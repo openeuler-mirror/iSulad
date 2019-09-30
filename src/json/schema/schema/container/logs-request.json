@@ -1,0 +1,24 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "since": {
+            "type": "string"
+        },
+        "until": {
+            "type": "string"
+        },
+        "timestamps": {
+            "type": "boolean"
+        },
+        "follow": {
+            "type": "boolean"
+        },
+        "tail": {
+            "type": "uint64"
+        },
+        "details": {
+            "type": "boolean"
+        }
+    }
+}

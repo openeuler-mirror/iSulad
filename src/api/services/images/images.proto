@@ -1,0 +1,137 @@
+syntax = "proto3";
+option optimize_for = CODE_SIZE;
+
+import "google/protobuf/timestamp.proto";
+import "descriptor.proto";
+
+package images;
+
+// Images is a service that allows one to register images with containerd.
+//
+// In containerd, an image is merely the mapping of a name to a content root,
+// described by a descriptor. The behavior and state of image is purely
+// dictated by the type of the descriptor.
+//
+// From the perspective of this service, these references are mostly shallow,
+// in that the existence of the required content won't be validated until
+// required by consuming services.
+//
+// As such, this can really be considered a "metadata service".
+service ImagesService {
+	// List returns a list of all images known to containerd.
+	rpc List(ListImagesRequest) returns (ListImagesResponse);
+
+	// Delete deletes the image by name.
+	rpc Delete(DeleteImageRequest) returns (DeleteImageResponse);
+
+	// load image from archive.
+	rpc Load(LoadImageRequest) returns (LoadImageResponse);
+
+	//inspect image
+	rpc Inspect(InspectImageRequest) returns (InspectImageResponse);
+
+	// Login to a Docker registry
+	rpc Login(LoginRequest) returns (LoginResponse);
+
+	// Logout from a Docker registry
+	rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+message Image {
+	// Name provides a unique name for the image.
+	//
+	// Containerd treats this as the primary identifier.
+	string name = 1;
+
+	// Labels provides free form labels for the image. These are runtime only
+	// and do not get inherited into the package image in any way.
+	//
+	// Labels may be updated using the field mask.
+	// The combined size of a key/value pair cannot exceed 4096 bytes.
+	map<string, string> labels = 2;
+
+	// Target describes the content entry point of the image.
+	containerd.types.Descriptor target = 3;
+
+	// CreatedAt is the time the image was first created.
+	google.protobuf.Timestamp created_at = 7;
+
+	// UpdatedAt is the last time the image was mutated.
+	google.protobuf.Timestamp updated_at = 8;
+}
+
+message ListImagesRequest {
+	// Filters contains one or more filters using the syntax defined in the
+	// containerd filter package.
+	//
+	// The returned result will be those that match any of the provided
+	// filters. Expanded, images that match the following will be
+	// returned:
+	//
+	//   filters[0] or filters[1] or ... or filters[n-1] or filters[n]
+	//
+	// If filters is zero-length or nil, all items will be returned.
+	repeated string filters = 1;
+}
+
+message ListImagesResponse {
+	repeated Image images = 1;
+	uint32 cc = 2;
+	string errmsg = 3;
+}
+
+message DeleteImageRequest {
+	string name = 1;
+	bool force = 2;
+}
+
+message DeleteImageResponse {
+	string name = 1;
+	uint32 cc = 2;
+	string errmsg = 3;
+}
+
+message LoadImageRequest {
+	string file = 1;
+	string type = 2;
+	string tag = 3;
+}
+
+message LoadImageResponse {
+	uint32 cc = 1;
+	string errmsg = 2;
+}
+
+message InspectImageRequest {
+	string id = 1;
+	bool bformat = 2;
+	int32 timeout = 3;
+}
+
+message InspectImageResponse {
+	string ImageJSON = 1;
+	uint32 cc = 2;
+	string errmsg = 3;
+}
+
+message LoginRequest {
+	string username = 1;
+	string password = 2;
+	string server = 3;
+	string type = 4;
+}
+
+message LoginResponse {
+	uint32 cc = 1;
+	string errmsg = 2;
+}
+
+message LogoutRequest {
+	string server = 1;
+	string type = 2;
+}
+
+message LogoutResponse {
+	uint32 cc = 1;
+	string errmsg = 2;
+}

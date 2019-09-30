@@ -1,0 +1,70 @@
+{
+  "description": "Huawei docker image save and load config Specification",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "parent": {
+      "type": "string"
+    },
+    "comment": {
+      "type": "string"
+    },
+    "created": {
+      "type": "string"
+    },
+    "container": {
+      "type": "string"
+    },
+    "container_config": {
+      "$ref": "../../container/config.json"
+    },
+    "docker_version": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "config": {
+      "$ref": "../../container/config.json"
+    },
+    "architecture": {
+      "type": "string"
+    },
+    "os": {
+      "type": "string"
+    },
+    "Size": {
+      "type": "int64"
+    },
+    "parent": {
+      "type": "string"
+    },
+    "From": {
+      "type": "string"
+    },
+    "rootfs": {
+      "$ref": "rootfs.json"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "$ref": "history.json"
+      }
+    },
+    "rawJSON": {
+      "type": "array",
+      "items": {
+	"type": "byte"
+      }
+    },
+    "computedID": {
+      "type": "string"
+    }
+  },
+  "required": [
+	  "config"
+  ]
+}

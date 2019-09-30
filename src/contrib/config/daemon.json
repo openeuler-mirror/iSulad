@@ -1,0 +1,36 @@
+{
+    "group": "lcrd",
+    "graph": "/var/lib/lcrd",
+    "state": "/var/run/lcrd",
+    "engine": "lcr",
+    "log-level": "ERROR",
+    "pidfile": "/var/run/lcrd.pid",
+    "log-opts": {
+        "log-file-mode": "0600",
+        "log-path": "/var/lib/lcrd",
+        "max-file": "1",
+        "max-size": "30KB"
+    },
+    "log-driver": "stdout",
+    "hook-spec": "/etc/default/lcrd/hooks/default.json",
+    "start-timeout": "2m",
+    "storage-driver": "overlay2",
+    "storage-opts": [
+        "overlay2.override_kernel_check=true"
+    ],
+    "registry-mirrors": [
+        "docker.io"
+    ],
+    "insecure-registries": [
+        "rnd-dockerhub.huawei.com"
+    ],
+    "pod-sandbox-image": "",
+    "image-opt-timeout": "5m",
+    "native.umask": "secure",
+    "network-plugin": "",
+    "cni-bin-dir": "",
+    "cni-conf-dir": "",
+    "image-layer-check": false,
+    "use-decrypted-key": true,
+    "insecure-skip-verify-enforce": false
+}

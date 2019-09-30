@@ -1,0 +1,139 @@
+{
+    "description":"Container Inspect Specification",
+    "$schema":"http://json-schema.org/draft-04/schema#",
+    "title":"container inspect",
+    "type":"object",
+    "properties":{
+        "Id":{
+            "type":"string"
+        },
+        "Created":{
+            "type":"string"
+        },
+        "Path":{
+            "type":"string"
+        },
+        "Args":{
+            "type":"array",
+            "items":{
+                "type":"string"
+            }
+        },
+        "State":{
+            "type":"object",
+            "properties":{
+                "Status":{
+                    "type":"string"
+                },
+                "Running":{
+                    "type":"boolean"
+                },
+                "Paused":{
+                    "type":"boolean"
+                },
+                "Restarting":{
+                    "type":"boolean"
+                },
+                "Pid":{
+                    "type":"integer"
+                },
+                "ExitCode":{
+                    "type":"integer"
+                },
+                "Error":{
+                    "type":"string"
+                },
+                "StartedAt":{
+                    "type":"string"
+                },
+                "FinishedAt":{
+                    "type":"string"
+                },
+                "Health": {
+                    "$ref": "../defs.json#/definitions/Health"
+                }
+            }
+        },
+        "Image":{
+            "type":"string"
+        },
+        "ResolvConfPath": {
+            "type":"string"
+        },
+        "HostnamePath": {
+            "type":"string"
+        },
+        "HostsPath": {
+            "type":"string"
+        },
+        "LogPath":{
+            "type":"string"
+        },
+        "Name":{
+            "type":"string"
+        },
+        "RestartCount":{
+            "type":"integer"
+        },
+        "HostConfig":{
+            "$ref": "../host-config.json"
+        },
+        "Mounts": {
+            "type": "array",
+            "items": {
+                "$ref": "../docker/types/mount-point.json"
+            }
+        },
+        "Config": {
+            "type":"object",
+            "properties":{
+                "Hostname": {
+                    "type": "string"
+                },
+                "User": {
+                    "type": "string"
+                },
+                "Env": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "Tty": {
+                    "type": "boolean"
+                },
+                "Cmd": {
+                    "$ref": "../defs.json#/definitions/ArrayOfStrings"
+                },
+                "Entrypoint": {
+                    "$ref": "../defs.json#/definitions/ArrayOfStrings"
+                },
+                "Labels": {
+                    "$ref": "../defs.json#/definitions/mapStringString"
+                },
+                "Annotations": {
+                    "$ref": "../defs.json#/definitions/mapStringString"
+                },
+                "HealthCheck": {
+                    "$ref": "../defs.json#/definitions/HealthCheck"
+                }
+            }
+        },
+        "NetworkSettings":{
+            "type":"object",
+            "properties":{
+                "IPAddress":{
+                    "type":"string"
+                }
+            }
+        }
+    },
+    "required":[
+        "Id",
+        "Name",
+        "State",
+        "RestartCount",
+        "HostConfig",
+        "NetworkSettings"
+    ]
+}

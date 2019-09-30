@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_PREFIX@/lib
+localstatedir=@CMAKE_INSTALL_PREFIX@/var
+includedir=@CMAKE_INSTALL_PREFIX@/include
+
+Name: liblcrc
+Description: light-weighted container runtime daemon library
+Version: @LCRD_VERSION@
+URL: http://code.huawei.com/containers/iSulad
+Libs: -L@CMAKE_INSTALL_PREFIX@/lib -llcrc
+Cflags: -I@CMAKE_INSTALL_PREFIX@/include
+

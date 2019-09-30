@@ -1,0 +1,15 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"protocol": {
+			"$ref": "../defs.json#/definitions/stringPointer"
+		},
+		"container_port": {
+			"$ref": "../defs.json#/definitions/int32Pointer"
+		},
+		"host_port": {
+			"$ref": "../defs.json#/definitions/int32Pointer"
+		}
+	}
+}

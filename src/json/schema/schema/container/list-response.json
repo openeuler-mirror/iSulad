@@ -1,0 +1,18 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"containers": {
+			"type": "array",
+			"items": {
+				"$ref": "container.json"
+			}
+		},
+		"cc": {
+			"type": "uint32"
+		},
+		"errmsg": {
+			"type": "string"
+		}
+	}
+}

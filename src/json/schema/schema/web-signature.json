@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "signature": {
+      "type": "string"
+    },
+    "protected": {
+      "type": "string"
+    },
+    "header": {
+      "type": "object",
+      "minItems": 1,
+	"properties": {
+	  "alg": {
+	    "type": "string"
+	  },
+	  "jwk": {
+	    "type": "object",
+	    "properties": {
+	      "crv": {
+		"type": "string"
+	      },
+	      "kid": {
+		"type": "string"
+	      },
+	      "kty": {
+		"type": "string"
+	      },
+	      "x": {
+		"type": "string"
+	      },
+	      "y": {
+		"type": "string"
+	      },
+	      "d": {
+		"type": "string"
+	      }
+	    }
+	  }
+	}
+    }
+  }
+}

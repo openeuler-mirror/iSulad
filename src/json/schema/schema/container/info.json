@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "image_type": {
+      "type": "string"
+    },
+    "pid": {
+      "type": "int32"
+    },
+    "has_pid": {
+      "type": "boolean"
+    },
+    "status": {
+      "type": "integer"
+    },
+    "pids_current": {
+      "type": "uint64"
+    },
+    "cpu_use_nanos": {
+      "type": "uint64"
+    },
+    "cpu_use_user": {
+      "type": "uint64"
+    },
+    "cpu_use_kernel": {
+      "type": "uint64"
+    },
+    "cpu_system_use": {
+      "type": "uint64"
+    },
+    "online_cpus": {
+      "type": "uint32"
+    },
+    "blkio_read": {
+      "type": "uint64"
+    },
+    "blkio_write": {
+      "type": "uint64"
+    },
+    "mem_used": {
+      "type": "uint64"
+    },
+    "mem_limit": {
+      "type": "uint64"
+    },
+    "kmem_used": {
+      "type": "uint64"
+    },
+    "kmem_limit": {
+      "type": "uint64"
+    }
+  }
+}

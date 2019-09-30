@@ -1,0 +1,421 @@
+/******************************************************************************
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * iSulad licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ * Author: lifeng
+ * Create: 2018-11-08
+ * Description: provide grpc images functions
+ ******************************************************************************/
+
+#include "grpc_images_service.h"
+
+#include <unistd.h>
+#include <iostream>
+#include <memory>
+#include <new>
+#include <string>
+#include <securec.h>
+
+#include "log.h"
+#include "utils.h"
+#include "grpc_server_tls_auth.h"
+
+int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *grequest,
+                                                    image_list_images_request **request)
+{
+    image_list_images_request *tmpreq = (image_list_images_request *)util_common_calloc_s(
+                                            sizeof(image_list_images_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    *request = tmpreq;
+
+    return 0;
+}
+
+int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        return 0;
+    }
+
+    gresponse->set_cc(response->cc);
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+
+    for (size_t i = 0; i < response->images_len; i++) {
+        Descriptor *target = nullptr;
+        Image *image = gresponse->add_images();
+        if (response->images[i]->name != nullptr) {
+            image->set_name(response->images[i]->name);
+        }
+        target = new (std::nothrow) Descriptor;
+        if (target == nullptr) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        if (response->images[i]->target->digest != nullptr) {
+            target->set_digest(response->images[i]->target->digest);
+        }
+        Timestamp *timestamp = image->mutable_created_at();
+        if (timestamp == nullptr) {
+            delete target;
+            ERROR("Out of memory");
+            return -1;
+        }
+        timestamp->set_seconds(response->images[i]->created_at->seconds);
+        timestamp->set_nanos(response->images[i]->created_at->nanos);
+        if (response->images[i]->target->media_type != nullptr) {
+            target->set_media_type(response->images[i]->target->media_type);
+        }
+        target->set_size(response->images[i]->target->size);
+        image->set_allocated_target(target);
+    }
+
+    return 0;
+}
+
+int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *grequest,
+                                                      image_delete_image_request **request)
+{
+    image_delete_image_request *tmpreq = (image_delete_image_request *)util_common_calloc_s(
+                                             sizeof(image_delete_image_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    tmpreq->force = grequest->force();
+    if (!grequest->name().empty()) {
+        tmpreq->image_name = util_strdup_s(grequest->name().c_str());
+    }
+    *request = tmpreq;
+
+    return 0;
+}
+
+int ImagesServiceImpl::image_load_request_from_grpc(
+    const LoadImageRequest *grequest, image_load_image_request **request)
+{
+    image_load_image_request *tmpreq = (image_load_image_request *)util_common_calloc_s(
+                                           sizeof(image_load_image_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->file().empty()) {
+        tmpreq->file = util_strdup_s(grequest->file().c_str());
+    }
+    if (!grequest->type().empty()) {
+        tmpreq->type = util_strdup_s(grequest->type().c_str());
+    }
+    if (!grequest->tag().empty()) {
+        tmpreq->tag = util_strdup_s(grequest->tag().c_str());
+    }
+    *request = tmpreq;
+
+    return 0;
+}
+
+int ImagesServiceImpl::inspect_request_from_grpc(const InspectImageRequest *grequest, image_inspect_request **request)
+{
+    image_inspect_request *tmpreq = (image_inspect_request *)util_common_calloc_s(
+                                        sizeof(image_inspect_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->id().empty()) {
+        tmpreq->id = util_strdup_s(grequest->id().c_str());
+    }
+
+    tmpreq->bformat = grequest->bformat();
+    tmpreq->timeout = grequest->timeout();
+
+    *request = tmpreq;
+    return 0;
+}
+
+int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *response,
+                                                InspectImageResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        return 0;
+    }
+
+    gresponse->set_cc(response->cc);
+    if (response->image_json != nullptr) {
+        gresponse->set_imagejson(response->image_json);
+    }
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+    return 0;
+}
+
+Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *request, ListImagesResponse *reply)
+{
+    auto status = GrpcServerTlsAuth::auth(context, "image_list");
+    if (!status.ok()) {
+        return status;
+    }
+    service_callback_t *cb = get_service_callback();
+    if (cb == nullptr || cb->image.list == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    image_list_images_request *image_req = nullptr;
+    int tret = image_list_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(LCRD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    image_list_images_response *image_res = nullptr;
+    int ret = cb->image.list(image_req, &image_res);
+    tret = image_list_response_to_grpc(image_res, reply);
+
+    free_image_list_images_request(image_req);
+    free_image_list_images_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
+        reply->set_cc(LCRD_ERR_INPUT);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+    return Status::OK;
+}
+
+Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageRequest *request, DeleteImageResponse *reply)
+{
+    auto status = GrpcServerTlsAuth::auth(context, "image_delete");
+    if (!status.ok()) {
+        return status;
+    }
+    service_callback_t *cb = get_service_callback();
+    if (cb == nullptr || cb->image.remove == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    image_delete_image_request *image_req = nullptr;
+    int tret = image_remove_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(LCRD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    image_delete_image_response *image_res = nullptr;
+    int ret = cb->image.remove(image_req, &image_res);
+    tret = response_to_grpc(image_res, reply);
+
+    free_image_delete_image_request(image_req);
+    free_image_delete_image_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
+        reply->set_cc(LCRD_ERR_INPUT);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+    return Status::OK;
+}
+
+Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *request, LoadImageResponse *reply)
+{
+    auto status = GrpcServerTlsAuth::auth(context, "image_load");
+    if (!status.ok()) {
+        return status;
+    }
+    service_callback_t *cb = get_service_callback();
+    if (cb == nullptr || cb->image.load == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    image_load_image_request *image_req = nullptr;
+    int tret = image_load_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(LCRD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    image_load_image_response *image_res = nullptr;
+    int ret = cb->image.load(image_req, &image_res);
+    tret = response_to_grpc(image_res, reply);
+
+    free_image_load_image_request(image_req);
+    free_image_load_image_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
+        reply->set_cc(LCRD_ERR_INPUT);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+
+    return Status::OK;
+}
+
+Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequest *request,
+                                  InspectImageResponse *reply)
+{
+    int ret, tret;
+    service_callback_t *cb = nullptr;
+    image_inspect_request *image_req = nullptr;
+    image_inspect_response *image_res = nullptr;
+
+    cb = get_service_callback();
+    if (cb == nullptr || cb->image.inspect == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    tret = inspect_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(LCRD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    Status status = GrpcServerTlsAuth::auth(context, "image_inspect");
+    if (!status.ok()) {
+        return status;
+    }
+
+    ret = cb->image.inspect(image_req, &image_res);
+    tret = inspect_response_to_grpc(image_res, reply);
+
+    free_image_inspect_request(image_req);
+    free_image_inspect_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
+        reply->set_cc(LCRD_ERR_INTERNAL);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+    return Status::OK;
+}
+
+int ImagesServiceImpl::image_login_request_from_grpc(
+    const LoginRequest *grequest, image_login_request **request)
+{
+    image_login_request *tmpreq = (image_login_request *)util_common_calloc_s(
+                                      sizeof(image_login_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->username().empty()) {
+        tmpreq->username = util_strdup_s(grequest->username().c_str());
+    }
+    if (!grequest->password().empty()) {
+        tmpreq->password = util_strdup_s(grequest->password().c_str());
+    }
+    if (!grequest->server().empty()) {
+        tmpreq->server = util_strdup_s(grequest->server().c_str());
+    }
+    if (!grequest->type().empty()) {
+        tmpreq->type = util_strdup_s(grequest->type().c_str());
+    }
+    *request = tmpreq;
+
+    return 0;
+}
+
+int ImagesServiceImpl::image_logout_request_from_grpc(
+    const LogoutRequest *grequest, image_logout_request **request)
+{
+    image_logout_request *tmpreq = (image_logout_request *)util_common_calloc_s(
+                                       sizeof(image_logout_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->server().empty()) {
+        tmpreq->server = util_strdup_s(grequest->server().c_str());
+    }
+    if (!grequest->type().empty()) {
+        tmpreq->type = util_strdup_s(grequest->type().c_str());
+    }
+    *request = tmpreq;
+
+    return 0;
+}
+
+Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *request, LoginResponse *reply)
+{
+    auto status = GrpcServerTlsAuth::auth(context, "login");
+    if (!status.ok()) {
+        return status;
+    }
+    service_callback_t *cb = get_service_callback();
+    if (cb == nullptr || cb->image.login == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    image_login_request *image_req = nullptr;
+    int tret = image_login_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(LCRD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    image_login_response *image_res = nullptr;
+    int ret = cb->image.login(image_req, &image_res);
+    tret = response_to_grpc(image_res, reply);
+
+    free_image_login_request(image_req);
+    free_image_login_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
+        reply->set_cc(LCRD_ERR_INPUT);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+
+    return Status::OK;
+}
+
+Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *request, LogoutResponse *reply)
+{
+    auto status = GrpcServerTlsAuth::auth(context, "logout");
+    if (!status.ok()) {
+        return status;
+    }
+    service_callback_t *cb = get_service_callback();
+    if (cb == nullptr || cb->image.logout == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    image_logout_request *image_req = nullptr;
+    int tret = image_logout_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(LCRD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    image_logout_response *image_res = nullptr;
+    int ret = cb->image.logout(image_req, &image_res);
+    tret = response_to_grpc(image_res, reply);
+
+    free_image_logout_request(image_req);
+    free_image_logout_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
+        reply->set_cc(LCRD_ERR_INPUT);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+
+    return Status::OK;
+}
+

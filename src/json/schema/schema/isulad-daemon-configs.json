@@ -1,0 +1,143 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "hosts": {
+            "type": "ArrayOfStrings"
+        },
+        "group": {
+            "type": "string"
+        },
+        "graph": {
+            "type": "string"
+        },
+        "state": {
+            "type": "string"
+        },
+        "log-level": {
+            "type": "string"
+        },
+        "log-driver": {
+            "type": "string"
+        },
+        "log-opts": {
+            "$ref": "defs.json#/definitions/mapStringString"
+        },
+        "storage-driver": {
+            "type": "string"
+        },
+        "storage-opts": {
+            "type": "ArrayOfStrings"
+        },
+        "pidfile": {
+            "type": "string"
+        },
+        "engine": {
+            "type": "string"
+        },
+        "hook-spec": {
+            "type": "string"
+        },
+        "start-timeout": {
+            "type": "string"
+        },
+        "enable-plugins": {
+            "type": "string"
+        },
+        "cpu-rt-period": {
+            "type": "int64"
+        },
+        "cpu-rt-runtime": {
+            "type": "int64"
+        },
+        "registry-mirrors": {
+            "type": "ArrayOfStrings"
+        },
+        "insecure-registries": {
+            "type": "ArrayOfStrings"
+        },
+        "native.umask": {
+            "type": "string"
+        },
+        "im_opt_timeout": {
+            "type": "string"
+        },
+        "pod-sandbox-image": {
+            "type": "string"
+        },
+        "image_service": {
+            "type": "boolean"
+        },
+        "rootfsmntdir": {
+            "type": "string"
+        },
+        "network-plugin": {
+            "type": "string"
+        },
+        "cni-bin-dir": {
+            "type": "string"
+        },
+        "cni-conf-dir": {
+            "type": "string"
+        },
+        "image-layer-check": {
+            "type": "boolean"
+        },
+        "use-decrypted-key": {
+            "type": "booleanPointer"
+        },
+        "insecure-skip-verify-enforce": {
+            "type": "boolean"
+        },
+        "tls": {
+            "type": "boolean"
+        },
+        "tls-verify": {
+            "type": "boolean"
+        },
+        "tls-config": {
+            "type": "object",
+            "properties": {
+                "CAFile": {
+                    "type": "string"
+                },
+                "CertFile": {
+                    "type": "string"
+                },
+                "KeyFile": {
+                    "type": "string"
+                }
+            }
+        },
+        "authorization-plugin": {
+            "type": "string"
+        },
+        "cgroup-parent": {
+            "type": "string"
+        },
+        "default-ulimits": {
+            "type": "object",
+            "patternProperties": {
+                ".{1,}": {
+		            "type": "object",
+		            "required": [
+		                "Name",
+		                "Hard",
+		                "Soft"
+		            ],
+		            "properties": {
+		                "Name": {
+		                    "type": "string"
+		                },
+		                "Hard": {
+		                    "type": "int64"
+		                },
+		                "Soft": {
+		                    "type": "int64"
+		                }
+		            }
+                }
+            }
+        }
+    }
+}

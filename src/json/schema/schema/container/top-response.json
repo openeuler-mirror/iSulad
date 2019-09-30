@@ -1,0 +1,18 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"titles": {
+			"type": "string"
+		},
+		"processes": {
+			"$ref": "../defs.json#/definitions/ArrayOfStrings"
+                },
+		"cc": {
+			"type": "uint32"
+		},
+		"errmsg": {
+			"type": "string"
+		}
+	}
+}

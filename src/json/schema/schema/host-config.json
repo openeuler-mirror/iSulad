@@ -1,0 +1,283 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "Binds": {
+            "$ref": "defs.json#/definitions/ArrayOfStrings"
+        },
+        "NetworkMode": {
+            "type": "string"
+        },
+        "GroupAdd": {
+            "$ref": "defs.json#/definitions/ArrayOfStrings"
+        },
+        "IpcMode": {
+            "type": "string"
+        },
+        "PidMode": {
+            "type": "string"
+        },
+        "Privileged": {
+            "type": "boolean"
+        },
+        "SystemContainer": {
+            "type": "boolean"
+        },
+        "NsChangeFiles": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "UserRemap": {
+            "type": "string"
+        },
+        "ShmSize": {
+            "type": "int64"
+        },
+        "AutoRemove": {
+            "type": "boolean"
+        },
+        "AutoRemoveBak": {
+            "type": "boolean"
+        },
+        "ReadonlyRootfs": {
+            "type": "boolean"
+        },
+        "UTSMode": {
+            "type": "string"
+        },
+        "UsernsMode": {
+            "type": "string"
+        },
+        "Sysctls": {
+            "$ref": "defs.json#/definitions/mapStringString"
+        },
+        "Runtime":{
+            "type":"string"
+        },
+        "RestartPolicy": {
+            "type": "object",
+            "properties": {
+                "Name": {
+                    "type": "string"
+                },
+                "MaximumRetryCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "CapAdd": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "CapDrop": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "Dns": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "DnsOptions": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "DnsSearch": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "ExtraHosts": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "HookSpec": {
+            "type": "string"
+        },
+        "CPUShares": {
+            "type": "int64"
+        },
+        "Memory": {
+            "type": "int64"
+        },
+        "OomScoreAdj": {
+            "type": "integer"
+        },
+        "BlkioWeight": {
+            "type": "uint16"
+        },
+        "BlkioWeightDevice": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Path": {
+                        "type": "string"
+                    },
+                    "Weight": {
+                        "type": "uint16"
+                    }
+                }
+            }
+        },
+        "BlkioDeviceReadBps": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Path": {
+                        "type": "string"
+                    },
+                    "Rate": {
+                        "type": "uint64"
+                    }
+                }
+            }
+        },
+        "BlkioDeviceWriteBps": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Path": {
+                        "type": "string"
+                    },
+                    "Rate": {
+                        "type": "uint64"
+                    }
+                }
+            }
+        },
+        "CPUPeriod": {
+            "type": "int64"
+        },
+        "CPUQuota": {
+            "type": "int64"
+        },
+        "CPURealtimePeriod": {
+            "type": "int64"
+        },
+        "CPURealtimeRuntime": {
+            "type": "int64"
+        },
+        "CpusetCpus": {
+            "type": "string"
+        },
+        "CpusetMems": {
+            "type": "string"
+        },
+        "Devices": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "CgroupPermissions": {
+                        "type": "string"
+                    },
+                    "PathInContainer": {
+                        "type": "string"
+                    },
+                    "PathOnHost": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "SecurityOpt": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "StorageOpt": {
+            "$ref": "defs.json#/definitions/mapStringString"
+        },
+        "KernelMemory": {
+            "type": "int64"
+        },
+        "MemoryReservation": {
+            "type": "int64"
+        },
+        "MemorySwap": {
+            "type": "int64"
+        },
+        "OomKillDisable": {
+            "type": "boolean"
+        },
+        "PidsLimit": {
+            "type": "int64"
+        },
+        "FilesLimit": {
+            "type": "int64"
+        },
+        "Ulimits": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Name": {
+                        "type": "string"
+                    },
+                    "Hard": {
+                        "type": "int64"
+                    },
+                    "Soft": {
+                        "type": "int64"
+                    }
+                }
+            }
+        },
+        "Hugetlbs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "PageSize": {
+                        "type": "string"
+                    },
+                    "Limit": {
+                        "type": "uint64"
+                    }
+                }
+            }
+        },
+        "HostChannel": {
+            "type": "object",
+            "properties": {
+                "PathOnHost": {
+                    "type": "string"
+                },
+                "PathInContainer": {
+                    "type": "string"
+                },
+                "Permissions": {
+                    "type": "string"
+                },
+                "Size": {
+                    "type": "uint64"
+                }
+            }
+        },
+        "EnvTargetFile": {
+            "type": "string"
+        },
+        "ExternalRootfs": {
+            "type": "string"
+        },
+        "CgroupParent": {
+            "type": "string"
+        }
+    }
+}

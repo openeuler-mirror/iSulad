@@ -1,0 +1,24 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "log":{
+            "type": "array",
+            "items": {
+                "type": "byte"
+            }
+        },
+        "stream": {
+            "type": "string"
+        },
+        "time": {
+            "type": "string"
+        },
+        "attrs": {
+            "type": "array",
+            "items": {
+                "type": "byte"
+            }
+        }
+    }
+}

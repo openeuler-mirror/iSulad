@@ -1,0 +1,47 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "repo_tags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "repo_digests": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "size": {
+            "type": "uint64"
+        },
+        "created": {
+            "type": "string"
+        },
+        "Loaded": {
+            "type": "string"
+        },
+        "uid": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "int64"
+                }
+            }
+        },
+        "username": {
+            "type": "string"
+        },
+        "Spec": {
+            "$ref": "../oci/image/spec.json"
+        },
+        "Healthcheck": {
+            "$ref": "../defs.json#/definitions/HealthCheck"
+        }
+    }
+}

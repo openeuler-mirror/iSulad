@@ -1,0 +1,41 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "image_filesystems": {
+            "type": "array",
+            "items": {
+            "type": "object",
+                "properties": {
+                    "timestamp": {
+                        "type": "int64"
+                    },
+                    "fs_id": {
+                        "type": "object",
+                        "properties": {
+                            "mountpoint": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "used_bytes": {
+                        "type": "object",
+                        "properties": {
+                            "value": {
+                                "type": "uint64"
+                            }
+                        }
+                    },
+                    "inodes_used": {
+                        "type": "object",
+                        "properties": {
+                            "value": {
+                                "type": "uint64"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

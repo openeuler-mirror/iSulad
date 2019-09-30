@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "filters": {
+            "$ref": "../defs.json#/definitions/filters"
+        },
+        "all": {
+            "type": "boolean"
+        }
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "type": "object",
+    "properties": {
+        "InitType": {
+            "type": "uint64"
+        },
+        "WatchEvent": {
+            "type": "uint64"
+        },
+        "ErrCode": {
+            "type": "integer"
+        },
+        "ErrMessage": {
+            "Type": "string"
+        }
+    }
+}

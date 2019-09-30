@@ -1,0 +1,219 @@
+/******************************************************************************
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * iSulad licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ * Author: tanyifeng
+ * Create: 2018-11-08
+ * Description: provide container engine definition
+ ******************************************************************************/
+#ifndef __LCRD_ENGINE_H
+#define __LCRD_ENGINE_H
+
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct engine_console_config {
+    char *log_path;
+    unsigned int log_rotate;
+    char *log_file_size;
+};
+
+struct engine_cgroup_resources {
+    uint64_t blkio_weight;
+    uint64_t cpu_shares;
+    uint64_t cpu_period;
+    uint64_t cpu_quota;
+    char *cpuset_cpus;
+    char *cpuset_mems;
+    uint64_t memory_limit;
+    uint64_t memory_swap;
+    uint64_t memory_reservation;
+    uint64_t kernel_memory_limit;
+};
+
+typedef enum {
+    ENGINE_CONTAINER_STATUS_UNKNOWN = 0,
+    ENGINE_CONTAINER_STATUS_CREATED = 1,
+    ENGINE_CONTAINER_STATUS_STARTING = 2,
+    ENGINE_CONTAINER_STATUS_RUNNING = 3,
+    ENGINE_CONTAINER_STATUS_STOPPED = 4,
+    ENGINE_CONTAINER_STATUS_PAUSED = 5,
+    ENGINE_CONTAINER_STATUS_RESTARTING = 6,
+    ENGINE_CONTAINER_STATUS_MAX_STATE = 7
+} Engine_Container_Status;
+
+struct engine_container_summary_info {
+    char *id;
+    uint32_t has_pid;
+    uint32_t pid;
+    Engine_Container_Status status;
+    char *image;
+    char *command;
+    uint32_t exit_code;
+    uint32_t restart_count;
+    char *startat;
+    char *finishat;
+};
+
+struct engine_container_info {
+    char *id;
+    bool has_pid;
+    uint32_t pid;
+    Engine_Container_Status status;
+    uint64_t pids_current;
+    /* CPU usage */
+    uint64_t cpu_use_nanos;
+    uint64_t cpu_system_use;
+    /* BlkIO usage */
+    uint64_t blkio_read;
+    uint64_t blkio_write;
+    /* Memory usage */
+    uint64_t mem_used;
+    uint64_t mem_limit;
+    /* Kernel Memory usage */
+    uint64_t kmem_used;
+    uint64_t kmem_limit;
+};
+
+typedef struct _container_pid_t {
+    int pid; /* process id */
+    int ppid; /* pid of parent process */
+    unsigned long long start_time, /* start time of process -- seconds since 1-1-70 */
+             pstart_time; /* start time of parent process -- seconds since 1-1-70 */
+} container_pid_t;
+
+typedef struct _engine_start_request_t {
+    const char *name;
+    const char *lcrpath;
+
+    const char *logpath;
+    const char *loglevel;
+
+    bool daemonize;
+    bool tty;
+    bool open_stdin;
+    const char *pidfile;
+    const char **console_fifos;
+    const char *console_logpath;
+    uint32_t start_timeout;
+    const char *container_pidfile;
+    const char *exit_fifo;
+
+    uid_t uid;
+    gid_t gid;
+    gid_t *additional_gids;
+    size_t additional_gids_len;
+
+    const char **share_ns;
+} engine_start_request_t;
+
+typedef bool (*engine_create_t)(const char *, const char *, const char *, const char *, void *);
+
+typedef bool (*engine_start_t)(const engine_start_request_t *request);
+
+typedef bool (*engine_clean_t)(const char *name, const char *lcrpath, const char *logpath, const char *loglevel,
+                               pid_t pid);
+
+typedef bool (*engine_kill_t)(const char *name, const char *enginepath, uint32_t signal);
+
+typedef int (*engine_kill_monitor_t)(const char *name, const char *enginepath);
+
+typedef bool (*engine_delete_t)(const char *name, const char *enginepath);
+
+typedef bool (*engine_pause_t)(const char *name, const char *enginepath);
+
+typedef bool (*engine_resume_t)(const char *name, const char *enginepath);
+
+typedef bool (*engine_reset_t)(const char *name, const char *enginepath);
+
+typedef bool (*engine_update_t)(const char *name, const char *enginepath, const struct engine_cgroup_resources *cr);
+
+typedef bool (*engine_exec_t)(const char *name, const char *enginepath, const char *logpath, const char *loglevel,
+                              const char *console_fifos[], char * const argv[], char * const env[], int64_t timeout,
+                              pid_t *pid, int *exit_code);
+
+typedef int (*engine_get_all_containers_info_t)(const char *enginepath, struct engine_container_summary_info **cons);
+
+typedef struct engine_container_summary_info *(*engine_get_container_info_t)(const char *name, const char *enginepath);
+
+typedef void (*engine_free_container_info_t)(struct engine_container_summary_info *info);
+
+typedef void (*engine_free_all_containers_info_t)(struct engine_container_summary_info *info, int num);
+
+typedef int (*engine_get_container_status_t)(const char *name, const char *enginepath,
+                                             struct engine_container_info *status);
+
+typedef void (*engine_free_container_status_t)(struct engine_container_info *container);
+
+typedef bool (*engine_get_container_pids_t)(const char *name, const char *rootpath, pid_t **pids, size_t *pids_len);
+
+typedef int (*engine_monitord_spawn_t)(const char *enginepath);
+
+typedef bool (*engine_console_t)(const char *name, const char *enginepath, char *in_fifo, char *out_fifo,
+                                 char *err_fifo);
+
+typedef bool (*engine_get_console_config_t)(const char *name, const char *enginepath,
+                                            struct engine_console_config *config);
+
+typedef void (*engine_free_console_config_t)(struct engine_console_config *config);
+
+typedef int (*engine_log_init_t)(const char *name, const char *file, const char *priority, const char *prefix,
+                                 int quiet, const char *enginepath);
+
+typedef uint32_t (*engine_get_errno_t)();
+
+typedef const char *(*engine_get_errmsg_t)();
+
+typedef void (*engine_clear_errmsg_t)();
+
+struct engine_operation {
+    char *engine_type;
+    engine_create_t engine_create_op;
+    engine_start_t engine_start_op;
+    engine_kill_t engine_kill_op;
+    engine_kill_monitor_t engine_kill_monitor_op;
+    engine_delete_t engine_delete_op;
+    engine_pause_t engine_pause_op;
+    engine_resume_t engine_resume_op;
+    engine_reset_t engine_reset_op;
+    engine_exec_t engine_exec_op;
+    engine_console_t engine_console_op;
+    engine_get_container_status_t engine_get_container_status_op;
+    engine_free_container_status_t engine_free_container_status_op;
+    engine_get_all_containers_info_t engine_get_all_containers_info_op;
+    engine_free_all_containers_info_t engine_free_all_containers_info_op;
+    engine_get_container_pids_t engine_get_container_pids_op;
+    engine_log_init_t engine_log_init_op;
+    engine_update_t engine_update_op;
+    engine_get_console_config_t engine_get_console_config_op;
+    engine_free_console_config_t engine_free_console_config_op;
+    engine_get_errmsg_t engine_get_errmsg_op;
+    engine_clear_errmsg_t engine_clear_errmsg_op;
+    engine_clean_t engine_clean_op;
+};
+
+extern int engines_global_init();
+
+extern void engine_operation_free(struct engine_operation *eop);
+
+extern int engines_discovery(const char *name);
+
+extern struct engine_operation *engines_get_handler(const char *name);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+

@@ -1,0 +1,308 @@
+{
+    "description": "Definitions used throughout the OpenContainer Specification",
+    "definitions": {
+        "int8": {
+            "type": "integer",
+            "minimum": -128,
+            "maximum": 127
+        },
+        "int16": {
+            "type": "integer",
+            "minimum": -32768,
+            "maximum": 32767
+        },
+        "int32": {
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+        },
+        "int64": {
+            "type": "integer",
+            "minimum": -9223372036854776000,
+            "maximum": 9223372036854776000
+        },
+        "uint8": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+        },
+        "uint16": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+        },
+        "uint32": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+        },
+        "uint64": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 18446744073709552000
+        },
+        "int32Pointer": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/int32"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "uint16Pointer": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/uint16"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "uint64Pointer": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/uint64"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "stringPointer": {
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+        },
+        "UID": {
+            "$ref": "#/definitions/uint32"
+        },
+        "GID": {
+            "$ref": "#/definitions/uint32"
+        },
+        "ArrayOfGIDs": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/GID"
+            }
+        },
+        "FilePath": {
+            "type": "string"
+        },
+        "Env": {
+            "$ref": "#/definitions/ArrayOfStrings"
+        },
+        "Hook": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "$ref": "#/definitions/FilePath"
+                },
+                "args": {
+                    "$ref": "#/definitions/ArrayOfStrings"
+                },
+                "env": {
+                    "$ref": "#/definitions/Env"
+                },
+                "timeout": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            },
+            "required": [
+                "path"
+            ]
+        },
+        "ArrayOfHooks": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/Hook"
+            }
+        },
+        "IDMapping": {
+            "type": "object",
+            "properties": {
+                "hostID": {
+                    "$ref": "#/definitions/uint32"
+                },
+                "containerID": {
+                    "$ref": "#/definitions/uint32"
+                },
+                "size": {
+                    "$ref": "#/definitions/uint32"
+                }
+            },
+            "required": [
+                "hostID",
+                "containerID",
+                "size"
+            ]
+        },
+        "Mount": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "$ref": "#/definitions/FilePath"
+                },
+                "destination": {
+                    "$ref": "#/definitions/FilePath"
+                },
+                "options": {
+                    "$ref": "#/definitions/ArrayOfStrings"
+                },
+                "type": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "destination"
+            ]
+        },
+        "ArrayOfStrings": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "mapStringString": {
+            "type": "object",
+            "patternProperties": {
+                ".{1,}": {
+                    "type": "string"
+                }
+            }
+        },
+        "mapStringInt": {
+            "type": "object",
+            "patternProperties": {
+                ".{1,}": {
+                    "type": "integer"
+                }
+            }
+        },
+        "mapStringBool": {
+            "type": "object",
+            "patternProperties": {
+                ".{1,}": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "mapIntString": {
+            "type": "object",
+            "patternProperties": {
+                ".{2,}": {
+                    "type": "string"
+                }
+            }
+        },
+        "mapIntInt": {
+            "type": "object",
+            "patternProperties": {
+                ".{2,}": {
+                    "type": "integer"
+                }
+            }
+        },
+        "mapIntBool": {
+            "type": "object",
+            "patternProperties": {
+                ".{2,}": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "mapStringObject": {
+            "type": "object",
+            "patternProperties": {
+                ".{1,}": {
+                    "type": "object"
+                }
+            }
+        },
+        "ociVersion": {
+            "description": "The version of Open Container Runtime Specification that the document complies with",
+            "type": "string"
+        },
+        "annotations": {
+            "$ref": "#/definitions/mapStringString"
+        },
+        "HealthCheck": {
+            "type": "object",
+            "properties": {
+                "Test": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "Interval": {
+                    "type": "int64"
+                },
+                "Timeout": {
+                    "type": "int64"
+                },
+                "StartPeriod": {
+                    "type": "int64"
+                },
+                "Retries": {
+                    "type": "integer"
+                },
+                "ExitOnUnhealthy": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "Health": {
+            "type": "object",
+            "properties": {
+                "Status": {
+                    "type": "string"
+                },
+                "FailingStreak": {
+                    "type": "integer"
+                },
+                "Log": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "Start": {
+                                "type": "string"
+                            },
+                            "End": {
+                                "type": "string"
+                            },
+                            "ExitCode": {
+                                "type": "integer"
+                            },
+                            "Output": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+	    "filters": {
+            "type": "object",
+            "patternProperties": {
+                ".{1,}": {
+                    "$ref": "#/definitions/mapStringBool"
+                }
+            }
+        }
+    }
+}

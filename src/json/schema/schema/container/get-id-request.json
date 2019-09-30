@@ -1,0 +1,12 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"id_or_name": {
+			"type": "string"
+		},
+		"label": {
+			"type": "string"
+		}
+	}
+}

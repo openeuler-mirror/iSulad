@@ -1,0 +1,543 @@
+#######################################################################
+##- @Copyright (C) Huawei Technologies., Ltd. 2017-2019. All rights reserved.
+# - iSulad licensed under the Mulan PSL v1.
+# - You can use this software according to the terms and conditions of the Mulan PSL v1.
+# - You may obtain a copy of Mulan PSL v1 at:
+# -     http://license.coscl.org.cn/MulanPSL
+# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+# - PURPOSE.
+# - See the Mulan PSL v1 for more details.
+##- @Description: generate cetification
+##- @Author: wujing
+##- @Create: 2019-04-25
+#######################################################################
+#!/bin/bash
+# set -euxo pipefail
+
+CURRENT_PATH=$(pwd)
+CI_TOOLS_PROJECT="/root/workspace/ci_tools"
+export LOCAL_INCLUDE="/root/workspace/ci_tools/rule/include"
+export EULER_CODE_PATH="$(realpath ${CURRENT_PATH}/..)"
+LINT_RULE_FILE="/root/workspace/ci_tools/rule/pclint"
+PCLINT_TOOL="/usr/local/bin/flint"
+CODESTYLE_TOOL="/usr/local/bin/cpplint.py"
+CMETRICS_TOOL="/root/cmetrics/cmetrics.py"
+
+function usage() {
+    echo -e "\
+=================================================================================================\033[1;37m
+             _____ ______ ___   ______ ____ ______   ______ __  __ ______ ______ __ __
+            / ___//_  __//   | /_  __//  _// ____/  / ____// / / // ____// ____// //_/
+            \__ \  / /  / /| |  / /   / / / /      / /    / /_/ // __/  / /    / ,<
+           ___/ / / /  / ___ | / /  _/ / / /___   / /___ / __  // /___ / /___ / /| |
+          /____/ /_/  /_/  |_|/_/  /___/ \____/   \____//_/ /_//_____/ \____//_/ |_| \033[0m
+================================================================================================="
+  echo "Usage: $0 [options]"
+  echo "Personal level build static check script for iSulad project"
+  echo "Options:"
+  echo "    -u, --update-ci-tools    Update ci tools project and replace header files with latest ones"
+  echo "    -p, --pclint             Perform pclint code static check"
+  echo "    -s, --codestyle          Perform codestyle(codedex) code static check"
+  echo "    -c, --detail-cmetrics    Detail code statistics analysis"
+  echo "    -m, --simple-cmetrics    Simple code statistics analysis"
+  echo "    -a, --all                Perform all checks and statistics"
+  echo "    -i, --incremental-check  Perform incremental check"
+  echo "    -f, --quick-format       Incremental format code by astyle/clang-format"
+  echo "    -k, --style-check        Check code style by astyle"
+  echo "    --cpp-check              Use Cppcheck check code style"
+  echo "    -h, --help               Script help information"
+}
+
+function err() {
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+}
+
+function update_ci_tools() {
+  cd ${CI_TOOLS_PROJECT}
+  git fetch origin
+  git diff > static_check_backup.patch
+  git checkout .
+  git rebase origin/next_docker
+  cd ${CURRENT_PATH}
+  for file in $(find . -regextype posix-extended -regex ".*\.(h)")
+  do
+      cp $file $LOCAL_INCLUDE/docker/iSulad
+  done
+}
+
+PCLINT_MASKED_RULE="679|826|726|322|1001|834"
+
+function pclint_check() {
+    echo -e "\
+=================================================================================================\033[1;35m
+            ____   ______ __     ____ _   __ ______   ______ __  __ ______ ______ __ __
+           / __ \ / ____// /    /  _// | / //_  __/  / ____// / / // ____// ____// //_/
+          / /_/ // /    / /     / / /  |/ /  / /    / /    / /_/ // __/  / /    / ,<
+         / ____// /___ / /___ _/ / / /|  /  / /    / /___ / __  // /___ / /___ / /| |
+        /_/     \____//_____//___//_/ |_/  /_/     \____//_/ /_//_____/ \____//_/ |_| \033[0m
+================================================================================================="
+    local start_time=$(date +%s)
+    local files
+    if [[ ${1} == "all" ]]; then
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(c|cc)")
+    else
+        files=$(git diff --name-only HEAD | grep -E "*.c$")
+    fi
+    files=(${files// / })
+    local total=${#files[@]}
+    local failure_num=0
+    local index=1
+    for file in ${files[@]}
+    do
+        ${PCLINT_TOOL} -i ${LINT_RULE_FILE} std_lcrd.lnt $file 2>&1 | grep -E "Err|Warn|Info" | grep -vE ${PCLINT_MASKED_RULE}
+        if [[ $? -eq 0 ]];then
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
+              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+              failure_num=$((failure_num+1))
+        else
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
+              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+        fi
+        index=$((index+1))
+    done
+    printf "%0.s=" {1..96}
+    printf "\n"
+    local end_time=$(date +%s)
+    local duration=$((${end_time} - ${start_time}))
+    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
+    if [[ ${failure_num} -ne 0 ]]; then
+      exit -1
+    fi
+}
+
+CODESTYLE_MASKED_RULE=(
+  "Start-processing"
+  "Done-processing"
+  "Total-errors-found"
+  "\[build/header_guard\]-\[5\]"
+  "\[build/c++11\]-\[5\]"
+  "\[whitespace/indent\]-\[3\]"
+  "\[whitespace/braces\]-\[4\]"
+  "\[readability/condition\]-\[2\]"
+  "\[whitespace/braces\]-\[5\]"
+  "\[build/c\+\+11\]-\[5\]"
+  "\[build/include_order\]-\[4\]"
+  "\[readability/multiline_string\]-\[5\]"
+  "\[runtime/string\]-\[4\]"
+  "\[whitespace/semicolon\]-\[5\]"
+  "\[whitespace/comments\]-\[2\]"
+  "\[build/c\+\+11\]-\[3\]"
+  "\[whitespace/operators\]-\[4\]"
+  "\[runtime/threadsafe_fn\]-\[2\]"
+  "\[runtime/printf\]-\[4\]"
+)
+function codestyle_check() {
+    echo -e "\
+=================================================================================================\033[1;33m
+           ______ ____   ____   ____ _   __ ______ _____ ________  __ __     ______
+          / ____// __ \ / __ \ /  _// | / // ____// ___//_  __/\ \/ // /    / ____/
+         / /    / / / // / / / / / /  |/ // / __  \__ \  / /    \  // /    / __/
+        / /___ / /_/ // /_/ /_/ / / /|  // /_/ / ___/ / / /     / // /___ / /___
+        \____/ \____//_____//___//_/ |_/ \____/ /____/ /_/     /_//_____//_____/\033[0m
+================================================================================================="
+    local masked_rule=$(echo ${CODESTYLE_MASKED_RULE[@]} | sed -e "s/ /|/g" -e "s/-/ /g")
+    local start_time=$(date +%s)
+    local files
+    if [[ ${1} == "all" ]]; then
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+    else
+        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+    fi
+    files=(${files// / })
+    local total=${#files[@]}
+    local failure_num=0
+    local index=1
+    for file in ${files[@]}
+    do
+        python3 ${CODESTYLE_TOOL} $file 2>&1 | grep -vE "${masked_rule}"
+        if [[ $? -eq 0 ]];then
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
+              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+              failure_num=$((failure_num+1))
+        else
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
+              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+        fi
+        index=$((index+1))
+    done
+    printf "%0.s=" {1..96}
+    printf "\n"
+    local end_time=$(date +%s)
+    local duration=$((${end_time} - ${start_time}))
+    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
+    if [[ ${failure_num} -ne 0 ]]; then
+      exit -1
+    fi
+}
+
+function clang_format() {
+    echo -e "\
+=================================================================================================\033[1;36m
+         ______ __     ___     _   __ ______        ______ ____   ____   __  ___ ___   ______
+        / ____// /    /   |   / | / // ____/       / ____// __ \ / __ \ /  |/  //   | /_  __/
+       / /    / /    / /| |  /  |/ // / __ ______ / /_   / / / // /_/ // /|_/ // /| |  / /
+      / /___ / /___ / ___ | / /|  // /_/ //_____// __/  / /_/ // _, _// /  / // ___ | / /
+      \____//_____//_/  |_|/_/ |_/ \____/       /_/     \____//_/ |_|/_/  /_//_/  |_|/_/ \033[0m]
+================================================================================================="
+    local start_time=$(date +%s)
+    local files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+    files=(${files// / })
+    local total=${#files[@]}
+    local failure_num=0
+    local index=1
+    for file in ${files[@]}
+    do
+        clang-format -i ${file}
+        if [[ $? -ne 0 ]];then
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
+              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+              failure_num=$((failure_num+1))
+        else
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
+              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+        fi
+        index=$((index+1))
+    done
+    printf "%0.s=" {1..96}
+    printf "\n"
+    local end_time=$(date +%s)
+    local duration=$((${end_time} - ${start_time}))
+    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
+}
+
+function do_astyle_fix() {
+    astyle --options=none --lineend=linux --mode=c \
+        --style=kr \
+        --add-braces \
+        --indent=spaces=4 \
+        --indent-preprocessor \
+        --indent-col1-comments \
+        --indent-switches \
+        --indent-cases \
+        --min-conditional-indent=0 \
+        --max-instatement-indent=120 \
+        --max-code-length=120 \
+        --break-after-logical \
+        --pad-oper \
+        --pad-header \
+        --unpad-paren \
+        --pad-comma \
+        --lineend=linux \
+        --align-reference=name \
+        --close-templates \
+        --indent-preproc-define \
+        --indent-cases \
+        --indent-switches \
+        --attach-namespaces \
+        --attach-classes \
+        --attach-extern-c \
+        --attach-closing-while  \
+        --indent-col1-comments  \
+        --break-one-line-headers \
+        --close-templates < "${1}"
+}
+
+function astyle_fix() {
+    [[ -z "${1}" || ! -r "${1}" ]] && exit -1
+    tmp="$(mktemp --tmpdir=$(dirname "${1}"))"
+    do_astyle_fix "${1}" > "${tmp}"
+    sed -i 's/\*const/\* const/g' "${tmp}"
+    mv "${tmp}" "${1}"
+}
+
+function astyle_format() {
+    echo -e "\
+=================================================================================================\033[1;36m
+        ___    _____ ________  __ __     ______       ______ ____   ____   __  ___ ___   ______
+       /   |  / ___//_  __/\ \/ // /    / ____/      / ____// __ \ / __ \ /  |/  //   | /_  __/
+      / /| |  \__ \  / /    \  // /    / __/ ______ / /_   / / / // /_/ // /|_/ // /| |  / /
+     / ___ | ___/ / / /     / // /___ / /___/_____// __/  / /_/ // _, _// /  / // ___ | / /
+    /_/  |_|/____/ /_/     /_//_____//_____/      /_/     \____//_/ |_|/_/  /_//_/  |_|/_/ \033[0m]
+================================================================================================="
+    local start_time=$(date +%s)
+    local files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+    files=(${files// / })
+    local total=${#files[@]}
+    local failure_num=0
+    local index=1
+    for file in ${files[@]}
+    do
+        astyle_fix ${file}
+        if [[ $? -ne 0 ]];then
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
+              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+              failure_num=$((failure_num+1))
+        else
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
+              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+        fi
+        index=$((index+1))
+    done
+    printf "%0.s=" {1..96}
+    printf "\n"
+    local end_time=$(date +%s)
+    local duration=$((${end_time} - ${start_time}))
+    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
+}
+
+function quick_format() {
+    if [[ $1 == "clang-format" ]]; then
+        clang_format
+    else
+        astyle_format
+    fi
+}
+
+function do_astyle_check() {
+    [[ -z "$1" || ! -r "$1" ]] && return -1
+
+    do_astyle_fix "$1" | diff -pu --label="$1.orig" "$1" --label="$1" -
+    if [[ $? -ne 0 ]]; then
+        return -1
+    fi
+}
+
+function style_check() {
+echo -e "\
+=================================================================================================
+    ███████╗████████╗██╗   ██╗██╗     ███████╗     ██████╗██╗  ██╗███████╗ ██████╗██╗  ██╗
+    ██╔════╝╚══██╔══╝╚██╗ ██╔╝██║     ██╔════╝    ██╔════╝██║  ██║██╔════╝██╔════╝██║ ██╔╝
+    ███████╗   ██║    ╚████╔╝ ██║     █████╗      ██║     ███████║█████╗  ██║     █████╔╝
+    ╚════██║   ██║     ╚██╔╝  ██║     ██╔══╝      ██║     ██╔══██║██╔══╝  ██║     ██╔═██╗
+    ███████║   ██║      ██║   ███████╗███████╗    ╚██████╗██║  ██║███████╗╚██████╗██║  ██╗
+    ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚══════╝     ╚═════╝╚═╝  ╚═╝╚══════╝ ╚═════╝╚═╝  ╚═╝
+================================================================================================="
+    local start_time=$(date +%s)
+    local files
+    if [[ ${1} == "all" ]]; then
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+    else
+        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+    fi
+    files=(${files// / })
+    local total=${#files[@]}
+    local failure_num=0
+    local index=1
+    for file in ${files[@]}
+    do
+        do_astyle_check ${file}
+        if [[ $? -ne 0 ]];then
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
+              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+              failure_num=$((failure_num+1))
+        else
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
+              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+        fi
+        index=$((index+1))
+    done
+    printf "%0.s=" {1..96}
+    printf "\n"
+    local end_time=$(date +%s)
+    local duration=$((${end_time} - ${start_time}))
+    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
+    if [[ ${failure_num} -ne 0 ]]; then
+      exit -1
+    fi
+}
+
+CPPCHRECK_RULE=(
+    "information"
+    "warning"
+    "performance"
+    "style"
+    # "unusedFunction"
+    # "all"
+)
+CPPCHRCK_LOG="${CURRENT_PATH}/cppcheck.log"
+
+function cpp_check() {
+    echo -e "\
+=================================================================================================\033[1;33m
+                   ______ ____   ____     ______ __  __ ______ ______ __ __
+                  / ____// __ \ / __ \   / ____// / / // ____// ____// //_/
+                 / /    / /_/ // /_/ /  / /    / /_/ // __/  / /    / ,<
+                / /___ / ____// ____/  / /___ / __  // /___ / /___ / /| |
+                \____//_/    /_/       \____//_/ /_//_____/ \____//_/ |_|\033[0m
+================================================================================================="
+    echo "cpp check is in progress, please wait a few seconds..."
+    printf "%0.s*" {1..97}
+    printf "\n"
+    local check_rule=$(echo ${CPPCHRECK_RULE[@]} | sed -e "s/ /,/g")
+    local start_time=$(date +%s)
+    result=$(cppcheck --enable=${check_rule} -j $(nproc) -i ./build ./ 2>&1 | grep -vE "^Checking|done$")
+    nums=$(echo "${result}" | wc -l)
+    echo "${result}"
+    local end_time=$(date +%s)
+    local duration=$((${end_time} - ${start_time}))
+    if [[ ${nums} -eq 0 ]] || [[ -z ${result} ]]; then
+        echo -e "\033[1;32mSuccess: clean code!\033[0m \033[1;33mSpend time: ${duration} seconds\033[0m"
+    else
+        printf "%0.s*" {1..97}
+        printf "\n"
+        echo -e "\033[1;31mFailure: There are ${nums} warnings that you need to handle\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
+        exit -1
+    fi
+}
+
+function cmetrics_check() {
+    echo -e "\
+=================================================================================================\033[1;36m
+     ______ __  ___ ______ ______ ____   ____ ______ _____    ______ __  __ ______ ______ __ __
+    / ____//  |/  // ____//_  __// __ \ /  _// ____// ___/   / ____// / / // ____// ____// //_/
+   / /    / /|_/ // __/    / /  / /_/ / / / / /     \__ \   / /    / /_/ // __/  / /    / ,<
+  / /___ / /  / // /___   / /  / _, _/_/ / / /___  ___/ /  / /___ / __  // /___ / /___ / /| |
+  \____//_/  /_//_____/  /_/  /_/ |_|/___/ \____/ /____/   \____//_/ /_//_____/ \____//_/ |_|\033[0m
+================================================================================================="
+    if [[ ${1} == "simple" ]]; then
+        printf "%0.s*" {1..97}
+        printf "\n"
+        result=$(python3 ${CMETRICS_TOOL} -fp ./src)
+        echo "${result}"
+        printf "%0.s*" {1..97}
+        printf "\n"
+        CyclomaticComplexityPerMethod=$(echo "${result}" | grep '\[\*\] Cyclomatic Complexity per Method' | awk '{print $NF}')
+        if [[ $(echo "${CyclomaticComplexityPerMethod} > 5" | bc) -eq 1 ]]; then
+            echo -e "\033[1;31mFailure: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) greater then 5\033[0m."
+            exit 1
+        else
+            echo -e "\033[1;32mSuccess: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) less then 5\033[0m."
+            exit 0
+        fi
+    fi
+
+    local start_time=$(date +%s)
+    local files
+    if [[ ${1} == "all" ]]; then
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+    else
+        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+    fi
+    files=(${files// / })
+    local total=${#files[@]}
+    local failure_num=0
+    local index=1
+    if [[ ${total} -eq 0 ]]; then
+        return 0
+    fi
+    for file in ${files[@]}
+    do
+        result=$(python3 ${CMETRICS_TOOL} -fp ${file})
+        CyclomaticComplexityperMethod=$(echo "${result}" | grep "\[\*\] Cyclomatic Complexity per Method:" | awk '{print $NF}')
+        CyclomaticComplexityperMethod=${CyclomaticComplexityperMethod:-0}
+        MaximumCyclomaticComplexity=$(echo "${result}" | grep "\[\*\] Maximum Cyclomatic Complexity:" | awk '{print $NF}')
+        MaximumCyclomaticComplexity=${MaximumCyclomaticComplexity:-0}
+        MaximumDepth=$(echo "${result}" | grep "\[\*\] Maximum Depth:" | awk '{print $NF}')
+        MaximumDepth=${MaximumDepth:-0}
+        RawLines=$(echo "${result}" | grep "\[\*\] Raw Lines:" | awk '{print $NF}')
+        RawLines=${RawLines:-0}
+        if [[ ${MaximumCyclomaticComplexity} -gt 10 ]] || [[ $(echo "${CyclomaticComplexityperMethod} > 5" | bc) -eq 1 ]] || \
+          [[ ${MaximumDepth} -gt 5 ]] || [[ ${RawLines} -gt 2000 ]]; then
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
+              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+              failure_num=$((failure_num+1))
+        else
+            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
+              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
+        fi
+        printf "%s\n%s\n%s\n            %-1.3f                  |             %3d               |     %2d        |    %4d\n%s\n" \
+"-------------------------------------------------------------------------------------------------" \
+"  Cyclomatic Complexity per Method | Maximum Cyclomatic Complexity | Maximum Depth | Raw Lines   " \
+"-------------------------------------------------------------------------------------------------" \
+  ${CyclomaticComplexityperMethod}    ${MaximumCyclomaticComplexity} ${MaximumDepth}  ${RawLines}   \
+"-------------------------------------------------------------------------------------------------"
+        index=$((index+1))
+    done
+    printf "%0.s=" {1..97}
+    printf "\n"
+    local end_time=$(date +%s)
+    local duration=$((${end_time} - ${start_time}))
+    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
+    printf "%0.s*" {1..97}
+    printf "\n"
+    if [[ ${1} == "all" ]]; then
+        result=$(python3 ${CMETRICS_TOOL} -fp ./src)
+    else
+        result=$(python3 ${CMETRICS_TOOL} -fp ${files[@]})
+    fi
+    echo "${result}"
+    printf "%0.s*" {1..96}
+    printf "\n"
+    CyclomaticComplexityPerMethod=$(echo "${result}" | grep '\[\*\] Cyclomatic Complexity per Method' | awk '{print $NF}')
+    if [[ $(echo "${CyclomaticComplexityPerMethod} > 5" | bc) -eq 1 ]]; then
+        echo -e "\033[1;31mFailure: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) greater then 5\033[0m."
+        exit 1
+    else
+        echo -e "\033[1;32mSuccess: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) less then 5\033[0m."
+        exit 0
+    fi
+}
+
+function incremental_check() {
+    style_check "incremental"
+    if [[ $? -ne 0 ]]; then
+        exit -1
+    fi
+    pclint_check "incremental"
+    if [[ $? -ne 0 ]]; then
+        exit -1
+    fi
+    codestyle_check "incremental"
+    if [[ $? -ne 0 ]]; then
+        exit -1
+    fi
+    cpp_check
+    if [[ $? -ne 0 ]]; then
+        return -1
+    fi
+    cmetrics_check "incremental"
+}
+
+function static_check_all() {
+    style_check "all"
+    if [[ $? -ne 0 ]]; then
+        return -1
+    fi
+    pclint_check "all"
+    if [[ $? -ne 0 ]]; then
+        return -1
+    fi
+    codestyle_check "all"
+    if [[ $? -ne 0 ]]; then
+        return -1
+    fi
+    cpp_check
+    if [[ $? -ne 0 ]]; then
+        return -1
+    fi
+    cmetrics_check "simple"
+}
+
+args=`getopt -o upscmiaf:kh --long update-ci-tools,pclint,codestyle,detail-cmetrics,simple-cmetrics,incremental-check,all,quick-format:,style-check,cpp-check,help -- "$@"`
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+eval set -- "$args"
+
+while true; do
+  case "$1" in
+    -u|--update-ci-tools)   update_ci_tools || (err "failed to update ci tools project" && exit -1); shift ;;
+    -p|--pclint)            pclint_check "all" || (err "failed to perfrom pclint code static check" && exit -1); shift ;;
+    -s|--codestyle)         codestyle_check "all" || (err "failed to perfrom codestyle(codedex) code static check" && exit -1); shift ;;
+    -c|--detail-cmetrics)   cmetrics_check "all" || (err "failed to perform detail checks and statistics" && exit -1); shift ;;
+    -m|--simple-cmetrics)   cmetrics_check "simple" || (err "failed to perform simple checks and statistics" && exit -1); shift ;;
+    -i|--incremental-check) incremental_check || (err "failed to perform incremental check" && exit -1); shift ;;
+    -a|--all)               static_check_all || (err "failed to perform all checks and statistics" && exit -1); shift ;;
+    -f|--quick-format)      quick_format $2 || (err "failed to format code" && exit -1); shift 2 ;;
+    -k|--style-check)       style_check "all" || (err "failed to check code style" && exit -1); shift ;;
+    --cpp-check)            cpp_check || (err "failed to check code style" && exit -1); shift ;;
+    -h|--help)              usage ; exit 0 ;;
+    --)                     shift ; break ;;
+    *)                      err "invalid parameter" ; exit -1 ;;
+  esac
+done
+

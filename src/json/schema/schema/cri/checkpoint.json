@@ -1,0 +1,21 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"version": {
+		  "type": "string"
+		},
+		"name": {
+		  "type": "string"
+		},
+		"ns": {
+		  "type": "string"
+		},
+		"data": {
+			"$ref": "checkpoint_data.json"
+		},
+		"checksum": {
+		  "type": "string"
+		}
+	}
+}

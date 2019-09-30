@@ -1,0 +1,24 @@
+{
+  "description": "Huawei docker search Specification",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "mediaType": {
+      "type": "string"
+    },
+    "size": {
+      "type": "int64"
+    },
+    "digest": {
+      "type": "string"
+    },
+    "pathInHost": {
+      "type": "string"
+    },
+    "pathInContainer": {
+      "type": "string"
+    }
+  },
+  "required": [
+  ]
+}

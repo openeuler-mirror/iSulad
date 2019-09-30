@@ -1,0 +1,27 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"container_id": {
+			"type": "string"
+		},
+		"attach_stdin": {
+			"type": "boolean"
+		},
+		"attach_stdout": {
+			"type": "boolean"
+		},
+		"attach_stderr": {
+			"type": "boolean"
+		},
+		"stdin": {
+			"type": "string"
+		},
+		"stdout": {
+			"type": "string"
+		},
+		"stderr": {
+			"type": "string"
+		}
+	}
+}

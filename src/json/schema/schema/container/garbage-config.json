@@ -1,0 +1,32 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"GcContainers": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"runtime": {
+						"type": "string"
+					},
+					"pid": {
+						"type": "integer"
+					},
+					"StartTime": {
+						"type": "uint64"
+					},
+					"ppid": {
+						"type": "integer"
+					},
+					"PStartTime": {
+						"type": "uint64"
+                    }
+				}
+			}
+		}
+	}
+}

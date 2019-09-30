@@ -1,0 +1,18 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "ErrCode": {
+            "type": "integer"
+        },
+        "ErrMessage": {
+            "type": "string"
+        },
+        "ID": {
+            "type": "string"
+        },
+        "Pspec": {
+            "type": "string"
+        }
+    }
+}

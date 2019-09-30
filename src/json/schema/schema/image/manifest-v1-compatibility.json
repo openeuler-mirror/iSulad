@@ -1,0 +1,29 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"id": {
+			"type": "string"
+		},
+		"parent": {
+			"type": "string"
+		},
+		"created": {
+			"type": "string"
+		},
+		"throwaway": {
+			"type": "boolean"
+		},
+		"container_config": {
+			"type": "object",
+			"properties": {
+				"Cmd" : {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		}
+	}
+}

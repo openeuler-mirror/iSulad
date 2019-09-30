@@ -1,0 +1,116 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "defaultAction": {
+            "id": "https://opencontainers.org/schema/bundle/linux/seccomp/defaultAction",
+            "type": "string"
+        },
+        "archMap": {
+            "id": "https://opencontainers.org/schema/bundle/linux/seccomp/architectures",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "architecture": {
+                        "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                    },
+                    "subArchitectures": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                        }
+                    }
+                }
+            }
+        },
+        "syscalls": {
+            "id": "https://opencontainers.org/schema/bundle/linux/seccomp/syscalls",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "names": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    },
+                    "action": {
+                        "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompAction"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "index": {
+                                    "$ref": "../oci/runtime/defs.json#/definitions/uint32"
+                                },
+                                "value": {
+                                    "$ref": "../oci/runtime/defs.json#/definitions/uint64"
+                                },
+                                "valueTwo": {
+                                    "$ref": "../oci/runtime/defs.json#/definitions/uint64"
+                                },
+                                "op": {
+                                    "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompOperators"
+                                }
+                            },
+                            "required": [
+                                "index",
+                                "value",
+                                "op"
+                            ]
+                        }
+                    },
+                    "comment": {
+                        "type": "string"
+                    },
+                    "includes": {
+                        "type": "object",
+                        "properties": {
+                            "arches": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                                }
+                            },
+                            "caps": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "excludes": {
+                        "type": "object",
+                        "properties": {
+                            "arches": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                                }
+                            },
+                            "caps": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "names",
+                    "action"
+                ]
+            }
+        }
+    },
+    "required": [
+        "defaultAction"
+    ]
+}

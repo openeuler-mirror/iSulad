@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "seconds": {
+      "type": "int64"
+    },
+    "nanos": {
+      "type": "int32"
+    }
+  }
+}

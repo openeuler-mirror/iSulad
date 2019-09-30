@@ -1,0 +1,15 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"port_mappings": {
+			"type": "array",
+			"items": {
+				"$ref": "port_mapping.json"
+			}
+		},
+		"host_network": {
+			"type": "boolean"
+		}
+	}
+}

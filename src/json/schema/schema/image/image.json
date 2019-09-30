@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "labels": {
+      "$ref": "../defs.json#/definitions/mapStringString"
+    },
+    "target": {
+      "$ref": "descriptor.json"
+    },
+    "created_at": {
+      "$ref": "../timestamp.json"
+    },
+    "updated_at": {
+      "$ref": "../timestamp.json"
+    }
+  }
+}

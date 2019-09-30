@@ -1,0 +1,165 @@
+#!/bin/sh
+
+
+KERNELCONFIG="/proc/config.gz"
+MODNAME="configs"
+KVER="$(uname -r)"
+HEADERS_CFG="/lib/modules/$KVER/build/.config"
+BOOT_CFG="/boot/config-$KVER"
+
+CAT="cat"
+
+SETCOLOR_SUCCESS="echo -en \\033[1;32m"
+SETCOLOR_FAILURE="echo -en \\033[1;31m"
+SETCOLOR_WARNING="echo -en \\033[1;33m"
+SETCOLOR_NORMAL="echo -en \\033[0;39m"
+
+$SETCOLOR_SUCCESS
+echo ""
+echo "---This is iSula environment check program---"
+echo ""
+if [ ! -f /etc/euleros-release ]; then
+    $SETCOLOR_FAILURE
+    echo "Make sure you are running this program on EulerOS System"
+    exit 1 
+fi
+
+config_set() 
+{
+    $CAT $KERNELCONFIG | grep "$1=[y|m]" > /dev/null
+    return $?
+}
+
+config_enable() 
+{
+
+    config_set $1
+    force=$2
+
+    if [ $? -eq 0 ]; then
+        $SETCOLOR_SUCCESS 
+        echo "enabled" 
+        $SETCOLOR_NORMAL
+    else
+        if [ "$force" = yes ]; then
+            $SETCOLOR_FAILURE
+            echo "required"
+            $SETCOLOR_NORMAL
+        else
+            $SETCOLOR_WARNING
+            echo "missing"
+            $SETCOLOR_NORMAL
+        fi
+    fi
+}
+
+has_lib() 
+{
+    ldconfig -v 2>&1 | grep $1 > /dev/null 2>&1
+
+    if [ $? -eq 0 ]; then
+        $SETCOLOR_SUCCESS
+        echo "installed"
+        $SETCOLOR_NORMAL
+    else
+        $SETCOLOR_WARNING
+        echo "missing"
+        $SETCOLOR_NORMAL
+    fi
+}
+
+print_cgroup() 
+{
+  awk '$1 !~ /#/ && $3 == mp { print $2; } ; END { exit(0); } '  "mp=$1" "$2" ;
+}
+
+
+CGROUP_PATH=`print_cgroup cgroup /proc/self/mounts | head -n 1`
+
+if [ ! -f $KERNELCONFIG ]; then
+
+    if [ -f "${HEADERS_CFG}" ]; then  
+        KERNELCONFIG=${HEADERS_CFG}
+    fi
+
+    if [ -f "${BOOT_CFG}" ]; then
+        KERNELCONFIG=${BOOT_CFG}
+    fi
+
+    if [ ! -f $KERNELCONFIG ]; then
+        $SETCOLOR_FAILURE && echo "Can not get kernel configuration" >&2
+        exit 1
+    fi
+fi
+
+if gunzip -tq < $KERNELCONFIG 2>/dev/null; then
+    CAT="zcat"
+fi
+
+$SETCOLOR_NORMAL
+echo "--- Namespaces Config ---"
+#you can add more namespace type here
+
+echo -n "Ipc Namespace Result: " && config_enable CONFIG_IPC_NS yes
+echo -n "Pid Namespace Result: " && config_enable CONFIG_PID_NS yes
+echo -n "User Namespace Result: " && config_enable CONFIG_USER_NS
+echo -n "Network Namespace Result: " && config_enable CONFIG_NET_NS
+echo -n "Mount Namespaces Result: " && config_enable CONFIG_NAMESPACES yes
+echo -n "Utsname Namespace Result: " && config_enable CONFIG_UTS_NS
+
+if config_set CONFIG_USER_NS; then
+        if type newuidmap > /dev/null 2>&1; then
+                f=`type -P newuidmap`
+                if [ ! -u "${f}" ]; then
+                        $SETCOLOR_WARNING
+                        echo "Warning: newuidmap is not setuid-root"
+                fi
+        else
+                echo "newuidmap not installed"
+        fi
+        if type newgidmap > /dev/null 2>&1; then
+                f=`type -P newgidmap`
+                if [ ! -u "${f}" ]; then
+                        $SETCOLOR_WARNING 
+                        echo "Warning: newgidmap is not setuid-root"
+                fi
+        else
+                echo "newgidmap not installed"
+        fi
+fi
+
+
+echo ""
+echo "--- Cgroups Config---"
+CGROUP_PATH=`print_cgroup cgroup /proc/self/mounts | head -n 1`
+
+echo -n "Cgroup: " && config_enable CONFIG_CGROUPS yes
+
+if [ -f $CGROUP_PATH/cgroup.clone_children ]; then
+    echo -n "Cgroup clone_children flag: " &&
+    $SETCOLOR_SUCCESS
+    echo "enabled" 
+    $SETCOLOR_NORMAL
+else
+    echo -n "Cgroup namespace: " && config_enable CONFIG_CGROUP_NS yes
+fi
+echo -n "Cpu account Cgroup Result: " && config_enable CONFIG_CGROUP_CPUACCT
+echo -n "Device Cgroup Result: " && config_enable CONFIG_CGROUP_DEVICE
+echo -n "Pids Cgroup Result: " && config_enable CONFIG_CGROUP_PIDS
+echo -n "Hugetlb Cgroup Result: " && config_enable CONFIG_CGROUP_HUGETLB
+echo -n "Freezer Cgroup Result: " && config_enable CONFIG_CGROUP_FREEZER
+echo -n "Memory controller Cgroup Result: "
+config_enable CONFIG_MEMCG
+config_set CONFIG_SMP && echo -n "Cpuset Cgroup Result: " && config_enable CONFIG_CPUSETS
+
+echo ""
+echo "--- Third-party Packages ---"
+echo -n "libyajl: " && has_lib libyajl
+echo -n "libhttp_parser: " && has_lib libhttp_parser
+echo -n "libevhtp.so.1.2.16: " && has_lib libevhtp.so.1.2.16
+echo -n "libseccomp: " && has_lib libseccomp
+echo -n "libcap.so: " && has_lib libcap.so
+echo -n "libsecurec.so: " && has_lib libsecurec.so
+
+echo "---------------------------------"
+

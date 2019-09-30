@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "created": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "comment": {
+      "type": "string"
+    },
+    "empty_layer": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+  ]
+}

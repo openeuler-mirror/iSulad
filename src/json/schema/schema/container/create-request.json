@@ -1,0 +1,27 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"id": {
+			"type": "string"
+		},
+		"rootfs": {
+			"type": "string"
+		},
+		"image": {
+			"type": "string"
+		},
+		"runtime": {
+			"type": "string"
+		},
+		"restart": {
+			"type": "string"
+		},
+		"hostconfig": {
+			"type": "string"
+		},
+		"customconfig": {
+			"type": "string"
+		}
+	}
+}

@@ -1,0 +1,84 @@
+/******************************************************************************
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * iSulad licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ * Author: tanyifeng
+ * Create: 2018-11-22
+ * Description: provide container rest definition
+ **********************************************************************************/
+#ifndef CONTAINER_REST_H_
+#define CONTAINER_REST_H_
+
+#include "container_create_request.h"
+#include "container_create_response.h"
+#include "container_start_request.h"
+#include "container_start_response.h"
+#include "container_stop_request.h"
+#include "container_stop_response.h"
+#include "container_restart_request.h"
+#include "container_restart_response.h"
+#include "container_pause_request.h"
+#include "container_pause_response.h"
+#include "container_kill_request.h"
+#include "container_kill_response.h"
+#include "container_update_request.h"
+#include "container_update_response.h"
+#include "container_version_request.h"
+#include "container_version_response.h"
+#include "container_exec_request.h"
+#include "container_exec_response.h"
+#include "container_delete_request.h"
+#include "container_delete_response.h"
+#include "container_inspect_request.h"
+#include "container_inspect_response.h"
+#include "container_list_request.h"
+#include "container_list_response.h"
+#include "container_attach_request.h"
+#include "container_attach_response.h"
+#include "container_resume_request.h"
+#include "container_resume_response.h"
+#include "container_wait_request.h"
+#include "container_wait_response.h"
+#include "container_conf_request.h"
+#include "container_conf_response.h"
+
+#ifndef RestHttpHead
+#define RestHttpHead "http://localhost"
+#endif
+
+#define ContainerServiceCreate "/ContainerService/Create"
+#define ContainerServiceStart "/ContainerService/Start"
+#define ContainerServiceRestart "/ContainerService/Restart"
+#define ContainerServiceStop "/ContainerService/Stop"
+#define ContainerServiceVersion "/ContainerService/Version"
+#define ContainerServiceUpdate "/ContainerService/Update"
+#define ContainerServicePause "/ContainerService/Pause"
+#define ContainerServiceKill "/ContainerService/Kill"
+#define ContainerServiceExec "/ContainerService/Exec"
+#define ContainerServiceRemove "/ContainerService/Remove"
+#define ContainerServiceInspect "/ContainerService/Inspect"
+#define ContainerServiceList "/ContainerService/List"
+#define ContainerServiceAttach "/ContainerService/Attach"
+#define ContainerServiceResume "/ContainerService/Resume"
+#define ContainerServiceWait "/ContainerService/Wait"
+#define ContainerServiceConf "/ContainerService/Container_conf"
+
+/* "/ContainerService/Kill",
+"/ContainerService/Delete",
+"/ContainerService/Pause",
+"/ContainerService/Info",
+"/ContainerService/Inspect",
+"/ContainerService/Stats",
+"/ContainerService/Events",
+"/ContainerService/Exec",
+"/ContainerService/Version",
+"/ContainerService/Update",
+"/ContainerService/Attach",
+*/
+#endif

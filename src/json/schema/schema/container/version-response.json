@@ -1,0 +1,24 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"version": {
+			"type": "string"
+		},
+		"git_commit": {
+			"type": "string"
+		},
+		"build_time": {
+			"type": "string"
+		},
+		"root_path": {
+			"type": "string"
+		},
+		"cc": {
+			"type": "uint32"
+		},
+		"errmsg": {
+			"type": "string"
+		}
+	}
+}

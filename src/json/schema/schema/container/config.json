@@ -1,0 +1,95 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "Hostname": {
+            "type": "string"
+        },
+        "Domainname": {
+            "type": "string"
+        },
+        "User": {
+            "type": "string"
+        },
+        "AttachStdin": {
+            "type": "boolean"
+        },
+        "AttachStdout": {
+            "type": "boolean"
+        },
+        "AttachStderr": {
+            "type": "boolean"
+        },
+        "ExposedPorts": {
+            "$ref": "../defs.json#/definitions/mapStringObject"
+        },
+        "PublishService": {
+            "type": "string"
+        },
+        "Tty": {
+            "type": "boolean"
+        },
+        "OpenStdin": {
+            "type": "boolean"
+        },
+        "StdinOnce": {
+            "type": "boolean"
+        },
+        "Env": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "Cmd": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "ArgsEscaped": {
+            "type": "boolean"
+        },
+        "Image": {
+            "type": "string"
+        },
+        "Volumes": {
+            "$ref": "../defs.json#/definitions/mapStringObject"
+        },
+        "WorkingDir": {
+            "type": "string"
+        },
+        "Entrypoint": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "NetworkDisabled": {
+            "type": "boolean"
+        },
+        "MacAddress": {
+            "type": "string"
+        },
+        "Onbuild": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "Labels": {
+            "$ref": "../defs.json#/definitions/mapStringString"
+        },
+        "Annotations": {
+            "$ref": "../defs.json#/definitions/mapStringString"
+        },
+        "StopSignal": {
+            "type": "string"
+        },
+        "HealthCheck": {
+            "$ref": "../defs.json#/definitions/HealthCheck"
+        }
+    },
+    "required": [
+    ]
+}

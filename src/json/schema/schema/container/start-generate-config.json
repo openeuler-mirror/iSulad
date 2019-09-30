@@ -1,0 +1,18 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+        "uid": {
+            "id": "https://opencontainers.org/schema/bundle/process/user/uid",
+            "$ref": "../defs.json#/definitions/UID"
+        },
+        "gid": {
+            "id": "https://opencontainers.org/schema/bundle/process/user/gid",
+            "$ref": "../defs.json#/definitions/GID"
+        },
+        "additionalGids": {
+            "id": "https://opencontainers.org/schema/bundle/process/user/additionalGids",
+            "$ref": "../defs.json#/definitions/ArrayOfGIDs"
+        }
+	}
+}

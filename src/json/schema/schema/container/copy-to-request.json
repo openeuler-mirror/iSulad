@@ -1,0 +1,24 @@
+{
+    "$schema":"http://json-schema.org/draft-04/schema#",
+    "type":"object",
+    "properties":{
+        "id":{
+            "type": "string"
+        },
+        "runtime":{
+            "type": "string"
+        },
+        "srcPath":{
+            "type": "string"
+        },
+        "srcIsdir":{
+            "type": "boolean"
+        },
+        "srcRebaseName":{
+            "type": "string"
+        },
+        "dstPath":{
+            "type": "string"
+        }
+    }
+}

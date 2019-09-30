@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "media_type": {
+      "type": "string"
+    },
+    "digest": {
+      "type": "string"
+    },
+    "size": {
+      "type": "int64"
+    }
+  }
+}

@@ -1,0 +1,727 @@
+/******************************************************************************
+ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+ * iSulad licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ * Author: tanyifeng
+ * Create: 2018-11-1
+ * Description: provide image functions
+ *********************************************************************************/
+
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <malloc.h>
+
+#include "image_cb.h"
+#include "utils.h"
+#include "error.h"
+#include "liblcrd.h"
+#include "log.h"
+#include "image.h"
+#include "securec.h"
+#include "engine.h"
+#include "lcrd_config.h"
+#include "mediatype.h"
+
+static int docker_load_image(const char *file, const char *tag, const char *type)
+{
+    int ret = 0;
+    im_load_request *request = NULL;
+    im_load_response *response = NULL;
+
+    if (file == NULL || type == NULL) {
+        ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    request = util_common_calloc_s(sizeof(im_load_request));
+    if (request == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    if (tag != NULL) {
+        request->tag = util_strdup_s(tag);
+    }
+    request->file = util_strdup_s(file);
+    request->type = util_strdup_s(type);
+
+    ret = im_load_image(request, &response);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_im_load_request(request);
+    free_im_load_response(response);
+    return ret;
+}
+
+/* image load cb*/
+static int image_load_cb(const image_load_image_request *request,
+                         image_load_image_response **response)
+{
+    int ret = -1;
+    uint32_t cc = LCRD_SUCCESS;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = util_common_calloc_s(sizeof(image_load_image_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto out;
+    }
+
+    if (request->file == NULL || request->type == NULL) {
+        ERROR("input arguments error");
+        cc = LCRD_ERR_INPUT;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Loading}",
+          request->file);
+
+    ret = docker_load_image(request->file, request->tag, request->type);
+    if (ret != 0) {
+        ERROR("Failed to load docker image %s with tag %s and type %s",
+              request->file, request->tag, request->type);
+        cc = EINVALIDARGS;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Loaded}",
+          request->file);
+out:
+
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_lcrd_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
+static int docker_login(const char *username, const char *password, const char *server, const char *type)
+{
+    int ret = 0;
+    im_login_request *request = NULL;
+    im_login_response *response = NULL;
+
+    request = util_common_calloc_s(sizeof(im_login_request));
+    if (request == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    request->username = util_strdup_s(username);
+    request->password = util_strdup_s(password);
+    request->server = util_strdup_s(server);
+    request->type = util_strdup_s(type);
+
+    ret = im_login(request, &response);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_im_login_request(request);
+    free_im_login_response(response);
+    return ret;
+}
+
+/* login cb */
+static int login_cb(const image_login_request *request,
+                    image_login_response **response)
+{
+    int ret = -1;
+    uint32_t cc = LCRD_SUCCESS;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        cc = LCRD_ERR_INPUT;
+        goto out;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = util_common_calloc_s(sizeof(image_login_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto out;
+    }
+
+    if (request->username == NULL || request->password == NULL ||
+        request->type == NULL || request->server == NULL) {
+        ERROR("input arguments error");
+        cc = LCRD_ERR_INPUT;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Logining}", request->server);
+
+    ret = docker_login(request->username, request->password, request->server, request->type);
+    if (ret != 0) {
+        ERROR("Failed to login %s", request->server);
+        cc = EINVALIDARGS;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Logined}", request->server);
+out:
+
+    if (response != NULL && *response != NULL) {
+        (*response)->cc = cc;
+        if (g_lcrd_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
+static int docker_logout(const char *server, const char *type)
+{
+    int ret = 0;
+    im_logout_request *request = NULL;
+    im_logout_response *response = NULL;
+
+    request = util_common_calloc_s(sizeof(im_logout_request));
+    if (request == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    request->server = util_strdup_s(server);
+    request->type = util_strdup_s(type);
+
+    ret = im_logout(request, &response);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_im_logout_request(request);
+    free_im_logout_response(response);
+    return ret;
+}
+
+/* logout cb */
+static int logout_cb(const image_logout_request *request,
+                     image_logout_response **response)
+{
+    int ret = -1;
+    uint32_t cc = LCRD_SUCCESS;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        cc = LCRD_ERR_INPUT;
+        goto out;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = util_common_calloc_s(sizeof(image_logout_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto out;
+    }
+
+    if (request->type == NULL || request->server == NULL) {
+        ERROR("input arguments error");
+        cc = LCRD_ERR_INPUT;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Logouting}", request->server);
+
+    ret = docker_logout(request->server, request->type);
+    if (ret != 0) {
+        ERROR("Failed to logout %s", request->server);
+        cc = EINVALIDARGS;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Logouted}", request->server);
+out:
+
+    if (response != NULL && *response != NULL) {
+        (*response)->cc = cc;
+        if (g_lcrd_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
+/* delete image info*/
+static int delete_image_info(const char *image_ref, bool force)
+{
+    int ret = 0;
+    im_remove_request *im_request = NULL;
+    im_remove_response *im_response = NULL;
+
+    if (image_ref == NULL) {
+        ERROR("invalid NULL param");
+        return EINVALIDARGS;
+    }
+
+    im_request = util_common_calloc_s(sizeof(im_remove_request));
+    if (im_request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    im_request->image.image = util_strdup_s(image_ref);
+    im_request->force = force;
+
+    ret = im_rm_image(im_request, &im_response);
+    if (ret != 0) {
+        if (im_response != NULL && im_response->errmsg != NULL) {
+            ERROR("Remove image %s failed:%s", image_ref, im_response->errmsg);
+            lcrd_try_set_error_message("Remove image %s failed:%s", image_ref, im_response->errmsg);
+        } else {
+            ERROR("Remove image %s failed", image_ref);
+            lcrd_try_set_error_message("Remove image %s failed", image_ref);
+        }
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_im_remove_request(im_request);
+    free_im_remove_response(im_response);
+
+    return ret;
+}
+
+/* image remove cb */
+static int image_remove_cb(const image_delete_image_request *request,
+                           image_delete_image_response **response)
+{
+    int ret = -1;
+    char *image_ref = NULL;
+    uint32_t cc = LCRD_SUCCESS;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    if (request == NULL || request->image_name == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    image_ref = request->image_name;
+
+    *response = util_common_calloc_s(sizeof(image_delete_image_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto out;
+    }
+
+    if (!util_valid_image_name(image_ref)) {
+        ERROR("Invalid image name %s", image_ref);
+        cc = LCRD_ERR_INPUT;
+        lcrd_try_set_error_message("Invalid image name:%s",
+                                   image_ref);
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Deleting}", image_ref);
+
+    ret = delete_image_info(image_ref, request->force);
+    if (ret != 0) {
+        cc = LCRD_ERR_EXEC;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Deleted}", image_ref);
+
+out:
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_lcrd_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
+static bool valid_repo_tags(char * const * const repo_tags, size_t repo_index)
+{
+    if (repo_tags != NULL && repo_tags[repo_index] != NULL) {
+        return true;
+    }
+
+    return false;
+}
+
+static int trans_one_image(image_list_images_response *response, size_t image_index,
+                           const imagetool_image *im_image, size_t repo_index)
+{
+    int ret = 0;
+    image_image *out_image = NULL;
+
+    out_image = util_common_calloc_s(sizeof(image_image));
+    if (out_image == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    response->images[image_index] = out_image;
+    response->images_len++;
+
+    if (valid_repo_tags(im_image->repo_tags, repo_index)) {
+        out_image->name = util_strdup_s(im_image->repo_tags[repo_index]);
+    }
+
+    out_image->target = util_common_calloc_s(sizeof(image_descriptor));
+    if (out_image->target == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    /* This digest is image id. */
+    out_image->target->digest = util_full_digest(im_image->id);
+    out_image->target->size = (int64_t)im_image->size;
+
+    out_image->created_at = util_common_calloc_s(sizeof(timestamp));
+    if (out_image->created_at == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (im_image->created != NULL) {
+        if (time_tz_to_seconds_nanos(im_image->created,
+                                     &(out_image->created_at->seconds),
+                                     &(out_image->created_at->nanos))) {
+            ERROR("Failed to translate created to seconds and nanos");
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+
+    return ret;
+}
+
+static size_t calc_images_display_num(const imagetool_images_list *images)
+{
+    size_t images_num = 0;
+    size_t i = 0;
+    const imagetool_image *im_image = NULL;
+
+    for (i = 0; i < images->images_len; i++) {
+        size_t j = 0;
+        im_image = images->images[i];
+        for (j = 0; j < im_image->repo_tags_len || (j == 0 && im_image->repo_tags_len == 0); j++) {
+            images_num++;
+        }
+    }
+
+    return images_num;
+}
+
+static int trans_im_list_images(const im_list_response *im_list, image_list_images_response *response)
+{
+    int ret = 0;
+    size_t i = 0;
+    size_t j = 0;
+    size_t images_num = 0;
+    size_t images_display_num = 0;
+    size_t image_index = 0;
+    imagetool_image *im_image = NULL;
+
+    if (im_list == NULL || im_list->images == NULL) {
+        return -1;
+    }
+
+    images_num = im_list->images->images_len;
+    if (images_num == 0) {
+        return 0;
+    }
+
+    /* If one image have several repo tags, display them all. Image with no
+     * repo will also be displayed */
+    images_display_num = calc_images_display_num(im_list->images);
+    if (images_display_num >= (SIZE_MAX / sizeof(image_image *))) {
+        INFO("Too many images, out of memory");
+        ret = -1;
+        lcrd_try_set_error_message("Get too many images info, out of memory");
+        goto out;
+    }
+
+    response->images = util_common_calloc_s(sizeof(image_image *) * images_display_num);
+    if (response->images == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < images_num; i++) {
+        im_image = im_list->images->images[i];
+        for (j = 0; j < im_image->repo_tags_len || (j == 0 && im_image->repo_tags_len == 0); j++) {
+            ret = trans_one_image(response, image_index, im_image, j);
+            if (ret < 0) {
+                goto out;
+            }
+            image_index++;
+        }
+    }
+
+out:
+    return ret;
+}
+
+/* image list cb */
+int image_list_cb(const image_list_images_request *request,
+                  image_list_images_response **response)
+{
+    int ret = -1;
+    uint32_t cc = LCRD_SUCCESS;
+    im_list_request *im_request = NULL;
+    im_list_response *im_response = NULL;
+
+    if (response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+
+    im_request = util_common_calloc_s(sizeof(im_list_request));
+    if (im_request == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto out;
+    }
+
+    *response = util_common_calloc_s(sizeof(image_list_images_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto out;
+    }
+
+    ret = im_list_images(im_request, &im_response);
+    if (ret) {
+        if (im_response != NULL && im_response->errmsg != NULL) {
+            ERROR("List images failed:%s", im_response->errmsg);
+            lcrd_try_set_error_message("List images failed:%s", im_response->errmsg);
+        } else {
+            ERROR("List images failed");
+            lcrd_try_set_error_message("List images failed");
+        }
+        cc = LCRD_ERR_EXEC;
+        goto out;
+    }
+
+    ret = trans_im_list_images(im_response, *response);
+    if (ret) {
+        ERROR("Failed to translate list images info");
+        cc = LCRD_ERR_EXEC;
+        goto out;
+    }
+
+out:
+
+    free_im_list_request(im_request);
+    free_im_list_response(im_response);
+
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_lcrd_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
+static int inspect_image_with_valid_name(const char *image_ref, char **inspected_json)
+{
+    int ret = 0;
+    im_inspect_request *im_request = NULL;
+    im_inspect_response *im_response = NULL;
+
+    if (image_ref == NULL) {
+        ERROR("invalid NULL param");
+        return EINVALIDARGS;
+    }
+
+    im_request = util_common_calloc_s(sizeof(im_inspect_request));
+    if (im_request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    im_request->image.image = util_strdup_s(image_ref);
+
+    ret = im_inspect_image(im_request, &im_response);
+    if (ret != 0) {
+        if (im_response != NULL && im_response->errmsg != NULL) {
+            ERROR("Inspect image %s failed:%s", image_ref, im_response->errmsg);
+            lcrd_try_set_error_message("Inspect image %s failed:%s", image_ref, im_response->errmsg);
+        } else {
+            ERROR("Inspect image %s failed", image_ref);
+            lcrd_try_set_error_message("Inspect image %s failed", image_ref);
+        }
+        ret = -1;
+        goto out;
+    }
+
+    *inspected_json = im_response->im_inspect_json ? util_strdup_s(im_response->im_inspect_json) : NULL;
+
+out:
+    free_im_inspect_request(im_request);
+    free_im_inspect_response(im_response);
+
+    return ret;
+}
+
+/* When inspect none image, we respone following string according hasen's request. */
+#define INSPECT_NONE_IMAGE_RESP \
+    "{                                                                            \
+    \"ContainerConfig\": {                                                        \
+        \"Env\": [                                                                \
+            \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\" \
+        ],                                                                        \
+        \"Entrypoint\": null                                                      \
+    }                                                                             \
+}"
+
+/*
+ * RETURN VALUE:
+ * 0: inspect success
+ * -1: no such image with "id"
+*/
+static int inspect_image_helper(const char *image_ref, char **inspected_json)
+{
+    int ret = 0;
+
+    if (strcmp(image_ref, "none") == 0 || strcmp(image_ref, "none:latest") == 0) {
+        *inspected_json = util_strdup_s(INSPECT_NONE_IMAGE_RESP);
+        INFO("Inspect image %s success", image_ref);
+        goto out;
+    }
+
+    if (!util_valid_image_name(image_ref)) {
+        ERROR("Inspect invalid name %s", image_ref);
+        lcrd_set_error_message("Inspect invalid name %s", image_ref);
+        ret = -1;
+        goto out;
+    }
+
+    if (inspect_image_with_valid_name(image_ref, inspected_json) != 0) {
+        ERROR("No such image or container or accelerator:%s", image_ref);
+        lcrd_set_error_message("No such image or container or accelerator:%s", image_ref);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int image_inspect_cb(const image_inspect_request *request, image_inspect_response **response)
+{
+    char *name = NULL;
+    char *image_json = NULL;
+    uint32_t cc = LCRD_SUCCESS;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid NULL input");
+        return -1;
+    }
+
+    *response = util_common_calloc_s(sizeof(image_inspect_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto pack_response;
+    }
+
+    name = request->id;
+
+    if (name == NULL) {
+        ERROR("receive NULL Request id");
+        cc = LCRD_ERR_INPUT;
+        goto pack_response;
+    }
+
+    set_log_prefix(name);
+
+    INFO("Inspect :%s", name);
+
+    if (inspect_image_helper(name, &image_json) != 0) {
+        cc = LCRD_ERR_EXEC;
+    }
+
+pack_response:
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_lcrd_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+        (*response)->image_json = image_json;
+    }
+
+    free_log_prefix();
+    malloc_trim(0);
+    return (cc == LCRD_SUCCESS) ? 0 : -1;
+}
+
+/* image callback init */
+void image_callback_init(service_image_callback_t *cb)
+{
+    if (cb == NULL) {
+        ERROR("Invalid input arguments");
+        return;
+    }
+
+    cb->load = image_load_cb;
+    cb->remove = image_remove_cb;
+    cb->list = image_list_cb;
+    cb->inspect = image_inspect_cb;
+    cb->login = login_cb;
+    cb->logout = logout_cb;
+}
+

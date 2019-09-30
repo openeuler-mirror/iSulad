@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "pid": {
+      "type": "int32"
+    },
+    "status": {
+      "type": "integer"
+    },
+    "image": {
+      "type": "string"
+    },
+    "command": {
+      "type": "string"
+    },
+    "ram": {
+      "type": "double"
+    },
+    "swap": {
+      "type": "double"
+    },
+    "exit_code": {
+      "type": "uint32"
+    },
+    "restartcount": {
+      "type": "uint64"
+    },
+    "Created": {
+      "type": "int64"
+    },
+    "startat": {
+      "type": "string"
+    },
+    "finishat": {
+      "type": "string"
+    },
+    "runtime": {
+      "type": "string"
+    },
+    "HealthState": {
+      "type": "string"
+    },
+    "Labels": {
+      "$ref": "../defs.json#/definitions/mapStringString"
+    },
+    "Annotations": {
+      "$ref": "../defs.json#/definitions/mapStringString"
+    }
+  }
+}

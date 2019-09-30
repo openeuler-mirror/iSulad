@@ -1,0 +1,34 @@
+{
+    "description": "oci info used for plugin system",
+    "type": "object",
+    "properties": {
+        "annotations": {
+            "$ref": "defs.json#/definitions/annotations"
+        },
+        "root": {
+            "$ref": "spec.json#/properties/root"
+        },
+        "mounts": {
+            "id": "https://opencontainers.org/schema/bundle/mounts",
+            "type": "array",
+            "items": {
+                "$ref": "defs.json#/definitions/Mount"
+            }
+        },
+        "env": {
+            "id": "https://opencontainers.org/schema/bundle/process/env",
+            "$ref": "defs.json#/definitions/Env"
+        },
+        "devices": {
+            "id": "https://opencontainers.org/schema/bundle/linux/devices",
+            "type": "array",
+            "items": {
+                "$ref": "defs-linux.json#/definitions/Device"
+            }
+        },
+        "resources": {
+            "id": "https://opencontainers.org/schema/bundle/linux/resources",
+            "$ref": "config-linux.json#/linux/properties/resources"
+        }
+    }
+}

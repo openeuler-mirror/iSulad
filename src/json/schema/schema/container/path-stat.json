@@ -1,0 +1,21 @@
+{
+    "$schema":"http://json-schema.org/draft-04/schema#",
+    "type":"object",
+    "properties":{
+        "Name":{
+            "type": "string"
+        },
+        "Size":{
+            "type": "int64"
+        },
+        "Mode":{
+            "type": "uint32"
+        },
+        "Mtime":{
+            "$ref": "../timestamp.json"
+        },
+        "LinkTarget":{
+            "type": "string"
+        }
+    }
+}

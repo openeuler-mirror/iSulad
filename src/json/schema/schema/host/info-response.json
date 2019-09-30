@@ -1,0 +1,72 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "version": {
+                "type": "string"
+            },
+            "containers_num":{
+                "type":"integer"
+            },
+            "cRunning":{
+                "type":"integer"
+            },
+            "cPaused":{
+                "type":"integer"
+            },
+            "cStopped":{
+                "type":"integer"
+            },
+            "images_num":{
+                "type":"integer"
+            },
+            "kversion": {
+                "type": "string"
+            },
+            "os_type": {
+                "type": "string"
+            },
+            "architecture": {
+                "type": "string"
+            },
+            "nodename": {
+                "type": "string"
+            },
+            "cpus": {
+                "type": "integer"
+            },
+            "operating_system": {
+                "type": "string"
+            },
+            "cgroup_driver": {
+                "type": "string"
+            },
+            "logging_driver": {
+                "type": "string"
+            },
+            "huge_page_size": {
+                "type": "string"
+            },
+            "isulad_root_dir": {
+                "type": "string"
+            },
+            "total_mem": {
+                "type": "uint32"
+            },
+            "http_proxy": {
+                "type": "string"
+            },
+            "https_proxy": {
+                "type": "string"
+            },
+            "no_proxy": {
+                "type": "string"
+            },
+            "cc": {
+                "type": "uint32"
+            },
+            "errmsg": {
+                "type": "string"
+            }
+        }
+}
