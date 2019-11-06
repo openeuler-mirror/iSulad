@@ -90,7 +90,7 @@ private:
     WebsocketServer();
     WebsocketServer(const WebsocketServer &) = delete;
     WebsocketServer &operator=(const WebsocketServer &) = delete;
-    ~WebsocketServer();
+    virtual ~WebsocketServer();
     int InitRWPipe(int read_fifo[]);
     std::vector<std::string> split(std::string str, char r);
     static void EmitLog(int level, const char *line);

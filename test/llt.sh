@@ -1,17 +1,3 @@
-#######################################################################
-##- @Copyright (C) Huawei Technologies., Ltd. 2017-2019. All rights reserved.
-# - iSulad licensed under the Mulan PSL v1.
-# - You can use this software according to the terms and conditions of the Mulan PSL v1.
-# - You may obtain a copy of Mulan PSL v1 at:
-# -     http://license.coscl.org.cn/MulanPSL
-# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
-# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
-# - PURPOSE.
-# - See the Mulan PSL v1 for more details.
-##- @Description: generate cetification
-##- @Author: wujing
-##- @Create: 2019-04-25
-#######################################################################
 #! /bin/bash
 
 #set -xe
@@ -114,6 +100,7 @@ function llt_empty()
     find ../ -name "Makefile" |xargs rm -f
     find ../ -name "CMakeFiles" |xargs rm -rf
     find ../ -name "CMakeCache.txt"|xargs rm -f
+    find ../ -name "CTestTestfile.cmake"|xargs rm -f
     rm -rf ../conf ../grpc ../json
     rm coverage -rf
     rm test_result.log -f
@@ -123,28 +110,35 @@ function llt_empty()
 }
 function llt_cmake()
 {
+  ret=0
   if [ x"${CMAKE_ENABLE}" = x"yes" ]; then
     echo ---------------------- llt cmake begin ----------------------
     cd ..
     if [ x"${COVERAGE_ENABLE}" = x"yes" ]; then
       cmake ./ -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=1 -DENABLE_LLT=ON
+      ret=$?
     else
       cmake -DENABLE_LLT=ON ./
+      ret=$?
     fi
     cd -
     echo ---------------------- llt cmake end ------------------------
     echo
   fi
+  return $ret
 }
 
 function llt_compile()
 {
+  ret=0
   if [ x"${COMPILE_ENABLE}" = x"yes" ]; then
     echo ---------------------- llt compile begin ----------------------    
     make -j
+    ret=$?
     echo ---------------------- llt compile end ------------------------
     echo
   fi
+  return $ret
 }
 
 function llt_run_all_test()
@@ -172,12 +166,14 @@ function llt_run_all_test()
     TEST_LOG=test_result.log
     >$TEST_LOG
 
+    ret=0
     for TEST in $SPECIFY_LLT 
     do
             echo $TEST
             $TEST $RUN_MODE
             if [ $? != 0 ];then
                     echo $TEST FAILED >> $TEST_LOG
+                    ret=1
             else
                     echo $TEST success >> $TEST_LOG
             fi  
@@ -189,6 +185,7 @@ function llt_run_all_test()
     echo ""
     echo ---------------------- llt run end --------------------------
     echo
+    return $ret
   fi
 }
 
@@ -237,7 +234,7 @@ function llt_coverage()
      	fi
 
       #lcov -c ${LCOV_CMD} -o coverage/coverage.info --exclude '*_llt.c' --include '*.c' --include '*.cpp' --include '*.cc' --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
-      lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external --exclude '*_llt.c' -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
+      lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external --exclude '*_llt*.cc' -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
       if [ $? != 0 ]; then
         echo "lcov generate coverage.info fail."
         exit 1
@@ -255,10 +252,16 @@ function llt_coverage()
 }
 
 llt_cmake
+if [[ $? -ne 0 ]];then
+    exit 1
+fi
 llt_empty
 llt_compile
+if [[ $? -ne 0 ]];then
+    exit 1
+fi
 llt_run_all_test
+if [[ $? -ne 0 ]];then
+    exit 1
+fi
 llt_coverage
-
-#set +x
-

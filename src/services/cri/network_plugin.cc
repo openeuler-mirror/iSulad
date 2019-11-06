@@ -39,7 +39,7 @@ static void runGetIP(void *cmdArgs)
     char *args[ARGS_NUM];
     char **tmpArgs = reinterpret_cast<char **>(cmdArgs);
 
-    if (util_array_len(tmpArgs) != CMD_ARGS_NUM) {
+    if (util_array_len((const char **)tmpArgs) != CMD_ARGS_NUM) {
         COMMAND_ERROR("need four args");
         exit(1);
     }
@@ -102,7 +102,7 @@ static std::string GetOnePodIP(std::string nsenterPath, std::string netnsPath, s
         error.SetError("Out of memory");
         goto free_out;
     }
-    if (util_array_len(lines) < 1) {
+    if (util_array_len((const char **)lines) < 1) {
         error.Errorf("Unexpected command output %s", stdout_str);
         goto free_out;
     }
@@ -112,7 +112,7 @@ static std::string GetOnePodIP(std::string nsenterPath, std::string netnsPath, s
         error.SetError("Out of memory");
         goto free_out;
     }
-    if (util_array_len(fields) < 4) {
+    if (util_array_len((const char **)fields) < 4) {
         error.Errorf("Unexpected address output %s ", lines[0]);
         goto free_out;
     }
@@ -519,3 +519,4 @@ void NoopNetworkPlugin::Status(Errors &error)
 }
 
 } // namespace Network
+

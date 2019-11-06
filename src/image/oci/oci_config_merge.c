@@ -229,11 +229,6 @@ static int oci_image_merge_health_check(const defs_health_check *image_health_ch
 {
     int ret = 0;
 
-    if (custom_spec == NULL) {
-        ERROR("Invalid input arguments");
-        return -1;
-    }
-
     if (image_health_check == NULL) {
         return 0;
     }
@@ -264,7 +259,7 @@ int oci_image_merge_config(imagetool_image *image_conf, oci_runtime_spec *oci_sp
 {
     int ret = 0;
 
-    if (image_conf == NULL || oci_spec == NULL) {
+    if (image_conf == NULL || oci_spec == NULL || custom_spec == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }

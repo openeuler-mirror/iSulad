@@ -44,9 +44,7 @@ private:
     RequestCache() = default;
     RequestCache(const RequestCache &) = delete;
     RequestCache &operator=(const RequestCache &) = delete;
-    ~RequestCache() = default;
-    // clock is used to obtain the current time
-    std::time_t m_clock;
+    virtual ~RequestCache() = default;
     // tokens maps the generate token to the request for fast retrieval.
     std::unordered_map<std::string, CacheEntry> m_tokens;
     // ll maintains an age-ordered request list for faster garbage collection of expired requests.

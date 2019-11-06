@@ -33,7 +33,6 @@ CODE = '''// Auto generated file. Do not edit!
 # include <stdbool.h>
 # include <stdio.h>
 # include <string.h>
-# include <stdlib.h>
 # include <stdint.h>
 # include <yajl/yajl_tree.h>
 # include <yajl/yajl_gen.h>

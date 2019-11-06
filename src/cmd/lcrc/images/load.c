@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "load.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
@@ -172,3 +171,4 @@ int cmd_load_main(int argc, const char **argv)
     printf("Load image from \"%s\" success\n", g_cmd_load_args.file);
     exit(EXIT_SUCCESS);
 }
+

@@ -58,13 +58,13 @@
             "type": "object",
             "properties": {
                 "index": {
-                    "$ref": "defs.json#/definitions/uint32"
+                    "$ref": "../../defs.json#/definitions/uint32"
                 },
                 "value": {
-                    "$ref": "defs.json#/definitions/uint64"
+                    "$ref": "../../defs.json#/definitions/uint64"
                 },
                 "valueTwo": {
-                    "$ref": "defs.json#/definitions/uint64"
+                    "$ref": "../../defs.json#/definitions/uint64"
                 },
                 "op": {
                     "$ref": "#/definitions/SeccompOperators"
@@ -103,11 +103,11 @@
         },
         "Major": {
             "description": "major device number",
-            "$ref": "defs.json#/definitions/int64"
+            "$ref": "../../defs.json#/definitions/int64"
         },
         "Minor": {
             "description": "minor device number",
-            "$ref": "defs.json#/definitions/int64"
+            "$ref": "../../defs.json#/definitions/int64"
         },
         "FileMode": {
             "description": "File permissions mode (typically an octal value)",
@@ -131,7 +131,7 @@
                     "$ref": "#/definitions/FileType"
                 },
                 "path": {
-                    "$ref": "defs.json#/definitions/FilePath"
+                    "$ref": "../../defs.json#/definitions/FilePath"
                 },
                 "fileMode": {
                     "$ref": "#/definitions/FileMode"
@@ -143,10 +143,10 @@
                     "$ref": "#/definitions/Minor"
                 },
                 "uid": {
-                    "$ref": "defs.json#/definitions/UID"
+                    "$ref": "../../defs.json#/definitions/UID"
                 },
                 "gid": {
-                    "$ref": "defs.json#/definitions/GID"
+                    "$ref": "../../defs.json#/definitions/GID"
                 }
             }
         },
@@ -196,7 +196,7 @@
                     "type": "object",
                     "properties": {
                         "rate": {
-                            "$ref": "defs.json#/definitions/uint64"
+                            "$ref": "../../defs.json#/definitions/uint64"
                         }
                     }
                 }
@@ -232,7 +232,7 @@
                     "type": "string"
                 },
                 "priority": {
-                    "$ref": "defs.json#/definitions/uint32"
+                    "$ref": "../../defs.json#/definitions/uint32"
                 }
             },
             "required": [
@@ -259,7 +259,7 @@
                     "$ref": "#/definitions/NamespaceType"
                 },
                 "path": {
-                    "$ref": "defs.json#/definitions/FilePath"
+                    "$ref": "../../defs.json#/definitions/FilePath"
                 }
             },
             "required": [

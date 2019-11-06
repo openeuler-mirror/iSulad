@@ -145,57 +145,6 @@ pack_response:
     return ret;
 }
 
-int prepare_rootfs(rootfs_prepare_request *request,
-                   rootfs_prepare_response **response)
-{
-    int ret = 0;
-    char *name = NULL;
-    char *image = NULL;
-    imagetool_prepare_response *tool_response = NULL;
-
-    if (response == NULL) {
-        ERROR("Invalid input arguments");
-        return -1;
-    }
-
-    *response = util_common_calloc_s(sizeof(rootfs_prepare_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    if (check_prepare_request_valid(request) != 0) {
-        ret = -1;
-        goto pack_response;
-    }
-
-    image = request->image;
-    name = request->name;
-
-    EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", name, image);
-
-    if (!do_prepare(request, &tool_response)) {
-        ERROR("Failed to prepare rootfs");
-        ret = -1;
-        goto pack_response;
-    }
-
-    EVENT("Event: {Object: %s, Type: prepared rootfs with image %s}", name, image);
-
-pack_response:
-    if (g_lcrd_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
-    }
-
-    if (tool_response != NULL) {
-        (*response)->rootfs = tool_response->mount_point;
-        tool_response->mount_point = NULL;
-        free_imagetool_prepare_response(tool_response);
-    }
-
-    return ret;
-}
-
 void free_rootfs_prepare_request(rootfs_prepare_request *ptr)
 {
     if (ptr == NULL) {
@@ -228,3 +177,4 @@ void free_rootfs_prepare_and_get_image_conf_response(rootfs_prepare_and_get_imag
 
     free(ptr);
 }
+

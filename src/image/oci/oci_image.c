@@ -729,3 +729,4 @@ int oci_init(const char *rootpath)
 out:
     return ret;
 }
+

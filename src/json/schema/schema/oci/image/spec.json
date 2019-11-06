@@ -24,7 +24,7 @@
           "type": "string"
         },
         "ExposedPorts": {
-          "$ref": "defs.json#/definitions/mapStringObject"
+          "$ref": "../../defs.json#/definitions/mapStringObject"
         },
         "Env": {
           "type": "array",
@@ -61,7 +61,7 @@
         "Volumes": {
           "oneOf": [
             {
-              "$ref": "defs.json#/definitions/mapStringObject"
+              "$ref": "../../defs.json#/definitions/mapStringObject"
             },
             {
               "type": "null"
@@ -74,7 +74,7 @@
         "Labels": {
           "oneOf": [
             {
-              "$ref": "defs.json#/definitions/mapStringString"
+              "$ref": "../../defs.json#/definitions/mapStringString"
             },
             {
               "type": "null"

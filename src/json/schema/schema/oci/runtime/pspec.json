@@ -3,7 +3,7 @@
     "type": "object",
     "properties": {
         "annotations": {
-            "$ref": "defs.json#/definitions/annotations"
+            "$ref": "../../defs.json#/definitions/annotations"
         },
         "root": {
             "$ref": "spec.json#/properties/root"
@@ -12,12 +12,12 @@
             "id": "https://opencontainers.org/schema/bundle/mounts",
             "type": "array",
             "items": {
-                "$ref": "defs.json#/definitions/Mount"
+                "$ref": "../../defs.json#/definitions/Mount"
             }
         },
         "env": {
             "id": "https://opencontainers.org/schema/bundle/process/env",
-            "$ref": "defs.json#/definitions/Env"
+            "$ref": "../../defs.json#/definitions/Env"
         },
         "devices": {
             "id": "https://opencontainers.org/schema/bundle/linux/devices",

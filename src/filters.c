@@ -213,7 +213,7 @@ static bool do_filters_args_match_kv_list(const map_t *field_values_map, const m
             goto cleanup;
         }
 
-        if (util_array_len(test_kv) == 2 && strcmp(test_kv[1], sources_value) != 0) {
+        if (util_array_len((const char **)test_kv) == 2 && strcmp(test_kv[1], sources_value) != 0) {
             util_free_array(test_kv);
             goto cleanup;
         }

@@ -16,7 +16,6 @@
 #define __LCRD_SUPERVISOR_H
 #include <pthread.h>
 #include <semaphore.h>
-#include <limits.h>
 #include "container_unix.h"
 
 extern char *exit_fifo_create(const char *cont_state_path);
@@ -31,3 +30,4 @@ extern int supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, 
 extern int new_supervisor();
 
 #endif
+

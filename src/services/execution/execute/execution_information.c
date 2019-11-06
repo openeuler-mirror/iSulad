@@ -314,7 +314,7 @@ int get_stime(const char *title_line)
     char **title_element = NULL;
 
     title_element = util_string_split(title_line, ' ');
-    for (i = 0; i < util_array_len(title_element); i++) {
+    for (i = 0; i < util_array_len((const char **)title_element); i++) {
         if (strcmp(title_element[i], "STIME") == 0) {
             stime = (int)i;
             break;
@@ -333,7 +333,7 @@ int get_pid_num(const char *title_line)
     char **title_element = NULL;
 
     title_element = util_string_split(title_line, ' ');
-    for (i = 0; i < util_array_len(title_element); i++) {
+    for (i = 0; i < util_array_len((const char **)title_element); i++) {
         if (strcmp(title_element[i], "PID") == 0) {
             num = (int)i;
             break;
@@ -372,7 +372,7 @@ static int parse_output_by_lines(char **process, char **tmp, int pid_num, int st
     char **pid_s = NULL;
     char **pid_s_pre = NULL;
 
-    for (i = 1; i < util_array_len(tmp); i++) {
+    for (i = 1; i < util_array_len((const char **)tmp); i++) {
         bool flag = false;
         int tmp_num = 0;
         if (i > 1) {
@@ -429,12 +429,12 @@ int parse_output(char **title, char ***process, const char *output, const pid_t 
 
     pid_num = get_pid_num(*title);
     stime = get_stime(*title);
-    if (util_array_len(tmp) > SIZE_MAX / sizeof(char *)) {
+    if (util_array_len((const char **)tmp) > SIZE_MAX / sizeof(char *)) {
         ERROR("Invalid array length");
         ret = -1;
         goto out;
     }
-    *process = util_common_calloc_s(util_array_len(tmp) * sizeof(char *));
+    *process = util_common_calloc_s(util_array_len((const char **)tmp) * sizeof(char *));
     if (*process == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -757,12 +757,12 @@ static int container_top_cb(container_top_request *request, container_top_respon
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
-    if (util_array_len(processes) > SIZE_MAX / sizeof(char *)) {
+    if (util_array_len((const char **)processes) > SIZE_MAX / sizeof(char *)) {
         ERROR("invalid processe size");
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
-    (*response)->processes = util_common_calloc_s(util_array_len(processes) * sizeof(char *));
+    (*response)->processes = util_common_calloc_s(util_array_len((const char **)processes) * sizeof(char *));
     if ((*response)->processes == NULL) {
         ERROR("Out of memory");
         cc = LCRD_ERR_EXEC;
@@ -771,10 +771,10 @@ static int container_top_cb(container_top_request *request, container_top_respon
 
     (*response)->titles = titles;
     titles = NULL;
-    for (i = 0; i < util_array_len(processes); i++) {
+    for (i = 0; i < util_array_len((const char **)processes); i++) {
         (*response)->processes[i] = util_strdup_s(processes[i]);
     }
-    (*response)->processes_len = util_array_len(processes);
+    (*response)->processes_len = util_array_len((const char **)processes);
 
 pack_response:
     if (*response != NULL) {

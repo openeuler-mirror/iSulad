@@ -21,7 +21,7 @@
     },
     "annotations": {
       "id": "https://opencontainers.org/schema/image/descriptor/annotations",
-      "$ref": "defs.json#/definitions/mapStringString"
+      "$ref": "../../defs.json#/definitions/mapStringString"
     }
   }
 }

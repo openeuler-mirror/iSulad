@@ -664,7 +664,7 @@ static int restore_container_by_runtime(const char *runtime)
         ret = -1;
         goto out;
     }
-    subdir_num = util_array_len(subdir);
+    subdir_num = util_array_len((const char **)subdir);
     if (subdir_num == 0) {
         goto out;
     }
@@ -706,7 +706,7 @@ void containers_restore(void)
         ERROR("Failed to list engines");
         goto out;
     }
-    subdir_num = util_array_len(subdir);
+    subdir_num = util_array_len((const char **)subdir);
 
     for (i = 0; i < subdir_num; i++) {
         DEBUG("Restore the containers by runtime:%s", subdir[i]);

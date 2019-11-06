@@ -17,7 +17,6 @@
 #include "commander.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <regex.h>
@@ -299,10 +298,6 @@ static int command_parse_short_arg(command_t *self, const char *arg)
 
     do {
         found = false;
-        if (opt_arg[0] == 'h' && have_short_options(self, 'h') < 0) {
-            command_help(self);
-            exit(0);
-        }
         if (command_parse_options(self, &opt_arg, &found)) {
             return -1;
         }
@@ -459,7 +454,7 @@ static void get_default_ulimit_split_parts(const char *val, char ***parts, size_
         ERROR("Out of memory");
         return;
     }
-    *parts_len = util_array_len(*parts);
+    *parts_len = util_array_len((const char **)(*parts));
 }
 
 static int parse_soft_hard_default_ulimit(const char *val, char **limitvals, size_t limitvals_len, int64_t *soft,

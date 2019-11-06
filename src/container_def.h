@@ -16,7 +16,6 @@
 #define __CONTAINER_DEF_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
 
 #include "types_def.h"
@@ -33,6 +32,9 @@ extern "C" {
 #endif
 #ifndef OCICONFIG_PATH
 #define OCICONFIG_PATH "/etc/default/lcrd/config.json"
+#endif
+#ifndef OCI_SYSTEM_CONTAINER_CONFIG_PATH
+#define OCI_SYSTEM_CONTAINER_CONFIG_PATH "/etc/default/lcrd/systemcontainer_config.json"
 #endif
 #ifndef SECCOMP_DEFAULT_PATH
 #define SECCOMP_DEFAULT_PATH "/etc/isulad/seccomp_default.json"
@@ -137,3 +139,4 @@ typedef void (*container_events_callback_t)(const container_events_format_t *eve
 #endif
 
 #endif
+

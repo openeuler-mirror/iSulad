@@ -413,6 +413,7 @@ void WebsocketServer::Wait()
     lws_context_destroy(m_context);
 }
 
+
 ssize_t WsWriteToClient(void *context, const void *data, size_t len)
 {
     const int RETRIES = 10;

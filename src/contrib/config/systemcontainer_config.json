@@ -1,0 +1,321 @@
+{
+	"ociVersion": "1.0.0-rc5-dev",
+	"process": {
+		"terminal": true,
+		"consoleSize": {
+			"height": 0,
+			"width": 0
+		},
+		"user": {
+			"uid": 0,
+			"gid": 0
+		},
+		"args": [
+			"/bin/bash"
+		],
+		"env": [
+			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"TERM=xterm"
+		],
+		"cwd": "/",
+		"capabilities": {
+			"bounding": [
+				"CAP_CHOWN",
+				"CAP_DAC_OVERRIDE",
+				"CAP_FSETID",
+				"CAP_FOWNER",
+				"CAP_MKNOD",
+				"CAP_NET_RAW",
+				"CAP_SETGID",
+				"CAP_SETUID",
+				"CAP_SETFCAP",
+				"CAP_SETPCAP",
+				"CAP_NET_BIND_SERVICE",
+				"CAP_SYS_CHROOT",
+				"CAP_KILL",
+				"CAP_AUDIT_WRITE"
+			],
+			"effective": [
+			],
+			"inheritable": [
+			],
+			"permitted": [
+			],
+			"ambient": [
+			]
+		}
+	},
+	"root": {
+		"path": "rootfs",
+		"readonly": false
+	},
+	"hostname": "ubuntu",
+	"mounts": [
+		{
+			"destination": "/proc",
+			"type": "proc",
+			"source": "proc",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		{
+			"destination": "/dev",
+			"type": "tmpfs",
+			"source": "tmpfs",
+			"options": [
+				"nosuid",
+				"strictatime",
+				"mode=755",
+				"size=65536k"
+			]
+		},
+		{
+			"destination": "/dev/pts",
+			"type": "devpts",
+			"source": "devpts",
+			"options": [
+				"nosuid",
+				"noexec",
+				"newinstance",
+				"ptmxmode=0666",
+				"mode=0620",
+				"gid=5"
+			]
+		},
+		{
+			"destination": "/sys",
+			"type": "sysfs",
+			"source": "sysfs",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"ro"
+			]
+		},
+		{
+			"destination": "/dev/shm",
+			"type": "tmpfs",
+			"source": "shm",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"mode=1777",
+				"size=65536k"
+			]
+		},
+		{
+			"destination": "/sys/fs/cgroup",
+			"type": "cgroup",
+			"source": "cgroup",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"ro"
+			]
+		},
+		{
+			"destination": "/dev/mqueue",
+			"type": "mqueue",
+			"source": "mqueue",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		{
+			"destination": "/run",
+			"type": "tmpfs",
+			"source": "tmpfs",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"mode=755"
+			]
+		},
+		{
+			"destination": "/run/lock",
+			"type": "tmpfs",
+			"source": "tmpfs",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"mode=755"
+			]
+		},
+		{
+			"destination": "/tmp",
+			"type": "tmpfs",
+			"source": "tmpfs",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"mode=1777"
+			]
+		}
+	],
+	"linux": {
+		"resources": {
+			"devices": [
+				{
+					"allow": false,
+					"type": "a",
+					"major": -1,
+					"minor": -1,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": -1,
+					"minor": -1,
+					"access": "m"
+				},
+				{
+					"allow": true,
+					"type": "b",
+					"major": -1,
+					"minor": -1,
+					"access": "m"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 1,
+					"minor": 3,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 1,
+					"minor": 5,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 1,
+					"minor": 7,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 5,
+					"minor": 0,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 5,
+					"minor": 1,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 5,
+					"minor": 2,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 1,
+					"minor": 8,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 1,
+					"minor": 9,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 136,
+					"minor": -1,
+					"access": "rwm"
+				},
+				{
+					"allow": true,
+					"type": "c",
+					"major": 10,
+					"minor": 200,
+					"access": "rwm"
+				},
+				{
+					"allow": false,
+					"type": "c",
+					"major": 10,
+					"minor": 229,
+					"access": "rwm"
+				}
+			]
+		},
+		"namespaces": [
+			{
+				"type": "pid"
+			},
+			{
+				"type": "network"
+			},
+			{
+				"type": "ipc"
+			},
+			{
+				"type": "uts"
+			},
+			{
+				"type": "mount"
+			}
+		],
+		"maskedPaths": [
+			"/proc/acpi",
+			"/proc/config.gz",
+			"/proc/cpuirqstat",
+			"/proc/fdenable",
+			"/proc/fdstat",
+			"/proc/fdthreshold",
+			"/proc/files_panic_enable",
+			"/proc/iomem_ext",
+			"/proc/kbox",
+			"/proc/kcore",
+			"/proc/keys",
+			"/proc/latency_stats",
+			"/proc/livepatch",
+			"/proc/memstat",
+			"/proc/net_namespace",
+			"/proc/oom_extend",
+			"/proc/sched_debug",
+			"/proc/scsi",
+			"/proc/sig_catch",
+			"/proc/signo",
+			"/proc/timer_list",
+			"/proc/timer_stats",
+			"/sys/firmware"
+		],
+		"readonlyPaths": [
+			"/proc/asound",
+			"/proc/bus",
+			"/proc/fs",
+			"/proc/irq",
+			"/proc/sys",
+			"/proc/sysrq-trigger",
+			"/proc/sysrq-region-size"
+		]
+	}
+}

@@ -68,7 +68,7 @@ static int client_exec(const struct client_arguments *args, const struct command
     request.argv = (char **)args->argv;
 
     /* environment variables */
-    request.env_len = util_array_len(args->extra_env);
+    request.env_len = util_array_len((const char **)(args->extra_env));
     request.env = args->extra_env;
 
     ops = get_connect_client_ops();
@@ -258,7 +258,7 @@ static int remote_cmd_exec(const struct client_arguments *args, uint32_t *exit_c
     request.argv = (char **)args->argv;
 
     /* environment variables */
-    request.env_len = util_array_len(args->extra_env);
+    request.env_len = util_array_len((const char **)(args->extra_env));
     request.env = args->extra_env;
 
     if (remote_cmd_exec_setup_tty(args, &reset_tty, &oldtios) < 0) {
@@ -356,3 +356,4 @@ int cmd_exec_main(int argc, const char **argv)
 out:
     exit(exit_code ? (int)exit_code : ret);
 }
+

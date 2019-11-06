@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "info.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include "securec.h"
 
 #include "utils.h"
@@ -148,3 +147,4 @@ int cmd_info_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

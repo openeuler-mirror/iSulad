@@ -29,6 +29,10 @@
 
 class AttachServe : public StreamingServeInterface {
 public:
+    AttachServe() = default;
+    AttachServe(const AttachServe &) = delete;
+    AttachServe &operator=(const AttachServe &) = delete;
+    virtual ~AttachServe() = default;
     int Execute(struct lws *wsi, const std::string &token, int read_pipe_fd) override;
 private:
     int RequestFromCri(const runtime::AttachRequest *grequest,

@@ -237,10 +237,10 @@ int check_args(struct service_arguments *args)
         goto out;
     }
 
-    args->hosts_len = util_array_len(args->hosts);
-    args->json_confs->storage_opts_len = util_array_len(args->json_confs->storage_opts);
-    args->json_confs->registry_mirrors_len = util_array_len(args->json_confs->registry_mirrors);
-    args->json_confs->insecure_registries_len = util_array_len(args->json_confs->insecure_registries);
+    args->hosts_len = util_array_len((const char **)(args->hosts));
+    args->json_confs->storage_opts_len = util_array_len((const char **)(args->json_confs->storage_opts));
+    args->json_confs->registry_mirrors_len = util_array_len((const char **)(args->json_confs->registry_mirrors));
+    args->json_confs->insecure_registries_len = util_array_len((const char **)(args->json_confs->insecure_registries));
 
     /* validate log-file-mode */
     if (check_args_log_conf(args) != 0) {
@@ -522,7 +522,7 @@ out:
 
 int update_hosts(struct service_arguments *args)
 {
-    args->hosts_len = util_array_len(args->hosts);
+    args->hosts_len = util_array_len((const char **)(args->hosts));
 
     if (check_hosts_specified_conflict(args) != 0) {
         return -1;

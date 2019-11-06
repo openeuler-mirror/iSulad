@@ -16,7 +16,6 @@
 #define __LIB_LCRD_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
 
 #include "container_def.h"

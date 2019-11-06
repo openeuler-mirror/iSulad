@@ -12,7 +12,7 @@
  * Create: 2018-11-08
  * Description: provide container grpc client definition
  ******************************************************************************/
-#ifndef __GPRC_CONTAINERS_CLIENT_H
+#ifndef __GRPC_CONTAINERS_CLIENT_H
 #define __GRPC_CONTAINERS_CLIENT_H
 
 #include "lcrc_connect.h"

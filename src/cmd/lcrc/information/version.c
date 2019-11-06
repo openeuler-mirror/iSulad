@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "version.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include "securec.h"
 
 #include "utils.h"
@@ -122,3 +121,4 @@ int cmd_version_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

@@ -339,7 +339,8 @@ static int client_list(const struct client_arguments *args)
     }
 
     if (args->filters != NULL) {
-        request.filters = lcrc_filters_parse_args((const char **)args->filters, util_array_len(args->filters));
+        request.filters = lcrc_filters_parse_args((const char **)args->filters,
+                                                  util_array_len((const char **)(args->filters)));
         if (!request.filters) {
             ERROR("Failed to parse filters args");
             ret = -1;
@@ -409,3 +410,4 @@ int cmd_list_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

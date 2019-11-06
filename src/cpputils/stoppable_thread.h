@@ -16,7 +16,6 @@
 #define __STOPPABLE_THREAD_H_
 
 #include <iostream>
-#include <assert.h>
 #include <chrono>
 #include <future>
 #include <mutex>
@@ -50,3 +49,4 @@ private:
 };
 
 #endif /* __STOPPABLE_THREAD_H_ */
+

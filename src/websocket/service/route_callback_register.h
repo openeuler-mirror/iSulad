@@ -24,11 +24,19 @@
 #include "log.h"
 class StreamingServeInterface {
 public:
+    StreamingServeInterface() = default;
+    StreamingServeInterface(const StreamingServeInterface &) = delete;
+    StreamingServeInterface &operator=(const StreamingServeInterface &) = delete;
+    virtual ~StreamingServeInterface() = default;
     virtual int Execute(struct lws *wsi, const std::string &token, int read_pipe_fd) = 0;
 };
 
 class RouteCallbackRegister {
 public:
+    RouteCallbackRegister() = default;
+    RouteCallbackRegister(const RouteCallbackRegister &) = delete;
+    RouteCallbackRegister &operator=(const RouteCallbackRegister &) = delete;
+    virtual ~RouteCallbackRegister() = default;
     bool IsValidMethod(const std::string &method)
     {
         return static_cast<bool>(m_registeredcallbacks.count(method));
@@ -66,7 +74,9 @@ public:
                const std::string &token, int read_pipe_fd)
         : m_invoker(invoker), m_wsi(wsi), m_method(method), m_token(token),
           m_read_pipe_fd(read_pipe_fd) {}
-    ~StreamTask() = default;
+    StreamTask(const StreamTask &) = delete;
+    StreamTask &operator=(const StreamTask &) = delete;
+    virtual ~StreamTask() = default;
     int Run()
     {
         return m_invoker->HandleCallback(m_wsi, m_method, m_token, m_read_pipe_fd);

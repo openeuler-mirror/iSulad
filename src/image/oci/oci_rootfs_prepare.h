@@ -40,9 +40,6 @@ typedef struct {
     imagetool_prepare_response *raw_response;
 } rootfs_prepare_and_get_image_conf_response;
 
-int prepare_rootfs(rootfs_prepare_request *request,
-                   rootfs_prepare_response **response);
-
 void free_rootfs_prepare_request(rootfs_prepare_request *ptr);
 
 int prepare_rootfs_and_get_image_conf(rootfs_prepare_request *request,
@@ -54,3 +51,4 @@ void free_rootfs_prepare_and_get_image_conf_response(rootfs_prepare_and_get_imag
 #endif
 
 #endif
+

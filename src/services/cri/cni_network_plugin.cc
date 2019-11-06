@@ -146,13 +146,13 @@ int CniNetworkPlugin::GetCNIConfFiles(const std::string &pluginDir, std::vector<
         goto out;
     }
 
-    if (util_array_len(files) == 0) {
+    if (util_array_len((const char **)files) == 0) {
         err.Errorf("No networks found in %s", usePluginDir.c_str());
         ret = -1;
         goto out;
     }
 
-    vect_files = std::vector<std::string>(files, files + util_array_len(files));
+    vect_files = std::vector<std::string>(files, files + util_array_len((const char **)files));
 
 out:
     free(serr);
@@ -717,3 +717,4 @@ void CniNetworkPlugin::UnlockNetworkMap(Errors &error)
 }
 
 }  // namespace Network
+

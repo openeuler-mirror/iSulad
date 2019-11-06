@@ -77,7 +77,7 @@ OPTION(ENABLE_COVERAGE "coverage switch" OFF)
 IF(ENABLE_COVERAGE)
     MESSAGE(STATUS "Enable coverage compile option")
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -fprofile-arcs -ftest-coverage")
-    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -fprofile-arcs -ftest-coverage")
+    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -fprofile-arcs -ftest-coverage -fkeep-inline-functions -fkeep-static-functions")
     SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -g -fprofile-arcs -ftest-coverage -lgcov")
 ENDIF(ENABLE_COVERAGE)
 
@@ -111,7 +111,7 @@ if (CMAKE_INSTALL_SYSCONFDIR)
 endif()
 install(FILES src/contrib/config/daemon.json
     DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
-install(FILES src/contrib/config/config.json
+install(FILES src/contrib/config/config.json src/contrib/config/systemcontainer_config.json
     DESTINATION ${conf_prefix}/default/lcrd PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/config/seccomp_default.json
     DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)

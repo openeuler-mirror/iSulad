@@ -205,7 +205,7 @@ int embedded_image_merge_config(oci_runtime_spec *oci_spec,
         }
     }
 
-    ret = merge_volumes(oci_spec, mounts, util_array_len(mounts), NULL, parse_mount);
+    ret = merge_volumes(oci_spec, mounts, util_array_len((const char **)mounts), NULL, parse_mount);
     if (ret) {
         ERROR("Failed to merge layer into mounts");
         goto out;

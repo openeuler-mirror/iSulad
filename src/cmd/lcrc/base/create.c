@@ -76,7 +76,7 @@ static int request_pack_host_config_storage_opts(const struct client_arguments *
         return -1;
     }
 
-    len = util_array_len(args->custom_conf.storage_opts);
+    len = util_array_len((const char **)(args->custom_conf.storage_opts));
     for (i = 0; i < len; i++) {
         char *p = NULL;
         p = strchr(args->custom_conf.storage_opts[i], '=');
@@ -111,7 +111,7 @@ static int request_pack_host_config_sysctls(const struct client_arguments *args,
         return -1;
     }
 
-    len = util_array_len(args->custom_conf.sysctls);
+    len = util_array_len((const char **)(args->custom_conf.sysctls));
     for (i = 0; i < len; i++) {
         char *p = NULL;
         p = strchr(args->custom_conf.sysctls[i], '=');
@@ -232,7 +232,7 @@ static int request_pack_custom_env(struct client_arguments *args, lcrc_container
 
     if (args->custom_conf.env != NULL) {
         conf->env = args->custom_conf.env;
-        conf->env_len = util_array_len(conf->env);
+        conf->env_len = util_array_len((const char **)(conf->env));
     }
 
     if (args->custom_conf.accel != NULL) {
@@ -246,10 +246,10 @@ static int request_pack_custom_env(struct client_arguments *args, lcrc_container
         }
 
         args->custom_conf.env = conf->env; /* make sure args->custom_conf.env point to valid memory. */
-        conf->env_len = util_array_len(conf->env);
+        conf->env_len = util_array_len((const char **)(conf->env));
 
         conf->accel = args->custom_conf.accel;
-        conf->accel_len = util_array_len(args->custom_conf.accel);
+        conf->accel_len = util_array_len((const char **)(args->custom_conf.accel));
         if (util_env_set_lcrd_enable_plugins(&conf->env, &conf->env_len, LCRD_ISULA_ADAPTER)) {
             COMMAND_ERROR("init accel env failed");
             ret = -1;
@@ -308,7 +308,7 @@ static void request_pack_custom_system_container(const struct client_arguments *
 static void request_pack_custom_mounts(const struct client_arguments *args, lcrc_container_config_t *conf)
 {
     if (args->custom_conf.mounts != NULL) {
-        conf->mounts_len = util_array_len(args->custom_conf.mounts);
+        conf->mounts_len = util_array_len((const char **)(args->custom_conf.mounts));
         conf->mounts = args->custom_conf.mounts;
     }
     return;
@@ -535,12 +535,12 @@ static void request_pack_host_caps(const struct client_arguments *args, lcrc_hos
 {
     /* cap add */
     if (args->custom_conf.cap_adds != NULL) {
-        hostconfig->cap_add_len = util_array_len(args->custom_conf.cap_adds);
+        hostconfig->cap_add_len = util_array_len((const char **)(args->custom_conf.cap_adds));
         hostconfig->cap_add = args->custom_conf.cap_adds;
     }
     /* cap drop */
     if (args->custom_conf.cap_drops != NULL) {
-        hostconfig->cap_drop_len = util_array_len(args->custom_conf.cap_drops);
+        hostconfig->cap_drop_len = util_array_len((const char **)(args->custom_conf.cap_drops));
         hostconfig->cap_drop = args->custom_conf.cap_drops;
     }
 }
@@ -549,7 +549,7 @@ static void request_pack_host_group_add(const struct client_arguments *args, lcr
 {
     /* group add */
     if (args->custom_conf.group_add != NULL) {
-        hostconfig->group_add_len = util_array_len(args->custom_conf.group_add);
+        hostconfig->group_add_len = util_array_len((const char **)(args->custom_conf.group_add));
         hostconfig->group_add = args->custom_conf.group_add;
     }
 }
@@ -558,7 +558,7 @@ static void request_pack_host_extra_hosts(const struct client_arguments *args, l
 {
     /* extra hosts */
     if (args->custom_conf.extra_hosts != NULL) {
-        hostconfig->extra_hosts_len = util_array_len(args->custom_conf.extra_hosts);
+        hostconfig->extra_hosts_len = util_array_len((const char **)(args->custom_conf.extra_hosts));
         hostconfig->extra_hosts = args->custom_conf.extra_hosts;
     }
 }
@@ -567,19 +567,19 @@ static void request_pack_host_dns(const struct client_arguments *args, lcrc_host
 {
     /* dns */
     if (args->custom_conf.dns != NULL) {
-        hostconfig->dns_len = util_array_len(args->custom_conf.dns);
+        hostconfig->dns_len = util_array_len((const char **)(args->custom_conf.dns));
         hostconfig->dns = args->custom_conf.dns;
     }
 
     /* dns options */
     if (args->custom_conf.dns_options != NULL) {
-        hostconfig->dns_options_len = util_array_len(args->custom_conf.dns_options);
+        hostconfig->dns_options_len = util_array_len((const char **)(args->custom_conf.dns_options));
         hostconfig->dns_options = args->custom_conf.dns_options;
     }
 
     /* dns search */
     if (args->custom_conf.dns_search != NULL) {
-        hostconfig->dns_search_len = util_array_len(args->custom_conf.dns_search);
+        hostconfig->dns_search_len = util_array_len((const char **)(args->custom_conf.dns_search));
         hostconfig->dns_search = args->custom_conf.dns_search;
     }
 }
@@ -588,7 +588,7 @@ static void request_pack_host_ulimit(const struct client_arguments *args, lcrc_h
 {
     /* ulimit options */
     if (args->custom_conf.ulimits != NULL) {
-        hostconfig->ulimits_len = util_array_len(args->custom_conf.ulimits);
+        hostconfig->ulimits_len = util_array_len((const char **)(args->custom_conf.ulimits));
         hostconfig->ulimits = args->custom_conf.ulimits;
     }
 }
@@ -597,7 +597,7 @@ static void request_pack_host_weight_devices(const struct client_arguments *args
 {
     /* blkio weight devices */
     if (args->custom_conf.weight_devices != NULL) {
-        hostconfig->blkio_weight_device_len = util_array_len(args->custom_conf.weight_devices);
+        hostconfig->blkio_weight_device_len = util_array_len((const char **)(args->custom_conf.weight_devices));
         hostconfig->blkio_weight_device = args->custom_conf.weight_devices;
     }
 }
@@ -606,7 +606,7 @@ static void request_pack_host_device_read_bps(const struct client_arguments *arg
 {
     if (args->custom_conf.blkio_throttle_read_bps_device != NULL) {
         hostconfig->blkio_throttle_read_bps_device_len =
-            util_array_len(args->custom_conf.blkio_throttle_read_bps_device);
+            util_array_len((const char **)(args->custom_conf.blkio_throttle_read_bps_device));
         hostconfig->blkio_throttle_read_bps_device = args->custom_conf.blkio_throttle_read_bps_device;
     }
 }
@@ -615,7 +615,7 @@ static void request_pack_host_device_write_bps(const struct client_arguments *ar
 {
     if (args->custom_conf.blkio_throttle_write_bps_device != NULL) {
         hostconfig->blkio_throttle_write_bps_device_len =
-            util_array_len(args->custom_conf.blkio_throttle_write_bps_device);
+            util_array_len((const char **)(args->custom_conf.blkio_throttle_write_bps_device));
         hostconfig->blkio_throttle_write_bps_device = args->custom_conf.blkio_throttle_write_bps_device;
     }
 }
@@ -631,7 +631,7 @@ static void request_pack_host_devices(const struct client_arguments *args, lcrc_
 {
     /* devices */
     if (args->custom_conf.devices != NULL) {
-        hostconfig->devices_len = util_array_len(args->custom_conf.devices);
+        hostconfig->devices_len = util_array_len((const char **)(args->custom_conf.devices));
         hostconfig->devices = args->custom_conf.devices;
     }
 }
@@ -640,7 +640,7 @@ static void request_pack_host_hugepage_limits(const struct client_arguments *arg
 {
     /* hugepage limits*/
     if (args->custom_conf.hugepage_limits != NULL) {
-        hostconfig->hugetlbs_len = util_array_len(args->custom_conf.hugepage_limits);
+        hostconfig->hugetlbs_len = util_array_len((const char **)(args->custom_conf.hugepage_limits));
         hostconfig->hugetlbs = args->custom_conf.hugepage_limits;
     }
 }
@@ -649,7 +649,7 @@ static void request_pack_host_binds(const struct client_arguments *args, lcrc_ho
 {
     /* volumes to binds */
     if (args->custom_conf.volumes != NULL) {
-        hostconfig->binds_len = (size_t)util_array_len(args->custom_conf.volumes);
+        hostconfig->binds_len = (size_t)util_array_len((const char **)(args->custom_conf.volumes));
         hostconfig->binds = args->custom_conf.volumes;
     }
 }
@@ -696,7 +696,7 @@ static void request_pack_host_security(const struct client_arguments *args, lcrc
 {
     /* security opt */
     if (args->custom_conf.security != NULL) {
-        hostconfig->security_len = util_array_len(args->custom_conf.security);
+        hostconfig->security_len = util_array_len((const char **)(args->custom_conf.security));
         hostconfig->security = args->custom_conf.security;
     }
 }
@@ -1162,7 +1162,7 @@ static bool check_devices_conf_valid(const char *devices)
         ret = false;
         goto out;
     }
-    tmp_str_len = util_array_len(tmp_str);
+    tmp_str_len = util_array_len((const char **)tmp_str);
 
     // device format: x:x:x or x:x or x
     switch (tmp_str_len) {
@@ -1217,7 +1217,7 @@ static bool check_volumes_valid(const char *volume)
         ret = false;
         goto free_out;
     }
-    alen = util_array_len(array);
+    alen = util_array_len((const char **)array);
 
     // volume format: src:dst:mode
     switch (alen) {
@@ -1453,7 +1453,7 @@ static int parse_mounts_conf(const char *mount, struct valid_mounts_state *state
         goto out;
     }
 
-    items_len = util_array_len(items);
+    items_len = util_array_len((const char **)items);
 
     for (i = 0; i < items_len; i++) {
         key_val = util_string_split(items[i], '=');
@@ -1621,7 +1621,7 @@ static int create_check_hugetlbs(const struct client_arguments *args)
     int ret = 0;
     size_t len, i;
 
-    len = util_array_len(args->custom_conf.hugepage_limits);
+    len = util_array_len((const char **)(args->custom_conf.hugepage_limits));
     for (i = 0; i < len; i++) {
         char *limit = NULL;
         int64_t limitvalue;
@@ -1666,7 +1666,7 @@ static int create_check_network(const struct client_arguments *args)
     size_t len, i;
     struct sockaddr_in sa;
 
-    len = util_array_len(args->custom_conf.extra_hosts);
+    len = util_array_len((const char **)(args->custom_conf.extra_hosts));
     for (i = 0; i < len; i++) {
         char **items = NULL;
         items = util_string_split(args->custom_conf.extra_hosts[i], ':');
@@ -1674,7 +1674,7 @@ static int create_check_network(const struct client_arguments *args)
             COMMAND_ERROR("split extra hosts '%s' failed.", args->custom_conf.extra_hosts[i]);
             return -1;
         }
-        if (util_array_len(items) != 2) {
+        if (util_array_len((const char **)items) != 2) {
             util_free_array(items);
             COMMAND_ERROR("Invalid extra hosts specification '%s'. unsupported format",
                           args->custom_conf.extra_hosts[i]);
@@ -1687,7 +1687,7 @@ static int create_check_network(const struct client_arguments *args)
         }
         util_free_array(items);
     }
-    len = util_array_len(args->custom_conf.dns);
+    len = util_array_len((const char **)(args->custom_conf.dns));
     for (i = 0; i < len; i++) {
         if (!inet_pton(AF_INET, args->custom_conf.dns[i], &sa.sin_addr)) {
             COMMAND_ERROR("Invalid dns ip address '%s'.", args->custom_conf.dns[i]);
@@ -1733,21 +1733,21 @@ static int create_devices_volumes_checker(const struct client_arguments *args)
     size_t i;
     size_t len = 0;
 
-    len = util_array_len(args->custom_conf.devices);
+    len = util_array_len((const char **)(args->custom_conf.devices));
     for (i = 0; i < len; i++) {
         if (!check_devices_conf_valid(args->custom_conf.devices[i])) {
             ret = -1;
             goto out;
         }
     }
-    len = util_array_len(args->custom_conf.volumes);
+    len = util_array_len((const char **)(args->custom_conf.volumes));
     for (i = 0; i < len; i++) {
         if (!check_volumes_conf_valid(args->custom_conf.volumes[i])) {
             ret = -1;
             goto out;
         }
     }
-    len = util_array_len(args->custom_conf.mounts);
+    len = util_array_len((const char **)(args->custom_conf.mounts));
     for (i = 0; i < len; i++) {
         if (!check_mounts_conf_valid(args->custom_conf.mounts[i])) {
             ret = -1;
@@ -1812,7 +1812,7 @@ static int create_check_nschangeopt(const struct client_arguments *args)
         ERROR("Out of memory");
         return EINVALIDARGS;
     }
-    array_str_len = util_array_len(array_str);
+    array_str_len = util_array_len((const char **)array_str);
     if (array_str_len != 1 && array_str_len != 2) {
         ERROR("invalid ns-change-opt pararm:%s\n", args->custom_conf.ns_change_opt);
         util_free_array(array_str);
@@ -1886,7 +1886,7 @@ static int create_check_sysctl(const struct client_arguments *args)
         return 0;
     }
 
-    len = util_array_len(args->custom_conf.sysctls);
+    len = util_array_len((const char **)(args->custom_conf.sysctls));
     for (i = 0; i < len; i++) {
         if (!do_create_check_sysctl((const char *)args->custom_conf.sysctls[i])) {
             return -1;

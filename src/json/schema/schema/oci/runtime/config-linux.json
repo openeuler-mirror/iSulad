@@ -15,14 +15,14 @@
                 "id": "https://opencontainers.org/schema/bundle/linux/uidMappings",
                 "type": "array",
                 "items": {
-                    "$ref": "defs.json#/definitions/IDMapping"
+                    "$ref": "../../defs.json#/definitions/IDMapping"
                 }
             },
             "gidMappings": {
                 "id": "https://opencontainers.org/schema/bundle/linux/gidMappings",
                 "type": "array",
                 "items": {
-                    "$ref": "defs.json#/definitions/IDMapping"
+                    "$ref": "../../defs.json#/definitions/IDMapping"
                 }
             },
             "namespaces": {
@@ -53,7 +53,7 @@
                         "properties": {
                             "limit": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/pids/limit",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             }
                         },
                         "required": [
@@ -123,23 +123,23 @@
                             },
                             "period": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/period",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "../../defs.json#/definitions/uint64"
                             },
                             "quota": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/quota",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             },
                             "realtimePeriod": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/realtimePeriod",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "../../defs.json#/definitions/uint64"
                             },
                             "realtimeRuntime": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/realtimeRuntime",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             },
                             "shares": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/shares",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "../../defs.json#/definitions/uint64"
                             }
                         }
                     },
@@ -153,7 +153,7 @@
                                     "type": "string"
                                 },
                                 "limit": {
-                                    "$ref": "defs.json#/definitions/uint64"
+                                    "$ref": "../../defs.json#/definitions/uint64"
                                 }
                             },
                             "required": [
@@ -168,27 +168,27 @@
                         "properties": {
                             "kernel": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/kernel",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             },
                             "kernelTCP": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/kernelTCP",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             },
                             "limit": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/limit",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             },
                             "reservation": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/reservation",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             },
                             "swap": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swap",
-                                "$ref": "defs.json#/definitions/int64"
+                                "$ref": "../../defs.json#/definitions/int64"
                             },
                             "swappiness": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swappiness",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "../../defs.json#/definitions/uint64"
                             },
                             "disableOOMKiller": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/disableOOMKiller",
@@ -202,7 +202,7 @@
                         "properties": {
                             "classID": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/network/classId",
-                                "$ref": "defs.json#/definitions/uint32"
+                                "$ref": "../../defs.json#/definitions/uint32"
                             },
                             "priorities": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/network/priorities",
@@ -252,15 +252,15 @@
             },
             "sysctl": {
                 "id": "https://opencontainers.org/schema/bundle/linux/sysctl",
-                "$ref": "defs.json#/definitions/mapStringString"
+                "$ref": "../../defs.json#/definitions/mapStringString"
             },
             "maskedPaths": {
                 "id": "https://opencontainers.org/schema/bundle/linux/maskedPaths",
-                "$ref": "defs.json#/definitions/ArrayOfStrings"
+                "$ref": "../../defs.json#/definitions/ArrayOfStrings"
             },
             "readonlyPaths": {
                 "id": "https://opencontainers.org/schema/bundle/linux/readonlyPaths",
-                "$ref": "defs.json#/definitions/ArrayOfStrings"
+                "$ref": "../../defs.json#/definitions/ArrayOfStrings"
             },
             "mountLabel": {
                 "id": "https://opencontainers.org/schema/bundle/linux/mountLabel",

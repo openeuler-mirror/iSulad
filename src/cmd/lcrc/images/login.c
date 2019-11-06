@@ -15,7 +15,6 @@
 #include "login.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
@@ -95,7 +94,7 @@ static int get_password_from_notty(struct client_arguments *args)
     // Try get password from notty input.
     if (g_cmd_login_args.password_stdin) {
         char password[LOGIN_PASSWORD_LEN + 1] = { 0 };
-        int n = util_input_notty(password, sizeof(password));
+        int n = util_input_readall(password, sizeof(password));
         if (n == 0) {
             COMMAND_ERROR("Error: Password Required");
             return -1;
@@ -230,3 +229,4 @@ int cmd_login_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

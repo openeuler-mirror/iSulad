@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-size_t util_array_len(char **array);
+size_t util_array_len(const char **array);
 
 void util_free_array(char **array);
 
@@ -38,3 +38,4 @@ int util_array_append(char ***array, const char *element);
 #endif
 
 #endif /* __UTILS_H */
+

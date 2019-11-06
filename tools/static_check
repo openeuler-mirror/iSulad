@@ -13,6 +13,8 @@
 ##- @Create: 2019-04-25
 #######################################################################
 #!/bin/bash
+#
+# This script is the implementation portal for the iSulad project Personal level build static check.
 # set -euxo pipefail
 
 CURRENT_PATH=$(pwd)
@@ -371,7 +373,7 @@ function cpp_check() {
     printf "\n"
     local check_rule=$(echo ${CPPCHRECK_RULE[@]} | sed -e "s/ /,/g")
     local start_time=$(date +%s)
-    result=$(cppcheck --enable=${check_rule} -j $(nproc) -i ./build ./ 2>&1 | grep -vE "^Checking|done$")
+    result=$(cppcheck --enable=${check_rule} -j $(nproc) -i ./build ./ 2>&1 | grep -vE "^Checking|done$|any_of algorithm instead of a raw loop")
     nums=$(echo "${result}" | wc -l)
     echo "${result}"
     local end_time=$(date +%s)

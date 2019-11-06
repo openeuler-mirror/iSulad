@@ -389,7 +389,7 @@ static int stats_get_all_containers_id(const container_stats_request *request, c
     } else {
         array = containers_store_list_ids();
     }
-    *ids_len = util_array_len(array);
+    *ids_len = util_array_len((const char **)array);
     *idsarray = array;
     array = NULL;
     ret = 0;

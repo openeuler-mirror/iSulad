@@ -398,7 +398,7 @@ void free_sensitive_string(char *str);
 void memset_sensitive_string(char *str);
 bool detect_mount(const char *path);
 
-int util_input_notty(char *buf, size_t maxlen);
+int util_input_readall(char *buf, size_t maxlen);
 int util_input_echo(char *buf, size_t maxlen);
 int util_input_noecho(char *buf, size_t maxlen);
 

@@ -253,7 +253,7 @@ static char **health_check_cmds(const container_config *config)
         goto out;
     }
 
-    shell_len = util_array_len(shell);
+    shell_len = util_array_len((const char **)shell);
     if (shell_len > (SIZE_MAX / sizeof(char *)) - config->health_check->test_len) {
         ERROR("Invalid shell length");
         goto out;
@@ -574,7 +574,7 @@ void *health_check_run(void *arg)
     container_req->timeout = timeout_with_default(config->health_check->timeout, DEFAULT_PROBE_TIMEOUT) / Time_Second;
     container_req->container_id = util_strdup_s(cont->common_config->id);
     container_req->argv = cmd_slice;
-    container_req->argv_len = util_array_len(cmd_slice);
+    container_req->argv_len = util_array_len((const char **)cmd_slice);
     cmd_slice = NULL;
     EVENT("EVENT: {Object: %s, Type:  Health checking}", cont->common_config->id);
 
@@ -855,4 +855,5 @@ out:
     container_unref(cont);
     return;
 }
+
 

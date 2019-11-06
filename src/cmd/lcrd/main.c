@@ -388,7 +388,7 @@ static void send_dump_req(void)
         ERROR("Failed to read /proc/self/task' subdirectory");
         goto out;
     }
-    subdir_num = util_array_len(subdir);
+    subdir_num = util_array_len((const char **)subdir);
     if (subdir_num == 0) {
         goto out;
     }
@@ -1700,3 +1700,4 @@ failure:
     DAEMON_CLEAR_ERRMSG();
     exit(1);
 }
+

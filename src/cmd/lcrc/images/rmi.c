@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "rmi.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
@@ -130,3 +129,4 @@ int cmd_rmi_main(int argc, const char **argv)
     }
     exit(EXIT_SUCCESS);
 }
+

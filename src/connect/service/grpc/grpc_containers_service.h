@@ -101,7 +101,7 @@ public:
                              ServerWriter<CopyFromContainerResponse> *writer) override;
 
     Status CopyToContainer(ServerContext *context, ServerReaderWriter<CopyToContainerResponse,
-                           CopyToContainerRequest> *stream);
+                           CopyToContainerRequest> *stream) override;
 
     Status Logs(ServerContext *context, const LogsRequest* request,
                 ServerWriter<LogsResponse>* writer) override;

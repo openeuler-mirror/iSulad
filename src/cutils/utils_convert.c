@@ -169,7 +169,7 @@ static inline bool is_valid_str_bool_false(const char *str)
 
 int util_str_to_bool(const char *boolstr, bool *converted)
 {
-    if (boolstr == NULL || boolstr[0] == '\0') {
+    if (boolstr == NULL || converted == NULL) {
         return -EINVAL;
     }
     if (is_valid_str_bool_true(boolstr)) {
@@ -181,3 +181,4 @@ int util_str_to_bool(const char *boolstr, bool *converted)
     }
     return 0;
 }
+

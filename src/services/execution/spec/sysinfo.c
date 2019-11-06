@@ -1061,7 +1061,7 @@ static bool is_huge_pagesize_valid(const char *pagesize)
         ERROR("Hugetlb cgroup not supported");
         goto free_out;
     }
-    hps_len = util_array_len(hps);
+    hps_len = util_array_len((const char **)hps);
     if (hps_len == 0) {
         ERROR("Hugetlb cgroup not supported");
         goto free_out;
@@ -1245,7 +1245,7 @@ mountinfo_t *get_mount_info(const char *pline)
         ret = -1;
         goto free_out;
     }
-    length = util_array_len(list);
+    length = util_array_len((const char **)list);
     if (length < 8) {
         ERROR("Invalid mountinfo '%s'", pline);
         ret = -1;
@@ -1339,3 +1339,4 @@ free_out:
     }
     return minfos;
 }
+

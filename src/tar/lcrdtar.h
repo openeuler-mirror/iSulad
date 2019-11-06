@@ -19,7 +19,6 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <sys/types.h>
@@ -75,3 +74,4 @@ int archive_path(const char *srcdir, const char *srcbase, const char *rebase_nam
 #endif
 
 #endif
+

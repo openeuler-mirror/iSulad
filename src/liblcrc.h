@@ -16,7 +16,6 @@
 #define __LIB_LCRC_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
 
 #include "container_def.h"
@@ -840,3 +839,4 @@ void lcrc_logs_response_free(struct lcrc_logs_response *response);
 #endif
 
 #endif
+

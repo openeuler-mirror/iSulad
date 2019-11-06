@@ -607,7 +607,7 @@ bool util_valid_mount_mode(const char *mode)
         ERROR("Out of memory");
         return false;
     }
-    mlen = util_array_len(modes);
+    mlen = util_array_len((const char **)modes);
 
     for (i = 0; i < mlen; i++) {
         if (util_valid_rw_mode(modes[i])) {
@@ -664,3 +664,4 @@ cleanup:
     free(copy);
     return bret;
 }
+

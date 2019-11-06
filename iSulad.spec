@@ -1,17 +1,17 @@
-%global _version 1.0.31
-%global _release 20190919.232053.gitf0f8c706
+%global _version 1.0.33
+%global _release 20190930.052413.gitd2956279
 %global is_systemd 1
 %global debug_package %{nil}
 
 Name:      iSulad
 Version:   %{_version}
-Release:   %{_release}%{?dist}
+Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v1
-BuildRoot: {_tmppath}/%{name}-%{version}
-ExclusiveArch:  x86_64 aarch64
 URL:       http://code.huawei.com/containers/lcrd
-Source:    %{name}-1.0.tar.gz
+Source:    iSulad-1.0.tar.gz
+BuildRoot: {_tmppath}/iSulad-%{version}
+ExclusiveArch:  x86_64 aarch64
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -48,7 +48,7 @@ This is a umbrella project for gRPC-services based Lightweight Container
 Runtime Daemon, written by C.
 
 %prep
-%autosetup -c -n %{name}-%{version}
+%autosetup -c -n iSulad-%{version}
 
 %build
 mkdir -p build
@@ -84,7 +84,8 @@ install -m 0640 ../src/contrib/config/seccomp_default.json  %{buildroot}/%{_sysc
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/default/lcrd
 install -m 0640 ../src/contrib/config/config.json           %{buildroot}/%{_sysconfdir}/default/lcrd/config.json
-install -m 0550 ../src/contrib/sysmonitor/isulad-check.sh   %{buildroot}/%{_sysconfdir}/default/lcrd/isulad-check.sh
+install -m 0640 ../src/contrib/config/systemcontainer_config.json           %{buildroot}/%{_sysconfdir}/default/lcrd/systemcontainer_config.json
+install -m 0550 ../src/contrib/sysmonitor/isulad-check.sh        %{buildroot}/%{_sysconfdir}/default/lcrd/isulad-check.sh
 
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/sysmonitor/process
 cp ../src/contrib/sysmonitor/isulad-monit $RPM_BUILD_ROOT/etc/sysmonitor/process
@@ -159,6 +160,7 @@ fi
 %attr(0600,root,root) %{_sysconfdir}/sysmonitor/process/isulad-monit
 %attr(0550,root,root) %{_sysconfdir}/default/lcrd/isulad-check.sh
 %defattr(0640,root,root,0750)
+%{_sysconfdir}/isulad
 %{_sysconfdir}/isulad/*
 %{_sysconfdir}/default/*
 %defattr(-,root,root,-)

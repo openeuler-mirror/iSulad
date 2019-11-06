@@ -165,8 +165,8 @@ static char *get_uniq_enable_plugins(const oci_runtime_spec *oci)
     UTIL_FREE_AND_SET_NULL(names);
     UTIL_FREE_AND_SET_NULL(full);
 
-    for (i = 0; i < util_array_len(raw); i++) {
-        if (strings_in_slice((const char **)arr, util_array_len(arr), raw[i])) {
+    for (i = 0; i < util_array_len((const char **)raw); i++) {
+        if (strings_in_slice((const char **)arr, util_array_len((const char **)arr), raw[i])) {
             continue;
         }
         if (util_array_append(&arr, raw[i]) != 0) {
@@ -175,7 +175,7 @@ static char *get_uniq_enable_plugins(const oci_runtime_spec *oci)
         }
     }
 
-    names = util_string_join(LCRD_ENABLE_PLUGINS_SEPERATOR, (const char **)arr, util_array_len(arr));
+    names = util_string_join(LCRD_ENABLE_PLUGINS_SEPERATOR, (const char **)arr, util_array_len((const char **)arr));
     if (names == NULL) {
         ERROR("join uniq plugin name failed");
         goto failed;
@@ -251,7 +251,7 @@ static char **get_enable_plugins(const char *plugins)
     if (arr == NULL) {
         ERROR("Out of memory");
     }
-    arr_len = util_array_len(arr);
+    arr_len = util_array_len((const char **)arr);
 
     for (i = 0; i < arr_len; i++) {
         if (strings_in_slice((const char **)dst, dst_len, arr[i])) {
@@ -262,7 +262,7 @@ static char **get_enable_plugins(const char *plugins)
             dst = NULL;
             goto out;
         }
-        dst_len = util_array_len(dst);
+        dst_len = util_array_len((const char **)dst);
     }
 
     if (arr_len != dst_len) {
@@ -956,7 +956,7 @@ static bool plugin_useby_container(const plugin_t *plugin, const container_t *co
     plugin_names = container_get_env_nolock(cont, LCRD_ENABLE_PLUGINS);
     pnames = get_enable_plugins(plugin_names);
 
-    for (i = 0; i < util_array_len(pnames); i++) {
+    for (i = 0; i < util_array_len((const char **)pnames); i++) {
         if (strcmp(pnames[i], plugin->name) == 0) {
             ok = true;
             break;
@@ -1090,7 +1090,7 @@ static int pm_init_plugin(const plugin_t *plugin)
     size_t i = 0;
 
     cnames = containers_store_list_ids();
-    container_num = util_array_len(cnames);
+    container_num = util_array_len((const char **)cnames);
 
     /*
      * send init request no matter containers exist or not, plugin should
@@ -1331,7 +1331,7 @@ static int plugin_event_handle_dispath_impl(const char *cid, const char *plugins
     }
 
     pm_rdlock();
-    for (i = 0; i < util_array_len(pnames); i++) {
+    for (i = 0; i < util_array_len((const char **)pnames); i++) {
         if (pm_get_plugin(pnames[i], &plugin)) { /* plugin not found */
             ERROR("plugin %s not registered.", pnames[i]);
             ret = -1;
@@ -1548,7 +1548,7 @@ int plugin_event_container_pre_create(const char *cid, oci_runtime_spec *ocic)
         goto out;
     }
     pm_rdlock();
-    for (i = 0; i < util_array_len(pnames); i++) {
+    for (i = 0; i < util_array_len((const char **)pnames); i++) {
         if (pm_get_plugin(pnames[i], &plugin)) { /* plugin not found */
             ERROR("plugin %s not registered.", pnames[i]);
             ret = -1;

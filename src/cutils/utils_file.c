@@ -786,10 +786,11 @@ char *look_path(const char *file, char **err)
 
     /* if slash in file, directly use file and do not try PATH. */
     if (strings_contains_any(file, "/")) {
-        if (find_executable(file) == 0) {
+        int en = find_executable(file);
+        if (en == 0) {
             return util_strdup_s(file);
         }
-        if (asprintf(err, "find exec %s : %s", file, strerror(errno)) < 0) {
+        if (asprintf(err, "find exec %s : %s", file, strerror(en)) < 0) {
             *err = util_strdup_s("Out of memory");
         }
         return NULL;

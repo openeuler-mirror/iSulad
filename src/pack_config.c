@@ -379,7 +379,7 @@ static host_config_devices_element *parse_device(const char *devices)
     }
 
     tmp_str = util_string_split(devices, ':');
-    tmp_str_len = util_array_len(tmp_str);
+    tmp_str_len = util_array_len((const char **)tmp_str);
 
     switch (tmp_str_len) {
         case 3:
@@ -448,7 +448,7 @@ static void get_ulimit_split_parts(const char *val, char ***parts, size_t *parts
         COMMAND_ERROR("Out of memory");
         return;
     }
-    *parts_len = util_array_len(*parts);
+    *parts_len = util_array_len((const char **)(*parts));
 }
 
 static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limitvals_len, int64_t *soft, int64_t *hard)
@@ -748,7 +748,7 @@ static host_config_blkio_weight_device_element *pack_blkio_weight_devices(const 
         COMMAND_ERROR("String split failed");
         goto erro_out;
     }
-    tmp_str_len = util_array_len(tmp_str);
+    tmp_str_len = util_array_len((const char **)tmp_str);
 
     if (tmp_str_len != 2) {
         COMMAND_ERROR("Bad blkio weight device format: %s", devices);
@@ -789,7 +789,7 @@ static int parse_blkio_throttle_bps_device(const char *device, char **path, cons
     char **split = NULL;
 
     split = util_string_split_multi(device, ':');
-    if (split == NULL || util_array_len(split) != 2) {
+    if (split == NULL || util_array_len((const char **)split) != 2) {
         COMMAND_ERROR("bad format: %s", device);
         ret = -1;
         goto out;

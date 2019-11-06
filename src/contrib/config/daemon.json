@@ -22,7 +22,6 @@
         "docker.io"
     ],
     "insecure-registries": [
-        "rnd-dockerhub.huawei.com"
     ],
     "pod-sandbox-image": "",
     "image-opt-timeout": "5m",

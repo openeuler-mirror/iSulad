@@ -16,6 +16,7 @@ add_executable(${EXE}
     utils_string_llt.cc)
 
 target_include_directories(${EXE} PUBLIC
+    ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256

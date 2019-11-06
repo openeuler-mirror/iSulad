@@ -12,7 +12,7 @@
  * Create: 2018-11-08
  * Description: provide grpc image client definition
  ******************************************************************************/
-#ifndef __GPRC_IMAGES_CLIENT_H
+#ifndef __GRPC_IMAGES_CLIENT_H
 #define __GRPC_IMAGES_CLIENT_H
 
 #include "lcrc_connect.h"

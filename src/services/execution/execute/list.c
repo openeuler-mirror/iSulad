@@ -199,10 +199,10 @@ static char **filter_by_name_id_matches(const struct list_context *ctx, const ma
     map_t *matches = NULL;
 
     names = filters_args_get(ctx->ps_filters, "name");
-    names_len = util_array_len(names);
+    names_len = util_array_len((const char **)names);
 
     ids = filters_args_get(ctx->ps_filters, "id");
-    ids_len = util_array_len(ids);
+    ids_len = util_array_len((const char **)ids);
     if (names_len == 0 && ids_len == 0) {
         if (append_ids(map_id_name, &filtered_ids) != 0) {
             goto cleanup;
@@ -618,7 +618,7 @@ static int pack_list_containers(char **idsarray, const struct list_context *ctx,
     int j = 0;
     size_t container_nums = 0;
 
-    container_nums = util_array_len(idsarray);
+    container_nums = util_array_len((const char **)idsarray);
     if (container_nums == 0) {
         goto out;
     }

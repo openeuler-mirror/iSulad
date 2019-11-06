@@ -1098,7 +1098,7 @@ char *container_get_command(const container_t *cont)
         }
     }
 
-    cmd = util_string_join(" ", (const char **)args, util_array_len(args));
+    cmd = util_string_join(" ", (const char **)args, util_array_len((const char **)args));
 
 cleanup:
     util_free_array(args);

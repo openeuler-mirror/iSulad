@@ -16,7 +16,6 @@
 #define __LCRD_RESTORE_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
 
 #include "engine.h"
@@ -32,3 +31,4 @@ extern void containers_restore(void);
 #endif
 
 #endif
+

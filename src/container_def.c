@@ -13,6 +13,7 @@
  * Description: provide container definition
  ******************************************************************************/
 #include <string.h>
+#include <stdlib.h>
 
 #include "container_def.h"
 
@@ -30,3 +31,4 @@ void container_cgroup_resources_free(container_cgroup_resources_t *cr)
 
     free(cr);
 }
+

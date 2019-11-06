@@ -507,6 +507,14 @@ char *preserve_trailing_dot_or_separator(const char *cleanedpath, const char *or
     int nret;
     char respath[PATH_MAX + 3] = { 0 };
 
+    if (cleanedpath == NULL || originalpath == NULL) {
+        return NULL;
+    }
+
+    if (cleanedpath[0] == '\0' || originalpath[0] == '\0') {
+        return NULL;
+    }
+
     nret = sprintf_s(respath, PATH_MAX, "%s", cleanedpath);
     if (nret < 0) {
         ERROR("Failed to print string");

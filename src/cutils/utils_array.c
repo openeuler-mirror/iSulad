@@ -21,9 +21,9 @@
 #include "log.h"
 #include "utils.h"
 
-size_t util_array_len(char **array)
+size_t util_array_len(const char **array)
 {
-    char **pos;
+    const char **pos;
     size_t len = 0;
 
     for (pos = array; pos != NULL && *pos != NULL; pos++) {
@@ -53,7 +53,7 @@ int util_array_append(char ***array, const char *element)
     }
 
     // let new len to len + 2 for element and null
-    len = util_array_len(*array);
+    len = util_array_len((const char **)(*array));
 
     if (len > SIZE_MAX / sizeof(char *) - 2) {
         ERROR("Too many array elements!");
@@ -123,3 +123,4 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
 
     return 0;
 }
+

@@ -147,7 +147,7 @@ int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_custom_confi
         ret = -1;
         goto out;
     }
-    array_str_len = util_array_len(array_str);
+    array_str_len = util_array_len((const char **)array_str);
 
     for (i = 0; i < array_str_len; i++) {
         if (strcmp(array_str[i], "net") == 0) {
@@ -543,7 +543,7 @@ defs_mount *parse_mount(const char *mount)
         goto out;
     }
 
-    items_len = util_array_len(items);
+    items_len = util_array_len((const char **)items);
 
     for (i = 0; i < items_len; i++) {
         kv = util_string_split(items[i], '=');
@@ -635,7 +635,7 @@ static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_elem
         goto free_out;
     }
 
-    alen = util_array_len(array);
+    alen = util_array_len((const char **)array);
     switch (alen) {
         case 1:
             ERROR("Not supported volume format '%s'", volume);
@@ -716,7 +716,7 @@ defs_mount *parse_volume(const char *volume)
         goto free_out;
     }
 
-    mlen = util_array_len(modes);
+    mlen = util_array_len((const char **)modes);
     for (i = 0; i < mlen; i++) {
         if (util_valid_rw_mode(modes[i])) {
             rw = modes[i];
@@ -1818,57 +1818,6 @@ static bool mounts_expand(oci_runtime_spec *container, size_t add_len)
     container->mounts_len = old_len + add_len;
 
     return true;
-}
-
-bool mount_run_tmpfs(oci_runtime_spec *container, const char *path)
-{
-    char **options = NULL;
-    size_t options_len = 5;
-    bool ret = false;
-    defs_mount *tmp_mounts = NULL;
-
-    if (options_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("Invalid option size");
-        return ret;
-    }
-    options = util_common_calloc_s(options_len * sizeof(char *));
-    if (options == NULL) {
-        ERROR("Out of memory");
-        goto out_free;
-    }
-    options[0] = util_strdup_s("nosuid");
-    options[1] = util_strdup_s("noexec");
-    options[2] = util_strdup_s("nodev");
-    options[3] = util_strdup_s("relatime");
-    options[4] = util_strdup_s("mode=755");
-    tmp_mounts = util_common_calloc_s(sizeof(defs_mount));
-    if (tmp_mounts == NULL) {
-        ERROR("Malloc tmp_mounts memory failed");
-        goto out_free;
-    }
-
-    tmp_mounts->destination = util_strdup_s(path);
-    tmp_mounts->source = util_strdup_s("tmpfs");
-    tmp_mounts->type = util_strdup_s("tmpfs");
-    tmp_mounts->options = options;
-    tmp_mounts->options_len = options_len;
-    options = NULL;
-
-    /*expand mount array*/
-    if (!mounts_expand(container, 1)) {
-        goto out_free;
-    }
-    /*add a new mount node*/
-    container->mounts[container->mounts_len - 1] = tmp_mounts;
-
-    ret = true;
-out_free:
-
-    if (!ret) {
-        util_free_array(options);
-        free_defs_mount(tmp_mounts);
-    }
-    return ret;
 }
 
 static bool mount_file(oci_runtime_spec *container, const char *src_path, const char *dst_path)

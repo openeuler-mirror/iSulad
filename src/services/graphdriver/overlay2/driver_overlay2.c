@@ -14,6 +14,7 @@
  ******************************************************************************/
 #include "driver_overlay2.h"
 #include <string.h>
+#include <stdlib.h>
 
 #include "liblcrd.h"
 #include "utils.h"
@@ -79,3 +80,4 @@ int overlay2_parse_options(struct graphdriver *driver, const char **options, siz
 
     return 0;
 }
+

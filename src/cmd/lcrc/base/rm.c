@@ -62,8 +62,10 @@ static int client_delete(const struct client_arguments *args)
     }
 
     if (response->name != NULL) {
+        free(g_cmd_delete_args.name);
         g_cmd_delete_args.name = util_strdup_s(response->name);
     }
+
 out:
     lcrc_delete_response_free(response);
     return ret;
@@ -141,7 +143,8 @@ int cmd_delete_main(int argc, const char **argv)
     }
 
     for (i = 0; i < g_cmd_delete_args.argc; i++) {
-        g_cmd_delete_args.name = g_cmd_delete_args.argv[i];
+        free(g_cmd_delete_args.name);
+        g_cmd_delete_args.name = util_strdup_s(g_cmd_delete_args.argv[i]);
         if (client_delete(&g_cmd_delete_args)) {
             ERROR("Container \"%s\" rm failed", g_cmd_delete_args.name);
             status = true;
@@ -156,3 +159,4 @@ int cmd_delete_main(int argc, const char **argv)
     }
     exit(EXIT_SUCCESS);
 }
+

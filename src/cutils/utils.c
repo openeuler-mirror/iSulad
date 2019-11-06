@@ -1080,7 +1080,7 @@ int util_parse_user_remap(const char *user_remap, unsigned int *host_uid, unsign
         ret = -1;
         goto out;
     }
-    args_len = util_array_len(items);
+    args_len = util_array_len((const char **)items);
 
     switch (args_len) {
         case 3:
@@ -1344,6 +1344,43 @@ int util_input_notty(char *buf, size_t maxlen)
             break;
         }
         buf[i] = (char) c;
+    }
+
+    return ret ? ret : (int)i;
+}
+
+int util_input_readall(char *buf, size_t maxlen)
+{
+    size_t i = 0;
+    int ret = 0;
+
+    for (;;) {
+        int c = getchar();
+        if (c == EOF) {
+            break;
+        }
+        if (c < 0) {
+            ret = -1;
+            break;
+        }
+        // Skip chars larger than maxlen
+        if (i + 1 >= maxlen) {
+            continue;
+        }
+        buf[i] = (char) c;
+        i++;
+    }
+    buf[i] = 0;
+
+    // Strip last '\n'
+    if (i > 0  && buf[i - 1] == '\n') {
+        buf[i - 1] = 0;
+        i--;
+    }
+    // Strip last '\r'
+    if (i > 0  && buf[i - 1] == '\r') {
+        buf[i - 1] = 0;
+        i--;
     }
 
     return ret ? ret : (int)i;

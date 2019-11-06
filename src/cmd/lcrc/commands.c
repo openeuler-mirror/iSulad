@@ -174,8 +174,8 @@ int run_command(struct command *commands, int argc, const char **argv)
         return command_default_help(argv[0], commands, argc - 1, (const char **)(argv + 1));
     }
 
-    if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-        // lcrc help command format: lcrc [-h|help|--help] args
+    if (strcmp(argv[1], "--help") == 0) {
+        // lcrc help command format: lcrc --help args
         return command_default_help(argv[0], commands, argc - 2, (const char **)(argv + 2));
     }
 
@@ -191,7 +191,7 @@ int run_command(struct command *commands, int argc, const char **argv)
     }
 
     printf("%s: command \"%s\" not found\n", argv[0], argv[1]);
-    printf("run `%s --help` or `run -h` for a list of sub-commands\n", argv[0]);
+    printf("run `%s --help` for a list of sub-commands\n", argv[0]);
     return 1;
 }
 
@@ -430,3 +430,4 @@ int start_client_console_thread(struct command_fifo_config *console_fifos, bool 
 
     return 0;
 }
+

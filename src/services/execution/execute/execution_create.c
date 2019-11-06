@@ -693,6 +693,159 @@ static int verify_merged_custom_config(const container_custom_config *custom_spe
     return 0;
 }
 
+static int response_allocate_memory(container_create_response **response)
+{
+    if (response == NULL) {
+        ERROR("Invalid NULL input");
+        return -1;
+    }
+
+    *response = util_common_calloc_s(sizeof(container_create_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int get_request_container_info(const container_create_request *request, char **id, char **name, uint32_t *cc)
+{
+    if (create_request_check(request) != 0) {
+        ERROR("Invalid create container request");
+        *cc = LCRD_ERR_INPUT;
+        return -1;
+    }
+
+    if (maintain_container_id(request, id, name) != 0) {
+        *cc = LCRD_ERR_EXEC;
+        return -1;
+    }
+
+    return 0;
+}
+
+static int get_request_image_info(const container_create_request *request, char **image_type,
+                                  const char **ext_config_image, const char **image_name)
+{
+    *image_type = im_get_image_type(request->image, request->rootfs);
+    if (*image_type == NULL) {
+        return -1;
+    }
+
+    if (request->rootfs != NULL) {
+        *image_name = request->rootfs;
+        // Do not use none image because none image has no config.
+        if (strcmp(request->image, "none") && strcmp(request->image, "none:latest")) {
+            *ext_config_image = request->image;
+        }
+    } else {
+        *image_name = request->image;
+    }
+
+    // Check if config image exist if provided.
+    if (*ext_config_image != NULL) {
+        if (!im_config_image_exist(*ext_config_image)) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int preparate_runtime_environment(const container_create_request *request, const char *id,
+                                         char **runtime, char **runtime_root, uint32_t *cc)
+{
+    *runtime = get_runtime_from_request(request);
+    if (*runtime == NULL) {
+        *cc = LCRD_ERR_INPUT;
+        return -1;
+    }
+
+    *runtime_root = conf_get_routine_rootdir(*runtime);
+    if (*runtime_root == NULL) {
+        *cc = LCRD_ERR_EXEC;
+        return -1;
+    }
+
+    if (create_container_root_dir(id, *runtime_root) != 0) {
+        *cc = LCRD_ERR_EXEC;
+        return -1;
+    }
+
+    return 0;
+}
+
+static int get_basic_spec(const container_create_request *request, const char *id, const char *runtime_root,
+                          host_config **host_spec, container_custom_config **custom_spec)
+{
+    *host_spec = get_host_spec(request);
+    if (*host_spec == NULL) {
+        return -1;
+    }
+
+    *custom_spec = get_custom_spec(id, runtime_root, request);
+    if (*custom_spec == NULL) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int get_v2_spec(const container_create_request *request, const char *id, const char *name,
+                       const char *runtime_root, const host_config *host_spec, const char *image_type,
+                       container_config_v2_common_config **v2_spec)
+{
+    *v2_spec = get_config_v2_spec(id, runtime_root, host_spec);
+    if (*v2_spec == NULL) {
+        ERROR("Failed to malloc container_config_v2_common_config");
+        return -1;
+    }
+
+    if (v2_spec_make_basic_info(id, name, request->image, image_type, *v2_spec) != 0) {
+        ERROR("Failed to malloc container_config_v2_common_config");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int v2_spec_merge_config(const container_custom_config *custom_spec, const oci_runtime_spec *oci_spec,
+                                container_config_v2_common_config *v2_spec)
+{
+    if (v2_spec_merge_custom_spec(custom_spec, v2_spec) != 0) {
+        ERROR("Failed to malloc container_config_v2_common_config");
+        return -1;
+    }
+
+    if (v2_spec_merge_oci_spec(oci_spec, v2_spec) != 0) {
+        ERROR("Failed to malloc container_config_v2_common_config");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int generate_oci_config_json(const char *id, const container_create_request *request,
+                                    const host_config *host_spec, const container_custom_config *custom_spec,
+                                    oci_runtime_spec *oci_spec, char **oci_config_data)
+{
+    if (verify_merged_custom_config(custom_spec)) {
+        return -1;
+    }
+
+    if (merge_config_for_syscontainer(request, host_spec, custom_spec, oci_spec) != 0) {
+        ERROR("Failed to merge config for syscontainer");
+        return -1;
+    }
+
+    if (generate_merged_oci_config_json(id, oci_spec, oci_config_data) != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
 int container_create_cb(const container_create_request *request,
                         container_create_response **response)
 {
@@ -714,90 +867,29 @@ int container_create_cb(const container_create_request *request,
 
     DAEMON_CLEAR_ERRMSG();
 
-    if (response == NULL) {
-        ERROR("Invalid NULL input");
+    if (response_allocate_memory(response) != 0) {
         return -1;
     }
 
-    *response = util_common_calloc_s(sizeof(container_create_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    if (create_request_check(request) != 0) {
-        ERROR("Invalid create container request");
-        cc = LCRD_ERR_INPUT;
+    if (get_request_container_info(request, &id, &name, &cc) != 0) {
         goto pack_response;
     }
 
-    if (maintain_container_id(request, &id, &name) != 0) {
-        cc = LCRD_ERR_EXEC;
-        goto pack_response;
-    }
-
-    image_type = im_get_image_type(request->image, request->rootfs);
-    if (image_type == NULL) {
+    if (get_request_image_info(request, &image_type, &ext_config_image, &image_name) != 0) {
         cc = LCRD_ERR_EXEC;
         goto clean_nameindex;
     }
 
-    if (request->rootfs != NULL) {
-        image_name = request->rootfs;
-        // Do not use none image because none image has no config.
-        if (strcmp(request->image, "none") && strcmp(request->image, "none:latest")) {
-            ext_config_image = request->image;
-        }
-    } else {
-        image_name = request->image;
-    }
-
-    // Check if config image exist if provided.
-    if (ext_config_image != NULL) {
-        if (!im_config_image_exist(ext_config_image)) {
-            cc = LCRD_ERR_EXEC;
-            goto clean_nameindex;
-        }
-    }
-
-    runtime = get_runtime_from_request(request);
-    if (runtime == NULL) {
-        cc = LCRD_ERR_INPUT;
+    if (preparate_runtime_environment(request, id, &runtime, &runtime_root, &cc) != 0) {
         goto clean_nameindex;
     }
 
-    runtime_root = conf_get_routine_rootdir(runtime);
-    if (runtime_root == NULL) {
-        cc = LCRD_ERR_EXEC;
-        goto clean_nameindex;
-    }
-
-    if (create_container_root_dir(id, runtime_root) != 0) {
-        cc = LCRD_ERR_EXEC;
-        goto clean_nameindex;
-    }
-
-    host_spec = get_host_spec(request);
-    if (host_spec == NULL) {
+    if (get_basic_spec(request, id, runtime_root, &host_spec, &custom_spec) != 0) {
         cc = LCRD_ERR_INPUT;
         goto clean_container_root_dir;
     }
 
-    custom_spec = get_custom_spec(id, runtime_root, request);
-    if (custom_spec == NULL) {
-        cc = LCRD_ERR_INPUT;
-        goto clean_container_root_dir;
-    }
-
-    v2_spec = get_config_v2_spec(id, runtime_root, host_spec);
-    if (v2_spec == NULL) {
-        ERROR("Failed to malloc container_config_v2_common_config");
-        cc = LCRD_ERR_EXEC;
-        goto clean_container_root_dir;
-    }
-
-    if (v2_spec_make_basic_info(id, name, request->image, image_type, v2_spec) != 0) {
-        ERROR("Failed to malloc container_config_v2_common_config");
+    if (get_v2_spec(request, id, name, runtime_root, host_spec, image_type, &v2_spec) != 0) {
         cc = LCRD_ERR_EXEC;
         goto clean_container_root_dir;
     }
@@ -808,12 +900,12 @@ int container_create_cb(const container_create_request *request,
     }
 
     host_channel = dup_host_channel(host_spec->host_channel);
-
     if (prepare_host_channel(host_channel, host_spec->user_remap)) {
         ERROR("Failed to prepare host channel with '%s'", host_spec->host_channel);
         cc = LCRD_ERR_EXEC;
         goto clean_container_root_dir;
     }
+
     oci_spec = merge_config(id, image_type, image_name, ext_config_image, host_spec, custom_spec, v2_spec,
                             &real_rootfs);
     if (oci_spec == NULL) {
@@ -826,19 +918,8 @@ int container_create_cb(const container_create_request *request,
         goto clean_rootfs;
     }
 
-    if (verify_merged_custom_config(custom_spec)) {
+    if (generate_oci_config_json(id, request, host_spec, custom_spec, oci_spec, &oci_config_data) != 0) {
         cc = LCRD_ERR_INPUT;
-        goto clean_rootfs;
-    }
-
-    if (merge_config_for_syscontainer(request, host_spec, custom_spec, oci_spec) != 0) {
-        ERROR("Failed to merge config for syscontainer");
-        cc = LCRD_ERR_EXEC;
-        goto clean_rootfs;
-    }
-
-    if (generate_merged_oci_config_json(id, oci_spec, &oci_config_data) != 0) {
-        cc = LCRD_ERR_EXEC;
         goto clean_rootfs;
     }
 
@@ -848,14 +929,7 @@ int container_create_cb(const container_create_request *request,
         goto clean_rootfs;
     }
 
-    if (v2_spec_merge_custom_spec(custom_spec, v2_spec) != 0) {
-        ERROR("Failed to malloc container_config_v2_common_config");
-        cc = LCRD_ERR_EXEC;
-        goto clean_on_error;
-    }
-
-    if (v2_spec_merge_oci_spec(oci_spec, v2_spec) != 0) {
-        ERROR("Failed to malloc container_config_v2_common_config");
+    if (v2_spec_merge_config(custom_spec, oci_spec, v2_spec) != 0) {
         cc = LCRD_ERR_EXEC;
         goto clean_on_error;
     }
@@ -868,6 +942,7 @@ int container_create_cb(const container_create_request *request,
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
     goto pack_response;
+
 clean_on_error:
     (void)runtime_rm(id, runtime, runtime_root);
 

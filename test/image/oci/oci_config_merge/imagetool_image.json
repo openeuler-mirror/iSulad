@@ -1,0 +1,51 @@
+{
+    "id": "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b",
+    "repo_tags": [
+        "rnd-dockerhub.huawei.com/official/busybox:latest"
+    ],
+    "repo_digests": [
+        "rnd-dockerhub.huawei.com/official/busybox@sha256:64da743694ece2ca88df34bf4c5378fdfc44a1a5b50478722e2ff98b82e4a5c9"
+    ],
+    "size": 1443304,
+    "created": "2019-06-15T00:19:54.402459069Z",
+    "Loaded": "2019-09-04T07:43:50.498364718Z",
+    "Spec": {
+        "created": "2019-06-15T00:19:54.402459069Z",
+        "architecture": "amd64",
+        "os": "linux",
+        "config": {
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "sh"
+            ]
+        },
+        "rootfs": {
+            "diff_ids": [
+                "sha256:6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a"
+            ],
+            "type": "layers"
+        },
+        "history": [
+            {
+                "created": "2019-06-15T00:19:54.271494486Z",
+                "created_by": "/bin/sh -c #(nop) ADD file:b265aa0ea2ef7ff1f4a3e087217e75aca2c90f5c345406299664cc7969b2b28e in / "
+            },
+            {
+                "created": "2019-06-15T00:19:54.402459069Z",
+                "created_by": "/bin/sh -c #(nop)  CMD [\"sh\"]",
+                "empty_layer": true
+            }
+        ]
+    },
+    "Healthcheck": {
+        "Test": [
+          "CMD-SHELL",
+          "echo hello || exit 1"
+        ],
+        "Interval": 5000000000,
+        "Timeout": 3000000000,
+        "ExitOnUnhealthy": true
+    }
+}

@@ -328,9 +328,12 @@ out:
 }
 
 /* default_spec returns default oci spec used by lcrd. */
-oci_runtime_spec *default_spec()
+oci_runtime_spec *default_spec(bool system_container)
 {
     const char *oci_file = OCICONFIG_PATH;
+    if (system_container) {
+        oci_file = OCI_SYSTEM_CONTAINER_CONFIG_PATH;
+    }
     oci_runtime_spec *oci_spec = NULL;
     parser_error err = NULL;
 
@@ -1453,6 +1456,44 @@ out:
     return ret;
 }
 
+static int change_tmpfs_mount_size(const oci_runtime_spec *oci_spec, int64_t memory_limit)
+{
+    int ret = 0;
+    size_t i = 0;
+    char size_opt[MOUNT_PROPERTIES_SIZE] = { 0 };
+
+    if (oci_spec->mounts == NULL) {
+        goto out;
+    }
+    if (memory_limit <= 0) {
+        goto out;
+    }
+    /*set tmpfs mount size to half of container memory limit*/
+    if (sprintf_s(size_opt, sizeof(size_opt), "size=%lldk", (long long int)(memory_limit / 2048)) < 0) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    for (i = 0; i < oci_spec->mounts_len; i++) {
+        if (strcmp("tmpfs", oci_spec->mounts[i]->type) != 0) {
+            continue;
+        }
+        if (strcmp("/run", oci_spec->mounts[i]->destination)  == 0 || \
+            strcmp("/run/lock", oci_spec->mounts[i]->destination)  == 0 || \
+            strcmp("/tmp", oci_spec->mounts[i]->destination) == 0) {
+            ret = util_array_append(&oci_spec->mounts[i]->options, size_opt);
+            if (ret != 0) {
+                ERROR("append mount size option failed");
+                goto out;
+            }
+            oci_spec->mounts[i]->options_len++;
+        }
+    }
+
+out:
+    return ret;
+}
+
 static int merge_settings_for_system_container(oci_runtime_spec *oci_spec, host_config *host_spec,
                                                container_custom_config *custom_spec)
 {
@@ -1471,14 +1512,9 @@ static int merge_settings_for_system_container(oci_runtime_spec *oci_spec, host_
         ERROR("Failed to adapt settings for system container");
         goto out;
     }
-    if (!mount_run_tmpfs(oci_spec, "/run")) {
+    if (change_tmpfs_mount_size(oci_spec, host_spec->memory) != 0) {
         ret = -1;
-        ERROR("Failed to add /run mount to system container");
-        goto out;
-    }
-    if (!mount_run_tmpfs(oci_spec, "/run/lock")) {
-        ret = -1;
-        ERROR("Failed to add /run/lock mount to system container");
+        ERROR("Failed to change tmpfs mount size for system container");
         goto out;
     }
 
@@ -1674,7 +1710,7 @@ oci_runtime_spec *merge_container_config(const char *id, const char *image_type,
     parser_error err = NULL;
     int ret = 0;
 
-    oci_spec = default_spec();
+    oci_spec = default_spec(host_spec->system_container);
     if (oci_spec == NULL) {
         goto out;
     }
@@ -1814,3 +1850,4 @@ out:
     free(err);
     return ociconfig;
 }
+

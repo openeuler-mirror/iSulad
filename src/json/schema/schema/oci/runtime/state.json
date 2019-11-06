@@ -6,7 +6,7 @@
     "properties": {
         "ociVersion": {
             "id": "https://opencontainers.org/schema/runtime/state/ociVersion",
-            "$ref": "defs.json#/definitions/ociVersion"
+            "$ref": "../../defs.json#/definitions/ociVersion"
         },
         "id": {
             "id": "https://opencontainers.org/schema/runtime/state/id",
@@ -33,7 +33,7 @@
             "type": "string"
         },
         "annotations": {
-            "$ref": "defs.json#/definitions/annotations"
+            "$ref": "../../defs.json#/definitions/annotations"
         }
     },
     "required": [
