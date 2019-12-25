@@ -1,5 +1,5 @@
-%global _version 1.1.1
-%global _release 20191222.225449.gitaa7147bf
+%global _version 1.1.2
+%global _release 20191224.232827.git9001f2f6
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -30,7 +30,7 @@ Requires(preun): initscripts
 %endif
 
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
-BuildRequires: grpc grpc-devel protobuf-devel grpc-plugins
+BuildRequires: grpc grpc-devel protobuf-devel
 BuildRequires: libsecurec libsecurec-devel libcurl libcurl-devel sqlite-devel
 BuildRequires: http-parser-devel libevhtp-devel libevent-devel
 BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
