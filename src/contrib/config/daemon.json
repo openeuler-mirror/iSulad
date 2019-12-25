@@ -19,12 +19,12 @@
         "overlay2.override_kernel_check=true"
     ],
     "registry-mirrors": [
-        "docker.io"
     ],
     "insecure-registries": [
     ],
     "pod-sandbox-image": "",
     "image-opt-timeout": "5m",
+    "image-server-sock-addr": "unix:///var/run/lcrd/isula_image.sock",
     "native.umask": "secure",
     "network-plugin": "",
     "cni-bin-dir": "",

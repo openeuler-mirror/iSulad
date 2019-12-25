@@ -33,3 +33,4 @@ const char *errno_to_error_message(lcrd_errno_t err)
     }
     return g_lcrd_strerror_tab[err].errmsg;
 }
+

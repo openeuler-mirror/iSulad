@@ -97,3 +97,4 @@ int dup_health_check_status(defs_health **dst, const defs_health *src);
 #endif
 
 #endif /* __LCRD_CONTAINER_STATE_H__ */
+

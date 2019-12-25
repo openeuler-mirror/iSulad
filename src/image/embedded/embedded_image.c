@@ -65,27 +65,32 @@ char *embedded_resolve_image_name(const char *image_name)
 {
     return util_strdup_s(image_name);
 }
-int embedded_filesystem_usage(struct bim *bim, imagetool_fs_info **fs_usage)
+int embedded_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage)
 {
     return 0;
 }
 
-int embedded_prepare_rf(struct bim *bim, const json_map_string_string *storage_opt, char **real_rootfs)
+int embedded_prepare_rf(const im_prepare_request *request, char **real_rootfs)
 {
-    return lim_create_rw_layer(bim->image_name, bim->container_id, NULL, real_rootfs);
+    if (request == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    return lim_create_rw_layer(request->image_name, request->container_id, NULL, real_rootfs);
 }
 
-int embedded_mount_rf(struct bim *bim)
+int embedded_mount_rf(const im_mount_request *request)
 {
     return 0;
 }
 
-int embedded_umount_rf(struct bim *bim)
+int embedded_umount_rf(const im_umount_request *request)
 {
     return 0;
 }
 
-int embedded_delete_rf(struct bim *bim)
+int embedded_delete_rf(const im_delete_request *request)
 {
     return 0;
 }
@@ -129,12 +134,18 @@ out:
 
 
 int embedded_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
-                        struct bim *bim, char **real_rootfs)
+                        const im_prepare_request *request, char **real_rootfs)
 {
     int ret = 0;
     int nret = 0;
+    im_umount_request iu_request = { 0 };
 
-    nret = embedded_prepare_rf(bim, host_spec->storage_opt, real_rootfs);
+    if (request == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    nret = embedded_prepare_rf(request, real_rootfs);
     if (nret != 0) {
         return nret;
     }
@@ -145,14 +156,16 @@ int embedded_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec
         goto umount;
     }
 
-    nret = do_merge_embedded_image_conf(oci_spec, custom_spec, bim->image_name);
+    nret = do_merge_embedded_image_conf(oci_spec, custom_spec, request->image_name);
     if (nret != 0) {
         ret = nret;
         goto umount;
     }
 
 umount:
-    nret = embedded_umount_rf(bim);
+    iu_request.name_id = request->container_id;
+    iu_request.force = false;
+    nret = embedded_umount_rf(&iu_request);
     if (nret != 0) {
         ret = nret;
     }
@@ -241,7 +254,7 @@ out:
     return ret;
 }
 
-int embedded_list_images(im_list_request *request, imagetool_images_list **list)
+int embedded_list_images(const im_list_request *request, imagetool_images_list **list)
 {
     int ret = 0;
     struct db_all_images *all_images = NULL;
@@ -253,7 +266,7 @@ int embedded_list_images(im_list_request *request, imagetool_images_list **list)
         goto out;
     }
 
-    if (request->filter.image.image != NULL) {
+    if (request->filter.image.image != NULL || request->image_filters != NULL) {
         INFO("Embedded images do not support filter");
         ret = 0;
         goto out;
@@ -292,7 +305,7 @@ out:
     return ret;
 }
 
-int embedded_remove_image(im_remove_request *request)
+int embedded_remove_image(const im_remove_request *request)
 {
     bool force = false;
     char *image_ref = NULL;
@@ -344,22 +357,28 @@ out:
     return ret;
 }
 
-int embedded_inspect_image(struct bim *bim, char **inspected_json)
+int embedded_inspect_image(const im_inspect_request *request, char **inspected_json)
 {
     char *image_ref = NULL;
 
-    if (bim == NULL || inspected_json == NULL) {
+    if (request == NULL || inspected_json == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
 
-    image_ref = bim->image_name;
+    image_ref = request->image.image;
 
     return lim_query_image_data(image_ref, IMAGE_DATA_TYPE_CONFIG, inspected_json, NULL);
 }
 
-int embedded_init(const char *rootpath)
+int embedded_init(const struct im_configs *conf)
 {
-    return lim_init(rootpath);
+    if (conf == NULL) {
+        ERROR("Invalid image configs");
+        return -1;
+    }
+
+    return lim_init(conf->rootpath);
 }
+
 

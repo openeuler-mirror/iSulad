@@ -27,7 +27,7 @@ int AttachServe::Execute(struct lws *wsi, const std::string &token,
         ERROR("invalid token :%s", token.c_str());
         return -1;
     }
-    runtime::AttachRequest *request = dynamic_cast<runtime::AttachRequest *>(cachedRequest);
+    runtime::v1alpha2::AttachRequest *request = dynamic_cast<runtime::v1alpha2::AttachRequest *>(cachedRequest);
     if (request == nullptr) {
         ERROR("failed to get exec request!");
         return -1;
@@ -66,7 +66,7 @@ int AttachServe::Execute(struct lws *wsi, const std::string &token,
     return ret;
 }
 
-int AttachServe::RequestFromCri(const runtime::AttachRequest *grequest,
+int AttachServe::RequestFromCri(const runtime::v1alpha2::AttachRequest *grequest,
                                 container_attach_request **request)
 {
     container_attach_request *tmpreq = nullptr;
@@ -88,4 +88,5 @@ int AttachServe::RequestFromCri(const runtime::AttachRequest *grequest,
 
     return 0;
 }
+
 

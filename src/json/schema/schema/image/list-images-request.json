@@ -3,7 +3,7 @@
 	"type": "object",
 	"properties": {
 		"filters": {
-			"$ref": "../defs.json#/definitions/ArrayOfStrings"
+			"$ref": "../defs.json#/definitions/filters"
 		}
 	}
 }

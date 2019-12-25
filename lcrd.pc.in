@@ -6,7 +6,7 @@ includedir=@CMAKE_INSTALL_PREFIX@/include
 Name: liblcrc
 Description: light-weighted container runtime daemon library
 Version: @LCRD_VERSION@
-URL: http://code.huawei.com/containers/iSulad
+URL: iSulad
 Libs: -L@CMAKE_INSTALL_PREFIX@/lib -llcrc
 Cflags: -I@CMAKE_INSTALL_PREFIX@/include
 

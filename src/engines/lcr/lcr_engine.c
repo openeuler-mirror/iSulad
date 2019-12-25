@@ -28,19 +28,15 @@
 #include "log.h"
 #include "lcrd_config.h"
 
-typedef int(*lcr_monitor_open_t)(const char *lcrpath);
-typedef int(*lcr_monitor_read_t)(int fd, struct lcr_msg *msg);
-typedef struct lcr_container_info *(*lcr_container_info_get_op_t)(const char *name, const char *lcrpath);
 typedef int(*lcr_list_all_containers_t)(const char *lcrpath, struct lcr_container_info **info_arr);
 typedef void(*lcr_containers_info_free_t)(struct lcr_container_info **info_arr, size_t size);
-typedef int(*lcr_stats_all_containers_t)(const char *lcrpath, struct lcr_container_state **state_arr);
 typedef bool(*lcr_state_op_t)(const char *name, const char *lcrpath, struct lcr_container_state *lcs);
 typedef void(*lcr_container_state_free_t)(struct lcr_container_state *lcs);
 typedef bool(*lcr_update_op_t)(const char *name, const char *lcrpath, struct lcr_cgroup_resources *cr);
 typedef bool(*lcr_get_console_config_op_t)(const char *name, const char *lcrpath, struct lcr_console_config *config);
 typedef void(*lcr_free_console_config_op_t)(struct lcr_console_config *config);
-typedef int(*lcr_monitord_spawn_t)(const char *lcrpath);
 typedef bool(*lcr_start_op_t)(struct lcr_start_request *request);
+typedef bool(*lcr_exec_op_t)(const struct lcr_exec_request *request, int *exit_code);
 
 static lcr_list_all_containers_t g_lcr_list_all_containers_op = NULL;
 static lcr_containers_info_free_t g_lcr_containers_info_free_op = NULL;
@@ -50,7 +46,7 @@ static lcr_update_op_t g_lcr_update_op = NULL;
 static lcr_get_console_config_op_t g_lcr_get_console_config_op = NULL;
 static lcr_free_console_config_op_t g_lcr_free_console_config_op = NULL;
 static lcr_start_op_t g_lcr_start_op = NULL;
-
+static lcr_exec_op_t g_lcr_exec_op = NULL;
 /*
  * Trans the lcr_state_t to Status
  */
@@ -121,6 +117,13 @@ static bool lcr_start_container(const engine_start_request_t *request)
     struct lcr_start_request *lcr_request = (struct lcr_start_request *)request;
 
     return g_lcr_start_op(lcr_request);
+}
+
+static bool lcr_exec_container(const engine_exec_request_t *request, int *exit_code)
+{
+    struct lcr_exec_request *lcr_request = (struct lcr_exec_request *)request;
+
+    return g_lcr_exec_op(lcr_request, exit_code);
 }
 
 /* free console config */
@@ -368,10 +371,6 @@ static bool load_lcr_exec_ops(void *lcr_handler, struct engine_operation *eop)
     if (dlerror() != NULL) {
         return false;
     }
-    eop->engine_kill_op = dlsym(lcr_handler, "lcr_kill");
-    if (dlerror() != NULL) {
-        return false;
-    }
     g_lcr_update_op = dlsym(lcr_handler, "lcr_update");
     if (dlerror() != NULL) {
         return false;
@@ -392,7 +391,7 @@ static bool load_lcr_exec_ops(void *lcr_handler, struct engine_operation *eop)
     if (dlerror() != NULL) {
         return false;
     }
-    eop->engine_exec_op = dlsym(lcr_handler, "lcr_attach");
+    g_lcr_exec_op = dlsym(lcr_handler, "lcr_exec");
     if (dlerror() != NULL) {
         return false;
     }
@@ -485,6 +484,7 @@ struct engine_operation *lcr_engine_init()
     eop->engine_free_container_status_op = free_container_status;
     eop->engine_update_op = lcr_update_container;
     eop->engine_start_op = lcr_start_container;
+    eop->engine_exec_op = lcr_exec_container;
     eop->engine_get_console_config_op = get_console_config;
     eop->engine_free_console_config_op = free_console_config;
 

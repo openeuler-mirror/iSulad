@@ -24,3 +24,4 @@ int cmd_wait_main(int argc, const char **argv);
 int client_wait(const struct client_arguments *args, unsigned int *exit_code);
 
 #endif /* __CMD_WAIT_H */
+

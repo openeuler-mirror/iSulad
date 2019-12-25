@@ -225,7 +225,7 @@ static int set_env_enable_plugins(oci_runtime_spec *oci)
 
     if (util_env_insert(&oci->process->env, &oci->process->env_len, LCRD_ENABLE_PLUGINS, strlen(LCRD_ENABLE_PLUGINS),
                         uniq)) {
-        ERROR("set env %s failed", uniq);
+        WARN("set env %s failed", uniq);
     }
 
     free(uniq);
@@ -250,6 +250,7 @@ static char **get_enable_plugins(const char *plugins)
     arr = util_string_split(plugins, LCRD_ENABLE_PLUGINS_SEPERATOR_CHAR);
     if (arr == NULL) {
         ERROR("Out of memory");
+        goto out;
     }
     arr_len = util_array_len((const char **)arr);
 

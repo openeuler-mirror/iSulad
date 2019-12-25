@@ -4,10 +4,10 @@
 	"items": {
 		"type": "object",
         "properties": {
-			"Name": {
+			"name": {
 			  "type": "string"
 			},
-			"Interface": {
+			"interface": {
 			  "type": "string"
 			}
         }

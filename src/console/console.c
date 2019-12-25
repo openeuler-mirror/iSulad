@@ -683,3 +683,4 @@ int start_io_copy_thread(int sync_fd, bool detach, struct io_copy_arg *copy_arg,
     sem_destroy(&thread_arg.wait_sem);
     return 0;
 }
+

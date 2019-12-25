@@ -87,5 +87,5 @@ private:
     std::string m_checkSum;
 };
 
-}  // namespace cri
+} // namespace cri
 #endif

@@ -116,6 +116,9 @@
                 },
                 "HealthCheck": {
                     "$ref": "../defs.json#/definitions/HealthCheck"
+                },
+                "Image": {
+                    "type":"string"
                 }
             }
         },

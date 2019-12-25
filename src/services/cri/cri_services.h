@@ -26,14 +26,15 @@
 namespace cri {
 class RuntimeVersioner {
 public:
-    virtual void Version(const std::string &apiVersion, runtime::VersionResponse *versionResponse, Errors &error) = 0;
+    virtual void Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse,
+                         Errors &error) = 0;
 };
 
 class ContainerManager {
 public:
     virtual std::string CreateContainer(const std::string &podSandboxID,
-                                        const runtime::ContainerConfig &containerConfig,
-                                        const runtime::PodSandboxConfig &podSandboxConfig, Errors &error) = 0;
+                                        const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                        const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error) = 0;
 
     virtual void StartContainer(const std::string &containerID, Errors &error) = 0;
 
@@ -41,65 +42,72 @@ public:
 
     virtual void RemoveContainer(const std::string &containerID, Errors &error) = 0;
 
-    virtual void ListContainers(const runtime::ContainerFilter *filter,
-                                std::vector<std::unique_ptr<runtime::Container>> *containers, Errors &error) = 0;
+    virtual void ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
+                                std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
+                                Errors &error) = 0;
 
-    virtual void ListContainerStats(const runtime::ContainerStatsFilter *filter,
-                                    std::vector<std::unique_ptr<runtime::ContainerStats>> *containerstats,
+    virtual void ListContainerStats(const runtime::v1alpha2::ContainerStatsFilter *filter,
+                                    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
                                     Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::ContainerStatus> ContainerStatus(const std::string &containerID,
-                                                                      Errors &error) = 0;
+    virtual std::unique_ptr<runtime::v1alpha2::ContainerStatus> ContainerStatus(const std::string &containerID,
+                                                                                Errors &error) = 0;
 
     virtual void UpdateContainerResources(const std::string &containerID,
-                                          const runtime::LinuxContainerResources &resources, Errors &error) = 0;
+                                          const runtime::v1alpha2::LinuxContainerResources &resources,
+                                          Errors &error) = 0;
 
     virtual void ExecSync(const std::string &containerID, const google::protobuf::RepeatedPtrField<std::string> &cmd,
-                          int64_t timeout, runtime::ExecSyncResponse *reply, Errors &error) = 0;
+                          int64_t timeout, runtime::v1alpha2::ExecSyncResponse *reply, Errors &error) = 0;
 
-    virtual void Exec(const runtime::ExecRequest &req, runtime::ExecResponse *resp, Errors &error) = 0;
+    virtual void Exec(const runtime::v1alpha2::ExecRequest &req, runtime::v1alpha2::ExecResponse *resp,
+                      Errors &error) = 0;
 
-    virtual void Attach(const runtime::AttachRequest &req, runtime::AttachResponse *resp, Errors &error) = 0;
+    virtual void Attach(const runtime::v1alpha2::AttachRequest &req, runtime::v1alpha2::AttachResponse *resp,
+                        Errors &error) = 0;
 };
 
 class PodSandboxManager {
 public:
-    virtual std::string RunPodSandbox(const runtime::PodSandboxConfig &config, Errors &error) = 0;
+    virtual std::string RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, Errors &error) = 0;
 
     virtual void StopPodSandbox(const std::string &podSandboxID, Errors &error) = 0;
 
     virtual void RemovePodSandbox(const std::string &podSandboxID, Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::PodSandboxStatus> PodSandboxStatus(const std::string &podSandboxID,
-                                                                        Errors &error) = 0;
+    virtual std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> PodSandboxStatus(const std::string &podSandboxID,
+                                                                                  Errors &error) = 0;
 
-    virtual void ListPodSandbox(const runtime::PodSandboxFilter *filter,
-                                std::vector<std::unique_ptr<runtime::PodSandbox>> *pods, Errors &error) = 0;
+    virtual void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
+                                std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error) = 0;
 
-    virtual void PortForward(const runtime::PortForwardRequest &req, runtime::PortForwardResponse *resp,
-                             Errors &error) = 0;
+    virtual void PortForward(const runtime::v1alpha2::PortForwardRequest &req,
+                             runtime::v1alpha2::PortForwardResponse *resp, Errors &error) = 0;
 };
 
 class RuntimeManager {
 public:
-    virtual void UpdateRuntimeConfig(const runtime::RuntimeConfig &config, Errors &error) = 0;
+    virtual void UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::RuntimeStatus> Status(Errors &error) = 0;
+    virtual std::unique_ptr<runtime::v1alpha2::RuntimeStatus> Status(Errors &error) = 0;
 };
 
 class ImageManagerService {
 public:
-    virtual void ListImages(const runtime::ImageFilter &filter, std::vector<std::unique_ptr<runtime::Image>> *images,
-                            Errors &error) = 0;
+    virtual void ListImages(const runtime::v1alpha2::ImageFilter &filter,
+                            std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::Image> ImageStatus(const runtime::ImageSpec &image, Errors &error) = 0;
+    virtual std::unique_ptr<runtime::v1alpha2::Image> ImageStatus(const runtime::v1alpha2::ImageSpec &image,
+                                                                  Errors &error) = 0;
 
-    virtual std::string PullImage(const runtime::ImageSpec &image, const runtime::AuthConfig &auth, Errors &error) = 0;
+    virtual std::string PullImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
+                                  Errors &error) = 0;
 
-    virtual void RemoveImage(const runtime::ImageSpec &image, Errors &error) = 0;
+    virtual void RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error) = 0;
 
-    virtual void ImageFsInfo(std::vector<std::unique_ptr<runtime::FilesystemUsage>> *usages, Errors &error) = 0;
+    virtual void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *usages,
+                             Errors &error) = 0;
 };
 
-}  // namespace cri
+} // namespace cri
 #endif /* _CRI_SERVICES_H_ */

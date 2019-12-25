@@ -36,10 +36,13 @@ struct custom_configs {
     /* environment variables */
     char **env;
 
+    /* environment variables file */
+    char **env_file;
+
     /* hugepage limits */
     char **hugepage_limits;
 
-    /* group add*/
+    /* group add */
     char **group_add;
 
     /* hook-spec file */
@@ -225,7 +228,7 @@ struct client_arguments {
     char *log_file_size;
     unsigned int log_file_rotate;
 
-    /* notes: we should free the mem in custom_conf by hand*/
+    /* notes: we should free the mem in custom_conf by hand */
     struct custom_configs custom_conf;
 
     // lcrc run;
@@ -250,6 +253,7 @@ struct client_arguments {
     bool dispname;
     bool list_all;
     char **filters;
+    bool no_trunc;
 
     // inspect
     char *format;
@@ -343,4 +347,5 @@ extern void client_print_error(uint32_t cc, uint32_t server_errono, const char *
 
 extern client_connect_config_t get_connect_config(const struct client_arguments *args);
 
-#endif /*__LCRC_ARGUMENTS_H*/
+#endif /* __LCRC_ARGUMENTS_H */
+

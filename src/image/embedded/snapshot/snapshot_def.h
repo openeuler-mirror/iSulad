@@ -46,3 +46,4 @@ struct snapshot_plugin {
 
 
 #endif
+

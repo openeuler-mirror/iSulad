@@ -13,6 +13,7 @@
  * Description: provide grpc container service functions
  ******************************************************************************/
 #include "grpc_images_client.h"
+#include <string>
 #include "securec.h"
 #include "images.grpc.pb.h"
 #include "api.grpc.pb.h"
@@ -43,7 +44,13 @@ public:
         if (request == nullptr) {
             return -1;
         }
-
+        if (request->filters != nullptr) {
+            google::protobuf::Map<std::string, std::string> *map;
+            map = grequest->mutable_filters();
+            for (size_t i = 0; i < request->filters->len; i++) {
+                (*map)[request->filters->keys[i]] = request->filters->values[i];
+            }
+        }
         return 0;
     }
 
@@ -57,6 +64,9 @@ public:
             response->images_list = nullptr;
             response->images_num = 0;
             response->server_errono = gresponse->cc();
+            if (!gresponse->errmsg().empty()) {
+                response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+            }
             return 0;
         }
 
@@ -217,8 +227,9 @@ public:
     }
 };
 
-class ImagesPull : public ClientBase<runtime::ImageService, runtime::ImageService::Stub, lcrc_pull_request,
-    runtime::PullImageRequest, lcrc_pull_response, runtime::PullImageResponse> {
+class ImagesPull : public
+    ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub, lcrc_pull_request,
+    runtime::v1alpha2::PullImageRequest, lcrc_pull_response, runtime::v1alpha2::PullImageResponse> {
 public:
     explicit ImagesPull(void *args)
         : ClientBase(args)
@@ -226,14 +237,14 @@ public:
     }
     ~ImagesPull() = default;
 
-    int request_to_grpc(const lcrc_pull_request *request, runtime::PullImageRequest *grequest) override
+    int request_to_grpc(const lcrc_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
         }
 
         if (request->image_name != nullptr) {
-            runtime::ImageSpec *image_spec = new (std::nothrow) runtime::ImageSpec;
+            runtime::v1alpha2::ImageSpec *image_spec = new (std::nothrow) runtime::v1alpha2::ImageSpec;
             if (image_spec == nullptr) {
                 return -1;
             }
@@ -244,7 +255,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(runtime::PullImageResponse *gresponse, lcrc_pull_response *response) override
+    int response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, lcrc_pull_response *response) override
     {
         if (!gresponse->image_ref().empty()) {
             response->image_ref = util_strdup_s(gresponse->image_ref().c_str());
@@ -253,7 +264,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const runtime::PullImageRequest &req) override
+    int check_parameter(const runtime::v1alpha2::PullImageRequest &req) override
     {
         if (req.image().image().empty()) {
             ERROR("Missing image name in the request");
@@ -263,8 +274,8 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const runtime::PullImageRequest &req,
-                     runtime::PullImageResponse *reply) override
+    Status grpc_call(ClientContext *context, const runtime::v1alpha2::PullImageRequest &req,
+                     runtime::v1alpha2::PullImageResponse *reply) override
     {
         return stub_->PullImage(context, req, reply);
     }
@@ -461,4 +472,3 @@ int grpc_images_client_ops_init(lcrc_connect_ops *ops)
 
     return 0;
 }
-

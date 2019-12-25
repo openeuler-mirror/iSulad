@@ -116,7 +116,10 @@ int client_arguments_init(struct client_arguments *args)
     }
     args->name = NULL;
     args->create_rootfs = NULL;
-    args->log_file = "none";
+    args->log_file = NULL;
+    // maximum number of rotate files : 7
+    args->log_file_rotate = 7;
+    args->log_file_size = "30KB";
     args->argc = 0;
     args->argv = NULL;
     host = getenv("ISULAD_HOST");
@@ -270,3 +273,4 @@ void client_print_error(uint32_t cc, uint32_t server_errono, const char *errmsg)
             break;
     }
 }
+

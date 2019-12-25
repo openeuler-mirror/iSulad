@@ -22,4 +22,5 @@ extern const char g_cmd_images_usage[];
 extern struct client_arguments g_cmd_images_args;
 int cmd_images_main(int argc, const char **argv);
 
-#endif /*__CMD_IMAGES_LIST_H*/
+#endif /* __CMD_IMAGES_LIST_H */
+

@@ -135,3 +135,4 @@ void rest_server_shutdown(void)
         }
     }
 }
+

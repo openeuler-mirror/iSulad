@@ -683,3 +683,47 @@ int dup_array_of_strings(const char **src, size_t src_len, char ***dst, size_t *
     return 0;
 }
 
+char *util_sub_string(const char *source, size_t offset, size_t length)
+{
+    size_t total_len;
+    size_t substr_len;
+    char *substring = NULL;
+
+    if (source == NULL || length == 0) {
+        return NULL;
+    }
+
+    total_len = strlen(source);
+    substr_len = ((total_len - offset) >= length ? length : (total_len - offset)) + 1;
+    substring = (char *)malloc(substr_len * sizeof(char));
+    if (substring == NULL) {
+        ERROR("Out of memory\n");
+        return NULL;
+    }
+    if (strncpy_s(substring, substr_len, source + offset, substr_len - 1) != EOK) {
+        ERROR("Out of memory\n");
+        free(substring);
+        return NULL;
+    }
+    substring[substr_len - 1] = '\0';
+
+    return substring;
+}
+
+bool util_is_space_string(const char *str)
+{
+    size_t i;
+
+    if (str == NULL) {
+        return false;
+    }
+
+    for (i = 0; i < strlen(str); i++) {
+        if (!isspace(str[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+

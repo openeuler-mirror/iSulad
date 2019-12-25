@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-/*record the lcrd errmsg*/
+/* record the lcrd errmsg */
 extern __thread char *g_lcrd_errmsg;
 
 #define CONTAINER_LOG_CONFIG_KEY_FILE "log.console.file"
@@ -47,7 +47,7 @@ extern __thread char *g_lcrd_errmsg;
 
 #define MAX_HOSTS 10
 
-/*clear the g_lcrd_errmsg*/
+/* clear the g_lcrd_errmsg */
 #define DAEMON_CLEAR_ERRMSG() do { \
         if (g_lcrd_errmsg != NULL) { \
             free(g_lcrd_errmsg); \
@@ -81,14 +81,14 @@ struct lcrd_client_cgroup_resources {
 };
 
 struct create_custom_config {
-    /*environment variables*/
+    /* environment variables */
     int env_len;
     char **env;
 
     /* cgroup resources */
     struct lcrd_client_cgroup_resources cr;
 
-    /* hugepage limits*/
+    /* hugepage limits */
     int hugepage_limits_len;
     char **hugepage_limits;
 
@@ -104,7 +104,7 @@ struct create_custom_config {
     /* user and group */
     char *user;
 
-    /*hostname*/
+    /* hostname */
     char *hostname;
 
     /* privileged */
@@ -116,7 +116,7 @@ struct create_custom_config {
     /* alldevices */
     bool all_devices;
 
-    /* system container*/
+    /* system container */
     bool  system_container;
 
     /* cap add */
@@ -274,7 +274,7 @@ struct lcrd_image_info {
     char *digest;
     int64_t created; /* seconds */
     int32_t created_nanos;
-    int64_t size; /*Bytes*/
+    int64_t size; /* Bytes */
 };
 
 struct lcrd_create_image_request {

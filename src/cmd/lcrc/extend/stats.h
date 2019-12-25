@@ -31,3 +31,4 @@ extern struct client_arguments g_cmd_stats_args;
 int cmd_stats_main(int argc, const char **argv);
 
 #endif /* __CMD_STATS_H */
+

@@ -231,3 +231,4 @@ void container_log_config_free(struct container_log_config *conf)
     conf->size = 0;
     free(conf);
 }
+

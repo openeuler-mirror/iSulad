@@ -24,24 +24,20 @@ typedef int(*progress_info_func)(void *p,
                                  double ultotal, double ulnow);
 
 struct http_get_options {
-    unsigned with_head : 1, /*if set, means write output with response HEADER*/
-             with_body : 1, /*if set, means write output with response BODY*/
-             /*if set, means set request with "Authorization:(char *)authorization"*/
+    unsigned with_head : 1, /* if set, means write output with response HEADER */
+             with_body : 1, /* if set, means write output with response BODY */
+             /* if set, means set request with "Authorization:(char *)authorization" */
              with_header_auth : 1,
-             /*if set, means set requst with "Content-Type: application/json"*/
+             /* if set, means set requst with "Content-Type: application/json" */
              with_header_json : 1,
-             /*if set, means set request with "Accept:(char *)accepts"*/
+             /* if set, means set request with "Accept:(char *)accepts" */
              with_header_accept : 1,
-             /*if set, means show the process progress"*/
+             /* if set, means show the process progress" */
              show_progress : 1;
 
-    /*
-     *#define HTTP_REQUEST_STRBUF  0
-     *#define HTTP_REQUEST_FILE    1
-     */
     char outputtype;
 
-    /* if set, means connnect to unix socket*/
+    /* if set, means connnect to unix socket */
     char *unix_socket_path;
 
     /*
@@ -50,9 +46,9 @@ struct http_get_options {
      */
     void *output;
 
-    /*http method PUT GET POST*/
+    /* http method PUT GET POST */
     void *method;
-    /*body to be sent to server*/
+    /* body to be sent to server */
     void *input;
     size_t input_len;
 
@@ -71,21 +67,21 @@ struct http_get_options {
 #define HTTP_RES_REAUTH             4
 #define HTTP_RES_NOAUTH             5
 
-/*HTTP Get buffer size*/
+/* HTTP Get buffer size */
 #define  HTTP_GET_BUFFER_SIZE       1024
 
-/*authz error msg size*/
+/* authz error msg size */
 #define  AUTHZ_ERROR_MSG_SIZE       256
 
 /* http_request() targets */
 #define HTTP_REQUEST_STRBUF         0
 #define HTTP_REQUEST_FILE           1
 
-/* authz unix sock and request url*/
+/* authz unix sock and request url */
 #define AUTHZ_UNIX_SOCK             "/run/docker/plugins/authz-broker.sock"
 #define AUTHZ_REQUEST_URL           "http://localhost/isulad.auth"
 
-/* http response code*/
+/* http response code */
 enum http_response_code {
     StatusContinue                      = 100, // RFC 7231, 6.2.1
     StatusSwitchingProtocols            = 101, // RFC 7231, 6.2.2
@@ -169,3 +165,4 @@ void http_global_cleanup(void);
 #endif
 
 #endif
+

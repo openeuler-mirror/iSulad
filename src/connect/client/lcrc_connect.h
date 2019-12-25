@@ -143,3 +143,4 @@ lcrc_connect_ops *get_connect_client_ops(void);
 #endif
 
 #endif /* __LCRC_CONNECT_H */
+

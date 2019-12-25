@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2019-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
  * iSulad licensed under the Mulan PSL v1.
  * You can use this software according to the terms and conditions of the Mulan PSL v1.
  * You may obtain a copy of Mulan PSL v1 at:
@@ -40,6 +40,21 @@ char **single_array_from_string(const char *value)
     return arr;
 }
 
+char *conf_get_graph_rootpath_success()
+{
+    return util_strdup_s("/var/lib/lcrd/storage");
+}
+
+char *conf_get_graph_run_path_success()
+{
+    return util_strdup_s("/var/run/lcrd/storage");
+}
+
+char *conf_get_lcrd_storage_driver_success()
+{
+    return util_strdup_s("overlay");
+}
+
 char **conf_get_storage_opts_success()
 {
     return single_array_from_string("overlay.override_kernel_check=true");
@@ -52,7 +67,7 @@ char **conf_get_registry_list_success()
 
 char **conf_get_insecure_registry_list_success()
 {
-    return single_array_from_string("rnd-dockerhub.huawei.com");
+    return single_array_from_string("isulad");
 }
 
 char *json_path(const char *file)

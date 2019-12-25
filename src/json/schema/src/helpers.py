@@ -20,16 +20,16 @@ History: 2019-06-17
 import os
 import sys
 
-def appendSeparator(subStr):
+def append_separator(substr):
     '''
     Description: append only '_' at last position of subStr
     Interface: None
     History: 2019-09-20
     '''
-    if subStr and subStr[-1] != '_':
-        subStr.append('_')
+    if substr and substr[-1] != '_':
+        substr.append('_')
 
-def convertToCStyle(name):
+def conv_to_c_style(name):
     '''
     Description: convert name to linux c format
     Interface: None
@@ -38,33 +38,33 @@ def convertToCStyle(name):
     if name is None or name == "":
         return ""
     name = name.replace('.', '_').replace('-', '_').replace('/', '_')
-    subStr = []
+    substr = []
     preindex = 0
     index = 0
     for index, char in enumerate(name):
         if char == '_':
-            appendSeparator(subStr)
-            subStr.append(name[preindex:index].lower())
+            append_separator(substr)
+            substr.append(name[preindex:index].lower())
             preindex = index + 1
         if not char.isupper() and name[preindex].isupper() and \
                 name[preindex + 1].isupper():
-            appendSeparator(subStr)
-            subStr.append(name[preindex:index - 1].lower())
+            append_separator(substr)
+            substr.append(name[preindex:index - 1].lower())
             preindex = index - 1
             continue
         if char.isupper() and index > 0 and name[index - 1].islower():
-            appendSeparator(subStr)
-            subStr.append(name[preindex:index].lower())
+            append_separator(substr)
+            substr.append(name[preindex:index].lower())
             preindex = index
 
     if preindex <= index and index >= 0 and name[index] != '_' and \
             preindex != 0:
-        appendSeparator(subStr)
-    subStr.append(name[preindex:index + 1].lower())
-    result = ''.join(subStr)
+        append_separator(substr)
+    substr.append(name[preindex:index + 1].lower())
+    result = ''.join(substr)
     return result
 
-def getMapCTypes(typ):
+def get_map_c_types(typ):
     '''
     Description: Get map c types
     Interface: None
@@ -103,7 +103,7 @@ def getMapCTypes(typ):
         return map_c_types[typ]
     return ""
 
-def validBasicMapName(typ):
+def valid_basic_map_name(typ):
     '''
     Description: Valid basic map name
     Interface: None
@@ -112,14 +112,14 @@ def validBasicMapName(typ):
     return typ != 'mapStringObject' and hasattr(typ, 'startswith') and \
         typ.startswith('map')
 
-def makeBasicMapName(mapname):
+def make_basic_map_name(mapname):
     '''
     Description: Make basic map name
     Interface: None
     History: 2019-06-17
     '''
     basic_map_types = ('string', 'int', 'bool')
-    parts = convertToCStyle(mapname).split('_')
+    parts = conv_to_c_style(mapname).split('_')
     if len(parts) != 3 or parts[0] != 'map' or \
             (parts[1] not in basic_map_types) or \
             (parts[2] not in basic_map_types):
@@ -128,7 +128,7 @@ def makeBasicMapName(mapname):
     return "json_map_%s_%s" % (parts[1], parts[2])
 
 
-def getNameSubstr(name, prefix):
+def get_name_substr(name, prefix):
     '''
     Description: Make array name
     Interface: None
@@ -137,7 +137,7 @@ def getNameSubstr(name, prefix):
     return "%s_element" % prefix if name is None or name == "" or prefix == name \
         else "%s_%s_element" % (prefix, name)
 
-def getPrefixName(name, prefix):
+def get_prefixe_name(name, prefix):
     '''
     Description: Make name
     Interface: None
@@ -149,19 +149,19 @@ def getPrefixName(name, prefix):
         return "%s" % name
     return "%s_%s" % (prefix, name)
 
-def getPrefixPointer(name, typ, prefix):
+def get_prefixe_pointer(name, typ, prefix):
     '''
     Description: Make pointer name
     Interface: None
     History: 2019-06-17
     '''
     if typ != 'object' and typ != 'mapStringObject' and \
-            not validBasicMapName(typ):
+            not valid_basic_map_name(typ):
         return ""
-    return '%s *' % makeBasicMapName(typ) if validBasicMapName(typ) \
-        else "%s *" % getPrefixName(name, prefix)
+    return '%s *' % make_basic_map_name(typ) if valid_basic_map_name(typ) \
+        else "%s *" % get_prefixe_name(name, prefix)
 
-def judgeComplex(typ):
+def judge_complex(typ):
     '''
     Description: Check compound object
     Interface: None
@@ -169,7 +169,7 @@ def judgeComplex(typ):
     '''
     return typ in ('object', 'array', 'mapStringObject')
 
-def judgeDataType(typ):
+def judge_data_type(typ):
     '''
     Description: Check numeric type
     Interface: None
@@ -180,7 +180,7 @@ def judgeDataType(typ):
         return True
     return typ in ("integer", "UID", "GID", "double")
 
-def judgeDataPointerType(typ):
+def judge_data_pointer_type(typ):
     '''
     Description: Check numeric pointer type
     Interface: None
@@ -190,7 +190,7 @@ def judgeDataPointerType(typ):
         return True
     return False
 
-def obtainDataPointerType(typ):
+def obtain_data_pointer_type(typ):
     '''
     Description: Get numeric pointer type
     Interface: None
@@ -199,22 +199,22 @@ def obtainDataPointerType(typ):
     index = typ.find("Pointer")
     return typ[0:index] if index != -1 else ""
 
-def obtainPointer(name, typ, prefix):
+def obtain_pointer(name, typ, prefix):
     '''
     Description: Obtain pointer string
     Interface: None
     History: 2019-06-17
     '''
-    ptr = getPrefixPointer(name, typ, prefix)
+    ptr = get_prefixe_pointer(name, typ, prefix)
     if ptr != "":
         return ptr
 
     return "char *" if typ == "string" else \
         ("%s *" % typ if typ == "ArrayOfStrings" else "")
 
-class CombinationName(object):
+class CombinateName(object):
     '''
-    Description: Store CombinationName information
+    Description: Store CombinateName information
     Interface: None
     History: 2019-06-17
     '''
@@ -236,7 +236,7 @@ class CombinationName(object):
         History: 2019-06-17
         '''
         prefix_name = self.name + '_' if self.name != "" else ""
-        return CombinationName(prefix_name + leaf, leaf)
+        return CombinateName(prefix_name + leaf, leaf)
 
 
 class Unite(object):
@@ -253,9 +253,9 @@ class Unite(object):
         self.subtypobj = subtypobj
         self.subtypname = subtypname
         self.required = required
-        self.name = convertToCStyle(name.name.replace('.', '_'))
+        self.name = conv_to_c_style(name.name.replace('.', '_'))
         self.origname = name.leaf or name.name
-        self.fixname = convertToCStyle(self.origname.replace('.', '_'))
+        self.fixname = conv_to_c_style(self.origname.replace('.', '_'))
 
 
 
@@ -297,7 +297,7 @@ class SchemaInfo(object):
 
     def __init__(self, name, header, source, prefix, filesdir, refs=None):
         self.name = name
-        self.fileprefix = convertToCStyle( \
+        self.fileprefix = conv_to_c_style( \
             name.basename.replace('.', '_').replace('-', '_'))
         self.header = header
         self.source = source
@@ -311,3 +311,7 @@ class SchemaInfo(object):
 
     def __str__(self):
         return self.__repr__(self)
+
+
+
+

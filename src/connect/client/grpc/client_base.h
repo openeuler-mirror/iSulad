@@ -49,6 +49,8 @@ public:
 
         std::string socket_address = arguments->socket;
         const std::string tcp_prefix = "tcp://";
+        deadline = arguments->deadline;
+
         if (socket_address.compare(0, tcp_prefix.length(), tcp_prefix) == 0) {
             socket_address.erase(0, tcp_prefix.length());
         }
@@ -104,6 +106,12 @@ public:
         gRP reply;
         ClientContext context;
         Status status;
+
+        // Set deadline for GRPC client
+        if (deadline > 0) {
+            auto tDeadline = std::chrono::system_clock::now() + std::chrono::seconds(deadline);
+            context.set_deadline(tDeadline);
+        }
 
         // Set common name from cert.perm
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
@@ -190,6 +198,8 @@ protected:
     std::unique_ptr<sTB> stub_;
     std::string m_tlsMode { ClientBaseConstants::TLS_OFF };
     std::string m_certFile { "" };
+
+    unsigned int deadline;
 };
 
 template <class REQUEST, class RESPONSE, class FUNC>
@@ -200,8 +210,14 @@ int container_func(const REQUEST *request, RESPONSE *response, void *arg) noexce
         return -1;
     }
 
-    std::unique_ptr<FUNC> client(new FUNC(arg));
+    std::unique_ptr<FUNC> client(new (std::nothrow) FUNC(arg));
+    if (client == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
     return client->run(request, response);
 }
 
 #endif /* __CLIENT_BASH_H */
+

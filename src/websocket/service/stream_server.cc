@@ -39,3 +39,4 @@ void websocket_server_shutdown(void)
     WebsocketServer *server = WebsocketServer::GetInstance();
     server->Shutdown();
 }
+

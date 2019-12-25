@@ -112,7 +112,7 @@ static int container_state_changed(container_t *cont, const struct lcrd_events_f
     bool should_restart = false;
     bool auto_remove = false;
 
-    /*only handle Exit event*/
+    /* only handle Exit event */
     if (events->type != EVENTS_TYPE_STOPPED1) {
         return 0;
     }
@@ -327,3 +327,4 @@ out:
     events_handler_unlock(handler);
     return ret;
 }
+

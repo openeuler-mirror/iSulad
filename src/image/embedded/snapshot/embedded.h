@@ -32,3 +32,4 @@ int ebd_generate_mount_string(struct db_image *imginfo,
                               struct db_sninfo **sninfos, char **mount_string);
 
 #endif
+

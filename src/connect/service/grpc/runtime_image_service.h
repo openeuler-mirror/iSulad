@@ -22,27 +22,28 @@
 
 // Implement of runtime RuntimeService
 class RuntimeImageServiceImpl: public
-    runtime::ImageService::Service {
+    runtime::v1alpha2::ImageService::Service {
 public:
     grpc::Status PullImage(grpc::ServerContext *context,
-                           const runtime::PullImageRequest *request,
-                           runtime::PullImageResponse *reply) override;
+                           const runtime::v1alpha2::PullImageRequest *request,
+                           runtime::v1alpha2::PullImageResponse *reply) override;
     grpc::Status ListImages(grpc::ServerContext *context,
-                            const runtime::ListImagesRequest *request,
-                            runtime::ListImagesResponse *reply) override;
+                            const runtime::v1alpha2::ListImagesRequest *request,
+                            runtime::v1alpha2::ListImagesResponse *reply) override;
     grpc::Status ImageStatus(grpc::ServerContext *context,
-                             const runtime::ImageStatusRequest *request,
-                             runtime::ImageStatusResponse *reply) override;
+                             const runtime::v1alpha2::ImageStatusRequest *request,
+                             runtime::v1alpha2::ImageStatusResponse *reply) override;
 
     grpc::Status ImageFsInfo(grpc::ServerContext *context,
-                             const runtime::ImageFsInfoRequest *request,
-                             runtime::ImageFsInfoResponse *reply) override;
+                             const runtime::v1alpha2::ImageFsInfoRequest *request,
+                             runtime::v1alpha2::ImageFsInfoResponse *reply) override;
     grpc::Status RemoveImage(grpc::ServerContext *context,
-                             const runtime::RemoveImageRequest *request,
-                             runtime::RemoveImageResponse *reply) override;
+                             const runtime::v1alpha2::RemoveImageRequest *request,
+                             runtime::v1alpha2::RemoveImageResponse *reply) override;
 
 private:
     CRIImageServiceImpl rService;
 };
 #endif /* _RUNTIME_IMAGE_SERVICES_IMPL_H_ */
+
 

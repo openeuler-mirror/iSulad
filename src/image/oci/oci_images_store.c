@@ -16,13 +16,12 @@
 #include <pthread.h>
 
 #include "oci_images_store.h"
-#include "oci_image_status.h"
-#include "oci_images_list.h"
 
 #include "log.h"
 #include "utils.h"
 #include "lcrd_config.h"
 #include "constants.h"
+#include "oci_common_operators.h"
 
 pthread_rwlock_t g_image_memory_rwlock;
 
@@ -306,9 +305,9 @@ out:
 static int update_old_image_by_id(const char *id)
 {
     int ret = 0;
-    imagetool_image *image_info = NULL;
+    imagetool_image *image_info;
 
-    image_info = oci_image_get_image_info_by_name(id);
+    image_info = oci_get_image_info_by_name(id);
     if (image_info == NULL) {
         WARN("Failed to status old oci image %s, may be remeved", id);
         ret = 0;
@@ -316,7 +315,6 @@ static int update_old_image_by_id(const char *id)
     }
 
     ret = register_new_oci_image(image_info);
-
 out:
     return ret;
 }
@@ -366,7 +364,7 @@ static int try_list_oci_images(const char *check_file, imagetool_images_list **a
     im_request->check = need_check;
 
     do {
-        ret = do_list_oci_images(im_request, all_images);
+        ret = oci_get_all_images(im_request, all_images);
         if (ret != 0 || *all_images == NULL) {
             list_images_ok = false;
             if (retry_count < max_retry) {
@@ -469,11 +467,8 @@ int oci_images_store_list(oci_image_t ***out, size_t *size)
         ret = 0;
         goto unlock;
     }
-    if (*size > SIZE_MAX / sizeof(oci_image_t *)) {
-        ERROR("Containers store list is too long!");
-        goto unlock;
-    }
-    images = util_common_calloc_s(sizeof(oci_image_t *) * (*size));
+
+    images = util_smart_calloc_s(sizeof(oci_image_t *), (*size));
     if (images == NULL) {
         ERROR("Out of memory");
         goto unlock;
@@ -556,7 +551,7 @@ oci_image_t *oci_images_store_get_by_id(const char *id)
     return image;
 }
 
-/* oci images store get image by image name*/
+/* oci images store get image by image name */
 oci_image_t *oci_images_store_get_by_name(const char *name)
 {
     char *id = NULL;
@@ -575,7 +570,7 @@ oci_image_t *oci_images_store_get_by_name(const char *name)
     return oci_images_store_get_by_id(id);
 }
 
-/* oci images store get image by prefix*/
+/* oci images store get image by prefix */
 oci_image_t *oci_images_store_get_by_prefix(const char *prefix)
 {
     oci_image_t *image = NULL;
@@ -707,7 +702,7 @@ int register_new_oci_image_into_memory(const char *name)
         return -1;
     }
 
-    image_info = oci_image_get_image_info_by_name(name);
+    image_info = oci_get_image_info_by_name(name);
     if (image_info == NULL) {
         ERROR("Failed to get oci image %s informations", name);
         ret = -1;
@@ -784,7 +779,7 @@ int remove_oci_image_from_memory(const char *name_or_id)
         goto free_out;
     }
 
-    image_info = oci_image_get_image_info_by_name(image->info->id);
+    image_info = oci_get_image_info_by_name(image->info->id);
     if (image_info == NULL) {
         WARN("Failed to status old oci image %s, may be remeved", image->info->id);
 
@@ -811,3 +806,24 @@ free_out:
     return ret;
 }
 
+int oci_image_store_init()
+{
+    int ret = 0;
+
+    ret = oci_images_store_init();
+    if (ret != 0) {
+        ERROR("Failed to init oci images store");
+        goto out;
+    }
+
+    ret = image_name_id_init();
+    if (ret != 0) {
+        ERROR("Failed to init oci name id store");
+        goto out;
+    }
+
+    ret = load_all_oci_images();
+
+out:
+    return ret;
+}

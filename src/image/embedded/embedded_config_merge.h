@@ -30,3 +30,4 @@ int embedded_image_merge_config(oci_runtime_spec *oci_spec,
 #endif
 
 #endif
+

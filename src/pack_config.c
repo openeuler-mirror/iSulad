@@ -659,7 +659,7 @@ static void pack_cgroup_resources(host_config *dstconfig, const lcrc_host_config
     dstconfig->pids_limit = srcconfig->cr->pids_limit;
     dstconfig->files_limit = srcconfig->cr->files_limit;
 
-    /* oom score adj*/
+    /* oom score adj */
     dstconfig->oom_score_adj = (int)srcconfig->cr->oom_score_adj;
 }
 

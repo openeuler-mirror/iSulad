@@ -71,8 +71,6 @@
 #endif
 
 sem_t g_daemon_shutdown_sem;
-sem_t g_print_backtrace_sem;
-int g_backtrace_log_fd = -1;
 
 static int create_client_run_path(const char *group)
 {
@@ -193,10 +191,57 @@ static void umount_daemon_mntpoint()
 }
 #endif
 
+static inline bool unlink_ignore_enoent(const char *fname)
+{
+    return unlink(fname) && errno != ENOENT;
+}
+
+static void clean_residual_files()
+{
+    char *checked_flag = NULL;
+    char *fname = NULL;
+
+    /* remove image checked file */
+    checked_flag = conf_get_graph_check_flag_file();
+    if (checked_flag == NULL) {
+        ERROR("Failed to get image checked flag file path");
+    } else if (unlink_ignore_enoent(checked_flag)) {
+        ERROR("Unlink file: %s error: %s", checked_flag, strerror(errno));
+    }
+    free(checked_flag);
+
+    /* remove pid file */
+    fname = conf_get_lcrd_pidfile();
+    if (fname == NULL) {
+        ERROR("Failed to get LCRD pid file path");
+    } else if (unlink(fname) && errno != ENOENT) {
+        WARN("Unlink file: %s error: %s", fname, strerror(errno));
+    }
+    free(fname);
+
+#ifdef ENABLE_OCI_IMAGE
+    /* remove image server socket file */
+    fname = conf_get_im_server_sock_addr();
+    if (fname != NULL && unlink_ignore_enoent(fname + strlen(UNIX_SOCKET_PREFIX))) {
+        WARN("Unlink file: %s error: %s", fname + strlen(UNIX_SOCKET_PREFIX), strerror(errno));
+    }
+    free(fname);
+
+#define ISULAD_KIT_PID_FILE "/var/run/isula_image.pid"
+#define ISULAD_KIT_INFO_FILE "/var/run/isula_image.info"
+    if (unlink_ignore_enoent(ISULAD_KIT_PID_FILE)) {
+        WARN("Unlink file: %s error: %s", ISULAD_KIT_PID_FILE, strerror(errno));
+    }
+    if (unlink_ignore_enoent(ISULAD_KIT_INFO_FILE)) {
+        WARN("Unlink file: %s error: %s", ISULAD_KIT_INFO_FILE, strerror(errno));
+    }
+#endif
+}
+
 static void daemon_shutdown()
 {
-    char *pidfile = NULL;
-    char *checked_flag = NULL;
+    /* clean resource first, left time to wait finish */
+    image_module_exit();
 
 #ifdef ENABLE_EMBEDDED_IMAGE
     /* shutdown db */
@@ -210,25 +255,7 @@ static void daemon_shutdown()
     umount_daemon_mntpoint();
 #endif
 
-    /* remove image checked file */
-    checked_flag = conf_get_graph_check_flag_file();
-    if (checked_flag == NULL) {
-        ERROR("Failed to get image checked flag file path");
-    } else if (unlink(checked_flag) && errno != ENOENT) {
-        ERROR("Unlink file: %s error: %s", checked_flag, strerror(errno));
-    }
-    free(checked_flag);
-    checked_flag = NULL;
-
-    /* remove pid file */
-    pidfile = conf_get_lcrd_pidfile();
-    if (pidfile == NULL) {
-        ERROR("Failed to get LCRD pid file path");
-    } else if (unlink(pidfile) && errno != ENOENT) {
-        WARN("Unlink file: %s error: %s", pidfile, strerror(errno));
-    }
-    free(pidfile);
-    pidfile = NULL;
+    clean_residual_files();
 }
 
 static void sigint_handler(int x)
@@ -241,197 +268,6 @@ static void sigterm_handler(int signo)
 {
     INFO("Got SIGTERM; exiting");
     sem_post(&g_daemon_shutdown_sem);
-}
-
-#define BT_BUF_SIZE 100
-#define MAX_BT_SIZE (3 * 1024)
-static void print_callstack(void)
-{
-    int j = 0;
-    int nptrs = 0;
-    int nret = 0;
-    void *buffer[BT_BUF_SIZE] = { NULL };
-    char msg[MAX_BT_SIZE] = { 0 };
-    char tname[16] = { 0 };
-    char **strings = NULL;
-    pid_t tid = 0;
-    size_t avalid_size = 0;
-
-    prctl(PR_GET_NAME, tname);
-    tid = (pid_t)syscall(__NR_gettid);
-
-    nptrs = backtrace(buffer, BT_BUF_SIZE);
-    strings = backtrace_symbols(buffer, nptrs);
-    if (strings == NULL) {
-        ERROR("backtrace_symbols return nothing");
-        goto out;
-    }
-
-    nret = sprintf_s(msg, MAX_BT_SIZE, "[%s] tid:%d backtrace:\n", tname, tid);
-    if (nret < 0 || nret > MAX_BT_SIZE) {
-        ERROR("Failed to print [%s] tid:%d backtrace headinfo", tname, tid);
-        goto out;
-    }
-
-    for (j = 0; j < nptrs; j++) {
-        avalid_size = MAX_BT_SIZE - strlen(msg);
-        if ((strlen(strings[j]) + strlen("  \n")) <= (avalid_size - 1)) {
-            nret = sprintf_s(msg + strlen(msg), avalid_size, "  %s\n", strings[j]);
-            if (nret < 0 || (size_t)nret > avalid_size) {
-                ERROR("Failed to print backtrace %s", strings[j]);
-                goto out;
-            }
-        } else {
-            break;
-        }
-    }
-    nret = (int)write(g_backtrace_log_fd, msg, strlen(msg));
-    if (nret < 0) {
-        ERROR("Failed to write backtrace info: %s", strerror(errno));
-        goto out;
-    }
-
-out:
-    if (sem_wait(&g_print_backtrace_sem) == -1) {
-        ERROR("Failed to wait");
-    }
-
-    free(strings);
-    return;
-}
-
-static void sigusr1_handler(int signo)
-{
-    INFO("Got SIGUSER1; print back trace");
-    print_callstack();
-    return;
-}
-
-static int create_isulad_monitor_log_file()
-{
-    int ret = 0;
-    int tmp_fd = -1;
-    char *root_dir = NULL;
-    struct tm *tm_now = NULL;
-    time_t currtime = time(0);
-    char log_file[PATH_MAX] = { 0 };
-    char fn[PATH_MAX] = { 0 };
-
-    root_dir = conf_get_lcrd_rootdir();
-    if (root_dir == NULL) {
-        ERROR("Get rootpath failed");
-        ret = -1;
-        goto out;
-    }
-
-    tm_now = localtime(&currtime);
-    if (tm_now == NULL) {
-        ERROR("Failed to get current time");
-        ret = -1;
-        goto out;
-    }
-
-    if (strftime(log_file, sizeof(log_file), "%Y%m%d%H%M%S", tm_now) == 0) {
-        ret = -1;
-        goto out;
-    }
-
-    ret = sprintf_s(fn, sizeof(fn), "%s/%s/%s", root_dir, "isulad-monitor", log_file);
-    if (ret < 0) {
-        ERROR("Failed to print string");
-        ret = -1;
-        goto out;
-    }
-
-    ret = util_build_dir(fn);
-    if (ret < 0) {
-        WARN("Failed to create directory for log file: %s", fn);
-        ret = -1;
-        goto out;
-    }
-
-    tmp_fd = util_open(fn, O_RDWR | O_CREAT, DEFAULT_SECURE_FILE_MODE);
-    if (tmp_fd < 0) {
-        WARN("Failed to open log file: %s", fn);
-        ret = -1;
-        goto out;
-    }
-
-    if (g_backtrace_log_fd != -1) {
-        close(g_backtrace_log_fd);
-    }
-    g_backtrace_log_fd = tmp_fd;
-
-    ret = 0;
-
-out:
-    free(root_dir);
-    return ret;
-}
-
-static void send_dump_req(void)
-{
-    int ret = 0;
-    size_t subdir_num = 0;
-    size_t i = 0;
-    char **subdir = NULL;
-    pid_t tid = 0;
-    pid_t pid = 0;
-
-    ret = create_isulad_monitor_log_file();
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = util_list_all_subdir("/proc/self/task", &subdir);
-    if (ret < 0) {
-        ERROR("Failed to read /proc/self/task' subdirectory");
-        goto out;
-    }
-    subdir_num = util_array_len((const char **)subdir);
-    if (subdir_num == 0) {
-        goto out;
-    }
-
-    pid = getpid();
-    if (pid < 0) {
-        goto out;
-    }
-
-    ret = sem_init(&g_print_backtrace_sem, 0, (unsigned int)subdir_num);
-    if (ret != 0) {
-        goto out;
-    }
-
-    for (i = 0; i < subdir_num; i++) {
-        ret = util_safe_int(subdir[i], &tid);
-        if (ret < 0) {
-            (void)sem_wait(&g_print_backtrace_sem);
-            continue;
-        }
-        ret = (int)syscall(SYS_tgkill, pid, tid, SIGUSR1);
-        if (ret < 0) {
-            ERROR("Failed to send SIGUSR1 to thread id:%d in process:%d", tid, pid);
-            (void)sem_wait(&g_print_backtrace_sem);
-        }
-    }
-
-out:
-    util_free_array(subdir);
-    return;
-}
-
-static void sigrtmin_handler(int signo)
-{
-    int tmp_sval = 0;
-
-    if (sem_getvalue(&g_print_backtrace_sem, &tmp_sval) == 0) {
-        if (tmp_sval == 0) {
-            send_dump_req();
-        }
-    }
-
-    return;
 }
 
 static int ignore_signals()
@@ -460,6 +296,10 @@ static int ignore_signals()
         return -1;
     }
 
+    if (sigaction(SIGUSR1, &sa, NULL) < 0) {
+        ERROR("Failed to ignore SIGUSR1");
+        return -1;
+    }
     return 0;
 }
 
@@ -501,44 +341,6 @@ static int add_shutdown_signal_handler()
     return 0;
 }
 
-static int add_print_bt_handler()
-{
-    struct sigaction sa;
-
-    if (memset_s(&sa, sizeof(struct sigaction), 0, sizeof(struct sigaction)) != EOK) {
-        ERROR("Failed to set memory");
-        return -1;
-    }
-
-    if (sem_init(&g_print_backtrace_sem, 0, 0) == -1) {
-        ERROR("Failed to init");
-        return -1;
-    }
-
-    sa.sa_handler = sigusr1_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    if (sigaction(SIGUSR1, &sa, NULL) < 0) {
-        ERROR("Failed to add handler for SIGUSR1");
-        return -1;
-    }
-
-    if (memset_s(&sa, sizeof(struct sigaction), 0, sizeof(struct sigaction)) != EOK) {
-        ERROR("Failed to set memory");
-        return -1;
-    }
-
-    sa.sa_handler = sigrtmin_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    if (sigaction(SIGRTMIN, &sa, NULL) < 0) {
-        ERROR("Failed to add handler for SIGRTMIN");
-        return -1;
-    }
-
-    return 0;
-}
-
 static int add_sighandler()
 {
     if (ignore_signals() != 0) {
@@ -548,11 +350,6 @@ static int add_sighandler()
 
     if (add_shutdown_signal_handler() != 0) {
         ERROR("Failed to add shutdown signals");
-        return -1;
-    }
-
-    if (add_print_bt_handler() != 0) {
-        ERROR("Failed to add print back trace signals");
         return -1;
     }
 
@@ -974,8 +771,8 @@ static int parse_conf_time_duration(struct service_arguments *args)
     }
 
     /* parse image opt timeout */
-    if (args->json_confs->im_opt_timeout != NULL &&
-        parse_time_duration(args->json_confs->im_opt_timeout, &args->im_opt_timeout)) {
+    if (args->json_confs->image_opt_timeout != NULL &&
+        parse_time_duration(args->json_confs->image_opt_timeout, &args->image_opt_timeout)) {
         ret = -1;
         goto out;
     }
@@ -1253,15 +1050,15 @@ static int lcrd_server_init_common()
         goto unlock_out;
     }
 
-#ifdef ENABLE_OCI_IMAGE
-    /* update status of graphdriver before init image module */
-    update_graphdriver_status(&(args->driver));
-#endif
-
     if (image_module_init(args->json_confs->graph)) {
         ERROR("Failed to init image manager");
         goto unlock_out;
     }
+
+#ifdef ENABLE_OCI_IMAGE
+    /* update status of graphdriver after image server running */
+    update_graphdriver_status(&(args->driver));
+#endif
 
     if (containers_store_init()) {
         ERROR("Failed to init containers store");
@@ -1550,6 +1347,9 @@ static int start_daemon_threads(char **msg)
     }
 
     containers_restore();
+
+    /* sync containers list with remote */
+    im_sync_containers_isuladkit();
 
     if (start_gchandler()) {
         *msg = "Failed to start garbage collecotor handler";

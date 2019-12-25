@@ -64,6 +64,7 @@ static int client_exec(const struct client_arguments *args, const struct command
         request.stderr = fifos->stderr_name;
     }
 
+    request.user = args->custom_conf.user;
     request.argc = args->argc;
     request.argv = (char **)args->argv;
 

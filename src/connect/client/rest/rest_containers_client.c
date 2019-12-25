@@ -1808,7 +1808,6 @@ static int unpack_exec_response(const struct parsed_http_message *message, void 
         goto out;
     }
     response->server_errono = cresponse->cc;
-    response->pid = cresponse->pid;
     response->exit_code = cresponse->exit_code;
     if (cresponse->errmsg != NULL) {
         response->errmsg = util_strdup_s(cresponse->errmsg);

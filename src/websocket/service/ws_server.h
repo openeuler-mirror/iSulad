@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2019-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
  * iSulad licensed under the Mulan PSL v1.
  * You can use this software according to the terms and conditions of the Mulan PSL v1.
  * You may obtain a copy of Mulan PSL v1 at:
@@ -122,5 +122,5 @@ private:
 ssize_t WsWriteToClient(void *context, const void *data, size_t len);
 int closeWsConnect(void *context, char **err);
 
-#endif /*__WEBSOCKET_SERVER_H_*/
+#endif /* __WEBSOCKET_SERVER_H_ */
 

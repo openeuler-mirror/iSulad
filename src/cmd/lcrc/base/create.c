@@ -231,7 +231,16 @@ static int request_pack_custom_env(struct client_arguments *args, lcrc_container
     char *pe = NULL;
 
     if (args->custom_conf.env != NULL) {
-        conf->env = args->custom_conf.env;
+        size_t i;
+        for (i = 0; i < util_array_len((const char **)(args->custom_conf.env)); i++) {
+            if (util_array_append(&conf->env, args->custom_conf.env[i]) != 0) {
+                COMMAND_ERROR("Failed to append custom config env list");
+                ret = -1;
+                goto out;
+            }
+        }
+        util_free_array(args->custom_conf.env);
+        args->custom_conf.env = conf->env; /* make sure args->custom_conf.env point to valid memory. */
         conf->env_len = util_array_len((const char **)(conf->env));
     }
 
@@ -244,7 +253,6 @@ static int request_pack_custom_env(struct client_arguments *args, lcrc_container
                 goto out;
             }
         }
-
         args->custom_conf.env = conf->env; /* make sure args->custom_conf.env point to valid memory. */
         conf->env_len = util_array_len((const char **)(conf->env));
 
@@ -259,6 +267,149 @@ static int request_pack_custom_env(struct client_arguments *args, lcrc_container
 
 out:
     free(pe);
+    return ret;
+}
+
+static int validate_env(const char *env, char **dst)
+{
+    int ret = 0;
+    char *value = NULL;
+    char **arr = util_string_split_multi(env, '=');
+    if (arr == NULL) {
+        ERROR("Failed to split env string");
+        return -1;
+    }
+    if (strlen(arr[0]) == 0) {
+        ERROR("Invalid environment variable: %s", env);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_array_len((const char **)arr) > 1) {
+        *dst = util_strdup_s(env);
+        goto out;
+    }
+
+    value = getenv(env);
+    if (value == NULL) {
+        *dst = util_strdup_s(env);
+        goto out;
+    } else {
+        size_t len = strlen(env) + 1 + strlen(value) + 1;
+        *dst = (char *)util_common_calloc_s(len);
+        if (*dst == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        if (sprintf_s(*dst, len, "%s=%s", env, value) < 0) {
+            ERROR("Failed to compose env string");
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    util_free_array(arr);
+    return ret;
+}
+
+static int read_env_from_file(const char *path, size_t file_size, lcrc_container_config_t *conf)
+{
+    int ret = 0;
+    FILE *fp = NULL;
+    char *buf = NULL;
+    char *new_env = NULL;
+
+    if (file_size == 0) {
+        return 0;
+    }
+    fp = util_fopen(path, "r");
+    if (fp == NULL) {
+        ERROR("Failed to open '%s'", path);
+        return -1;
+    }
+    buf = (char *)util_common_calloc_s(file_size + 1);
+    if (buf == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    while (fgets(buf, (int)file_size + 1, fp) != NULL) {
+        size_t len = strlen(buf);
+        if (len == 1) {
+            continue;
+        }
+        buf[len - 1] = '\0';
+        if (validate_env(buf, &new_env) != 0) {
+            ret = -1;
+            goto out;
+        }
+        if (new_env == NULL) {
+            continue;
+        }
+        if (util_array_append(&conf->env, new_env) != 0) {
+            ERROR("Failed to append environment variable");
+            ret = -1;
+            goto out;
+        }
+        free(new_env);
+        new_env = NULL;
+    }
+
+out:
+    fclose(fp);
+    free(buf);
+    free(new_env);
+    return ret;
+}
+
+static int append_env_variables_to_conf(const char *env_file, lcrc_container_config_t *conf)
+{
+    int ret = 0;
+    size_t file_size;
+
+    if (!util_file_exists(env_file)) {
+        COMMAND_ERROR("env file not exists: %s", env_file);
+        ret = -1;
+        goto out;
+    }
+    file_size = util_file_size(env_file);
+    if (file_size > REGULAR_FILE_SIZE) {
+        COMMAND_ERROR("env file '%s', size exceed limit: %lld", env_file, REGULAR_FILE_SIZE);
+        ret = -1;
+        goto out;
+    }
+
+    if (read_env_from_file(env_file, file_size, conf) != 0) {
+        COMMAND_ERROR("failed to read env from file: %s", env_file);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int request_pack_custom_env_file(const struct client_arguments *args, lcrc_container_config_t *conf)
+{
+    int ret = 0;
+    size_t i;
+    char **env_files = args->custom_conf.env_file;
+    size_t env_files_size = util_array_len((const char **)env_files);
+    if (env_files_size == 0) {
+        return 0;
+    }
+
+    for (i = 0; i < env_files_size; i++) {
+        if (append_env_variables_to_conf(env_files[i], conf) != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+    conf->env_len = util_array_len((const char **)(conf->env));
+
+out:
     return ret;
 }
 
@@ -295,7 +446,7 @@ static void request_pack_custom_system_container(const struct client_arguments *
         conf->system_container = true;
     }
 
-    /*ns change opt*/
+    /* ns change opt */
     if (!args->custom_conf.privileged) {
         if (args->custom_conf.ns_change_opt != NULL) {
             conf->ns_change_opt = args->custom_conf.ns_change_opt;
@@ -420,7 +571,12 @@ static int request_pack_custom_conf(struct client_arguments *args, lcrc_containe
         return -1;
     }
 
-    /* environment variables */
+    /* append environment variables from env file */
+    if (request_pack_custom_env_file(args, conf) != 0) {
+        return -1;
+    }
+
+    /* Make sure --env has higher priority than --env-file */
     if (request_pack_custom_env(args, conf) != 0) {
         return -1;
     }
@@ -638,7 +794,7 @@ static void request_pack_host_devices(const struct client_arguments *args, lcrc_
 
 static void request_pack_host_hugepage_limits(const struct client_arguments *args, lcrc_host_config_t *hostconfig)
 {
-    /* hugepage limits*/
+    /* hugepage limits */
     if (args->custom_conf.hugepage_limits != NULL) {
         hostconfig->hugetlbs_len = util_array_len((const char **)(args->custom_conf.hugepage_limits));
         hostconfig->hugetlbs = args->custom_conf.hugepage_limits;
@@ -790,8 +946,7 @@ static int request_pack_host_config(const struct client_arguments *args, lcrc_ho
 #define IMAGE_NOT_FOUND_ERROR "No such image"
 
 static int do_client_create(const struct client_arguments *args, const lcrc_connect_ops *ops,
-                            const struct lcrc_create_request *request,
-                            struct lcrc_create_response *response)
+                            const struct lcrc_create_request *request, struct lcrc_create_response *response)
 {
     int ret = 0;
     client_connect_config_t config = get_connect_config(args);
@@ -947,6 +1102,7 @@ static int log_opt_parse_options(struct client_arguments *args, const char *optk
         ret = 0;
     } else if (strcmp(optkey, "disable-log") == 0) {
         if (strcmp(value, "true") == 0) {
+            args->log_file = util_strdup_s("none");
             ret = 0;
         } else if (strcmp(value, "false") == 0) {
             args->log_file = NULL;
@@ -1855,8 +2011,7 @@ static bool do_create_check_sysctl(const char *sysctl)
         *p = '\0';
         if (strcmp("kernel.pid_max", sysctl) == 0) {
             if (!pid_max_kernel_namespaced()) {
-                COMMAND_ERROR("Sysctl '%s' is not kernel namespaced, it cannot be changed",
-                              sysctl);
+                COMMAND_ERROR("Sysctl '%s' is not kernel namespaced, it cannot be changed", sysctl);
                 restore_to_equate(p);
                 return false;
             } else {
@@ -1913,13 +2068,8 @@ static int create_check_env_target_file(const struct client_arguments *args)
         COMMAND_ERROR("external rootfs not specified");
         return 0;
     }
-    env_path = util_path_join(args->external_rootfs, env_target_file);
-    if (env_path == NULL) {
-        COMMAND_ERROR("join env target file path error");
-        return -1;
-    }
-    if (strncmp(env_path, args->external_rootfs, strlen(args->external_rootfs)) != 0) {
-        COMMAND_ERROR("env target file path must be under rootfs '%s'", args->external_rootfs);
+    if (realpath_in_scope(args->external_rootfs, env_target_file, &env_path) < 0) {
+        COMMAND_ERROR("env target file '%s' real path must be under '%s'", env_target_file, args->external_rootfs);
         ret = -1;
         goto out;
     }
@@ -1932,6 +2082,7 @@ static int create_check_env_target_file(const struct client_arguments *args)
         ret = -1;
         goto out;
     }
+
 out:
     free(env_path);
     return ret;

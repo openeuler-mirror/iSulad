@@ -773,6 +773,9 @@ public:
         for (size_t i = 0; i < request->env_len; i++) {
             grequest->add_env(request->env[i]);
         }
+        if (request->user != nullptr) {
+            grequest->set_user(request->user);
+        }
 
         return 0;
     }
@@ -780,7 +783,6 @@ public:
     int response_from_grpc(ExecResponse *gresponse, lcrc_exec_response *response) override
     {
         response->server_errono = gresponse->cc();
-        response->pid = (uint32_t)gresponse->pid();
         response->exit_code = gresponse->exit_code();
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
@@ -903,11 +905,6 @@ out:
         if (cc != metadata.end()) {
             auto tmpstr = std::string(cc->second.data(), cc->second.length());
             response->server_errono = (uint32_t)std::stoul(tmpstr, nullptr, 0);
-        }
-        auto pid = metadata.find("pid");
-        if (pid != metadata.end()) {
-            auto tmpstr = std::string(pid->second.data(), pid->second.length());
-            response->pid = (uint32_t)std::stoul(tmpstr, nullptr, 0);
         }
         auto exit_code = metadata.find("exit_code");
         if (exit_code != metadata.end()) {
@@ -1174,7 +1171,7 @@ private:
 
         response->container_summary[index]->exit_code = in.exit_code();
         response->container_summary[index]->restart_count = (uint32_t)(in.restartcount());
-
+        response->container_summary[index]->created = (int64_t)in.created();
         std::string healthState { "" };
         if (!in.health_state().empty()) {
             healthState = "(" + in.health_state() + ")";
@@ -1919,6 +1916,7 @@ public:
         if (ret != 0) {
             ERROR("Failed to translate request to grpc");
             response->server_errono = LCRD_ERR_INPUT;
+            delete ctx;
             return -1;
         }
 

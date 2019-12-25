@@ -34,25 +34,16 @@
 #include "config.h"
 #include "containers_store.h"
 #include "namespace.h"
+#include "path.h"
 
 static int write_hostname_to_file(const char *rootfs, const char *hostname)
 {
     int ret = 0;
-    size_t path_len = 0;
     char *file_path = NULL;
 
-    path_len = strlen(rootfs) + strlen("/etc/hostname") + 1;
-    if (path_len > PATH_MAX) {
-        ERROR("Invalid path length");
-        return -1;
-    }
-    file_path = util_common_calloc_s(path_len);
-    if (file_path == NULL) {
-        ERROR("Failed to malloc hostname path memory");
-        return -1;
-    }
-    if (sprintf_s(file_path, path_len, "%s%s", rootfs, "/etc/hostname") < 0) {
-        ERROR("Failed to print string");
+    if (realpath_in_scope(rootfs, "/etc/hostname", &file_path) < 0) {
+        SYSERROR("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
+        lcrd_set_error_message("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
         goto error_out;
     }
     if (hostname != NULL) {
@@ -71,18 +62,9 @@ error_out:
 
 static int fopen_network(FILE **fp, char **file_path, const char *rootfs, const char *filename)
 {
-    size_t path_len = strlen(rootfs) + strlen(filename) + 1;
-    if (path_len > PATH_MAX) {
-        ERROR("Invalid path length");
-        return -1;
-    }
-    *file_path = util_common_calloc_s(path_len);
-    if (*file_path == NULL) {
-        ERROR("Failed to malloc network path memory");
-        return -1;
-    }
-    if (sprintf_s(*file_path, path_len, "%s%s", rootfs, filename) < 0) {
-        ERROR("Failed to print string");
+    if (realpath_in_scope(rootfs, filename, file_path) < 0) {
+        SYSERROR("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
+        lcrd_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         return -1;
     }
     *fp = util_fopen(*file_path, "a+");
@@ -315,7 +297,7 @@ static int merge_dns_search(const host_config *host_spec, char **content, const 
             }
         }
     }
-    if (strlen(*content) > content_len) {
+    if (*content != NULL && strlen(*content) > content_len) {
         (*content)[strlen(*content) - 1] = '\n';
     }
 
@@ -373,7 +355,7 @@ static int merge_dns_options(const host_config *host_spec, char **content, const
             }
         }
     }
-    if (strlen(*content) > content_len) {
+    if (*content != NULL && strlen(*content) > content_len) {
         (*content)[strlen(*content) - 1] = '\n';
     }
 
@@ -904,4 +886,5 @@ int container_initialize_networking(const container_t *cont)
     container_unref(nc);
     return ret;
 }
+
 

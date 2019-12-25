@@ -1009,7 +1009,7 @@ static int merge_conf_cgroup_memory(oci_runtime_spec *oci_spec, const host_confi
         }
     }
 
-    /* memory swap*/
+    /* memory swap */
     if (host_spec->memory_swap != 0) {
         ret = merge_memory_swap(oci_spec, host_spec->memory_swap);
         if (ret != 0) {
@@ -1468,7 +1468,7 @@ static int change_tmpfs_mount_size(const oci_runtime_spec *oci_spec, int64_t mem
     if (memory_limit <= 0) {
         goto out;
     }
-    /*set tmpfs mount size to half of container memory limit*/
+    /* set tmpfs mount size to half of container memory limit */
     if (sprintf_s(size_opt, sizeof(size_opt), "size=%lldk", (long long int)(memory_limit / 2048)) < 0) {
         ERROR("Out of memory");
         ret = -1;

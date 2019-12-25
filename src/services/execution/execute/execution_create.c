@@ -38,7 +38,7 @@
 #include "verify.h"
 #include "containers_store.h"
 #include "execution_network.h"
-#include "runtime_interface.h"
+#include "runtime.h"
 #include "plugin.h"
 #include "image.h"
 #include "utils.h"
@@ -864,6 +864,8 @@ int container_create_cb(const container_create_request *request,
     container_custom_config *custom_spec = NULL;
     container_config_v2_common_config *v2_spec = NULL;
     host_config_host_channel *host_channel = NULL;
+    rt_create_params_t create_params = { 0 };
+    rt_rm_params_t delete_params = { 0 };
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -923,7 +925,10 @@ int container_create_cb(const container_create_request *request,
         goto clean_rootfs;
     }
 
-    if (runtime_create(id, runtime, real_rootfs, oci_config_data) != 0) {
+    create_params.real_rootfs = real_rootfs;
+    create_params.oci_config_data = oci_config_data;
+
+    if (runtime_create(id, runtime, &create_params) != 0) {
         ERROR("Runtime create container failed");
         cc = LCRD_ERR_EXEC;
         goto clean_rootfs;
@@ -944,7 +949,8 @@ int container_create_cb(const container_create_request *request,
     goto pack_response;
 
 clean_on_error:
-    (void)runtime_rm(id, runtime, runtime_root);
+    delete_params.rootpath = runtime_root;
+    (void)runtime_rm(id, runtime, &delete_params);
 
 clean_rootfs:
     (void)im_remove_container_rootfs(image_type, id);

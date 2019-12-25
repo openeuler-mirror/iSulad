@@ -23,3 +23,4 @@ char *fread_file(FILE *stream, size_t *length);
 char *read_file(const char *path, size_t *length);
 
 #endif
+

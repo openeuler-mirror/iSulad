@@ -89,7 +89,6 @@ std::string RequestCache::UniqueToken()
         for (size_t j {}; j < tokenSize; ++j) {
             rawToken[j] = (char)uniform_dist(e1);
         }
-
         lws_b64_encode_string(rawToken, (int)strlen(rawToken), buf, (int)sizeof(buf));
         buf[sizeof(buf) - 1] = '\0';
         if (strlen(buf) < TokenLen) {
@@ -150,4 +149,3 @@ bool RequestCache::IsValidToken(const std::string &token)
     found = true;
     return ele.req;
 }
-

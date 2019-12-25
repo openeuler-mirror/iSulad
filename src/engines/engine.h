@@ -103,9 +103,7 @@ typedef struct _engine_start_request_t {
     bool daemonize;
     bool tty;
     bool open_stdin;
-    const char *pidfile;
     const char **console_fifos;
-    const char *console_logpath;
     uint32_t start_timeout;
     const char *container_pidfile;
     const char *exit_fifo;
@@ -114,20 +112,34 @@ typedef struct _engine_start_request_t {
     gid_t gid;
     gid_t *additional_gids;
     size_t additional_gids_len;
-
-    const char **share_ns;
 } engine_start_request_t;
 
-typedef bool (*engine_create_t)(const char *, const char *, const char *, const char *, void *);
+typedef struct _engine_exec_request_t {
+    const char *name;
+    const char *lcrpath;
+
+    const char *logpath;
+    const char *loglevel;
+
+    const char **console_fifos;
+
+    const char *user;
+
+    const char **env;
+    size_t env_len;
+    const char **args;
+    size_t args_len;
+
+    int64_t timeout;
+} engine_exec_request_t;
+
+
+typedef bool (*engine_create_t)(const char *, const char *, const char *, void *);
 
 typedef bool (*engine_start_t)(const engine_start_request_t *request);
 
 typedef bool (*engine_clean_t)(const char *name, const char *lcrpath, const char *logpath, const char *loglevel,
                                pid_t pid);
-
-typedef bool (*engine_kill_t)(const char *name, const char *enginepath, uint32_t signal);
-
-typedef int (*engine_kill_monitor_t)(const char *name, const char *enginepath);
 
 typedef bool (*engine_delete_t)(const char *name, const char *enginepath);
 
@@ -139,9 +151,7 @@ typedef bool (*engine_reset_t)(const char *name, const char *enginepath);
 
 typedef bool (*engine_update_t)(const char *name, const char *enginepath, const struct engine_cgroup_resources *cr);
 
-typedef bool (*engine_exec_t)(const char *name, const char *enginepath, const char *logpath, const char *loglevel,
-                              const char *console_fifos[], char * const argv[], char * const env[], int64_t timeout,
-                              pid_t *pid, int *exit_code);
+typedef bool (*engine_exec_t)(const engine_exec_request_t *request, int *exit_code);
 
 typedef int (*engine_get_all_containers_info_t)(const char *enginepath, struct engine_container_summary_info **cons);
 
@@ -157,8 +167,6 @@ typedef int (*engine_get_container_status_t)(const char *name, const char *engin
 typedef void (*engine_free_container_status_t)(struct engine_container_info *container);
 
 typedef bool (*engine_get_container_pids_t)(const char *name, const char *rootpath, pid_t **pids, size_t *pids_len);
-
-typedef int (*engine_monitord_spawn_t)(const char *enginepath);
 
 typedef bool (*engine_console_t)(const char *name, const char *enginepath, char *in_fifo, char *out_fifo,
                                  char *err_fifo);
@@ -181,8 +189,6 @@ struct engine_operation {
     char *engine_type;
     engine_create_t engine_create_op;
     engine_start_t engine_start_op;
-    engine_kill_t engine_kill_op;
-    engine_kill_monitor_t engine_kill_monitor_op;
     engine_delete_t engine_delete_op;
     engine_pause_t engine_pause_op;
     engine_resume_t engine_resume_op;

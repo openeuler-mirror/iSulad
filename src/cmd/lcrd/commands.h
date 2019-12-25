@@ -68,9 +68,11 @@ int update_default_ulimit(struct service_arguments *args);
         "Set parent cgroup for all containers", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "pod-sandbox-image", 0, &(cmdargs)->json_confs->pod_sandbox_image, \
         "The image whose network/ipc namespaces containers in each pod will use. " \
-        "(default \"rnd-dockerhub.huawei.com/library/pause-${machine}:3.0\")", NULL }, \
-    { CMD_OPT_TYPE_STRING_DUP, false, "image-opt-timeout", 0, &(cmdargs)->json_confs->im_opt_timeout, \
+        "(default \"pause-${machine}:3.0\")", NULL }, \
+    { CMD_OPT_TYPE_STRING_DUP, false, "image-opt-timeout", 0, &(cmdargs)->json_confs->image_opt_timeout, \
         "Max timeout(default 5m) for image operation", NULL }, \
+    { CMD_OPT_TYPE_STRING_DUP, false, "image_server_sock_addr", 0, &(cmdargs)->json_confs->image_server_sock_addr, \
+        "Set isula image remote server socket address, Default: unix:///var/run/lcrd/isula_image.sock", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "network-plugin", 0, &(cmdargs)->json_confs->network_plugin, \
         "Set network plugin, default is null, suppport null and cni", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "cni-bin-dir", 0, &(cmdargs)->json_confs->cni_bin_dir, \
@@ -100,3 +102,4 @@ int update_default_ulimit(struct service_arguments *args);
         "Default ulimits for containers (default [])", command_default_ulimit_append }
 
 #endif /* __COMMAND_H */
+

@@ -146,6 +146,24 @@ target_link_libraries(lcrc liblcrc -lpthread)
 # ------ build lcrd -------
 add_subdirectory(services)
 add_subdirectory(image)
+add_subdirectory(runtime)
+
+if (ENABLE_OCI_IMAGE)
+    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/types CONNECT_API_TYPES)
+    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/image_client/ IMAGE_CLIENT_SRCS)
+
+    list(APPEND IMAGE_SRCS
+        ${ISULA_IMAGE_CLIENT_SRCS}
+        ${CONNECT_API_TYPES} ${IMAGE_CLIENT_SRCS}
+        )
+    list(APPEND IMAGE_INCS
+        ${CMAKE_BINARY_DIR}/grpc/src/api/types
+        ${CMAKE_BINARY_DIR}/grpc/src/api/image_client
+        ${GRPC_INCLUDE_DIR}
+        ${ISULA_IMAGE_CLIENT_INCS}
+        )
+endif()
+
 add_subdirectory(engines)
 
 add_subdirectory(plugin)
@@ -158,6 +176,7 @@ add_executable(lcrd
     ${HTTP_SRCS}
     ${ENGINES_SRCS}
     ${IMAGE_SRCS}
+    ${RUNTIME_SRCS}
     ${PLUGIN_SRCS}
     ${MAP_SRCS} ${CONFIG_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/filters.c
@@ -172,6 +191,7 @@ target_include_directories(lcrd PUBLIC
     ${CONNECT_SOCKET_INCS}
     ${SERVICES_INCS}
     ${IMAGE_INCS}
+    ${RUNTIME_INCS}
     ${ENGINES_INCS}
     ${LCRD_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin
@@ -183,7 +203,7 @@ target_include_directories(lcrd PUBLIC
 
 target_link_libraries(lcrd ${LIBYAJL_LIBRARY} ${LIBSECUREC_LIBRARY} ${SYSTEMD_LIBRARY})
 target_link_libraries(lcrd -ldl ${ZLIB_LIBRARY} -lpthread libhttpclient)
-if (ENABLE_EMBEDDED)
+if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(lcrd ${SQLITE3_LIBRARY})
 endif()
 
@@ -196,6 +216,12 @@ if (GRPC_CONNECTOR)
 else()
     message("Restful iSulad")
     target_link_libraries(lcrd ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
+endif()
+
+if (ENABLE_OCI_IMAGE)
+    target_link_libraries(lcrd -Wl,--as-needed -lstdc++)
+    target_link_libraries(lcrd -Wl,--as-needed ${PROTOBUF_LIBRARY})
+    target_link_libraries(lcrd -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 endif()
 
 if (ISULAD_GCOV)

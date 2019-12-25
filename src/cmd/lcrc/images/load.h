@@ -29,4 +29,5 @@ extern const char g_cmd_load_desc[];
 extern struct client_arguments g_cmd_load_args;
 int cmd_load_main(int argc, const char **argv);
 
-#endif /*__CMD_LOAD_H*/
+#endif /* __CMD_LOAD_H */
+

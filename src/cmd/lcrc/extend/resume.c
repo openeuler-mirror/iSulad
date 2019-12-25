@@ -19,8 +19,8 @@
 #include "log.h"
 #include "lcrc_connect.h"
 
-const char g_cmd_resume_desc[] = "resume container";
-const char g_cmd_resume_usage[] = "resume [command options] --name=NAME";
+const char g_cmd_resume_desc[] = "Unpause all processes within one or more containers";
+const char g_cmd_resume_usage[] = "unpause [OPTIONS] CONTAINER [CONTAINER...]";
 
 struct client_arguments g_cmd_resume_args = {};
 
@@ -116,3 +116,4 @@ int cmd_resume_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

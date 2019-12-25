@@ -51,7 +51,7 @@ static int parseName(const std::string &name, std::vector<std::string> &items, u
     return 0;
 }
 
-std::string MakeSandboxName(const runtime::PodSandboxMetadata &metadata)
+std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata)
 {
     std::string sname;
 
@@ -70,7 +70,7 @@ std::string MakeSandboxName(const runtime::PodSandboxMetadata &metadata)
     return sname;
 }
 
-void ParseSandboxName(const std::string &name, runtime::PodSandboxMetadata &metadata, Errors &err)
+void ParseSandboxName(const std::string &name, runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err)
 {
     int ret {};
     std::vector<std::string> items;
@@ -87,7 +87,7 @@ void ParseSandboxName(const std::string &name, runtime::PodSandboxMetadata &meta
     metadata.set_attempt(attempt);
 }
 
-std::string MakeContainerName(const runtime::PodSandboxConfig &s, const runtime::ContainerConfig &c)
+std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s, const runtime::v1alpha2::ContainerConfig &c)
 {
     std::string sname;
 
@@ -106,7 +106,7 @@ std::string MakeContainerName(const runtime::PodSandboxConfig &s, const runtime:
     return sname;
 }
 
-void ParseContainerName(const std::string &name, runtime::ContainerMetadata *metadata, Errors &err)
+void ParseContainerName(const std::string &name, runtime::v1alpha2::ContainerMetadata *metadata, Errors &err)
 {
     int ret {};
     std::vector<std::string> items;
@@ -121,4 +121,4 @@ void ParseContainerName(const std::string &name, runtime::ContainerMetadata *met
     metadata->set_attempt(attempt);
 }
 
-}  // namespace CRINaming
+} // namespace CRINaming

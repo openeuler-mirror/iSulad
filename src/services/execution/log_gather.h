@@ -41,3 +41,4 @@ enum log_gather_driver {
 void *log_gather(void *arg);
 
 #endif
+

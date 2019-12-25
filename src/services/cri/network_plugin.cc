@@ -139,8 +139,8 @@ free_out:
     return result;
 }
 
-std::string GetPodIP(const std::string &nsenterPath, const std::string &netnsPath,
-                     const std::string &interfaceName, Errors &error)
+std::string GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
+                     Errors &error)
 {
     std::string ip = GetOnePodIP(nsenterPath, netnsPath, interfaceName, "-4", error);
     if (error.NotEmpty()) {
@@ -158,7 +158,11 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
 
     if (networkPluginName.empty()) {
         DEBUG("network plugin name empty");
-        *result = std::shared_ptr<NetworkPlugin>(new NoopNetworkPlugin);
+        *result = std::shared_ptr<NetworkPlugin>(new (std::nothrow) NoopNetworkPlugin);
+        if (*result == nullptr) {
+            ERROR("Out of memory");
+            return;
+        }
         (*result)->Init(criImpl, hairpinMode, nonMasqueradeCIDR, mtu, err);
         return;
     }
@@ -305,7 +309,11 @@ void PluginManager::Lock(const std::string &fullPodName, Errors &error)
     auto iter = m_pods.find(fullPodName);
     PodLock *lock { nullptr };
     if (iter == m_pods.end()) {
-        auto tmpLock = std::unique_ptr<PodLock>(new PodLock());
+        auto tmpLock = std::unique_ptr<PodLock>(new (std::nothrow) PodLock());
+        if (tmpLock == nullptr) {
+            error.SetError("Out of memory");
+            return;
+        }
         lock = tmpLock.get();
         m_pods[fullPodName] = std::move(tmpLock);
     } else {
@@ -442,8 +450,7 @@ unlock:
 }
 
 void NoopNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode,
-                             const std::string &nonMasqueradeCIDR,
-                             int mtu, Errors &error)
+                             const std::string &nonMasqueradeCIDR, int mtu, Errors &error)
 {
     char *stderr_str { nullptr };
     char *stdout_str { nullptr };
@@ -518,5 +525,8 @@ void NoopNetworkPlugin::Status(Errors &error)
     return;
 }
 
+const std::string &GetInterfaceName()
+{
+    return DEFAULT_NETWORK_INTERFACE_NAME;
+}
 } // namespace Network
-

@@ -19,30 +19,31 @@ History: 2018-04-25 created
 import helpers
 
 
-def appendCCode(obj, c_file, prefix):
+def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
     Interface: None
     History: 2019-06-17
     """
-    parseJsonToC(obj, c_file, prefix)
-    makeCFree(obj, c_file, prefix)
-    obtainCJson(obj, c_file, prefix)
+    parse_json_to_c(obj, c_file, prefix)
+    make_c_free(obj, c_file, prefix)
+    get_c_json(obj, c_file, prefix)
 
-def parseMapStringObject(obj, c_file, prefix, obj_typename):
+
+def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     """
     Description: generate c language for parse json map string object
     Interface: None
     History: 2019-06-17
     """
     child = obj.children[0]
-    if helpers.validBasicMapName(child.typ):
-        childname = helpers.makeBasicMapName(child.typ)
+    if helpers.valid_basic_map_name(child.typ):
+        childname = helpers.make_basic_map_name(child.typ)
     else:
         if child.subtypname:
             childname = child.subtypname
         else:
-            childname = helpers.getPrefixName(child.name, prefix)
+            childname = helpers.get_prefixe_name(child.name, prefix)
     c_file.write('    if (YAJL_GET_OBJECT(tree) != NULL && YAJL_GET_OBJECT(tree)->len > 0) {\n')
     c_file.write('        size_t i;\n')
     c_file.write('        ret->len = YAJL_GET_OBJECT(tree)->len;\n')
@@ -63,7 +64,8 @@ def parseMapStringObject(obj, c_file, prefix, obj_typename):
     c_file.write('        }\n')
     c_file.write('    }\n')
 
-def parseObjectType(obj, c_file, prefix, obj_typename):
+
+def parse_obj_type(obj, c_file, prefix, obj_typename):
     """
     Description: generate c language for parse object type
     Interface: None
@@ -71,34 +73,34 @@ def parseObjectType(obj, c_file, prefix, obj_typename):
     """
     if obj.typ == 'string':
         c_file.write('    {\n')
-        readValueGenerator(c_file, 2, 'get_val(tree, "%s", yajl_t_string)' % obj.origname, \
+        read_val_generator(c_file, 2, 'get_val(tree, "%s", yajl_t_string)' % obj.origname, \
                              "ret->%s" % obj.fixname, obj.typ, obj.origname, obj_typename)
         c_file.write('    }\n')
-    elif helpers.judgeDataType(obj.typ):
+    elif helpers.judge_data_type(obj.typ):
         c_file.write('    {\n')
-        readValueGenerator(c_file, 2, 'get_val(tree, "%s", yajl_t_number)' % obj.origname, \
+        read_val_generator(c_file, 2, 'get_val(tree, "%s", yajl_t_number)' % obj.origname, \
                              "ret->%s" % obj.fixname, obj.typ, obj.origname, obj_typename)
         c_file.write('    }\n')
-    elif helpers.judgeDataPointerType(obj.typ):
+    elif helpers.judge_data_pointer_type(obj.typ):
         c_file.write('    {\n')
-        readValueGenerator(c_file, 2, 'get_val(tree, "%s", yajl_t_number)' % obj.origname, \
+        read_val_generator(c_file, 2, 'get_val(tree, "%s", yajl_t_number)' % obj.origname, \
                              "ret->%s" % obj.fixname, obj.typ, obj.origname, obj_typename)
         c_file.write('    }\n')
     if obj.typ == 'boolean':
         c_file.write('    {\n')
-        readValueGenerator(c_file, 2, 'get_val(tree, "%s", yajl_t_true)' % obj.origname, \
+        read_val_generator(c_file, 2, 'get_val(tree, "%s", yajl_t_true)' % obj.origname, \
                              "ret->%s" % obj.fixname, obj.typ, obj.origname, obj_typename)
         c_file.write('    }\n')
     if obj.typ == 'booleanPointer':
         c_file.write('    {\n')
-        readValueGenerator(c_file, 2, 'get_val(tree, "%s", yajl_t_true)' % obj.origname, \
+        read_val_generator(c_file, 2, 'get_val(tree, "%s", yajl_t_true)' % obj.origname, \
                              "ret->%s" % obj.fixname, obj.typ, obj.origname, obj_typename)
         c_file.write('    }\n')
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname is not None:
             typename = obj.subtypname
         else:
-            typename = helpers.getPrefixName(obj.name, prefix)
+            typename = helpers.get_prefixe_name(obj.name, prefix)
         c_file.write(
             '    ret->%s = make_%s(get_val(tree, "%s", yajl_t_object), ctx, err);\n' \
             % (obj.fixname, typename, obj.origname))
@@ -110,7 +112,7 @@ def parseObjectType(obj, c_file, prefix, obj_typename):
         if obj.subtypname:
             typename = obj.subtypname
         else:
-            typename = helpers.getNameSubstr(obj.name, prefix)
+            typename = helpers.get_name_substr(obj.name, prefix)
         c_file.write('    {\n')
         c_file.write('        yajl_val tmp = get_val(tree, "%s", yajl_t_array);\n' \
                      % (obj.origname))
@@ -155,18 +157,18 @@ def parseObjectType(obj, c_file, prefix, obj_typename):
             '            ret->%s = safe_malloc((YAJL_GET_ARRAY(tmp)->len + 1) *' \
             ' sizeof(*ret->%s));\n' % (obj.fixname, obj.fixname))
         c_file.write('            for (i = 0; i < YAJL_GET_ARRAY(tmp)->len; i++) {\n')
-        readValueGenerator(c_file, 4, 'YAJL_GET_ARRAY(tmp)->values[i]', \
+        read_val_generator(c_file, 4, 'YAJL_GET_ARRAY(tmp)->values[i]', \
                              "ret->%s[i]" % obj.fixname, obj.subtyp, obj.origname, obj_typename)
         c_file.write('            }\n')
         c_file.write('        }\n')
         c_file.write('    }\n')
-    elif helpers.validBasicMapName(obj.typ):
+    elif helpers.valid_basic_map_name(obj.typ):
         c_file.write('    {\n')
         c_file.write('        yajl_val tmp = get_val(tree, "%s", yajl_t_object);\n' \
                      % (obj.origname))
         c_file.write('        if (tmp != NULL) {\n')
         c_file.write('            ret->%s = make_%s(tmp, ctx, err);\n' \
-                     % (obj.fixname, helpers.makeBasicMapName(obj.typ)))
+                     % (obj.fixname, helpers.make_basic_map_name(obj.typ)))
         c_file.write('            if (ret->%s == NULL) {\n' % (obj.fixname))
         c_file.write('                char *new_error = NULL;\n')
         c_file.write("                if (asprintf(&new_error, \"Value error for key" \
@@ -182,20 +184,19 @@ def parseObjectType(obj, c_file, prefix, obj_typename):
         c_file.write('        }\n')
         c_file.write('    }\n')
 
-def parseObjectOrArrayObject(obj, c_file, prefix, obj_typename):
+def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
     """
     Description: generate c language for parse object or array object
     Interface: None
     History: 2019-06-17
     """
     nodes = obj.children if obj.typ == 'object' else obj.subtypobj
-
     required_to_check = []
     for i in nodes or []:
         if obj.required and i.origname in obj.required and \
-                not helpers.judgeDataType(i.typ) and i.typ != 'boolean':
+                not helpers.judge_data_type(i.typ) and i.typ != 'boolean':
             required_to_check.append(i)
-        parseObjectType(i, c_file, prefix, obj_typename)
+        parse_obj_type(i, c_file, prefix, obj_typename)
 
     for i in required_to_check:
         c_file.write('    if (ret->%s == NULL) {\n' % i.fixname)
@@ -222,26 +223,24 @@ def parseObjectOrArrayObject(obj, c_file, prefix, obj_typename):
         }
 """ % condition)
 
-def parseJsonToC(obj, c_file, prefix):
+
+def parse_json_to_c(obj, c_file, prefix):
     """
     Description: generate c language for parse json file
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judgeComplex(obj.typ):
+    if not helpers.judge_complex(obj.typ):
         return
-
     if obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname:
             return
-        obj_typename = typename = helpers.getPrefixName(obj.name, prefix)
-
+        obj_typename = typename = helpers.get_prefixe_name(obj.name, prefix)
     if obj.typ == 'array':
-        obj_typename = typename = helpers.getNameSubstr(obj.name, prefix)
+        obj_typename = typename = helpers.get_name_substr(obj.name, prefix)
         objs = obj.subtypobj
         if objs is None or obj.subtypname:
             return
-
     c_file.write("%s *make_%s(yajl_val tree, const struct parser_context *ctx, "\
         "parser_error *err) {\n" % (typename, typename))
     c_file.write("    %s *ret = NULL;\n" % (typename))
@@ -249,31 +248,29 @@ def parseJsonToC(obj, c_file, prefix):
     c_file.write("    if (tree == NULL)\n")
     c_file.write("        return ret;\n")
     c_file.write("    ret = safe_malloc(sizeof(*ret));\n")
-
     if obj.typ == 'mapStringObject':
-        parseMapStringObject(obj, c_file, prefix, obj_typename)
+        parse_map_string_obj(obj, c_file, prefix, obj_typename)
 
     if obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
-        parseObjectOrArrayObject(obj, c_file, prefix, obj_typename)
-
+        parse_obj_arr_obj(obj, c_file, prefix, obj_typename)
     c_file.write('    return ret;\n')
     c_file.write("}\n\n")
 
 
-def obtainMapStringObject(obj, c_file, prefix):
+def get_map_string_obj(obj, c_file, prefix):
     """
     Description: c language generate map string object
     Interface: None
     History: 2019-06-17
     """
     child = obj.children[0]
-    if helpers.validBasicMapName(child.typ):
-        childname = helpers.makeBasicMapName(child.typ)
+    if helpers.valid_basic_map_name(child.typ):
+        childname = helpers.make_basic_map_name(child.typ)
     else:
         if child.subtypname:
             childname = child.subtypname
         else:
-            childname = helpers.getPrefixName(child.name, prefix)
+            childname = helpers.get_prefixe_name(child.name, prefix)
     c_file.write('    size_t len = 0, i;\n')
     c_file.write("    if (ptr != NULL)\n")
     c_file.write("        len = ptr->len;\n")
@@ -286,7 +283,8 @@ def obtainMapStringObject(obj, c_file, prefix):
                  % child.fixname)
     c_file.write('        for (i = 0; i < len; i++) {\n')
     c_file.write('            char *str = ptr->keys[i] ? ptr->keys[i] : "";\n')
-    c_file.write('            stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)str, strlen(str));\n')
+    c_file.write('            stat = yajl_gen_string((yajl_gen)g, \
+        (const unsigned char *)str, strlen(str));\n')
     c_file.write("            if (yajl_gen_status_ok != stat)\n")
     c_file.write("                GEN_SET_ERROR_AND_RETURN(stat, err);\n")
     c_file.write('            stat = gen_%s(g, ptr->%s[i], ctx, err);\n' \
@@ -301,7 +299,8 @@ def obtainMapStringObject(obj, c_file, prefix):
     c_file.write("    if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
     c_file.write('        yajl_gen_config(g, yajl_gen_beautify, 1);\n')
 
-def obtainObjectOrArrayObject(obj, c_file, prefix):
+
+def get_obj_arr_obj(obj, c_file, prefix):
     """
     Description: c language generate object or array object
     Interface: None
@@ -311,17 +310,16 @@ def obtainObjectOrArrayObject(obj, c_file, prefix):
         c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s != NULL)) {\n' % obj.fixname)
         c_file.write('        char *str = "";\n')
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+            (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL) {\n" % obj.fixname)
         c_file.write("            str = ptr->%s;\n" % obj.fixname)
         c_file.write("        }\n")
-        jsonValueGenerator(c_file, 2, "str", 'g', 'ctx', obj.typ)
+        json_value_generator(c_file, 2, "str", 'g', 'ctx', obj.typ)
         c_file.write("    }\n")
-
-    elif helpers.judgeDataType(obj.typ):
+    elif helpers.judge_data_type(obj.typ):
         c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s)) {\n' % obj.fixname)
         if obj.typ == 'double':
@@ -331,55 +329,53 @@ def obtainObjectOrArrayObject(obj, c_file, prefix):
         else:
             numtyp = 'long long int'
         c_file.write('        %s num = 0;\n' % numtyp)
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+            (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s) {\n" % obj.fixname)
         c_file.write("            num = (%s)ptr->%s;\n" % (numtyp, obj.fixname))
         c_file.write("        }\n")
-        jsonValueGenerator(c_file, 2, "num", 'g', 'ctx', obj.typ)
+        json_value_generator(c_file, 2, "num", 'g', 'ctx', obj.typ)
         c_file.write("    }\n")
-
-    elif helpers.judgeDataPointerType(obj.typ):
+    elif helpers.judge_data_pointer_type(obj.typ):
         c_file.write('    if ((ptr != NULL && ptr->%s != NULL)) {\n' % obj.fixname)
-        numtyp = helpers.obtainDataPointerType(obj.typ)
+        numtyp = helpers.obtain_data_pointer_type(obj.typ)
         if numtyp == "":
             return
-        c_file.write('        %s num = 0;\n' % helpers.getMapCTypes(numtyp))
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        %s num = 0;\n' % helpers.get_map_c_types(numtyp))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+            (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL) {\n" % obj.fixname)
         c_file.write("            num = (%s)*(ptr->%s);\n" \
-                     % (helpers.getMapCTypes(numtyp), obj.fixname))
+                     % (helpers.get_map_c_types(numtyp), obj.fixname))
         c_file.write("        }\n")
-        jsonValueGenerator(c_file, 2, "num", 'g', 'ctx', numtyp)
+        json_value_generator(c_file, 2, "num", 'g', 'ctx', numtyp)
         c_file.write("    }\n")
-
     elif obj.typ == 'boolean':
         c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s)) {\n' % obj.fixname)
         c_file.write('        bool b = false;\n')
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+            (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s) {\n" % obj.fixname)
         c_file.write("            b = ptr->%s;\n" % obj.fixname)
         c_file.write("        }\n")
-        jsonValueGenerator(c_file, 2, "b", 'g', 'ctx', obj.typ)
+        json_value_generator(c_file, 2, "b", 'g', 'ctx', obj.typ)
         c_file.write("    }\n")
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname:
             typename = obj.subtypname
         else:
-            typename = helpers.getPrefixName(obj.name, prefix)
+            typename = helpers.get_prefixe_name(obj.name, prefix)
         c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s != NULL)) {\n' % obj.fixname)
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+            (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write('        stat = gen_%s(g, ptr != NULL ? ptr->%s : NULL, ctx, err);\n' \
@@ -387,17 +383,16 @@ def obtainObjectOrArrayObject(obj, c_file, prefix):
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("    }\n")
-
     elif obj.typ == 'array' and (obj.subtypobj or obj.subtyp == 'object'):
         if obj.subtypname:
             typename = obj.subtypname
         else:
-            typename = helpers.getNameSubstr(obj.name, prefix)
+            typename = helpers.get_name_substr(obj.name, prefix)
         c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL)) {\n' % obj.fixname)
         c_file.write('        size_t len = 0, i;\n')
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+            (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL) {\n" % obj.fixname)
@@ -426,15 +421,16 @@ def obtainObjectOrArrayObject(obj, c_file, prefix):
                      % (obj.fixname, obj.fixname))
         c_file.write('        const char *str = "";\n')
         c_file.write('        size_t len = 0;\n')
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+        (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL) {\n" % obj.fixname)
         c_file.write("            str = (const char *)ptr->%s;\n" % obj.fixname)
         c_file.write("            len = ptr->%s_len;\n" % obj.fixname)
         c_file.write("        }\n")
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)str, len);\n')
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+        (const unsigned char *)str, len);\n')
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("    }\n")
@@ -442,8 +438,8 @@ def obtainObjectOrArrayObject(obj, c_file, prefix):
         c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL)) {\n' % obj.fixname)
         c_file.write('        size_t len = 0, i;\n')
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+            (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL) {\n" % obj.fixname)
@@ -455,7 +451,7 @@ def obtainObjectOrArrayObject(obj, c_file, prefix):
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write('        for (i = 0; i < len; i++) {\n')
-        jsonValueGenerator(c_file, 3, "ptr->%s[i]" % obj.fixname, 'g', 'ctx', obj.subtyp)
+        json_value_generator(c_file, 3, "ptr->%s[i]" % obj.fixname, 'g', 'ctx', obj.subtyp)
         c_file.write('        }\n')
         c_file.write('        stat = yajl_gen_array_close((yajl_gen)g);\n')
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
@@ -463,44 +459,42 @@ def obtainObjectOrArrayObject(obj, c_file, prefix):
         c_file.write("        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
         c_file.write('            yajl_gen_config(g, yajl_gen_beautify, 1);\n')
         c_file.write('    }\n')
-
-    elif helpers.validBasicMapName(obj.typ):
+    elif helpers.valid_basic_map_name(obj.typ):
         c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL)) {\n' % obj.fixname)
-        c_file.write('        stat = yajl_gen_string((yajl_gen)g, (const unsigned char *)("%s"), strlen("%s"));\n' \
-                     % (obj.origname, obj.origname))
+        c_file.write('        stat = yajl_gen_string((yajl_gen)g, \
+        (const unsigned char *)("%s"), strlen("%s"));\n' % (obj.origname, obj.origname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write('        stat = gen_%s(g, ptr ? ptr->%s : NULL, ctx, err);\n' \
-                     % (helpers.makeBasicMapName(obj.typ), obj.fixname))
+                     % (helpers.make_basic_map_name(obj.typ), obj.fixname))
         c_file.write("        if (yajl_gen_status_ok != stat)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN(stat, err);\n")
         c_file.write("    }\n")
 
-def obtainCJson(obj, c_file, prefix):
+
+def get_c_json(obj, c_file, prefix):
     """
     Description: c language generate json file
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judgeComplex(obj.typ) or obj.subtypname:
+    if not helpers.judge_complex(obj.typ) or obj.subtypname:
         return
     if obj.typ == 'object' or obj.typ == 'mapStringObject':
-        obj_typename = typename = helpers.getPrefixName(obj.name, prefix)
+        typename = helpers.get_prefixe_name(obj.name, prefix)
     elif obj.typ == 'array':
-        obj_typename = typename = helpers.getNameSubstr(obj.name, prefix)
+        typename = helpers.get_name_substr(obj.name, prefix)
         objs = obj.subtypobj
         if objs is None:
             return
-
     c_file.write(
         "yajl_gen_status gen_%s(yajl_gen g, const %s *ptr, const struct parser_context " \
         "*ctx, parser_error *err) {\n" % (typename, typename))
     c_file.write("    yajl_gen_status stat = yajl_gen_status_ok;\n")
     c_file.write("    *err = 0;\n")
-
     if obj.typ == 'mapStringObject':
-        obtainMapStringObject(obj, c_file, prefix)
+        get_map_string_obj(obj, c_file, prefix)
     elif obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
         nodes = obj.children if obj.typ == 'object' else obj.subtypobj
         if nodes is None:
@@ -510,10 +504,8 @@ def obtainCJson(obj, c_file, prefix):
         c_file.write("    stat = yajl_gen_map_open((yajl_gen)g);\n")
         c_file.write("    if (yajl_gen_status_ok != stat)\n")
         c_file.write("        GEN_SET_ERROR_AND_RETURN(stat, err);\n")
-
         for i in nodes or []:
-            obtainObjectOrArrayObject(i, c_file, prefix)
-
+            get_obj_arr_obj(i, c_file, prefix)
         c_file.write("    stat = yajl_gen_map_close((yajl_gen)g);\n")
         c_file.write("    if (yajl_gen_status_ok != stat)\n")
         c_file.write("        GEN_SET_ERROR_AND_RETURN(stat, err);\n")
@@ -524,17 +516,17 @@ def obtainCJson(obj, c_file, prefix):
     c_file.write("}\n\n")
 
 
-def readValueGenerator(c_file, level, src, dest, typ, keyname, obj_typename):
+def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
     """
     Description: read value generateor
     Interface: None
     History: 2019-06-17
     """
-    if helpers.validBasicMapName(typ):
+    if helpers.valid_basic_map_name(typ):
         c_file.write('%syajl_val val = %s;\n' % ('    ' * level, src))
         c_file.write('%sif (val != NULL) {\n' % ('    ' * level))
         c_file.write('%s%s = make_%s(val, ctx, err);\n' \
-                     % ('    ' * (level + 1), dest, helpers.makeBasicMapName(typ)))
+                     % ('    ' * (level + 1), dest, helpers.make_basic_map_name(typ)))
         c_file.write('%sif (%s == NULL) {\n' % ('    ' * (level + 1), dest))
         c_file.write('%s    char *new_error = NULL;\n' % ('    ' * (level + 1)))
         c_file.write("%s    if (asprintf(&new_error, \"Value error for key" \
@@ -555,7 +547,7 @@ def readValueGenerator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%schar *str = YAJL_GET_STRING(val);\n' % ('    ' * (level + 1)))
         c_file.write('%s%s = safe_strdup(str ? str : "");\n' % ('    ' * (level + 1), dest))
         c_file.write('%s}\n' % ('    ' * level))
-    elif helpers.judgeDataType(typ):
+    elif helpers.judge_data_type(typ):
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
         c_file.write('%sif (val != NULL) {\n' % ('    ' * (level)))
         if typ.startswith("uint") or \
@@ -578,14 +570,14 @@ def readValueGenerator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * (level)))
-    elif helpers.judgeDataPointerType(typ):
-        num_type = helpers.obtainDataPointerType(typ)
+    elif helpers.judge_data_pointer_type(typ):
+        num_type = helpers.obtain_data_pointer_type(typ)
         if num_type == "":
             return
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
         c_file.write('%sif (val != NULL) {\n' % ('    ' * (level)))
         c_file.write('%s%s = safe_malloc(sizeof(%s));\n' %
-                     ('    ' * (level + 1), dest, helpers.getMapCTypes(num_type)))
+                     ('    ' * (level + 1), dest, helpers.get_map_c_types(num_type)))
         c_file.write('%sint invalid = common_safe_%s(YAJL_GET_NUMBER(val), %s);\n' \
                      % ('    ' * (level + 1), num_type, dest))
         c_file.write('%sif (invalid) {\n' % ('    ' * (level + 1)))
@@ -617,105 +609,86 @@ def readValueGenerator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%s}\n' % ('    ' * (level)))
 
 
-def jsonValueGenerator(c_file, level, src, dst, ptx, typ):
+def json_value_generator(c_file, level, src, dst, ptx, typ):
     """
     Description: json value generateor
     Interface: None
     History: 2019-06-17
     """
-    if helpers.validBasicMapName(typ):
+    if helpers.valid_basic_map_name(typ):
         c_file.write('%sstat = gen_%s(%s, %s, %s, err);\n' \
-                     % ('    ' * (level), helpers.makeBasicMapName(typ), dst, src, ptx))
+                     % ('    ' * (level), helpers.make_basic_map_name(typ), dst, src, ptx))
         c_file.write("%sif (yajl_gen_status_ok != stat)\n" % ('    ' * (level)))
         c_file.write("%sGEN_SET_ERROR_AND_RETURN(stat, err);\n" % ('    ' * (level + 1)))
     elif typ == 'string':
-        c_file.write('%sstat = yajl_gen_string((yajl_gen)%s, (const unsigned char *)(%s), strlen(%s));\n' \
-                     % ('    ' * (level), dst, src, src))
+        c_file.write('%sstat = yajl_gen_string((yajl_gen)%s, \
+        (const unsigned char *)(%s), strlen(%s));\n' % ('    ' * (level), dst, src, src))
         c_file.write("%sif (yajl_gen_status_ok != stat)\n" % ('    ' * (level)))
         c_file.write("%sGEN_SET_ERROR_AND_RETURN(stat, err);\n" % ('    ' * (level + 1)))
-
-    elif helpers.judgeDataType(typ):
+    elif helpers.judge_data_type(typ):
         if typ == 'double':
-            c_file.write('%sstat = yajl_gen_double((yajl_gen)%s, %s);\n' % ('    ' * (level), dst, src))
+            c_file.write('%sstat = yajl_gen_double((yajl_gen)%s, %s);\n' \
+                         % ('    ' * (level), dst, src))
         elif typ.startswith("uint") or typ == 'GID' or typ == 'UID':
             c_file.write('%sstat = map_uint(%s, %s);\n' % ('    ' * (level), dst, src))
         else:
             c_file.write('%sstat = map_int(%s, %s);\n' % ('    ' * (level), dst, src))
         c_file.write("%sif (yajl_gen_status_ok != stat)\n" % ('    ' * (level)))
-        c_file.write("%sGEN_SET_ERROR_AND_RETURN(stat, err);\n" % ('    ' * (level + 1)))
-
+        c_file.write("%sGEN_SET_ERROR_AND_RETURN(stat, err);\n" \
+                     % ('    ' * (level + 1)))
     elif typ == 'boolean':
-        c_file.write('%sstat = yajl_gen_bool((yajl_gen)%s, (int)(%s));\n' % ('    ' * (level), dst, src))
+        c_file.write('%sstat = yajl_gen_bool((yajl_gen)%s, (int)(%s));\n' \
+                     % ('    ' * (level), dst, src))
         c_file.write("%sif (yajl_gen_status_ok != stat)\n" % ('    ' * (level)))
         c_file.write("%sGEN_SET_ERROR_AND_RETURN(stat, err);\n" % ('    ' * (level + 1)))
 
 
-def makeCFree(obj, c_file, prefix):
+def make_c_free(obj, c_file, prefix):
     """
     Description: generate c free function
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judgeComplex(obj.typ) or obj.subtypname:
+    if not helpers.judge_complex(obj.typ) or obj.subtypname:
         return
-
-    typename = helpers.getPrefixName(obj.name, prefix)
-
+    typename = helpers.get_prefixe_name(obj.name, prefix)
     case = obj.typ
-    result = {
-        'mapStringObject': lambda x: [],
-        'object': lambda x: x.children,
-        'array': lambda x: x.subtypobj
-    }[case](obj)
-
+    result = {'mapStringObject': lambda x: [], 'object': lambda x: x.children,
+              'array': lambda x: x.subtypobj}[case](obj)
     objs = result
     if obj.typ == 'array':
         if objs is None:
             return
         else:
-            typename = helpers.getNameSubstr(obj.name, prefix)
-
+            typename = helpers.get_name_substr(obj.name, prefix)
     c_file.write("void free_%s(%s *ptr) {\n" % (typename, typename))
     c_file.write("    if (ptr == NULL)\n")
     c_file.write("        return;\n")
     if obj.typ == 'mapStringObject':
         child = obj.children[0]
-        if helpers.validBasicMapName(child.typ):
-            childname = helpers.makeBasicMapName(child.typ)
+        if helpers.valid_basic_map_name(child.typ):
+            childname = helpers.make_basic_map_name(child.typ)
         else:
             if child.subtypname:
                 childname = child.subtypname
             else:
-                childname = helpers.getPrefixName(child.name, prefix)
-        c_file.write("    if (ptr->keys != NULL && ptr->%s != NULL) {\n" % child.fixname)
-        c_file.write("        size_t i;\n")
-        c_file.write("        for (i = 0; i < ptr->len; i++) {\n")
-        c_file.write("            free(ptr->keys[i]);\n")
-        c_file.write("            ptr->keys[i] = NULL;\n")
-        c_file.write("            free_%s(ptr->%s[i]);\n" % (childname, child.fixname))
-        c_file.write("            ptr->%s[i] = NULL;\n" % (child.fixname))
-        c_file.write("        }\n")
-        c_file.write("        free(ptr->keys);\n")
-        c_file.write("        ptr->keys = NULL;\n")
-        c_file.write("        free(ptr->%s);\n" % (child.fixname))
-        c_file.write("        ptr->%s = NULL;\n" % (child.fixname))
-        c_file.write("    }\n")
-
+                childname = helpers.get_prefixe_name(child.name, prefix)
+        c_file_map_str(c_file, child, childname)
     for i in objs or []:
-        if helpers.validBasicMapName(i.typ):
-            free_func = helpers.makeBasicMapName(i.typ)
+        if helpers.valid_basic_map_name(i.typ):
+            free_func = helpers.make_basic_map_name(i.typ)
             c_file.write("    free_%s(ptr->%s);\n" % (free_func, i.fixname))
             c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
         if i.typ == 'mapStringObject':
             if i.subtypname:
                 free_func = i.subtypname
             else:
-                free_func = helpers.getPrefixName(i.name, prefix)
+                free_func = helpers.get_prefixe_name(i.name, prefix)
             c_file.write("    free_%s(ptr->%s);\n" % (free_func, i.fixname))
             c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
         elif i.typ == 'array':
-            if helpers.validBasicMapName(i.subtyp):
-                free_func = helpers.makeBasicMapName(i.subtyp)
+            if helpers.valid_basic_map_name(i.subtyp):
+                free_func = helpers.make_basic_map_name(i.subtyp)
                 c_file.write("    if (ptr->%s != NULL) {\n" % i.fixname)
                 c_file.write("        size_t i;\n")
                 c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.fixname)
@@ -728,25 +701,15 @@ def makeCFree(obj, c_file, prefix):
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
                 c_file.write("    }\n")
             elif i.subtyp == 'string':
-                c_file.write("    if (ptr->%s != NULL) {\n" % i.fixname)
-                c_file.write("        size_t i;\n")
-                c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.fixname)
-                c_file.write("            if (ptr->%s[i] != NULL) {\n" % (i.fixname))
-                c_file.write("                free(ptr->%s[i]);\n" % (i.fixname))
-                c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
-                c_file.write("            }\n")
-                c_file.write("        }\n")
-                c_file.write("        free(ptr->%s);\n" % (i.fixname))
-                c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
-                c_file.write("    }\n")
-            elif not helpers.judgeComplex(i.subtyp):
+                c_file_str(c_file, i)
+            elif not helpers.judge_complex(i.subtyp):
                 c_file.write("    free(ptr->%s);\n" % (i.fixname))
                 c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
             elif i.subtyp == 'object' or i.subtypobj is not None:
                 if i.subtypname is not None:
                     free_func = i.subtypname
                 else:
-                    free_func = helpers.getNameSubstr(i.name, prefix)
+                    free_func = helpers.get_name_substr(i.name, prefix)
                 c_file.write("    if (ptr->%s != NULL) {\n" % i.fixname)
                 c_file.write("        size_t i;\n")
                 c_file.write("        for (i = 0; i < ptr->%s_len; i++)\n" % i.fixname)
@@ -757,23 +720,17 @@ def makeCFree(obj, c_file, prefix):
                 c_file.write("        free(ptr->%s);\n" % i.fixname)
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
                 c_file.write("    }\n")
-
-            c_typ = helpers.obtainPointer(i.name, i.subtypobj, prefix)
+            c_typ = helpers.obtain_pointer(i.name, i.subtypobj, prefix)
             if c_typ == "":
                 continue
             if i.subobj is not None:
                 c_typ = c_typ + "_element"
             c_file.write("    free_%s(ptr->%s);\n" % (c_typ, i.fixname))
             c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
-        else:  # not array
-            typename = helpers.getPrefixName(i.name, prefix)
-            if i.typ == 'string':
-                c_file.write("    free(ptr->%s);\n" % (i.fixname))
-                c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
-            elif i.typ == 'booleanPointer':
-                c_file.write("    free(ptr->%s);\n" % (i.fixname))
-                c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
-            elif helpers.judgeDataPointerType(i.typ):
+        else:
+            typename = helpers.get_prefixe_name(i.name, prefix)
+            if i.typ == 'string' or i.typ == 'booleanPointer' or \
+                    helpers.judge_data_pointer_type(i.typ):
                 c_file.write("    free(ptr->%s);\n" % (i.fixname))
                 c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
             elif i.typ == 'object':
@@ -787,13 +744,54 @@ def makeCFree(obj, c_file, prefix):
     c_file.write("}\n\n")
 
 
-def sourceReflection(structs, schema_info, c_file, root_typ):
+def c_file_map_str(c_file, child, childname):
+    """
+    Description: generate c code for map string
+    Interface: None
+    History: 2019-10-31
+    """
+    c_file.write("    if (ptr->keys != NULL && ptr->%s != NULL) {\n" % child.fixname)
+    c_file.write("        size_t i;\n")
+    c_file.write("        for (i = 0; i < ptr->len; i++) {\n")
+    c_file.write("            free(ptr->keys[i]);\n")
+    c_file.write("            ptr->keys[i] = NULL;\n")
+    c_file.write("            free_%s(ptr->%s[i]);\n" % (childname, child.fixname))
+    c_file.write("            ptr->%s[i] = NULL;\n" % (child.fixname))
+    c_file.write("        }\n")
+    c_file.write("        free(ptr->keys);\n")
+    c_file.write("        ptr->keys = NULL;\n")
+    c_file.write("        free(ptr->%s);\n" % (child.fixname))
+    c_file.write("        ptr->%s = NULL;\n" % (child.fixname))
+    c_file.write("    }\n")
+
+
+def c_file_str(c_file, i):
+    """
+    Description: generate c code template
+    Interface: None
+    History: 2019-10-31
+    """
+    c_file.write("    if (ptr->%s != NULL) {\n" % i.fixname)
+    c_file.write("        size_t i;\n")
+    c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.fixname)
+    c_file.write("            if (ptr->%s[i] != NULL) {\n" % (i.fixname))
+    c_file.write("                free(ptr->%s[i]);\n" % (i.fixname))
+    c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
+    c_file.write("            }\n")
+    c_file.write("        }\n")
+    c_file.write("        free(ptr->%s);\n" % (i.fixname))
+    c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
+    c_file.write("    }\n")
+
+
+def src_reflect(structs, schema_info, c_file, root_typ):
     """
     Description: reflect code
     Interface: None
     History: 2019-06-17
     """
-    c_file.write("// Generated from %s. Do not edit!\n" % (schema_info.name.basename))
+    c_file.write("// Generated from %s. Do not edit!\n" \
+                 % (schema_info.name.basename))
     c_file.write("#ifndef _GNU_SOURCE\n")
     c_file.write("#define _GNU_SOURCE\n")
     c_file.write("#endif\n")
@@ -801,14 +799,12 @@ def sourceReflection(structs, schema_info, c_file, root_typ):
     c_file.write('#include <read_file.h>\n')
     c_file.write('#include "securec.h"\n')
     c_file.write('#include "%s"\n\n' % schema_info.header.basename)
-
     for i in structs:
-        appendCCode(i, c_file, schema_info.prefix)
+        append_c_code(i, c_file, schema_info.prefix)
+    get_c_epilog(c_file, schema_info.prefix, root_typ)
 
-    obtainCEpilogue(c_file, schema_info.prefix, root_typ)
 
-
-def obtainCEpilogue(c_file, prefix, typ):
+def get_c_epilog(c_file, prefix, typ):
     """
     Description: generate c language epilogue
     Interface: None
@@ -816,7 +812,6 @@ def obtainCEpilogue(c_file, prefix, typ):
     """
     if typ != 'array' and typ != 'object':
         return
-
     if typ == 'array':
         c_file.write("""\n
 %s_element **make_%s(yajl_val tree, const struct parser_context *ctx, parser_error *err, size_t *len) {
@@ -877,13 +872,11 @@ yajl_gen_status gen_%s(yajl_gen g, const %s_element **ptr, size_t len, const str
     return yajl_gen_status_ok;
 }
 """ % (prefix, prefix, prefix))
-
     c_file.write("""
 %s%s*%s_parse_file(const char *filename, const struct parser_context *ctx, parser_error *err%s) {
     %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
                            prefix, '' if typ == 'object' else ', size_t *len', \
                            prefix, ' ' if typ == 'object' else '_element *'))
-
     c_file.write("""
     size_t filesize;
     char *content = NULL;
@@ -903,13 +896,11 @@ yajl_gen_status gen_%s(yajl_gen g, const %s_element **ptr, size_t len, const str
     return ptr;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
-
     c_file.write("""
 %s%s*%s_parse_file_stream(FILE *stream, const struct parser_context *ctx, parser_error *err%s) {
     %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
                            prefix, '' if typ == 'object' else ', size_t *len', \
                            prefix, ' ' if typ == 'object' else '_element *'))
-
     c_file.write("""
     size_t filesize;
     char *content = NULL ;
@@ -928,13 +919,11 @@ yajl_gen_status gen_%s(yajl_gen g, const %s_element **ptr, size_t len, const str
     return ptr;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
-
     c_file.write("""
 %s%s*%s_parse_data(const char *jsondata, const struct parser_context *ctx, parser_error *err%s) {
     %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
                            prefix, '' if typ == 'object' else ', size_t *len', \
                            prefix, ' ' if typ == 'object' else '_element *'))
-
     c_file.write("""
     yajl_val tree;
     char errbuf[1024];
@@ -958,12 +947,10 @@ yajl_gen_status gen_%s(yajl_gen g, const %s_element **ptr, size_t len, const str
     return ptr;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
-
     c_file.write("char *%s_generate_json(const %s%s*ptr%s, const struct parser_context *ctx," \
                  " parser_error *err) {" % (prefix, prefix, \
                                             ' ' if typ == 'object' else '_element *', \
                                             '' if typ == 'object' else ', size_t len'))
-
     c_file.write("""
     yajl_gen g = NULL;
     struct parser_context tmp_ctx = { 0 };
@@ -1011,3 +998,5 @@ out:
 }
 
 """ % (prefix, '' if typ == 'object' else ', len'))
+
+

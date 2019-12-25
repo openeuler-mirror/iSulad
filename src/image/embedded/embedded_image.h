@@ -20,33 +20,33 @@
 
 bool embedded_detect(const char *image_name);
 
-int embedded_prepare_rf(struct bim *bim, const json_map_string_string *storage_opt, char **real_rootfs);
+int embedded_prepare_rf(const im_prepare_request *request, char **real_rootfs);
 
-int embedded_filesystem_usage(struct bim *bim, imagetool_fs_info **fs_usage);
+int embedded_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
 
-int embedded_mount_rf(struct bim *bim);
+int embedded_mount_rf(const im_mount_request *request);
 
-int embedded_umount_rf(struct bim *bim);
+int embedded_umount_rf(const im_umount_request *request);
 
-int embedded_delete_rf(struct bim *bim);
+int embedded_delete_rf(const im_delete_request *request);
 
 char *embedded_resolve_image_name(const char *image_name);
 
 int embedded_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
-                        struct bim *bim, char **real_rootfs);
+                        const im_prepare_request *request, char **real_rootfs);
 
 int embedded_get_user_conf(const char *basefs, host_config *hc, const char *userstr,
                            oci_runtime_spec_process_user *puser);
 
-int embedded_list_images(im_list_request *request,
-                         imagetool_images_list **list);
+int embedded_list_images(const im_list_request *request, imagetool_images_list **list);
 
-int embedded_remove_image(im_remove_request *request);
+int embedded_remove_image(const im_remove_request *request);
 
-int embedded_inspect_image(struct bim *bim, char **inspected_json);
+int embedded_inspect_image(const im_inspect_request *request, char **inspected_json);
 
-int embedded_load_image(im_load_request *request);
+int embedded_load_image(const im_load_request *request);
 
-int embedded_init(const char *rootpath);
+int embedded_init(const struct im_configs *conf);
 
 #endif
+

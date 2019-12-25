@@ -104,3 +104,4 @@ void map_clear(map_t *map);
 #endif
 
 #endif /* __LCRD_MAP_H__ */
+

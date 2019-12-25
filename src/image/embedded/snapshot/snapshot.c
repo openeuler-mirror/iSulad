@@ -73,3 +73,4 @@ int snapshot_generate_mount_string(uint32_t driver_type,
 
     return g_sd->plugins[driver_type].gms(imginfo, sninfos, mount_string);
 }
+

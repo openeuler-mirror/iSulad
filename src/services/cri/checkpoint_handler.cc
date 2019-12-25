@@ -154,6 +154,7 @@ out:
 
 void PortMapping::CStructToPortMapping(const cri_port_mapping *pmapping, Errors &error)
 {
+    (void)error;
     if (pmapping == nullptr) {
         return;
     }
@@ -362,5 +363,4 @@ void PodSandboxCheckpoint::CStructToCheckpoint(const cri_checkpoint *checkpoint,
     }
 }
 
-}  // namespace cri
-
+} // namespace cri

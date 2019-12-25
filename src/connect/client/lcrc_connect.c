@@ -49,3 +49,4 @@ lcrc_connect_ops *get_connect_client_ops(void)
 {
     return &g_connect_ops;
 }
+

@@ -1,5 +1,5 @@
-%global _version 1.0.33
-%global _release 20190930.052413.gitd2956279
+%global _version 1.1.1
+%global _release 20191222.225449.gitaa7147bf
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -8,7 +8,7 @@ Version:   %{_version}
 Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v1
-URL:       http://code.huawei.com/containers/lcrd
+URL:       lcrd
 Source:    iSulad-1.0.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64

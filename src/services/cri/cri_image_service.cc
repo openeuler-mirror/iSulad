@@ -27,7 +27,7 @@
 #include "utils.h"
 #include "cri_helpers.h"
 
-static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::Image> &image)
+static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {
     if (element == nullptr) {
         return;
@@ -52,7 +52,7 @@ static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<r
     image->set_size(element->size);
 
     if (element->uid != nullptr) {
-        runtime::Int64Value *uid_value = new (std::nothrow) runtime::Int64Value;
+        runtime::v1alpha2::Int64Value *uid_value = new (std::nothrow) runtime::v1alpha2::Int64Value;
         if (uid_value == nullptr) {
             return;
         }
@@ -67,8 +67,9 @@ static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<r
     return;
 }
 
-int CRIImageServiceImpl::pull_request_from_grpc(const runtime::ImageSpec *image, const runtime::AuthConfig *auth,
-                                                im_pull_request **request, Errors &error)
+int CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                const runtime::v1alpha2::AuthConfig *auth, im_pull_request **request,
+                                                Errors &error)
 {
     im_pull_request *tmpreq = (im_pull_request *)util_common_calloc_s(sizeof(im_pull_request));
     if (tmpreq == nullptr) {
@@ -110,7 +111,7 @@ int CRIImageServiceImpl::pull_request_from_grpc(const runtime::ImageSpec *image,
     return 0;
 }
 
-int CRIImageServiceImpl::list_request_from_grpc(const runtime::ImageFilter *filter, im_list_request **request,
+int CRIImageServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter, im_list_request **request,
                                                 Errors &error)
 {
     im_list_request *tmpreq = (im_list_request *)util_common_calloc_s(sizeof(im_list_request));
@@ -130,7 +131,8 @@ int CRIImageServiceImpl::list_request_from_grpc(const runtime::ImageFilter *filt
 }
 
 void CRIImageServiceImpl::list_images_to_grpc(im_list_response *response,
-                                              std::vector<std::unique_ptr<runtime::Image>> *images, Errors &error)
+                                              std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images,
+                                              Errors &error)
 {
     imagetool_images_list *list_images = response->images;
     if (list_images == nullptr) {
@@ -138,7 +140,11 @@ void CRIImageServiceImpl::list_images_to_grpc(im_list_response *response,
     }
 
     for (size_t i = 0; i < list_images->images_len; i++) {
-        std::unique_ptr<runtime::Image> image(new runtime::Image);
+        std::unique_ptr<runtime::v1alpha2::Image> image(new (std::nothrow) runtime::v1alpha2::Image);
+        if (image == nullptr) {
+            error.SetError("Out of memory");
+            return;
+        }
 
         imagetool_image *element = list_images->images[i];
         conv_image_to_grpc(element, image);
@@ -146,8 +152,8 @@ void CRIImageServiceImpl::list_images_to_grpc(im_list_response *response,
     }
 }
 
-void CRIImageServiceImpl::ListImages(const runtime::ImageFilter &filter,
-                                     std::vector<std::unique_ptr<runtime::Image>> *images, Errors &error)
+void CRIImageServiceImpl::ListImages(const runtime::v1alpha2::ImageFilter &filter,
+                                     std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error)
 {
     im_list_request *request { nullptr };
     im_list_response *response { nullptr };
@@ -176,11 +182,11 @@ cleanup:
     return;
 }
 
-int CRIImageServiceImpl::status_request_from_grpc(const runtime::ImageSpec *image, oci_image_status_request **request,
-                                                  Errors &error)
+int CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                  im_status_request **request, Errors &error)
 {
-    oci_image_status_request *tmpreq =
-        (oci_image_status_request *)util_common_calloc_s(sizeof(oci_image_status_request));
+    im_status_request *tmpreq =
+        (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         error.SetError("Out of memory");
@@ -196,8 +202,8 @@ int CRIImageServiceImpl::status_request_from_grpc(const runtime::ImageSpec *imag
     return 0;
 }
 
-std::unique_ptr<runtime::Image> CRIImageServiceImpl::status_image_to_grpc(oci_image_status_response *response,
-                                                                          Errors &error)
+std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::status_image_to_grpc(im_status_response *response,
+                                                                                    Errors &error)
 {
     imagetool_image_status *image_info = response->image_info;
     if (image_info == nullptr) {
@@ -209,24 +215,29 @@ std::unique_ptr<runtime::Image> CRIImageServiceImpl::status_image_to_grpc(oci_im
         return nullptr;
     }
 
-    std::unique_ptr<runtime::Image> image(new runtime::Image);
+    std::unique_ptr<runtime::v1alpha2::Image> image(new (std::nothrow) runtime::v1alpha2::Image);
+    if (image == nullptr) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
     conv_image_to_grpc(element, image);
 
     return image;
 }
 
-std::unique_ptr<runtime::Image> CRIImageServiceImpl::ImageStatus(const runtime::ImageSpec &image, Errors &error)
+std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
+                                                                           Errors &error)
 {
-    oci_image_status_request *request { nullptr };
-    oci_image_status_response *response { nullptr };
-    std::unique_ptr<runtime::Image> out { nullptr };
+    im_status_request *request { nullptr };
+    im_status_response *response { nullptr };
+    std::unique_ptr<runtime::v1alpha2::Image> out { nullptr };
 
     int ret = status_request_from_grpc(&image, &request, error);
     if (ret != 0) {
         goto cleanup;
     }
 
-    ret = oci_status_image(request, &response);
+    ret = im_image_status(request, &response);
     if (ret != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
@@ -240,13 +251,13 @@ std::unique_ptr<runtime::Image> CRIImageServiceImpl::ImageStatus(const runtime::
 
 cleanup:
     DAEMON_CLEAR_ERRMSG();
-    free_oci_image_status_request(request);
-    free_oci_image_status_response(response);
+    free_im_status_request(request);
+    free_im_status_response(response);
     return out;
 }
 
-std::string CRIImageServiceImpl::PullImage(const runtime::ImageSpec &image, const runtime::AuthConfig &auth,
-                                           Errors &error)
+std::string CRIImageServiceImpl::PullImage(const runtime::v1alpha2::ImageSpec &image,
+                                           const runtime::v1alpha2::AuthConfig &auth, Errors &error)
 {
     std::string out_str { "" };
     im_pull_request *request { nullptr };
@@ -256,9 +267,7 @@ std::string CRIImageServiceImpl::PullImage(const runtime::ImageSpec &image, cons
     if (ret != 0) {
         goto cleanup;
     }
-#ifdef ENABLE_OCI_IMAGE
     request->type = util_strdup_s(IMAGE_TYPE_OCI);
-#endif
 
     ret = im_pull_image(request, &response);
     if (ret != 0) {
@@ -280,8 +289,8 @@ cleanup:
     return out_str;
 }
 
-int CRIImageServiceImpl::remove_request_from_grpc(const runtime::ImageSpec *image, im_remove_request **request,
-                                                  Errors &error)
+int CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                  im_remove_request **request, Errors &error)
 {
     im_remove_request *tmpreq = (im_remove_request *)util_common_calloc_s(sizeof(im_remove_request));
     if (tmpreq == nullptr) {
@@ -299,7 +308,7 @@ int CRIImageServiceImpl::remove_request_from_grpc(const runtime::ImageSpec *imag
     return 0;
 }
 
-void CRIImageServiceImpl::RemoveImage(const runtime::ImageSpec &image, Errors &error)
+void CRIImageServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error)
 {
     std::string out_str { "" };
     im_remove_request *request { nullptr };
@@ -324,8 +333,8 @@ cleanup:
     return;
 }
 
-void CRIImageServiceImpl::fs_info_to_grpc(image_fs_info_response *response,
-                                          std::vector<std::unique_ptr<runtime::FilesystemUsage>> *fs_infos,
+void CRIImageServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
+                                          std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *fs_infos,
                                           Errors &error)
 {
     imagetool_fs_info *got_fs_info = response->fs_info;
@@ -334,21 +343,32 @@ void CRIImageServiceImpl::fs_info_to_grpc(image_fs_info_response *response,
     }
 
     for (size_t i {}; i < got_fs_info->image_filesystems_len; i++) {
-        std::unique_ptr<runtime::FilesystemUsage> fs_info(new runtime::FilesystemUsage);
+        using FilesystemUsagePtr = std::unique_ptr<runtime::v1alpha2::FilesystemUsage>;
+        FilesystemUsagePtr fs_info(new (std::nothrow) runtime::v1alpha2::FilesystemUsage);
+        if (fs_info == nullptr) {
+            ERROR("Out of memory");
+            return;
+        }
 
         imagetool_fs_info_image_filesystems_element *element = got_fs_info->image_filesystems[i];
 
         fs_info->set_timestamp(element->timestamp);
 
         if (element->fs_id != nullptr && element->fs_id->mountpoint != nullptr) {
-            runtime::StorageIdentifier *fs_id = new runtime::StorageIdentifier;
-            fs_id->set_uuid(element->fs_id->mountpoint);
-            fs_info->set_allocated_storage_id(fs_id);
+            runtime::v1alpha2::FilesystemIdentifier *fs_id =
+                new (std::nothrow)runtime::v1alpha2::FilesystemIdentifier;
+            if (fs_id == nullptr) {
+                ERROR("Out of memory");
+                return;
+            }
+            fs_id->set_mountpoint(element->fs_id->mountpoint);
+            fs_info->set_allocated_fs_id(fs_id);
         }
 
         if (element->used_bytes != nullptr) {
-            runtime::UInt64Value *used_bytes = new (std::nothrow) runtime::UInt64Value;
+            runtime::v1alpha2::UInt64Value *used_bytes = new (std::nothrow) runtime::v1alpha2::UInt64Value;
             if (used_bytes == nullptr) {
+                ERROR("Out of memory");
                 return;
             }
             used_bytes->set_value(element->used_bytes->value);
@@ -356,8 +376,9 @@ void CRIImageServiceImpl::fs_info_to_grpc(image_fs_info_response *response,
         }
 
         if (element->inodes_used != nullptr) {
-            runtime::UInt64Value *inodes_used = new (std::nothrow) runtime::UInt64Value;
+            runtime::v1alpha2::UInt64Value *inodes_used = new (std::nothrow) runtime::v1alpha2::UInt64Value;
             if (inodes_used == nullptr) {
+                ERROR("Out of memory");
                 return;
             }
             inodes_used->set_value(element->inodes_used->value);
@@ -368,11 +389,12 @@ void CRIImageServiceImpl::fs_info_to_grpc(image_fs_info_response *response,
     }
 }
 
-void CRIImageServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::FilesystemUsage>> *usages, Errors &error)
+void CRIImageServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *usages,
+                                      Errors &error)
 {
-    image_fs_info_response *response { nullptr };
+    im_fs_info_response *response { nullptr };
 
-    if (get_fs_info(&response)) {
+    if (im_get_filesystem_info(IMAGE_TYPE_OCI, &response)) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
         } else {
@@ -385,7 +407,6 @@ void CRIImageServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::Files
 
 out:
     DAEMON_CLEAR_ERRMSG();
-    free_image_fs_info_response(response);
+    free_im_fs_info_response(response);
     return;
 }
-

@@ -59,7 +59,10 @@
         "native.umask": {
             "type": "string"
         },
-        "im_opt_timeout": {
+        "image-opt-timeout": {
+            "type": "string"
+        },
+        "image-server-sock-addr": {
             "type": "string"
         },
         "pod-sandbox-image": {

@@ -114,3 +114,4 @@ int plugin_event_container_post_remove(const container_t *cont);
 int plugin_event_container_post_remove2(const char *cid, const oci_runtime_spec *oci);
 
 #endif /* _PLUGIN_H_ */
+

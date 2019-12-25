@@ -38,9 +38,11 @@ int register_new_oci_image_into_memory(const char *name);
 
 int remove_oci_image_from_memory(const char *name_or_id);
 
+int oci_image_store_init();
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }
 #endif
 
 #endif /* __LCRD_MEMORY_STORE_H__ */
+

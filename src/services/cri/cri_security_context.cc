@@ -19,7 +19,8 @@
 #include "log.h"
 
 namespace CRISecurity {
-static void ModifyContainerConfig(const runtime::LinuxContainerSecurityContext &sc, container_custom_config *config)
+static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
+                                  container_custom_config *config)
 {
     if (sc.has_run_as_user()) {
         free(config->user);
@@ -31,99 +32,118 @@ static void ModifyContainerConfig(const runtime::LinuxContainerSecurityContext &
     }
 }
 
-static void ModifyHostConfig(const runtime::LinuxContainerSecurityContext &sc, host_config *hostConfig, Errors &error)
+static void ModifyHostConfigCapabilities(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
+                                         host_config *hostConfig, Errors &error)
+{
+    if (!sc.has_capabilities()) {
+        return;
+    }
+
+    const google::protobuf::RepeatedPtrField<std::string> &capAdd = sc.capabilities().add_capabilities();
+    if (capAdd.size() > 0) {
+        if (static_cast<size_t>(capAdd.size()) > SIZE_MAX / sizeof(char *)) {
+            error.SetError("Invalid capability add size");
+            return;
+        }
+        hostConfig->cap_add = (char **)util_common_calloc_s(sizeof(char *) * capAdd.size());
+        if (hostConfig->cap_add == nullptr) {
+            error.SetError("Out of memory");
+            return;
+        }
+        for (int i {}; i < capAdd.size(); i++) {
+            hostConfig->cap_add[i] = util_strdup_s(capAdd[i].c_str());
+            hostConfig->cap_add_len++;
+        }
+    }
+    const google::protobuf::RepeatedPtrField<std::string> &capDrop = sc.capabilities().drop_capabilities();
+    if (capDrop.size() > 0) {
+        if (static_cast<size_t>(capDrop.size()) > SIZE_MAX / sizeof(char *)) {
+            error.SetError("Invalid capability drop size");
+            return;
+        }
+        hostConfig->cap_drop = (char **)util_common_calloc_s(sizeof(char *) * capDrop.size());
+        if (hostConfig->cap_drop == nullptr) {
+            error.SetError("Out of memory");
+            return;
+        }
+        for (int i = 0; i < capDrop.size(); i++) {
+            hostConfig->cap_drop[i] = util_strdup_s(capDrop[i].c_str());
+            hostConfig->cap_drop_len++;
+        }
+    }
+}
+
+static void ModifyHostConfigNoNewPrivs(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
+                                       host_config *hostConfig, Errors &error)
+{
+    char **tmp_security_opt { nullptr };
+
+    if (!sc.no_new_privs()) {
+        return;
+    }
+
+    if (hostConfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
+        error.Errorf("Out of memory");
+        return;
+    }
+
+    size_t oldSize = hostConfig->security_opt_len * sizeof(char *);
+    size_t newSize = oldSize + sizeof(char *);
+    int ret = mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostConfig->security_opt, oldSize);
+    if (ret != 0) {
+        error.Errorf("Out of memory");
+        return;
+    }
+    hostConfig->security_opt = tmp_security_opt;
+    hostConfig->security_opt[hostConfig->security_opt_len++] = util_strdup_s("no-new-privileges");
+}
+
+static void ModifyHostConfigscSupplementalGroups(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
+                                                 host_config *hostConfig, Errors &error)
+{
+    if (sc.supplemental_groups().size() == 0) {
+        return;
+    }
+
+    const google::protobuf::RepeatedField<google::protobuf::int64> &groups = sc.supplemental_groups();
+    if (groups.size() > 0) {
+        if (static_cast<size_t>(groups.size()) > SIZE_MAX / sizeof(char *)) {
+            error.SetError("Invalid group size");
+            return;
+        }
+        hostConfig->group_add = (char **)util_common_calloc_s(sizeof(char *) * groups.size());
+        if (hostConfig->group_add == nullptr) {
+            error.SetError("Out of memory");
+            return;
+        }
+        for (int i = 0; i < groups.size(); i++) {
+            hostConfig->group_add[i] = util_strdup_s(std::to_string(groups[i]).c_str());
+            hostConfig->group_add_len++;
+        }
+    }
+}
+
+static void ModifyHostConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, host_config *hostConfig,
+                             Errors &error)
 {
     hostConfig->privileged = sc.privileged();
     hostConfig->readonly_rootfs = sc.readonly_rootfs();
-    if (sc.has_capabilities()) {
-        const google::protobuf::RepeatedPtrField<std::string> &capAdd = sc.capabilities().add_capabilities();
-        if (capAdd.size() > 0) {
-            if (static_cast<size_t>(capAdd.size()) > SIZE_MAX / sizeof(char *)) {
-                error.SetError("Invalid capability add size");
-                return;
-            }
-            hostConfig->cap_add = (char **)util_common_calloc_s(sizeof(char *) * capAdd.size());
-            if (hostConfig->cap_add == nullptr) {
-                error.SetError("Out of memory");
-                return;
-            }
-            for (int i {}; i < capAdd.size(); i++) {
-                hostConfig->cap_add[i] = util_strdup_s(capAdd[i].c_str());
-                hostConfig->cap_add_len++;
-            }
-        }
-        const google::protobuf::RepeatedPtrField<std::string> &capDrop = sc.capabilities().drop_capabilities();
-        if (capDrop.size() > 0) {
-            if (static_cast<size_t>(capDrop.size()) > SIZE_MAX / sizeof(char *)) {
-                error.SetError("Invalid capability drop size");
-                return;
-            }
-            hostConfig->cap_drop = (char **)util_common_calloc_s(sizeof(char *) * capDrop.size());
-            if (hostConfig->cap_drop == nullptr) {
-                error.SetError("Out of memory");
-                return;
-            }
-            for (int i = 0; i < capDrop.size(); i++) {
-                hostConfig->cap_drop[i] = util_strdup_s(capDrop[i].c_str());
-                hostConfig->cap_drop_len++;
-            }
-        }
-    }
-
     // note: Apply apparmor options, selinux options, noNewPrivilege
-    if (sc.no_new_privs()) {
-        char **tmp_security_opt { nullptr };
-
-        if (hostConfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
-            error.Errorf("Out of memory");
-            return;
-        }
-
-        size_t oldSize = hostConfig->security_opt_len * sizeof(char *);
-        size_t newSize = oldSize + sizeof(char *);
-        int ret = mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostConfig->security_opt, oldSize);
-        if (ret != 0) {
-            error.Errorf("Out of memory");
-            return;
-        }
-        hostConfig->security_opt = tmp_security_opt;
-        hostConfig->security_opt[hostConfig->security_opt_len++] = util_strdup_s("no-new-privileges");
-    }
-
-    if (sc.supplemental_groups().size() > 0) {
-        const google::protobuf::RepeatedField<google::protobuf::int64> &groups = sc.supplemental_groups();
-        if (groups.size() > 0) {
-            if (static_cast<size_t>(groups.size()) > SIZE_MAX / sizeof(char *)) {
-                error.SetError("Invalid group size");
-                return;
-            }
-            hostConfig->group_add = (char **)util_common_calloc_s(sizeof(char *) * groups.size());
-            if (hostConfig->group_add == nullptr) {
-                error.SetError("Out of memory");
-                return;
-            }
-            for (int i = 0; i < groups.size(); i++) {
-                hostConfig->group_add[i] = util_strdup_s(std::to_string(groups[i]).c_str());
-                hostConfig->group_add_len++;
-            }
-        }
-    }
+    ModifyHostConfigCapabilities(sc, hostConfig, error);
+    ModifyHostConfigNoNewPrivs(sc, hostConfig, error);
+    ModifyHostConfigscSupplementalGroups(sc, hostConfig, error);
 }
 
-static void ModifyCommonNamespaceOptions(const runtime::NamespaceOption &nsOpts, host_config *hostConfig)
+static void ModifyCommonNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)
 {
-    if (nsOpts.host_pid()) {
+    if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->pid_mode);
         hostConfig->pid_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
     }
-    if (nsOpts.host_ipc()) {
-        free(hostConfig->ipc_mode);
-        hostConfig->ipc_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
-    }
 }
 
-static void ModifyHostNetworkOptionForContainer(bool hostNetwork, const std::string &podSandboxID,
-                                                host_config *hostConfig)
+static void ModifyHostNetworkOptionForContainer(const runtime::v1alpha2::NamespaceMode &hostNetwork,
+                                                const std::string &podSandboxID, host_config *hostConfig)
 {
     std::string sandboxNSMode = "container:" + podSandboxID;
 
@@ -131,47 +151,60 @@ static void ModifyHostNetworkOptionForContainer(bool hostNetwork, const std::str
     hostConfig->network_mode = util_strdup_s(sandboxNSMode.c_str());
     free(hostConfig->ipc_mode);
     hostConfig->ipc_mode = util_strdup_s(sandboxNSMode.c_str());
-    if (hostNetwork) {
+    if (hostNetwork == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->uts_mode);
         hostConfig->uts_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
     }
 }
 
-static void ModifyHostNetworkOptionForSandbox(bool hostNetwork, host_config *hostConfig)
+static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)
 {
-    if (hostNetwork) {
+    if (nsOpts.ipc() == runtime::v1alpha2::NamespaceMode::NODE) {
+        free(hostConfig->ipc_mode);
+        hostConfig->ipc_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
+    }
+
+    if (nsOpts.network() == runtime::v1alpha2::NamespaceMode::NODE) {
+        free(hostConfig->network_mode);
         hostConfig->network_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
     }
     // Note: default networkMode is not supported
 }
 
-static void ModifyContainerNamespaceOptions(const runtime::NamespaceOption &nsOpts, const std::string &podSandboxID,
-                                            host_config *hostConfig, Errors &error)
+static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
+                                            const std::string &podSandboxID, host_config *hostConfig, Errors &error)
 {
-    std::string pidMode = "container:" + podSandboxID;
-    hostConfig->pid_mode = util_strdup_s(pidMode.c_str());
+    if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::POD) {
+        free(hostConfig->pid_mode);
+        hostConfig->pid_mode = util_strdup_s("");
+    }
 
     /* set common Namespace options */
     ModifyCommonNamespaceOptions(nsOpts, hostConfig);
     /* modify host network option for container */
-    ModifyHostNetworkOptionForContainer(nsOpts.host_network(), podSandboxID, hostConfig);
+    ModifyHostNetworkOptionForContainer(nsOpts.network(), podSandboxID, hostConfig);
 }
 
-static void ModifySandboxNamespaceOptions(const runtime::NamespaceOption &nsOpts, host_config *hostConfig,
+static void ModifySandboxNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig,
                                           Errors &error)
 {
     /* set common Namespace options */
     ModifyCommonNamespaceOptions(nsOpts, hostConfig);
     /* modify host network option for container */
-    ModifyHostNetworkOptionForSandbox(nsOpts.host_network(), hostConfig);
+    ModifyHostNetworkOptionForSandbox(nsOpts, hostConfig);
 }
 
-void ApplySandboxSecurityContext(const runtime::LinuxPodSandboxConfig &lc, container_custom_config *config,
+void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_custom_config *config,
                                  host_config *hc, Errors &error)
 {
-    std::unique_ptr<runtime::LinuxContainerSecurityContext> sc(new runtime::LinuxContainerSecurityContext);
+    std::unique_ptr<runtime::v1alpha2::LinuxContainerSecurityContext> sc(
+        new (std::nothrow) runtime::v1alpha2::LinuxContainerSecurityContext);
+    if (sc == nullptr) {
+        error.SetError("Out of memory");
+        return;
+    }
     if (lc.has_security_context()) {
-        const runtime::LinuxSandboxSecurityContext &old = lc.security_context();
+        const runtime::v1alpha2::LinuxSandboxSecurityContext &old = lc.security_context();
         if (old.has_run_as_user()) {
             *sc->mutable_run_as_user() = old.run_as_user();
         }
@@ -192,11 +225,11 @@ void ApplySandboxSecurityContext(const runtime::LinuxPodSandboxConfig &lc, conta
     ModifySandboxNamespaceOptions(sc->namespace_options(), hc, error);
 }
 
-void ApplyContainerSecurityContext(const runtime::LinuxContainerConfig &lc, const std::string &podSandboxID,
+void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig &lc, const std::string &podSandboxID,
                                    container_custom_config *config, host_config *hc, Errors &error)
 {
     if (lc.has_security_context()) {
-        const runtime::LinuxContainerSecurityContext &sc = lc.security_context();
+        const runtime::v1alpha2::LinuxContainerSecurityContext &sc = lc.security_context();
         ModifyContainerConfig(sc, config);
         ModifyHostConfig(sc, hc, error);
         if (error.NotEmpty()) {
@@ -210,4 +243,4 @@ void ApplyContainerSecurityContext(const runtime::LinuxContainerConfig &lc, cons
     }
 }
 
-}  // namespace CRISecurity
+} // namespace CRISecurity

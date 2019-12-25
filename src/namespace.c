@@ -96,3 +96,4 @@ char *get_share_namespace_path(const char *type, const char *src_path)
 
     return tmp_mode;
 }
+

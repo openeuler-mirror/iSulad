@@ -1498,7 +1498,7 @@ static int merge_custom_one_device(oci_runtime_spec *oci_spec, const host_config
         goto out;
     }
 
-    /* malloc for linux->device*/
+    /* malloc for linux->device */
     oci_runtime_defs_linux_device **spec_dev = NULL;
     if (oci_spec->linux->devices_len > SIZE_MAX / sizeof(oci_runtime_defs_linux_device *) - 1) {
         ERROR("Too many linux devices to merge!");
@@ -1827,7 +1827,7 @@ static bool mount_file(oci_runtime_spec *container, const char *src_path, const 
     bool ret = false;
     defs_mount *tmp_mounts = NULL;
 
-    /*mount options*/
+    /* mount options */
     if (options_len > SIZE_MAX / sizeof(char *)) {
         ERROR("Options len is too long!");
         goto out_free;
@@ -1839,7 +1839,7 @@ static bool mount_file(oci_runtime_spec *container, const char *src_path, const 
     }
     options[0] = util_strdup_s("rbind");
     options[1] = util_strdup_s("rprivate");
-    /*generate mount node*/
+    /* generate mount node */
     tmp_mounts = util_common_calloc_s(sizeof(defs_mount));
     if (tmp_mounts == NULL) {
         ERROR("Malloc tmp_mounts memory failed");
@@ -1853,11 +1853,11 @@ static bool mount_file(oci_runtime_spec *container, const char *src_path, const 
     tmp_mounts->options_len = options_len;
     options = NULL;
 
-    /*expand mount array*/
+    /* expand mount array */
     if (!mounts_expand(container, 1)) {
         goto out_free;
     }
-    /*add a new mount node*/
+    /* add a new mount node */
     container->mounts[container->mounts_len - 1] = tmp_mounts;
 
     ret = true;
@@ -1889,7 +1889,7 @@ static bool add_host_channel_mount(oci_runtime_spec *container, const host_confi
     options[0] = util_strdup_s("rbind");
     options[1] = util_strdup_s("rprivate");
     options[2] = util_strdup_s(host_channel->permissions);
-    /*generate mount node*/
+    /* generate mount node */
     tmp_mounts = util_common_calloc_s(sizeof(defs_mount));
     if (tmp_mounts == NULL) {
         ERROR("Malloc tmp_mounts memory failed");
@@ -1903,11 +1903,11 @@ static bool add_host_channel_mount(oci_runtime_spec *container, const host_confi
     tmp_mounts->options_len = options_len;
     options = NULL;
 
-    /*expand mount array*/
+    /* expand mount array */
     if (!mounts_expand(container, 1)) {
         goto out_free;
     }
-    /*add a new mount node*/
+    /* add a new mount node */
     container->mounts[container->mounts_len - 1] = tmp_mounts;
 
     ret = true;
@@ -1956,12 +1956,11 @@ static int change_dev_shm_size(oci_runtime_spec *oci_spec, int64_t shm_size)
     return -1;
 }
 
-int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custom_spec, host_config *host_spec,
-                      container_config_v2_common_config *common_config)
+static int merge_volumes_to_mount(oci_runtime_spec *oci_spec, host_config *host_spec,
+                                  container_config_v2_common_config *common_config)
 {
     int ret = 0;
 
-    /* volumes to mount */
     if (host_spec->binds != NULL && host_spec->binds_len) {
         ret = merge_volumes(oci_spec, host_spec->binds,
                             host_spec->binds_len, common_config,
@@ -1972,15 +1971,33 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custo
         }
     }
 
-    /* host channel to mount */
-    if (host_spec->host_channel != NULL) {
-        if (!add_host_channel_mount(oci_spec, host_spec->host_channel)) {
-            ERROR("Failed to merge host channel mount");
-            goto out;
-        }
+out:
+    return ret;
+}
+
+static int merge_host_channel_to_mount(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    int ret = 0;
+
+    if (host_spec->host_channel == NULL) {
+        return 0;
     }
 
-    /* mounts to mount filesystem */
+    if (!add_host_channel_mount(oci_spec, host_spec->host_channel)) {
+        ERROR("Failed to merge host channel mount");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int merge_mounts_to_mount_filesystem(oci_runtime_spec *oci_spec, container_custom_config *custom_spec,
+                                            host_config *host_spec, container_config_v2_common_config *common_config)
+{
+    int ret = 0;
+
     if (custom_spec->mounts && custom_spec->mounts_len) {
         ret = merge_volumes(oci_spec, custom_spec->mounts,
                             custom_spec->mounts_len, common_config,
@@ -1990,6 +2007,14 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custo
             goto out;
         }
     }
+
+out:
+    return ret;
+}
+
+static int merge_shm_size(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    int ret = 0;
 
     if (host_spec->shm_size >= 0) {
         if (host_spec->shm_size == 0) {
@@ -2002,6 +2027,15 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custo
             goto out;
         }
     }
+
+out:
+    return ret;
+}
+
+static int merge_network_config_files(oci_runtime_spec *oci_spec, host_config *host_spec,
+                                      container_config_v2_common_config *common_config)
+{
+    int ret = 0;
 
     if (is_container(host_spec->network_mode)) {
         /* add network config files */
@@ -2017,6 +2051,44 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custo
             goto out;
         }
     }
+
+out:
+    return ret;
+}
+
+int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custom_spec, host_config *host_spec,
+                      container_config_v2_common_config *common_config)
+{
+    int ret = 0;
+
+    /* volumes to mount */
+    ret = merge_volumes_to_mount(oci_spec, host_spec, common_config);
+    if (ret != 0) {
+        goto out;
+    }
+
+    /* host channel to mount */
+    if (merge_host_channel_to_mount(oci_spec, host_spec) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    /* mounts to mount filesystem */
+    if (merge_mounts_to_mount_filesystem(oci_spec, custom_spec, host_spec, common_config) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (merge_shm_size(oci_spec, host_spec) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (merge_network_config_files(oci_spec, host_spec, common_config) != 0) {
+        ret = -1;
+        goto out;
+    }
+
 out:
     return ret;
 }

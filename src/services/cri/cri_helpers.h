@@ -24,12 +24,12 @@
 #include "container_def.h"
 #include "host_config.h"
 #include "callback.h"
-#include "oci_image_status.h"
+#include "docker_seccomp.h"
 #include "cri_pod_network.h"
 #include "checkpoint_handler.h"
+#include "image.h"
 
 namespace CRIHelpers {
-
 class Constants {
 public:
     static const std::string DEFAULT_RUNTIME_NAME;
@@ -68,7 +68,7 @@ int FiltersAddLabel(defs_filters *filters, const std::string &key, const std::st
 void ProtobufAnnoMapToStd(const google::protobuf::Map<std::string, std::string> &annotations,
                           std::map<std::string, std::string> &newAnnos);
 
-runtime::ContainerState ContainerStatusToRuntime(Container_Status status);
+runtime::v1alpha2::ContainerState ContainerStatusToRuntime(Container_Status status);
 
 char **StringVectorToCharArray(std::vector<std::string> &path);
 
@@ -85,28 +85,32 @@ std::string sha256(const char *val);
 cri_pod_network_element **GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations,
                                                      size_t *len, Errors &error);
 
-std::unique_ptr<runtime::PodSandbox> CheckpointToSandbox(const std::string &id,
-                                                         const cri::PodSandboxCheckpoint &checkpoint);
+std::unique_ptr<runtime::v1alpha2::PodSandbox> CheckpointToSandbox(const std::string &id,
+                                                                   const cri::PodSandboxCheckpoint &checkpoint);
 
 std::string StringsJoin(const std::vector<std::string> &vec, const std::string &sep);
 
-void UpdateCreateConfig(container_custom_config *createConfig, host_config *hc, const runtime::ContainerConfig &config,
-                        const std::string &podSandboxID, Errors &error);
+void UpdateCreateConfig(container_custom_config *createConfig, host_config *hc,
+                        const runtime::v1alpha2::ContainerConfig &config, const std::string &podSandboxID,
+                        Errors &error);
 
-void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::Mount> &mounts, host_config *hostconfig,
-                           Errors &err);
+void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1alpha2::Mount> &mounts,
+                           host_config *hostconfig, Errors &err);
 
-std::vector<std::string> GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::KeyValue> &envs);
+std::vector<std::string>
+GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs);
 
 bool ValidateCheckpointKey(const std::string &key, Errors &error);
 
-std::string ToIsuladContainerStatus(const runtime::ContainerStateValue &state);
+std::string ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state);
 
 std::vector<std::string> GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error);
 
 std::string CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error);
 
 void GetCheckpoint(const std::string &jsonCheckPoint, cri::PodSandboxCheckpoint &checkpoint, Errors &error);
-};  // namespace CRIHelpers
+
+std::string DeterminePodIPBySandboxID(const std::string &podSandboxID);
+}; // namespace CRIHelpers
 
 #endif /* _CRI_HELPERS_H_ */

@@ -387,3 +387,4 @@ int cmd_attach_main(int argc, const char **argv)
 out:
     exit((exit_code != 0) ? (int)exit_code : ret);
 }
+

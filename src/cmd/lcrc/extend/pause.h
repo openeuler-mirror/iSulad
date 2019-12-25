@@ -23,3 +23,4 @@ extern struct client_arguments g_cmd_pause_args;
 int cmd_pause_main(int argc, const char **argv);
 
 #endif
+

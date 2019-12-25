@@ -22,12 +22,12 @@
 #include "host_config.h"
 
 namespace CRISecurity {
-void ApplySandboxSecurityContext(const runtime::LinuxPodSandboxConfig &lc, container_custom_config *config,
+void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_custom_config *config,
                                  host_config *hc, Errors &error);
 
-void ApplyContainerSecurityContext(const runtime::LinuxContainerConfig &lc, const std::string &podSandboxID,
+void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig &lc, const std::string &podSandboxID,
                                    container_custom_config *config, host_config *hc, Errors &errorr);
 
-}  // namespace CRISecurity
+} // namespace CRISecurity
 
 #endif /* _CRI_SECURITY_CONTEXT_H_ */

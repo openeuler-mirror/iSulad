@@ -30,6 +30,7 @@
 #include "utils_file.h"
 #include "utils_convert.h"
 #include "utils_verify.h"
+#include "utils_regex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +38,14 @@ extern "C" {
 
 #ifndef MS_REC
 #define MS_REC 16384
+#endif
+
+#if __WORDSIZE == 64
+// current max user memory for 64-machine is 2^47 B
+#define MAX_MEMORY_SIZE ((size_t)1 << 47)
+#else
+// current max user memory for 32-machine is 2^31 B
+#define MAX_MEMORY_SIZE ((size_t)1 << 31)
 #endif
 
 #define MAX_ID_OFFSET 65535
@@ -62,6 +71,7 @@ extern "C" {
 
 #define MAX_BUFFER_SIZE 4096
 #define LCRD_NUMSTRLEN64 21
+#define LCRD_NUMSTRLEN32 11
 #define MAXLINE 4096
 #define MAX_HOST_NAME_LEN 64
 #define MAX_IMAGE_NAME_LEN 255
@@ -77,7 +87,7 @@ extern "C" {
 
 #define UINT_LEN 10
 
-/*container id max length*/
+/* container id max length */
 #define CONTAINER_ID_MAX_LEN 64
 
 #define LIST_SIZE_MAX 1000LL
@@ -99,7 +109,7 @@ extern "C" {
 #define Time_Minute (60LL * Time_Second)
 #define Time_Hour (60LL * Time_Minute)
 
-/*Max regular file size for LCRC\LCRD to open as same as docker*/
+/* Max regular file size for LCRC\LCRD to open as same as docker */
 #define REGULAR_FILE_SIZE (10 * SIZE_MB)
 
 #define rFC339Local "2006-01-02T15:04:05"
@@ -353,6 +363,8 @@ int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize);
 int util_check_inherited(bool closeall, int fd_to_ignore);
 
 int util_sig_parse(const char *sig_name);
+
+void *util_smart_calloc_s(size_t unit_size, size_t count);
 
 void *util_common_calloc_s(size_t size);
 

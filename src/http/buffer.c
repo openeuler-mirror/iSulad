@@ -173,3 +173,4 @@ int buffer_append(Buffer *buf, const char *append, size_t len)
 
     return 0;
 }
+

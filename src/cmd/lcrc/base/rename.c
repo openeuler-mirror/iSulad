@@ -96,3 +96,4 @@ int cmd_rename_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

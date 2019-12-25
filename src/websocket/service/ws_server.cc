@@ -411,6 +411,7 @@ void WebsocketServer::Wait()
     CloseAllWsSession();
 
     lws_context_destroy(m_context);
+    closelog();
 }
 
 

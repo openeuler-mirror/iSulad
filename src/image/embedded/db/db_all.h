@@ -71,3 +71,4 @@ int db_read_all_images_info(struct db_all_images **image_info);
 void db_all_imginfo_free(struct db_all_images *images_info);
 
 #endif
+

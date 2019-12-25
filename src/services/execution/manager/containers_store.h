@@ -54,3 +54,4 @@ bool name_index_rename(const char *new_name, const char *old_name, const char *i
 #endif
 
 #endif /* __LCRD_MEMORY_STORE_H__ */
+

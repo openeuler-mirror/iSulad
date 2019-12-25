@@ -42,10 +42,7 @@
 #include "execution_extend.h"
 #include "sysinfo.h"
 #include "health_check.h"
-
-#ifdef ENABLE_OCI_IMAGE
-#include "oci_rootfs_export.h"
-#endif
+#include "runtime.h"
 
 #include "filters.h"
 #include "utils.h"
@@ -526,38 +523,11 @@ pack_response:
     return (cc == LCRD_SUCCESS) ? 0 : -1;
 }
 
-static int runtime_resume(const char *id, const char *runtime, const char *rootpath)
-{
-    int ret = 0;
-    struct engine_operation *engine_ops = NULL;
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_resume_op == NULL) {
-        DEBUG("Failed to get engine resume operations");
-        ret = -1;
-        goto out;
-    }
-
-    if (!engine_ops->engine_resume_op(id, rootpath)) {
-        DEBUG("Resume container %s failed", id);
-        const char *tmpmsg = NULL;
-        tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Resume container error;%s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
-                               : DEF_ERR_RUNTIME_STR);
-
-        engine_ops->engine_clear_errmsg_op();
-        ret = -1;
-        goto out;
-    }
-out:
-    return ret;
-}
-
 static int resume_container(container_t *cont)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
+    rt_resume_params_t params = { 0 };
 
     container_lock(cont);
 
@@ -575,7 +545,9 @@ static int resume_container(container_t *cont)
         goto out;
     }
 
-    if (runtime_resume(id, cont->runtime, cont->root_path)) {
+    params.rootpath = cont->root_path;
+
+    if (runtime_resume(id, cont->runtime, &params)) {
         ERROR("Failed to resume container:%s", id);
         ret = -1;
         goto out;
@@ -598,8 +570,7 @@ out:
 static int oci_image_export_rootfs(const char *id, const char *file)
 {
     int ret = 0;
-    rootfs_export_request *request = NULL;
-    rootfs_export_response *response = NULL;
+    im_export_request *request = NULL;
 
     if (id == NULL || file == NULL) {
         ERROR("Invalid input arguments");
@@ -607,26 +578,24 @@ static int oci_image_export_rootfs(const char *id, const char *file)
         goto out;
     }
 
-    request = util_common_calloc_s(sizeof(rootfs_export_request));
+    request = util_common_calloc_s(sizeof(im_export_request));
     if (request == NULL) {
         ERROR("Memory out");
         ret = -1;
         goto out;
     }
 
-    request->id = util_strdup_s(id);
+    request->name_id = util_strdup_s(id);
     request->file = util_strdup_s(file);
+    request->type = util_strdup_s(IMAGE_TYPE_OCI);
 
-    ret = export_rootfs(request, &response);
+    ret = im_container_export(request);
     if (ret != 0) {
         ERROR("Failed to export rootfs to %s from container %s", file, id);
-        ret = -1;
-        goto out;
     }
 
 out:
-    free_rootfs_export_request(request);
-    free_rootfs_export_response(response);
+    free_im_export_request(request);
     return ret;
 }
 #endif
@@ -732,36 +701,11 @@ pack_response:
     return (cc == LCRD_SUCCESS) ? 0 : -1;
 }
 
-static int runtime_pause(const char *id, const char *runtime, const char *rootpath)
-{
-    int ret = 0;
-    struct engine_operation *engine_ops = NULL;
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_pause_op == NULL) {
-        DEBUG("Failed to get engine pause operations");
-        ret = -1;
-        goto out;
-    }
-
-    if (!engine_ops->engine_pause_op(id, rootpath)) {
-        DEBUG("Pause container %s failed", id);
-        const char *tmpmsg = NULL;
-        tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Pause container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
-        engine_ops->engine_clear_errmsg_op();
-        ret = -1;
-        goto out;
-    }
-out:
-    return ret;
-}
-
 static int pause_container(container_t *cont)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
+    rt_pause_params_t params = { 0 };
 
     container_lock(cont);
 
@@ -786,7 +730,9 @@ static int pause_container(container_t *cont)
         goto out;
     }
 
-    if (runtime_pause(id, cont->runtime, cont->root_path)) {
+    params.rootpath = cont->root_path;
+
+    if (runtime_pause(id, cont->runtime, &params)) {
         ERROR("Failed to pause container:%s", id);
         ret = -1;
         goto out;

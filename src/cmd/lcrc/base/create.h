@@ -47,6 +47,8 @@
         "Add a host device to the container", command_append_array }, \
     { CMD_OPT_TYPE_CALLBACK, false, "env", 'e', &(cmdargs).custom_conf.env, \
         "Set environment variables", command_append_array }, \
+    { CMD_OPT_TYPE_CALLBACK, false, "env-file", 0, &(cmdargs).custom_conf.env_file, \
+        "Read in a file of environment variables", command_append_array }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "entrypoint", 0, &(cmdargs).custom_conf.entrypoint, \
         "Entrypoint to run when starting the container", NULL }, \
     { CMD_OPT_TYPE_STRING, false, "external-rootfs", 0, &(cmdargs).external_rootfs, \
@@ -168,3 +170,4 @@ int callback_annotation(command_option_t *option, const char *value);
 int cmd_create_main(int argc, const char **argv);
 
 #endif /* __CMD_CREATE_H */
+

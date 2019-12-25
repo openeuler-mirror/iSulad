@@ -335,18 +335,19 @@ struct lcrc_list_request {
 
 struct lcrc_container_summary_info {
     char *id;
-    char *name;
-    uint32_t has_pid;
-    uint32_t pid;
-    Container_Status status;
     char *image;
     char *command;
+    char *name;
+    Container_Status status;
     uint32_t exit_code;
+    uint32_t has_pid;
+    uint32_t pid;
     uint32_t restart_count;
     char *startat;
     char *finishat;
     char *runtime;
     char *health_state;
+    int64_t created;
 };
 
 struct lcrc_list_response {
@@ -461,12 +462,12 @@ struct lcrc_exec_request {
     size_t env_len;
     char **env;
     int64_t timeout;
+    char *user;
 };
 
 struct lcrc_exec_response {
     uint32_t cc;
     uint32_t server_errono;
-    uint32_t pid;
     uint32_t exit_code;
     char *errmsg;
 };
@@ -576,7 +577,7 @@ struct lcrc_image_info {
     char *digest;
     int64_t created; /* seconds */
     int32_t created_nanos;
-    int64_t size; /*Bytes*/
+    int64_t size; /* Bytes */
 };
 
 struct lcrc_create_image_request {
@@ -591,6 +592,7 @@ struct lcrc_create_image_response {
 };
 
 struct lcrc_list_images_request {
+    struct lcrc_filters *filters;
     // unuseful definition to avoid generate empty struct which will get 0 if we call sizeof
     char unuseful;
 };

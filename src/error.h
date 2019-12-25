@@ -74,3 +74,4 @@ static inline void format_errorf(char **err, const char *format, ...)
 }
 #endif
 #endif
+

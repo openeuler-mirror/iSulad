@@ -22,3 +22,4 @@ oci_runtime_spec_hooks *oci_runtime_spec_hooks_parse_file(const char *filename,
                                                           const struct parser_context *ctx, parser_error *err);
 
 #endif
+

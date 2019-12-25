@@ -5,6 +5,7 @@ SET(EXE oci_config_merge_llt)
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/image/oci/oci_config_merge.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cutils/utils_regex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cutils/utils_verify.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cutils/utils_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cutils/utils_string.c
@@ -22,6 +23,7 @@ add_executable(${EXE}
     ${CMAKE_BINARY_DIR}/json/defs.c
     ${CMAKE_BINARY_DIR}/json/container_config_v2.c
     ${CMAKE_BINARY_DIR}/json/container_config.c
+    ${CMAKE_BINARY_DIR}/json/container_custom_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/config/lcrd_config.c
     ${CMAKE_BINARY_DIR}/json/oci_runtime_spec.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/sysinfo.c
@@ -54,5 +56,5 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/image/oci
     )
 
-set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_common_calloc_s -Wl,--wrap,merge_env")
+set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_common_calloc_s -Wl,--wrap,util_smart_calloc_s -Wl,--wrap,merge_env")
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} -lyajl -lsecurec -lz)

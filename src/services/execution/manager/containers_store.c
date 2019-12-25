@@ -119,7 +119,7 @@ static container_t *containers_store_get_by_id(const char *id)
     return cont;
 }
 
-/* containers store get container by container name*/
+/* containers store get container by container name */
 static container_t *containers_store_get_by_name(const char *name)
 {
     char *id = NULL;
@@ -138,7 +138,7 @@ static container_t *containers_store_get_by_name(const char *name)
     return containers_store_get_by_id(id);
 }
 
-/* containers store get container by prefix*/
+/* containers store get container by prefix */
 container_t *containers_store_get_by_prefix(const char *prefix)
 {
     bool ret = false;

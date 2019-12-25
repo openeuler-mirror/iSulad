@@ -29,3 +29,4 @@ extern struct client_arguments g_cmd_inspect_args;
 int cmd_inspect_main(int argc, const char **argv);
 
 #endif /* __CMD_INSPECT_H */
+

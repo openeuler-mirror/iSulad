@@ -70,7 +70,7 @@ static int monitor_event_cb(int fd, uint32_t events, void *cbdata, struct epoll_
         goto out;
     }
 
-    /* second, handle events*/
+    /* second, handle events */
     events_handler(&mmsg);
     if (malloc_trim(0) == 0) {
         DEBUG("Malloc trim failed");
@@ -227,3 +227,4 @@ out:
     free(statedir);
     return ret;
 }
+

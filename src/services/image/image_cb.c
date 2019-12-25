@@ -34,7 +34,12 @@
 #include "engine.h"
 #include "lcrd_config.h"
 #include "mediatype.h"
-
+#include "filters.h"
+#ifdef ENABLE_OCI_IMAGE
+#include "oci_image_unix.h"
+#include "oci_images_store.h"
+#include "oci_common_operators.h"
+#endif
 static int docker_load_image(const char *file, const char *tag, const char *type)
 {
     int ret = 0;
@@ -71,7 +76,7 @@ out:
     return ret;
 }
 
-/* image load cb*/
+/* image load cb */
 static int image_load_cb(const image_load_image_request *request,
                          image_load_image_response **response)
 {
@@ -280,7 +285,7 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
-/* delete image info*/
+/* delete image info */
 static int delete_image_info(const char *image_ref, bool force)
 {
     int ret = 0;
@@ -474,8 +479,8 @@ static int trans_im_list_images(const im_list_response *im_list, image_list_imag
         return 0;
     }
 
-    /* If one image have several repo tags, display them all. Image with no
-     * repo will also be displayed */
+    // If one image have several repo tags, display them all. Image with no
+    // repo will also be displayed
     images_display_num = calc_images_display_num(im_list->images);
     if (images_display_num >= (SIZE_MAX / sizeof(image_image *))) {
         INFO("Too many images, out of memory");
@@ -506,6 +511,155 @@ out:
     return ret;
 }
 
+static im_list_request *image_list_context_new(const image_list_images_request *request)
+{
+    im_list_request *ctx = NULL;
+
+    ctx = util_common_calloc_s(sizeof(im_list_request));
+    if (ctx == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    return ctx;
+}
+
+#ifdef ENABLE_OCI_IMAGE
+struct image_list_context {
+    struct filters_args *image_filters;
+};
+
+static const char *g_accepted_image_filter_tags[] = {
+    "dangling",
+    "label",
+    "before",
+    "since",
+    "reference",
+    NULL
+};
+
+static bool is_valid_dangling_string(const char *val)
+{
+    return strcmp(val, "true") == 0 || strcmp(val, "false") == 0;
+}
+
+static bool is_valid_image(const char *val)
+{
+    bool ret = true;
+    oci_image_t *image_info = NULL;
+    char *resolved_name = NULL;
+    int nret = im_resolv_image_name(IMAGE_TYPE_OCI, val, &resolved_name);
+    if (nret != 0) {
+        ERROR("Failed to resolve image name");
+        ret = false;
+        goto out;
+    }
+    image_info = oci_images_store_get(resolved_name);
+    if (image_info == NULL) {
+        ERROR("No such image: %s", val);
+        ret = false;
+        goto out;
+    }
+
+out:
+    free(resolved_name);
+    oci_image_unref(image_info);
+    return ret;
+}
+
+static int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value, im_list_request *ctx)
+{
+    int ret = 0;
+    size_t j;
+    bool bret = false;
+    char *value = NULL;
+
+    for (j = 0; j < filter_value->len; j++) {
+        if (strcmp(filter_key, "reference") == 0) {
+            if (util_wildcard_to_regex(filter_value->keys[j], &value) != 0) {
+                ERROR("Failed to convert wildcard to regex: %s", filter_value->keys[j]);
+                lcrd_set_error_message("Failed to convert wildcard to regex: %s", filter_value->keys[j]);
+                ret = -1;
+                goto out;
+            }
+        } else if (strcmp(filter_key, "dangling") == 0) {
+            if (!is_valid_dangling_string(filter_value->keys[j])) {
+                ERROR("Unrecognised filter value for status: %s", filter_value->keys[j]);
+                lcrd_set_error_message("Unrecognised filter value for status: %s", filter_value->keys[j]);
+                ret = -1;
+                goto out;
+            }
+            value = util_strdup_s(filter_value->keys[j]);
+        } else if (strcmp(filter_key, "before") == 0 || strcmp(filter_key, "since") == 0) {
+            if (!is_valid_image(filter_value->keys[j])) {
+                ERROR("No such image: %s", filter_value->keys[j]);
+                lcrd_set_error_message("No such image: %s", filter_value->keys[j]);
+                ret = -1;
+                goto out;
+            }
+            value = util_strdup_s(filter_value->keys[j]);
+        } else {
+            value = util_strdup_s(filter_value->keys[j]);
+        }
+
+        bret = filters_args_add(ctx->image_filters, filter_key, value);
+        if (!bret) {
+            ERROR("Add filter args failed");
+            ret = -1;
+            goto out;
+        }
+        free(value);
+        value = NULL;
+    }
+
+out:
+    free(value);
+    return ret;
+}
+#endif
+
+static im_list_request *fold_filter(const image_list_images_request *request)
+{
+    im_list_request *ctx = NULL;
+
+    ctx = image_list_context_new(request);
+    if (ctx == NULL) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+#ifdef ENABLE_OCI_IMAGE
+    size_t i;
+    if (request->filters == NULL) {
+        return ctx;
+    }
+
+    ctx->image_filters = filters_args_new();
+    if (ctx->image_filters == NULL) {
+        ERROR("Out of memory");
+        goto error_out;
+    }
+
+    for (i = 0; i < request->filters->len; i++) {
+        if (!filters_args_valid_key(g_accepted_image_filter_tags,
+                                    sizeof(g_accepted_image_filter_tags) / sizeof(char *),
+                                    request->filters->keys[i])) {
+            ERROR("Invalid filter '%s'", request->filters->keys[i]);
+            lcrd_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
+            goto error_out;
+        }
+
+        if (do_add_filters(request->filters->keys[i], request->filters->values[i], ctx) != 0) {
+            goto error_out;
+        }
+    }
+#endif
+    return ctx;
+
+error_out:
+    free_im_list_request(ctx);
+    return NULL;
+}
+
 /* image list cb */
 int image_list_cb(const image_list_images_request *request,
                   image_list_images_response **response)
@@ -515,24 +669,24 @@ int image_list_cb(const image_list_images_request *request,
     im_list_request *im_request = NULL;
     im_list_response *im_response = NULL;
 
-    if (response == NULL) {
+    if (request == NULL || response == NULL) {
         ERROR("Invalid input arguments");
         return EINVALIDARGS;
     }
 
     DAEMON_CLEAR_ERRMSG();
 
-    im_request = util_common_calloc_s(sizeof(im_list_request));
-    if (im_request == NULL) {
+    *response = util_common_calloc_s(sizeof(image_list_images_response));
+    if (*response == NULL) {
         ERROR("Out of memory");
         cc = LCRD_ERR_MEMOUT;
         goto out;
     }
 
-    *response = util_common_calloc_s(sizeof(image_list_images_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+    im_request = fold_filter(request);
+    if (im_request == NULL) {
+        ERROR("Failed to fold filters");
+        cc = LCRD_ERR_EXEC;
         goto out;
     }
 

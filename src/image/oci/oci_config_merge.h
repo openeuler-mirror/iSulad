@@ -32,3 +32,4 @@ int oci_image_merge_config(imagetool_image *image_conf, oci_runtime_spec *oci_sp
 #endif
 
 #endif
+

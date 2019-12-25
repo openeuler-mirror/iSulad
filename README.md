@@ -12,14 +12,6 @@ iSulad follows the kernel coding conventions. You can find a detailed introducti
 
 - https://www.kernel.org/doc/html/v4.10/process/coding-style.html
 
-## Building
-
-Without considering distribution specific details a simple
-
-    mkdir -p build && cd ./build && cmake .. && make && sudo make install
-
-is usually sufficient.
-
 ## Licensing
 
 iSulad is licensed under the Mulan PSL v1.

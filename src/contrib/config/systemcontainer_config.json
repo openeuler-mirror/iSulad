@@ -306,6 +306,7 @@
 			"/proc/signo",
 			"/proc/timer_list",
 			"/proc/timer_stats",
+			"/proc/sysmonitor",
 			"/sys/firmware"
 		],
 		"readonlyPaths": [

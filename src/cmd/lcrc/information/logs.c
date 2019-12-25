@@ -47,7 +47,7 @@ static int do_logs(const struct client_arguments *args)
     client_connect_config_t config = { 0 };
     int ret = 0;
 
-    response = util_common_calloc_s(sizeof(struct lcrc_container_conf_response));
+    response = util_common_calloc_s(sizeof(struct lcrc_logs_response));
     if (response == NULL) {
         ERROR("Log: Out of memory");
         return -1;
@@ -150,3 +150,4 @@ int cmd_logs_main(int argc, const char **argv)
     }
     return 0;
 }
+

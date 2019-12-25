@@ -20,9 +20,6 @@
 #include <vector>
 #include <memory>
 #include "cri_services.h"
-#include "oci_image_pull.h"
-#include "oci_image.h"
-#include "oci_fs_info.h"
 #include "image.h"
 
 class CRIImageServiceImpl : public cri::ImageManagerService {
@@ -32,35 +29,37 @@ public:
     CRIImageServiceImpl &operator=(const CRIImageServiceImpl &) = delete;
     virtual ~CRIImageServiceImpl() = default;
 
-    void ListImages(const runtime::ImageFilter &filter, std::vector<std::unique_ptr<runtime::Image>> *images,
-                    Errors &error) override;
+    void ListImages(const runtime::v1alpha2::ImageFilter &filter,
+                    std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error) override;
 
-    std::unique_ptr<runtime::Image> ImageStatus(const runtime::ImageSpec &image, Errors &error) override;
+    std::unique_ptr<runtime::v1alpha2::Image> ImageStatus(const runtime::v1alpha2::ImageSpec &image,
+                                                          Errors &error) override;
 
-    std::string PullImage(const runtime::ImageSpec &image, const runtime::AuthConfig &auth,
+    std::string PullImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
                           Errors &error) override;
 
-    void RemoveImage(const runtime::ImageSpec &image, Errors &error) override;
+    void RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error) override;
 
-    void ImageFsInfo(std::vector<std::unique_ptr<runtime::FilesystemUsage>> *usages, Errors &error) override;
+    void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *usages, Errors &error) override;
 
 private:
-    int pull_request_from_grpc(const runtime::ImageSpec *image, const runtime::AuthConfig *auth,
+    int pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, const runtime::v1alpha2::AuthConfig *auth,
                                im_pull_request **request, Errors &error);
 
-    int list_request_from_grpc(const runtime::ImageFilter *filter, im_list_request **request, Errors &error);
+    int list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter, im_list_request **request, Errors &error);
 
-    void list_images_to_grpc(im_list_response *response, std::vector<std::unique_ptr<runtime::Image>> *images,
+    void list_images_to_grpc(im_list_response *response, std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images,
                              Errors &error);
 
-    int status_request_from_grpc(const runtime::ImageSpec *image, oci_image_status_request **request, Errors &error);
+    int status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_status_request **request,
+                                 Errors &error);
 
-    std::unique_ptr<runtime::Image> status_image_to_grpc(oci_image_status_response *response, Errors &error);
+    std::unique_ptr<runtime::v1alpha2::Image> status_image_to_grpc(im_status_response *response, Errors &error);
 
-    void fs_info_to_grpc(image_fs_info_response *response,
-                         std::vector<std::unique_ptr<runtime::FilesystemUsage>> *fs_infos, Errors &error);
+    void fs_info_to_grpc(im_fs_info_response *response,
+                         std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *fs_infos, Errors &error);
 
-    int remove_request_from_grpc(const runtime::ImageSpec *image, im_remove_request **request, Errors &error);
+    int remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_remove_request **request, Errors &error);
 };
 
 #endif /* _CRI_IMAGE_SERVICES_IMPL_H_ */

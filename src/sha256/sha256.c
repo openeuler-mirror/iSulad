@@ -264,3 +264,4 @@ char *sha256_digest(void *stream, bool isgzip)
     }
     return digest;
 }
+

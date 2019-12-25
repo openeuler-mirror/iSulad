@@ -45,6 +45,7 @@
 #include "error.h"
 #include "logger_json_file.h"
 #include "constants.h"
+#include "runtime.h"
 
 static char *create_single_fifo(const char *statepath, const char *subpath, const char *stdflag)
 {
@@ -248,81 +249,15 @@ out:
     return ret;
 }
 
-static int runtime_exec(const char *id, const char *runtime, const char *rootpath, const char *engine_log_path,
-                        const char *loglevel, const char *console_fifos[], char * const argv[],
-                        char * const env[], int64_t timeout, pid_t *pid, int *exit_code)
-{
-    int ret = 0;
-    struct engine_operation *engine_ops = NULL;
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_exec_op == NULL) {
-        DEBUG("Failed to get engine exec operations");
-        ret = -1;
-        goto out;
-    }
-
-    if (!engine_ops->engine_exec_op(id, rootpath, engine_log_path, loglevel,
-                                    console_fifos, argv, env, timeout, pid, exit_code)) {
-        const char *tmpmsg = NULL;
-        tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Exec container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
-        util_contain_errmsg(g_lcrd_errmsg, exit_code);
-        engine_ops->engine_clear_errmsg_op();
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
-static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[],
+static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[], const char *user,
                           size_t argc, const char **argv, size_t env_len, const char **env,
-                          int64_t timeout, pid_t *pid, int *exit_code)
+                          int64_t timeout, int *exit_code)
 {
     int ret = 0;
-    size_t i, tmp_env_len, tmp_argc;
     char *engine_log_path = NULL;
     char *loglevel = NULL;
     char *logdriver = NULL;
-    const char **tmp_argv = NULL;
-    const char **tmp_env = NULL;
-
-    // Append null pointer to end of argv
-    tmp_argc = argc + 1;
-    if (tmp_argc > SIZE_MAX / sizeof(char *)) {
-        ERROR("Too many parameters!");
-        return -1;
-    }
-    tmp_argv = util_common_calloc_s(tmp_argc * sizeof(char *));
-    if (tmp_argv == NULL) {
-        FATAL("out of memory");
-        return -1;
-    }
-
-    for (i = 0; i < tmp_argc - 1; i++) {
-        tmp_argv[i] = argv[i];
-    }
-
-    // Append null pointer to end of env
-    tmp_env_len = env_len + 1;
-    if (tmp_env_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("The environment variable length is too long!");
-        ret = -1;
-        goto out;
-    }
-    tmp_env = util_common_calloc_s(tmp_env_len * sizeof(char *));
-    if (tmp_env == NULL) {
-        FATAL("out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < tmp_env_len - 1; i++) {
-        tmp_env[i] = env[i];
-    }
+    rt_exec_params_t params = { 0 };
 
     loglevel = conf_get_lcrd_loglevel();
     if (loglevel == NULL) {
@@ -343,9 +278,18 @@ static int exec_container(container_t *cont, const char *runtime, char * const c
         goto out;
     }
 
-    if (runtime_exec(cont->common_config->id, runtime, cont->root_path, engine_log_path, loglevel,
-                     (const char **)console_fifos, (char * const *)tmp_argv,
-                     (char * const *)tmp_env, timeout, pid, exit_code)) {
+    params.loglevel = loglevel;
+    params.logpath = engine_log_path;
+    params.console_fifos = (const char **)console_fifos;
+    params.rootpath = cont->root_path;
+    params.timeout = timeout;
+    params.user = user;
+    params.args = (const char * const *)argv;
+    params.args_len = argc;
+    params.envs = (const char * const *)env;
+    params.envs_len = env_len;
+
+    if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
         ERROR("Runtime exec container failed");
         ret = -1;
         goto out;
@@ -355,8 +299,6 @@ out:
     free(loglevel);
     free(engine_log_path);
     free(logdriver);
-    free(tmp_argv);
-    free(tmp_env);
 
     return ret;
 }
@@ -433,12 +375,11 @@ out:
     return ret;
 }
 
-static void container_exec_cb_end(container_exec_response *response, uint32_t cc, pid_t pid, int exit_code, int sync_fd,
+static void container_exec_cb_end(container_exec_response *response, uint32_t cc, int exit_code, int sync_fd,
                                   pthread_t thread_id)
 {
     if (response != NULL) {
         response->cc = cc;
-        response->pid = pid;
         response->exit_code = (uint32_t)exit_code;
         if (g_lcrd_errmsg != NULL) {
             response->errmsg = util_strdup_s(g_lcrd_errmsg);
@@ -460,18 +401,112 @@ static void container_exec_cb_end(container_exec_response *response, uint32_t cc
     }
 }
 
+static int get_user_and_groups_conf(const container_t *cont, const char *username,
+                                    oci_runtime_spec_process_user **puser)
+{
+    int ret = -1;
+    if (username == NULL) {
+        return 0;
+    }
+
+    if (cont == NULL || cont->common_config == NULL) {
+        ERROR("Can not found container config");
+        return -1;
+    }
+
+    *puser = util_common_calloc_s(sizeof(oci_runtime_spec_process_user));
+    if (*puser == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    ret = im_get_user_conf(cont->common_config->image_type, cont->common_config->base_fs,
+                           cont->hostconfig, username, *puser);
+    if (ret != 0) {
+        ERROR("Get user failed with '%s'", username ? username : "");
+        free_oci_runtime_spec_process_user(*puser);
+        *puser = NULL;
+    }
+
+    return ret;
+}
+
+// user string(UID:GID)
+static int generate_user_string_by_uid_gid(const oci_runtime_spec_process_user *puser, char **user)
+{
+    char uid_str[LCRD_NUMSTRLEN32] = { 0 };
+    char gid_str[LCRD_NUMSTRLEN32] = { 0 };
+    size_t len;
+
+    if (sprintf_s(uid_str, LCRD_NUMSTRLEN32, "%u", (unsigned int)puser->uid) < 0) {
+        ERROR("Invalid UID:%u", (unsigned int)puser->uid);
+        return -1;
+    }
+
+    if (sprintf_s(gid_str, LCRD_NUMSTRLEN32, "%u", (unsigned int)puser->gid) < 0) {
+        ERROR("Invalid attach uid value :%u", (unsigned int)puser->gid);
+        return -1;
+    }
+
+    len = strlen(uid_str) + 1 + strlen(gid_str) + 1;
+    *user = (char *)util_common_calloc_s(len * sizeof(char));
+    if (*user == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (sprintf_s(*user, len, "%u:%u", (unsigned int)puser->uid, (unsigned int)puser->gid) < 0) {
+        ERROR("Invalid UID:GID (%u:%u)", (unsigned int)puser->uid, (unsigned int)puser->gid);
+        free(*user);
+        *user = NULL;
+        return -1;
+    }
+
+    return 0;
+}
+
+static int get_exec_user_string(const container_t *cont, const char *username, char **user)
+{
+    int ret = 0;
+    oci_runtime_spec_process_user *puser = NULL;
+
+    if (username == NULL) {
+        return 0;
+    }
+
+    if (cont == NULL || user == NULL) {
+        ERROR("Invalid parameters");
+        return -1;
+    }
+
+    if (get_user_and_groups_conf(cont, username, &puser) != 0) {
+        ERROR("Failed to get user and groups conf");
+        ret = -1;
+        goto out;
+    }
+
+    if (generate_user_string_by_uid_gid(puser, user) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_oci_runtime_spec_process_user(puser);
+    return ret;
+}
+
 static int container_exec_cb(const container_exec_request *request, container_exec_response **response,
                              int stdinfd, struct io_write_wrapper *stdout_handler)
 {
     int exit_code = 0;
     int sync_fd = -1;
-    pid_t pid = -1;
     uint32_t cc = LCRD_SUCCESS;
     char *id = NULL;
     char *fifos[3] = { NULL, NULL, NULL };
     char *fifopath = NULL;
     pthread_t thread_id = 0;
     container_t *cont = NULL;
+    char *user = NULL;
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -483,8 +518,13 @@ static int container_exec_cb(const container_exec_request *request, container_ex
         goto pack_response;
     }
     id = cont->common_config->id;
-    set_log_prefix(id);
 
+    if (get_exec_user_string(cont, request->user, &user) != 0) {
+        cc = LCRD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: execing}", id);
 
     if (gc_is_gc_progress(id)) {
@@ -494,14 +534,35 @@ static int container_exec_cb(const container_exec_request *request, container_ex
         goto pack_response;
     }
 
+    if (!is_running(cont->state)) {
+        ERROR("Container %s is not running", id);
+        lcrd_set_error_message("Container %s is not running", id);
+        cc = LCRD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    if (is_paused(cont->state)) {
+        ERROR("Container %s ispaused, unpause the container before exec", id);
+        lcrd_set_error_message("Container %s paused, unpause the container before exec", id);
+        cc = LCRD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    if (is_restarting(cont->state)) {
+        ERROR("Container %s is currently restarting, wait until the container is running", id);
+        lcrd_set_error_message("Container %s is currently restarting, wait until the container is running", id);
+        cc = LCRD_ERR_EXEC;
+        goto pack_response;
+    }
+
     if (exec_prepare_console(cont, request, stdinfd, stdout_handler, fifos, &fifopath, &sync_fd, &thread_id)) {
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
 
-    if (exec_container(cont, cont->runtime, (char * const *)fifos, request->argv_len,
+    if (exec_container(cont, cont->runtime, (char * const *)fifos, user, request->argv_len,
                        (const char **)request->argv, request->env_len,
-                       (const char **)request->env, request->timeout, &pid, &exit_code)) {
+                       (const char **)request->env, request->timeout, &exit_code)) {
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
@@ -509,12 +570,13 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     EVENT("Event: {Object: %s, Type: execed}", id);
 
 pack_response:
-    container_exec_cb_end(*response, cc, pid, exit_code, sync_fd, thread_id);
+    container_exec_cb_end(*response, cc, exit_code, sync_fd, thread_id);
     delete_daemon_fifos(fifopath, (const char **)fifos);
     free(fifos[0]);
     free(fifos[1]);
     free(fifos[2]);
     free(fifopath);
+    free(user);
     container_unref(cont);
 
     free_log_prefix();
@@ -941,6 +1003,58 @@ static container_path_stat *resolve_and_stat_path(const char *rootpath, const ch
     return stat;
 }
 
+static int pause_container(const container_t *cont)
+{
+    int ret = 0;
+    rt_pause_params_t params = { 0 };
+    const char *id = cont->common_config->id;
+
+    params.rootpath = cont->root_path;
+
+    if (runtime_pause(id, cont->runtime, &params)) {
+        ERROR("Failed to pause container:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    state_set_paused(cont->state);
+
+    if (container_to_disk(cont)) {
+        ERROR("Failed to save container \"%s\" to disk", id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int resume_container(const container_t *cont)
+{
+    int ret = 0;
+    rt_resume_params_t params = { 0 };
+    const char *id = cont->common_config->id;
+
+    params.rootpath = cont->root_path;
+
+    if (runtime_resume(id, cont->runtime, &params)) {
+        ERROR("Failed to resume container:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    state_reset_paused(cont->state);
+
+    if (container_to_disk(cont)) {
+        ERROR("Failed to save container \"%s\" to disk", id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 static int copy_from_container_cb(const struct lcrd_copy_from_container_request *request,
                                   const stream_func_wrapper *stream, char **err)
 {
@@ -951,6 +1065,7 @@ static int copy_from_container_cb(const struct lcrd_copy_from_container_request 
     container_path_stat *stat = NULL;
     container_t *cont = NULL;
     struct lcrd_copy_from_container_response *response = NULL;
+    bool need_pause = false;
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || stream == NULL || err == NULL) {
@@ -970,10 +1085,19 @@ static int copy_from_container_cb(const struct lcrd_copy_from_container_request 
         goto unlock_container;
     }
 
+    need_pause = is_running(cont->state) && !is_paused(cont->state);
+    if (need_pause) {
+        if (pause_container(cont) != 0) {
+            ERROR("can't copy to a container which is cannot be paused");
+            lcrd_set_error_message("can't copy to a container which is cannot be paused");
+            goto unlock_container;
+        }
+    }
+
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
                                      cont->common_config->id);
     if (nret != 0) {
-        goto unlock_container;
+        goto unpause_container;
     }
 
     stat = resolve_and_stat_path(cont->common_config->base_fs, request->srcpath, &resolvedpath, &abspath);
@@ -999,6 +1123,10 @@ cleanup_rootfs:
     if (im_umount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
                                    cont->common_config->id) != 0) {
         WARN("Can not umount rootfs of container: %s", cont->common_config->id);
+    }
+unpause_container:
+    if (need_pause && resume_container(cont) != 0) {
+        ERROR("can't resume container which has been paused before copy");
     }
 unlock_container:
     container_unlock(cont);
@@ -1224,6 +1352,7 @@ static int copy_to_container_cb(const container_copy_to_request *request,
     char *dstdir = NULL;
     char *transform = NULL;
     container_t *cont = NULL;
+    bool need_pause = false;
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || stream == NULL || err == NULL) {
@@ -1243,10 +1372,19 @@ static int copy_to_container_cb(const container_copy_to_request *request,
         goto unlock_container;
     }
 
+    need_pause = is_running(cont->state) && !is_paused(cont->state);
+    if (need_pause) {
+        if (pause_container(cont) != 0) {
+            ERROR("can't copy to a container which is cannot be paused");
+            lcrd_set_error_message("can't copy to a container which is cannot be paused");
+            goto unlock_container;
+        }
+    }
+
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
                                      cont->common_config->id);
     if (nret != 0) {
-        goto unlock_container;
+        goto unpause_container;
     }
 
     dstdir = copy_to_container_get_dstdir(cont, request, &transform);
@@ -1271,11 +1409,18 @@ static int copy_to_container_cb(const container_copy_to_request *request,
     }
 
     ret = 0;
+
 cleanup_rootfs:
     if (im_umount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
                                    cont->common_config->id) != 0) {
         WARN("Can not umount rootfs of container: %s", cont->common_config->id);
     }
+
+unpause_container:
+    if (need_pause && resume_container(cont) != 0) {
+        ERROR("can't resume container which has been paused before copy");
+    }
+
 unlock_container:
     container_unlock(cont);
     container_unref(cont);

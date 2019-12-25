@@ -31,3 +31,4 @@ extern struct client_arguments g_cmd_events_args;
 int cmd_events_main(int argc, const char **argv);
 
 #endif /* __CMD_EVENT_H */
+

@@ -70,3 +70,4 @@ int commmand_default_help(const char * const program_name,
 
 int run_command(struct command *commands, int argc, const char **argv);
 #endif /* __COMMAND_H */
+

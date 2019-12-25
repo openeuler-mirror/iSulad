@@ -25,3 +25,4 @@ extern struct client_arguments g_cmd_attach_args;
 int inspect_container(const struct client_arguments *args, container_inspect **inspect_data);
 int cmd_attach_main(int argc, const char **argv);
 #endif /* __CMD_ATTACH_H */
+

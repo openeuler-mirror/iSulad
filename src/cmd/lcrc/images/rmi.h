@@ -25,4 +25,5 @@ extern const char g_cmd_rmi_usage[];
 extern struct client_arguments g_cmd_rmi_args;
 int cmd_rmi_main(int argc, const char **argv);
 
-#endif /*__CMD_REMOVE_IMAGE_H*/
+#endif /* __CMD_REMOVE_IMAGE_H */
+

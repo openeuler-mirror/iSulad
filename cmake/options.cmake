@@ -33,7 +33,7 @@ endif()
 
 option(VERSION "set lcrd version" ON)
 if (VERSION STREQUAL "ON")
-    set(LCRD_VERSION "1.0.33")
+    set(LCRD_VERSION "1.1.1")
 endif()
 
 option(DEBUG "set lcrd gcc option" ON)

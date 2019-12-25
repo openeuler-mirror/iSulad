@@ -46,3 +46,4 @@ int cmd_update_main(int argc, const char **argv);
 int update_checker(const struct client_arguments *args);
 
 #endif /* __CMD_UPDATE_H */
+

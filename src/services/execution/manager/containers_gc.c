@@ -377,6 +377,14 @@ static void gc_monitor_process(const char *id, pid_t pid, unsigned long long sta
     }
 }
 
+static void add_to_list_tail_to_retry_gc(struct linked_list *it)
+{
+    gc_containers_lock();
+    linked_list_del(it);
+    linked_list_add_tail(&g_gc_containers.containers_list, it);
+    gc_containers_unlock();
+}
+
 static void gc_container_process(struct linked_list *it)
 {
     int ret = 0;
@@ -396,6 +404,8 @@ static void gc_container_process(struct linked_list *it)
         ret = clean_container_resource(id, runtime, pid);
         if (ret != 0) {
             WARN("Failed to clean resources of container %s", id);
+            add_to_list_tail_to_retry_gc(it);
+            return;
         }
 
         /* remove container from gc list */
@@ -418,13 +428,7 @@ static void gc_container_process(struct linked_list *it)
         if (ret < 0 && errno != ESRCH) {
             ERROR("Can not kill process (pid=%d) with SIGKILL for container %s", pid, id);
         }
-
-        gc_containers_lock();
-
-        linked_list_del(it);
-        linked_list_add_tail(&g_gc_containers.containers_list, it);
-
-        gc_containers_unlock();
+        add_to_list_tail_to_retry_gc(it);
     }
 }
 static void do_gc_container(struct linked_list *it)
@@ -467,7 +471,7 @@ static void *gchandler(void *arg)
         do_gc_container(it);
 
 wait_continue:
-        usleep_nointerupt(100 * 1000); /* wait 100 millisecond to check next gc container*/
+        usleep_nointerupt(100 * 1000); /* wait 100 millisecond to check next gc container */
     }
 error:
     return NULL;
@@ -517,3 +521,4 @@ int start_gchandler()
 out:
     return ret;
 }
+

@@ -33,13 +33,27 @@ const char * const g_log_prio_name[] = {
     "FATAL", "ALERT", "CRIT", "ERROR", "WARN", "NOTICE", "INFO", "DEBUG", "TRACE"
 };
 
+/* predefined priorities. */
+enum log_priority {
+    LOG_PRIORITY_FATAL = LOG_EMERG,
+    LOG_PRIORITY_ALERT = LOG_ALERT,
+    LOG_PRIORITY_CRIT = LOG_CRIT,
+    LOG_PRIORITY_ERROR = LOG_ERR,
+    LOG_PRIORITY_WARN = LOG_WARNING,
+    LOG_PRIORITY_NOTICE = LOG_NOTICE,
+    LOG_PRIORITY_INFO = LOG_INFO,
+    LOG_PRIORITY_DEBUG = LOG_DEBUG,
+    LOG_PRIORITY_TRACE,
+    LOG_PRIORITY_MAX
+};
+
 #define MAX_MSG_LENGTH 4096
 
 static __thread char *g_log_prefix = NULL;
 
 static char *g_log_vmname = NULL;
 static bool g_log_quiet = false;
-static int g_log_level = ISULA_LOG_DEBUG;
+static int g_log_level = LOG_PRIORITY_DEBUG;
 static int g_log_driver = LOG_DRIVER_STDOUT;
 int g_lcrd_log_fd = -1;
 
@@ -89,8 +103,10 @@ static ssize_t write_nointr(int fd, const void *buf, size_t count)
     return nret;
 }
 
-void log_append_logfile(const struct log_object_metadata *metadata, const char *timestamp, const char *msg);
-void log_append_stderr(const struct log_object_metadata *metadata, const char *timestamp, const char *msg);
+void log_append_logfile(const struct log_event *event, const char *timestamp, const char *msg);
+void log_append_stderr(const struct log_event *event, const char *timestamp, const char *msg);
+
+int lcrd_unix_trans_to_utc(char *buf, size_t bufsize, const struct timespec *time);
 
 /* change str logdriver to enum */
 int change_str_logdriver_to_enum(const char *driver)
@@ -149,14 +165,14 @@ static int log_init_checker(const struct log_config *log)
         return -1;
     }
 
-    for (i = ISULA_LOG_FATAL; i < ISULA_LOG_MAX; i++) {
+    for (i = LOG_PRIORITY_FATAL; i < LOG_PRIORITY_MAX; i++) {
         if (strcasecmp(g_log_prio_name[i], log->priority) == 0) {
             g_log_level = i;
             break;
         }
     }
 
-    if (i == ISULA_LOG_MAX) {
+    if (i == LOG_PRIORITY_MAX) {
         fprintf(stderr, "Unable to parse logging level:%s\n", log->priority);
         return -1;
     }
@@ -218,57 +234,31 @@ out:
     return nret;
 }
 
-static char *parse_timespec_to_human()
-{
-    struct timespec timestamp;
-    struct tm ptm = { 0 };
-    char date_time[ISULAD_LOG_BUFFER_SIZE] = { 0 };
-    int nret;
-
-    if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1) {
-        fprintf(stderr, "Failed to get real time\n");
-        return 0;
-    }
-
-    if (localtime_r(&(timestamp.tv_sec), &ptm) == NULL) {
-        SYSERROR("Transfer timespec failed");
-        return NULL;
-    }
-
-    nret = sprintf_s(date_time, ISULAD_LOG_BUFFER_SIZE, "%04d%02d%02d%02d%02d%02d.%03ld",
-                     ptm.tm_year + 1900, ptm.tm_mon + 1, ptm.tm_mday, ptm.tm_hour, ptm.tm_min, ptm.tm_sec,
-                     timestamp.tv_nsec / 1000000);
-
-    if (nret < 0) {
-        COMMAND_ERROR("Sprintf failed");
-        return NULL;
-    }
-
-    return util_strdup_s(date_time);
-}
-
 /* log append */
-int log_append(const struct log_object_metadata *metadata, const char *format, ...)
+int log_append(const struct log_event *event, const char *format, ...)
 {
     int rc = 0;
     va_list args;
     char msg[MAX_MSG_LENGTH] = { 0 };
-    char *date_time = NULL;
-    int ret = 0;
+    char date_time[LCRD_LOG_TIME_SIZE] = { 0 };
+    struct timespec timestamp;
 
     va_start(args, format);
-    rc = vsprintf_s(msg, MAX_MSG_LENGTH, format, args);
+    rc = vsnprintf_truncated_s(msg, MAX_MSG_LENGTH, format, args);
     va_end(args);
     if (rc < 0 || rc >= MAX_MSG_LENGTH) {
-        rc = sprintf_s(msg, MAX_MSG_LENGTH, "%s", "!!LONG LONG A LOG!!");
+        rc = sprintf_s(msg, MAX_MSG_LENGTH, "%s", "Failed to truncate print error log");
         if (rc < 0) {
             return 0;
         }
     }
 
-    date_time = parse_timespec_to_human();
-    if (date_time == NULL) {
-        goto out;
+    if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1) {
+        fprintf(stderr, "Failed to get real time");
+        return -1;
+    }
+    if (lcrd_unix_trans_to_utc(date_time, LCRD_LOG_TIME_SIZE, &timestamp) < 0) {
+        return 0;
     }
 
     switch (g_log_driver) {
@@ -276,39 +266,35 @@ int log_append(const struct log_object_metadata *metadata, const char *format, .
             if (g_log_quiet) {
                 break;
             }
-            log_append_stderr(metadata, date_time, msg);
+            log_append_stderr(event, date_time, msg);
             break;
         case LOG_DRIVER_FIFO:
             if (g_lcrd_log_fd == -1) {
-                COMMAND_ERROR("Do not set log file");
-                ret = -1;
-                goto out;
+                fprintf(stderr, "Do not set log file\n");
+                return -1;
             }
-            log_append_logfile(metadata, date_time, msg);
+            log_append_logfile(event, date_time, msg);
             break;
         case LOG_DRIVER_NOSET:
             break;
         default:
-            COMMAND_ERROR("Invalid log driver");
-            ret = -1;
-            goto out;
+            fprintf(stderr, "Invalid log driver\n");
+            return -1;
     }
 
-out:
-    free(date_time);
-    return ret;
+    return 0;
 }
 
 /* log append logfile */
-void log_append_logfile(const struct log_object_metadata *metadata, const char *timestamp, const char *msg)
+void log_append_logfile(const struct log_event *event, const char *timestamp, const char *msg)
 {
     int log_fd = -1;
     int nret = 0;
     size_t size = 0;
     char *tmp_prefix = NULL;
-    char log_buffer[ISULAD_LOG_BUFFER_SIZE] = { 0 };
+    char log_buffer[LCRD_LOG_BUFFER_SIZE] = { 0 };
 
-    if (metadata == NULL || metadata->level > g_log_level) {
+    if (event == NULL || event->priority > g_log_level) {
         return;
     }
     log_fd = g_lcrd_log_fd;
@@ -320,13 +306,13 @@ void log_append_logfile(const struct log_object_metadata *metadata, const char *
     if (tmp_prefix != NULL && strlen(tmp_prefix) > 15) {
         tmp_prefix = tmp_prefix + (strlen(tmp_prefix) - 15);
     }
-    if (metadata->func != NULL && metadata->file != NULL) {
-        nret = sprintf_s(log_buffer, sizeof(log_buffer), "%15s %s %-8s %s - %s:%s:%d - %s",
-                         tmp_prefix ? tmp_prefix : "", timestamp, g_log_prio_name[metadata->level],
-                         g_log_vmname ? g_log_vmname : "lcrd", metadata->file, metadata->func,
-                         metadata->line, msg);
+    if (event->locinfo != NULL) {
+        nret = snprintf_truncated_s(log_buffer, sizeof(log_buffer), "%15s %s %-8s %s - %s:%s:%d - %s",
+                                    tmp_prefix ? tmp_prefix : "", timestamp, g_log_prio_name[event->priority],
+                                    g_log_vmname ? g_log_vmname : "lcrd", event->locinfo->file, event->locinfo->func,
+                                    event->locinfo->line, msg);
     } else {
-        nret = sprintf_s(log_buffer, sizeof(log_buffer), "%s %s", timestamp, msg);
+        nret = snprintf_truncated_s(log_buffer, sizeof(log_buffer), "%s %s", timestamp, msg);
     }
 
     if (nret < 0) {
@@ -346,11 +332,11 @@ void log_append_logfile(const struct log_object_metadata *metadata, const char *
 }
 
 /* log append stderr */
-void log_append_stderr(const struct log_object_metadata *metadata, const char *timestamp, const char *msg)
+void log_append_stderr(const struct log_event *event, const char *timestamp, const char *msg)
 {
     char *tmp_prefix = NULL;
 
-    if (metadata == NULL || metadata->level > g_log_level) {
+    if (event == NULL || event->priority > g_log_level) {
         return;
     }
 
@@ -359,14 +345,14 @@ void log_append_stderr(const struct log_object_metadata *metadata, const char *t
         tmp_prefix = tmp_prefix + (strlen(tmp_prefix) - 15);
     }
 
-    if (metadata->func != NULL && metadata->file != NULL) {
+    if (event->locinfo != NULL) {
         fprintf(stderr, "%15s ", tmp_prefix ? tmp_prefix : "");
     }
     fprintf(stderr, "%s ", timestamp);
-    if (metadata->func != NULL && metadata->file != NULL) {
-        fprintf(stderr, "%-8s ", g_log_prio_name[metadata->level]);
+    if (event->locinfo != NULL) {
+        fprintf(stderr, "%-8s ", g_log_prio_name[event->priority]);
         fprintf(stderr, "%s - ", g_log_vmname ? g_log_vmname : "lcrd");
-        fprintf(stderr, "%s:%s:%d - ", metadata->file, metadata->func, metadata->line);
+        fprintf(stderr, "%s:%s:%d - ", event->locinfo->file, event->locinfo->func, event->locinfo->line);
     }
     fprintf(stderr, "%s", msg);
     fprintf(stderr, "\n");
@@ -396,7 +382,7 @@ int lcrd_unix_trans_to_utc(char *buf, size_t bufsize, const struct timespec *tim
     /* Transtate seconds to number of days. */
     trans_to_days = time->tv_sec / 86400;
 
-    /* Calculate days from 0000-03-01 to 1970-01-01.Days base it*/
+    /* Calculate days from 0000-03-01 to 1970-01-01.Days base it */
     all_days = trans_to_days + 719468;
 
     /* compute the age.One age means 400 years(146097 days) */
@@ -457,3 +443,4 @@ int lcrd_unix_trans_to_utc(char *buf, size_t bufsize, const struct timespec *tim
 
     return 0;
 }
+

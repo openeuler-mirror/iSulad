@@ -33,3 +33,4 @@ int db_sqlite_request_callback(const char *stmt,
                                sqlite_callback_t callback, void *data);
 
 #endif
+

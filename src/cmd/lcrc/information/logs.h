@@ -29,3 +29,4 @@ extern struct client_arguments g_cmd_logs_args;
 int callback_tail(command_option_t *option, const char *arg);
 int cmd_logs_main(int argc, const char **argv);
 #endif /* __CMD_LOGS_H */
+

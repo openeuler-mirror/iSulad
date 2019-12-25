@@ -494,6 +494,10 @@ static bool valid_manifest_and_get_size(embedded_manifest *manifest, const char 
 
     for (i = 1; i < (int)manifest->layers_len; i++) {
         abs_path = util_add_path(path, manifest->layers[i]->path_in_host);
+        if (abs_path == NULL) {
+            ERROR("Failed to add path: %s, %s", path, manifest->layers[i]->path_in_host);
+            goto out;
+        }
         if (strlen(abs_path) > PATH_MAX || !realpath(abs_path, real_path)) {
             ERROR("invalid file path %s", abs_path);
             lcrd_try_set_error_message("Invalid content in manifest: layer not exists");
@@ -831,3 +835,4 @@ out:
 
     return ret;
 }
+

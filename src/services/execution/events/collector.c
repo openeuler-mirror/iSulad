@@ -322,7 +322,7 @@ out:
     return ret;
 }
 
-/* events copy*/
+/* events copy */
 static void event_copy(const struct lcrd_events_format *src, struct lcrd_events_format *dest)
 {
     if (src == NULL || dest == NULL) {
@@ -650,7 +650,7 @@ static int post_event_to_events_hander(const struct lcrd_events_format *events)
         return -1;
     }
 
-    /*only post STOPPED event to events_hander */
+    /* only post STOPPED event to events_hander */
     if (events->type != EVENTS_TYPE_STOPPED1) {
         return 0;
     }
@@ -832,3 +832,4 @@ int newcollector()
 out:
     return ret;
 }
+

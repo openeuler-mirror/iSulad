@@ -24,6 +24,8 @@
 extern "C" {
 #endif
 
+#define DEFAULT_IM_SERVER_SOCK_ADDR "unix:///var/run/lcrd/isula_image.sock"
+
 struct lcrd_conf {
     pthread_rwlock_t lcrd_conf_rwlock;
     struct service_arguments *server_conf;
@@ -87,6 +89,10 @@ char *conf_get_lcrd_cgroup_parent();
 
 unsigned int conf_get_im_opt_timeout();
 
+char *conf_get_im_server_sock_addr();
+
+bool conf_update_im_server_sock_addr(const char *new_sock_addr);
+
 char *conf_get_graph_check_flag_file();
 
 bool conf_get_image_layer_check_flag();
@@ -102,3 +108,4 @@ int parse_log_opts(struct service_arguments *args, const char *key, const char *
 #endif
 
 #endif /* __LCRD_CONF_H */
+

@@ -23,3 +23,4 @@ extern struct client_arguments g_cmd_top_args;
 int cmd_top_main(int argc, const char **argv);
 
 #endif /* __CMD_TOP_H */
+

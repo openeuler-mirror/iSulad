@@ -43,3 +43,4 @@ void free_event(struct lcrd_events_format *event);
 int lcrd_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code);
 
 #endif /* __COLLECTOR_H */
+

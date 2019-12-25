@@ -26,3 +26,4 @@ extern struct client_arguments g_cmd_health_check_args;
 int cmd_health_check_main(int argc, const char **argv);
 
 #endif
+

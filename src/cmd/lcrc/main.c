@@ -30,6 +30,8 @@
 #include "rmi.h"
 #include "wait.h"
 #include "restart.h"
+#include "pause.h"
+#include "resume.h"
 #include "logs.h"
 #include "kill.h"
 #include "load.h"
@@ -77,6 +79,14 @@ struct command g_commands[] = {
     {
         // `inspect` sub-command
         "inspect", cmd_inspect_main, g_cmd_inspect_desc, NULL, &g_cmd_inspect_args
+    },
+    {
+        // `pause` sub-command
+        "pause", cmd_pause_main, g_cmd_pause_desc, NULL, &g_cmd_pause_args
+    },
+    {
+        // `unpause` sub-command
+        "unpause", cmd_resume_main, g_cmd_resume_desc, NULL, &g_cmd_resume_args
     },
 #ifdef ENABLE_OCI_IMAGE
     {
@@ -186,3 +196,4 @@ int main(int argc, char **argv)
     }
     return run_command(g_commands, argc, (const char **)argv);
 }
+

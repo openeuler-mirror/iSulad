@@ -149,3 +149,4 @@ char *read_file(const char *path, size_t *length)
     (void)fclose(fp);
     return buf;
 }
+

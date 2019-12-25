@@ -212,3 +212,4 @@ void db_common_finish(void)
 {
     db_sqlite_finish();
 }
+

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2019-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
  * iSulad licensed under the Mulan PSL v1.
  * You can use this software according to the terms and conditions of the Mulan PSL v1.
  * You may obtain a copy of Mulan PSL v1 at:
@@ -27,14 +27,14 @@ extern "C" {
 
 #define DECLARE_OCI_LLT_COMMON_WRAPPER \
     extern "C" {\
-        DECLARE_WRAPPER(conf_get_graph_rootpath, char *, ());\
-        DEFINE_WRAPPER(conf_get_graph_rootpath, char *, (), ());\
+        DECLARE_WRAPPER_V(conf_get_graph_rootpath, char *, ());\
+        DEFINE_WRAPPER_V(conf_get_graph_rootpath, char *, (), ());\
         \
-        DECLARE_WRAPPER(conf_get_graph_run_path, char *, ());\
-        DEFINE_WRAPPER(conf_get_graph_run_path, char *, (), ());\
+        DECLARE_WRAPPER_V(conf_get_graph_run_path, char *, ());\
+        DEFINE_WRAPPER_V(conf_get_graph_run_path, char *, (), ());\
         \
-        DECLARE_WRAPPER(conf_get_lcrd_storage_driver, char *, ());\
-        DEFINE_WRAPPER(conf_get_lcrd_storage_driver, char *, (), ());\
+        DECLARE_WRAPPER_V(conf_get_lcrd_storage_driver, char *, ());\
+        DEFINE_WRAPPER_V(conf_get_lcrd_storage_driver, char *, (), ());\
         \
         DECLARE_WRAPPER_V(conf_get_storage_opts, char **, ());\
         DEFINE_WRAPPER_V(conf_get_storage_opts, char **, (), ());\
@@ -54,9 +54,9 @@ extern "C" {
 
 #define MOCK_SET_DEFAULT_ISULAD_KIT_OPTS \
     {\
-        MOCK_SET(conf_get_graph_rootpath, util_strdup_s("/var/lib/lcrd/storage"));\
-        MOCK_SET(conf_get_graph_run_path, util_strdup_s("/var/run/lcrd/storage"));\
-        MOCK_SET(conf_get_lcrd_storage_driver, util_strdup_s("overlay"));\
+        MOCK_SET_V(conf_get_graph_rootpath, conf_get_graph_rootpath_success);\
+        MOCK_SET_V(conf_get_graph_run_path, conf_get_graph_run_path_success);\
+        MOCK_SET_V(conf_get_lcrd_storage_driver, conf_get_lcrd_storage_driver_success);\
         MOCK_SET_V(conf_get_storage_opts, conf_get_storage_opts_success);\
         MOCK_SET_V(conf_get_registry_list, conf_get_registry_list_success);\
         MOCK_SET_V(conf_get_insecure_registry_list, conf_get_insecure_registry_list_success);\
@@ -76,6 +76,9 @@ extern "C" {
 
 char *json_path(const char *file);
 int execvp_success(const char *file, char * const argv[]);
+char *conf_get_graph_rootpath_success();
+char *conf_get_graph_run_path_success();
+char *conf_get_lcrd_storage_driver_success();
 char **conf_get_storage_opts_success();
 char **conf_get_registry_list_success();
 char **conf_get_insecure_registry_list_success();

@@ -105,3 +105,4 @@ void oci_image_unlock(oci_image_t *image)
         ERROR("Failed to unlock image '%s'", image->info->id);
     }
 }
+

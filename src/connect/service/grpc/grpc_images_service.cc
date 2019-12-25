@@ -29,15 +29,64 @@
 int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *grequest,
                                                     image_list_images_request **request)
 {
+    size_t len = 0;
     image_list_images_request *tmpreq = (image_list_images_request *)util_common_calloc_s(
                                             sizeof(image_list_images_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
     }
-    *request = tmpreq;
 
+    len = (size_t)grequest->filters_size();
+    if (len == 0) {
+        *request = tmpreq;
+        return 0;
+    }
+    if (len > SIZE_MAX / sizeof(char *)) {
+        ERROR("invalid filters size");
+        goto cleanup;
+    }
+
+    tmpreq->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
+    if (tmpreq->filters == nullptr) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+
+    tmpreq->filters->keys = (char **)util_common_calloc_s(len * sizeof(char *));
+    if (tmpreq->filters->keys == nullptr) {
+        goto cleanup;
+    }
+    tmpreq->filters->values = (json_map_string_bool **)util_common_calloc_s(len * sizeof(json_map_string_bool *));
+    if (tmpreq->filters->values == nullptr) {
+        free(tmpreq->filters->keys);
+        tmpreq->filters->keys = nullptr;
+        goto cleanup;
+    }
+
+    for (auto &iter : grequest->filters()) {
+        tmpreq->filters->values[tmpreq->filters->len] = (json_map_string_bool *)
+                                                        util_common_calloc_s(sizeof(json_map_string_bool));
+        if (tmpreq->filters->values[tmpreq->filters->len] == nullptr) {
+            ERROR("Out of memory");
+            goto cleanup;
+        }
+        if (append_json_map_string_bool(tmpreq->filters->values[tmpreq->filters->len],
+                                        iter.second.empty() ? "" : iter.second.c_str(), true)) {
+            free(tmpreq->filters->values[tmpreq->filters->len]);
+            tmpreq->filters->values[tmpreq->filters->len] = nullptr;
+            ERROR("Append failed");
+            goto cleanup;
+        }
+        tmpreq->filters->keys[tmpreq->filters->len] = util_strdup_s(iter.first.empty() ? "" : iter.first.c_str());
+        tmpreq->filters->len++;
+    }
+    *request = tmpreq;
     return 0;
+
+cleanup:
+    free_image_list_images_request(tmpreq);
+    return -1;
 }
 
 int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse)
@@ -273,6 +322,11 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
     image_inspect_request *image_req = nullptr;
     image_inspect_response *image_res = nullptr;
 
+    Status status = GrpcServerTlsAuth::auth(context, "image_inspect");
+    if (!status.ok()) {
+        return status;
+    }
+
     cb = get_service_callback();
     if (cb == nullptr || cb->image.inspect == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
@@ -283,11 +337,6 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
         ERROR("Failed to transform grpc request");
         reply->set_cc(LCRD_ERR_INPUT);
         return Status::OK;
-    }
-
-    Status status = GrpcServerTlsAuth::auth(context, "image_inspect");
-    if (!status.ok()) {
-        return status;
     }
 
     ret = cb->image.inspect(image_req, &image_res);
@@ -418,4 +467,5 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
 
     return Status::OK;
 }
+
 

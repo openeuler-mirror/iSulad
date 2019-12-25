@@ -1,8 +1,3 @@
 project(iSulad_LLT)
 
 add_subdirectory(oci_config_merge)
-add_subdirectory(oci_rootfs_remove)
-add_subdirectory(oci_rootfs_mount)
-add_subdirectory(oci_rootfs_umount)
-add_subdirectory(oci_rootfs_export)
-add_subdirectory(oci_rootfs_prepare)

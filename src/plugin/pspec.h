@@ -40,3 +40,4 @@ int set_pspec(oci_runtime_spec *oci, const char *data);
 char *merge_pspec(const char *base, const char *data);
 
 #endif /* PSPEC_H */
+

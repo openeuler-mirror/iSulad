@@ -19,6 +19,19 @@
 #include "log.h"
 #include "utils.h"
 
+bool unix_nanos_to_timestamp(int64_t nanos, types_timestamp_t *timestamp)
+{
+    if (timestamp == NULL) {
+        return false;
+    }
+    timestamp->has_seconds = true;
+    timestamp->seconds = nanos / Time_Second;
+    timestamp->has_nanos = true;
+    timestamp->nanos = nanos % Time_Second;
+
+    return true;
+}
+
 int types_timestamp_cmp_check(const types_timestamp_t *t1, const types_timestamp_t *t2)
 {
     if (t1 == NULL && t2 == NULL) {
@@ -772,18 +785,6 @@ static int time_format_duration_bad(char *out, size_t len)
     return 1; /* format ok with bad data, return 1 */
 }
 
-static int time_format_duration_ago(char *out, size_t len)
-{
-    if (strcmp(out, "-") != 0 && strlen(out) + 5 < len) {
-        if (strcat_s(out, len, " ago") != EOK) {
-            ERROR("Strcat string error");
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
 int time_format_duration(const char *in, char *out, size_t len)
 {
     int32_t nanos = 0;
@@ -819,7 +820,24 @@ int time_format_duration(const char *in, char *out, size_t len)
         return time_format_duration_bad(out, len);
     }
 
-    return time_format_duration_ago(out, len);
+    return 0;
+}
+
+int time_format_duration_ago(const char *in, char *out, size_t len)
+{
+    if (time_format_duration(in, out, len) != 0) {
+        ERROR("Get format duration");
+        return -1;
+    }
+
+    if (strcmp(out, "-") != 0 && strlen(out) + 5 < len) {
+        if (strcat_s(out, len, " ago") != EOK) {
+            ERROR("Strcat string error");
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 int time_tz_to_seconds_nanos(const char *time_tz, int64_t *seconds, int32_t *nanos)

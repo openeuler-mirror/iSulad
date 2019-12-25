@@ -367,32 +367,28 @@ out:
 
 static char *get_env_abs_file_path(const oci_runtime_spec *oci_spec, const char *env_target_file)
 {
-    char *abs_path = NULL;
+    char *env_path = NULL;
     int64_t file_size = 0;
 
     if (oci_spec->root == NULL || oci_spec->root->path == NULL) {
         return NULL;
     }
-    abs_path = util_path_join(oci_spec->root->path, env_target_file);
-    if (abs_path == NULL) {
-        ERROR("Failed to get env abs file path");
-        return NULL;
+    if (realpath_in_scope(oci_spec->root->path, env_target_file, &env_path) < 0) {
+        ERROR("env target file '%s' real path must be under rootfs '%s'", env_target_file, oci_spec->root->path);
+        goto out;
     }
-    if (strncmp(abs_path, oci_spec->root->path, strlen(oci_spec->root->path)) != 0) {
-        ERROR("env target file path must be under rootfs '%s'", oci_spec->root->path);
-        free(abs_path);
-        return NULL;
+    if (!util_file_exists(env_path)) {
+        return env_path;
     }
-    if (!util_file_exists(abs_path)) {
-        return abs_path;
-    }
-    file_size = util_file_size(abs_path);
+    file_size = util_file_size(env_path);
     if (file_size > REGULAR_FILE_SIZE) {
         ERROR("env target file %s, size exceed limit: %lld", env_target_file, REGULAR_FILE_SIZE);
-        free(abs_path);
-        return NULL;
+        goto out;
     }
-    return abs_path;
+    return env_path;
+out:
+    free(env_path);
+    return NULL;
 }
 
 int merge_env_target_file(oci_runtime_spec *oci_spec, const char *env_target_file)
@@ -1286,4 +1282,5 @@ out:
     free_default_ulimit(ulimits);
     return ret;
 }
+
 

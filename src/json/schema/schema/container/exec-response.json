@@ -2,9 +2,6 @@
 	"$schema": "http://json-schema.org/draft-04/schema#",
 	"type": "object",
 	"properties": {
-		"pid": {
-			"type": "int32"
-		},
 		"exit_code": {
 			"type": "uint32"
 		},

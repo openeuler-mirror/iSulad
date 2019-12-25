@@ -61,3 +61,4 @@ oci_runtime_spec_hooks *oci_runtime_spec_hooks_parse_file(const char *filename,
     yajl_tree_free(tree);
     return ptr;
 }
+

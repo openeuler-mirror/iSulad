@@ -48,3 +48,4 @@ char *sha256_digest(void *stream, bool isgzip);
 # endif
 
 #endif
+

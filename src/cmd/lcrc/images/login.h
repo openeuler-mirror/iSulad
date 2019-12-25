@@ -28,4 +28,5 @@ extern const char g_cmd_login_usage[];
 extern struct client_arguments g_cmd_login_args;
 int cmd_login_main(int argc, const char **argv);
 
-#endif /*__CMD_LOGIN_H*/
+#endif /* __CMD_LOGIN_H */
+

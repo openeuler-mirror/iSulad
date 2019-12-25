@@ -231,31 +231,6 @@ static int archive_context_close(void *context, char **err)
     return ret;
 }
 
-static int split_path_dir_entry(const char *path, char **dir, char **base)
-{
-    char cleaned[PATH_MAX + 3] = { 0 };
-    char *dup = NULL;
-
-    if (cleanpath(path, cleaned, PATH_MAX) == NULL) {
-        ERROR("Failed to clean path");
-        return -1;
-    }
-
-    if (specify_current_dir(path)) {
-        set_char_to_separator(&cleaned[strlen(cleaned)]);
-        cleaned[strlen(cleaned)] = '.';
-    }
-    dup = util_strdup_s(cleaned);
-    if (dir != NULL) {
-        *dir = util_strdup_s(dirname(dup));
-    }
-    if (base != NULL) {
-        *base = util_strdup_s(basename(cleaned));
-    }
-    free(dup);
-    return 0;
-}
-
 static int get_rebase_name(const char *path, const char *real_path,
                            char **resolved_path, char **rebase_name)
 {

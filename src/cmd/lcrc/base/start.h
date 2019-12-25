@@ -29,3 +29,4 @@ int client_start(const struct client_arguments *args, bool *reset_tty, struct te
                  struct command_fifo_config **console_fifos);
 int cmd_start_main(int argc, const char **argv);
 #endif /* __CMD_START_H */
+

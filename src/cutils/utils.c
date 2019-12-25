@@ -266,10 +266,22 @@ bool util_check_signal_valid(int sig)
     return false;
 }
 
+void *util_smart_calloc_s(size_t unit_size, size_t count)
+{
+    if (unit_size == 0) {
+        return NULL;
+    }
+
+    if (count > (MAX_MEMORY_SIZE / unit_size)) {
+        return NULL;
+    }
+
+    return calloc(count, unit_size);
+}
 
 void *util_common_calloc_s(size_t size)
 {
-    if (size == 0 || size > SIZE_MAX) {
+    if (size == 0 || size > MAX_MEMORY_SIZE) {
         return NULL;
     }
 

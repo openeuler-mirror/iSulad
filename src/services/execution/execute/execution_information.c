@@ -40,12 +40,8 @@
 #include "sysinfo.h"
 #include "read_file.h"
 
-#ifdef ENABLE_OCI_IMAGE
-#include "oci_images_store.h"
-#endif
-
 #include "container_state.h"
-#include "runtime_interface.h"
+#include "runtime.h"
 #include "list.h"
 #include "utils.h"
 #include "error.h"
@@ -201,6 +197,7 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     char *operating_system = NULL;
     char *huge_page_size = NULL;
     struct utsname u;
+    im_image_count_request *im_request = NULL;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -222,9 +219,18 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
+
+    im_request = util_common_calloc_s(sizeof(im_image_count_request));
+    if (im_request == NULL) {
+        ERROR("Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto pack_response;
+    }
 #ifdef ENABLE_OCI_IMAGE
-    images_num = oci_images_store_size();
+    im_request->type = util_strdup_s(IMAGE_TYPE_OCI);
 #endif
+    images_num = im_get_image_count(im_request);
+
     operating_system = get_operating_system();
     if (operating_system == NULL) {
         ERROR("Failed to get operating system info!");
@@ -302,6 +308,7 @@ pack_response:
     }
     free(huge_page_size);
     free(operating_system);
+    free_im_image_count_request(im_request);
     free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
     return (cc == LCRD_SUCCESS) ? 0 : -1;
@@ -999,7 +1006,7 @@ out:
     return ret;
 }
 
-static int dup_container_config(const container_config *src, container_inspect_config *dest)
+static int dup_container_config(const char *image, const container_config *src, container_inspect_config *dest)
 {
     int ret = 0;
 
@@ -1010,6 +1017,7 @@ static int dup_container_config(const container_config *src, container_inspect_c
     dest->hostname = src->hostname ? util_strdup_s(src->hostname) : util_strdup_s("");
     dest->user = src->user ? util_strdup_s(src->user) : util_strdup_s("");
     dest->tty = src->tty;
+    dest->image = image ? util_strdup_s(image) : util_strdup_s("none");
 
     if (dup_container_config_env(src, dest) != 0) {
         ret = -1;
@@ -1036,6 +1044,7 @@ static int dup_container_config(const container_config *src, container_inspect_c
         ret = -1;
         goto out;
     }
+
 out:
     return ret;
 }
@@ -1147,6 +1156,92 @@ out:
     return ret;
 }
 
+static int inspect_image(const char *image, imagetool_image **result)
+{
+    int ret = 0;
+    im_status_request *request = NULL;
+    im_status_response *response = NULL;
+
+    if (image == NULL) {
+        ERROR("Empty image name or id");
+        return -1;
+    }
+
+    request = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    request->image.image = util_strdup_s(image);
+
+    if (im_image_status(request, &response) != 0) {
+        if (response != NULL && response->errmsg != NULL) {
+            ERROR("failed to inspect inspect image info: %s", response->errmsg);
+        } else {
+            ERROR("Failed to call status image");
+        }
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (response->image_info != NULL) {
+        *result = response->image_info->image;
+        response->image_info->image = NULL;
+    }
+
+cleanup:
+    free_im_status_request(request);
+    free_im_status_response(response);
+    return ret;
+}
+
+static int pack_inspect_general_image_data(const char *image, container_inspect *inspect)
+{
+    int ret = 0;
+    imagetool_image *ir = NULL;
+    size_t len = 0;
+    char *image_data = NULL;
+
+    if (image == NULL || strcmp(image, "none") == 0) {
+        inspect->image = util_strdup_s("none");
+        return 0;
+    }
+
+    if (inspect_image(image, &ir) != 0) {
+        ERROR("Failed to inspect image status");
+        ret = -1;
+        goto out;
+    }
+
+    if (strlen(ir->id) > SIZE_MAX / sizeof(char) - strlen("sha256:")) {
+        ERROR("Invalid image id");
+        ret = -1;
+        goto out;
+    }
+
+    len = strlen("sha256:") + strlen(ir->id) + 1;
+    image_data = (char *)util_common_calloc_s(len * sizeof(char));
+    if (image_data == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (sprintf_s(image_data, len, "sha256:%s", ir->id) < 0) {
+        ERROR("Failed to sprintf string");
+        ret = -1;
+        goto out;
+    }
+
+    inspect->image = image_data;
+    image_data = NULL;
+
+out:
+    free_imagetool_image(ir);
+    free(image_data);
+    return ret;
+}
+
 static int pack_inspect_general_data(const container_t *cont, container_inspect *inspect)
 {
     int ret = 0;
@@ -1163,7 +1258,11 @@ static int pack_inspect_general_data(const container_t *cont, container_inspect 
         goto out;
     }
 
-    inspect->image = cont->common_config->image ? util_strdup_s(cont->common_config->image) : util_strdup_s("none");
+    if (pack_inspect_general_image_data(cont->common_config->image, inspect) != 0) {
+        ERROR("Failed to pack image info");
+        ret = -1;
+        goto out;
+    }
 
     if (cont->common_config->log_path != NULL) {
         inspect->log_path = util_strdup_s(cont->common_config->log_path);
@@ -1181,6 +1280,7 @@ static int pack_inspect_general_data(const container_t *cont, container_inspect 
         ret = -1;
         goto out;
     }
+
 out:
     return ret;
 }
@@ -1196,7 +1296,7 @@ static int pack_inspect_config(const container_t *cont, container_inspect *inspe
         goto out;
     }
 
-    if (dup_container_config(cont->common_config->config, inspect->config) != 0) {
+    if (dup_container_config(cont->common_config->image, cont->common_config->config, inspect->config) != 0) {
         ERROR("Failed to dup container config");
         ret = -1;
         goto out;
@@ -1524,6 +1624,7 @@ static int container_conf_cb(const struct lcrd_container_conf_request *request,
     struct engine_operation *engine_ops = NULL;
     struct engine_console_config config = { 0 };
     container_t *cont = NULL;
+    rt_get_console_conf_params_t params = { 0 };
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -1561,7 +1662,10 @@ static int container_conf_cb(const struct lcrd_container_conf_request *request,
     id = cont->common_config->id;
     set_log_prefix(id);
 
-    if (runtime_get_console_config(id, cont->runtime, cont->root_path, &config) != 0) {
+    params.rootpath = cont->root_path;
+    params.config = &config;
+
+    if (runtime_get_console_config(id, cont->runtime, &params) != 0) {
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }

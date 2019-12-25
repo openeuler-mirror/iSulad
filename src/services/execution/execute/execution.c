@@ -49,7 +49,7 @@
 #include "plugin.h"
 #include "health_check.h"
 #include "execution_network.h"
-#include "runtime_interface.h"
+#include "runtime.h"
 #include "specs_extend.h"
 #include "utils.h"
 #include "error.h"
@@ -210,6 +210,7 @@ static int do_clean_container(const container_t *cont, pid_t pid)
     char *logdriver = NULL;
     const char *id = cont->common_config->id;
     const char *runtime = cont->runtime;
+    rt_clean_params_t params = { 0 };
 
     if (conf_get_daemon_log_config(&loglevel, &logdriver, &engine_log_path) != 0) {
         ERROR("Failed to get log config");
@@ -217,7 +218,13 @@ static int do_clean_container(const container_t *cont, pid_t pid)
         goto out;
     }
 
-    ret = runtime_clean_resource(id, runtime, cont->root_path, engine_log_path, loglevel, pid);
+    params.rootpath = cont->root_path;
+    params.statepath = cont->state_path;
+    params.logpath = engine_log_path;
+    params.loglevel = loglevel;
+    params.pid = pid;
+
+    ret = runtime_clean_resource(id, runtime, &params);
     if (ret != 0) {
         ERROR("Failed to clean failed started container %s", id);
         ret = -1;
@@ -256,8 +263,6 @@ int clean_container_resource(const char *id, const char *runtime, pid_t pid)
     cont = containers_store_get(id);
     if (cont == NULL) {
         WARN("No such container:%s", id);
-        lcrd_set_error_message("No such container:%s", id);
-        ret = -1;
         goto out;
     }
 
@@ -636,37 +641,32 @@ static int write_env_to_target_file(const container_t *cont)
 }
 
 static int do_post_start_on_success(const char *id, const char *runtime,
-                                    const char *pidfile, int exit_fifo_fd, container_pid_t **pid_info)
+                                    const char *pidfile, int exit_fifo_fd, const container_pid_t *pid_info)
 {
     int ret = 0;
 
-    *pid_info = container_read_pidfile(pidfile);
-    if (*pid_info == NULL) {
-        ERROR("Failed to get started container's pid info, start container fail");
-        close(exit_fifo_fd);
-        ret = -1;
-        goto out;
-    }
-
     // exit_fifo_fd was closed in supervisor_add_exit_monitor
-    if (supervisor_add_exit_monitor(exit_fifo_fd, *pid_info, id, runtime)) {
+    if (supervisor_add_exit_monitor(exit_fifo_fd, pid_info, id, runtime)) {
         ERROR("Failed to add exit monitor to supervisor");
         ret = -1;
     }
-out:
     return ret;
 }
 
-static void do_post_start_on_failure(const container_t *cont, int exit_fifo_fd,
-                                     const char *engine_log_path, const char *loglevel)
+static void clean_resources_on_failure(const container_t *cont, const char *engine_log_path, const char *loglevel)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
     const char *runtime = cont->runtime;
+    rt_clean_params_t params = { 0 };
 
-    close(exit_fifo_fd);
+    params.rootpath = cont->root_path;
+    params.statepath = cont->state_path;
+    params.logpath = engine_log_path;
+    params.loglevel = loglevel;
+    params.pid = 0;
 
-    ret = runtime_clean_resource(id, runtime, cont->root_path, engine_log_path, loglevel, 0);
+    ret = runtime_clean_resource(id, runtime, &params);
     if (ret != 0) {
         ERROR("Failed to clean failed started container %s", id);
     }
@@ -675,7 +675,7 @@ static void do_post_start_on_failure(const container_t *cont, int exit_fifo_fd,
 }
 
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm,
-                              container_pid_t **pid_info)
+                              container_pid_t *pid_info)
 {
     int ret = 0;
     int nret = 0;
@@ -691,6 +691,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     oci_runtime_spec_process_user *puser = NULL;
     const char *runtime = cont->runtime;
     const char *id = cont->common_config->id;
+    rt_start_params_t start_params = { 0 };
 
     if (mount_dev_tmpfs_for_system_container(cont) < 0) {
         ret = -1;
@@ -744,26 +745,45 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
+    if (verify_container_settings_start(cont->root_path, id) != 0) {
+        ret = -1;
+        goto close_exit_fd;
+    }
+
     start_timeout = conf_get_start_timeout();
     if (cont->common_config->config != NULL) {
         tty = cont->common_config->config->tty;
         open_stdin = cont->common_config->config->open_stdin;
     }
 
-    ret = runtime_start(id, runtime, cont->root_path, tty, open_stdin, engine_log_path, loglevel,
-                        console_fifos, NULL, start_timeout, pidfile, exit_fifo, puser);
+    start_params.rootpath = cont->root_path;
+    start_params.tty = tty;
+    start_params.open_stdin = open_stdin;
+    start_params.logpath = engine_log_path;
+    start_params.loglevel = loglevel;
+    start_params.console_fifos = console_fifos;
+    start_params.start_timeout = start_timeout;
+    start_params.container_pidfile = pidfile;
+    start_params.exit_fifo = exit_fifo;
+    start_params.puser = puser;
+
+    ret = runtime_start(id, runtime, &start_params, pid_info);
     if (ret == 0) {
         if (do_post_start_on_success(id, runtime, pidfile, exit_fifo_fd, pid_info) != 0) {
             ERROR("Failed to do post start on runtime start success");
             ret = -1;
+            goto clean_resources;
         }
     } else {
-        do_post_start_on_failure(cont, exit_fifo_fd, engine_log_path, loglevel);
+        goto close_exit_fd;
     }
     goto out;
 
 close_exit_fd:
     close(exit_fifo_fd);
+
+clean_resources:
+    clean_resources_on_failure(cont, engine_log_path, loglevel);
 out:
     free_oci_runtime_spec_process_user(puser);
     free(loglevel);
@@ -793,7 +813,7 @@ static bool save_after_auto_remove(container_t *cont)
             ERROR("Failed to cleanup container %s", cont->common_config->id);
             return true;
         }
-        return false; /*do not save container if already auto removed*/
+        return false; /* do not save container if already auto removed */
     }
 
     return true;
@@ -802,7 +822,8 @@ static bool save_after_auto_remove(container_t *cont)
 int start_container(container_t *cont, const char *console_fifos[], bool reset_rm)
 {
     int ret = 0;
-    container_pid_t *pid_info = NULL;
+    container_pid_t pid_info = { 0 };
+    int exit_code = 125;
 
     if (cont == NULL || console_fifos == NULL) {
         ERROR("Invalid input arguments");
@@ -814,6 +835,13 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
 
     if (reset_rm && is_running(cont->state)) {
         ret = 0;
+        goto out;
+    }
+
+    if (is_paused(cont->state)) {
+        ERROR("Cannot start a paused container, try unpause instead");
+        lcrd_set_error_message("Cannot start a paused container, try unpause instead.");
+        ret = -1;
         goto out;
     }
 
@@ -839,23 +867,23 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
 
     ret = do_start_container(cont, console_fifos, reset_rm, &pid_info);
     if (ret != 0) {
-        int exit_code = 125;
         ERROR("Runtime start container failed");
-        container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
         ret = -1;
-        util_contain_errmsg(g_lcrd_errmsg, &exit_code);
-        state_set_stopped(cont->state, exit_code);
-        container_wait_stop_cond_broadcast(cont);
-        if (save_after_auto_remove(cont)) {
-            goto save_container;
-        } else {
-            goto out;
-        }
+        goto set_stopped;
     } else {
-        state_set_running(cont->state, pid_info, true);
+        state_set_running(cont->state, &pid_info, true);
         cont->common_config->has_been_manually_stopped = false;
         init_health_monitor(cont->common_config->id);
         goto save_container;
+    }
+
+set_stopped:
+    container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
+    util_contain_errmsg(g_lcrd_errmsg, &exit_code);
+    state_set_stopped(cont->state, exit_code);
+    container_wait_stop_cond_broadcast(cont);
+    if (!save_after_auto_remove(cont)) {
+        goto out;
     }
 
 save_container:
@@ -866,7 +894,6 @@ save_container:
     }
 out:
     container_unlock(cont);
-    free(pid_info);
     return ret;
 }
 
@@ -924,10 +951,6 @@ static int container_start_prepare(container_t *cont, const container_start_requ
     if (container_to_disk_locking(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         lcrd_set_error_message("Failed to save container \"%s\" to disk", id);
-        return -1;
-    }
-
-    if (verify_container_settings_start(cont->root_path, id) != 0) {
         return -1;
     }
 
@@ -992,7 +1015,7 @@ static int container_start_cb(const container_start_request *request, container_
         goto pack_response;
     }
 
-    if (start_container(cont, (const char **)fifos, true)) {
+    if (start_container(cont, (const char **)fifos, true) != 0) {
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
@@ -1019,6 +1042,8 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
+    bool need_unpause = is_paused(cont->state);
+    rt_resume_params_t params = { 0 };
 
     if (container_exit_on_next(cont)) {
         ERROR("Failed to cancel restart manager");
@@ -1042,9 +1067,16 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
     stop_health_checks(id);
 
     ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, signal);
-
     if (ret != 0) {
-        ERROR("Failed to grace shutdown container %s", id);
+        ERROR("Failed to send signal to container %s with signal %d", id, signal);
+    }
+    if (signal == SIGKILL && need_unpause) {
+        params.rootpath = cont->root_path;
+        if (runtime_resume(id, cont->runtime, &params) != 0) {
+            ERROR("Cannot unpause container: %s", id);
+            ret = -1;
+            goto out;
+        }
     }
 
 out:
@@ -1134,6 +1166,7 @@ static int restart_container(container_t *cont)
     const char *id = cont->common_config->id;
     const char *runtime = cont->runtime;
     const char *rootpath = cont->root_path;
+    rt_restart_params_t params = { 0 };
 
     container_lock(cont);
 
@@ -1145,7 +1178,9 @@ static int restart_container(container_t *cont)
 
     (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
 
-    ret = runtime_restart(id, runtime, rootpath);
+    params.rootpath = rootpath;
+
+    ret = runtime_restart(id, runtime, &params);
     if (ret == -2) {
         goto out;
     }
@@ -1196,7 +1231,7 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
         goto out;
     }
 
-    if (start_container(cont, console_fifos, true)) {
+    if (start_container(cont, console_fifos, true) != 0) {
         cc = LCRD_ERR_EXEC;
         goto out;
     }
@@ -1527,32 +1562,16 @@ pack_response:
 static int do_runtime_rm_helper(const char *id, const char *runtime, const char *rootpath)
 {
     int ret = 0;
-    /* notes: we do not use force stop in lcr, we do stop above */
-    if (runtime_rm(id, runtime, rootpath)) {
-        if (strstr(g_lcrd_errmsg, "No such container") != NULL) {
-            // container root path may been corrupted, try to remove by daemon
-            char cont_root_path[PATH_MAX] = { 0 };
-            WARN("container %s root path may been corrupted, try to remove by daemon", id);
-            ret = sprintf_s(cont_root_path, sizeof(cont_root_path), "%s/%s", rootpath, id);
-            if (ret < 0) {
-                ERROR("Failed to sprintf container_state");
-                ret = -1;
-                goto out;
-            }
-            ret = util_recursive_rmdir(cont_root_path, 0);
-            if (ret != 0) {
-                const char *tmp_err = (errno != 0) ? strerror(errno) : "error";
-                ERROR("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
-                lcrd_set_error_message("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
-                ret = -1;
-                goto out;
-            }
-        } else {
-            ERROR("Runtime remove container failed");
-            ret = -1;
-            goto out;
-        }
+    rt_rm_params_t params = { 0 };
+
+    params.rootpath = rootpath;
+
+    if (runtime_rm(id, runtime, &params)) {
+        ERROR("Runtime remove container failed");
+        ret = -1;
+        goto out;
     }
+
 out:
     return ret;
 }

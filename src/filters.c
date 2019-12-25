@@ -295,10 +295,8 @@ bool filters_args_match(const struct filters_args *filters, const char *field, c
     }
 
     for (; map_itor_valid(itor); map_itor_next(itor)) {
-        int mret;
         const char *name2match = map_itor_key(itor);
-        mret = util_reg_match(name2match, source);
-        if (mret != 0) {
+        if (util_reg_match(name2match, source) != 0) {
             continue;
         }
         map_itor_free(itor);
@@ -308,7 +306,7 @@ bool filters_args_match(const struct filters_args *filters, const char *field, c
     return false;
 }
 
-/* check whether field is one of accepted name or not*/
+/* check whether field is one of accepted name or not */
 bool filters_args_valid_key(const char **accepted, size_t len, const char *field)
 {
     size_t i;

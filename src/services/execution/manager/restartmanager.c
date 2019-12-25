@@ -61,8 +61,6 @@ static void *container_restart(void *args)
     int ret = 0;
     struct restart_args *arg = args;
     char *id = arg->id;
-    uint64_t timeout = arg->timeout;
-    int exit_code = arg->exit_code;
     container_t *cont = NULL;
     const char *console_fifos[3] = { NULL, NULL, NULL };
     restart_manager_t *rm = NULL;
@@ -92,21 +90,22 @@ static void *container_restart(void *args)
         goto set_stopped;
     }
 
-    ret = restart_manager_wait_cancel(rm, timeout);
+    ret = restart_manager_wait_cancel(rm, arg->timeout);
     if (ret == 0) {
         INFO("Canceled to restart container '%s' cased %d", id, ret);
         goto set_stopped;
     }
 
-    (void)start_container(cont, console_fifos, false);
+    if (start_container(cont, console_fifos, false) != 0 && is_restarting(cont->state)) {
+        goto set_stopped;
+    }
     goto out;
 
 set_stopped:
     container_lock(cont);
-    state_set_stopped(cont->state, exit_code);
+    state_set_stopped(cont->state, arg->exit_code);
     container_wait_stop_cond_broadcast(cont);
     container_unlock(cont);
-
 out:
     container_unref(cont);
     restart_manager_unref(rm);
@@ -463,3 +462,4 @@ int restart_manager_cancel(restart_manager_t *rm)
     restart_manager_unlock(rm);
     return 0;
 }
+

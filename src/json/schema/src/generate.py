@@ -74,7 +74,7 @@ class MyRoot(object):
         return self.root_path
 
 
-def trimJsonSuffix(name):
+def trim_json_suffix(name):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -82,10 +82,10 @@ def trimJsonSuffix(name):
     """
     if name.endswith(JSON_SUFFIX) or name.endswith(REF_SUFFIX):
         name = name[:-len(JSON_SUFFIX)]
-    return helpers.convertToCStyle(name.replace('.', '_').replace('-', '_'))
+    return helpers.conv_to_c_style(name.replace('.', '_').replace('-', '_'))
 
 
-def getPrefixPackage(filepath, rootpath):
+def get_prefix_package(filepath, rootpath):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -94,49 +94,52 @@ def getPrefixPackage(filepath, rootpath):
     realpath = os.path.realpath(filepath)
 
     if realpath.startswith(rootpath) and len(realpath) > len(rootpath):
-        return helpers.convertToCStyle(os.path.dirname(realpath)[(len(rootpath) + 1):])
+        return helpers.conv_to_c_style(os.path.dirname(realpath)[(len(rootpath) + 1):])
     else:
         raise RuntimeError('schema path \"%s\" is not in scope of root path \"%s\"' \
                            % (realpath, rootpath))
 
 
-def getPrefixFromFile(filepath):
+def get_prefix_from_file(filepath):
     """
     Description: generate c language for parse json map string object
     Interface: None
     History: 2019-06-17
     """
-    prefix_file = trimJsonSuffix(os.path.basename(filepath))
+    prefix_file = trim_json_suffix(os.path.basename(filepath))
     root_path = MyRoot.root_path
-    prefix_package = getPrefixPackage(filepath, root_path)
+    prefix_package = get_prefix_package(filepath, root_path)
     prefix = prefix_file if prefix_package == "" else prefix_package + "_" + prefix_file
     return prefix
 
-def schemaFromFile(filepath, srcpath):
+
+def schema_from_file(filepath, srcpath):
     """
     Description: generate c language for parse json map string object
     Interface: None
     History: 2019-06-17
     """
     schemapath = helpers.FilePath(filepath)
-    prefix = getPrefixFromFile(schemapath.name)
+    prefix = get_prefix_from_file(schemapath.name)
     header = helpers.FilePath(os.path.join(srcpath, prefix + ".h"))
     source = helpers.FilePath(os.path.join(srcpath, prefix + ".c"))
     schema_info = helpers.SchemaInfo(schemapath, header, source, prefix, srcpath)
     return schema_info
 
-def makeRefName(refname, reffile):
+
+def make_ref_name(refname, reffile):
     """
     Description: generate c language for parse json map string object
     Interface: None
     History: 2019-06-17
     """
-    prefix = getPrefixFromFile(reffile)
+    prefix = get_prefix_from_file(reffile)
     if refname == "" or prefix.endswith(refname):
         return prefix
-    return prefix + "_" + helpers.convertToCStyle(refname)
+    return prefix + "_" + helpers.conv_to_c_style(refname)
 
-def splitRefName(ref):
+
+def splite_ref_name(ref):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -144,6 +147,7 @@ def splitRefName(ref):
     """
     tmp_f, tmp_r = ref.split("#/") if '#/' in ref else (ref, "")
     return tmp_f, tmp_r
+
 
 def merge(children):
     """
@@ -166,7 +170,8 @@ BASIC_TYPES = (
     "booleanPointer"
 )
 
-def judgeSupportedType(typ):
+
+def judge_support_type(typ):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -174,7 +179,8 @@ def judgeSupportedType(typ):
     """
     return typ in ("integer", "boolean", "string", "double") or typ in BASIC_TYPES
 
-def getRefSubref(src, subref):
+
+def get_ref_subref(src, subref):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -190,14 +196,15 @@ def getRefSubref(src, subref):
 
     return src, cur, subrefname
 
-def getRefRoot(schema_info, src, ref, curfile):
+
+def get_ref_root(schema_info, src, ref, curfile):
     """
     Description: generate c language for parse json map string object
     Interface: None
     History: 2019-06-17
     """
     refname = ""
-    tmp_f, tmp_r = splitRefName(ref)
+    tmp_f, tmp_r = splite_ref_name(ref)
 
     if tmp_f == "":
         cur = src
@@ -205,7 +212,7 @@ def getRefRoot(schema_info, src, ref, curfile):
         realpath = os.path.realpath(os.path.join(os.path.dirname(curfile), tmp_f))
         curfile = realpath
 
-        subschema = schemaFromFile(realpath, schema_info.filesdir)
+        subschema = schema_from_file(realpath, schema_info.filesdir)
         if schema_info.refs is None:
             schema_info.refs = {}
         schema_info.refs[subschema.header.basename] = subschema
@@ -213,19 +220,20 @@ def getRefRoot(schema_info, src, ref, curfile):
             cur = src = json.loads(i.read())
     subcur = cur
     if tmp_r != "":
-        src, subcur, refname = getRefSubref(src, tmp_r)
+        src, subcur, refname = get_ref_subref(src, tmp_r)
 
     if 'type' not in subcur and '$ref' in subcur:
-        subf, subr = splitRefName(subcur['$ref'])
+        subf, subr = splite_ref_name(subcur['$ref'])
         if subf == "":
-            src, subcur, refname = getRefSubref(src, subr)
+            src, subcur, refname = get_ref_subref(src, subr)
             if 'type' not in subcur:
                 raise RuntimeError("Not support reference of nesting more than 2 level: ", ref)
         else:
-            return getRefRoot(schema_info, src, subcur['$ref'], curfile)
-    return src, subcur, curfile, makeRefName(refname, curfile)
+            return get_ref_root(schema_info, src, subcur['$ref'], curfile)
+    return src, subcur, curfile, make_ref_name(refname, curfile)
 
-def getTypePatternInCur(cur, schema_info, src, curfile):
+
+def get_type_pattern_incur(cur, schema_info, src, curfile):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -244,21 +252,22 @@ def getTypePatternInCur(cur, schema_info, src, curfile):
             if 'type' in value:
                 val = value["type"]
             else:
-                dummy_subsrc, subcur, dummy_subcurfile, dummy_subrefname = getRefRoot(
+                dummy_subsrc, subcur, dummy_subcurfile, dummy_subrefname = get_ref_root(
                     schema_info, src, value['$ref'], curfile)
                 val = subcur['type']
             break
 
-    mapKey = {
+    m_key = {
         'object': 'Object',
         'string': 'String',
         'integer': 'Int',
         'boolean': 'Bool'
     }[val]
-    map_val = mapKey
+    map_val = m_key
 
     typ = 'map' + map_key + map_val
     return typ
+
 
 class GenerateNodeInfo(object):
     '''
@@ -289,7 +298,8 @@ class GenerateNodeInfo(object):
         '''
         return self.name
 
-def generateAllofArrayTypNode(node_info, src, typ, refname):
+
+def gen_all_arr_typnode(node_info, src, typ, refname):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -302,7 +312,7 @@ def generateAllofArrayTypNode(node_info, src, typ, refname):
     subtyp = None
     subtypobj = None
     required = None
-    children = merge(parseList(schema_info, name, src, cur["items"]['allOf'], curfile))
+    children = merge(resolve_list(schema_info, name, src, cur["items"]['allOf'], curfile))
     subtyp = children[0].typ
     subtypobj = children
     return helpers.Unite(name,
@@ -313,7 +323,8 @@ def generateAllofArrayTypNode(node_info, src, typ, refname):
                         subtypname=refname,
                         required=required), src
 
-def generateAnyofArrayTypNode(node_info, src, typ, refname):
+
+def gen_any_arr_typnode(node_info, src, typ, refname):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -326,7 +337,7 @@ def generateAnyofArrayTypNode(node_info, src, typ, refname):
     subtyp = None
     subtypobj = None
     required = None
-    anychildren = parseList(schema_info, name, src, cur["items"]['anyOf'], curfile)
+    anychildren = resolve_list(schema_info, name, src, cur["items"]['anyOf'], curfile)
     subtyp = anychildren[0].typ
     children = anychildren[0].children
     subtypobj = children
@@ -339,7 +350,8 @@ def generateAnyofArrayTypNode(node_info, src, typ, refname):
                         subtypname=refname,
                         required=required), src
 
-def generateRefArrayTypNode(node_info, src, typ, refname):
+
+def gen_ref_arr_typnode(node_info, src, typ, refname):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -350,11 +362,11 @@ def generateRefArrayTypNode(node_info, src, typ, refname):
     cur = node_info.cur
     curfile = node_info.curfile
 
-    item_type, src = resolveType(schema_info, name, src, cur["items"], curfile)
-    ref_file, subref = splitRefName(cur['items']['$ref'])
+    item_type, src = resolve_type(schema_info, name, src, cur["items"], curfile)
+    ref_file, subref = splite_ref_name(cur['items']['$ref'])
     if ref_file == "":
-        src, dummy_subcur, subrefname = getRefSubref(src, subref)
-        refname = makeRefName(subrefname, curfile)
+        src, dummy_subcur, subrefname = get_ref_subref(src, subref)
+        refname = make_ref_name(subrefname, curfile)
     else:
         refname = item_type.subtypname
     return helpers.Unite(name,
@@ -365,7 +377,8 @@ def generateRefArrayTypNode(node_info, src, typ, refname):
                         subtypname=refname,
                         required=item_type.required), src
 
-def generateTypeArrayTypNode(node_info, src, typ, refname):
+
+def gen_type_arr_typnode(node_info, src, typ, refname):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -376,7 +389,7 @@ def generateTypeArrayTypNode(node_info, src, typ, refname):
     cur = node_info.cur
     curfile = node_info.curfile
 
-    item_type, src = resolveType(schema_info, name, src, cur["items"], curfile)
+    item_type, src = resolve_type(schema_info, name, src, cur["items"], curfile)
     return helpers.Unite(name,
                         typ,
                         None,
@@ -386,7 +399,7 @@ def generateTypeArrayTypNode(node_info, src, typ, refname):
                         required=item_type.required), src
 
 
-def generateArrayTypNode(node_info, src, typ, refname):
+def gen_arr_typnode(node_info, src, typ, refname):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -395,16 +408,17 @@ def generateArrayTypNode(node_info, src, typ, refname):
     cur = node_info.cur
 
     if 'allOf' in cur["items"]:
-        return generateAllofArrayTypNode(node_info, src, typ, refname)
+        return gen_all_arr_typnode(node_info, src, typ, refname)
     elif 'anyOf' in cur["items"]:
-        return generateAnyofArrayTypNode(node_info, src, typ, refname)
+        return gen_any_arr_typnode(node_info, src, typ, refname)
     elif '$ref' in cur["items"]:
-        return generateRefArrayTypNode(node_info, src, typ, refname)
+        return gen_ref_arr_typnode(node_info, src, typ, refname)
     elif 'type' in cur["items"]:
-        return generateTypeArrayTypNode(node_info, src, typ, refname)
+        return gen_type_arr_typnode(node_info, src, typ, refname)
     return None
 
-def generateObjTypNode(node_info, src, typ, refname):
+
+def gen_obj_typnode(node_info, src, typ, refname):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -420,18 +434,18 @@ def generateObjTypNode(node_info, src, typ, refname):
     required = None
 
     if 'allOf' in cur:
-        children = merge(parseList(schema_info, name, src, cur['allOf'], curfile))
+        children = merge(resolve_list(schema_info, name, src, cur['allOf'], curfile))
     elif 'anyOf' in cur:
-        children = parseList(schema_info, name, src, cur['anyOf'], curfile)
+        children = resolve_list(schema_info, name, src, cur['anyOf'], curfile)
     elif 'patternProperties' in cur:
-        children = parseProperties(schema_info, name, src, cur, curfile)
+        children = parse_properties(schema_info, name, src, cur, curfile)
         children[0].name = children[0].name.replace('_{1,}', 'element').replace('_{2,}', \
                                                                                 'element')
         children[0].fixname = "values"
-        if helpers.validBasicMapName(children[0].typ):
-            children[0].name = helpers.makeBasicMapName(children[0].typ)
+        if helpers.valid_basic_map_name(children[0].typ):
+            children[0].name = helpers.make_basic_map_name(children[0].typ)
     else:
-        children = parseProperties(schema_info, name, src, cur, curfile) \
+        children = parse_properties(schema_info, name, src, cur, curfile) \
             if 'properties' in cur else None
     if 'required' in cur:
         required = cur['required']
@@ -443,14 +457,15 @@ def generateObjTypNode(node_info, src, typ, refname):
             subtypname=refname,\
             required=required), src
 
-def getTypNotOneof(schema_info, src, cur, curfile):
+
+def get_typ_notoneof(schema_info, src, cur, curfile):
     """
     Description: generate c language for parse json map string object
     Interface: None
     History: 2019-06-17
     """
     if 'patternProperties' in cur:
-        typ = getTypePatternInCur(cur, schema_info, src, curfile)
+        typ = get_type_pattern_incur(cur, schema_info, src, curfile)
     elif "type" in cur:
         typ = cur["type"]
     else:
@@ -459,7 +474,7 @@ def getTypNotOneof(schema_info, src, cur, curfile):
     return typ
 
 
-def resolveType(schema_info, name, src, cur, curfile):
+def resolve_type(schema_info, name, src, cur, curfile):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -472,31 +487,31 @@ def resolveType(schema_info, name, src, cur, curfile):
     refname = None
 
     if '$ref' in cur:
-        src, cur, curfile, refname = getRefRoot(schema_info, src, cur['$ref'], curfile)
+        src, cur, curfile, refname = get_ref_root(schema_info, src, cur['$ref'], curfile)
 
     if "oneOf" in cur:
         cur = cur['oneOf'][0]
         if '$ref' in cur:
-            return resolveType(schema_info, name, src, cur, curfile)
+            return resolve_type(schema_info, name, src, cur, curfile)
         else:
             typ = cur['type']
     else:
-        typ = getTypNotOneof(schema_info, src, cur, curfile)
+        typ = get_typ_notoneof(schema_info, src, cur, curfile)
 
     node_info = GenerateNodeInfo(schema_info, name, cur, curfile)
 
-    if helpers.validBasicMapName(typ):
+    if helpers.valid_basic_map_name(typ):
         pass
     elif typ == 'array':
-        return generateArrayTypNode(node_info, src, typ, refname)
+        return gen_arr_typnode(node_info, src, typ, refname)
     elif typ == 'object' or typ == 'mapStringObject':
-        return generateObjTypNode(node_info, src, typ, refname)
+        return gen_obj_typnode(node_info, src, typ, refname)
     elif typ == 'ArrayOfStrings':
         typ = 'array'
         subtyp = 'string'
         children = subtypobj = None
     else:
-        if not judgeSupportedType(typ):
+        if not judge_support_type(typ):
             raise RuntimeError("Invalid schema type: %s" % typ)
         children = None
 
@@ -509,7 +524,7 @@ def resolveType(schema_info, name, src, cur, curfile):
                         required=required), src
 
 
-def parseList(schema_info, name, schema, objs, curfile):
+def resolve_list(schema_info, name, schema, objs, curfile):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -518,9 +533,10 @@ def parseList(schema_info, name, schema, objs, curfile):
     obj = []
     index = 0
     for i in objs:
-        generated_name = helpers.CombinationName( \
-            i['$ref'].split("/")[-1]) if '$ref' in i else helpers.CombinationName(name.name + str(index))
-        node, _ = resolveType(schema_info, generated_name, schema, i, curfile)
+        generated_name = helpers.CombinateName( \
+            i['$ref'].split("/")[-1]) if '$ref' in i \
+            else helpers.CombinateName(name.name + str(index))
+        node, _ = resolve_type(schema_info, generated_name, schema, i, curfile)
         if node:
             obj.append(node)
         index += 1
@@ -529,7 +545,7 @@ def parseList(schema_info, name, schema, objs, curfile):
     return obj
 
 
-def parseDictionary(schema_info, name, schema, objs, curfile):
+def parse_dict(schema_info, name, schema, objs, curfile):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -537,7 +553,7 @@ def parseDictionary(schema_info, name, schema, objs, curfile):
     """
     obj = []
     for i in objs:
-        node, _ = resolveType(schema_info, name.append(i), schema, objs[i], curfile)
+        node, _ = resolve_type(schema_info, name.append(i), schema, objs[i], curfile)
         if node:
             obj.append(node)
     if not obj:
@@ -545,19 +561,20 @@ def parseDictionary(schema_info, name, schema, objs, curfile):
     return obj
 
 
-def parseProperties(schema_info, name, schema, props, curfile):
+def parse_properties(schema_info, name, schema, props, curfile):
     """
     Description: generate c language for parse json map string object
     Interface: None
     History: 2019-06-17
     """
     if 'definitions' in props:
-        return parseDictionary(schema_info, name, schema, props['definitions'], curfile)
+        return parse_dict(schema_info, name, schema, props['definitions'], curfile)
     if 'patternProperties' in props:
-        return parseDictionary(schema_info, name, schema, props['patternProperties'], curfile)
-    return parseDictionary(schema_info, name, schema, props['properties'], curfile)
+        return parse_dict(schema_info, name, schema, props['patternProperties'], curfile)
+    return parse_dict(schema_info, name, schema, props['properties'], curfile)
 
-def handleTypeNotInSchema(schema_info, schema, prefix):
+
+def handle_type_not_in_schema(schema_info, schema, prefix):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -566,8 +583,8 @@ def handleTypeNotInSchema(schema_info, schema, prefix):
     required = None
     if 'definitions' in schema:
         return helpers.Unite( \
-            helpers.CombinationName("definitions"), 'definitions', \
-            parseProperties(schema_info, helpers.CombinationName(""), schema, schema, \
+            helpers.CombinateName("definitions"), 'definitions', \
+            parse_properties(schema_info, helpers.CombinateName(""), schema, schema, \
                             schema_info.name.name), None, None, None, None)
     else:
         if len(schema) > 1:
@@ -577,15 +594,19 @@ def handleTypeNotInSchema(schema_info, schema, prefix):
         for value in schema:
             if 'required' in schema[value]:
                 required = schema[value]['required']
-            childrens = parseProperties(schema_info, helpers.CombinationName(""), schema[value], \
-                                        schema[value], schema_info.name.name)
-            value_node = helpers.Unite(helpers.CombinationName(prefix), 'object', childrens, None, None, \
-                                      None, required)
+            childrens = parse_properties(schema_info, helpers.CombinateName(""), \
+                                        schema[value], schema[value], \
+                                        schema_info.name.name)
+            value_node = helpers.Unite(helpers.CombinateName(prefix), \
+                                       'object', childrens, None, None, \
+                                       None, required)
             value_nodes.append(value_node)
-        return helpers.Unite(helpers.CombinationName("definitions"), 'definitions', value_nodes, None, None, \
+        return helpers.Unite(helpers.CombinateName("definitions"), \
+                             'definitions', value_nodes, None, None, \
                             None, None)
 
-def parseSchema(schema_info, schema, prefix):
+
+def parse_schema(schema_info, schema, prefix):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -593,23 +614,21 @@ def parseSchema(schema_info, schema, prefix):
     """
     required = None
     if 'type' not in schema:
-        return handleTypeNotInSchema(schema_info, schema, prefix)
-
-    if 'type' not in schema:
-        print("No 'type' defined in schema")
-        return prefix, None
+        return handle_type_not_in_schema(schema_info, schema, prefix)
 
     if 'object' in schema['type']:
         if 'required' in schema:
             required = schema['required']
         return helpers.Unite(
-            helpers.CombinationName(prefix), 'object',
-            parseProperties(schema_info, helpers.CombinationName(""), schema, schema, schema_info.name.name), \
+            helpers.CombinateName(prefix), 'object',
+            parse_properties(schema_info, \
+                            helpers.CombinateName(""), \
+                            schema, schema, schema_info.name.name), \
             None, None, None, required)
     elif 'array' in schema['type']:
-        item_type, _ = resolveType(schema_info, helpers.CombinationName(""), schema['items'], \
-                                    schema['items'], schema_info.name.name)
-        return helpers.Unite(helpers.CombinationName(prefix), 'array', None, item_type.typ, \
+        item_type, _ = resolve_type(schema_info, helpers.CombinateName(""), \
+                                    schema['items'], schema['items'], schema_info.name.name)
+        return helpers.Unite(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
                             item_type.children, None, item_type.required)
     else:
         print("Not supported type '%s'") % schema['type']
@@ -631,8 +650,8 @@ def expand(tree, structs, visited):
         for i in tree.subtypobj:
             expand(i, structs, visited=visited)
 
-    if tree.typ == 'array' and helpers.validBasicMapName(tree.subtyp):
-        name = helpers.CombinationName(tree.name + "_element")
+    if tree.typ == 'array' and helpers.valid_basic_map_name(tree.subtyp):
+        name = helpers.CombinateName(tree.name + "_element")
         node = helpers.Unite(name, tree.subtyp, None)
         expand(node, structs, visited)
 
@@ -658,13 +677,13 @@ def reflection(schema_info, gen_ref):
         with open(schema_info.name.name) as schema_file:
             schema_json = json.loads(schema_file.read(), object_pairs_hook=OrderedDict)
             try:
-                tree = parseSchema(schema_info, schema_json, schema_info.prefix)
+                tree = parse_schema(schema_info, schema_json, schema_info.prefix)
                 if tree is None:
                     print("Failed parse schema")
                     sys.exit(1)
                 structs = expand(tree, [], {})
-                headers.headerReflection(structs, schema_info, header_file)
-                sources.sourceReflection(structs, schema_info, source_file, tree.typ)
+                headers.header_reflect(structs, schema_info, header_file)
+                sources.src_reflect(structs, schema_info, source_file, tree.typ)
             except RuntimeError:
                 traceback.print_exc()
                 print("Failed to parse schema file: %s") % schema_info.name.name
@@ -681,7 +700,7 @@ def reflection(schema_info, gen_ref):
                 reflection(reffile, True)
 
 
-def generateCommonFiles(out):
+def gen_common_files(out):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -699,7 +718,8 @@ def generateCommonFiles(out):
         fcntl.flock(source_file, fcntl.LOCK_UN)
         fcntl.flock(header_file, fcntl.LOCK_UN)
 
-def handlerSingleFile(args, srcpath, gen_ref, schemapath):
+
+def handle_single_file(args, srcpath, gen_ref, schemapath):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -715,7 +735,7 @@ def handlerSingleFile(args, srcpath, gen_ref, schemapath):
             for dirpath, dummy_dirnames, files in os.walk(schemapath.name):
                 for target_file in files:
                     if target_file.endswith(JSON_SUFFIX):
-                        schema_info = schemaFromFile(os.path.join(dirpath, target_file), \
+                        schema_info = schema_from_file(os.path.join(dirpath, target_file), \
                                                        srcpath.name)
                         reflection(schema_info, gen_ref)
         else:
@@ -723,17 +743,17 @@ def handlerSingleFile(args, srcpath, gen_ref, schemapath):
             for target_file in os.listdir(schemapath.name):
                 fullpath = os.path.join(schemapath.name, target_file)
                 if fullpath.endswith(JSON_SUFFIX) and os.path.isfile(fullpath):
-                    schema_info = schemaFromFile(fullpath, srcpath.name)
+                    schema_info = schema_from_file(fullpath, srcpath.name)
                     reflection(schema_info, gen_ref)
     else:
         if schemapath.name.endswith(JSON_SUFFIX):
-            schema_info = schemaFromFile(schemapath.name, srcpath.name)
+            schema_info = schema_from_file(schemapath.name, srcpath.name)
             reflection(schema_info, gen_ref)
         else:
             print('File %s is not ends with .json') % schemapath.name
 
 
-def handlerFiles(args, srcpath):
+def handle_files(args, srcpath):
     """
     Description: generate c language for parse json map string object
     Interface: None
@@ -742,7 +762,8 @@ def handlerFiles(args, srcpath):
     for path in args.path:
         gen_ref = args.gen_ref
         schemapath = helpers.FilePath(path)
-        handlerSingleFile(args, srcpath, gen_ref, schemapath)
+        handle_single_file(args, srcpath, gen_ref, schemapath)
+
 
 def main():
     """
@@ -795,8 +816,11 @@ def main():
         os.makedirs(srcpath.name)
 
     if args.gen_common:
-        generateCommonFiles(srcpath.name)
-    handlerFiles(args, srcpath)
+        gen_common_files(srcpath.name)
+    handle_files(args, srcpath)
+
 
 if __name__ == "__main__":
     main()
+
+

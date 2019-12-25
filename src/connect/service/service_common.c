@@ -58,3 +58,4 @@ void server_common_shutdown(void)
     rest_server_shutdown();
 #endif
 }
+

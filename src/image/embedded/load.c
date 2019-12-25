@@ -195,7 +195,7 @@ out:
     return ret;
 }
 
-int embedded_load_image(im_load_request *request)
+int embedded_load_image(const im_load_request *request)
 {
     if (request == NULL) {
         ERROR("invalid NULL param");
@@ -204,4 +204,5 @@ int embedded_load_image(im_load_request *request)
 
     return load_image(request->file);
 }
+
 

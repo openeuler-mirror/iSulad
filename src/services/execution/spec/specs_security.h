@@ -33,3 +33,4 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
 int merge_seccomp(oci_runtime_spec *oci_spec, const host_config *host_spec);
 
 #endif
+

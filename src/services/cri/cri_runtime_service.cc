@@ -40,7 +40,7 @@ std::string Constants::sandboxContainerName { "POD" };
 std::string Constants::kubeAPIVersion { "0.1.0" };
 std::string Constants::iSulaRuntimeName { "iSulad" };
 std::string Constants::RESOLV_CONF_PATH { "/etc/resolv.conf" };
-}
+} // namespace CRIRuntimeService
 CRIRuntimeServiceImpl::CRIRuntimeServiceImpl()
 {
     m_cb = get_service_callback();
@@ -50,7 +50,7 @@ CRIRuntimeServiceImpl::CRIRuntimeServiceImpl()
 }
 
 void CRIRuntimeServiceImpl::VersionResponseToGRPC(container_version_response *response,
-                                                  runtime::VersionResponse *gResponse, Errors &error)
+                                                  runtime::v1alpha2::VersionResponse *gResponse, Errors &error)
 {
     gResponse->set_version(CRIRuntimeService::Constants::kubeAPIVersion);
     gResponse->set_runtime_name(CRIRuntimeService::Constants::iSulaRuntimeName);
@@ -83,7 +83,7 @@ void CRIRuntimeServiceImpl::Init(Network::NetworkPluginConf mConf, const std::st
     m_pluginManager = std::make_shared<Network::PluginManager>(chosen);
 }
 
-void CRIRuntimeServiceImpl::Version(const std::string &apiVersion, runtime::VersionResponse *versionResponse,
+void CRIRuntimeServiceImpl::Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse,
                                     Errors &error)
 {
     (void)apiVersion;
@@ -108,7 +108,7 @@ cleanup:
     free_container_version_response(response);
 }
 
-void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::RuntimeConfig &config, Errors &error)
+void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error)
 {
     const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE { "pod-cidr-change" };
     const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod-cidr" };
@@ -122,14 +122,18 @@ void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::RuntimeConfig &co
     return;
 }
 
-std::unique_ptr<runtime::RuntimeStatus> CRIRuntimeServiceImpl::Status(Errors &error)
+std::unique_ptr<runtime::v1alpha2::RuntimeStatus> CRIRuntimeServiceImpl::Status(Errors &error)
 {
-    std::unique_ptr<runtime::RuntimeStatus> status(new runtime::RuntimeStatus);
+    std::unique_ptr<runtime::v1alpha2::RuntimeStatus> status(new (std::nothrow) runtime::v1alpha2::RuntimeStatus);
+    if (status == nullptr) {
+        error.SetError("Out of memory");
+        return nullptr;
+    }
 
-    runtime::RuntimeCondition *runtimeReady = status->add_conditions();
+    runtime::v1alpha2::RuntimeCondition *runtimeReady = status->add_conditions();
     runtimeReady->set_type(CRIHelpers::Constants::RUNTIME_READY);
     runtimeReady->set_status(true);
-    runtime::RuntimeCondition *networkReady = status->add_conditions();
+    runtime::v1alpha2::RuntimeCondition *networkReady = status->add_conditions();
     networkReady->set_type(CRIHelpers::Constants::NETWORK_READY);
     networkReady->set_status(true);
 
@@ -182,3 +186,4 @@ cleanup:
     free_container_inspect(inspect_data);
     return result;
 }
+

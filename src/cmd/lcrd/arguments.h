@@ -46,7 +46,7 @@ struct service_arguments {
     oci_runtime_spec_hooks *hooks;
 
     unsigned int start_timeout;
-    unsigned int im_opt_timeout;
+    unsigned int image_opt_timeout;
 
     /* log-opts */
     unsigned int log_file_mode;
@@ -68,4 +68,5 @@ int service_arguments_init(struct service_arguments *args);
 void service_arguments_free(struct service_arguments *args);
 int server_log_opt_parser(struct service_arguments *args, const char *option);
 
-#endif /*__LCRD_ARGUMENTS_H*/
+#endif /* __LCRD_ARGUMENTS_H */
+

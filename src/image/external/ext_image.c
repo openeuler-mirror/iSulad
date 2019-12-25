@@ -28,7 +28,7 @@
 #include "ext_image.h"
 
 #ifdef ENABLE_OCI_IMAGE
-#include "oci_image.h"
+#include "oci_common_operators.h"
 #include "oci_images_store.h"
 #include "oci_config_merge.h"
 #endif
@@ -46,26 +46,31 @@ bool ext_detect(const char *image_name)
 
     return util_file_exists(image_name);
 }
-int ext_filesystem_usage(struct bim *bim, imagetool_fs_info **fs_usage)
+int ext_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage)
 {
     return 0;
 }
 
-int ext_prepare_rf(struct bim *bim, const json_map_string_string *storage_opt, char **real_rootfs)
+int ext_prepare_rf(const im_prepare_request *request, char **real_rootfs)
 {
     int ret = 0;
 
+    if (request == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
     if (real_rootfs != NULL) {
-        if (bim->image_name != NULL) {
+        if (request->image_name != NULL) {
             char real_path[PATH_MAX] = { 0 };
-            if (bim->image_name[0] != '/') {
+            if (request->image_name[0] != '/') {
                 ERROR("Rootfs should be absolutely path");
                 lcrd_set_error_message("Rootfs should be absolutely path");
                 return -1;
             }
-            if (realpath(bim->image_name, real_path) == NULL) {
-                ERROR("Failed to clean rootfs path '%s': %s", bim->image_name, strerror(errno));
-                lcrd_set_error_message("Failed to clean rootfs path '%s': %s", bim->image_name, strerror(errno));
+            if (realpath(request->image_name, real_path) == NULL) {
+                ERROR("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
+                lcrd_set_error_message("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
                 return -1;
             }
             *real_rootfs = util_strdup_s(real_path);
@@ -77,17 +82,17 @@ int ext_prepare_rf(struct bim *bim, const json_map_string_string *storage_opt, c
     return ret;
 }
 
-int ext_mount_rf(struct bim *bim)
+int ext_mount_rf(const im_mount_request *request)
 {
     return 0;
 }
 
-int ext_umount_rf(struct bim *bim)
+int ext_umount_rf(const im_umount_request *request)
 {
     return 0;
 }
 
-int ext_delete_rf(struct bim *bim)
+int ext_delete_rf(const im_delete_request *request)
 {
     return 0;
 }
@@ -97,35 +102,42 @@ char *ext_resolve_image_name(const char *image_name)
     return util_strdup_s(image_name);
 }
 
-#ifdef ENABLE_OCI_IMAGE
 int ext_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
-                   struct bim *bim, char **real_rootfs)
+                   const im_prepare_request *request, char **real_rootfs)
+#ifdef ENABLE_OCI_IMAGE
 {
     int ret = 0;
     char *resolved_name = NULL;
     oci_image_t *image_info = NULL;
+    im_umount_request umount_request = { 0 };
 
+    if (request == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
     // Ensure rootfs is valid.
-    ret = ext_prepare_rf(bim, host_spec->storage_opt, real_rootfs);
+    ret = ext_prepare_rf(request, real_rootfs);
     if (ret != 0) {
         return ret;
     }
 
-    ret = ext_umount_rf(bim);
+    umount_request.name_id = request->container_id;
+    umount_request.force = false;
+    ret = ext_umount_rf(&umount_request);
     if (ret != 0) {
         return ret;
     }
 
     // No config neeed merge if NULL.
-    if (bim->ext_config_image == NULL) {
+    if (request->ext_config_image == NULL) {
         ret = 0;
         goto out;
     }
 
     // Get image's config and merge configs.
-    resolved_name = oci_resolve_image_name(bim->ext_config_image);
+    resolved_name = oci_resolve_image_name(request->ext_config_image);
     if (resolved_name == NULL) {
-        ERROR("Resolve external config image name failed, image name is %s", bim->ext_config_image);
+        ERROR("Resolve external config image name failed, image name is %s", request->ext_config_image);
         ret = -1;
         goto out;
     }
@@ -149,18 +161,19 @@ out:
     return ret;
 }
 #else
-int ext_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
-                   struct bim *bim, char **real_rootfs)
 {
     int ret = 0;
+    im_umount_request umount_request = { 0 };
 
     // Ensure rootfs is valid.
-    ret = ext_prepare_rf(bim, host_spec->storage_opt, real_rootfs);
+    ret = ext_prepare_rf(request, real_rootfs);
     if (ret != 0) {
         return ret;
     }
 
-    ret = ext_umount_rf(bim);
+    umount_request.name_id = request->container_id;
+    umount_request.force = false;
+    ret = ext_umount_rf(&umount_request);
     if (ret != 0) {
         return ret;
     }
@@ -178,7 +191,7 @@ int ext_get_user_conf(const char *basefs, host_config *hc, const char *userstr, 
     return get_user(basefs, hc, userstr, puser);
 }
 
-int ext_list_images(im_list_request *request, imagetool_images_list **list)
+int ext_list_images(const im_list_request *request, imagetool_images_list **list)
 {
     int ret = 0;
 
@@ -192,32 +205,33 @@ out:
     return ret;
 }
 
-int ext_remove_image(im_remove_request *request)
+int ext_remove_image(const im_remove_request *request)
 {
     return 0;
 }
 
-int ext_inspect_image(struct bim *bim, char **inspected_json)
+int ext_inspect_image(const im_inspect_request *request, char **inspected_json)
 {
     return 0;
 }
 
-int ext_load_image(im_load_request *request)
+int ext_load_image(const im_load_request *request)
 {
     return 0;
 }
 
-int ext_login(im_login_request *request)
+int ext_login(const im_login_request *request)
 {
     return 0;
 }
 
-int ext_logout(im_logout_request *request)
+int ext_logout(const im_logout_request *request)
 {
     return 0;
 }
 
-int ext_init(const char *rootpath)
+int ext_init(const struct im_configs *conf)
 {
     return 0;
 }
+

@@ -56,30 +56,26 @@ configure_file(
 	"${CMAKE_BINARY_DIR}/conf/lcrd.pc"
 )
 
-if (GRPC_CONNECTOR)
-    # parse .proto files
-    include(cmake/protoc.cmake)
-endif()
-
-# enable embedded image
-if (ENABLE_EMBEDDED)
-	add_definitions(-DENABLE_EMBEDDED_IMAGE=1)
-endif()
-
-# disable oci image
-if (NOT DISABLE_OCI)
-	add_definitions(-DENABLE_OCI_IMAGE=1)
-endif()
+# parse .proto files
+include(cmake/protoc.cmake)
 
 # llt and coverage
 SET(CMAKE_VERBOSE_MAKEFILE OFF)
-OPTION(ENABLE_COVERAGE "coverage switch" OFF)
 IF(ENABLE_COVERAGE)
     MESSAGE(STATUS "Enable coverage compile option")
-    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -fprofile-arcs -ftest-coverage")
-    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -fprofile-arcs -ftest-coverage -fkeep-inline-functions -fkeep-static-functions")
-    SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -g -fprofile-arcs -ftest-coverage -lgcov")
+    SET(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-inline-functions -fkeep-static-functions")
+    SET(COVERAGE_CXX_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage")
 ENDIF(ENABLE_COVERAGE)
+
+IF(ENABLE_ASAN)
+    MESSAGE(STATUS "Enable asan compile option")
+    SET(ASAN_OPTIONS "${ASAN_OPTION} -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
+ENDIF(ENABLE_ASAN)
+
+IF(CMAKE_BUILD_TYPE STREQUAL Debug)
+    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${COVERAGE_C_OPTION} ${ASAN_OPTIONS}")
+    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${COVERAGE_CXX_OPTION} ${ASAN_OPTIONS}")
+ENDIF()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 OPTION(ENABLE_LLT "llt switch" OFF)

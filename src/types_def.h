@@ -25,9 +25,9 @@ extern "C" {
 #endif
 
 typedef struct types_timestamp {
-    uint32_t has_seconds;
+    bool has_seconds;
     int64_t seconds;
-    uint32_t has_nanos;
+    bool has_nanos;
     int32_t nanos;
 } types_timestamp_t;
 
@@ -35,6 +35,8 @@ struct types_timezone {
     int hour;
     int min;
 };
+
+bool unix_nanos_to_timestamp(int64_t nanos, types_timestamp_t *timestamp);
 
 int64_t time_seconds_since(const char *in);
 
@@ -62,8 +64,10 @@ bool get_tm_from_str(const char *str, struct tm *tm, int32_t *nanos);
 
 int time_format_duration(const char *in, char *out, size_t len);
 
+int time_format_duration_ago(const char *in, char *out, size_t len);
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+

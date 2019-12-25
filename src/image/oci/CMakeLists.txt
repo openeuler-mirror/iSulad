@@ -8,5 +8,6 @@ set(OCI_SRCS
 
 set(OCI_INCS
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/remote
     PARENT_SCOPE
     )

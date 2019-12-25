@@ -30,5 +30,6 @@ void websocket_server_shutdown(void);
 }
 #endif
 
-#endif /*__WEBSOCKET_STREAM_SERVICE_H*/
+#endif /* __WEBSOCKET_STREAM_SERVICE_H */
+
 

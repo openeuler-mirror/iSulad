@@ -164,3 +164,4 @@ int update_checker(const struct client_arguments *args)
 
     return ret;
 }
+

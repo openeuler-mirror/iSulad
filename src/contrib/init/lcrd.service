@@ -1,6 +1,5 @@
 [Unit]
 Description=iSulad Application Container Engine
-Documentation=http://code.huawei.com/containers/iSulad/tree/cri/documentation
 After=network.target
 
 [Service]

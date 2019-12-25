@@ -33,3 +33,4 @@ struct db_all_images_info {
 };
 
 #endif
+

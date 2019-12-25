@@ -70,3 +70,4 @@ static inline bool is_container(const char *mode)
 char *get_share_namespace_path(const char *type, const char *src_path);
 
 #endif
+

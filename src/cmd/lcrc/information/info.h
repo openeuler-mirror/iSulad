@@ -23,3 +23,4 @@ extern struct client_arguments g_cmd_info_args;
 int cmd_info_main(int argc, const char **argv);
 
 #endif /* __CMD_INFO_H */
+

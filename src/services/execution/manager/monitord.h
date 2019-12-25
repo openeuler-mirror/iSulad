@@ -47,3 +47,4 @@ int read_monitord_message_timeout(int fd, struct monitord_msg *msg, int timeout)
 int new_monitord(struct monitord_sync_data *msync);
 
 #endif
+

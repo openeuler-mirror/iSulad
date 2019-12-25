@@ -29,3 +29,4 @@ extern struct client_arguments g_cmd_stop_args;
 int cmd_stop_main(int argc, const char **argv);
 
 #endif /* __CMD_STOP_H */
+

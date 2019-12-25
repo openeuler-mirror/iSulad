@@ -49,13 +49,12 @@ const std::string Constants::POD_CHECKPOINT_KEY { "cri.sandbox.isulad.checkpoint
 const char *InternalLabelKeys[] = {
     CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
     CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(),
-    CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str(),
-    nullptr
+    CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str(), nullptr
 };
 
 std::string GetDefaultSandboxImage(Errors &err)
 {
-    const std::string defaultPodSandboxImageName { "rnd-dockerhub.huawei.com/library/pause" };
+    const std::string defaultPodSandboxImageName { "pause" };
     const std::string defaultPodSandboxImageVersion { "3.0" };
     std::string machine;
     struct utsname uts;
@@ -266,20 +265,20 @@ int FiltersAddLabel(defs_filters *filters, const std::string &key, const std::st
     return FiltersAdd(filters, "label", key + "=" + value);
 }
 
-runtime::ContainerState ContainerStatusToRuntime(Container_Status status)
+runtime::v1alpha2::ContainerState ContainerStatusToRuntime(Container_Status status)
 {
     switch (status) {
         case CONTAINER_STATUS_CREATED:
         case CONTAINER_STATUS_STARTING:
-            return runtime::CONTAINER_CREATED;
+            return runtime::v1alpha2::CONTAINER_CREATED;
         case CONTAINER_STATUS_PAUSED:
         case CONTAINER_STATUS_RESTARTING:
         case CONTAINER_STATUS_RUNNING:
-            return runtime::CONTAINER_RUNNING;
+            return runtime::v1alpha2::CONTAINER_RUNNING;
         case CONTAINER_STATUS_STOPPED:
-            return runtime::CONTAINER_EXITED;
+            return runtime::v1alpha2::CONTAINER_EXITED;
         default:
-            return runtime::CONTAINER_UNKNOWN;
+            return runtime::v1alpha2::CONTAINER_UNKNOWN;
     }
 }
 
@@ -303,8 +302,8 @@ char **StringVectorToCharArray(std::vector<std::string> &path)
 
 imagetool_image *InspectImageByID(const std::string &imageID, Errors &err)
 {
-    oci_image_status_request *request { nullptr };
-    oci_image_status_response *response { nullptr };
+    im_status_request *request { nullptr };
+    im_status_response *response { nullptr };
     imagetool_image *image { nullptr };
 
     if (imageID.empty()) {
@@ -312,7 +311,7 @@ imagetool_image *InspectImageByID(const std::string &imageID, Errors &err)
         return nullptr;
     }
 
-    request = (oci_image_status_request *)util_common_calloc_s(sizeof(oci_image_status_request));
+    request = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
     if (request == nullptr) {
         ERROR("Out of memory");
         err.SetError("Out of memory");
@@ -320,7 +319,7 @@ imagetool_image *InspectImageByID(const std::string &imageID, Errors &err)
     }
     request->image.image = util_strdup_s(imageID.c_str());
 
-    if (oci_status_image(request, &response)) {
+    if (im_image_status(request, &response) != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             err.SetError(response->errmsg);
         } else {
@@ -335,8 +334,8 @@ imagetool_image *InspectImageByID(const std::string &imageID, Errors &err)
     }
 
 cleanup:
-    free_oci_image_status_request(request);
-    free_oci_image_status_response(response);
+    free_im_status_request(request);
+    free_im_status_response(response);
     return image;
 }
 
@@ -405,11 +404,14 @@ cri_pod_network_element **GetNetworkPlaneFromPodAnno(const google::protobuf::Map
     return result;
 }
 
-std::unique_ptr<runtime::PodSandbox> CheckpointToSandbox(const std::string &id,
-                                                         const cri::PodSandboxCheckpoint &checkpoint)
+std::unique_ptr<runtime::v1alpha2::PodSandbox> CheckpointToSandbox(const std::string &id,
+                                                                   const cri::PodSandboxCheckpoint &checkpoint)
 {
-    std::unique_ptr<runtime::PodSandbox> result(new runtime::PodSandbox);
-    runtime::PodSandboxMetadata *metadata = new (std::nothrow) runtime::PodSandboxMetadata;
+    std::unique_ptr<runtime::v1alpha2::PodSandbox> result(new (std::nothrow) runtime::v1alpha2::PodSandbox);
+    if (result == nullptr) {
+        return nullptr;
+    }
+    runtime::v1alpha2::PodSandboxMetadata *metadata = new (std::nothrow) runtime::v1alpha2::PodSandboxMetadata;
     if (metadata == nullptr) {
         return nullptr;
     }
@@ -418,13 +420,14 @@ std::unique_ptr<runtime::PodSandbox> CheckpointToSandbox(const std::string &id,
     metadata->set_namespace_(checkpoint.GetNamespace());
     result->set_allocated_metadata(metadata);
     result->set_id(id);
-    result->set_state(runtime::SANDBOX_NOTREADY);
+    result->set_state(runtime::v1alpha2::SANDBOX_NOTREADY);
 
     return result;
 }
 
-void UpdateCreateConfig(container_custom_config *createConfig, host_config *hc, const runtime::ContainerConfig &config,
-                        const std::string &podSandboxID, Errors &error)
+void UpdateCreateConfig(container_custom_config *createConfig, host_config *hc,
+                        const runtime::v1alpha2::ContainerConfig &config, const std::string &podSandboxID,
+                        Errors &error)
 {
     if (createConfig == nullptr || hc == nullptr) {
         return;
@@ -437,7 +440,7 @@ void UpdateCreateConfig(container_custom_config *createConfig, host_config *hc, 
         return;
     }
     if (config.linux().has_resources()) {
-        runtime::LinuxContainerResources rOpts = config.linux().resources();
+        runtime::v1alpha2::LinuxContainerResources rOpts = config.linux().resources();
         hc->memory = rOpts.memory_limit_in_bytes();
         hc->memory_swap = CRIRuntimeService::Constants::DefaultMemorySwap;
         hc->cpu_shares = rOpts.cpu_shares();
@@ -456,8 +459,8 @@ void UpdateCreateConfig(container_custom_config *createConfig, host_config *hc, 
     createConfig->tty = config.tty();
 }
 
-void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::Mount> &mounts, host_config *hostconfig,
-                           Errors &err)
+void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1alpha2::Mount> &mounts,
+                           host_config *hostconfig, Errors &err)
 {
     if (mounts.size() <= 0 || hostconfig == nullptr) {
         return;
@@ -485,11 +488,11 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::Mou
         if (mounts[i].selinux_relabel()) {
             attrs.push_back("Z");
         }
-        if (mounts[i].propagation() == runtime::PROPAGATION_PRIVATE) {
-            ;  // noop, private is default
-        } else if (mounts[i].propagation() == runtime::PROPAGATION_BIDIRECTIONAL) {
+        if (mounts[i].propagation() == runtime::v1alpha2::PROPAGATION_PRIVATE) {
+            ; // noop, private is default
+        } else if (mounts[i].propagation() == runtime::v1alpha2::PROPAGATION_BIDIRECTIONAL) {
             attrs.push_back("rshared");
-        } else if (mounts[i].propagation() == runtime::PROPAGATION_HOST_TO_CONTAINER) {
+        } else if (mounts[i].propagation() == runtime::v1alpha2::PROPAGATION_HOST_TO_CONTAINER) {
             attrs.push_back("rslave");
         } else {
             WARN("unknown propagation mode for hostPath %s", mounts[i].host_path().c_str());
@@ -504,10 +507,11 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::Mou
     }
 }
 
-std::vector<std::string> GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::KeyValue> &envs)
+std::vector<std::string> GenerateEnvList(
+    const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs)
 {
     std::vector<std::string> vect;
-    std::for_each(envs.begin(), envs.end(), [&vect](const ::runtime::KeyValue & elem) {
+    std::for_each(envs.begin(), envs.end(), [&vect](const ::runtime::v1alpha2::KeyValue & elem) {
         vect.push_back(elem.key() + "=" + elem.value());
     });
     return vect;
@@ -531,13 +535,13 @@ err_out:
     return false;
 }
 
-std::string ToIsuladContainerStatus(const runtime::ContainerStateValue &state)
+std::string ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state)
 {
-    if (state.state() == runtime::CONTAINER_CREATED) {
+    if (state.state() == runtime::v1alpha2::CONTAINER_CREATED) {
         return "created";
-    } else if (state.state() == runtime::CONTAINER_RUNNING) {
+    } else if (state.state() == runtime::v1alpha2::CONTAINER_RUNNING) {
         return "running";
-    } else if (state.state() == runtime::CONTAINER_EXITED) {
+    } else if (state.state() == runtime::v1alpha2::CONTAINER_EXITED) {
         return "exited";
     } else {
         return "unknown";
@@ -708,5 +712,8 @@ out:
     free_cri_checkpoint(criCheckpoint);
 }
 
-}  // namespace CRIHelpers
-
+std::string DeterminePodIPBySandboxID(const std::string &podSandboxID)
+{
+    return "";
+}
+} // namespace CRIHelpers

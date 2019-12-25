@@ -57,7 +57,12 @@ static std::unique_ptr<CNINetwork> GetLoNetwork(const std::string &binDir, const
         exit(1);
     }
 
-    auto result = std::unique_ptr<CNINetwork>(new CNINetwork("lo", loConf));
+    auto result = std::unique_ptr<CNINetwork>(new (std::nothrow) CNINetwork("lo", loConf));
+    if (result == nullptr) {
+        ERROR("Out of memory");
+        return nullptr;
+    }
+
     result->InsertPath(VendorCNIDir(vendorDirPrefix, "loopback"));
     result->InsertPath(binDir);
 
@@ -245,11 +250,15 @@ int CniNetworkPlugin::InsertNewNetwork(struct cni_network_list_conf *n_list,
     std::string tpath = VendorCNIDir(vendorCNIDirPrefix, confType);
     if (tpath.empty()) {
         free_cni_network_list_conf(n_list);
-        n_list = nullptr;
         err.SetError("Out of memory");
         return -1;
     }
-    std::unique_ptr<CNINetwork> network(new CNINetwork(n_list->name, n_list));
+    std::unique_ptr<CNINetwork> network(new (std::nothrow) CNINetwork(n_list->name, n_list));
+    if (network == nullptr) {
+        free_cni_network_list_conf(n_list);
+        err.SetError("Out of memory");
+        return -1;
+    }
     network->InsertPath(tpath);
     network->InsertPath(binDir);
 
@@ -646,8 +655,7 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std
             err.Errorf("could not retrieve port mappings: %s", err.GetCMessage());
             goto free_out;
         }
-        std::copy(checkpoint.GetData()->GetPortMappings().begin(),
-                  checkpoint.GetData()->GetPortMappings().end(),
+        std::copy(checkpoint.GetData()->GetPortMappings().begin(), checkpoint.GetData()->GetPortMappings().end(),
                   std::back_inserter(portMappings));
     }
 
@@ -716,5 +724,4 @@ void CniNetworkPlugin::UnlockNetworkMap(Errors &error)
     }
 }
 
-}  // namespace Network
-
+} // namespace Network

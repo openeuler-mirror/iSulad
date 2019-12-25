@@ -69,3 +69,4 @@ int ebd_generate_mount_string(struct db_image *imginfo,
 
     return 0;
 }
+

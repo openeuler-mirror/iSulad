@@ -117,3 +117,4 @@ int cmd_restart_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

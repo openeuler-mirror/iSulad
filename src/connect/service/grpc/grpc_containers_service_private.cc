@@ -403,6 +403,9 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
         tmpreq->env_len = grequest->env_size();
     }
 
+    if (!grequest->user().empty()) {
+        tmpreq->user = util_strdup_s(grequest->user().c_str());
+    }
     *request = tmpreq;
     return 0;
 }
@@ -415,7 +418,6 @@ int ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *r
     }
 
     gresponse->set_cc(response->cc);
-    gresponse->set_pid(response->pid);
     gresponse->set_exit_code(response->exit_code);
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
@@ -567,6 +569,7 @@ int ContainerServiceImpl::list_response_to_grpc(const container_list_response *r
         if (response->containers[i]->health_state != nullptr) {
             container->set_health_state(response->containers[i]->health_state);
         }
+        container->set_created(response->containers[i]->created);
     }
     return 0;
 }
@@ -908,7 +911,6 @@ void ContainerServiceImpl::add_exec_trailing_metadata(ServerContext *context, co
         return;
     }
     context->AddTrailingMetadata("cc", std::to_string(response->cc));
-    context->AddTrailingMetadata("pid", std::to_string(response->pid));
     context->AddTrailingMetadata("exit_code", std::to_string(response->exit_code));
     if (response->errmsg != nullptr) {
         context->AddTrailingMetadata("errmsg", response->errmsg);

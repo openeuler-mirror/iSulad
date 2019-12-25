@@ -15,6 +15,8 @@
 #ifndef __LINKED_LIST_H
 #define __LINKED_LIST_H
 
+#include <stddef.h>
+
 struct linked_list {
     void *elem;
     struct linked_list *next;
@@ -120,3 +122,4 @@ static inline size_t linked_list_len(struct linked_list *list)
 }
 
 #endif
+

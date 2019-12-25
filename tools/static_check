@@ -1,5 +1,5 @@
 #######################################################################
-##- @Copyright (C) Huawei Technologies., Ltd. 2017-2019. All rights reserved.
+##- @Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
 # - iSulad licensed under the Mulan PSL v1.
 # - You can use this software according to the terms and conditions of the Mulan PSL v1.
 # - You may obtain a copy of Mulan PSL v1 at:

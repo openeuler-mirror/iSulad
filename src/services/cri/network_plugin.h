@@ -27,19 +27,25 @@ class CRIRuntimeServiceImpl;
 namespace Network {
 const std::string DEFAULT_NETWORK_PLANE_NAME = "default";
 const std::string DEFAULT_NETWORK_INTERFACE_NAME = "eth0";
+const std::string POD_DISABLE_DEFAULT_NET_ANNOTATION_KEY = "network.alpha.kubernetes.io/disableDefaultNetwork";
 
 class NetworkPluginConf {
 public:
     /* settings for net plugin */
     NetworkPluginConf(const std::string &dockershimRootDirectory = "/var/lib/lcrd/shim",
                       const std::string &pluginConfDir = "/etc/cni/net.d/",
-                      const std::string &pluginBinDir = "/opt/cni/bin",
-                      const std::string &pluginName = "",
-                      const std::string &hairpinMode = "hairpin-veth",
-                      const std::string &nonMasqueradeCIDR = "", int32_t mtu = 1460)
-        : m_dockershimRootDirectory(dockershimRootDirectory), m_pluginConfDir(pluginConfDir),
-          m_pluginBinDir(pluginBinDir), m_pluginName(pluginName),
-          m_hairpinMode(hairpinMode), m_nonMasqueradeCIDR(nonMasqueradeCIDR), m_mtu(mtu) {}
+                      const std::string &pluginBinDir = "/opt/cni/bin", const std::string &pluginName = "",
+                      const std::string &hairpinMode = "hairpin-veth", const std::string &nonMasqueradeCIDR = "",
+                      int32_t mtu = 1460)
+        : m_dockershimRootDirectory(dockershimRootDirectory)
+        , m_pluginConfDir(pluginConfDir)
+        , m_pluginBinDir(pluginBinDir)
+        , m_pluginName(pluginName)
+        , m_hairpinMode(hairpinMode)
+        , m_nonMasqueradeCIDR(nonMasqueradeCIDR)
+        , m_mtu(mtu)
+    {
+    }
     ~NetworkPluginConf() = default;
 
     const std::string &GetDockershimRootDirectory() const;
@@ -121,8 +127,8 @@ public:
 
     virtual ~NoopNetworkPlugin() = default;
 
-    void Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode,
-              const std::string &nonMasqueradeCIDR, int mtu, Errors &error) override;
+    void Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode, const std::string &nonMasqueradeCIDR,
+              int mtu, Errors &error) override;
 
     void Event(const std::string &name, std::map<std::string, std::string> &details) override;
 
@@ -185,7 +191,10 @@ private:
 
 class PluginManager {
 public:
-    explicit PluginManager(std::shared_ptr<NetworkPlugin> plugin) : m_plugin(plugin) {}
+    explicit PluginManager(std::shared_ptr<NetworkPlugin> plugin)
+        : m_plugin(plugin)
+    {
+    }
     ~PluginManager() = default;
     std::string PluginName();
     void Event(const std::string &name, std::map<std::string, std::string> &details);
@@ -215,8 +224,10 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
 void ProbeNetworkPlugins(const std::string &pluginDir, const std::string &binDir,
                          std::vector<std::shared_ptr<NetworkPlugin>> *plugins);
 
-std::string GetPodIP(const std::string &nsenterPath, const std::string &netnsPath,
-                     const std::string &interfaceName, Errors &error);
-}  // namespace Network
+std::string GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
+                     Errors &error);
+
+const std::string &GetInterfaceName();
+} // namespace Network
 
 #endif

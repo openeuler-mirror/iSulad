@@ -27,3 +27,4 @@ extern const char g_cmd_kill_usage[];
 extern struct client_arguments g_cmd_kill_args;
 int cmd_kill_main(int argc, const char **argv);
 #endif
+

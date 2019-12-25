@@ -51,7 +51,7 @@ typedef struct {
 } container_tree_t;
 
 static yajl_val inspect_get_json_info(yajl_val element, char *key_string);
-static void print_json_aux(yajl_val element, int indent, int flags);
+static void print_json_aux(yajl_val element, int indent, int flags, bool json_format);
 
 /*
  * Parse text into a JSON tree. If text is valid JSON, returns a
@@ -300,13 +300,15 @@ out:
     return ret;
 }
 
-static void print_json_string(yajl_val element, int flags)
+static void print_json_string(yajl_val element, int flags, bool json_format)
 {
     const char *str = YAJL_GET_STRING(element);
     const char *hexchars = "0123456789ABCDEF";
     char hex[7] = { '\\', 'u', '0', '0', '\0', '\0', '\0' };
 
-    putchar('"');
+    if (json_format) {
+        putchar('"');
+    }
     if (str == NULL) {
         goto out;
     }
@@ -351,7 +353,9 @@ static void print_json_string(yajl_val element, int flags)
     }
 
 out:
-    putchar('"');
+    if (json_format) {
+        putchar('"');
+    }
     if (!IS_LAST_ELEMENT((unsigned int)flags)) {
         putchar(',');
     }
@@ -406,7 +410,7 @@ static void print_json_indent(int indent, bool new_line)
     }
 }
 
-static void print_json_object(yajl_val element, int indent, int flags)
+static void print_json_object(yajl_val element, int indent, int flags, bool json_format)
 {
     size_t size = 0;
     const char *objkey = NULL;
@@ -440,9 +444,9 @@ static void print_json_object(yajl_val element, int indent, int flags)
 
         printf("\"%s\": ", objkey);
         if ((i + 1) == size) {
-            print_json_aux(value, indent + PRINTF_TAB_LEN, LAST_ELEMENT);
+            print_json_aux(value, indent + PRINTF_TAB_LEN, LAST_ELEMENT, json_format);
         } else {
-            print_json_aux(value, indent + PRINTF_TAB_LEN, NOT_LAST_ELEMENT);
+            print_json_aux(value, indent + PRINTF_TAB_LEN, NOT_LAST_ELEMENT, json_format);
         }
     }
 
@@ -455,7 +459,7 @@ static void print_json_object(yajl_val element, int indent, int flags)
     }
 }
 
-static void print_json_array(yajl_val element, int indent, int flags)
+static void print_json_array(yajl_val element, int indent, int flags, bool json_format)
 {
     size_t i = 0;
     size_t size = 0;
@@ -488,9 +492,9 @@ static void print_json_array(yajl_val element, int indent, int flags)
         value = element->u.array.values[i];
 
         if ((i + 1) == size) {
-            print_json_aux(value, indent + PRINTF_TAB_LEN, LAST_ELEMENT);
+            print_json_aux(value, indent + PRINTF_TAB_LEN, LAST_ELEMENT, json_format);
         } else {
-            print_json_aux(value, indent + PRINTF_TAB_LEN, NOT_LAST_ELEMENT);
+            print_json_aux(value, indent + PRINTF_TAB_LEN, NOT_LAST_ELEMENT, json_format);
         }
     }
     print_json_indent(indent, true);
@@ -502,7 +506,7 @@ static void print_json_array(yajl_val element, int indent, int flags)
     }
 }
 
-static void print_json_aux(yajl_val element, int indent, int flags)
+static void print_json_aux(yajl_val element, int indent, int flags, bool json_format)
 {
     if (element == NULL) {
         return;
@@ -510,13 +514,13 @@ static void print_json_aux(yajl_val element, int indent, int flags)
 
     switch (YAJL_TYPEOF(element)) {
         case yajl_t_object:
-            print_json_object(element, indent, flags);
+            print_json_object(element, indent, flags, json_format);
             break;
         case yajl_t_array:
-            print_json_array(element, indent, flags);
+            print_json_array(element, indent, flags, json_format);
             break;
         case yajl_t_string:
-            print_json_string(element, flags);
+            print_json_string(element, flags, json_format);
             break;
         case yajl_t_number:
             print_json_number(element, flags);
@@ -540,16 +544,16 @@ static void print_json_aux(yajl_val element, int indent, int flags)
 /*
  * Print yajl tree as JSON format.
  */
-static void print_json(yajl_val tree, int indent)
+static void print_json(yajl_val tree, int indent, bool json_format)
 {
     if (tree == NULL) {
         return;
     }
 
-    print_json_aux(tree, indent, LAST_ELEMENT | TOP_LEVEL_OBJ);
+    print_json_aux(tree, indent, LAST_ELEMENT | TOP_LEVEL_OBJ, json_format);
 }
 
-static void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format)
+static void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format, bool json_format)
 {
     int i = 0;
     yajl_val tree = NULL;
@@ -569,7 +573,7 @@ static void inspect_show_result(int show_nums, const container_tree_t *tree_arra
 
     for (i = 0; i < show_nums; i++) {
         tree = tree_array[i].tree_print;
-        print_json(tree, indent);
+        print_json(tree, indent, json_format);
 
         if ((i + 1) != show_nums) {
             if (format == NULL) {
@@ -639,7 +643,7 @@ out:
 
 #define MATCH_NUM 1
 #define CHECK_FAILED (-1)
-#define JSON_ARGS "^\\s*\\{\\s*\\{\\s*json\\s+[^\\s]+\\s*.*\\}\\s*\\}\\s*$"
+#define JSON_ARGS "^\\s*\\{\\s*\\{\\s*(json)?\\s+[^\\s]+\\s*.*\\}\\s*\\}\\s*$"
 
 static int inspect_check(const char *json_str, const char *regex)
 {
@@ -665,7 +669,7 @@ static int inspect_check(const char *json_str, const char *regex)
     return 0;
 }
 
-static int inspect_check_format_f(const char *json_str)
+static int inspect_check_format_f(const char *json_str, bool *json_format)
 {
     int ret = 0;
 
@@ -675,8 +679,11 @@ static int inspect_check_format_f(const char *json_str)
     }
 
     /* check "{{json .xxx.xxx}}" */
-    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$");
+    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json\\s+)?(\\.\\w+)+\\s*\\}\\s*\\}\\s*$");
     if (ret == 0) {
+        if (inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$") != 0) {
+            *json_format = false;
+        }
         return 0;
     }
 
@@ -688,17 +695,16 @@ static int inspect_check_format_f(const char *json_str)
     }
 
     /* json args. */
-    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s*\\}\\s*\\}\\s*$");
+    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json)?\\s*\\}\\s*\\}\\s*$");
     if (ret == 0) {
         COMMAND_ERROR("Executing \"\" at <json>: wrong number of args for json: want 1 got 0.");
         goto out;
     }
 
     /* check "{{json... }}" */
-    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\W.*\\s*\\}\\s*\\}\\s*$");
+    ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json)?\\W.*\\s*\\}\\s*\\}\\s*$");
     if (ret != 0) {
-        COMMAND_ERROR("Output mode error,"
-                      "support function \"json\" only. E.g \"{{json ... }}\" is right.");
+        COMMAND_ERROR("Output mode error, E.g \"{{json ... }}\" or \"{{ ... }}\" is right.");
         goto out;
     }
 
@@ -727,6 +733,7 @@ int cmd_inspect_main(int argc, const char **argv)
     container_tree_t *tree_array = NULL;
     size_t array_size = 0;
     command_t cmd;
+    bool json_format = true;
 
     set_default_command_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_inspect_args)) {
@@ -773,7 +780,7 @@ int cmd_inspect_main(int argc, const char **argv)
 
     if (g_cmd_inspect_args.format != NULL) {
         int ret;
-        ret = inspect_check_format_f(g_cmd_inspect_args.format);
+        ret = inspect_check_format_f(g_cmd_inspect_args.format, &json_format);
         if (ret != 0) {
             free(tree_array);
             tree_array = NULL;
@@ -781,7 +788,6 @@ int cmd_inspect_main(int argc, const char **argv)
         }
 
         filter_string = inspect_pause_filter(g_cmd_inspect_args.format);
-
         if (filter_string == NULL) {
             COMMAND_ERROR("Inspect format parameter invalid: %s", g_cmd_inspect_args.format);
             free(tree_array);
@@ -801,7 +807,7 @@ int cmd_inspect_main(int argc, const char **argv)
     }
 
     if (tree_array != NULL) {
-        inspect_show_result(success_counts, tree_array, g_cmd_inspect_args.format);
+        inspect_show_result(success_counts, tree_array, g_cmd_inspect_args.format, json_format);
         inspect_free_trees(success_counts, tree_array);
     }
     free(tree_array);
@@ -812,3 +818,4 @@ int cmd_inspect_main(int argc, const char **argv)
     }
     exit(EXIT_SUCCESS);
 }
+

@@ -1,5 +1,4 @@
 /******************************************************************************
-#include "buffer.h"
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
  * iSulad licensed under the Mulan PSL v1.
  * You can use this software according to the terms and conditions of the Mulan PSL v1.
@@ -27,13 +26,13 @@ extern "C" {
 
 extern const char *g_all_caps[];
 
-int util_reg_match(const char *patten, const char *str);
-
 bool util_valid_cmd_arg(const char *arg);
 
 bool util_valid_signal(int sig);
 
 int util_validate_absolute_path(const char *path);
+
+bool util_validate_unix_socket(const char *socket);
 
 bool util_validate_socket(const char *socket);
 
@@ -102,3 +101,4 @@ bool util_valid_short_sha256_id(const char *id);
 #endif
 
 #endif /* __UTILS_H */
+

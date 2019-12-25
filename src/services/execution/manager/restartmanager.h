@@ -61,3 +61,4 @@ int container_restart_in_thread(const char *id, uint64_t timeout, int exit_code)
 
 
 #endif /* __RESTARTMANAGER_H */
+

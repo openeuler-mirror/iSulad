@@ -21,4 +21,5 @@ extern const char g_cmd_logout_usage[];
 extern struct client_arguments g_cmd_logout_args;
 int cmd_logout_main(int argc, const char **argv);
 
-#endif /*__CMD_LOGOUT_H*/
+#endif /* __CMD_LOGOUT_H */
+

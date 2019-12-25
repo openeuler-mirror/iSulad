@@ -64,7 +64,7 @@ static inline void atomic_int_set(volatile uint64_t *atomic, uint64_t value)
     atomic_mutex_unlock(&g_atomic_lock);
 }
 
-/* atomic int set for image*/
+/* atomic int set for image */
 static inline void atomic_int_set_image(volatile uint64_t *atomic, uint64_t value)
 {
     atomic_mutex_lock(&g_atomic_image_lock);
@@ -109,7 +109,7 @@ static inline bool atomic_int_dec_test(volatile uint64_t *atomic)
     return is_zero;
 }
 
-/* atomic int dec test for image*/
+/* atomic int dec test for image */
 static inline bool atomic_int_dec_test_image(volatile uint64_t *atomic)
 {
     bool is_zero = false;
@@ -195,3 +195,4 @@ static inline uint64_t atomic_int_xor(volatile uint64_t *atomic, uint64_t val)
 #endif
 
 #endif /* __UTILS_ATOMIC_H */
+

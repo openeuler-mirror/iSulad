@@ -19,7 +19,7 @@ History: 2019-06-17
 #!/usr/bin/python -Es
 import helpers
 
-def appendHeaderArray(obj, header, prefix):
+def append_header_arr(obj, header, prefix):
     '''
     Description: Write c header file of array
     Interface: None
@@ -30,28 +30,29 @@ def appendHeaderArray(obj, header, prefix):
     header.write("typedef struct {\n")
     for i in obj.subtypobj:
         if i.typ == 'array':
-            c_typ = helpers.getPrefixPointer(i.name, i.subtyp, prefix) or \
-                helpers.getMapCTypes(i.subtyp)
+            c_typ = helpers.get_prefixe_pointer(i.name, i.subtyp, prefix) or \
+                helpers.get_map_c_types(i.subtyp)
             if i.subtypobj is not None:
-                c_typ = helpers.getNameSubstr(i.name, prefix)
+                c_typ = helpers.get_name_substr(i.name, prefix)
 
-            if not helpers.judgeComplex(i.subtyp):
+            if not helpers.judge_complex(i.subtyp):
                 header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", \
                     i.fixname))
             else:
                 header.write("    %s **%s;\n" % (c_typ, i.fixname))
             header.write("    size_t %s;\n\n" % (i.fixname + "_len"))
         else:
-            c_typ = helpers.getPrefixPointer(i.name, i.typ, prefix) or \
-                helpers.getMapCTypes(i.typ)
+            c_typ = helpers.get_prefixe_pointer(i.name, i.typ, prefix) or \
+                helpers.get_map_c_types(i.typ)
             header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.fixname))
-    typename = helpers.getNameSubstr(obj.name, prefix)
+    typename = helpers.get_name_substr(obj.name, prefix)
     header.write("}\n%s;\n\n" % typename)
     header.write("void free_%s(%s *ptr);\n\n" % (typename, typename))
     header.write("%s *make_%s(yajl_val tree, const struct parser_context *ctx, parser_error *err);"\
         "\n\n" % (typename, typename))
 
-def appendHeaderMapStrObj(obj, header, prefix):
+
+def append_header_map_str_obj(obj, header, prefix):
     '''
     Description: Write c header file of mapStringObject
     Interface: None
@@ -60,86 +61,89 @@ def appendHeaderMapStrObj(obj, header, prefix):
     child = obj.children[0]
     header.write("typedef struct {\n")
     header.write("    char **keys;\n")
-    if helpers.validBasicMapName(child.typ):
-        c_typ = helpers.getPrefixPointer("", child.typ, "")
+    if helpers.valid_basic_map_name(child.typ):
+        c_typ = helpers.get_prefixe_pointer("", child.typ, "")
     elif child.subtypname:
         c_typ = child.subtypname
     else:
-        c_typ = helpers.getPrefixPointer(child.name, child.typ, prefix)
+        c_typ = helpers.get_prefixe_pointer(child.name, child.typ, prefix)
     header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
     header.write("    size_t len;\n")
 
-def appendHeaderChildArray(child, header, prefix):
+
+def append_header_child_arr(child, header, prefix):
     '''
     Description: Write c header file of array of child
     Interface: None
     History: 2019-06-17
     '''
-    if helpers.getMapCTypes(child.subtyp) != "":
-        c_typ = helpers.getMapCTypes(child.subtyp)
-    elif helpers.validBasicMapName(child.subtyp):
-        c_typ = '%s *' % helpers.makeBasicMapName(child.subtyp)
+    if helpers.get_map_c_types(child.subtyp) != "":
+        c_typ = helpers.get_map_c_types(child.subtyp)
+    elif helpers.valid_basic_map_name(child.subtyp):
+        c_typ = '%s *' % helpers.make_basic_map_name(child.subtyp)
     elif child.subtypname is not None:
         c_typ = child.subtypname
     elif child.subtypobj is not None:
-        c_typ = helpers.getNameSubstr(child.name, prefix)
+        c_typ = helpers.get_name_substr(child.name, prefix)
     else:
-        c_typ = helpers.getPrefixPointer(child.name, child.subtyp, prefix)
+        c_typ = helpers.get_prefixe_pointer(child.name, child.subtyp, prefix)
 
-    if helpers.validBasicMapName(child.subtyp):
-        header.write("    %s **%s;\n" % (helpers.makeBasicMapName(child.subtyp), child.fixname))
-    elif not helpers.judgeComplex(child.subtyp):
+    if helpers.valid_basic_map_name(child.subtyp):
+        header.write("    %s **%s;\n" % (helpers.make_basic_map_name(child.subtyp), child.fixname))
+    elif not helpers.judge_complex(child.subtyp):
         header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
     else:
         header.write("    %s%s**%s;\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
     header.write("    size_t %s;\n\n" % (child.fixname + "_len"))
 
-def appendHeaderChildOthers(child, header, prefix):
+
+def append_header_child_others(child, header, prefix):
     '''
     Description: Write c header file of others of child
     Interface: None
     History: 2019-06-17
     '''
-    if helpers.getMapCTypes(child.typ) != "":
-        c_typ = helpers.getMapCTypes(child.typ)
-    elif helpers.validBasicMapName(child.typ):
-        c_typ = '%s *' % helpers.makeBasicMapName(child.typ)
+    if helpers.get_map_c_types(child.typ) != "":
+        c_typ = helpers.get_map_c_types(child.typ)
+    elif helpers.valid_basic_map_name(child.typ):
+        c_typ = '%s *' % helpers.make_basic_map_name(child.typ)
     elif child.subtypname:
-        c_typ = helpers.getPrefixPointer(child.subtypname, child.typ, "")
+        c_typ = helpers.get_prefixe_pointer(child.subtypname, child.typ, "")
     else:
-        c_typ = helpers.getPrefixPointer(child.name, child.typ, prefix)
+        c_typ = helpers.get_prefixe_pointer(child.name, child.typ, prefix)
     header.write("    %s%s%s;\n\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
 
-def appendTypeCHeader(obj, header, prefix):
+
+def append_type_c_header(obj, header, prefix):
     '''
     Description: Write c header file
     Interface: None
     History: 2019-06-17
     '''
-    if not helpers.judgeComplex(obj.typ):
+    if not helpers.judge_complex(obj.typ):
         return
 
     if obj.typ == 'array':
-        appendHeaderArray(obj, header, prefix)
+        append_header_arr(obj, header, prefix)
         return
 
     if obj.typ == 'mapStringObject':
         if obj.subtypname is not None:
             return
-        appendHeaderMapStrObj(obj, header, prefix)
+        append_header_map_str_obj(obj, header, prefix)
     elif obj.typ == 'object':
         if obj.subtypname is not None:
             return
         header.write("typedef struct {\n")
         if obj.children is None:
-            header.write("    char unuseful;//unuseful definition to avoid empty struct\n")
-        for i in obj.children or [ ]:
+            header.write("    char unuseful; // unuseful definition to avoid empty struct\n")
+        for i in obj.children or []:
             if i.typ == 'array':
-                appendHeaderChildArray(i, header, prefix)
+                append_header_child_arr(i, header, prefix)
             else:
-                appendHeaderChildOthers(i, header, prefix)
+                append_header_child_others(i, header, prefix)
 
-    typename = helpers.getPrefixName(obj.name, prefix)
+    typename = helpers.get_prefixe_name(obj.name, prefix)
     header.write("}\n%s;\n\n" % typename)
     header.write("void free_%s(%s *ptr);\n\n" % (typename, typename))
     header.write("%s *make_%s(yajl_val tree, const struct parser_context *ctx, parser_error *err)"\
@@ -147,7 +151,8 @@ def appendTypeCHeader(obj, header, prefix):
     header.write("yajl_gen_status gen_%s(yajl_gen g, const %s *ptr, const struct parser_context "\
         "*ctx, parser_error *err);\n\n" % (typename, typename))
 
-def headerReflection(structs, schema_info, header):
+
+def header_reflect(structs, schema_info, header):
     '''
     Description: Reflection header files
     Interface: None
@@ -168,7 +173,7 @@ def headerReflection(structs, schema_info, header):
     header.write("#endif\n\n")
 
     for i in structs:
-        appendTypeCHeader(i, header, prefix)
+        append_type_c_header(i, header, prefix)
     length = len(structs)
     toptype = structs[length - 1].typ if length != 0 else ""
     if toptype == 'object':
@@ -195,3 +200,4 @@ def headerReflection(structs, schema_info, header):
     header.write("}\n")
     header.write("#endif\n\n")
     header.write("#endif\n\n")
+

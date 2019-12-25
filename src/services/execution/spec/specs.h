@@ -31,3 +31,4 @@ int merge_global_config(oci_runtime_spec *oci_spec);
 oci_runtime_spec *read_oci_config(const char *rootpath, const char *name);
 
 #endif
+

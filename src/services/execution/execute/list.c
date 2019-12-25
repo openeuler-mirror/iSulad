@@ -451,12 +451,11 @@ static int fill_lcrdinfo(container_container *lcrdinfo, const container_config_v
     char *image = NULL;
     char *timestr = NULL;
     char *defvalue = "-";
+    int64_t created_nanos = 0;
 
-    if (cont->common_config != NULL) {
-        ret = convert_common_config_info(map_labels, cont->common_config, lcrdinfo);
-        if (ret != 0) {
-            goto out;
-        }
+    ret = convert_common_config_info(map_labels, cont->common_config, lcrdinfo);
+    if (ret != 0) {
+        goto out;
     }
 
     lcrdinfo->pid = (int32_t)cont_state->pid;
@@ -477,6 +476,14 @@ static int fill_lcrdinfo(container_container *lcrdinfo, const container_config_v
     lcrdinfo->runtime = cont->runtime ? util_strdup_s(cont->runtime) : util_strdup_s("none");
 
     lcrdinfo->health_state = container_get_health_state(cont_state);
+    if (cont->common_config->created != NULL) {
+        ret = to_unix_nanos_from_str(cont->common_config->created, &created_nanos);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+
+    lcrdinfo->created = created_nanos;
 
 out:
     return ret;
@@ -635,7 +642,7 @@ static int pack_list_containers(char **idsarray, const struct list_context *ctx,
         ret = -1;
         goto out;
     }
-    j = 0;
+
     while (idsarray != NULL && idsarray[j] != NULL) {
         response->containers[response->containers_len] = get_container_info(idsarray[j], ctx);
         if (response->containers[response->containers_len] == NULL) {

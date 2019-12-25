@@ -61,8 +61,13 @@ char *util_string_append(const char *post, const char *pre);
 
 int dup_array_of_strings(const char **src, size_t src_len, char ***dst, size_t *dst_len);
 
+char *util_sub_string(const char *source, size_t offset, size_t length);
+
+bool util_is_space_string(const char *str);
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __UTILS_STRING_H */
+

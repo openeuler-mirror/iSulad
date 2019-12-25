@@ -26,6 +26,8 @@ extern "C" {
 
 size_t util_array_len(const char **array);
 
+void util_free_array_by_len(char **array, size_t len);
+
 void util_free_array(char **array);
 
 int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,

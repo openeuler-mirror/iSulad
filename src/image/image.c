@@ -28,13 +28,11 @@
 #include "utils.h"
 
 #include "ext_image.h"
+#include "filters.h"
 
 #ifdef ENABLE_OCI_IMAGE
-#include "oci_image.h"
-#include "oci_image_status.h"
-#include "oci_image_load.h"
-#include "oci_login.h"
-#include "oci_logout.h"
+#include "isula_image.h"
+#include "oci_images_store.h"
 #endif
 
 #ifdef ENABLE_EMBEDDED_IMAGE
@@ -44,81 +42,108 @@
 /* embedded */
 static const struct bim_ops g_embedded_ops = {
     .init = embedded_init,
+    .clean_resource = NULL,
     .detect = embedded_detect,
 
     .prepare_rf = embedded_prepare_rf,
     .mount_rf = embedded_mount_rf,
     .umount_rf = embedded_umount_rf,
     .delete_rf = embedded_delete_rf,
+    .export_rf = NULL,
 
     .merge_conf = embedded_merge_conf,
     .get_user_conf = embedded_get_user_conf,
 
     .list_ims = embedded_list_images,
+    .get_image_count = NULL,
     .rm_image = embedded_remove_image,
     .inspect_image = embedded_inspect_image,
     .resolve_image_name = embedded_resolve_image_name,
-    .filesystem_usage = embedded_filesystem_usage,
+    .container_fs_usage = embedded_filesystem_usage,
+    .get_filesystem_info = NULL,
+    .get_storage_status = NULL,
+    .image_status = NULL,
     .load_image = embedded_load_image,
     .pull_image = NULL,
+
+    .login = NULL,
+    .logout = NULL,
+
+    .health_check = NULL,
 };
 #endif
 
+/* isula image server */
 #ifdef ENABLE_OCI_IMAGE
-/* oci */
-static const struct bim_ops g_oci_ops = {
-    .init = oci_init,
+static const struct bim_ops g_isula_ops = {
+    .init = isula_init,
+    .clean_resource = isula_exit,
     .detect = oci_detect,
 
-    .prepare_rf = oci_prepare_rf,
-    .mount_rf = oci_mount_rf,
-    .umount_rf = oci_umount_rf,
-    .delete_rf = oci_delete_rf,
+    .prepare_rf = isula_prepare_rf,
+    .mount_rf = isula_mount_rf,
+    .umount_rf = isula_umount_rf,
+    .delete_rf = isula_delete_rf,
+    .export_rf = isula_export_rf,
 
-    .merge_conf = oci_merge_conf,
+    .merge_conf = isula_merge_conf_rf,
     .get_user_conf = oci_get_user_conf,
 
     .list_ims = oci_list_images,
-    .rm_image = oci_remove_image,
+    .get_image_count = oci_images_store_size,
+    .rm_image = isula_rmi,
     .inspect_image = oci_inspect_image,
     .resolve_image_name = oci_resolve_image_name,
-    .filesystem_usage = oci_filesystem_usage,
-    .load_image = oci_load_image,
-    .pull_image = oci_pull_image,
-    .login = oci_login,
-    .logout = oci_logout,
+    .container_fs_usage = isula_container_filesystem_usage,
+    .get_filesystem_info = isula_get_filesystem_info,
+    .get_storage_status = isula_get_storage_status,
+    .image_status = oci_status_image,
+    .load_image = isual_load_image,
+    .pull_image = isula_pull_rf,
+    .login = isula_login,
+    .logout = isula_logout,
+
+    .health_check = isula_health_check,
 };
 #endif
 
 /* external */
 static const struct bim_ops g_ext_ops = {
     .init = ext_init,
+    .clean_resource = NULL,
     .detect = ext_detect,
 
     .prepare_rf = ext_prepare_rf,
     .mount_rf = ext_mount_rf,
     .umount_rf = ext_umount_rf,
     .delete_rf = ext_delete_rf,
+    .export_rf = NULL,
 
     .merge_conf = ext_merge_conf,
     .get_user_conf = ext_get_user_conf,
 
     .list_ims = ext_list_images,
+    .get_image_count = NULL,
     .rm_image = ext_remove_image,
     .inspect_image = ext_inspect_image,
     .resolve_image_name = ext_resolve_image_name,
-    .filesystem_usage = ext_filesystem_usage,
+    .container_fs_usage = ext_filesystem_usage,
+    .image_status = NULL,
+    .get_filesystem_info = NULL,
+    .get_storage_status = NULL,
     .load_image = ext_load_image,
     .pull_image = NULL,
     .login = ext_login,
     .logout = ext_logout,
+
+    .health_check = NULL,
 };
 
 static const struct bim_type g_bims[] = {
 #ifdef ENABLE_OCI_IMAGE
     {
         .image_type = IMAGE_TYPE_OCI,
-        .ops = &g_oci_ops,
+        .ops = &g_isula_ops,
     },
 #endif
     { .image_type = IMAGE_TYPE_EXTERNAL, .ops = &g_ext_ops },
@@ -135,6 +160,10 @@ static const struct bim_type *bim_query(const char *image_name)
     char *temp = NULL;
 
     for (i = 0; i < g_numbims; i++) {
+        if (g_bims[i].ops->resolve_image_name == NULL) {
+            WARN("Unimplements resolve image name in %s", g_bims[i].image_type);
+            continue;
+        }
         temp = g_bims[i].ops->resolve_image_name(image_name);
         if (temp == NULL) {
             lcrd_append_error_message("Failed to resovle image name%s", image_name);
@@ -219,7 +248,7 @@ static struct bim *bim_get(const char *image_type, const char *image_name, const
     if (ext_config_image != NULL) {
         bim->ext_config_image = util_strdup_s(ext_config_image);
         if (bim->ext_config_image == NULL) {
-            lcrd_append_error_message("Failed to strdup external config image %s", bim->ext_config_image);
+            lcrd_append_error_message("Failed to dup external config image %s", bim->ext_config_image);
             bim_put(bim);
             return NULL;
         }
@@ -230,12 +259,132 @@ static struct bim *bim_get(const char *image_type, const char *image_name, const
     return bim;
 }
 
+int im_resolv_image_name(const char *image_type, const char *image_name, char **resolved_name)
+{
+    int ret = -1;
+    const struct bim_type *q = NULL;
+
+    if (image_type == NULL) {
+        ERROR("Image type is required");
+        goto out;
+    }
+    q = get_bim_by_type(image_type);
+    if (q == NULL) {
+        goto out;
+    }
+    if (q->ops->resolve_image_name == NULL) {
+        ERROR("Get resolve image name umimplements");
+        goto out;
+    }
+
+    *resolved_name = q->ops->resolve_image_name(image_name);
+    if (*resolved_name == NULL) {
+        goto out;
+    }
+
+    ret = 0;
+out:
+    return ret;
+}
+
+int im_get_storage_status(const char *image_type, im_storage_status_response **response)
+{
+    int ret = -1;
+    const struct bim_type *q = NULL;
+
+    if (image_type == NULL) {
+        ERROR("Image type is required");
+        goto out;
+    }
+    q = get_bim_by_type(image_type);
+    if (q == NULL) {
+        goto out;
+    }
+    if (q->ops->get_storage_status == NULL) {
+        ERROR("Get storage status umimplements");
+        goto out;
+    }
+
+    ret = q->ops->get_storage_status(response);
+    if (ret != 0) {
+        ERROR("Get storage status failed");
+        free_im_storage_status_response(*response);
+        *response = NULL;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+int im_get_filesystem_info(const char *image_type, im_fs_info_response **response)
+{
+    int ret = -1;
+    const struct bim_type *q = NULL;
+
+    if (image_type == NULL) {
+        ERROR("Image type is required");
+        goto out;
+    }
+
+    q = get_bim_by_type(image_type);
+    if (q == NULL) {
+        goto out;
+    }
+    if (q->ops->get_filesystem_info == NULL) {
+        ERROR("Get filesystem info umimplements");
+        goto out;
+    }
+
+    EVENT("Event: {Object: get image filesystem info, Type: inspecting}");
+    ret = q->ops->get_filesystem_info(response);
+    if (ret != 0) {
+        if (response != NULL && *response != NULL) {
+            ERROR("Get filesystem info failed: %s", (*response)->errmsg);
+        } else {
+            ERROR("Get filesystem info failed");
+        }
+        goto out;
+    }
+    EVENT("Event: {Object: get image filesystem info, Type: inspected}");
+
+out:
+    return ret;
+}
+
+int im_health_check(const char *image_type)
+{
+    int ret = -1;
+    const struct bim_type *q = NULL;
+
+    if (image_type == NULL) {
+        ERROR("Image type is required");
+        goto out;
+    }
+
+    q = get_bim_by_type(image_type);
+    if (q == NULL) {
+        ERROR("Get bim failed");
+        goto out;
+    }
+
+    if (q->ops->health_check == NULL) {
+        ERROR("Health check umimplement");
+        goto out;
+    }
+
+    ret = q->ops->health_check();
+
+out:
+    return ret;
+}
+
 int im_get_container_filesystem_usage(const char *image_type, const char *id, imagetool_fs_info **fs_usage)
 {
     int ret = 0;
     imagetool_fs_info *filesystemusage = NULL;
     const struct bim_type *q = NULL;
-    struct bim *bim = NULL;
+    im_container_fs_usage_request *request = NULL;
 
     if (image_type == NULL || id == NULL) {
         ERROR("Invalid input arguments");
@@ -248,21 +397,24 @@ int im_get_container_filesystem_usage(const char *image_type, const char *id, im
         ret = -1;
         goto out;
     }
+    if (q->ops->container_fs_usage == NULL) {
+        ERROR("Unimplements filesystem usage in %s", image_type);
+        goto out;
+    }
 
-    bim = util_common_calloc_s(sizeof(struct bim));
-    if (bim == NULL) {
+    request = util_common_calloc_s(sizeof(im_container_fs_usage_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
         ret = -1;
         goto out;
     }
 
-    bim->ops = q->ops;
-    bim->type = q->image_type;
-
     if (id != NULL) {
-        bim->container_id = util_strdup_s(id);
+        request->name_id = util_strdup_s(id);
     }
 
-    ret = bim->ops->filesystem_usage(bim, &filesystemusage);
+    EVENT("Event: {Object: container \'%s\' filesystem info, Type: inspecting}", id != NULL ? id : "");
+    ret = q->ops->container_fs_usage(request, &filesystemusage);
     if (ret != 0) {
         ERROR("Failed to get filesystem usage for container %s", id);
         ret = -1;
@@ -270,15 +422,17 @@ int im_get_container_filesystem_usage(const char *image_type, const char *id, im
     }
 
     *fs_usage = filesystemusage;
+    EVENT("Event: {Object: container \'%s\' filesystem info, Type: inspected}", id != NULL ? id : "");
 
 out:
-    bim_put(bim);
+    free_im_container_fs_usage_request(request);
     return ret;
 }
 
 int im_remove_container_rootfs(const char *image_type, const char *container_id)
 {
     int ret = 0;
+    im_delete_request *request = NULL;
     struct bim *bim = NULL;
 
     if (container_id == NULL || image_type == NULL) {
@@ -293,23 +447,102 @@ int im_remove_container_rootfs(const char *image_type, const char *container_id)
         ret = -1;
         goto out;
     }
+    if (bim->ops->delete_rf == NULL) {
+        ERROR("Unimplements delete in %s", bim->type);
+        goto out;
+    }
 
-    ret = bim->ops->delete_rf(bim);
+    request = util_common_calloc_s(sizeof(im_delete_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    request->name_id = util_strdup_s(container_id);
+
+    EVENT("Event: {Object: %s, Type: removeing rootfs}", container_id);
+    ret = bim->ops->delete_rf(request);
     if (ret != 0) {
         ERROR("Failed to delete rootfs for container %s", container_id);
         ret = -1;
         goto out;
     }
+    EVENT("Event: {Object: %s, Type: removed rootfs}", container_id);
 
 out:
     bim_put(bim);
+    free_im_delete_request(request);
     return ret;
+}
+
+void free_im_container_fs_usage_request(im_container_fs_usage_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name_id);
+    request->name_id = NULL;
+    free(request);
+}
+
+void free_im_prepare_request(im_prepare_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->image_name);
+    request->image_name = NULL;
+    free(request->container_id);
+    request->container_id = NULL;
+    free(request->ext_config_image);
+    request->ext_config_image = NULL;
+
+    free_json_map_string_string(request->storage_opt);
+    request->storage_opt = NULL;
+
+    free(request);
+}
+
+void free_im_mount_request(im_mount_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name_id);
+    request->name_id = NULL;
+    free(request);
+}
+
+void free_im_delete_request(im_delete_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name_id);
+    request->name_id = NULL;
+    free(request);
+}
+
+void free_im_umount_request(im_umount_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name_id);
+    request->name_id = NULL;
+    free(request);
 }
 
 int im_umount_container_rootfs(const char *image_type, const char *image_name, const char *container_id)
 {
     int ret = 0;
     struct bim *bim = NULL;
+    im_umount_request *request = NULL;
 
     if (container_id == NULL || image_type == NULL || image_name == NULL) {
         ERROR("Invalid input arguments");
@@ -323,16 +556,33 @@ int im_umount_container_rootfs(const char *image_type, const char *image_name, c
         ret = -1;
         goto out;
     }
+    if (bim->ops->umount_rf == NULL) {
+        ERROR("Unimplements umount in %s", bim->type);
+        goto out;
+    }
 
-    ret = bim->ops->umount_rf(bim);
+    request = (im_umount_request *)util_common_calloc_s(sizeof(im_umount_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    request->force = false;
+    request->name_id = bim->container_id;
+    bim->container_id = NULL;
+
+    EVENT("Event: {Object: %s, Type: umounting rootfs}", container_id);
+    ret = bim->ops->umount_rf(request);
     if (ret != 0) {
         ERROR("Failed to umount rootfs for container %s", container_id);
         ret = -1;
         goto out;
     }
+    EVENT("Event: {Object: %s, Type: umounted rootfs}", container_id);
 
 out:
     bim_put(bim);
+    free_im_umount_request(request);
     return ret;
 }
 
@@ -340,6 +590,7 @@ int im_mount_container_rootfs(const char *image_type, const char *image_name, co
 {
     int ret = 0;
     struct bim *bim = NULL;
+    im_mount_request *request = NULL;
 
     if (image_name == NULL || container_id == NULL || image_type == NULL) {
         ERROR("Invalid input arguments");
@@ -353,16 +604,31 @@ int im_mount_container_rootfs(const char *image_type, const char *image_name, co
         ret = -1;
         goto out;
     }
+    if (bim->ops->mount_rf == NULL) {
+        ERROR("Unimplements mount in %s", bim->type);
+        goto out;
+    }
 
-    ret = bim->ops->mount_rf(bim);
+    request = util_common_calloc_s(sizeof(im_mount_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    request->name_id = util_strdup_s(container_id);
+
+    EVENT("Event: {Object: %s, Type: mounting rootfs}", container_id);
+    ret = bim->ops->mount_rf(request);
     if (ret != 0) {
         ERROR("Failed to mount rootfs for container %s", container_id);
         ret = -1;
         goto out;
     }
+    EVENT("Event: {Object: %s, Type: mounted rootfs}", container_id);
 
 out:
     bim_put(bim);
+    free_im_mount_request(request);
     return ret;
 }
 
@@ -408,6 +674,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
 {
     int ret = 0;
     struct bim *bim = NULL;
+    im_prepare_request *request = NULL;
 
     if (real_rootfs == NULL || oci_spec == NULL || image_type == NULL) {
         ERROR("Invalid input arguments");
@@ -421,17 +688,40 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
         ret = -1;
         goto out;
     }
+    if (bim->ops->merge_conf == NULL) {
+        ERROR("Unimplements merge config in %s", bim->type);
+        goto out;
+    }
 
-    ret = bim->ops->merge_conf(oci_spec, host_spec, custom_spec, bim, real_rootfs);
+    request = util_common_calloc_s(sizeof(im_prepare_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    request->container_id = util_strdup_s(id);
+    request->image_name = util_strdup_s(image_name);
+    request->ext_config_image = util_strdup_s(ext_config_image);
+    if (host_spec != NULL) {
+        request->storage_opt = host_spec->storage_opt;
+    }
+
+    EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", id, image_name);
+
+    ret = bim->ops->merge_conf(oci_spec, host_spec, custom_spec, request, real_rootfs);
+    request->storage_opt = NULL;
     if (ret != 0) {
         ERROR("Failed to merge image %s config, config image is %s", image_name, ext_config_image);
         ret = -1;
         goto out;
     }
+    EVENT("Event: {Object: %s, Type: prepared rootfs with image %s}", id, image_name);
+
     INFO("Use real rootfs: %s with type: %s", *real_rootfs, image_type);
 
 out:
     bim_put(bim);
+    free_im_prepare_request(request);
     return ret;
 }
 
@@ -451,6 +741,10 @@ int im_get_user_conf(const char *image_type, const char *basefs, host_config *hc
     if (bim == NULL) {
         ERROR("Failed to init bim for image type: %s", image_type);
         ret = -1;
+        goto out;
+    }
+    if (bim->ops->get_user_conf == NULL) {
+        ERROR("Unimplements get user config in %s", bim->type);
         goto out;
     }
 
@@ -492,7 +786,6 @@ static int append_images_to_response(im_list_response *response, imagetool_image
     }
 
     images_num = images_in->images_len;
-
     // no images need to append
     if (images_num == 0) {
         goto out;
@@ -524,14 +817,10 @@ static int append_images_to_response(im_list_response *response, imagetool_image
 out:
     return ret;
 }
-
-int im_list_images(im_list_request *request, im_list_response **response)
+int im_list_images(const im_list_request *ctx, im_list_response **response)
 {
-    char *filter = NULL;
     size_t i;
     imagetool_images_list *images_tmp = NULL;
-
-    filter = request->filter.image.image;
 
     *response = util_common_calloc_s(sizeof(im_list_response));
     if (*response == NULL) {
@@ -539,10 +828,14 @@ int im_list_images(im_list_request *request, im_list_response **response)
         return -1;
     }
 
-    EVENT("Event: {Object: list images, Type: listing, Filter: %s}", filter ? filter : "");
+    EVENT("Event: {Object: list images, Type: listing}");
 
     for (i = 0; i < g_numbims; i++) {
-        int ret = g_bims[i].ops->list_ims(request, &images_tmp);
+        if (g_bims[i].ops->list_ims == NULL) {
+            DEBUG("bim %s umimplements list images operator", g_bims[i].image_type);
+            continue;
+        }
+        int ret = g_bims[i].ops->list_ims(ctx, &images_tmp);
         if (ret != 0) {
             ERROR("Failed to list all images with type:%s", g_bims[i].image_type);
             continue;
@@ -555,7 +848,7 @@ int im_list_images(im_list_request *request, im_list_response **response)
         images_tmp = NULL;
     }
 
-    EVENT("Event: {Object: list images, Type: listed, Filter: %s}", filter ? filter : "");
+    EVENT("Event: {Object: list images, Type: listed}");
 
     if (g_lcrd_errmsg != NULL) {
         (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
@@ -572,6 +865,8 @@ void free_im_list_request(im_list_request *ptr)
     free(ptr->filter.image.image);
     ptr->filter.image.image = NULL;
 
+    filters_args_free(ptr->image_filters);
+    ptr->image_filters = NULL;
     free(ptr);
 }
 
@@ -618,17 +913,18 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
     }
 
     if (bim->ops->pull_image == NULL) {
-        WARN("Unimplements pull image in %s", bim->type);
-        ret = 0;
+        ERROR("Unimplements pull image in %s", bim->type);
         goto out;
     }
 
+    EVENT("Event: {Object: %s, Type: Pulling}", request->image);
     ret = bim->ops->pull_image(request, response);
     if (ret != 0) {
         ERROR("Pull image %s failed", request->image);
         ret = -1;
         goto out;
     }
+    EVENT("Event: {Object: %s, Type: Pulled}", request->image);
 
 out:
     bim_put(bim);
@@ -671,7 +967,7 @@ void free_im_pull_response(im_pull_response *resp)
     free(resp);
 }
 
-int im_load_image(im_load_request *request, im_load_response **response)
+int im_load_image(const im_load_request *request, im_load_response **response)
 {
     int ret = -1;
     struct bim *bim = NULL;
@@ -702,6 +998,10 @@ int im_load_image(im_load_request *request, im_load_response **response)
     bim = bim_get(request->type, NULL, NULL, NULL);
     if (bim == NULL) {
         ERROR("Failed to init bim, image type:%s", request->type);
+        goto pack_response;
+    }
+    if (bim->ops->load_image == NULL) {
+        ERROR("Unimplements load image in %s", bim->type);
         goto pack_response;
     }
 
@@ -755,7 +1055,7 @@ void free_im_load_response(im_load_response *ptr)
     free(ptr);
 }
 
-int im_login(im_login_request *request, im_login_response **response)
+int im_login(const im_login_request *request, im_login_response **response)
 {
     int ret = -1;
     struct bim *bim = NULL;
@@ -848,7 +1148,7 @@ void free_im_login_response(im_login_response *ptr)
     free(ptr);
 }
 
-int im_logout(im_logout_request *request, im_logout_response **response)
+int im_logout(const im_logout_request *request, im_logout_response **response)
 {
     int ret = -1;
     struct bim *bim = NULL;
@@ -929,7 +1229,66 @@ void free_im_logout_response(im_logout_response *ptr)
     free(ptr);
 }
 
-int im_rm_image(im_remove_request *request, im_remove_response **response)
+int im_image_status(im_status_request *request, im_status_response **response)
+{
+    int ret = -1;
+    char *image_ref = NULL;
+    const struct bim_type *bim_type = NULL;
+    struct bim *bim = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    *response = (im_status_response *)util_common_calloc_s(sizeof(im_status_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (request->image.image == NULL) {
+        ERROR("get image status requires image ref");
+        lcrd_set_error_message("get image status requires image ref");
+        goto pack_response;
+    }
+
+    image_ref = util_strdup_s(request->image.image);
+
+    bim_type = bim_query(image_ref);
+    if (bim_type == NULL) {
+        ERROR("No such image:%s", image_ref);
+        lcrd_set_error_message("No such image:%s", image_ref);
+        goto pack_response;
+    }
+
+    bim = bim_get(bim_type->image_type, image_ref, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim for image %s", image_ref);
+        goto pack_response;
+    }
+    if (bim->ops->image_status == NULL) {
+        ERROR("Unimplements image status in %s", bim->type);
+        goto pack_response;
+    }
+
+    ret = bim->ops->image_status(request, response);
+    if (ret != 0) {
+        ERROR("Failed to get status of image %s", image_ref);
+        ret = -1;
+    }
+
+pack_response:
+    if (g_lcrd_errmsg != NULL) {
+        free((*response)->errmsg);
+        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+    }
+    free(image_ref);
+    bim_put(bim);
+    return ret;
+}
+
+int im_rm_image(const im_remove_request *request, im_remove_response **response)
 {
     int ret = -1;
     char *image_ref = NULL;
@@ -955,7 +1314,7 @@ int im_rm_image(im_remove_request *request, im_remove_response **response)
 
     image_ref = util_strdup_s(request->image.image);
 
-    EVENT("Event: {Object: %s, Type: removing}", image_ref);
+    EVENT("Event: {Object: %s, Type: image removing}", image_ref);
 
     bim_type = bim_query(image_ref);
     if (bim_type == NULL) {
@@ -969,6 +1328,10 @@ int im_rm_image(im_remove_request *request, im_remove_response **response)
         ERROR("Failed to init bim for image %s", image_ref);
         goto pack_response;
     }
+    if (bim->ops->rm_image == NULL) {
+        ERROR("Unimplements rm image in %s", bim->type);
+        goto pack_response;
+    }
 
     ret = bim->ops->rm_image(request);
     if (ret != 0) {
@@ -977,7 +1340,7 @@ int im_rm_image(im_remove_request *request, im_remove_response **response)
         goto pack_response;
     }
 
-    EVENT("Event: {Object: %s, Type: removed}", image_ref);
+    EVENT("Event: {Object: %s, Type: image removed}", image_ref);
 
 pack_response:
     if (g_lcrd_errmsg != NULL) {
@@ -1011,6 +1374,36 @@ void free_im_remove_response(im_remove_response *ptr)
     free(ptr);
 }
 
+static int do_im_inspect_image(struct bim *bim, char **inspected_json)
+{
+    int ret = 0;
+    im_inspect_request *update_request = NULL;
+
+    if (bim->ops->inspect_image == NULL) {
+        ERROR("Unimplements inspect image in %s", bim->type);
+        ret = -1;
+        goto out;
+    }
+    update_request = util_common_calloc_s(sizeof(im_inspect_request));
+    if (update_request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    update_request->image.image = bim->image_name;
+    bim->image_name = NULL;
+
+    ret = bim->ops->inspect_image(update_request, inspected_json);
+    if (ret != 0) {
+        ERROR("Failed to inspect image %s", update_request->image.image);
+        ret = -1;
+    }
+
+out:
+    free_im_inspect_request(update_request);
+    return ret;
+}
+
 int im_inspect_image(const im_inspect_request *request, im_inspect_response **response)
 {
     int ret = 0;
@@ -1039,7 +1432,7 @@ int im_inspect_image(const im_inspect_request *request, im_inspect_response **re
 
     image_ref = util_strdup_s(request->image.image);
 
-    EVENT("Event: {Object: %s, Type: inspecting}", image_ref);
+    EVENT("Event: {Object: %s, Type: image inspecting}", image_ref);
 
     bim_type = bim_query(image_ref);
     if (bim_type == NULL) {
@@ -1056,14 +1449,12 @@ int im_inspect_image(const im_inspect_request *request, im_inspect_response **re
         goto pack_response;
     }
 
-    ret = bim->ops->inspect_image(bim, &inspected_json);
+    ret = do_im_inspect_image(bim, &inspected_json);
     if (ret != 0) {
-        ERROR("Failed to inspect image %s", image_ref);
-        ret = -1;
         goto pack_response;
     }
 
-    EVENT("Event: {Object: %s, Type: inspected}", image_ref);
+    EVENT("Event: {Object: %s, Type: image inspected}", image_ref);
 
 pack_response:
     if (g_lcrd_errmsg != NULL) {
@@ -1104,13 +1495,134 @@ void free_im_inspect_response(im_inspect_response *ptr)
     free(ptr);
 }
 
-static int bims_init(const char *rootpath)
+/*
+ * parameters: image type
+ * return: error return 0, success return image count
+ * */
+size_t im_get_image_count(const im_image_count_request *request)
+{
+    size_t ret = 0;
+    const struct bim_type *q = NULL;
+
+    if (request == NULL || request->type == NULL) {
+        ERROR("Image type is required");
+        goto out;
+    }
+    q = get_bim_by_type(request->type);
+    if (q == NULL) {
+        goto out;
+    }
+    if (q->ops->get_image_count == NULL) {
+        ERROR("Get image count umimplements");
+        goto out;
+    }
+
+    ret = q->ops->get_image_count();
+
+out:
+    return ret;
+}
+
+void free_im_image_count_request(im_image_count_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->type);
+    ptr->type = NULL;
+    free(ptr);
+}
+
+int im_container_export(const im_export_request *request)
+{
+    int ret = 0;
+    int nret = 0;
+    struct bim *bim = NULL;
+
+    if (request == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (request->file == NULL) {
+        ERROR("Container export requires output file path");
+        ret = -1;
+        goto out;
+    }
+    if (request->name_id == NULL) {
+        ERROR("Container export requires container id");
+        ret = -1;
+        goto out;
+    }
+
+    if (request->type == NULL) {
+        ERROR("Missing image type");
+        ret = -1;
+        goto out;
+    }
+
+    bim = bim_get(request->type, NULL, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim, image type:%s", request->type);
+        ret = -1;
+        goto out;
+    }
+    if (bim->ops->export_rf == NULL) {
+        ERROR("Unimplements container export in %s", bim->type);
+        ret = -1;
+        goto out;
+    }
+
+    EVENT("Event: {Object: %s, Type: exporting}", request->file);
+
+    nret = bim->ops->export_rf(request);
+    if (nret != 0) {
+        ERROR("Failed to export container from %s into file %s and type %s",
+              request->name_id, request->file, request->type);
+        ret = -1;
+        goto out;
+    }
+
+    EVENT("Event: {Object: %s, Type: exported}", request->name_id);
+
+out:
+    bim_put(bim);
+    return ret;
+}
+
+void free_im_export_request(im_export_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->type);
+    ptr->type = NULL;
+    free(ptr->file);
+    ptr->file = NULL;
+    free(ptr->name_id);
+    ptr->name_id = NULL;
+    free(ptr);
+}
+
+void free_im_configs(struct im_configs *conf)
+{
+    if (conf == NULL) {
+        return;
+    }
+    free(conf->rootpath);
+    conf->rootpath = NULL;
+    free(conf->server_sock);
+    conf->server_sock = NULL;
+    free(conf);
+}
+
+static int bims_init(const struct im_configs *conf)
 {
     int ret = 0;
     size_t i;
 
     for (i = 0; i < g_numbims; i++) {
-        ret = g_bims[i].ops->init(rootpath);
+        ret = g_bims[i].ops->init(conf);
         if (ret != 0) {
             ERROR("Failed to init bim %s", g_bims[i].image_type);
             break;
@@ -1122,7 +1634,31 @@ static int bims_init(const char *rootpath)
 
 int image_module_init(const char *rootpath)
 {
-    return bims_init(rootpath);
+    struct im_configs *conf;
+    int ret = -1;
+
+    conf = (struct im_configs *)util_common_calloc_s(sizeof(struct im_configs));
+    if (conf == NULL) {
+        ERROR("Out of memory");
+        return ret;
+    }
+    conf->rootpath = util_strdup_s(rootpath);
+    ret = bims_init(conf);
+
+    free_im_configs(conf);
+    return ret;
+}
+
+void image_module_exit()
+{
+    size_t i;
+
+    for (i = 0; i < g_numbims; i++) {
+        if (g_bims[i].ops->clean_resource == NULL) {
+            continue;
+        }
+        g_bims[i].ops->clean_resource();
+    }
 }
 
 int map_to_key_value_string(const json_map_string_string *map, char ***array, size_t *array_len)
@@ -1169,5 +1705,62 @@ int map_to_key_value_string(const json_map_string_string *map, char ***array, si
 cleanup:
     util_free_array(strings);
     return -1;
+}
+
+void free_im_status_request(im_status_request *req)
+{
+    if (req == NULL) {
+        return;
+    }
+    free(req->image.image);
+    req->image.image = NULL;
+
+    free(req);
+}
+
+void free_im_status_response(im_status_response *req)
+{
+    if (req == NULL) {
+        return;
+    }
+    free_imagetool_image_status(req->image_info);
+    req->image_info = NULL;
+    free(req->errmsg);
+    req->errmsg = NULL;
+
+    free(req);
+}
+
+void free_im_fs_info_response(im_fs_info_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_imagetool_fs_info(ptr->fs_info);
+    ptr->fs_info = NULL;
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+
+    free(ptr);
+}
+
+void free_im_storage_status_response(im_storage_status_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->backing_fs);
+    ptr->backing_fs = NULL;
+    free(ptr);
+}
+
+void im_sync_containers_isuladkit(void)
+{
+    DEBUG("Sync containers...");
+#ifdef ENABLE_OCI_IMAGE
+    if (isula_sync_containers() != 0) {
+        WARN("Sync containers with remote failed!!");
+    }
+#endif
 }
 

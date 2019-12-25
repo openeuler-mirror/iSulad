@@ -152,6 +152,6 @@ private:
     std::map<std::string, std::unique_ptr<CNINetwork>> m_networks;
 };
 
-}  // namespace Network
+} // namespace Network
 
 #endif

@@ -29,4 +29,5 @@ int db_common_init(const char *rootpath);
 
 void db_common_finish(void);
 
-#endif /*__DB_COMMON_H_*/
+#endif /* __DB_COMMON_H_ */
+

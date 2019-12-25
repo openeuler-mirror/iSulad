@@ -13,7 +13,7 @@ set(local_image_incs
     ${CMAKE_CURRENT_SOURCE_DIR}/external
     )
 
-if (NOT DISABLE_OCI)
+if (ENABLE_OCI_IMAGE)
     add_subdirectory(oci)
     list(APPEND local_image_srcs
 	    ${OCI_SRCS}
@@ -23,7 +23,7 @@ if (NOT DISABLE_OCI)
         )
 endif()
 
-if (ENABLE_EMBEDDED)
+if (ENABLE_EMBEDDED_IMAGE)
     add_subdirectory(embedded)
     list(APPEND local_image_srcs
         ${EMBEDDED_SRCS}

@@ -46,3 +46,4 @@ bool gc_is_gc_progress(const char *id);
 #endif
 
 #endif /* __LCRD_CONTAINER_GC_H__ */
+

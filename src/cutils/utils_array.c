@@ -21,6 +21,21 @@
 #include "log.h"
 #include "utils.h"
 
+void util_free_array_by_len(char **array, size_t len)
+{
+    size_t i = 0;
+
+    if (array == NULL) {
+        return;
+    }
+
+    for (; i < len; i++) {
+        UTIL_FREE_AND_SET_NULL(array[i]);
+    }
+
+    free(array);
+}
+
 size_t util_array_len(const char **array)
 {
     const char **pos;

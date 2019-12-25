@@ -20,13 +20,14 @@
 #include <string>
 
 namespace CRINaming {
-std::string MakeSandboxName(const runtime::PodSandboxMetadata &metadata);
+std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata);
 
-std::string MakeContainerName(const runtime::PodSandboxConfig &s, const runtime::ContainerConfig &c);
+std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s,
+                              const runtime::v1alpha2::ContainerConfig &c);
 
-void ParseSandboxName(const std::string &name, runtime::PodSandboxMetadata &metadata, Errors &err);
+void ParseSandboxName(const std::string &name, runtime::v1alpha2::PodSandboxMetadata &metadata, Errors &err);
 
-void ParseContainerName(const std::string &name, runtime::ContainerMetadata *metadata, Errors &err);
-}  // namespace CRINaming
+void ParseContainerName(const std::string &name, runtime::v1alpha2::ContainerMetadata *metadata, Errors &err);
+} // namespace CRINaming
 
 #endif /* _CRI_RUNTIME_SERVICES_IMPL_H_ */

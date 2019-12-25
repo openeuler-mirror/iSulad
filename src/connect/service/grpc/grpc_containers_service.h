@@ -222,4 +222,5 @@ private:
     int logs_request_from_grpc(const LogsRequest *grequest, struct lcrd_logs_request **request);
 };
 
-#endif /*_GRPC_CONTAINER_SERVICE_H_*/
+#endif /* _GRPC_CONTAINER_SERVICE_H_ */
+

@@ -22,8 +22,8 @@
 #include "log.h"
 
 grpc::Status RuntimeImageServiceImpl::PullImage(grpc::ServerContext *context,
-                                                const runtime::PullImageRequest *request,
-                                                runtime::PullImageResponse *reply)
+                                                const runtime::v1alpha2::PullImageRequest *request,
+                                                runtime::v1alpha2::PullImageResponse *reply)
 {
     Errors error;
     std::string imageRef = rService.PullImage(request->image(), request->auth(), error);
@@ -35,10 +35,10 @@ grpc::Status RuntimeImageServiceImpl::PullImage(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
-                                                 const runtime::ListImagesRequest *request,
-                                                 runtime::ListImagesResponse *reply)
+                                                 const runtime::v1alpha2::ListImagesRequest *request,
+                                                 runtime::v1alpha2::ListImagesResponse *reply)
 {
-    std::vector<std::unique_ptr<runtime::Image>> images;
+    std::vector<std::unique_ptr<runtime::v1alpha2::Image>> images;
     Errors error;
 
     rService.ListImages(request->filter(), &images, error);
@@ -47,7 +47,7 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
     }
 
     for (auto iter = images.begin(); iter != images.end(); iter++) {
-        runtime::Image *image = reply->add_images();
+        runtime::v1alpha2::Image *image = reply->add_images();
         if (image == nullptr) {
             return grpc::Status(grpc::StatusCode::UNKNOWN, "Out of memory");
         }
@@ -57,10 +57,10 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
-                                                  const runtime::ImageStatusRequest *request,
-                                                  runtime::ImageStatusResponse *reply)
+                                                  const runtime::v1alpha2::ImageStatusRequest *request,
+                                                  runtime::v1alpha2::ImageStatusResponse *reply)
 {
-    std::unique_ptr<runtime::Image> image_info = nullptr;
+    std::unique_ptr<runtime::v1alpha2::Image> image_info = nullptr;
     Errors error;
 
     image_info = rService.ImageStatus(request->image(), error);
@@ -69,7 +69,7 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
     }
 
     if (image_info != nullptr) {
-        runtime::Image *image = reply->mutable_image();
+        runtime::v1alpha2::Image *image = reply->mutable_image();
         *image = *image_info;
     }
 
@@ -77,10 +77,10 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
-                                                  const runtime::ImageFsInfoRequest *request,
-                                                  runtime::ImageFsInfoResponse *reply)
+                                                  const runtime::v1alpha2::ImageFsInfoRequest *request,
+                                                  runtime::v1alpha2::ImageFsInfoResponse *reply)
 {
-    std::vector<std::unique_ptr<runtime::FilesystemUsage>> usages;
+    std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> usages;
     Errors error;
 
     rService.ImageFsInfo(&usages, error);
@@ -89,7 +89,7 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
     }
 
     for (auto iter = usages.begin(); iter != usages.end(); ++iter) {
-        runtime::FilesystemUsage *fs_info = reply->add_image_filesystems();
+        runtime::v1alpha2::FilesystemUsage *fs_info = reply->add_image_filesystems();
         if (fs_info == nullptr) {
             return grpc::Status(grpc::StatusCode::UNKNOWN, "Out of memory");
         }
@@ -99,8 +99,8 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
 }
 
 grpc::Status RuntimeImageServiceImpl::RemoveImage(grpc::ServerContext *context,
-                                                  const runtime::RemoveImageRequest *request,
-                                                  runtime::RemoveImageResponse *reply)
+                                                  const runtime::v1alpha2::RemoveImageRequest *request,
+                                                  runtime::v1alpha2::RemoveImageResponse *reply)
 {
     Errors error;
 
@@ -110,4 +110,5 @@ grpc::Status RuntimeImageServiceImpl::RemoveImage(grpc::ServerContext *context,
     }
     return grpc::Status::OK;
 }
+
 

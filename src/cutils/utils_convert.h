@@ -34,3 +34,4 @@ int util_str_to_bool(const char *boolstr, bool *converted);
 #endif
 
 #endif /* __UTILS_CONVERT_H */
+

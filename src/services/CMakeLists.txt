@@ -11,7 +11,7 @@ add_subdirectory(execution)
 list(APPEND local_services_srcs ${EXECUTION_SRCS})
 list(APPEND local_services_incs ${EXECUTION_INCS})
 
-if (NOT DISABLE_OCI)
+if (ENABLE_OCI_IMAGE)
 	add_subdirectory(graphdriver)
 	list(APPEND local_services_srcs ${GRAPHDRIVER_SRCS})
 	list(APPEND local_services_incs ${GRAPHDRIVER_INCS})

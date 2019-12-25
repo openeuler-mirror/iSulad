@@ -76,3 +76,4 @@ char *verify_file_and_get_real_path(const char *file);
 #endif
 
 #endif /* __UTILS_H */
+

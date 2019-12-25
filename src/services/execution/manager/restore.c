@@ -31,7 +31,6 @@
 #include "image.h"
 
 #ifdef ENABLE_OCI_IMAGE
-#include "oci_image.h"
 #include "oci_images_store.h"
 #endif
 
@@ -249,10 +248,9 @@ static int check_container_image_exist(const container_t *cont)
 
     /* only check exist for oci image */
     if (strcmp(image_type, IMAGE_TYPE_OCI) == 0) {
-        tmp = oci_resolve_image_name(image_name);
-        if (tmp == NULL) {
+        ret = im_resolv_image_name(image_type, image_name, &tmp);
+        if (ret != 0) {
             ERROR("Failed to resolve image %s", image_name);
-            ret = -1;
             goto out;
         }
         image = oci_images_store_get(tmp);
@@ -270,7 +268,7 @@ out:
 }
 #endif
 
-static void try_to_set_container_running(Container_Status status, container_t *cont,
+static void try_to_set_container_running(Container_Status status, const container_t *cont,
                                          const container_pid_t *pid_info)
 {
     int pid = 0;
@@ -278,6 +276,17 @@ static void try_to_set_container_running(Container_Status status, container_t *c
     pid = state_get_pid(cont->state);
     if (status != CONTAINER_STATUS_RUNNING || pid != pid_info->pid) {
         state_set_running(cont->state, pid_info, true);
+    }
+}
+
+static void try_to_set_paused_container_pid(Container_Status status, const container_t *cont,
+                                            const container_pid_t *pid_info)
+{
+    int pid = 0;
+
+    pid = state_get_pid(cont->state);
+    if (status != CONTAINER_STATUS_RUNNING || pid != pid_info->pid) {
+        state_set_running(cont->state, pid_info, false);
     }
 }
 
@@ -352,6 +361,36 @@ out:
     return ret;
 }
 
+static int restore_paused_container(Container_Status status, container_t *cont,
+                                    const struct engine_container_summary_info *info)
+{
+    int ret = 0;
+    const char *id = cont->common_config->id;
+    container_pid_t *pid_info = NULL;
+
+    state_set_paused(cont->state);
+
+    pid_info = load_running_container_pid_info(cont);
+    if (pid_info == NULL) {
+        ERROR("Failed to restore container:%s due to unable to read container pid info", id);
+        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, info->pid);
+        if (nret != 0) {
+            ERROR("Failed to post container %s to garbage"
+                  "collector, that may lost some resources"
+                  "used with container!", id);
+        }
+        ret = -1;
+        goto out;
+    } else {
+        try_to_set_paused_container_pid(status, cont, pid_info);
+    }
+    container_reset_manually_stopped(cont);
+
+out:
+    free(pid_info);
+    return ret;
+}
+
 /* restore state */
 static int restore_state(container_t *cont, const struct engine_container_summary_info *info, size_t container_num)
 {
@@ -386,6 +425,11 @@ static int restore_state(container_t *cont, const struct engine_container_summar
         }
     } else if (info[c_index].status == ENGINE_CONTAINER_STATUS_RUNNING) {
         ret = restore_running_container(status, cont, &info[c_index]);
+        if (ret != 0) {
+            goto out;
+        }
+    } else if (info[c_index].status == ENGINE_CONTAINER_STATUS_PAUSED) {
+        ret = restore_paused_container(status, cont, &info[c_index]);
         if (ret != 0) {
             goto out;
         }

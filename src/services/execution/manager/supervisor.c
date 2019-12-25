@@ -165,7 +165,9 @@ static void *clean_resources_thread(void *arg)
 retry:
     if (false == util_process_alive(pid, start_time)) {
         ret = clean_container_resource(name, runtime, pid);
-        if (ret != 0) {
+        // clean_container_resource failed, do not log error message,
+        // just add to gc to retry clean resource.
+        if (ret != 0 && gc_add_container(name, runtime, &data->pid_info) != 0) {
             ERROR("Failed to clean resources of container %s", name);
         }
     } else {
@@ -333,3 +335,4 @@ int new_supervisor()
 out:
     return ret;
 }
+

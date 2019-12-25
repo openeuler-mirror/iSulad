@@ -679,3 +679,107 @@ cleanup:
     return ret;
 }
 
+int split_path_dir_entry(const char *path, char **dir, char **base)
+{
+#define EXTRA_LEN 3
+    char cleaned[PATH_MAX + EXTRA_LEN] = { 0 };
+    char *dup = NULL;
+
+    if (cleanpath(path, cleaned, PATH_MAX) == NULL) {
+        ERROR("Failed to clean path");
+        return -1;
+    }
+    if (specify_current_dir(path)) {
+        set_char_to_separator(&cleaned[strlen(cleaned)]);
+        cleaned[strlen(cleaned)] = '.';
+    }
+    dup = util_strdup_s(cleaned);
+    if (dir != NULL) {
+        *dir = util_strdup_s(dirname(dup));
+    }
+    if (base != NULL) {
+        *base = util_strdup_s(basename(cleaned));
+    }
+    free(dup);
+    return 0;
+}
+
+static char *find_realpath(const char *path)
+{
+    int ret;
+    int i;
+    int max_symlink_iter = 10;
+    char *iter_path = NULL;
+    struct stat st;
+
+    iter_path = util_strdup_s(path);
+    ret = lstat(iter_path, &st);
+    for (i = 0; i <= max_symlink_iter && ret == 0 && S_ISLNK(st.st_mode); i++) {
+        char target[PATH_MAX] = { 0 };
+        char *parent = NULL;
+
+        ret = (int)readlink(iter_path, target, PATH_MAX - 1);
+        if (ret < 0) {
+            ERROR("Failed to read link of %s: %s", iter_path, strerror(errno));
+            goto out;
+        }
+        // is not absolutely path
+        if (target[0] != '\0' && target[0] != '/') {
+            if (split_path_dir_entry(iter_path, &parent, NULL) < 0) {
+                goto out;
+            }
+            free(iter_path);
+            iter_path = util_path_join(parent, target);
+            if (iter_path == NULL) {
+                ERROR("Failed to join path");
+                free(parent);
+                goto out;
+            }
+        } else {
+            free(iter_path);
+            iter_path = util_strdup_s(target);
+        }
+        ret = lstat(iter_path, &st);
+        free(parent);
+    }
+    if (i > max_symlink_iter) {
+        ERROR("Too many symlinks in: %s", path);
+        goto out;
+    }
+    return iter_path;
+out:
+    free(iter_path);
+    return NULL;
+}
+
+int realpath_in_scope(const char *rootfs, const char *path, char **real_path)
+{
+    int ret = 0;
+    char full_path[PATH_MAX] = { 0 };
+    char cleaned[PATH_MAX] = { 0 };
+    char *tmp = NULL;
+
+    if (sprintf_s(full_path, sizeof(full_path), "%s%s", rootfs, path) < 0) {
+        ERROR("sprintf error: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+    if (cleanpath(full_path, cleaned, PATH_MAX) == NULL) {
+        ERROR("Failed to clean path: %s", full_path);
+        ret = -1;
+        goto out;
+    }
+    tmp = find_realpath(cleaned);
+    if (tmp == NULL) {
+        ret = -1;
+        goto out;
+    }
+    if (strncmp(tmp, rootfs, strlen(rootfs)) != 0) {
+        free(tmp);
+        ret = -1;
+        goto out;
+    }
+    *real_path = tmp;
+out:
+    return ret;
+}

@@ -863,7 +863,10 @@ std::unique_ptr<URLDatum> URLDatum::UrlParse(const std::string &ref)
 
 std::unique_ptr<URLDatum> URLDatum::ResolveReference(URLDatum *ref)
 {
-    std::unique_ptr<URLDatum> url(new URLDatum(*ref));
+    std::unique_ptr<URLDatum> url(new (std::nothrow) URLDatum(*ref));
+    if (url == nullptr) {
+        return nullptr;
+    }
 
     if (url->m_scheme.empty()) {
         url->m_scheme = m_scheme;

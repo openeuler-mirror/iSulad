@@ -141,6 +141,7 @@ int service_arguments_init(struct service_arguments *args)
     args->json_confs->native_umask = util_strdup_s(UMASK_SECURE);
     args->json_confs->image_service = true;
     args->json_confs->image_layer_check = false;
+    args->json_confs->image_server_sock_addr = util_strdup_s(DEFAULT_IM_SERVER_SOCK_ADDR);
     args->json_confs->use_decrypted_key = (bool *)util_common_calloc_s(sizeof(bool));
     if (args->json_confs->use_decrypted_key == NULL) {
         goto free_out;
@@ -148,7 +149,7 @@ int service_arguments_init(struct service_arguments *args)
     *(args->json_confs->use_decrypted_key) = true;
     args->json_confs->insecure_skip_verify_enforce = false;
 
-    args->im_opt_timeout = 5 * 60; // default image operation timeout 300s
+    args->image_opt_timeout = 5 * 60; // default image operation timeout 300s
     if (set_daemon_default_tls_options(args) != 0) {
         goto free_out;
     }
@@ -242,3 +243,4 @@ out:
     free(tmp);
     return ret;
 }
+

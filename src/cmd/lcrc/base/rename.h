@@ -23,3 +23,4 @@ extern struct client_arguments g_cmd_rename_args;
 int cmd_rename_main(int argc, const char **argv);
 
 #endif
+

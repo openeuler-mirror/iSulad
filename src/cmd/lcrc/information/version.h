@@ -23,3 +23,4 @@ extern struct client_arguments g_cmd_version_args;
 int cmd_version_main(int argc, const char **argv);
 
 #endif /* __CMD_VERSION_H */
+

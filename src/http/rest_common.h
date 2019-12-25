@@ -40,3 +40,4 @@ void put_body(char *body);
 #endif
 
 #endif /* __REST_COMMON_H */
+

@@ -57,12 +57,7 @@ static int do_duplicate_commands(const oci_image_spec_config *config, container_
         return 0;
     }
 
-    if (config->cmd_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("too many commands!");
-        return -1;
-    }
-
-    custom_spec->cmd = (char **)util_common_calloc_s(sizeof(char *) * config->cmd_len);
+    custom_spec->cmd = (char **)util_smart_calloc_s(sizeof(char *), config->cmd_len);
     if (custom_spec->cmd == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -84,12 +79,7 @@ static int do_duplicate_entrypoints(const oci_image_spec_config *config, contain
         return 0;
     }
 
-    if (config->entrypoint_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("too many entrypoints!");
-        return -1;
-    }
-
-    custom_spec->entrypoint = (char **)util_common_calloc_s(sizeof(char *) * config->entrypoint_len);
+    custom_spec->entrypoint = (char **)util_smart_calloc_s(sizeof(char *), config->entrypoint_len);
     if (custom_spec->entrypoint == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -156,13 +146,7 @@ static int dup_health_check_from_image(const defs_health_check *image_health_che
         return -1;
     }
 
-    if (image_health_check->test_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("invalid health check commands!");
-        ret = -1;
-        goto out;
-    }
-
-    health_check->test = util_common_calloc_s(sizeof(char *) * image_health_check->test_len);
+    health_check->test = util_smart_calloc_s(sizeof(char *), image_health_check->test_len);
     if (health_check->test == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -194,11 +178,7 @@ static int update_health_check_from_image(const defs_health_check *image_health_
     if (custom_spec->health_check->test_len == 0) {
         size_t i;
 
-        if (image_health_check->test_len > SIZE_MAX / sizeof(char *)) {
-            ERROR("invalid health check commands!");
-            return -1;
-        }
-        custom_spec->health_check->test = util_common_calloc_s(sizeof(char *) * image_health_check->test_len);
+        custom_spec->health_check->test = util_smart_calloc_s(sizeof(char *), image_health_check->test_len);
         if (custom_spec->health_check->test == NULL) {
             ERROR("Out of memory");
             return -1;

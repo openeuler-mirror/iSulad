@@ -41,8 +41,13 @@ bool has_trailing_path_separator(const char *path);
 
 char *preserve_trailing_dot_or_separator(const char *cleanedpath, const char *originalpath);
 
+int split_path_dir_entry(const char *path, char **dir, char **base);
+
+int realpath_in_scope(const char *rootfs, const char *path, char **real_path);
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+

@@ -101,3 +101,4 @@ int cmd_health_check_main(int argc, const char **argv)
     printf("LCRD with socket name '%s' is SERVING\n", g_cmd_health_check_args.socket);
     exit(EXIT_SUCCESS);
 }
+

@@ -25,3 +25,4 @@ extern struct client_arguments g_cmd_restart_args;
 int cmd_restart_main(int argc, const char **argv);
 
 #endif /* __CMD_RESTART_H */
+

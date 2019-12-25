@@ -1208,7 +1208,7 @@ int container_exit_on_next(container_t *cont)
     return ret;
 }
 
-/* this function should be called in container_lock*/
+/* this function should be called in container_lock */
 int container_wait_stop(container_t *cont, int timeout)
 {
     int ret = 0;

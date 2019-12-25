@@ -22,7 +22,11 @@
         "Display all containers (default shows just running)", NULL }, \
     { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &(cmdargs).dispname, "Only display numeric IDs", NULL }, \
     { CMD_OPT_TYPE_CALLBACK, false, "filter", 'f', &(cmdargs).filters, \
-        "Filter output based on conditions provided", command_append_array }
+        "Filter output based on conditions provided", command_append_array }, \
+    { CMD_OPT_TYPE_BOOL, false, "no-trunc", 0, &(cmdargs).no_trunc, \
+        "Don't truncate output", NULL }, \
+    { CMD_OPT_TYPE_STRING, false, "format", 0, &(cmdargs).format, \
+        "Format the output using the given go template", NULL }
 
 extern const char g_cmd_list_desc[];
 extern const char g_cmd_list_usage[];
@@ -30,3 +34,4 @@ extern struct client_arguments g_cmd_list_args;
 int cmd_list_main(int argc, const char **argv);
 
 #endif /* __CMD_LIST_H */
+

@@ -15,9 +15,8 @@
 
 #define _GNU_SOURCE
 #include "utils_verify.h"
-
-#include <sys/stat.h>
 #include <regex.h>
+#include <sys/stat.h>
 #ifdef HAVE_LIBCAP_H
 #include <sys/capability.h>
 #endif
@@ -26,6 +25,7 @@
 
 #include "log.h"
 #include "utils.h"
+#include "utils_regex.h"
 
 const char *g_all_caps[] = {
     "CAP_CHOWN",
@@ -80,47 +80,6 @@ const char *g_all_caps[] = {
 #endif
 };
 
-/*
- * return value:
- * -1  failed
- *  0  match
- *  1  no match
- */
-int util_reg_match(const char *patten, const char *str)
-{
-    int nret = 0;
-    regex_t reg;
-    regmatch_t regmatch = { 0 };
-
-    if (patten == NULL || str == NULL) {
-        ERROR("invalid NULL param");
-        return -1;
-    }
-
-    nret = regcomp(&reg, patten, REG_EXTENDED | REG_NOSUB);
-    if (nret) {
-        return -1;
-    }
-
-    nret = regexec(&reg, str, 1, &regmatch, 0);
-    if (nret == 0) {
-        nret = 0;
-        goto free_out;
-    } else if (nret == REG_NOMATCH) {
-        nret = 1;
-        goto free_out;
-    } else {
-        nret = -1;
-        ERROR("reg match failed");
-        goto free_out;
-    }
-
-free_out:
-    regfree(&reg);
-
-    return nret;
-}
-
 bool util_valid_cmd_arg(const char *arg)
 {
     return (arg != NULL) && (strchr(arg, '|') == NULL) && (strchr(arg, '`') == NULL) && (strchr(arg, '&')) == NULL &&
@@ -173,24 +132,25 @@ err_out:
     return nret;
 }
 
-static int util_vaildate_tcp_socket(const char *socket)
+static bool util_vaildate_tcp_socket(const char *socket)
 {
     if (socket == NULL) {
-        return -1;
+        return false;
     }
     return util_reg_match("^(tcp://(((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9]).){3}"
                           "(25[0-5]|2[0-5][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])|localhost):"
                           "((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})"
                           "|([1-5][0-9]{4})|([1-9][0-9]{0,3})|0))$",
-                          socket);
+                          socket) == 0;
 }
-static int util_validate_unix_socket(const char *socket)
+
+bool util_validate_unix_socket(const char *socket)
 {
     int nret = 0;
     const char *name = NULL;
 
     if (socket == NULL) {
-        return -1;
+        return false;
     }
 
     if (strncmp("unix://", socket, strlen("unix://"))) {
@@ -211,12 +171,12 @@ static int util_validate_unix_socket(const char *socket)
         goto err_out;
     }
 err_out:
-    return nret;
+    return nret == 0;
 }
 
 bool util_validate_socket(const char *socket)
 {
-    return util_validate_unix_socket(socket) == 0 || util_vaildate_tcp_socket(socket) == 0;
+    return util_validate_unix_socket(socket) || util_vaildate_tcp_socket(socket);
 }
 
 bool util_valid_device_mode(const char *mode)
@@ -429,7 +389,7 @@ cleanup:
 
 bool util_valid_time_tz(const char *time)
 {
-    char *patten = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{2,9}Z$";
+    char *patten = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]{2,9})?Z$";
 
     if (time == NULL) {
         ERROR("invalid NULL param");

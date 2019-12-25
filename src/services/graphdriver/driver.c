@@ -23,8 +23,8 @@
 #include "utils.h"
 #include "liblcrd.h"
 #include "log.h"
-#include "isula_imtool_interface.h"
 #include "lcrd_config.h"
+#include "image.h"
 
 /* overlay2 */
 
@@ -83,63 +83,15 @@ struct graphdriver *graphdriver_get(const char *name)
     return NULL;
 }
 
-// format: [status xx: val]
-static int get_graphdriver_status_line_value(const char *line, char **start, char **end)
-{
-    char *pstart = NULL;
-    char *pend = NULL;
-
-    pstart = strchr(line, ':');
-    if (pstart == NULL) {
-        ERROR("Invalid output: %s", line);
-        return -1;
-    }
-    pstart++;
-    if (*pstart != ' ') {
-        ERROR("Invalid output: %s", line);
-        return -1;
-    }
-    pstart++;
-
-    pend = strchr(pstart, '\n');
-    if (pend == NULL) {
-        ERROR("Invalid output: %s", pstart);
-        return -1;
-    }
-    *pend++ = '\0';
-
-    *start = pstart;
-    *end = pend;
-    return 0;
-}
-
 struct graphdriver_status *graphdriver_get_status(void)
 {
     struct graphdriver_status *status = NULL;
-    bool command_ret = false;
-    char *stdout_buffer = NULL;
-    char *stderr_buffer = NULL;
-    char *pstart = NULL;
-    char *pend = NULL;
     int ret = -1;
-    int nret = -1;
+    im_storage_status_response *resp = NULL;
 
-    command_ret = util_exec_cmd(execute_storage_status, NULL, NULL, &stdout_buffer, &stderr_buffer);
-    if (!command_ret) {
-        if (stderr_buffer != NULL) {
-            ERROR("Failed to get storage status with error: %s", stderr_buffer);
-            lcrd_set_error_message("Failed to get storage status with error: %s", stderr_buffer);
-        } else {
-            ERROR("Failed to exec storage status command");
-            lcrd_set_error_message("Failed to storage status command");
-        }
-        goto free_out;
-    }
-
-    if (stdout_buffer == NULL) {
-        ERROR("Failed to get storage status because can not get stdoutput");
-        lcrd_set_error_message("Failed to get storage status because can not get stdoutput");
-        goto free_out;
+    ret = im_get_storage_status(IMAGE_TYPE_OCI, &resp);
+    if (ret != 0) {
+        return NULL;
     }
 
     status = util_common_calloc_s(sizeof(struct graphdriver_status));
@@ -148,36 +100,13 @@ struct graphdriver_status *graphdriver_get_status(void)
         goto free_out;
     }
 
-    // Backing Filesystem: extfs
-    if (get_graphdriver_status_line_value(stdout_buffer, &pstart, &pend) != 0) {
-        goto free_out;
-    }
-    status->backing_fs = util_strdup_s(pstart);
-
-    // Supports d_type: true
-    if (get_graphdriver_status_line_value(pend, &pstart, &pend) != 0) {
-        goto free_out;
-    }
-    nret = util_str_to_bool(pstart, &status->supports_d_type);
-    if (nret < 0) {
-        ERROR("Invalid output: %s", pstart);
-        goto free_out;
-    }
-
-    // Native Overlay Diff: true
-    if (get_graphdriver_status_line_value(pend, &pstart, &pend) != 0) {
-        goto free_out;
-    }
-    nret = util_str_to_bool(pstart, &status->native_overlay_diff);
-    if (nret < 0) {
-        ERROR("Invalid output: %s", pstart);
-        goto free_out;
-    }
+    status->backing_fs = util_strdup_s(resp->backing_fs);
+    status->supports_d_type = resp->supports_d_type;
+    status->native_overlay_diff = resp->native_overlay_diff;
 
     ret = 0;
 free_out:
-    free(stderr_buffer);
-    free(stdout_buffer);
+    free_im_storage_status_response(resp);
     if (ret != 0) {
         free_graphdriver_status(status);
         return NULL;

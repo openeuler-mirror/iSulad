@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2019-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
  * iSulad licensed under the Mulan PSL v1.
  * You can use this software according to the terms and conditions of the Mulan PSL v1.
  * You may obtain a copy of Mulan PSL v1 at:
@@ -34,6 +34,9 @@ extern "C" {
     DECLARE_WRAPPER_V(util_common_calloc_s, void *, (size_t size));
     DEFINE_WRAPPER_V(util_common_calloc_s, void *, (size_t size), (size));
 
+    DECLARE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len));
+    DEFINE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len), (size, len));
+
     DECLARE_WRAPPER(merge_env, int, (oci_runtime_spec *oci_spec, const char **env, size_t env_len));
     DEFINE_WRAPPER(merge_env, int, (oci_runtime_spec *oci_spec, const char **env, size_t env_len), \
                    (oci_spec, env, env_len));
@@ -49,6 +52,19 @@ void *util_common_calloc_s_fail(size_t size)
         return NULL;
     } else {
         return __real_util_common_calloc_s(size);
+    }
+}
+
+void *util_smart_calloc_s_fail(size_t size, size_t len)
+{
+    g_malloc_count++;
+
+    if (g_malloc_count == g_malloc_match) {
+        g_malloc_match++;
+        g_malloc_count = 0;
+        return NULL;
+    } else {
+        return __real_util_smart_calloc_s(size, len);
     }
 }
 
@@ -72,6 +88,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     custom_config = (container_custom_config *) util_common_calloc_s(sizeof(container_custom_config));
     ASSERT_TRUE(custom_config != NULL);
@@ -80,7 +98,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
 
     free_oci_runtime_spec(oci_spec);
     oci_spec = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 
     // Parameter oci_spec is NULL
@@ -91,6 +109,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec != NULL);
     free(err);
     err = NULL;
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
 
     custom_config = (container_custom_config *) util_common_calloc_s(sizeof(container_custom_config));
     ASSERT_TRUE(custom_config != NULL);
@@ -99,7 +119,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
 
     free_imagetool_image(tool_image);
     tool_image = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 
     // Parameter custom_spec is NULL
@@ -110,6 +130,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec != NULL);
     free(err);
     err = NULL;
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
 
     oci_runtime_spec_file = json_path(OCI_RUNTIME_SPEC_FILE);
     ASSERT_TRUE(oci_runtime_spec_file != NULL);
@@ -117,6 +139,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     ASSERT_NE(oci_image_merge_config(tool_image, oci_spec, NULL), 0);
 
@@ -133,6 +157,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec != NULL);
     free(err);
     err = NULL;
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
 
     oci_runtime_spec_file = json_path(OCI_RUNTIME_SPEC_FILE);
     ASSERT_TRUE(oci_runtime_spec_file != NULL);
@@ -140,6 +166,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     custom_config = (container_custom_config *) util_common_calloc_s(sizeof(container_custom_config));
     ASSERT_TRUE(custom_config != NULL);
@@ -150,7 +178,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     oci_spec = NULL;
     free_imagetool_image(tool_image);
     tool_image = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 
     // image_config's volumes not NULL
@@ -163,10 +191,15 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec->config->volumes == NULL);
     free(err);
     err = NULL;
-    tool_image->spec->config->volumes = (defs_map_string_object *) util_common_calloc_s(sizeof(defs_map_string_object));
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
+    tool_image->spec->config->volumes = (defs_map_string_object *)util_common_calloc_s(sizeof(defs_map_string_object));
     ASSERT_TRUE(tool_image->spec->config->volumes != NULL);
     tool_image->spec->config->volumes->keys = single_array_from_string("/data");
     ASSERT_TRUE(tool_image->spec->config->volumes->keys != NULL);
+    tool_image->spec->config->volumes->values = (defs_map_string_object_element **)
+                                                util_common_calloc_s(sizeof(defs_map_string_object_element *));
+    ASSERT_TRUE(tool_image->spec->config->volumes->values != NULL);
     tool_image->spec->config->volumes->len = 1;
 
     oci_runtime_spec_file = json_path(OCI_RUNTIME_SPEC_FILE);
@@ -175,6 +208,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     custom_config = (container_custom_config *) util_common_calloc_s(sizeof(container_custom_config));
     ASSERT_TRUE(custom_config != NULL);
@@ -185,7 +220,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     oci_spec = NULL;
     free_imagetool_image(tool_image);
     tool_image = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 
     // Config merge condition 1
@@ -196,6 +231,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec != NULL);
     free(err);
     err = NULL;
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
     ASSERT_TRUE(tool_image->spec->config != NULL);
 
     free(tool_image->spec->config->working_dir);
@@ -227,6 +264,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     free(oci_spec->process->cwd);
     oci_spec->process->cwd = util_strdup_s("/bin/pwd");
@@ -280,7 +319,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     oci_spec = NULL;
     free_imagetool_image(tool_image);
     tool_image = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 
     // Config merge condition 2
@@ -291,6 +330,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec != NULL);
     free(err);
     err = NULL;
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
     ASSERT_TRUE(tool_image->spec->config != NULL);
 
     free(tool_image->spec->config->working_dir);
@@ -320,6 +361,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     free(oci_spec->process->cwd);
     oci_spec->process->cwd = util_strdup_s("/bin/pwd");
@@ -366,7 +409,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     oci_spec = NULL;
     free_imagetool_image(tool_image);
     tool_image = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 
     // Test malloc failed
@@ -378,6 +421,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
         ASSERT_TRUE(tool_image->spec != NULL);
         free(err);
         err = NULL;
+        free(imagetool_image_file);
+        imagetool_image_file = NULL;
 
         oci_runtime_spec_file = json_path(OCI_RUNTIME_SPEC_FILE);
         ASSERT_TRUE(oci_runtime_spec_file != NULL);
@@ -385,10 +430,13 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
         ASSERT_TRUE(oci_spec != NULL);
         free(err);
         err = NULL;
+        free(oci_runtime_spec_file);
+        oci_runtime_spec_file = NULL;
 
         custom_config = (container_custom_config *) util_common_calloc_s(sizeof(container_custom_config));
         ASSERT_TRUE(custom_config != NULL);
 
+        g_malloc_match = 1;
         // Test update_health_check_from_image executed failed caused by malloc failed.
         if (i == 3) {
             g_malloc_match = 2;
@@ -404,15 +452,15 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
             tool_image->spec->config->entrypoint_len = 1;
         }
 
-        MOCK_SET_V(util_common_calloc_s, util_common_calloc_s_fail);
+        MOCK_SET_V(util_smart_calloc_s, util_smart_calloc_s_fail);
         ASSERT_NE(oci_image_merge_config(tool_image, oci_spec, custom_config), 0);
-        MOCK_CLEAR(util_common_calloc_s);
+        MOCK_CLEAR(util_smart_calloc_s);
 
         free_oci_runtime_spec(oci_spec);
         oci_spec = NULL;
         free_imagetool_image(tool_image);
         tool_image = NULL;
-        free(custom_config);
+        free_container_custom_config(custom_config);
         custom_config = NULL;
     }
 
@@ -424,6 +472,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec != NULL);
     free(err);
     err = NULL;
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
 
     oci_runtime_spec_file = json_path(OCI_RUNTIME_SPEC_FILE);
     ASSERT_TRUE(oci_runtime_spec_file != NULL);
@@ -431,6 +481,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     custom_config = (container_custom_config *) util_common_calloc_s(sizeof(container_custom_config));
     ASSERT_TRUE(custom_config != NULL);
@@ -443,7 +495,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     oci_spec = NULL;
     free_imagetool_image(tool_image);
     tool_image = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 
     // Test test_len == NULL
@@ -454,6 +506,8 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec != NULL);
     free(err);
     err = NULL;
+    free(imagetool_image_file);
+    imagetool_image_file = NULL;
 
     oci_runtime_spec_file = json_path(OCI_RUNTIME_SPEC_FILE);
     ASSERT_TRUE(oci_runtime_spec_file != NULL);
@@ -461,8 +515,11 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     ASSERT_TRUE(oci_spec != NULL);
     free(err);
     err = NULL;
+    free(oci_runtime_spec_file);
+    oci_runtime_spec_file = NULL;
 
     util_free_array(tool_image->healthcheck->test);
+    tool_image->healthcheck->test = NULL;
     tool_image->healthcheck->test_len = 0;
 
     custom_config = (container_custom_config *) util_common_calloc_s(sizeof(container_custom_config));
@@ -474,6 +531,6 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     oci_spec = NULL;
     free_imagetool_image(tool_image);
     tool_image = NULL;
-    free(custom_config);
+    free_container_custom_config(custom_config);
     custom_config = NULL;
 }

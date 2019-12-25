@@ -25,8 +25,11 @@
 #include "lcrc_connect.h"
 #include "log.h"
 
-#define IMAGES_OPTIONS(cmdargs)                                                                         \
-    { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display image names", NULL }
+#define IMAGES_OPTIONS(cmdargs)                                                                          \
+    { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display image names", NULL }, \
+    { CMD_OPT_TYPE_CALLBACK, false, "filter", 'f', &(cmdargs).filters, \
+        "Filter output based on conditions provided", command_append_array }
+
 
 #define CREATED_DISPLAY_FORMAT "YYYY-MM-DD HH:MM:SS"
 #define SHORT_DIGEST_LEN 12
@@ -37,7 +40,8 @@ const char g_cmd_images_usage[] = "images";
 struct client_arguments g_cmd_images_args = {};
 /* keep track of field widths for printing. */
 struct lengths {
-    unsigned int ref_length;
+    unsigned int registry_length;
+    unsigned int tag_length;
     unsigned int digest_length;
     unsigned int created_length;
     unsigned int size_length;
@@ -78,14 +82,33 @@ static void list_print_table(struct lcrc_image_info *images_list, const size_t s
         return;
     }
     /* print header */
-    printf("%-*s ", (int)length->ref_length, "REF");
+    printf("%-*s ", (int)length->registry_length, "REPOSITORY");
+    printf("%-*s ", (int)length->tag_length, "TAG");
     printf("%-*s ", (int)length->digest_length, "IMAGE ID");
     printf("%-*s ", (int)length->created_length, "CREATED");
     printf("%-*s ", (int)length->size_length, "SIZE");
     printf("\n");
 
     for (i = 0, in = images_list; i < size && in != NULL; i++, in++) {
-        printf("%-*s ", (int)length->ref_length, in->imageref ? in->imageref : "-");
+        if (in->imageref == NULL || strcmp(in->imageref, "-") == 0) {
+            printf("%-*s ", (int)length->registry_length, "<none>");
+            printf("%-*s ", (int)length->tag_length, "<none>");
+        } else {
+            char *copy_name = util_strdup_s(in->imageref);
+            char *tag_pos = util_tag_pos(copy_name);
+            if (tag_pos == NULL) {
+                printf("%-*s ", (int)length->registry_length, copy_name);
+                printf("%-*s ", (int)length->tag_length, "<none>");
+            } else {
+                *tag_pos = '\0';
+                tag_pos++;
+                printf("%-*s ", (int)length->registry_length, copy_name);
+                printf("%-*s ", (int)length->tag_length, tag_pos);
+                tag_pos--;
+                *tag_pos = ':';
+            }
+            free(copy_name);
+        }
 
         digest = util_short_digest(in->digest);
         printf("%-*s ", (int)length->digest_length, digest ? digest : "-");
@@ -103,6 +126,39 @@ static void list_print_table(struct lcrc_image_info *images_list, const size_t s
     }
 }
 
+static int update_image_ref_width(const struct lcrc_image_info *in, struct lengths *l)
+{
+    size_t len;
+    char *copy_name = util_strdup_s(in->imageref);
+    char *tag_pos = util_tag_pos(copy_name);
+    if (tag_pos == NULL) {
+        len = strlen(copy_name);
+        if (len > l->registry_length) {
+            l->registry_length = (unsigned int)len;
+        }
+        len = strlen("<none>");
+        if (len > l->tag_length) {
+            l->tag_length = (unsigned int)len;
+        }
+    } else {
+        *tag_pos = '\0';
+        tag_pos++;
+        len = strlen(copy_name);
+        if (len > l->registry_length) {
+            l->registry_length = (unsigned int)len;
+        }
+        len = strlen(tag_pos);
+        if (len > l->tag_length) {
+            l->tag_length = (unsigned int)len;
+        }
+        tag_pos--;
+        *tag_pos = ':';
+    }
+    free(copy_name);
+
+    return 0;
+}
+
 /* list field width */
 static void list_field_width(const struct lcrc_image_info *images_list, const size_t size, struct lengths *l)
 {
@@ -114,9 +170,8 @@ static void list_field_width(const struct lcrc_image_info *images_list, const si
         size_t len;
         int slen;
         if (in->imageref) {
-            len = strlen(in->imageref);
-            if (len > l->ref_length) {
-                l->ref_length = (unsigned int)len;
+            if (update_image_ref_width(in, l) != 0) {
+                return;
             }
         }
         if (in->digest) {
@@ -149,7 +204,8 @@ static void list_field_width(const struct lcrc_image_info *images_list, const si
 static void images_info_print(const struct lcrc_list_images_response *response)
 {
     struct lengths max_len = {
-        .ref_length = 30, /* ref */
+        .registry_length = 30, /* registry */
+        .tag_length = 10, /* tag */
         .digest_length = 20, /* digest */
         .created_length = 20, /* created */
         .size_length = 10, /* size */
@@ -162,16 +218,14 @@ static void images_info_print(const struct lcrc_list_images_response *response)
 /* images info print quiet */
 static void images_info_print_quiet(const struct lcrc_list_images_response *response)
 {
-    struct lengths max_len = {
-        .ref_length = 30, /* ref */
-    };
-
     const struct lcrc_image_info *in = NULL;
     size_t i = 0;
 
     for (i = 0, in = response->images_list; in != NULL && i < response->images_num; i++, in++) {
-        printf("%-*s ", (int)(max_len.ref_length), in->imageref ? in->imageref : "-");
+        char *digest = util_short_digest(in->digest);
+        printf("%-*s ", SHORT_DIGEST_LEN, digest ? digest : "<none>");
         printf("\n");
+        free(digest);
     }
 }
 
@@ -212,7 +266,15 @@ static int list_images(const struct client_arguments *args)
         ret = -1;
         goto out;
     }
-
+    if (args->filters != NULL) {
+        request.filters = lcrc_filters_parse_args((const char **)args->filters,
+                                                  util_array_len((const char **)(args->filters)));
+        if (request.filters == NULL) {
+            ERROR("Failed to parse filters args");
+            ret = -1;
+            goto out;
+        }
+    }
     config = get_connect_config(args);
     ret = ops->image.list(&request, response, &config);
     if (ret != 0) {
@@ -232,6 +294,7 @@ static int list_images(const struct client_arguments *args)
     }
 
 out:
+    lcrc_filters_free(request.filters);
     lcrc_list_images_response_free(response);
     return ret;
 }
@@ -262,11 +325,6 @@ int cmd_images_main(int argc, const char **argv)
     }
     if (log_init(&lconf)) {
         COMMAND_ERROR("Images: log init failed");
-        exit(exit_code);
-    }
-
-    if (g_cmd_images_args.argc > 0) {
-        COMMAND_ERROR("%s: \"images\" requires 0 arguments.", g_cmd_images_args.progname);
         exit(exit_code);
     }
 

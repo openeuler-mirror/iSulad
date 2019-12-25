@@ -29,3 +29,4 @@ int snapshot_generate_mount_string(uint32_t driver_type,
                                    struct db_sninfo **sninfos, char **mount_string);
 
 #endif
+

@@ -200,7 +200,7 @@ static int run_checker(struct client_arguments *args)
         goto out;
     }
 
-    /* Make detach option a high priority than terminal*/
+    /* Make detach option a high priority than terminal */
     if (args->detach) {
         args->custom_conf.attach_stdin = false;
         args->custom_conf.attach_stdout = false;

@@ -27,7 +27,7 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
         ERROR("invalid token :%s", token.c_str());
         return -1;
     }
-    runtime::ExecRequest *request = dynamic_cast<runtime::ExecRequest *>(cachedRequest);
+    runtime::v1alpha2::ExecRequest *request = dynamic_cast<runtime::v1alpha2::ExecRequest *>(cachedRequest);
     if (request == nullptr) {
         ERROR("failed to get exec request!");
         return -1;
@@ -74,7 +74,7 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
     return ret;
 }
 
-int ExecServe::RequestFromCri(const runtime::ExecRequest *grequest,
+int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest *grequest,
                               container_exec_request **request)
 {
     container_exec_request *tmpreq = nullptr;

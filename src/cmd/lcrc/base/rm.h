@@ -29,3 +29,4 @@ extern struct client_arguments g_cmd_delete_args;
 int cmd_delete_main(int argc, const char **argv);
 
 #endif /* __CMD_DELETE_H */
+

@@ -23,3 +23,4 @@ extern struct client_arguments g_cmd_resume_args;
 int cmd_resume_main(int argc, const char **argv);
 
 #endif
+

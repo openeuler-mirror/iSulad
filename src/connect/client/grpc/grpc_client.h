@@ -28,3 +28,4 @@ int grpc_ops_init(lcrc_connect_ops *ops);
 #endif
 
 #endif /* __GRPC_CLIENT_H */
+

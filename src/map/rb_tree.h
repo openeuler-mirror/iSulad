@@ -80,3 +80,4 @@ void *rbtree_iterator_value(rb_iterator_t *itor);
 #endif
 
 #endif /* __RB_TREE_H_ */
+

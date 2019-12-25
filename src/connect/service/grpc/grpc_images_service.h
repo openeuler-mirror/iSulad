@@ -88,4 +88,5 @@ private:
     int image_logout_request_from_grpc(const LogoutRequest *grequest, image_logout_request **request);
 };
 
-#endif /*_GRPC_IMAGES_SERVICE_H_*/
+#endif /* _GRPC_IMAGES_SERVICE_H_ */
+

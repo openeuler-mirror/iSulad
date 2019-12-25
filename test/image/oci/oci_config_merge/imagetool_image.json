@@ -1,10 +1,10 @@
 {
     "id": "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b",
     "repo_tags": [
-        "rnd-dockerhub.huawei.com/official/busybox:latest"
+        "busybox:latest"
     ],
     "repo_digests": [
-        "rnd-dockerhub.huawei.com/official/busybox@sha256:64da743694ece2ca88df34bf4c5378fdfc44a1a5b50478722e2ff98b82e4a5c9"
+        "busybox@sha256:64da743694ece2ca88df34bf4c5378fdfc44a1a5b50478722e2ff98b82e4a5c9"
     ],
     "size": 1443304,
     "created": "2019-06-15T00:19:54.402459069Z",
