@@ -18,7 +18,6 @@
 #include <string>
 #include <thread>
 #include <unistd.h>
-#include "securec.h"
 #include "log.h"
 #include "utils.h"
 #include "error.h"
@@ -118,11 +117,7 @@ static bool copy_to_container_data_from_grpc(struct lcrd_copy_to_container_data 
             ERROR("Out of memory");
             return false;
         }
-        if (memcpy_s(data, len, gcopy->data().c_str(), len) != EOK) {
-            ERROR("Can not copy memory");
-            free(data);
-            return false;
-        }
+        (void)memcpy(data, gcopy->data().c_str(), len);
         copy->data = data;
         copy->data_len = len;
         return true;

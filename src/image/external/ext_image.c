@@ -24,7 +24,6 @@
 #include "log.h"
 #include "utils.h"
 #include "specs_extend.h"
-#include "securec.h"
 #include "ext_image.h"
 
 #ifdef ENABLE_OCI_IMAGE

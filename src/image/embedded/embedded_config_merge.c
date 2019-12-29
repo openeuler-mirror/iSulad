@@ -19,7 +19,6 @@
 #include <string.h>
 #include <linux/limits.h>
 
-#include "securec.h"
 #include "utils.h"
 #include "log.h"
 #include "liblcrd.h"
@@ -141,15 +140,15 @@ int gen_one_mount(embedded_manifest *manifest, char *mount, char *real_path, int
         return -1;
     }
     if (strcmp(manifest->layers[i]->media_type, MediaTypeEmbeddedLayerSquashfs) == 0) {
-        nret = sprintf_s(mount, PATH_MAX * 3,
-                         "type=squashfs,ro=true,src=%s,dst=%s",
-                         real_path, manifest->layers[i]->path_in_container);
+        nret = snprintf(mount, PATH_MAX * 3,
+                        "type=squashfs,ro=true,src=%s,dst=%s",
+                        real_path, manifest->layers[i]->path_in_container);
     } else {
-        nret = sprintf_s(mount, PATH_MAX * 3,
-                         "type=bind,ro=true,bind-propagation=rprivate,src=%s,dst=%s",
-                         real_path, manifest->layers[i]->path_in_container);
+        nret = snprintf(mount, PATH_MAX * 3,
+                        "type=bind,ro=true,bind-propagation=rprivate,src=%s,dst=%s",
+                        real_path, manifest->layers[i]->path_in_container);
     }
-    if (nret < 0) {
+    if (nret < 0 || (size_t)nret >= (PATH_MAX * 3)) {
         ERROR("print string for mounts failed");
         return -1;
     }

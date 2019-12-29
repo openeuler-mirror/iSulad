@@ -19,7 +19,6 @@
 #include <malloc.h>
 
 #include "error.h"
-#include "securec.h"
 #include "arguments.h"
 #include "commander.h"
 #include "start.h"

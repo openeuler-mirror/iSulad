@@ -16,12 +16,12 @@
 #include <stdio.h>
 #include <errno.h>
 #include <ctype.h>
+#include <stdarg.h>
 
 #include "liblcrd.h"
 #include "log.h"
 #include "pack_config.h"
 #include "utils.h"
-#include "securec.h"
 
 // record the errno
 __thread char *g_lcrd_errmsg = NULL;
@@ -107,9 +107,9 @@ void lcrd_set_error_message(const char *format, ...)
     va_list argp;
     va_start(argp, format);
 
-    ret = vsprintf_s(errbuf, BUFSIZ, format, argp);
+    ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0) {
+    if (ret < 0 || ret >= BUFSIZ) {
         return;
     }
 
@@ -129,9 +129,9 @@ void lcrd_try_set_error_message(const char *format, ...)
     va_list argp;
     va_start(argp, format);
 
-    ret = vsprintf_s(errbuf, BUFSIZ, format, argp);
+    ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0) {
+    if (ret < 0 || ret >= BUFSIZ) {
         return;
     }
 
@@ -148,9 +148,9 @@ void lcrd_append_error_message(const char *format, ...)
     va_list argp;
     va_start(argp, format);
 
-    ret = vsprintf_s(errbuf, BUFSIZ, format, argp);
+    ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0) {
+    if (ret < 0 || ret >= BUFSIZ) {
         return;
     }
     result = util_string_append(g_lcrd_errmsg, errbuf);

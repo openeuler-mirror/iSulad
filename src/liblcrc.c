@@ -21,7 +21,6 @@
 #include "log.h"
 #include "pack_config.h"
 #include "utils.h"
-#include "securec.h"
 
 /* lcrc filters free */
 void lcrc_filters_free(struct lcrc_filters *filters)

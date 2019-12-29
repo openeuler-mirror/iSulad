@@ -18,7 +18,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
-#include "securec.h"
 
 #include "utils.h"
 #include "arguments.h"
@@ -60,9 +59,9 @@ static char *trans_time(int64_t created)
         return NULL;
     }
 
-    nret = sprintf_s(formated_time, sizeof(formated_time), "%04d-%02d-%02d %02d:%02d:%02d", t.tm_year + 1900,
-                     t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
-    if (nret < 0) {
+    nret = snprintf(formated_time, sizeof(formated_time), "%04d-%02d-%02d %02d:%02d:%02d", t.tm_year + 1900,
+                    t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
+    if (nret < 0 || nret >= sizeof(formated_time)) {
         ERROR("format created time failed");
         return NULL;
     }
@@ -187,8 +186,8 @@ static void list_field_width(const struct lcrc_image_info *images_list, const si
             }
         }
 
-        slen = sprintf_s(tmpbuffer, sizeof(tmpbuffer), "%.2f", (float)(in->size) / (1024 * 1024));
-        if (slen < 0) {
+        slen = snprintf(tmpbuffer, sizeof(tmpbuffer), "%.2f", (float)(in->size) / (1024 * 1024));
+        if (slen < 0 || (size_t)slen >= sizeof(tmpbuffer)) {
             ERROR("sprintf tmpbuffer failed");
             return;
         }

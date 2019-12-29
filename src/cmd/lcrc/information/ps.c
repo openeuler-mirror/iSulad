@@ -19,7 +19,6 @@
 #include <ctype.h>
 #include <regex.h>
 #include <errno.h>
-#include "securec.h"
 #include "arguments.h"
 #include "ps.h"
 #include "utils.h"
@@ -162,21 +161,11 @@ static int mix_container_state(const struct lcrc_container_summary_info *in, cha
 
     container_status = lcrc_lcrsta2str(in->status);
     if (container_status == NULL) {
-        ret = strcpy_s(state, len, "-");
-        if (ret < 0) {
-            ERROR("Failed to copy string");
-            ret = -1;
-            goto out;
-        }
+        (void)strcpy(state, "-");
     } else {
-        if (strcpy_s(state, len, container_status) != EOK) {
-            ERROR("Failed to copy string");
-            ret = -1;
-            goto out;
-        }
+        (void)strcpy(state, container_status);
     }
 
-out:
     return ret;
 }
 
@@ -184,15 +173,18 @@ static int handle_running_status(const char *start_at, const struct lcrc_contain
                                  char *status, size_t len)
 {
     int ret = 0;
+    int nret;
 
     if (in->health_state != NULL) {
-        if (sprintf_s(status, len, "Up %s %s", start_at, in->health_state) < 0) {
+        nret = snprintf(status, len, "Up %s %s", start_at, in->health_state);
+        if (nret < 0 || nret >= len) {
             ERROR("Failed to compose string");
             ret = -1;
             goto out;
         }
     } else {
-        if (sprintf_s(status, len, "Up %s",  start_at) < 0) {
+        nret = snprintf(status, len, "Up %s",  start_at);
+        if (nret < 0 || nret >= len) {
             ERROR("Failed to compose string");
             ret = -1;
             goto out;
@@ -206,6 +198,7 @@ out:
 static int mix_container_status(const struct lcrc_container_summary_info *in, char *status, size_t len)
 {
     int ret = -1;
+    int sret = 0;
     char startat_duration[TIME_DURATION_MAX_LEN] = { 0 };
     char finishat_duration[TIME_DURATION_MAX_LEN] = { 0 };
     char *start_at = NULL;
@@ -219,24 +212,19 @@ static int mix_container_status(const struct lcrc_container_summary_info *in, ch
         if (handle_running_status(start_at, in, status, len) != 0) {
             goto out;
         }
-    } else if (in->status == CONTAINER_STATUS_CREATED) {
-        if (sprintf_s(status, len, "Created") < 0) {
-            goto out;
-        }
-    } else if (in->status == CONTAINER_STATUS_RESTARTING) {
-        if (sprintf_s(status, len, "Restarting (%d) %s", (int)in->exit_code, finish_at) < 0) {
-            goto out;
-        }
-    } else if (in->status == CONTAINER_STATUS_PAUSED) {
-        if (sprintf_s(status, len, "Up %s (Paused)", start_at) < 0) {
-            goto out;
-        }
-    } else if (in->status == CONTAINER_STATUS_STARTING) {
-        if (sprintf_s(status, len, "Starting %s", start_at) < 0) {
-            goto out;
-        }
     } else {
-        if (sprintf_s(status, len, "Exited (%d) %s", (int)in->exit_code, finish_at) < 0) {
+        if (in->status == CONTAINER_STATUS_CREATED) {
+            sret = snprintf(status, len, "Created");
+        } else if (in->status == CONTAINER_STATUS_RESTARTING) {
+            sret = snprintf(status, len, "Restarting (%d) %s", (int)in->exit_code, finish_at);
+        } else if (in->status == CONTAINER_STATUS_PAUSED) {
+            sret = snprintf(status, len, "Up %s (Paused)", start_at);
+        } else if (in->status == CONTAINER_STATUS_STARTING) {
+            sret = snprintf(status, len, "Starting %s", start_at);
+        } else {
+            sret = snprintf(status, len, "Exited (%d) %s", (int)in->exit_code, finish_at);
+        }
+        if (sret < 0 || (size_t)sret >= len) {
             goto out;
         }
     }
@@ -523,8 +511,8 @@ static void calculate_uint_str_length(uint32_t data, unsigned int *length)
     int len = 0;
     char tmpbuffer[UINT_LEN + 1] = { 0 };
 
-    len = sprintf_s(tmpbuffer, sizeof(tmpbuffer), "%u", data);
-    if (len < 0) {
+    len = snprintf(tmpbuffer, sizeof(tmpbuffer), "%u", data);
+    if (len < 0 || (size_t)len >= sizeof(tmpbuffer)) {
         ERROR("sprintf buffer failed");
         return;
     }
@@ -808,7 +796,7 @@ static char *get_filter_string(const char *arg)
 
     input_str = util_strdup_s(arg);
 
-    p = strtok_s(input_str, ".", &next_context);
+    p = strtok_r(input_str, ".", &next_context);
     if (p == NULL) {
         goto out;
     }
@@ -818,7 +806,7 @@ static char *get_filter_string(const char *arg)
         goto out;
     }
 
-    p = strtok_s(p, " }", &next_context);
+    p = strtok_r(p, " }", &next_context);
     if (p == NULL) {
         goto out;
     }

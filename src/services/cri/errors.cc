@@ -17,8 +17,6 @@
 
 #include <cstdarg>
 
-#include "securec.h"
-
 Errors::Errors()
 {
     m_message.clear();
@@ -117,9 +115,9 @@ void Errors::Errorf(const char *fmt, ...)
 
     va_start(argp, fmt);
 
-    ret = vsprintf_s(errbuf, BUFSIZ, fmt, argp);
+    ret = vsnprintf(errbuf, BUFSIZ, fmt, argp);
     va_end(argp);
-    if (ret < 0) {
+    if (ret < 0 || ret >= BUFSIZ) {
         m_message = "Error message is too long";
         return;
     }

@@ -25,7 +25,6 @@
 #include "log.h"
 #include "monitord.h"
 #include "mainloop.h"
-#include "securec.h"
 #include "lcrd_config.h"
 #include "collector.h"
 #include "utils.h"
@@ -46,8 +45,8 @@ char *lcrd_monitor_fifo_name(const char *rootpath)
         ERROR("Invalid parameter");
         goto err;
     }
-    ret = sprintf_s(fifo_file_path, PATH_MAX, "%s/monitord_fifo", rootpath);
-    if (ret < 0 || ret >= PATH_MAX) {
+    ret = snprintf(fifo_file_path, PATH_MAX, "%s/monitord_fifo", rootpath);
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         ERROR("Create monitord fifo path failed");
         goto err;
     }

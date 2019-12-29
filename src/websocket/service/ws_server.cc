@@ -19,7 +19,6 @@
 #include <future>
 #include <utility>
 #include <sys/resource.h>
-#include <securec.h>
 #include "cxxutils.h"
 #include "log.h"
 #include "utils.h"
@@ -115,10 +114,8 @@ int WebsocketServer::CreateContext()
 
     m_url.SetScheme("ws");
     m_url.SetHost("localhost:" + std::to_string(m_listenPort));
-    if (memset_s(&info, sizeof(struct lws_context_creation_info), 0, sizeof(info)) != EOK) {
-        ERROR("Failed to set memory!");
-        return -1;
-    }
+
+    (void)memset(&info, 0, sizeof(info));
     lws_set_log_level(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_DEBUG, WebsocketServer::EmitLog);
 
     info.port = m_listenPort;
@@ -285,10 +282,7 @@ int WebsocketServer::Wswrite(struct lws *wsi, void *in, size_t len)
             ERROR("ERROR %d writing to socket, hanging up", n);
             return -1;
         }
-        if (memset_s(buf, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1,
-                     0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1) != EOK) {
-            ERROR("Failed to set memory");
-        }
+        (void)memset(buf, 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
         it->second.buf_mutex->unlock();
     }
 
@@ -302,10 +296,7 @@ void WebsocketServer::Receive(struct lws *wsi, void *user, void *in, size_t len)
         pss->final = lws_is_final_fragment(wsi);
         pss->binary = lws_frame_is_binary(wsi);
 
-        if (memcpy_s(&pss->buf[LWS_PRE], MAX_ECHO_PAYLOAD, in, len) != EOK) {
-            ERROR("failed to copy memory!");
-            return;
-        }
+        (void)memcpy(&pss->buf[LWS_PRE], in, len);
         pss->len = (unsigned int)len;
         pss->rx += len;
         lws_rx_flow_control(wsi, 0);
@@ -436,15 +427,10 @@ ssize_t WsWriteToClient(void *context, const void *data, size_t len)
     it->second.buf_mutex->lock();
     auto &buf = it->second.buf;
     // Determine if it is standard output channel or error channel?
-    if (memset_s(buf, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1,
-                 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1) != EOK) {
-        ERROR("Failed to set memory");
-    }
+    (void)memset(buf, 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
     buf[LWS_PRE] = STDOUTCHANNEL;
-    if (memcpy_s(&buf[LWS_PRE + 1], MAX_MSG_BUFFER_SIZE, (void *)data, len) != EOK) {
-        ERROR("failed to copy memory!");
-        return 0;
-    }
+
+    (void)memcpy(&buf[LWS_PRE + 1], (void *)data, len);
     auto start = std::chrono::system_clock::now();
     lws_callback_on_writable(wsi);
     it->second.buf_mutex->unlock();

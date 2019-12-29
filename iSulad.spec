@@ -1,5 +1,5 @@
-%global _version 1.1.2
-%global _release 20191224.232827.git9001f2f6
+%global _version 1.1.4
+%global _release 20191226.061440.gitfa7769d5
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -31,14 +31,14 @@ Requires(preun): initscripts
 
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
 BuildRequires: grpc grpc-devel protobuf-devel
-BuildRequires: libsecurec libsecurec-devel libcurl libcurl-devel sqlite-devel
+BuildRequires: libcurl libcurl-devel sqlite-devel
 BuildRequires: http-parser-devel libevhtp-devel libevent-devel
 BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
 Requires:      iSulad-kit lcr lxc clibcni
 Requires:      grpc protobuf yajl
-Requires:      libcurl libsecurec
+Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
 Requires:      libcap libwebsockets
 Requires:      libevhtp libevent systemd

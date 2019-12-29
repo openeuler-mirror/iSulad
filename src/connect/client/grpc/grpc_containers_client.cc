@@ -18,7 +18,6 @@
 #include <sstream>
 #include <fstream>
 #include <thread>
-#include "securec.h"
 #include "container_copy_to_request.h"
 #include "container_exec_request.h"
 #include "utils.h"
@@ -1541,10 +1540,7 @@ public:
         }
 
         lcrc_host_config_t hostconfig;
-        if (memset_s(&hostconfig, sizeof(hostconfig), 0, sizeof(hostconfig)) != EOK) {
-            ERROR("Failed to set memory");
-            return -1;
-        }
+        (void)memset(&hostconfig, 0, sizeof(hostconfig));
 
         if (request->updateconfig) {
             hostconfig.restart_policy = request->updateconfig->restart_policy;
@@ -1793,13 +1789,7 @@ private:
 
     void event_from_grpc(container_events_format_t *event, Event *gevent)
     {
-        errno_t mret = EOK;
-
-        mret = memset_s(event, sizeof(*event), 0, sizeof(*event));
-        if (mret != EOK) {
-            ERROR("Failed to set memory");
-            return;
-        }
+        (void)memset(event, 0, sizeof(*event));
         if (!gevent->id().empty()) {
             event->id = (char *)gevent->id().c_str();
         }
@@ -1855,9 +1845,7 @@ static ssize_t CopyFromContainerRead(void *context, void *buf, size_t len)
     }
     size_t data_len = res.data().length();
     if (data_len <= len) {
-        if (memcpy_s(buf, len, res.data().c_str(), data_len) != EOK) {
-            return -1;
-        }
+        (void)memcpy(buf, res.data().c_str(), data_len);
         return (ssize_t)data_len;
     }
 

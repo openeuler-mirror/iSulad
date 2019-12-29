@@ -23,7 +23,6 @@
 #include <lcr/lcrcontainer.h>
 
 #include "error.h"
-#include "securec.h"
 #include "engine.h"
 #include "log.h"
 #include "lcrd_config.h"
@@ -80,7 +79,6 @@ static Engine_Container_Status lcrsta2sta(const char *state)
 static bool lcr_update_container(const char *name, const char *lcrpath, const struct engine_cgroup_resources *cr)
 {
     struct lcr_cgroup_resources lcr_cr;
-    errno_t ret = EOK;
 
     if (g_lcr_update_op == NULL) {
         ERROR("Not supported update operation");
@@ -92,11 +90,7 @@ static bool lcr_update_container(const char *name, const char *lcrpath, const st
         return false;
     }
 
-    ret = memset_s(&lcr_cr, sizeof(struct lcr_cgroup_resources), 0x00, sizeof(struct lcr_cgroup_resources));
-    if (ret != EOK) {
-        ERROR("Failed to set memory");
-        return false;
-    }
+    (void)memset(&lcr_cr, 0, sizeof(struct lcr_cgroup_resources));
 
     lcr_cr.blkio_weight = cr->blkio_weight;
     lcr_cr.cpu_shares = cr->cpu_shares;
@@ -146,18 +140,13 @@ bool get_console_config(const char *name, const char *lcrpath, struct engine_con
 {
     struct lcr_console_config lcr_config;
     bool ret = false;
-    errno_t mret = EOK;
 
     if (name == NULL || config == NULL) {
         ERROR("Invalid arguments");
         return ret;
     }
 
-    mret = memset_s(&lcr_config, sizeof(struct lcr_console_config), 0x00, sizeof(struct lcr_console_config));
-    if (mret != EOK) {
-        ERROR("Failed to set memory");
-        return ret;
-    }
+    (void)memset(&lcr_config, 0, sizeof(struct lcr_console_config));
 
     if (g_lcr_get_console_config_op != NULL) {
         ret = g_lcr_get_console_config_op(name, lcrpath, &lcr_config);
@@ -215,9 +204,7 @@ static void copy_container_status(const struct lcr_container_state *lcs, struct 
     const char *defvalue = "-";
     const char *name = NULL;
 
-    if (memset_s(status, sizeof(struct engine_container_info), 0, sizeof(struct engine_container_info)) != EOK) {
-        WARN("Can not set memory");
-    }
+    (void)memset(status, 0, sizeof(struct engine_container_info));
 
     name = lcs->name ? lcs->name : defvalue;
     status->id = util_strdup_s(name);

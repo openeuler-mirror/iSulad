@@ -20,7 +20,6 @@
 #include "buffer.h"
 #include "log.h"
 #include "utils.h"
-#include "securec.h"
 
 size_t fwrite_buffer(const char *ptr, size_t eltsize, size_t nmemb, void *buffer_)
 {
@@ -96,8 +95,8 @@ struct curl_slist *http_get_chunk_header(const struct http_get_options *options)
             ret = -1;
             goto out;
         }
-        nret = sprintf_s(header, len, "Authorization: %s", options->authorization);
-        if (nret < 0) {
+        nret = snprintf(header, len, "Authorization: %s", options->authorization);
+        if (nret < 0 || (size_t)nret >= len) {
             ERROR("Failed to print string");
             ret = -1;
             goto out;
@@ -126,8 +125,8 @@ struct curl_slist *http_get_chunk_header(const struct http_get_options *options)
             ret = -1;
             goto out;
         }
-        nret = sprintf_s(header, len, "Accept: %s", options->accepts);
-        if (nret < 0) {
+        nret = snprintf(header, len, "Accept: %s", options->accepts);
+        if (nret < 0 || (size_t)nret >= len) {
             ERROR("Failed to print string");
             ret = -1;
             goto out;
@@ -365,7 +364,8 @@ int authz_http_request(const char *username, const char *action, char **resp)
         *resp = util_strdup_s("Inernal server error: Out of memory");
         return -1;
     }
-    if (sprintf_s(request_body, length, "%s:%s", username, action) < 0) {
+    int nret = snprintf(request_body, length, "%s:%s", username, action);
+    if (nret < 0 || (size_t)nret >= length) {
         ERROR("Failed to print string");
         free(request_body);
         return -1;
@@ -392,8 +392,8 @@ int authz_http_request(const char *username, const char *action, char **resp)
         goto out;
     }
     if (response_code != StatusOK) {
-        ret = sprintf_s(err_msg, sizeof(err_msg), "action '%s' for user '%s': permission denied", action, username);
-        if (ret < 0) {
+        ret = snprintf(err_msg, sizeof(err_msg), "action '%s' for user '%s': permission denied", action, username);
+        if (ret < 0 || (size_t)ret >= sizeof(err_msg)) {
             ERROR("Out of memory");
             *resp = util_strdup_s("Inernal server error: Out of memory");
             goto out;

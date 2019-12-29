@@ -30,7 +30,6 @@
 #include "liblcrd.h"
 #include "log.h"
 #include "image.h"
-#include "securec.h"
 #include "engine.h"
 #include "lcrd_config.h"
 #include "mediatype.h"

@@ -13,7 +13,6 @@
  * Description: provide container health functions
  ******************************************************************************/
 #include "health.h"
-#include "securec.h"
 #include "utils.h"
 #include "arguments.h"
 #include "log.h"

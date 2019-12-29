@@ -21,7 +21,6 @@
 #include <sys/utsname.h>
 #include <ctype.h>
 
-#include "securec.h"
 #include "image.h"
 #include "liblcrd.h"
 #include "log.h"
@@ -1684,8 +1683,8 @@ int map_to_key_value_string(const json_map_string_string *map, char ***array, si
             ERROR("Out of memory");
             goto cleanup;
         }
-        ret = sprintf_s(str, len, "%s=%s", map->keys[i], map->values[i]);
-        if (ret < 0) {
+        ret = snprintf(str, len, "%s=%s", map->keys[i], map->values[i]);
+        if (ret < 0 || (size_t)ret >= len) {
             ERROR("Failed to print string");
             free(str);
             goto cleanup;

@@ -204,23 +204,12 @@ static ssize_t write_to_string(void *context, const void *data, size_t len)
     }
 
     if (len >= REV_BUF_SIZE) {
-        if (strncpy_s(dst, REV_BUF_SIZE, data, REV_BUF_SIZE - 4) != EOK) {
-            ERROR("Failed to set output");
-            len = 0;
-            goto out;
-        }
-        if (strcpy_s(dst + REV_BUF_SIZE - 4, strlen("...") + 1, "...") != EOK) {
-            ERROR("Failed to append string to output");
-            len = 0;
-            goto out;
-        }
+        (void)strncpy(dst, data, REV_BUF_SIZE - 4);
+        (void)strcpy(dst + REV_BUF_SIZE - 4, "...");
     } else {
-        if (strncpy_s(dst, REV_BUF_SIZE, data, len) != EOK) {
-            len = 0;
-            goto out;
-        }
+        (void)strncpy(dst, data, len);
     }
-out:
+
     return (ssize_t)len;
 }
 

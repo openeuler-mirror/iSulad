@@ -84,6 +84,12 @@ int copy_image_metadata(const isula::Image &gimage, struct image_metadata **meta
         goto err_out;
     }
 
+    tmp_data->size = gimage.size();
+
+    if (gimage.has_uid()) {
+        tmp_data->uid = gimage.uid().value();
+    }
+
     if (!gimage.username().empty()) {
         tmp_data->username = util_strdup_s(gimage.username().c_str());
     }

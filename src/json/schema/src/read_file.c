@@ -23,7 +23,6 @@
 #include <stdint.h>
 
 #include <config.h>
-#include "securec.h"
 #include "read_file.h"
 
 #ifndef O_CLOEXEC
@@ -57,8 +56,6 @@ char *fread_file(FILE *stream, size_t *length)
 
     while (1) {
         size_t ret, newsize, sizejudge;
-        int pret;
-        errno_t rc = EOK;
         sizejudge = (JSON_MAX_SIZE - BUFSIZ) - 1;
         if (sizejudge < off) {
             goto out;
@@ -71,15 +68,9 @@ char *fread_file(FILE *stream, size_t *length)
         }
 
         if (buf != NULL) {
-            pret = memcpy_s(tmpbuf, newsize, buf, off);
-            if (pret) {
-                goto out;
-            }
+            (void)memcpy(tmpbuf, buf, off);
 
-            rc = memset_s(buf, off, 0, off);
-            if (rc != EOK) {
-                goto out;
-            }
+            (void)memset(buf, 0, off);
 
             free(buf);
         }
@@ -149,4 +140,3 @@ char *read_file(const char *path, size_t *length)
     (void)fclose(fp);
     return buf;
 }
-

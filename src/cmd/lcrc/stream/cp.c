@@ -23,7 +23,6 @@
 #include "log.h"
 #include "path.h"
 #include "lcrc_connect.h"
-#include "securec.h"
 #include "lcrdtar.h"
 
 #define FromContainer 0x01u
@@ -231,9 +230,7 @@ static void ignore_sigpipe()
     /*
      * Ignore SIGPIPE so the current process still exists after child process exited.
      */
-    if (memset_s(&sa, sizeof(struct sigaction), 0, sizeof(struct sigaction)) != EOK) {
-        WARN("Failed to set memory");
-    }
+    (void)memset(&sa, 0, sizeof(struct sigaction));
 
     sa.sa_handler = SIG_IGN;
     sigemptyset(&sa.sa_mask);

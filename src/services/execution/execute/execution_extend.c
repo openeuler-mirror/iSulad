@@ -34,7 +34,6 @@
 #include "config.h"
 #include "restartmanager.h"
 #include "image.h"
-#include "securec.h"
 #include "verify.h"
 #include "container_inspect.h"
 #include "containers_store.h"

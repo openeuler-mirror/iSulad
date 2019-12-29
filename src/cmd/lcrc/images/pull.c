@@ -18,7 +18,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
-#include "securec.h"
 
 #include "utils.h"
 #include "arguments.h"

@@ -303,8 +303,8 @@ static int get_plugin_dir(char *plugin_dir)
         return -1;
     }
 
-    ret = sprintf_s(plugin_dir, PATH_MAX, "%s/plugins", statedir);
-    if (ret < 0) {
+    ret = snprintf(plugin_dir, PATH_MAX, "%s/plugins", statedir);
+    if (ret < 0 || (size_t)ret >= PATH_MAX) {
         goto failed;
     }
 
@@ -365,14 +365,11 @@ static int get_plugin_addr_and_name(char *plugin_addr, char *plugin_name, const 
         ERROR("not plugin filename %s", filename);
         goto out;
     }
-    nret = strcpy_s(plugin_name, PATH_MAX, filename);
-    if (nret < 0) {
-        ERROR("get plugin name failed %s", filename);
-        goto out;
-    }
+    (void)strcpy(plugin_name, filename);
+
     plugin_name[str_length - PLUGIN_SOCKET_FILE_SUFFIX_LEN] = 0;
-    nret = sprintf_s(plugin_addr, PATH_MAX, "%s/%s", plugin_dir, filename);
-    if (nret < 0) {
+    nret = snprintf(plugin_addr, PATH_MAX, "%s/%s", plugin_dir, filename);
+    if (nret < 0 || nret >= PATH_MAX) {
         ERROR("get plugin addr failed %s", filename);
         goto out;
     }
@@ -574,8 +571,8 @@ static int reload_plugin(const char *name)
         return -1;
     }
 
-    ret = sprintf_s(filename, PATH_MAX, "%s.sock", name);
-    if (ret < 0) {
+    ret = snprintf(filename, PATH_MAX, "%s.sock", name);
+    if (ret < 0 || ret >= PATH_MAX) {
         ERROR("get plugin addr failed %s", filename);
         return -1;
     }
@@ -904,8 +901,8 @@ int pm_activate_plugin(plugin_t *plugin)
     }
 
     body_len = strlen(body) + 1;
-    ret = sprintf_s(socket, PATH_MAX, "unix://%s", plugin->addr);
-    if (ret < 0) {
+    ret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
+    if (ret < 0 || ret >= PATH_MAX) {
         ERROR("get plugin socket failed");
         ret = -1;
         goto out;
@@ -1130,8 +1127,8 @@ static int pm_init_plugin(const plugin_t *plugin)
     }
 
     body_len = strlen(body) + 1;
-    ret = sprintf_s(socket, PATH_MAX, "unix://%s", plugin->addr);
-    if (ret < 0) {
+    ret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
+    if (ret < 0 || ret >= PATH_MAX) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1470,8 +1467,8 @@ static int plugin_event_pre_create_handle(const plugin_t *plugin, const char *ci
     }
 
     body_len = strlen(body) + 1;
-    ret = sprintf_s(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0) {
+    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1642,8 +1639,8 @@ static int plugin_event_pre_start_handle(const plugin_t *plugin, const char *cid
     }
 
     body_len = strlen(body) + 1;
-    ret = sprintf_s(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0) {
+    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1741,8 +1738,8 @@ static int plugin_event_post_stop_handle(const plugin_t *plugin, const char *cid
     }
 
     body_len = strlen(body) + 1;
-    ret = sprintf_s(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0) {
+    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1839,8 +1836,8 @@ static int plugin_event_post_remove_handle(const plugin_t *plugin, const char *c
     }
 
     body_len = strlen(body) + 1;
-    ret = sprintf_s(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0) {
+    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;

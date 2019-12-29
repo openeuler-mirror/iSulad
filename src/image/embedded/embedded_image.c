@@ -24,7 +24,6 @@
 #include "containers_store.h"
 #include "specs_extend.h"
 #include "log.h"
-#include "securec.h"
 #include "embedded_image.h"
 #include "lim.h"
 #include "embedded_config_merge.h"

@@ -13,7 +13,6 @@
  * Description: provide container stop functions
  ******************************************************************************/
 #include "rename.h"
-#include "securec.h"
 #include "arguments.h"
 #include "log.h"
 #include "utils.h"

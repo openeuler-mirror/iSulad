@@ -33,7 +33,7 @@ endif()
 
 option(VERSION "set lcrd version" ON)
 if (VERSION STREQUAL "ON")
-    set(LCRD_VERSION "1.1.2")
+    set(LCRD_VERSION "1.1.4")
 endif()
 
 option(DEBUG "set lcrd gcc option" ON)
@@ -44,4 +44,19 @@ endif()
 option(GCOV "set lcrd gcov option" OFF)
 if (GCOV STREQUAL "ON")
     set(ISULAD_GCOV "ON")
+endif()
+
+# set OCI image server type
+option(DISABLE_OCI "disable oci image" OFF)
+if (DISABLE_OCI STREQUAL "ON")
+    message("Disable OCI image")
+else()
+    add_definitions(-DENABLE_OCI_IMAGE=1)
+    set(ENABLE_OCI_IMAGE 2)
+endif()
+
+option(ENABLE_EMBEDDED "enable embedded image" OFF)
+if (ENABLE_EMBEDDED STREQUAL "ON")
+    add_definitions(-DENABLE_EMBEDDED_IMAGE=1)
+    set(ENABLE_EMBEDDED_IMAGE 1)
 endif()

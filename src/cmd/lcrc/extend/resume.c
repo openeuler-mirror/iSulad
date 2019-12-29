@@ -13,7 +13,6 @@
  * Description: provide container resume functions
  ******************************************************************************/
 #include "resume.h"
-#include "securec.h"
 #include "utils.h"
 #include "arguments.h"
 #include "log.h"

@@ -225,17 +225,9 @@ int FiltersAdd(defs_filters *filters, const std::string &key, const std::string 
     }
 
     if (filters->len) {
-        if (memcpy_s(keys, len * sizeof(char *), filters->keys, filters->len * sizeof(char *)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
-        if (memcpy_s(vals, len * sizeof(json_map_string_bool *), filters->values,
-                     filters->len * sizeof(json_map_string_bool *)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
+        (void)memcpy(keys, filters->keys, filters->len * sizeof(char *));
+
+        (void)memcpy(vals, filters->values, filters->len * sizeof(json_map_string_bool *));
     }
     free(filters->keys);
     filters->keys = keys;
@@ -377,7 +369,8 @@ std::string sha256(const char *val)
 
     char outputBuffer[(SHA256_DIGEST_LENGTH * 2) + 1] { 0 };
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        if (sprintf_s(outputBuffer + (i * 2), 3, "%02x", (unsigned int)hash[i]) < 0) {
+        int ret = snprintf(outputBuffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
+        if (ret >= 3 || ret < 0) {
             return "";
         }
     }

@@ -26,7 +26,6 @@
 #include <sys/ioctl.h>
 
 #include "error.h"
-#include "securec.h"
 #include "arguments.h"
 #include "stats.h"
 #include "utils.h"
@@ -54,20 +53,20 @@ static void lcrc_size_humanize(unsigned long long val, char *buf, size_t bufsz)
 {
     int ret = 0;
     if (val > 1024 * 1024 * 1024) {
-        ret = sprintf_s(buf, bufsz, "%u.%.2u GiB", (unsigned int)(val >> 30),
-                        (unsigned int)(val & ((1 << 30) - 1)) / 10737419);
+        ret = snprintf(buf, bufsz, "%u.%.2u GiB", (unsigned int)(val >> 30),
+                       (unsigned int)(val & ((1 << 30) - 1)) / 10737419);
     } else if (val > 1024 * 1024) {
         unsigned long long x = val + 5243; /* for rounding */
-        ret = sprintf_s(buf, bufsz, "%u.%.2u MiB", (unsigned int)(x >> 20),
-                        (unsigned int)(((x & ((1 << 20) - 1)) * 100) >> 20));
+        ret = snprintf(buf, bufsz, "%u.%.2u MiB", (unsigned int)(x >> 20),
+                       (unsigned int)(((x & ((1 << 20) - 1)) * 100) >> 20));
     } else if (val > 1024) {
         unsigned long long x = val + 5; /* for rounding */
-        ret = sprintf_s(buf, bufsz, "%u.%.2u KiB", (unsigned int)(x >> 10),
-                        (unsigned int)(((x & ((1 << 10) - 1)) * 100) >> 10));
+        ret = snprintf(buf, bufsz, "%u.%.2u KiB", (unsigned int)(x >> 10),
+                       (unsigned int)(((x & ((1 << 10) - 1)) * 100) >> 10));
     } else {
-        ret = sprintf_s(buf, bufsz, "%u.00 B", (unsigned int)val);
+        ret = snprintf(buf, bufsz, "%u.00 B", (unsigned int)val);
     }
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= bufsz) {
         ERROR("Humanize sprintf failed!");
     }
 }
@@ -100,13 +99,13 @@ static void stats_print(const struct lcrc_container_info *stats)
     lcrc_size_humanize(stats->mem_used, mem_used_str, sizeof(mem_used_str));
     lcrc_size_humanize(stats->mem_limit, mem_limit_str, sizeof(mem_limit_str));
 
-    len = sprintf_s(iosb_str, sizeof(iosb_str), "%s / %s", iosb_read_str, iosb_write_str);
-    if (len < 0) {
+    len = snprintf(iosb_str, sizeof(iosb_str), "%s / %s", iosb_read_str, iosb_write_str);
+    if (len < 0 || (size_t)len >= sizeof(iosb_str)) {
         ERROR("Sprintf iosb_str failed");
         return;
     }
-    len = sprintf_s(mem_str, sizeof(mem_str), "%s / %s", mem_used_str, mem_limit_str);
-    if (len < 0) {
+    len = snprintf(mem_str, sizeof(mem_str), "%s / %s", mem_used_str, mem_limit_str);
+    if (len < 0 || (size_t)len >= sizeof(mem_str)) {
         ERROR("Sprintf mem_str failed");
         return;
     }

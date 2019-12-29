@@ -15,7 +15,6 @@
 #include <unistd.h>
 
 #include "log.h"
-#include "securec.h"
 #include "callback.h"
 #include "image.rest.h"
 #include "rest_service_common.h"

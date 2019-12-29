@@ -20,7 +20,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <limits.h>
-#include <securec.h>
 
 #include "sysctl_tools.h"
 #include "utils.h"
@@ -34,8 +33,8 @@ int get_sysctl(const char *sysctl, char **err)
     char fullpath[PATH_MAX] = { 0 };
     char buff[MAX_BUFFER_SIZE] = { 0 };
 
-    ret = sprintf_s(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
-    if (ret < 0) {
+    ret = snprintf(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
+    if (ret < 0 || ret >= PATH_MAX) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }
@@ -81,13 +80,13 @@ int set_sysctl(const char *sysctl, int new_value, char **err)
     char fullpath[PATH_MAX] = { 0 };
     char buff[LCRD_NUMSTRLEN64] = { 0 };
 
-    ret = sprintf_s(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
-    if (ret < 0) {
+    ret = snprintf(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
+    if (ret < 0 || ret >= PATH_MAX) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }
-    ret = sprintf_s(buff, LCRD_NUMSTRLEN64, "%d", new_value);
-    if (ret < 0) {
+    ret = snprintf(buff, LCRD_NUMSTRLEN64, "%d", new_value);
+    if (ret < 0 || ret >= LCRD_NUMSTRLEN64) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }

@@ -19,7 +19,6 @@
 #include <vector>
 #include <utility>
 #include <set>
-#include <securec.h>
 
 #include "log.h"
 #include "utils.h"

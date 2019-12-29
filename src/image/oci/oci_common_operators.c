@@ -23,7 +23,6 @@
 
 #include "log.h"
 #include "utils.h"
-#include "securec.h"
 #include "oci_images_store.h"
 #include "specs_extend.h"
 #include "oci_config_merge.h"
@@ -169,7 +168,8 @@ char *oci_normalize_image_name(const char *name)
     util_free_array(parts);
 
     // Normalize image name
-    if (sprintf_s(temp, sizeof(temp), "%s%s%s%s", add_dockerio, add_library, name, add_default_tag) < 0) {
+    int nret = snprintf(temp, sizeof(temp), "%s%s%s%s", add_dockerio, add_library, name, add_default_tag);
+    if (nret < 0 || (size_t)nret >= sizeof(temp)) {
         ERROR("sprint temp image name failed");
         return NULL;
     }
@@ -196,7 +196,8 @@ static char *oci_strip_dockerio_prefix(const char *name)
         return NULL;
     }
 
-    if (sprintf_s(prefix, sizeof(prefix), "%s%s", DEFAULT_HOSTNAME, DEFAULT_REPO_PREFIX) < 0) {
+    int nret = snprintf(prefix, sizeof(prefix), "%s%s", DEFAULT_HOSTNAME, DEFAULT_REPO_PREFIX);
+    if (nret < 0 || (size_t)nret >= sizeof(prefix)) {
         ERROR("sprint prefix prefix failed");
         return NULL;
     }
@@ -756,11 +757,8 @@ int oci_inspect_image(const im_inspect_request *im_request, char **inspected_jso
         return -1;
     }
 
-    ret = memset_s(&request, sizeof(im_status_request), 0x00, sizeof(im_status_request));
-    if (ret != EOK) {
-        ERROR("Failed to set memory");
-        return -1;
-    }
+    (void)memset(&request, 0, sizeof(im_status_request));
+
     request.image.image = im_request->image.image;
 
     response = (im_status_response *)util_common_calloc_s(sizeof(im_status_response));

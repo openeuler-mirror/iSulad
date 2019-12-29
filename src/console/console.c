@@ -19,9 +19,10 @@
 #include <termios.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "console.h"
-#include "securec.h"
 #include "mainloop.h"
 #include "log.h"
 #include "utils.h"
@@ -185,8 +186,8 @@ int console_fifo_name(const char *rundir, const char *subpath,
     int ret = 0;
     int nret = 0;
 
-    nret = sprintf_s(fifo_path, fifo_path_sz, "%s/%s/", rundir, subpath);
-    if (nret < 0) {
+    nret = snprintf(fifo_path, fifo_path_sz, "%s/%s/", rundir, subpath);
+    if (nret < 0 || (size_t)nret >= fifo_path_sz) {
         ERROR("FIFO path:%s/%s/ is too long.", rundir, subpath);
         ret = -1;
         goto out;
@@ -200,8 +201,8 @@ int console_fifo_name(const char *rundir, const char *subpath,
         }
     }
 
-    nret = sprintf_s(fifo_name, fifo_name_sz, "%s/%s/%s-fifo", rundir, subpath, stdflag);
-    if (nret < 0) {
+    nret = snprintf(fifo_name, fifo_name_sz, "%s/%s/%s-fifo", rundir, subpath, stdflag);
+    if (nret < 0 || (size_t)nret >= fifo_name_sz) {
         ERROR("FIFO name %s/%s/%s-fifo is too long.", rundir, subpath, stdflag);
         ret = -1;
         goto out;

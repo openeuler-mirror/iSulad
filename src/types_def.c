@@ -13,8 +13,9 @@
  * Description: provide typedef  functions
  ********************************************************************************/
 #include "types_def.h"
-#include <securec.h>
 #include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "log.h"
 #include "utils.h"
@@ -105,10 +106,7 @@ bool get_timestamp(const char *str_time, types_timestamp_t *timestamp)
     int32_t nanos = 0;
     struct tm tm_day;
 
-    if (memset_s(&tm_day, sizeof(tm_day), 0, sizeof(tm_day)) != EOK) {
-        ERROR("Failed to memset memory");
-        return false;
-    }
+    (void)memset(&tm_day, 0, sizeof(tm_day));
 
     if (timestamp == NULL || str_time == NULL) {
         return false;
@@ -162,13 +160,13 @@ bool get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_
     }
 
     if (tm_zone >= 0) {
-        nret = sprintf_s(timebuffer + strlen(timebuffer),
-                         maxsize - strlen(timebuffer), ".%09d+%02d:00", nanos, tm_zone);
+        nret = snprintf(timebuffer + strlen(timebuffer),
+                        maxsize - strlen(timebuffer), ".%09d+%02d:00", nanos, tm_zone);
     } else {
-        nret = sprintf_s(timebuffer + strlen(timebuffer),
-                         maxsize - strlen(timebuffer), ".%09d-%02d:00", nanos, -tm_zone);
+        nret = snprintf(timebuffer + strlen(timebuffer),
+                        maxsize - strlen(timebuffer), ".%09d-%02d:00", nanos, -tm_zone);
     }
-    if (nret < 0) {
+    if (nret < 0 || nret >= maxsize - strlen(timebuffer)) {
         ERROR("sprintf timebuffer failed");
         return false;
     }
@@ -614,7 +612,7 @@ static bool check_human_duration_less_1_sec(int64_t seconds)
 
 static int gen_human_duration_less_1_sec(int64_t secondes, char *str, size_t len)
 {
-    return sprintf_s(str, len, "Less than a second");
+    return snprintf(str, len, "Less than a second");
 }
 
 static bool check_human_duration_less_60_secs(int64_t seconds)
@@ -624,7 +622,7 @@ static bool check_human_duration_less_60_secs(int64_t seconds)
 
 static int gen_human_duration_less_60_secs(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "%lld seconds", (long long)seconds);
+    return snprintf(str, len, "%lld seconds", (long long)seconds);
 }
 
 static bool check_human_duration_eq_1_min(int64_t seconds)
@@ -634,7 +632,7 @@ static bool check_human_duration_eq_1_min(int64_t seconds)
 
 static int gen_human_duration_eq_1_min(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "About a minute");
+    return snprintf(str, len, "About a minute");
 }
 
 static bool check_human_duration_less_60_mins(int64_t seconds)
@@ -644,7 +642,7 @@ static bool check_human_duration_less_60_mins(int64_t seconds)
 
 static int gen_human_duration_less_60_mins(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "%lld minutes", (long long)seconds / 60);
+    return snprintf(str, len, "%lld minutes", (long long)seconds / 60);
 }
 
 static bool check_human_duration_eq_1_hour(int64_t seconds)
@@ -654,7 +652,7 @@ static bool check_human_duration_eq_1_hour(int64_t seconds)
 
 static int gen_human_duration_eq_1_hour(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "About an hour");
+    return snprintf(str, len, "About an hour");
 }
 
 static bool check_human_duration_less_48_hours(int64_t seconds)
@@ -664,7 +662,7 @@ static bool check_human_duration_less_48_hours(int64_t seconds)
 
 static int gen_human_duration_less_48_hours(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "%lld hours", (long long)seconds / (60 * 60));
+    return snprintf(str, len, "%lld hours", (long long)seconds / (60 * 60));
 }
 
 static bool check_human_duration_less_7_days(int64_t seconds)
@@ -674,7 +672,7 @@ static bool check_human_duration_less_7_days(int64_t seconds)
 
 static int gen_human_duration_less_7_days(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "%lld days", (long long)seconds / (60 * 60 * 24));
+    return snprintf(str, len, "%lld days", (long long)seconds / (60 * 60 * 24));
 }
 
 static bool check_human_duration_less_90_days(int64_t seconds)
@@ -684,7 +682,7 @@ static bool check_human_duration_less_90_days(int64_t seconds)
 
 static int gen_human_duration_less_90_days(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "%lld weeks", (long long)seconds / (60 * 60 * 24 * 7));
+    return snprintf(str, len, "%lld weeks", (long long)seconds / (60 * 60 * 24 * 7));
 }
 
 static bool check_human_duration_less_2_years(int64_t seconds)
@@ -694,7 +692,7 @@ static bool check_human_duration_less_2_years(int64_t seconds)
 
 static int gen_human_duration_less_2_years(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "%lld months", (long long)seconds / (60 * 60 * 24 * 30));
+    return snprintf(str, len, "%lld months", (long long)seconds / (60 * 60 * 24 * 30));
 }
 
 static bool check_human_duration_default(int64_t seconds)
@@ -704,7 +702,7 @@ static bool check_human_duration_default(int64_t seconds)
 
 static int gen_human_duration_default(int64_t seconds, char *str, size_t len)
 {
-    return sprintf_s(str, len, "%lld years", (long long)seconds / (60 * 60 * 24 * 365));
+    return snprintf(str, len, "%lld years", (long long)seconds / (60 * 60 * 24 * 365));
 }
 
 typedef struct time_human_duration_rule_t time_human_duration_rule;
@@ -769,7 +767,7 @@ static bool time_human_duration(int64_t seconds, char *str, size_t len)
         }
     }
 
-    if (nret < 0) {
+    if (nret < 0 || nret >= len) {
         ERROR("Sprintf buffer failed");
         return false;
     }
@@ -779,7 +777,8 @@ static bool time_human_duration(int64_t seconds, char *str, size_t len)
 
 static int time_format_duration_bad(char *out, size_t len)
 {
-    if (sprintf_s(out, len, "-") < 0) {
+    int nret = snprintf(out, len, "-");
+    if (nret < 0 || (size_t)nret >= len) {
         return -1; /* format failed, return -1 */
     }
     return 1; /* format ok with bad data, return 1 */
@@ -831,10 +830,7 @@ int time_format_duration_ago(const char *in, char *out, size_t len)
     }
 
     if (strcmp(out, "-") != 0 && strlen(out) + 5 < len) {
-        if (strcat_s(out, len, " ago") != EOK) {
-            ERROR("Strcat string error");
-            return -1;
-        }
+        (void)strcat(out, " ago");
     }
 
     return 0;

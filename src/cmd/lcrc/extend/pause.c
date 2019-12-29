@@ -13,7 +13,6 @@
  * Description: provide container pause functions
  ******************************************************************************/
 #include "pause.h"
-#include "securec.h"
 #include "utils.h"
 #include "arguments.h"
 #include "log.h"

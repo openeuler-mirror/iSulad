@@ -25,7 +25,6 @@
 #include <sys/wait.h>
 
 #include "sha256.h"
-#include "securec.h"
 #include "log.h"
 #include "utils.h"
 

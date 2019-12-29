@@ -13,10 +13,11 @@
  * Description: provide container restful service common functions
  ******************************************************************************/
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "log.h"
 #include "utils.h"
-#include "securec.h"
 #include "rest_service_common.h"
 
 #define UNIX_PATH_MAX 128

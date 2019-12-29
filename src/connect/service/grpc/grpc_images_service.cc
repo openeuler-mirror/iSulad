@@ -20,7 +20,6 @@
 #include <memory>
 #include <new>
 #include <string>
-#include <securec.h>
 
 #include "log.h"
 #include "utils.h"

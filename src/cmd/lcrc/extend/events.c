@@ -17,7 +17,6 @@
 #include "arguments.h"
 #include "log.h"
 #include "lcrc_connect.h"
-#include "securec.h"
 
 const char g_cmd_events_desc[] = "Get real time events from the server";
 const char g_cmd_events_usage[] = "events [command options]";

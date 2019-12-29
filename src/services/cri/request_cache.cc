@@ -70,6 +70,10 @@ void RequestCache::GarbageCollection()
         if (now < oldest.expireTime) {
             return;
         }
+        if (oldest.req != nullptr) {
+            delete oldest.req;
+            oldest.req = nullptr;
+        }
         m_ll.pop_back();
         m_tokens.erase(oldest.token);
     }

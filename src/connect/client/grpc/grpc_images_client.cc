@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "grpc_images_client.h"
 #include <string>
-#include "securec.h"
 #include "images.grpc.pb.h"
 #include "api.grpc.pb.h"
 #include "utils.h"

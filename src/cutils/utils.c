@@ -19,7 +19,9 @@
 #include <execinfo.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -37,7 +39,6 @@
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <securec.h>
 #include <termios.h>
 
 #include "utils.h"
@@ -47,7 +48,6 @@
 int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
 {
     void *tmp = NULL;
-    int nret = 0;
 
     if (newptr == NULL || newsize == 0) {
         goto err_out;
@@ -60,18 +60,8 @@ int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
     }
 
     if (oldptr != NULL) {
-        nret = memcpy_s(tmp, newsize, oldptr, (newsize < oldsize) ? newsize : oldsize);
-        if (nret != EOK) {
-            ERROR("Failed to memcpy memory");
-            free(tmp);
-            goto err_out;
-        }
-
-        if (memset_s(oldptr, oldsize, 0, oldsize) != EOK) {
-            ERROR("Failed to memset memory");
-            free(tmp);
-            goto err_out;
-        }
+        (void)memcpy(tmp, oldptr, (newsize < oldsize) ? newsize : oldsize);
+        (void)memset(oldptr, 0, oldsize);
 
         free(oldptr);
     }
@@ -385,10 +375,7 @@ char *util_short_digest(const char *digest)
         start_pos = strlen(SHA256_PREFIX);
     }
 
-    if (memcpy_s(short_digest, sizeof(short_digest), digest + start_pos, SHORT_DIGEST_LEN) != EOK) {
-        ERROR("Failed to memcpy memory");
-        return NULL;
-    }
+    (void)memcpy(short_digest, digest + start_pos, SHORT_DIGEST_LEN);
 
     short_digest[SHORT_DIGEST_LEN] = 0;
 
@@ -405,8 +392,8 @@ char *util_full_digest(const char *digest)
         return NULL;
     }
 
-    nret = sprintf_s(full_digest, sizeof(full_digest), "%s%s", SHA256_PREFIX, digest);
-    if (nret < 0) {
+    nret = snprintf(full_digest, sizeof(full_digest), "%s%s", SHA256_PREFIX, digest);
+    if (nret < 0 || (size_t)nret >= sizeof(full_digest)) {
         ERROR("digest too long failed");
         return NULL;
     }
@@ -445,22 +432,22 @@ proc_t *util_stat2proc(const char *s, size_t len)
 
     /* parse these two strings separately, skipping the leading "(". */
     /* comm[16] in kernel */
-    num = sscanf_s(s, "%d (%15c", &p->pid, p->cmd, 16);
+    num = sscanf(s, "%d (%15c", &p->pid, p->cmd);
     if (num != 2) {
         ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
         free(p);
         return NULL;
     }
-    num = sscanf_s(tmp + 2, /* skip space after ')' too */
-                   "%c "
-                   "%d %d %d %d %d "
-                   "%lu %lu %lu %lu %lu "
-                   "%Lu %Lu %Lu %Lu " /* utime stime cutime cstime */
-                   "%ld %ld %ld %ld "
-                   "%Lu ", /* start_time */
-                   &p->state, 1, &p->ppid, &p->pgrp, &p->session, &p->tty, &p->tpgid, &p->flags, &p->min_flt,
-                   &p->cmin_flt, &p->maj_flt, &p->cmaj_flt, &p->utime, &p->stime, &p->cutime, &p->cstime, &p->priority,
-                   &p->nice, &p->timeout, &p->it_real_value, &p->start_time);
+    num = sscanf(tmp + 2, /* skip space after ')' too */
+                 "%c "
+                 "%d %d %d %d %d "
+                 "%lu %lu %lu %lu %lu "
+                 "%Lu %Lu %Lu %Lu " /* utime stime cutime cstime */
+                 "%ld %ld %ld %ld "
+                 "%Lu ", /* start_time */
+                 &p->state, &p->ppid, &p->pgrp, &p->session, &p->tty, &p->tpgid, &p->flags, &p->min_flt,
+                 &p->cmin_flt, &p->maj_flt, &p->cmaj_flt, &p->utime, &p->stime, &p->cutime, &p->cstime, &p->priority,
+                 &p->nice, &p->timeout, &p->it_real_value, &p->start_time);
     if (num != 20) { // max arg to read
         ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
         free(p);
@@ -490,8 +477,8 @@ bool util_process_alive(pid_t pid, unsigned long long start_time)
         return false;
     }
 
-    sret = sprintf_s(filename, sizeof(filename), "/proc/%d/stat", pid);
-    if (sret < 0 || (unsigned int)sret >= sizeof(filename)) {
+    sret = snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
+    if (sret < 0 || (size_t)sret >= sizeof(filename)) {
         ERROR("Failed to sprintf filename");
         goto out;
     }
@@ -519,7 +506,6 @@ out:
 
 static void set_stderr_buf(char **stderr_buf, const char *format, ...)
 {
-    int ret = 0;
     char errbuf[BUFSIZ + 1] = { 0 };
     char *jerr = NULL;
 
@@ -528,11 +514,8 @@ static void set_stderr_buf(char **stderr_buf, const char *format, ...)
     va_list argp;
     va_start(argp, format);
 
-    ret = vsprintf_s(errbuf, BUFSIZ, format, argp);
+    (void)vsprintf(errbuf, format, argp);
     va_end(argp);
-    if (ret < 0) {
-        return;
-    }
 
     *stderr_buf = json_marshal_string(errbuf, strlen(errbuf), NULL, &jerr);
     if (*stderr_buf == NULL) {
@@ -968,8 +951,8 @@ proc_t *util_get_process_proc_info(pid_t pid)
     char filename[PATH_MAX] = { 0 };
     char sbuf[1024] = { 0 }; /* bufs for stat */
 
-    sret = sprintf_s(filename, sizeof(filename), "/proc/%d/stat", pid);
-    if (sret < 0 || (unsigned int)sret >= sizeof(filename)) {
+    sret = snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
+    if (sret < 0 || (size_t)sret >= sizeof(filename)) {
         ERROR("Failed to sprintf filename");
         goto out;
     }
@@ -1221,9 +1204,7 @@ void free_sensitive_string(char *str)
         goto out;
     }
 
-    if (memset_s(str, strlen(str), 0, strlen(str)) != EOK) {
-        ERROR("Failed to memset sensitive string memory");
-    }
+    (void)memset(str, 0, strlen(str));
 
 out:
     free(str);
@@ -1235,9 +1216,7 @@ void memset_sensitive_string(char *str)
         return;
     }
 
-    if (memset_s(str, strlen(str), 0, strlen(str)) != EOK) {
-        ERROR("Failed to memset sensitive string memory");
-    }
+    (void)memset(str, 0, strlen(str));
 }
 
 static char *get_mtpoint(const char *line)
@@ -1272,11 +1251,7 @@ static char *get_mtpoint(const char *line)
     if (sret == NULL) {
         goto err_out;
     }
-    if (memcpy_s(sret, len + 1, tmp, len) != EOK) {
-        free(sret);
-        sret = NULL;
-        goto err_out;
-    }
+    (void)memcpy(sret, tmp, len);
     sret[len] = '\0';
 
 err_out:

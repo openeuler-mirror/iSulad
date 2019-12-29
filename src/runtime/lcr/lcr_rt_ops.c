@@ -72,11 +72,11 @@ out:
     return ret;
 }
 
-static int parse_container_pid(const char *S, const container_pid_t *pid_info)
+static int parse_container_pid(const char *S, container_pid_t *pid_info)
 {
     int num;
 
-    num = sscanf_s(S, "%d %Lu %d %Lu", &pid_info->pid, &pid_info->start_time, &pid_info->ppid, &pid_info->pstart_time);
+    num = sscanf(S, "%d %Lu %d %Lu", &pid_info->pid, &pid_info->start_time, &pid_info->ppid, &pid_info->pstart_time);
     if (num != 4) { // args num to read is 4
         ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
         return -1;
@@ -85,7 +85,7 @@ static int parse_container_pid(const char *S, const container_pid_t *pid_info)
     return 0;
 }
 
-static int lcr_rt_read_pidfile(const char *pidfile, const container_pid_t *pid_info)
+static int lcr_rt_read_pidfile(const char *pidfile, container_pid_t *pid_info)
 {
     if (pidfile == NULL || pid_info == NULL) {
         ERROR("Invalid input arguments");
@@ -191,8 +191,8 @@ static int remove_container_rootpath(const char *id, const char *root_path)
     int ret = 0;
     char cont_root_path[PATH_MAX] = { 0 };
 
-    ret = sprintf_s(cont_root_path, sizeof(cont_root_path), "%s/%s", root_path, id);
-    if (ret < 0) {
+    ret = snprintf(cont_root_path, sizeof(cont_root_path), "%s/%s", root_path, id);
+    if (ret < 0 || (size_t)ret >= sizeof(cont_root_path)) {
         ERROR("Failed to sprintf container_state");
         ret = -1;
         goto out;
@@ -223,19 +223,20 @@ int rt_lcr_rm(const char *name, const char *runtime, const rt_rm_params_t *param
     }
 
     if (!engine_ops->engine_delete_op(name, params->rootpath)) {
+        ret = -1;
         const char *tmpmsg = engine_ops->engine_get_errmsg_op();
-        if (tmpmsg != NULL && strstr(tmpmsg, "No such container") != NULL) {
-            // container root path may been corrupted, try to remove by daemon
-            WARN("container %s root path may been corrupted, try to remove by daemon", name);
-            if (remove_container_rootpath(name, params->rootpath) == 0) {
-                goto out;
-            }
-        }
         lcrd_set_error_message("Runtime delete container error: %s",
                                (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ERROR("Runtime delete container error: %s",
               (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
-        ret = -1;
+        if (tmpmsg != NULL && strstr(tmpmsg, "No such container") != NULL) {
+            // container root path may been corrupted, try to remove by daemon
+            WARN("container %s root path may been corrupted, try to remove by daemon", name);
+            if (remove_container_rootpath(name, params->rootpath) == 0) {
+                ret = 0;
+                goto out;
+            }
+        }
         goto out;
     }
 

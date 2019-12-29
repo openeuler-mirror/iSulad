@@ -20,7 +20,6 @@
 #include <linux/limits.h>
 #include <unistd.h>
 #include <errno.h>
-#include <securec.h>
 
 #include "constants.h"
 #include "utils.h"

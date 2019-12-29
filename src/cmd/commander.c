@@ -21,7 +21,6 @@
 #include <assert.h>
 #include <regex.h>
 #include <limits.h>
-#include "securec.h"
 #include "liblcrd.h"
 
 #include "utils.h"
@@ -115,10 +114,7 @@ int command_valid_socket(command_option_t *option, const char *arg)
 void command_init(command_t *self, command_option_t *opts, int opts_len, int argc, const char **argv,
                   const char *description, const char *usage)
 {
-    if (memset_s(self, sizeof(command_t), 0, sizeof(command_t)) != EOK) {
-        COMMAND_ERROR("Failed to set memory");
-        return;
-    }
+    (void)memset(self, 0, sizeof(command_t));
     self->name = argv[0];
     self->argc = argc - 2;
     self->argv = argv + 2;

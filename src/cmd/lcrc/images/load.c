@@ -18,7 +18,6 @@
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
-#include "securec.h"
 
 #include "utils.h"
 #include "arguments.h"
@@ -150,13 +149,15 @@ int cmd_load_main(int argc, const char **argv)
     /* If it's not a absolute path, add cwd to be absolute path */
     if (g_cmd_load_args.file[0] != '/') {
         char cwd[PATH_MAX] = { 0 };
+        int len;
 
         if (!getcwd(cwd, sizeof(cwd))) {
             COMMAND_ERROR("get cwd failed:%s", strerror(errno));
             exit(exit_code);
         }
 
-        if (sprintf_s(file, sizeof(file), "%s/%s", cwd, g_cmd_load_args.file) < 0) {
+        len = snprintf(file, sizeof(file), "%s/%s", cwd, g_cmd_load_args.file);
+        if (len < 0 || (size_t)len >= sizeof(file)) {
             COMMAND_ERROR("filename too long");
             exit(exit_code);
         }

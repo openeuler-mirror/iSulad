@@ -14,7 +14,7 @@
  ******************************************************************************/
 #include "rest_common.h"
 #include <dlfcn.h>
-#include "securec.h"
+#include <string.h>
 #include "log.h"
 #include "utils.h"
 
@@ -72,8 +72,6 @@ int check_status_code(int status_code)
 /* free httpclient ops */
 static void free_httpclient_ops(struct httpclient_ops *ops)
 {
-    errno_t rc = EOK;
-
     if (ops == NULL || ops->handle == NULL) {
         return;
     }
@@ -81,10 +79,7 @@ static void free_httpclient_ops(struct httpclient_ops *ops)
         return;
     }
     dlclose(ops->handle);
-    rc = memset_s(ops, sizeof(struct httpclient_ops), 0, sizeof(struct httpclient_ops));
-    if (rc != EOK) {
-        ERROR("Failed to set memory!");
-    }
+    (void)memset(ops, 0, sizeof(struct httpclient_ops));
 }
 
 /* ops init */
@@ -92,16 +87,11 @@ static int ops_init(struct httpclient_ops *ops)
 {
     void *handle = NULL;
     int ret = -1;
-    errno_t rc = EOK;
 
     if (ops == NULL) {
         return ret;
     }
-    rc = memset_s(ops, sizeof(struct httpclient_ops), 0, sizeof(struct httpclient_ops));
-    if (rc != EOK) {
-        ERROR("Failed to set memory!");
-        goto out;
-    }
+    (void)memset(ops, 0, sizeof(struct httpclient_ops));
     handle = dlopen("libhttpclient.so", RTLD_LAZY);
     if (handle == NULL) {
         COMMAND_ERROR("Dlopen libhttpclient: %s", dlerror());

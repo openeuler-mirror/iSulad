@@ -25,7 +25,6 @@
 #include <libgen.h>
 
 #include "constants.h"
-#include "securec.h"
 #include "log.h"
 #include "utils.h"
 #include "lcrd_config.h"
@@ -95,8 +94,8 @@ int get_system_cpu_usage(uint64_t *val)
         ret = -1;
         goto out;
     }
-    nret = sscanf_s(buffer, "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu", &usertime,
-                    &nicetime, &systemtime, &idletime, &ioWait, &irq, &softIrq, &steal, &guest, &guestnice);
+    nret = sscanf(buffer, "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu", &usertime,
+                  &nicetime, &systemtime, &idletime, &ioWait, &irq, &softIrq, &steal, &guest, &guestnice);
     if (nret != BUFFER_ITEM_NUMS) {
         ERROR("sscanf buffer failed");
         ret = -1;
@@ -204,7 +203,8 @@ char *conf_get_engine_rootpath()
         goto free_out;
     }
 
-    if (sprintf_s(epath, len, "%s/%s", rootpath, ENGINE_ROOTPATH_NAME) < 0) {
+    int nret = snprintf(epath, len, "%s/%s", rootpath, ENGINE_ROOTPATH_NAME);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf engine path failed");
         free(epath);
         epath = NULL;
@@ -242,7 +242,8 @@ char *conf_get_graph_rootpath()
         goto free_out;
     }
 
-    if (sprintf_s(epath, len, "%s/%s", rootpath, GRAPH_ROOTPATH_NAME) < 0) {
+    int nret = snprintf(epath, len, "%s/%s", rootpath, GRAPH_ROOTPATH_NAME);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf graph path failed");
         free(epath);
         epath = NULL;
@@ -280,7 +281,8 @@ char *conf_get_graph_check_flag_file()
         goto free_out;
     }
 
-    if (sprintf_s(epath, len, "%s/%s/%s", rootpath, GRAPH_ROOTPATH_NAME, GRAPH_ROOTPATH_CHECKED_FLAG) < 0) {
+    int nret = snprintf(epath, len, "%s/%s/%s", rootpath, GRAPH_ROOTPATH_NAME, GRAPH_ROOTPATH_CHECKED_FLAG);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf graph checked flag failed");
         free(epath);
         epath = NULL;
@@ -318,7 +320,8 @@ char *conf_get_graph_run_path()
         goto free_out;
     }
 
-    if (sprintf_s(epath, len, "%s/%s", rootpath, GRAPH_ROOTPATH_NAME) < 0) {
+    int nret = snprintf(epath, len, "%s/%s", rootpath, GRAPH_ROOTPATH_NAME);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf graph run path failed");
         free(epath);
         epath = NULL;
@@ -367,7 +370,8 @@ char *conf_get_routine_rootdir(const char *runtime)
         goto out;
     }
 
-    if (sprintf_s(path, len, "%s/%s/%s", conf->json_confs->graph, ENGINE_ROOTPATH_NAME, runtime) < 0) {
+    int nret = snprintf(path, len, "%s/%s/%s", conf->json_confs->graph, ENGINE_ROOTPATH_NAME, runtime);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Failed to sprintf path");
         free(path);
         path = NULL;
@@ -412,7 +416,8 @@ char *conf_get_routine_statedir(const char *runtime)
         goto out;
     }
 
-    if (sprintf_s(path, len, "%s/%s", conf->json_confs->state, runtime) < 0) {
+    int nret = snprintf(path, len, "%s/%s", conf->json_confs->state, runtime);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("sprintf path failed");
         free(path);
         path = NULL;
@@ -762,8 +767,8 @@ char *get_log_file_helper(const struct service_arguments *conf, const char *suff
         goto out;
     }
 
-    nret = sprintf_s(logfile, len, "%s/%s", conf->logpath, suffix);
-    if (nret < 0) {
+    nret = snprintf(logfile, len, "%s/%s", conf->logpath, suffix);
+    if (nret < 0 || (size_t)nret >= len) {
         free(logfile);
         logfile = NULL;
         ERROR("Failed to sprintf log path");
@@ -800,8 +805,8 @@ char *conf_get_lcrd_log_gather_fifo_path()
         ERROR("Out of memory");
         goto err_out;
     }
-    nret = sprintf_s(logfile, len, "%s%s", statedir, "/lcrd_log_gather_fifo");
-    if (nret < 0) {
+    nret = snprintf(logfile, len, "%s%s", statedir, "/lcrd_log_gather_fifo");
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf log file failed");
         goto err_out;
     }
@@ -860,7 +865,8 @@ char *conf_get_engine_log_file()
         FATAL("Out of Memory");
         goto out;
     }
-    if (sprintf_s(full_path, len, "%s%s", prefix, logfile) < 0) {
+    int nret = snprintf(full_path, len, "%s%s", prefix, logfile);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Failed to sprintf engine log path");
         free(full_path);
         full_path = NULL;
@@ -1368,11 +1374,13 @@ static int maybe_create_cpu_realtime_file(bool present, int64_t value, const cha
         return -1;
     }
 
-    if (sprintf_s(fpath, sizeof(fpath), "%s/%s", path, file) < 0) {
+    int nret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
+    if (nret < 0 || nret >= sizeof(fpath)) {
         ERROR("Failed to print string");
         return -1;
     }
-    if (sprintf_s(buf, sizeof(buf), "%lld", (long long int)value) < 0) {
+    nret = snprintf(buf, sizeof(buf), "%lld", (long long int)value);
+    if (nret < 0 || (size_t)nret >= sizeof(buf)) {
         ERROR("Failed to print string");
         return -1;
     }
@@ -1452,7 +1460,8 @@ static int recursively_create_cgroup(const char *path, int recursive_depth, int6
         root[1] = '\0';
     }
 
-    if (sprintf_s(fpath, sizeof(fpath), "%s/%s/%s", mnt, root, path) < 0) {
+    int nret = snprintf(fpath, sizeof(fpath), "%s/%s/%s", mnt, root, path);
+    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
         ERROR("Failed to print string");
         ret = -1;
         goto out;

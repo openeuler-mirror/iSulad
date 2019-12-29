@@ -15,6 +15,7 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <time.h>
 #include <errno.h>
@@ -37,7 +38,6 @@
 
 #include "constants.h"
 #include "liblcrd.h"
-#include "securec.h"
 #include "collector.h"
 #include "commands.h"
 #include "log.h"
@@ -278,10 +278,7 @@ static int ignore_signals()
      * Ignore SIGHUP so lcrd process still exists after
      * terminal die.
      */
-    if (memset_s(&sa, sizeof(struct sigaction), 0, sizeof(struct sigaction)) != EOK) {
-        ERROR("Failed to set memory");
-        return -1;
-    }
+    (void)memset(&sa, 0, sizeof(struct sigaction));
 
     sa.sa_handler = SIG_IGN;
     sigemptyset(&sa.sa_mask);
@@ -307,10 +304,7 @@ static int add_shutdown_signal_handler()
 {
     struct sigaction sa;
 
-    if (memset_s(&sa, sizeof(struct sigaction), 0, sizeof(struct sigaction)) != EOK) {
-        ERROR("Failed to set memory");
-        return -1;
-    }
+    (void)memset(&sa, 0, sizeof(struct sigaction));
 
     if (sem_init(&g_daemon_shutdown_sem, 0, 0) == -1) {
         ERROR("Failed to init daemon shutdown sem");
@@ -325,10 +319,7 @@ static int add_shutdown_signal_handler()
         return -1;
     }
 
-    if (memset_s(&sa, sizeof(struct sigaction), 0, sizeof(struct sigaction)) != EOK) {
-        ERROR("Failed to set memory");
-        return -1;
-    }
+    (void)memset(&sa, 0, sizeof(struct sigaction));
 
     sa.sa_handler = sigterm_handler;
     sigemptyset(&sa.sa_mask);
@@ -441,8 +432,8 @@ int check_and_save_pid(const char *fn)
         goto out;
     }
 
-    len = sprintf_s(pidbuf, sizeof(pidbuf), "%lu\n", (unsigned long)getpid());
-    if (len < 0) {
+    len = snprintf(pidbuf, sizeof(pidbuf), "%lu\n", (unsigned long)getpid());
+    if (len < 0 || len >= sizeof(pidbuf)) {
         ERROR("failed sprint pidbuf");
         ret = -1;
         goto out;
@@ -504,8 +495,8 @@ static int set_parent_mount_dir(struct service_arguments *args)
         ERROR("Out of memory");
         goto out;
     }
-    nret = sprintf_s(rootfsdir, len, "%s/mnt/rootfs", args->json_confs->graph);
-    if (nret < 0) {
+    nret = snprintf(rootfsdir, len, "%s/mnt/rootfs", args->json_confs->graph);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Failed to print string");
         goto out;
     }
@@ -1134,7 +1125,7 @@ static int load_listener(const struct service_arguments *args)
         char *proto_addr = NULL;
 
         proto_addr = parse_host(args->json_confs->tls, args->hosts[i]);
-        proto = strtok_s(proto_addr, delim, &addr);
+        proto = strtok_r(proto_addr, delim, &addr);
         if (proto == NULL) {
             ERROR("Failed to get proto");
             ret = -1;

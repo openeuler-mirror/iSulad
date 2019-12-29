@@ -21,7 +21,6 @@
 #include <sys/utsname.h>
 #include <ctype.h>
 
-#include "securec.h"
 #include "runtime.h"
 #include "log.h"
 #include "utils.h"

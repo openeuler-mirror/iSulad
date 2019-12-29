@@ -27,7 +27,6 @@
 #include "collector.h"
 #include "events_handler.h"
 #include "utils.h"
-#include "securec.h"
 #include "containers_store.h"
 #include "execution.h"
 #include "plugin.h"

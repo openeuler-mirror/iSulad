@@ -19,7 +19,6 @@
 #include "lcrc_connect.h"
 #include "console.h"
 #include "utils.h"
-#include "securec.h"
 #include "json_common.h"
 #include <regex.h>
 
@@ -85,7 +84,7 @@ static yajl_val json_object(yajl_val element, char *key)
     char *top_key = key;
     char *next_context = NULL;
 
-    top_key = strtok_s(top_key, ".", &next_context);
+    top_key = strtok_r(top_key, ".", &next_context);
     if (top_key == NULL) {
         return NULL;
     }
@@ -111,7 +110,7 @@ static yajl_val json_array(yajl_val element, char *key)
     if (YAJL_GET_ARRAY(element) != NULL) {
         size = YAJL_GET_ARRAY(element)->len;
     }
-    top_key = strtok_s(top_key, ".", &next_context);
+    top_key = strtok_r(top_key, ".", &next_context);
     if (top_key == NULL) {
         return NULL;
     }
@@ -616,7 +615,7 @@ static char *inspect_pause_filter(const char *arg)
 
     input_str = util_strdup_s(arg);
 
-    p = strtok_s(input_str, ".", &next_context);
+    p = strtok_r(input_str, ".", &next_context);
     if (p == NULL) {
         goto out;
     }
@@ -626,7 +625,7 @@ static char *inspect_pause_filter(const char *arg)
         goto out;
     }
 
-    p = strtok_s(p, " }", &next_context);
+    p = strtok_r(p, " }", &next_context);
     if (p == NULL) {
         goto out;
     }

@@ -21,7 +21,6 @@
 #include "utils.h"
 #include "supervisor.h"
 #include "mainloop.h"
-#include "securec.h"
 #include "liblcrd.h"
 #include "collector.h"
 #include "execution.h"
@@ -65,8 +64,8 @@ char *exit_fifo_name(const char *cont_state_path)
         return NULL;
     }
 
-    ret = sprintf_s(fifo_path, sizeof(fifo_path), "%s/%s", cont_state_path, EXIT_FIFO);
-    if (ret < 0) {
+    ret = snprintf(fifo_path, sizeof(fifo_path), "%s/%s", cont_state_path, EXIT_FIFO);
+    if (ret < 0 || (size_t)ret >= sizeof(fifo_path)) {
         ERROR("sprintf buffer failed");
         return NULL;
     }
@@ -84,8 +83,8 @@ char *exit_fifo_create(const char *cont_state_path)
         return NULL;
     }
 
-    ret = sprintf_s(fifo_path, sizeof(fifo_path), "%s/%s", cont_state_path, EXIT_FIFO);
-    if (ret < 0) {
+    ret = snprintf(fifo_path, sizeof(fifo_path), "%s/%s", cont_state_path, EXIT_FIFO);
+    if (ret < 0 || (size_t)ret >= sizeof(fifo_path)) {
         ERROR("sprintf buffer failed");
         return NULL;
     }

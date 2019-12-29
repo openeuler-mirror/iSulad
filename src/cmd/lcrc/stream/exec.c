@@ -19,7 +19,6 @@
 #include <limits.h>
 #include <pthread.h>
 
-#include "securec.h"
 #include "arguments.h"
 #include "exec.h"
 #include "log.h"

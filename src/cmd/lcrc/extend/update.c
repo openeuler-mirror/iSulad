@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include <string.h>
 #include <errno.h>
-#include "securec.h"
 #include "arguments.h"
 #include "update.h"
 #include "utils.h"

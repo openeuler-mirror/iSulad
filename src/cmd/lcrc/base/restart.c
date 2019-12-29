@@ -13,7 +13,6 @@
  * Description: provide container restart functions
  ******************************************************************************/
 #include <unistd.h>
-#include <securec.h>
 
 #include "restart.h"
 #include "arguments.h"

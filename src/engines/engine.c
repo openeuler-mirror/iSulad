@@ -23,7 +23,6 @@
 #include "constants.h"
 #include "linked_list.h"
 #include "lcrd_config.h"
-#include "securec.h"
 #include "log.h"
 #include "utils.h"
 #include "lcr_engine.h"
@@ -42,15 +41,8 @@ typedef int (*engine_init_func_t)(struct engine_operation *ops);
 int engines_global_init()
 {
     int ret = 0;
-    errno_t mret = EOK;
-    mret = memset_s(&g_lcrd_engines_lists, sizeof(struct lcrd_engine_operation_lists), 0x00,
-                    sizeof(struct lcrd_engine_operation_lists));
-    if (mret != EOK) {
-        ERROR("Failed to set memory");
-        ret = -1;
-        goto out;
-    }
 
+    (void)memset(&g_lcrd_engines_lists, 0, sizeof(struct lcrd_engine_operation_lists));
     /* init lcrd_engines_op_rwlock */
 
     ret = pthread_rwlock_init(&g_lcrd_engines_lists.lcrd_engines_op_rwlock, NULL);

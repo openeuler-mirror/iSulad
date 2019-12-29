@@ -20,7 +20,6 @@
 #include "commands.h"
 #include "console.h"
 #include "utils.h"
-#include "securec.h"
 #include "container_inspect.h"
 #include "attach.h"
 #include "commander.h"

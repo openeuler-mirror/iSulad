@@ -20,7 +20,6 @@
 #include "log.h"
 #include "lim.h"
 #include "liblcrd.h"
-#include "securec.h"
 #include "mediatype.h"
 #include "snapshot.h"
 #include "snapshot_def.h"
@@ -241,8 +240,8 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
             return false;
         }
         abs_path = util_add_path(location, path_in_host);
-        sret = sprintf_s(parent_location, sizeof(parent_location), "%s/..", location);
-        if (sret < 0 || sret >= (int)sizeof(parent_location)) {
+        sret = snprintf(parent_location, sizeof(parent_location), "%s/..", location);
+        if (sret < 0 || (size_t)sret >= sizeof(parent_location)) {
             ERROR("Failed to sprintf parent_location");
             lcrd_try_set_error_message("Failed to sprintf parent_location");
             UTIL_FREE_AND_SET_NULL(abs_path);

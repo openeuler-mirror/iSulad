@@ -29,7 +29,6 @@
 #include <ctype.h>
 
 #include "error.h"
-#include "securec.h"
 #include "log.h"
 #include "oci_runtime_spec.h"
 #include "oci_runtime_hooks.h"
@@ -190,8 +189,8 @@ static bool valid_dirent_info(const char *dir, const struct dirent *info_archivo
         return false;
     }
 
-    nret = sprintf_s(fullpath, PATH_MAX, "%s/%s", dir, info_archivo->d_name);
-    if (nret < 0) {
+    nret = snprintf(fullpath, PATH_MAX, "%s/%s", dir, info_archivo->d_name);
+    if (nret < 0 || nret >= PATH_MAX) {
         ERROR("get_devices: Failed to combine device path");
         return false;
     }
@@ -302,8 +301,8 @@ static int get_devices(const char *dir, char ***devices, size_t *device_len,
             closedir(midir);
             return -1;
         }
-        nret = sprintf_s(fullpath, PATH_MAX, "%s/%s", dir, info_archivo->d_name);
-        if (nret < 0) {
+        nret = snprintf(fullpath, PATH_MAX, "%s/%s", dir, info_archivo->d_name);
+        if (nret < 0 || nret >= PATH_MAX) {
             ERROR("get_devices: Failed to combine device path");
             closedir(midir);
             free(fullpath);
@@ -782,9 +781,9 @@ static host_config_devices_element *parse_one_device(const char *device_path, co
 
     device_map->path_on_host = util_strdup_s(device_path);
     if (dir_container != NULL) {
-        nret = sprintf_s(tmp_container_path, sizeof(tmp_container_path), "%s/%s",
-                         dir_container, device_path + strlen(dir_host));
-        if (nret < 0 || (unsigned int)nret >= sizeof(tmp_container_path)) {
+        nret = snprintf(tmp_container_path, sizeof(tmp_container_path), "%s/%s",
+                        dir_container, device_path + strlen(dir_host));
+        if (nret < 0 || (size_t)nret >= sizeof(tmp_container_path)) {
             ERROR("Failed to sprintf device path in container %s/%s", dir_container, device_path + strlen(dir_host));
             goto erro_out;
         }
@@ -1380,8 +1379,8 @@ static container_config_v2_common_config_mount_points_element *defs_mnt_to_mount
                 ERROR("Out of memory");
                 goto cleanup;
             }
-            pret = sprintf_s(new_mode, len, "%s,%s", mode, mnt->options[i]);
-            if (pret < 0) {
+            pret = snprintf(new_mode, len, "%s,%s", mode, mnt->options[i]);
+            if (pret < 0 || (size_t)pret >= len) {
                 ERROR("Sprintf failed");
                 free(new_mode);
                 goto cleanup;
@@ -1926,7 +1925,9 @@ static int change_dev_shm_size(oci_runtime_spec *oci_spec, int64_t shm_size)
     size_t j = 0;
     char size_opt[MOUNT_PROPERTIES_SIZE] = { 0 };
     char *tmp = NULL;
-    if (sprintf_s(size_opt, sizeof(size_opt), "size=%lld", (long long int)shm_size) < 0) {
+
+    int nret = snprintf(size_opt, sizeof(size_opt), "size=%lld", (long long int)shm_size);
+    if (nret < 0 || (size_t)nret >= sizeof(size_opt)) {
         ERROR("Out of memory");
         return -1;
     }

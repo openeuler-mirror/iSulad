@@ -797,7 +797,6 @@ def src_reflect(structs, schema_info, c_file, root_typ):
     c_file.write("#endif\n")
     c_file.write('#include <string.h>\n')
     c_file.write('#include <read_file.h>\n')
-    c_file.write('#include "securec.h"\n')
     c_file.write('#include "%s"\n\n' % schema_info.header.basename)
     for i in structs:
         append_c_code(i, c_file, schema_info.prefix)
@@ -982,12 +981,7 @@ yajl_gen_status gen_%s(yajl_gen g, const %s_element **ptr, size_t len, const str
     }
 
     json_buf = safe_malloc(gen_len + 1);
-    if (memcpy_s(json_buf, gen_len + 1, gen_buf, gen_len) != EOK) {
-        *err = safe_strdup("Error to memcpy json");
-        free(json_buf);
-        json_buf = NULL;
-        goto free_out;
-    }
+    (void)memcpy(json_buf, gen_buf, gen_len);
     json_buf[gen_len] = '\\0';
 
 free_out:

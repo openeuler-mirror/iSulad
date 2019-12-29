@@ -99,18 +99,21 @@ err_out:
     return -1;
 }
 
-static void pack_imagetool_images_list(const struct isula_list_response *resp, imagetool_images_list **images)
+static int pack_imagetool_images_list(const struct isula_list_response *resp, imagetool_images_list **images)
 {
+    int ret = 0;
     size_t i = 0;
     imagetool_images_list *tmp_list = NULL;
 
     if (resp == NULL) {
-        return;
+        ret = -1;
+        goto err_out;
     }
     tmp_list = (imagetool_images_list *)util_common_calloc_s(sizeof(imagetool_images_list));
     if (tmp_list == NULL) {
         ERROR("Out of memory");
-        return;
+        ret = -1;
+        goto err_out;
     }
     if (resp->images_len == 0) {
         DEBUG("Get number of images is 0");
@@ -119,7 +122,8 @@ static void pack_imagetool_images_list(const struct isula_list_response *resp, i
     tmp_list->images = (imagetool_image **)util_common_calloc_s(sizeof(imagetool_image *) * resp->images_len);
     if (tmp_list->images == NULL) {
         ERROR("Out of memory");
-        goto out;
+        ret = -1;
+        goto err_out;
     }
     for (; i < resp->images_len; i++) {
         if (pack_imagetool_image(resp->images[i], &(tmp_list->images[i])) != 0) {
@@ -128,8 +132,14 @@ static void pack_imagetool_images_list(const struct isula_list_response *resp, i
         tmp_list->images_len++;
     }
 
+    goto out;
+
+err_out:
+    free(tmp_list);
+    tmp_list = NULL;
 out:
     *images = tmp_list;
+    return ret;
 }
 
 int isula_list_images(const im_list_request *request, imagetool_images_list **images)
@@ -175,7 +185,11 @@ int isula_list_images(const im_list_request *request, imagetool_images_list **im
         goto out;
     }
 
-    pack_imagetool_images_list(iresp, images);
+    if (pack_imagetool_images_list(iresp, images) != 0) {
+        ERROR("Failed to pack images list");
+        ret = -1;
+        goto out;
+    }
 out:
     free_isula_list_request(ireq);
     free_isula_list_response(iresp);
