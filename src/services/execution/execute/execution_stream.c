@@ -1190,6 +1190,10 @@ static ssize_t extract_stream_to_io_read(void *content, void *buf, size_t buf_le
         DEBUG("Client may exited");
         return -1;
     }
+    if (copy.data_len > buf_len) {
+        free(copy.data);
+        return -1;
+    }
     (void)memcpy(buf, copy.data, copy.data_len);
     free(copy.data);
     return (ssize_t)(copy.data_len);
