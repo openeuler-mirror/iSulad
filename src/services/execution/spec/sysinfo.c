@@ -23,7 +23,6 @@
 #include "liblcrd.h"
 #include "sysinfo.h"
 #include "log.h"
-#include "securec.h"
 #include "read_file.h"
 
 // Cgroup Item Definition
@@ -244,17 +243,9 @@ static char *cgroup_legacy_must_prefix_named(const char *entry)
         ERROR("Out of memory");
         return NULL;
     }
+    (void)memcpy(prefixed, prefix, strlen(prefix));
+    (void)memcpy(prefixed + strlen(prefix), entry, len);
 
-    if (memcpy_s(prefixed, len + strlen(prefix) + 1, prefix, strlen(prefix)) != EOK) {
-        ERROR("Failed to copy memory!");
-        free(prefixed);
-        return NULL;
-    }
-    if (memcpy_s(prefixed + strlen(prefix), len + 1, entry, len) != EOK) {
-        ERROR("Failed to copy memory!");
-        free(prefixed);
-        return NULL;
-    }
     prefixed[len + strlen(prefix)] = '\0';
     return prefixed;
 }
@@ -521,8 +512,8 @@ static bool cgroup_enabled(const char *mountpoint, const char *name)
     char path[PATH_MAX] = { 0 };
     int nret;
 
-    nret = sprintf_s(path, sizeof(path), "%s/%s", mountpoint, name);
-    if (nret < 0) {
+    nret = snprintf(path, sizeof(path), "%s/%s", mountpoint, name);
+    if (nret < 0 || (size_t)nret >= sizeof(path)) {
         ERROR("Path is too long");
         return false;
     }
@@ -790,7 +781,6 @@ static void check_cgroup_blkio_info(struct layer **layers, bool quiet, cgroup_bl
 static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_cpuset_info_t *cpusetinfo)
 {
     size_t file_size = 0;
-    errno_t nret = EOK;
     char *mountpoint = NULL;
     char cpuset_cpus_path[PATH_MAX] = { 0 };
     char cpuset_mems_path[PATH_MAX] = { 0 };
@@ -801,8 +791,8 @@ static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_c
         return;
     }
 
-    nret = sprintf_s(cpuset_cpus_path, sizeof(cpuset_cpus_path), "%s/%s", mountpoint, CGROUP_CPUSET_CPUS);
-    if (nret < 0) {
+    int nret = snprintf(cpuset_cpus_path, sizeof(cpuset_cpus_path), "%s/%s", mountpoint, CGROUP_CPUSET_CPUS);
+    if (nret < 0 || (size_t)nret >= sizeof(cpuset_cpus_path)) {
         ERROR("Path is too long");
         goto error;
     }
@@ -813,8 +803,8 @@ static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_c
         goto error;
     }
 
-    nret = sprintf_s(cpuset_mems_path, sizeof(cpuset_mems_path), "%s/%s", mountpoint, CGROUP_CPUSET_MEMS);
-    if (nret < 0) {
+    nret = snprintf(cpuset_mems_path, sizeof(cpuset_mems_path), "%s/%s", mountpoint, CGROUP_CPUSET_MEMS);
+    if (nret < 0 || (size_t)nret >= sizeof(cpuset_mems_path)) {
         ERROR("Path is too long");
         goto error;
     }
@@ -962,8 +952,8 @@ static void check_cgroup_hugetlb(struct layer **layers, bool quiet, cgroup_huget
         WARN("Your kernel does not support cgroup hugetlb limit");
         return;
     }
-    nret = sprintf_s(hugetlbpath, sizeof(hugetlbpath), "hugetlb.%s.limit_in_bytes", defaultpagesize);
-    if (nret < 0) {
+    nret = snprintf(hugetlbpath, sizeof(hugetlbpath), "hugetlb.%s.limit_in_bytes", defaultpagesize);
+    if (nret < 0 || (size_t)nret >= sizeof(hugetlbpath)) {
         WARN("Failed to print hugetlb path");
         goto free_out;
     }
@@ -1068,8 +1058,8 @@ static bool is_huge_pagesize_valid(const char *pagesize)
     }
 
     for (it = hps; *it; it++) {
-        nret = sprintf_s(hpsbuf, sizeof(hpsbuf), "%s ", *it);
-        if (nret < 0) {
+        nret = snprintf(hpsbuf, sizeof(hpsbuf), "%s ", *it);
+        if (nret < 0 || (size_t)nret >= sizeof(hpsbuf)) {
             ERROR("hps buf is too short");
             goto free_out;
         }

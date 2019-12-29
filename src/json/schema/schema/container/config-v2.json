@@ -99,6 +99,9 @@
             ],
             "type": "object"
         },
+        "Image": {
+            "type": "string"
+        },
         "State": {
             "properties": {
                 "Dead": {

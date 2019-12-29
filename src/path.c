@@ -18,11 +18,12 @@
 #include <sys/param.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "log.h"
 #include "path.h"
 #include "utils.h"
-#include "securec.h"
 
 #define ISSLASH(C) ((C) == '/')
 #define IS_ABSOLUTE_FILE_NAME(F) (ISSLASH ((F)[0]))
@@ -51,7 +52,6 @@ static int do_clean_path(const char *respath, const char *limit_respath,
 {
     char *dest = *dst;
     const char *endpos = NULL;
-    errno_t ret;
 
     for (endpos = stpos; *stpos; stpos = endpos) {
         while (ISSLASH(*stpos)) {
@@ -80,11 +80,7 @@ static int do_clean_path(const char *respath, const char *limit_respath,
             return -1;
         }
 
-        ret = memcpy_s(dest, (size_t)(endpos - stpos), stpos, (size_t)(endpos - stpos));
-        if (ret != EOK) {
-            ERROR("Failed at cleanpath memcpy");
-            return -1;
-        }
+        (void)memcpy(dest, stpos, (size_t)(endpos - stpos));
         dest += endpos - stpos;
         *dest = '\0';
     }
@@ -98,7 +94,6 @@ char *cleanpath(const char *path, char *realpath, size_t realpath_len)
     char *dest = NULL;
     const char *stpos = NULL;
     const char *limit_respath = NULL;
-    errno_t ret;
 
     if (path == NULL || path[0] == '\0' || \
         realpath == NULL || (realpath_len < PATH_MAX)) {
@@ -107,11 +102,7 @@ char *cleanpath(const char *path, char *realpath, size_t realpath_len)
 
     respath = realpath;
 
-    ret = memset_s(respath, realpath_len, 0, realpath_len);
-    if (ret != EOK) {
-        ERROR("Failed at cleanpath memset");
-        goto error;
-    }
+    (void)memset(respath, 0, realpath_len);
     limit_respath = respath + PATH_MAX;
 
     if (!IS_ABSOLUTE_FILE_NAME(path)) {
@@ -125,11 +116,11 @@ char *cleanpath(const char *path, char *realpath, size_t realpath_len)
             ERROR("Failed to get the end of respath");
             goto error;
         }
-        ret = strcat_s(respath, PATH_MAX, path);
-        if (ret != EOK) {
-            ERROR("Failed at cleanpath strcat");
+        if (strlen(path) >= (PATH_MAX - 1) - strlen(respath)) {
+            ERROR("%s path too long", path);
             goto error;
         }
+        (void)strcat(respath, path);
         stpos = path;
     } else {
         dest = respath;
@@ -195,10 +186,7 @@ static int do_get_symlinks_copy_buf(const char *buf, const char *prefix, size_t 
 {
     if (IS_ABSOLUTE_FILE_NAME(buf)) {
         if (prefix_len) {
-            if (memcpy_s(*rpath, PATH_MAX, prefix, prefix_len) != EOK) {
-                ERROR("Memory copy failed!");
-                return -1;
-            }
+            (void)memcpy(*rpath, prefix, prefix_len);
         }
         *dest = *rpath + prefix_len;
         *(*dest)++ = '/';
@@ -219,7 +207,6 @@ static int do_get_symlinks(const char **fullpath, const char *prefix, size_t pre
     int ret = -1;
     size_t len;
     ssize_t n;
-    errno_t rc = EOK;
     char *buf = NULL;
 
     if (++(*num_links) > MAXSYMLINKS) {
@@ -253,16 +240,8 @@ static int do_get_symlinks(const char **fullpath, const char *prefix, size_t pre
         goto out;
     }
 
-    rc = memmove_s(&(*extra_buf)[n], (size_t)(PATH_MAX - n), *end, len + 1);
-    if (rc != EOK) {
-        ERROR("Memory move failed!");
-        goto out;
-    }
-    rc = memcpy_s(*extra_buf, PATH_MAX, buf, (size_t)n);
-    if (rc != EOK) {
-        ERROR("Memory copy failed!");
-        goto out;
-    }
+    (void)memmove(&(*extra_buf)[n], *end, len + 1);
+    (void)memcpy(*extra_buf, buf, (size_t)n);
     *fullpath = *end = *extra_buf;
 
     if (do_get_symlinks_copy_buf(buf, prefix, prefix_len, rpath, dest) != 0) {
@@ -332,7 +311,6 @@ static int do_eval_symlinks_in_scope(const char *fullpath, const char *prefix,
     const char *start = NULL;
     const char *end = NULL;
     char *extra_buf = NULL;
-    errno_t rc = EOK;
 
     start = fullpath + prefix_len;
     for (end = start; *start; start = end) {
@@ -354,12 +332,7 @@ static int do_eval_symlinks_in_scope(const char *fullpath, const char *prefix,
                 goto out;
             }
 
-            rc = memcpy_s(*dest, (size_t)(end - start), start, (size_t)(end - start));
-            if (rc != EOK) {
-                ERROR("Out of memory");
-                nret = -1;
-                goto out;
-            }
+            (void)memcpy(*dest, start, (size_t)(end - start));
             *dest += end - start;
             **dest = '\0';
 
@@ -387,7 +360,6 @@ static char *eval_symlinks_in_scope(const char *fullpath, const char *rootpath)
     char *prefix = NULL;
     const char *rpath_limit = NULL;
     size_t prefix_len;
-    errno_t rc = EOK;
     char resroot[PATH_MAX] = { 0 };
 
     if (fullpath == NULL || rootpath == NULL) {
@@ -424,11 +396,7 @@ static char *eval_symlinks_in_scope(const char *fullpath, const char *rootpath)
 
     dest = rpath;
     if (prefix_len) {
-        rc = memcpy_s(rpath, PATH_MAX, prefix, prefix_len);
-        if (rc != EOK) {
-            ERROR("Out of memory");
-            goto out;
-        }
+        (void)memcpy(rpath, prefix, prefix_len);
         dest += prefix_len;
     }
     *dest++ = '/';
@@ -515,8 +483,8 @@ char *preserve_trailing_dot_or_separator(const char *cleanedpath, const char *or
         return NULL;
     }
 
-    nret = sprintf_s(respath, PATH_MAX, "%s", cleanedpath);
-    if (nret < 0) {
+    nret = snprintf(respath, PATH_MAX, "%s", cleanedpath);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Failed to print string");
         return NULL;
     }
@@ -598,8 +566,8 @@ char *get_resource_path(const char *rootpath, const char *path)
     char tmppath[PATH_MAX] = { 0 };
     char fullpath[PATH_MAX] = { 0 };
 
-    nret = sprintf_s(tmppath, sizeof(tmppath), "/%s/%s", rootpath, path);
-    if (nret < 0) {
+    nret = snprintf(tmppath, sizeof(tmppath), "/%s/%s", rootpath, path);
+    if (nret < 0 || (size_t)nret >= sizeof(tmppath)) {
         return NULL;
     }
 
@@ -624,8 +592,8 @@ int resolve_path(const char *rootpath, const char *path, char **resolvedpath, ch
     *resolvedpath = NULL;
     *abspath = NULL;
 
-    nret = sprintf_s(tmppath, sizeof(tmppath), "/%s", path);
-    if (nret < 0) {
+    nret = snprintf(tmppath, sizeof(tmppath), "/%s", path);
+    if (nret < 0 || (size_t)nret >= sizeof(tmppath)) {
         ERROR("Failed to print string");
         return -1;
     }
@@ -658,8 +626,8 @@ int resolve_path(const char *rootpath, const char *path, char **resolvedpath, ch
         ERROR("Out of memory");
         goto cleanup;
     }
-    nret = sprintf_s(*resolvedpath, len, "%s/%s", resolved_dir_path, basepath);
-    if (nret < 0) {
+    nret = snprintf(*resolvedpath, len, "%s/%s", resolved_dir_path, basepath);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Failed to print string");
         goto cleanup;
     }
@@ -759,7 +727,8 @@ int realpath_in_scope(const char *rootfs, const char *path, char **real_path)
     char cleaned[PATH_MAX] = { 0 };
     char *tmp = NULL;
 
-    if (sprintf_s(full_path, sizeof(full_path), "%s%s", rootfs, path) < 0) {
+    int nret = snprintf(full_path, sizeof(full_path), "%s%s", rootfs, path);
+    if (nret < 0 || (size_t)nret >= sizeof(full_path)) {
         ERROR("sprintf error: %s", strerror(errno));
         ret = -1;
         goto out;

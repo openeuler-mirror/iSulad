@@ -109,7 +109,8 @@ static int get_content_and_hosts_map(FILE *fp, char **content, json_map_string_b
         host_ip = strtok_r(tmp_str, " ", &saveptr);
         host_name = strtok_r(NULL, " ", &saveptr);
         if (host_ip != NULL && host_name != NULL) {
-            if (sprintf_s(host_key, sizeof(host_key), "%s:%s", host_ip, host_name) < 0) {
+            int nret = snprintf(host_key, sizeof(host_key), "%s:%s", host_ip, host_name);
+            if ((size_t)nret >= sizeof(host_key) || nret < 0) {
                 free(tmp_str);
                 ERROR("Out of memory");
                 ret = -1;
@@ -172,7 +173,8 @@ static int merge_hosts_content(const host_config *host_spec, char **content, jso
             ERROR("extra host '%s' format error.", host_spec->extra_hosts[i]);
             return -1;
         }
-        if (sprintf_s(host_key, sizeof(host_key), "%s:%s", host_ip, host_name) < 0) {
+        int nret = snprintf(host_key, sizeof(host_key), "%s:%s", host_ip, host_name);
+        if ((size_t)nret >= sizeof(host_key) || nret < 0) {
             free(hosts);
             ERROR("Out of memory");
             return -1;
@@ -648,7 +650,6 @@ error_out:
 static int chown_network(const char *user_remap, const char *rootfs, const char *filename)
 {
     int ret = 0;
-    size_t path_len = 0;
     char *file_path = NULL;
     unsigned int host_uid = 0;
     unsigned int host_gid = 0;
@@ -663,20 +664,9 @@ static int chown_network(const char *user_remap, const char *rootfs, const char 
         ret = -1;
         goto out;
     }
-    path_len = strlen(rootfs) + strlen(filename) + 1;
-    if (path_len > PATH_MAX) {
-        ERROR("Invalid path length");
-        ret = -1;
-        goto out;
-    }
-    file_path = util_common_calloc_s(path_len);
-    if (file_path == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-    if (sprintf_s(file_path, path_len, "%s%s", rootfs, filename) < 0) {
-        ERROR("Failed to print string");
+    if (realpath_in_scope(rootfs, filename, &file_path) < 0) {
+        SYSERROR("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
+        lcrd_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         ret = -1;
         goto out;
     }
@@ -848,14 +838,16 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
     }
 
     // create hosts, resolv.conf and so
-    if (sprintf_s(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hosts") < 0) {
+    int nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hosts");
+    if (nret >= PATH_MAX || nret < 0) {
         ERROR("Failed to print string");
         ret = -1;
         goto cleanup;
     }
     free(common_config->hosts_path);
     common_config->hosts_path = util_strdup_s(file_path);
-    if (sprintf_s(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "resolv.conf") < 0) {
+    nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "resolv.conf");
+    if (nret >= PATH_MAX || nret < 0) {
         ERROR("Failed to print string");
         ret = -1;
         goto cleanup;

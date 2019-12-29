@@ -33,8 +33,8 @@ yajl_gen_status map_uint(void *ctx, long long unsigned int num) {
     char numstr[MAX_NUM_STR_LEN];
     int ret;
 
-    ret = sprintf_s(numstr, sizeof(numstr), "%llu", num);
-    if (ret < 0) {
+    ret = snprintf(numstr, sizeof(numstr), "%llu", num);
+    if (ret < 0 || (size_t)ret >= sizeof(numstr)) {
         return yajl_gen_in_error_state;
     }
     return yajl_gen_number((yajl_gen)ctx, (const char *)numstr, strlen(numstr));
@@ -44,8 +44,8 @@ yajl_gen_status map_int(void *ctx, long long int num) {
     char numstr[MAX_NUM_STR_LEN];
     int ret;
 
-    ret = sprintf_s(numstr, sizeof(numstr), "%lld", num);
-    if (ret < 0) {
+    ret = snprintf(numstr, sizeof(numstr), "%lld", num);
+    if (ret < 0 || (size_t)ret >= sizeof(numstr)) {
         return yajl_gen_in_error_state;
     }
     return yajl_gen_number((yajl_gen)ctx, (const char *)numstr, strlen(numstr));
@@ -389,8 +389,8 @@ yajl_gen_status gen_json_map_int_int(void *ctx, const json_map_int_int *map, con
     for (i = 0; i < len; i++) {
         char numstr[MAX_NUM_STR_LEN];
         int nret;
-        nret = sprintf_s(numstr, sizeof(numstr), "%lld", (long long int)map->keys[i]);
-        if (nret < 0) {
+        nret = snprintf(numstr, sizeof(numstr), "%lld", (long long int)map->keys[i]);
+        if (nret < 0 || (size_t)nret >= sizeof(numstr)) {
             if (!*err && asprintf(err, "Error to print string") < 0) {
                 *(err) = safe_strdup("error allocating memory");
             }
@@ -490,16 +490,8 @@ int append_json_map_int_int(json_map_int_int *map, int key, int val) {
     vals = safe_malloc(len * sizeof(int));
 
     if (map->len) {
-        if (memcpy_s(keys, len * sizeof(int), map->keys, map->len * sizeof(int)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
-        if (memcpy_s(vals, len * sizeof(int), map->values, map->len * sizeof(int)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
+        (void)memcpy(keys, map->keys, map->len * sizeof(int));
+        (void)memcpy(vals, map->values, map->len * sizeof(int));
     }
     free(map->keys);
     map->keys = keys;
@@ -530,8 +522,8 @@ yajl_gen_status gen_json_map_int_bool(void *ctx, const json_map_int_bool *map, c
     for (i = 0; i < len; i++) {
         char numstr[MAX_NUM_STR_LEN];
         int nret;
-        nret = sprintf_s(numstr, sizeof(numstr), "%lld", (long long int)map->keys[i]);
-        if (nret < 0) {
+        nret = snprintf(numstr, sizeof(numstr), "%lld", (long long int)map->keys[i]);
+        if (nret < 0 || (size_t)nret >= sizeof(numstr)) {
             if (!*err && asprintf(err, "Error to print string") < 0) {
                 *(err) = safe_strdup("error allocating memory");
             }
@@ -631,16 +623,8 @@ int append_json_map_int_bool(json_map_int_bool *map, int key, bool val) {
     vals = safe_malloc(len * sizeof(bool));
 
     if (map->len) {
-        if (memcpy_s(keys, len * sizeof(int), map->keys, map->len * sizeof(int)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
-        if (memcpy_s(vals, len * sizeof(bool), map->values, map->len * sizeof(bool)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
+        (void)memcpy(keys, map->keys, map->len * sizeof(int));
+        (void)memcpy(vals, map->values, map->len * sizeof(bool));
     }
     free(map->keys);
     map->keys = keys;
@@ -671,8 +655,8 @@ yajl_gen_status gen_json_map_int_string(void *ctx, const json_map_int_string *ma
     for (i = 0; i < len; i++) {
         char numstr[MAX_NUM_STR_LEN];
         int nret;
-        nret = sprintf_s(numstr, sizeof(numstr), "%lld", (long long int)map->keys[i]);
-        if (nret < 0) {
+        nret = snprintf(numstr, sizeof(numstr), "%lld", (long long int)map->keys[i]);
+        if (nret < 0 || (size_t)nret >= sizeof(numstr)) {
             if (!*err && asprintf(err, "Error to print string") < 0) {
                 *(err) = safe_strdup("error allocating memory");
             }
@@ -771,16 +755,8 @@ int append_json_map_int_string(json_map_int_string *map, int key, const char *va
     vals = safe_malloc(len * sizeof(char *));
 
     if (map->len) {
-        if (memcpy_s(keys, len * sizeof(int), map->keys, map->len * sizeof(int)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
-        if (memcpy_s(vals, len * sizeof(char *), map->values, map->len * sizeof(char *)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
+        (void)memcpy(keys, map->keys, map->len * sizeof(int));
+        (void)memcpy(vals, map->values, map->len * sizeof(char *));
     }
     free(map->keys);
     map->keys = keys;
@@ -897,16 +873,8 @@ int append_json_map_string_int(json_map_string_int *map, const char *key, int va
     vals = safe_malloc(len * sizeof(int));
 
     if (map->len) {
-        if (memcpy_s(keys, len * sizeof(char *), map->keys, map->len * sizeof(char *)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
-        if (memcpy_s(vals, len * sizeof(int), map->values, map->len * sizeof(int)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
+        (void)memcpy(keys, map->keys, map->len * sizeof(char *));
+        (void)memcpy(vals, map->values, map->len * sizeof(int));
     }
     free(map->keys);
     map->keys = keys;
@@ -1019,16 +987,8 @@ int append_json_map_string_bool(json_map_string_bool *map, const char *key, bool
     vals = safe_malloc(len * sizeof(bool));
 
     if (map->len) {
-        if (memcpy_s(keys, len * sizeof(char *), map->keys, map->len * sizeof(char *)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
-        if (memcpy_s(vals, len * sizeof(bool), map->values, map->len * sizeof(bool)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
+        (void)memcpy(keys, map->keys, map->len * sizeof(char *));
+        (void)memcpy(vals, map->values, map->len * sizeof(bool));
     }
     free(map->keys);
     map->keys = keys;
@@ -1148,16 +1108,8 @@ int append_json_map_string_string(json_map_string_string *map, const char *key, 
     vals = safe_malloc(len * sizeof(char *));
 
     if (map->len) {
-        if (memcpy_s(keys, len * sizeof(char *), map->keys, map->len * sizeof(char *)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
-        if (memcpy_s(vals, len * sizeof(char *), map->values, map->len * sizeof(char *)) != EOK) {
-            free(keys);
-            free(vals);
-            return -1;
-        }
+        (void)memcpy(keys, map->keys, map->len * sizeof(char *));
+        (void)memcpy(vals, map->values, map->len * sizeof(char *));
     }
     free(map->keys);
     map->keys = keys;
@@ -1205,12 +1157,7 @@ char *json_marshal_string(const char *str, size_t strlen, const struct parser_co
     }
 
     json_buf = safe_malloc(gen_len + 1);
-    if (memcpy_s(json_buf, gen_len + 1, gen_buf, gen_len) != EOK) {
-        *err = safe_strdup("Error to memcpy json");
-        free(json_buf);
-        json_buf = NULL;
-        goto free_out;
-    }
+    (void)memcpy(json_buf, gen_buf, gen_len);
     json_buf[gen_len] = '\\0';
 
 free_out:

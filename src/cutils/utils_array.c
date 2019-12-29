@@ -15,9 +15,8 @@
 
 #define _GNU_SOURCE
 #include "utils_array.h"
-
-#include "securec.h"
-
+#include <stdlib.h>
+#include <string.h>
 #include "log.h"
 #include "utils.h"
 
@@ -80,12 +79,7 @@ int util_array_append(char ***array, const char *element)
         return -1;
     }
     if (*array != NULL) {
-        if (memcpy_s(new_array, (len + 2) * sizeof(char *),
-                     *array, len * sizeof(char *)) != EOK) {
-            ERROR("Failed to memcpy memory");
-            free(new_array);
-            return -1;
-        }
+        (void)memcpy(new_array, *array, len * sizeof(char *));
         UTIL_FREE_AND_SET_NULL(*array);
     }
     *array = new_array;
@@ -122,13 +116,8 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
         if (add_array == NULL) {
             return -1;
         }
-        if (*orig_array) {
-            if (memcpy_s(add_array, add_capacity * sizeof(void *),
-                         *orig_array, *orig_capacity * sizeof(void *)) != EOK) {
-                ERROR("Failed to memcpy memory");
-                free(add_array);
-                return -1;
-            }
+        if (*orig_array != NULL) {
+            (void)memcpy(add_array, *orig_array, *orig_capacity * sizeof(void *));
             UTIL_FREE_AND_SET_NULL(*orig_array);
         }
 

@@ -15,13 +15,13 @@
 
 #define _GNU_SOURCE
 #include "utils_verify.h"
+#include <stdlib.h>
+#include <string.h>
 #include <regex.h>
 #include <sys/stat.h>
 #ifdef HAVE_LIBCAP_H
 #include <sys/capability.h>
 #endif
-
-#include "securec.h"
 
 #include "log.h"
 #include "utils.h"
@@ -111,10 +111,7 @@ int util_validate_absolute_path(const char *path)
         return -1;
     }
 
-    if (memset_s(&regmatch, sizeof(regmatch_t), 0, sizeof(regmatch_t)) != EOK) {
-        WARN("Failed to set memory!");
-        return -1;
-    }
+    (void)memset(&regmatch, 0, sizeof(regmatch_t));
 
     if (regcomp(&preg, "^(/[^/ ]*)+/?$", REG_NOSUB | REG_EXTENDED)) {
         ERROR("Failed to compile the regex");
@@ -217,8 +214,8 @@ bool util_valid_cap(const char *cap)
         return false;
     }
 
-    nret = sprintf_s(tmpcap, sizeof(tmpcap), "CAP_%s", cap);
-    if (nret < 0) {
+    nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", cap);
+    if (nret < 0 || nret >= sizeof(tmpcap)) {
         ERROR("Failed to print string");
         cret = false;
         goto err_out;

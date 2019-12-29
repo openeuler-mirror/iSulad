@@ -24,7 +24,6 @@
 #include <libgen.h>
 #include <limits.h>
 #include <signal.h>
-#include <securec.h>
 #include <sys/stat.h>
 
 #include "lcrdtar.h"
@@ -240,8 +239,8 @@ static int get_rebase_name(const char *path, const char *real_path,
     char *path_base = NULL;
     char *resolved_base = NULL;
 
-    nret = sprintf_s(resolved, PATH_MAX, "%s", real_path);
-    if (nret < 0) {
+    nret = snprintf(resolved, PATH_MAX, "%s", real_path);
+    if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Failed to print string");
         return -1;
     }
@@ -319,8 +318,8 @@ int resolve_host_source_path(const char *path, bool follow_link,
             format_errorf(err, "Can not get real path of %s: %s", dirpath, strerror(errno));
             goto cleanup;
         }
-        nret = sprintf_s(resolved, sizeof(resolved), "%s/%s", real_path, basepath);
-        if (nret < 0) {
+        nret = snprintf(resolved, sizeof(resolved), "%s/%s", real_path, basepath);
+        if (nret < 0 || (size_t)nret >= sizeof(resolved)) {
             ERROR("Path is too long");
             goto cleanup;
         }
@@ -538,8 +537,8 @@ static char *format_transform_of_tar(const char *srcbase, const char *dstbase)
         ERROR("Out of memory");
         return NULL;
     }
-    nret = sprintf_s(transform, len, "s/%s/%s/", src_escaped, dst_escaped);
-    if (nret < 0) {
+    nret = snprintf(transform, len, "s/%s/%s/", src_escaped, dst_escaped);
+    if (nret < 0 || (size_t)nret >= len) {
         ERROR("Failed to print string");
         free(transform);
         return NULL;

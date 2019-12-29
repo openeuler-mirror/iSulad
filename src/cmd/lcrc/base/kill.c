@@ -13,7 +13,6 @@
  * Description: provide container kill functions
  ******************************************************************************/
 #include "error.h"
-#include "securec.h"
 #include "arguments.h"
 #include "kill.h"
 #include "log.h"

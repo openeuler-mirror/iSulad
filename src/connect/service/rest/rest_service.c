@@ -16,10 +16,10 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "log.h"
 #include "utils.h"
-#include "securec.h"
 #include "rest_containers_service.h"
 #include "rest_images_service.h"
 

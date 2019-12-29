@@ -22,7 +22,6 @@
 
 #include "namespace.h"
 #include "error.h"
-#include "securec.h"
 #include "arguments.h"
 #include "log.h"
 #include "utils.h"
@@ -295,6 +294,7 @@ static int validate_env(const char *env, char **dst)
         *dst = util_strdup_s(env);
         goto out;
     } else {
+        int sret;
         size_t len = strlen(env) + 1 + strlen(value) + 1;
         *dst = (char *)util_common_calloc_s(len);
         if (*dst == NULL) {
@@ -302,7 +302,8 @@ static int validate_env(const char *env, char **dst)
             ret = -1;
             goto out;
         }
-        if (sprintf_s(*dst, len, "%s=%s", env, value) < 0) {
+        sret = snprintf(*dst, len, "%s=%s", env, value);
+        if (sret < 0 || (size_t)sret >= len) {
             ERROR("Failed to compose env string");
             ret = -1;
             goto out;

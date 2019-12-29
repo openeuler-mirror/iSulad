@@ -33,7 +33,6 @@
 #endif
 
 #include "error.h"
-#include "securec.h"
 #include "log.h"
 #include "oci_runtime_spec.h"
 #include "docker_seccomp.h"
@@ -170,8 +169,8 @@ static int tweak_adds_capabilities(char ***new_caps, size_t *new_caps_len, const
             continue;
         }
 
-        nret = sprintf_s(tmpcap, sizeof(tmpcap), "CAP_%s", adds[i]);
-        if (nret < 0) {
+        nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", adds[i]);
+        if (nret < 0 || (size_t)nret >= sizeof(tmpcap)) {
             ERROR("Failed to print string");
             ret = -1;
             goto out;
@@ -211,8 +210,8 @@ static bool valid_drops_cap(const char **drops, size_t drops_len)
             continue;
         }
 
-        nret = sprintf_s(tmpcap, sizeof(tmpcap), "CAP_%s", drops[i]);
-        if (nret < 0) {
+        nret = snprintf(tmpcap, sizeof(tmpcap), "CAP_%s", drops[i]);
+        if (nret < 0 || (size_t)nret >= sizeof(tmpcap)) {
             ERROR("Failed to print string");
             return false;
         }

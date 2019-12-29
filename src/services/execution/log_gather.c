@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <securec.h>
 #include <limits.h>
 
 #include "log.h"
@@ -44,15 +43,18 @@ static int log_file_open();
 
 static int file_rotate_gz(const char *file_name, int i)
 {
+    int ret = 0;
     char from_path[PATH_MAX] = { 0 };
     char to_path[PATH_MAX] = { 0 };
 
-    if (sprintf_s(from_path, PATH_MAX, "%s.%d.gz", file_name, (i - 1)) == -1) {
+    ret = snprintf(from_path, PATH_MAX, "%s.%d.gz", file_name, (i - 1));
+    if (ret >= PATH_MAX || ret < 0) {
         ERROR("sprint zip file name failed");
         return -1;
     }
 
-    if (sprintf_s(to_path, PATH_MAX, "%s.%d.gz", file_name, i) == -1) {
+    ret = snprintf(to_path, PATH_MAX, "%s.%d.gz", file_name, i);
+    if (ret >= PATH_MAX || ret < 0) {
         ERROR("sprint zip file name failed");
         return -1;
     }
@@ -67,9 +69,11 @@ static int file_rotate_gz(const char *file_name, int i)
 
 static int file_rotate_me(const char *file_name)
 {
+    int ret = 0;
     char tmp_path[PATH_MAX] = { 0 };
 
-    if (sprintf_s(tmp_path, PATH_MAX, "%s.1", file_name) == -1) {
+    ret = snprintf(tmp_path, PATH_MAX, "%s.1", file_name);
+    if (ret >= PATH_MAX || ret < 0) {
         ERROR("Out of memory");
         return -1;
     }

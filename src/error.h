@@ -16,7 +16,7 @@
 #define __LCRD_ERROR_H_
 
 #include <stdlib.h>
-#include <securec.h>
+#include <stdarg.h>
 #include "utils.h"
 
 #ifdef __cplusplus
@@ -60,9 +60,9 @@ static inline void format_errorf(char **err, const char *format, ...)
     va_list argp;
     va_start(argp, format);
 
-    ret = vsprintf_s(errbuf, BUFSIZ, format, argp);
+    ret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
-    if (ret < 0) {
+    if (ret < 0 || ret >= BUFSIZ) {
         *err = util_strdup_s("Error is too long!!!");
         return;
     }

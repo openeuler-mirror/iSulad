@@ -59,7 +59,7 @@ out:
 }
 
 /* notes: hostconfig and common_config will be free in this function on error */
-container_t *container_new(const char *runtime, const char *rootpath, const char *statepath,
+container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
                            host_config **hostconfig, container_config_v2_common_config **common_config)
 {
     int ret = 0;
@@ -103,6 +103,7 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     cont->runtime = util_strdup_s(runtime);
     cont->root_path = util_strdup_s(rootpath);
     cont->state_path = util_strdup_s(statepath);
+    cont->image_id = image_id != NULL ? util_strdup_s(image_id) : NULL;
     cont->state = container_state_new();
     if (cont->state == NULL) {
         ERROR("Out of memory");
@@ -148,6 +149,8 @@ void container_free(container_t *container)
     container->root_path = NULL;
     free(container->state_path);
     container->state_path = NULL;
+    free(container->image_id);
+    container->image_id = NULL;
 
     free(container->log_path);
     container->log_path = NULL;
@@ -700,8 +703,8 @@ static int save_json_config_file(const char *id, const char *rootpath,
     if (json_data == NULL || strlen(json_data) == 0) {
         return 0;
     }
-    nret = sprintf_s(filename, sizeof(filename), "%s/%s/%s", rootpath, id, fname);
-    if (nret < 0) {
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, id, fname);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         ret = -1;
         goto out;
@@ -747,8 +750,8 @@ container_config_v2 *read_config_v2(const char *rootpath, const char *id)
     parser_error err = NULL;
     container_config_v2 *v2config = NULL;
 
-    nret = sprintf_s(filename, sizeof(filename), "%s/%s/%s", rootpath, id, CONFIG_V2_JSON);
-    if (nret < 0) {
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, id, CONFIG_V2_JSON);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         goto out;
     }
@@ -781,8 +784,8 @@ static host_config *read_host_config(const char *rootpath, const char *id)
     parser_error err = NULL;
     host_config *hostconfig = NULL;
 
-    nret = sprintf_s(filename, sizeof(filename), "%s/%s/%s", rootpath, id, HOSTCONFIGJSON);
-    if (nret < 0) {
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, id, HOSTCONFIGJSON);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         goto out;
     }
@@ -806,8 +809,8 @@ static bool check_start_generate_config(const char *rootpath, const char *id)
     parser_error err = NULL;
     container_start_generate_config *config = NULL;
 
-    nret = sprintf_s(filename, sizeof(filename), "%s/%s/%s", rootpath, id, START_GENERATE_CONFIG);
-    if (nret < 0) {
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, id, START_GENERATE_CONFIG);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         goto out;
     }
@@ -877,6 +880,8 @@ static int container_save_config_v2(const container_t *cont)
     config_v2.common_config = cont->common_config;
 
     config_v2.state = cont->state->state;
+
+    config_v2.image = cont->image_id;
 
     json_v2 = container_config_v2_generate_json(&config_v2, NULL, &err);
     if (json_v2 == NULL) {
@@ -985,6 +990,7 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     container_config_v2 *v2config = NULL;
     container_config_v2_common_config *common_config = NULL;
     host_config *hostconfig = NULL;
+    const char *image_id = NULL;
     container_t *cont = NULL;
 
     if (rootpath == NULL || statepath == NULL || id == NULL || runtime == NULL) {
@@ -1008,8 +1014,9 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
 
     common_config = v2config->common_config;
     v2config->common_config = NULL;
+    image_id = v2config->image;
 
-    cont = container_new(runtime, rootpath, statepath, &hostconfig, &common_config);
+    cont = container_new(runtime, rootpath, statepath, image_id, &hostconfig, &common_config);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
         goto error_out;
@@ -1055,7 +1062,8 @@ static char *append_quote_to_arg(const char *arg)
         ERROR("Out of memory");
         return NULL;
     }
-    if (sprintf_s(new_arg, total, "%s%s%s", part, arg, part) < 0) {
+    int nret = snprintf(new_arg, total, "%s%s%s", part, arg, part);
+    if (nret < 0 || (size_t)nret >= total) {
         free(new_arg);
         ERROR("Sprintf failed");
         return NULL;
@@ -1261,7 +1269,7 @@ static container_pid_t *parse_container_pid(const char *S)
         return NULL;
     }
 
-    num = sscanf_s(S, "%d %Lu %d %Lu", &P->pid, &P->start_time, &P->ppid, &P->pstart_time);
+    num = sscanf(S, "%d %Lu %d %Lu", &P->pid, &P->start_time, &P->ppid, &P->pstart_time);
     if (num != 4) { // args num to read is 4
         ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
         free(P);

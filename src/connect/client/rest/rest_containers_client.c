@@ -16,7 +16,6 @@
 #include "error.h"
 
 #include "log.h"
-#include "securec.h"
 #include "lcrc_connect.h"
 #include "container.rest.h"
 #include "pack_config.h"
@@ -1087,10 +1086,7 @@ static int update_request_to_rest(const struct lcrc_update_request *lu_request, 
     char *srcconfigjson = NULL;
     int ret = 0;
 
-    if (memset_s(&srcconfig, sizeof(srcconfig), 0, sizeof(srcconfig)) != EOK) {
-        ERROR("Failed to set memory");
-        return -1;
-    }
+    (void)memset(&srcconfig, 0, sizeof(srcconfig));
 
     crequest = util_common_calloc_s(sizeof(container_update_request));
     if (crequest == NULL) {

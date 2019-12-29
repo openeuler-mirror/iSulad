@@ -164,6 +164,7 @@ std::unique_ptr<runtime::v1alpha2::RuntimeStatus> CRIRuntimeServiceImpl::Status(
 
 std::string CRIRuntimeServiceImpl::GetNetNS(const std::string &podSandboxID, Errors &err)
 {
+    int ret;
     char fullpath[PATH_MAX] { 0 };
     std::string result { "" };
     const std::string NetNSFmt { "/proc/%d/ns/net" };
@@ -176,7 +177,8 @@ std::string CRIRuntimeServiceImpl::GetNetNS(const std::string &podSandboxID, Err
         err.Errorf("cannot find network namespace for the terminated container %s", podSandboxID.c_str());
         goto cleanup;
     }
-    if (sprintf_s(fullpath, sizeof(fullpath), NetNSFmt.c_str(), inspect_data->state->pid) < 0) {
+    ret = snprintf(fullpath, sizeof(fullpath), NetNSFmt.c_str(), inspect_data->state->pid);
+    if ((size_t)ret >= sizeof(fullpath) || ret < 0) {
         err.SetError("Sprint nspath failed");
         goto cleanup;
     }

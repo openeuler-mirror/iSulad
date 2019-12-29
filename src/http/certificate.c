@@ -15,10 +15,10 @@
 #include "certificate.h"
 #include <openssl/x509.h>
 #include <openssl/pem.h>
+#include <string.h>
 
 #include "log.h"
 #include "utils.h"
-#include "securec.h"
 
 int get_common_name_from_tls_cert(const char *cert_path, char *value, size_t len)
 {

@@ -33,7 +33,6 @@
 #include "console.h"
 #include "lcrd_config.h"
 #include "config.h"
-#include "securec.h"
 #include "specs.h"
 #include "verify.h"
 #include "containers_store.h"
@@ -179,8 +178,8 @@ static int add_default_log_config_to_custom_spec(const char *id, const char *run
 
     if (custom_config->log_config->log_file == NULL) {
         char default_path[PATH_MAX] = { 0 };
-        int nret = sprintf_s(default_path, PATH_MAX, "%s/%s/console.log", runtime_root, id);
-        if (nret < 0) {
+        int nret = snprintf(default_path, PATH_MAX, "%s/%s/console.log", runtime_root, id);
+        if (nret >= PATH_MAX || nret < 0) {
             ERROR("Create default log path for container %s failed", id);
             ret = -1;
             goto out;
@@ -235,8 +234,8 @@ static int generateID(char *id, size_t len)
             return -1;
         }
         unsigned char rs = (unsigned char)(num % m);
-        nret = sprintf_s((id + i * 2), ((len - i) * 2 + 1), "%02x", (unsigned int)rs);
-        if (nret < 0) {
+        nret = snprintf((id + i * 2), ((len - i) * 2 + 1), "%02x", (unsigned int)rs);
+        if (nret >= ((len - i) * 2 + 1) || nret < 0) {
             close(fd);
             return -1;
         }
@@ -332,6 +331,93 @@ out:
     return id;
 }
 
+static int inspect_image(const char *image, imagetool_image **result)
+{
+    int ret = 0;
+    im_status_request *request = NULL;
+    im_status_response *response = NULL;
+
+    if (image == NULL) {
+        ERROR("Empty image name or id");
+        return -1;
+    }
+
+    request = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    request->image.image = util_strdup_s(image);
+
+    if (im_image_status(request, &response) != 0) {
+        if (response != NULL && response->errmsg != NULL) {
+            ERROR("failed to inspect inspect image info: %s", response->errmsg);
+        } else {
+            ERROR("Failed to call status image");
+        }
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (response->image_info != NULL) {
+        *result = response->image_info->image;
+        response->image_info->image = NULL;
+    }
+
+cleanup:
+    free_im_status_request(request);
+    free_im_status_response(response);
+    return ret;
+}
+
+static int conf_get_image_id(const char *image, char **id)
+{
+    int ret = 0;
+    imagetool_image *ir = NULL;
+    size_t len = 0;
+    char *image_id = NULL;
+
+    if (image == NULL || strcmp(image, "none") == 0) {
+        *id = util_strdup_s("none");
+        return 0;
+    }
+
+    if (inspect_image(image, &ir) != 0) {
+        ERROR("Failed to inspect image status");
+        ret = -1;
+        goto out;
+    }
+
+    if (strlen(ir->id) > SIZE_MAX / sizeof(char) - strlen("sha256:")) {
+        ERROR("Invalid image id");
+        ret = -1;
+        goto out;
+    }
+
+    len = strlen("sha256:") + strlen(ir->id) + 1;
+    image_id = (char *)util_common_calloc_s(len * sizeof(char));
+    if (image_id == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    int nret = snprintf(image_id, len, "sha256:%s", ir->id);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("Failed to sprintf string");
+        ret = -1;
+        goto out;
+    }
+
+    *id = image_id;
+    image_id = NULL;
+
+out:
+    free_imagetool_image(ir);
+    free(image_id);
+    return ret;
+}
+
 static int register_new_container(const char *id, const char *runtime, host_config **host_spec,
                                   container_config_v2_common_config **v2_spec)
 {
@@ -339,6 +425,7 @@ static int register_new_container(const char *id, const char *runtime, host_conf
     bool registed = false;
     char *runtime_root = NULL;
     char *runtime_stat = NULL;
+    char *image_id = NULL;
     container_t *cont = NULL;
 
     runtime_root = conf_get_routine_rootdir(runtime);
@@ -351,7 +438,12 @@ static int register_new_container(const char *id, const char *runtime, host_conf
         goto out;
     }
 
-    cont = container_new(runtime, runtime_root, runtime_stat, host_spec, v2_spec);
+    if (strcmp((*v2_spec)->image_type, IMAGE_TYPE_OCI) == 0) {
+        if (conf_get_image_id((*v2_spec)->image, &image_id) != 0) {
+            goto out;
+        }
+    }
+    cont = container_new(runtime, runtime_root, runtime_stat, image_id, host_spec, v2_spec);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
         goto out;
@@ -372,6 +464,7 @@ static int register_new_container(const char *id, const char *runtime, host_conf
 out:
     free(runtime_root);
     free(runtime_stat);
+    free(image_id);
     if (ret != 0) {
         container_unref(cont);
     }
@@ -522,8 +615,8 @@ static int create_container_root_dir(const char *id, const char *runtime_root)
     char container_root[PATH_MAX] = { 0x00 };
     mode_t mask = umask(S_IWOTH);
 
-    nret = sprintf_s(container_root, sizeof(container_root), "%s/%s", runtime_root, id);
-    if (nret < 0) {
+    nret = snprintf(container_root, sizeof(container_root), "%s/%s", runtime_root, id);
+    if ((size_t)nret >= sizeof(container_root) || nret < 0) {
         ret = -1;
         goto out;
     }
@@ -545,8 +638,8 @@ static int delete_container_root_dir(const char *id, const char *runtime_root)
     int ret = 0;
     char container_root[PATH_MAX] = { 0x00 };
 
-    ret = sprintf_s(container_root, sizeof(container_root), "%s/%s", runtime_root, id);
-    if (ret < 0) {
+    ret = snprintf(container_root, sizeof(container_root), "%s/%s", runtime_root, id);
+    if ((size_t)ret >= sizeof(container_root) || ret < 0) {
         ERROR("Failed to sprintf invalid root directory %s/%s", runtime_root, id);
         ret = -1;
         goto out;

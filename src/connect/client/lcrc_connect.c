@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "lcrc_connect.h"
 
-#include "securec.h"
 
 #ifdef GRPC_CONNECTOR
 #include "grpc_client.h"
@@ -27,11 +26,7 @@ static lcrc_connect_ops g_connect_ops;
 /* connect client ops init */
 int connect_client_ops_init(void)
 {
-    errno_t ret;
-    ret = memset_s(&g_connect_ops, sizeof(g_connect_ops), 0, sizeof(g_connect_ops));
-    if (ret != EOK) {
-        return -1;
-    }
+    (void)memset(&g_connect_ops, 0, sizeof(g_connect_ops));
 #ifdef GRPC_CONNECTOR
     if (grpc_ops_init(&g_connect_ops)) {
         return -1;

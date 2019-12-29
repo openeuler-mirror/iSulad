@@ -13,7 +13,6 @@
  * Description: provide container wait functions
  ******************************************************************************/
 #include "error.h"
-#include "securec.h"
 #include "wait.h"
 #include "arguments.h"
 #include "log.h"

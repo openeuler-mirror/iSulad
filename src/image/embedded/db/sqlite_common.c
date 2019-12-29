@@ -16,7 +16,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include "securec.h"
 
 #include "utils.h"
 #include "constants.h"
@@ -158,8 +157,8 @@ int db_common_init(const char *rootpath)
     char dbpath[PATH_MAX] = { 0 };
     bool retry = true;
 
-    nret = sprintf_s(dbpath, sizeof(dbpath), "%s/%s", rootpath, DBNAME);
-    if (nret < 0) {
+    nret = snprintf(dbpath, sizeof(dbpath), "%s/%s", rootpath, DBNAME);
+    if (nret < 0 || (size_t)nret >= sizeof(dbpath)) {
         ERROR("Failed to print string");
         return -1;
     }

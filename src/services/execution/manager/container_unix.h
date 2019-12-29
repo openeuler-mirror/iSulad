@@ -43,6 +43,7 @@ typedef struct _container_t_ {
     char *runtime;
     char *root_path;
     char *state_path;
+    char *image_id;
     container_config_v2_common_config *common_config;
     container_state_t *state;
     host_config *hostconfig;
@@ -60,8 +61,8 @@ void container_refinc(container_t *cont);
 
 void container_unref(container_t *cont);
 
-container_t *container_new(const char *runtime, const char *rootpath, const char *statepath,  host_config **hostconfig,
-                           container_config_v2_common_config **common_config);
+container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
+                           host_config **hostconfig, container_config_v2_common_config **common_config);
 
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id);
 

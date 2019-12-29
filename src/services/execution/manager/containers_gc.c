@@ -61,8 +61,8 @@ static int save_gc_config(const char *json_gc_config)
         goto out;
     }
 
-    nret = sprintf_s(filename, sizeof(filename), "%s/%s", rootpath, GCCONFIGJSON);
-    if (nret < 0) {
+    nret = snprintf(filename, sizeof(filename), "%s/%s", rootpath, GCCONFIGJSON);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         ret = -1;
         goto out;
@@ -237,8 +237,8 @@ container_garbage_config *read_gc_config()
         goto out;
     }
 
-    nret = sprintf_s(filename, sizeof(filename), "%s/%s", rootpath, GCCONFIGJSON);
-    if (nret < 0) {
+    nret = snprintf(filename, sizeof(filename), "%s/%s", rootpath, GCCONFIGJSON);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         goto out;
     }

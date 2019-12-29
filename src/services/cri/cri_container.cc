@@ -1357,6 +1357,7 @@ void CRIRuntimeServiceImpl::Exec(const runtime::v1alpha2::ExecRequest &req, runt
     std::string token = cache->Insert(const_cast<runtime::v1alpha2::ExecRequest *>(execReq));
     if (token.empty()) {
         error.SetError("failed to get a unique token!");
+        delete execReq;
         return;
     }
     std::string url = BuildURL("exec", token);
@@ -1406,6 +1407,7 @@ void CRIRuntimeServiceImpl::Attach(const runtime::v1alpha2::AttachRequest &req, 
     std::string token = cache->Insert(const_cast<runtime::v1alpha2::AttachRequest *>(attachReq));
     if (token.empty()) {
         error.SetError("failed to get a unique token!");
+        delete attachReq;
         return;
     }
     std::string url = BuildURL("attach", token);

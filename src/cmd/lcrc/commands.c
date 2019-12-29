@@ -19,7 +19,6 @@
 #include <limits.h>
 #include <pthread.h>
 #include <syslog.h>
-#include "securec.h"
 
 #include "arguments.h"
 #include "config.h"
@@ -55,8 +54,8 @@ static void send_msg_to_syslog(int argc, const char **argv)
     }
     ppid = getppid();
     // get parent cmdline, "/proc/ppid/cmdline"
-    nret = sprintf_s(cmdline_path, PATH_MAX, "/proc/%d/cmdline", ppid);
-    if (nret < 0) {
+    nret = snprintf(cmdline_path, PATH_MAX, "/proc/%d/cmdline", ppid);
+    if (nret < 0 || nret >= PATH_MAX) {
         COMMAND_ERROR("Get parent '%d' cmdline path failed", ppid);
         return;
     }
@@ -304,9 +303,9 @@ int create_console_fifos(bool attach_stdin, bool attach_stdout, bool attach_stde
         return -1;
     }
 
-    ret = sprintf_s(subpath, sizeof(subpath), "%s/%s-%u-%u", name, type, (unsigned int)getpid(),
-                    (unsigned int)pthread_self());
-    if (ret < 0) {
+    ret = snprintf(subpath, sizeof(subpath), "%s/%s-%u-%u", name, type, (unsigned int)getpid(),
+                   (unsigned int)pthread_self());
+    if (ret < 0 || (size_t)ret >= sizeof(subpath)) {
         ERROR("Path is too long");
         goto cleanup;
     }

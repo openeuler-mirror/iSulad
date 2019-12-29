@@ -15,10 +15,9 @@
 
 #define _GNU_SOURCE
 #include "utils_string.h"
-
 #include <ctype.h>
-#include "securec.h"
-
+#include <stdlib.h>
+#include <string.h>
 #include "utils.h"
 #include "log.h"
 
@@ -576,19 +575,10 @@ static char *do_string_join(const char *sep, const char **parts, size_t parts_le
     }
 
     for (iter = 0; iter < parts_len - 1; iter++) {
-        if (strcat_s(res_string, result_len + 1, parts[iter]) != EOK) {
-            free(res_string);
-            return NULL;
-        }
-        if (strcat_s(res_string, result_len + 1, sep) != EOK) {
-            free(res_string);
-            return NULL;
-        }
+        (void)strcat(res_string, parts[iter]);
+        (void)strcat(res_string, sep);
     }
-    if (strcat_s(res_string, result_len + 1, parts[parts_len - 1]) != EOK) {
-        free(res_string);
-        return NULL;
-    }
+    (void)strcat(res_string, parts[parts_len - 1]);
     return res_string;
 }
 
@@ -641,14 +631,8 @@ char *util_string_append(const char *post, const char *pre)
     if (res_string == NULL) {
         return NULL;
     }
-    if (strcat_s(res_string, length, pre) != EOK) {
-        free(res_string);
-        return NULL;
-    }
-    if (strcat_s(res_string, length, post) != EOK) {
-        free(res_string);
-        return NULL;
-    }
+    (void)strcat(res_string, pre);
+    (void)strcat(res_string, post);
 
     return res_string;
 }
@@ -695,16 +679,12 @@ char *util_sub_string(const char *source, size_t offset, size_t length)
 
     total_len = strlen(source);
     substr_len = ((total_len - offset) >= length ? length : (total_len - offset)) + 1;
-    substring = (char *)malloc(substr_len * sizeof(char));
+    substring = (char *)util_common_calloc_s(substr_len * sizeof(char));
     if (substring == NULL) {
         ERROR("Out of memory\n");
         return NULL;
     }
-    if (strncpy_s(substring, substr_len, source + offset, substr_len - 1) != EOK) {
-        ERROR("Out of memory\n");
-        free(substring);
-        return NULL;
-    }
+    (void)strncpy(substring, source + offset, substr_len - 1);
     substring[substr_len - 1] = '\0';
 
     return substring;

@@ -18,7 +18,6 @@
 #include "log.h"
 #include "utils.h"
 #include "error.h"
-#include "securec.h"
 #include "callback.h"
 #include "container.rest.h"
 #include "rest_service_common.h"

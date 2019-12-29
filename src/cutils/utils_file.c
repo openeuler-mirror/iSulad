@@ -18,13 +18,13 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <regex.h>
 #include <dirent.h>
-#include "securec.h"
 
 #include "constants.h"
 #include "log.h"
@@ -218,24 +218,16 @@ static int recursive_rmdir_helper(const char *dirpath, int recursive_depth, int 
     pdirent = readdir(directory);
     for (; pdirent != NULL; pdirent = readdir(directory)) {
         struct stat fstat;
-        int pathname;
+        int pathname_len;
 
-        bool ret = !strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..");
-
-        if (ret) {
+        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
             continue;
         }
 
-        nret = memset_s(fname, sizeof(fname), 0, sizeof(fname));
-        if (nret != EOK) {
-            ERROR("Failed to memset memory");
-            failure = 1;
-            continue;
-        }
-        pathname = sprintf_s(fname, MAXPATHLEN, "%s/%s", dirpath, pdirent->d_name);
+        (void)memset(fname, 0, sizeof(fname));
 
-        ret = pathname < 0 || pathname >= MAXPATHLEN;
-        if (ret) {
+        pathname_len = snprintf(fname, MAXPATHLEN, "%s/%s", dirpath, pdirent->d_name);
+        if (pathname_len < 0 || pathname_len >= MAXPATHLEN) {
             ERROR("Pathname too long");
             failure = 1;
             continue;
@@ -299,8 +291,8 @@ char *util_path_join(const char *dir, const char *file)
         return NULL;
     }
 
-    nret = sprintf_s(path, sizeof(path), "%s/%s", dir, file);
-    if (nret < 0) {
+    nret = snprintf(path, PATH_MAX, "%s/%s", dir, file);
+    if (nret < 0 || nret >= PATH_MAX) {
         ERROR("dir or file too long failed");
         return NULL;
     }
@@ -420,8 +412,8 @@ char *util_human_size(uint64_t val)
         return NULL;
     }
 
-    ret = sprintf_s(out, len, "%llu%s", (unsigned long long)ui, uf[index]);
-    if (ret < 0) {
+    ret = snprintf(out, len, "%llu%s", (unsigned long long)ui, uf[index]);
+    if (ret < 0 || ret >= len) {
         ERROR("Failed to print string");
         free(out);
         return NULL;
@@ -439,15 +431,15 @@ char *util_human_size_decimal(int64_t val)
     char out[16] = { 0 }; /* 16 is enough, format like: 123.456 MB */
 
     if (val >= gb) {
-        nret = sprintf_s(out, sizeof(out), "%.3lf GB", ((double)val / gb));
+        nret = snprintf(out, sizeof(out), "%.3lf GB", ((double)val / gb));
     } else if (val >= mb) {
-        nret = sprintf_s(out, sizeof(out), "%.3lf MB", ((double)val / mb));
+        nret = snprintf(out, sizeof(out), "%.3lf MB", ((double)val / mb));
     } else if (val >= kb) {
-        nret = sprintf_s(out, sizeof(out), "%.3lf KB", ((double)val / kb));
+        nret = snprintf(out, sizeof(out), "%.3lf KB", ((double)val / kb));
     } else {
-        nret = sprintf_s(out, sizeof(out), "%lld B", (long long int)val);
+        nret = snprintf(out, sizeof(out), "%lld B", (long long int)val);
     }
-    if (nret < 0) {
+    if (nret < 0 || nret >= sizeof(out)) {
         ERROR("Failed to print string");
         return NULL;
     }
@@ -705,8 +697,8 @@ int util_list_all_subdir(const char *directory, char ***out)
             continue;
         }
 
-        nret = sprintf_s(tmpdir, PATH_MAX, "%s/%s", directory, direntp->d_name);
-        if (nret < 0) {
+        nret = snprintf(tmpdir, PATH_MAX, "%s/%s", directory, direntp->d_name);
+        if (nret < 0 || nret >= PATH_MAX) {
             ERROR("Sprintf: %s failed", direntp->d_name);
             goto error_out;
         }

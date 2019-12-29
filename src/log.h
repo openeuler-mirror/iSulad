@@ -17,6 +17,7 @@
 
 #include <syslog.h>
 #include <stdbool.h>
+#include <string.h>
 #include <sys/time.h>
 #include <time.h>
 

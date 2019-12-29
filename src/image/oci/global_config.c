@@ -17,7 +17,6 @@
 #include <stddef.h>
 
 #include "lcrd_config.h"
-#include "securec.h"
 #include "log.h"
 #ifdef ENABLE_OCI_IMAGE
 #include "driver.h"
@@ -198,7 +197,8 @@ static int pack_global_opt_time(const char * const *options, char *params[], siz
     opt_timeout = conf_get_im_opt_timeout();
     if (opt_timeout != 0) {
         add_array_elem(params, PARAM_NUM, &i, options[GB_OPTION_OPT_TIMEOUT]);
-        if (sprintf_s(timeout_str, UINT_LEN, "%us", opt_timeout) < 0) {
+        int nret = snprintf(timeout_str, UINT_LEN + 2, "%us", opt_timeout);
+        if (nret < 0 || (size_t)nret >= (UINT_LEN + 2)) {
             COMMAND_ERROR("Failed to print string");
             goto out;
         }

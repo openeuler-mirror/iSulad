@@ -32,7 +32,6 @@
 #include "lcrd_config.h"
 #include "config.h"
 #include "image.h"
-#include "securec.h"
 #include "execution.h"
 #include "container_inspect.h"
 #include "containers_store.h"
@@ -497,13 +496,13 @@ static char *ps_pids_arg(const pid_t *pids, size_t pids_len)
     int ret = -1;
     size_t tmp_len = 0;
     char *pid_arg = NULL;
-    char pid_str[UINT_LEN + 1] = { 0 };
+    char pid_str[UINT_LEN + 2] = { 0 };
 
-    if (pids_len > SIZE_MAX / (UINT_LEN + 1)) {
+    if (pids_len == 0 || pids_len > (SIZE_MAX - 1) / (UINT_LEN + 2)) {
         ERROR("Invalid pid size");
         return NULL;
     }
-    tmp_len = pids_len * (UINT_LEN + 1);
+    tmp_len = pids_len * (UINT_LEN + 2) + 1;
     pid_arg = util_common_calloc_s(tmp_len);
     if (pid_arg == NULL) {
         ERROR("Out of memory");
@@ -512,22 +511,17 @@ static char *ps_pids_arg(const pid_t *pids, size_t pids_len)
 
     for (i = 0; i < pids_len; i++) {
         if (i != (pids_len - 1)) {
-            nret = sprintf_s(pid_str, sizeof(pid_str), "%d,", pids[i]);
+            nret = snprintf(pid_str, sizeof(pid_str), "%d,", pids[i]);
         } else {
-            nret = sprintf_s(pid_str, sizeof(pid_str), "%d", pids[i]);
+            nret = snprintf(pid_str, sizeof(pid_str), "%d", pids[i]);
         }
-        if (nret < 0) {
+        if ((size_t)nret >= sizeof(pid_str) || nret < 0) {
             ERROR("Failed to sprintf pids!");
             ret = -1;
             goto out;
         }
 
-        nret = strcat_s(pid_arg, tmp_len, pid_str);
-        if (nret != EOK) {
-            ERROR("Failed to cat pids!");
-            ret = -1;
-            goto out;
-        }
+        (void)strcat(pid_arg, pid_str);
     }
 
     ret = 0;
@@ -651,16 +645,15 @@ static int do_top(const container_top_request *request, container_t *cont, size_
                   char **stdout_buffer, char **stderr_buffer)
 {
     int ret = 0;
-    int nret = 0;
     bool command_ret = false;
     char *ps_args_with_q = NULL;
     size_t ps_args_with_q_len = 0;
 
-    if (pids_len > (SIZE_MAX / (UINT_LEN + 1)) - 1) {
+    if (pids_len == 0 || pids_len > ((SIZE_MAX - 3) / (UINT_LEN + 2)) - 1) {
         ERROR("Invalid pid size");
         return -1;
     }
-    ps_args_with_q_len = (pids_len + 1) * (UINT_LEN + 1);
+    ps_args_with_q_len = (pids_len + 1) * (UINT_LEN + 2) + 3;
     ps_args_with_q = util_common_calloc_s(ps_args_with_q_len);
     if (ps_args_with_q == NULL) {
         ERROR("Out of memory");
@@ -668,19 +661,9 @@ static int do_top(const container_top_request *request, container_t *cont, size_
         goto out;
     }
 
-    nret = strcat_s(ps_args_with_q, ps_args_with_q_len, "-q");
-    if (nret != EOK) {
-        ERROR("Failed to cat pids!");
-        ret = -1;
-        goto out;
-    }
+    (void)strcat(ps_args_with_q, "-q");
 
-    nret = strcat_s(ps_args_with_q, ps_args_with_q_len, pid_args);
-    if (nret != EOK) {
-        ERROR("Failed to cat pids!");
-        ret = -1;
-        goto out;
-    }
+    (void)strcat(ps_args_with_q, pid_args);
 
     command_ret = util_exec_top_cmd(execute_ps_command, request->args, ps_args_with_q, request->args_len, stdout_buffer,
                                     stderr_buffer);
@@ -1156,92 +1139,6 @@ out:
     return ret;
 }
 
-static int inspect_image(const char *image, imagetool_image **result)
-{
-    int ret = 0;
-    im_status_request *request = NULL;
-    im_status_response *response = NULL;
-
-    if (image == NULL) {
-        ERROR("Empty image name or id");
-        return -1;
-    }
-
-    request = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
-    if (request == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    request->image.image = util_strdup_s(image);
-
-    if (im_image_status(request, &response) != 0) {
-        if (response != NULL && response->errmsg != NULL) {
-            ERROR("failed to inspect inspect image info: %s", response->errmsg);
-        } else {
-            ERROR("Failed to call status image");
-        }
-        ret = -1;
-        goto cleanup;
-    }
-
-    if (response->image_info != NULL) {
-        *result = response->image_info->image;
-        response->image_info->image = NULL;
-    }
-
-cleanup:
-    free_im_status_request(request);
-    free_im_status_response(response);
-    return ret;
-}
-
-static int pack_inspect_general_image_data(const char *image, container_inspect *inspect)
-{
-    int ret = 0;
-    imagetool_image *ir = NULL;
-    size_t len = 0;
-    char *image_data = NULL;
-
-    if (image == NULL || strcmp(image, "none") == 0) {
-        inspect->image = util_strdup_s("none");
-        return 0;
-    }
-
-    if (inspect_image(image, &ir) != 0) {
-        ERROR("Failed to inspect image status");
-        ret = -1;
-        goto out;
-    }
-
-    if (strlen(ir->id) > SIZE_MAX / sizeof(char) - strlen("sha256:")) {
-        ERROR("Invalid image id");
-        ret = -1;
-        goto out;
-    }
-
-    len = strlen("sha256:") + strlen(ir->id) + 1;
-    image_data = (char *)util_common_calloc_s(len * sizeof(char));
-    if (image_data == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    if (sprintf_s(image_data, len, "sha256:%s", ir->id) < 0) {
-        ERROR("Failed to sprintf string");
-        ret = -1;
-        goto out;
-    }
-
-    inspect->image = image_data;
-    image_data = NULL;
-
-out:
-    free_imagetool_image(ir);
-    free(image_data);
-    return ret;
-}
-
 static int pack_inspect_general_data(const container_t *cont, container_inspect *inspect)
 {
     int ret = 0;
@@ -1258,11 +1155,7 @@ static int pack_inspect_general_data(const container_t *cont, container_inspect 
         goto out;
     }
 
-    if (pack_inspect_general_image_data(cont->common_config->image, inspect) != 0) {
-        ERROR("Failed to pack image info");
-        ret = -1;
-        goto out;
-    }
+    inspect->image = cont->image_id != NULL ? util_strdup_s(cont->image_id) : util_strdup_s("");
 
     if (cont->common_config->log_path != NULL) {
         inspect->log_path = util_strdup_s(cont->common_config->log_path);

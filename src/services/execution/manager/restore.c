@@ -20,7 +20,6 @@
 #include <pthread.h>
 
 #include "lcrd_config.h"
-#include "securec.h"
 #include "log.h"
 #include "restore.h"
 #include "containers_store.h"
@@ -47,8 +46,8 @@ static int restore_supervisor(const char *id, const char *runtime, const char *s
     char *exit_fifo = NULL;
     container_pid_t *pid_info = NULL;
 
-    nret = sprintf_s(container_state, sizeof(container_state), "%s/%s", statepath, id);
-    if (nret < 0 || (unsigned int)nret >= sizeof(container_state)) {
+    nret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
+    if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
         ERROR("Failed to sprintf container state %s/%s", statepath, id);
         ret = -1;
         goto out;
@@ -68,8 +67,8 @@ static int restore_supervisor(const char *id, const char *runtime, const char *s
         goto out;
     }
 
-    nret = sprintf_s(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
-    if (nret < 0 || (unsigned int)nret >= sizeof(pidfile)) {
+    nret = snprintf(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
+    if (nret < 0 || (size_t)nret >= sizeof(pidfile)) {
         close(exit_fifo_fd);
         ERROR("Failed to sprintf pidfile");
         ret = -1;
@@ -133,15 +132,15 @@ static int post_stopped_container_to_gc(const char *id, const char *runtime, con
     char pidfile[PATH_MAX] = { 0 };
     container_pid_t *pid_info = NULL;
 
-    nret = sprintf_s(container_state, sizeof(container_state), "%s/%s", statepath, id);
-    if (nret < 0 || (unsigned int)nret >= sizeof(container_state)) {
+    nret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
+    if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
         ERROR("Failed to sprintf container state %s/%s", statepath, id);
         ret = -1;
         goto out;
     }
 
-    nret = sprintf_s(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
-    if (nret < 0 || (unsigned int)nret >= sizeof(pidfile)) {
+    nret = snprintf(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
+    if (nret < 0 || (size_t)nret >= sizeof(pidfile)) {
         ERROR("Failed to sprintf pidfile");
         ret = -1;
         goto out;
@@ -177,14 +176,14 @@ static container_pid_t *load_running_container_pid_info(const container_t *cont)
     char container_state[PATH_MAX] = { 0 };
     container_pid_t *pid_info = NULL;
 
-    nret = sprintf_s(container_state, sizeof(container_state), "%s/%s", cont->state_path, id);
-    if (nret < 0 || (unsigned int)nret >= sizeof(container_state)) {
+    nret = snprintf(container_state, sizeof(container_state), "%s/%s", cont->state_path, id);
+    if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
         ERROR("Failed to sprintf container_state for container %s", id);
         goto out;
     }
 
-    nret = sprintf_s(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
-    if (nret < 0 || (unsigned int)nret >= sizeof(pidfile)) {
+    nret = snprintf(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
+    if (nret < 0 || (size_t)nret >= sizeof(pidfile)) {
         ERROR("Failed to sprintf pidfile");
         goto out;
     }
@@ -458,8 +457,8 @@ static int remove_invalid_container(const container_t *cont, const char *runtime
     char container_root[PATH_MAX] = { 0x00 };
     char container_state[PATH_MAX] = { 0x00 };
 
-    ret = sprintf_s(container_state, sizeof(container_state), "%s/%s", state, id);
-    if (ret < 0 || (unsigned int)ret >= sizeof(container_state)) {
+    ret = snprintf(container_state, sizeof(container_state), "%s/%s", state, id);
+    if (ret < 0 || (size_t)ret >= sizeof(container_state)) {
         ERROR("Failed to sprintf container state %s/%s", state, id);
         ret = -1;
         goto out;
@@ -471,8 +470,8 @@ static int remove_invalid_container(const container_t *cont, const char *runtime
         goto out;
     }
 
-    ret = sprintf_s(container_root, sizeof(container_root), "%s/%s", root, id);
-    if (ret < 0 || (unsigned int)ret >= sizeof(container_root)) {
+    ret = snprintf(container_root, sizeof(container_root), "%s/%s", root, id);
+    if (ret < 0 || (size_t)ret >= sizeof(container_root)) {
         ERROR("Failed to sprintf invalid root directory %s/%s", root, id);
         ret = -1;
         goto out;

@@ -24,7 +24,6 @@
 #include <errno.h>
 #include "error.h"
 
-#include "securec.h"
 #include "logs.h"
 #include "arguments.h"
 #include "log.h"

@@ -19,7 +19,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "securec.h"
 #include "utils.h"
 #include "log.h"
 #include "imagetool_auth_input.h"

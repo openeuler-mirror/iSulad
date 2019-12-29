@@ -13,7 +13,8 @@
  * Description: provide container parser functions
  ******************************************************************************/
 #include <http_parser.h>
-#include <securec.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "parser.h"
 #include "utils.h"
@@ -29,11 +30,7 @@ size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
     if (dsize < size) {
         size_t rsize = size - dsize;
         size_t ncpy = ssize < rsize ? ssize : (rsize - 1);
-        errno_t nret = memcpy_s(dststr + dsize, size - dsize, srcstr, ncpy);
-        if (nret != EOK) {
-            ERROR("Fail at strlncat memcpy!");
-            return 0;
-        }
+        (void)memcpy(dststr + dsize, srcstr, ncpy);
         dststr[dsize + ncpy] = '\0';
     }
 
@@ -109,11 +106,7 @@ static int parser_body_cb(http_parser *parser, const char *buf, size_t len)
         return -1;
     }
     if (m->body != NULL && m->body_size > 0) {
-        if (memcpy_s(body, newsize, m->body, m->body_size) != EOK) {
-            ERROR("Failed to copy memory");
-            free(body);
-            return -1;
-        }
+        (void)memcpy(body, m->body, m->body_size);
         free(m->body);
     }
 

@@ -47,12 +47,6 @@ find_library(ZLIB_LIBRARY z
   HINTS ${PC_ZLIB_LIBDIR} ${PC_ZLIB_LIBRARY_DIRS})
 _CHECK(ZLIB_LIBRARY "ZLIB_LIBRARY-NOTFOUND" "libz.so")
 
-# check securec
-find_path(LIBSECUREC_INCLUDE_DIR securec.h)
-_CHECK(LIBSECUREC_INCLUDE_DIR "LIBSECUREC_INCLUDE_DIR-NOTFOUND" "securec.h")
-find_library(LIBSECUREC_LIBRARY securec)
-_CHECK(LIBSECUREC_LIBRARY "LIBSECUREC_LIBRARY-NOTFOUND" "libsecurec.so")
-
 # check libyajl
 pkg_check_modules(PC_LIBYAJL REQUIRED "yajl>=2")
 find_path(LIBYAJL_INCLUDE_DIR yajl/yajl_tree.h
@@ -80,13 +74,7 @@ if (OPENSSL_VERIFY)
     _CHECK(OPENSSL_INCLUDE_DIR "OPENSSL_INCLUDE_DIR-NOTFOUND" "openssl/x509.h")
 endif()
 
-if (GRPC_CONNECTOR)
-    # check websocket
-    find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
-    _CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
-    find_library(WEBSOCKET_LIBRARY websockets)
-    _CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
-
+if (GRPC_CONNECTOR OR ENABLE_OCI_IMAGE)
     # check protobuf
     pkg_check_modules(PC_PROTOBUF "protobuf>=3.1.0")
     find_library(PROTOBUF_LIBRARY protobuf
@@ -109,6 +97,15 @@ if (GRPC_CONNECTOR)
     _CHECK(GRPC_LIBRARY "GRPC_LIBRARY-NOTFOUND" "libgrpc.so")
     find_library(GPR_LIBRARY gpr)
     _CHECK(GPR_LIBRARY "GPR_LIBRARY-NOTFOUND" "libgpr.so")
+
+endif()
+
+if (GRPC_CONNECTOR)
+    # check websocket
+    find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
+    _CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
+    find_library(WEBSOCKET_LIBRARY websockets)
+    _CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
 
     # check clibcni
     pkg_check_modules(PC_CLIBCNI REQUIRED "clibcni")
@@ -136,7 +133,7 @@ else()
     _CHECK(EVHTP_LIBRARY "EVHTP_LIBRARY-NOTFOUND" "libevhtp.so")
 endif()
 
-if (ENABLE_EMBEDDED)
+if (ENABLE_EMBEDDED_IMAGE)
     pkg_check_modules(PC_SQLITE3 "sqlite3>=3.7.17")
     find_path(SQLIT3_INCLUDE_DIR sqlite3.h
         HINTS ${PC_SQLITE3_INCLUDEDIR} ${PC_SQLITE3_INCLUDE_DIRS})

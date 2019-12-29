@@ -29,7 +29,6 @@
 #include <ctype.h>
 
 #include "error.h"
-#include "securec.h"
 #include "log.h"
 #include "specs.h"
 #include "oci_runtime_spec.h"
@@ -119,9 +118,9 @@ static int make_annotations_log_console(const oci_runtime_spec *oci_spec, const 
             }
         }
 
-        nret = sprintf_s(tmp_str, sizeof(tmp_str), "%llu",
-                         (unsigned long long)(custom_conf->log_config->log_file_rotate));
-        if (nret < 0) {
+        nret = snprintf(tmp_str, sizeof(tmp_str), "%llu",
+                        (unsigned long long)(custom_conf->log_config->log_file_rotate));
+        if (nret < 0 || (size_t)nret >= sizeof(tmp_str)) {
             ERROR("create rotate string failed");
             ret = -1;
             goto out;
@@ -218,8 +217,8 @@ static int make_annotations_oom_score_adj(const oci_runtime_spec *oci_spec, cons
 
     // oom_score_adj default value is 0, So there is no need to explicitly set this value
     if (host_spec->oom_score_adj != 0) {
-        int nret = sprintf_s(tmp_str, sizeof(tmp_str), "%d", host_spec->oom_score_adj);
-        if (nret < 0) {
+        int nret = snprintf(tmp_str, sizeof(tmp_str), "%d", host_spec->oom_score_adj);
+        if (nret < 0 || (size_t)nret >= sizeof(tmp_str)) {
             ERROR("create oom score adj string failed");
             ret = -1;
             goto out;
@@ -244,8 +243,8 @@ static int make_annotations_files_limit(const oci_runtime_spec *oci_spec, const 
     if (host_spec->files_limit != 0) {
         // need create new file limit item in annotations
         int64_t filelimit = host_spec->files_limit;
-        int nret = sprintf_s(tmp_str, sizeof(tmp_str), "%lld", (long long)filelimit);
-        if (nret < 0) {
+        int nret = snprintf(tmp_str, sizeof(tmp_str), "%lld", (long long)filelimit);
+        if (nret < 0 || (size_t)nret >= sizeof(tmp_str)) {
             ERROR("create files limit string failed");
             ret = -1;
             goto out;
@@ -1469,7 +1468,8 @@ static int change_tmpfs_mount_size(const oci_runtime_spec *oci_spec, int64_t mem
         goto out;
     }
     /* set tmpfs mount size to half of container memory limit */
-    if (sprintf_s(size_opt, sizeof(size_opt), "size=%lldk", (long long int)(memory_limit / 2048)) < 0) {
+    int nret = snprintf(size_opt, sizeof(size_opt), "size=%lldk", (long long int)(memory_limit / 2048));
+    if (nret < 0 || (size_t)nret >= sizeof(size_opt)) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
@@ -1834,8 +1834,8 @@ oci_runtime_spec *read_oci_config(const char *rootpath, const char *name)
     parser_error err = NULL;
     oci_runtime_spec *ociconfig = NULL;
 
-    nret = sprintf_s(filename, sizeof(filename), "%s/%s/%s", rootpath, name, OCICONFIGJSON);
-    if (nret < 0) {
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, name, OCICONFIGJSON);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         goto out;
     }

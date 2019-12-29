@@ -30,13 +30,13 @@ CODE = '''// Auto generated file. Do not edit!
 # ifndef _JSON_COMMON_H
 # define _JSON_COMMON_H
 
+# include <stdlib.h>
 # include <stdbool.h>
 # include <stdio.h>
 # include <string.h>
 # include <stdint.h>
 # include <yajl/yajl_tree.h>
 # include <yajl/yajl_gen.h>
-# include "securec.h"
 
 # ifdef __cplusplus
 extern "C" {

@@ -16,7 +16,6 @@
 
 #include "image_cb.h"
 #include "execution.h"
-#include "securec.h"
 
 service_callback_t g_isulad_servicecallback;
 

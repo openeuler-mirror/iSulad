@@ -1216,8 +1216,8 @@ static int parse_seccomp(const lcrc_host_config_t *srcconfig, host_config *dstco
                 ret = -1;
                 goto out;
             }
-            nret = sprintf_s(tmp_str, size, "seccomp=%s", seccomp_json);
-            if (nret < 0) {
+            nret = snprintf(tmp_str, size, "seccomp=%s", seccomp_json);
+            if (nret < 0 || (size_t)nret >= size) {
                 COMMAND_ERROR("failed to sprintf buffer!");
                 ret = -1;
                 goto out;

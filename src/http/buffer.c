@@ -14,8 +14,8 @@
  ******************************************************************************/
 #define _GNU_SOURCE
 #include "buffer.h"
-#include <securec.h>
 
+#include <string.h>
 #include "log.h"
 #include "utils.h"
 
@@ -71,16 +71,10 @@ void buffer_free(Buffer *buf)
 /* buffer empty */
 void buffer_empty(Buffer *buf)
 {
-    errno_t ret = EOK;
-
     if (buf == NULL) {
         return;
     }
-    ret = memset_s(buf->contents, buf->total_size, 0x00, buf->total_size);
-    if (ret != EOK) {
-        ERROR("Failed to set memory");
-        return;
-    }
+    (void)memset(buf->contents, 0, buf->total_size);
 
     buf->bytes_used = 0;
 }
@@ -89,9 +83,7 @@ void buffer_empty(Buffer *buf)
 int buffer_grow(Buffer *buffer, size_t min_size)
 {
     size_t factor = 0;
-    int ret;
     size_t new_size = 0;
-    errno_t mret = EOK;
     char *tmp = NULL;
 
     if (buffer == NULL) {
@@ -116,19 +108,9 @@ int buffer_grow(Buffer *buffer, size_t min_size)
         return -1;
     }
 
-    ret = memcpy_s(tmp, new_size, buffer->contents, buffer->total_size);
-    if (ret) {
-        ERROR("Failed to copy memory");
-        free(tmp);
-        return -1;
-    }
+    (void)memcpy(tmp, buffer->contents, buffer->total_size);
 
-    mret = memset_s(buffer->contents, buffer->total_size, 0, buffer->total_size);
-    if (mret != EOK) {
-        ERROR("Failed to set memory");
-        free(tmp);
-        return -1;
-    }
+    (void)memset(buffer->contents, 0, buffer->total_size);
 
     free(buffer->contents);
     buffer->contents = tmp;

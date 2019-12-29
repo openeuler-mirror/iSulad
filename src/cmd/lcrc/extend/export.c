@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "export.h"
 #include <limits.h>
-#include "securec.h"
 #include "utils.h"
 #include "arguments.h"
 #include "log.h"
@@ -31,17 +30,12 @@ struct client_arguments g_cmd_export_args = {};
 static int client_export(const struct client_arguments *args)
 {
     int ret = 0;
-    errno_t mret;
     lcrc_connect_ops *ops = NULL;
     struct lcrc_export_request request;
     struct lcrc_export_response *response = NULL;
     client_connect_config_t config = { 0 };
 
-    mret = memset_s(&request, sizeof(request), 0x00, sizeof(request));
-    if (mret != EOK) {
-        ERROR("Failed to memset export request");
-        return -1;
-    }
+    (void)memset(&request, 0, sizeof(request));
     response = util_common_calloc_s(sizeof(struct lcrc_export_response));
     if (response == NULL) {
         ERROR("Resume: Out of memory");
@@ -110,13 +104,14 @@ int cmd_export_main(int argc, const char **argv)
 
     /* If it's not a absolute path, add cwd to be absolute path */
     if (g_cmd_export_args.file[0] != '/') {
+        int sret;
         char cwd[PATH_MAX] = { 0 };
         if (!getcwd(cwd, sizeof(cwd))) {
             COMMAND_ERROR("get cwd failed:%s", strerror(errno));
             exit(ECOMMON);
         }
-
-        if (sprintf_s(file, sizeof(file), "%s/%s", cwd, g_cmd_export_args.file) < 0) {
+        sret = snprintf(file, sizeof(file), "%s/%s", cwd, g_cmd_export_args.file);
+        if (sret < 0 || (size_t)sret >= sizeof(file)) {
             COMMAND_ERROR("filename too long");
             exit(EINVALIDARGS);
         }

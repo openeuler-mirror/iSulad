@@ -19,7 +19,6 @@
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
-#include "securec.h"
 
 #include "utils.h"
 #include "arguments.h"
@@ -104,9 +103,7 @@ static int get_password_from_notty(struct client_arguments *args)
             return -1;
         }
         args->password = util_strdup_s(password);
-        if (memset_s(password, sizeof(password), 0, sizeof(password)) != EOK) {
-            ERROR("Failed to memset sensitive string memory");
-        }
+        (void)memset(password, 0, sizeof(password));
     }
 
     return 0;
@@ -152,9 +149,7 @@ static int get_auth_from_terminal(struct client_arguments *args)
             return -1;
         }
         args->password = util_strdup_s(password);
-        if (memset_s(password, sizeof(password), 0, sizeof(password)) != EOK) {
-            ERROR("Failed to memset sensitive string memory");
-        }
+        (void)memset(password, 0, sizeof(password));
     }
 
     return 0;

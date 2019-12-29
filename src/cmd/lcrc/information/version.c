@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "version.h"
 #include <stdio.h>
-#include "securec.h"
 
 #include "utils.h"
 #include "arguments.h"

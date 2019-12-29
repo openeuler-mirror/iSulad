@@ -159,8 +159,8 @@ void graphdriver_umount_mntpoint(void)
     if (strcmp(driver_name, "overlay2") == 0) {
         driver_name[strlen(driver_name) - 1] = '\0';
     }
-    nret = sprintf_s(mp, sizeof(mp), "%s/%s", root, driver_name);
-    if (nret < 0) {
+    nret = snprintf(mp, sizeof(mp), "%s/%s", root, driver_name);
+    if (nret < 0 || (size_t)nret >= sizeof(mp)) {
         WARN("Failed to print string");
         goto cleanup;
     }

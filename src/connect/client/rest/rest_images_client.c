@@ -17,7 +17,6 @@
 #include <limits.h>
 
 #include "log.h"
-#include "securec.h"
 #include "lcrc_connect.h"
 #include "image.rest.h"
 #include "rest_common.h"

@@ -20,6 +20,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "oci_images_store.h"
+#include "oci_common_operators.h"
 
 static bool need_new_isula_auth(const im_pull_request *request)
 {
@@ -107,6 +108,7 @@ int isula_pull_image(const im_pull_request *request, im_pull_response **response
     struct isula_pull_response *iresp = NULL;
     int ret = -1;
     client_connect_config_t conf = { 0 };
+    char *normalized = NULL;
 
     im_ops = get_isula_image_ops();
     if (im_ops == NULL) {
@@ -149,9 +151,16 @@ int isula_pull_image(const im_pull_request *request, im_pull_response **response
         goto err_out;
     }
 
-    ret = register_new_oci_image_into_memory(request->image);
+    normalized = oci_normalize_image_name(request->image);
+    if (normalized == NULL) {
+        ret = -1;
+        ERROR("Normalize image name %s failed", request->image);
+        goto err_out;
+    }
+
+    ret = register_new_oci_image_into_memory(normalized);
     if (ret != 0) {
-        ERROR("Register image %s into store failed", request->image);
+        ERROR("Register image %s into store failed", normalized);
         goto err_out;
     }
 
@@ -161,6 +170,7 @@ err_out:
     *response = NULL;
     ret = -1;
 out:
+    free(normalized);
     free_client_connect_config_value(&conf);
     free_isula_pull_request(ireq);
     free_isula_pull_response(iresp);

@@ -20,7 +20,6 @@
 #include "commands.h"
 #include "console.h"
 #include "utils.h"
-#include "securec.h"
 
 const char g_cmd_delete_desc[] = "Remove one or more containers";
 const char g_cmd_delete_usage[] = "rm [OPTIONS] CONTAINER [CONTAINER...]";

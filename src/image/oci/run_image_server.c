@@ -169,8 +169,8 @@ static unsigned long long get_image_server_start_time(pid_t server_pid)
         return 0;
     }
 
-    sret = sprintf_s(filename, sizeof(filename), "/proc/%d/stat", server_pid);
-    if (sret < 0 || (unsigned int)sret >= sizeof(filename)) {
+    sret = snprintf(filename, sizeof(filename), "/proc/%d/stat", server_pid);
+    if (sret < 0 || (size_t)sret >= sizeof(filename)) {
         ERROR("Failed to sprintf filename");
         goto out;
     }

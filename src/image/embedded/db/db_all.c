@@ -14,7 +14,7 @@
  ******************************************************************************/
 #include <limits.h>
 #include <pthread.h>
-#include "securec.h"
+#include <stdlib.h>
 #include "log.h"
 #include "utils.h"
 #include "db_common.h"

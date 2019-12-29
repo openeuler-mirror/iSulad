@@ -28,7 +28,6 @@
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <libgen.h>
-#include <securec.h>
 
 #include "log.h"
 #include "engine.h"
@@ -144,15 +143,15 @@ int create_daemon_fifos(const char *id, const char *runtime, bool attach_stdin, 
         goto cleanup;
     }
 
-    nret = sprintf_s(subpath, PATH_MAX, "%s/%s/%u_%u_%u", id, operation,
-                     (unsigned int)tid, (unsigned int)now.tv_sec, (unsigned int)(now.tv_nsec));
-    if (nret < 0) {
+    nret = snprintf(subpath, PATH_MAX, "%s/%s/%u_%u_%u", id, operation,
+                    (unsigned int)tid, (unsigned int)now.tv_sec, (unsigned int)(now.tv_nsec));
+    if (nret >= PATH_MAX || nret < 0) {
         ERROR("Failed to print string");
         goto cleanup;
     }
 
-    nret = sprintf_s(fifodir, PATH_MAX, "%s/%s", statepath, subpath);
-    if (nret < 0) {
+    nret = snprintf(fifodir, PATH_MAX, "%s/%s", statepath, subpath);
+    if (nret >= PATH_MAX || nret < 0) {
         ERROR("Failed to print string");
         goto cleanup;
     }
@@ -438,12 +437,14 @@ static int generate_user_string_by_uid_gid(const oci_runtime_spec_process_user *
     char gid_str[LCRD_NUMSTRLEN32] = { 0 };
     size_t len;
 
-    if (sprintf_s(uid_str, LCRD_NUMSTRLEN32, "%u", (unsigned int)puser->uid) < 0) {
+    int nret = snprintf(uid_str, LCRD_NUMSTRLEN32, "%u", (unsigned int)puser->uid);
+    if (nret >= LCRD_NUMSTRLEN32 || nret < 0) {
         ERROR("Invalid UID:%u", (unsigned int)puser->uid);
         return -1;
     }
 
-    if (sprintf_s(gid_str, LCRD_NUMSTRLEN32, "%u", (unsigned int)puser->gid) < 0) {
+    nret = snprintf(gid_str, LCRD_NUMSTRLEN32, "%u", (unsigned int)puser->gid);
+    if (nret >= LCRD_NUMSTRLEN32 || nret < 0) {
         ERROR("Invalid attach uid value :%u", (unsigned int)puser->gid);
         return -1;
     }
@@ -455,7 +456,8 @@ static int generate_user_string_by_uid_gid(const oci_runtime_spec_process_user *
         return -1;
     }
 
-    if (sprintf_s(*user, len, "%u:%u", (unsigned int)puser->uid, (unsigned int)puser->gid) < 0) {
+    nret = snprintf(*user, len, "%u:%u", (unsigned int)puser->uid, (unsigned int)puser->gid);
+    if ((size_t)nret >= len || nret < 0) {
         ERROR("Invalid UID:GID (%u:%u)", (unsigned int)puser->uid, (unsigned int)puser->gid);
         free(*user);
         *user = NULL;
@@ -1188,10 +1190,7 @@ static ssize_t extract_stream_to_io_read(void *content, void *buf, size_t buf_le
         DEBUG("Client may exited");
         return -1;
     }
-    if (memcpy_s(buf, buf_len, copy.data, copy.data_len) != EOK) {
-        free(copy.data);
-        return -1;
-    }
+    (void)memcpy(buf, copy.data, copy.data_len);
     free(copy.data);
     return (ssize_t)(copy.data_len);
 }
@@ -1562,7 +1561,8 @@ static int do_read_all_container_logs(int64_t require_line, const char *path, co
     char log_path[PATH_MAX] = { 0 };
 
     for (; i > 0; i--) {
-        if (sprintf_s(log_path, PATH_MAX, "%s.%d", path, i) < 0) {
+        int nret = snprintf(log_path, PATH_MAX, "%s.%d", path, i);
+        if (nret >= PATH_MAX || nret < 0) {
             ERROR("Sprintf failed");
             goto out;
         }
@@ -1600,7 +1600,8 @@ static int do_show_all_logs(const struct container_log_config *conf, const strea
     char log_path[PATH_MAX] = { 0 };
 
     while (index > 0) {
-        if (sprintf_s(log_path, PATH_MAX, "%s.%d", conf->path, index) < 0) {
+        int nret = snprintf(log_path, PATH_MAX, "%s.%d", conf->path, index);
+        if (nret >= PATH_MAX || nret < 0) {
             ERROR("Sprintf failed");
             ret = -1;
             goto out;
@@ -1734,7 +1735,8 @@ static int do_tail_container_logs(int64_t require_line, const struct container_l
         }
         left -= get_line;
         get_line = 0;
-        if (sprintf_s(log_path, PATH_MAX, "%s.%d", conf->path, i) < 0) {
+        int nret = snprintf(log_path, PATH_MAX, "%s.%d", conf->path, i);
+        if (nret >= PATH_MAX || nret < 0) {
             ERROR("Sprintf failed");
             goto out;
         }

@@ -26,7 +26,6 @@
 #include "lcrd_config.h"
 #include "restartmanager.h"
 #include "utils.h"
-#include "securec.h"
 #include "containers_store.h"
 #include "execution.h"
 #include "containers_gc.h"

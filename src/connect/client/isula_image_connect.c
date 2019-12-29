@@ -14,7 +14,6 @@
 *******************************************************************************/
 #include "isula_image_connect.h"
 
-#include "securec.h"
 #include "utils.h"
 #include "grpc_isula_image_client.h"
 
@@ -22,12 +21,7 @@ static isula_image_ops g_image_ops;
 
 int isula_image_ops_init(void)
 {
-    errno_t ret;
-
-    ret = memset_s(&g_image_ops, sizeof(isula_image_ops), 0, sizeof(isula_image_ops));
-    if (ret != EOK) {
-        return -1;
-    }
+    (void)memset(&g_image_ops, 0, sizeof(isula_image_ops));
 
     return grpc_isula_image_client_ops_init(&g_image_ops);
 }

@@ -30,7 +30,6 @@
 #include <lcr/lcrcontainer.h>
 #include "collector.h"
 #include "lcrd_config.h"
-#include "securec.h"
 #include "liblcrd.h"
 #include "containers_store.h"
 
@@ -73,8 +72,8 @@ static bool get_idreg(regex_t *preg, const char *id)
         return false;
     }
 
-    nret = sprintf_s(regexp, len, "^%s$", id);
-    if (nret < 0) {
+    nret = snprintf(regexp, len, "^%s$", id);
+    if ((size_t)nret >= len || nret < 0) {
         ERROR("Failed to print string");
         goto error;
     }
@@ -237,7 +236,6 @@ int lcrd_monitor_send_event(const char *name, runtime_state_t state, int pid, in
 {
     int ret = 0;
     char *statedir = NULL;
-    errno_t nret;
     struct monitord_msg msg = {
         .type = monitord_msg_state,
         .value = state,
@@ -258,12 +256,7 @@ int lcrd_monitor_send_event(const char *name, runtime_state_t state, int pid, in
         goto out;
     }
 
-    nret = strncpy_s(msg.name, sizeof(msg.name), name, sizeof(msg.name) - 1);
-    if (nret != EOK) {
-        ERROR("Fail at lcrd_monitor_send_event string copy!");
-        ret = -1;
-        goto out;
-    }
+    (void)strncpy(msg.name, name, sizeof(msg.name) - 1);
     msg.name[sizeof(msg.name) - 1] = 0;
     if (pid > 0) {
         msg.pid = pid;

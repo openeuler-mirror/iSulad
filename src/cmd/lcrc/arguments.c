@@ -23,7 +23,6 @@
 #include "error.h"
 #include "commander.h"
 #include "log.h"
-#include "securec.h"
 #include "utils.h"
 #include "constants.h"
 
@@ -129,15 +128,9 @@ int client_arguments_init(struct client_arguments *args)
         args->socket = util_strdup_s(DEFAULT_UNIX_SOCKET);
     }
 
-    if (memset_s(&args->custom_conf, sizeof(args->custom_conf), 0x00, sizeof(struct custom_configs)) != EOK) {
-        COMMAND_ERROR("Failed to set memory");
-        return -1;
-    }
+    (void)memset(&args->custom_conf, 0, sizeof(struct custom_configs));
+    (void)memset(&args->cr, 0, sizeof(struct args_cgroup_resources));
 
-    if (memset_s(&args->cr, sizeof(args->cr), 0x00, sizeof(struct args_cgroup_resources)) != EOK) {
-        COMMAND_ERROR("Failed to set memory");
-        return -1;
-    }
     if (set_default_tls_options(args) != 0) {
         return -1;
     }

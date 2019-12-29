@@ -21,7 +21,6 @@
 #include "lim.h"
 #include "limits.h"
 #include "log.h"
-#include "securec.h"
 #include "image.h"
 
 #define RAW_DIGEST_LEN 64
@@ -48,11 +47,7 @@ static char *replace_suffix_to_sgn(const char *file)
     }
 
     /* dump chars to sgn_file */
-    if (strcat_s(sgn_file, len, file) != EOK) {
-        ERROR("strcat string failed");
-        free(sgn_file);
-        return NULL;
-    }
+    (void)strcat(sgn_file, file);
 
     /* strip file's suffix */
     for (i = strlen(sgn_file); i > 0; i--) {
@@ -67,11 +62,7 @@ static char *replace_suffix_to_sgn(const char *file)
     }
 
     /* add .sgn to tail as suffix */
-    if (strcat_s(sgn_file, len, ".sgn") != EOK) {
-        ERROR("strcat string failed");
-        free(sgn_file);
-        return NULL;
-    }
+    (void)strcat(sgn_file, ".sgn");
 
     return sgn_file;
 }

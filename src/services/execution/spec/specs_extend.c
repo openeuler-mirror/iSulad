@@ -29,7 +29,6 @@
 #include <ctype.h>
 
 #include "error.h"
-#include "securec.h"
 #include "log.h"
 #include "oci_runtime_spec.h"
 #include "host_config.h"
@@ -284,7 +283,8 @@ static int do_append_env(char ***env, size_t *env_len, const char *key, const ch
         ERROR("Out of memory");
         return -1;
     }
-    if (sprintf_s(tmp_env, tmp_env_len, "%s=%s", key, value) < 0) {
+    int nret = snprintf(tmp_env, tmp_env_len, "%s=%s", key, value);
+    if (nret < 0 || (size_t)nret >= tmp_env_len) {
         ERROR("Out of memory");
         free(tmp_env);
         return -1;
@@ -473,8 +473,8 @@ static int read_user_file(const char *basefs, const char *user_path, FILE **stre
     char path[PATH_MAX] = {0};
     char real_path[PATH_MAX] = {0};
 
-    nret = sprintf_s(path, sizeof(path), "%s/%s", basefs, user_path);
-    if (nret < 0) {
+    nret = snprintf(path, sizeof(path), "%s/%s", basefs, user_path);
+    if (nret < 0 || (size_t)nret >= sizeof(path)) {
         ERROR("Path is too long");
         return -1;
     }
@@ -1166,11 +1166,8 @@ int trans_ulimit_to_rlimit(oci_runtime_spec_process_rlimits_element **rlimit_dst
         goto out;
     }
 
-    if (strcat_s(typename, namelen, RLIMIT_PRE) != EOK) {
-        ERROR("Failed to cat string");
-        ret = -1;
-        goto out;
-    }
+    (void)strcat(typename, RLIMIT_PRE);
+
     for (j = 0; j < strlen(ulimit->name); j++) {
         typename[j + strlen(RLIMIT_PRE)] = (char)toupper((int)(ulimit->name[j]));
     }

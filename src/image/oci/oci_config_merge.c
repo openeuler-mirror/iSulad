@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include "securec.h"
 #include "utils.h"
 #include "log.h"
 #include "liblcrd.h"

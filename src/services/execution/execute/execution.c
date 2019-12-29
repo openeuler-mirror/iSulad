@@ -35,7 +35,6 @@
 #include "lcrd_config.h"
 #include "config.h"
 #include "image.h"
-#include "securec.h"
 #include "execution.h"
 #include "verify.h"
 #include "container_inspect.h"
@@ -190,7 +189,8 @@ static int umount_dev_tmpfs_for_system_container(const container_t *cont)
 {
     if (cont->hostconfig != NULL && cont->hostconfig->system_container) {
         char rootfs_dev_path[PATH_MAX] = { 0 };
-        if (sprintf_s(rootfs_dev_path, sizeof(rootfs_dev_path), "%s/dev", cont->common_config->base_fs) < 0) {
+        int nret = snprintf(rootfs_dev_path, sizeof(rootfs_dev_path), "%s/dev", cont->common_config->base_fs);
+        if ((size_t)nret >= sizeof(rootfs_dev_path) || nret < 0) {
             ERROR("Out of memory");
             return -1;
         }
@@ -306,8 +306,8 @@ static int prepare_start_state_files(const container_t *cont, char **exit_fifo, 
     char pidfile[PATH_MAX] = { 0 };
     const char *id = cont->common_config->id;
 
-    nret = sprintf_s(container_state, sizeof(container_state), "%s/%s", cont->state_path, id);
-    if (nret < 0 || nret >= (int)sizeof(container_state)) {
+    nret = snprintf(container_state, sizeof(container_state), "%s/%s", cont->state_path, id);
+    if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
         ERROR("Failed to sprintf container_state");
         ret = -1;
         goto out;
@@ -320,8 +320,8 @@ static int prepare_start_state_files(const container_t *cont, char **exit_fifo, 
         goto out;
     }
 
-    nret = sprintf_s(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
-    if (nret < 0 || nret >= (int)sizeof(pidfile)) {
+    nret = snprintf(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
+    if (nret < 0 || (size_t)nret >= sizeof(pidfile)) {
         ERROR("Failed to sprintf pidfile");
         ret = -1;
         goto out;
@@ -418,8 +418,9 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
     if (detect_mount(host_channel->path_on_host)) {
         return 0;
     }
-    if (sprintf_s(properties, sizeof(properties), "mode=1777,size=%llu",
-                  (long long unsigned int)host_channel->size) < 0) {
+    int nret = snprintf(properties, sizeof(properties), "mode=1777,size=%llu",
+                        (long long unsigned int)host_channel->size);
+    if (nret < 0 || (size_t)nret >= sizeof(properties)) {
         ERROR("Failed to generate mount properties");
         return -1;
     }
@@ -455,7 +456,8 @@ static int mount_dev_tmpfs_for_system_container(const container_t *cont)
     if (!cont->hostconfig->system_container) {
         return 0;
     }
-    if (sprintf_s(rootfs_dev_path, sizeof(rootfs_dev_path), "%s/dev", cont->common_config->base_fs) < 0) {
+    int nret = snprintf(rootfs_dev_path, sizeof(rootfs_dev_path), "%s/dev", cont->common_config->base_fs);
+    if (nret < 0 || (size_t)nret >= sizeof(rootfs_dev_path)) {
         ERROR("Out of memory");
         return -1;
     }
@@ -597,7 +599,8 @@ static int write_env_content(const char *env_path, const char **env, size_t env_
                 ret = -1;
                 goto out;
             }
-            if (sprintf_s(env_content, len, "%s\n", env[i]) < 0) {
+            nret = snprintf(env_content, len, "%s\n", env[i]);
+            if (nret < 0 || (size_t)nret >= len) {
                 ERROR("Out of memory");
                 free(env_content);
                 ret = -1;
@@ -1123,6 +1126,12 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
 
     container_lock(cont);
 
+    if (is_paused(cont->state)) {
+        ERROR("Container %s is paused. Unpause the container before stopping or killing", id);
+        lcrd_set_error_message("Container %s is paused. Unpause the container before stopping or killing", id);
+        ret = -1;
+        goto out;
+    }
     // set AutoRemove flag to false before stop so the container won't be
     // removed during restart process
     if (restart) {
@@ -1612,8 +1621,8 @@ static int do_cleanup_container_resources(container_t *cont)
         goto out;
     }
 
-    ret = sprintf_s(container_state, sizeof(container_state), "%s/%s", statepath, id);
-    if (ret < 0) {
+    ret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
+    if (ret < 0 || (size_t)ret >= sizeof(container_state)) {
         ERROR("Failed to sprintf container_state");
         ret = -1;
         goto out;
@@ -1696,16 +1705,24 @@ int cleanup_container(container_t *cont, bool force)
 
     if (is_running(cont->state)) {
         if (!force) {
-            lcrd_set_error_message("You cannot remove a running container %s. "
-                                   "Stop the container before attempting removal or use -f", id);
-            ERROR("You cannot remove a running container %s. Stop the container before attempting removal or use -f",
-                  id);
+            if (is_paused(cont->state)) {
+                lcrd_set_error_message("You cannot remove a paused container %s. "
+                                       "Unpause and then stop the container before "
+                                       "attempting removal or force remove", id);
+                ERROR("You cannot remove a paused container %s. Unpause and then stop the container before "
+                      "attempting removal or force remove", id);
+            } else {
+                lcrd_set_error_message("You cannot remove a running container %s. "
+                                       "Stop the container before attempting removal or use -f", id);
+                ERROR("You cannot remove a running container %s."
+                      " Stop the container before attempting removal or use -f", id);
+            }
             ret = -1;
             goto reset_removal_progress;
         }
         ret = stop_container(cont, 3, force, false);
         if (ret != 0) {
-            lcrd_try_set_error_message("Could not stop running container %s, cannot remove", id);
+            lcrd_append_error_message("Could not stop running container %s, cannot remove. ", id);
             ERROR("Could not stop running container %s, cannot remove", id);
             ret = -1;
             goto reset_removal_progress;
