@@ -514,8 +514,12 @@ static void set_stderr_buf(char **stderr_buf, const char *format, ...)
     va_list argp;
     va_start(argp, format);
 
-    (void)vsprintf(errbuf, format, argp);
+    int nret = vsnprintf(errbuf, BUFSIZ, format, argp);
     va_end(argp);
+
+    if (nret < 0 || nret >= BUFSIZ) {
+        return;
+    }
 
     *stderr_buf = json_marshal_string(errbuf, strlen(errbuf), NULL, &jerr);
     if (*stderr_buf == NULL) {
