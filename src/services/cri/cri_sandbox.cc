@@ -35,7 +35,6 @@
 #include "container_custom_config.h"
 #include "checkpoint_handler.h"
 #include "cri_security_context.h"
-#include "cxxutils.h"
 
 runtime::v1alpha2::NamespaceMode CRIRuntimeServiceImpl::SharesHostNetwork(container_inspect *inspect)
 {
@@ -967,72 +966,8 @@ void CRIRuntimeServiceImpl::SetSandboxStatusNetwork(container_inspect *inspect, 
                                                     std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus,
                                                     Errors &error)
 {
-    if (podStatus->annotations_size() == 0) {
-        return;
-    }
-    std::vector<std::string> ipInfo;
-    std::string IP;
-    size_t len = 0;
-    auto networks = CRIHelpers::GetNetworkPlaneFromPodAnno(*podStatus->mutable_annotations(), &len, error);
-    if (error.NotEmpty()) {
-        ERROR("Couldn't get network plane from pod annotations: %s", error.GetCMessage());
-        return;
-    }
-    bool isDefaultNetDisable = false;
-    for (size_t i = 0; i < len; i++) {
-        if (networks[i]->name == nullptr) {
-            ERROR("Invalid network config, do not have name");
-            error.SetError("Invalid networks config");
-            goto free_out;
-        }
-        if (std::string(networks[i]->name) == Network::POD_DISABLE_DEFAULT_NET_ANNOTATION_KEY) {
-            isDefaultNetDisable = true;
-        }
-    }
-
-    IP = CRIHelpers::DeterminePodIPBySandboxID(podSandboxID);
-    if (IP.empty() && !isDefaultNetDisable) {
-        if (len > SIZE_MAX / sizeof(cri_pod_network_element *) - 1) {
-            ERROR("Too many cri pod network elements!");
-            goto free_out;
-        }
-        size_t new_size = (len + 1) * sizeof(cri_pod_network_element *);
-        size_t old_size = len * sizeof(cri_pod_network_element *);
-        cri_pod_network_element **new_networks;
-        if (mem_realloc((void **)(&new_networks), new_size, (void *)networks, old_size) != 0) {
-            ERROR("Failed to realloc memory for append cri pod network element");
-            goto free_out;
-        }
-        networks = new_networks;
-        cri_pod_network_element *new_element =
-            (cri_pod_network_element *)util_common_calloc_s(sizeof(cri_pod_network_element));
-        if (new_element == NULL) {
-            ERROR("Out of memory");
-            goto free_out;
-        }
-        new_element->interface = util_strdup_s(Network::GetInterfaceName().c_str());
-        networks[len] = new_element;
-        len++;
-    }
-
-    for (size_t i = 0; i < len; i++) {
-        std::string iterfaceName { networks[i]->interface != nullptr ? networks[i]->interface : "" };
-        std::string interfaceIP = GetIP(podSandboxID, inspect, iterfaceName, error);
-        if (error.NotEmpty()) {
-            WARN("get default ip failed: %s", error.GetCMessage());
-            error.Clear();
-        }
-        ipInfo.push_back(iterfaceName + ":" + interfaceIP);
-    }
-    podStatus->mutable_network()->set_ip(CXXUtils::StringsJoin(ipInfo, ";"));
-
-free_out:
-    for (size_t i = 0; i < len; i++) {
-        free_cri_pod_network_element(networks[i]);
-        networks[i] = nullptr;
-    }
-
-    free(networks);
+    std::string interfaceIP = GetIP(podSandboxID, inspect, Network::DEFAULT_NETWORK_INTERFACE_NAME, error);
+    podStatus->mutable_network()->set_ip(interfaceIP);
 }
 
 void CRIRuntimeServiceImpl::PodSandboxStatusToGRPC(container_inspect *inspect, const std::string &podSandboxID,

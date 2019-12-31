@@ -705,8 +705,4 @@ out:
     free_cri_checkpoint(criCheckpoint);
 }
 
-std::string DeterminePodIPBySandboxID(const std::string &podSandboxID)
-{
-    return "";
-}
 } // namespace CRIHelpers
