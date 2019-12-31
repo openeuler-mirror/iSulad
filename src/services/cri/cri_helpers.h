@@ -110,7 +110,6 @@ std::string CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &erro
 
 void GetCheckpoint(const std::string &jsonCheckPoint, cri::PodSandboxCheckpoint &checkpoint, Errors &error);
 
-std::string DeterminePodIPBySandboxID(const std::string &podSandboxID);
 }; // namespace CRIHelpers
 
 #endif /* _CRI_HELPERS_H_ */
