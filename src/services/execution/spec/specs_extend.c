@@ -468,34 +468,35 @@ out:
 
 static int read_user_file(const char *basefs, const char *user_path, FILE **stream)
 {
-    int nret;
+    int ret = 0;
     int64_t filesize = 0;
-    char path[PATH_MAX] = {0};
-    char real_path[PATH_MAX] = {0};
+    char *real_path = NULL;
 
-    nret = snprintf(path, sizeof(path), "%s/%s", basefs, user_path);
-    if (nret < 0 || (size_t)nret >= sizeof(path)) {
-        ERROR("Path is too long");
-        return -1;
-    }
-    if (cleanpath(path, real_path, sizeof(real_path)) == NULL) {
-        ERROR("Failed to clean path");
-        return -1;
+    if (realpath_in_scope(basefs, user_path, &real_path) < 0) {
+        ERROR("user target file '%s' real path must be under '%s'", user_path, basefs);
+        lcrd_set_error_message("user target file '%s' real path must be under '%s'", user_path, basefs);
+        ret = -1;
+        goto out;
     }
 
     filesize = util_file_size(real_path);
     if (filesize > REGULAR_FILE_SIZE) {
         ERROR("File %s is more than %lld", real_path, (long long)REGULAR_FILE_SIZE);
         lcrd_set_error_message("File %s is more than %lld", real_path, (long long)REGULAR_FILE_SIZE);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     *stream = util_fopen(real_path, "r");
     if (*stream == NULL) {
         ERROR("Failed to open %s: %s", real_path, strerror(errno));
-        return 0;
+        ret = 0;
+        goto out;
     }
-    return 0;
+
+out:
+    free(real_path);
+    return ret;
 }
 
 static void parse_user_group(const char *username, char **user, char **group, char **tmp_dup)
