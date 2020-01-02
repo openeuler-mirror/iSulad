@@ -1,9 +1,63 @@
-# iSulad
+<img src="logo/isula-logo.png" alt="iSulad" style="zoom:80%;" />
 
-This is a umbrella project for gRPC-services based Lightweight Container Runtime Daemon.
-iSulad provide a unified architecture to meet the different needs of CT and IT.
-Compared with Docker written by Golang, iSulad has the characteristics of light, agile, fast,
-not limited by hardware specifications and architecture, and can be applied more widely.
+## iSulad
+
+`iSulad` is a light weight container runtime daemon which is desinged for IOT and Cloud infrastructure.`iSulad` has the characteristics of light, fast and not limited by hardware specifications and architecture, and can be applied more widely.
+
+## Getting Started
+
+### Installing
+To install iSulad, you can use `rpm` or `yum` package manager command with `openEuler` repository.
+
+Install iSulad with yum
+```sh
+yum install -y iSulad
+```
+
+### Run
+We provide `systemd` service to start `iSulad`
+```sh
+systemd start lcrd # run the server with systemd command
+```
+
+You can use direct command to start `iSulad` server：
+```sh
+$ sudo lcrd  # run the server with default socket name and default log level and images manage function
+```
+### Operations on containers:
+`iSulad` provides command line `lcrd` to talk with server.
+Here are some sample commands to manager containers.
+
+List all containers in your own environment:
+```sh
+# list containers
+$ sudo lcrc ps -a   
+```
+
+Create a container with busybox named `test`
+```sh
+# create a container 'test' with image busybox       
+$ sudo lcrc create -t -n test busybox  
+```
+
+Start this container `test`
+```sh
+# start the container 'test'          
+$ sudo lcrc start test                
+```
+Kill the container `test`
+```sh
+# kill the container 'test'   
+$ sudo lcrc kill test  
+```
+Remove the container `test`
+```sh
+# remove the container 'test'     
+$ sudo lcrc rm test                        
+```
+
+### Build from source
+Build requirements for developers are listed in [build_guide](./doc/build_guide.md)
 
 ## How to Contribute
 
