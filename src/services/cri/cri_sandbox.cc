@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <grpc++/grpc++.h>
 
+#include "cxxutils.h"
 #include "log.h"
 #include "utils.h"
 #include "errors.h"
@@ -275,7 +276,7 @@ void CRIRuntimeServiceImpl::SetupSandboxFiles(const std::string &resolvPath,
     if (resolvPath.empty()) {
         return;
     }
-    std::string resolvContent;
+    std::vector<std::string> resolvContentStrs;
 
     /* set DNS options */
     int len = config.dns_config().searches_size();
@@ -283,26 +284,24 @@ void CRIRuntimeServiceImpl::SetupSandboxFiles(const std::string &resolvPath,
         error.SetError("DNSOption.Searches has more than 6 domains");
         return;
     }
-    resolvContent = "search ";
-    int i;
-    for (i = 0; i < len - 1; i++) {
-        resolvContent += (config.dns_config().searches(i) + " ");
-    }
-    resolvContent += (config.dns_config().searches(i) + "\n");
-    len = config.dns_config().servers_size();
-    resolvContent += "nameserver ";
-    for (i = 0; i < len - 1; i++) {
-        resolvContent += (config.dns_config().servers(i) + "\nnameserver ");
-    }
-    resolvContent += config.dns_config().servers(i) + "\n";
-    len = config.dns_config().options_size();
-    resolvContent += "options ";
-    for (i = 0; i < len - 1; i++) {
-        resolvContent += (config.dns_config().options(i) + " ");
-    }
-    resolvContent += (config.dns_config().options(i) + "\n");
 
-    if (!resolvContent.empty()) {
+    std::vector<std::string> servers(config.dns_config().servers().begin(), config.dns_config().servers().end());
+    if (!servers.empty()) {
+        resolvContentStrs.push_back("nameserver " + CXXUtils::StringsJoin(servers, "\nnameserver "));
+    }
+
+    std::vector<std::string> searchs(config.dns_config().searches().begin(), config.dns_config().searches().end());
+    if (!searchs.empty()) {
+        resolvContentStrs.push_back("search " + CXXUtils::StringsJoin(searchs, " "));
+    }
+
+    std::vector<std::string> options(config.dns_config().options().begin(), config.dns_config().options().end());
+    if (!options.empty()) {
+        resolvContentStrs.push_back("options " + CXXUtils::StringsJoin(options, " "));
+    }
+
+    if (!resolvContentStrs.empty()) {
+        std::string resolvContent = CXXUtils::StringsJoin(resolvContentStrs, "\n") + "\n";
         if (util_write_file(resolvPath.c_str(), resolvContent.c_str(), resolvContent.size()) != 0) {
             error.SetError("Failed to write resolv content");
         }
