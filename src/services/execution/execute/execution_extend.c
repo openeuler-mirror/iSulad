@@ -553,6 +553,7 @@ static int resume_container(container_t *cont)
     }
 
     state_reset_paused(cont->state);
+    update_health_monitor(cont->common_config->id);
 
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
@@ -738,6 +739,7 @@ static int pause_container(container_t *cont)
     }
 
     state_set_paused(cont->state);
+    update_health_monitor(cont->common_config->id);
 
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
@@ -830,8 +832,6 @@ static int container_pause_cb(const container_pause_request *request,
     }
 
     EVENT("Event: {Object: %s, Type: Paused}", id);
-
-    update_health_monitor(id);
 
 pack_response:
     pack_pause_response(*response, cc, id);
