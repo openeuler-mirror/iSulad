@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <climits>
-#include <securec.h>
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "utils_convert.h"
