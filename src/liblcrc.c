@@ -648,6 +648,9 @@ void lcrc_exec_request_free(struct lcrc_exec_request *request)
     free(request->name);
     request->name = NULL;
 
+    free(request->suffix);
+    request->suffix = NULL;
+
     free(request->stdout);
     request->stdout = NULL;
 
@@ -778,38 +781,6 @@ void lcrc_resume_response_free(struct lcrc_resume_response *response)
     free(response);
 }
 
-/* lcrc container conf request free */
-void lcrc_container_conf_request_free(struct lcrc_container_conf_request *req)
-{
-    if (req == NULL) {
-        return;
-    }
-
-    free(req->name);
-    req->name = NULL;
-
-    free(req);
-}
-
-/* lcrc container conf response free */
-void lcrc_container_conf_response_free(struct lcrc_container_conf_response *resp)
-{
-    if (resp == NULL) {
-        return;
-    }
-
-    free(resp->errmsg);
-    resp->errmsg = NULL;
-
-    free(resp->container_logpath);
-    resp->container_logpath = NULL;
-
-    free(resp->container_logsize);
-    resp->container_logsize = NULL;
-
-    free(resp);
-}
-
 /* lcrc kill request free */
 void lcrc_kill_request_free(struct lcrc_kill_request *request)
 {
@@ -882,12 +853,20 @@ void lcrc_update_response_free(struct lcrc_update_response *response)
 /* lcrc stats request free */
 void lcrc_stats_request_free(struct lcrc_stats_request *request)
 {
+    size_t i = 0;
+
     if (request == NULL) {
         return;
     }
 
-    free(request->runtime);
-    request->runtime = NULL;
+    for (i = 0; i < request->containers_len; i++) {
+        free(request->containers[i]);
+        request->containers[i] = NULL;
+    }
+
+    free(request->containers);
+    request->containers = NULL;
+
     free(request);
 }
 
@@ -902,8 +881,8 @@ void lcrc_stats_response_free(struct lcrc_stats_response *response)
     response->errmsg = NULL;
 
     if (response->container_stats != NULL && response->container_num) {
-        int i;
-        for (i = 0; i < (int)response->container_num; i++) {
+        size_t i;
+        for (i = 0; i < response->container_num; i++) {
             free(response->container_stats[i].id);
             response->container_stats[i].id = NULL;
         }
@@ -1347,6 +1326,36 @@ void lcrc_rename_response_free(struct lcrc_rename_response *response)
 
     free(response);
 }
+
+/* lcrc resize request free */
+void lcrc_resize_request_free(struct lcrc_resize_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->id);
+    request->id = NULL;
+
+    free(request->suffix);
+    request->suffix = NULL;
+
+    free(request);
+}
+
+/* lcrc resize response free */
+void lcrc_resize_response_free(struct lcrc_resize_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+}
+
 
 /* lcrc logs request free */
 void lcrc_logs_request_free(struct lcrc_logs_request *request)

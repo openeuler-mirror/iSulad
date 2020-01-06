@@ -95,15 +95,15 @@ int util_wildcard_to_regex(const char *wildcard, char **regex)
     size_t index = 0;
     size_t regex_size;
     char escapes[] = { '$', '^', '[', ']', '(', ')', '{', '|', '+', '\\', '.', '<', '>', '}' };
-    if (wildcard == NULL) {
-        return 0;
-    }
 
+    if (wildcard == NULL || regex == NULL) {
+        ERROR("Invalid output parameter");
+        return -1;
+    }
     if (get_regex_size_from_wildcard(wildcard, escapes, sizeof(escapes) / sizeof(char), &regex_size) != 0) {
         return -1;
     }
-
-    *regex = malloc(regex_size);
+    *regex = (char *)util_common_calloc_s(regex_size);
     if (*regex == NULL) {
         ERROR("Out of memory");
         return -1;

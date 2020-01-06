@@ -150,20 +150,6 @@ static int list_request_check(void *req)
     return ret;
 }
 
-/* container conf response check */
-static int container_conf_request_check(void *req)
-{
-    int ret = 0;
-    struct lcrd_container_conf_request *req_conf = (struct lcrd_container_conf_request *)req;
-    if (req_conf->name == NULL) {
-        DEBUG("container name error");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
 /* create request check */
 static int create_request_check(void *req)
 {
@@ -298,11 +284,6 @@ static struct rest_handle_st g_rest_handle[] = {
         .request_check = wait_request_check,
     },
     {
-        .name = ContainerServiceConf,
-        .request_parse_data = (void *)container_conf_request_parse_data,
-        .request_check = container_conf_request_check,
-    },
-    {
         .name = ContainerServiceInspect,
         .request_parse_data = (void *)container_inspect_request_parse_data,
         .request_check = container_inspect_request_check,
@@ -411,50 +392,6 @@ out:
     return;
 }
 
-/* evhtp send container conf repsponse */
-static void evhtp_send_container_conf_repsponse(evhtp_request_t *req, container_conf_response *response, int rescode)
-{
-    parser_error err = NULL;
-    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
-    char *responsedata = NULL;
-
-    responsedata = container_conf_response_generate_json(response, &ctx, &err);
-    if (responsedata == NULL) {
-        ERROR("Failed to generate container_conf request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
-        goto out;
-    }
-
-    evhtp_send_response(req, responsedata, rescode);
-
-out:
-    free(err);
-    free(responsedata);
-    return;
-}
-
-/* container conf response to rest */
-static int container_conf_response_to_rest(container_conf_response *cresponse,
-                                           struct lcrd_container_conf_response *response)
-{
-    if (response == NULL) {
-        cresponse->cc = LCRD_ERR_MEMOUT;
-        return 0;
-    }
-    cresponse->cc = response->cc;
-    if (response->errmsg) {
-        cresponse->errmsg = util_strdup_s(response->errmsg);
-    }
-    if (response->container_logpath) {
-        cresponse->container_logpath = util_strdup_s(response->container_logpath);
-    }
-    cresponse->container_logrotate = response->container_logrotate;
-    if (response->container_logsize) {
-        cresponse->container_logsize = util_strdup_s(response->container_logsize);
-    }
-    return 0;
-}
-
 /* evhtp send wait repsponse */
 static void evhtp_send_wait_repsponse(evhtp_request_t *req, container_wait_response *response, int rescode)
 {
@@ -545,58 +482,6 @@ static void rest_start_cb(evhtp_request_t *req, void *arg)
 out:
     free_container_start_request(crequest);
     free_container_start_response(cresponse);
-}
-
-/* rest container conf cb */
-static void rest_container_conf_cb(evhtp_request_t *req, void *arg)
-{
-    int ret, tret;
-    service_callback_t *cb = NULL;
-    struct lcrd_container_conf_request *lcrdreq = NULL;
-    struct lcrd_container_conf_response *lcrdres = NULL;
-    container_conf_response *cresponse = NULL;
-
-    // only deal with POST request
-    if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
-        return;
-    }
-    cb = get_service_callback();
-    if (cb == NULL || cb->container.conf == NULL) {
-        ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
-        return;
-    }
-
-    cresponse = util_common_calloc_s(sizeof(container_conf_response));
-    if (cresponse == NULL) {
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
-        return;
-    }
-
-    tret = action_request_from_rest(req, (void **)&lcrdreq, ContainerServiceConf);
-    if (tret < 0) {
-        ERROR("Bad request");
-        cresponse->cc = LCRD_ERR_EXEC;
-        evhtp_send_container_conf_repsponse(req, cresponse, EVHTP_RES_SERVERR);
-        goto out;
-    }
-
-    ret = cb->container.conf(lcrdreq, &lcrdres);
-
-    tret = container_conf_response_to_rest(cresponse, lcrdres);
-    if (tret) {
-        ERROR("Failed to translate response to rest,operation is %s", ret ? "failed" : "success");
-        cresponse->cc = LCRD_ERR_EXEC;
-        if (cresponse->errmsg == NULL) {
-            cresponse->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL));
-        }
-    }
-    evhtp_send_container_conf_repsponse(req, cresponse, EVHTP_RES_OK);
-out:
-    lcrd_container_conf_request_free(lcrdreq);
-    lcrd_container_conf_response_free(lcrdres);
-    free_container_conf_response(cresponse);
 }
 
 /* rest wait cb */
@@ -1210,11 +1095,6 @@ int rest_register_containers_handler(evhtp_t *htp)
     }
     if (evhtp_set_cb(htp, ContainerServiceList, rest_list_cb, NULL) == NULL) {
         ERROR("Failed to register list callback");
-        return -1;
-    }
-
-    if (evhtp_set_cb(htp, ContainerServiceConf, rest_container_conf_cb, NULL) == NULL) {
-        ERROR("Failed to register container_conf callback");
         return -1;
     }
 

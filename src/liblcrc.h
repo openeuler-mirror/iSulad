@@ -296,9 +296,6 @@ struct lcrc_resume_response {
 
 struct lcrc_container_info {
     char *id;
-    bool has_pid;
-    uint32_t pid;
-    Container_Status status;
     uint64_t pids_current;
     // CPU usage
     uint64_t cpu_use_nanos;
@@ -359,7 +356,6 @@ struct lcrc_list_response {
 };
 
 struct lcrc_stats_request {
-    char *runtime;
     char **containers;
     size_t containers_len;
     bool all;
@@ -449,6 +445,7 @@ struct lcrc_wait_response {
 
 struct lcrc_exec_request {
     char *name;
+    char *suffix;
     bool tty;
     bool open_stdin;
     bool attach_stdin;
@@ -539,19 +536,6 @@ struct lcrc_info_response {
     uint32_t c_stopped;
     uint32_t images_num;
     uint32_t cpus;
-    char *errmsg;
-};
-
-struct lcrc_container_conf_request {
-    char *name;
-};
-
-struct lcrc_container_conf_response {
-    uint32_t cc;
-    uint32_t server_errono;
-    char *container_logpath;
-    uint32_t container_logrotate;
-    char *container_logsize;
     char *errmsg;
 };
 
@@ -688,6 +672,19 @@ struct lcrc_rename_response {
     char *errmsg;
 };
 
+struct lcrc_resize_request {
+    char *id;
+    char *suffix;
+    uint32_t height;
+    uint32_t width;
+};
+
+struct lcrc_resize_response {
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
 Container_Status lcrcstastr2sta(const char *state);
 
 struct lcrc_filters *lcrc_filters_parse_args(const char **array, size_t len);
@@ -757,10 +754,6 @@ void lcrc_pause_response_free(struct lcrc_pause_response *response);
 void lcrc_resume_request_free(struct lcrc_resume_request *request);
 
 void lcrc_resume_response_free(struct lcrc_resume_response *response);
-
-void lcrc_container_conf_request_free(struct lcrc_container_conf_request *req);
-
-void lcrc_container_conf_response_free(struct lcrc_container_conf_response *resp);
 
 void lcrc_kill_request_free(struct lcrc_kill_request *request);
 
@@ -832,6 +825,10 @@ void lcrc_export_response_free(struct lcrc_export_response *response);
 void lcrc_rename_request_free(struct lcrc_rename_request *request);
 
 void lcrc_rename_response_free(struct lcrc_rename_response *response);
+
+void lcrc_resize_request_free(struct lcrc_resize_request *request);
+
+void lcrc_resize_response_free(struct lcrc_resize_response *response);
 
 void lcrc_logs_request_free(struct lcrc_logs_request *request);
 void lcrc_logs_response_free(struct lcrc_logs_response *response);
