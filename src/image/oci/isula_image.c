@@ -61,10 +61,14 @@ void isula_exit(void)
 
 static int start_isula_image_server(void)
 {
-    struct server_monitor_conf sm_conf = {0};
+#define MIN_OPT_TIMEOUT 15
+    struct server_monitor_conf sm_conf = { 0 };
     struct timespec ts = { 0 };
     sem_t wait_monitor_sem;
+    unsigned int im_opt_timeout = conf_get_im_opt_timeout();
     int ret = 0;
+
+    im_opt_timeout = im_opt_timeout >= MIN_OPT_TIMEOUT ? im_opt_timeout : MIN_OPT_TIMEOUT;
 
     // check whether isula_kit is running by systemd
     if (util_file_exists(ISULA_IMAGE_SERVER_DEFAULT_SOCK)) {
@@ -93,7 +97,7 @@ static int start_isula_image_server(void)
         ret = -1;
         goto out;
     }
-    ts.tv_sec += 15; // set deadline 15s
+    ts.tv_sec += (time_t)im_opt_timeout; // set deadline
 
     ret = sem_timedwait(&wait_monitor_sem, &ts);
     if (ret != 0) {

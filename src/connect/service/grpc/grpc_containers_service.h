@@ -75,10 +75,9 @@ public:
 
     Status Resume(ServerContext *context, const ResumeRequest *request, ResumeResponse *reply) override;
 
-    Status Container_conf(ServerContext *context, const Container_conf_Request *request,
-                          Container_conf_Response *reply) override;
-
     Status Rename(ServerContext *context, const RenameRequest *request, RenameResponse *reply) override;
+
+    Status Resize(ServerContext *context, const ResizeRequest *request, ResizeResponse *reply) override;
 
     Status Update(ServerContext *context, const UpdateRequest *request, UpdateResponse *reply) override;
 
@@ -165,17 +164,17 @@ private:
 
     int resume_request_from_grpc(const ResumeRequest *grequest, container_resume_request **request);
 
-    int container_conf_request_from_grpc(const Container_conf_Request *grequest,
-                                         struct lcrd_container_conf_request **request);
-
-    int container_conf_response_to_grpc(const struct lcrd_container_conf_response *response,
-                                        Container_conf_Response *gresponse);
-
     int container_rename_request_from_grpc(const RenameRequest *grequest,
                                            struct lcrd_container_rename_request **request);
 
     int container_rename_response_to_grpc(const struct lcrd_container_rename_response *response,
                                           RenameResponse *gresponse);
+
+    int container_resize_request_from_grpc(const ResizeRequest *grequest,
+                                           struct lcrd_container_resize_request **request);
+
+    int container_resize_response_to_grpc(const struct lcrd_container_resize_response *response,
+                                          ResizeResponse *gresponse);
 
     int update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request);
 

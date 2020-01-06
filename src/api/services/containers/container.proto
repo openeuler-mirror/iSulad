@@ -69,20 +69,18 @@ message Container {
 
 message Container_info {
 	string id = 1;
-	int32 pid = 2;
-	ContainerStatus status = 3;
-	uint64 pids_current = 4;
-	uint64 cpu_use_nanos = 5;
-	uint64 cpu_use_user = 6;
-	uint64 cpu_use_kernel = 7;
-	uint64 cpu_system_use = 8;
-	uint32 online_cpus = 9;
-	uint64 blkio_read = 10;
-	uint64 blkio_write = 11;
-	uint64 mem_used = 12;
-	uint64 mem_limit = 13;
-	uint64 kmem_used = 14;
-	uint64 kmem_limit = 15;
+	uint64 pids_current = 2;
+	uint64 cpu_use_nanos = 3;
+	uint64 cpu_use_user = 4;
+	uint64 cpu_use_kernel = 5;
+	uint64 cpu_system_use = 6;
+	uint32 online_cpus = 7;
+	uint64 blkio_read = 8;
+	uint64 blkio_write = 9;
+	uint64 mem_used = 10;
+	uint64 mem_limit = 11;
+	uint64 kmem_used = 12;
+	uint64 kmem_limit = 13;
 }
 
 message Event {
@@ -114,13 +112,13 @@ service ContainerService {
     rpc Info(InfoRequest) returns (InfoResponse);
     rpc Update(UpdateRequest) returns (UpdateResponse);
     rpc Attach(stream AttachRequest) returns (stream AttachResponse);
-    rpc Container_conf(Container_conf_Request) returns (Container_conf_Response);
     rpc Restart(RestartRequest) returns (RestartResponse);
     rpc Export(ExportRequest) returns (ExportResponse);
     rpc CopyFromContainer(CopyFromContainerRequest) returns (stream CopyFromContainerResponse);
     rpc CopyToContainer(stream CopyToContainerRequest) returns (stream CopyToContainerResponse);
     rpc Rename(RenameRequest) returns (RenameResponse);
     rpc Logs(LogsRequest) returns (stream LogsResponse);
+    rpc Resize(ResizeRequest) returns (ResizeResponse);
 }
 
 message CreateRequest {
@@ -271,7 +269,6 @@ message ListResponse {
 }
 
 message StatsRequest {
-	string runtime = 1;
 	repeated string containers = 2;
 	bool all = 3;
 }
@@ -313,6 +310,7 @@ message ExecRequest {
 	repeated string argv = 10;
 	repeated string env = 11;
 	string user = 12;
+	string suffix = 13;
 }
 message ExecResponse {
 	int32 pid = 1;
@@ -390,19 +388,6 @@ message UpdateResponse {
 	uint32 cc = 2;
 	string errmsg = 3;
 }
-message Container_conf_Request {
-	// ContainerID specifies the container in which to get config.
-	string container_id = 1;
-	string runtime = 2;
-}
-
-message Container_conf_Response {
-	string container_logpath = 1;
-	string container_logsize = 2;
-	uint32 container_logrotate = 3;
-	uint32 cc = 4;
-	string errmsg = 5;
-}
 
 message ExportRequest {
 	string id = 1;
@@ -460,4 +445,17 @@ message LogsResponse {
     string stream = 2;
     string time = 3;
     bytes attrs = 4;
+}
+
+message ResizeRequest {
+	string id = 1;
+	string suffix = 2;
+	uint32 height = 3;
+	uint32 width = 4;
+}
+
+message ResizeResponse {
+	string id = 1;
+	uint32 cc = 2;
+	string errmsg = 3;
 }

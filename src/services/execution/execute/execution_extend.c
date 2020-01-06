@@ -213,7 +213,8 @@ static int copy_map_labels(const container_config *config, map_t **map_labels)
     return 0;
 }
 
-static container_info *get_container_stats(const container_t *cont, const struct engine_container_info *einfo,
+static container_info *get_container_stats(const container_t *cont,
+                                           const struct engine_container_resources_stats_info *einfo,
                                            const struct stats_context *ctx)
 {
     int ret = 0;
@@ -229,9 +230,6 @@ static container_info *get_container_stats(const container_t *cont, const struct
     }
 
     info->id = util_strdup_s(cont->common_config->id);
-    info->has_pid = einfo->has_pid;
-    info->pid = (int32_t)einfo->pid;
-    info->status = (int)einfo->status;
     info->pids_current = einfo->pids_current;
     info->cpu_use_nanos = einfo->cpu_use_nanos;
     info->blkio_read = einfo->blkio_read;
@@ -395,29 +393,12 @@ cleanup:
     return ret;
 }
 
-static int get_containers_stats(const char *runtime, char **idsarray, size_t ids_len, const struct stats_context *ctx,
+static int get_containers_stats(char **idsarray, size_t ids_len, const struct stats_context *ctx,
                                 bool check_exists, container_info ***info, size_t *info_len)
 {
     int ret = 0;
     int nret;
     size_t i;
-    char *engine_path = NULL;
-    struct engine_operation *engine_ops = NULL;
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_get_container_status_op == NULL ||
-        engine_ops->engine_free_container_status_op == NULL) {
-        ERROR("Failed to get engine stats operations");
-        ret = -1;
-        goto cleanup;
-    }
-
-    engine_path = conf_get_routine_rootdir(runtime);
-    if (engine_path == NULL) {
-        ERROR("Get engine path failed");
-        ret = -1;
-        goto cleanup;
-    }
 
     nret = service_stats_make_memory(info, ids_len);
     if (nret != 0) {
@@ -426,7 +407,7 @@ static int get_containers_stats(const char *runtime, char **idsarray, size_t ids
     }
 
     for (i = 0; i < ids_len; i++) {
-        struct engine_container_info einfo = { 0 };
+        struct engine_container_resources_stats_info einfo = { 0 };
         container_t *cont = NULL;
 
         cont = containers_store_get(idsarray[i]);
@@ -440,9 +421,11 @@ static int get_containers_stats(const char *runtime, char **idsarray, size_t ids
             continue;
         }
         if (is_running(cont->state)) {
-            nret = engine_ops->engine_get_container_status_op(cont->common_config->id, engine_path, &einfo);
+            rt_stats_params_t params = { 0 };
+            params.rootpath = cont->root_path;
+
+            nret = runtime_resources_stats(cont->common_config->id, cont->runtime, &params, &einfo);
             if (nret != 0) {
-                engine_ops->engine_clear_errmsg_op();
                 container_unref(cont);
                 continue;
             }
@@ -455,14 +438,12 @@ static int get_containers_stats(const char *runtime, char **idsarray, size_t ids
 
         (*info)[*info_len] = get_container_stats(cont, &einfo, ctx);
         container_unref(cont);
-        engine_ops->engine_free_container_status_op(&einfo);
         if ((*info)[*info_len] == NULL) {
             continue;
         }
         (*info_len)++;
     }
 cleanup:
-    free(engine_path);
     return ret;
 }
 
@@ -490,12 +471,6 @@ static int container_stats_cb(const container_stats_request *request,
         goto pack_response;
     }
 
-    if (request->runtime == NULL) {
-        ERROR("Receive NULL Request runtime");
-        cc = LCRD_ERR_INPUT;
-        goto pack_response;
-    }
-
     ctx = fold_stats_filter(request);
     if (ctx == NULL) {
         cc = LCRD_ERR_EXEC;
@@ -510,7 +485,7 @@ static int container_stats_cb(const container_stats_request *request,
         goto pack_response;
     }
 
-    if (get_containers_stats(request->runtime, idsarray, ids_len, ctx, check_exists, &info, &info_len)) {
+    if (get_containers_stats(idsarray, ids_len, ctx, check_exists, &info, &info_len)) {
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
@@ -553,6 +528,7 @@ static int resume_container(container_t *cont)
     }
 
     state_reset_paused(cont->state);
+
     update_health_monitor(cont->common_config->id);
 
     if (container_to_disk(cont)) {
@@ -739,6 +715,7 @@ static int pause_container(container_t *cont)
     }
 
     state_set_paused(cont->state);
+
     update_health_monitor(cont->common_config->id);
 
     if (container_to_disk(cont)) {
@@ -838,24 +815,6 @@ pack_response:
     container_unref(cont);
     free_log_prefix();
     return (cc == LCRD_SUCCESS) ? 0 : -1;
-}
-
-static void to_engine_resources(const host_config *hostconfig, struct engine_cgroup_resources *cr)
-{
-    if (hostconfig == NULL || cr == NULL) {
-        return;
-    }
-
-    cr->blkio_weight = hostconfig->blkio_weight;
-    cr->cpu_shares = (uint64_t)hostconfig->cpu_shares;
-    cr->cpu_period = (uint64_t)hostconfig->cpu_period;
-    cr->cpu_quota = (uint64_t)hostconfig->cpu_quota;
-    cr->cpuset_cpus = hostconfig->cpuset_cpus;
-    cr->cpuset_mems = hostconfig->cpuset_mems;
-    cr->memory_limit = (uint64_t)hostconfig->memory;
-    cr->memory_swap = (uint64_t)hostconfig->memory_swap;
-    cr->memory_reservation = (uint64_t)hostconfig->memory_reservation;
-    cr->kernel_memory_limit = (uint64_t)hostconfig->kernel_memory;
 }
 
 static void host_config_restore_unlocking(container_t *cont, host_config *backup_hostconfig)
@@ -1034,32 +993,6 @@ out:
     return ret;
 }
 
-static int runtime_update(const char *id, const char *runtime, const char *rootpath, struct engine_cgroup_resources *cr)
-{
-    int ret = 0;
-    struct engine_operation *engine_ops = NULL;
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_update_op == NULL) {
-        DEBUG("Failed to get engine update operations");
-        ret = -1;
-        goto out;
-    }
-
-    if (!engine_ops->engine_update_op(id, rootpath, cr)) {
-        DEBUG("Update container %s failed", id);
-        const char *tmpmsg = NULL;
-        tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Cannot update container %s: %s", id, (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
-        engine_ops->engine_clear_errmsg_op();
-        ret = -1;
-        goto out;
-    }
-out:
-    return ret;
-}
-
 static int do_update_resources(const container_update_request *request, container_t *cont)
 {
     int ret = 0;
@@ -1067,7 +1000,7 @@ static int do_update_resources(const container_update_request *request, containe
     parser_error err = NULL;
     host_config *hostconfig = NULL;
     host_config *backup_hostconfig = NULL;
-    struct engine_cgroup_resources cr = { 0 };
+    rt_update_params_t params = { 0 };
 
     if (request->host_config == NULL) {
         DEBUG("receive NULL host config");
@@ -1111,10 +1044,10 @@ static int do_update_resources(const container_update_request *request, containe
         container_update_restart_manager(cont, hostconfig->restart_policy);
     }
 
-    to_engine_resources(hostconfig, &cr);
-    if (runtime_update(id, cont->runtime, cont->root_path, &cr)) {
+    params.rootpath = cont->root_path;
+    params.hostconfig = hostconfig;
+    if (runtime_update(id, cont->runtime, &params)) {
         ERROR("Update container %s failed", id);
-        host_config_restore_unlocking(cont, backup_hostconfig);
         ret = -1;
         goto unlock_out;
     }
@@ -1291,6 +1224,179 @@ pack_response:
     return (cc == LCRD_SUCCESS) ? 0 : -1;
 }
 
+static int runtime_resize_helper(const char *id, const char *runtime, const char *rootpath, unsigned int height,
+                                 unsigned int width)
+{
+    int ret = 0;
+    rt_resize_params_t params = { 0 };
+
+    params.rootpath = rootpath;
+    params.height = height;
+    params.width = width;
+
+    ret = runtime_resize(id, runtime, &params);
+    if (ret != 0) {
+        ERROR("Failed to resize container %s", id);
+    }
+
+    return ret;
+}
+
+static int runtime_exec_resize_helper(const char *id, const char *runtime, const char *rootpath, const char *suffix,
+                                      unsigned int height,
+                                      unsigned int width)
+{
+    int ret = 0;
+    rt_exec_resize_params_t params = { 0 };
+
+    params.rootpath = rootpath;
+    params.suffix = suffix;
+    params.height = height;
+    params.width = width;
+
+    ret = runtime_exec_resize(id, runtime, &params);
+    if (ret != 0) {
+        ERROR("Failed to resize container %s", id);
+    }
+
+    return ret;
+}
+
+static int resize_container(container_t *cont, const char *suffix, unsigned int height, unsigned int width)
+{
+    int ret = 0;
+    const char *id = cont->common_config->id;
+
+    container_lock(cont);
+
+    if (!is_running(cont->state)) {
+        ERROR("Container %s is not running", id);
+        lcrd_set_error_message("Container %s is not running", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (suffix != NULL) {
+        DEBUG("Failed to resize container:%s suffix:%s", id, suffix);
+        if (runtime_exec_resize_helper(id, cont->runtime, cont->root_path, suffix, height, width)) {
+            ERROR("Failed to resize container:%s", id);
+            ret = -1;
+            goto out;
+        }
+    } else {
+        if (runtime_resize_helper(id, cont->runtime, cont->root_path, height, width)) {
+            ERROR("Failed to resize container:%s", id);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    container_unlock(cont);
+    return ret;
+}
+
+static void pack_resize_response(struct lcrd_container_resize_response *response, uint32_t cc, const char *id)
+{
+    if (response == NULL) {
+        return;
+    }
+    response->cc = cc;
+    if (id != NULL) {
+        response->id = util_strdup_s(id);
+    }
+    if (g_lcrd_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+        DAEMON_CLEAR_ERRMSG();
+    }
+}
+
+static int resize_request_check(const struct lcrd_container_resize_request *request)
+{
+    int ret = 0;
+
+    char *name = request->id;
+    if (name == NULL) {
+        ERROR("Resume: receive NULL id");
+        ret = -1;
+        goto out;
+    }
+
+    if (!util_valid_container_id_or_name(name)) {
+        ERROR("Invalid container name %s", name);
+        lcrd_set_error_message("Invalid container name %s", name);
+        ret = -1;
+        goto out;
+    }
+
+    if (request->suffix != NULL && !util_valid_exec_suffix(request->suffix)) {
+        ERROR("Invalid suffix name %s", name);
+        lcrd_set_error_message("Invalid suffix name %s", name);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int container_resize_cb(const struct lcrd_container_resize_request *request,
+                               struct lcrd_container_resize_response **response)
+{
+    int ret = 0;
+    uint32_t cc = LCRD_SUCCESS;
+    char *name = NULL;
+    char *id = NULL;
+    container_t *cont = NULL;
+
+    DAEMON_CLEAR_ERRMSG();
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid NULL input");
+        return -1;
+    }
+
+    *response = util_common_calloc_s(sizeof(struct lcrd_container_resize_response));
+    if (*response == NULL) {
+        ERROR("Resume: Out of memory");
+        cc = LCRD_ERR_MEMOUT;
+        goto pack_response;
+    }
+
+    if (resize_request_check(request) != 0) {
+        cc = LCRD_ERR_INPUT;
+        goto pack_response;
+    }
+
+    name = request->id;
+
+    cont = containers_store_get(name);
+    if (cont == NULL) {
+        ERROR("No such container:%s", name);
+        lcrd_set_error_message("No such container:%s", name);
+        cc = LCRD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    id = cont->common_config->id;
+    set_log_prefix(id);
+    EVENT("Event: {Object: %s, Type: Resizing}", id);
+
+    ret = resize_container(cont, request->suffix, request->height, request->width);
+    if (ret != 0) {
+        cc = LCRD_ERR_EXEC;
+        container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
+        goto pack_response;
+    }
+
+    EVENT("Event: {Object: %s, Type: Resized}", id);
+
+pack_response:
+    pack_resize_response(*response, cc, id);
+    container_unref(cont);
+    free_log_prefix();
+    return (cc == LCRD_SUCCESS) ? 0 : -1;
+}
+
 void container_extend_callback_init(service_container_callback_t *cb)
 {
     cb->update = container_update_cb;
@@ -1299,5 +1405,6 @@ void container_extend_callback_init(service_container_callback_t *cb)
     cb->stats = container_stats_cb;
     cb->events = container_events_cb;
     cb->export_rootfs = container_export_cb;
+    cb->resize = container_resize_cb;
 }
 

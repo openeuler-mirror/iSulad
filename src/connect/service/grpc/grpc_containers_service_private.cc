@@ -352,6 +352,10 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
         tmpreq->container_id = util_strdup_s(grequest->container_id().c_str());
     }
 
+    if (!grequest->suffix().empty()) {
+        tmpreq->suffix = util_strdup_s(grequest->suffix().c_str());
+    }
+
     tmpreq->tty = grequest->tty();
     tmpreq->attach_stdin = grequest->attach_stdin();
     tmpreq->attach_stdout = grequest->attach_stdout();
@@ -607,46 +611,6 @@ int ContainerServiceImpl::resume_request_from_grpc(const ResumeRequest *grequest
     return 0;
 }
 
-int ContainerServiceImpl::container_conf_request_from_grpc(const Container_conf_Request *grequest,
-                                                           struct lcrd_container_conf_request **request)
-{
-    struct lcrd_container_conf_request *tmpreq = (struct lcrd_container_conf_request *)util_common_calloc_s(
-                                                     sizeof(struct lcrd_container_conf_request));
-    if (tmpreq == nullptr) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    if (!grequest->container_id().empty()) {
-        tmpreq->name = util_strdup_s(grequest->container_id().c_str());
-    }
-
-    *request = tmpreq;
-    return 0;
-}
-
-int ContainerServiceImpl::container_conf_response_to_grpc(const struct lcrd_container_conf_response *response,
-                                                          Container_conf_Response *gresponse)
-{
-    if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
-        return 0;
-    }
-
-    gresponse->set_cc(response->cc);
-    if (response->errmsg != nullptr) {
-        gresponse->set_errmsg(response->errmsg);
-    }
-    if (response->container_logpath != nullptr) {
-        gresponse->set_container_logpath(response->container_logpath);
-    }
-    gresponse->set_container_logrotate(response->container_logrotate);
-    if (response->container_logsize != nullptr) {
-        gresponse->set_container_logsize(response->container_logsize);
-    }
-    return 0;
-}
-
 int ContainerServiceImpl::container_rename_request_from_grpc(const RenameRequest *grequest,
                                                              struct lcrd_container_rename_request **request)
 {
@@ -688,6 +652,50 @@ int ContainerServiceImpl::container_rename_response_to_grpc(const struct lcrd_co
     return 0;
 }
 
+int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest *grequest,
+                                                             struct lcrd_container_resize_request **request)
+{
+    struct lcrd_container_resize_request *tmpreq = (struct lcrd_container_resize_request *)util_common_calloc_s(
+                                                       sizeof(struct lcrd_container_resize_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->id().empty()) {
+        tmpreq->id = util_strdup_s(grequest->id().c_str());
+    }
+
+    if (!grequest->suffix().empty()) {
+        tmpreq->suffix = util_strdup_s(grequest->suffix().c_str());
+    }
+
+    tmpreq->height = grequest->height();
+
+    tmpreq->width = grequest->width();
+
+    *request = tmpreq;
+    return 0;
+}
+
+int ContainerServiceImpl::container_resize_response_to_grpc(const struct lcrd_container_resize_response *response,
+                                                            ResizeResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        return 0;
+    }
+
+    gresponse->set_cc(response->cc);
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+    if (response->id != nullptr) {
+        gresponse->set_id(response->id);
+    }
+
+    return 0;
+}
 
 int ContainerServiceImpl::update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request)
 {
@@ -735,10 +743,6 @@ int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest, 
         return -1;
     }
 
-    if (!grequest->runtime().empty()) {
-        tmpreq->runtime = util_strdup_s(grequest->runtime().c_str());
-    }
-
     if (grequest->containers_size() > 0) {
         tmpreq->containers = (char **)util_common_calloc_s(grequest->containers_size() * sizeof(char *));
         if (tmpreq->containers == nullptr) {
@@ -771,12 +775,6 @@ int ContainerServiceImpl::stats_response_to_grpc(const container_stats_response 
             if (response->container_stats[i]->id != nullptr) {
                 stats->set_id(response->container_stats[i]->id);
             }
-            if (response->container_stats[i]->has_pid) {
-                stats->set_pid(response->container_stats[i]->pid);
-            } else {
-                stats->set_pid(-1);
-            }
-            stats->set_status((ContainerStatus)response->container_stats[i]->status);
             stats->set_pids_current(response->container_stats[i]->pids_current);
             stats->set_cpu_use_nanos(response->container_stats[i]->cpu_use_nanos);
             stats->set_cpu_system_use(response->container_stats[i]->cpu_system_use);

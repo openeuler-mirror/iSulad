@@ -1041,39 +1041,6 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
     return Status::OK;
 }
 
-Status ContainerServiceImpl::Container_conf(ServerContext *context, const Container_conf_Request *request,
-                                            Container_conf_Response *reply)
-{
-    int ret, tret;
-    service_callback_t *cb = nullptr;
-    struct lcrd_container_conf_request *lcrdreq = nullptr;
-    struct lcrd_container_conf_response *lcrdres = nullptr;
-
-    cb = get_service_callback();
-    if (cb == nullptr || cb->container.conf == nullptr) {
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
-
-    tret = container_conf_request_from_grpc(request, &lcrdreq);
-    if (tret != 0) {
-        ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
-        return Status::OK;
-    }
-
-    ret = cb->container.conf(lcrdreq, &lcrdres);
-    tret = container_conf_response_to_grpc(lcrdres, reply);
-
-    lcrd_container_conf_request_free(lcrdreq);
-    lcrd_container_conf_response_free(lcrdres);
-    if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
-    return Status::OK;
-}
-
 Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest *request,
                                     RenameResponse *reply)
 {
@@ -1104,6 +1071,44 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
 
     lcrd_container_rename_request_free(lcrdreq);
     lcrd_container_rename_response_free(lcrdres);
+    if (tret != 0) {
+        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
+        reply->set_cc(LCRD_ERR_INTERNAL);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+    return Status::OK;
+}
+
+Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest *request,
+                                    ResizeResponse *reply)
+{
+    int ret, tret;
+    service_callback_t *cb = nullptr;
+    struct lcrd_container_resize_request *lcrdreq = nullptr;
+    struct lcrd_container_resize_response *lcrdres = nullptr;
+
+    auto status = GrpcServerTlsAuth::auth(context, "container_resize");
+    if (!status.ok()) {
+        return status;
+    }
+
+    cb = get_service_callback();
+    if (cb == nullptr || cb->container.resize == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    tret = container_resize_request_from_grpc(request, &lcrdreq);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(LCRD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    ret = cb->container.resize(lcrdreq, &lcrdres);
+    tret = container_resize_response_to_grpc(lcrdres, reply);
+
+    lcrd_container_resize_request_free(lcrdreq);
+    lcrd_container_resize_response_free(lcrdres);
     if (tret != 0) {
         reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
         reply->set_cc(LCRD_ERR_INTERNAL);

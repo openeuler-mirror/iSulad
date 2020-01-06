@@ -243,25 +243,25 @@ struct lcrd_health_check_response {
     char *errmsg;
 };
 
-struct lcrd_container_conf_request {
-    char *name;
-};
-
-struct lcrd_container_conf_response {
-    uint32_t cc;
-    uint32_t server_errono;
-    char *container_logpath;
-    uint32_t container_logrotate;
-    char *container_logsize;
-    char *errmsg;
-};
-
 struct lcrd_container_rename_request {
     char *old_name;
     char *new_name;
 };
 
 struct lcrd_container_rename_response {
+    char *id;
+    uint32_t cc;
+    char *errmsg;
+};
+
+struct lcrd_container_resize_request {
+    char *id;
+    char *suffix;
+    uint32_t height;
+    uint32_t width;
+};
+
+struct lcrd_container_resize_response {
     char *id;
     uint32_t cc;
     char *errmsg;
@@ -295,10 +295,6 @@ struct container_log_config {
 };
 void container_log_config_free(struct container_log_config *conf);
 
-void lcrd_container_conf_request_free(struct lcrd_container_conf_request *request);
-
-void lcrd_container_conf_response_free(struct lcrd_container_conf_response *response);
-
 void lcrd_events_request_free(struct lcrd_events_request *request);
 
 void lcrd_copy_from_container_request_free(struct lcrd_copy_from_container_request *request);
@@ -314,6 +310,10 @@ void lcrd_append_error_message(const char *format, ...);
 void lcrd_container_rename_request_free(struct lcrd_container_rename_request *request);
 
 void lcrd_container_rename_response_free(struct lcrd_container_rename_response *response);
+
+void lcrd_container_resize_request_free(struct lcrd_container_resize_request *request);
+
+void lcrd_container_resize_response_free(struct lcrd_container_resize_response *response);
 
 void lcrd_logs_request_free(struct lcrd_logs_request *request);
 void lcrd_logs_response_free(struct lcrd_logs_response *response);

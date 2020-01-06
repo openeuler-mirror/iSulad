@@ -26,36 +26,6 @@
 // record the errno
 __thread char *g_lcrd_errmsg = NULL;
 
-/* lcrd container conf request free */
-void lcrd_container_conf_request_free(struct lcrd_container_conf_request *request)
-{
-    if (request == NULL) {
-        return;
-    }
-    free(request->name);
-    request->name = NULL;
-
-    free(request);
-}
-
-/* lcrd container conf response free */
-void lcrd_container_conf_response_free(struct lcrd_container_conf_response *response)
-{
-    if (response == NULL) {
-        return;
-    }
-    free(response->errmsg);
-    response->errmsg = NULL;
-
-    free(response->container_logpath);
-    response->container_logpath = NULL;
-
-    free(response->container_logsize);
-    response->container_logsize = NULL;
-
-    free(response);
-}
-
 /* lcrd events request free */
 void lcrd_events_request_free(struct lcrd_events_request *request)
 {
@@ -192,6 +162,38 @@ void lcrd_container_rename_response_free(struct lcrd_container_rename_response *
 
     free(response);
 }
+
+/* lcrd container rename request free */
+void lcrd_container_resize_request_free(struct lcrd_container_resize_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->id);
+    request->id = NULL;
+
+    free(request->suffix);
+    request->suffix = NULL;
+
+    free(request);
+}
+
+/* lcrd container rename response free */
+void lcrd_container_resize_response_free(struct lcrd_container_resize_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->id);
+    response->id = NULL;
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+}
+
 
 void lcrd_logs_request_free(struct lcrd_logs_request *request)
 {

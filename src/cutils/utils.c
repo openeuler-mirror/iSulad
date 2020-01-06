@@ -1424,4 +1424,54 @@ void usleep_nointerupt(unsigned long usec)
         request = remain;
     } while (ret == -1 && errno == EINTR);
 }
+int util_generate_random_str(char *id, size_t len)
+{
+    int fd = -1;
+    int num = 0;
+    size_t i;
+    const int m = 256;
+
+    len = len / 2;
+    fd = open("/dev/urandom", O_RDONLY);
+    if (fd == -1) {
+        ERROR("Failed to open /dev/urandom");
+        return -1;
+    }
+    for (i = 0; i < len; i++) {
+        int nret;
+        if (read(fd, &num, sizeof(int)) < 0) {
+            ERROR("Failed to read urandom value");
+            close(fd);
+            return -1;
+        }
+        unsigned char rs = (unsigned char)(num % m);
+        nret = snprintf((id + i * 2), ((len - i) * 2 + 1), "%02x", (unsigned int)rs);
+        if (nret < 0 || (size_t)nret >= ((len - i) * 2 + 1)) {
+            ERROR("Failed to snprintf random string");
+            close(fd);
+            return -1;
+        }
+    }
+    close(fd);
+    id[i * 2] = '\0';
+    return 0;
+}
+
+void add_array_elem(char **array, size_t total, size_t *pos, const char *elem)
+{
+    if (*pos + 1 >= total - 1) {
+        return;
+    }
+    array[*pos] = util_strdup_s(elem);
+    *pos += 1;
+}
+
+void add_array_kv(char **array, size_t total, size_t *pos, const char *k, const char *v)
+{
+    if (k == NULL || v == NULL) {
+        return;
+    }
+    add_array_elem(array, total, pos, k);
+    add_array_elem(array, total, pos, v);
+}
 

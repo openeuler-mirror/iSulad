@@ -33,11 +33,16 @@ static const struct rt_ops g_lcr_rt_ops = {
     .rt_restart = rt_lcr_restart,
     .rt_clean_resource = rt_lcr_clean_resource,
     .rt_rm = rt_lcr_rm,
-    .rt_get_console_config = rt_lcr_get_console_config,
     .rt_status = rt_lcr_status,
     .rt_exec = rt_lcr_exec,
     .rt_pause = rt_lcr_pause,
     .rt_resume = rt_lcr_resume,
+    .rt_attach = rt_lcr_attach,
+    .rt_update = rt_lcr_update,
+    .rt_listpids = rt_lcr_listpids,
+    .rt_resources_stats = rt_lcr_resources_stats,
+    .rt_resize = rt_lcr_resize,
+    .rt_exec_resize = rt_lcr_exec_resize,
 };
 
 static const struct rt_ops *g_rt_ops[] = {
@@ -184,38 +189,14 @@ out:
     return ret;
 }
 
-int runtime_get_console_config(const char *name, const char *runtime, const rt_get_console_conf_params_t *params)
-{
-    int ret = 0;
-    const struct rt_ops *ops = NULL;
-
-    if (name == NULL || runtime == NULL) {
-        ERROR("Invalide arguments for runtime get console config");
-        ret = -1;
-        goto out;
-    }
-
-    ops = rt_ops_query(runtime);
-    if (ops == NULL) {
-        ERROR("Failed to get runtime ops");
-        ret = -1;
-        goto out;
-    }
-
-    ret = ops->rt_get_console_config(name, runtime, params);
-
-out:
-    return ret;
-}
-
 int runtime_status(const char *name, const char *runtime, const rt_status_params_t *params,
-                   struct engine_container_info *status)
+                   struct engine_container_status_info *status)
 {
     int ret = 0;
     const struct rt_ops *ops = NULL;
 
     if (name == NULL || runtime == NULL || status == NULL) {
-        ERROR("Invalide arguments for runtime start");
+        ERROR("Invalide arguments for runtime status");
         ret = -1;
         goto out;
     }
@@ -228,6 +209,31 @@ int runtime_status(const char *name, const char *runtime, const rt_status_params
     }
 
     ret = ops->rt_status(name, runtime, params, status);
+
+out:
+    return ret;
+}
+
+int runtime_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
+                            struct engine_container_resources_stats_info *rs_stats)
+{
+    int ret = 0;
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || rs_stats == NULL) {
+        ERROR("Invalide arguments for runtime stats");
+        ret = -1;
+        goto out;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->rt_resources_stats(name, runtime, params, rs_stats);
 
 out:
     return ret;
@@ -301,6 +307,137 @@ int runtime_resume(const char *name, const char *runtime, const rt_resume_params
     }
 
     ret = ops->rt_resume(name, runtime, params);
+
+out:
+    return ret;
+}
+
+int runtime_attach(const char *name, const char *runtime, const rt_attach_params_t *params)
+{
+    int ret = 0;
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalide arguments for runtime attach");
+        ret = -1;
+        goto out;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->rt_attach(name, runtime, params);
+
+out:
+    return ret;
+}
+
+int runtime_update(const char *name, const char *runtime, const rt_update_params_t *params)
+{
+    int ret = 0;
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalide arguments for runtime update");
+        ret = -1;
+        goto out;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->rt_update(name, runtime, params);
+
+out:
+    return ret;
+}
+
+void free_rt_listpids_out_t(rt_listpids_out_t *out)
+{
+    if (out == NULL) {
+        return;
+    }
+
+    free(out->pids);
+    out->pids = NULL;
+    free(out);
+}
+
+int runtime_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out)
+{
+    int ret = 0;
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL || out == NULL) {
+        ERROR("Invalide arguments for runtime listpids");
+        ret = -1;
+        goto out;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->rt_listpids(name, runtime, params, out);
+
+out:
+    return ret;
+}
+
+int runtime_resize(const char *name, const char *runtime, const rt_resize_params_t *params)
+{
+    int ret = 0;
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalide arguments for runtime resize");
+        ret = -1;
+        goto out;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->rt_resize(name, runtime, params);
+
+out:
+    return ret;
+}
+
+int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_resize_params_t *params)
+{
+    int ret = 0;
+    const struct rt_ops *ops = NULL;
+
+    if (name == NULL || runtime == NULL || params == NULL) {
+        ERROR("Invalide arguments for runtime exec resize");
+        ret = -1;
+        goto out;
+    }
+
+    ops = rt_ops_query(runtime);
+    if (ops == NULL) {
+        ERROR("Failed to get runtime ops");
+        ret = -1;
+        goto out;
+    }
+
+    ret = ops->rt_exec_resize(name, runtime, params);
 
 out:
     return ret;
