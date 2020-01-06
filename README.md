@@ -57,7 +57,7 @@ $ sudo lcrc rm test
 ```
 
 ### Build from source
-Build requirements for developers are listed in [build_guide](./doc/build_guide.md)
+Build requirements for developers are listed in [build_guide](./docs/build_guide.md)
 
 ## How to Contribute
 
