@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide monitord definition
  ******************************************************************************/
-#ifndef __LCRD_MONITORD_H
-#define __LCRD_MONITORD_H
+#ifndef __ISULAD_MONITORD_H
+#define __ISULAD_MONITORD_H
 #include <pthread.h>
 #include <semaphore.h>
 #include <limits.h>
@@ -38,7 +38,7 @@ struct monitord_sync_data {
     int *exit_code;
 };
 
-char *lcrd_monitor_fifo_name(const char *rootpath);
+char *isulad_monitor_fifo_name(const char *rootpath);
 
 int connect_monitord(const char *rootpath);
 

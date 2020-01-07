@@ -22,7 +22,7 @@
 #include <ctype.h>
 
 #include "image.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
 #include "utils.h"
 
@@ -165,7 +165,7 @@ static const struct bim_type *bim_query(const char *image_name)
         }
         temp = g_bims[i].ops->resolve_image_name(image_name);
         if (temp == NULL) {
-            lcrd_append_error_message("Failed to resovle image name%s", image_name);
+            isulad_append_error_message("Failed to resovle image name%s", image_name);
             return NULL;
         }
         int r = g_bims[i].ops->detect(temp);
@@ -239,7 +239,7 @@ static struct bim *bim_get(const char *image_type, const char *image_name, const
     if (image_name != NULL) {
         bim->image_name = bim->ops->resolve_image_name(image_name);
         if (bim->image_name == NULL) {
-            lcrd_append_error_message("Failed to resovle image name%s", image_name);
+            isulad_append_error_message("Failed to resovle image name%s", image_name);
             bim_put(bim);
             return NULL;
         }
@@ -640,7 +640,7 @@ char *im_get_image_type(const char *image, const char *external_rootfs)
     bim_type = bim_query(image_name);
     if (bim_type == NULL) {
         ERROR("Failed to query type of image %s", image_name);
-        lcrd_set_error_message("No such image:%s", image_name);
+        isulad_set_error_message("No such image:%s", image_name);
         return NULL;
     }
 
@@ -654,7 +654,7 @@ bool im_config_image_exist(const char *image_name)
     bim_type = bim_query(image_name);
     if (bim_type == NULL) {
         ERROR("Config image %s not exist", image_name);
-        lcrd_set_error_message("Image %s not exist", image_name);
+        isulad_set_error_message("Image %s not exist", image_name);
         return false;
     }
 
@@ -844,8 +844,8 @@ int im_list_images(const im_list_request *ctx, im_list_response **response)
 
     EVENT("Event: {Object: list images, Type: listed}");
 
-    if (g_lcrd_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
     }
 
     return 0;
@@ -885,7 +885,7 @@ static bool check_im_pull_args(const im_pull_request *req, im_pull_response * co
     }
     if (req->image == NULL) {
         ERROR("Empty image required");
-        lcrd_set_error_message("Empty image required");
+        isulad_set_error_message("Empty image required");
         return false;
     }
     return true;
@@ -979,13 +979,13 @@ int im_load_image(const im_load_request *request, im_load_response **response)
 
     if (request->file == NULL) {
         ERROR("Load image requires image tarball file path");
-        lcrd_set_error_message("Load image requires image tarball file path");
+        isulad_set_error_message("Load image requires image tarball file path");
         goto pack_response;
     }
 
     if (request->type == NULL) {
         ERROR("Missing image type");
-        lcrd_set_error_message("Missing image type");
+        isulad_set_error_message("Missing image type");
         goto pack_response;
     }
 
@@ -1011,8 +1011,8 @@ int im_load_image(const im_load_request *request, im_load_response **response)
     EVENT("Event: {Object: %s, Type: loaded}", request->file);
 
 pack_response:
-    if (g_lcrd_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
     }
 
     bim_put(bim);
@@ -1067,19 +1067,19 @@ int im_login(const im_login_request *request, im_login_response **response)
 
     if (request->server == NULL) {
         ERROR("Login requires server address");
-        lcrd_set_error_message("Login requires server address");
+        isulad_set_error_message("Login requires server address");
         goto pack_response;
     }
 
     if (request->type == NULL) {
         ERROR("Login requires image type");
-        lcrd_set_error_message("Login requires image type");
+        isulad_set_error_message("Login requires image type");
         goto pack_response;
     }
 
     if (request->username == NULL || request->password == NULL) {
         ERROR("Missing username or password");
-        lcrd_set_error_message("Missing username or password");
+        isulad_set_error_message("Missing username or password");
         goto pack_response;
     }
 
@@ -1101,8 +1101,8 @@ int im_login(const im_login_request *request, im_login_response **response)
     EVENT("Event: {Object: %s, Type: logined}", request->server);
 
 pack_response:
-    if (g_lcrd_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
     }
 
     bim_put(bim);
@@ -1160,13 +1160,13 @@ int im_logout(const im_logout_request *request, im_logout_response **response)
 
     if (request->server == NULL) {
         ERROR("Logout requires server address");
-        lcrd_set_error_message("Logout requires server address");
+        isulad_set_error_message("Logout requires server address");
         goto pack_response;
     }
 
     if (request->type == NULL) {
         ERROR("Logout requires image type");
-        lcrd_set_error_message("Logout requires image type");
+        isulad_set_error_message("Logout requires image type");
         goto pack_response;
     }
 
@@ -1188,8 +1188,8 @@ int im_logout(const im_logout_request *request, im_logout_response **response)
     EVENT("Event: {Object: %s, Type: logouted}", request->server);
 
 pack_response:
-    if (g_lcrd_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
     }
 
     bim_put(bim);
@@ -1243,7 +1243,7 @@ int im_image_status(im_status_request *request, im_status_response **response)
 
     if (request->image.image == NULL) {
         ERROR("get image status requires image ref");
-        lcrd_set_error_message("get image status requires image ref");
+        isulad_set_error_message("get image status requires image ref");
         goto pack_response;
     }
 
@@ -1252,7 +1252,7 @@ int im_image_status(im_status_request *request, im_status_response **response)
     bim_type = bim_query(image_ref);
     if (bim_type == NULL) {
         ERROR("No such image:%s", image_ref);
-        lcrd_set_error_message("No such image:%s", image_ref);
+        isulad_set_error_message("No such image:%s", image_ref);
         goto pack_response;
     }
 
@@ -1273,9 +1273,9 @@ int im_image_status(im_status_request *request, im_status_response **response)
     }
 
 pack_response:
-    if (g_lcrd_errmsg != NULL) {
+    if (g_isulad_errmsg != NULL) {
         free((*response)->errmsg);
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
     }
     free(image_ref);
     bim_put(bim);
@@ -1302,7 +1302,7 @@ int im_rm_image(const im_remove_request *request, im_remove_response **response)
 
     if (request->image.image == NULL) {
         ERROR("remove image requires image ref");
-        lcrd_set_error_message("remove image requires image ref");
+        isulad_set_error_message("remove image requires image ref");
         goto pack_response;
     }
 
@@ -1313,7 +1313,7 @@ int im_rm_image(const im_remove_request *request, im_remove_response **response)
     bim_type = bim_query(image_ref);
     if (bim_type == NULL) {
         ERROR("No such image:%s", image_ref);
-        lcrd_set_error_message("No such image:%s", image_ref);
+        isulad_set_error_message("No such image:%s", image_ref);
         goto pack_response;
     }
 
@@ -1337,8 +1337,8 @@ int im_rm_image(const im_remove_request *request, im_remove_response **response)
     EVENT("Event: {Object: %s, Type: image removed}", image_ref);
 
 pack_response:
-    if (g_lcrd_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
     }
     free(image_ref);
     bim_put(bim);
@@ -1419,7 +1419,7 @@ int im_inspect_image(const im_inspect_request *request, im_inspect_response **re
 
     if (request->image.image == NULL) {
         ERROR("inspect image requires image ref");
-        lcrd_set_error_message("inspect image requires image ref");
+        isulad_set_error_message("inspect image requires image ref");
         ret = -1;
         goto pack_response;
     }
@@ -1431,7 +1431,7 @@ int im_inspect_image(const im_inspect_request *request, im_inspect_response **re
     bim_type = bim_query(image_ref);
     if (bim_type == NULL) {
         ERROR("No such image:%s", image_ref);
-        lcrd_set_error_message("No such image:%s", image_ref);
+        isulad_set_error_message("No such image:%s", image_ref);
         ret = -1;
         goto pack_response;
     }
@@ -1451,8 +1451,8 @@ int im_inspect_image(const im_inspect_request *request, im_inspect_response **re
     EVENT("Event: {Object: %s, Type: image inspected}", image_ref);
 
 pack_response:
-    if (g_lcrd_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
     }
     if (inspected_json != NULL) {
         (*response)->im_inspect_json = util_strdup_s(inspected_json);

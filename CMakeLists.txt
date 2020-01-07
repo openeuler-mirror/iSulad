@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8)
-project (lcrd)
+project (isulad)
 
 include(cmake/helper.cmake)
 
@@ -17,7 +17,7 @@ execute_process(
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 message("--  commit id: " ${GIT_COMMIT_HASH})
-add_definitions(-DLCRD_GIT_COMMIT="${GIT_COMMIT_HASH}")
+add_definitions(-DISULAD_GIT_COMMIT="${GIT_COMMIT_HASH}")
 
 execute_process(
 	COMMAND sh -c "date --rfc-3339 ns | sed -e 's/ /T/'"
@@ -25,13 +25,13 @@ execute_process(
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 message("-- build time: " ${BUILD_DATE})
-add_definitions(-DLCRD_BUILD_TIME="${BUILD_DATE}")
+add_definitions(-DISULAD_BUILD_TIME="${BUILD_DATE}")
 
-if (NOT LCRD_ROOT_PATH)
-add_definitions(-DLCRD_ROOT_PATH="/var/lib/lcrd")
+if (NOT ISULAD_ROOT_PATH)
+add_definitions(-DISULAD_ROOT_PATH="/var/lib/isulad")
 endif()
-if (NOT LCRD_STATE_PATH)
-add_definitions(-DLCRD_STATE_PATH="/var/run/lcrd")
+if (NOT ISULAD_STATE_PATH)
+add_definitions(-DISULAD_STATE_PATH="/var/run/isulad")
 endif()
 
 if (LIB_INSTALL_DIR)
@@ -52,8 +52,8 @@ configure_file(
 )
 
 configure_file(
-	"${CMAKE_CURRENT_SOURCE_DIR}/lcrd.pc.in"
-	"${CMAKE_BINARY_DIR}/conf/lcrd.pc"
+	"${CMAKE_CURRENT_SOURCE_DIR}/isulad.pc.in"
+	"${CMAKE_BINARY_DIR}/conf/isulad.pc"
 )
 
 # parse .proto files
@@ -85,20 +85,20 @@ IF(ENABLE_LLT)
 ENDIF(ENABLE_LLT)
 
 # install all files
-install(FILES ${CMAKE_BINARY_DIR}/conf/lcrd.pc
+install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc
   DESTINATION ${LIB_INSTALL_DIR_DEFAULT}/pkgconfig PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
-install(FILES src/liblcrc.h
-	DESTINATION include/lcrd)
-install(FILES src/connect/client/lcrc_connect.h
-	DESTINATION include/lcrd)
+install(FILES src/libisula.h
+	DESTINATION include/isulad)
+install(FILES src/connect/client/isula_connect.h
+	DESTINATION include/isulad)
 install(FILES src/container_def.h
-	DESTINATION include/lcrd)
+	DESTINATION include/isulad)
 install(FILES src/types_def.h
-	DESTINATION include/lcrd)
+	DESTINATION include/isulad)
 install(FILES src/error.h
-	DESTINATION include/lcrd)
+	DESTINATION include/isulad)
 install(FILES src/engines/engine.h
-	DESTINATION include/lcrd)
+	DESTINATION include/isulad)
 
 # install config files
 set(conf_prefix "/etc")
@@ -108,12 +108,12 @@ endif()
 install(FILES src/contrib/config/daemon.json
     DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/config/config.json src/contrib/config/systemcontainer_config.json
-    DESTINATION ${conf_prefix}/default/lcrd PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
+    DESTINATION ${conf_prefix}/default/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/config/seccomp_default.json
     DESTINATION ${conf_prefix}/isulad PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/config/hooks/default.json
-    DESTINATION ${conf_prefix}/default/lcrd/hooks PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
+    DESTINATION ${conf_prefix}/default/isulad/hooks PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
 install(FILES src/contrib/sysmonitor/isulad-check.sh
-    DESTINATION ${conf_prefix}/default/lcrd PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+    DESTINATION ${conf_prefix}/default/isulad PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES src/contrib/sysmonitor/isulad-monit
     DESTINATION ${conf_prefix}/sysmonitor/process PERMISSIONS OWNER_READ OWNER_WRITE)

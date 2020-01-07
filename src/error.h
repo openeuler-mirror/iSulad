@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container error definition
  ******************************************************************************/
-#ifndef __LCRD_ERROR_H_
-#define __LCRD_ERROR_H_
+#ifndef __ISULAD_ERROR_H_
+#define __ISULAD_ERROR_H_
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -26,7 +26,7 @@ extern "C" {
 #define DEF_SUCCESS_STR "Success"
 #define DEF_ERR_RUNTIME_STR "Runtime error"
 
-#define LCRD_ERRNO_MAP(XX)                                                                   \
+#define ISULAD_ERRNO_MAP(XX)                                                                   \
     XX(SUCCESS, DEF_SUCCESS_STR)                                                             \
     \
     /* err in posix api call */                                                              \
@@ -46,11 +46,11 @@ extern "C" {
     /* err max */                                                                            \
     XX(ERR_UNKNOWN, "Unknown error")
 
-#define LCRD_ERRNO_GEN(n, s) LCRD_##n,
-typedef enum { LCRD_ERRNO_MAP(LCRD_ERRNO_GEN) } lcrd_errno_t;
-#undef LCRD_ERRNO_GEN
+#define ISULAD_ERRNO_GEN(n, s) ISULAD_##n,
+typedef enum { ISULAD_ERRNO_MAP(ISULAD_ERRNO_GEN) } isulad_errno_t;
+#undef ISULAD_ERRNO_GEN
 
-const char *errno_to_error_message(lcrd_errno_t err);
+const char *errno_to_error_message(isulad_errno_t err);
 
 static inline void format_errorf(char **err, const char *format, ...)
 {

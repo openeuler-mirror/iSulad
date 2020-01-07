@@ -15,13 +15,13 @@
 #ifndef __REST_CLIENT_H
 #define __REST_CLIENT_H
 
-#include "lcrc_connect.h"
+#include "isula_connect.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int rest_ops_init(lcrc_connect_ops *ops);
+int rest_ops_init(isula_connect_ops *ops);
 
 #ifdef __cplusplus
 }

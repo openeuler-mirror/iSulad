@@ -17,43 +17,43 @@ yum install -y iSulad
 ### Run
 We provide `systemd` service to start `iSulad`
 ```sh
-systemd start lcrd # run the server with systemd command
+systemd start isulad # run the server with systemd command
 ```
 
 You can use direct command to start `iSulad` server：
 ```sh
-$ sudo lcrd  # run the server with default socket name and default log level and images manage function
+$ sudo isulad  # run the server with default socket name and default log level and images manage function
 ```
 ### Operations on containers:
-`iSulad` provides command line `lcrc` to talk with server.
+`iSulad` provides command line `isulad` to talk with server.
 Here are some sample commands to manager containers.
 
 List all containers in your own environment:
 ```sh
 # list containers
-$ sudo lcrc ps -a   
+$ sudo isula ps -a
 ```
 
 Create a container with busybox named `test`
 ```sh
-# create a container 'test' with image busybox       
-$ sudo lcrc create -t -n test busybox  
+# create a container 'test' with image busybox
+$ sudo isula create -t -n test busybox
 ```
 
 Start this container `test`
 ```sh
-# start the container 'test'          
-$ sudo lcrc start test                
+# start the container 'test'
+$ sudo isula start test
 ```
 Kill the container `test`
 ```sh
-# kill the container 'test'   
-$ sudo lcrc kill test  
+# kill the container 'test'
+$ sudo isula kill test
 ```
 Remove the container `test`
 ```sh
-# remove the container 'test'     
-$ sudo lcrc rm test                        
+# remove the container 'test'
+$ sudo isula rm test
 ```
 
 ### Build from source

@@ -12,8 +12,8 @@
  * Create: 2018-11-1
  * Description: provide health check definition
  *********************************************************************************/
-#ifndef __LCRD_HEALTH_CHECK_H_
-#define __LCRD_HEALTH_CHECK_H_
+#ifndef __ISULAD_HEALTH_CHECK_H_
+#define __ISULAD_HEALTH_CHECK_H_
 
 #include "types_def.h"
 #include "container_config_v2.h"
@@ -64,6 +64,6 @@ int64_t timeout_with_default(int64_t configured_value, int64_t default_value);
 }
 #endif
 
-#endif /* __LCRD_HEALTH_CHECK_H_ */
+#endif /* __ISULAD_HEALTH_CHECK_H_ */
 
 

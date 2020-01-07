@@ -16,11 +16,11 @@
 #set -x
 LWC_PATH=/usr
 DEFAULT_ROOTFS_PATH=/dev/ram0
-LCRC_COMMON_OPTION=
+ISULA_COMMON_OPTION=
 SOCKET_PATH=unix:///var/run/docker.sock
 SPACE_REPLACE_MAGIC="[#)"
 export IMAGE_NONE_PATH=$DEFAULT_ROOTFS_PATH
-info_lcrc_command_help()
+info_isula_command_help()
 {
 	echo "See 'docker $1 --help'." 1>&2
 }
@@ -28,13 +28,13 @@ info_lcrc_command_help()
 error_invalid_flag()
 {
     echo "flag provided but not defined: $2" 1>&2
-    info_lcrc_command_help $1
+    info_isula_command_help $1
 }
 
 INFO_DOCKER_COMMAND_NO_ARGUMENT()
 {
 	echo "\"docker $1\" requires at least 1 argument(s)." 1>&2
-	info_lcrc_command_help $1
+	info_isula_command_help $1
 }
 
 LOG_ERROR()
@@ -57,7 +57,7 @@ Options:
       --device=[]                  Add a host device to the container
   -e, --env=[]                     Set environment variables
       --entrypoint                 Entrypoint to run when starting the container
-      --external-rootfs=PATH       Specify the custom rootfs that is not managed by LCRD for the container, directory or block device
+      --external-rootfs=PATH       Specify the custom rootfs that is not managed by isulad for the container, directory or block device
       --help                       Print usage
       --hook-spec                  File containing hook definition(prestart, poststart, poststop)
   -h, --hostname                   Container host name
@@ -90,7 +90,7 @@ command_run()
 	    exit 0
 	fi
     done
-    exec $LWC_PATH/bin/lcrc run $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula run $ISULA_COMMON_OPTION "$@"
 }
 
 STOP_USAGE="
@@ -119,7 +119,7 @@ command_stop()
         fi
     done
 
-    exec $LWC_PATH/bin/lcrc stop $LCRC_COMMON_OPTION  "$@"
+    exec $LWC_PATH/bin/isula stop $ISULA_COMMON_OPTION  "$@"
 }
 
 KILL_USAGE="
@@ -145,7 +145,7 @@ command_kill()
             exit 0
         fi
     done
-    exec $LWC_PATH/bin/lcrc kill $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula kill $ISULA_COMMON_OPTION "$@"
 }
 
 PS_USAGE="
@@ -169,10 +169,10 @@ command_ps()
         fi
     done
     RET=0
-    $LWC_PATH/bin/lcrc ps $LCRC_COMMON_OPTION "$@"
+    $LWC_PATH/bin/isula ps $ISULA_COMMON_OPTION "$@"
     let "RET=$?"
     if [ $RET == 1  -o  $RET == 125 ]; then
-        info_lcrc_command_help ps
+        info_isula_command_help ps
     fi
     exit $RET
 }
@@ -210,7 +210,7 @@ command_pull()
 
 command_version()
 {
-    exec $LWC_PATH/bin/lcrc version $LCRC_COMMON_OPTION
+    exec $LWC_PATH/bin/isula version $ISULA_COMMON_OPTION
 }
 
 INSPECT_USAGE="
@@ -256,9 +256,9 @@ command_inspect()
     fi
 
     if [ -z "$FORMAT" ] ; then
-        exec $LWC_PATH/bin/lcrc inspect $LCRC_COMMON_OPTION $LCRC_INSPECT_OPTION "$@"
+        exec $LWC_PATH/bin/isula inspect $ISULA_COMMON_OPTION $ISULA_INSPECT_OPTION "$@"
     else
-        exec $LWC_PATH/bin/lcrc inspect $LCRC_COMMON_OPTION $LCRC_INSPECT_OPTION -f "$FORMAT" "$@"
+        exec $LWC_PATH/bin/isula inspect $ISULA_COMMON_OPTION $ISULA_INSPECT_OPTION -f "$FORMAT" "$@"
     fi
 }
 
@@ -286,7 +286,7 @@ command_exec()
         fi
     done
 
-    exec $LWC_PATH/bin/lcrc exec $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula exec $ISULA_COMMON_OPTION "$@"
 }
 
 RM_USAGE="
@@ -313,7 +313,7 @@ command_rm()
             exit 0
         fi
     done
-    exec $LWC_PATH/bin/lcrc rm $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula rm $ISULA_COMMON_OPTION "$@"
 }
 
 RMI_USAGE="
@@ -339,7 +339,7 @@ command_rmi()
             exit 0
         fi
     done
-    exec $LWC_PATH/bin/lcrc rmi $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula rmi $ISULA_COMMON_OPTION "$@"
 }
 
 LOAD_USAGE="
@@ -362,7 +362,7 @@ command_load()
             exit 0
         fi
     done
-    exec $LWC_PATH/bin/lcrc load $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula load $ISULA_COMMON_OPTION "$@"
 }
 
 IMAGES_USAGE="
@@ -384,7 +384,7 @@ command_images()
             exit 0
         fi
     done
-    exec $LWC_PATH/bin/lcrc images $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula images $ISULA_COMMON_OPTION "$@"
 }
 
 RESTART_USAGE="
@@ -410,7 +410,7 @@ command_restart()
             exit 0
         fi
     done
-    exec $LWC_PATH/bin/lcrc restart $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula restart $ISULA_COMMON_OPTION "$@"
 }
 
 WAIT_USAGE="
@@ -435,7 +435,7 @@ command_wait()
             exit 0
         fi
     done
-    exec $LWC_PATH/bin/lcrc wait $LCRC_COMMON_OPTION "$@"
+    exec $LWC_PATH/bin/isula wait $ISULA_COMMON_OPTION "$@"
 }
 
 LOGS_USAGE="
@@ -465,10 +465,10 @@ command_logs()
     done
 
     RET=0
-    $LWC_PATH/bin/lcrc logs $LCRC_COMMON_OPTION  "$@"
+    $LWC_PATH/bin/isula logs $ISULA_COMMON_OPTION  "$@"
     let "RET=$?"
     if [ $RET == 1 ]; then
-        info_lcrc_command_help logs
+        info_isula_command_help logs
     fi
     exit $RET
 }
@@ -567,6 +567,6 @@ while true ; do
     esac
 done
 
-LCRC_COMMON_OPTION="$LCRC_COMMON_OPTION -H $SOCKET_PATH"
+ISULA_COMMON_OPTION="$ISULA_COMMON_OPTION -H $SOCKET_PATH"
 
 command_docker "$@";

@@ -19,7 +19,7 @@
 #include "error.h"
 #include "log.h"
 #include "lim.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "mediatype.h"
 #include "snapshot.h"
 #include "snapshot_def.h"
@@ -165,7 +165,7 @@ static bool validate_layer_path_in_container(size_t layer_index, char *path)
     if (layer_index == 0) {
         if (path != NULL && path[0] != 0) {
             ERROR("first layer's path in container must be empty, got %s", path);
-            lcrd_try_set_error_message("Invalid content in manifest: first layer path in container must be empty");
+            isulad_try_set_error_message("Invalid content in manifest: first layer path in container must be empty");
             return false;
         }
         return true;
@@ -174,8 +174,8 @@ static bool validate_layer_path_in_container(size_t layer_index, char *path)
     if (!valid_absolute_path(path)) {
         ERROR("path in container %s should be absolute path, layer %llu", path,
               (unsigned long long)layer_index);
-        lcrd_try_set_error_message("Invalid content in manifest:"
-                                   " layer path in container(except first layer) must be absolute path");
+        isulad_try_set_error_message("Invalid content in manifest:"
+                                     " layer path in container(except first layer) must be absolute path");
         return false;
     }
     return true;
@@ -188,7 +188,7 @@ static bool validate_layer_path_in_host_real(size_t layer_index,
     if (!util_file_exists(real_path)) {
         ERROR("file not exist, path in host %s, real path is %s",
               path_in_host, real_path);
-        lcrd_try_set_error_message("Invalid content in manifest: layer not exists");
+        isulad_try_set_error_message("Invalid content in manifest: layer not exists");
         return false;
     }
 
@@ -196,11 +196,11 @@ static bool validate_layer_path_in_host_real(size_t layer_index,
         ERROR("invalid path in host %s, real path is %s, layer %u",
               path_in_host, real_path, layer_index);
         if (fmod == (uint32_t)S_IFREG) {
-            lcrd_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a regular file");
+            isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a regular file");
         } else if ((int)fmod == S_IFDIR) {
-            lcrd_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a directory");
+            isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a directory");
         } else if ((int)fmod == S_IFBLK) {
-            lcrd_try_set_error_message("Invalid content in manifest: layer is not block device");
+            isulad_try_set_error_message("Invalid content in manifest: layer is not block device");
         }
         return false;
     }
@@ -217,14 +217,14 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
         if (!valid_absolute_path(path_in_host)) {
             ERROR("path in host %s not a absolute path, layer %u", path_in_host,
                   layer_index);
-            lcrd_try_set_error_message("Invalid content in manifest: first layer path in host must be absolute path");
+            isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be absolute path");
             return false;
         }
 
         if ((int)fmod == S_IFDIR && strcmp(path_in_host, "/") != 0) {
             ERROR("expected / as root, got %s, layer %u", path_in_host,
                   layer_index);
-            lcrd_try_set_error_message("Invalid content in manifest: first layer path in host must be /");
+            isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be /");
             return false;
         }
         abs_path = util_strdup_s(path_in_host);
@@ -235,15 +235,15 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
         int sret = 0;
         if (!valid_relative_path(path_in_host)) {
             ERROR("path in host %s not a relative path, layer %u", path_in_host, layer_index);
-            lcrd_try_set_error_message("Invalid content in manifest:"
-                                       " layer path in host(except first layer) must be relative path");
+            isulad_try_set_error_message("Invalid content in manifest:"
+                                         " layer path in host(except first layer) must be relative path");
             return false;
         }
         abs_path = util_add_path(location, path_in_host);
         sret = snprintf(parent_location, sizeof(parent_location), "%s/..", location);
         if (sret < 0 || (size_t)sret >= sizeof(parent_location)) {
             ERROR("Failed to sprintf parent_location");
-            lcrd_try_set_error_message("Failed to sprintf parent_location");
+            isulad_try_set_error_message("Failed to sprintf parent_location");
             UTIL_FREE_AND_SET_NULL(abs_path);
             UTIL_FREE_AND_SET_NULL(tmp_path);
             return false;
@@ -251,7 +251,7 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
         tmp_path = follow_symlink_in_scope(abs_path, parent_location);
         if (tmp_path == NULL || !strncmp(tmp_path, "..", 2)) {
             ERROR("invalid layer path %s", path_in_host);
-            lcrd_try_set_error_message("Invalid content in manifest: layer not exists");
+            isulad_try_set_error_message("Invalid content in manifest: layer not exists");
             UTIL_FREE_AND_SET_NULL(abs_path);
             UTIL_FREE_AND_SET_NULL(tmp_path);
             return false;
@@ -261,7 +261,7 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
 
     if (strlen(abs_path) > PATH_MAX || realpath(abs_path, real_path) == NULL) {
         ERROR("invalid layer path %s", abs_path);
-        lcrd_try_set_error_message("Invalid content in manifest: layer not exists");
+        isulad_try_set_error_message("Invalid content in manifest: layer not exists");
         UTIL_FREE_AND_SET_NULL(abs_path);
         return false;
     }
@@ -285,8 +285,8 @@ static bool validate_layer_media_type(size_t layer_index, char *media_type,
         }
     }
 
-    lcrd_try_set_error_message("Invalid content in manifest: layer's media type must be"
-                               " application/squashfs.image.rootfs.diff.img or application/bind.image.rootfs.diff.dir");
+    isulad_try_set_error_message("Invalid content in manifest: layer's media type must be"
+                                 " application/squashfs.image.rootfs.diff.img or application/bind.image.rootfs.diff.dir");
     ERROR("invalid layer media type %s", media_type);
     return false;
 }
@@ -305,7 +305,7 @@ static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
 
     // first layer's digest must be empty
     if (layer_index == 0) {
-        lcrd_try_set_error_message("Invalid content in manifest: first layer's digest must be empty");
+        isulad_try_set_error_message("Invalid content in manifest: first layer's digest must be empty");
         ERROR("first layer's digest must be empty, got %s", digest);
     }
 
@@ -313,21 +313,21 @@ static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
     if ((int)fmod == S_IFDIR) {
         ERROR("Invalid digest %s, digest must be empty if media type is %s", digest,
               MediaTypeEmbeddedLayerDir);
-        lcrd_try_set_error_message("Invalid content in mainfest: layer digest must be empty if mediaType is %s",
-                                   MediaTypeEmbeddedLayerDir);
+        isulad_try_set_error_message("Invalid content in mainfest: layer digest must be empty if mediaType is %s",
+                                     MediaTypeEmbeddedLayerDir);
         return false;
     }
 
     /* check if digest format is valid */
     if (!util_valid_digest(digest)) {
         ERROR("invalid digest %s for layer", digest);
-        lcrd_try_set_error_message("Invalid content in mainfest: layer(except first layer) has invalid digest");
+        isulad_try_set_error_message("Invalid content in mainfest: layer(except first layer) has invalid digest");
         return false;
     }
 
     /* calc and check digest */
     if (!util_valid_digest_file(path, digest)) {
-        lcrd_try_set_error_message("Invalid content in mainfest: layer(except first layer) has invalid digest");
+        isulad_try_set_error_message("Invalid content in mainfest: layer(except first layer) has invalid digest");
         return false;
     }
 
@@ -367,7 +367,7 @@ static bool validate_layer_size(size_t layer_index,
 
     if (layer->size < 0) {
         ERROR("invalid layer size %lld, layer %llu", (long long)layer->size, (unsigned long long)layer_index);
-        lcrd_try_set_error_message("Invalid content in manifest: layer's size must not be negative number");
+        isulad_try_set_error_message("Invalid content in manifest: layer's size must not be negative number");
         return false;
     }
     return true;
@@ -378,14 +378,14 @@ static bool validate_create_time(char *created)
 {
     if (!util_valid_time_tz(created)) {
         ERROR("invalid created time %s, invalid format", created);
-        lcrd_try_set_error_message("Invalid content in manifest: invalid created time");
+        isulad_try_set_error_message("Invalid content in manifest: invalid created time");
         return false;
     }
 
     /* ensure time can be processed by us */
     if (time_tz_to_seconds_nanos(created, NULL, NULL)) {
         ERROR("invalid created time %s, invalid time value", created);
-        lcrd_try_set_error_message("Invalid content in manifest: invalid created time");
+        isulad_try_set_error_message("Invalid content in manifest: invalid created time");
         return false;
     }
     return true;
@@ -396,20 +396,20 @@ static bool validate_image_name(char *image_name)
 {
     if (image_name == NULL) {
         ERROR("image name not exist");
-        lcrd_try_set_error_message("Invalid content in manfiest: image name not exist");
+        isulad_try_set_error_message("Invalid content in manfiest: image name not exist");
         return false;
     }
 
     if (strcmp(image_name, "none") == 0 ||
         strcmp(image_name, "none:latest") == 0) {
         ERROR("image name %s must not be none or none:latest", image_name);
-        lcrd_try_set_error_message("Image name 'none' or 'none:latest' in manifest is reserved, please use other name");
+        isulad_try_set_error_message("Image name 'none' or 'none:latest' in manifest is reserved, please use other name");
         return false;
     }
 
     if (!util_valid_embedded_image_name(image_name)) {
         ERROR("invalid image name %s", image_name);
-        lcrd_try_set_error_message("Invalid content in manfiest: invalid image name");
+        isulad_try_set_error_message("Invalid content in manfiest: invalid image name");
         return false;
     }
     return true;
@@ -420,7 +420,7 @@ static bool validate_image_layers_number(size_t layers_len)
 {
     if (layers_len > LAYER_NUM_MAX || layers_len < 1) {
         ERROR("invalid layers number %d maxium is %d", layers_len, LAYER_NUM_MAX);
-        lcrd_try_set_error_message("Invalid content in mainfest: layer empty or max depth exceeded");
+        isulad_try_set_error_message("Invalid content in mainfest: layer empty or max depth exceeded");
         return false;
     }
     return true;
@@ -442,14 +442,14 @@ static bool valid_embedded_manifest(embedded_manifest *manifest, const char *pat
 
     if (manifest->schema_version != 1) {
         ERROR("invalid schema version %u", manifest->schema_version);
-        lcrd_try_set_error_message("Invalid content in manifest: schema version must be 1");
+        isulad_try_set_error_message("Invalid content in manifest: schema version must be 1");
         return false;
     }
 
     if (manifest->media_type == NULL || strcmp(manifest->media_type, MediaTypeEmbeddedImageManifest) != 0) {
         ERROR("invalid manifest media type %s", manifest->media_type);
-        lcrd_try_set_error_message("Invalid content in manifest:"
-                                   " manifest's media type must be application/embedded.manifest+json");
+        isulad_try_set_error_message("Invalid content in manifest:"
+                                     " manifest's media type must be application/embedded.manifest+json");
         return false;
     }
 
@@ -499,20 +499,20 @@ static bool valid_manifest_and_get_size(embedded_manifest *manifest, const char 
         }
         if (strlen(abs_path) > PATH_MAX || !realpath(abs_path, real_path)) {
             ERROR("invalid file path %s", abs_path);
-            lcrd_try_set_error_message("Invalid content in manifest: layer not exists");
+            isulad_try_set_error_message("Invalid content in manifest: layer not exists");
             goto out;
         }
         UTIL_FREE_AND_SET_NULL(abs_path);
 
         size = util_file_size(real_path);
         if (size < 0) {
-            lcrd_try_set_error_message("Calculate layer size failed");
+            isulad_try_set_error_message("Calculate layer size failed");
             goto out;
         }
 
         if (INT64_MAX - size < *image_size) {
             ERROR("The layer size is too large!");
-            lcrd_try_set_error_message("The layer size is too large!");
+            isulad_try_set_error_message("The layer size is too large!");
             goto out;
         }
         *image_size += size;
@@ -541,7 +541,7 @@ int lim_add_manifest(struct image_creator *ic, char *path, char *digest, bool mv
     }
     if (strcmp(ic->type, IMAGE_TYPE_EMBEDDED) != 0) {
         ERROR("invalid image type %s", ic->type);
-        lcrd_try_set_error_message("Invalid image type: image type must be embedded");
+        isulad_try_set_error_message("Invalid image type: image type must be embedded");
         return EINVALIDARGS;
     }
 
@@ -549,7 +549,7 @@ int lim_add_manifest(struct image_creator *ic, char *path, char *digest, bool mv
     manifest_digest = util_full_file_digest(path);
     if (manifest_digest == NULL) {
         ERROR("calc full digest of %s failed", path);
-        lcrd_try_set_error_message("Invalid manifest: invalid digest");
+        isulad_try_set_error_message("Invalid manifest: invalid digest");
         return -1;
     }
 
@@ -557,7 +557,7 @@ int lim_add_manifest(struct image_creator *ic, char *path, char *digest, bool mv
         if (strcmp(manifest_digest, digest) != 0) {
             ERROR("file %s digest %s not match %s", path, manifest_digest, digest);
             ret = EINVALIDARGS;
-            lcrd_try_set_error_message("Invalid manifest: invalid digest");
+            isulad_try_set_error_message("Invalid manifest: invalid digest");
             goto out;
         }
     }
@@ -566,7 +566,7 @@ int lim_add_manifest(struct image_creator *ic, char *path, char *digest, bool mv
     if (manifest == NULL) {
         ERROR("parse embedded manifest file %s failed", path);
         ret = EINVALIDARGS;
-        lcrd_try_set_error_message("Invalid content in manifest: parse manifest as a json file failed");
+        isulad_try_set_error_message("Invalid content in manifest: parse manifest as a json file failed");
         goto out;
     }
 
@@ -600,7 +600,7 @@ int lim_add_manifest(struct image_creator *ic, char *path, char *digest, bool mv
     if (ret != 0) {
         ERROR("Failed to save the image to DB, ret is %d", ret);
         if (ret == DB_NAME_CONFLICT) {
-            lcrd_try_set_error_message("Image name is conflicted in the database");
+            isulad_try_set_error_message("Image name is conflicted in the database");
             ret = ENAMECONFLICT;
         } else {
             ret = -1;
@@ -669,7 +669,7 @@ int lim_delete_image(char *name, bool force)
     ret = db_read_image(name, &imginfo);
     if (ret != 0) {
         ERROR("can't find image %s in database", name);
-        lcrd_try_set_error_message("No such image:%s", name);
+        isulad_try_set_error_message("No such image:%s", name);
         ret = EIMAGENOTFOUND;
         goto out;
     }
@@ -686,12 +686,12 @@ int lim_delete_image(char *name, bool force)
         goto out;
     } else if (ret == DB_INUSE) {
         ERROR("image %s is in use", name);
-        lcrd_try_set_error_message("Image is in use");
+        isulad_try_set_error_message("Image is in use");
         ret = EIMAGEBUSY;
         goto out;
     } else if (ret == DB_NOT_EXIST) {
         ERROR("image %s not exist", name);
-        lcrd_try_set_error_message("No such image:%s", name);
+        isulad_try_set_error_message("No such image:%s", name);
 
         ret = EIMAGENOTFOUND;
         goto out;
@@ -745,7 +745,7 @@ int lim_create_rw_layer(char *name, const char *id, char **options,
     ret = db_read_image(name, &imginfo);
     if (ret != 0) {
         ERROR("can't find image %s in database", name);
-        lcrd_try_set_error_message("No such image:%s", name);
+        isulad_try_set_error_message("No such image:%s", name);
         ret = EIMAGENOTFOUND;
         goto out;
     }
@@ -796,7 +796,7 @@ int lim_query_image_data(const char *name, const char *type,
     if (ret != 0 || imginfo == NULL) {
         ERROR("can't find image %s in database", name);
         ret = -1;
-        lcrd_try_set_error_message("No such image:%s", name);
+        isulad_try_set_error_message("No such image:%s", name);
         goto out;
     }
 

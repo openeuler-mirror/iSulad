@@ -110,7 +110,7 @@ private:
     int response_to_grpc(const T1 *response, T2 *gresponse)
     {
         if (response == nullptr) {
-            gresponse->set_cc(LCRD_ERR_MEMOUT);
+            gresponse->set_cc(ISULAD_ERR_MEMOUT);
             return 0;
         }
         gresponse->set_cc(response->cc);
@@ -165,15 +165,15 @@ private:
     int resume_request_from_grpc(const ResumeRequest *grequest, container_resume_request **request);
 
     int container_rename_request_from_grpc(const RenameRequest *grequest,
-                                           struct lcrd_container_rename_request **request);
+                                           struct isulad_container_rename_request **request);
 
-    int container_rename_response_to_grpc(const struct lcrd_container_rename_response *response,
+    int container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
                                           RenameResponse *gresponse);
 
     int container_resize_request_from_grpc(const ResizeRequest *grequest,
-                                           struct lcrd_container_resize_request **request);
+                                           struct isulad_container_resize_request **request);
 
-    int container_resize_response_to_grpc(const struct lcrd_container_resize_response *response,
+    int container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
                                           ResizeResponse *gresponse);
 
     int update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request);
@@ -188,10 +188,10 @@ private:
 
     int wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
 
-    int events_request_from_grpc(const EventsRequest *grequest, struct lcrd_events_request **request);
+    int events_request_from_grpc(const EventsRequest *grequest, struct isulad_events_request **request);
 
     int copy_from_container_request_from_grpc(const CopyFromContainerRequest *grequest,
-                                              struct lcrd_copy_from_container_request **request);
+                                              struct isulad_copy_from_container_request **request);
 
     int remote_exec_request_from_stream(ServerContext *context,
                                         container_exec_request **request, std::string &errmsg);
@@ -218,7 +218,7 @@ private:
 
     int pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
-    int logs_request_from_grpc(const LogsRequest *grequest, struct lcrd_logs_request **request);
+    int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
 };
 
 #endif /* _GRPC_CONTAINER_SERVICE_H_ */

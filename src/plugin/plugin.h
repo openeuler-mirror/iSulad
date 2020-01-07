@@ -81,12 +81,12 @@ typedef struct plugin_manager {
 plugin_manager_t *g_plugin_manager;
 
 /*
- * init at lcrd start, scan and init/sync all plugins
+ * init at isulad start, scan and init/sync all plugins
  */
 int pm_init(void);
 int pm_scan(void);
 /*
- * destroy at lcrd exit
+ * destroy at isulad exit
  */
 int pm_destroy();
 /*

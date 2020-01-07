@@ -18,7 +18,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "linked_list.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "monitord.h"
 
 struct context_lists {
@@ -36,11 +36,11 @@ int add_monitor_client(char *name, const types_timestamp_t *since, const types_t
 int events_subscribe(const char *name, const types_timestamp_t *since, const types_timestamp_t *until,
                      const stream_func_wrapper *stream);
 
-struct lcrd_events_format *dup_event(const struct lcrd_events_format *event);
+struct isulad_events_format *dup_event(const struct isulad_events_format *event);
 
-void free_event(struct lcrd_events_format *event);
+void free_event(struct isulad_events_format *event);
 
-int lcrd_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code);
+int isulad_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code);
 
 #endif /* __COLLECTOR_H */
 

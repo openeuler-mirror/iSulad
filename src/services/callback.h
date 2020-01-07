@@ -15,7 +15,7 @@
 #ifndef __SERVICE_CALLBACK_H_
 #define __SERVICE_CALLBACK_H_
 
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "console.h"
 #include "container_get_id_request.h"
 #include "container_get_id_response.h"
@@ -78,9 +78,9 @@ extern "C" {
 
 typedef struct {
     int(*subscribe)(char *name, types_timestamp_t *since,
-                    types_timestamp_t *until, struct lcrd_events_format ***events);
+                    types_timestamp_t *until, struct isulad_events_format ***events);
 
-    int(*wait)(struct lcrd_events_request *request, stream_func_wrapper *stream);
+    int(*wait)(struct isulad_events_request *request, stream_func_wrapper *stream);
 } service_container_events_callback_t;
 
 typedef struct {
@@ -125,21 +125,21 @@ typedef struct {
 
     int(*wait)(const container_wait_request *request, container_wait_response **response);
 
-    int(*events)(const struct lcrd_events_request *request, const stream_func_wrapper *stream);
+    int(*events)(const struct isulad_events_request *request, const stream_func_wrapper *stream);
 
     int(*export_rootfs)(const container_export_request *request, container_export_response **response);
 
-    int(*copy_from_container)(const struct lcrd_copy_from_container_request *request, const stream_func_wrapper *stream,
+    int(*copy_from_container)(const struct isulad_copy_from_container_request *request, const stream_func_wrapper *stream,
                               char **err);
 
     int(*copy_to_container)(const container_copy_to_request *request, stream_func_wrapper *stream, char **err);
 
-    int(*rename)(const struct lcrd_container_rename_request *request, struct lcrd_container_rename_response **response);
+    int(*rename)(const struct isulad_container_rename_request *request, struct isulad_container_rename_response **response);
 
-    int(*logs)(const struct lcrd_logs_request *request,
-               stream_func_wrapper *stream, struct lcrd_logs_response **response);
+    int(*logs)(const struct isulad_logs_request *request,
+               stream_func_wrapper *stream, struct isulad_logs_response **response);
 
-    int(*resize)(const struct lcrd_container_resize_request *request, struct lcrd_container_resize_response **response);
+    int(*resize)(const struct isulad_container_resize_request *request, struct isulad_container_resize_response **response);
 } service_container_callback_t;
 
 typedef struct {
@@ -157,7 +157,7 @@ typedef struct {
 } service_image_callback_t;
 
 typedef struct {
-    int(*check)(const struct lcrd_health_check_request *request, struct lcrd_health_check_response *response);
+    int(*check)(const struct isulad_health_check_request *request, struct isulad_health_check_response *response);
 } service_health_callback_t;
 
 typedef struct {

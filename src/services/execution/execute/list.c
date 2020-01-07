@@ -294,16 +294,16 @@ char *container_get_health_state(const container_config_v2_state *cont_state)
     return util_strdup_s(cont_state->health->status);
 }
 
-static int replace_labels(container_container *lcrdinfo, json_map_string_string *labels, const map_t *map_labels)
+static int replace_labels(container_container *isuladinfo, json_map_string_string *labels, const map_t *map_labels)
 {
-    lcrdinfo->labels = util_common_calloc_s(sizeof(json_map_string_string));
+    isuladinfo->labels = util_common_calloc_s(sizeof(json_map_string_string));
 
-    if (lcrdinfo->labels == NULL) {
+    if (isuladinfo->labels == NULL) {
         ERROR("Out of memory");
         return -1;
     }
 
-    if (dup_json_map_string_string(labels, lcrdinfo->labels) != 0) {
+    if (dup_json_map_string_string(labels, isuladinfo->labels) != 0) {
         ERROR("Failed to dup labels");
         return -1;
     }
@@ -318,18 +318,18 @@ static int replace_labels(container_container *lcrdinfo, json_map_string_string 
 }
 
 static int replace_annotations(const container_config_v2_common_config *common_config,
-                               container_container *lcrdinfo)
+                               container_container *isuladinfo)
 {
     if (common_config->config->annotations != NULL &&
         common_config->config->annotations->len != 0) {
-        lcrdinfo->annotations = util_common_calloc_s(sizeof(json_map_string_string));
-        if (lcrdinfo->annotations == NULL) {
+        isuladinfo->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+        if (isuladinfo->annotations == NULL) {
             ERROR("Out of memory");
             return -1;
         }
 
         if (dup_json_map_string_string(common_config->config->annotations,
-                                       lcrdinfo->annotations) != 0) {
+                                       isuladinfo->annotations) != 0) {
             ERROR("Failed to dup annotations");
             return -1;
         }
@@ -337,24 +337,24 @@ static int replace_annotations(const container_config_v2_common_config *common_c
     return 0;
 }
 
-static void dup_id_name(const container_config_v2_common_config *common_config, container_container *lcrdinfo)
+static void dup_id_name(const container_config_v2_common_config *common_config, container_container *isuladinfo)
 {
     if (common_config->id != NULL) {
-        lcrdinfo->id = util_strdup_s(common_config->id);
+        isuladinfo->id = util_strdup_s(common_config->id);
     }
 
     if (common_config->name != NULL) {
-        lcrdinfo->name = util_strdup_s(common_config->name);
+        isuladinfo->name = util_strdup_s(common_config->name);
     }
 }
 
 static int convert_common_config_info(const map_t *map_labels, const container_config_v2_common_config *common_config,
-                                      container_container *lcrdinfo)
+                                      container_container *isuladinfo)
 {
     int ret = 0;
     bool args_err = false;
 
-    if (map_labels == NULL || common_config == NULL || lcrdinfo == NULL) {
+    if (map_labels == NULL || common_config == NULL || isuladinfo == NULL) {
         return -1;
     }
 
@@ -365,31 +365,31 @@ static int convert_common_config_info(const map_t *map_labels, const container_c
     if (args_err) {
         json_map_string_string *labels = common_config->config->labels;
 
-        ret = replace_labels(lcrdinfo, labels, map_labels);
+        ret = replace_labels(isuladinfo, labels, map_labels);
         if (ret == -1) {
             goto out;
         }
     }
 
-    ret = replace_annotations(common_config, lcrdinfo);
+    ret = replace_annotations(common_config, isuladinfo);
     if (ret == -1) {
         goto out;
     }
 
-    dup_id_name(common_config, lcrdinfo);
+    dup_id_name(common_config, isuladinfo);
     args_err = (common_config->created != NULL &&
-                to_unix_nanos_from_str(common_config->created, &lcrdinfo->created) != 0);
+                to_unix_nanos_from_str(common_config->created, &isuladinfo->created) != 0);
     if (args_err) {
         ret = -1;
         goto out;
     }
-    lcrdinfo->restartcount = (uint64_t)common_config->restart_count;
+    isuladinfo->restartcount = (uint64_t)common_config->restart_count;
 out:
     return ret;
 }
 
 static int container_info_match(const struct list_context *ctx, const map_t *map_labels,
-                                const container_container *lcrdinfo, const container_config_v2_state *cont_state)
+                                const container_container *isuladinfo, const container_config_v2_state *cont_state)
 {
     int ret = 0;
     Container_Status cs;
@@ -398,12 +398,12 @@ static int container_info_match(const struct list_context *ctx, const map_t *map
         return -1;
     }
 
-    if (!filters_args_match(ctx->ps_filters, "name", lcrdinfo->name)) {
+    if (!filters_args_match(ctx->ps_filters, "name", isuladinfo->name)) {
         ret = -1;
         goto out;
     }
 
-    if (!filters_args_match(ctx->ps_filters, "id", lcrdinfo->id)) {
+    if (!filters_args_match(ctx->ps_filters, "id", isuladinfo->id)) {
         ret = -1;
         goto out;
     }
@@ -444,8 +444,8 @@ static int get_cnt_state(const struct list_context *ctx, const container_config_
     return 0;
 }
 
-static int fill_lcrdinfo(container_container *lcrdinfo, const container_config_v2_state *cont_state,
-                         const map_t *map_labels, const container_t *cont)
+static int fill_isuladinfo(container_container *isuladinfo, const container_config_v2_state *cont_state,
+                           const map_t *map_labels, const container_t *cont)
 {
     int ret = 0;
     char *image = NULL;
@@ -453,29 +453,29 @@ static int fill_lcrdinfo(container_container *lcrdinfo, const container_config_v
     char *defvalue = "-";
     int64_t created_nanos = 0;
 
-    ret = convert_common_config_info(map_labels, cont->common_config, lcrdinfo);
+    ret = convert_common_config_info(map_labels, cont->common_config, isuladinfo);
     if (ret != 0) {
         goto out;
     }
 
-    lcrdinfo->pid = (int32_t)cont_state->pid;
+    isuladinfo->pid = (int32_t)cont_state->pid;
 
-    lcrdinfo->status = (int)state_judge_status(cont_state);
+    isuladinfo->status = (int)state_judge_status(cont_state);
 
-    lcrdinfo->command = container_get_command(cont);
+    isuladinfo->command = container_get_command(cont);
     image = container_get_image(cont);
-    lcrdinfo->image = image ? image : util_strdup_s("none");
+    isuladinfo->image = image ? image : util_strdup_s("none");
 
-    lcrdinfo->exit_code = (uint32_t)(cont_state->exit_code);
+    isuladinfo->exit_code = (uint32_t)(cont_state->exit_code);
     timestr = cont_state->started_at ? cont_state->started_at : defvalue;
-    lcrdinfo->startat = util_strdup_s(timestr);
+    isuladinfo->startat = util_strdup_s(timestr);
 
     timestr = cont_state->finished_at ? cont_state->finished_at : defvalue;
-    lcrdinfo->finishat = util_strdup_s(timestr);
+    isuladinfo->finishat = util_strdup_s(timestr);
 
-    lcrdinfo->runtime = cont->runtime ? util_strdup_s(cont->runtime) : util_strdup_s("none");
+    isuladinfo->runtime = cont->runtime ? util_strdup_s(cont->runtime) : util_strdup_s("none");
 
-    lcrdinfo->health_state = container_get_health_state(cont_state);
+    isuladinfo->health_state = container_get_health_state(cont_state);
     if (cont->common_config->created != NULL) {
         ret = to_unix_nanos_from_str(cont->common_config->created, &created_nanos);
         if (ret != 0) {
@@ -483,17 +483,17 @@ static int fill_lcrdinfo(container_container *lcrdinfo, const container_config_v
         }
     }
 
-    lcrdinfo->created = created_nanos;
+    isuladinfo->created = created_nanos;
 
 out:
     return ret;
 }
 
-static void free_lcrd_info(container_container **lcrdinfo, int ret)
+static void free_isulad_info(container_container **isuladinfo, int ret)
 {
     if (ret != 0) {
-        free_container_container(*lcrdinfo);
-        *lcrdinfo = NULL;
+        free_container_container(*isuladinfo);
+        *isuladinfo = NULL;
     }
     return;
 }
@@ -509,7 +509,7 @@ static void unref_cont(container_t *cont)
 static container_container *get_container_info(const char *name, const struct list_context *ctx)
 {
     int ret = 0;
-    container_container *lcrdinfo = NULL;
+    container_container *isuladinfo = NULL;
     container_t *cont = NULL;
     container_config_v2_state *cont_state = NULL;
     map_t *map_labels = NULL;
@@ -533,19 +533,19 @@ static container_container *get_container_info(const char *name, const struct li
         goto cleanup;
     }
 
-    lcrdinfo = util_common_calloc_s(sizeof(container_container));
-    if (lcrdinfo == NULL) {
+    isuladinfo = util_common_calloc_s(sizeof(container_container));
+    if (isuladinfo == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto cleanup;
     }
 
-    ret = fill_lcrdinfo(lcrdinfo, cont_state, map_labels, cont);
+    ret = fill_isuladinfo(isuladinfo, cont_state, map_labels, cont);
     if (ret != 0) {
         goto cleanup;
     }
 
-    ret = container_info_match(ctx, map_labels, lcrdinfo, cont_state);
+    ret = container_info_match(ctx, map_labels, isuladinfo, cont_state);
     if (ret != 0) {
         goto cleanup;
     }
@@ -554,8 +554,8 @@ cleanup:
     unref_cont(cont);
     map_free(map_labels);
     free_container_config_v2_state(cont_state);
-    free_lcrd_info(&lcrdinfo, ret);
-    return lcrdinfo;
+    free_isulad_info(&isuladinfo, ret);
+    return isuladinfo;
 }
 
 static int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value, struct list_context *ctx)
@@ -568,8 +568,8 @@ static int do_add_filters(const char *filter_key, const json_map_string_bool *fi
         if (strcmp(filter_key, "status") == 0) {
             if (!is_valid_state_string(filter_value->keys[j])) {
                 ERROR("Unrecognised filter value for status: %s", filter_value->keys[j]);
-                lcrd_set_error_message("Unrecognised filter value for status: %s",
-                                       filter_value->keys[j]);
+                isulad_set_error_message("Unrecognised filter value for status: %s",
+                                         filter_value->keys[j]);
                 ret = -1;
                 goto out;
             }
@@ -605,7 +605,7 @@ static struct list_context *fold_filter(const container_list_request *request)
         if (!filters_args_valid_key(accepted_ps_filter_tags, sizeof(accepted_ps_filter_tags) / sizeof(char *),
                                     request->filters->keys[i])) {
             ERROR("Invalid filter '%s'", request->filters->keys[i]);
-            lcrd_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
+            isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
             goto error_out;
         }
         if (do_add_filters(request->filters->keys[i], request->filters->values[i], ctx) != 0) {
@@ -660,7 +660,7 @@ int container_list_cb(const container_list_request *request, container_list_resp
 {
     char **idsarray = NULL;
     map_t *map_id_name = NULL;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     struct list_context *ctx = NULL;
 
     DAEMON_CLEAR_ERRMSG();
@@ -673,19 +673,19 @@ int container_list_cb(const container_list_request *request, container_list_resp
     *response = util_common_calloc_s(sizeof(container_list_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
     ctx = fold_filter(request);
     if (ctx == NULL) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     map_id_name = name_index_get_all();
     if (map_id_name == NULL) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
     if (map_size(map_id_name) == 0) {
@@ -697,7 +697,7 @@ int container_list_cb(const container_list_request *request, container_list_resp
     idsarray = filter_by_name_id_matches(ctx, map_id_name);
 
     if (pack_list_containers(idsarray, ctx, (*response)) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -705,14 +705,14 @@ pack_response:
     map_free(map_id_name);
     if (*response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
     }
     util_free_array(idsarray);
     free_list_context(ctx);
 
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 

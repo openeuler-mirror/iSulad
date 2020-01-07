@@ -18,18 +18,18 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
 
 static int is_valid_arguments(const char *server, const char *username, const char *password)
 {
     if (server == NULL) {
-        lcrd_set_error_message("Login requires server address");
+        isulad_set_error_message("Login requires server address");
         return -1;
     }
 
     if (username == NULL || password == NULL) {
-        lcrd_set_error_message("Missing username or password");
+        isulad_set_error_message("Missing username or password");
         return -1;
     }
 
@@ -97,7 +97,7 @@ int isula_do_login(const char *server, const char *username, const char *passwor
     ret = im_ops->login(ireq, iresp, &conf);
     if (ret != 0) {
         ERROR("Failed to login with error: %s", iresp->errmsg);
-        lcrd_set_error_message("Failed to login with error: %s", iresp->errmsg);
+        isulad_set_error_message("Failed to login with error: %s", iresp->errmsg);
     }
 
 out:

@@ -19,7 +19,7 @@
 #include <pthread.h>
 #include "linked_list.h"
 
-#include "liblcrd.h"
+#include "libisulad.h"
 
 typedef struct _events_handler_t {
     pthread_mutex_t mutex;
@@ -33,7 +33,7 @@ events_handler_t *events_handler_new();
 
 void events_handler_free(events_handler_t *handler);
 
-int events_handler_post_events(events_handler_t *handler, const struct lcrd_events_format *event);
+int events_handler_post_events(events_handler_t *handler, const struct isulad_events_format *event);
 
 #endif /* __EVENTS_HANDLER_H */
 

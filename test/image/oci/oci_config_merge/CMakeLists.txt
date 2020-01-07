@@ -18,20 +18,20 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/specs_mount.c
     ${CMAKE_BINARY_DIR}/json/host_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/specs_extend.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/liblcrd.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/libisulad.c
     ${CMAKE_BINARY_DIR}/json/oci_runtime_defs_linux.c
     ${CMAKE_BINARY_DIR}/json/defs.c
     ${CMAKE_BINARY_DIR}/json/container_config_v2.c
     ${CMAKE_BINARY_DIR}/json/container_config.c
     ${CMAKE_BINARY_DIR}/json/container_custom_config.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/config/lcrd_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/config/isulad_config.c
     ${CMAKE_BINARY_DIR}/json/oci_runtime_spec.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/sysinfo.c
     ${CMAKE_BINARY_DIR}/json/oci_runtime_config_linux.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/commander.c
     ${CMAKE_BINARY_DIR}/json/isulad_daemon_configs.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/json/schema/src/read_file.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/lcrd/arguments.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/isulad/arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/image/oci/oci_llt_common.cc
     ${CMAKE_BINARY_DIR}/json/imagetool_image.c
     ${CMAKE_BINARY_DIR}/json/oci_image_spec.c

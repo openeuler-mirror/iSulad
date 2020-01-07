@@ -16,7 +16,7 @@
 #include "rest_containers_client.h"
 #include "rest_images_client.h"
 
-int rest_ops_init(lcrc_connect_ops *ops)
+int rest_ops_init(isula_connect_ops *ops)
 {
     if (ops == NULL) {
         return -1;

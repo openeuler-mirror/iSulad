@@ -25,16 +25,16 @@ extern "C" {
 #endif
 
 #ifndef DEFAULT_UNIX_SOCKET
-#define DEFAULT_UNIX_SOCKET "unix:///var/run/lcrd.sock"
+#define DEFAULT_UNIX_SOCKET "unix:///var/run/isulad.sock"
 #endif
 #ifndef DEFAULT_ROOTFS_PATH
 #define DEFAULT_ROOTFS_PATH "/dev/ram0"
 #endif
 #ifndef OCICONFIG_PATH
-#define OCICONFIG_PATH "/etc/default/lcrd/config.json"
+#define OCICONFIG_PATH "/etc/default/isulad/config.json"
 #endif
 #ifndef OCI_SYSTEM_CONTAINER_CONFIG_PATH
-#define OCI_SYSTEM_CONTAINER_CONFIG_PATH "/etc/default/lcrd/systemcontainer_config.json"
+#define OCI_SYSTEM_CONTAINER_CONFIG_PATH "/etc/default/isulad/systemcontainer_config.json"
 #endif
 #ifndef SECCOMP_DEFAULT_PATH
 #define SECCOMP_DEFAULT_PATH "/etc/isulad/seccomp_default.json"

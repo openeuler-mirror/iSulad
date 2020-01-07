@@ -21,9 +21,9 @@
 
 #include "driver_overlay2.h"
 #include "utils.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "image.h"
 
 /* overlay2 */
@@ -61,7 +61,7 @@ struct graphdriver *graphdriver_init(const char *name, char **storage_opts, size
         }
     }
 
-    lcrd_set_error_message("Invalid storage driver name: '%s'", name);
+    isulad_set_error_message("Invalid storage driver name: '%s'", name);
     return NULL;
 }
 
@@ -79,7 +79,7 @@ struct graphdriver *graphdriver_get(const char *name)
         }
     }
 
-    lcrd_set_error_message("Invalid storage driver name: '%s'", name);
+    isulad_set_error_message("Invalid storage driver name: '%s'", name);
     return NULL;
 }
 
@@ -151,7 +151,7 @@ void graphdriver_umount_mntpoint(void)
     int nret = 0;
 
     root = conf_get_graph_rootpath();
-    driver_name = conf_get_lcrd_storage_driver();
+    driver_name = conf_get_isulad_storage_driver();
     if (root == NULL || driver_name == NULL) {
         WARN("No root or driver name specified");
         goto cleanup;

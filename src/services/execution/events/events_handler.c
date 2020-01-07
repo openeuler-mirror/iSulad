@@ -23,7 +23,7 @@
 
 #include "error.h"
 #include "log.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "collector.h"
 #include "events_handler.h"
 #include "utils.h"
@@ -50,7 +50,7 @@ static void events_handler_unlock(events_handler_t *handler)
 /* events handler free */
 void events_handler_free(events_handler_t *handler)
 {
-    struct lcrd_events_format *event = NULL;
+    struct isulad_events_format *event = NULL;
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
 
@@ -59,7 +59,7 @@ void events_handler_free(events_handler_t *handler)
     }
 
     linked_list_for_each_safe(it, &(handler->events_list), next) {
-        event = (struct lcrd_events_format *)it->elem;
+        event = (struct isulad_events_format *)it->elem;
         linked_list_del(it);
         free_event(event);
         free(it);
@@ -101,7 +101,7 @@ cleanup:
 }
 
 /* container state changed */
-static int container_state_changed(container_t *cont, const struct lcrd_events_format *events)
+static int container_state_changed(container_t *cont, const struct isulad_events_format *events)
 {
     int ret = 0;
     int pid = 0;
@@ -209,7 +209,7 @@ out:
 static int handle_one(container_t *cont, events_handler_t *handler)
 {
     struct linked_list *it = NULL;
-    struct lcrd_events_format *events = NULL;
+    struct isulad_events_format *events = NULL;
 
     events_handler_lock(handler);
 
@@ -224,7 +224,7 @@ static int handle_one(container_t *cont, events_handler_t *handler)
 
     events_handler_unlock(handler);
 
-    events = (struct lcrd_events_format *)it->elem;
+    events = (struct isulad_events_format *)it->elem;
     INFO("Received event %s with pid %d", events->id, events->pid);
 
     if (container_state_changed(cont, events)) {
@@ -279,12 +279,12 @@ out:
 
 /* events handler post events */
 int events_handler_post_events(events_handler_t *handler,
-                               const struct lcrd_events_format *event)
+                               const struct isulad_events_format *event)
 {
     int ret = 0;
     char *name = NULL;
     pthread_t td;
-    struct lcrd_events_format *post_event = NULL;
+    struct isulad_events_format *post_event = NULL;
     struct linked_list *it = NULL;
 
     if (handler == NULL || event == NULL) {

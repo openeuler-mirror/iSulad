@@ -16,14 +16,14 @@
 #include "error.h"
 
 #include "log.h"
-#include "lcrc_connect.h"
+#include "isula_connect.h"
 #include "container.rest.h"
 #include "pack_config.h"
 #include "rest_common.h"
 #include "rest_containers_client.h"
 
 /* create request to rest */
-static int create_request_to_rest(const struct lcrc_create_request *lc_request, char **body, size_t *body_len)
+static int create_request_to_rest(const struct isula_create_request *lc_request, char **body, size_t *body_len)
 {
     container_create_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -78,7 +78,7 @@ out:
 }
 
 /* start request to rest */
-static int start_request_to_rest(const struct lcrc_start_request *ls_request, char **body, size_t *body_len)
+static int start_request_to_rest(const struct isula_start_request *ls_request, char **body, size_t *body_len)
 {
     container_start_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -121,7 +121,7 @@ out:
 }
 
 /* list request to rest */
-static int list_request_to_rest(const struct lcrc_list_request *ll_request, char **body, size_t *body_len)
+static int list_request_to_rest(const struct isula_list_request *ll_request, char **body, size_t *body_len)
 {
     container_list_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -203,7 +203,7 @@ out:
 }
 
 /* attach request to rest */
-static int attach_request_to_rest(const struct lcrc_attach_request *la_request, char **body, size_t *body_len)
+static int attach_request_to_rest(const struct isula_attach_request *la_request, char **body, size_t *body_len)
 {
     container_attach_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -242,7 +242,7 @@ out:
 }
 
 /* resume request to rest */
-static int resume_request_to_rest(const struct lcrc_resume_request *lr_request, char **body, size_t *body_len)
+static int resume_request_to_rest(const struct isula_resume_request *lr_request, char **body, size_t *body_len)
 {
     container_resume_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -272,7 +272,7 @@ out:
 }
 
 /* wait request to rest */
-static int wait_request_to_rest(const struct lcrc_wait_request *lw_request, char **body, size_t *body_len)
+static int wait_request_to_rest(const struct isula_wait_request *lw_request, char **body, size_t *body_len)
 {
     container_wait_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -306,7 +306,7 @@ out:
 /* unpack create response */
 static int unpack_create_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_create_response *response = arg;
+    struct isula_create_response *response = arg;
     container_create_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -329,7 +329,7 @@ static int unpack_create_response(const struct parsed_http_message *message, voi
     if (cresponse->id != NULL) {
         response->id = util_strdup_s(cresponse->id);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -343,7 +343,7 @@ out:
 /* unpack start response */
 static int unpack_start_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_start_response *start_response = arg;
+    struct isula_start_response *start_response = arg;
     container_start_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -363,7 +363,7 @@ static int unpack_start_response(const struct parsed_http_message *message, void
     if (cresponse->errmsg != NULL) {
         start_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -375,11 +375,11 @@ out:
 }
 
 static int unpack_container_info_for_list_response(container_list_response *cresponse,
-                                                   struct lcrc_list_response *response)
+                                                   struct isula_list_response *response)
 {
     size_t num = 0;
     size_t i = 0;
-    struct lcrc_container_summary_info **summary_info = NULL;
+    struct isula_container_summary_info **summary_info = NULL;
 
     if (cresponse == NULL || response == NULL) {
         return -1;
@@ -389,12 +389,12 @@ static int unpack_container_info_for_list_response(container_list_response *cres
     if (num == 0) {
         return 0;
     }
-    if (num > SIZE_MAX / sizeof(struct lcrc_container_summary_info *)) {
+    if (num > SIZE_MAX / sizeof(struct isula_container_summary_info *)) {
         ERROR("Too many container summaries");
         return -1;
     }
-    summary_info = (struct lcrc_container_summary_info **)util_common_calloc_s(
-                       sizeof(struct lcrc_container_summary_info *) * num);
+    summary_info = (struct isula_container_summary_info **)util_common_calloc_s(
+                       sizeof(struct isula_container_summary_info *) * num);
     if (summary_info == NULL) {
         ERROR("out of memory");
         return -1;
@@ -403,7 +403,7 @@ static int unpack_container_info_for_list_response(container_list_response *cres
     response->container_summary = summary_info;
     for (i = 0; i < num; i++) {
         summary_info[i] =
-            (struct lcrc_container_summary_info *)util_common_calloc_s(sizeof(struct lcrc_container_summary_info));
+            (struct isula_container_summary_info *)util_common_calloc_s(sizeof(struct isula_container_summary_info));
         if (summary_info[i] == NULL) {
             ERROR("Out of memory");
             return -1;
@@ -434,7 +434,7 @@ static int unpack_container_info_for_list_response(container_list_response *cres
 /* unpack list response */
 static int unpack_list_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_list_response *response = arg;
+    struct isula_list_response *response = arg;
     container_list_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -454,7 +454,7 @@ static int unpack_list_response(const struct parsed_http_message *message, void 
     if (cresponse->errmsg != NULL) {
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -472,7 +472,7 @@ out:
 /* unpack attach response */
 static int unpack_attach_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_attach_response *attach_response = arg;
+    struct isula_attach_response *attach_response = arg;
     container_attach_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -492,7 +492,7 @@ static int unpack_attach_response(const struct parsed_http_message *message, voi
     if (cresponse->errmsg != NULL) {
         attach_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -506,7 +506,7 @@ out:
 /* unpack resume response */
 static int unpack_resume_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_resume_response *resume_response = arg;
+    struct isula_resume_response *resume_response = arg;
     container_resume_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -526,7 +526,7 @@ static int unpack_resume_response(const struct parsed_http_message *message, voi
     if (cresponse->errmsg != NULL) {
         resume_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -540,7 +540,7 @@ out:
 /* unpack wait response */
 static int unpack_wait_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_wait_response *response = arg;
+    struct isula_wait_response *response = arg;
     container_wait_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -561,7 +561,7 @@ static int unpack_wait_response(const struct parsed_http_message *message, void 
     if (cresponse->errmsg != NULL) {
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -573,8 +573,8 @@ out:
 }
 
 /* rest container create */
-static int rest_container_create(const struct lcrc_create_request *lc_request,
-                                 struct lcrc_create_response *lc_response, void *arg)
+static int rest_container_create(const struct isula_create_request *lc_request,
+                                 struct isula_create_response *lc_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -585,13 +585,13 @@ static int rest_container_create(const struct lcrc_create_request *lc_request,
 
     ret = create_request_to_rest(lc_request, &body, &len);
     if (ret != 0) {
-        lc_response->cc = LCRD_ERR_INPUT;
+        lc_response->cc = ISULAD_ERR_INPUT;
         goto out;
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceCreate, body, len, &c_output);
     if (ret != 0) {
-        lc_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lc_response->cc = LCRD_ERR_EXEC;
+        lc_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lc_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(c_output, unpack_create_response, (void *)lc_response);
@@ -607,7 +607,7 @@ out:
 }
 
 /* rest container start */
-static int rest_container_start(const struct lcrc_start_request *ls_request, struct lcrc_start_response *ls_response,
+static int rest_container_start(const struct isula_start_request *ls_request, struct isula_start_response *ls_response,
                                 void *arg)
 {
     char *body = NULL;
@@ -623,9 +623,9 @@ static int rest_container_start(const struct lcrc_start_request *ls_request, str
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceStart, body, len, &s_output);
     if (ret != 0) {
-        ls_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        ls_response->cc = LCRD_ERR_EXEC;
-        ls_response->server_errono = LCRD_ERR_EXEC;
+        ls_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        ls_response->cc = ISULAD_ERR_EXEC;
+        ls_response->server_errono = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(s_output, unpack_start_response, (void *)ls_response);
@@ -641,8 +641,8 @@ out:
 }
 
 /* rest container attach */
-static int rest_container_attach(const struct lcrc_attach_request *la_request,
-                                 struct lcrc_attach_response *la_response, void *arg)
+static int rest_container_attach(const struct isula_attach_request *la_request,
+                                 struct isula_attach_response *la_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -657,8 +657,8 @@ static int rest_container_attach(const struct lcrc_attach_request *la_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceAttach, body, len, &a_output);
     if (ret != 0) {
-        la_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        la_response->cc = LCRD_ERR_EXEC;
+        la_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        la_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(a_output, unpack_attach_response, (void *)la_response);
@@ -674,8 +674,8 @@ out:
 }
 
 /* rest container list */
-static int rest_container_list(const struct lcrc_list_request *ll_request,
-                               struct lcrc_list_response *ll_response, void *arg)
+static int rest_container_list(const struct isula_list_request *ll_request,
+                               struct isula_list_response *ll_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -690,8 +690,8 @@ static int rest_container_list(const struct lcrc_list_request *ll_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceList, body, len, &l_output);
     if (ret != 0) {
-        ll_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        ll_response->cc = LCRD_ERR_EXEC;
+        ll_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        ll_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(l_output, unpack_list_response, (void *)ll_response);
@@ -707,8 +707,8 @@ out:
 }
 
 /* rest container resume */
-static int rest_container_resume(const struct lcrc_resume_request *lr_request,
-                                 struct lcrc_resume_response *lr_response, void *arg)
+static int rest_container_resume(const struct isula_resume_request *lr_request,
+                                 struct isula_resume_response *lr_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -723,8 +723,8 @@ static int rest_container_resume(const struct lcrc_resume_request *lr_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceResume, body, len, &r_output);
     if (ret != 0) {
-        lr_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lr_response->cc = LCRD_ERR_EXEC;
+        lr_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lr_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(r_output, unpack_resume_response, (void *)lr_response);
@@ -740,8 +740,8 @@ out:
 }
 
 /* rest container wait */
-static int rest_container_wait(const struct lcrc_wait_request *lw_request,
-                               struct lcrc_wait_response *lw_response, void *arg)
+static int rest_container_wait(const struct isula_wait_request *lw_request,
+                               struct isula_wait_response *lw_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -756,8 +756,8 @@ static int rest_container_wait(const struct lcrc_wait_request *lw_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceWait, body, len, &w_output);
     if (ret != 0) {
-        lw_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lw_response->cc = LCRD_ERR_EXEC;
+        lw_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lw_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(w_output, unpack_wait_response, (void *)lw_response);
@@ -773,7 +773,7 @@ out:
 }
 
 /* stop request to rest */
-static int stop_request_to_rest(const struct lcrc_stop_request *ls_request, char **body, size_t *body_len)
+static int stop_request_to_rest(const struct isula_stop_request *ls_request, char **body, size_t *body_len)
 {
     container_stop_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -809,7 +809,7 @@ out:
 /* unpack stop response */
 static int unpack_stop_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_stop_response *stop_response = arg;
+    struct isula_stop_response *stop_response = arg;
     container_stop_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -829,7 +829,7 @@ static int unpack_stop_response(const struct parsed_http_message *message, void 
     if (cresponse->errmsg != NULL) {
         stop_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -841,8 +841,8 @@ out:
 }
 
 /* rest container stop */
-static int rest_container_stop(const struct lcrc_stop_request *ls_request,
-                               struct lcrc_stop_response *ls_response, void *arg)
+static int rest_container_stop(const struct isula_stop_request *ls_request,
+                               struct isula_stop_response *ls_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -857,8 +857,8 @@ static int rest_container_stop(const struct lcrc_stop_request *ls_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceStop, body, len, &output);
     if (ret != 0) {
-        ls_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        ls_response->cc = LCRD_ERR_EXEC;
+        ls_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        ls_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_stop_response, (void *)ls_response);
@@ -874,7 +874,7 @@ out:
 }
 
 /* restart request to rest */
-static int restart_request_to_rest(const struct lcrc_restart_request *lr_request, char **body, size_t *body_len)
+static int restart_request_to_rest(const struct isula_restart_request *lr_request, char **body, size_t *body_len)
 {
     container_restart_request *creq = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -909,7 +909,7 @@ out:
 /* unpack restart response */
 static int unpack_restart_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_restart_response *response = arg;
+    struct isula_restart_response *response = arg;
     container_restart_response *cres = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -929,7 +929,7 @@ static int unpack_restart_response(const struct parsed_http_message *message, vo
     if (cres->errmsg != NULL) {
         response->errmsg = util_strdup_s(cres->errmsg);
     }
-    ret = (cres->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cres->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -941,8 +941,8 @@ out:
 }
 
 /* rest container restart */
-static int rest_container_restart(const struct lcrc_restart_request *lr_request,
-                                  struct lcrc_restart_response *lr_response, void *arg)
+static int rest_container_restart(const struct isula_restart_request *lr_request,
+                                  struct isula_restart_response *lr_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -957,8 +957,8 @@ static int rest_container_restart(const struct lcrc_restart_request *lr_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceRestart, body, len, &output);
     if (ret != 0) {
-        lr_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lr_response->cc = LCRD_ERR_EXEC;
+        lr_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lr_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_restart_response, (void *)lr_response);
@@ -972,10 +972,10 @@ out:
 }
 
 /* update request to rest */
-static int update_request_to_rest(const struct lcrc_update_request *lu_request, char **body, size_t *body_len)
+static int update_request_to_rest(const struct isula_update_request *lu_request, char **body, size_t *body_len)
 {
     container_update_request *crequest = NULL;
-    lcrc_host_config_t srcconfig;
+    isula_host_config_t srcconfig;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error err = NULL;
     char *srcconfigjson = NULL;
@@ -1022,7 +1022,7 @@ out:
 /* unpack update response */
 static int unpack_update_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_update_response *update_response = arg;
+    struct isula_update_response *update_response = arg;
     container_update_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -1042,7 +1042,7 @@ static int unpack_update_response(const struct parsed_http_message *message, voi
     if (cresponse->errmsg != NULL) {
         update_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -1054,8 +1054,8 @@ out:
 }
 
 /* rest container update */
-static int rest_container_update(const struct lcrc_update_request *lu_request,
-                                 struct lcrc_update_response *lu_response, void *arg)
+static int rest_container_update(const struct isula_update_request *lu_request,
+                                 struct isula_update_response *lu_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1070,8 +1070,8 @@ static int rest_container_update(const struct lcrc_update_request *lu_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceUpdate, body, len, &output);
     if (ret != 0) {
-        lu_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lu_response->cc = LCRD_ERR_EXEC;
+        lu_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lu_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_update_response, (void *)lu_response);
@@ -1087,7 +1087,7 @@ out:
 }
 
 /* version request to rest */
-static int version_request_to_rest(const struct lcrc_version_request *lv_request, char **body, size_t *body_len)
+static int version_request_to_rest(const struct isula_version_request *lv_request, char **body, size_t *body_len)
 {
     container_version_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -1117,7 +1117,7 @@ out:
 /* unpack version response */
 static int unpack_version_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_version_response *version_response = arg;
+    struct isula_version_response *version_response = arg;
     container_version_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -1149,7 +1149,7 @@ static int unpack_version_response(const struct parsed_http_message *message, vo
     if (cresponse->errmsg != NULL) {
         version_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -1161,8 +1161,8 @@ out:
 }
 
 /* rest container version */
-static int rest_container_version(const struct lcrc_version_request *lv_request,
-                                  struct lcrc_version_response *lv_response, void *arg)
+static int rest_container_version(const struct isula_version_request *lv_request,
+                                  struct isula_version_response *lv_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1177,8 +1177,8 @@ static int rest_container_version(const struct lcrc_version_request *lv_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceVersion, body, len, &output);
     if (ret != 0) {
-        lv_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lv_response->cc = LCRD_ERR_EXEC;
+        lv_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lv_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_version_response, (void *)lv_response);
@@ -1194,7 +1194,7 @@ out:
 }
 
 /* pause request to rest */
-static int pause_request_to_rest(const struct lcrc_pause_request *lp_request, char **body, size_t *body_len)
+static int pause_request_to_rest(const struct isula_pause_request *lp_request, char **body, size_t *body_len)
 {
     container_pause_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -1228,7 +1228,7 @@ out:
 /* unpack pause response */
 static int unpack_pause_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_pause_response *pause_response = arg;
+    struct isula_pause_response *pause_response = arg;
     container_pause_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -1248,7 +1248,7 @@ static int unpack_pause_response(const struct parsed_http_message *message, void
     if (cresponse->errmsg != NULL) {
         pause_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -1260,8 +1260,8 @@ out:
 }
 
 /* rest container pause */
-static int rest_container_pause(const struct lcrc_pause_request *lp_request,
-                                struct lcrc_pause_response *lp_response, void *arg)
+static int rest_container_pause(const struct isula_pause_request *lp_request,
+                                struct isula_pause_response *lp_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1276,8 +1276,8 @@ static int rest_container_pause(const struct lcrc_pause_request *lp_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServicePause, body, len, &output);
     if (ret != 0) {
-        lp_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lp_response->cc = LCRD_ERR_EXEC;
+        lp_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lp_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_pause_response, (void *)lp_response);
@@ -1293,7 +1293,7 @@ out:
 }
 
 /* kill request to rest */
-static int kill_request_to_rest(const struct lcrc_kill_request *lk_request, char **body, size_t *body_len)
+static int kill_request_to_rest(const struct isula_kill_request *lk_request, char **body, size_t *body_len)
 {
     container_kill_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -1328,7 +1328,7 @@ out:
 /* unpack kill response */
 static int unpack_kill_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_kill_response *kill_response = arg;
+    struct isula_kill_response *kill_response = arg;
     container_kill_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -1348,7 +1348,7 @@ static int unpack_kill_response(const struct parsed_http_message *message, void 
     if (cresponse->errmsg != NULL) {
         kill_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -1360,8 +1360,8 @@ out:
 }
 
 /* rest container kill */
-static int rest_container_kill(const struct lcrc_kill_request *lk_request,
-                               struct lcrc_kill_response *lk_response, void *arg)
+static int rest_container_kill(const struct isula_kill_request *lk_request,
+                               struct isula_kill_response *lk_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1376,8 +1376,8 @@ static int rest_container_kill(const struct lcrc_kill_request *lk_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceKill, body, len, &output);
     if (ret != 0) {
-        lk_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lk_response->cc = LCRD_ERR_EXEC;
+        lk_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        lk_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_kill_response, (void *)lk_response);
@@ -1393,7 +1393,7 @@ out:
 }
 
 /* remove request to rest */
-static int remove_request_to_rest(const struct lcrc_delete_request *ld_request, char **body, size_t *body_len)
+static int remove_request_to_rest(const struct isula_delete_request *ld_request, char **body, size_t *body_len)
 {
     container_delete_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -1428,7 +1428,7 @@ out:
 /* unpack remove response */
 static int unpack_remove_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_delete_response *delete_response = arg;
+    struct isula_delete_response *delete_response = arg;
     container_delete_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -1448,7 +1448,7 @@ static int unpack_remove_response(const struct parsed_http_message *message, voi
     if (cresponse->errmsg != NULL) {
         delete_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -1460,8 +1460,8 @@ out:
 }
 
 /* rest container remove */
-static int rest_container_remove(const struct lcrc_delete_request *ld_request,
-                                 struct lcrc_delete_response *ld_response, void *arg)
+static int rest_container_remove(const struct isula_delete_request *ld_request,
+                                 struct isula_delete_response *ld_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1476,8 +1476,8 @@ static int rest_container_remove(const struct lcrc_delete_request *ld_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceRemove, body, len, &r_output);
     if (ret != 0) {
-        ld_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        ld_response->cc = LCRD_ERR_EXEC;
+        ld_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        ld_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(r_output, unpack_remove_response, (void *)ld_response);
@@ -1493,7 +1493,7 @@ out:
 }
 
 /* inspect request to rest */
-static int inspect_request_to_rest(const struct lcrc_inspect_request *li_request, char **body, size_t *body_len)
+static int inspect_request_to_rest(const struct isula_inspect_request *li_request, char **body, size_t *body_len)
 {
     container_inspect_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -1530,7 +1530,7 @@ out:
 /* unpack inspect response */
 static int unpack_inspect_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_inspect_response *response = arg;
+    struct isula_inspect_response *response = arg;
     container_inspect_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -1553,7 +1553,7 @@ static int unpack_inspect_response(const struct parsed_http_message *message, vo
     if (cresponse->errmsg != NULL) {
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -1565,8 +1565,8 @@ out:
 }
 
 /* rest container inspect */
-static int rest_container_inspect(const struct lcrc_inspect_request *li_request,
-                                  struct lcrc_inspect_response *li_response, void *arg)
+static int rest_container_inspect(const struct isula_inspect_request *li_request,
+                                  struct isula_inspect_response *li_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1581,8 +1581,8 @@ static int rest_container_inspect(const struct lcrc_inspect_request *li_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceInspect, body, len, &output);
     if (ret != 0) {
-        li_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        li_response->cc = LCRD_ERR_EXEC;
+        li_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        li_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_inspect_response, (void *)li_response);
@@ -1598,7 +1598,7 @@ out:
 }
 
 /* exec request to rest */
-static int exec_request_to_rest(const struct lcrc_exec_request *le_request, char **body, size_t *body_len)
+static int exec_request_to_rest(const struct isula_exec_request *le_request, char **body, size_t *body_len)
 {
     container_exec_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -1682,7 +1682,7 @@ out:
 /* unpack exec response */
 static int unpack_exec_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_exec_response *response = arg;
+    struct isula_exec_response *response = arg;
     container_exec_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -1703,7 +1703,7 @@ static int unpack_exec_response(const struct parsed_http_message *message, void 
     if (cresponse->errmsg != NULL) {
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -1715,8 +1715,8 @@ out:
 }
 
 /* rest container exec */
-static int rest_container_exec(const struct lcrc_exec_request *le_request,
-                               struct lcrc_exec_response *le_response, void *arg)
+static int rest_container_exec(const struct isula_exec_request *le_request,
+                               struct isula_exec_response *le_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1731,8 +1731,8 @@ static int rest_container_exec(const struct lcrc_exec_request *le_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ContainerServiceExec, body, len, &output);
     if (ret != 0) {
-        le_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        le_response->cc = LCRD_ERR_EXEC;
+        le_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        le_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_exec_response, (void *)le_response);
@@ -1748,7 +1748,7 @@ out:
 }
 
 /* rest containers client ops init */
-int rest_containers_client_ops_init(lcrc_connect_ops *ops)
+int rest_containers_client_ops_init(isula_connect_ops *ops)
 {
     if (ops == NULL) {
         return -1;

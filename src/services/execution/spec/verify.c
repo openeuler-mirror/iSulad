@@ -27,19 +27,19 @@
 
 #include "constants.h"
 #include "error.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
 #include "sysinfo.h"
 #include "specs.h"
 #include "verify.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 
 /* verify hook timeout */
 static int verify_hook_timeout(int t)
 {
     if (t < 0) {
         ERROR("Hook spec timeout invalid");
-        lcrd_set_error_message("Invalid timeout: %d", t);
+        isulad_set_error_message("Invalid timeout: %d", t);
         return -1;
     }
 
@@ -53,14 +53,14 @@ static int verify_hook_root_and_no_other(const struct stat *st, const char *path
     /* validate file owner */
     if (st->st_uid != 0) {
         ERROR("Hook file %s isn't right,file owner should be root", path);
-        lcrd_set_error_message("Hook file %s isn't right,file owner should be root", path);
+        isulad_set_error_message("Hook file %s isn't right,file owner should be root", path);
         return -1;
     }
 
     /* validate file if can be written by other user */
     if (st->st_mode & S_IWOTH) {
         ERROR("Hook path %s isn't right,file should not be written by non-root", path);
-        lcrd_set_error_message("%s should not be written by non-root", path);
+        isulad_set_error_message("%s should not be written by non-root", path);
         return -1;
     }
     return 0;
@@ -75,7 +75,7 @@ static int verify_hook_path(const char *path)
     ret = util_validate_absolute_path(path);
     if (ret != 0) {
         ERROR("Hook path %s must be an absolute path", path);
-        lcrd_set_error_message("%s is not an absolute path", path);
+        isulad_set_error_message("%s is not an absolute path", path);
         goto out;
     }
 
@@ -83,7 +83,7 @@ static int verify_hook_path(const char *path)
     /* validate file exits */
     if (ret < 0) {
         ERROR("Hook path %s isn't exist", path);
-        lcrd_set_error_message("Cann't find path: %s", path);
+        isulad_set_error_message("Cann't find path: %s", path);
         ret = -1;
         goto out;
     }
@@ -127,14 +127,14 @@ static int verify_mem_limit_swap(const sysinfo_t *sysinfo, int64_t limit, int64_
     /* check the minimum memory limit */
     if (is_mem_limit_minimum(limit)) {
         ERROR("Minimum memory limit allowed is 4MB");
-        lcrd_set_error_message("Minimum memory limit allowed is 4MB");
+        isulad_set_error_message("Minimum memory limit allowed is 4MB");
         ret = -1;
         goto out;
     }
 
     if (limit > 0 && !(sysinfo->cgmeminfo.limit)) {
         ERROR("Your kernel does not support memory limit capabilities. Limitation discarded.");
-        lcrd_set_error_message(
+        isulad_set_error_message(
             "Your kernel does not support memory limit capabilities. Limitation discarded.");
         ret = -1;
         goto out;
@@ -142,7 +142,7 @@ static int verify_mem_limit_swap(const sysinfo_t *sysinfo, int64_t limit, int64_
 
     if (limit > 0 && swap != 0 && !(sysinfo->cgmeminfo.swap)) {
         ERROR("Your kernel does not support swap limit capabilities, memory limited without swap.");
-        lcrd_set_error_message(
+        isulad_set_error_message(
             "Your kernel does not support swap limit capabilities, memory limited without swap.");
         ret = -1;
         goto out;
@@ -150,14 +150,14 @@ static int verify_mem_limit_swap(const sysinfo_t *sysinfo, int64_t limit, int64_
 
     if (limit > 0 && swap > 0 && swap < limit) {
         ERROR("Minimum memoryswap limit should be larger than memory limit, see usage.");
-        lcrd_set_error_message("Minimum memoryswap limit should be larger than memory limit");
+        isulad_set_error_message("Minimum memoryswap limit should be larger than memory limit");
         ret = -1;
         goto out;
     }
 
     if (limit == 0 && swap > 0 && !update) {
         ERROR("You should always set the Memory limit when using Memoryswap limit, see usage.");
-        lcrd_set_error_message("You should set the memory limit when using memoryswap limit");
+        isulad_set_error_message("You should set the memory limit when using memoryswap limit");
         ret = -1;
         goto out;
     }
@@ -178,7 +178,7 @@ static int verify_memory_swappiness(const sysinfo_t *sysinfo, uint64_t swapiness
 
     if ((int64_t)swapiness != -1 && !(sysinfo->cgmeminfo.swappiness)) {
         ERROR("Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
-        lcrd_set_error_message(
+        isulad_set_error_message(
             "Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
         ret = -1;
         goto out;
@@ -186,7 +186,7 @@ static int verify_memory_swappiness(const sysinfo_t *sysinfo, uint64_t swapiness
 
     if (is_swappiness_invalid(swapiness)) {
         ERROR("Invalid value: %lld, valid memory swappiness range is 0-100", (long long)swapiness);
-        lcrd_set_error_message("Invalid value: %lld, valid memory swappiness range is 0-100", (long long)swapiness);
+        isulad_set_error_message("Invalid value: %lld, valid memory swappiness range is 0-100", (long long)swapiness);
         ret = -1;
         goto out;
     }
@@ -202,7 +202,7 @@ static int verify_memory_reservation(const sysinfo_t *sysinfo, int64_t limit, in
 
     if (reservation > 0 && !(sysinfo->cgmeminfo.reservation)) {
         ERROR("Your kernel does not support memory soft limit capabilities. Limitation discarded");
-        lcrd_set_error_message("Your kernel does not support memory soft limit capabilities. Limitation discarded");
+        isulad_set_error_message("Your kernel does not support memory soft limit capabilities. Limitation discarded");
         ret = -1;
         goto out;
     }
@@ -210,14 +210,14 @@ static int verify_memory_reservation(const sysinfo_t *sysinfo, int64_t limit, in
     /* check the minimum memory limit */
     if (is_mem_limit_minimum(reservation)) {
         ERROR("Minimum memory reservation allowed is 4MB");
-        lcrd_set_error_message("Minimum memory reservation allowed is 4MB");
+        isulad_set_error_message("Minimum memory reservation allowed is 4MB");
         ret = -1;
         goto out;
     }
 
     if (limit > 0 && reservation > 0 && limit < reservation) {
         ERROR("Minimum memory limit should be larger than memory reservation limit, see usage.");
-        lcrd_set_error_message("Minimum memory limit should be larger than memory reservation limit, see usage.");
+        isulad_set_error_message("Minimum memory limit should be larger than memory reservation limit, see usage.");
         ret = -1;
         goto out;
     }
@@ -250,14 +250,14 @@ static int verify_memory_kernel(const sysinfo_t *sysinfo, int64_t kernel)
 
     if (kernel > 0 && !(sysinfo->cgmeminfo.kernel)) {
         ERROR("Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
-        lcrd_set_error_message("Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
+        isulad_set_error_message("Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
         ret = -1;
         goto out;
     }
 
     if (is_mem_limit_minimum(kernel)) {
         ERROR("Minimum kernel memory limit allowed is 4MB");
-        lcrd_set_error_message("Minimum kernel memory limit allowed is 4MB");
+        isulad_set_error_message("Minimum kernel memory limit allowed is 4MB");
         ret = -1;
         goto out;
     }
@@ -279,7 +279,7 @@ static int verify_pids_limit(const sysinfo_t *sysinfo, int64_t pids_limit)
 
     if (pids_limit != 0 && !(sysinfo->pidsinfo.pidslimit)) {
         ERROR("Your kernel does not support pids limit capabilities, pids limit discarded.");
-        lcrd_set_error_message("Your kernel does not support pids limit capabilities, pids limit discarded.");
+        isulad_set_error_message("Your kernel does not support pids limit capabilities, pids limit discarded.");
         ret = -1;
     }
     return ret;
@@ -292,7 +292,7 @@ static int verify_files_limit(const sysinfo_t *sysinfo, int64_t files_limit)
 
     if (files_limit != 0 && !(sysinfo->filesinfo.fileslimit)) {
         ERROR("Your kernel does not support files limit capabilities, files limit discarded.");
-        lcrd_set_error_message("Your kernel does not support files limit capabilities, files limit discarded.");
+        isulad_set_error_message("Your kernel does not support files limit capabilities, files limit discarded.");
         ret = -1;
     }
     return ret;
@@ -306,7 +306,7 @@ static int verify_oom_control(const sysinfo_t *sysinfo, bool oomdisable)
 
     if (oomdisable && !(sysinfo->cgmeminfo.oomkilldisable)) {
         ERROR("Your kernel does not support OomKillDisable, OomKillDisable discarded");
-        lcrd_set_error_message("Your kernel does not support OomKillDisable, OomKillDisable discarded");
+        isulad_set_error_message("Your kernel does not support OomKillDisable, OomKillDisable discarded");
         ret = -1;
     }
 
@@ -369,21 +369,21 @@ static int verify_cpu_realtime(const sysinfo_t *sysinfo, int64_t realtime_period
 
     if (realtime_period > 0 && !(sysinfo->cgcpuinfo.cpu_rt_period)) {
         ERROR("Invalid --cpu-rt-period: Your kernel does not support cgroup rt period");
-        lcrd_set_error_message("Invalid --cpu-rt-period: Your kernel does not support cgroup rt period");
+        isulad_set_error_message("Invalid --cpu-rt-period: Your kernel does not support cgroup rt period");
         ret = -1;
         goto out;
     }
 
     if (realtime_runtime > 0 && !(sysinfo->cgcpuinfo.cpu_rt_runtime)) {
         ERROR("Invalid --cpu-rt-runtime: Your kernel does not support cgroup rt runtime");
-        lcrd_set_error_message("Invalid --cpu-rt-period: Your kernel does not support cgroup rt runtime");
+        isulad_set_error_message("Invalid --cpu-rt-period: Your kernel does not support cgroup rt runtime");
         ret = -1;
         goto out;
     }
 
     if (realtime_period != 0 && realtime_runtime != 0 && realtime_runtime > realtime_period) {
         ERROR("Invalid --cpu-rt-runtime: rt runtime cannot be higher than rt period");
-        lcrd_set_error_message("Invalid --cpu-rt-runtime: rt runtime cannot be higher than rt period");
+        isulad_set_error_message("Invalid --cpu-rt-runtime: rt runtime cannot be higher than rt period");
         ret = -1;
         goto out;
     }
@@ -398,7 +398,7 @@ static int verify_cpu_shares(const sysinfo_t *sysinfo, int64_t cpu_shares)
 
     if (cpu_shares > 0 && !(sysinfo->cgcpuinfo.cpu_shares)) {
         ERROR("Your kernel does not support cgroup cpu shares. Shares discarded.");
-        lcrd_set_error_message(
+        isulad_set_error_message(
             "Your kernel does not support cgroup cpu shares. Shares discarded.");
         ret = -1;
     }
@@ -412,7 +412,7 @@ static int verify_cpu_cfs_period(const sysinfo_t *sysinfo, int64_t cpu_cfs_perio
 
     if (cpu_cfs_period > 0 && !(sysinfo->cgcpuinfo.cpu_cfs_period)) {
         ERROR("Your kernel does not support CPU cfs period. Period discarded.");
-        lcrd_set_error_message("Your kernel does not support CPU cfs period. Period discarded.");
+        isulad_set_error_message("Your kernel does not support CPU cfs period. Period discarded.");
         ret = -1;
         goto out;
     }
@@ -431,14 +431,14 @@ static int verify_cpu_cfs_quota(const sysinfo_t *sysinfo, int64_t cpu_cfs_quota)
 
     if (cpu_cfs_quota > 0 && !(sysinfo->cgcpuinfo.cpu_cfs_quota)) {
         ERROR("Your kernel does not support CPU cfs quato. Quota discarded.");
-        lcrd_set_error_message("Your kernel does not support CPU cfs quato. Quota discarded.");
+        isulad_set_error_message("Your kernel does not support CPU cfs quato. Quota discarded.");
         ret = -1;
         goto out;
     }
 
     if (is_cpu_cfs_quota_invalid(cpu_cfs_quota)) {
         ERROR("CPU cfs quota can not be less than 1ms (i.e. 1000)");
-        lcrd_set_error_message("CPU cfs quota can not be less than 1ms (i.e. 1000)");
+        isulad_set_error_message("CPU cfs quota can not be less than 1ms (i.e. 1000)");
         ret = -1;
         goto out;
     }
@@ -526,7 +526,7 @@ static bool check_cpu(const char *provided, const char *available)
     }
     if (max_request > max_available) {
         ERROR("invalid maxRequest is %d, max available: %d", max_request, max_available);
-        lcrd_set_error_message("invalid maxRequest is %d, max available: %d", max_request, max_available);
+        isulad_set_error_message("invalid maxRequest is %d, max available: %d", max_request, max_available);
         return false;
     }
     return true;
@@ -641,7 +641,7 @@ bool is_cpuset_cpus_available(const sysinfo_t *sysinfo, const char *cpus)
     ret = is_cpuset_list_available(cpus, sysinfo->cpusetinfo.cpus);
     if (!ret) {
         ERROR("Checking cpuset.cpus got invalid format: %s.", cpus);
-        lcrd_set_error_message("Checking cpuset.cpus got invalid format: %s.", cpus);
+        isulad_set_error_message("Checking cpuset.cpus got invalid format: %s.", cpus);
     }
     return ret;
 }
@@ -653,7 +653,7 @@ bool is_cpuset_mems_available(const sysinfo_t *sysinfo, const char *mems)
     ret = is_cpuset_list_available(mems, sysinfo->cpusetinfo.mems);
     if (!ret) {
         ERROR("Checking cpuset.mems got invalid format: %s.", mems);
-        lcrd_set_error_message("Checking cpuset.mems got invalid format: %s.", mems);
+        isulad_set_error_message("Checking cpuset.mems got invalid format: %s.", mems);
     }
     return ret;
 }
@@ -667,14 +667,14 @@ static int verify_resources_cpuset(const sysinfo_t *sysinfo, const char *cpus, c
 
     if (cpus != NULL && !(sysinfo->cpusetinfo.cpuset)) {
         ERROR("Your kernel does not support cpuset. Cpuset discarded.");
-        lcrd_set_error_message("Your kernel does not support cpuset. Cpuset discarded.");
+        isulad_set_error_message("Your kernel does not support cpuset. Cpuset discarded.");
         ret = -1;
         goto out;
     }
 
     if (mems != NULL && !(sysinfo->cpusetinfo.cpuset)) {
         ERROR("Your kernel does not support cpuset. Cpuset discarded.");
-        lcrd_set_error_message("Your kernel does not support cpuset. Cpuset discarded.");
+        isulad_set_error_message("Your kernel does not support cpuset. Cpuset discarded.");
         ret = -1;
         goto out;
     }
@@ -682,8 +682,8 @@ static int verify_resources_cpuset(const sysinfo_t *sysinfo, const char *cpus, c
     cpus_available = is_cpuset_cpus_available(sysinfo, cpus);
     if (!cpus_available) {
         ERROR("Requested CPUs are not available - requested %s, available: %s.", cpus, sysinfo->cpusetinfo.cpus);
-        lcrd_set_error_message("Requested CPUs are not available - requested %s, available: %s.", cpus,
-                               sysinfo->cpusetinfo.cpus);
+        isulad_set_error_message("Requested CPUs are not available - requested %s, available: %s.", cpus,
+                                 sysinfo->cpusetinfo.cpus);
         ret = -1;
         goto out;
     }
@@ -692,8 +692,8 @@ static int verify_resources_cpuset(const sysinfo_t *sysinfo, const char *cpus, c
     if (!mems_available) {
         ERROR("Requested memory nodes are not available - requested %s, available: %s.",
               mems, sysinfo->cpusetinfo.mems);
-        lcrd_set_error_message("Requested memory nodes are not available - requested %s, available: %s.",
-                               mems, sysinfo->cpusetinfo.mems);
+        isulad_set_error_message("Requested memory nodes are not available - requested %s, available: %s.",
+                                 mems, sysinfo->cpusetinfo.mems);
         ret = -1;
         goto out;
     }
@@ -742,13 +742,13 @@ static int verify_blkio_weight(const sysinfo_t *sysinfo, int weight)
 
     if (weight > 0 && !(sysinfo->blkioinfo.blkio_weight)) {
         ERROR("Your kernel does not support Block I/O weight. Weight discarded.");
-        lcrd_set_error_message("Your kernel does not support Block I/O weight. Weight discarded.");
+        isulad_set_error_message("Your kernel does not support Block I/O weight. Weight discarded.");
         ret = -1;
         goto out;
     }
     if (is_blkio_weight_invalid(weight)) {
         ERROR("Range of blkio weight is from 10 to 1000.");
-        lcrd_set_error_message("Range of blkio weight is from 10 to 1000.");
+        isulad_set_error_message("Range of blkio weight is from 10 to 1000.");
         ret = -1;
         goto out;
     }
@@ -769,13 +769,13 @@ static int verify_hostconfig_blkio_weight(const sysinfo_t *sysinfo, uint16_t wei
 
     if (weight > 0 && !(sysinfo->blkioinfo.blkio_weight)) {
         ERROR("Your kernel does not support Block I/O weight. Weight in host config discarded.");
-        lcrd_set_error_message("Your kernel does not support Block I/O weight. Weight in host config discarded.");
+        isulad_set_error_message("Your kernel does not support Block I/O weight. Weight in host config discarded.");
         ret = -1;
         goto out;
     }
     if (is_hostconfig_blkio_weight_invalid(weight)) {
         ERROR("Range of blkio weight is from 10 to 1000.");
-        lcrd_set_error_message("Range of blkio weight is from 10 to 1000.");
+        isulad_set_error_message("Range of blkio weight is from 10 to 1000.");
         ret = -1;
         goto out;
     }
@@ -791,7 +791,7 @@ static int verify_blkio_device(const sysinfo_t *sysinfo, size_t weight_device_le
 
     if (weight_device_len > 0 && !(sysinfo->blkioinfo.blkio_weight_device)) {
         ERROR("Your kernel does not support Block I/O weight_device.");
-        lcrd_set_error_message("Your kernel does not support Block I/O weight_device.");
+        isulad_set_error_message("Your kernel does not support Block I/O weight_device.");
         ret = -1;
     }
 
@@ -804,7 +804,7 @@ static int verify_oom_score_adj(int oom_score_adj)
     int ret = 0;
     if (oom_score_adj < OOM_SCORE_ADJ_MIN || oom_score_adj > OOM_SCORE_ADJ_MAX) {
         ERROR("Invalid value %d, range for oom score adj is [-1000, 1000].", oom_score_adj);
-        lcrd_set_error_message("Invalid value %d, range for oom score adj is [-1000, 1000].", oom_score_adj);
+        isulad_set_error_message("Invalid value %d, range for oom score adj is [-1000, 1000].", oom_score_adj);
         ret = -1;
     }
     return ret;
@@ -819,7 +819,7 @@ static bool is_storage_opts_valid(const json_map_string_string *storage_opts)
         if (strcmp(storage_opts->keys[i], "size") != 0) {
             // Only check key here, check value by image driver
             ERROR("Unknown storage option: %s", storage_opts->keys[i]);
-            lcrd_set_error_message("Unknown storage option: %s", storage_opts->keys[i]);
+            isulad_set_error_message("Unknown storage option: %s", storage_opts->keys[i]);
             return false;
         }
     }
@@ -837,7 +837,7 @@ static int verify_storage_opts(const host_config *hc)
         storage_opts = hc->storage_opt;
     }
 
-    driver = conf_get_lcrd_storage_driver();
+    driver = conf_get_isulad_storage_driver();
     if (driver == NULL) {
         ERROR("Failed to get storage driver");
         return -1;
@@ -849,7 +849,7 @@ static int verify_storage_opts(const host_config *hc)
 
     if (storage_opts->len > 0) {
         char *backing_fs = NULL;
-        backing_fs = conf_get_lcrd_storage_driver_backing_fs();
+        backing_fs = conf_get_isulad_storage_driver_backing_fs();
         if (backing_fs == NULL) {
             ERROR("No backing fs detected");
             ret = -1;
@@ -880,14 +880,14 @@ static int verify_blkio_rw_bps_device(const sysinfo_t *sysinfo, size_t throttle_
 
     if (throttle_read_bps_device_len > 0 && !(sysinfo->blkioinfo.blkio_read_bps_device)) {
         ERROR("Your kernel does not support Block read limit in bytes per second");
-        lcrd_set_error_message("Your kernel does not support Block read limit in bytes per second");
+        isulad_set_error_message("Your kernel does not support Block read limit in bytes per second");
         ret = -1;
         goto out;
     }
 
     if (throttle_write_bps_device_len > 0 && !(sysinfo->blkioinfo.blkio_write_bps_device)) {
         ERROR("Your kernel does not support Block write limit in bytes per second");
-        lcrd_set_error_message("Your kernel does not support Block write limit in bytes per second");
+        isulad_set_error_message("Your kernel does not support Block write limit in bytes per second");
         ret = -1;
         goto out;
     }
@@ -903,14 +903,14 @@ static int verify_blkio_rw_iops_device(const sysinfo_t *sysinfo, size_t throttle
 
     if (throttle_read_iops_device_len > 0 && !(sysinfo->blkioinfo.blkio_read_iops_device)) {
         ERROR("Your kernel does not support Block read limit in IO per second");
-        lcrd_set_error_message("Your kernel does not support Block read limit in IO per second");
+        isulad_set_error_message("Your kernel does not support Block read limit in IO per second");
         ret = -1;
         goto out;
     }
 
     if (throttle_write_iops_device_len > 0 && !(sysinfo->blkioinfo.blkio_write_iops_device)) {
         ERROR("Your kernel does not support Block write limit in IO per second");
-        lcrd_set_error_message("Your kernel does not support Block write limit in IO per second");
+        isulad_set_error_message("Your kernel does not support Block write limit in IO per second");
         ret = -1;
         goto out;
     }
@@ -999,7 +999,7 @@ static int verify_resources_hugetlbs(const sysinfo_t *sysinfo,
 
     if (!sysinfo->hugetlbinfo.hugetlblimit) {
         ERROR("Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
-        lcrd_set_error_message(
+        isulad_set_error_message(
             "Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
         ret = -1;
         goto out;
@@ -1066,7 +1066,7 @@ static int adapt_memory_swap(const sysinfo_t *sysinfo, const int64_t *limit, int
     if (*limit > 0 && *swap == 0 && sysinfo->cgmeminfo.swap) {
         if (*limit > (INT64_MAX / 2)) {
             ERROR("Memory swap out of range!");
-            lcrd_set_error_message("Memory swap out of range!");
+            isulad_set_error_message("Memory swap out of range!");
             return -1;
         }
         *swap = (*limit) * 2;
@@ -1150,17 +1150,17 @@ static bool verify_oci_linux_sysctl(const oci_runtime_config_linux *l)
     for (i = 0; i < l->sysctl->len; i++) {
         if (strcmp("kernel.pid_max", l->sysctl->keys[i]) == 0) {
             if (!pid_max_kernel_namespaced()) {
-                lcrd_set_error_message("Sysctl '%s' is not kernel namespaced, it cannot be changed",
-                                       l->sysctl->keys[i]);
+                isulad_set_error_message("Sysctl '%s' is not kernel namespaced, it cannot be changed",
+                                         l->sysctl->keys[i]);
                 return false;
             } else {
                 return true;
             }
         }
         if (!check_sysctl_valid(l->sysctl->keys[i])) {
-            lcrd_set_error_message("Sysctl %s=%s is not whitelist",
-                                   l->sysctl->keys[i],
-                                   l->sysctl->values[i]);
+            isulad_set_error_message("Sysctl %s=%s is not whitelist",
+                                     l->sysctl->keys[i],
+                                     l->sysctl->values[i]);
             return false;
         }
     }
@@ -1471,7 +1471,7 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
         if (!util_file_exists(iter->source) &&
             util_mkdir_p(iter->source, CONFIG_DIRECTORY_MODE)) {
             ERROR("Failed to create directory '%s': %s", iter->source, strerror(errno));
-            lcrd_try_set_error_message("Failed to create directory '%s': %s", iter->source, strerror(errno));
+            isulad_try_set_error_message("Failed to create directory '%s': %s", iter->source, strerror(errno));
             ret = -1;
             goto out;
         }
@@ -1536,8 +1536,8 @@ int verify_container_settings(const oci_runtime_spec *container)
 
     if (!util_valid_host_name(container->hostname)) {
         ERROR("Invalid container hostname %s", container->hostname);
-        lcrd_set_error_message("Invalid container hostname (%s), only %s and less than 64 bytes are allowed.",
-                               container->hostname, HOST_NAME_REGEXP);
+        isulad_set_error_message("Invalid container hostname (%s), only %s and less than 64 bytes are allowed.",
+                                 container->hostname, HOST_NAME_REGEXP);
         ret = -1;
         goto out;
     }
@@ -1660,7 +1660,7 @@ static int verify_host_config_hugetlbs(const sysinfo_t *sysinfo, host_config_hug
 
     if (!sysinfo->hugetlbinfo.hugetlblimit) {
         ERROR("Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
-        lcrd_set_error_message("Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
+        isulad_set_error_message("Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
         ret = -1;
         goto out;
     }
@@ -1777,24 +1777,24 @@ static int verify_restart_policy_name(const host_config_restart_policy *rp, cons
     if (is_restart_policy_always(rp->name) || is_restart_policy_no(rp->name) || is_restart_policy_on_reboot(rp->name)) {
         if (rp->maximum_retry_count != 0) {
             ERROR("Maximum retry count cannot be used with restart policy '%s'", rp->name);
-            lcrd_set_error_message("Maximum retry count cannot be used with restart policy '%s'", rp->name);
+            isulad_set_error_message("Maximum retry count cannot be used with restart policy '%s'", rp->name);
             return -1;
         }
     } else if (is_restart_policy_on_failure(rp->name)) {
         if (rp->maximum_retry_count < 0) {
             ERROR("Maximum retry count cannot be negative");
-            lcrd_set_error_message("Maximum retry count cannot be negative");
+            isulad_set_error_message("Maximum retry count cannot be negative");
             return -1;
         }
     } else {
         ERROR("Invalid restart policy '%s'", rp->name);
-        lcrd_set_error_message("Invalid restart policy '%s'", rp->name);
+        isulad_set_error_message("Invalid restart policy '%s'", rp->name);
         return -1;
     }
 
     if (hostconfig->auto_remove && !is_restart_policy_no(rp->name)) {
         ERROR("Can't create 'AutoRemove' container with restart policy");
-        lcrd_set_error_message("Can't create 'AutoRemove' container with restart policy");
+        isulad_set_error_message("Can't create 'AutoRemove' container with restart policy");
         return -1;
     }
 
@@ -1813,7 +1813,7 @@ static int host_config_settings_restart_policy(const host_config *hostconfig)
     if (rp->name == NULL || rp->name[0] == '\0') {
         if (rp->maximum_retry_count != 0) {
             ERROR("Maximum retry count cannot be used with empty restart policy");
-            lcrd_set_error_message("Maximum retry count cannot be used with empty restart policy");
+            isulad_set_error_message("Maximum retry count cannot be used with empty restart policy");
             return -1;
         }
         return 0;
@@ -1944,25 +1944,25 @@ int verify_health_check_parameter(const container_custom_config *custom_spec)
 
     if (is_less_than_one_second(custom_spec->health_check->interval)) {
         ERROR("Interval in Healthcheck cannot be less than one second");
-        lcrd_set_error_message("Interval in Healthcheck cannot be less than one second");
+        isulad_set_error_message("Interval in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
     if (is_less_than_one_second(custom_spec->health_check->timeout)) {
         ERROR("Timeout in Healthcheck cannot be less than one second");
-        lcrd_set_error_message("Timeout in Healthcheck cannot be less than one second");
+        isulad_set_error_message("Timeout in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
     if (is_less_than_one_second(custom_spec->health_check->start_period)) {
         ERROR("StartPeriod in Healthcheck cannot be less than one second");
-        lcrd_set_error_message("StartPeriod in Healthcheck cannot be less than one second");
+        isulad_set_error_message("StartPeriod in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
     if (custom_spec->health_check->retries < 0) {
         ERROR("--health-retries cannot be negative");
-        lcrd_set_error_message("--health-retries cannot be negative");
+        isulad_set_error_message("--health-retries cannot be negative");
         ret = -1;
         goto out;
     }

@@ -40,10 +40,10 @@
 #include "container_custom_config.h"
 #include "utils.h"
 #include "config.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "parse_common.h"
 #include "container_def.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "specs_extend.h"
 
 #define MAX_CAP_LEN 32
@@ -662,14 +662,14 @@ int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const oci_runtime_spe
     docker_seccomp_spec = get_seccomp_security_opt_spec(SECCOMP_DEFAULT_PATH);
     if (docker_seccomp_spec == NULL) {
         ERROR("Failed to parse docker format seccomp specification file \"%s\"", SECCOMP_DEFAULT_PATH);
-        lcrd_set_error_message("failed to parse seccomp file: %s", SECCOMP_DEFAULT_PATH);
+        isulad_set_error_message("failed to parse seccomp file: %s", SECCOMP_DEFAULT_PATH);
         return -1;
     }
     oci_seccomp_spec = trans_docker_seccomp_to_oci_format(docker_seccomp_spec, capabilites);
     free_docker_seccomp(docker_seccomp_spec);
     if (oci_seccomp_spec == NULL) {
         ERROR("Failed to trans docker format seccomp profile to oci standard");
-        lcrd_set_error_message("Failed to trans docker format seccomp profile to oci standard");
+        isulad_set_error_message("Failed to trans docker format seccomp profile to oci standard");
         return -1;
     }
 
@@ -794,7 +794,7 @@ int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, c
 
     if (adds_len > LIST_SIZE_MAX || drops_len > LIST_SIZE_MAX) {
         ERROR("Too many capabilities to add or drop, the limit is %d", LIST_SIZE_MAX);
-        lcrd_set_error_message("Too many capabilities to add or drop, the limit is %d", LIST_SIZE_MAX);
+        isulad_set_error_message("Too many capabilities to add or drop, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -845,7 +845,7 @@ int merge_sysctls(oci_runtime_spec *oci_spec, const json_map_string_string *sysc
 
     if (sysctls->len > LIST_SIZE_MAX) {
         ERROR("Too many sysctls to add, the limit is %d", LIST_SIZE_MAX);
-        lcrd_set_error_message("Too many sysctls to add, the limit is %d", LIST_SIZE_MAX);
+        isulad_set_error_message("Too many sysctls to add, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -1016,7 +1016,7 @@ int merge_seccomp(oci_runtime_spec *oci_spec, const host_config *host_spec)
 
     if (host_spec->security_opt_len > LIST_SIZE_MAX) {
         ERROR("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
-        lcrd_set_error_message("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
+        isulad_set_error_message("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
     }

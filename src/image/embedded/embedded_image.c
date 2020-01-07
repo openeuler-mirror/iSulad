@@ -53,7 +53,7 @@ bool embedded_detect(const char *image_name)
 {
     if (image_name == NULL && !util_valid_embedded_image_name(image_name)) {
         WARN("invalid image name %s", image_name);
-        lcrd_set_error_message("Invalid image name '%s'", image_name);
+        isulad_set_error_message("Invalid image name '%s'", image_name);
         return false;
     }
 
@@ -193,7 +193,7 @@ static int embedded_images_to_imagetool_images(struct db_all_images *all_images,
     if (images_num >= (SIZE_MAX / sizeof(imagetool_image *))) {
         ERROR("Too many images, out of memory");
         ret = -1;
-        lcrd_try_set_error_message("Get too many images info, out of memory");
+        isulad_try_set_error_message("Get too many images info, out of memory");
         goto out;
     }
     list->images = util_common_calloc_s(sizeof(imagetool_image *) * images_num);
@@ -280,7 +280,7 @@ int embedded_list_images(const im_list_request *request, imagetool_images_list *
     } else if (ret != 0 || all_images == NULL || all_images->imagesnum == 0) {
         ERROR("Get image info failed");
         ret = -1;
-        lcrd_try_set_error_message("Get image info failed");
+        isulad_try_set_error_message("Get image info failed");
         goto out;
     }
 
@@ -288,7 +288,7 @@ int embedded_list_images(const im_list_request *request, imagetool_images_list *
     if (ret != 0) {
         ERROR("Failed to translate embedded images to imagetool images");
         ret = -1;
-        lcrd_try_set_error_message("Failed to translate embedded images to imagetool images");
+        isulad_try_set_error_message("Failed to translate embedded images to imagetool images");
         goto out;
     }
 
@@ -335,7 +335,7 @@ int embedded_remove_image(const im_remove_request *request)
             if (strcmp(conts[i]->common_config->image, image_ref) == 0) {
                 ERROR("unable to remove image %s, container %s is using it",
                       image_ref, conts[i]->common_config->id);
-                lcrd_set_error_message("Image is in use");
+                isulad_set_error_message("Image is in use");
                 ret = EIMAGEBUSY;
                 goto unref_continue;
             }

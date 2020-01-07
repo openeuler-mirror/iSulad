@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container log function definition
  ******************************************************************************/
-#ifndef __LCRD_LOG_H
-#define __LCRD_LOG_H
+#ifndef __ISULAD_LOG_H
+#define __ISULAD_LOG_H
 
 #include <stdbool.h>
 #include <errno.h>
@@ -27,9 +27,9 @@ extern "C" {
 #define O_CLOEXEC 02000000
 #endif
 
-#define LCRD_LOG_BUFFER_SIZE 4096
+#define ISULAD_LOG_BUFFER_SIZE 4096
 
-#define LCRD_LOG_TIME_MAX_LEN 21
+#define ISULAD_LOG_TIME_MAX_LEN 21
 
 enum g_log_driver {
     LOG_DRIVER_STDOUT,
@@ -135,5 +135,5 @@ int new_log(const struct log_object_metadata *meta, const char *format, ...);
 }
 #endif
 
-#endif /* __LCRD_LOG_H */
+#endif /* __ISULAD_LOG_H */
 
