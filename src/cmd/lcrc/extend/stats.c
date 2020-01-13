@@ -213,7 +213,6 @@ static int client_stats(const struct client_arguments *args)
 {
     struct lcrc_stats_request request = { 0 };
 
-    request.runtime = args->runtime;
     request.all = args->showall;
     request.containers = (char **)(args->argv);
     request.containers_len = (size_t)(args->argc);

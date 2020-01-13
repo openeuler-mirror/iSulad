@@ -24,5 +24,5 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils
     ${CMAKE_BINARY_DIR}/json
     )
-set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,calloc -Wl,--wrap,memcpy_s")
-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} -lyajl -lsecurec -lz)
+set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,calloc")
+target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} -lyajl -lz)

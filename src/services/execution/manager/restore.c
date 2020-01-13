@@ -28,6 +28,7 @@
 #include "container_unix.h"
 #include "error.h"
 #include "image.h"
+#include "runtime.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_images_store.h"
@@ -36,15 +37,17 @@
 #include "execution.h"
 
 /* restore supervisor */
-static int restore_supervisor(const char *id, const char *runtime, const char *statepath)
+static int restore_supervisor(const container_t *cont)
 {
     int ret = 0;
     int nret = 0;
     int exit_fifo_fd = -1;
     char container_state[PATH_MAX] = { 0 };
-    char pidfile[PATH_MAX] = { 0 };
     char *exit_fifo = NULL;
-    container_pid_t *pid_info = NULL;
+    char *id = cont->common_config->id;
+    char *statepath = cont->state_path;
+    char *runtime = cont->runtime;
+    container_pid_t pid_info = { 0 };
 
     nret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
     if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
@@ -67,23 +70,12 @@ static int restore_supervisor(const char *id, const char *runtime, const char *s
         goto out;
     }
 
-    nret = snprintf(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
-    if (nret < 0 || (size_t)nret >= sizeof(pidfile)) {
-        close(exit_fifo_fd);
-        ERROR("Failed to sprintf pidfile");
-        ret = -1;
-        goto out;
-    }
+    pid_info.pid = cont->state->state->pid;
+    pid_info.ppid = cont->state->state->p_pid;
+    pid_info.start_time = cont->state->state->start_time;
+    pid_info.pstart_time = cont->state->state->p_start_time;
 
-    pid_info = container_read_pidfile(pidfile);
-    if (pid_info == NULL) {
-        close(exit_fifo_fd);
-        ERROR("Failed to get started container's pid info");
-        ret = -1;
-        goto out;
-    }
-
-    if (supervisor_add_exit_monitor(exit_fifo_fd, pid_info, id, runtime)) {
+    if (supervisor_add_exit_monitor(exit_fifo_fd, &pid_info, id, runtime)) {
         ERROR("Failed to add exit monitor to supervisor");
         ret = -1;
         goto out;
@@ -91,115 +83,31 @@ static int restore_supervisor(const char *id, const char *runtime, const char *s
 
 out:
     free(exit_fifo);
-    free(pid_info);
 
     return ret;
-}
-
-static container_pid_t *container_read_proc(uint32_t pid)
-{
-    container_pid_t *pid_info = NULL;
-    proc_t *proc_info = NULL;
-
-    if (pid == 0) {
-        goto out;
-    }
-
-    proc_info = util_get_process_proc_info((pid_t)pid);
-    if (proc_info == NULL) {
-        goto out;
-    }
-
-    pid_info = util_common_calloc_s(sizeof(container_pid_t));
-    if (pid_info == NULL) {
-        goto out;
-    }
-
-    pid_info->pid = proc_info->pid;
-    pid_info->start_time = proc_info->start_time;
-
-out:
-    free(proc_info);
-    return pid_info;
 }
 
 /* post stopped container to gc */
 static int post_stopped_container_to_gc(const char *id, const char *runtime, const char *statepath, uint32_t pid)
 {
     int ret = 0;
-    int nret = 0;
-    char container_state[PATH_MAX] = { 0 };
-    char pidfile[PATH_MAX] = { 0 };
-    container_pid_t *pid_info = NULL;
+    container_pid_t pid_info = { 0 };
 
-    nret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
-    if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
-        ERROR("Failed to sprintf container state %s/%s", statepath, id);
-        ret = -1;
-        goto out;
-    }
+    (void)container_read_proc(pid, &pid_info);
 
-    nret = snprintf(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
-    if (nret < 0 || (size_t)nret >= sizeof(pidfile)) {
-        ERROR("Failed to sprintf pidfile");
-        ret = -1;
-        goto out;
-    }
-
-    pid_info = container_read_pidfile(pidfile);
-    if (pid_info == NULL) {
-        WARN("Failed to get started container's pid info, try to read proc filesystem");
-        pid_info = container_read_proc(pid);
-        if (pid_info == NULL) {
-            ERROR("Failed to get started container's pid info");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    if (gc_add_container(id, runtime, pid_info)) {
+    if (gc_add_container(id, runtime, &pid_info)) {
         ERROR("Failed to post container %s to garbage collector", id);
         ret = -1;
         goto out;
     }
 
 out:
-    free(pid_info);
     return ret;
-}
-
-static container_pid_t *load_running_container_pid_info(const container_t *cont)
-{
-    int nret = 0;
-    const char *id = cont->common_config->id;
-    char pidfile[PATH_MAX] = { 0 };
-    char container_state[PATH_MAX] = { 0 };
-    container_pid_t *pid_info = NULL;
-
-    nret = snprintf(container_state, sizeof(container_state), "%s/%s", cont->state_path, id);
-    if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
-        ERROR("Failed to sprintf container_state for container %s", id);
-        goto out;
-    }
-
-    nret = snprintf(pidfile, sizeof(pidfile), "%s/pid.file", container_state);
-    if (nret < 0 || (size_t)nret >= sizeof(pidfile)) {
-        ERROR("Failed to sprintf pidfile");
-        goto out;
-    }
-
-    pid_info = container_read_pidfile(pidfile);
-    if (pid_info == NULL) {
-        goto out;
-    }
-
-out:
-    return pid_info;
 }
 
 #ifdef ENABLE_OCI_IMAGE
 static void post_nonexist_image_containers(const container_t *cont, Container_Status status,
-                                           const struct engine_container_summary_info *info)
+                                           const struct engine_container_status_info *info)
 {
     int nret;
     const char *id = cont->common_config->id;
@@ -267,50 +175,31 @@ out:
 }
 #endif
 
-static void try_to_set_container_running(Container_Status status, const container_t *cont,
-                                         const container_pid_t *pid_info)
+static bool is_same_process(const container_t *cont, const container_pid_t *pid_info)
 {
-    int pid = 0;
-
-    pid = state_get_pid(cont->state);
-    if (status != CONTAINER_STATUS_RUNNING || pid != pid_info->pid) {
-        state_set_running(cont->state, pid_info, true);
+    if (pid_info->pid == cont->state->state->pid &&
+        pid_info->ppid == cont->state->state->p_pid &&
+        pid_info->start_time == cont->state->state->start_time &&
+        pid_info->pstart_time == cont->state->state->p_start_time) {
+        return true;
     }
+    return false;
 }
 
 static void try_to_set_paused_container_pid(Container_Status status, const container_t *cont,
                                             const container_pid_t *pid_info)
 {
-    int pid = 0;
-
-    pid = state_get_pid(cont->state);
-    if (status != CONTAINER_STATUS_RUNNING || pid != pid_info->pid) {
+    if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
         state_set_running(cont->state, pid_info, false);
     }
 }
 
-static int restore_check_id_valid(const char *id, const struct engine_container_summary_info *info,
-                                  size_t container_num)
+static void try_to_set_container_running(Container_Status status, container_t *cont,
+                                         const container_pid_t *pid_info)
 {
-    size_t i = 0;
-
-    if (id == NULL) {
-        ERROR("Cannot get container id from config v2");
-        return -1;
+    if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
+        state_set_running(cont->state, pid_info, true);
     }
-
-    for (i = 0; i < container_num; i++) {
-        if (strcmp(id, info[i].id) == 0) {
-            break;
-        }
-    }
-
-    if (i >= container_num) {
-        ERROR("Container %s is not in runtime container array", id);
-        return -1;
-    }
-
-    return (int)i;
 }
 
 static int restore_stopped_container(Container_Status status, const container_t *cont, bool *need_save)
@@ -333,16 +222,19 @@ static int restore_stopped_container(Container_Status status, const container_t 
 }
 
 static int restore_running_container(Container_Status status, container_t *cont,
-                                     const struct engine_container_summary_info *info)
+                                     const struct engine_container_status_info *info)
 {
     int ret = 0;
+    int nret = 0;
     const char *id = cont->common_config->id;
-    container_pid_t *pid_info = NULL;
+    container_pid_t pid_info = { 0 };
 
-    pid_info = load_running_container_pid_info(cont);
-    if (pid_info == NULL) {
-        ERROR("Failed to restore container:%s due to unable to read container pid info", id);
-        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, info->pid);
+    nret = container_read_proc(info->pid, &pid_info);
+    if (nret == 0) {
+        try_to_set_container_running(status, cont, &pid_info);
+    } else {
+        ERROR("Failed to restore container:%s due to unable to read container pid information", id);
+        nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
@@ -350,29 +242,30 @@ static int restore_running_container(Container_Status status, container_t *cont,
         }
         ret = -1;
         goto out;
-    } else {
-        try_to_set_container_running(status, cont, pid_info);
     }
+
     container_reset_manually_stopped(cont);
 
 out:
-    free(pid_info);
     return ret;
 }
 
 static int restore_paused_container(Container_Status status, container_t *cont,
-                                    const struct engine_container_summary_info *info)
+                                    const struct engine_container_status_info *info)
 {
     int ret = 0;
+    int nret = 0;
     const char *id = cont->common_config->id;
-    container_pid_t *pid_info = NULL;
+    container_pid_t pid_info = { 0 };
 
     state_set_paused(cont->state);
 
-    pid_info = load_running_container_pid_info(cont);
-    if (pid_info == NULL) {
-        ERROR("Failed to restore container:%s due to unable to read container pid info", id);
-        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, info->pid);
+    nret = container_read_proc(info->pid, &pid_info);
+    if (nret == 0) {
+        try_to_set_paused_container_pid(status, cont, &pid_info);
+    } else {
+        ERROR("Failed to restore container:%s due to unable to read container pid information", id);
+        nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
@@ -380,27 +273,31 @@ static int restore_paused_container(Container_Status status, container_t *cont,
         }
         ret = -1;
         goto out;
-    } else {
-        try_to_set_paused_container_pid(status, cont, pid_info);
     }
+
     container_reset_manually_stopped(cont);
 
 out:
-    free(pid_info);
     return ret;
 }
 
 /* restore state */
-static int restore_state(container_t *cont, const struct engine_container_summary_info *info, size_t container_num)
+static int restore_state(container_t *cont)
 {
     int ret = 0;
-    int c_index = 0;
+    int nret = 0;
     bool need_save = false;
     const char *id = cont->common_config->id;
+    const char *runtime = cont->runtime;
+    rt_status_params_t params = { 0 };
+    struct engine_container_status_info real_status = { 0 };
     Container_Status status = CONTAINER_STATUS_UNKNOWN;
 
-    c_index = restore_check_id_valid(id, info, container_num);
-    if (c_index < 0) {
+    params.rootpath = cont->root_path;
+
+    nret = runtime_status(id, runtime, &params, &real_status);
+    if (nret != 0) {
+        ERROR("Failed to restore container %s, due to can not load container status", id);
         ret = -1;
         goto out;
     }
@@ -411,29 +308,31 @@ static int restore_state(container_t *cont, const struct engine_container_summar
 #ifdef ENABLE_OCI_IMAGE
     if (check_container_image_exist(cont) != 0) {
         ERROR("Failed to restore container:%s due to image not exist", id);
-        post_nonexist_image_containers(cont, status, &info[c_index]);
+        post_nonexist_image_containers(cont, status, &real_status);
         ret = -1;
         goto out;
     }
 #endif
 
-    if (info[c_index].status == ENGINE_CONTAINER_STATUS_STOPPED) {
+    if (real_status.status == ENGINE_CONTAINER_STATUS_STOPPED) {
         ret = restore_stopped_container(status, cont, &need_save);
         if (ret != 0) {
             goto out;
         }
-    } else if (info[c_index].status == ENGINE_CONTAINER_STATUS_RUNNING) {
-        ret = restore_running_container(status, cont, &info[c_index]);
+    } else if (real_status.status == ENGINE_CONTAINER_STATUS_RUNNING) {
+        ret = restore_running_container(status, cont, &real_status);
         if (ret != 0) {
             goto out;
         }
-    } else if (info[c_index].status == ENGINE_CONTAINER_STATUS_PAUSED) {
-        ret = restore_paused_container(status, cont, &info[c_index]);
+    } else if (real_status.status == ENGINE_CONTAINER_STATUS_PAUSED) {
+        ret = restore_paused_container(status, cont, &real_status);
         if (ret != 0) {
             goto out;
         }
     } else {
-        ERROR("Container %s get invalid status %d", id, info[c_index].status);
+        ERROR("Container %s get invalid status %d", id, real_status.status);
+        ret = -1;
+        goto out;
     }
 
     if (is_removal_in_progress(cont->state)) {
@@ -538,7 +437,7 @@ static void handle_restored_container()
         id = cont->common_config->id;
 
         if (is_running(cont->state)) {
-            if (restore_supervisor(id, cont->runtime, cont->state_path)) {
+            if (restore_supervisor(cont)) {
                 ERROR("Failed to restore %s supervisor", id);
             }
             init_health_monitor(id);
@@ -563,8 +462,7 @@ static void handle_restored_container()
 
 /* scan dir to add store */
 static void scan_dir_to_add_store(const char *runtime, const char *rootpath, const char *statepath,
-                                  const size_t subdir_num, const char **subdir, const size_t container_num,
-                                  const struct engine_container_summary_info *info)
+                                  const size_t subdir_num, const char **subdir)
 {
     size_t i = 0;
     container_t *cont = NULL;
@@ -579,7 +477,7 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
             goto error_load;
         }
 
-        if (restore_state(cont, info, container_num)) {
+        if (restore_state(cont)) {
             WARN("Failed to restore container %s state", subdir[i]);
             goto error_load;
         }
@@ -609,83 +507,14 @@ error_load:
     }
 }
 
-/* query all containers info */
-static int query_all_containers_info(const char *runtime, struct engine_container_summary_info **container_summary,
-                                     size_t *container_num)
-{
-    int ret = 0;
-    int container_nums = 0;
-    char *engine_path = NULL;
-    struct engine_operation *engine_ops = NULL;
-
-    if (runtime == NULL || container_summary == NULL || container_num == NULL) {
-        ERROR("invalid NULL param");
-        return -1;
-    }
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_get_all_containers_info_op == NULL) {
-        ERROR("Failed to get list op of engine %s", runtime);
-        ret = -1;
-        goto out;
-    }
-
-    engine_path = conf_get_routine_rootdir(runtime);
-    if (engine_path == NULL) {
-        ret = -1;
-        goto out;
-    }
-    container_nums = engine_ops->engine_get_all_containers_info_op(engine_path, container_summary);
-    if (container_nums < 0) {
-        ERROR("Engine %s get all containers info failed", runtime);
-        ret = -1;
-        goto out;
-    }
-    *container_num = (size_t)container_nums;
-
-out:
-    free(engine_path);
-    if (engine_ops != NULL) {
-        engine_ops->engine_clear_errmsg_op();
-    }
-
-    return ret;
-}
-
-/* all containers info free */
-static void all_containers_info_free(const char *runtime, struct engine_container_summary_info *container_summary,
-                                     size_t container_num)
-{
-    struct engine_operation *engine_ops = NULL;
-
-    if (container_summary == NULL || runtime == NULL) {
-        return;
-    }
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_free_all_containers_info_op == NULL) {
-        ERROR("Failed to get free op of engine %s", runtime);
-        return;
-    }
-
-    engine_ops->engine_free_all_containers_info_op(container_summary, (int)container_num);
-
-    if (engine_ops->engine_clear_errmsg_op != NULL) {
-        engine_ops->engine_clear_errmsg_op();
-    }
-    return;
-}
-
 /* restore container by runtime */
 static int restore_container_by_runtime(const char *runtime)
 {
     int ret = 0;
     char *rootpath = NULL;
     char *statepath = NULL;
-    size_t container_num = 0;
     size_t subdir_num = 0;
     char **subdir = NULL;
-    struct engine_container_summary_info *info = NULL;
 
     rootpath = conf_get_routine_rootdir(runtime);
     if (rootpath == NULL) {
@@ -712,17 +541,9 @@ static int restore_container_by_runtime(const char *runtime)
         goto out;
     }
 
-    ret = query_all_containers_info(runtime, &info, &container_num);
-    if (ret < 0) {
-        ERROR("query all containers info failed");
-        ret = -1;
-        goto out;
-    }
-
-    scan_dir_to_add_store(runtime, rootpath, statepath, subdir_num, (const char **)subdir, container_num, info);
+    scan_dir_to_add_store(runtime, rootpath, statepath, subdir_num, (const char **)subdir);
 
 out:
-    all_containers_info_free(runtime, info, container_num);
     free(rootpath);
     free(statepath);
     util_free_array(subdir);

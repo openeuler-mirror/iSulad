@@ -57,6 +57,8 @@ extern "C" {
 
 #define ECOMMON 1
 
+#define PARAM_NUM 100
+
 /* image error start */
 #define EIMAGEBUSY 2
 #define ENAMECONFLICT 3
@@ -89,6 +91,8 @@ extern "C" {
 
 /* container id max length */
 #define CONTAINER_ID_MAX_LEN 64
+
+#define CONTAINER_EXEC_ID_MAX_LEN 64
 
 #define LIST_SIZE_MAX 1000LL
 #define LIST_DEVICE_SIZE_MAX 10000LL
@@ -417,6 +421,12 @@ int util_input_noecho(char *buf, size_t maxlen);
 bool util_check_signal_valid(int sig);
 
 void usleep_nointerupt(unsigned long usec);
+
+int util_generate_random_str(char *id, size_t len);
+
+void add_array_elem(char **array, size_t total, size_t *pos, const char *elem);
+
+void add_array_kv(char **array, size_t total, size_t *pos, const char *k, const char *v);
 
 #ifdef __cplusplus
 }

@@ -106,10 +106,10 @@ int container_wait_stop_locking(container_t *cont, int timeout);
 void container_wait_rm_cond_broadcast(container_t *cont);
 int container_wait_rm_locking(container_t *cont, int timeout);
 
-container_pid_t *container_read_pidfile(const char *pidfile);
-
 int save_host_config(const char *id, const char *rootpath, const char *hostconfigstr);
 int save_config_v2_json(const char *id, const char *rootpath, const char *v2configstr);
+
+int container_read_proc(uint32_t pid, container_pid_t *pid_info);
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }

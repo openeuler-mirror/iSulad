@@ -73,14 +73,13 @@ typedef struct _rt_rm_params_t {
     const char *rootpath;
 } rt_rm_params_t;
 
-typedef struct _rt_get_console_conf_params_t {
-    const char *rootpath;
-    struct engine_console_config *config;
-} rt_get_console_conf_params_t;
-
 typedef struct _rt_status_params_t {
     const char *rootpath;
 } rt_status_params_t;
+
+typedef struct _rt_stats_params_t {
+    const char *rootpath;
+} rt_stats_params_t;
 
 typedef struct _rt_exec_params_t {
     const char *rootpath;
@@ -93,6 +92,7 @@ typedef struct _rt_exec_params_t {
     size_t args_len;
     const char * const *envs;
     size_t envs_len;
+    const char *suffix;
 } rt_exec_params_t;
 
 typedef struct _rt_pause_params_t {
@@ -102,6 +102,40 @@ typedef struct _rt_pause_params_t {
 typedef struct _rt_resume_params_t {
     const char *rootpath;
 } rt_resume_params_t;
+
+typedef struct _rt_attach_params_t {
+    const char *rootpath;
+    const char *stdin;
+    const char *stdout;
+    const char *stderr;
+} rt_attach_params_t;
+
+typedef struct _rt_update_params_t {
+    const char *rootpath;
+    const host_config *hostconfig;
+} rt_update_params_t;
+
+typedef struct _rt_listpids_params_t {
+    const char *rootpath;
+} rt_listpids_params_t;
+
+typedef struct _rt_listpids_out_t {
+    pid_t *pids;
+    size_t pids_len;
+} rt_listpids_out_t;
+
+typedef struct _rt_resize_params_t {
+    const char *rootpath;
+    unsigned int height;
+    unsigned int width;
+} rt_resize_params_t;
+
+typedef struct _rt_exec_resize_params_t {
+    const char *rootpath;
+    const char *suffix;
+    unsigned int height;
+    unsigned int width;
+} rt_exec_resize_params_t;
 
 struct rt_ops {
     /* detect whether runtime is of this runtime type */
@@ -118,16 +152,26 @@ struct rt_ops {
 
     int (*rt_rm)(const char *name, const char *runtime, const rt_rm_params_t *params);
 
-    int (*rt_get_console_config)(const char *name, const char *runtime, const rt_get_console_conf_params_t *params);
-
     int (*rt_status)(const char *name, const char *runtime, const rt_status_params_t *params,
-                     struct engine_container_info *status);
+                     struct engine_container_status_info *status);
+
+    int (*rt_resources_stats)(const char *name, const char *runtime, const rt_stats_params_t *params,
+                              struct engine_container_resources_stats_info *rs_stats);
 
     int (*rt_exec)(const char *name, const char *runtime, const rt_exec_params_t *params,
                    int *exit_code);
 
     int (*rt_pause)(const char *name, const char *runtime, const rt_pause_params_t *params);
     int (*rt_resume)(const char *name, const char *runtime, const rt_resume_params_t *params);
+
+    int (*rt_attach)(const char *name, const char *runtime, const rt_attach_params_t *params);
+
+    int (*rt_update)(const char *name, const char *runtime, const rt_update_params_t *params);
+
+    int (*rt_listpids)(const char *name, const char *runtime, const rt_listpids_params_t *params,
+                       rt_listpids_out_t *out);
+    int (*rt_resize)(const char *name, const char *runtime, const rt_resize_params_t *params);
+    int (*rt_exec_resize)(const char *name, const char *runtime, const rt_exec_resize_params_t *params);
 };
 
 int runtime_create(const char *name, const char *runtime, const rt_create_params_t *params);
@@ -135,14 +179,22 @@ int runtime_clean_resource(const char *name, const char *runtime, const rt_clean
 int runtime_start(const char *name, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info);
 int runtime_restart(const char *name, const char *runtime, const rt_restart_params_t *params);
 int runtime_rm(const char *name, const char *runtime, const rt_rm_params_t *params);
-int runtime_get_console_config(const char *name, const char *runtime, const rt_get_console_conf_params_t *params);
 int runtime_status(const char *name, const char *runtime, const rt_status_params_t *params,
-                   struct engine_container_info *status);
+                   struct engine_container_status_info *status);
+int runtime_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
+                            struct engine_container_resources_stats_info *rs_stats);
 int runtime_exec(const char *name, const char *runtime, const rt_exec_params_t *params,
                  int *exit_code);
 int runtime_pause(const char *name, const char *runtime, const rt_pause_params_t *params);
 int runtime_resume(const char *name, const char *runtime, const rt_resume_params_t *params);
+int runtime_attach(const char *name, const char *runtime, const rt_attach_params_t *params);
 
+int runtime_update(const char *name, const char *runtime, const rt_update_params_t *params);
+
+int runtime_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out);
+void free_rt_listpids_out_t(rt_listpids_out_t *out);
+int runtime_resize(const char *name, const char *runtime, const rt_resize_params_t *params);
+int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_resize_params_t *params);
 #ifdef __cplusplus
 }
 #endif

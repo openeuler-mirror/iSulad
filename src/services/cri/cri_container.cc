@@ -811,14 +811,74 @@ cleanup:
     free_container_list_response(response);
 }
 
+void CRIRuntimeServiceImpl::PackContainerStatsAttributes(
+    const char *id,
+    std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
+    Errors &error)
+{
+    if (id == nullptr) {
+        return;
+    }
+
+    container->mutable_attributes()->set_id(id);
+    auto status = ContainerStatus(std::string(id), error);
+    if (status->has_metadata()) {
+        std::unique_ptr<runtime::v1alpha2::ContainerMetadata> metadata(
+            new (std::nothrow) runtime::v1alpha2::ContainerMetadata(status->metadata()));
+        if (metadata == nullptr) {
+            error.SetError("Out of memory");
+            ERROR("Out of memory");
+            return;
+        }
+        container->mutable_attributes()->set_allocated_metadata(metadata.release());
+    }
+    if (status->labels_size() > 0) {
+        auto labels = container->mutable_attributes()->mutable_labels();
+        *labels = status->labels();
+    }
+    if (status->annotations_size() > 0) {
+        auto annotations = container->mutable_attributes()->mutable_annotations();
+        *annotations = status->annotations();
+    }
+}
+
+void CRIRuntimeServiceImpl::PackContainerStatsFilesystemUsage(
+    const char *id, const char *image_type,
+    std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
+    Errors &error)
+{
+    if (id == nullptr || image_type == nullptr) {
+        return;
+    }
+
+    imagetool_fs_info *fs_usage { nullptr };
+    if (im_get_container_filesystem_usage(image_type, id, &fs_usage) != 0) {
+        ERROR("Failed to get container filesystem usage");
+    }
+
+    if (fs_usage == nullptr) {
+        container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
+        container->mutable_writable_layer()->mutable_inodes_used()->set_value(0);
+    } else {
+        if (fs_usage->image_filesystems[0]->used_bytes->value) {
+            container->mutable_writable_layer()->mutable_used_bytes()->set_value(
+                fs_usage->image_filesystems[0]->used_bytes->value);
+        }
+
+        if (fs_usage->image_filesystems[0]->inodes_used->value) {
+            container->mutable_writable_layer()->mutable_inodes_used()->set_value(
+                fs_usage->image_filesystems[0]->inodes_used->value);
+        }
+    }
+
+    free_imagetool_fs_info(fs_usage);
+}
+
 void CRIRuntimeServiceImpl::ContainerStatsToGRPC(
     container_stats_response *response,
     std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
 {
-    int ret {};
-
     for (size_t i {}; i < response->container_stats_len; i++) {
-        imagetool_fs_info *fs_usage { nullptr };
         using ContainerStatsPtr = std::unique_ptr<runtime::v1alpha2::ContainerStats>;
         ContainerStatsPtr container(new (std::nothrow) runtime::v1alpha2::ContainerStats);
         if (container == nullptr) {
@@ -826,14 +886,12 @@ void CRIRuntimeServiceImpl::ContainerStatsToGRPC(
             return;
         }
 
-        if (response->container_stats[i]->id != nullptr && response->container_stats[i]->image_type != nullptr) {
-            container->mutable_attributes()->set_id(response->container_stats[i]->id);
-            ret = im_get_container_filesystem_usage(response->container_stats[i]->image_type,
-                                                    response->container_stats[i]->id, &fs_usage);
-            if (ret != 0) {
-                ERROR("Failed to get container filesystem usage");
-            }
+        PackContainerStatsAttributes(response->container_stats[i]->id, container, error);
+        if (error.NotEmpty()) {
+            return;
         }
+        PackContainerStatsFilesystemUsage(response->container_stats[i]->id,
+                                          response->container_stats[i]->image_type, container, error);
 
         if (response->container_stats[i]->mem_used) {
             container->mutable_memory()->mutable_working_set_bytes()->set_value(response->container_stats[i]->mem_used);
@@ -845,23 +903,7 @@ void CRIRuntimeServiceImpl::ContainerStatsToGRPC(
             container->mutable_cpu()->set_timestamp((int64_t)(response->container_stats[i]->cpu_system_use));
         }
 
-        if (fs_usage == nullptr) {
-            container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
-            container->mutable_writable_layer()->mutable_inodes_used()->set_value(0);
-        }
-        if (fs_usage != nullptr) {
-            if (fs_usage->image_filesystems[0]->used_bytes->value) {
-                container->mutable_writable_layer()->mutable_used_bytes()->set_value(
-                    fs_usage->image_filesystems[0]->used_bytes->value);
-            }
-
-            if (fs_usage->image_filesystems[0]->inodes_used->value) {
-                container->mutable_writable_layer()->mutable_inodes_used()->set_value(
-                    fs_usage->image_filesystems[0]->inodes_used->value);
-            }
-        }
         containerstats->push_back(move(container));
-        free_imagetool_fs_info(fs_usage);
     }
 }
 

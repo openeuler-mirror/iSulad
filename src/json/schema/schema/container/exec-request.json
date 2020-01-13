@@ -5,6 +5,9 @@
 		"container_id": {
 			"type": "string"
 		},
+		"suffix": {
+			"type": "string"
+		},
 		"tty": {
 			"type": "boolean"
 		},

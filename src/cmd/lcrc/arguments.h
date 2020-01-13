@@ -286,6 +286,9 @@ struct client_arguments {
     char *type;
     char *tag;
 
+    // exec
+    char *exec_suffix;
+
     // login/logout
     char *username;
     char *password;

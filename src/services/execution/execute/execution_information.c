@@ -456,7 +456,6 @@ out:
 
 static inline void add_ps_array_elem(char **array, size_t *pos, const char *elem)
 {
-#define PARAM_NUM 100
     if (*pos + 1 >= (PARAM_NUM - 1)) {
         return;
     }
@@ -537,25 +536,47 @@ static int get_pids(const char *name, const char *runtime, const char *rootpath,
                     char **pid_args)
 {
     int ret = 0;
-    struct engine_operation *engine_ops = NULL;
+    size_t i = 0;
+    rt_listpids_params_t params = { 0 };
+    rt_listpids_out_t *out = NULL;
 
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || engine_ops->engine_get_container_pids_op == NULL) {
-        DEBUG("Failed to get engine top operations");
+    out = util_common_calloc_s(sizeof(rt_listpids_out_t));
+    if (out == NULL) {
+        ERROR("Memeory out");
         ret = -1;
         goto out;
     }
 
-    if (!engine_ops->engine_get_container_pids_op(name, rootpath, pids, pids_len)) {
-        DEBUG("Top container %s failed", name);
-        const char *tmpmsg = NULL;
-        tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Runtime top container error: %s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+    params.rootpath = rootpath;
 
+    if (runtime_listpids(name, runtime, &params, out) != 0) {
+        ERROR("runtime failed to list pids");
         ret = -1;
         goto out;
     }
+
+
+    if (out->pids_len > SIZE_MAX / sizeof(pid_t)) {
+        ERROR("list too many pids");
+        ret = -1;
+        goto out;
+    }
+
+    if (out->pids_len != 0) {
+        pid_t *tmp = NULL;
+        tmp = util_common_calloc_s(sizeof(pid_t) * out->pids_len);
+        if (tmp == NULL) {
+            ERROR("Memory out");
+            ret = -1;
+            goto out;
+        }
+        for (i = 0; i < out->pids_len; i++) {
+            tmp[i] = out->pids[i];
+        }
+        *pids = tmp;
+    }
+
+    *pids_len = out->pids_len;
 
     *pid_args = ps_pids_arg(*pids, *pids_len);
     if (*pid_args == NULL) {
@@ -564,9 +585,7 @@ static int get_pids(const char *name, const char *runtime, const char *rootpath,
         goto out;
     }
 out:
-    if (engine_ops != NULL) {
-        engine_ops->engine_clear_errmsg_op();
-    }
+    free_rt_listpids_out_t(out);
     return ret;
 }
 
@@ -1467,113 +1486,6 @@ pack_response:
     return (cc == LCRD_SUCCESS) ? 0 : -1;
 }
 
-static int container_conf_request_check(const struct lcrd_container_conf_request *h)
-{
-    int ret = 0;
-
-    if (h->name == NULL) {
-        ERROR("Receive NULL container name");
-        ret = -1;
-        goto out;
-    }
-
-    if (!util_valid_container_id_or_name(h->name)) {
-        ERROR("Invalid container name %s", h->name);
-        lcrd_set_error_message("Invalid container name %s", h->name);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
-static void pack_container_conf_response(struct lcrd_container_conf_response *response, uint32_t cc,
-                                         const struct engine_console_config *config)
-{
-    if (response == NULL) {
-        return;
-    }
-    response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
-        DAEMON_CLEAR_ERRMSG();
-    }
-
-    if (config->log_path != NULL) {
-        response->container_logpath = util_strdup_s(config->log_path);
-    }
-    response->container_logrotate = (uint32_t)config->log_rotate;
-    if (config->log_file_size != NULL) {
-        response->container_logsize = util_strdup_s(config->log_file_size);
-    }
-}
-
-static int container_conf_cb(const struct lcrd_container_conf_request *request,
-                             struct lcrd_container_conf_response **response)
-{
-    char *id = NULL;
-    uint32_t cc = LCRD_SUCCESS;
-    struct engine_operation *engine_ops = NULL;
-    struct engine_console_config config = { 0 };
-    container_t *cont = NULL;
-    rt_get_console_conf_params_t params = { 0 };
-
-    DAEMON_CLEAR_ERRMSG();
-    if (request == NULL || response == NULL) {
-        ERROR("Invalid NULL input");
-        return -1;
-    }
-
-    *response = util_common_calloc_s(sizeof(struct lcrd_container_conf_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
-        goto pack_response;
-    }
-
-    if (container_conf_request_check(request) != 0) {
-        cc = LCRD_ERR_INPUT;
-        goto pack_response;
-    }
-
-    cont = containers_store_get(request->name);
-    if (cont == NULL) {
-        ERROR("No such container:%s", request->name);
-        lcrd_set_error_message("No such container:%s", request->name);
-        cc = LCRD_ERR_EXEC;
-        goto pack_response;
-    }
-
-    engine_ops = engines_get_handler(cont->runtime);
-    if (engine_ops == NULL || engine_ops->engine_free_console_config_op == NULL) {
-        ERROR("Failed to get engine free_console_config operation");
-        cc = LCRD_ERR_EXEC;
-        goto pack_response;
-    }
-
-    id = cont->common_config->id;
-    set_log_prefix(id);
-
-    params.rootpath = cont->root_path;
-    params.config = &config;
-
-    if (runtime_get_console_config(id, cont->runtime, &params) != 0) {
-        cc = LCRD_ERR_EXEC;
-        goto pack_response;
-    }
-
-pack_response:
-    pack_container_conf_response(*response, cc, &config);
-    container_unref(cont);
-    if (engine_ops != NULL && engine_ops->engine_free_console_config_op != NULL) {
-        engine_ops->engine_free_console_config_op(&config);
-    }
-
-    free_log_prefix();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
-}
-
 static int rename_request_check(const struct lcrd_container_rename_request *request)
 {
     int ret = 0;
@@ -1745,7 +1657,6 @@ void container_information_callback_init(service_container_callback_t *cb)
     cb->inspect = container_inspect_cb;
     cb->list = container_list_cb;
     cb->wait = container_wait_cb;
-    cb->conf = container_conf_cb;
     cb->top = container_top_cb;
     cb->rename = container_rename_cb;
 }

@@ -27,23 +27,15 @@
 #include "log.h"
 #include "lcrd_config.h"
 
-typedef int(*lcr_list_all_containers_t)(const char *lcrpath, struct lcr_container_info **info_arr);
-typedef void(*lcr_containers_info_free_t)(struct lcr_container_info **info_arr, size_t size);
 typedef bool(*lcr_state_op_t)(const char *name, const char *lcrpath, struct lcr_container_state *lcs);
 typedef void(*lcr_container_state_free_t)(struct lcr_container_state *lcs);
 typedef bool(*lcr_update_op_t)(const char *name, const char *lcrpath, struct lcr_cgroup_resources *cr);
-typedef bool(*lcr_get_console_config_op_t)(const char *name, const char *lcrpath, struct lcr_console_config *config);
-typedef void(*lcr_free_console_config_op_t)(struct lcr_console_config *config);
 typedef bool(*lcr_start_op_t)(struct lcr_start_request *request);
 typedef bool(*lcr_exec_op_t)(const struct lcr_exec_request *request, int *exit_code);
 
-static lcr_list_all_containers_t g_lcr_list_all_containers_op = NULL;
-static lcr_containers_info_free_t g_lcr_containers_info_free_op = NULL;
 static lcr_state_op_t g_lcr_state_op = NULL;
 static lcr_container_state_free_t g_lcr_container_state_free_op = NULL;
 static lcr_update_op_t g_lcr_update_op = NULL;
-static lcr_get_console_config_op_t g_lcr_get_console_config_op = NULL;
-static lcr_free_console_config_op_t g_lcr_free_console_config_op = NULL;
 static lcr_start_op_t g_lcr_start_op = NULL;
 static lcr_exec_op_t g_lcr_exec_op = NULL;
 /*
@@ -120,199 +112,21 @@ static bool lcr_exec_container(const engine_exec_request_t *request, int *exit_c
     return g_lcr_exec_op(lcr_request, exit_code);
 }
 
-/* free console config */
-void free_console_config(struct engine_console_config *config)
-{
-    if (config == NULL) {
-        return;
-    }
-    free(config->log_path);
-    config->log_path = NULL;
-
-    free(config->log_file_size);
-    config->log_file_size = NULL;
-
-    config->log_rotate = 0;
-}
-
-/* get console config */
-bool get_console_config(const char *name, const char *lcrpath, struct engine_console_config *config)
-{
-    struct lcr_console_config lcr_config;
-    bool ret = false;
-
-    if (name == NULL || config == NULL) {
-        ERROR("Invalid arguments");
-        return ret;
-    }
-
-    (void)memset(&lcr_config, 0, sizeof(struct lcr_console_config));
-
-    if (g_lcr_get_console_config_op != NULL) {
-        ret = g_lcr_get_console_config_op(name, lcrpath, &lcr_config);
-    }
-
-    if (ret) {
-        if (lcr_config.log_path) {
-            config->log_path = util_strdup_s(lcr_config.log_path);
-        } else {
-            config->log_path = NULL;
-        }
-        config->log_rotate = lcr_config.log_rotate;
-        if (lcr_config.log_file_size) {
-            config->log_file_size = util_strdup_s(lcr_config.log_file_size);
-        } else {
-            config->log_file_size = NULL;
-        }
-
-        if (g_lcr_free_console_config_op != NULL) {
-            g_lcr_free_console_config_op(&lcr_config);
-        }
-    }
-
-    return ret;
-}
-
-/*
- * Get the containers info by liblcr
- */
-static void get_containers_info(int num, const struct lcr_container_info *info_arr,
-                                struct engine_container_summary_info *info)
-{
-    int i = 0;
-    const struct lcr_container_info *in = NULL;
-    char *name = NULL;
-
-    for (i = 0, in = info_arr; i < num; i++, in++) {
-        name = in->name;
-        if (name == NULL) {
-            continue;
-        }
-
-        info[i].id = util_strdup_s(name);
-        info[i].has_pid = (-1 == in->init) ? false : true;
-        info[i].pid = (uint32_t)in->init;
-        info[i].status = lcrsta2sta(in->state);
-    }
-}
-
 /*
  * Get the state of container from 'lcr_container_state'
  */
-static void copy_container_status(const struct lcr_container_state *lcs, struct engine_container_info *status)
+static void copy_container_status(const struct lcr_container_state *lcs, struct engine_container_status_info *status)
 {
-    const char *defvalue = "-";
-    const char *name = NULL;
-
-    (void)memset(status, 0, sizeof(struct engine_container_info));
-
-    name = lcs->name ? lcs->name : defvalue;
-    status->id = util_strdup_s(name);
+    (void)memset(status, 0, sizeof(struct engine_container_status_info));
 
     status->has_pid = (-1 == lcs->init) ? false : true;
     status->pid = (uint32_t)lcs->init;
 
     status->status = lcrsta2sta(lcs->state);
-
-    status->pids_current = lcs->pids_current;
-
-    status->cpu_use_nanos = lcs->cpu_use_nanos;
-
-    status->blkio_read = lcs->io_service_bytes.read;
-    status->blkio_write = lcs->io_service_bytes.write;
-
-    status->mem_used = lcs->mem_used;
-    status->mem_limit = lcs->mem_limit;
-    status->kmem_used = lcs->kmem_used;
-    status->kmem_limit = lcs->kmem_limit;
-}
-
-/*
- * Alloc Memory for containerArray and container
- */
-static int service_list_alloc(int num, struct engine_container_summary_info **cons)
-{
-    if (num <= 0 || cons == NULL) {
-        return -1;
-    }
-
-    if ((size_t)num > SIZE_MAX / sizeof(struct engine_container_summary_info)) {
-        ERROR("Too many engine container summaries!");
-        return -1;
-    }
-    *cons = util_common_calloc_s((size_t)num * sizeof(struct engine_container_summary_info));
-    if ((*cons) == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*
- * Free the container** containerArray
- */
-static void free_all_containers_info(struct engine_container_summary_info *info, int num)
-{
-    int i = 0;
-
-    if (num <= 0 || info == NULL) {
-        return;
-    }
-    for (i = 0; i < num; i++) {
-        free(info[i].id);
-        info[i].id = NULL;
-        free(info[i].command);
-        info[i].command = NULL;
-        free(info[i].image);
-        info[i].image = NULL;
-        free(info[i].finishat);
-        info[i].finishat = NULL;
-        free(info[i].startat);
-        info[i].startat = NULL;
-    }
-    free(info);
-}
-
-/* get all containers info */
-static int get_all_containers_info(const char *enginepath, struct engine_container_summary_info **cons)
-{
-    struct lcr_container_info *info_arr = NULL;
-    int num = 0;
-
-    if (cons == NULL) {
-        ERROR("Invalid argument");
-        return -1;
-    }
-
-    if (g_lcr_list_all_containers_op == NULL || g_lcr_containers_info_free_op == NULL) {
-        ERROR("Not supported op");
-        num = -1;
-        goto free_out;
-    }
-
-    num = g_lcr_list_all_containers_op(enginepath, &info_arr);
-    if (num <= 0) {
-        num = 0; /* set to 0 if non were found */
-        goto free_out;
-    }
-
-    if (service_list_alloc(num, cons)) {
-        g_lcr_containers_info_free_op(&info_arr, (size_t)num);
-        ERROR("service list alloc failed");
-        num = -1;
-        goto free_out;
-    }
-
-    get_containers_info(num, info_arr, *cons);
-    g_lcr_containers_info_free_op(&info_arr, (size_t)num);
-
-free_out:
-    return num;
 }
 
 /* get container status */
-static int get_container_status(const char *name, const char *enginepath, struct engine_container_info *status)
+static int get_container_status(const char *name, const char *enginepath, struct engine_container_status_info *status)
 {
     struct lcr_container_state lcs = { 0 };
 
@@ -331,22 +145,43 @@ static int get_container_status(const char *name, const char *enginepath, struct
     return 0;
 }
 
-/* free container status */
-static void free_container_status(struct engine_container_info *status)
+static void copy_container_resources_stats(const struct lcr_container_state *lcs,
+                                           struct engine_container_resources_stats_info *rs_stats)
 {
-    if (status == NULL) {
-        return;
-    }
+    (void)memset(rs_stats, 0, sizeof(struct engine_container_resources_stats_info));
+    rs_stats->pids_current = lcs->pids_current;
 
-    free(status->id);
-    status->id = NULL;
+    rs_stats->cpu_use_nanos = lcs->cpu_use_nanos;
+
+    rs_stats->blkio_read = lcs->io_service_bytes.read;
+    rs_stats->blkio_write = lcs->io_service_bytes.write;
+
+    rs_stats->mem_used = lcs->mem_used;
+    rs_stats->mem_limit = lcs->mem_limit;
+    rs_stats->kmem_used = lcs->kmem_used;
+    rs_stats->kmem_limit = lcs->kmem_limit;
 }
 
-#define CHECK_ERROR(P) do { \
-        if (dlerror() != NULL) { \
-            goto badcleanup; \
-        } \
-    } while (0)
+/* get container cgroup resources */
+static int lcr_get_container_resources_stats(const char *name, const char *enginepath,
+                                             struct engine_container_resources_stats_info *rs_stats)
+{
+    struct lcr_container_state lcs = { 0 };
+
+    if (g_lcr_state_op == NULL || g_lcr_container_state_free_op == NULL) {
+        ERROR("Not supported op");
+        return -1;
+    }
+
+    if (!g_lcr_state_op(name, enginepath, &lcs)) {
+        DEBUG("Failed to state for container '%s'", name);
+        g_lcr_container_state_free_op(&lcs);
+        return -1;
+    }
+    copy_container_resources_stats(&lcs, rs_stats);
+    g_lcr_container_state_free_op(&lcs);
+    return 0;
+}
 
 static bool load_lcr_exec_ops(void *lcr_handler, struct engine_operation *eop)
 {
@@ -386,6 +221,14 @@ static bool load_lcr_exec_ops(void *lcr_handler, struct engine_operation *eop)
     if (dlerror() != NULL) {
         return false;
     }
+    eop->engine_resize_op = dlsym(lcr_handler, "lcr_resize");
+    if (dlerror() != NULL) {
+        return false;
+    }
+    eop->engine_exec_resize_op = dlsym(lcr_handler, "lcr_exec_resize");
+    if (dlerror() != NULL) {
+        return false;
+    }
     return true;
 }
 
@@ -400,22 +243,6 @@ static bool load_lcr_info_ops(void *lcr_handler, struct engine_operation *eop)
         return false;
     }
     eop->engine_get_container_pids_op = dlsym(lcr_handler, "lcr_get_container_pids");
-    if (dlerror() != NULL) {
-        return false;
-    }
-    g_lcr_get_console_config_op = dlsym(lcr_handler, "lcr_get_console_config");
-    if (dlerror() != NULL) {
-        return false;
-    }
-    g_lcr_free_console_config_op = dlsym(lcr_handler, "lcr_free_console_config");
-    if (dlerror() != NULL) {
-        return false;
-    }
-    g_lcr_list_all_containers_op = dlsym(lcr_handler, "lcr_list_all_containers");
-    if (dlerror() != NULL) {
-        return false;
-    }
-    g_lcr_containers_info_free_op = dlsym(lcr_handler, "lcr_containers_info_free");
     if (dlerror() != NULL) {
         return false;
     }
@@ -464,16 +291,11 @@ struct engine_operation *lcr_engine_init()
         ERROR("Load lcr info operations failed");
         goto badcleanup;
     }
-
-    eop->engine_get_all_containers_info_op = get_all_containers_info;
-    eop->engine_free_all_containers_info_op = free_all_containers_info;
     eop->engine_get_container_status_op = get_container_status;
-    eop->engine_free_container_status_op = free_container_status;
+    eop->engine_get_container_resources_stats_op = lcr_get_container_resources_stats;
     eop->engine_update_op = lcr_update_container;
     eop->engine_start_op = lcr_start_container;
     eop->engine_exec_op = lcr_exec_container;
-    eop->engine_get_console_config_op = get_console_config;
-    eop->engine_free_console_config_op = free_console_config;
 
     goto cleanup;
 

@@ -622,3 +622,14 @@ cleanup:
     return bret;
 }
 
+bool util_valid_exec_suffix(const char *suffix)
+{
+    char *patten = "^[a-f0-9]{64}$";
+
+    if (suffix == NULL) {
+        ERROR("invalid NULL param");
+        return false;
+    }
+
+    return util_reg_match(patten, suffix) == 0;
+}

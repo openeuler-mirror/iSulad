@@ -174,9 +174,10 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
 static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
                                             const std::string &podSandboxID, host_config *hostConfig, Errors &error)
 {
+    std::string sandboxNSMode = "container:" + podSandboxID;
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::POD) {
         free(hostConfig->pid_mode);
-        hostConfig->pid_mode = util_strdup_s("");
+        hostConfig->pid_mode = util_strdup_s(sandboxNSMode.c_str());
     }
 
     /* set common Namespace options */

@@ -62,12 +62,14 @@ int rt_lcr_create(const char *name, const char *runtime, const rt_create_params_
         lcrd_set_error_message("Create container error: %s",
                                (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
                                : DEF_ERR_RUNTIME_STR);
-        engine_ops->engine_clear_errmsg_op();
         ret = -1;
         goto out;
     }
 
 out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
     free(runtime_root);
     return ret;
 }
@@ -138,7 +140,6 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
                                : DEF_ERR_RUNTIME_STR);
         ERROR("Start container error: %s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
               : DEF_ERR_RUNTIME_STR);
-        engine_ops->engine_clear_errmsg_op();
         ret = -1;
         goto out;
     }
@@ -149,6 +150,9 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
         goto out;
     }
 out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
     return ret;
 }
 
@@ -247,38 +251,8 @@ out:
     return ret;
 }
 
-int rt_lcr_get_console_config(const char *name, const char *runtime, const rt_get_console_conf_params_t *params)
-{
-    int ret = 0;
-    struct engine_operation *engine_ops = NULL;
-
-    engine_ops = engines_get_handler(runtime);
-    if (engine_ops == NULL || (engine_ops->engine_get_console_config_op) == NULL) {
-        ERROR("Failed to get engine get_console_config operation");
-        ret = -1;
-        goto out;
-    }
-
-    if (!engine_ops->engine_get_console_config_op(name, params->rootpath, params->config)) {
-        ERROR("Failed to get console config");
-        const char *tmpmsg = NULL;
-        tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Get console config error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
-        ret = -1;
-        goto out;
-    }
-
-
-out:
-    if (engine_ops != NULL) {
-        engine_ops->engine_clear_errmsg_op();
-    }
-    return ret;
-}
-
 int rt_lcr_status(const char *name, const char *runtime, const rt_status_params_t *params,
-                  struct engine_container_info *status)
+                  struct engine_container_status_info *status)
 {
     int ret = 0;
     int nret = 0;
@@ -299,9 +273,39 @@ int rt_lcr_status(const char *name, const char *runtime, const rt_status_params_
     }
 
 out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
     return ret;
 }
 
+int rt_lcr_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
+                           struct engine_container_resources_stats_info *rs_stats)
+{
+    int ret = 0;
+    int nret = 0;
+    struct engine_operation *engine_ops = NULL;
+
+    engine_ops = engines_get_handler(runtime);
+    if (engine_ops == NULL || engine_ops->engine_get_container_resources_stats_op == NULL) {
+        ERROR("Failed to get engine stats operations");
+        ret = -1;
+        goto out;
+    }
+
+    nret = engine_ops->engine_get_container_resources_stats_op(name, params->rootpath, rs_stats);
+    if (nret != 0) {
+        engine_ops->engine_clear_errmsg_op();
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
+    return ret;
+}
 int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *params, int *exit_code)
 {
     int ret = 0;
@@ -326,6 +330,7 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
     request.console_fifos = params->console_fifos;
     request.timeout = params->timeout;
     request.user = params->user;
+    request.suffix = params->suffix;
 
     if (!engine_ops->engine_exec_op(&request, exit_code)) {
         const char *tmpmsg = NULL;
@@ -339,6 +344,9 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
     }
 
 out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
     return ret;
 }
 
@@ -360,11 +368,13 @@ int rt_lcr_pause(const char *name, const char *runtime, const rt_pause_params_t 
         tmpmsg = engine_ops->engine_get_errmsg_op();
         lcrd_set_error_message("Pause container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
                                tmpmsg : DEF_ERR_RUNTIME_STR);
-        engine_ops->engine_clear_errmsg_op();
         ret = -1;
         goto out;
     }
 out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
     return ret;
 }
 
@@ -387,11 +397,177 @@ int rt_lcr_resume(const char *name, const char *runtime, const rt_resume_params_
         lcrd_set_error_message("Resume container error;%s",
                                (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
                                : DEF_ERR_RUNTIME_STR);
-
-        engine_ops->engine_clear_errmsg_op();
         ret = -1;
         goto out;
     }
 out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
+    return ret;
+}
+
+int rt_lcr_attach(const char *name, const char *runtime, const rt_attach_params_t *params)
+{
+    int ret = 0;
+    struct engine_operation *engine_ops = NULL;
+
+    engine_ops = engines_get_handler(runtime);
+    if (engine_ops == NULL || engine_ops->engine_console_op == NULL) {
+        DEBUG("Failed to get engine attach operations");
+        ret = -1;
+        goto out;
+    }
+
+    if (!engine_ops->engine_console_op(name, params->rootpath, (char *)params->stdin, (char *)params->stdout,
+                                       (char *)params->stderr)) {
+        ERROR("attach failed");
+        const char *tmpmsg = NULL;
+        tmpmsg = engine_ops->engine_get_errmsg_op();
+        lcrd_set_error_message("Attach container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
+                               tmpmsg : DEF_ERR_RUNTIME_STR);
+        ret = -1;
+        goto out;
+    }
+out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
+    return ret;
+}
+
+static void to_engine_resources(const host_config *hostconfig, struct engine_cgroup_resources *cr)
+{
+    if (hostconfig == NULL || cr == NULL) {
+        return;
+    }
+
+    cr->blkio_weight = hostconfig->blkio_weight;
+    cr->cpu_shares = (uint64_t)hostconfig->cpu_shares;
+    cr->cpu_period = (uint64_t)hostconfig->cpu_period;
+    cr->cpu_quota = (uint64_t)hostconfig->cpu_quota;
+    cr->cpuset_cpus = hostconfig->cpuset_cpus;
+    cr->cpuset_mems = hostconfig->cpuset_mems;
+    cr->memory_limit = (uint64_t)hostconfig->memory;
+    cr->memory_swap = (uint64_t)hostconfig->memory_swap;
+    cr->memory_reservation = (uint64_t)hostconfig->memory_reservation;
+    cr->kernel_memory_limit = (uint64_t)hostconfig->kernel_memory;
+}
+
+int rt_lcr_update(const char *id, const char *runtime, const rt_update_params_t *params)
+{
+    int ret = 0;
+    struct engine_operation *engine_ops = NULL;
+    struct engine_cgroup_resources cr = { 0 };
+
+    engine_ops = engines_get_handler(runtime);
+    if (engine_ops == NULL || engine_ops->engine_update_op == NULL) {
+        DEBUG("Failed to get engine update operations");
+        ret = -1;
+        goto out;
+    }
+
+    to_engine_resources(params->hostconfig, &cr);
+
+    if (!engine_ops->engine_update_op(id, params->rootpath, &cr)) {
+        DEBUG("Update container %s failed", id);
+        const char *tmpmsg = NULL;
+        tmpmsg = engine_ops->engine_get_errmsg_op();
+        lcrd_set_error_message("Cannot update container %s: %s", id, (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
+                               tmpmsg : DEF_ERR_RUNTIME_STR);
+        ret = -1;
+        goto out;
+    }
+out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
+    return ret;
+}
+
+int rt_lcr_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out)
+{
+    int ret = 0;
+    struct engine_operation *engine_ops = NULL;
+
+    engine_ops = engines_get_handler(runtime);
+    if (engine_ops == NULL || engine_ops->engine_get_container_pids_op == NULL) {
+        DEBUG("Failed to get engine top operations");
+        ret = -1;
+        goto out;
+    }
+
+    if (!engine_ops->engine_get_container_pids_op(name, params->rootpath, &(out->pids), &(out->pids_len))) {
+        DEBUG("Top container %s failed", name);
+        const char *tmpmsg = NULL;
+        tmpmsg = engine_ops->engine_get_errmsg_op();
+        lcrd_set_error_message("Runtime top container error: %s",
+                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+        ret = -1;
+        goto out;
+    }
+out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
+    return ret;
+}
+
+int rt_lcr_resize(const char *id, const char *runtime, const rt_resize_params_t *params)
+{
+    int ret = 0;
+    struct engine_operation *engine_ops = NULL;
+
+    engine_ops = engines_get_handler(runtime);
+    if (engine_ops == NULL || engine_ops->engine_resize_op == NULL) {
+        DEBUG("Failed to get engine resume operations");
+        ret = -1;
+        goto out;
+    }
+
+    if (!engine_ops->engine_resize_op(id, params->rootpath, params->height, params->width)) {
+        DEBUG("resize container %s failed", id);
+        const char *tmpmsg = NULL;
+        tmpmsg = engine_ops->engine_get_errmsg_op();
+        lcrd_set_error_message("Resize container error;%s",
+                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                               : DEF_ERR_RUNTIME_STR);
+
+        ret = -1;
+        goto out;
+    }
+out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
+    return ret;
+}
+
+int rt_lcr_exec_resize(const char *id, const char *runtime, const rt_exec_resize_params_t *params)
+{
+    int ret = 0;
+    struct engine_operation *engine_ops = NULL;
+
+    engine_ops = engines_get_handler(runtime);
+    if (engine_ops == NULL || engine_ops->engine_resize_op == NULL) {
+        DEBUG("Failed to get engine resume operations");
+        ret = -1;
+        goto out;
+    }
+
+    if (!engine_ops->engine_exec_resize_op(id, params->rootpath, params->suffix, params->height, params->width)) {
+        DEBUG("exec resize container %s failed", id);
+        const char *tmpmsg = NULL;
+        tmpmsg = engine_ops->engine_get_errmsg_op();
+        lcrd_set_error_message("Resize container error;%s",
+                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                               : DEF_ERR_RUNTIME_STR);
+        ret = -1;
+        goto out;
+    }
+out:
+    if (engine_ops != NULL) {
+        engine_ops->engine_clear_errmsg_op();
+    }
     return ret;
 }

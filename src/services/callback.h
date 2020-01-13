@@ -123,8 +123,6 @@ typedef struct {
 
     int(*inspect)(const container_inspect_request *request, container_inspect_response **response);
 
-    int(*conf)(const struct lcrd_container_conf_request *request, struct lcrd_container_conf_response **response);
-
     int(*wait)(const container_wait_request *request, container_wait_response **response);
 
     int(*events)(const struct lcrd_events_request *request, const stream_func_wrapper *stream);
@@ -140,6 +138,8 @@ typedef struct {
 
     int(*logs)(const struct lcrd_logs_request *request,
                stream_func_wrapper *stream, struct lcrd_logs_response **response);
+
+    int(*resize)(const struct lcrd_container_resize_request *request, struct lcrd_container_resize_response **response);
 } service_container_callback_t;
 
 typedef struct {

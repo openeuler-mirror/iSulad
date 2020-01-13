@@ -15,7 +15,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <securec.h>
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "oci_runtime_spec.h"

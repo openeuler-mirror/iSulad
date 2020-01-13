@@ -83,9 +83,6 @@ typedef struct {
     int(*update)(const struct lcrc_update_request *request,
                  struct lcrc_update_response *response, void *arg);
 
-    int(*conf)(const struct lcrc_container_conf_request *request,
-               struct lcrc_container_conf_response *response, void *arg);
-
     int(*attach)(const struct lcrc_attach_request *request,
                  struct lcrc_attach_response *response, void *arg);
 
@@ -98,7 +95,8 @@ typedef struct {
               struct lcrc_top_response *response, void *arg);
     int(*rename)(const struct lcrc_rename_request *request,
                  struct lcrc_rename_response *response, void *arg);
-
+    int(*resize)(const struct lcrc_resize_request *request,
+                 struct lcrc_resize_response *response, void *arg);
     int(*logs)(const struct lcrc_logs_request *request, struct lcrc_logs_response *response, void *arg);
 } container_ops;
 

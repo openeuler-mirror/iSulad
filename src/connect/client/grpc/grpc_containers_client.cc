@@ -636,6 +636,61 @@ public:
     }
 };
 
+class ContainerResize : public ClientBase<ContainerService, ContainerService::Stub, lcrc_resize_request, ResizeRequest,
+    lcrc_resize_response, ResizeResponse> {
+public:
+    explicit ContainerResize(void *args)
+        : ClientBase(args)
+    {
+    }
+    ~ContainerResize() = default;
+
+    int request_to_grpc(const lcrc_resize_request *request, ResizeRequest *grequest) override
+    {
+        if (request == nullptr) {
+            return -1;
+        }
+
+        if (request->id != nullptr) {
+            grequest->set_id(request->id);
+        }
+        if (request->suffix != nullptr) {
+            grequest->set_suffix(request->suffix);
+        }
+        grequest->set_height(request->height);
+
+        grequest->set_width(request->width);
+
+        return 0;
+    }
+
+    int response_from_grpc(ResizeResponse *gresponse, lcrc_resize_response *response) override
+    {
+        response->server_errono = gresponse->cc();
+        if (!gresponse->errmsg().empty()) {
+            response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+        }
+
+        return 0;
+    }
+
+    int check_parameter(const ResizeRequest &req) override
+    {
+        if (req.id().empty()) {
+            ERROR("Missing container id in the request");
+            return -1;
+        }
+
+        return 0;
+    }
+
+    Status grpc_call(ClientContext *context, const ResizeRequest &req, ResizeResponse *reply) override
+    {
+        return stub_->Resize(context, req, reply);
+    }
+};
+
+
 class ContainerRestart : public ClientBase<ContainerService, ContainerService::Stub, lcrc_restart_request,
     RestartRequest, lcrc_restart_response, RestartResponse> {
 public:
@@ -751,6 +806,9 @@ public:
 
         if (request->name != nullptr) {
             grequest->set_container_id(request->name);
+        }
+        if (request->suffix != nullptr) {
+            grequest->set_suffix(request->suffix);
         }
         grequest->set_tty(request->tty);
         grequest->set_open_stdin(request->open_stdin);
@@ -876,6 +934,7 @@ public:
         exec.argv_len = (size_t)request->argc;
         exec.env = request->env;
         exec.env_len = request->env_len;
+        exec.suffix = request->suffix;
         json = container_exec_request_generate_json(&exec, &ctx, &err);
         if (json == nullptr) {
             format_errorf(&response->errmsg, "Can not generate json: %s", err);
@@ -1589,61 +1648,6 @@ cleanup:
     }
 };
 
-class ContainerConf : public ClientBase<ContainerService, ContainerService::Stub, lcrc_container_conf_request,
-    Container_conf_Request, lcrc_container_conf_response, Container_conf_Response> {
-public:
-    explicit ContainerConf(void *args)
-        : ClientBase(args)
-    {
-    }
-    ~ContainerConf() = default;
-
-    int request_to_grpc(const lcrc_container_conf_request *request, Container_conf_Request *grequest) override
-    {
-        if (request == nullptr) {
-            return -1;
-        }
-
-        if (request->name != nullptr) {
-            grequest->set_container_id(request->name);
-        }
-
-        return 0;
-    }
-
-    int response_from_grpc(Container_conf_Response *gresponse, lcrc_container_conf_response *response) override
-    {
-        response->server_errono = gresponse->cc();
-        if (!gresponse->errmsg().empty()) {
-            response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
-        }
-        if (!gresponse->container_logpath().empty()) {
-            response->container_logpath = util_strdup_s(gresponse->container_logpath().c_str());
-        }
-        response->container_logrotate = gresponse->container_logrotate();
-        if (!gresponse->container_logsize().empty()) {
-            response->container_logsize = util_strdup_s(gresponse->container_logsize().c_str());
-        }
-
-        return 0;
-    }
-
-    int check_parameter(const Container_conf_Request &req) override
-    {
-        if (req.container_id().empty()) {
-            ERROR("Missing container name in the request");
-            return -1;
-        }
-
-        return 0;
-    }
-
-    Status grpc_call(ClientContext *context, const Container_conf_Request &req, Container_conf_Response *reply) override
-    {
-        return stub_->Container_conf(context, req, reply);
-    }
-};
-
 class ContainerStats : public ClientBase<ContainerService, ContainerService::Stub, lcrc_stats_request, StatsRequest,
     lcrc_stats_response, StatsResponse> {
 public:
@@ -1657,10 +1661,6 @@ public:
     {
         if (request == nullptr) {
             return -1;
-        }
-
-        if (request->runtime != nullptr) {
-            grequest->set_runtime(request->runtime);
         }
 
         for (size_t i = 0; request->containers != nullptr && i < request->containers_len; i++) {
@@ -1686,9 +1686,6 @@ public:
                 if (!gresponse->containers(i).id().empty()) {
                     response->container_stats[i].id = util_strdup_s(gresponse->containers(i).id().c_str());
                 }
-                response->container_stats[i].has_pid = (int)gresponse->containers(i).pid() != -1;
-                response->container_stats[i].pid = (uint32_t)gresponse->containers(i).pid();
-                response->container_stats[i].status = (Container_Status)((int)gresponse->containers(i).status());
                 response->container_stats[i].pids_current = gresponse->containers(i).pids_current();
                 response->container_stats[i].cpu_use_nanos = gresponse->containers(i).cpu_use_nanos();
                 response->container_stats[i].cpu_system_use = gresponse->containers(i).cpu_system_use();
@@ -1712,11 +1709,6 @@ public:
 
     int check_parameter(const StatsRequest &req) override
     {
-        if (req.runtime().empty()) {
-            ERROR("Missing runtime in the request");
-            return -1;
-        }
-
         return 0;
     }
 
@@ -2213,7 +2205,6 @@ int grpc_containers_client_ops_init(lcrc_connect_ops *ops)
     ops->container.pause = container_func<lcrc_pause_request, lcrc_pause_response, ContainerPause>;
     ops->container.resume = container_func<lcrc_resume_request, lcrc_resume_response, ContainerResume>;
     ops->container.update = container_func<lcrc_update_request, lcrc_update_response, ContainerUpdate>;
-    ops->container.conf = container_func<lcrc_container_conf_request, lcrc_container_conf_response, ContainerConf>;
     ops->container.kill = container_func<lcrc_kill_request, lcrc_kill_response, ContainerKill>;
     ops->container.stats = container_func<lcrc_stats_request, lcrc_stats_response, ContainerStats>;
     ops->container.wait = container_func<lcrc_wait_request, lcrc_wait_response, ContainerWait>;
@@ -2226,6 +2217,7 @@ int grpc_containers_client_ops_init(lcrc_connect_ops *ops)
         container_func<lcrc_copy_to_container_request, lcrc_copy_to_container_response, CopyToContainer>;
     ops->container.top = container_func<lcrc_top_request, lcrc_top_response, ContainerTop>;
     ops->container.rename = container_func<lcrc_rename_request, lcrc_rename_response, ContainerRename>;
+    ops->container.resize = container_func<lcrc_resize_request, lcrc_resize_response, ContainerResize>;
     ops->container.logs = container_func<lcrc_logs_request, lcrc_logs_response, ContainerLogs>;
 
     return 0;

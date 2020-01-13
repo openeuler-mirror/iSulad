@@ -96,6 +96,8 @@ bool util_valid_runtime_name(const char *name);
 
 bool util_valid_short_sha256_id(const char *id);
 
+bool util_valid_exec_suffix(const char *suffix);
+
 #ifdef __cplusplus
 }
 #endif

@@ -45,8 +45,6 @@
 #include "container_resume_response.h"
 #include "container_wait_request.h"
 #include "container_wait_response.h"
-#include "container_conf_request.h"
-#include "container_conf_response.h"
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
@@ -67,7 +65,6 @@
 #define ContainerServiceAttach "/ContainerService/Attach"
 #define ContainerServiceResume "/ContainerService/Resume"
 #define ContainerServiceWait "/ContainerService/Wait"
-#define ContainerServiceConf "/ContainerService/Container_conf"
 
 /* "/ContainerService/Kill",
 "/ContainerService/Delete",

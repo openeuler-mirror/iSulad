@@ -1273,7 +1273,6 @@ int cmd_create_main(int argc, const char **argv)
     printf("%s\n", g_cmd_create_args.name);
     nret = EXIT_SUCCESS;
 out:
-    client_arguments_free(&g_cmd_create_args);
     exit(nret);
 }
 

@@ -1255,46 +1255,6 @@ unlock:
     return ret;
 }
 
-static container_pid_t *parse_container_pid(const char *S)
-{
-    int num;
-    container_pid_t *P = NULL;
-
-    if (S == NULL) {
-        return NULL;
-    }
-
-    P = util_common_calloc_s(sizeof(container_pid_t));
-    if (P == NULL) {
-        return NULL;
-    }
-
-    num = sscanf(S, "%d %Lu %d %Lu", &P->pid, &P->start_time, &P->ppid, &P->pstart_time);
-    if (num != 4) { // args num to read is 4
-        ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
-        free(P);
-        return NULL;
-    }
-
-    return P;
-}
-
-container_pid_t *container_read_pidfile(const char *pidfile)
-{
-    if (pidfile == NULL) {
-        ERROR("Invalid input arguments");
-        return NULL;
-    }
-
-    char sbuf[1024] = { 0 };  /* bufs for stat */
-
-    if ((util_file2str(pidfile, sbuf, sizeof(sbuf))) == -1) {
-        return NULL;
-    }
-
-    return parse_container_pid(sbuf);
-}
-
 char *container_get_env_nolock(const container_t *cont, const char *key)
 {
     size_t i = 0;
@@ -1339,4 +1299,39 @@ char *container_get_env_nolock(const container_t *cont, const char *key)
 
     return val;
 }
+
+int container_read_proc(uint32_t pid, container_pid_t *pid_info)
+{
+    int ret = 0;
+    proc_t *proc = NULL;
+    proc_t *p_proc = NULL;
+
+    if (pid == 0) {
+        ret = -1;
+        goto out;
+    }
+
+    proc = util_get_process_proc_info((pid_t)pid);
+    if (proc == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    p_proc = util_get_process_proc_info((pid_t)proc->ppid);
+    if (p_proc == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    pid_info->pid = proc->pid;
+    pid_info->start_time = proc->start_time;
+    pid_info->ppid = proc->ppid;
+    pid_info->pstart_time = p_proc->start_time;
+
+out:
+    free(proc);
+    free(p_proc);
+    return ret;
+}
+
 

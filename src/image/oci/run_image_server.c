@@ -245,10 +245,42 @@ static void *heartbeat_for_isulad_kit(void *arg)
     return NULL;
 }
 
+static unsigned long get_timeout_secs(bool retry)
+{
+    unsigned long result = RETRY_COUNT_MAX;
+
+    if (retry) {
+        return result;
+    }
+
+    result = conf_get_im_opt_timeout();
+    if (result < RETRY_COUNT_MAX) {
+        result = RETRY_COUNT_MAX;
+    }
+
+    return result;
+}
+
+static bool is_timeout(unsigned long max_second, unsigned long retry_cnt)
+{
+    unsigned long total = retry_cnt;
+
+    if (total >= ULONG_MAX / (total + 1)) {
+        return true;
+    }
+    total = total * (total + 1) / 2;
+    // time unit is second, retry time is 0.1s
+    if (total >= max_second * 10) {
+        return true;
+    }
+    return false;
+}
+
 static int isula_image_server_load_first_check(const struct server_monitor_conf *conf, bool retry)
 {
     int ret = 0;
-    unsigned long retry_cnt = 1;
+    unsigned long retry_cnt = 0;
+    unsigned long opt_timeout = get_timeout_secs(retry);
 
     /* parent: check server is running */
     while (true) {
@@ -257,13 +289,13 @@ static int isula_image_server_load_first_check(const struct server_monitor_conf 
         if (ret == 0) {
             break;
         }
-        retry_cnt++;
-        if (retry_cnt > RETRY_COUNT_MAX) {
+        if (is_timeout(opt_timeout, retry_cnt)) {
             // don't post sem to main thread
             ERROR("First load image server failed");
             ret = -1;
             goto out;
         }
+        retry_cnt++;
     }
 
     /* 1. If health check success, send a mutex to main thread and make it run again;

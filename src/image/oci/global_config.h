@@ -21,8 +21,6 @@
 extern "C" {
 #endif
 
-#define PARAM_NUM 100
-
 enum {
     GB_OPTION_GRAPH_ROOT = 0,
     GB_OPTION_RUN_ROOT,
@@ -36,25 +34,6 @@ enum {
     GB_OPTION_GRPC_SERVER_ADDR, // image server socket addr
     GB_OPTION_MAX, // should not be used
 };
-
-
-static inline void add_array_elem(char **array, size_t total, size_t *pos, const char *elem)
-{
-    if (*pos + 1 >= total - 1) {
-        return;
-    }
-    array[*pos] = util_strdup_s(elem);
-    *pos += 1;
-}
-
-static inline void add_array_kv(char **array, size_t total, size_t *pos, const char *k, const char *v)
-{
-    if (k == NULL || v == NULL) {
-        return;
-    }
-    add_array_elem(array, total, pos, k);
-    add_array_elem(array, total, pos, v);
-}
 
 int pack_global_options(const char * const *options, char *params[], size_t *count, bool ignore_storage_opt_size);
 

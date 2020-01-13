@@ -250,7 +250,7 @@ out:
 
 static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[], const char *user,
                           size_t argc, const char **argv, size_t env_len, const char **env,
-                          int64_t timeout, int *exit_code)
+                          int64_t timeout, const char *suffix, int *exit_code)
 {
     int ret = 0;
     char *engine_log_path = NULL;
@@ -287,6 +287,7 @@ static int exec_container(container_t *cont, const char *runtime, char * const c
     params.args_len = argc;
     params.envs = (const char * const *)env;
     params.envs_len = env_len;
+    params.suffix = suffix;
 
     if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
         ERROR("Runtime exec container failed");
@@ -328,6 +329,13 @@ static int container_exec_cb_check(const container_exec_request *request, contai
     if (!util_valid_container_id_or_name(container_name)) {
         ERROR("Invalid container name %s", container_name);
         lcrd_set_error_message("Invalid container name %s", container_name);
+        *cc = LCRD_ERR_EXEC;
+        return -1;
+    }
+
+    if (request->suffix != NULL && !util_valid_exec_suffix(request->suffix)) {
+        ERROR("Invalid exec suffix %s", request->suffix);
+        lcrd_set_error_message("Invalid exec suffix %s", request->suffix);
         *cc = LCRD_ERR_EXEC;
         return -1;
     }
@@ -564,7 +572,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
 
     if (exec_container(cont, cont->runtime, (char * const *)fifos, user, request->argv_len,
                        (const char **)request->argv, request->env_len,
-                       (const char **)request->env, request->timeout, &exit_code)) {
+                       (const char **)request->env, request->timeout, request->suffix, &exit_code)) {
         cc = LCRD_ERR_EXEC;
         goto pack_response;
     }
@@ -698,7 +706,7 @@ static int container_attach_cb(const container_attach_request *request, containe
     char *fifopath = NULL;
     pthread_t tid = 0;
     container_t *cont = NULL;
-    struct engine_operation *engine_ops = NULL;
+    rt_attach_params_t params = { 0 };
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -725,21 +733,14 @@ static int container_attach_cb(const container_attach_request *request, containe
         goto pack_response;
     }
 
-    engine_ops = engines_get_handler(cont->runtime);
-    if (engine_ops == NULL || engine_ops->engine_console_op == NULL) {
-        DEBUG("Failed to get engine attach operations");
-        cc = LCRD_ERR_EXEC;
-        goto pack_response;
-    }
+    params.rootpath = cont->root_path;
+    params.stdin = fifos[0];
+    params.stdout = fifos[1];
+    params.stderr = fifos[2];
 
-    if (!engine_ops->engine_console_op(id, cont->root_path, fifos[0], fifos[1], fifos[2])) {
-        ERROR("attach failed");
+    if (runtime_attach(cont->common_config->id, cont->runtime, &params)) {
+        ERROR("Runtime attach container failed");
         cc = LCRD_ERR_EXEC;
-        const char *tmpmsg = NULL;
-        tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Attach container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
-        engine_ops->engine_clear_errmsg_op();
         goto pack_response;
     }
 
@@ -1796,6 +1797,20 @@ static int handle_rotate(int fd, int wd, const char *path)
     return watch_fd;
 }
 
+static void cleanup_handler(void *arg)
+{
+    int *fds = (int *)arg;
+
+    if (fds[0] < 0) {
+        return;
+    }
+
+    if (fds[1] >= 0 && inotify_rm_watch(fds[0], fds[1]) < 0) {
+        SYSERROR("Rm watch failed");
+    }
+    close(fds[0]);
+}
+
 static int hanlde_events(int fd, const struct follow_args *farg)
 {
     int write_cnt, rename_cnt;
@@ -1805,17 +1820,21 @@ static int hanlde_events(int fd, const struct follow_args *farg)
     ssize_t len = 0;
     struct inotify_event *c_event = NULL;
     char buf[MAXLINE] __attribute__((aligned(__alignof__(struct inotify_event)))) = { 0 };
+    int clean_fds[2] = { fd, -1 };
 
     struct last_log_file_position last_pos = {
         .file_index = farg->last_file_index,
         .pos = farg->last_file_pos,
     };
 
+    pthread_cleanup_push(cleanup_handler, clean_fds);
+
     watch_fd = inotify_add_watch(fd, farg->path, IN_MODIFY | IN_DELETE | IN_MOVED_FROM | IN_MOVE_SELF);
     if (watch_fd < 0) {
         SYSERROR("Add watch %s failed", farg->path);
         goto out;
     }
+    clean_fds[1] = watch_fd;
 
     for (;;) {
         if (pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL) != 0) {
@@ -1866,9 +1885,7 @@ static int hanlde_events(int fd, const struct follow_args *farg)
     }
 
 out:
-    if (inotify_rm_watch(fd, watch_fd) < 0) {
-        SYSERROR("Rm watch failed");
-    }
+    pthread_cleanup_pop(1);
     return ret;
 }
 
@@ -1881,7 +1898,7 @@ static void *follow_thread_func(void *arg)
 
     INFO("Get args, path: %s, last pos: %ld, last file: %d", farg->path, farg->last_file_pos, farg->last_file_index);
 
-    inotify_fd = inotify_init();
+    inotify_fd = inotify_init1(IN_CLOEXEC);
     if (inotify_fd < 0) {
         SYSERROR("Init inotify failed");
         goto set_flag;
@@ -1891,7 +1908,6 @@ static void *follow_thread_func(void *arg)
         ERROR("Handle inotify event failed");
     }
 
-    close(inotify_fd);
 set_flag:
     *(farg->finish) = true;
     return NULL;

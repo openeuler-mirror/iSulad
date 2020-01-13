@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <climits>
-#include <securec.h>
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "utils_array.h"
@@ -25,10 +24,6 @@
 extern "C" {
     DECLARE_WRAPPER(calloc, void *, (size_t nmemb, size_t size));
     DEFINE_WRAPPER(calloc, void *, (size_t nmemb, size_t size), (nmemb, size));
-
-    DECLARE_WRAPPER(memcpy_s, errno_t, (void* dest, size_t destMax, const void* src, size_t count));
-    DEFINE_WRAPPER(memcpy_s, errno_t, (void* dest, size_t destMax, const void* src, size_t count),
-                   (dest, destMax, src, count));
 }
 
 TEST(utils_array, test_util_array_len)
@@ -158,17 +153,6 @@ TEST(utils_array, test_util_grow_array)
     util_free_array(array);
     array = nullptr;
     capacity = 0;
-
-    capacity = 1;
-    array = (char **)util_common_calloc_s(capacity * sizeof(char *));
-    ASSERT_NE(array, nullptr);
-    MOCK_SET(memcpy_s, EINVAL);
-    ret = util_grow_array(&array, &capacity, 1, 1);
-    ASSERT_NE(ret, 0);
-    MOCK_CLEAR(memcpy_s);
-    util_free_array(array);
-    array = nullptr;
-    capacity = 0;
 }
 
 TEST(utils_array, test_util_array_append)
@@ -219,17 +203,4 @@ TEST(utils_array, test_util_array_append)
     MOCK_CLEAR(calloc);
     util_free_array(array);
     array = nullptr;
-
-    array_three = (char **)util_common_calloc_s(4 * sizeof(char *));
-    ASSERT_NE(array_three, nullptr);
-    array_three[0] = util_strdup_s("test1");
-    array_three[1] = util_strdup_s("test2");
-    array_three[2] = util_strdup_s("test3");
-    array_three[3] = nullptr;
-    MOCK_SET(memcpy_s, EINVAL);
-    ret = util_array_append(&array_three, "123");
-    ASSERT_NE(ret, 0);
-    MOCK_CLEAR(memcpy_s);
-    util_free_array(array_three);
-    array_three = nullptr;
 }

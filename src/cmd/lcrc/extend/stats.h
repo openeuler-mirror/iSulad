@@ -18,8 +18,6 @@
 #include "arguments.h"
 
 #define STATUS_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING, false, "runtime", 'R', &(cmdargs).runtime, \
-        "Runtime to use for containers(default: lcr)", NULL }, \
     { CMD_OPT_TYPE_BOOL, false, "all", 'a', &(cmdargs).showall, \
         "Show all containers (default shows just running)", NULL }, \
     { CMD_OPT_TYPE_BOOL, false, "no-stream", 0, &(cmdargs).nostream, \

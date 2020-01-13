@@ -212,39 +212,6 @@ error_out:
     return NULL;
 }
 
-
-static int generateID(char *id, size_t len)
-{
-    int fd = -1;
-    int num = 0;
-    size_t i;
-    const int m = 256;
-
-    len = len / 2;
-    fd = open("/dev/urandom", O_RDONLY);
-    if (fd == -1) {
-        ERROR("Failed to open /dev/urandom");
-        return -1;
-    }
-    for (i = 0; i < len; i++) {
-        int nret;
-        if (read(fd, &num, sizeof(int)) < 0) {
-            ERROR("Failed to read urandom value");
-            close(fd);
-            return -1;
-        }
-        unsigned char rs = (unsigned char)(num % m);
-        nret = snprintf((id + i * 2), ((len - i) * 2 + 1), "%02x", (unsigned int)rs);
-        if (nret >= ((len - i) * 2 + 1) || nret < 0) {
-            close(fd);
-            return -1;
-        }
-    }
-    close(fd);
-    id[i * 2] = '\0';
-    return 0;
-}
-
 static oci_runtime_spec *merge_config(const char *id, const char *image_type, const char *image_name,
                                       const char *ext_config_image, host_config *host_spec,
                                       container_custom_config *custom_spec,
@@ -311,7 +278,7 @@ static char *try_generate_id()
     }
 
     for (i = 0; i < max_time; i++) {
-        if (generateID(id, (size_t)CONTAINER_ID_MAX_LEN)) {
+        if (util_generate_random_str(id, (size_t)CONTAINER_ID_MAX_LEN)) {
             ERROR("Generate id failed");
             goto err_out;
         }

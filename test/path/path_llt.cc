@@ -16,7 +16,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <securec.h>
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "utils.h"
@@ -36,13 +35,16 @@ extern "C" {
 
 static char *getcwd_specify(char *str, size_t size)
 {
+    const char *dst = "/home";
     if (str == nullptr) {
         return nullptr;
     }
 
-    if (strcpy_s(str, size, "/home") != EOK) {
+    if (size <= strlen(dst)) {
         return nullptr;
     }
+    (void)strcpy(str, dst);
+
     return str;
 }
 
@@ -74,9 +76,10 @@ static ssize_t readlink_specify(const char *path, char *buf, size_t bufsize)
         return -1;
     }
 
-    if (strcpy_s(buf, bufsize, linkpath) != EOK) {
+    if (bufsize <= linkpath_length) {
         return -1;
     }
+    (void)strcpy(buf, linkpath);
 
     if (linkpath_length > bufsize) {
         return bufsize;

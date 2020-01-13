@@ -23,12 +23,6 @@
 extern "C" {
 #endif
 
-struct engine_console_config {
-    char *log_path;
-    unsigned int log_rotate;
-    char *log_file_size;
-};
-
 struct engine_cgroup_resources {
     uint64_t blkio_weight;
     uint64_t cpu_shares;
@@ -66,11 +60,13 @@ struct engine_container_summary_info {
     char *finishat;
 };
 
-struct engine_container_info {
-    char *id;
+struct engine_container_status_info {
     bool has_pid;
     uint32_t pid;
     Engine_Container_Status status;
+};
+
+struct engine_container_resources_stats_info {
     uint64_t pids_current;
     /* CPU usage */
     uint64_t cpu_use_nanos;
@@ -131,6 +127,8 @@ typedef struct _engine_exec_request_t {
     size_t args_len;
 
     int64_t timeout;
+
+    const char *suffix;
 } engine_exec_request_t;
 
 
@@ -149,32 +147,24 @@ typedef bool (*engine_resume_t)(const char *name, const char *enginepath);
 
 typedef bool (*engine_reset_t)(const char *name, const char *enginepath);
 
+typedef bool (*engine_resize_t)(const char *name, const char *lcrpath, unsigned int height, unsigned int width);
+typedef bool (*engine_exec_resize_t)(const char *name, const char *lcrpath, const char *suffix, unsigned int height,
+                                     unsigned int width);
+
 typedef bool (*engine_update_t)(const char *name, const char *enginepath, const struct engine_cgroup_resources *cr);
 
 typedef bool (*engine_exec_t)(const engine_exec_request_t *request, int *exit_code);
 
-typedef int (*engine_get_all_containers_info_t)(const char *enginepath, struct engine_container_summary_info **cons);
-
-typedef struct engine_container_summary_info *(*engine_get_container_info_t)(const char *name, const char *enginepath);
-
-typedef void (*engine_free_container_info_t)(struct engine_container_summary_info *info);
-
-typedef void (*engine_free_all_containers_info_t)(struct engine_container_summary_info *info, int num);
-
 typedef int (*engine_get_container_status_t)(const char *name, const char *enginepath,
-                                             struct engine_container_info *status);
+                                             struct engine_container_status_info *status);
 
-typedef void (*engine_free_container_status_t)(struct engine_container_info *container);
+typedef int (*engine_get_container_resources_stats_t)(const char *name, const char *enginepath,
+                                                      struct engine_container_resources_stats_info *rs_stats);
 
 typedef bool (*engine_get_container_pids_t)(const char *name, const char *rootpath, pid_t **pids, size_t *pids_len);
 
 typedef bool (*engine_console_t)(const char *name, const char *enginepath, char *in_fifo, char *out_fifo,
                                  char *err_fifo);
-
-typedef bool (*engine_get_console_config_t)(const char *name, const char *enginepath,
-                                            struct engine_console_config *config);
-
-typedef void (*engine_free_console_config_t)(struct engine_console_config *config);
 
 typedef int (*engine_log_init_t)(const char *name, const char *file, const char *priority, const char *prefix,
                                  int quiet, const char *enginepath);
@@ -193,17 +183,15 @@ struct engine_operation {
     engine_pause_t engine_pause_op;
     engine_resume_t engine_resume_op;
     engine_reset_t engine_reset_op;
+    engine_resize_t engine_resize_op;
+    engine_exec_resize_t engine_exec_resize_op;
     engine_exec_t engine_exec_op;
     engine_console_t engine_console_op;
     engine_get_container_status_t engine_get_container_status_op;
-    engine_free_container_status_t engine_free_container_status_op;
-    engine_get_all_containers_info_t engine_get_all_containers_info_op;
-    engine_free_all_containers_info_t engine_free_all_containers_info_op;
+    engine_get_container_resources_stats_t engine_get_container_resources_stats_op;
     engine_get_container_pids_t engine_get_container_pids_op;
     engine_log_init_t engine_log_init_op;
     engine_update_t engine_update_op;
-    engine_get_console_config_t engine_get_console_config_op;
-    engine_free_console_config_t engine_free_console_config_op;
     engine_get_errmsg_t engine_get_errmsg_op;
     engine_clear_errmsg_t engine_clear_errmsg_op;
     engine_clean_t engine_clean_op;

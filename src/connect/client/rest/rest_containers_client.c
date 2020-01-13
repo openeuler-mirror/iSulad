@@ -271,37 +271,6 @@ out:
     return ret;
 }
 
-/* container conf request to rest */
-static int container_conf_request_to_rest(const struct lcrc_container_conf_request *lconf_request, char **body,
-                                          size_t *body_len)
-{
-    container_conf_request *crequest = NULL;
-    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
-    parser_error err = NULL;
-    int ret = 0;
-
-    crequest = util_common_calloc_s(sizeof(container_conf_request));
-    if (crequest == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    if (lconf_request->name != NULL) {
-        crequest->container_id = util_strdup_s(lconf_request->name);
-    }
-    *body = container_conf_request_generate_json(crequest, &ctx, &err);
-    if (*body == NULL) {
-        ERROR("Failed to generate conf request json:%s", err);
-        ret = -1;
-        goto out;
-    }
-    *body_len = strlen(*body) + 1;
-out:
-    free(err);
-    free_container_conf_request(crequest);
-    return ret;
-}
-
 /* wait request to rest */
 static int wait_request_to_rest(const struct lcrc_wait_request *lw_request, char **body, size_t *body_len)
 {
@@ -568,47 +537,6 @@ out:
     return ret;
 }
 
-/* unpack container conf response */
-static int unpack_container_conf_response(const struct parsed_http_message *message, void *arg)
-{
-    struct lcrc_container_conf_response *response = arg;
-    container_conf_response *cresponse = NULL;
-    parser_error err = NULL;
-    int ret = 0;
-
-    ret = check_status_code(message->status_code);
-    if (ret != 0) {
-        goto out;
-    }
-
-    cresponse = container_conf_response_parse_data(message->body, NULL, &err);
-    if (cresponse == NULL) {
-        ERROR("Invalid create response:%s", err);
-        ret = -1;
-        goto out;
-    }
-    response->server_errono = cresponse->cc;
-    if (cresponse->errmsg != NULL) {
-        response->errmsg = util_strdup_s(cresponse->errmsg);
-    }
-    if (cresponse->container_logpath != NULL) {
-        response->container_logpath = util_strdup_s(cresponse->container_logpath);
-    }
-    response->container_logrotate = cresponse->container_logrotate;
-    if (cresponse->container_logsize != NULL) {
-        response->container_logsize = util_strdup_s(cresponse->container_logsize);
-    }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
-        ret = -1;
-    }
-
-out:
-    free(err);
-    free_container_conf_response(cresponse);
-    return ret;
-}
-
 /* unpack wait response */
 static int unpack_wait_response(const struct parsed_http_message *message, void *arg)
 {
@@ -806,39 +734,6 @@ static int rest_container_resume(const struct lcrc_resume_request *lr_request,
 out:
     if (r_output != NULL) {
         buffer_free(r_output);
-    }
-    put_body(body);
-    return ret;
-}
-
-/* rest container conf */
-static int rest_container_conf(const struct lcrc_container_conf_request *lc_request,
-                               struct lcrc_container_conf_response *lc_response, void *arg)
-{
-    char *body = NULL;
-    int ret = 0;
-    size_t len = 0;
-    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
-    const char *socketname = (const char *)(connect_config->socket);
-    Buffer *c_output = NULL;
-
-    ret = container_conf_request_to_rest(lc_request, &body, &len);
-    if (ret != 0) {
-        goto out;
-    }
-    ret = rest_send_requst(socketname, RestHttpHead ContainerServiceConf, body, len, &c_output);
-    if (ret != 0) {
-        lc_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        lc_response->cc = LCRD_ERR_EXEC;
-        goto out;
-    }
-    ret = get_response(c_output, unpack_container_conf_response, (void *)lc_response);
-    if (ret != 0) {
-        goto out;
-    }
-out:
-    if (c_output != NULL) {
-        buffer_free(c_output);
     }
     put_body(body);
     return ret;
@@ -1871,7 +1766,6 @@ int rest_containers_client_ops_init(lcrc_connect_ops *ops)
     ops->container.attach = &rest_container_attach;
     ops->container.resume = &rest_container_resume;
     ops->container.update = &rest_container_update;
-    ops->container.conf = &rest_container_conf;
     ops->container.kill = &rest_container_kill;
     ops->container.version = &rest_container_version;
     ops->container.wait = &rest_container_wait;

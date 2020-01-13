@@ -239,18 +239,13 @@ static struct bim *bim_get(const char *image_type, const char *image_name, const
     if (image_name != NULL) {
         bim->image_name = bim->ops->resolve_image_name(image_name);
         if (bim->image_name == NULL) {
-            lcrd_append_error_message("Failed to resovle image name%s", bim->image_name);
+            lcrd_append_error_message("Failed to resovle image name%s", image_name);
             bim_put(bim);
             return NULL;
         }
     }
     if (ext_config_image != NULL) {
         bim->ext_config_image = util_strdup_s(ext_config_image);
-        if (bim->ext_config_image == NULL) {
-            lcrd_append_error_message("Failed to dup external config image %s", bim->ext_config_image);
-            bim_put(bim);
-            return NULL;
-        }
     }
     if (container_id != NULL) {
         bim->container_id = util_strdup_s(container_id);

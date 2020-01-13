@@ -143,6 +143,13 @@ private:
     void ListContainersToGRPC(container_list_response *response,
                               std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *pods, Errors &error);
 
+    void PackContainerStatsAttributes(const char *id, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
+                                      Errors &error);
+
+    void PackContainerStatsFilesystemUsage(const char *id, const char *image_type,
+                                           std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
+                                           Errors &error);
+
     void ContainerStatsToGRPC(container_stats_response *response,
                               std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *pods, Errors &error);
 

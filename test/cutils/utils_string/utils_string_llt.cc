@@ -15,7 +15,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <securec.h>
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "utils_string.h"
@@ -26,26 +25,6 @@ extern "C" {
 
     DECLARE_WRAPPER(calloc, void *, (size_t nmemb, size_t size));
     DEFINE_WRAPPER(calloc, void *, (size_t nmemb, size_t size), (nmemb, size));
-
-    DECLARE_WRAPPER_V(strcat_s, errno_t, (char *strDest, size_t destMax, const char *strSrc));
-    DEFINE_WRAPPER_V(strcat_s, errno_t, (char *strDest, size_t destMax, const char *strSrc),
-                     (strDest, destMax, strSrc));
-}
-
-static int g_strcat_s_cnt = 0;
-
-static errno_t strcat_s_fail(char *strDest, size_t destMax, const char *strSrc)
-{
-    return (errno_t)EINVAL;
-}
-
-static errno_t strcat_s_second_fail(char *strDest, size_t destMax, const char *strSrc)
-{
-    g_strcat_s_cnt++;
-    if (g_strcat_s_cnt == 1) {
-        return __real_strcat_s(strDest, destMax, strSrc);
-    }
-    return (errno_t)EINVAL;
 }
 
 TEST(utils_string_llt, test_strings_count)
@@ -681,22 +660,6 @@ TEST(utils_string_llt, test_util_string_join)
 
     result = util_string_join(nullptr, array_long, array_long_len);
     ASSERT_STREQ(result, nullptr);
-
-    MOCK_SET_V(strcat_s, strcat_s_fail);
-    result = util_string_join("   ", array_short, array_short_len);
-    ASSERT_STREQ(result, nullptr);
-    MOCK_CLEAR(strcat_s);
-
-    MOCK_SET_V(strcat_s, strcat_s_fail);
-    result = util_string_join("   ", array_long, array_long_len);
-    ASSERT_STREQ(result, nullptr);
-    MOCK_CLEAR(strcat_s);
-
-    g_strcat_s_cnt = 0;
-    MOCK_SET_V(strcat_s, strcat_s_second_fail);
-    result = util_string_join("   ", array_long, array_long_len);
-    ASSERT_STREQ(result, nullptr);
-    MOCK_CLEAR(strcat_s);
 }
 
 TEST(utils_string_llt, test_util_string_append)
@@ -742,17 +705,6 @@ TEST(utils_string_llt, test_util_string_append)
     result = util_string_append("abc", "123");
     ASSERT_STREQ(result, nullptr);
     MOCK_CLEAR(calloc);
-
-    MOCK_SET_V(strcat_s, strcat_s_fail);
-    result = util_string_append("abc", "123");
-    ASSERT_STREQ(result, nullptr);
-    MOCK_CLEAR(strcat_s);
-
-    g_strcat_s_cnt = 0;
-    MOCK_SET_V(strcat_s, strcat_s_second_fail);
-    result = util_string_append("abc", "123");
-    ASSERT_STREQ(result, nullptr);
-    MOCK_CLEAR(strcat_s);
 }
 
 TEST(utils_string_llt, test_dup_array_of_strings)

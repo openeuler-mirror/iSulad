@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <limits.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
+#include <termios.h>
 
 #include "arguments.h"
 #include "exec.h"
@@ -52,6 +54,7 @@ static int client_exec(const struct client_arguments *args, const struct command
     }
 
     request.name = args->name;
+    request.suffix =  args->exec_suffix;
     request.tty = args->custom_conf.tty;
     request.open_stdin = args->custom_conf.open_stdin;
     request.attach_stdin = args->custom_conf.attach_stdin;
@@ -248,6 +251,7 @@ static int remote_cmd_exec(const struct client_arguments *args, uint32_t *exit_c
     g_cmd_exec_args.name = util_strdup_s(inspect_data->id);
 
     request.name = args->name;
+    request.suffix = args->exec_suffix;
     request.tty = args->custom_conf.tty;
     request.open_stdin = args->custom_conf.open_stdin;
     request.attach_stdin = args->custom_conf.attach_stdin;
@@ -313,6 +317,119 @@ out:
     return ret;
 }
 
+static char *generate_exec_suffix()
+{
+    char *exec_suffix = NULL;
+
+    exec_suffix = util_common_calloc_s(sizeof(char) * (CONTAINER_ID_MAX_LEN + 1));
+    if (exec_suffix == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    if (util_generate_random_str(exec_suffix, (size_t)CONTAINER_ID_MAX_LEN)) {
+        ERROR("Generate exec suffix failed");
+        free(exec_suffix);
+        exec_suffix = NULL;
+        goto out;
+    }
+
+out:
+    return exec_suffix;
+}
+
+static int do_resize_exec_console(const struct client_arguments *args, unsigned int height, unsigned int width)
+{
+    int ret = 0;
+    lcrc_connect_ops *ops = NULL;
+    struct lcrc_resize_request request = { 0 };
+    struct lcrc_resize_response *response = NULL;
+    client_connect_config_t config = { 0 };
+
+    ops = get_connect_client_ops();
+    if (ops == NULL || ops->container.resize == NULL) {
+        ERROR("Unimplemented ops");
+        ret = -1;
+        goto out;
+    }
+
+    request.id = args->name;
+    request.suffix = args->exec_suffix;
+    request.height = height;
+    request.width = width;
+
+    response = util_common_calloc_s(sizeof(struct lcrc_resize_response));
+    if (response == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    config = get_connect_config(args);
+    ret = ops->container.resize(&request, response, &config);
+    if (ret != 0) {
+        ERROR("Failed to call resize");
+        goto out;
+    }
+
+out:
+    lcrc_resize_response_free(response);
+    return ret;
+}
+
+static void *exec_console_resize_thread(void *arg)
+{
+    int ret = 0;
+    const struct client_arguments *args = arg;
+    static struct winsize s_pre_wsz;
+    struct winsize wsz;
+
+    if (!isatty(STDIN_FILENO)) {
+        goto out;
+    }
+
+    ret = pthread_detach(pthread_self());
+    if (ret != 0) {
+        CRIT("Start: set thread detach fail");
+        goto out;
+    }
+
+    while (true) {
+        sleep(1); // check the windows size per 1s
+        ret = ioctl(STDIN_FILENO, TIOCGWINSZ, &wsz);
+        if (ret < 0) {
+            WARN("Failed to get window size");
+            continue;
+        }
+        if (wsz.ws_row == s_pre_wsz.ws_row && wsz.ws_col == s_pre_wsz.ws_col) {
+            continue;
+        }
+        ret = do_resize_exec_console(args, wsz.ws_row, wsz.ws_col);
+        if (ret != 0) {
+            continue;
+        }
+        s_pre_wsz.ws_row = wsz.ws_row;
+        s_pre_wsz.ws_col = wsz.ws_col;
+    }
+
+out:
+    return NULL;
+}
+
+int exec_client_console_resize_thread(struct client_arguments *args)
+{
+    int res = 0;
+    pthread_t a_thread;
+
+    res = pthread_create(&a_thread, NULL, exec_console_resize_thread, (void *)(args));
+    if (res != 0) {
+        CRIT("Thread creation failed");
+        return -1;
+    }
+
+    return 0;
+}
+
 int cmd_exec_main(int argc, const char **argv)
 {
     int ret = 0;
@@ -337,6 +454,18 @@ int cmd_exec_main(int argc, const char **argv)
         custom_cfg->attach_stdout = false;
         custom_cfg->attach_stderr = false;
         custom_cfg->open_stdin = false;
+    }
+
+    g_cmd_exec_args.exec_suffix = generate_exec_suffix();
+    if (g_cmd_exec_args.exec_suffix == NULL) {
+        ERROR("Failed to generate exec suffix");
+        ret = -1;
+        goto out;
+    }
+
+    if (custom_cfg->tty && isatty(STDIN_FILENO) && (custom_cfg->attach_stdin || custom_cfg->attach_stdout ||
+                                                    custom_cfg->attach_stderr)) {
+        (void)exec_client_console_resize_thread(&g_cmd_exec_args);
     }
 
     if (strncmp(g_cmd_exec_args.socket, "tcp://", strlen("tcp://")) == 0) {
