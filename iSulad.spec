@@ -32,7 +32,7 @@ Requires(preun): initscripts
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
 BuildRequires: grpc grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
-BuildRequires: http-parser-devel libevhtp-devel libevent-devel
+BuildRequires: http-parser http-parser-devel libevhtp-devel libevent-devel
 BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
