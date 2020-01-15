@@ -4,18 +4,25 @@ Description: commom header file
 Interface: None
 History: 2019-06-17
 '''
-# - Copyright (C) Huawei Technologies., Ltd. 2018-2019. All rights reserved.
-# - iSulad licensed under the Mulan PSL v1.
-# - You can use this software according to the terms and conditions of the Mulan PSL v1.
-# - You may obtain a copy of Mulan PSL v1 at:
-# -     http://license.coscl.org.cn/MulanPSL
-# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
-# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
-# - PURPOSE.
-# - See the Mulan PSL v1 for more details.
-# - Description: generate json
-# - Author: tanyifeng
-# - Create: 2018-04-25
+#
+# libocispec - a C library for parsing OCI spec files.
+#
+# Copyright (C) 2017, 2019 Giuseppe Scrivano <giuseppe@scrivano.org>
+# Copyright (C) Huawei Technologies., Ltd. 2018-2019. All rights reserved.
+#
+# libocispec is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# libocispec is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
+#
 #!/usr/bin/python -Es
 
 """
