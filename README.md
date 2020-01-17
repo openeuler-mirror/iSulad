@@ -25,7 +25,7 @@ You can use direct command to start `iSulad` server：
 $ sudo lcrd  # run the server with default socket name and default log level and images manage function
 ```
 ### Operations on containers:
-`iSulad` provides command line `lcrd` to talk with server.
+`iSulad` provides command line `lcrc` to talk with server.
 Here are some sample commands to manager containers.
 
 List all containers in your own environment:
