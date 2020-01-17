@@ -29,7 +29,7 @@ struct server_monitor_conf {
 
 void *isula_image_server_monitor(void *arg);
 
-void isula_kit_exit();
+void isula_img_exit();
 
 #ifdef __cplusplus
 }
