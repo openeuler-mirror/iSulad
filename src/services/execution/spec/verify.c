@@ -314,7 +314,7 @@ static int verify_oom_control(const sysinfo_t *sysinfo, bool oomdisable)
 }
 
 /* verify resources memory */
-static int verify_resources_memory(const sysinfo_t *sysinfo, const oci_runtime_config_linux_resources_memory *memory)
+static int verify_resources_memory(const sysinfo_t *sysinfo, const defs_resources_memory *memory)
 {
     int ret = 0;
 
@@ -348,7 +348,7 @@ out:
 }
 
 /* verify resources pids */
-static int verify_resources_pids(const sysinfo_t *sysinfo, const oci_runtime_config_linux_resources_pids *pids)
+static int verify_resources_pids(const sysinfo_t *sysinfo, const defs_resources_pids *pids)
 {
     int ret = 0;
 
@@ -703,7 +703,7 @@ out:
 }
 
 /* verify resources cpu */
-static int verify_resources_cpu(const sysinfo_t *sysinfo, const oci_runtime_config_linux_resources_cpu *cpu)
+static int verify_resources_cpu(const sysinfo_t *sysinfo, const defs_resources_cpu *cpu)
 {
     int ret = 0;
 
@@ -919,7 +919,7 @@ out:
 }
 
 /* verify resources blkio */
-static int verify_resources_blkio(const sysinfo_t *sysinfo, const oci_runtime_config_linux_resources_block_io *blkio)
+static int verify_resources_blkio(const sysinfo_t *sysinfo, const defs_resources_block_io *blkio)
 {
     int ret = 0;
 
@@ -949,8 +949,8 @@ out:
 }
 
 static bool check_hugetlbs_repeated(size_t newlen, const char *pagesize,
-                                    const oci_runtime_config_linux_resources_hugepage_limits_element *hugetlb,
-                                    oci_runtime_config_linux_resources_hugepage_limits_element **newtlb)
+                                    const defs_resources_hugepage_limits_element *hugetlb,
+                                    defs_resources_hugepage_limits_element **newtlb)
 {
     bool repeated = false;
     size_t j;
@@ -969,7 +969,7 @@ out:
     return repeated;
 }
 
-static void free_hugetlbs_array(oci_runtime_config_linux_resources_hugepage_limits_element **hugetlb,
+static void free_hugetlbs_array(defs_resources_hugepage_limits_element **hugetlb,
                                 size_t hugetlb_len)
 {
     size_t i;
@@ -980,7 +980,7 @@ static void free_hugetlbs_array(oci_runtime_config_linux_resources_hugepage_limi
 
     for (i = 0; i < hugetlb_len; i++) {
         if (hugetlb[i] != NULL) {
-            free_oci_runtime_config_linux_resources_hugepage_limits_element(hugetlb[i]);
+            free_defs_resources_hugepage_limits_element(hugetlb[i]);
             hugetlb[i] = NULL;
         }
     }
@@ -989,11 +989,11 @@ static void free_hugetlbs_array(oci_runtime_config_linux_resources_hugepage_limi
 
 /* verify resources hugetlbs */
 static int verify_resources_hugetlbs(const sysinfo_t *sysinfo,
-                                     oci_runtime_config_linux_resources_hugepage_limits_element ***hugetlb,
+                                     defs_resources_hugepage_limits_element ***hugetlb,
                                      size_t *hugetlb_len)
 {
     int ret = 0;
-    oci_runtime_config_linux_resources_hugepage_limits_element **newhugetlb = NULL;
+    defs_resources_hugepage_limits_element **newhugetlb = NULL;
     size_t newlen = 0;
     size_t i;
 
@@ -1008,7 +1008,7 @@ static int verify_resources_hugetlbs(const sysinfo_t *sysinfo,
     for (i = 0; i < *hugetlb_len; i++) {
         char *pagesize = NULL;
         size_t newsize, oldsize;
-        oci_runtime_config_linux_resources_hugepage_limits_element **tmphugetlb;
+        defs_resources_hugepage_limits_element **tmphugetlb;
 
         pagesize = validate_hugetlb((*hugetlb)[i]->page_size, (*hugetlb)[i]->limit);
         if (pagesize == NULL) {
@@ -1022,14 +1022,14 @@ static int verify_resources_hugetlbs(const sysinfo_t *sysinfo,
         }
 
         // append new hugetlb
-        if (newlen > SIZE_MAX / sizeof(oci_runtime_config_linux_resources_hugepage_limits_element *) - 1) {
+        if (newlen > SIZE_MAX / sizeof(defs_resources_hugepage_limits_element *) - 1) {
             free(pagesize);
             ERROR("Too many new hugetlb to append!");
             ret = -1;
             goto out;
         }
-        newsize = sizeof(oci_runtime_config_linux_resources_hugepage_limits_element *) * (newlen + 1);
-        oldsize = newsize - sizeof(oci_runtime_config_linux_resources_hugepage_limits_element *);
+        newsize = sizeof(defs_resources_hugepage_limits_element *) * (newlen + 1);
+        oldsize = newsize - sizeof(defs_resources_hugepage_limits_element *);
         ret = mem_realloc((void **)&tmphugetlb, newsize, newhugetlb, oldsize);
         if (ret < 0) {
             free(pagesize);
@@ -1038,7 +1038,7 @@ static int verify_resources_hugetlbs(const sysinfo_t *sysinfo,
             goto out;
         }
         newhugetlb = tmphugetlb;
-        newhugetlb[newlen] = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources_hugepage_limits_element));
+        newhugetlb[newlen] = util_common_calloc_s(sizeof(defs_resources_hugepage_limits_element));
         if (newhugetlb[newlen] == NULL) {
             free(pagesize);
             ERROR("Out of memory");
@@ -1075,13 +1075,13 @@ static int adapt_memory_swap(const sysinfo_t *sysinfo, const int64_t *limit, int
 }
 
 /* adapt resources memory */
-static int adapt_resources_memory(const sysinfo_t *sysinfo, oci_runtime_config_linux_resources_memory *memory)
+static int adapt_resources_memory(const sysinfo_t *sysinfo, defs_resources_memory *memory)
 {
     return adapt_memory_swap(sysinfo, &(memory->limit), &(memory->swap));
 }
 
 /* verify linux resources */
-static int verify_linux_resources(const sysinfo_t *sysinfo, oci_runtime_config_linux_resources *resources)
+static int verify_linux_resources(const sysinfo_t *sysinfo, defs_resources *resources)
 {
     int ret = 0;
 
@@ -1125,7 +1125,7 @@ out:
 }
 
 /* adapt linux resources */
-static int adapt_linux_resources(const sysinfo_t *sysinfo, oci_runtime_config_linux_resources *resources)
+static int adapt_linux_resources(const sysinfo_t *sysinfo, defs_resources *resources)
 {
     int ret = 0;
 
@@ -1910,22 +1910,15 @@ out:
 }
 
 /* verify container settings start */
-int verify_container_settings_start(const char *rootpath, const char *id)
+int verify_container_settings_start(const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
-    oci_runtime_spec *container = read_oci_config(rootpath, id);
-    if (container == NULL) {
-        ERROR("Failed to read oci config");
-        ret = -1;
-        goto out;
-    }
 
     /* verify custom mount info, ensure source path exist */
-    if (container->mounts != NULL && container->mounts_len > 0) {
-        ret = verify_custom_mount(container->mounts, container->mounts_len);
+    if (oci_spec->mounts != NULL && oci_spec->mounts_len > 0) {
+        ret = verify_custom_mount(oci_spec->mounts, oci_spec->mounts_len);
     }
-out:
-    free_oci_runtime_spec(container);
+
     return ret;
 }
 
@@ -1934,33 +1927,33 @@ static inline bool is_less_than_one_second(int64_t timeout)
     return timeout != 0 && timeout < Time_Second;
 }
 
-int verify_health_check_parameter(const container_custom_config *custom_spec)
+int verify_health_check_parameter(const container_config *container_spec)
 {
     int ret = 0;
 
-    if (custom_spec == NULL || custom_spec->health_check == NULL) {
+    if (container_spec == NULL || container_spec->health_check == NULL) {
         return ret;
     }
 
-    if (is_less_than_one_second(custom_spec->health_check->interval)) {
+    if (is_less_than_one_second(container_spec->health_check->interval)) {
         ERROR("Interval in Healthcheck cannot be less than one second");
         isulad_set_error_message("Interval in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
-    if (is_less_than_one_second(custom_spec->health_check->timeout)) {
+    if (is_less_than_one_second(container_spec->health_check->timeout)) {
         ERROR("Timeout in Healthcheck cannot be less than one second");
         isulad_set_error_message("Timeout in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
-    if (is_less_than_one_second(custom_spec->health_check->start_period)) {
+    if (is_less_than_one_second(container_spec->health_check->start_period)) {
         ERROR("StartPeriod in Healthcheck cannot be less than one second");
         isulad_set_error_message("StartPeriod in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
-    if (custom_spec->health_check->retries < 0) {
+    if (container_spec->health_check->retries < 0) {
         ERROR("--health-retries cannot be negative");
         isulad_set_error_message("--health-retries cannot be negative");
         ret = -1;

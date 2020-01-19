@@ -35,7 +35,6 @@
 #include "oci_runtime_hooks.h"
 #include "docker_seccomp.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "utils.h"
 #include "config.h"
 #include "isulad_config.h"
@@ -45,6 +44,7 @@
 #include "specs_extend.h"
 #include "image.h"
 #include "path.h"
+#include "constants.h"
 
 #ifndef CLONE_NEWUTS
 #define CLONE_NEWUTS            0x04000000
@@ -74,26 +74,40 @@
 #define CLONE_NEWCGROUP         0x02000000
 #endif
 
-#define OCICONFIGJSON "ociconfig.json"
+static int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec)
+{
+    if (oci_spec->annotations == NULL) {
+        oci_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+        if (oci_spec->annotations == NULL) {
+            return -1;
+        }
+    }
+    return 0;
+}
 
-static int merge_annotations(oci_runtime_spec *oci_spec, container_custom_config *custom_conf)
+static int merge_annotations(oci_runtime_spec *oci_spec, const container_config *container_spec)
 {
     int ret = 0;
     size_t i;
 
-    if (custom_conf->annotations != NULL && custom_conf->annotations->len) {
-        if (oci_spec->annotations->len > LIST_SIZE_MAX - custom_conf->annotations->len) {
+    ret = make_sure_oci_spec_annotations(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    if (container_spec->annotations != NULL && container_spec->annotations->len) {
+        if (oci_spec->annotations->len > LIST_SIZE_MAX - container_spec->annotations->len) {
             ERROR("Too many annotations to add, the limit is %d", LIST_SIZE_MAX);
             isulad_set_error_message("Too many annotations to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
         }
-        for (i = 0; i < custom_conf->annotations->len; i++) {
-            ret = append_json_map_string_string(oci_spec->annotations, custom_conf->annotations->keys[i],
-                                                custom_conf->annotations->values[i]);
+        for (i = 0; i < container_spec->annotations->len; i++) {
+            ret = append_json_map_string_string(oci_spec->annotations, container_spec->annotations->keys[i],
+                                                container_spec->annotations->values[i]);
             if (ret != 0) {
-                ERROR("Failed to append annotation:%s, value:%s", custom_conf->annotations->keys[i],
-                      custom_conf->annotations->values[i]);
+                ERROR("Failed to append annotation:%s, value:%s", container_spec->annotations->keys[i],
+                      container_spec->annotations->values[i]);
                 goto out;
             }
         }
@@ -102,16 +116,16 @@ out:
     return ret;
 }
 
-static int make_annotations_log_console(const oci_runtime_spec *oci_spec, const container_custom_config *custom_conf)
+static int make_annotations_log_console(const container_config *container_spec)
 {
     int ret = 0;
     int nret = 0;
     char tmp_str[ISULAD_NUMSTRLEN64] = {0};
 
-    if (custom_conf->log_config != NULL) {
-        if (custom_conf->log_config->log_file != NULL) {
-            if (append_json_map_string_string(oci_spec->annotations, CONTAINER_LOG_CONFIG_KEY_FILE,
-                                              custom_conf->log_config->log_file)) {
+    if (container_spec->log_config != NULL) {
+        if (container_spec->log_config->log_file != NULL) {
+            if (append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_FILE,
+                                              container_spec->log_config->log_file)) {
                 ERROR("append log console file failed");
                 ret = -1;
                 goto out;
@@ -119,22 +133,22 @@ static int make_annotations_log_console(const oci_runtime_spec *oci_spec, const 
         }
 
         nret = snprintf(tmp_str, sizeof(tmp_str), "%llu",
-                        (unsigned long long)(custom_conf->log_config->log_file_rotate));
+                        (unsigned long long)(container_spec->log_config->log_file_rotate));
         if (nret < 0 || (size_t)nret >= sizeof(tmp_str)) {
             ERROR("create rotate string failed");
             ret = -1;
             goto out;
         }
 
-        if (append_json_map_string_string(oci_spec->annotations, CONTAINER_LOG_CONFIG_KEY_ROTATE, tmp_str)) {
+        if (append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_ROTATE, tmp_str)) {
             ERROR("append log console file rotate failed");
             ret = -1;
             goto out;
         }
 
-        if (custom_conf->log_config->log_file_size != NULL) {
-            if (append_json_map_string_string(oci_spec->annotations, CONTAINER_LOG_CONFIG_KEY_SIZE,
-                                              custom_conf->log_config->log_file_size)) {
+        if (container_spec->log_config->log_file_size != NULL) {
+            if (append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_SIZE,
+                                              container_spec->log_config->log_file_size)) {
                 ERROR("append log console file size failed");
                 ret = -1;
                 goto out;
@@ -146,12 +160,12 @@ out:
     return ret;
 }
 
-static int make_annotations_network_mode(const oci_runtime_spec *oci_spec, const host_config *host_spec)
+static int make_annotations_network_mode(const container_config *container_spec, const host_config *host_spec)
 {
     int ret = 0;
 
     if (host_spec->network_mode != NULL) {
-        if (append_json_map_string_string(oci_spec->annotations, "host.network.mode", host_spec->network_mode)) {
+        if (append_json_map_string_string(container_spec->annotations, "host.network.mode", host_spec->network_mode)) {
             ERROR("append network mode failed");
             ret = -1;
             goto out;
@@ -162,12 +176,12 @@ out:
     return ret;
 }
 
-static int make_annotations_system_container(const oci_runtime_spec *oci_spec, const host_config *host_spec)
+static int make_annotations_system_container(const container_config *container_spec, const host_config *host_spec)
 {
     int ret = 0;
 
     if (host_spec->system_container) {
-        if (append_json_map_string_string(oci_spec->annotations, "system.container", "true")) {
+        if (append_json_map_string_string(container_spec->annotations, "system.container", "true")) {
             ERROR("Realloc annotations failed");
             ret = -1;
             goto out;
@@ -178,7 +192,7 @@ out:
     return ret;
 }
 
-static int make_annotations_cgroup_dir(const oci_runtime_spec *oci_spec, const host_config *host_spec)
+static int make_annotations_cgroup_dir(const container_config *container_spec, const host_config *host_spec)
 {
     int ret = 0;
     char cleaned[PATH_MAX] = { 0 };
@@ -199,7 +213,7 @@ static int make_annotations_cgroup_dir(const oci_runtime_spec *oci_spec, const h
         ret = -1;
         goto out;
     }
-    if (append_json_map_string_string(oci_spec->annotations, "cgroup.dir", cleaned)) {
+    if (append_json_map_string_string(container_spec->annotations, "cgroup.dir", cleaned)) {
         ERROR("Realloc annotations failed");
         ret = -1;
         goto out;
@@ -210,7 +224,7 @@ out:
     return ret;
 }
 
-static int make_annotations_oom_score_adj(const oci_runtime_spec *oci_spec, const host_config *host_spec)
+static int make_annotations_oom_score_adj(const container_config *container_spec, const host_config *host_spec)
 {
     int ret = 0;
     char tmp_str[ISULAD_NUMSTRLEN64 + 1] = { 0 };
@@ -223,7 +237,7 @@ static int make_annotations_oom_score_adj(const oci_runtime_spec *oci_spec, cons
             ret = -1;
             goto out;
         }
-        if (append_json_map_string_string(oci_spec->annotations, "proc.oom_score_adj", tmp_str)) {
+        if (append_json_map_string_string(container_spec->annotations, "proc.oom_score_adj", tmp_str)) {
             ERROR("append oom score adj which configure proc filesystem for the container failed ");
             ret = -1;
             goto out;
@@ -234,7 +248,7 @@ out:
     return ret;
 }
 
-static int make_annotations_files_limit(const oci_runtime_spec *oci_spec, const host_config *host_spec)
+static int make_annotations_files_limit(const container_config *container_spec, const host_config *host_spec)
 {
     int ret = 0;
     char tmp_str[ISULAD_NUMSTRLEN64 + 1] = { 0 };
@@ -250,7 +264,7 @@ static int make_annotations_files_limit(const oci_runtime_spec *oci_spec, const 
             goto out;
         }
 
-        if (append_json_map_string_string(oci_spec->annotations, "files.limit", tmp_str)) {
+        if (append_json_map_string_string(container_spec->annotations, "files.limit", tmp_str)) {
             ERROR("append files limit failed");
             ret = -1;
             goto out;
@@ -261,63 +275,117 @@ out:
     return ret;
 }
 
-static int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec)
+static int make_sure_container_spec_annotations(container_config *container_spec)
 {
-    if (oci_spec->annotations == NULL) {
-        oci_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
-        if (oci_spec->annotations == NULL) {
+    if (container_spec->annotations == NULL) {
+        container_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+        if (container_spec->annotations == NULL) {
             return -1;
         }
     }
     return 0;
 }
 
-static int make_annotations(oci_runtime_spec *oci_spec, container_custom_config *custom_conf, host_config *host_spec)
+static inline bool is_valid_umask_value(const char *value)
+{
+    return (strcmp(value, UMASK_NORMAL) == 0 || strcmp(value, UMASK_SECURE) == 0);
+}
+
+static int add_native_umask(const container_config *container_spec)
+{
+    int ret = 0;
+    size_t i = 0;
+    char *umask = NULL;
+
+    for (i = 0; i < container_spec->annotations->len; i++) {
+        if (strcmp(container_spec->annotations->keys[i], ANNOTATION_UMAKE_KEY) == 0) {
+            if (!is_valid_umask_value(container_spec->annotations->values[i])) {
+                ERROR("native.umask option %s not supported", container_spec->annotations->values[i]);
+                isulad_set_error_message("native.umask option %s not supported", container_spec->annotations->values[i]);
+                ret = -1;
+            }
+            goto out;
+        }
+    }
+
+    umask = conf_get_isulad_native_umask();
+    if (umask == NULL) {
+        ERROR("Failed to get default native umask");
+        ret = -1;
+        goto out;
+    }
+
+    if (append_json_map_string_string(container_spec->annotations, ANNOTATION_UMAKE_KEY, umask)) {
+        ERROR("Failed to append annotations: native.umask=%s", umask);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(umask);
+    return ret;
+}
+
+static int make_annotations(oci_runtime_spec *oci_spec, container_config *container_spec, host_config *host_spec)
 {
     int ret = 0;
 
-    ret = make_sure_oci_spec_annotations(oci_spec);
+    ret = make_sure_container_spec_annotations(container_spec);
     if (ret < 0) {
         goto out;
     }
 
-    ret = make_annotations_network_mode(oci_spec, host_spec);
+    ret = make_annotations_network_mode(container_spec, host_spec);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    ret = make_annotations_system_container(oci_spec, host_spec);
+    ret = make_annotations_system_container(container_spec, host_spec);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    ret = make_annotations_cgroup_dir(oci_spec, host_spec);
+    ret = make_annotations_cgroup_dir(container_spec, host_spec);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    ret = make_annotations_oom_score_adj(oci_spec, host_spec);
+    ret = make_annotations_oom_score_adj(container_spec, host_spec);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    ret = make_annotations_files_limit(oci_spec, host_spec);
+    ret = make_annotations_files_limit(container_spec, host_spec);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    ret = make_annotations_log_console(oci_spec, custom_conf);
+    ret = make_annotations_log_console(container_spec);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    if (merge_annotations(oci_spec, custom_conf)) {
+    /* add rootfs.mount */
+    ret = add_rootfs_mount(container_spec);
+    if (ret != 0) {
+        ERROR("Failed to add rootfs mount");
+        goto out;
+    }
+
+    /* add native.umask */
+    ret = add_native_umask(container_spec);
+    if (ret != 0) {
+        ERROR("Failed to add native umask");
+        goto out;
+    }
+
+    if (merge_annotations(oci_spec, container_spec)) {
         ret = -1;
         goto out;
     }
@@ -407,7 +475,7 @@ static int make_sure_oci_spec_linux_resources_cpu(oci_runtime_spec *oci_spec)
     }
 
     if (oci_spec->linux->resources->cpu == NULL) {
-        oci_spec->linux->resources->cpu = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources_cpu));
+        oci_spec->linux->resources->cpu = util_common_calloc_s(sizeof(defs_resources_cpu));
         if (oci_spec->linux->resources->cpu == NULL) {
             return -1;
         }
@@ -532,7 +600,7 @@ static int make_sure_oci_spec_linux_resources_mem(oci_runtime_spec *oci_spec)
     }
 
     if (oci_spec->linux->resources->memory == NULL) {
-        oci_spec->linux->resources->memory = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources_memory));
+        oci_spec->linux->resources->memory = util_common_calloc_s(sizeof(defs_resources_memory));
         if (oci_spec->linux->resources->memory == NULL) {
             return -1;
         }
@@ -559,28 +627,9 @@ static int merge_memory_oom_kill_disable(oci_runtime_spec *oci_spec, bool oom_ki
 {
     int ret = 0;
 
-    if (oci_spec->linux == NULL) {
-        oci_spec->linux = util_common_calloc_s(sizeof(oci_runtime_config_linux));
-        if (oci_spec->linux == NULL) {
-            ret = -1;
-            goto out;
-        }
-    }
-
-    if (oci_spec->linux->resources == NULL) {
-        oci_spec->linux->resources = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources));
-        if (oci_spec->linux->resources == NULL) {
-            ret = -1;
-            goto out;
-        }
-    }
-
-    if (oci_spec->linux->resources->memory == NULL) {
-        oci_spec->linux->resources->memory = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources_memory));
-        if (oci_spec->linux->resources->memory == NULL) {
-            ret = -1;
-            goto out;
-        }
+    ret = make_sure_oci_spec_linux_resources_mem(oci_spec);
+    if (ret < 0) {
+        goto out;
     }
 
     oci_spec->linux->resources->memory->disable_oom_killer = oom_kill_disable;
@@ -639,23 +688,23 @@ static int merge_hugetlbs(oci_runtime_spec *oci_spec, host_config_hugetlbs_eleme
     int ret = 0;
     size_t i = 0;
     size_t new_size, old_size;
-    oci_runtime_config_linux_resources_hugepage_limits_element **hugepage_limits_temp = NULL;
+    defs_resources_hugepage_limits_element **hugepage_limits_temp = NULL;
 
     ret = make_sure_oci_spec_linux_resources(oci_spec);
     if (ret < 0) {
         goto out;
     }
 
-    if (hugetlbs_len > SIZE_MAX / sizeof(oci_runtime_config_linux_resources_hugepage_limits_element *) -
+    if (hugetlbs_len > SIZE_MAX / sizeof(defs_resources_hugepage_limits_element *) -
         oci_spec->linux->resources->hugepage_limits_len) {
         ERROR("Too many hugetlbs to merge!");
         ret = -1;
         goto out;
     }
     old_size = oci_spec->linux->resources->hugepage_limits_len *
-               sizeof(oci_runtime_config_linux_resources_hugepage_limits_element *);
+               sizeof(defs_resources_hugepage_limits_element *);
     new_size = (oci_spec->linux->resources->hugepage_limits_len + hugetlbs_len)
-               * sizeof(oci_runtime_config_linux_resources_hugepage_limits_element *);
+               * sizeof(defs_resources_hugepage_limits_element *);
     ret = mem_realloc((void **)&hugepage_limits_temp, new_size,
                       oci_spec->linux->resources->hugepage_limits,  old_size);
     if (ret != 0) {
@@ -668,7 +717,7 @@ static int merge_hugetlbs(oci_runtime_spec *oci_spec, host_config_hugetlbs_eleme
 
     for (i = 0; i < hugetlbs_len; i++) {
         oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]
-            = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources_hugepage_limits_element));
+            = util_common_calloc_s(sizeof(defs_resources_hugepage_limits_element));
         if (oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len] == NULL) {
             ERROR("Failed to malloc memory for hugepage limits");
             ret = -1;
@@ -727,7 +776,7 @@ out:
     return ret;
 }
 
-static void clean_correlated_selinux(oci_runtime_spec_process *process)
+static void clean_correlated_selinux(defs_process *process)
 {
     if (process == NULL) {
         return;
@@ -851,7 +900,7 @@ static int make_sure_oci_spec_linux_resources_pids(oci_runtime_spec *oci_spec)
     }
 
     if (oci_spec->linux->resources->pids == NULL) {
-        oci_spec->linux->resources->pids = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources_pids));
+        oci_spec->linux->resources->pids = util_common_calloc_s(sizeof(defs_resources_pids));
         if (oci_spec->linux->resources->pids == NULL) {
             return -1;
         }
@@ -875,28 +924,12 @@ out:
 }
 
 static int merge_hostname(oci_runtime_spec *oci_spec, const host_config *host_spec,
-                          container_custom_config *custom_spec)
+                          container_config *container_spec)
 {
-    int ret = 0;
-
-    if (custom_spec->hostname == NULL) {
-        if (host_spec->network_mode != NULL && !strcmp(host_spec->network_mode, "host")) {
-            char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
-            ret = gethostname(hostname, sizeof(hostname));
-            if (ret != 0) {
-                ERROR("Get hostname error");
-                goto out;
-            }
-            custom_spec->hostname = util_strdup_s(hostname);
-        } else {
-            custom_spec->hostname = util_strdup_s("localhost");
-        }
-    }
-
     free(oci_spec->hostname);
-    oci_spec->hostname = util_strdup_s(custom_spec->hostname);
-out:
-    return ret;
+    oci_spec->hostname = util_strdup_s(container_spec->hostname);
+
+    return 0;
 }
 
 static int merge_conf_cgroup_cpu_int64(oci_runtime_spec *oci_spec, const host_config *host_spec)
@@ -1056,7 +1089,7 @@ out:
 }
 
 static int do_merge_one_ulimit_override(const oci_runtime_spec *oci_spec,
-                                        oci_runtime_spec_process_rlimits_element *rlimit)
+                                        defs_process_rlimits_element *rlimit)
 {
     size_t j;
     bool exists = false;
@@ -1075,7 +1108,7 @@ static int do_merge_one_ulimit_override(const oci_runtime_spec *oci_spec,
     }
     if (exists) {
         /* override ulimit */
-        free_oci_runtime_spec_process_rlimits_element(oci_spec->process->rlimits[j]);
+        free_defs_process_rlimits_element(oci_spec->process->rlimits[j]);
         oci_spec->process->rlimits[j] = rlimit;
     } else {
         oci_spec->process->rlimits[oci_spec->process->rlimits_len] = rlimit;
@@ -1087,7 +1120,7 @@ static int do_merge_one_ulimit_override(const oci_runtime_spec *oci_spec,
 
 static int merge_one_ulimit_override(const oci_runtime_spec *oci_spec, const host_config_ulimits_element *ulimit)
 {
-    oci_runtime_spec_process_rlimits_element *rlimit = NULL;
+    defs_process_rlimits_element *rlimit = NULL;
 
     if (trans_ulimit_to_rlimit(&rlimit, ulimit) != 0) {
         return -1;
@@ -1184,7 +1217,7 @@ out:
     return ret;
 }
 
-static int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec)
+int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
 
@@ -1253,7 +1286,7 @@ static int prepare_process_args(oci_runtime_spec *oci_spec, size_t args_len)
     return 0;
 }
 
-static int replace_entrypoint_cmds_from_spec(const oci_runtime_spec *oci_spec, container_custom_config *custom_spec)
+static int replace_entrypoint_cmds_from_spec(const oci_runtime_spec *oci_spec, container_config *container_spec)
 {
     if (oci_spec->process->args_len == 0) {
         ERROR("No command specified");
@@ -1261,27 +1294,27 @@ static int replace_entrypoint_cmds_from_spec(const oci_runtime_spec *oci_spec, c
         return -1;
     }
     return dup_array_of_strings((const char **)(oci_spec->process->args), oci_spec->process->args_len,
-                                &(custom_spec->cmd), &(custom_spec->cmd_len));
+                                &(container_spec->cmd), &(container_spec->cmd_len));
 }
 
-static int merge_conf_args(oci_runtime_spec *oci_spec, container_custom_config *custom_spec)
+static int merge_conf_args(oci_runtime_spec *oci_spec, container_config *container_spec)
 {
     int ret = 0;
     size_t argslen = 0;
     size_t i = 0;
 
     // Reset entrypoint if we do not want to use entrypoint from image
-    if (custom_spec->entrypoint_len == 1 && custom_spec->entrypoint[0][0] == '\0') {
-        free(custom_spec->entrypoint[0]);
-        custom_spec->entrypoint[0] = NULL;
-        free(custom_spec->entrypoint);
-        custom_spec->entrypoint = NULL;
-        custom_spec->entrypoint_len = 0;
+    if (container_spec->entrypoint_len == 1 && container_spec->entrypoint[0][0] == '\0') {
+        free(container_spec->entrypoint[0]);
+        container_spec->entrypoint[0] = NULL;
+        free(container_spec->entrypoint);
+        container_spec->entrypoint = NULL;
+        container_spec->entrypoint_len = 0;
     }
 
-    argslen = custom_spec->cmd_len;
-    if (custom_spec->entrypoint_len != 0) {
-        argslen += custom_spec->entrypoint_len;
+    argslen = container_spec->cmd_len;
+    if (container_spec->entrypoint_len != 0) {
+        argslen += container_spec->entrypoint_len;
     }
 
     if (argslen > LIST_SIZE_MAX) {
@@ -1291,7 +1324,7 @@ static int merge_conf_args(oci_runtime_spec *oci_spec, container_custom_config *
     }
 
     if (argslen == 0) {
-        return replace_entrypoint_cmds_from_spec(oci_spec, custom_spec);
+        return replace_entrypoint_cmds_from_spec(oci_spec, container_spec);
     }
 
     if (prepare_process_args(oci_spec, argslen) < 0) {
@@ -1300,13 +1333,13 @@ static int merge_conf_args(oci_runtime_spec *oci_spec, container_custom_config *
     }
 
     // append commands... to entrypoint
-    for (i = 0; custom_spec->entrypoint != NULL && i < custom_spec->entrypoint_len; i++) {
-        oci_spec->process->args[oci_spec->process->args_len] = util_strdup_s(custom_spec->entrypoint[i]);
+    for (i = 0; container_spec->entrypoint != NULL && i < container_spec->entrypoint_len; i++) {
+        oci_spec->process->args[oci_spec->process->args_len] = util_strdup_s(container_spec->entrypoint[i]);
         oci_spec->process->args_len++;
     }
 
-    for (i = 0; custom_spec->cmd != NULL && i < custom_spec->cmd_len; i++) {
-        oci_spec->process->args[oci_spec->process->args_len] = util_strdup_s(custom_spec->cmd[i]);
+    for (i = 0; container_spec->cmd != NULL && i < container_spec->cmd_len; i++) {
+        oci_spec->process->args[oci_spec->process->args_len] = util_strdup_s(container_spec->cmd[i]);
         oci_spec->process->args_len++;
     }
 
@@ -1321,7 +1354,7 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
     size_t len = 0;
     size_t org_len = 0;
     size_t i = 0;
-    oci_runtime_defs_linux_namespace_reference **work_ns = NULL;
+    defs_namespace_reference **work_ns = NULL;
 
     org_len = oci_spec->linux->namespaces_len;
     len = oci_spec->linux->namespaces_len;
@@ -1329,7 +1362,7 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
 
     tmp_mode = get_share_namespace_path(type, mode);
     for (i = 0; i < org_len; i++) {
-        if (strcmp(mode, work_ns[i]->type) == 0) {
+        if (strcmp(type, work_ns[i]->type) == 0) {
             free(work_ns[i]->path);
             work_ns[i]->path = NULL;
             if (tmp_mode != NULL) {
@@ -1338,20 +1371,21 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
             break;
         }
     }
+
     if (i >= org_len) {
-        if (len > (SIZE_MAX / sizeof(oci_runtime_defs_linux_namespace_reference *)) - 1) {
+        if (len > (SIZE_MAX / sizeof(defs_namespace_reference *)) - 1) {
             ret = -1;
             ERROR("Out of memory");
             goto out;
         }
 
-        ret = mem_realloc((void **)&work_ns, (len + 1) * sizeof(oci_runtime_defs_linux_namespace_reference *),
-                          (void *)work_ns, len * sizeof(oci_runtime_defs_linux_namespace_reference *));
+        ret = mem_realloc((void **)&work_ns, (len + 1) * sizeof(defs_namespace_reference *),
+                          (void *)work_ns, len * sizeof(defs_namespace_reference *));
         if (ret != 0) {
             ERROR("Out of memory");
             goto out;
         }
-        work_ns[len] = util_common_calloc_s(sizeof(oci_runtime_defs_linux_namespace_reference));
+        work_ns[len] = util_common_calloc_s(sizeof(defs_namespace_reference));
         if (work_ns[len] == NULL) {
             ERROR("Out of memory");
             ret = -1;
@@ -1495,7 +1529,7 @@ out:
 }
 
 static int merge_settings_for_system_container(oci_runtime_spec *oci_spec, host_config *host_spec,
-                                               container_custom_config *custom_spec)
+                                               container_config *container_spec)
 {
     int ret = -1;
 
@@ -1519,8 +1553,8 @@ static int merge_settings_for_system_container(oci_runtime_spec *oci_spec, host_
     }
 
     // append mounts of oci_spec
-    if (custom_spec->ns_change_opt != NULL) {
-        ret = adapt_settings_for_mounts(oci_spec, custom_spec);
+    if (container_spec->ns_change_opt != NULL) {
+        ret = adapt_settings_for_mounts(oci_spec, container_spec);
         if (ret != 0) {
             ERROR("Failed to adapt settings for ns_change_opt");
             goto out;
@@ -1532,7 +1566,7 @@ out:
 }
 
 static int merge_resources_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
-                                container_custom_config *custom_spec, container_config_v2_common_config *common_config)
+                                container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
 
@@ -1551,7 +1585,7 @@ static int merge_resources_conf(oci_runtime_spec *oci_spec, host_config *host_sp
         goto out;
     }
 
-    ret = merge_conf_mounts(oci_spec, custom_spec, host_spec, common_config);
+    ret = merge_conf_mounts(oci_spec, host_spec, v2_spec);
     if (ret) {
         goto out;
     }
@@ -1559,18 +1593,33 @@ out:
     return ret;
 }
 
-static int merge_process_conf(oci_runtime_spec *oci_spec, const host_config *host_spec,
-                              container_custom_config *custom_spec)
+static int merge_terminal(oci_runtime_spec *oci_spec, bool terminal)
 {
     int ret = 0;
 
-    ret = merge_conf_args(oci_spec, custom_spec);
+    ret = make_sure_oci_spec_process(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    oci_spec->process->terminal = terminal;
+
+out:
+    return ret;
+}
+
+static int merge_process_conf(oci_runtime_spec *oci_spec, const host_config *host_spec,
+                              container_config *container_spec)
+{
+    int ret = 0;
+
+    ret = merge_conf_args(oci_spec, container_spec);
     if (ret != 0) {
         goto out;
     }
 
     /* environment variables */
-    ret = merge_env(oci_spec, (const char **)custom_spec->env, custom_spec->env_len);
+    ret = merge_env(oci_spec, (const char **)container_spec->env, container_spec->env_len);
     if (ret != 0) {
         ERROR("Failed to merge environment variables");
         goto out;
@@ -1584,7 +1633,7 @@ static int merge_process_conf(oci_runtime_spec *oci_spec, const host_config *hos
     }
 
     /* working dir */
-    ret = merge_working_dir(oci_spec, custom_spec->working_dir);
+    ret = merge_working_dir(oci_spec, container_spec->working_dir);
     if (ret != 0) {
         ERROR("Failed to merge working dir");
         goto out;
@@ -1594,6 +1643,13 @@ static int merge_process_conf(oci_runtime_spec *oci_spec, const host_config *hos
     ret = merge_hook_spec(oci_spec, host_spec->hook_spec);
     if (ret != 0) {
         ERROR("Failed to merge hook spec");
+        goto out;
+    }
+
+    /* merge whether allocate a pseudo-TTY */
+    ret = merge_terminal(oci_spec, container_spec->tty);
+    if (ret != 0) {
+        ERROR("Failed to merge process terminal");
         goto out;
     }
 
@@ -1630,17 +1686,25 @@ out:
 }
 
 
-static int merge_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
-                      container_custom_config *custom_spec, container_config_v2_common_config *common_config)
+int merge_all_specs(host_config *host_spec, const char *real_rootfs,
+                    container_config_v2_common_config *v2_spec, oci_runtime_spec *oci_spec)
 {
     int ret = 0;
 
-    ret = merge_resources_conf(oci_spec, host_spec, custom_spec, common_config);
+    ret = merge_root(oci_spec, real_rootfs, host_spec);
+    if (ret != 0) {
+        ERROR("Failed to merge root");
+        goto out;
+    }
+    v2_spec->base_fs = util_strdup_s(real_rootfs);
+
+
+    ret = merge_resources_conf(oci_spec, host_spec, v2_spec);
     if (ret != 0) {
         goto out;
     }
 
-    ret = merge_process_conf(oci_spec, host_spec, custom_spec);
+    ret = merge_process_conf(oci_spec, host_spec, v2_spec->config);
     if (ret != 0) {
         goto out;
     }
@@ -1659,7 +1723,7 @@ static int merge_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
     }
 
     /* settings for system container */
-    ret = merge_settings_for_system_container(oci_spec, host_spec, custom_spec);
+    ret = merge_settings_for_system_container(oci_spec, host_spec, v2_spec->config);
     if (ret != 0) {
         ERROR("Failed to merge system container conf");
         goto out;
@@ -1672,13 +1736,13 @@ static int merge_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
         goto out;
     }
 
-    ret = merge_hostname(oci_spec, host_spec, custom_spec);
+    ret = merge_hostname(oci_spec, host_spec, v2_spec->config);
     if (ret != 0) {
         ERROR("Failed to merge hostname");
         goto out;
     }
 
-    ret = make_annotations(oci_spec, custom_spec, host_spec);
+    ret = make_annotations(oci_spec, v2_spec->config, host_spec);
     if (ret != 0) {
         ret = -1;
         goto out;
@@ -1700,97 +1764,6 @@ out:
     return ret;
 }
 
-/* merge the default config with host config and image config and custom config */
-oci_runtime_spec *merge_container_config(const char *id, const char *image_type, const char *image_name,
-                                         const char *ext_config_image, host_config *host_spec,
-                                         container_custom_config *custom_spec,
-                                         container_config_v2_common_config *v2_spec, char **real_rootfs)
-{
-    oci_runtime_spec *oci_spec = NULL;
-    parser_error err = NULL;
-    int ret = 0;
-
-    oci_spec = default_spec(host_spec->system_container);
-    if (oci_spec == NULL) {
-        goto out;
-    }
-
-    ret = make_sure_oci_spec_linux(oci_spec);
-    if (ret < 0) {
-        goto out;
-    }
-
-    ret = im_merge_image_config(id, image_type, image_name, ext_config_image, oci_spec, host_spec,
-                                custom_spec, real_rootfs);
-    if (ret != 0) {
-        ERROR("Can not merge with image config");
-        goto free_out;
-    }
-
-    if (*real_rootfs != NULL) {
-        ret = merge_root(oci_spec, *real_rootfs, host_spec);
-        if (ret != 0) {
-            ERROR("Failed to merge root");
-            goto free_out;
-        }
-        v2_spec->base_fs = util_strdup_s(*real_rootfs);
-    }
-    ret = merge_conf(oci_spec, host_spec, custom_spec, v2_spec);
-    if (ret != 0) {
-        ERROR("Failed to merge config");
-        goto free_out;
-    }
-
-    goto out;
-
-free_out:
-    free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
-out:
-    free(err);
-    return oci_spec;
-}
-
-static inline bool is_valid_umask_value(const char *value)
-{
-    return (strcmp(value, UMASK_NORMAL) == 0 || strcmp(value, UMASK_SECURE) == 0);
-}
-
-static int add_native_umask(const oci_runtime_spec *container)
-{
-    int ret = 0;
-    size_t i = 0;
-    char *umask = NULL;
-
-    for (i = 0; i < container->annotations->len; i++) {
-        if (strcmp(container->annotations->keys[i], ANNOTATION_UMAKE_KEY) == 0) {
-            if (!is_valid_umask_value(container->annotations->values[i])) {
-                ERROR("native.umask option %s not supported", container->annotations->values[i]);
-                isulad_set_error_message("native.umask option %s not supported", container->annotations->values[i]);
-                ret = -1;
-            }
-            goto out;
-        }
-    }
-
-    umask = conf_get_isulad_native_umask();
-    if (umask == NULL) {
-        ERROR("Failed to get default native umask");
-        ret = -1;
-        goto out;
-    }
-
-    if (append_json_map_string_string(container->annotations, ANNOTATION_UMAKE_KEY, umask)) {
-        ERROR("Failed to append annotations: native.umask=%s", umask);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(umask);
-    return ret;
-}
-
 /* merge the default config with host config and custom config */
 int merge_global_config(oci_runtime_spec *oci_spec)
 {
@@ -1808,33 +1781,19 @@ int merge_global_config(oci_runtime_spec *oci_spec)
         goto out;
     }
 
-    /* add rootfs.mount */
-    ret = add_rootfs_mount(oci_spec);
-    if (ret != 0) {
-        ERROR("Failed to add rootfs mount");
-        goto out;
-    }
-
-    /* add native.umask */
-    ret = add_native_umask(oci_spec);
-    if (ret != 0) {
-        ERROR("Failed to add native umask");
-        goto out;
-    }
-
 out:
     return ret;
 }
 
 /* read oci config */
-oci_runtime_spec *read_oci_config(const char *rootpath, const char *name)
+oci_runtime_spec *load_oci_config(const char *rootpath, const char *name)
 {
     int nret;
     char filename[PATH_MAX] = { 0x00 };
     parser_error err = NULL;
     oci_runtime_spec *ociconfig = NULL;
 
-    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, name, OCICONFIGJSON);
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, name, OCI_CONFIG_JSON);
     if (nret < 0 || (size_t)nret >= sizeof(filename)) {
         ERROR("Failed to print string");
         goto out;
@@ -1850,4 +1809,40 @@ out:
     free(err);
     return ociconfig;
 }
+
+int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec)
+{
+    int ret = 0;
+    int nret = 0;
+    char *json_container = NULL;
+    char file_path[PATH_MAX] = { 0x0 };
+    struct parser_context ctx = { OPT_PARSE_STRICT, stderr };
+    parser_error err = NULL;
+
+    nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, OCI_CONFIG_JSON);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to print string");
+        ret = -1;
+        goto out_free;
+    }
+
+    json_container = oci_runtime_spec_generate_json(oci_spec, &ctx, &err);
+    if (json_container == NULL) {
+        ERROR("Failed to generate json: %s", err);
+        ret = -1;
+        goto out_free;
+    }
+
+    if (util_write_file(file_path, json_container, strlen(json_container)) != 0) {
+        ERROR("write json container failed: %s", strerror(errno));
+        ret = -1;
+        goto out_free;
+    }
+
+out_free:
+    free(err);
+    free(json_container);
+    return ret;
+}
+
 

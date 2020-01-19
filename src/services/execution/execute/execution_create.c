@@ -148,80 +148,84 @@ error_out:
     return NULL;
 }
 
-static container_custom_config *get_custom_spec_from_request(const container_create_request *request)
+static container_config *get_container_spec_from_request(const container_create_request *request)
 {
     parser_error err = NULL;
 
-    container_custom_config *custom_spec = container_custom_config_parse_data(request->customconfig, NULL, &err);
-    if (custom_spec == NULL) {
+    container_config *container_spec = container_config_parse_data(request->customconfig, NULL, &err);
+    if (container_spec == NULL) {
         ERROR("Failed to parse custom config data:%s", err);
     }
 
     free(err);
-    return custom_spec;
+    return container_spec;
 }
 
-static int add_default_log_config_to_custom_spec(const char *id, const char *runtime_root,
-                                                 container_custom_config *custom_config)
+static int add_default_log_config_to_container_spec(const char *id, const char *runtime_root,
+                                                    container_config *container_spec)
 {
     int ret = 0;
 
     /* generate default log path */
-    if (custom_config->log_config == NULL) {
-        custom_config->log_config = util_common_calloc_s(sizeof(container_custom_config_log_config));
-        if (custom_config->log_config == NULL) {
+    if (container_spec->log_config == NULL) {
+        container_spec->log_config = util_common_calloc_s(sizeof(container_config_log_config));
+        if (container_spec->log_config == NULL) {
             ERROR("Out of memory");
             ret = -1;
             goto out;
         }
     }
 
-    if (custom_config->log_config->log_file == NULL) {
+    if (container_spec->log_config->log_file == NULL) {
         char default_path[PATH_MAX] = { 0 };
         int nret = snprintf(default_path, PATH_MAX, "%s/%s/console.log", runtime_root, id);
-        if (nret >= PATH_MAX || nret < 0) {
+        if (nret < 0 || nret >= PATH_MAX) {
             ERROR("Create default log path for container %s failed", id);
             ret = -1;
             goto out;
         }
-        custom_config->log_config->log_file = util_strdup_s(default_path);
+        container_spec->log_config->log_file = util_strdup_s(default_path);
     }
 
 out:
     return ret;
 }
 
-static container_custom_config *get_custom_spec(const char *id, const char *runtime_root,
-                                                const container_create_request *request)
+static container_config *get_container_spec(const char *id, const char *runtime_root,
+                                            const container_create_request *request)
 {
-    container_custom_config *custom_spec = NULL;
+    container_config *container_spec = NULL;
 
-    custom_spec = get_custom_spec_from_request(request);
-    if (custom_spec == NULL) {
+    container_spec = get_container_spec_from_request(request);
+    if (container_spec == NULL) {
         return NULL;
     }
 
-    if (add_default_log_config_to_custom_spec(id, runtime_root, custom_spec)) {
+    if (add_default_log_config_to_container_spec(id, runtime_root, container_spec)) {
         goto error_out;
     }
 
-    return custom_spec;
+    return container_spec;
 
 error_out:
-    free_container_custom_config(custom_spec);
+    free_container_config(container_spec);
     return NULL;
 }
 
-static oci_runtime_spec *merge_config(const char *id, const char *image_type, const char *image_name,
-                                      const char *ext_config_image, host_config *host_spec,
-                                      container_custom_config *custom_spec,
-                                      container_config_v2_common_config *v2_spec, char **real_rootfs)
+static oci_runtime_spec *generate_oci_config(host_config *host_spec,
+                                             const char *real_rootfs,
+                                             container_config_v2_common_config *v2_spec)
 {
+    int ret = 0;
     oci_runtime_spec *oci_spec = NULL;
 
-    oci_spec = merge_container_config(id, image_type, image_name, ext_config_image, host_spec, custom_spec,
-                                      v2_spec, real_rootfs);
+    oci_spec = default_spec(host_spec->system_container);
     if (oci_spec == NULL) {
+        goto error_out;
+    }
+
+    ret = merge_all_specs(host_spec, real_rootfs, v2_spec, oci_spec);
+    if (ret != 0) {
         ERROR("Failed to merge config");
         goto error_out;
     }
@@ -239,7 +243,7 @@ error_out:
 }
 
 static int merge_config_for_syscontainer(const container_create_request *request, const host_config *host_spec,
-                                         const container_custom_config *custom_spec, const oci_runtime_spec *oci_spec)
+                                         const container_config *container_spec, const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
 
@@ -247,7 +251,7 @@ static int merge_config_for_syscontainer(const container_create_request *request
         return 0;
     }
 
-    if (merge_network(host_spec, request->rootfs, custom_spec->hostname) != 0) {
+    if (merge_network(host_spec, request->rootfs, container_spec->hostname) != 0) {
         ERROR("Failed to merge network config");
         ret = -1;
         goto out;
@@ -547,34 +551,6 @@ void umount_host_channel(const host_config_host_channel *host_channel)
     }
 }
 
-static int generate_merged_oci_config_json(const char *id, oci_runtime_spec *oci_spec,
-                                           char **oci_config_data)
-{
-    char *err = NULL;
-
-    if (verify_container_settings(oci_spec)) {
-        ERROR("Failed to verify container settings");
-        return -1;
-    }
-
-    /* modify oci_spec by plugin. */
-    if (plugin_event_container_pre_create(id, oci_spec)) {
-        ERROR("Plugin event pre create failed");
-        (void)plugin_event_container_post_remove2(id, oci_spec); /* ignore error */
-        return -1;
-    }
-
-    *oci_config_data = oci_runtime_spec_generate_json(oci_spec, 0, &err);
-    if (*oci_config_data == NULL) {
-        ERROR("Failed to generate runtime spec json,erro:%s", err);
-        free(err);
-        isulad_set_error_message("Failed to generate runtime spec json");
-        return -1;
-    }
-    free(err);
-    return 0;
-}
-
 static int create_container_root_dir(const char *id, const char *runtime_root)
 {
     int ret = 0;
@@ -623,104 +599,6 @@ out:
     return ret;
 }
 
-static container_config_v2_common_config *get_config_v2_spec(const char *id, const char *runtime_root,
-                                                             const host_config *host_spec)
-{
-    container_config_v2_common_config *v2_spec = NULL;
-
-    v2_spec = util_common_calloc_s(sizeof(container_config_v2_common_config));
-    if (v2_spec == NULL) {
-        ERROR("Failed to malloc container_config_v2_common_config");
-        return NULL;
-    }
-
-    /* set network config to v2_spec */
-    if (init_container_network_confs(id, runtime_root, host_spec, v2_spec) != 0) {
-        ERROR("Init Network files failed");
-        goto error_out;
-    }
-
-    return v2_spec;
-
-error_out:
-    free_container_config_v2_common_config(v2_spec);
-    return NULL;
-}
-
-/* save config v2 */
-static int create_v2_config_json(const char *id, const char *runtime_root, container_config_v2_common_config *v2_spec)
-{
-    int ret = 0;
-    char *json_v2 = NULL;
-    parser_error err = NULL;
-    container_config_v2 config_v2 = { 0 };
-    container_config_v2_state state = { 0 };
-
-    config_v2.common_config = v2_spec;
-    config_v2.state = &state;
-
-    json_v2 = container_config_v2_generate_json(&config_v2, NULL, &err);
-    if (json_v2 == NULL) {
-        ERROR("Failed to generate container config V2 json string:%s", err ? err : " ");
-        ret = -1;
-        goto out;
-    }
-
-    ret = save_config_v2_json(id, runtime_root, json_v2);
-    if (ret != 0) {
-        ERROR("Failed to save container config V2 json to file");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(json_v2);
-    free(err);
-    return ret;
-}
-
-/* save host config */
-static int create_host_config_json(const char *id, const char *runtime_root, const host_config *host_spec)
-{
-    int ret = 0;
-    char *json_host_config = NULL;
-    parser_error err = NULL;
-
-    json_host_config = host_config_generate_json(host_spec, NULL, &err);
-    if (json_host_config == NULL) {
-        ERROR("Failed to generate container host config json string:%s", err ? err : " ");
-        ret = -1;
-        goto out;
-    }
-
-    ret = save_host_config(id, runtime_root, json_host_config);
-    if (ret != 0) {
-        ERROR("Failed to save container host config json to file");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(json_host_config);
-    free(err);
-
-    return ret;
-}
-
-static int save_container_config_before_create(const char *id, const char *runtime_root, host_config *host_spec,
-                                               container_config_v2_common_config *v2_spec)
-{
-    if (create_v2_config_json(id, runtime_root, v2_spec) != 0) {
-        return -1;
-    }
-
-    if (create_host_config_json(id, runtime_root, host_spec) != 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
 static host_config_host_channel *dup_host_channel(const host_config_host_channel *channel)
 {
     host_config_host_channel *dup_channel = NULL;
@@ -742,15 +620,6 @@ static host_config_host_channel *dup_host_channel(const host_config_host_channel
     dup_channel->size = channel->size;
 
     return dup_channel;
-}
-
-static int verify_merged_custom_config(const container_custom_config *custom_spec)
-{
-    if (verify_health_check_parameter(custom_spec) != 0) {
-        return -1;
-    }
-
-    return 0;
 }
 
 static int response_allocate_memory(container_create_response **response)
@@ -837,75 +706,28 @@ static int preparate_runtime_environment(const container_create_request *request
 }
 
 static int get_basic_spec(const container_create_request *request, const char *id, const char *runtime_root,
-                          host_config **host_spec, container_custom_config **custom_spec)
+                          host_config **host_spec, container_config **container_spec)
 {
     *host_spec = get_host_spec(request);
     if (*host_spec == NULL) {
         return -1;
     }
 
-    *custom_spec = get_custom_spec(id, runtime_root, request);
-    if (*custom_spec == NULL) {
+    *container_spec = get_container_spec(id, runtime_root, request);
+    if (*container_spec == NULL) {
         return -1;
     }
 
     return 0;
 }
 
-static int get_v2_spec(const container_create_request *request, const char *id, const char *name,
-                       const char *runtime_root, const host_config *host_spec, const char *image_type,
-                       container_config_v2_common_config **v2_spec)
-{
-    *v2_spec = get_config_v2_spec(id, runtime_root, host_spec);
-    if (*v2_spec == NULL) {
-        ERROR("Failed to malloc container_config_v2_common_config");
-        return -1;
-    }
-
-    if (v2_spec_make_basic_info(id, name, request->image, image_type, *v2_spec) != 0) {
-        ERROR("Failed to malloc container_config_v2_common_config");
-        return -1;
-    }
-
-    return 0;
-}
-
-static int v2_spec_merge_config(const container_custom_config *custom_spec, const oci_runtime_spec *oci_spec,
-                                container_config_v2_common_config *v2_spec)
-{
-    if (v2_spec_merge_custom_spec(custom_spec, v2_spec) != 0) {
-        ERROR("Failed to malloc container_config_v2_common_config");
-        return -1;
-    }
-
-    if (v2_spec_merge_oci_spec(oci_spec, v2_spec) != 0) {
-        ERROR("Failed to malloc container_config_v2_common_config");
-        return -1;
-    }
-
-    return 0;
-}
-
-static int generate_oci_config_json(const char *id, const container_create_request *request,
-                                    const host_config *host_spec, const container_custom_config *custom_spec,
-                                    oci_runtime_spec *oci_spec, char **oci_config_data)
-{
-    if (verify_merged_custom_config(custom_spec)) {
-        return -1;
-    }
-
-    if (merge_config_for_syscontainer(request, host_spec, custom_spec, oci_spec) != 0) {
-        ERROR("Failed to merge config for syscontainer");
-        return -1;
-    }
-
-    if (generate_merged_oci_config_json(id, oci_spec, oci_config_data) != 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
+/*
+ * request -> host_spec + container_spec
+ * container_spec + image config
+ * host_spec + container_spec + default_spec+ global_spec => oci_spec
+ * verify oci_spec
+ * register container(save v2_spec\host_spec\oci_spec)
+ */
 int container_create_cb(const container_create_request *request,
                         container_create_response **response)
 {
@@ -921,11 +743,10 @@ int container_create_cb(const container_create_request *request,
     const char *ext_config_image = NULL;
     oci_runtime_spec *oci_spec = NULL;
     host_config *host_spec = NULL;
-    container_custom_config *custom_spec = NULL;
+    container_config *container_spec = NULL;
     container_config_v2_common_config *v2_spec = NULL;
     host_config_host_channel *host_channel = NULL;
-    rt_create_params_t create_params = { 0 };
-    rt_rm_params_t delete_params = { 0 };
+    int ret = 0;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -946,75 +767,109 @@ int container_create_cb(const container_create_request *request,
         goto clean_nameindex;
     }
 
-    if (get_basic_spec(request, id, runtime_root, &host_spec, &custom_spec) != 0) {
+    if (get_basic_spec(request, id, runtime_root, &host_spec, &container_spec) != 0) {
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
 
-    if (get_v2_spec(request, id, name, runtime_root, host_spec, image_type, &v2_spec) != 0) {
+    v2_spec = util_common_calloc_s(sizeof(container_config_v2_common_config));
+    if (v2_spec == NULL) {
+        ERROR("Failed to malloc container_config_v2_common_config");
+        cc = ISULAD_ERR_INPUT;
+        goto clean_container_root_dir;
+    }
+
+    char timebuffer[TIME_STR_SIZE] = { 0 };
+    v2_spec->id = id ? util_strdup_s(id) : NULL;
+    v2_spec->name = name ? util_strdup_s(name) : NULL;
+    v2_spec->image = image_name ? util_strdup_s(image_name) : util_strdup_s("none");
+    v2_spec->image_type = image_type ? util_strdup_s(image_type) : NULL;
+    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    free(v2_spec->created);
+    v2_spec->created = util_strdup_s(timebuffer);
+
+    v2_spec->config = container_spec;
+
+    /* set network config to v2_spec */
+    if (init_container_network_confs(id, runtime_root, host_spec, v2_spec) != 0) {
+        ERROR("Init Network files failed");
+        cc = ISULAD_ERR_INPUT;
+        goto clean_container_root_dir;
+    }
+
+    ret = im_merge_image_config(id, image_type, image_name, ext_config_image, host_spec,
+                                v2_spec->config, &real_rootfs);
+    if (ret != 0) {
+        ERROR("Can not merge container_spec with image config");
         cc = ISULAD_ERR_EXEC;
         goto clean_container_root_dir;
     }
 
-    if (save_container_config_before_create(id, runtime_root, host_spec, v2_spec) != 0) {
+    if (verify_health_check_parameter(v2_spec->config) != 0) {
         cc = ISULAD_ERR_EXEC;
-        goto clean_container_root_dir;
+        goto clean_rootfs;
+    }
+
+    oci_spec = generate_oci_config(host_spec, real_rootfs, v2_spec);
+    if (oci_spec == NULL) {
+        cc = ISULAD_ERR_EXEC;
+        goto clean_rootfs;
+    }
+
+    if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
+        ERROR("Failed to merge config for syscontainer");
+        cc = ISULAD_ERR_EXEC;
+        goto clean_rootfs;
+    }
+
+    /* modify oci_spec by plugin. */
+    if (plugin_event_container_pre_create(id, oci_spec) != 0) {
+        ERROR("Plugin event pre create failed");
+        (void)plugin_event_container_post_remove2(id, oci_spec); /* ignore error */
+        cc = ISULAD_ERR_EXEC;
+        goto clean_rootfs;
     }
 
     host_channel = dup_host_channel(host_spec->host_channel);
     if (prepare_host_channel(host_channel, host_spec->user_remap)) {
         ERROR("Failed to prepare host channel with '%s'", host_spec->host_channel);
-        cc = ISULAD_ERR_EXEC;
-        goto clean_container_root_dir;
-    }
-
-    oci_spec = merge_config(id, image_type, image_name, ext_config_image, host_spec, custom_spec, v2_spec,
-                            &real_rootfs);
-    if (oci_spec == NULL) {
-        cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
-    }
-    if (real_rootfs == NULL) {
-        ERROR("Can not found rootfs");
-        cc = ISULAD_ERR_INPUT;
-        goto clean_rootfs;
-    }
-
-    if (generate_oci_config_json(id, request, host_spec, custom_spec, oci_spec, &oci_config_data) != 0) {
-        cc = ISULAD_ERR_INPUT;
-        goto clean_rootfs;
-    }
-
-    create_params.real_rootfs = real_rootfs;
-    create_params.oci_config_data = oci_config_data;
-
-    if (runtime_create(id, runtime, &create_params) != 0) {
-        ERROR("Runtime create container failed");
+        sleep(111);
         cc = ISULAD_ERR_EXEC;
         goto clean_rootfs;
     }
 
-    if (v2_spec_merge_config(custom_spec, oci_spec, v2_spec) != 0) {
+    if (verify_container_settings(oci_spec)) {
+        ERROR("Failed to verify container settings");
         cc = ISULAD_ERR_EXEC;
-        goto clean_on_error;
+        goto umount_channel;
+    }
+
+    if (save_oci_config(id, runtime_root, oci_spec) != 0) {
+        ERROR("Failed to save container settings");
+        cc = ISULAD_ERR_EXEC;
+        goto umount_channel;
+    }
+
+    if (v2_spec_merge_contaner_spec(v2_spec) != 0) {
+        ERROR("Failed to merge container settings");
+        cc = ISULAD_ERR_EXEC;
+        goto umount_channel;
     }
 
     if (register_new_container(id, runtime, &host_spec, &v2_spec)) {
         ERROR("Failed to register new container");
         cc = ISULAD_ERR_EXEC;
-        goto clean_on_error;
+        goto umount_channel;
     }
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
     goto pack_response;
 
-clean_on_error:
-    delete_params.rootpath = runtime_root;
-    (void)runtime_rm(id, runtime, &delete_params);
+umount_channel:
+    umount_host_channel(host_channel);
 
 clean_rootfs:
     (void)im_remove_container_rootfs(image_type, id);
-    umount_host_channel(host_channel);
 
 clean_container_root_dir:
     (void)delete_container_root_dir(id, runtime_root);
@@ -1033,7 +888,6 @@ pack_response:
     free(id);
     free_oci_runtime_spec(oci_spec);
     free_host_config(host_spec);
-    free_container_custom_config(custom_spec);
     free_container_config_v2_common_config(v2_spec);
     free_host_config_host_channel(host_channel);
     free_log_prefix();

@@ -877,3 +877,60 @@ char *verify_file_and_get_real_path(const char *file)
     return util_strdup_s(resolved_path);
 }
 
+int util_copy_file(const char *src_file, const char *dst_file)
+{
+#define BUFSIZE 4096
+    int ret = 0;
+    char *nret = NULL;
+    char real_src_file[PATH_MAX + 1] = { 0 };
+    int src_fd = -1;
+    int dst_fd = -1;
+    char buf[BUFSIZE + 1] = { 0 };
+
+    if (src_file == NULL || dst_file == NULL) {
+        return ret;
+    }
+    nret = realpath(src_file, real_src_file);
+    if (nret == NULL) {
+        ERROR("real path: %s, return: %s", src_file, strerror(errno));
+        ret = -1;
+        return ret;
+    }
+    src_fd = util_open(real_src_file, O_RDONLY, CONFIG_FILE_MODE);
+    if (src_fd < 0) {
+        ERROR("Open src file: %s, failed: %s", real_src_file, strerror(errno));
+        ret = -1;
+        goto free_out;
+    }
+    dst_fd = util_open(dst_file, O_WRONLY | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
+    if (dst_fd < 0) {
+        ERROR("Creat file: %s, failed: %s", dst_file, strerror(errno));
+        ret = -1;
+        goto free_out;
+    }
+    while (true) {
+        ssize_t len = util_read_nointr(src_fd, buf, BUFSIZE);
+        if (len < 0) {
+            ERROR("Read src file failed: %s", strerror(errno));
+            ret = -1;
+            goto free_out;
+        } else if (len == 0) {
+            break;
+        }
+        if (util_write_nointr(dst_fd, buf, (size_t)len) != len) {
+            ERROR("Write file failed: %s", strerror(errno));
+            ret = -1;
+            goto free_out;
+        }
+    }
+
+free_out:
+    if (src_fd >= 0) {
+        close(src_fd);
+    }
+    if (dst_fd >= 0) {
+        close(dst_fd);
+    }
+    return ret;
+}
+

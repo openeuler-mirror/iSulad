@@ -20,7 +20,7 @@
 
 namespace CRISecurity {
 static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
-                                  container_custom_config *config)
+                                  container_config *config)
 {
     if (sc.has_run_as_user()) {
         free(config->user);
@@ -195,7 +195,7 @@ static void ModifySandboxNamespaceOptions(const runtime::v1alpha2::NamespaceOpti
     ModifyHostNetworkOptionForSandbox(nsOpts, hostConfig);
 }
 
-void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_custom_config *config,
+void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_config *config,
                                  host_config *hc, Errors &error)
 {
     std::unique_ptr<runtime::v1alpha2::LinuxContainerSecurityContext> sc(
@@ -227,7 +227,7 @@ void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig 
 }
 
 void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig &lc, const std::string &podSandboxID,
-                                   container_custom_config *config, host_config *hc, Errors &error)
+                                   container_config *config, host_config *hc, Errors &error)
 {
     if (lc.has_security_context()) {
         const runtime::v1alpha2::LinuxContainerSecurityContext &sc = lc.security_context();

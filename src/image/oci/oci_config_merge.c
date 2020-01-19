@@ -25,52 +25,110 @@
 #include "specs_mount.h"
 #include "specs_extend.h"
 
-static void oci_image_merge_working_dir(const char *working_dir, oci_runtime_spec *oci_spec)
+static void oci_image_merge_working_dir(const char *working_dir, container_config *container_spec)
 {
     if (working_dir == NULL) {
         return;
     }
 
-    free(oci_spec->process->cwd);
-    oci_spec->process->cwd = util_strdup_s(working_dir);
+    free(container_spec->working_dir);
+    container_spec->working_dir = util_strdup_s(working_dir);
 }
 
-static int oci_image_merge_env(const oci_image_spec_config *config, oci_runtime_spec *oci_spec)
+static int oci_image_merge_env(const oci_image_spec_config *config, container_config *container_spec)
 {
+    int ret = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
+    size_t i = 0;
+    size_t j = 0;
+    char **temp = NULL;
+    char **im_kv = NULL;
+    char **custom_kv = NULL;
+
     if (config->env == NULL || config->env_len == 0) {
         return 0;
     }
-    if (merge_env(oci_spec, (const char **)config->env, config->env_len) != 0) {
-        ERROR("Failed to merge environment variables");
-        return -1;
+
+    if (config->env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
+        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ret = -1;
+        goto out;
     }
+    new_size = (container_spec->env_len + config->env_len) * sizeof(char *);
+    old_size = container_spec->env_len * sizeof(char *);
+    ret = mem_realloc((void **)&temp, new_size, container_spec->env, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for envionment variables");
+        ret = -1;
+        goto out;
+    }
+
+    container_spec->env = temp;
+    for (i = 0; i < config->env_len; i++) {
+        bool found = false;
+        im_kv = util_string_split(config->env[i], '=');
+        if (im_kv == NULL) {
+            continue;
+        }
+
+        for (j = 0; j < container_spec->env_len; j++) {
+            custom_kv = util_string_split(container_spec->env[i], '=');
+            if (custom_kv == NULL) {
+                continue;
+            }
+            if (strcmp(im_kv[0], custom_kv[0]) == 0) {
+                found = true;
+            }
+            util_free_array(custom_kv);
+            custom_kv = NULL;
+            if (found) {
+                break;
+            }
+        }
+
+        if (!found) {
+            container_spec->env[container_spec->env_len] = util_strdup_s(config->env[i]);
+            container_spec->env_len++;
+        }
+        util_free_array(im_kv);
+        im_kv = NULL;
+    }
+out:
+    return ret;
 
     return 0;
 }
 
-static int do_duplicate_commands(const oci_image_spec_config *config, container_custom_config *custom_spec)
+static int do_duplicate_commands(const oci_image_spec_config *config, container_config *container_spec)
 {
     size_t i;
 
-    if (custom_spec->cmd_len != 0 || config->cmd_len == 0) {
+    if (container_spec->cmd_len != 0 || config->cmd_len == 0) {
         return 0;
     }
 
-    custom_spec->cmd = (char **)util_smart_calloc_s(sizeof(char *), config->cmd_len);
-    if (custom_spec->cmd == NULL) {
+    if (config->cmd_len > SIZE_MAX / sizeof(char *)) {
+        ERROR("too many commands!");
+        return -1;
+    }
+
+    container_spec->cmd = (char **)util_common_calloc_s(sizeof(char *) * config->cmd_len);
+    if (container_spec->cmd == NULL) {
         ERROR("Out of memory");
         return -1;
     }
 
     for (i = 0; i < config->cmd_len; i++) {
-        custom_spec->cmd[i] = util_strdup_s(config->cmd[i]);
-        custom_spec->cmd_len++;
+        container_spec->cmd[i] = util_strdup_s(config->cmd[i]);
+        container_spec->cmd_len++;
     }
 
     return 0;
 }
 
-static int do_duplicate_entrypoints(const oci_image_spec_config *config, container_custom_config *custom_spec)
+static int do_duplicate_entrypoints(const oci_image_spec_config *config, container_config *container_spec)
 {
     size_t i;
 
@@ -78,64 +136,53 @@ static int do_duplicate_entrypoints(const oci_image_spec_config *config, contain
         return 0;
     }
 
-    custom_spec->entrypoint = (char **)util_smart_calloc_s(sizeof(char *), config->entrypoint_len);
-    if (custom_spec->entrypoint == NULL) {
+    if (config->entrypoint_len > SIZE_MAX / sizeof(char *)) {
+        ERROR("too many entrypoints!");
+        return -1;
+    }
+
+    container_spec->entrypoint = (char **)util_common_calloc_s(sizeof(char *) * config->entrypoint_len);
+    if (container_spec->entrypoint == NULL) {
         ERROR("Out of memory");
         return -1;
     }
 
     for (i = 0; i < config->entrypoint_len; i++) {
-        custom_spec->entrypoint[i] = util_strdup_s(config->entrypoint[i]);
-        custom_spec->entrypoint_len++;
+        container_spec->entrypoint[i] = util_strdup_s(config->entrypoint[i]);
+        container_spec->entrypoint_len++;
     }
 
     return 0;
 }
 
-static int oci_image_merge_entrypoint(const oci_image_spec_config *config, container_custom_config *custom_spec)
+static int oci_image_merge_entrypoint(const oci_image_spec_config *config, container_config *container_spec)
 {
-    if (custom_spec->entrypoint_len != 0) {
+    if (container_spec->entrypoint_len != 0) {
         return 0;
     }
 
-    if (do_duplicate_commands(config, custom_spec) != 0) {
+    if (do_duplicate_commands(config, container_spec) != 0) {
         return -1;
     }
 
-    if (do_duplicate_entrypoints(config, custom_spec) != 0) {
+    if (do_duplicate_entrypoints(config, container_spec) != 0) {
         return -1;
     }
 
     return 0;
 }
 
-static void oci_image_merge_user(const char *user, container_custom_config *custom_spec)
+static void oci_image_merge_user(const char *user, container_config *container_spec)
 {
-    if (custom_spec->user != NULL) {
+    if (container_spec->user != NULL) {
         return;
     }
 
-    custom_spec->user = util_strdup_s(user);
-}
-
-static int oci_image_merge_volumes(const oci_image_spec_config *config, oci_runtime_spec *oci_spec)
-{
-    int ret;
-
-    if (config->volumes == NULL) {
-        return 0;
-    }
-    ret = merge_volumes(oci_spec, config->volumes->keys, config->volumes->len, NULL, parse_volume);
-    if (ret != 0) {
-        ERROR("Failed to merge volumes");
-        return -1;
-    }
-
-    return 0;
+    container_spec->user = util_strdup_s(user);
 }
 
 static int dup_health_check_from_image(const defs_health_check *image_health_check,
-                                       container_custom_config *custom_spec)
+                                       container_config *container_spec)
 {
     int ret = 0;
     size_t i;
@@ -145,7 +192,13 @@ static int dup_health_check_from_image(const defs_health_check *image_health_che
         return -1;
     }
 
-    health_check->test = util_smart_calloc_s(sizeof(char *), image_health_check->test_len);
+    if (image_health_check->test_len > SIZE_MAX / sizeof(char *)) {
+        ERROR("invalid health check commands!");
+        ret = -1;
+        goto out;
+    }
+
+    health_check->test = util_common_calloc_s(sizeof(char *) * image_health_check->test_len);
     if (health_check->test == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -162,7 +215,7 @@ static int dup_health_check_from_image(const defs_health_check *image_health_che
     health_check->retries = image_health_check->retries;
     health_check->exit_on_unhealthy = image_health_check->exit_on_unhealthy;
 
-    custom_spec->health_check = health_check;
+    container_spec->health_check = health_check;
 
     health_check = NULL;
 
@@ -172,39 +225,43 @@ out:
 }
 
 static int update_health_check_from_image(const defs_health_check *image_health_check,
-                                          container_custom_config *custom_spec)
+                                          container_config *container_spec)
 {
-    if (custom_spec->health_check->test_len == 0) {
+    if (container_spec->health_check->test_len == 0) {
         size_t i;
 
-        custom_spec->health_check->test = util_smart_calloc_s(sizeof(char *), image_health_check->test_len);
-        if (custom_spec->health_check->test == NULL) {
+        if (image_health_check->test_len > SIZE_MAX / sizeof(char *)) {
+            ERROR("invalid health check commands!");
+            return -1;
+        }
+        container_spec->health_check->test = util_common_calloc_s(sizeof(char *) * image_health_check->test_len);
+        if (container_spec->health_check->test == NULL) {
             ERROR("Out of memory");
             return -1;
         }
         for (i = 0; i < image_health_check->test_len; i++) {
-            custom_spec->health_check->test[i] = util_strdup_s(image_health_check->test[i]);
-            custom_spec->health_check->test_len++;
+            container_spec->health_check->test[i] = util_strdup_s(image_health_check->test[i]);
+            container_spec->health_check->test_len++;
         }
     }
-    if (custom_spec->health_check->interval == 0) {
-        custom_spec->health_check->interval = image_health_check->interval;
+    if (container_spec->health_check->interval == 0) {
+        container_spec->health_check->interval = image_health_check->interval;
     }
-    if (custom_spec->health_check->timeout == 0) {
-        custom_spec->health_check->timeout = image_health_check->timeout;
+    if (container_spec->health_check->timeout == 0) {
+        container_spec->health_check->timeout = image_health_check->timeout;
     }
-    if (custom_spec->health_check->start_period == 0) {
-        custom_spec->health_check->start_period = image_health_check->start_period;
+    if (container_spec->health_check->start_period == 0) {
+        container_spec->health_check->start_period = image_health_check->start_period;
     }
-    if (custom_spec->health_check->retries == 0) {
-        custom_spec->health_check->retries = image_health_check->retries;
+    if (container_spec->health_check->retries == 0) {
+        container_spec->health_check->retries = image_health_check->retries;
     }
 
     return 0;
 }
 
 static int oci_image_merge_health_check(const defs_health_check *image_health_check,
-                                        container_custom_config *custom_spec)
+                                        container_config *container_spec)
 {
     int ret = 0;
 
@@ -217,13 +274,13 @@ static int oci_image_merge_health_check(const defs_health_check *image_health_ch
         return -1;
     }
 
-    if (custom_spec->health_check == NULL) {
-        if (dup_health_check_from_image(image_health_check, custom_spec) != 0) {
+    if (container_spec->health_check == NULL) {
+        if (dup_health_check_from_image(image_health_check, container_spec) != 0) {
             ret = -1;
             goto out;
         }
     } else {
-        if (update_health_check_from_image(image_health_check, custom_spec) != 0) {
+        if (update_health_check_from_image(image_health_check, container_spec) != 0) {
             ret = -1;
             goto out;
         }
@@ -233,38 +290,34 @@ out:
     return ret;
 }
 
-int oci_image_merge_config(imagetool_image *image_conf, oci_runtime_spec *oci_spec,
-                           container_custom_config *custom_spec)
+int oci_image_merge_config(imagetool_image *image_conf, container_config *container_spec)
 {
     int ret = 0;
 
-    if (image_conf == NULL || oci_spec == NULL || custom_spec == NULL) {
+    if (image_conf == NULL || container_spec == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
 
     if (image_conf->spec != NULL && image_conf->spec->config != NULL) {
-        oci_image_merge_working_dir(image_conf->spec->config->working_dir, oci_spec);
+        oci_image_merge_working_dir(image_conf->spec->config->working_dir, container_spec);
 
-        if (oci_image_merge_env(image_conf->spec->config, oci_spec) != 0) {
+        if (oci_image_merge_env(image_conf->spec->config, container_spec) != 0) {
             ret = -1;
             goto out;
         }
 
-        if (oci_image_merge_entrypoint(image_conf->spec->config, custom_spec) != 0) {
+        if (oci_image_merge_entrypoint(image_conf->spec->config, container_spec) != 0) {
             ret = -1;
             goto out;
         }
 
-        oci_image_merge_user(image_conf->spec->config->user, custom_spec);
+        oci_image_merge_user(image_conf->spec->config->user, container_spec);
 
-        if (oci_image_merge_volumes(image_conf->spec->config, oci_spec) != 0) {
-            ret = -1;
-            goto out;
-        }
+        // ignore volumes now
     }
 
-    if (oci_image_merge_health_check(image_conf->healthcheck, custom_spec) != 0) {
+    if (oci_image_merge_health_check(image_conf->healthcheck, container_spec) != 0) {
         ret = -1;
         goto out;
     }

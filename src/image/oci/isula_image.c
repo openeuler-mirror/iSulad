@@ -156,7 +156,7 @@ int isula_prepare_rf(const im_prepare_request *request, char **real_rootfs)
                                                    real_rootfs, NULL);
 }
 
-int isula_merge_conf_rf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
+int isula_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
                         const im_prepare_request *request, char **real_rootfs)
 {
     oci_image_spec *image = NULL;
@@ -173,7 +173,7 @@ int isula_merge_conf_rf(oci_runtime_spec *oci_spec, const host_config *host_spec
         ERROR("Get prepare rootfs failed of image: %s", request->image_name);
         goto out;
     }
-    ret = oci_image_conf_merge_into_spec(request->image_name, oci_spec, custom_spec);
+    ret = oci_image_conf_merge_into_spec(request->image_name, container_spec);
     if (ret != 0) {
         ERROR("Failed to merge oci config for image: %s", request->image_name);
         goto out;

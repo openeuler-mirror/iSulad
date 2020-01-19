@@ -90,7 +90,7 @@ std::unique_ptr<runtime::v1alpha2::PodSandbox> CheckpointToSandbox(const std::st
 
 std::string StringsJoin(const std::vector<std::string> &vec, const std::string &sep);
 
-void UpdateCreateConfig(container_custom_config *createConfig, host_config *hc,
+void UpdateCreateConfig(container_config *createConfig, host_config *hc,
                         const runtime::v1alpha2::ContainerConfig &config, const std::string &podSandboxID,
                         Errors &error);
 

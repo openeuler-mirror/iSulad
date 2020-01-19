@@ -32,11 +32,10 @@ int embedded_delete_rf(const im_delete_request *request);
 
 char *embedded_resolve_image_name(const char *image_name);
 
-int embedded_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
+int embedded_merge_conf(const host_config *host_spec, container_config *container_spec,
                         const im_prepare_request *request, char **real_rootfs);
 
-int embedded_get_user_conf(const char *basefs, host_config *hc, const char *userstr,
-                           oci_runtime_spec_process_user *puser);
+int embedded_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser);
 
 int embedded_list_images(const im_list_request *request, imagetool_images_list **list);
 

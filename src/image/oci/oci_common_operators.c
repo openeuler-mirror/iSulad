@@ -244,7 +244,7 @@ static void oci_strip_dockerio(const imagetool_image *image)
     return;
 }
 
-int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, oci_runtime_spec_process_user *puser)
+int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser)
 {
     if (basefs == NULL || puser == NULL) {
         ERROR("Empty basefs or puser");
@@ -796,14 +796,13 @@ int oci_get_all_images(const im_list_request *request, imagetool_images_list **i
     return isula_list_images(request, images);
 }
 
-int oci_image_conf_merge_into_spec(const char *image_name, oci_runtime_spec *oci_spec,
-                                   container_custom_config *custom_spec)
+int oci_image_conf_merge_into_spec(const char *image_name, container_config *container_spec)
 {
     int ret = 0;
     oci_image_t *image_info = NULL;
     char *resolved_name = NULL;
 
-    if (oci_spec == NULL || image_name == NULL) {
+    if (container_spec == NULL || image_name == NULL) {
         ERROR("invalid NULL param");
         return -1;
     }
@@ -822,7 +821,7 @@ int oci_image_conf_merge_into_spec(const char *image_name, oci_runtime_spec *oci
         goto out;
     }
 
-    ret = oci_image_merge_config(image_info->info, oci_spec, custom_spec);
+    ret = oci_image_merge_config(image_info->info, container_spec);
     if (ret != 0) {
         ERROR("Failed to merge oci config for image %s", resolved_name);
         ret = -1;

@@ -18,12 +18,11 @@
 #include <stdint.h>
 #include "libisulad.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "container_config_v2.h"
 #include "oci_runtime_hooks.h"
 #include "oci_runtime_spec.h"
 
-int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_custom_config *custom_spec);
+int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_config *container_spec);
 
 typedef defs_mount *(*parse_mount_cb)(const char *mount);
 
@@ -35,10 +34,10 @@ defs_mount *parse_mount(const char *mount);
 
 defs_mount *parse_volume(const char *volume);
 
-int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custom_spec, host_config *host_spec,
+int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
                       container_config_v2_common_config *common_config);
 
-int add_rootfs_mount(const oci_runtime_spec *container);
+int add_rootfs_mount(const container_config *container_spec);
 
 int set_mounts_readwrite_option(const oci_runtime_spec *oci_spec);
 

@@ -248,14 +248,129 @@ out:
     return ret;
 }
 
-static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[], const char *user,
-                          size_t argc, const char **argv, size_t env_len, const char **env,
-                          int64_t timeout, const char *suffix, int *exit_code)
+int merge_exec_process_env(defs_process *spec, const container_config *container_spec, const char **env, size_t env_len)
+{
+    int ret = 0;
+    size_t env_count = 0;
+    size_t i = 0;
+
+    if (env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
+        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+    env_count = container_spec->env_len + env_len;
+    if (env_count == 0) {
+        ret = 0;
+        goto out;
+    }
+
+    spec->env = util_common_calloc_s(env_count * sizeof(char *));
+    if (spec->env == NULL) {
+        ERROR("Failed to malloc memory for envionment variables");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < container_spec->env_len; i++) {
+        spec->env[spec->env_len] = util_strdup_s(container_spec->env[i]);
+        spec->env_len++;
+    }
+
+    for (i = 0; i < env_len; i++) {
+        spec->env[spec->env_len] = util_strdup_s(env[i]);
+        spec->env_len++;
+    }
+
+out:
+    return ret;
+}
+
+static int dup_defs_process_user(defs_process_user *src, defs_process_user **dst)
+{
+    int ret = 0;
+    size_t i;
+
+    if (src == NULL) {
+        return 0;
+    }
+
+    *dst = (defs_process_user *)util_common_calloc_s(sizeof(defs_process_user));
+    if (*dst == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    (*dst)->username = util_strdup_s(src->username);
+    (*dst)->uid = src->uid;
+    (*dst)->gid = src->gid;
+
+    if (src->additional_gids_len != 0) {
+        (*dst)->additional_gids = util_common_calloc_s(sizeof(gid_t) * src->additional_gids_len);
+        if ((*dst)->additional_gids == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        (*dst)->additional_gids_len = src->additional_gids_len;
+        for (i = 0; i < src->additional_gids_len; i++) {
+            (*dst)->additional_gids[i] = src->additional_gids[i];
+        }
+    }
+
+out:
+    return ret;
+}
+
+static defs_process *make_exec_process_spec(const container_config *container_spec, defs_process_user *puser,
+                                            const container_exec_request *request)
+{
+    int ret = 0;
+    defs_process *spec = NULL;
+
+    spec = util_common_calloc_s(sizeof(defs_process));
+    if (spec == NULL) {
+        return NULL;
+    }
+
+    ret = merge_exec_process_env(spec, container_spec, (const char **)request->env, request->env_len);
+    if (ret != 0) {
+        ERROR("Failed to dup args for exec process spec");
+        goto err_out;
+    }
+
+    ret = dup_array_of_strings((const char **)request->argv, request->argv_len, &(spec->args), &(spec->args_len));
+    if (ret != 0) {
+        ERROR("Failed to dup envs for exec process spec");
+        goto err_out;
+    }
+
+    ret = dup_defs_process_user(puser, &(spec->user));
+    if (ret != 0) {
+        ERROR("Failed to dup process user for exec process spec");
+        goto err_out;
+    }
+
+    spec->terminal = request->tty;
+    spec->cwd = util_strdup_s(container_spec->working_dir ? container_spec->working_dir : "/");
+
+    return spec;
+
+err_out:
+    free_defs_process(spec);
+    return NULL;
+}
+
+static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[],
+                          defs_process_user *puser,
+                          const container_exec_request *request, int *exit_code)
 {
     int ret = 0;
     char *engine_log_path = NULL;
     char *loglevel = NULL;
     char *logdriver = NULL;
+    defs_process *process_spec = NULL;
     rt_exec_params_t params = { 0 };
 
     loglevel = conf_get_isulad_loglevel();
@@ -277,17 +392,20 @@ static int exec_container(container_t *cont, const char *runtime, char * const c
         goto out;
     }
 
+    process_spec = make_exec_process_spec(cont->common_config->config, puser, request);
+    if (process_spec == NULL) {
+        ERROR("Exec: Failed to make process spec");
+        ret = -1;
+        goto out;
+    }
+
     params.loglevel = loglevel;
     params.logpath = engine_log_path;
     params.console_fifos = (const char **)console_fifos;
     params.rootpath = cont->root_path;
-    params.timeout = timeout;
-    params.user = user;
-    params.args = (const char * const *)argv;
-    params.args_len = argc;
-    params.envs = (const char * const *)env;
-    params.envs_len = env_len;
-    params.suffix = suffix;
+    params.timeout = request->timeout;
+    params.suffix = request->suffix;
+    params.spec = process_spec;
 
     if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
         ERROR("Runtime exec container failed");
@@ -299,6 +417,7 @@ out:
     free(loglevel);
     free(engine_log_path);
     free(logdriver);
+    free_defs_process(process_spec);
 
     return ret;
 }
@@ -408,100 +527,23 @@ static void container_exec_cb_end(container_exec_response *response, uint32_t cc
     }
 }
 
-static int get_user_and_groups_conf(const container_t *cont, const char *username,
-                                    oci_runtime_spec_process_user **puser)
+static int get_exec_user_info(const container_t *cont, const char *username, defs_process_user **puser)
 {
-    int ret = -1;
-    if (username == NULL) {
-        return 0;
-    }
+    int ret = 0;
 
-    if (cont == NULL || cont->common_config == NULL) {
-        ERROR("Can not found container config");
-        return -1;
-    }
-
-    *puser = util_common_calloc_s(sizeof(oci_runtime_spec_process_user));
+    *puser = util_common_calloc_s(sizeof(defs_process_user));
     if (*puser == NULL) {
         ERROR("Out of memory");
         return -1;
     }
-
     ret = im_get_user_conf(cont->common_config->image_type, cont->common_config->base_fs,
                            cont->hostconfig, username, *puser);
     if (ret != 0) {
         ERROR("Get user failed with '%s'", username ? username : "");
-        free_oci_runtime_spec_process_user(*puser);
-        *puser = NULL;
-    }
-
-    return ret;
-}
-
-// user string(UID:GID)
-static int generate_user_string_by_uid_gid(const oci_runtime_spec_process_user *puser, char **user)
-{
-    char uid_str[ISULAD_NUMSTRLEN32] = { 0 };
-    char gid_str[ISULAD_NUMSTRLEN32] = { 0 };
-    size_t len;
-
-    int nret = snprintf(uid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)puser->uid);
-    if (nret >= ISULAD_NUMSTRLEN32 || nret < 0) {
-        ERROR("Invalid UID:%u", (unsigned int)puser->uid);
-        return -1;
-    }
-
-    nret = snprintf(gid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)puser->gid);
-    if (nret >= ISULAD_NUMSTRLEN32 || nret < 0) {
-        ERROR("Invalid attach uid value :%u", (unsigned int)puser->gid);
-        return -1;
-    }
-
-    len = strlen(uid_str) + 1 + strlen(gid_str) + 1;
-    *user = (char *)util_common_calloc_s(len * sizeof(char));
-    if (*user == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    nret = snprintf(*user, len, "%u:%u", (unsigned int)puser->uid, (unsigned int)puser->gid);
-    if ((size_t)nret >= len || nret < 0) {
-        ERROR("Invalid UID:GID (%u:%u)", (unsigned int)puser->uid, (unsigned int)puser->gid);
-        free(*user);
-        *user = NULL;
-        return -1;
-    }
-
-    return 0;
-}
-
-static int get_exec_user_string(const container_t *cont, const char *username, char **user)
-{
-    int ret = 0;
-    oci_runtime_spec_process_user *puser = NULL;
-
-    if (username == NULL) {
-        return 0;
-    }
-
-    if (cont == NULL || user == NULL) {
-        ERROR("Invalid parameters");
-        return -1;
-    }
-
-    if (get_user_and_groups_conf(cont, username, &puser) != 0) {
-        ERROR("Failed to get user and groups conf");
         ret = -1;
         goto out;
     }
-
-    if (generate_user_string_by_uid_gid(puser, user) != 0) {
-        ret = -1;
-        goto out;
-    }
-
 out:
-    free_oci_runtime_spec_process_user(puser);
     return ret;
 }
 
@@ -516,7 +558,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     char *fifopath = NULL;
     pthread_t thread_id = 0;
     container_t *cont = NULL;
-    char *user = NULL;
+    defs_process_user *puser = NULL;
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -528,11 +570,6 @@ static int container_exec_cb(const container_exec_request *request, container_ex
         goto pack_response;
     }
     id = cont->common_config->id;
-
-    if (get_exec_user_string(cont, request->user, &user) != 0) {
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
 
     set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: execing}", id);
@@ -565,14 +602,19 @@ static int container_exec_cb(const container_exec_request *request, container_ex
         goto pack_response;
     }
 
+    if (request->user != NULL) {
+        if (get_exec_user_info(cont, request->user, &puser) != 0) {
+            cc = ISULAD_ERR_EXEC;
+            goto pack_response;
+        }
+    }
+
     if (exec_prepare_console(cont, request, stdinfd, stdout_handler, fifos, &fifopath, &sync_fd, &thread_id)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
-    if (exec_container(cont, cont->runtime, (char * const *)fifos, user, request->argv_len,
-                       (const char **)request->argv, request->env_len,
-                       (const char **)request->env, request->timeout, request->suffix, &exit_code)) {
+    if (exec_container(cont, cont->runtime, (char * const *)fifos, puser, request, &exit_code)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
@@ -586,7 +628,7 @@ pack_response:
     free(fifos[1]);
     free(fifos[2]);
     free(fifopath);
-    free(user);
+    free_defs_process_user(puser);
     container_unref(cont);
 
     free_log_prefix();
@@ -2026,6 +2068,7 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
     container_t *cont = NULL;
     struct container_log_config *log_config = NULL;
     struct last_log_file_position last_pos = {0};
+    Container_Status status = CONTAINER_STATUS_UNKNOWN;
 
     *response = (struct isulad_logs_response *)util_common_calloc_s(sizeof(struct isulad_logs_response));
     if (*response == NULL) {
@@ -2048,6 +2091,11 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
     }
     id = cont->common_config->id;
     set_log_prefix(id);
+
+    status = state_get_status(cont->state);
+    if (status == CONTAINER_STATUS_CREATED) {
+        goto out;
+    }
 
     /* check state of container */
     if (gc_is_gc_progress(id)) {
