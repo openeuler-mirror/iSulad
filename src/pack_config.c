@@ -25,11 +25,11 @@
 
 #include "log.h"
 #include "pack_config.h"
-#include "container_custom_config.h"
 #include "host_config.h"
 #include "utils.h"
 #include "parse_common.h"
 #include "path.h"
+#include "container_config.h"
 
 static bool parse_restart_policy(const char *policy, host_config_restart_policy **rp)
 {
@@ -1775,33 +1775,33 @@ out:
     return ret;
 }
 
-static int pack_container_custom_config_log(container_custom_config *custom_spec,
+static int pack_container_custom_config_log(container_config *container_spec,
                                             const isula_container_config_t *custom_conf)
 {
     int ret = 0;
 
     /* log config */
-    custom_spec->log_config = util_common_calloc_s(sizeof(container_custom_config_log_config));
-    if (custom_spec->log_config == NULL) {
+    container_spec->log_config = util_common_calloc_s(sizeof(container_config_log_config));
+    if (container_spec->log_config == NULL) {
         ret = -1;
         goto out;
     }
     if (custom_conf->log_file != NULL) {
-        custom_spec->log_config->log_file = util_strdup_s(custom_conf->log_file);
+        container_spec->log_config->log_file = util_strdup_s(custom_conf->log_file);
     }
 
     if (custom_conf->log_file_size != NULL) {
-        custom_spec->log_config->log_file_size = util_strdup_s(custom_conf->log_file_size);
+        container_spec->log_config->log_file_size = util_strdup_s(custom_conf->log_file_size);
     }
 
     if (custom_conf->log_file_rotate) {
-        custom_spec->log_config->log_file_rotate = custom_conf->log_file_rotate;
+        container_spec->log_config->log_file_rotate = custom_conf->log_file_rotate;
     }
 out:
     return ret;
 }
 
-static int pack_container_custom_config_args(container_custom_config *custom_spec,
+static int pack_container_custom_config_args(container_config *container_spec,
                                              const isula_container_config_t *custom_conf)
 {
     int ret = 0;
@@ -1809,13 +1809,13 @@ static int pack_container_custom_config_args(container_custom_config *custom_spe
 
     /* entrypoint */
     if (util_valid_str(custom_conf->entrypoint)) {
-        custom_spec->entrypoint = util_common_calloc_s(sizeof(char *));
-        if (custom_spec->entrypoint == NULL) {
+        container_spec->entrypoint = util_common_calloc_s(sizeof(char *));
+        if (container_spec->entrypoint == NULL) {
             ret = -1;
             goto out;
         }
-        custom_spec->entrypoint[0] = util_strdup_s(custom_conf->entrypoint);
-        custom_spec->entrypoint_len++;
+        container_spec->entrypoint[0] = util_strdup_s(custom_conf->entrypoint);
+        container_spec->entrypoint_len++;
     }
 
     /* commands */
@@ -1825,14 +1825,14 @@ static int pack_container_custom_config_args(container_custom_config *custom_spe
             ret = -1;
             goto out;
         }
-        custom_spec->cmd = util_common_calloc_s(custom_conf->cmd_len * sizeof(char *));
-        if (custom_spec->cmd == NULL) {
+        container_spec->cmd = util_common_calloc_s(custom_conf->cmd_len * sizeof(char *));
+        if (container_spec->cmd == NULL) {
             ret = -1;
             goto out;
         }
         for (i = 0; i < (int)custom_conf->cmd_len; i++) {
-            custom_spec->cmd[custom_spec->cmd_len] = util_strdup_s(custom_conf->cmd[i]);
-            custom_spec->cmd_len++;
+            container_spec->cmd[container_spec->cmd_len] = util_strdup_s(custom_conf->cmd[i]);
+            container_spec->cmd_len++;
         }
     }
 
@@ -1840,7 +1840,7 @@ out:
     return ret;
 }
 
-static int pack_container_custom_config_mounts(container_custom_config *custom_spec,
+static int pack_container_custom_config_mounts(container_config *container_spec,
                                                const isula_container_config_t *custom_conf)
 {
     int ret = 0;
@@ -1853,21 +1853,21 @@ static int pack_container_custom_config_mounts(container_custom_config *custom_s
             ret = -1;
             goto out;
         }
-        custom_spec->mounts = util_common_calloc_s(custom_conf->mounts_len * sizeof(char *));
-        if (custom_spec->mounts == NULL) {
+        container_spec->mounts = util_common_calloc_s(custom_conf->mounts_len * sizeof(char *));
+        if (container_spec->mounts == NULL) {
             ret = -1;
             goto out;
         }
         for (i = 0; i < (int)custom_conf->mounts_len; i++) {
-            custom_spec->mounts[custom_spec->mounts_len] = util_strdup_s(custom_conf->mounts[i]);
-            custom_spec->mounts_len++;
+            container_spec->mounts[container_spec->mounts_len] = util_strdup_s(custom_conf->mounts[i]);
+            container_spec->mounts_len++;
         }
     }
 out:
     return ret;
 }
 
-static int pack_container_custom_config_array(container_custom_config *custom_spec,
+static int pack_container_custom_config_array(container_config *container_spec,
                                               const isula_container_config_t *custom_conf)
 {
     int ret = 0;
@@ -1879,14 +1879,14 @@ static int pack_container_custom_config_array(container_custom_config *custom_sp
             COMMAND_ERROR("Too many environment variables");
             return -1;
         }
-        custom_spec->env = util_common_calloc_s(custom_conf->env_len * sizeof(char *));
-        if (custom_spec->env == NULL) {
+        container_spec->env = util_common_calloc_s(custom_conf->env_len * sizeof(char *));
+        if (container_spec->env == NULL) {
             ret = -1;
             goto out;
         }
         for (i = 0; i < (int)custom_conf->env_len; i++) {
-            custom_spec->env[custom_spec->env_len] = util_strdup_s(custom_conf->env[i]);
-            custom_spec->env_len++;
+            container_spec->env[container_spec->env_len] = util_strdup_s(custom_conf->env[i]);
+            container_spec->env_len++;
         }
     }
 
@@ -1907,7 +1907,7 @@ static bool have_health_check(const isula_container_config_t *custom_conf)
     return have_health_settings;
 }
 
-static int pack_custom_no_health_check(container_custom_config *custom_spec, bool have_health_settings,
+static int pack_custom_no_health_check(container_config *container_spec, bool have_health_settings,
                                        defs_health_check *health_config)
 {
     int ret = 0;
@@ -1923,13 +1923,13 @@ static int pack_custom_no_health_check(container_custom_config *custom_spec, boo
         goto out;
     }
     health_config->test[health_config->test_len++] = util_strdup_s("NONE");
-    custom_spec->health_check = health_config;
+    container_spec->health_check = health_config;
 
 out:
     return ret;
 }
 
-static int pack_custom_with_health_check(container_custom_config *custom_spec,
+static int pack_custom_with_health_check(container_config *container_spec,
                                          const isula_container_config_t *custom_conf, bool have_health_settings,
                                          defs_health_check *health_config)
 {
@@ -1953,23 +1953,23 @@ static int pack_custom_with_health_check(container_custom_config *custom_spec,
     health_config->start_period = custom_conf->health_start_period;
     health_config->retries = custom_conf->health_retries;
     health_config->exit_on_unhealthy = custom_conf->exit_on_unhealthy;
-    if (custom_spec->health_check != NULL) {
-        free_defs_health_check(custom_spec->health_check);
+    if (container_spec->health_check != NULL) {
+        free_defs_health_check(container_spec->health_check);
     }
-    custom_spec->health_check = health_config;
+    container_spec->health_check = health_config;
 
 out:
     return ret;
 }
 
-static int pack_container_custom_config_health(container_custom_config *custom_spec,
+static int pack_container_custom_config_health(container_config *container_spec,
                                                const isula_container_config_t *custom_conf)
 {
     int ret = 0;
     bool have_health_settings = false;
     defs_health_check *health_config = NULL;
 
-    if (custom_spec == NULL || custom_conf == NULL) {
+    if (container_spec == NULL || custom_conf == NULL) {
         return 0;
     }
 
@@ -1982,12 +1982,12 @@ static int pack_container_custom_config_health(container_custom_config *custom_s
     }
 
     if (custom_conf->no_healthcheck) {
-        ret = pack_custom_no_health_check(custom_spec, have_health_settings, health_config);
+        ret = pack_custom_no_health_check(container_spec, have_health_settings, health_config);
         if (ret != 0) {
             goto out;
         }
     } else if (have_health_settings) {
-        ret = pack_custom_with_health_check(custom_spec, custom_conf, have_health_settings, health_config);
+        ret = pack_custom_with_health_check(container_spec, custom_conf, have_health_settings, health_config);
         if (ret != 0) {
             goto out;
         }
@@ -2002,21 +2002,21 @@ out:
     return ret;
 }
 
-static int pack_container_custom_config_annotation(container_custom_config *custom_spec,
+static int pack_container_custom_config_annotation(container_config *container_spec,
                                                    const isula_container_config_t *custom_conf)
 {
     int ret = 0;
     size_t j;
 
-    custom_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
-    if (custom_spec->annotations == NULL) {
+    container_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+    if (container_spec->annotations == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
     if (custom_conf->annotations != NULL) {
         for (j = 0; j < custom_conf->annotations->len; j++) {
-            if (append_json_map_string_string(custom_spec->annotations, custom_conf->annotations->keys[j],
+            if (append_json_map_string_string(container_spec->annotations, custom_conf->annotations->keys[j],
                                               custom_conf->annotations->values[j])) {
                 ERROR("Append map failed");
                 ret = -1;
@@ -2028,32 +2028,32 @@ out:
     return ret;
 }
 
-static int pack_container_custom_config_pre(container_custom_config *custom_spec,
+static int pack_container_custom_config_pre(container_config *container_spec,
                                             const isula_container_config_t *custom_conf)
 {
     int ret = 0;
 
-    ret = pack_container_custom_config_log(custom_spec, custom_conf);
+    ret = pack_container_custom_config_log(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }
 
-    ret = pack_container_custom_config_args(custom_spec, custom_conf);
+    ret = pack_container_custom_config_args(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }
 
-    ret = pack_container_custom_config_mounts(custom_spec, custom_conf);
+    ret = pack_container_custom_config_mounts(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }
 
-    ret = pack_container_custom_config_array(custom_spec, custom_conf);
+    ret = pack_container_custom_config_array(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }
 
-    ret = pack_container_custom_config_health(custom_spec, custom_conf);
+    ret = pack_container_custom_config_health(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }
@@ -2062,75 +2062,75 @@ out:
 }
 
 /* translate create_custom_config to container_custom_config */
-static int pack_container_custom_config(container_custom_config *custom_spec,
+static int pack_container_custom_config(container_config *container_spec,
                                         const isula_container_config_t *custom_conf)
 {
     int ret = -1;
 
-    if (custom_spec == NULL || custom_conf == NULL) {
+    if (container_spec == NULL || custom_conf == NULL) {
         return ret;
     }
 
-    ret = pack_container_custom_config_pre(custom_spec, custom_conf);
+    ret = pack_container_custom_config_pre(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }
 
     if (custom_conf->hostname != NULL) {
-        custom_spec->hostname = util_strdup_s(custom_conf->hostname);
+        container_spec->hostname = util_strdup_s(custom_conf->hostname);
     }
 
     /* console config */
-    custom_spec->tty = custom_conf->tty;
-    custom_spec->open_stdin = custom_conf->open_stdin;
-    custom_spec->attach_stdin = custom_conf->attach_stdin;
-    custom_spec->attach_stdout = custom_conf->attach_stdout;
-    custom_spec->attach_stderr = custom_conf->attach_stderr;
+    container_spec->tty = custom_conf->tty;
+    container_spec->open_stdin = custom_conf->open_stdin;
+    container_spec->attach_stdin = custom_conf->attach_stdin;
+    container_spec->attach_stdout = custom_conf->attach_stdout;
+    container_spec->attach_stderr = custom_conf->attach_stderr;
 
     /* user and group */
     if (custom_conf->user != NULL) {
-        custom_spec->user = util_strdup_s(custom_conf->user);
+        container_spec->user = util_strdup_s(custom_conf->user);
     }
 
     /* settings for system container */
     if (custom_conf->system_container) {
-        custom_spec->system_container = custom_conf->system_container;
+        container_spec->system_container = custom_conf->system_container;
     }
 
     if (custom_conf->ns_change_opt != NULL) {
-        custom_spec->ns_change_opt = util_strdup_s(custom_conf->ns_change_opt);
+        container_spec->ns_change_opt = util_strdup_s(custom_conf->ns_change_opt);
     }
 
-    ret = pack_container_custom_config_annotation(custom_spec, custom_conf);
+    ret = pack_container_custom_config_annotation(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }
 
     if (custom_conf->workdir != NULL) {
-        custom_spec->working_dir = util_strdup_s(custom_conf->workdir);
+        container_spec->working_dir = util_strdup_s(custom_conf->workdir);
     }
 
 out:
     return ret;
 }
 
-int generate_container_config(const isula_container_config_t *custom_conf, char **custom_config_str)
+int generate_container_config(const isula_container_config_t *custom_conf, char **container_config_str)
 {
     int ret = 0;
-    container_custom_config *custom_spec = NULL;
+    container_config *container_spec = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error err = NULL;
 
-    /* step 1: malloc the container_custom_config */
-    custom_spec = util_common_calloc_s(sizeof(container_custom_config));
-    if (custom_spec == NULL) {
+    /* step 1: malloc the container config */
+    container_spec = util_common_calloc_s(sizeof(container_config));
+    if (container_spec == NULL) {
         ERROR("Memory out");
         ret = -1;
         goto out;
     }
 
     /* step 2: pack the container custom config */
-    ret = pack_container_custom_config(custom_spec, custom_conf);
+    ret = pack_container_custom_config(container_spec, custom_conf);
     if (ret != 0) {
         ERROR("Failed to pack the container custom config");
         ret = -1;
@@ -2138,15 +2138,15 @@ int generate_container_config(const isula_container_config_t *custom_conf, char 
     }
 
     /* step 3: generate the config string */
-    *custom_config_str = container_custom_config_generate_json(custom_spec, &ctx, &err);
-    if (*custom_config_str == NULL) {
+    *container_config_str = container_config_generate_json(container_spec, &ctx, &err);
+    if (*container_config_str == NULL) {
         ERROR("Failed to generate OCI specification json string");
         ret = -1;
         goto out;
     }
 
 out:
-    free_container_custom_config(custom_spec);
+    free_container_config(container_spec);
     free(err);
 
     return ret;

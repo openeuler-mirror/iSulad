@@ -760,7 +760,7 @@ cleanup:
 }
 
 static int init_container_network_confs_container(const char *id, const host_config *hc,
-                                                  container_config_v2_common_config *common_config)
+                                                  container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     size_t len = strlen(SHARE_NAMESPACE_PREFIX);
@@ -773,89 +773,222 @@ static int init_container_network_confs_container(const char *id, const host_con
     }
 
     if (nc->common_config->hostname_path != NULL) {
-        free(common_config->hostname_path);
-        common_config->hostname_path = util_strdup_s(nc->common_config->hostname_path);
+        free(v2_spec->hostname_path);
+        v2_spec->hostname_path = util_strdup_s(nc->common_config->hostname_path);
     }
     if (nc->common_config->hosts_path != NULL) {
-        free(common_config->hosts_path);
-        common_config->hosts_path = util_strdup_s(nc->common_config->hosts_path);
+        free(v2_spec->hosts_path);
+        v2_spec->hosts_path = util_strdup_s(nc->common_config->hosts_path);
     }
     if (nc->common_config->resolv_conf_path != NULL) {
-        free(common_config->resolv_conf_path);
-        common_config->resolv_conf_path = util_strdup_s(nc->common_config->resolv_conf_path);
+        free(v2_spec->resolv_conf_path);
+        v2_spec->resolv_conf_path = util_strdup_s(nc->common_config->resolv_conf_path);
     }
 
     if (nc->common_config->config != NULL && nc->common_config->config->hostname != NULL) {
-        if (common_config->config == NULL) {
-            common_config->config = util_common_calloc_s(sizeof(container_config));
-            if (common_config->config == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto cleanup;
-            }
-        }
-
-        free(common_config->config->hostname);
-        common_config->config->hostname = util_strdup_s(nc->common_config->config->hostname);
+        free(v2_spec->config->hostname);
+        v2_spec->config->hostname = util_strdup_s(nc->common_config->config->hostname);
     }
 
-cleanup:
     container_unref(nc);
     return ret;
 }
 
-int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
-                                 container_config_v2_common_config *common_config)
+static int create_default_hostname(const char *id, const char *rootpath, bool share_host,
+                                   container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
+    int nret = 0;
     char file_path[PATH_MAX] = { 0x0 };
+    char hostname_content[MAX_HOST_NAME_LEN + 2] = { 0 };
 
-    // is container mode
-    if (is_container(hc->network_mode)) {
-        ret = init_container_network_confs_container(id, hc, common_config);
-        goto cleanup;
-    }
-
-    // is host mode
-    if (is_host(hc->network_mode)) {
-        if (common_config->config == NULL) {
-            common_config->config = util_common_calloc_s(sizeof(container_config));
-            if (common_config->config == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto cleanup;
-            }
-        }
-        if (common_config->config->hostname == NULL) {
+    if (v2_spec->config->hostname == NULL) {
+        if (share_host) {
             char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
             ret = gethostname(hostname, sizeof(hostname));
             if (ret != 0) {
                 ERROR("Get hostname error");
-                goto cleanup;
+                goto out;
             }
-            common_config->config->hostname = util_strdup_s(hostname);
+            v2_spec->config->hostname = util_strdup_s(hostname);
+        } else {
+            v2_spec->config->hostname = util_strdup_s("localhost");
         }
     }
 
-    // create hosts, resolv.conf and so
-    int nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hosts");
-    if (nret >= PATH_MAX || nret < 0) {
+    nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hostname");
+    if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Failed to print string");
         ret = -1;
-        goto cleanup;
+        goto out;
     }
-    free(common_config->hosts_path);
-    common_config->hosts_path = util_strdup_s(file_path);
-    nret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "resolv.conf");
-    if (nret >= PATH_MAX || nret < 0) {
-        ERROR("Failed to print string");
-        ret = -1;
-        goto cleanup;
-    }
-    free(common_config->resolv_conf_path);
-    common_config->resolv_conf_path = util_strdup_s(file_path);
 
-cleanup:
+    nret = snprintf(hostname_content, MAX_HOST_NAME_LEN + 2, "%s\n", v2_spec->config->hostname);
+    if (nret < 0 || (size_t)nret >= sizeof(hostname_content)) {
+        ERROR("Failed to print string");
+        ret = -1;
+        goto out;
+    }
+
+
+    if (util_write_file(file_path, hostname_content, strlen(hostname_content)) != 0) {
+        ERROR("Failed to create default hostname");
+        ret = -1;
+        goto out;
+    }
+
+    free(v2_spec->hostname_path);
+    v2_spec->hostname_path = util_strdup_s(file_path);
+
+out:
+    return ret;
+}
+
+static int write_default_hosts(const char *file_path, const char *hostname)
+{
+    int ret = 0;
+    char *content = NULL;
+    size_t content_len = 0;
+    const char *default_config = "127.0.0.1       localhost\n"
+                                 "::1     localhost ip6-localhost ip6-loopback\n"
+                                 "fe00::0 ip6-localnet\n"
+                                 "ff00::0 ip6-mcastprefix\n"
+                                 "ff02::1 ip6-allnodes\n"
+                                 "ff02::2 ip6-allrouters\n";
+    const char *loop_ip = "127.0.0.1    ";
+
+    if (strlen(hostname) > (((SIZE_MAX - strlen(default_config)) - strlen(loop_ip)) - 2)) {
+        ret = -1;
+        goto out_free;
+    }
+
+    content_len = strlen(default_config) + strlen(loop_ip) + strlen(hostname) + 1 + 1;
+    content = util_common_calloc_s(content_len);
+    if (content == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out_free;
+    }
+
+    ret = snprintf(content, content_len, "%s%s%s\n", default_config, loop_ip, hostname);
+    if (ret < 0 || (size_t)ret >=  content_len) {
+        ERROR("Failed to generate default hosts");
+        ret = -1;
+        goto out_free;
+    }
+
+    ret = util_write_file(file_path, content, strlen(content));
+    if (ret != 0) {
+        ret = -1;
+        goto out_free;
+    }
+
+out_free:
+    free(content);
+    return ret;
+}
+
+
+static int create_default_hosts(const char *id, const char *rootpath, bool share_host,
+                                container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    char file_path[PATH_MAX] = { 0x0 };
+
+    ret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "hosts");
+    if (ret < 0 || ret >= PATH_MAX) {
+        ERROR("Failed to print string");
+        ret = -1;
+        goto out;
+    }
+
+    if (share_host && util_file_exists(ETC_HOSTS)) {
+        ret = util_copy_file(ETC_HOSTS, file_path);
+    } else {
+        ret = write_default_hosts(file_path, v2_spec->config->hostname);
+    }
+
+    if (ret != 0) {
+        ERROR("Failed to create default hosts");
+        goto out;
+    }
+
+    free(v2_spec->hosts_path);
+    v2_spec->hosts_path = util_strdup_s(file_path);
+
+out:
+    return ret;
+}
+
+static int write_default_resolve(const char *file_path)
+{
+    const char *default_ipv4_dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";;
+
+    return util_write_file(file_path, default_ipv4_dns, strlen(default_ipv4_dns));
+}
+
+static int create_default_resolv(const char *id, const char *rootpath, container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    char file_path[PATH_MAX] = { 0x0 };
+
+    ret = snprintf(file_path, PATH_MAX, "%s/%s/%s", rootpath, id, "resolv.conf");
+    if (ret < 0 || ret >= PATH_MAX) {
+        ERROR("Failed to print string");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_file_exists(RESOLV_CONF_PATH)) {
+        ret = util_copy_file(RESOLV_CONF_PATH, file_path);
+    } else {
+        ret = write_default_resolve(file_path);
+    }
+
+    if (ret != 0) {
+        ERROR("Failed to create default resolv.conf");
+        goto out;
+    }
+
+    free(v2_spec->resolv_conf_path);
+    v2_spec->resolv_conf_path = util_strdup_s(file_path);
+
+out:
+    return ret;
+}
+
+
+
+int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
+                                 container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    bool share_host = is_host(hc->network_mode);
+
+    // is container mode
+    if (is_container(hc->network_mode)) {
+        return init_container_network_confs_container(id, hc, v2_spec);
+    }
+
+    if (create_default_hostname(id, rootpath, share_host, v2_spec) != 0) {
+        ERROR("Failed to create default hostname");
+        ret = -1;
+        goto out;
+    }
+
+    if (create_default_hosts(id, rootpath, share_host, v2_spec) != 0) {
+        ERROR("Failed to create default hosts");
+        ret = -1;
+        goto out;
+    }
+
+    if (create_default_resolv(id, rootpath, v2_spec) != 0) {
+        ERROR("Failed to create default resolv.conf");
+        ret = -1;
+        goto out;
+    }
+
+out:
     return ret;
 }
 

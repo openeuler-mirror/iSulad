@@ -21,8 +21,8 @@
 #include "oci_image_index.h"
 #include "oci_image_spec.h"
 #include "oci_runtime_spec.h"
-#include "container_custom_config.h"
 #include "host_config.h"
+#include "container_config.h"
 #include "libisulad.h"
 
 #ifdef ENABLE_OCI_IMAGE
@@ -212,12 +212,12 @@ struct bim_ops {
     char *(*resolve_image_name)(const char *image_name);
 
     /* merge image config ops */
-    int (*merge_conf)(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
+    int (*merge_conf)(const host_config *host_spec, container_config *container_spec,
                       const im_prepare_request *request, char **real_rootfs);
 
     /* get user config ops */
     int (*get_user_conf)(const char *basefs, host_config *hc,
-                         const char *userstr, oci_runtime_spec_process_user *puser);
+                         const char *userstr, defs_process_user *puser);
 
     /* list images */
     int (*list_ims)(const im_list_request *request, imagetool_images_list **images);
@@ -293,11 +293,12 @@ int im_umount_container_rootfs(const char *image_type, const char *image_name, c
 int im_remove_container_rootfs(const char *image_type, const char *container_id);
 
 int im_merge_image_config(const char *id, const char *image_type, const char *image_name,
-                          const char *ext_config_image, oci_runtime_spec *oci_spec, host_config *host_spec,
-                          container_custom_config *custom_spec, char **real_rootfs);
+                          const char *ext_config_image,
+                          host_config *host_spec, container_config *container_spec,
+                          char **real_rootfs);
 
 int im_get_user_conf(const char *image_type, const char *basefs, host_config *hc, const char *userstr,
-                     oci_runtime_spec_process_user *puser);
+                     defs_process_user *puser);
 
 int im_list_images(const im_list_request *request, im_list_response **response);
 

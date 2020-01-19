@@ -351,6 +351,7 @@ int authz_http_request(const char *username, const char *action, char **resp)
     char err_msg[AUTHZ_ERROR_MSG_SIZE] = { 0 };
     long response_code = 0;
     int ret = 0;
+    int nret = 0;
     size_t length = 0;
     struct http_get_options *options = NULL;
     if (strlen(username) > ((SIZE_MAX - strlen(action)) - strlen(":")) - 1) {
@@ -364,7 +365,7 @@ int authz_http_request(const char *username, const char *action, char **resp)
         *resp = util_strdup_s("Inernal server error: Out of memory");
         return -1;
     }
-    int nret = snprintf(request_body, length, "%s:%s", username, action);
+    nret = snprintf(request_body, length, "%s:%s", username, action);
     if (nret < 0 || (size_t)nret >= length) {
         ERROR("Failed to print string");
         free(request_body);
@@ -392,14 +393,14 @@ int authz_http_request(const char *username, const char *action, char **resp)
         goto out;
     }
     if (response_code != StatusOK) {
-        ret = snprintf(err_msg, sizeof(err_msg), "action '%s' for user '%s': permission denied", action, username);
-        if (ret < 0 || (size_t)ret >= sizeof(err_msg)) {
+        ret = -1;
+        nret = snprintf(err_msg, sizeof(err_msg), "action '%s' for user '%s': permission denied", action, username);
+        if (nret < 0 || (size_t)nret >= sizeof(err_msg)) {
             ERROR("Out of memory");
             *resp = util_strdup_s("Inernal server error: Out of memory");
             goto out;
         }
         *resp = util_strdup_s(err_msg);
-        ret = -1;
         goto out;
     }
 

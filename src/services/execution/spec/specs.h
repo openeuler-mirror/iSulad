@@ -18,17 +18,20 @@
 #include <stdint.h>
 #include "libisulad.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "container_config_v2.h"
 #include "oci_runtime_hooks.h"
 #include "oci_runtime_spec.h"
 
-oci_runtime_spec *merge_container_config(const char *id, const char *image_type, const char *image_name,
-                                         const char *ext_image_name, host_config *host_spec,
-                                         container_custom_config *custom_spec,
-                                         container_config_v2_common_config *v2_spec, char **real_rootfs);
+
+int merge_all_specs(host_config *host_spec,
+                    const char *real_rootfs,
+                    container_config_v2_common_config *v2_spec, oci_runtime_spec *oci_spec);
+
 int merge_global_config(oci_runtime_spec *oci_spec);
-oci_runtime_spec *read_oci_config(const char *rootpath, const char *name);
+oci_runtime_spec *load_oci_config(const char *rootpath, const char *name);
+oci_runtime_spec *default_spec(bool system_container);
+int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec);
+int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec);
 
 #endif
 

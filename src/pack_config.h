@@ -24,7 +24,7 @@ extern "C" {
 int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr);
 
 int generate_container_config(const isula_container_config_t *custom_conf,
-                              char **custom_config_str);
+                              char **container_config_str);
 
 #ifdef __cplusplus
 }

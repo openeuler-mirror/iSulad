@@ -13,12 +13,12 @@
                 "type": "object",
                 "properties": {
                     "architecture": {
-                        "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                        "$ref": "../defs.json#/definitions/SeccompArch"
                     },
                     "subArchitectures": {
                         "type": "array",
                         "items": {
-                            "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                            "$ref": "../defs.json#/definitions/SeccompArch"
                         }
                     }
                 }
@@ -38,7 +38,7 @@
                         "minItems": 1
                     },
                     "action": {
-                        "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompAction"
+                        "$ref": "../defs.json#/definitions/SeccompAction"
                     },
                     "args": {
                         "type": "array",
@@ -55,7 +55,7 @@
                                     "$ref": "../defs.json#/definitions/uint64"
                                 },
                                 "op": {
-                                    "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompOperators"
+                                    "$ref": "../defs.json#/definitions/SeccompOperators"
                                 }
                             },
                             "required": [
@@ -74,7 +74,7 @@
                             "arches": {
                                 "type": "array",
                                 "items": {
-                                    "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                                    "$ref": "../defs.json#/definitions/SeccompArch"
                                 }
                             },
                             "caps": {
@@ -91,7 +91,7 @@
                             "arches": {
                                 "type": "array",
                                 "items": {
-                                    "$ref": "../oci/runtime/defs-linux.json#/definitions/SeccompArch"
+                                    "$ref": "../defs.json#/definitions/SeccompArch"
                                 }
                             },
                             "caps": {

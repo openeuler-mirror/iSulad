@@ -17,15 +17,14 @@
 #define __OCI_IMAGE_MERGE_CONFIG_H_
 
 #include "imagetool_image.h"
-#include "container_custom_config.h"
 #include "oci_runtime_spec.h"
+#include "container_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int oci_image_merge_config(imagetool_image *image_conf, oci_runtime_spec *oci_spec,
-                           container_custom_config *custom_spec);
+int oci_image_merge_config(imagetool_image *image_conf, container_config *container_spec);
 
 #ifdef __cplusplus
 }

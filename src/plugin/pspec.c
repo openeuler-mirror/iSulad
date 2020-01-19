@@ -72,7 +72,7 @@ static oci_runtime_pspec *raw_get_pspec(oci_runtime_spec *oci)
         return NULL;
     }
     if (oci->linux->resources != NULL && pspec->resources == NULL) {
-        pspec->resources = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources));
+        pspec->resources = util_common_calloc_s(sizeof(defs_resources));
         if (pspec->resources == NULL) {
             ERROR("Out of memory");
             free_oci_runtime_pspec(pspec);
@@ -85,10 +85,10 @@ static oci_runtime_pspec *raw_get_pspec(oci_runtime_spec *oci)
 
     PPR_UPDATE(pspec, oci, mounts, mounts_len, free_defs_mount);
     PPR_UPDATE(pspec, oci->process, env, env_len, free);
-    PPR_UPDATE(pspec, oci->linux, devices, devices_len, free_oci_runtime_defs_linux_device);
+    PPR_UPDATE(pspec, oci->linux, devices, devices_len, free_defs_device);
 
     PPR_UPDATE(pspec->resources, oci->linux->resources, devices, devices_len,
-               free_oci_runtime_defs_linux_device_cgroup);
+               free_defs_device_cgroup);
 
     return pspec;
 }
@@ -99,7 +99,7 @@ static void raw_set_pspec(oci_runtime_spec *oci, oci_runtime_pspec *pspec)
         return;
     }
     if (pspec->resources != NULL && oci->linux->resources == NULL) {
-        oci->linux->resources = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources));
+        oci->linux->resources = util_common_calloc_s(sizeof(defs_resources));
         if (oci->linux->resources == NULL) {
             ERROR("out of memory");
             return;
@@ -111,10 +111,10 @@ static void raw_set_pspec(oci_runtime_spec *oci, oci_runtime_pspec *pspec)
 
     PPR_UPDATE(oci, pspec, mounts, mounts_len, free_defs_mount);
     PPR_UPDATE(oci->process, pspec, env, env_len, free);
-    PPR_UPDATE(oci->linux, pspec, devices, devices_len, free_oci_runtime_defs_linux_device);
+    PPR_UPDATE(oci->linux, pspec, devices, devices_len, free_defs_device);
 
     PPR_UPDATE(oci->linux->resources, pspec->resources, devices, devices_len,
-               free_oci_runtime_defs_linux_device_cgroup);
+               free_defs_device_cgroup);
 }
 
 char *get_pspec(oci_runtime_spec *oci)
@@ -186,7 +186,7 @@ static void raw_update_pspec(oci_runtime_pspec *base, oci_runtime_pspec *new)
         return;
     }
     if (new->resources != NULL && base->resources == NULL) {
-        base->resources = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources));
+        base->resources = util_common_calloc_s(sizeof(defs_resources));
         if (base->resources == NULL) {
             ERROR("Out of memory");
             return;
@@ -198,9 +198,9 @@ static void raw_update_pspec(oci_runtime_pspec *base, oci_runtime_pspec *new)
 
     PPR_UPDATE(base, new, mounts, mounts_len, free_defs_mount);
     PPR_UPDATE(base, new, env, env_len, free);
-    PPR_UPDATE(base, new, devices, devices_len, free_oci_runtime_defs_linux_device);
+    PPR_UPDATE(base, new, devices, devices_len, free_defs_device);
 
-    PPR_UPDATE(base->resources, new->resources, devices, devices_len, free_oci_runtime_defs_linux_device_cgroup);
+    PPR_UPDATE(base->resources, new->resources, devices, devices_len, free_defs_device_cgroup);
 }
 
 char *merge_pspec(const char *base, const char *data)

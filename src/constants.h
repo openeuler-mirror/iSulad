@@ -53,6 +53,7 @@
 #define DEFAULT_CA_FILE "ca.pem"
 #define DEFAULT_KEY_FILE "key.pem"
 #define DEFAULT_CERT_FILE "cert.pem"
+#define OCI_CONFIG_JSON "config.json"
 
 
 #define LOG_MAX_RETRIES 10

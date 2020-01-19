@@ -26,7 +26,6 @@
 #include "utils.h"
 #include "config.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "cri_helpers.h"
 #include "network_plugin.h"
 #include "container_inspect.h"

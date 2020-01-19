@@ -40,6 +40,7 @@
 #define TYPE_NAMESPACE_CGROUP "cgroup"
 
 #define ETC_HOSTS "/etc/hosts"
+#define ETC_HOSTNAME "/etc/hostname"
 #define RESOLV_CONF_PATH "/etc/resolv.conf"
 
 static inline bool is_host(const char *mode)

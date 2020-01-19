@@ -21,8 +21,6 @@
 #include "container_unix.h"
 #include "log.h"
 #include "utils.h"
-#include "container_custom_config.h"
-#include "container_start_generate_config.h"
 
 static int parse_container_log_configs(container_t *cont);
 
@@ -332,175 +330,21 @@ int container_wait_rm_locking(container_t *cont, int timeout)
     return ret;
 }
 
-static int pack_container_config_annotations_from_oci_spec(const oci_runtime_spec *oci_spec,
-                                                           container_config_v2_common_config *v2_spec)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    if (oci_spec->annotations != NULL && oci_spec->annotations->len) {
-        if (v2_spec->config == NULL) {
-            v2_spec->config = util_common_calloc_s(sizeof(container_config));
-            if (v2_spec->config == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto out;
-            }
-        }
-        v2_spec->config->annotations = util_common_calloc_s(sizeof(json_map_string_string));
-        if (v2_spec->config->annotations == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        if (oci_spec->annotations->len > SIZE_MAX / sizeof(char *)) {
-            ERROR("Annotations list is too long!");
-            ret = -1;
-            goto out;
-        }
-        v2_spec->config->annotations->keys =
-            util_common_calloc_s(sizeof(char *) * oci_spec->annotations->len);
-        if (v2_spec->config->annotations->keys == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        v2_spec->config->annotations->values =
-            util_common_calloc_s(sizeof(char *) * oci_spec->annotations->len);
-        if (v2_spec->config->annotations->values == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-
-        for (i = 0; i < oci_spec->annotations->len; i++) {
-            v2_spec->config->annotations->keys[i] = util_strdup_s(oci_spec->annotations->keys[i]);
-            v2_spec->config->annotations->values[i] = util_strdup_s(oci_spec->annotations->values[i]);
-            v2_spec->config->annotations->len++;
-        }
-    }
-
-out:
-    return ret;
-}
-
-static int pack_container_config_labels(container_config_v2_common_config *config,
-                                        const container_custom_config *custom_spec)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    if (custom_spec->labels != NULL && custom_spec->labels->len) {
-        if (config->config == NULL) {
-            config->config = util_common_calloc_s(sizeof(container_config));
-            if (config->config == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto out;
-            }
-        }
-        config->config->labels = util_common_calloc_s(sizeof(json_map_string_string));
-        if (config->config->labels == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        if (custom_spec->labels->len > LIST_SIZE_MAX) {
-            ERROR("Labels list is too long, the limit is %d", LIST_SIZE_MAX);
-            isulad_set_error_message("Labels list is too long, the limit is %d", LIST_SIZE_MAX);
-            ret = -1;
-            goto out;
-        }
-        config->config->labels->keys = util_common_calloc_s(sizeof(char *) * custom_spec->labels->len);
-        if (config->config->labels->keys == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        config->config->labels->values = util_common_calloc_s(sizeof(char *) * custom_spec->labels->len);
-        if (config->config->labels->values == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-
-        for (i = 0; i < custom_spec->labels->len; i++) {
-            config->config->labels->keys[i] = util_strdup_s(custom_spec->labels->keys[i]);
-            config->config->labels->values[i] = util_strdup_s(custom_spec->labels->values[i]);
-            config->config->labels->len++;
-        }
-    }
-
-out:
-    return ret;
-}
-
-static int pack_container_config_health_check(container_config_v2_common_config *config,
-                                              const container_custom_config *custom_spec)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    if (custom_spec != NULL && custom_spec->health_check != NULL) {
-        if (config->config == NULL) {
-            config->config = util_common_calloc_s(sizeof(container_config));
-            if (config->config == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto out;
-            }
-        }
-        config->config->health_check = util_common_calloc_s(sizeof(defs_health_check));
-        if (config->config->health_check == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-
-        if (custom_spec->health_check->test != NULL && custom_spec->health_check->test_len != 0) {
-            if (custom_spec->health_check->test_len > SIZE_MAX / sizeof(char *)) {
-                ERROR("test list is too long!");
-                ret = -1;
-                goto out;
-            }
-            config->config->health_check->test =
-                util_common_calloc_s(sizeof(char *) * custom_spec->health_check->test_len);
-            if (config->config->health_check->test == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                goto out;
-            }
-            for (i = 0; i < custom_spec->health_check->test_len; i++) {
-                config->config->health_check->test[i] = util_strdup_s(custom_spec->health_check->test[i]);
-                config->config->health_check->test_len++;
-            }
-
-            config->config->health_check->interval = custom_spec->health_check->interval;
-            config->config->health_check->timeout = custom_spec->health_check->timeout;
-            config->config->health_check->start_period = custom_spec->health_check->start_period;
-            config->config->health_check->retries = custom_spec->health_check->retries;
-            config->config->health_check->exit_on_unhealthy = custom_spec->health_check->exit_on_unhealthy;
-        }
-    }
-out:
-    return ret;
-}
-
 static inline void add_to_config_v2_args(const char *str, char **args, size_t *args_len)
 {
     args[*args_len] = str ? util_strdup_s(str) : NULL;
     (*args_len)++;
 }
 
-static int pack_path_and_args_from_custom_spec(const container_custom_config *custom_spec,
-                                               container_config_v2_common_config *v2_spec)
+static int pack_path_and_args_from_container_spec(const container_config *container_spec,
+                                                  container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     size_t i, total;
 
-    if (custom_spec->entrypoint != NULL && custom_spec->entrypoint_len > 0) {
-        v2_spec->path = util_strdup_s(custom_spec->entrypoint[0]);
-        total = custom_spec->entrypoint_len + custom_spec->cmd_len - 1;
+    if (container_spec->entrypoint != NULL && container_spec->entrypoint_len > 0) {
+        v2_spec->path = util_strdup_s(container_spec->entrypoint[0]);
+        total = container_spec->entrypoint_len + container_spec->cmd_len - 1;
 
         if (total > SIZE_MAX / sizeof(char *)) {
             ERROR("Container oci spec process args elements is too much!");
@@ -517,18 +361,18 @@ static int pack_path_and_args_from_custom_spec(const container_custom_config *cu
             ret = -1;
             goto out;
         }
-        for (i = 1; i < custom_spec->entrypoint_len; i++) {
-            add_to_config_v2_args(custom_spec->entrypoint[i], v2_spec->args, &(v2_spec->args_len));
+        for (i = 1; i < container_spec->entrypoint_len; i++) {
+            add_to_config_v2_args(container_spec->entrypoint[i], v2_spec->args, &(v2_spec->args_len));
         }
-        for (i = 0; i < custom_spec->cmd_len; i++) {
-            add_to_config_v2_args(custom_spec->cmd[i], v2_spec->args, &(v2_spec->args_len));
+        for (i = 0; i < container_spec->cmd_len; i++) {
+            add_to_config_v2_args(container_spec->cmd[i], v2_spec->args, &(v2_spec->args_len));
         }
         goto out;
     }
 
-    if (custom_spec->cmd != NULL && custom_spec->cmd_len > 0) {
-        v2_spec->path = util_strdup_s(custom_spec->cmd[0]);
-        total = custom_spec->cmd_len - 1;
+    if (container_spec->cmd != NULL && container_spec->cmd_len > 0) {
+        v2_spec->path = util_strdup_s(container_spec->cmd[0]);
+        total = container_spec->cmd_len - 1;
 
         if (total > SIZE_MAX / sizeof(char *)) {
             ERROR("Container oci spec process args elements is too much!");
@@ -545,8 +389,8 @@ static int pack_path_and_args_from_custom_spec(const container_custom_config *cu
             ret = -1;
             goto out;
         }
-        for (i = 1; i < custom_spec->cmd_len; i++) {
-            add_to_config_v2_args(custom_spec->cmd[i], v2_spec->args, &(v2_spec->args_len));
+        for (i = 1; i < container_spec->cmd_len; i++) {
+            add_to_config_v2_args(container_spec->cmd[i], v2_spec->args, &(v2_spec->args_len));
         }
     }
 
@@ -576,118 +420,28 @@ int v2_spec_make_basic_info(const char *id, const char *name, const char *image_
 }
 
 /* container merge basic v2 spec info */
-int v2_spec_merge_custom_spec(const container_custom_config *custom_spec, container_config_v2_common_config *v2_spec)
+int v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
+    container_config *container_spec = NULL;
 
-    if (v2_spec == NULL || custom_spec == NULL) {
+    if (v2_spec == NULL) {
         return -1;
     }
 
-    if (custom_spec->log_config != NULL && custom_spec->log_config->log_file != NULL) {
-        v2_spec->log_path = util_strdup_s(custom_spec->log_config->log_file);
+    container_spec = v2_spec->config;
+
+    if (container_spec->log_config != NULL && container_spec->log_config->log_file != NULL) {
+        v2_spec->log_path = util_strdup_s(container_spec->log_config->log_file);
     }
 
-    if (v2_spec->config == NULL) {
-        v2_spec->config = util_common_calloc_s(sizeof(container_config));
-        if (v2_spec->config == NULL) {
-            ERROR("Failed to malloc container_config_v2_common_config_config");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    v2_spec->config->attach_stdin = custom_spec->attach_stdin;
-    v2_spec->config->attach_stdout = custom_spec->attach_stdout;
-    v2_spec->config->attach_stderr = custom_spec->attach_stderr;
-    v2_spec->config->tty = custom_spec->tty;
-    v2_spec->config->open_stdin = custom_spec->open_stdin;
-
-    if (custom_spec->user != NULL) {
-        v2_spec->config->user = util_strdup_s(custom_spec->user);
-    }
-
-    if (pack_path_and_args_from_custom_spec(custom_spec, v2_spec) != 0) {
-        ret = -1;
-        goto out;
-    }
-
-
-    ret = dup_array_of_strings((const char **)(custom_spec->cmd), custom_spec->cmd_len,
-                               &(v2_spec->config->cmd), &(v2_spec->config->cmd_len));
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = dup_array_of_strings((const char **)(custom_spec->entrypoint), custom_spec->entrypoint_len,
-                               &(v2_spec->config->entrypoint), &(v2_spec->config->entrypoint_len));
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = pack_container_config_labels(v2_spec, custom_spec);
-    if (ret != 0) {
-        ERROR("Failed to pack labels config");
-        ret = -1;
-        goto out;
-    }
-
-    ret = pack_container_config_health_check(v2_spec, custom_spec);
-    if (ret != 0) {
-        ERROR("Failed to pack health check config");
+    if (pack_path_and_args_from_container_spec(container_spec, v2_spec) != 0) {
         ret = -1;
         goto out;
     }
 
 out:
     return ret;
-}
-
-static int pack_envs_from_oci_spec(const oci_runtime_spec *oci_spec, const container_config_v2_common_config *v2_spec)
-{
-    int ret = 0;
-
-    if (oci_spec->process != NULL && oci_spec->process->env != NULL) {
-        ret = dup_array_of_strings((const char **)(oci_spec->process->env), oci_spec->process->env_len,
-                                   &(v2_spec->config->env), &(v2_spec->config->env_len));
-        if (ret != 0) {
-            goto out;
-        }
-    }
-
-out:
-    return ret;
-}
-
-static void pack_hostname_from_oci_spec(const oci_runtime_spec *oci_spec,
-                                        const container_config_v2_common_config *v2_spec)
-{
-    if (oci_spec->hostname != NULL) {
-        free(v2_spec->config->hostname);
-        v2_spec->config->hostname = util_strdup_s(oci_spec->hostname);
-    }
-}
-
-/* container pack common config */
-int v2_spec_merge_oci_spec(const oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec)
-{
-    if (oci_spec == NULL || v2_spec == NULL) {
-        ERROR("Invalid inputs for pack container common config");
-        return -1;
-    }
-
-    if (pack_envs_from_oci_spec(oci_spec, v2_spec) != 0) {
-        return -1;
-    }
-
-    pack_hostname_from_oci_spec(oci_spec, v2_spec);
-
-    if (pack_container_config_annotations_from_oci_spec(oci_spec, v2_spec) != 0) {
-        ERROR("Failed to pack annotations config");
-        return -1;
-    }
-
-    return 0;
 }
 
 /* save json config file */
@@ -798,37 +552,6 @@ static host_config *read_host_config(const char *rootpath, const char *id)
 out:
     free(err);
     return hostconfig;
-}
-
-static bool check_start_generate_config(const char *rootpath, const char *id)
-{
-#define START_GENERATE_CONFIG "start_generate_config.json"
-    int nret;
-    bool ret = false;
-    char filename[PATH_MAX] = { 0x00 };
-    parser_error err = NULL;
-    container_start_generate_config *config = NULL;
-
-    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, id, START_GENERATE_CONFIG);
-    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
-        ERROR("Failed to print string");
-        goto out;
-    }
-
-    if (!util_file_exists(filename)) {
-        return true;
-    }
-
-    config = container_start_generate_config_parse_file(filename, NULL, &err);
-    if (config == NULL) {
-        ERROR("Failed to parse start generate config file:%s", err);
-        goto out;
-    }
-    ret = true;
-out:
-    free(err);
-    free_container_start_generate_config(config);
-    return ret;
 }
 
 /* container save host config */
@@ -997,9 +720,6 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
         return NULL;
     }
 
-    if (!check_start_generate_config(rootpath, id)) {
-        return NULL;
-    }
     v2config = read_config_v2(rootpath, id);
     if (v2config == NULL) {
         ERROR("Failed to read config v2 file:%s", id);
@@ -1216,7 +936,7 @@ int container_exit_on_next(container_t *cont)
     return ret;
 }
 
-/* this function should be called in container_lock */
+/* this function should be called in container_lock*/
 int container_wait_stop(container_t *cont, int timeout)
 {
     int ret = 0;

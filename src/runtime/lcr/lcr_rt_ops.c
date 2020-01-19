@@ -55,7 +55,7 @@ int rt_lcr_create(const char *name, const char *runtime, const rt_create_params_
         goto out;
     }
 
-    if (!engine_ops->engine_create_op(name, runtime_root, params->real_rootfs, params->oci_config_data)) {
+    if (!engine_ops->engine_create_op(name, runtime_root, params->oci_config_data)) {
         ERROR("Failed to create container");
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
@@ -127,10 +127,6 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
     request.start_timeout = params->start_timeout;
     request.container_pidfile = params->container_pidfile;
     request.exit_fifo = params->exit_fifo;
-    request.uid = params->puser->uid;
-    request.gid = params->puser->gid;
-    request.additional_gids = params->puser->additional_gids;
-    request.additional_gids_len = params->puser->additional_gids_len;
 
     if (!engine_ops->engine_start_op(&request)) {
         const char *tmpmsg = NULL;
@@ -306,11 +302,51 @@ out:
     }
     return ret;
 }
+
+// user string(UID:GID)
+static int generate_user_string_by_uid_gid(const defs_process_user *puser, char **user)
+{
+    char uid_str[ISULAD_NUMSTRLEN32] = { 0 };
+    char gid_str[ISULAD_NUMSTRLEN32] = { 0 };
+    size_t len;
+    int nret = 0;
+
+    nret = snprintf(uid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)puser->uid);
+    if (nret < 0 || nret >= ISULAD_NUMSTRLEN32) {
+        ERROR("Invalid UID:%u", (unsigned int)puser->uid);
+        return -1;
+    }
+
+    nret = snprintf(gid_str, ISULAD_NUMSTRLEN32, "%u", (unsigned int)puser->gid);
+    if (nret < 0 || nret >= ISULAD_NUMSTRLEN32) {
+        ERROR("Invalid attach uid value :%u", (unsigned int)puser->gid);
+        return -1;
+    }
+
+    len = strlen(uid_str) + 1 + strlen(gid_str) + 1;
+    *user = (char *)util_common_calloc_s(len * sizeof(char));
+    if (*user == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    nret = snprintf(*user, len, "%u:%u", (unsigned int)puser->uid, (unsigned int)puser->gid);
+    if (nret < 0 || (size_t)nret >= len) {
+        ERROR("Invalid UID:GID (%u:%u)", (unsigned int)puser->uid, (unsigned int)puser->gid);
+        free(*user);
+        *user = NULL;
+        return -1;
+    }
+
+    return 0;
+}
+
 int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *params, int *exit_code)
 {
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
     engine_exec_request_t request = { 0 };
+    char *user = NULL;
 
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_exec_op == NULL) {
@@ -323,14 +359,20 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
     request.lcrpath = params->rootpath;
     request.logpath = params->logpath;
     request.loglevel = params->loglevel;
-    request.args = (const char **)params->args;
-    request.args_len = params->args_len;
-    request.env = (const char **)params->envs;
-    request.env_len = params->envs_len;
+    request.args = (const char **)params->spec->args;
+    request.args_len = params->spec->args_len;
+    request.env = (const char **)params->spec->env;
+    request.env_len = params->spec->env_len;
     request.console_fifos = params->console_fifos;
     request.timeout = params->timeout;
-    request.user = params->user;
     request.suffix = params->suffix;
+    if (params->spec->user != NULL) {
+        if (generate_user_string_by_uid_gid(params->spec->user, &user) != 0) {
+            ret = -1;
+            goto out;
+        }
+        request.user = user;
+    }
 
     if (!engine_ops->engine_exec_op(&request, exit_code)) {
         const char *tmpmsg = NULL;
@@ -338,7 +380,6 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
         isulad_set_error_message("Exec container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
                                  tmpmsg : DEF_ERR_RUNTIME_STR);
         util_contain_errmsg(g_isulad_errmsg, exit_code);
-        engine_ops->engine_clear_errmsg_op();
         ret = -1;
         goto out;
     }
@@ -347,6 +388,7 @@ out:
     if (engine_ops != NULL) {
         engine_ops->engine_clear_errmsg_op();
     }
+    free(user);
     return ret;
 }
 

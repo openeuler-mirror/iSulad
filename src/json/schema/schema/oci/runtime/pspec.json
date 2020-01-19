@@ -23,7 +23,7 @@
             "id": "https://opencontainers.org/schema/bundle/linux/devices",
             "type": "array",
             "items": {
-                "$ref": "defs-linux.json#/definitions/Device"
+                "$ref": "../../defs.json#/definitions/Device"
             }
         },
         "resources": {

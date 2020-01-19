@@ -211,7 +211,7 @@ static int set_env_enable_plugins(oci_runtime_spec *oci)
 
     if (oci->process == NULL) {
         ERROR("BUG oci->process should not be nil");
-        oci->process = util_common_calloc_s(sizeof(oci_runtime_spec_process));
+        oci->process = util_common_calloc_s(sizeof(defs_process));
         if (oci->process == NULL) {
             ERROR("out of memory");
             goto failed;
@@ -880,6 +880,7 @@ out:
 int pm_activate_plugin(plugin_t *plugin)
 {
     int ret = 0;
+    int nret = 0;
     plugin_activate_plugin_request reqs = { 0 };
     char *body = NULL;
     size_t body_len = 0;
@@ -901,8 +902,8 @@ int pm_activate_plugin(plugin_t *plugin)
     }
 
     body_len = strlen(body) + 1;
-    ret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
-    if (ret < 0 || ret >= PATH_MAX) {
+    nret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
+    if (nret < 0 || nret >= PATH_MAX) {
         ERROR("get plugin socket failed");
         ret = -1;
         goto out;
@@ -1044,7 +1045,7 @@ static int pm_prepare_init_reqs(const plugin_t *plugin, plugin_init_plugin_reque
 
     elem->status = get_status(cont);
 
-    ocic = read_oci_config(cont->root_path, elem->id);
+    ocic = load_oci_config(cont->root_path, elem->id);
     if (ocic == NULL) {
         ret = -1;
         ERROR("read oci config failed");
@@ -1073,6 +1074,7 @@ out:
 static int pm_init_plugin(const plugin_t *plugin)
 {
     int ret = 0;
+    int nret = 0;
     char **cnames = NULL;
     size_t container_num = 0;
     plugin_init_plugin_request reqs = { 0 };
@@ -1127,8 +1129,8 @@ static int pm_init_plugin(const plugin_t *plugin)
     }
 
     body_len = strlen(body) + 1;
-    ret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
-    if (ret < 0 || ret >= PATH_MAX) {
+    nret = snprintf(socket, PATH_MAX, "unix://%s", plugin->addr);
+    if (nret < 0 || nret >= PATH_MAX) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1443,6 +1445,7 @@ out:
 static int plugin_event_pre_create_handle(const plugin_t *plugin, const char *cid, char **base)
 {
     int ret = 0;
+    int nret = 0;
     char *body = NULL;
     size_t body_len = 0;
     struct parser_context ctx = {
@@ -1467,8 +1470,8 @@ static int plugin_event_pre_create_handle(const plugin_t *plugin, const char *ci
     }
 
     body_len = strlen(body) + 1;
-    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
+    nret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (nret < 0 || (size_t)nret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1618,6 +1621,7 @@ out:
 static int plugin_event_pre_start_handle(const plugin_t *plugin, const char *cid)
 {
     int ret = 0;
+    int nret = 0;
     char *body = NULL;
     size_t body_len = 0;
     struct parser_context ctx = {
@@ -1639,8 +1643,8 @@ static int plugin_event_pre_start_handle(const plugin_t *plugin, const char *cid
     }
 
     body_len = strlen(body) + 1;
-    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
+    nret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (nret < 0 || (size_t)nret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1717,6 +1721,7 @@ out:
 static int plugin_event_post_stop_handle(const plugin_t *plugin, const char *cid)
 {
     int ret = 0;
+    int nret = 0;
     char *body = NULL;
     size_t body_len = 0;
     struct parser_context ctx = {
@@ -1738,8 +1743,8 @@ static int plugin_event_post_stop_handle(const plugin_t *plugin, const char *cid
     }
 
     body_len = strlen(body) + 1;
-    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
+    nret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (nret < 0 || (size_t)nret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;
@@ -1815,6 +1820,7 @@ out:
 static int plugin_event_post_remove_handle(const plugin_t *plugin, const char *cid)
 {
     int ret = 0;
+    int nret = 0;
     char *body = NULL;
     size_t body_len = 0;
     struct parser_context ctx = {
@@ -1836,8 +1842,8 @@ static int plugin_event_post_remove_handle(const plugin_t *plugin, const char *c
     }
 
     body_len = strlen(body) + 1;
-    ret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
-    if (ret < 0 || (size_t)ret >= sizeof(socket)) {
+    nret = snprintf(socket, sizeof(socket), "unix://%s", plugin->addr);
+    if (nret < 0 || (size_t)nret >= sizeof(socket)) {
         ERROR("get plugin socket failed %s", plugin->addr);
         ret = -1;
         goto out;

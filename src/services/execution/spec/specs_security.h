@@ -18,14 +18,13 @@
 #include <stdint.h>
 #include "libisulad.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "container_config_v2.h"
 #include "oci_runtime_spec.h"
 int merge_default_seccomp_spec(oci_runtime_spec *oci_spec,
-                               const oci_runtime_spec_process_capabilities *capabilites);
+                               const defs_process_capabilities *capabilites);
 int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, const char **drops,
                size_t drops_len);
-int refill_oci_process_capabilities(oci_runtime_spec_process_capabilities **caps,
+int refill_oci_process_capabilities(defs_process_capabilities **caps,
                                     const char **src_caps, size_t src_caps_len);
 int merge_sysctls(oci_runtime_spec *oci_spec, const json_map_string_string *sysctls);
 int merge_no_new_privileges(oci_runtime_spec *oci_spec, const host_config *host_spec);
