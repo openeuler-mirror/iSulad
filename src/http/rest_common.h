@@ -15,8 +15,6 @@
 #ifndef __REST_COMMON_H
 #define __REST_COMMON_H
 
-#include <evhtp.h>
-
 #include "http/buffer.h"
 #include "http/http.h"
 #include "parser.h"
@@ -24,6 +22,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Response status from restful server 
+#define RESTFUL_RES_ERROR 0
+#define RESTFUL_RES_OK 200
+#define RESTFUL_RES_NOTFOUND 404
+#define RESTFUL_RES_SERVERR 500
+#define RESTFUL_RES_NOTIMPL 501
 
 typedef int (*unpack_response_func_t)(const struct parsed_http_message *message, void *arg);
 

@@ -17,6 +17,8 @@
 
 #include <evhtp.h>
 
+#include "rest_common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
