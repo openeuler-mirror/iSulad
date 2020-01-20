@@ -40,7 +40,7 @@
 #include "containers_store.h"
 #include "oci_images_store.h"
 
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "utils.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
@@ -244,7 +244,7 @@ int isula_rmi(const im_remove_request *request)
             ret = 0;
             goto clean_memory;
         }
-        lcrd_set_error_message("Failed to remove image with error: %s", errmsg);
+        isulad_set_error_message("Failed to remove image with error: %s", errmsg);
         ERROR("Failed to remove image '%s' with error: %s", real_image_name, errmsg);
         goto unlock;
     }
@@ -283,7 +283,7 @@ int isula_container_filesystem_usage(const im_container_fs_usage_request *reques
     *fs_usage = imagetool_fs_info_parse_data(output, NULL, &err);
     if (*fs_usage == NULL) {
         ERROR("Failed to parse output json: %s", err);
-        lcrd_set_error_message("Failed to parse output json:%s", err);
+        isulad_set_error_message("Failed to parse output json:%s", err);
         ret = -1;
     }
 

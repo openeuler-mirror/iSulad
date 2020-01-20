@@ -19,7 +19,7 @@
 
 #include "constants.h"
 #include "containers_gc.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "container_garbage_config.h"
 #include "log.h"
 #include "utils.h"
@@ -54,7 +54,7 @@ static int save_gc_config(const char *json_gc_config)
     char *rootpath = NULL;
     int fd = -1;
 
-    rootpath = conf_get_lcrd_rootdir();
+    rootpath = conf_get_isulad_rootdir();
     if (rootpath == NULL) {
         ERROR("Root path is NULL");
         ret = -1;
@@ -231,7 +231,7 @@ container_garbage_config *read_gc_config()
     container_garbage_config *gcconfig = NULL;
     char *rootpath = NULL;
 
-    rootpath = conf_get_lcrd_rootdir();
+    rootpath = conf_get_isulad_rootdir();
     if (rootpath == NULL) {
         ERROR("Root path is NULL");
         goto out;

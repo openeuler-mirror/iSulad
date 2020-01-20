@@ -21,7 +21,7 @@
 
 #include "utils.h"
 #include "log.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "oci_runtime_spec.h"
 #include "embedded_manifest.h"
 #include "specs_extend.h"

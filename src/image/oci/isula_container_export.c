@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
 
 static struct isula_export_request *generate_isula_export_request(const char *name_id, const char *out_file,
@@ -44,11 +44,11 @@ static struct isula_export_request *generate_isula_export_request(const char *na
 static int is_valid_arguments(const char *name_id, const char *out_file)
 {
     if (name_id == NULL) {
-        lcrd_set_error_message("Export rootfs requires container name");
+        isulad_set_error_message("Export rootfs requires container name");
         return -1;
     }
     if (out_file == NULL) {
-        lcrd_set_error_message("Export rootfs requires output file path");
+        isulad_set_error_message("Export rootfs requires output file path");
         return -1;
     }
     return 0;
@@ -97,7 +97,7 @@ int isula_container_export(const char *name_id, const char *out_file, uint32_t u
     ret = im_ops->container_export(ireq, iresp, &conf);
     if (ret != 0) {
         ERROR("Failed to export rootfs : %s", iresp->errmsg);
-        lcrd_set_error_message("Failed to export rootfs with error: %s", iresp->errmsg);
+        isulad_set_error_message("Failed to export rootfs with error: %s", iresp->errmsg);
     }
 
 out:

@@ -36,7 +36,7 @@
 #include "utils.h"
 #include "config.h"
 #include "path.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "specs_extend.h"
 
 #define MINUID 0
@@ -101,8 +101,8 @@ int merge_global_hook(oci_runtime_spec *oci_spec)
     oci_runtime_spec_hooks *hooks = NULL;
     oci_runtime_spec_hooks *tmp = NULL;
 
-    if (conf_get_lcrd_hooks(&hooks)) {
-        ERROR("Failed to get lcrd hooks");
+    if (conf_get_isulad_hooks(&hooks)) {
+        ERROR("Failed to get isulad hooks");
         ret = -1;
         goto out;
     }
@@ -444,7 +444,7 @@ int merge_env(oci_runtime_spec *oci_spec, const char **env, size_t env_len)
 
     if (env_len > LIST_ENV_SIZE_MAX - oci_spec->process->env_len) {
         ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
-        lcrd_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -474,7 +474,7 @@ static int read_user_file(const char *basefs, const char *user_path, FILE **stre
 
     if (realpath_in_scope(basefs, user_path, &real_path) < 0) {
         ERROR("user target file '%s' real path must be under '%s'", user_path, basefs);
-        lcrd_set_error_message("user target file '%s' real path must be under '%s'", user_path, basefs);
+        isulad_set_error_message("user target file '%s' real path must be under '%s'", user_path, basefs);
         ret = -1;
         goto out;
     }
@@ -482,7 +482,7 @@ static int read_user_file(const char *basefs, const char *user_path, FILE **stre
     filesize = util_file_size(real_path);
     if (filesize > REGULAR_FILE_SIZE) {
         ERROR("File %s is more than %lld", real_path, (long long)REGULAR_FILE_SIZE);
-        lcrd_set_error_message("File %s is more than %lld", real_path, (long long)REGULAR_FILE_SIZE);
+        isulad_set_error_message("File %s is more than %lld", real_path, (long long)REGULAR_FILE_SIZE);
         ret = -1;
         goto out;
     }
@@ -539,7 +539,7 @@ static void parse_user_group(const char *username, char **user, char **group, ch
 static void uids_gids_range_err_log()
 {
     ERROR("uids and gids must be in range 0-%d", MAXUID);
-    lcrd_set_error_message("uids and gids must be in range 0-%d", MAXUID);
+    isulad_set_error_message("uids and gids must be in range 0-%d", MAXUID);
     return;
 }
 
@@ -603,7 +603,7 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, oci_runtime_spec_pr
 
     if (errval != 0 && errval != ENOENT) {
         ERROR("Failed to parse passwd file: Insufficient buffer space supplied");
-        lcrd_set_error_message("Failed to parse passwd file: Insufficient buffer space supplied");
+        isulad_set_error_message("Failed to parse passwd file: Insufficient buffer space supplied");
         ret = -1;
         goto out;
     }
@@ -612,7 +612,7 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, oci_runtime_spec_pr
         // user is not a valid numeric UID
         if (uret != 0) {
             ERROR("Unable to find user '%s'", user);
-            lcrd_set_error_message("Unable to find user '%s': no matching entries in passwd file", user);
+            isulad_set_error_message("Unable to find user '%s': no matching entries in passwd file", user);
             ret = -1;
             goto out;
         }
@@ -747,7 +747,7 @@ static int proc_by_fgroup(FILE *f_group, const char *group, oci_runtime_spec_pro
             // group is not a valid numeric GID
             if (gret != 0) {
                 ERROR("Unable to find group '%s'", group);
-                lcrd_set_error_message("Unable to find group '%s': no matching entries in group file", group);
+                isulad_set_error_message("Unable to find group '%s': no matching entries in group file", group);
                 ret = -1;
                 goto out;
             }
@@ -856,7 +856,7 @@ static int get_one_additional_group(const char *additional_group, struct group *
         gret = util_safe_llong(additional_group, &n_gid);
         if (gret != 0) {
             ERROR("Unable to find group %s", additional_group);
-            lcrd_set_error_message("Unable to find group %s", additional_group);
+            isulad_set_error_message("Unable to find group %s", additional_group);
             ret = -1;
             goto out;
         }
@@ -975,7 +975,7 @@ int get_user(const char *basefs, const host_config *hc, const char *userstr, oci
     if (hc->group_add != NULL && hc->group_add_len > 0) {
         if (hc->group_add_len > LIST_SIZE_MAX) {
             ERROR("Too many groups to add, the limit is %d", LIST_SIZE_MAX);
-            lcrd_set_error_message("Too many groups to add, the limit is %d", LIST_SIZE_MAX);
+            isulad_set_error_message("Too many groups to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto cleanup;
         }
@@ -1262,8 +1262,8 @@ int merge_global_ulimit(oci_runtime_spec *oci_spec)
     host_config_ulimits_element **ulimits = NULL;
     size_t ulimits_len;
 
-    if (conf_get_lcrd_default_ulimit(&ulimits) != 0) {
-        ERROR("Failed to get lcrd default ulimit");
+    if (conf_get_isulad_default_ulimit(&ulimits) != 0) {
+        ERROR("Failed to get isulad default ulimit");
         ret = -1;
         goto out;
     }

@@ -17,13 +17,13 @@
 #include <limits.h>
 
 #include "log.h"
-#include "lcrc_connect.h"
+#include "isula_connect.h"
 #include "image.rest.h"
 #include "rest_common.h"
 #include "rest_images_client.h"
 
 /* image load request to rest */
-static int image_load_request_to_rest(const struct lcrc_load_request *request, char **body, size_t *body_len)
+static int image_load_request_to_rest(const struct isula_load_request *request, char **body, size_t *body_len)
 {
     image_load_image_request *crequest = NULL;
     parser_error err = NULL;
@@ -55,7 +55,7 @@ out:
 }
 
 /* image list request to rest */
-static int image_list_request_to_rest(const struct lcrc_list_images_request *request, char **body, size_t *body_len)
+static int image_list_request_to_rest(const struct isula_list_images_request *request, char **body, size_t *body_len)
 {
     image_list_images_request *crequest = NULL;
     parser_error err = NULL;
@@ -81,7 +81,7 @@ out:
 }
 
 /* image delete request to rest */
-static int image_delete_request_to_rest(const struct lcrc_rmi_request *request, char **body, size_t *body_len)
+static int image_delete_request_to_rest(const struct isula_rmi_request *request, char **body, size_t *body_len)
 {
     image_delete_image_request *crequest = NULL;
     parser_error err = NULL;
@@ -112,19 +112,19 @@ out:
 }
 
 static int unpack_image_info_to_list_response(image_list_images_response *cresponse,
-                                              struct lcrc_list_images_response *response)
+                                              struct isula_list_images_response *response)
 {
     size_t num = 0;
-    struct lcrc_image_info *image_info = NULL;
+    struct isula_image_info *image_info = NULL;
 
     if (cresponse == NULL || response == NULL) {
         return -1;
     }
 
     num = cresponse->images_len;
-    if (num > 0 && (num < (SIZE_MAX / sizeof(struct lcrc_image_info)))) {
+    if (num > 0 && (num < (SIZE_MAX / sizeof(struct isula_image_info)))) {
         size_t i;
-        image_info = (struct lcrc_image_info *)util_common_calloc_s(sizeof(struct lcrc_image_info) * num);
+        image_info = (struct isula_image_info *)util_common_calloc_s(sizeof(struct isula_image_info) * num);
         if (image_info == NULL) {
             ERROR("out of memory");
             return -1;
@@ -153,7 +153,7 @@ static int unpack_image_info_to_list_response(image_list_images_response *crespo
 /* unpack image list response */
 static int unpack_image_list_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_list_images_response *response = arg;
+    struct isula_list_images_response *response = arg;
     image_list_images_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -173,7 +173,7 @@ static int unpack_image_list_response(const struct parsed_http_message *message,
     if (cresponse->errmsg != NULL) {
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -192,7 +192,7 @@ out:
 /* unpack image load response */
 static int unpack_image_load_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_load_response *c_load_response = arg;
+    struct isula_load_response *c_load_response = arg;
     image_load_image_response *load_response = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -212,7 +212,7 @@ static int unpack_image_load_response(const struct parsed_http_message *message,
     if (load_response->errmsg != NULL) {
         c_load_response->errmsg = util_strdup_s(load_response->errmsg);
     }
-    ret = (load_response->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (load_response->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -224,7 +224,7 @@ out:
 }
 
 /* rest image load */
-static int rest_image_load(const struct lcrc_load_request *request, struct lcrc_load_response *response, void *arg)
+static int rest_image_load(const struct isula_load_request *request, struct isula_load_response *response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -239,8 +239,8 @@ static int rest_image_load(const struct lcrc_load_request *request, struct lcrc_
     }
     ret = rest_send_requst(socketname, RestHttpHead ImagesServiceLoad, body, len, &output);
     if (ret != 0) {
-        response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        response->cc = LCRD_ERR_EXEC;
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_image_load_response, (void *)response);
@@ -258,7 +258,7 @@ out:
 /* unpack image delete response */
 static int unpack_image_delete_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_rmi_response *c_rmi_response = arg;
+    struct isula_rmi_response *c_rmi_response = arg;
     image_delete_image_response *delete_response = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -278,7 +278,7 @@ static int unpack_image_delete_response(const struct parsed_http_message *messag
     if (delete_response->errmsg != NULL) {
         c_rmi_response->errmsg = util_strdup_s(delete_response->errmsg);
     }
-    ret = (delete_response->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (delete_response->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -290,7 +290,7 @@ out:
 }
 
 /* rest image list */
-static int rest_image_list(const struct lcrc_list_images_request *request, struct lcrc_list_images_response *response,
+static int rest_image_list(const struct isula_list_images_request *request, struct isula_list_images_response *response,
                            void *arg)
 {
     char *body = NULL;
@@ -306,8 +306,8 @@ static int rest_image_list(const struct lcrc_list_images_request *request, struc
     }
     ret = rest_send_requst(socketname, RestHttpHead ImagesServiceList, body, len, &output);
     if (ret != 0) {
-        response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        response->cc = LCRD_ERR_EXEC;
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_image_list_response, (void *)response);
@@ -323,7 +323,7 @@ out:
 }
 
 /* rest image remove */
-static int rest_image_remove(const struct lcrc_rmi_request *request, struct lcrc_rmi_response *response, void *arg)
+static int rest_image_remove(const struct isula_rmi_request *request, struct isula_rmi_response *response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -338,8 +338,8 @@ static int rest_image_remove(const struct lcrc_rmi_request *request, struct lcrc
     }
     ret = rest_send_requst(socketname, RestHttpHead ImagesServiceDelete, body, len, &output);
     if (ret != 0) {
-        response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        response->cc = LCRD_ERR_EXEC;
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_image_delete_response, (void *)response);
@@ -355,7 +355,7 @@ out:
 }
 
 /* inspect request to rest */
-static int inspect_request_to_rest(const struct lcrc_inspect_request *li_request, char **body, size_t *body_len)
+static int inspect_request_to_rest(const struct isula_inspect_request *li_request, char **body, size_t *body_len)
 {
     image_inspect_request *crequest = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -392,7 +392,7 @@ out:
 /* unpack inspect response */
 static int unpack_inspect_response(const struct parsed_http_message *message, void *arg)
 {
-    struct lcrc_inspect_response *response = arg;
+    struct isula_inspect_response *response = arg;
     image_inspect_response *cresponse = NULL;
     parser_error err = NULL;
     int ret = 0;
@@ -415,7 +415,7 @@ static int unpack_inspect_response(const struct parsed_http_message *message, vo
     if (cresponse->errmsg != NULL) {
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
-    ret = (cresponse->cc == LCRD_SUCCESS) ? 0 : -1;
+    ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == EVHTP_RES_SERVERR) {
         ret = -1;
     }
@@ -427,8 +427,8 @@ out:
 }
 
 /* rest image inspect */
-static int rest_image_inspect(const struct lcrc_inspect_request *li_request,
-                              struct lcrc_inspect_response *li_response, void *arg)
+static int rest_image_inspect(const struct isula_inspect_request *li_request,
+                              struct isula_inspect_response *li_response, void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -443,8 +443,8 @@ static int rest_image_inspect(const struct lcrc_inspect_request *li_request,
     }
     ret = rest_send_requst(socketname, RestHttpHead ImagesServiceInspect, body, len, &output);
     if (ret != 0) {
-        li_response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
-        li_response->cc = LCRD_ERR_EXEC;
+        li_response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        li_response->cc = ISULAD_ERR_EXEC;
         goto out;
     }
     ret = get_response(output, unpack_inspect_response, (void *)li_response);
@@ -460,7 +460,7 @@ out:
 }
 
 /* rest images client ops init */
-int rest_images_client_ops_init(lcrc_connect_ops *ops)
+int rest_images_client_ops_init(isula_connect_ops *ops)
 {
     if (ops == NULL) {
         return -1;

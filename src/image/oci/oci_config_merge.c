@@ -21,7 +21,7 @@
 #include <string.h>
 #include "utils.h"
 #include "log.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "specs_mount.h"
 #include "specs_extend.h"
 

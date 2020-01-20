@@ -12,12 +12,12 @@
  * Create: 2017-11-22
  * Description: provide container gc definition
  ******************************************************************************/
-#ifndef __LCRD_CONTAINER_GC_H__
-#define __LCRD_CONTAINER_GC_H__
+#ifndef __ISULAD_CONTAINER_GC_H__
+#define __ISULAD_CONTAINER_GC_H__
 
 #include <pthread.h>
 
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "linked_list.h"
 #include "container_unix.h"
 
@@ -45,5 +45,5 @@ bool gc_is_gc_progress(const char *id);
 }
 #endif
 
-#endif /* __LCRD_CONTAINER_GC_H__ */
+#endif /* __ISULAD_CONTAINER_GC_H__ */
 

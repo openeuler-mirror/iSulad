@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "utils_verify.h"
 #include "log.h"
 
@@ -81,13 +81,13 @@ static char **get_refs_from_output(const char *output)
 
     if (output == NULL) {
         ERROR("Failed to load image because can not get output");
-        lcrd_set_error_message("Failed to load image because can not get output");
+        isulad_set_error_message("Failed to load image because can not get output");
         return NULL;
     }
 
     if (strnlen(output, (size_t)(g_output_max_size + 1)) > (size_t)g_output_max_size) {
         ERROR("Failed to load image because stdoutput exceeded max size");
-        lcrd_set_error_message("Failed to load image because stdoutput exceeded max size");
+        isulad_set_error_message("Failed to load image because stdoutput exceeded max size");
         return NULL;
     }
 
@@ -98,7 +98,7 @@ static char **get_refs_from_output(const char *output)
     if (refs == NULL) {
         ERROR("Failed to load image because cann't get image reference from output."
               "stdout buffer is [%s]", output);
-        lcrd_set_error_message("Failed to load image because cann't get image reference from output");
+        isulad_set_error_message("Failed to load image because cann't get image reference from output");
         goto out;
     }
 
@@ -127,11 +127,11 @@ static int generate_isula_load_request(const char *file, const char *tag, struct
 static int is_valid_arguments(const char *file, const char *tag, char ***refs)
 {
     if (file == NULL) {
-        lcrd_set_error_message("Load image requires input file path");
+        isulad_set_error_message("Load image requires input file path");
         return -1;
     }
     if (tag != NULL && !util_valid_image_name(tag)) {
-        lcrd_try_set_error_message("Invalid tag:%s", tag);
+        isulad_try_set_error_message("Invalid tag:%s", tag);
         return -1;
     }
 
@@ -184,7 +184,7 @@ int isula_image_load(const char *file, const char *tag, char ***refs)
     ret = im_ops->load(ireq, iresp, &conf);
     if (ret != 0) {
         ERROR("Load image %s failed: %s", file, iresp->errmsg);
-        lcrd_set_error_message("Load image %s failed: %s", file, iresp->errmsg);
+        isulad_set_error_message("Load image %s failed: %s", file, iresp->errmsg);
         goto out;
     }
     *refs = get_refs_from_output(iresp->outmsg);

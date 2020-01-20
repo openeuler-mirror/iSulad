@@ -72,8 +72,8 @@ extern "C" {
 #define MAX_PATH_DEPTH 1024
 
 #define MAX_BUFFER_SIZE 4096
-#define LCRD_NUMSTRLEN64 21
-#define LCRD_NUMSTRLEN32 11
+#define ISULAD_NUMSTRLEN64 21
+#define ISULAD_NUMSTRLEN32 11
 #define MAXLINE 4096
 #define MAX_HOST_NAME_LEN 64
 #define MAX_IMAGE_NAME_LEN 255
@@ -113,7 +113,7 @@ extern "C" {
 #define Time_Minute (60LL * Time_Second)
 #define Time_Hour (60LL * Time_Minute)
 
-/* Max regular file size for LCRC\LCRD to open as same as docker */
+/* Max regular file size for isula\isulad to open as same as docker */
 #define REGULAR_FILE_SIZE (10 * SIZE_MB)
 
 #define rFC339Local "2006-01-02T15:04:05"

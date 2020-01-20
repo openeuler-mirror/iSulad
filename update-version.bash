@@ -48,7 +48,7 @@ commit_id_long=`git log  --pretty=oneline  -1 | awk {'print $1'}`
 commit_id=${commit_id_long:0:8}
 new_release=`date "+%Y%m%d"`.`date "+%H%M%S"`.git$commit_id
 echo "The relase version  has been modified, it is ${new_release}"
-sed -i "s/set(LCRD_VERSION \"${old_version}\")/set(LCRD_VERSION \"${new_version}\")/g" ${Version_CMakefile}
+sed -i "s/set(ISULAD_VERSION \"${old_version}\")/set(ISULAD_VERSION \"${new_version}\")/g" ${Version_CMakefile}
 sed -i "s/^\%global _version ${old_version}$/\%global _version ${new_version}/g" ${specfile}
 sed -i "s/^\%global _release ${old_release}$/\%global _release ${new_release}/g" ${specfile}
 

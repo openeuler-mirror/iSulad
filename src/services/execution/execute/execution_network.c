@@ -30,7 +30,7 @@
 
 #include "log.h"
 #include "utils.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "config.h"
 #include "containers_store.h"
 #include "namespace.h"
@@ -43,14 +43,14 @@ static int write_hostname_to_file(const char *rootfs, const char *hostname)
 
     if (realpath_in_scope(rootfs, "/etc/hostname", &file_path) < 0) {
         SYSERROR("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
-        lcrd_set_error_message("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
+        isulad_set_error_message("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
         goto error_out;
     }
     if (hostname != NULL) {
         ret = util_write_file(file_path, hostname, strlen(hostname));
         if (ret) {
             SYSERROR("Failed to write %s", file_path);
-            lcrd_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
+            isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
             goto error_out;
         }
     }
@@ -64,13 +64,13 @@ static int fopen_network(FILE **fp, char **file_path, const char *rootfs, const 
 {
     if (realpath_in_scope(rootfs, filename, file_path) < 0) {
         SYSERROR("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
-        lcrd_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
+        isulad_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         return -1;
     }
     *fp = util_fopen(*file_path, "a+");
     if (*fp == NULL) {
         SYSERROR("Failed to open %s", *file_path);
-        lcrd_set_error_message("Failed to open %s: %s", *file_path, strerror(errno));
+        isulad_set_error_message("Failed to open %s: %s", *file_path, strerror(errno));
         return -1;
     }
     return 0;
@@ -142,7 +142,7 @@ static int write_content_to_file(const char *file_path, const char *content)
         ret = util_write_file(file_path, content, strlen(content));
         if (ret != 0) {
             SYSERROR("Failed to write file %s", file_path);
-            lcrd_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
+            isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
             return ret;
         }
     }
@@ -666,17 +666,17 @@ static int chown_network(const char *user_remap, const char *rootfs, const char 
     }
     if (realpath_in_scope(rootfs, filename, &file_path) < 0) {
         SYSERROR("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
-        lcrd_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
+        isulad_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         ret = -1;
         goto out;
     }
     if (chown(file_path, host_uid, host_gid) != 0) {
         SYSERROR("Failed to chown network file '%s' to %u:%u", filename, host_uid, host_gid);
-        lcrd_set_error_message("Failed to chown network file '%s' to %u:%u: %s",
-                               filename,
-                               host_uid,
-                               host_gid,
-                               strerror(errno));
+        isulad_set_error_message("Failed to chown network file '%s' to %u:%u: %s",
+                                 filename,
+                                 host_uid,
+                                 host_gid,
+                                 strerror(errno));
         ret = -1;
         goto out;
     }
@@ -730,12 +730,12 @@ static container_t *get_networked_container(const char *id, const char *connecte
     nc = containers_store_get(connected_id);
     if (nc == NULL) {
         ERROR("No such container: %s", connected_id);
-        lcrd_set_error_message("No such container: %s", connected_id);
+        isulad_set_error_message("No such container: %s", connected_id);
         return NULL;
     }
     if (strcmp(id, nc->common_config->id) == 0) {
         ERROR("cannot join own network");
-        lcrd_set_error_message("cannot join own network");
+        isulad_set_error_message("cannot join own network");
         goto cleanup;
     }
     if (!check_state) {
@@ -743,12 +743,12 @@ static container_t *get_networked_container(const char *id, const char *connecte
     }
     if (!is_running(nc->state)) {
         ERROR("cannot join network of a non running container: %s", connected_id);
-        lcrd_set_error_message("cannot join network of a non running container: %s", connected_id);
+        isulad_set_error_message("cannot join network of a non running container: %s", connected_id);
         goto cleanup;
     }
     if (is_restarting(nc->state)) {
         ERROR("Container %s is restarting, wait until the container is running", connected_id);
-        lcrd_set_error_message("Container %s is restarting, wait until the container is running", connected_id);
+        isulad_set_error_message("Container %s is restarting, wait until the container is running", connected_id);
         goto cleanup;
     }
 

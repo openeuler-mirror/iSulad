@@ -17,7 +17,7 @@
 #include "grpc_containers_client.h"
 #include "grpc_images_client.h"
 
-int grpc_ops_init(lcrc_connect_ops *ops)
+int grpc_ops_init(isula_connect_ops *ops)
 {
     if (ops == nullptr) {
         return -1;

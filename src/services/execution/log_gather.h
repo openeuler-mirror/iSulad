@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide log gather definition
  ******************************************************************************/
-#ifndef __LCRD_LOG_GATHER_H_
-#define __LCRD_LOG_GATHER_H_
+#ifndef __ISULAD_LOG_GATHER_H_
+#define __ISULAD_LOG_GATHER_H_
 
 #include "utils.h"
 #include "log.h"

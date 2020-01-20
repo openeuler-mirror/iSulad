@@ -23,7 +23,7 @@
 
 #include "error.h"
 #include "log.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "restartmanager.h"
 #include "utils.h"
 #include "containers_store.h"

@@ -15,15 +15,15 @@
 #ifndef __PACK_CONFIG_H__
 #define __PACK_CONFIG_H__
 
-#include "liblcrc.h"
+#include "libisula.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int generate_hostconfig(const lcrc_host_config_t *srcconfig, char **hostconfigstr);
+int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr);
 
-int generate_container_config(const lcrc_container_config_t *custom_conf,
+int generate_container_config(const isula_container_config_t *custom_conf,
                               char **custom_config_str);
 
 #ifdef __cplusplus

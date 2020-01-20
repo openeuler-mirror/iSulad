@@ -10,7 +10,7 @@
  * See the Mulan PSL v1 for more details.
 * Author: liuhao
 * Create: 2019-07-12
-* Description: provide lcrc connect command definition
+* Description: provide isula connect command definition
 *******************************************************************************/
 #ifndef __ISULAD_CLIENT_CONNECT_H
 #define __ISULAD_CLIENT_CONNECT_H

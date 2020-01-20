@@ -91,7 +91,7 @@ cleanup:
 int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -199,7 +199,7 @@ int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *re
                                                 InspectImageResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -228,7 +228,7 @@ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *
     int tret = image_list_request_from_grpc(request, &image_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -239,8 +239,8 @@ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *
     free_image_list_images_request(image_req);
     free_image_list_images_response(image_res);
     if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+        reply->set_cc(ISULAD_ERR_INPUT);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -261,7 +261,7 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
     int tret = image_remove_request_from_grpc(request, &image_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -272,8 +272,8 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
     free_image_delete_image_request(image_req);
     free_image_delete_image_response(image_res);
     if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+        reply->set_cc(ISULAD_ERR_INPUT);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -294,7 +294,7 @@ Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *r
     int tret = image_load_request_from_grpc(request, &image_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -305,8 +305,8 @@ Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *r
     free_image_load_image_request(image_req);
     free_image_load_image_response(image_res);
     if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+        reply->set_cc(ISULAD_ERR_INPUT);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
 
@@ -334,7 +334,7 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
     tret = inspect_request_from_grpc(request, &image_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -344,8 +344,8 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
     free_image_inspect_request(image_req);
     free_image_inspect_response(image_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -414,7 +414,7 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
     int tret = image_login_request_from_grpc(request, &image_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -425,8 +425,8 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
     free_image_login_request(image_req);
     free_image_login_response(image_res);
     if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+        reply->set_cc(ISULAD_ERR_INPUT);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
 
@@ -448,7 +448,7 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
     int tret = image_logout_request_from_grpc(request, &image_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -459,8 +459,8 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
     free_image_logout_request(image_req);
     free_image_logout_response(image_res);
     if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(LCRD_ERR_INTERNAL)));
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+        reply->set_cc(ISULAD_ERR_INPUT);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
 

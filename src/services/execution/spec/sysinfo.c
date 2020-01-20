@@ -20,7 +20,7 @@
 #include <dirent.h>
 
 #include "error.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "sysinfo.h"
 #include "log.h"
 #include "read_file.h"
@@ -1071,8 +1071,8 @@ static bool is_huge_pagesize_valid(const char *pagesize)
 free_out:
     if (!bret) {
         ERROR("Invalid hugepage size: %s, should be one of [%s]", pagesize, hpsbuf);
-        lcrd_set_error_message("Invalid hugepage size: %s, should be one of [%s]", pagesize, hpsbuf);
-        if (g_lcrd_errmsg == NULL) {
+        isulad_set_error_message("Invalid hugepage size: %s, should be one of [%s]", pagesize, hpsbuf);
+        if (g_isulad_errmsg == NULL) {
             ERROR("Out of memory");
         }
     }

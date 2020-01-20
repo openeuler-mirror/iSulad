@@ -16,7 +16,7 @@
 
 #include "isula_image_connect.h"
 #include "isula_helper.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "utils.h"
 #include "log.h"
 
@@ -62,7 +62,7 @@ static int parse_image_conf_from_json_str(const char *image_conf_str, oci_image_
     *spec = oci_image_spec_parse_data(image_conf_str, NULL, &err);
     if (*spec == NULL) {
         ERROR("Failed to parse image conf: %s", err);
-        lcrd_set_error_message("Failed to parse image conf");
+        isulad_set_error_message("Failed to parse image conf");
         ret = -1;
     }
 
@@ -77,10 +77,10 @@ static int dealwith_result(int result, struct isula_prepare_response *iresp, cha
     if (result != 0) {
         if (iresp->errmsg != NULL) {
             ERROR("Failed to prepare rootfs with error: %s", iresp->errmsg);
-            lcrd_set_error_message("Failed to prepare rootfs with error: %s", iresp->errmsg);
+            isulad_set_error_message("Failed to prepare rootfs with error: %s", iresp->errmsg);
         } else {
             ERROR("Failed to prepare rootfs");
-            lcrd_set_error_message("Failed to prepare rootfs");
+            isulad_set_error_message("Failed to prepare rootfs");
         }
     } else {
         *real_rootfs = iresp->mount_point;

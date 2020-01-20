@@ -38,7 +38,7 @@
 #include "container_custom_config.h"
 #include "utils.h"
 #include "config.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "namespace.h"
 #include "specs_security.h"
 #include "specs_mount.h"
@@ -84,7 +84,7 @@ static int merge_annotations(oci_runtime_spec *oci_spec, container_custom_config
     if (custom_conf->annotations != NULL && custom_conf->annotations->len) {
         if (oci_spec->annotations->len > LIST_SIZE_MAX - custom_conf->annotations->len) {
             ERROR("Too many annotations to add, the limit is %d", LIST_SIZE_MAX);
-            lcrd_set_error_message("Too many annotations to add, the limit is %d", LIST_SIZE_MAX);
+            isulad_set_error_message("Too many annotations to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
         }
@@ -106,7 +106,7 @@ static int make_annotations_log_console(const oci_runtime_spec *oci_spec, const 
 {
     int ret = 0;
     int nret = 0;
-    char tmp_str[LCRD_NUMSTRLEN64] = {0};
+    char tmp_str[ISULAD_NUMSTRLEN64] = {0};
 
     if (custom_conf->log_config != NULL) {
         if (custom_conf->log_config->log_file != NULL) {
@@ -185,7 +185,7 @@ static int make_annotations_cgroup_dir(const oci_runtime_spec *oci_spec, const h
     char *default_cgroup_parent = NULL;
     char *path = NULL;
 
-    default_cgroup_parent = conf_get_lcrd_cgroup_parent();
+    default_cgroup_parent = conf_get_isulad_cgroup_parent();
     if (host_spec->cgroup_parent != NULL) {
         path = host_spec->cgroup_parent;
     } else if (default_cgroup_parent != NULL) {
@@ -213,7 +213,7 @@ out:
 static int make_annotations_oom_score_adj(const oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
-    char tmp_str[LCRD_NUMSTRLEN64 + 1] = { 0 };
+    char tmp_str[ISULAD_NUMSTRLEN64 + 1] = { 0 };
 
     // oom_score_adj default value is 0, So there is no need to explicitly set this value
     if (host_spec->oom_score_adj != 0) {
@@ -237,7 +237,7 @@ out:
 static int make_annotations_files_limit(const oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
-    char tmp_str[LCRD_NUMSTRLEN64 + 1] = { 0 };
+    char tmp_str[ISULAD_NUMSTRLEN64 + 1] = { 0 };
 
     // Not supported in oci runtime-spec, add 'files.limit' to annotations
     if (host_spec->files_limit != 0) {
@@ -326,7 +326,7 @@ out:
     return ret;
 }
 
-/* default_spec returns default oci spec used by lcrd. */
+/* default_spec returns default oci spec used by isulad. */
 oci_runtime_spec *default_spec(bool system_container)
 {
     const char *oci_file = OCICONFIG_PATH;
@@ -340,7 +340,7 @@ oci_runtime_spec *default_spec(bool system_container)
     oci_spec = oci_runtime_spec_parse_file(oci_file, NULL, &err);
     if (oci_spec == NULL) {
         ERROR("Failed to parse OCI specification file \"%s\", error message: %s", oci_file, err);
-        lcrd_set_error_message("Can not read the default /etc/default/lcrd/config.json file: %s", err);
+        isulad_set_error_message("Can not read the default /etc/default/isulad/config.json file: %s", err);
         goto out;
     }
 
@@ -1129,7 +1129,7 @@ static int merge_conf_ulimits(oci_runtime_spec *oci_spec, const host_config *hos
     if (host_spec->ulimits != NULL && host_spec->ulimits_len != 0) {
         if (host_spec->ulimits_len > LIST_SIZE_MAX) {
             ERROR("Too many ulimits to add, the limit is %d", LIST_SIZE_MAX);
-            lcrd_set_error_message("Too many ulimits to add, the limit is %d", LIST_SIZE_MAX);
+            isulad_set_error_message("Too many ulimits to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
         }
@@ -1152,7 +1152,7 @@ static int merge_conf_hugetlbs(oci_runtime_spec *oci_spec, const host_config *ho
     if (host_spec->hugetlbs_len != 0 && host_spec->hugetlbs != NULL) {
         if (host_spec->hugetlbs_len > LIST_SIZE_MAX) {
             ERROR("Too many hugetlbs to add, the limit is %d", LIST_SIZE_MAX);
-            lcrd_set_error_message("Too many hugetlbs to add, the limit is %d", LIST_SIZE_MAX);
+            isulad_set_error_message("Too many hugetlbs to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
         }
@@ -1257,7 +1257,7 @@ static int replace_entrypoint_cmds_from_spec(const oci_runtime_spec *oci_spec, c
 {
     if (oci_spec->process->args_len == 0) {
         ERROR("No command specified");
-        lcrd_set_error_message("No command specified");
+        isulad_set_error_message("No command specified");
         return -1;
     }
     return dup_array_of_strings((const char **)(oci_spec->process->args), oci_spec->process->args_len,
@@ -1286,7 +1286,7 @@ static int merge_conf_args(oci_runtime_spec *oci_spec, container_custom_config *
 
     if (argslen > LIST_SIZE_MAX) {
         ERROR("Too many commands to add, the limit is %d", LIST_SIZE_MAX);
-        lcrd_set_error_message("Too many commands to add, the limit is %d", LIST_SIZE_MAX);
+        isulad_set_error_message("Too many commands to add, the limit is %d", LIST_SIZE_MAX);
         return -1;
     }
 
@@ -1766,14 +1766,14 @@ static int add_native_umask(const oci_runtime_spec *container)
         if (strcmp(container->annotations->keys[i], ANNOTATION_UMAKE_KEY) == 0) {
             if (!is_valid_umask_value(container->annotations->values[i])) {
                 ERROR("native.umask option %s not supported", container->annotations->values[i]);
-                lcrd_set_error_message("native.umask option %s not supported", container->annotations->values[i]);
+                isulad_set_error_message("native.umask option %s not supported", container->annotations->values[i]);
                 ret = -1;
             }
             goto out;
         }
     }
 
-    umask = conf_get_lcrd_native_umask();
+    umask = conf_get_isulad_native_umask();
     if (umask == NULL) {
         ERROR("Failed to get default native umask");
         ret = -1;
@@ -1843,7 +1843,7 @@ oci_runtime_spec *read_oci_config(const char *rootpath, const char *name)
     ociconfig = oci_runtime_spec_parse_file(filename, NULL, &err);
     if (ociconfig == NULL) {
         ERROR("Failed to parse oci config file:%s", err);
-        lcrd_set_error_message("Parse oci config file failed:%s", err);
+        isulad_set_error_message("Parse oci config file failed:%s", err);
         goto out;
     }
 out:

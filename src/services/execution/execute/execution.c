@@ -32,7 +32,7 @@
 #include "log.h"
 #include "engine.h"
 #include "console.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "config.h"
 #include "image.h"
 #include "execution.h"
@@ -53,6 +53,7 @@
 #include "utils.h"
 #include "error.h"
 
+
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
 {
     int ret = 0;
@@ -68,14 +69,14 @@ static int filter_by_label(const container_t *cont, const container_get_id_reque
     if (cont->common_config->config == NULL || cont->common_config->config->labels == NULL || \
         cont->common_config->config->labels->len == 0) {
         ERROR("No such container: %s", request->id_or_name);
-        lcrd_set_error_message("No such container: %s", request->id_or_name);
+        isulad_set_error_message("No such container: %s", request->id_or_name);
         ret = -1;
         goto out;
     }
     p_equal = strchr(request->label, '=');
     if (p_equal == NULL) {
         ERROR("Invalid label: %s", request->label);
-        lcrd_set_error_message("Invalid label: %s", request->label);
+        isulad_set_error_message("Invalid label: %s", request->label);
         ret = -1;
         goto out;
     }
@@ -91,7 +92,7 @@ static int filter_by_label(const container_t *cont, const container_get_id_reque
     }
     ret = -1;
     ERROR("No such container: %s", request->id_or_name);
-    lcrd_set_error_message("No such container: %s", request->id_or_name);
+    isulad_set_error_message("No such container: %s", request->id_or_name);
 
 out:
     return ret;
@@ -104,8 +105,8 @@ static void pack_get_id_response(container_get_id_response *response, const char
     }
 
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -119,7 +120,7 @@ static void pack_get_id_response(container_get_id_response *response, const char
 static int container_get_id_cb(const container_get_id_request *request, container_get_id_response **response)
 {
     char *id = NULL;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     container_t *cont = NULL;
 
     DAEMON_CLEAR_ERRMSG();
@@ -131,27 +132,27 @@ static int container_get_id_cb(const container_get_id_request *request, containe
     *response = util_common_calloc_s(sizeof(container_get_id_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
     if (!util_valid_container_id_or_name(request->id_or_name)) {
         ERROR("Invalid container name: %s", request->id_or_name ? request->id_or_name : "");
-        lcrd_set_error_message("Invalid container name: %s", request->id_or_name ? request->id_or_name : "");
-        cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("Invalid container name: %s", request->id_or_name ? request->id_or_name : "");
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     cont = containers_store_get(request->id_or_name);
     if (cont == NULL) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         ERROR("No such container: %s", request->id_or_name);
-        lcrd_set_error_message("No such container: %s", request->id_or_name);
+        isulad_set_error_message("No such container: %s", request->id_or_name);
         goto pack_response;
     }
 
     if (filter_by_label(cont, request) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -161,7 +162,7 @@ pack_response:
     pack_get_id_response(*response, id, cc);
 
     container_unref(cont);
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint32_t signal)
@@ -289,7 +290,7 @@ static int start_request_check(const container_start_request *h)
 
     if (!util_valid_container_id_or_name(h->id)) {
         ERROR("Invalid container name %s", h->id);
-        lcrd_set_error_message("Invalid container name %s", h->id);
+        isulad_set_error_message("Invalid container name %s", h->id);
         ret = -1;
         goto out;
     }
@@ -379,7 +380,7 @@ static int chmod_runtime_bundle_permission(const char *runtime)
         goto error_out;
     }
 
-    root_dir = conf_get_lcrd_rootdir();
+    root_dir = conf_get_isulad_rootdir();
     if (root_dir == NULL) {
         ret = -1;
         goto error_out;
@@ -713,7 +714,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
 
     if (reset_rm && !reset_restart_manager(cont, true)) {
         ERROR("Failed to reset restart manager");
-        lcrd_set_error_message("Failed to reset restart manager");
+        isulad_set_error_message("Failed to reset restart manager");
         ret = -1;
         goto out;
     }
@@ -843,20 +844,20 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
 
     if (is_paused(cont->state)) {
         ERROR("Cannot start a paused container, try unpause instead");
-        lcrd_set_error_message("Cannot start a paused container, try unpause instead.");
+        isulad_set_error_message("Cannot start a paused container, try unpause instead.");
         ret = -1;
         goto out;
     }
 
     if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be started.");
-        lcrd_set_error_message("Container is marked for removal and cannot be started.");
+        isulad_set_error_message("Container is marked for removal and cannot be started.");
         ret = -1;
         goto out;
     }
 
     if (gc_is_gc_progress(cont->common_config->id)) {
-        lcrd_set_error_message("You cannot start container %s in garbage collector progress.", cont->common_config->id);
+        isulad_set_error_message("You cannot start container %s in garbage collector progress.", cont->common_config->id);
         ERROR("You cannot start container %s in garbage collector progress.", cont->common_config->id);
         ret = -1;
         goto out;
@@ -881,8 +882,8 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
     }
 
 set_stopped:
-    container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
-    util_contain_errmsg(g_lcrd_errmsg, &exit_code);
+    container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
+    util_contain_errmsg(g_isulad_errmsg, &exit_code);
     state_set_stopped(cont->state, exit_code);
     container_wait_stop_cond_broadcast(cont);
     if (!save_after_auto_remove(cont)) {
@@ -935,8 +936,8 @@ static void pack_start_response(container_start_response *response, uint32_t cc,
     }
 
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -953,7 +954,7 @@ static int container_start_prepare(container_t *cont, const container_start_requ
 
     if (container_to_disk_locking(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
-        lcrd_set_error_message("Failed to save container \"%s\" to disk", id);
+        isulad_set_error_message("Failed to save container \"%s\" to disk", id);
         return -1;
     }
 
@@ -968,7 +969,7 @@ static int container_start_cb(const container_start_request *request, container_
                               int stdinfd, struct io_write_wrapper *stdout_handler,
                               struct io_write_wrapper *stderr_handler)
 {
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
     char *fifos[3] = { NULL, NULL, NULL };
     char *fifopath = NULL;
@@ -984,20 +985,20 @@ static int container_start_cb(const container_start_request *request, container_
     *response = util_common_calloc_s(sizeof(container_start_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
     if (start_request_check(request)) {
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto pack_response;
     }
 
     cont = containers_store_get(request->id);
     if (cont == NULL) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         ERROR("No such container:%s", request->id);
-        lcrd_set_error_message("No such container:%s", request->id);
+        isulad_set_error_message("No such container:%s", request->id);
         goto pack_response;
     }
 
@@ -1014,12 +1015,12 @@ static int container_start_cb(const container_start_request *request, container_
     }
 
     if (container_start_prepare(cont, request, stdinfd, stdout_handler, stderr_handler, &fifopath, fifos) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     if (start_container(cont, (const char **)fifos, true) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -1038,7 +1039,7 @@ pack_response:
     }
     free_log_prefix();
     malloc_trim(0);
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 static int kill_with_signal(container_t *cont, uint32_t signal)
@@ -1102,8 +1103,8 @@ static int force_kill(container_t *cont)
         if (ret != 0) {
             ERROR("Container stuck for 90 seconds and failed to kill the monitor of container, "
                   "please check the config");
-            lcrd_set_error_message("Container stuck for 90 seconds "
-                                   "and failed to kill the monitor of container, please check configuration files");
+            isulad_set_error_message("Container stuck for 90 seconds "
+                                     "and failed to kill the monitor of container, please check configuration files");
             goto out;
         }
         ret = container_wait_stop(cont, -1);
@@ -1128,7 +1129,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
 
     if (is_paused(cont->state)) {
         ERROR("Container %s is paused. Unpause the container before stopping or killing", id);
-        lcrd_set_error_message("Container %s is paused. Unpause the container before stopping or killing", id);
+        isulad_set_error_message("Container %s is paused. Unpause the container before stopping or killing", id);
         ret = -1;
         goto out;
     }
@@ -1181,7 +1182,7 @@ static int restart_container(container_t *cont)
 
     if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be started.");
-        lcrd_set_error_message("Container is marked for removal and cannot be started.");
+        isulad_set_error_message("Container is marked for removal and cannot be started.");
         goto out;
     }
 
@@ -1211,14 +1212,14 @@ out:
 static uint32_t stop_and_start(container_t *cont, int timeout)
 {
     int ret = 0;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     const char *console_fifos[3] = { NULL, NULL, NULL };
     const char *id = cont->common_config->id;
 
     ret = stop_container(cont, timeout, false, true);
     if (ret != 0) {
-        cc = LCRD_ERR_EXEC;
-        container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
+        cc = ISULAD_ERR_EXEC;
+        container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
         goto out;
     }
 
@@ -1226,13 +1227,13 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     state_set_starting(cont->state);
     if (container_to_disk_locking(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
-        cc = LCRD_ERR_EXEC;
-        lcrd_set_error_message("Failed to save container \"%s\" to disk", id);
+        cc = ISULAD_ERR_EXEC;
+        isulad_set_error_message("Failed to save container \"%s\" to disk", id);
         goto out;
     }
 
     if (verify_container_settings_start(cont->root_path, id)) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto out;
     }
     if (is_running(cont->state)) {
@@ -1241,7 +1242,7 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     }
 
     if (start_container(cont, console_fifos, true) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto out;
     }
 out:
@@ -1255,8 +1256,8 @@ static void pack_restart_response(container_restart_response *response, uint32_t
         return;
     }
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -1270,21 +1271,21 @@ static uint32_t do_restart_container(container_t *cont, int timeout)
 
     ret = restart_container(cont);
     if (ret == -1) {
-        container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
-        return LCRD_ERR_EXEC;
+        container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
+        return ISULAD_ERR_EXEC;
     } else if (ret == -2) {
         /* runtime don't implement restart, use stop and start */
         return stop_and_start(cont, timeout);
     }
 
-    return LCRD_SUCCESS;
+    return ISULAD_SUCCESS;
 }
 
 static int container_restart_cb(const container_restart_request *request,
                                 container_restart_response **response)
 {
     int timeout = 0;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     char *name = NULL;
     char *id = NULL;
     container_t *cont = NULL;
@@ -1299,7 +1300,7 @@ static int container_restart_cb(const container_restart_request *request,
     *response = util_common_calloc_s(sizeof(container_restart_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
@@ -1307,17 +1308,17 @@ static int container_restart_cb(const container_restart_request *request,
     timeout = request->timeout;
 
     if (!util_valid_container_id_or_name(name)) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         ERROR("Invalid container name %s", name);
-        lcrd_set_error_message("Invalid container name %s", name);
+        isulad_set_error_message("Invalid container name %s", name);
         goto pack_response;
     }
 
     cont = containers_store_get(name);
     if (cont == NULL) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         ERROR("No such container: %s", name);
-        lcrd_set_error_message("No such container:%s", name);
+        isulad_set_error_message("No such container:%s", name);
         goto pack_response;
     }
 
@@ -1328,14 +1329,14 @@ static int container_restart_cb(const container_restart_request *request,
     EVENT("Event: {Object: %s, Type: restarting}", id);
 
     if (gc_is_gc_progress(id)) {
-        lcrd_set_error_message("You cannot restart container %s in garbage collector progress.", id);
+        isulad_set_error_message("You cannot restart container %s in garbage collector progress.", id);
         ERROR("You cannot restart container %s in garbage collector progress.", id);
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     cc = do_restart_container(cont, timeout);
-    if (cc != LCRD_SUCCESS) {
+    if (cc != ISULAD_SUCCESS) {
         goto pack_response;
     }
 
@@ -1344,7 +1345,7 @@ pack_response:
     pack_restart_response(*response, cc, id);
     container_unref(cont);
     free_log_prefix();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 static void pack_stop_response(container_stop_response *response, uint32_t cc, const char *id)
@@ -1353,8 +1354,8 @@ static void pack_stop_response(container_stop_response *response, uint32_t cc, c
         return;
     }
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -1369,7 +1370,7 @@ static int container_stop_cb(const container_stop_request *request,
     bool force = false;
     char *name = NULL;
     char *id = NULL;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     container_t *cont = NULL;
 
     DAEMON_CLEAR_ERRMSG();
@@ -1381,7 +1382,7 @@ static int container_stop_cb(const container_stop_request *request,
     *response = util_common_calloc_s(sizeof(container_stop_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
@@ -1391,22 +1392,22 @@ static int container_stop_cb(const container_stop_request *request,
 
     if (name == NULL) {
         ERROR("Stop: receive NULL id");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto pack_response;
     }
 
     if (!util_valid_container_id_or_name(name)) {
         ERROR("Invalid container name %s", name);
-        lcrd_set_error_message("Invalid container name %s", name);
-        cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("Invalid container name %s", name);
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     cont = containers_store_get(name);
     if (cont == NULL) {
         ERROR("No such container:%s", name);
-        lcrd_set_error_message("No such container:%s", name);
-        cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("No such container:%s", name);
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -1416,15 +1417,15 @@ static int container_stop_cb(const container_stop_request *request,
     EVENT("Event: {Object: %s, Type: Stopping}", id);
 
     if (gc_is_gc_progress(id)) {
-        lcrd_set_error_message("You cannot stop container %s in garbage collector progress.", id);
+        isulad_set_error_message("You cannot stop container %s in garbage collector progress.", id);
         ERROR("You cannot stop container %s in garbage collector progress.", id);
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     if (stop_container(cont, timeout, force, false)) {
-        cc = LCRD_ERR_EXEC;
-        container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
+        cc = ISULAD_ERR_EXEC;
+        container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
         goto pack_response;
     }
 
@@ -1434,7 +1435,7 @@ pack_response:
     pack_stop_response(*response, cc, id);
     container_unref(cont);
     free_log_prefix();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 static int kill_container(container_t *cont, uint32_t signal)
@@ -1448,7 +1449,7 @@ static int kill_container(container_t *cont, uint32_t signal)
 
     if (!is_running(cont->state)) {
         ERROR("Cannot kill container: Container %s is not running", id);
-        lcrd_set_error_message("Cannot kill container: Container %s is not running", id);
+        isulad_set_error_message("Cannot kill container: Container %s is not running", id);
         ret = -1;
         goto out;
     }
@@ -1475,8 +1476,8 @@ static void pack_kill_response(container_kill_response *response, uint32_t cc, c
         return;
     }
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -1491,7 +1492,7 @@ static int container_kill_cb(const container_kill_request *request,
     char *name = NULL;
     char *id = NULL;
     uint32_t signal = 0;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     container_t *cont = NULL;
 
     DAEMON_CLEAR_ERRMSG();
@@ -1504,7 +1505,7 @@ static int container_kill_cb(const container_kill_request *request,
     *response = util_common_calloc_s(sizeof(container_kill_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
@@ -1513,29 +1514,29 @@ static int container_kill_cb(const container_kill_request *request,
 
     if (name == NULL) {
         ERROR("Kill: receive NULL id");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto pack_response;
     }
 
     if (!util_valid_container_id_or_name(name)) {
-        lcrd_set_error_message("Invalid container name %s", name);
+        isulad_set_error_message("Invalid container name %s", name);
         ERROR("Invalid container name %s", name);
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     if (!util_check_signal_valid((int)signal)) {
-        lcrd_set_error_message("Not supported signal %d", signal);
+        isulad_set_error_message("Not supported signal %d", signal);
         ERROR("Not supported signal %d", signal);
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     cont = containers_store_get(name);
     if (cont == NULL) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         ERROR("No such container:%s", name);
-        lcrd_set_error_message("No such container:%s", name);
+        isulad_set_error_message("No such container:%s", name);
         goto pack_response;
     }
 
@@ -1546,16 +1547,16 @@ static int container_kill_cb(const container_kill_request *request,
 
 
     if (gc_is_gc_progress(id)) {
-        lcrd_set_error_message("You cannot kill container %s in garbage collector progress.", id);
+        isulad_set_error_message("You cannot kill container %s in garbage collector progress.", id);
         ERROR("You cannot kill container %s in garbage collector progress.", id);
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     ret = kill_container(cont, signal);
     if (ret != 0) {
-        cc = LCRD_ERR_EXEC;
-        container_state_set_error(cont->state, (const char *)g_lcrd_errmsg);
+        cc = ISULAD_ERR_EXEC;
+        container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
         goto pack_response;
     }
 
@@ -1565,7 +1566,7 @@ pack_response:
     pack_kill_response(*response, cc, id);
     container_unref(cont);
     free_log_prefix();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 static int do_runtime_rm_helper(const char *id, const char *runtime, const char *rootpath)
@@ -1615,7 +1616,7 @@ static int do_cleanup_container_resources(container_t *cont)
     (void)container_to_disk(cont);
 
     if (gc_is_gc_progress(id)) {
-        lcrd_set_error_message("You cannot remove container %s in garbage collector progress.", id);
+        isulad_set_error_message("You cannot remove container %s in garbage collector progress.", id);
         ERROR("You cannot remove container %s in garbage collector progress.", id);
         ret = -1;
         goto out;
@@ -1681,7 +1682,7 @@ int set_container_to_removal(const container_t *cont)
 
     bool removal_progress = state_set_removal_in_progress(cont->state);
     if (removal_progress) {
-        lcrd_set_error_message("Container:%s was already in removal progress", id);
+        isulad_set_error_message("Container:%s was already in removal progress", id);
         ERROR("Container:%s was already in removal progress", id);
         ret = -1;
         goto out;
@@ -1706,14 +1707,14 @@ int cleanup_container(container_t *cont, bool force)
     if (is_running(cont->state)) {
         if (!force) {
             if (is_paused(cont->state)) {
-                lcrd_set_error_message("You cannot remove a paused container %s. "
-                                       "Unpause and then stop the container before "
-                                       "attempting removal or force remove", id);
+                isulad_set_error_message("You cannot remove a paused container %s. "
+                                         "Unpause and then stop the container before "
+                                         "attempting removal or force remove", id);
                 ERROR("You cannot remove a paused container %s. Unpause and then stop the container before "
                       "attempting removal or force remove", id);
             } else {
-                lcrd_set_error_message("You cannot remove a running container %s. "
-                                       "Stop the container before attempting removal or use -f", id);
+                isulad_set_error_message("You cannot remove a running container %s. "
+                                         "Stop the container before attempting removal or use -f", id);
                 ERROR("You cannot remove a running container %s."
                       " Stop the container before attempting removal or use -f", id);
             }
@@ -1722,7 +1723,7 @@ int cleanup_container(container_t *cont, bool force)
         }
         ret = stop_container(cont, 3, force, false);
         if (ret != 0) {
-            lcrd_append_error_message("Could not stop running container %s, cannot remove. ", id);
+            isulad_append_error_message("Could not stop running container %s, cannot remove. ", id);
             ERROR("Could not stop running container %s, cannot remove", id);
             ret = -1;
             goto reset_removal_progress;
@@ -1750,8 +1751,8 @@ static void pack_delete_response(container_delete_response *response, uint32_t c
         return;
     }
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -1763,7 +1764,7 @@ static int container_delete_cb(const container_delete_request *request,
                                container_delete_response **response)
 {
     bool force = false;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     char *name = NULL;
     char *id = NULL;
     container_t *cont = NULL;
@@ -1777,7 +1778,7 @@ static int container_delete_cb(const container_delete_request *request,
     *response = util_common_calloc_s(sizeof(container_delete_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
@@ -1786,16 +1787,16 @@ static int container_delete_cb(const container_delete_request *request,
 
     if (!util_valid_container_id_or_name(name)) {
         ERROR("Invalid container name %s", name);
-        lcrd_set_error_message("Invalid container name %s", name);
-        cc = LCRD_ERR_INPUT;
+        isulad_set_error_message("Invalid container name %s", name);
+        cc = ISULAD_ERR_INPUT;
         goto pack_response;
     }
 
     cont = containers_store_get(name);
     if (cont == NULL) {
         ERROR("No such container:%s", name);
-        lcrd_set_error_message("No such container:%s", name);
-        cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("No such container:%s", name);
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -1809,12 +1810,12 @@ static int container_delete_cb(const container_delete_request *request,
     container_unlock(cont);
     if (nret != 0) {
         ERROR("Failed to set container %s state to removal", id);
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     if (cleanup_container(cont, force)) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -1824,7 +1825,7 @@ pack_response:
     pack_delete_response(*response, cc, id);
     container_unref(cont);
     free_log_prefix();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 void container_callback_init(service_container_callback_t *cb)
