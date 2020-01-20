@@ -463,8 +463,8 @@ void free_isula_storage_status_response(struct isula_storage_status_response *pt
     if (ptr == NULL) {
         return;
     }
-    free(ptr->backing_fs);
-    ptr->backing_fs = NULL;
+    free(ptr->status);
+    ptr->status = NULL;
     free(ptr->errmsg);
     ptr->errmsg = NULL;
     free(ptr);

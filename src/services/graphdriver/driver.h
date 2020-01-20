@@ -41,8 +41,7 @@ struct graphdriver {
 
 struct graphdriver_status {
     char *backing_fs;
-    bool supports_d_type;
-    bool native_overlay_diff;
+    char *status;
 };
 
 struct graphdriver *graphdriver_init(const char *name, char **storage_opts, size_t storage_opts_len);

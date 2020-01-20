@@ -24,7 +24,6 @@
 extern "C" {
 #endif
 
-int pack_storage_status_response(const char *stdout_buffer, im_storage_status_response *resp);
 char *oci_normalize_image_name(const char *name);
 
 bool oci_detect(const char *image_name);

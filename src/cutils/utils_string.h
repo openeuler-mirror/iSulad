@@ -35,6 +35,8 @@ char *strings_to_upper(const char *str);
 
 int util_parse_byte_size_string(const char *s, int64_t *converted);
 
+int util_parse_percent_string(const char *s, long *converted);
+
 // Breaks src_str into an array of string according to _sep,
 // note that two or more contiguous delimiter bytes  is considered to be a single delimiter
 char **util_string_split(const char *src_str, char _sep);

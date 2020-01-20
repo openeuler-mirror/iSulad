@@ -26,6 +26,31 @@ const char g_cmd_info_usage[] = "info";
 
 struct client_arguments g_cmd_info_args = {};
 
+static void print_with_space(const char *info)
+{
+    size_t i = 0;
+    size_t size = 0;
+    bool print_space = true;
+
+    if (info == NULL) {
+        return;
+    }
+
+    size = strlen(info);
+    for (i = 0; i < size; i++) {
+        if (print_space) {
+            printf(" ");
+            print_space = false;
+        }
+        if (info[i] == '\n') {
+            print_space = true;
+        }
+        printf("%c", info[i]);
+    }
+
+    return;
+}
+
 static void client_info_server(const struct isula_info_response *response)
 {
     printf("Containers: %u\n", (unsigned int)(response->containers_num));
@@ -35,6 +60,12 @@ static void client_info_server(const struct isula_info_response *response)
     printf("Images: %u\n", (unsigned int)(response->images_num));
     if (response->version != NULL) {
         printf("Server Version: %s\n", response->version);
+    }
+    if (response->driver_name != NULL) {
+        printf("Storage Driver: %s\n", response->driver_name);
+    }
+    if (response->driver_status != NULL) {
+        print_with_space(response->driver_status);
     }
     if (response->logging_driver != NULL) {
         printf("Logging Driver: %s\n", response->logging_driver);

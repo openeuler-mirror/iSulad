@@ -110,6 +110,10 @@ int ContainerServiceImpl::info_response_to_grpc(const host_info_response *respon
         return -1;
     }
 
+    if (pack_driver_info_to_grpc(response, gresponse)) {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -1109,4 +1113,20 @@ int ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *resp
     return 0;
 }
 
+int ContainerServiceImpl::pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
+        return 0;
+    }
 
+    if (response->driver_name != nullptr) {
+        gresponse->set_driver_name(response->driver_name);
+    }
+
+    if (response->driver_status != nullptr) {
+        gresponse->set_driver_status(response->driver_status);
+    }
+
+    return 0;
+}

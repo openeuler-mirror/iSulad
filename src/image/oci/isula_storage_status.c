@@ -20,11 +20,58 @@
 #include "utils.h"
 #include "log.h"
 
-static void pack_im_response(const struct isula_storage_status_response *iresp, im_storage_status_response *resp)
+// format: [status xx: val]
+static int get_graphdriver_status_line_value(const char *line, char **start, char **end)
 {
-    resp->backing_fs = util_strdup_s(iresp->backing_fs);
-    resp->supports_d_type = iresp->supports_d_type;
-    resp->native_overlay_diff = iresp->native_overlay_diff;
+    char *pstart = NULL;
+    char *pend = NULL;
+
+    pstart = strchr(line, ':');
+    if (pstart == NULL) {
+        ERROR("Invalid output: %s", line);
+        return -1;
+    }
+    pstart++;
+    if (*pstart != ' ') {
+        ERROR("Invalid output: %s", line);
+        return -1;
+    }
+    pstart++;
+
+    pend = strchr(pstart, '\n');
+    if (pend == NULL) {
+        ERROR("Invalid output: %s", pstart);
+        return -1;
+    }
+    *pend++ = '\0';
+
+    *start = pstart;
+    *end = pend;
+    return 0;
+}
+
+static int pack_im_response(const struct isula_storage_status_response *iresp, im_storage_status_response *resp)
+{
+    char *pstart = NULL;
+    char *pend = NULL;
+
+    if (iresp->status == NULL) {
+        ERROR("Storage status response status NULL");
+        isulad_set_error_message("Storage status response NULL");
+        return -1;
+    }
+
+    resp->status = util_strdup_s(iresp->status);
+
+    // Backing Filesystem: extfs
+    if (get_graphdriver_status_line_value(iresp->status, &pstart, &pend) != 0) {
+        ERROR("Get backing filesystem from status failed. status:%s", iresp->status);
+        isulad_set_error_message("Get backing filesystem from status failed");
+        return -1;
+    }
+    resp->backing_fs = util_strdup_s(pstart);
+
+    return 0;
 }
 
 int isula_do_storage_status(im_storage_status_response *resp)
@@ -71,7 +118,10 @@ int isula_do_storage_status(im_storage_status_response *resp)
         ret = -1;
         goto out;
     }
-    pack_im_response(iresp, resp);
+    ret = pack_im_response(iresp, resp);
+    if (ret != 0) {
+        goto out;
+    }
 
 out:
     free_isula_storage_status_response(iresp);
