@@ -17,7 +17,7 @@ yum install -y iSulad
 ### Run
 We provide `systemd` service to start `iSulad`
 ```sh
-systemd start isulad # run the server with systemd command
+systemctl start isulad # run the server with systemd command
 ```
 
 You can use direct command to start `iSulad` server：
