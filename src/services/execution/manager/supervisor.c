@@ -21,7 +21,7 @@
 #include "utils.h"
 #include "supervisor.h"
 #include "mainloop.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "collector.h"
 #include "execution.h"
 #include "containers_gc.h"
@@ -187,7 +187,7 @@ retry:
         }
     }
 
-    (void)lcrd_monitor_send_event(name, STOPPED, (int)pid, data->exit_code);
+    (void)isulad_monitor_send_event(name, STOPPED, (int)pid, data->exit_code);
 
     supervisor_handler_data_free(data);
 

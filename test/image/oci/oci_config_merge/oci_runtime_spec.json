@@ -7,7 +7,7 @@
         "log.console.file": "none",
         "log.console.filerotate": "7",
         "log.console.filesize": "1MB",
-        "rootfs.mount": "/var/lib/lcrd/mnt/rootfs",
+        "rootfs.mount": "/var/lib/isulad/mnt/rootfs",
         "native.umask": "secure"
     },
     "hostname": "localhost",
@@ -91,7 +91,7 @@
             "type": "mqueue"
         },
         {
-            "source": "/var/lib/lcrd/engines/lcr/ad6c3f33518ed7e17a6d889a1327aa386f8b869927e2540821fb02310f567310/hostname",
+            "source": "/var/lib/isulad/engines/lcr/ad6c3f33518ed7e17a6d889a1327aa386f8b869927e2540821fb02310f567310/hostname",
             "destination": "/etc/hostname",
             "options": [
                 "rbind",
@@ -100,7 +100,7 @@
             "type": "bind"
         },
         {
-            "source": "/var/lib/lcrd/engines/lcr/ad6c3f33518ed7e17a6d889a1327aa386f8b869927e2540821fb02310f567310/resolv.conf",
+            "source": "/var/lib/isulad/engines/lcr/ad6c3f33518ed7e17a6d889a1327aa386f8b869927e2540821fb02310f567310/resolv.conf",
             "destination": "/etc/resolv.conf",
             "options": [
                 "rbind",
@@ -109,7 +109,7 @@
             "type": "bind"
         },
         {
-            "source": "/var/lib/lcrd/engines/lcr/ad6c3f33518ed7e17a6d889a1327aa386f8b869927e2540821fb02310f567310/hosts",
+            "source": "/var/lib/isulad/engines/lcr/ad6c3f33518ed7e17a6d889a1327aa386f8b869927e2540821fb02310f567310/hosts",
             "destination": "/etc/hosts",
             "options": [
                 "rbind",
@@ -119,7 +119,7 @@
         }
     ],
     "root": {
-        "path": "/var/lib/lcrd/storage/overlay/40c51530fc1b4610f7f56633ef78fc5e4ad1a6f14cad59d5a1d012ff800c4289/merged"
+        "path": "/var/lib/isulad/storage/overlay/40c51530fc1b4610f7f56633ef78fc5e4ad1a6f14cad59d5a1d012ff800c4289/merged"
     },
     "process": {
         "args": [

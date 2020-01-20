@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container path function definition
  ******************************************************************************/
-#ifndef __LCRD_PATH_H_
-#define __LCRD_PATH_H_
+#ifndef __ISULAD_PATH_H_
+#define __ISULAD_PATH_H_
 
 #ifdef __cplusplus
 extern "C" {

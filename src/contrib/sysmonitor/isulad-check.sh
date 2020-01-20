@@ -16,8 +16,8 @@
 source /etc/sysconfig/iSulad
 
 #健康检查文件
-healthcheck_file="/var/run/lcrd/isulad_healcheck_status"
-createfile_time="/var/run/lcrd/isulad_healcheck_ctime"
+healthcheck_file="/var/run/isulad/isulad_healcheck_status"
+createfile_time="/var/run/isulad/isulad_healcheck_ctime"
 
 #健康检查超时时间
 declare -i timeout_time=900
@@ -29,13 +29,13 @@ declare -i status_change_time=930
 function status_check() {
     pid=$1
     if [ $? -ne 0 ];then
-        echo "cat /var/run/lcrd.pid failed!"
+        echo "cat /var/run/isulad.pid failed!"
         return 1
     fi
 
     cat /proc/${pid}/status >> /dev/null 2>&1
     if [ $? -ne 0 ];then
-        echo "/var/run/lcrd.pid exitst while process not exists!"
+        echo "/var/run/isulad.pid exitst while process not exists!"
         return 1
     fi
 
@@ -57,7 +57,7 @@ function basic_check()
         sleep 2
         date_start=$(date +%s)
 
-        tmp_id=`cat /var/run/lcrd.pid`
+        tmp_id=`cat /var/run/isulad.pid`
         status_check $tmp_id
         check_daemon=$?
 
@@ -109,7 +109,7 @@ function health_check() {
 
     while [ $i -lt ${timeout_time} ]
     do
-        timeout -s 9 1 lcrc version $SYSMONITOR_OPTIONS
+        timeout -s 9 1 isula version $SYSMONITOR_OPTIONS
         ret=$?
         if [ $ret -eq 0 ];then
             echo "success">${healthcheck_file}

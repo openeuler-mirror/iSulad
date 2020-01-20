@@ -407,7 +407,7 @@ static int pack_container_config_labels(container_config_v2_common_config *confi
         }
         if (custom_spec->labels->len > LIST_SIZE_MAX) {
             ERROR("Labels list is too long, the limit is %d", LIST_SIZE_MAX);
-            lcrd_set_error_message("Labels list is too long, the limit is %d", LIST_SIZE_MAX);
+            isulad_set_error_message("Labels list is too long, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
         }
@@ -713,7 +713,7 @@ static int save_json_config_file(const char *id, const char *rootpath,
     fd = util_open(filename, O_CREAT | O_TRUNC | O_CLOEXEC | O_WRONLY, CONFIG_FILE_MODE);
     if (fd == -1) {
         ERROR("Create file %s failed: %s", filename, strerror(errno));
-        lcrd_set_error_message("Create file '%s' failed: %s", filename, strerror(errno));
+        isulad_set_error_message("Create file '%s' failed: %s", filename, strerror(errno));
         ret = -1;
         goto out;
     }
@@ -721,7 +721,7 @@ static int save_json_config_file(const char *id, const char *rootpath,
     len = util_write_nointr(fd, json_data, strlen(json_data));
     if (len < 0 || ((size_t)len) != strlen(json_data)) {
         ERROR("Write file %s failed: %s", filename, strerror(errno));
-        lcrd_set_error_message("Write file '%s' failed: %s", filename, strerror(errno));
+        isulad_set_error_message("Write file '%s' failed: %s", filename, strerror(errno));
         ret = -1;
     }
     close(fd);

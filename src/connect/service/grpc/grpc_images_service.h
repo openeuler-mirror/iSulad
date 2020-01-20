@@ -62,7 +62,7 @@ private:
     int response_to_grpc(const T1 *response, T2 *gresponse)
     {
         if (response == nullptr) {
-            gresponse->set_cc(LCRD_ERR_MEMOUT);
+            gresponse->set_cc(ISULAD_ERR_MEMOUT);
             return 0;
         }
         gresponse->set_cc(response->cc);

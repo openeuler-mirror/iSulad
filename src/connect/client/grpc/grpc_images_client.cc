@@ -29,8 +29,8 @@ using grpc::ClientWriter;
 using grpc::Status;
 using google::protobuf::Timestamp;
 
-class ImagesList : public ClientBase<ImagesService, ImagesService::Stub, lcrc_list_images_request, ListImagesRequest,
-    lcrc_list_images_response, ListImagesResponse> {
+class ImagesList : public ClientBase<ImagesService, ImagesService::Stub, isula_list_images_request, ListImagesRequest,
+    isula_list_images_response, ListImagesResponse> {
 public:
     explicit ImagesList(void *args)
         : ClientBase(args)
@@ -38,7 +38,7 @@ public:
     }
     ~ImagesList() = default;
 
-    int request_to_grpc(const lcrc_list_images_request *request, ListImagesRequest *grequest) override
+    int request_to_grpc(const isula_list_images_request *request, ListImagesRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -53,9 +53,9 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ListImagesResponse *gresponse, lcrc_list_images_response *response) override
+    int response_from_grpc(ListImagesResponse *gresponse, isula_list_images_response *response) override
     {
-        struct lcrc_image_info *images_list = nullptr;
+        struct isula_image_info *images_list = nullptr;
         int i;
         int num = gresponse->images_size();
 
@@ -71,15 +71,15 @@ public:
 
         response->images_num = 0;
 
-        if ((size_t)num > SIZE_MAX / sizeof(struct lcrc_image_info)) {
+        if ((size_t)num > SIZE_MAX / sizeof(struct isula_image_info)) {
             ERROR("Too many images");
-            response->cc = LCRD_ERR_MEMOUT;
+            response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
-        images_list = (struct lcrc_image_info *)util_common_calloc_s(sizeof(struct lcrc_image_info) * (size_t)num);
+        images_list = (struct isula_image_info *)util_common_calloc_s(sizeof(struct isula_image_info) * (size_t)num);
         if (images_list == nullptr) {
             ERROR("out of memory");
-            response->cc = LCRD_ERR_MEMOUT;
+            response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
 
@@ -117,8 +117,8 @@ public:
     }
 };
 
-class ImagesDelete : public ClientBase<ImagesService, ImagesService::Stub, lcrc_rmi_request, DeleteImageRequest,
-    lcrc_rmi_response, DeleteImageResponse> {
+class ImagesDelete : public ClientBase<ImagesService, ImagesService::Stub, isula_rmi_request, DeleteImageRequest,
+    isula_rmi_response, DeleteImageResponse> {
 public:
     explicit ImagesDelete(void *args)
         : ClientBase(args)
@@ -126,7 +126,7 @@ public:
     }
     ~ImagesDelete() = default;
 
-    int request_to_grpc(const lcrc_rmi_request *request, DeleteImageRequest *grequest) override
+    int request_to_grpc(const isula_rmi_request *request, DeleteImageRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -140,7 +140,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(DeleteImageResponse *gresponse, lcrc_rmi_response *response) override
+    int response_from_grpc(DeleteImageResponse *gresponse, isula_rmi_response *response) override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -167,8 +167,8 @@ public:
     }
 };
 
-class ImagesLoad : public ClientBase<ImagesService, ImagesService::Stub, lcrc_load_request, LoadImageRequest,
-    lcrc_load_response, LoadImageResponse> {
+class ImagesLoad : public ClientBase<ImagesService, ImagesService::Stub, isula_load_request, LoadImageRequest,
+    isula_load_response, LoadImageResponse> {
 public:
     explicit ImagesLoad(void *args)
         : ClientBase(args)
@@ -176,7 +176,7 @@ public:
     }
     ~ImagesLoad() = default;
 
-    int request_to_grpc(const lcrc_load_request *request, LoadImageRequest *grequest) override
+    int request_to_grpc(const isula_load_request *request, LoadImageRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -195,7 +195,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(LoadImageResponse *gresponse, lcrc_load_response *response) override
+    int response_from_grpc(LoadImageResponse *gresponse, isula_load_response *response) override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -227,8 +227,8 @@ public:
 };
 
 class ImagesPull : public
-    ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub, lcrc_pull_request,
-    runtime::v1alpha2::PullImageRequest, lcrc_pull_response, runtime::v1alpha2::PullImageResponse> {
+    ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub, isula_pull_request,
+    runtime::v1alpha2::PullImageRequest, isula_pull_response, runtime::v1alpha2::PullImageResponse> {
 public:
     explicit ImagesPull(void *args)
         : ClientBase(args)
@@ -236,7 +236,7 @@ public:
     }
     ~ImagesPull() = default;
 
-    int request_to_grpc(const lcrc_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest) override
+    int request_to_grpc(const isula_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -254,7 +254,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, lcrc_pull_response *response) override
+    int response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, isula_pull_response *response) override
     {
         if (!gresponse->image_ref().empty()) {
             response->image_ref = util_strdup_s(gresponse->image_ref().c_str());
@@ -280,8 +280,8 @@ public:
     }
 };
 
-class ImageInspect : public ClientBase<ImagesService, ImagesService::Stub, lcrc_inspect_request, InspectImageRequest,
-    lcrc_inspect_response, InspectImageResponse> {
+class ImageInspect : public ClientBase<ImagesService, ImagesService::Stub, isula_inspect_request, InspectImageRequest,
+    isula_inspect_response, InspectImageResponse> {
 public:
     explicit ImageInspect(void *args)
         : ClientBase(args)
@@ -289,7 +289,7 @@ public:
     }
     ~ImageInspect() = default;
 
-    int request_to_grpc(const lcrc_inspect_request *request, InspectImageRequest *grequest) override
+    int request_to_grpc(const isula_inspect_request *request, InspectImageRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -304,7 +304,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(InspectImageResponse *gresponse, lcrc_inspect_response *response) override
+    int response_from_grpc(InspectImageResponse *gresponse, isula_inspect_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->imagejson().empty()) {
@@ -334,13 +334,13 @@ public:
 };
 
 class Login : public
-    ClientBase<ImagesService, ImagesService::Stub, lcrc_login_request, LoginRequest,
-    lcrc_login_response, LoginResponse> {
+    ClientBase<ImagesService, ImagesService::Stub, isula_login_request, LoginRequest,
+    isula_login_response, LoginResponse> {
 public:
     explicit Login(void *args) : ClientBase(args) {}
     ~Login() = default;
 
-    int request_to_grpc(const lcrc_login_request *request, LoginRequest *grequest) override
+    int request_to_grpc(const isula_login_request *request, LoginRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -362,7 +362,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(LoginResponse *gresponse, lcrc_login_response *response) override
+    int response_from_grpc(LoginResponse *gresponse, isula_login_response *response) override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -402,13 +402,13 @@ public:
 };
 
 class Logout : public
-    ClientBase<ImagesService, ImagesService::Stub, lcrc_logout_request, LogoutRequest,
-    lcrc_logout_response, LogoutResponse> {
+    ClientBase<ImagesService, ImagesService::Stub, isula_logout_request, LogoutRequest,
+    isula_logout_response, LogoutResponse> {
 public:
     explicit Logout(void *args) : ClientBase(args) {}
     ~Logout() = default;
 
-    int request_to_grpc(const lcrc_logout_request *request, LogoutRequest *grequest) override
+    int request_to_grpc(const isula_logout_request *request, LogoutRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -424,7 +424,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(LogoutResponse *gresponse, lcrc_logout_response *response) override
+    int response_from_grpc(LogoutResponse *gresponse, isula_logout_response *response) override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -455,19 +455,19 @@ public:
     }
 };
 
-int grpc_images_client_ops_init(lcrc_connect_ops *ops)
+int grpc_images_client_ops_init(isula_connect_ops *ops)
 {
     if (ops == nullptr) {
         return -1;
     }
 
-    ops->image.list = container_func<lcrc_list_images_request, lcrc_list_images_response, ImagesList>;
-    ops->image.remove = container_func<lcrc_rmi_request, lcrc_rmi_response, ImagesDelete>;
-    ops->image.load = container_func<lcrc_load_request, lcrc_load_response, ImagesLoad>;
-    ops->image.pull = container_func<lcrc_pull_request, lcrc_pull_response, ImagesPull>;
-    ops->image.inspect = container_func<lcrc_inspect_request, lcrc_inspect_response, ImageInspect>;
-    ops->image.login = container_func<lcrc_login_request, lcrc_login_response, Login>;
-    ops->image.logout = container_func<lcrc_logout_request, lcrc_logout_response, Logout>;
+    ops->image.list = container_func<isula_list_images_request, isula_list_images_response, ImagesList>;
+    ops->image.remove = container_func<isula_rmi_request, isula_rmi_response, ImagesDelete>;
+    ops->image.load = container_func<isula_load_request, isula_load_response, ImagesLoad>;
+    ops->image.pull = container_func<isula_pull_request, isula_pull_response, ImagesPull>;
+    ops->image.inspect = container_func<isula_inspect_request, isula_inspect_response, ImageInspect>;
+    ops->image.login = container_func<isula_login_request, isula_login_response, Login>;
+    ops->image.logout = container_func<isula_logout_request, isula_logout_response, Logout>;
 
     return 0;
 }

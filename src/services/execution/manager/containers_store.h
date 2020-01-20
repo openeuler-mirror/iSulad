@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide containers store definition
  ******************************************************************************/
-#ifndef __LCRD_MEMORY_STORE_H__
-#define __LCRD_MEMORY_STORE_H__
+#ifndef __ISULAD_MEMORY_STORE_H__
+#define __ISULAD_MEMORY_STORE_H__
 
 #include "container_unix.h"
 #include "map.h"
@@ -53,5 +53,5 @@ bool name_index_rename(const char *new_name, const char *old_name, const char *i
 }
 #endif
 
-#endif /* __LCRD_MEMORY_STORE_H__ */
+#endif /* __ISULAD_MEMORY_STORE_H__ */
 

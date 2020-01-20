@@ -27,11 +27,11 @@
 #include "image_cb.h"
 #include "utils.h"
 #include "error.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
 #include "image.h"
 #include "engine.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "mediatype.h"
 #include "filters.h"
 #ifdef ENABLE_OCI_IMAGE
@@ -80,7 +80,7 @@ static int image_load_cb(const image_load_image_request *request,
                          image_load_image_response **response)
 {
     int ret = -1;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
 
     if (request == NULL || response == NULL) {
         ERROR("Invalid input arguments");
@@ -91,13 +91,13 @@ static int image_load_cb(const image_load_image_request *request,
     *response = util_common_calloc_s(sizeof(image_load_image_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto out;
     }
 
     if (request->file == NULL || request->type == NULL) {
         ERROR("input arguments error");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto out;
     }
 
@@ -118,8 +118,8 @@ out:
 
     if (*response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
     }
@@ -161,11 +161,11 @@ static int login_cb(const image_login_request *request,
                     image_login_response **response)
 {
     int ret = -1;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
 
     if (request == NULL || response == NULL) {
         ERROR("Invalid input arguments");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto out;
     }
 
@@ -173,14 +173,14 @@ static int login_cb(const image_login_request *request,
     *response = util_common_calloc_s(sizeof(image_login_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto out;
     }
 
     if (request->username == NULL || request->password == NULL ||
         request->type == NULL || request->server == NULL) {
         ERROR("input arguments error");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto out;
     }
 
@@ -198,8 +198,8 @@ out:
 
     if (response != NULL && *response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
     }
@@ -239,11 +239,11 @@ static int logout_cb(const image_logout_request *request,
                      image_logout_response **response)
 {
     int ret = -1;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
 
     if (request == NULL || response == NULL) {
         ERROR("Invalid input arguments");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto out;
     }
 
@@ -251,13 +251,13 @@ static int logout_cb(const image_logout_request *request,
     *response = util_common_calloc_s(sizeof(image_logout_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto out;
     }
 
     if (request->type == NULL || request->server == NULL) {
         ERROR("input arguments error");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto out;
     }
 
@@ -275,8 +275,8 @@ out:
 
     if (response != NULL && *response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
     }
@@ -310,10 +310,10 @@ static int delete_image_info(const char *image_ref, bool force)
     if (ret != 0) {
         if (im_response != NULL && im_response->errmsg != NULL) {
             ERROR("Remove image %s failed:%s", image_ref, im_response->errmsg);
-            lcrd_try_set_error_message("Remove image %s failed:%s", image_ref, im_response->errmsg);
+            isulad_try_set_error_message("Remove image %s failed:%s", image_ref, im_response->errmsg);
         } else {
             ERROR("Remove image %s failed", image_ref);
-            lcrd_try_set_error_message("Remove image %s failed", image_ref);
+            isulad_try_set_error_message("Remove image %s failed", image_ref);
         }
         ret = -1;
         goto out;
@@ -332,7 +332,7 @@ static int image_remove_cb(const image_delete_image_request *request,
 {
     int ret = -1;
     char *image_ref = NULL;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -346,15 +346,15 @@ static int image_remove_cb(const image_delete_image_request *request,
     *response = util_common_calloc_s(sizeof(image_delete_image_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto out;
     }
 
     if (!util_valid_image_name(image_ref)) {
         ERROR("Invalid image name %s", image_ref);
-        cc = LCRD_ERR_INPUT;
-        lcrd_try_set_error_message("Invalid image name:%s",
-                                   image_ref);
+        cc = ISULAD_ERR_INPUT;
+        isulad_try_set_error_message("Invalid image name:%s",
+                                     image_ref);
         goto out;
     }
 
@@ -362,7 +362,7 @@ static int image_remove_cb(const image_delete_image_request *request,
 
     ret = delete_image_info(image_ref, request->force);
     if (ret != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
@@ -371,8 +371,8 @@ static int image_remove_cb(const image_delete_image_request *request,
 out:
     if (*response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
     }
@@ -484,7 +484,7 @@ static int trans_im_list_images(const im_list_response *im_list, image_list_imag
     if (images_display_num >= (SIZE_MAX / sizeof(image_image *))) {
         INFO("Too many images, out of memory");
         ret = -1;
-        lcrd_try_set_error_message("Get too many images info, out of memory");
+        isulad_try_set_error_message("Get too many images info, out of memory");
         goto out;
     }
 
@@ -577,14 +577,14 @@ static int do_add_filters(const char *filter_key, const json_map_string_bool *fi
         if (strcmp(filter_key, "reference") == 0) {
             if (util_wildcard_to_regex(filter_value->keys[j], &value) != 0) {
                 ERROR("Failed to convert wildcard to regex: %s", filter_value->keys[j]);
-                lcrd_set_error_message("Failed to convert wildcard to regex: %s", filter_value->keys[j]);
+                isulad_set_error_message("Failed to convert wildcard to regex: %s", filter_value->keys[j]);
                 ret = -1;
                 goto out;
             }
         } else if (strcmp(filter_key, "dangling") == 0) {
             if (!is_valid_dangling_string(filter_value->keys[j])) {
                 ERROR("Unrecognised filter value for status: %s", filter_value->keys[j]);
-                lcrd_set_error_message("Unrecognised filter value for status: %s", filter_value->keys[j]);
+                isulad_set_error_message("Unrecognised filter value for status: %s", filter_value->keys[j]);
                 ret = -1;
                 goto out;
             }
@@ -592,7 +592,7 @@ static int do_add_filters(const char *filter_key, const json_map_string_bool *fi
         } else if (strcmp(filter_key, "before") == 0 || strcmp(filter_key, "since") == 0) {
             if (!is_valid_image(filter_value->keys[j])) {
                 ERROR("No such image: %s", filter_value->keys[j]);
-                lcrd_set_error_message("No such image: %s", filter_value->keys[j]);
+                isulad_set_error_message("No such image: %s", filter_value->keys[j]);
                 ret = -1;
                 goto out;
             }
@@ -643,7 +643,7 @@ static im_list_request *fold_filter(const image_list_images_request *request)
                                     sizeof(g_accepted_image_filter_tags) / sizeof(char *),
                                     request->filters->keys[i])) {
             ERROR("Invalid filter '%s'", request->filters->keys[i]);
-            lcrd_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
+            isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
             goto error_out;
         }
 
@@ -664,7 +664,7 @@ int image_list_cb(const image_list_images_request *request,
                   image_list_images_response **response)
 {
     int ret = -1;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     im_list_request *im_request = NULL;
     im_list_response *im_response = NULL;
 
@@ -678,14 +678,14 @@ int image_list_cb(const image_list_images_request *request,
     *response = util_common_calloc_s(sizeof(image_list_images_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto out;
     }
 
     im_request = fold_filter(request);
     if (im_request == NULL) {
         ERROR("Failed to fold filters");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
@@ -693,19 +693,19 @@ int image_list_cb(const image_list_images_request *request,
     if (ret) {
         if (im_response != NULL && im_response->errmsg != NULL) {
             ERROR("List images failed:%s", im_response->errmsg);
-            lcrd_try_set_error_message("List images failed:%s", im_response->errmsg);
+            isulad_try_set_error_message("List images failed:%s", im_response->errmsg);
         } else {
             ERROR("List images failed");
-            lcrd_try_set_error_message("List images failed");
+            isulad_try_set_error_message("List images failed");
         }
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
     ret = trans_im_list_images(im_response, *response);
     if (ret) {
         ERROR("Failed to translate list images info");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
@@ -716,8 +716,8 @@ out:
 
     if (*response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
     }
@@ -749,10 +749,10 @@ static int inspect_image_with_valid_name(const char *image_ref, char **inspected
     if (ret != 0) {
         if (im_response != NULL && im_response->errmsg != NULL) {
             ERROR("Inspect image %s failed:%s", image_ref, im_response->errmsg);
-            lcrd_try_set_error_message("Inspect image %s failed:%s", image_ref, im_response->errmsg);
+            isulad_try_set_error_message("Inspect image %s failed:%s", image_ref, im_response->errmsg);
         } else {
             ERROR("Inspect image %s failed", image_ref);
-            lcrd_try_set_error_message("Inspect image %s failed", image_ref);
+            isulad_try_set_error_message("Inspect image %s failed", image_ref);
         }
         ret = -1;
         goto out;
@@ -795,14 +795,14 @@ static int inspect_image_helper(const char *image_ref, char **inspected_json)
 
     if (!util_valid_image_name(image_ref)) {
         ERROR("Inspect invalid name %s", image_ref);
-        lcrd_set_error_message("Inspect invalid name %s", image_ref);
+        isulad_set_error_message("Inspect invalid name %s", image_ref);
         ret = -1;
         goto out;
     }
 
     if (inspect_image_with_valid_name(image_ref, inspected_json) != 0) {
         ERROR("No such image or container or accelerator:%s", image_ref);
-        lcrd_set_error_message("No such image or container or accelerator:%s", image_ref);
+        isulad_set_error_message("No such image or container or accelerator:%s", image_ref);
         ret = -1;
         goto out;
     }
@@ -815,7 +815,7 @@ static int image_inspect_cb(const image_inspect_request *request, image_inspect_
 {
     char *name = NULL;
     char *image_json = NULL;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -827,7 +827,7 @@ static int image_inspect_cb(const image_inspect_request *request, image_inspect_
     *response = util_common_calloc_s(sizeof(image_inspect_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
@@ -835,7 +835,7 @@ static int image_inspect_cb(const image_inspect_request *request, image_inspect_
 
     if (name == NULL) {
         ERROR("receive NULL Request id");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto pack_response;
     }
 
@@ -844,14 +844,14 @@ static int image_inspect_cb(const image_inspect_request *request, image_inspect_
     INFO("Inspect :%s", name);
 
     if (inspect_image_helper(name, &image_json) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
     }
 
 pack_response:
     if (*response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
         (*response)->image_json = image_json;
@@ -859,7 +859,7 @@ pack_response:
 
     free_log_prefix();
     malloc_trim(0);
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 /* image callback init */

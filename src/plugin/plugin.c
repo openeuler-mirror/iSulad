@@ -27,7 +27,7 @@
 #include "utils.h"
 #include "parser.h"
 #include "buffer.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "specs.h"
 #include "specs_extend.h"
 #include "rest_common.h"
@@ -47,7 +47,7 @@
 #include "plugin_event_post_remove_request.h"
 #include "plugin_event_post_remove_response.h"
 
-#define plugin_socket_path "/run/lcrd/plugins"
+#define plugin_socket_path "/run/isulad/plugins"
 #define plugin_socket_file_regex ".*.sock$"
 
 // suffix is '.sock'
@@ -120,9 +120,9 @@ static char *join_enable_plugins(const char *plugins)
         return util_strdup_s(plugins);
     }
 
-    tmp = util_string_append(LCRD_ENABLE_PLUGINS_SEPERATOR, default_plugins);
+    tmp = util_string_append(ISULAD_ENABLE_PLUGINS_SEPERATOR, default_plugins);
     if (tmp == NULL) {
-        ERROR("string append failed %s -> %s", LCRD_ENABLE_PLUGINS_SEPERATOR, default_plugins);
+        ERROR("string append failed %s -> %s", ISULAD_ENABLE_PLUGINS_SEPERATOR, default_plugins);
         goto out;
     }
 
@@ -150,14 +150,14 @@ static char *get_uniq_enable_plugins(const oci_runtime_spec *oci)
         goto failed;
     }
 
-    names = oci_container_get_env(oci, LCRD_ENABLE_PLUGINS);
+    names = oci_container_get_env(oci, ISULAD_ENABLE_PLUGINS);
     full = join_enable_plugins(names);
     if (full == NULL) {
         INFO("no plugins enabled");
         goto failed;
     }
 
-    raw = util_string_split(full, LCRD_ENABLE_PLUGINS_SEPERATOR_CHAR);
+    raw = util_string_split(full, ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR);
     if (raw == NULL) {
         ERROR("split plugin name failed");
         goto failed;
@@ -175,13 +175,13 @@ static char *get_uniq_enable_plugins(const oci_runtime_spec *oci)
         }
     }
 
-    names = util_string_join(LCRD_ENABLE_PLUGINS_SEPERATOR, (const char **)arr, util_array_len((const char **)arr));
+    names = util_string_join(ISULAD_ENABLE_PLUGINS_SEPERATOR, (const char **)arr, util_array_len((const char **)arr));
     if (names == NULL) {
         ERROR("join uniq plugin name failed");
         goto failed;
     }
 
-    full = util_string_append(names, LCRD_ENABLE_PLUGINS "=");
+    full = util_string_append(names, ISULAD_ENABLE_PLUGINS "=");
     if (full == NULL) {
         ERROR("init uniq enable plugins env failed");
         goto failed;
@@ -223,7 +223,7 @@ static int set_env_enable_plugins(oci_runtime_spec *oci)
         goto failed;
     }
 
-    if (util_env_insert(&oci->process->env, &oci->process->env_len, LCRD_ENABLE_PLUGINS, strlen(LCRD_ENABLE_PLUGINS),
+    if (util_env_insert(&oci->process->env, &oci->process->env_len, ISULAD_ENABLE_PLUGINS, strlen(ISULAD_ENABLE_PLUGINS),
                         uniq)) {
         WARN("set env %s failed", uniq);
     }
@@ -247,7 +247,7 @@ static char **get_enable_plugins(const char *plugins)
         return dst;
     }
 
-    arr = util_string_split(plugins, LCRD_ENABLE_PLUGINS_SEPERATOR_CHAR);
+    arr = util_string_split(plugins, ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR);
     if (arr == NULL) {
         ERROR("Out of memory");
         goto out;
@@ -297,7 +297,7 @@ static int get_plugin_dir(char *plugin_dir)
         return -1;
     }
 
-    statedir = conf_get_lcrd_statedir();
+    statedir = conf_get_isulad_statedir();
     if (statedir == NULL) {
         ERROR("failed get statedir");
         return -1;
@@ -951,7 +951,7 @@ static bool plugin_useby_container(const plugin_t *plugin, const container_t *co
         return ok;
     }
 
-    plugin_names = container_get_env_nolock(cont, LCRD_ENABLE_PLUGINS);
+    plugin_names = container_get_env_nolock(cont, ISULAD_ENABLE_PLUGINS);
     pnames = get_enable_plugins(plugin_names);
 
     for (i = 0; i < util_array_len((const char **)pnames); i++) {
@@ -987,7 +987,7 @@ static int unpack_init_response(const struct parsed_http_message *message, void 
 
     ret = check_err(resp->err_code, resp->err_message);
     if (ret != 0) {
-        lcrd_set_error_message(resp->err_message);
+        isulad_set_error_message(resp->err_message);
         ERROR("init response error massge (%d)%s", resp->err_code, resp->err_message);
         goto out;
     }
@@ -1380,7 +1380,7 @@ static int plugin_event_handle_dispath(const container_t *cont, uint64_t pe)
         return 0;
     }
 
-    plugins = container_get_env_nolock(cont, LCRD_ENABLE_PLUGINS);
+    plugins = container_get_env_nolock(cont, ISULAD_ENABLE_PLUGINS);
     ret = plugin_event_handle_dispath_impl(cid, plugins, pe);
     free(cid);
     free(plugins);
@@ -1410,7 +1410,7 @@ static int unpack_event_pre_create_response(const struct parsed_http_message *me
 
     ret = check_err(resp->err_code, resp->err_message);
     if (ret) {
-        lcrd_set_error_message(resp->err_message);
+        isulad_set_error_message(resp->err_message);
         ret = -1;
         ERROR("pre-create response error massge (%d)%s", resp->err_code, resp->err_message);
         goto out;
@@ -1533,7 +1533,7 @@ int plugin_event_container_pre_create(const char *cid, oci_runtime_spec *ocic)
     }
 
     set_env_enable_plugins(ocic);
-    plugin_names = oci_container_get_env(ocic, LCRD_ENABLE_PLUGINS);
+    plugin_names = oci_container_get_env(ocic, ISULAD_ENABLE_PLUGINS);
     pnames = get_enable_plugins(plugin_names);
     if (pnames == NULL) {
         goto out;
@@ -1602,7 +1602,7 @@ static int unpack_event_pre_start_response(const struct parsed_http_message *mes
 
     ret = check_err(resp->err_code, resp->err_message);
     if (ret != 0) {
-        lcrd_set_error_message(resp->err_message);
+        isulad_set_error_message(resp->err_message);
         ERROR("pre-start response error massge (%d)%s", resp->err_code, resp->err_message);
         goto out;
     }
@@ -1699,7 +1699,7 @@ static int unpack_event_post_stop_response(const struct parsed_http_message *mes
 
     ret = check_err(resp->err_code, resp->err_message);
     if (ret != 0) {
-        lcrd_set_error_message(resp->err_message);
+        isulad_set_error_message(resp->err_message);
         ERROR("post-stop response error massge (%d)%s", resp->err_code, resp->err_message);
         goto out;
     }
@@ -1797,7 +1797,7 @@ static int unpack_event_post_remove_response(const struct parsed_http_message *m
 
     ret = check_err(resp->err_code, resp->err_message);
     if (ret != 0) {
-        lcrd_set_error_message(resp->err_message);
+        isulad_set_error_message(resp->err_message);
         ERROR("post-remove response error massge (%d)%s", resp->err_code, resp->err_message);
         goto out;
     }
@@ -1895,7 +1895,7 @@ int plugin_event_container_post_remove2(const char *cid, const oci_runtime_spec 
         return 0;
     }
 
-    plugins = oci_container_get_env(oci, LCRD_ENABLE_PLUGINS);
+    plugins = oci_container_get_env(oci, ISULAD_ENABLE_PLUGINS);
     cidx = util_strdup_s(cid);
     if (cidx == NULL) {
         ERROR("out of memory");

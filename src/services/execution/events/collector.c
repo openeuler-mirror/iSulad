@@ -29,8 +29,8 @@
 #include "log.h"
 #include <lcr/lcrcontainer.h>
 #include "collector.h"
-#include "lcrd_config.h"
-#include "liblcrd.h"
+#include "isulad_config.h"
+#include "libisulad.h"
 #include "containers_store.h"
 
 static struct context_lists g_context_lists;
@@ -127,7 +127,7 @@ static container_events_type_t lcrsta2Evetype(int value)
 }
 
 /* format_msg */
-static bool format_msg(struct lcrd_events_format *r, struct monitord_msg *msg)
+static bool format_msg(struct isulad_events_format *r, struct monitord_msg *msg)
 {
     bool ret = false;
     int err = 0;
@@ -176,28 +176,28 @@ static bool format_msg(struct lcrd_events_format *r, struct monitord_msg *msg)
     return ret;
 }
 
-static const char * const g_lcrd_event_strtype[] = {
+static const char * const g_isulad_event_strtype[] = {
     "EXIT",   "STOPPED", "STARTING", "RUNNING", "STOPPING", "ABORTING",   "FREEZING",
     "FROZEN", "THAWED",  "OOM",      "CREATE",  "START",    "EXEC_ADDED", "PAUSED1",
 };
 
-/* lcrd event sta2str */
-static const char *lcrd_event_sta2str(container_events_type_t sta)
+/* isulad event sta2str */
+static const char *isulad_event_sta2str(container_events_type_t sta)
 {
     if (sta > EVENTS_TYPE_PAUSED1) {
         return NULL;
     }
-    return g_lcrd_event_strtype[sta];
+    return g_isulad_event_strtype[sta];
 }
 
-/* lcrd monitor fifo send */
-static void lcrd_monitor_fifo_send(const struct monitord_msg *msg, const char *statedir)
+/* isulad monitor fifo send */
+static void isulad_monitor_fifo_send(const struct monitord_msg *msg, const char *statedir)
 {
     int fd = -1;
     ssize_t ret = 0;
     char *fifo_path = NULL;
 
-    fifo_path = lcrd_monitor_fifo_name(statedir);
+    fifo_path = isulad_monitor_fifo_name(statedir);
     if (fifo_path == NULL) {
         return;
     }
@@ -231,8 +231,8 @@ out:
     }
 }
 
-/* lcrd monitor send event */
-int lcrd_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code)
+/* isulad monitor send event */
+int isulad_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code)
 {
     int ret = 0;
     char *statedir = NULL;
@@ -249,9 +249,9 @@ int lcrd_monitor_send_event(const char *name, runtime_state_t state, int pid, in
         goto out;
     }
 
-    statedir = conf_get_lcrd_statedir();
+    statedir = conf_get_isulad_statedir();
     if (statedir == NULL) {
-        CRIT("Can not get lcrd root path");
+        CRIT("Can not get isulad root path");
         ret = -1;
         goto out;
     }
@@ -265,7 +265,7 @@ int lcrd_monitor_send_event(const char *name, runtime_state_t state, int pid, in
         msg.exit_code = exit_code;
     }
 
-    lcrd_monitor_fifo_send(&msg, statedir);
+    isulad_monitor_fifo_send(&msg, statedir);
 
 out:
     free(statedir);
@@ -273,7 +273,7 @@ out:
 }
 
 /* write events log */
-static int write_events_log(const struct lcrd_events_format *events)
+static int write_events_log(const struct isulad_events_format *events)
 {
 #define PID_PREFIX ", Pid: "
 #define EXIT_CODE_PREFIX ", ExitCode: "
@@ -306,7 +306,7 @@ static int write_events_log(const struct lcrd_events_format *events)
     }
 
     EVENT("Event: {Object: %s, Type: %s%s%s}", events->id,
-          (events->has_type ? lcrd_event_sta2str((container_events_type_t)events->type) : "-"),
+          (events->has_type ? isulad_event_sta2str((container_events_type_t)events->type) : "-"),
           (events->has_pid ? pid_str : ""), (events->has_exit_status ? exit_status_str : ""));
 
 out:
@@ -316,7 +316,7 @@ out:
 }
 
 /* events copy */
-static void event_copy(const struct lcrd_events_format *src, struct lcrd_events_format *dest)
+static void event_copy(const struct isulad_events_format *src, struct isulad_events_format *dest)
 {
     if (src == NULL || dest == NULL) {
         return;
@@ -337,9 +337,9 @@ static void event_copy(const struct lcrd_events_format *src, struct lcrd_events_
 }
 
 /* events append */
-static void events_append(const struct lcrd_events_format *event)
+static void events_append(const struct isulad_events_format *event)
 {
-    struct lcrd_events_format *tmpevent = NULL;
+    struct isulad_events_format *tmpevent = NULL;
     struct linked_list *newnode = NULL;
     struct linked_list *firstnode = NULL;
 
@@ -355,7 +355,7 @@ static void events_append(const struct lcrd_events_format *event)
             goto unlock;
         }
 
-        tmpevent = util_common_calloc_s(sizeof(struct lcrd_events_format));
+        tmpevent = util_common_calloc_s(sizeof(struct isulad_events_format));
         if (tmpevent == NULL) {
             CRIT("Memory allocation error.");
             free(newnode);
@@ -372,7 +372,7 @@ static void events_append(const struct lcrd_events_format *event)
         if (firstnode != NULL) {
             linked_list_del(firstnode);
 
-            tmpevent = (struct lcrd_events_format *)firstnode->elem;
+            tmpevent = (struct isulad_events_format *)firstnode->elem;
             event_copy(event, tmpevent);
 
             linked_list_add_tail(&g_events_buffer.event_list, firstnode);
@@ -386,7 +386,7 @@ unlock:
     }
 }
 
-static int do_write_events(const stream_func_wrapper *stream, struct lcrd_events_format *event)
+static int do_write_events(const stream_func_wrapper *stream, struct isulad_events_format *event)
 {
     int ret = 0;
 
@@ -404,7 +404,7 @@ out:
     return ret;
 }
 
-static int check_since_time(const types_timestamp_t *since, const struct lcrd_events_format *event)
+static int check_since_time(const types_timestamp_t *since, const struct isulad_events_format *event)
 {
     if (since != NULL && (since->has_seconds || since->has_nanos)) {
         if (types_timestamp_cmp(&event->timestamp, since) < 0) {
@@ -414,7 +414,7 @@ static int check_since_time(const types_timestamp_t *since, const struct lcrd_ev
     return 0;
 }
 
-static int check_util_time(const types_timestamp_t *until, const struct lcrd_events_format *event)
+static int check_util_time(const types_timestamp_t *until, const struct isulad_events_format *event)
 {
     if (until != NULL && (until->has_seconds || until->has_nanos)) {
         if (types_timestamp_cmp(&event->timestamp, until) > 0) {
@@ -433,7 +433,7 @@ static int do_subscribe(const char *name, const types_timestamp_t *since, const 
     regmatch_t regmatch = { 0 };
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
-    struct lcrd_events_format *c_event = NULL;
+    struct isulad_events_format *c_event = NULL;
 
     if (pthread_mutex_lock(&g_events_buffer.event_mutex)) {
         WARN("Failed to lock");
@@ -441,7 +441,7 @@ static int do_subscribe(const char *name, const types_timestamp_t *since, const 
     }
 
     linked_list_for_each_safe(it, &g_events_buffer.event_list, next) {
-        c_event = (struct lcrd_events_format *)it->elem;
+        c_event = (struct isulad_events_format *)it->elem;
 
         if (check_since_time(since, c_event) != 0) {
             continue;
@@ -503,7 +503,7 @@ int events_subscribe(const char *name, const types_timestamp_t *since, const typ
 }
 
 /* events forward */
-static void events_forward(struct lcrd_events_format *r)
+static void events_forward(struct isulad_events_format *r)
 {
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
@@ -634,7 +634,7 @@ error:
 }
 
 /* post event to events hander */
-static int post_event_to_events_hander(const struct lcrd_events_format *events)
+static int post_event_to_events_hander(const struct isulad_events_format *events)
 {
     int ret = 0;
     container_t *cont = NULL;
@@ -668,7 +668,7 @@ out:
 /* events handler */
 void events_handler(struct monitord_msg *msg)
 {
-    struct lcrd_events_format events = { 0 };
+    struct isulad_events_format events = { 0 };
 
     if (msg == NULL) {
         ERROR("Invalid input arguments");
@@ -688,20 +688,20 @@ void events_handler(struct monitord_msg *msg)
     /* forward events to grpc clients */
     events_forward(&events);
 
-    /* log event into lcrd.log */
+    /* log event into isulad.log */
     (void)write_events_log(&events);
 }
 
 /* dup event */
-struct lcrd_events_format *dup_event(const struct lcrd_events_format *event)
+struct isulad_events_format *dup_event(const struct isulad_events_format *event)
 {
-    struct lcrd_events_format *out = NULL;
+    struct isulad_events_format *out = NULL;
 
     if (event == NULL || event->id == NULL) {
         return NULL;
     }
 
-    out = util_common_calloc_s(sizeof(struct lcrd_events_format));
+    out = util_common_calloc_s(sizeof(struct isulad_events_format));
     if (out == NULL) {
         return NULL;
     }
@@ -712,7 +712,7 @@ struct lcrd_events_format *dup_event(const struct lcrd_events_format *event)
 }
 
 /* free event */
-void free_event(struct lcrd_events_format *event)
+void free_event(struct isulad_events_format *event)
 {
     if (event == NULL) {
         return;

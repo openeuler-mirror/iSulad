@@ -34,7 +34,7 @@ int ContainerServiceImpl::version_response_to_grpc(const container_version_respo
                                                    VersionResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
     gresponse->set_cc(response->cc);
@@ -71,7 +71,7 @@ int ContainerServiceImpl::info_request_from_grpc(const InfoRequest *grequest, ho
 int ContainerServiceImpl::info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -150,7 +150,7 @@ int ContainerServiceImpl::create_request_from_grpc(const CreateRequest *grequest
 int ContainerServiceImpl::create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
     gresponse->set_cc(response->cc);
@@ -233,7 +233,7 @@ int ContainerServiceImpl::top_request_from_grpc(const TopRequest *grequest, cont
 int ContainerServiceImpl::top_response_to_grpc(const container_top_response *response, TopResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
     gresponse->set_cc(response->cc);
@@ -327,7 +327,7 @@ int ContainerServiceImpl::delete_request_from_grpc(const DeleteRequest *grequest
 int ContainerServiceImpl::delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
     gresponse->set_cc(response->cc);
@@ -417,7 +417,7 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
 int ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -454,7 +454,7 @@ int ContainerServiceImpl::inspect_response_to_grpc(const container_inspect_respo
                                                    InspectContainerResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -533,7 +533,7 @@ cleanup:
 int ContainerServiceImpl::list_response_to_grpc(const container_list_response *response, ListResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -612,10 +612,10 @@ int ContainerServiceImpl::resume_request_from_grpc(const ResumeRequest *grequest
 }
 
 int ContainerServiceImpl::container_rename_request_from_grpc(const RenameRequest *grequest,
-                                                             struct lcrd_container_rename_request **request)
+                                                             struct isulad_container_rename_request **request)
 {
-    struct lcrd_container_rename_request *tmpreq = (struct lcrd_container_rename_request *)util_common_calloc_s(
-                                                       sizeof(struct lcrd_container_rename_request));
+    struct isulad_container_rename_request *tmpreq = (struct isulad_container_rename_request *)util_common_calloc_s(
+                                                         sizeof(struct isulad_container_rename_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -633,11 +633,11 @@ int ContainerServiceImpl::container_rename_request_from_grpc(const RenameRequest
     return 0;
 }
 
-int ContainerServiceImpl::container_rename_response_to_grpc(const struct lcrd_container_rename_response *response,
+int ContainerServiceImpl::container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
                                                             RenameResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -653,10 +653,10 @@ int ContainerServiceImpl::container_rename_response_to_grpc(const struct lcrd_co
 }
 
 int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest *grequest,
-                                                             struct lcrd_container_resize_request **request)
+                                                             struct isulad_container_resize_request **request)
 {
-    struct lcrd_container_resize_request *tmpreq = (struct lcrd_container_resize_request *)util_common_calloc_s(
-                                                       sizeof(struct lcrd_container_resize_request));
+    struct isulad_container_resize_request *tmpreq = (struct isulad_container_resize_request *)util_common_calloc_s(
+                                                         sizeof(struct isulad_container_resize_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -678,11 +678,11 @@ int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest
     return 0;
 }
 
-int ContainerServiceImpl::container_resize_response_to_grpc(const struct lcrd_container_resize_response *response,
+int ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
                                                             ResizeResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -721,7 +721,7 @@ int ContainerServiceImpl::update_request_from_grpc(const UpdateRequest *grequest
 int ContainerServiceImpl::update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -765,7 +765,7 @@ int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest, 
 int ContainerServiceImpl::stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -815,7 +815,7 @@ int ContainerServiceImpl::wait_request_from_grpc(const WaitRequest *grequest, co
 int ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -827,10 +827,11 @@ int ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *r
     return 0;
 }
 
-int ContainerServiceImpl::events_request_from_grpc(const EventsRequest *grequest, struct lcrd_events_request **request)
+int ContainerServiceImpl::events_request_from_grpc(const EventsRequest *grequest,
+                                                   struct isulad_events_request **request)
 {
-    struct lcrd_events_request *tmpreq = (struct lcrd_events_request *)util_common_calloc_s(
-                                             sizeof(struct lcrd_events_request));
+    struct isulad_events_request *tmpreq = (struct isulad_events_request *)util_common_calloc_s(
+                                               sizeof(struct isulad_events_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -855,10 +856,10 @@ int ContainerServiceImpl::events_request_from_grpc(const EventsRequest *grequest
 }
 
 int ContainerServiceImpl::copy_from_container_request_from_grpc(
-    const CopyFromContainerRequest *grequest, struct lcrd_copy_from_container_request **request)
+    const CopyFromContainerRequest *grequest, struct isulad_copy_from_container_request **request)
 {
-    struct lcrd_copy_from_container_request *tmpreq = (struct lcrd_copy_from_container_request *)util_common_calloc_s(
-                                                          sizeof(lcrd_copy_from_container_request));
+    struct isulad_copy_from_container_request *tmpreq = (struct isulad_copy_from_container_request *)util_common_calloc_s(
+                                                            sizeof(isulad_copy_from_container_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -905,7 +906,7 @@ int ContainerServiceImpl::remote_exec_request_from_stream(ServerContext *context
 void ContainerServiceImpl::add_exec_trailing_metadata(ServerContext *context, container_exec_response *response)
 {
     if (response == nullptr) {
-        context->AddTrailingMetadata("cc", std::to_string((int)LCRD_ERR_MEMOUT));
+        context->AddTrailingMetadata("cc", std::to_string((int)ISULAD_ERR_MEMOUT));
         return;
     }
     context->AddTrailingMetadata("cc", std::to_string(response->cc));
@@ -961,7 +962,7 @@ cleanup:
 void ContainerServiceImpl::add_attach_trailing_metadata(ServerContext *context, container_attach_response *response)
 {
     if (response == nullptr) {
-        context->AddTrailingMetadata("cc", std::to_string((int)LCRD_ERR_MEMOUT));
+        context->AddTrailingMetadata("cc", std::to_string((int)ISULAD_ERR_MEMOUT));
         return;
     }
     context->AddTrailingMetadata("cc", std::to_string(response->cc));
@@ -1015,7 +1016,7 @@ cleanup:
 void ContainerServiceImpl::add_start_trailing_metadata(ServerContext *context, container_start_response *response)
 {
     if (response == nullptr) {
-        context->AddTrailingMetadata("cc", std::to_string((int)LCRD_ERR_MEMOUT));
+        context->AddTrailingMetadata("cc", std::to_string((int)ISULAD_ERR_MEMOUT));
         return;
     }
     context->AddTrailingMetadata("cc", std::to_string(response->cc));
@@ -1049,7 +1050,7 @@ int ContainerServiceImpl::export_request_from_grpc(const ExportRequest *grequest
 int ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 
@@ -1089,7 +1090,7 @@ int ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *respons
 int ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
 {
     if (response == nullptr) {
-        gresponse->set_cc(LCRD_ERR_MEMOUT);
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
         return 0;
     }
 

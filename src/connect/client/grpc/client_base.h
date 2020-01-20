@@ -93,10 +93,10 @@ public:
              status.error_code() == grpc::StatusCode::INTERNAL)) {
             response->errmsg = util_strdup_s(status.error_message().c_str());
         } else {
-            response->errmsg = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
+            response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
         }
 
-        response->cc = LCRD_ERR_EXEC;
+        response->cc = ISULAD_ERR_EXEC;
     }
 
     virtual int run(const RQ *request, RP *response)
@@ -127,12 +127,12 @@ public:
         ret = request_to_grpc(request, &req);
         if (ret != 0) {
             ERROR("Failed to translate request to grpc");
-            response->cc = LCRD_ERR_INPUT;
+            response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
 
         if (check_parameter(req)) {
-            response->cc = LCRD_ERR_INPUT;
+            response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
 
@@ -146,15 +146,15 @@ public:
         ret = response_from_grpc(&reply, response);
         if (ret != 0) {
             ERROR("Failed to transform grpc response");
-            response->cc = LCRD_ERR_EXEC;
+            response->cc = ISULAD_ERR_EXEC;
             return -1;
         }
 
-        if (response->server_errono != LCRD_SUCCESS) {
-            response->cc = LCRD_ERR_EXEC;
+        if (response->server_errono != ISULAD_SUCCESS) {
+            response->cc = ISULAD_ERR_EXEC;
         }
 
-        return (response->cc == LCRD_SUCCESS) ? 0 : -1;
+        return (response->cc == ISULAD_SUCCESS) ? 0 : -1;
     }
 
 protected:

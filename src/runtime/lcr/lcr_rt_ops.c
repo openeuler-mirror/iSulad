@@ -22,7 +22,7 @@
 #include "engine.h"
 #include "callback.h"
 #include "error.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "runtime.h"
 
 bool rt_lcr_detect(const char *runtime)
@@ -59,9 +59,9 @@ int rt_lcr_create(const char *name, const char *runtime, const rt_create_params_
         ERROR("Failed to create container");
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Create container error: %s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
-                               : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Create container error: %s",
+                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                                 : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -135,9 +135,9 @@ int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t 
     if (!engine_ops->engine_start_op(&request)) {
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Start container error: %s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
-                               : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Start container error: %s",
+                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                                 : DEF_ERR_RUNTIME_STR);
         ERROR("Start container error: %s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
               : DEF_ERR_RUNTIME_STR);
         ret = -1;
@@ -176,9 +176,9 @@ int rt_lcr_clean_resource(const char *name, const char *runtime, const rt_clean_
     if (!engine_ops->engine_clean_op(name, params->rootpath, params->logpath, params->loglevel, params->pid)) {
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_try_set_error_message("Clean resource container error;%s",
-                                   (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
-                                   : DEF_ERR_RUNTIME_STR);
+        isulad_try_set_error_message("Clean resource container error;%s",
+                                     (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                                     : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -205,7 +205,7 @@ static int remove_container_rootpath(const char *id, const char *root_path)
     if (ret != 0) {
         const char *tmp_err = (errno != 0) ? strerror(errno) : "error";
         ERROR("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
-        lcrd_set_error_message("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
+        isulad_set_error_message("Failed to delete container's root directory %s: %s", cont_root_path, tmp_err);
         ret = -1;
         goto out;
     }
@@ -229,8 +229,8 @@ int rt_lcr_rm(const char *name, const char *runtime, const rt_rm_params_t *param
     if (!engine_ops->engine_delete_op(name, params->rootpath)) {
         ret = -1;
         const char *tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Runtime delete container error: %s",
-                               (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Runtime delete container error: %s",
+                                 (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ERROR("Runtime delete container error: %s",
               (tmpmsg != NULL && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         if (tmpmsg != NULL && strstr(tmpmsg, "No such container") != NULL) {
@@ -335,9 +335,9 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
     if (!engine_ops->engine_exec_op(&request, exit_code)) {
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Exec container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
-        util_contain_errmsg(g_lcrd_errmsg, exit_code);
+        isulad_set_error_message("Exec container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
+                                 tmpmsg : DEF_ERR_RUNTIME_STR);
+        util_contain_errmsg(g_isulad_errmsg, exit_code);
         engine_ops->engine_clear_errmsg_op();
         ret = -1;
         goto out;
@@ -366,8 +366,8 @@ int rt_lcr_pause(const char *name, const char *runtime, const rt_pause_params_t 
         DEBUG("Pause container %s failed", name);
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Pause container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Pause container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
+                                 tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -394,9 +394,9 @@ int rt_lcr_resume(const char *name, const char *runtime, const rt_resume_params_
         DEBUG("Resume container %s failed", name);
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Resume container error;%s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
-                               : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Resume container error;%s",
+                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                                 : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -424,8 +424,8 @@ int rt_lcr_attach(const char *name, const char *runtime, const rt_attach_params_
         ERROR("attach failed");
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Attach container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Attach container error;%s", (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
+                                 tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -473,8 +473,8 @@ int rt_lcr_update(const char *id, const char *runtime, const rt_update_params_t 
         DEBUG("Update container %s failed", id);
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Cannot update container %s: %s", id, (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
-                               tmpmsg : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Cannot update container %s: %s", id, (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ?
+                                 tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -501,8 +501,8 @@ int rt_lcr_listpids(const char *name, const char *runtime, const rt_listpids_par
         DEBUG("Top container %s failed", name);
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Runtime top container error: %s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Runtime top container error: %s",
+                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }
@@ -529,9 +529,9 @@ int rt_lcr_resize(const char *id, const char *runtime, const rt_resize_params_t 
         DEBUG("resize container %s failed", id);
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Resize container error;%s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
-                               : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Resize container error;%s",
+                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                                 : DEF_ERR_RUNTIME_STR);
 
         ret = -1;
         goto out;
@@ -559,9 +559,9 @@ int rt_lcr_exec_resize(const char *id, const char *runtime, const rt_exec_resize
         DEBUG("exec resize container %s failed", id);
         const char *tmpmsg = NULL;
         tmpmsg = engine_ops->engine_get_errmsg_op();
-        lcrd_set_error_message("Resize container error;%s",
-                               (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
-                               : DEF_ERR_RUNTIME_STR);
+        isulad_set_error_message("Resize container error;%s",
+                                 (tmpmsg && strcmp(tmpmsg, DEF_SUCCESS_STR)) ? tmpmsg
+                                 : DEF_ERR_RUNTIME_STR);
         ret = -1;
         goto out;
     }

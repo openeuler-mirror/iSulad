@@ -15,22 +15,22 @@
 #include "error.h"
 #include "utils.h"
 
-#define LCRD_ERRMSG_GEN(n, s) { LCRD_##n, s },
-struct lcrd_strerror_tab_t {
-    lcrd_errno_t errcode;
+#define ISULAD_ERRMSG_GEN(n, s) { ISULAD_##n, s },
+struct isulad_strerror_tab_t {
+    isulad_errno_t errcode;
     const char *errmsg;
 };
-static const struct lcrd_strerror_tab_t g_lcrd_strerror_tab[] = {
-    LCRD_ERRNO_MAP(LCRD_ERRMSG_GEN)
+static const struct isulad_strerror_tab_t g_isulad_strerror_tab[] = {
+    ISULAD_ERRNO_MAP(ISULAD_ERRMSG_GEN)
 };
-#undef LCRD_ERRMSG_GEN
+#undef ISULAD_ERRMSG_GEN
 
 /* errno to error message */
-const char *errno_to_error_message(lcrd_errno_t err)
+const char *errno_to_error_message(isulad_errno_t err)
 {
-    if ((size_t)err >= sizeof(g_lcrd_strerror_tab) / sizeof(g_lcrd_strerror_tab[0])) {
-        return g_lcrd_strerror_tab[LCRD_ERR_UNKNOWN].errmsg;
+    if ((size_t)err >= sizeof(g_isulad_strerror_tab) / sizeof(g_isulad_strerror_tab[0])) {
+        return g_isulad_strerror_tab[ISULAD_ERR_UNKNOWN].errmsg;
     }
-    return g_lcrd_strerror_tab[err].errmsg;
+    return g_isulad_strerror_tab[err].errmsg;
 }
 

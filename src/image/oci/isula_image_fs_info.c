@@ -138,7 +138,7 @@ int isula_image_fs_info(im_fs_info_response *resp)
     ret = im_ops->image_fs_info(&ireq, iresp, &conf);
     if (ret != 0) {
         ERROR("Failed to get image fs info with error: %s", iresp->errmsg);
-        lcrd_set_error_message("Failed to get image fs info with error: %s", iresp->errmsg);
+        isulad_set_error_message("Failed to get image fs info with error: %s", iresp->errmsg);
         goto out;
     }
     ret = pack_im_response(iresp, resp);

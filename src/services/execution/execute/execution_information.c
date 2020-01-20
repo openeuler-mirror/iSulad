@@ -29,7 +29,7 @@
 #include "log.h"
 #include "engine.h"
 #include "console.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "config.h"
 #include "image.h"
 #include "execution.h"
@@ -48,7 +48,7 @@
 static int container_version_cb(const container_version_request *request, container_version_response **response)
 {
     char *rootpath = NULL;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -60,18 +60,18 @@ static int container_version_cb(const container_version_request *request, contai
     *response = util_common_calloc_s(sizeof(container_version_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
     (*response)->version = util_strdup_s(VERSION);
-    (*response)->git_commit = util_strdup_s(LCRD_GIT_COMMIT);
-    (*response)->build_time = util_strdup_s(LCRD_BUILD_TIME);
+    (*response)->git_commit = util_strdup_s(ISULAD_GIT_COMMIT);
+    (*response)->build_time = util_strdup_s(ISULAD_BUILD_TIME);
 
-    rootpath = conf_get_lcrd_rootdir();
+    rootpath = conf_get_isulad_rootdir();
     if (rootpath == NULL) {
         ERROR("Failed to get root directory");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
     (*response)->root_path = util_strdup_s(rootpath);
@@ -85,7 +85,7 @@ pack_response:
 
     free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 #define STOP_JSON "{\"filters\":{\"status\":{\"exited\":true}}}"
@@ -187,7 +187,7 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     int cPaused = 0;
     int cStopped = 0;
     size_t images_num = 0;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     uint64_t total_mem = 0;
     uint64_t sysmem_limit = 0;
     char *http_proxy = NULL;
@@ -197,6 +197,7 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     char *huge_page_size = NULL;
     struct utsname u;
     im_image_count_request *im_request = NULL;
+    char *rootpath = NULL;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -208,21 +209,21 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     *response = util_common_calloc_s(sizeof(host_info_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
     ret = get_container_nums(&cRunning, &cPaused, &cStopped);
     if (ret != 0) {
         ERROR("Failed to get container status info!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     im_request = util_common_calloc_s(sizeof(im_image_count_request));
     if (im_request == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 #ifdef ENABLE_OCI_IMAGE
@@ -233,21 +234,21 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     operating_system = get_operating_system();
     if (operating_system == NULL) {
         ERROR("Failed to get operating system info!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     huge_page_size = get_default_huge_page_size();
     if (huge_page_size == NULL) {
         ERROR("Failed to get system hugepage size!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     sysmem_limit = get_default_total_mem_size();
     if (sysmem_limit == 0) {
         ERROR("Failed to get total mem!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -255,28 +256,34 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
 
     if (uname(&u) != 0) {
         ERROR("Failed to get kernel info!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     ret = get_proxy_env(&http_proxy, HTTP_PROXY);
     if (ret != 0) {
         ERROR("Failed to get http proxy env!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     ret = get_proxy_env(&https_proxy, HTTPS_PROXY);
     if (ret != 0) {
         ERROR("Failed to get https proxy env!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     ret = get_proxy_env(&no_proxy, NO_PROXY);
     if (ret != 0) {
         ERROR("Failed to get no proxy env!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
+    rootpath = conf_get_isulad_rootdir();
+    if (rootpath == NULL) {
+        ERROR("Get isulad rootpath failed");
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -295,7 +302,8 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     (*response)->cgroup_driver = util_strdup_s("cgroupfs");
     (*response)->logging_driver = util_strdup_s("json-file");
     (*response)->huge_page_size = util_strdup_s(huge_page_size);
-    (*response)->isulad_root_dir = util_strdup_s(LCRD_ROOT_PATH);
+    (*response)->isulad_root_dir = rootpath;
+    rootpath = NULL;
     (*response)->total_mem = (uint32_t)total_mem;
     (*response)->http_proxy = util_strdup_s(http_proxy);
     (*response)->https_proxy = util_strdup_s(https_proxy);
@@ -305,12 +313,13 @@ pack_response:
     if (*response != NULL) {
         (*response)->cc = cc;
     }
+    free(rootpath);
     free(huge_page_size);
     free(operating_system);
     free_im_image_count_request(im_request);
     free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 int get_stime(const char *title_line)
@@ -356,7 +365,7 @@ static int parse_output_check(char **pid_s, int pid_num, int *out_num)
     int ret = 0;
 
     // be able to display thread line also when "m" option used
-    // in "lcrc top" client command
+    // in "isula top" client command
     if (strcmp(pid_s[pid_num], "-") == 0) {
     } else {
         if (util_safe_int(pid_s[pid_num], out_num) || *out_num < 0) {
@@ -597,7 +606,7 @@ static int container_top_cb_check(const container_top_request *request, containe
     *response = util_common_calloc_s(sizeof(container_top_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        *cc = LCRD_ERR_MEMOUT;
+        *cc = ISULAD_ERR_MEMOUT;
         return -1;
     }
 
@@ -605,36 +614,36 @@ static int container_top_cb_check(const container_top_request *request, containe
 
     if (name == NULL) {
         DEBUG("receive NULL Request id");
-        *cc = LCRD_ERR_INPUT;
+        *cc = ISULAD_ERR_INPUT;
         return -1;
     }
 
     if (!util_valid_container_id_or_name(name)) {
         ERROR("Invalid container name %s", name);
-        lcrd_set_error_message("Invalid container name %s", name);
-        *cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("Invalid container name %s", name);
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
     *cont = containers_store_get(name);
     if (*cont == NULL) {
         ERROR("No such container:%s", name);
-        lcrd_set_error_message("No such container:%s", name);
-        *cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("No such container:%s", name);
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
     if (!is_running((*cont)->state)) {
         ERROR("Container is not running");
-        lcrd_set_error_message("Container is is not running.");
-        *cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("Container is is not running.");
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
     if (is_restarting((*cont)->state)) {
         ERROR("Container %s is restarting, wait until the container is running.", name);
-        lcrd_set_error_message("Container %s is restarting, wait until the container is running.", name);
-        *cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("Container %s is restarting, wait until the container is running.", name);
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
@@ -689,8 +698,8 @@ static int do_top(const container_top_request *request, container_t *cont, size_
     if (!command_ret) {
         ERROR("Failed to get container ps info with error: %s",
               *stderr_buffer ? *stderr_buffer : "Failed to exec ps command");
-        lcrd_set_error_message("Failed to get container ps info with error: %s",
-                               *stderr_buffer ? *stderr_buffer : "Failed to exec ps command");
+        isulad_set_error_message("Failed to get container ps info with error: %s",
+                                 *stderr_buffer ? *stderr_buffer : "Failed to exec ps command");
         free(*stdout_buffer);
         *stdout_buffer = NULL;
         free(*stderr_buffer);
@@ -702,7 +711,7 @@ static int do_top(const container_top_request *request, container_t *cont, size_
         if (!command_ret) {
             ERROR("Failed to get container ps info with error: %s",
                   *stderr_buffer ? *stderr_buffer : "Failed to exec ps command");
-            lcrd_set_error_message("Failed to container ps info with error: %s", *stderr_buffer);
+            isulad_set_error_message("Failed to container ps info with error: %s", *stderr_buffer);
             ret = -1;
             goto out;
         }
@@ -715,7 +724,7 @@ out:
 static int container_top_cb(container_top_request *request, container_top_response **response)
 {
     size_t i = 0;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
     char *rootpath = NULL;
     char *runtime = NULL;
@@ -737,7 +746,7 @@ static int container_top_cb(container_top_request *request, container_top_respon
     }
 
     if (top_append_args(request)) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -752,29 +761,29 @@ static int container_top_cb(container_top_request *request, container_top_respon
 
     if (get_pids(id, runtime, rootpath, &pids, &pids_len, &pid_args) != 0) {
         ERROR("failed to get all pids");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     if (do_top(request, cont, pids_len, pid_args, &stdout_buffer, &stderr_buffer) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     if (parse_output(&titles, &processes, stdout_buffer, pids, pids_len)) {
         ERROR("Failed to parse output!");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
     if (util_array_len((const char **)processes) > SIZE_MAX / sizeof(char *)) {
         ERROR("invalid processe size");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
     (*response)->processes = util_common_calloc_s(util_array_len((const char **)processes) * sizeof(char *));
     if ((*response)->processes == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -801,7 +810,7 @@ pack_response:
     util_free_array(processes);
     free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 static int dup_path_and_args(const container_t *cont, char **path, char ***args, size_t *args_len)
@@ -1223,8 +1232,8 @@ static int merge_default_ulimit_with_ulimit(container_inspect *out_inspect)
     host_config_ulimits_element **rlimits = NULL;
     size_t i, j, ulimits_len;
 
-    if (conf_get_lcrd_default_ulimit(&rlimits) != 0) {
-        ERROR("Failed to get lcrd default ulimit");
+    if (conf_get_isulad_default_ulimit(&rlimits) != 0) {
+        ERROR("Failed to get isulad default ulimit");
         ret = -1;
         goto out;
     }
@@ -1313,7 +1322,7 @@ static int inspect_container_helper(const char *id, int timeout, char **containe
 
     if (!util_valid_container_id_or_name(id)) {
         ERROR("Inspect invalid name %s", id);
-        lcrd_set_error_message("Inspect invalid name %s", id);
+        isulad_set_error_message("Inspect invalid name %s", id);
         ret = -1;
         goto out;
     }
@@ -1321,14 +1330,14 @@ static int inspect_container_helper(const char *id, int timeout, char **containe
     cont = containers_store_get(id);
     if (cont == NULL) {
         ret = -1;
-        lcrd_try_set_error_message("No such image or container or accelerator:%s", id);
+        isulad_try_set_error_message("No such image or container or accelerator:%s", id);
         goto out;
     }
 
     ret = container_timedlock(cont, timeout);
     if (ret != 0) {
         ERROR("Container %s inspect failed due to trylock timeout for %ds.", id, timeout);
-        lcrd_try_set_error_message("Container %s inspect failed due to trylock timeout for %ds.", id, timeout);
+        isulad_try_set_error_message("Container %s inspect failed due to trylock timeout for %ds.", id, timeout);
         ret = -2;
         goto out;
     }
@@ -1358,7 +1367,7 @@ out:
 static int container_inspect_cb(const container_inspect_request *request, container_inspect_response **response)
 {
     int timeout = 0;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     char *name = NULL;
     char *container_json = NULL;
 
@@ -1372,7 +1381,7 @@ static int container_inspect_cb(const container_inspect_request *request, contai
     *response = util_common_calloc_s(sizeof(container_inspect_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
@@ -1381,7 +1390,7 @@ static int container_inspect_cb(const container_inspect_request *request, contai
 
     if (name == NULL) {
         ERROR("receive NULL Request id");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto pack_response;
     }
 
@@ -1390,14 +1399,14 @@ static int container_inspect_cb(const container_inspect_request *request, contai
     INFO("Inspect :%s", name);
 
     if (inspect_container_helper(name, timeout, &container_json) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
     }
 
 pack_response:
     if (*response != NULL) {
         (*response)->cc = cc;
-        if (g_lcrd_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_lcrd_errmsg);
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
             DAEMON_CLEAR_ERRMSG();
         }
         (*response)->container_json = container_json;
@@ -1405,7 +1414,7 @@ pack_response:
 
     free_log_prefix();
     malloc_trim(0);
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 static void pack_wait_response(container_wait_response *response, uint32_t cc, uint32_t exit_code)
@@ -1414,8 +1423,8 @@ static void pack_wait_response(container_wait_response *response, uint32_t cc, u
         return;
     }
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     response->exit_code = exit_code;
@@ -1425,7 +1434,7 @@ static int container_wait_cb(const container_wait_request *request, container_wa
 {
     char *name = NULL;
     char *id = NULL;
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     uint32_t exit_code = 0;
     container_t *cont = NULL;
 
@@ -1439,7 +1448,7 @@ static int container_wait_cb(const container_wait_request *request, container_wa
     *response = util_common_calloc_s(sizeof(container_wait_response));
     if (*response == NULL) {
         ERROR("Out of memory");
-        cc = LCRD_ERR_MEMOUT;
+        cc = ISULAD_ERR_MEMOUT;
         goto pack_response;
     }
 
@@ -1447,22 +1456,22 @@ static int container_wait_cb(const container_wait_request *request, container_wa
 
     if (name == NULL) {
         DEBUG("receive NULL Request id");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto pack_response;
     }
 
     if (!util_valid_container_id_or_name(name)) {
         ERROR("Invalid container name %s", name);
-        lcrd_set_error_message("Invalid container name %s", name);
-        cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("Invalid container name %s", name);
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     cont = containers_store_get(name);
     if (cont == NULL) {
         ERROR("No such container '%s'", name);
-        cc = LCRD_ERR_EXEC;
-        lcrd_try_set_error_message("No such container:%s", name);
+        cc = ISULAD_ERR_EXEC;
+        isulad_try_set_error_message("No such container:%s", name);
         goto pack_response;
     }
 
@@ -1483,31 +1492,31 @@ pack_response:
     pack_wait_response(*response, cc, exit_code);
     container_unref(cont);
     free_log_prefix();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
-static int rename_request_check(const struct lcrd_container_rename_request *request)
+static int rename_request_check(const struct isulad_container_rename_request *request)
 {
     int ret = 0;
 
     if (!util_valid_str(request->old_name) || !util_valid_str(request->new_name)) {
         ERROR("Neither old nor new names may be empty");
-        lcrd_set_error_message("Neither old nor new names may be empty");
+        isulad_set_error_message("Neither old nor new names may be empty");
         ret = -1;
         goto out;
     }
 
     if (!util_valid_container_id_or_name(request->old_name)) {
         ERROR("Invalid container old name (%s)", request->old_name);
-        lcrd_set_error_message("Invalid container old name (%s)", request->old_name);
+        isulad_set_error_message("Invalid container old name (%s)", request->old_name);
         ret = -1;
         goto out;
     }
 
     if (!util_valid_container_name(request->new_name)) {
         ERROR("Invalid container new name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", request->new_name);
-        lcrd_set_error_message("Invalid container new name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.",
-                               request->new_name);
+        isulad_set_error_message("Invalid container new name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.",
+                                 request->new_name);
         ret = -1;
         goto out;
     }
@@ -1516,11 +1525,11 @@ out:
     return ret;
 }
 
-static void pack_rename_response(struct lcrd_container_rename_response *response, const char *id, uint32_t cc)
+static void pack_rename_response(struct isulad_container_rename_response *response, const char *id, uint32_t cc)
 {
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -1552,23 +1561,23 @@ static int container_rename(container_t *cont, const char *new_name)
 
     if (strcmp(old_name, new_name) == 0) {
         ERROR("Renaming a container with the same name as its current name");
-        lcrd_set_error_message("Renaming a container with the same name as its current name");
+        isulad_set_error_message("Renaming a container with the same name as its current name");
         ret = -1;
         goto out;
     }
 
     if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
         ERROR("Can't rename container which is dead or marked for removal");
-        lcrd_set_error_message("Can't rename container which is dead or marked for removal");
+        isulad_set_error_message("Can't rename container which is dead or marked for removal");
         ret = -1;
         goto out;
     }
 
     if (!name_index_rename(new_name, old_name, id)) {
         ERROR("Name %s is in use", new_name);
-        lcrd_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
-                               "You have to remove (or rename) that container to be able to reuse that name.",
-                               new_name, new_name);
+        isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
+                                 "You have to remove (or rename) that container to be able to reuse that name.",
+                                 new_name, new_name);
         ret = -1;
         goto out;
     }
@@ -1578,7 +1587,7 @@ static int container_rename(container_t *cont, const char *new_name)
 
     if (container_to_disk(cont) != 0) {
         ERROR("Failed to save container config of %s in renaming %s progress", id, new_name);
-        lcrd_set_error_message("Failed to save container config of %s in renaming %s progress", id, new_name);
+        isulad_set_error_message("Failed to save container config of %s in renaming %s progress", id, new_name);
         ret = -1;
         goto restore;
     }
@@ -1593,10 +1602,10 @@ out:
     return ret;
 }
 
-static int container_rename_cb(const struct lcrd_container_rename_request *request,
-                               struct lcrd_container_rename_response **response)
+static int container_rename_cb(const struct isulad_container_rename_request *request,
+                               struct isulad_container_rename_response **response)
 {
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
     char *old_name = NULL;
     char *new_name = NULL;
@@ -1616,7 +1625,7 @@ static int container_rename_cb(const struct lcrd_container_rename_request *reque
     }
 
     if (rename_request_check(request) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
     old_name = request->old_name;
@@ -1625,8 +1634,8 @@ static int container_rename_cb(const struct lcrd_container_rename_request *reque
     cont = containers_store_get(old_name);
     if (cont == NULL) {
         ERROR("No such container:%s", old_name);
-        lcrd_set_error_message("No such container:%s", old_name);
-        cc = LCRD_ERR_EXEC;
+        isulad_set_error_message("No such container:%s", old_name);
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -1636,7 +1645,7 @@ static int container_rename_cb(const struct lcrd_container_rename_request *reque
     EVENT("Event: {Object: %s, Type: Renaming}", id);
 
     if (container_rename(cont, new_name) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
@@ -1647,7 +1656,7 @@ pack_response:
     pack_rename_response(*response, id, cc);
     container_unref(cont);
     free_log_prefix();
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
 void container_information_callback_init(service_container_callback_t *cb)

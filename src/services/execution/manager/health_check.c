@@ -342,8 +342,8 @@ static int handle_increment_streak(container_t *cont, int retries)
             // kill container when exit on unhealthy flag is set
             ret = stop_container(cont, 3, true, false);
             if (ret != 0) {
-                lcrd_try_set_error_message("Could not stop running container %s, cannot remove",
-                                           cont->common_config->id);
+                isulad_try_set_error_message("Could not stop running container %s, cannot remove",
+                                             cont->common_config->id);
                 ERROR("Could not stop running container %s, cannot remove", cont->common_config->id);
                 ret = -1;
             }

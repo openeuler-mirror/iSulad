@@ -13,8 +13,8 @@
  * Description: provide macro definition
  ******************************************************************************/
 
-#ifndef _LCRD_CONSTANTS_H
-#define _LCRD_CONSTANTS_H
+#ifndef _ISULAD_CONSTANTS_H
+#define _ISULAD_CONSTANTS_H
 
 /* mode of file and directory */
 

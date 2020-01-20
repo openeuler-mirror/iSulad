@@ -31,7 +31,7 @@
 #include "log.h"
 #include "engine.h"
 #include "console.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "config.h"
 #include "specs.h"
 #include "verify.h"
@@ -63,7 +63,7 @@ static int create_request_check(const container_create_request *request)
 
     if (request->image != NULL && !util_valid_image_name(request->image)) {
         ERROR("invalid image name %s", request->image);
-        lcrd_set_error_message("Invalid image name '%s'", request->image);
+        isulad_set_error_message("Invalid image name '%s'", request->image);
         ret = -1;
         goto out;
     }
@@ -76,8 +76,8 @@ static int create_request_check(const container_create_request *request)
 
     if (!util_valid_runtime_name(request->runtime)) {
         ERROR("Invalid runtime name:%s", request->runtime);
-        lcrd_set_error_message("Invalid runtime name (%s), only \"lcr\" supported.",
-                               request->runtime);
+        isulad_set_error_message("Invalid runtime name (%s), only \"lcr\" supported.",
+                                 request->runtime);
         ret = -1;
         goto out;
     }
@@ -447,7 +447,7 @@ static int maintain_container_id(const container_create_request *request, char *
     id = try_generate_id();
     if (id == NULL) {
         ERROR("Failed to generate container ID");
-        lcrd_set_error_message("Failed to generate container ID");
+        isulad_set_error_message("Failed to generate container ID");
         ret = -1;
         goto out;
     }
@@ -462,7 +462,7 @@ static int maintain_container_id(const container_create_request *request, char *
 
     if (!util_valid_container_name(name)) {
         ERROR("Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", name);
-        lcrd_set_error_message("Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", name);
+        isulad_set_error_message("Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-]+$ are allowed.", name);
         ret = -1;
         goto out;
     }
@@ -471,9 +471,9 @@ static int maintain_container_id(const container_create_request *request, char *
 
     if (!name_index_add(name, id)) {
         ERROR("Name %s is in use", name);
-        lcrd_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
-                               "You have to remove (or rename) that container to be able to reuse that name.",
-                               name, name);
+        isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
+                                 "You have to remove (or rename) that container to be able to reuse that name.",
+                                 name, name);
         ret = -1;
         goto out;
     }
@@ -492,8 +492,8 @@ static char *get_runtime_from_request(const container_create_request *request)
 static void pack_create_response(container_create_response *response, const char *id, uint32_t cc)
 {
     response->cc = cc;
-    if (g_lcrd_errmsg != NULL) {
-        response->errmsg = util_strdup_s(g_lcrd_errmsg);
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
     if (id != NULL) {
@@ -568,7 +568,7 @@ static int generate_merged_oci_config_json(const char *id, oci_runtime_spec *oci
     if (*oci_config_data == NULL) {
         ERROR("Failed to generate runtime spec json,erro:%s", err);
         free(err);
-        lcrd_set_error_message("Failed to generate runtime spec json");
+        isulad_set_error_message("Failed to generate runtime spec json");
         return -1;
     }
     free(err);
@@ -773,12 +773,12 @@ static int get_request_container_info(const container_create_request *request, c
 {
     if (create_request_check(request) != 0) {
         ERROR("Invalid create container request");
-        *cc = LCRD_ERR_INPUT;
+        *cc = ISULAD_ERR_INPUT;
         return -1;
     }
 
     if (maintain_container_id(request, id, name) != 0) {
-        *cc = LCRD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
@@ -818,18 +818,18 @@ static int preparate_runtime_environment(const container_create_request *request
 {
     *runtime = get_runtime_from_request(request);
     if (*runtime == NULL) {
-        *cc = LCRD_ERR_INPUT;
+        *cc = ISULAD_ERR_INPUT;
         return -1;
     }
 
     *runtime_root = conf_get_routine_rootdir(*runtime);
     if (*runtime_root == NULL) {
-        *cc = LCRD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
     if (create_container_root_dir(id, *runtime_root) != 0) {
-        *cc = LCRD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
@@ -909,7 +909,7 @@ static int generate_oci_config_json(const char *id, const container_create_reque
 int container_create_cb(const container_create_request *request,
                         container_create_response **response)
 {
-    uint32_t cc = LCRD_SUCCESS;
+    uint32_t cc = ISULAD_SUCCESS;
     char *real_rootfs = NULL;
     char *image_type = NULL;
     char *runtime_root = NULL;
@@ -938,7 +938,7 @@ int container_create_cb(const container_create_request *request,
     }
 
     if (get_request_image_info(request, &image_type, &ext_config_image, &image_name) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_nameindex;
     }
 
@@ -947,41 +947,41 @@ int container_create_cb(const container_create_request *request,
     }
 
     if (get_basic_spec(request, id, runtime_root, &host_spec, &custom_spec) != 0) {
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
 
     if (get_v2_spec(request, id, name, runtime_root, host_spec, image_type, &v2_spec) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_container_root_dir;
     }
 
     if (save_container_config_before_create(id, runtime_root, host_spec, v2_spec) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_container_root_dir;
     }
 
     host_channel = dup_host_channel(host_spec->host_channel);
     if (prepare_host_channel(host_channel, host_spec->user_remap)) {
         ERROR("Failed to prepare host channel with '%s'", host_spec->host_channel);
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_container_root_dir;
     }
 
     oci_spec = merge_config(id, image_type, image_name, ext_config_image, host_spec, custom_spec, v2_spec,
                             &real_rootfs);
     if (oci_spec == NULL) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_rootfs;
     }
     if (real_rootfs == NULL) {
         ERROR("Can not found rootfs");
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto clean_rootfs;
     }
 
     if (generate_oci_config_json(id, request, host_spec, custom_spec, oci_spec, &oci_config_data) != 0) {
-        cc = LCRD_ERR_INPUT;
+        cc = ISULAD_ERR_INPUT;
         goto clean_rootfs;
     }
 
@@ -990,18 +990,18 @@ int container_create_cb(const container_create_request *request,
 
     if (runtime_create(id, runtime, &create_params) != 0) {
         ERROR("Runtime create container failed");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_rootfs;
     }
 
     if (v2_spec_merge_config(custom_spec, oci_spec, v2_spec) != 0) {
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_on_error;
     }
 
     if (register_new_container(id, runtime, &host_spec, &v2_spec)) {
         ERROR("Failed to register new container");
-        cc = LCRD_ERR_EXEC;
+        cc = ISULAD_ERR_EXEC;
         goto clean_on_error;
     }
 
@@ -1038,6 +1038,6 @@ pack_response:
     free_host_config_host_channel(host_channel);
     free_log_prefix();
     malloc_trim(0);
-    return (cc == LCRD_SUCCESS) ? 0 : -1;
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 

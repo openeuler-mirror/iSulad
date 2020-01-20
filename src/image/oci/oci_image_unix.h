@@ -17,7 +17,7 @@
 
 #include <pthread.h>
 
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "util_atomic.h"
 #include "imagetool_image_status.h"
 

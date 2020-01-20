@@ -10,7 +10,7 @@
  * See the Mulan PSL v1 for more details.
 * Author: liuhao
 * Create: 2019-07-12
-* Description: provide lcrc connect command definition
+* Description: provide isula connect command definition
 *******************************************************************************/
 #include "grpc_isula_image_client.h"
 #include <iostream>
@@ -19,7 +19,7 @@
 #include "isula_image.pb.h"
 #include "utils.h"
 #include "client_base.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 
 namespace {
 int copy_image_tags_metadata(const isula::Image &gimage, struct image_metadata *metadata)
@@ -656,13 +656,13 @@ public:
     {
         if (req.file().empty()) {
             ERROR("Load image requires input file path");
-            lcrd_set_error_message("Load image requires input file path");
+            isulad_set_error_message("Load image requires input file path");
             return -1;
         }
         if (!req.tag().empty()) {
             if (util_valid_image_name(req.tag().c_str()) != true) {
                 ERROR("Invalid tag %s", req.tag().c_str());
-                lcrd_try_set_error_message("Invalid tag:%s", req.tag().c_str());
+                isulad_try_set_error_message("Invalid tag:%s", req.tag().c_str());
                 return -1;
             }
         }
@@ -686,7 +686,7 @@ public:
     int request_to_grpc(const isula_login_request *req, isula::LoginRequest *grequest) override
     {
         if (req == nullptr) {
-            lcrd_set_error_message("invalid login request");
+            isulad_set_error_message("invalid login request");
             return -1;
         }
         if (req->server != nullptr) {
@@ -713,11 +713,11 @@ public:
     int check_parameter(const isula::LoginRequest &req) override
     {
         if (req.server().empty()) {
-            lcrd_set_error_message("Login requires server address");
+            isulad_set_error_message("Login requires server address");
             return -1;
         }
         if (req.username().empty() || req.password().empty()) {
-            lcrd_set_error_message("Missing username or password");
+            isulad_set_error_message("Missing username or password");
             return -1;
         }
         return 0;
@@ -740,7 +740,7 @@ public:
     int request_to_grpc(const isula_logout_request *req, isula::LogoutRequest *grequest) override
     {
         if (req == nullptr) {
-            lcrd_set_error_message("invalid logout request");
+            isulad_set_error_message("invalid logout request");
             return -1;
         }
         if (req->server != nullptr) {
@@ -761,7 +761,7 @@ public:
     int check_parameter(const isula::LogoutRequest &req) override
     {
         if (req.server().empty()) {
-            lcrd_set_error_message("Logout requires server address");
+            isulad_set_error_message("Logout requires server address");
             return -1;
         }
         return 0;
@@ -784,7 +784,7 @@ public:
     int request_to_grpc(const isula_export_request *req, isula::ContainerExportRequest *grequest) override
     {
         if (req == nullptr) {
-            lcrd_set_error_message("unvalid export request");
+            isulad_set_error_message("unvalid export request");
             return -1;
         }
         if (req->name_id != nullptr) {
@@ -811,11 +811,11 @@ public:
     int check_parameter(const isula::ContainerExportRequest &req) override
     {
         if (req.name_id().empty()) {
-            lcrd_set_error_message("Export rootfs requires container name");
+            isulad_set_error_message("Export rootfs requires container name");
             return -1;
         }
         if (req.output().empty()) {
-            lcrd_set_error_message("Export rootfs requires output file path");
+            isulad_set_error_message("Export rootfs requires output file path");
             return -1;
         }
         return 0;
@@ -869,7 +869,7 @@ public:
     int request_to_grpc(const isula_container_fs_usage_request *req, isula::ContainerFsUsageRequest *grequest) override
     {
         if (req == nullptr) {
-            lcrd_set_error_message("invalid containerfsusage request");
+            isulad_set_error_message("invalid containerfsusage request");
             return -1;
         }
         if (req->name_id != nullptr) {
@@ -894,7 +894,7 @@ public:
     int check_parameter(const isula::ContainerFsUsageRequest &req) override
     {
         if (req.name_id().empty()) {
-            lcrd_set_error_message("Required container id");
+            isulad_set_error_message("Required container id");
             return -1;
         }
 

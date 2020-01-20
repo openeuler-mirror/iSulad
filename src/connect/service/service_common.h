@@ -16,7 +16,7 @@
 #define __SERVICE_COMMON_H
 
 #include "arguments.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 
 #ifdef __cplusplus
 extern "C" {

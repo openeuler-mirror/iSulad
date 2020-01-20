@@ -1,18 +1,18 @@
 {
-    "group": "lcrd",
-    "graph": "/var/lib/lcrd",
-    "state": "/var/run/lcrd",
+    "group": "isulad",
+    "graph": "/var/lib/isulad",
+    "state": "/var/run/isulad",
     "engine": "lcr",
     "log-level": "ERROR",
-    "pidfile": "/var/run/lcrd.pid",
+    "pidfile": "/var/run/isulad.pid",
     "log-opts": {
         "log-file-mode": "0600",
-        "log-path": "/var/lib/lcrd",
+        "log-path": "/var/lib/isulad",
         "max-file": "1",
         "max-size": "30KB"
     },
     "log-driver": "stdout",
-    "hook-spec": "/etc/default/lcrd/hooks/default.json",
+    "hook-spec": "/etc/default/isulad/hooks/default.json",
     "start-timeout": "2m",
     "storage-driver": "overlay2",
     "storage-opts": [
@@ -24,7 +24,7 @@
     ],
     "pod-sandbox-image": "",
     "image-opt-timeout": "5m",
-    "image-server-sock-addr": "unix:///var/run/lcrd/isula_image.sock",
+    "image-server-sock-addr": "unix:///var/run/isulad/isula_image.sock",
     "native.umask": "secure",
     "network-plugin": "",
     "cni-bin-dir": "",

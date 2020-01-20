@@ -702,7 +702,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
     image_ref = request->image.image;
     if (image_ref == NULL) {
         ERROR("Inspect image requires image ref");
-        lcrd_set_error_message("Inspect image requires image ref");
+        isulad_set_error_message("Inspect image requires image ref");
         ret = -1;
         goto pack_response;
     }
@@ -710,7 +710,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
     resolved_name = oci_resolve_image_name(image_ref);
     if (resolved_name == NULL) {
         ERROR("Failed to reslove image name %s", image_ref);
-        lcrd_set_error_message("Failed to reslove image name %s", image_ref);
+        isulad_set_error_message("Failed to reslove image name %s", image_ref);
         ret = -1;
         goto pack_response;
     }
@@ -720,7 +720,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
     image_info = oci_images_store_get(resolved_name);
     if (image_info == NULL) {
         ERROR("No such image:%s", resolved_name);
-        lcrd_set_error_message("No such image:%s", resolved_name);
+        isulad_set_error_message("No such image:%s", resolved_name);
         ret = -1;
         goto pack_response;
     }
@@ -729,7 +729,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
     oci_image_unref(image_info);
     if (ret != 0) {
         ERROR("Failed to dup image info:%s", resolved_name);
-        lcrd_set_error_message("Failed to dup image info:%s", resolved_name);
+        isulad_set_error_message("Failed to dup image info:%s", resolved_name);
         ret = -1;
         goto pack_response;
     }

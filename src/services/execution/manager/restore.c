@@ -19,7 +19,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "log.h"
 #include "restore.h"
 #include "containers_store.h"

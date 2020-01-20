@@ -25,7 +25,7 @@
 #include "log.h"
 #include "monitord.h"
 #include "mainloop.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "collector.h"
 #include "utils.h"
 
@@ -35,8 +35,8 @@ struct monitord_handler {
     char *fifo_path;
 };
 
-/* lcrd monitor fifo name */
-char *lcrd_monitor_fifo_name(const char *rootpath)
+/* isulad monitor fifo name */
+char *isulad_monitor_fifo_name(const char *rootpath)
 {
     int ret;
     char fifo_file_path[PATH_MAX] = { 0 };
@@ -124,14 +124,14 @@ static void *monitord(void *arg)
     }
     mhandler.pdescr = &descr;
 
-    statedir = conf_get_lcrd_statedir();
+    statedir = conf_get_isulad_statedir();
     if (statedir == NULL) {
-        CRIT("Can not get lcrd root path");
+        CRIT("Can not get isulad root path");
         goto err;
     }
 
     /* 1. monitor fifo: to wait container monitor message */
-    fifo_file_path = lcrd_monitor_fifo_name(statedir);
+    fifo_file_path = isulad_monitor_fifo_name(statedir);
     if (fifo_file_path == NULL) {
         goto err;
     }
@@ -203,14 +203,14 @@ int new_monitord(struct monitord_sync_data *msync)
         goto out;
     }
 
-    statedir = conf_get_lcrd_statedir();
+    statedir = conf_get_isulad_statedir();
     if (statedir == NULL) {
-        ERROR("LCRD root path is NULL");
+        ERROR("isulad root path is NULL");
         ret = -1;
         goto out;
     }
 
-    if (setenv("LCRD_MONITORD_PATH", statedir, 1)) {
+    if (setenv("ISULAD_MONITORD_PATH", statedir, 1)) {
         ERROR("Setenv monitord path failed");
         ret = -1;
         goto out;

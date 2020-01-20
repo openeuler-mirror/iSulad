@@ -64,12 +64,12 @@ int ext_prepare_rf(const im_prepare_request *request, char **real_rootfs)
             char real_path[PATH_MAX] = { 0 };
             if (request->image_name[0] != '/') {
                 ERROR("Rootfs should be absolutely path");
-                lcrd_set_error_message("Rootfs should be absolutely path");
+                isulad_set_error_message("Rootfs should be absolutely path");
                 return -1;
             }
             if (realpath(request->image_name, real_path) == NULL) {
                 ERROR("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
-                lcrd_set_error_message("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
+                isulad_set_error_message("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
                 return -1;
             }
             *real_rootfs = util_strdup_s(real_path);

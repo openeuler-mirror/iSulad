@@ -1,4 +1,4 @@
-NAME=lcrd
-RECOVER_COMMAND=systemctl restart lcrd
-MONITOR_COMMAND=/etc/default/lcrd/isulad-check.sh
-STOP_COMMAND=systemctl stop lcrd
+NAME=isulad
+RECOVER_COMMAND=systemctl restart isulad
+MONITOR_COMMAND=/etc/default/isulad/isulad-check.sh
+STOP_COMMAND=systemctl stop isulad

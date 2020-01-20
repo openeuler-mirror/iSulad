@@ -405,7 +405,7 @@ char *util_human_size(uint64_t val)
         index++;
     }
 
-    len = LCRD_NUMSTRLEN64 + 2 + 1;
+    len = ISULAD_NUMSTRLEN64 + 2 + 1;
     out = util_common_calloc_s(len);
     if (out == NULL) {
         ERROR("Memory out");
