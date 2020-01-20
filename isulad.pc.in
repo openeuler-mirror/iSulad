@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_PREFIX@/lib
+localstatedir=@CMAKE_INSTALL_PREFIX@/var
+includedir=@CMAKE_INSTALL_PREFIX@/include
+
+Name: libisula
+Description: light-weighted container runtime daemon library
+Version: @ISULAD_VERSION@
+URL: iSulad
+Libs: -L@CMAKE_INSTALL_PREFIX@/lib -lisula
+Cflags: -I@CMAKE_INSTALL_PREFIX@/include
+

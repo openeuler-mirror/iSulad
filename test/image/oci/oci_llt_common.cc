@@ -42,15 +42,15 @@ char **single_array_from_string(const char *value)
 
 char *conf_get_graph_rootpath_success()
 {
-    return util_strdup_s("/var/lib/lcrd/storage");
+    return util_strdup_s("/var/lib/isulad/storage");
 }
 
 char *conf_get_graph_run_path_success()
 {
-    return util_strdup_s("/var/run/lcrd/storage");
+    return util_strdup_s("/var/run/isulad/storage");
 }
 
-char *conf_get_lcrd_storage_driver_success()
+char *conf_get_isulad_storage_driver_success()
 {
     return util_strdup_s("overlay");
 }

@@ -16,7 +16,7 @@
 #define __SPECS_EXTEND_H__
 
 #include <stdint.h>
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "host_config.h"
 #include "container_custom_config.h"
 #include "container_config_v2.h"

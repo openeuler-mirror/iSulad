@@ -26,7 +26,7 @@
 
 #include "log.h"
 #include "utils.h"
-#include "lcrdtar.h"
+#include "libtar.h"
 
 typedef int(*log_save_t)(const void *buf, size_t count);
 static log_save_t g_save_log_op = NULL;

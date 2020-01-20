@@ -23,7 +23,7 @@
 #include "oci_runtime_spec.h"
 #include "container_custom_config.h"
 #include "host_config.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image_type.h"

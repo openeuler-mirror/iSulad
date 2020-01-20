@@ -12,12 +12,12 @@
  * Create: 2017-11-22
  * Description: provide container state definition
  ******************************************************************************/
-#ifndef __LCRD_CONTAINER_STATE_H__
-#define __LCRD_CONTAINER_STATE_H__
+#ifndef __ISULAD_CONTAINER_STATE_H__
+#define __ISULAD_CONTAINER_STATE_H__
 
 #include <pthread.h>
 
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "container_config_v2.h"
 #include "engine.h"
 
@@ -96,5 +96,5 @@ int dup_health_check_status(defs_health **dst, const defs_health *src);
 }
 #endif
 
-#endif /* __LCRD_CONTAINER_STATE_H__ */
+#endif /* __ISULAD_CONTAINER_STATE_H__ */
 

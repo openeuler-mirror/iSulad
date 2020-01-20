@@ -21,14 +21,14 @@
 #include <assert.h>
 #include <regex.h>
 #include <limits.h>
-#include "liblcrd.h"
+#include "libisulad.h"
 
 #include "utils.h"
 #include "log.h"
 
-void command_help_lcrd_head()
+void command_help_isulad_head()
 {
-    fprintf(stdout, "lcrd\n\nlightweight container runtime daemon\n");
+    fprintf(stdout, "isulad\n\nlightweight container runtime daemon\n");
 }
 
 int compare_options(const void *s1, const void *s2)
@@ -93,8 +93,8 @@ void command_help(command_t *self)
         progname++;
     }
 
-    if (self->type != NULL && strcmp(self->type, "lcrd") == 0) {
-        command_help_lcrd_head();
+    if (self->type != NULL && strcmp(self->type, "isulad") == 0) {
+        command_help_isulad_head();
     }
     fprintf(stdout, "\nUsage:  %s %s\n\n", progname, self->usage);
     fprintf(stdout, "%s\n\n", self->description);

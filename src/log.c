@@ -41,7 +41,7 @@ static bool g_log_quiet = false;
 static char *g_log_module = NULL;
 static int g_log_level = ISULA_LOG_DEBUG;
 static int g_log_driver = LOG_DRIVER_STDOUT;
-int g_lcrd_log_fd = -1;
+int g_isulad_log_fd = -1;
 
 /* set log prefix */
 void set_log_prefix(const char *prefix)
@@ -175,8 +175,8 @@ int log_init(struct log_config *log)
     int nret = 0;
     char *full_path = NULL;
 
-    if (g_lcrd_log_fd != -1) {
-        fprintf(stderr, "lcrd log_init called with log already initialized\n");
+    if (g_isulad_log_fd != -1) {
+        fprintf(stderr, "isulad log_init called with log already initialized\n");
         return 0;
     }
 
@@ -202,9 +202,9 @@ int log_init(struct log_config *log)
         nret = -1;
         goto out;
     }
-    g_lcrd_log_fd = open_fifo(full_path);
+    g_isulad_log_fd = open_fifo(full_path);
 
-    if (g_lcrd_log_fd == -1) {
+    if (g_isulad_log_fd == -1) {
         nret = -1;
     }
 out:
@@ -220,7 +220,7 @@ static char *parse_timespec_to_human()
 {
     struct timespec timestamp;
     struct tm ptm = {0};
-    char date_time[LCRD_LOG_TIME_MAX_LEN] = { 0 };
+    char date_time[ISULAD_LOG_TIME_MAX_LEN] = { 0 };
     int nret;
 #define SEC_TO_NSEC 1000000
 #define FIRST_YEAR_OF_GMT 1900
@@ -235,11 +235,11 @@ static char *parse_timespec_to_human()
         return NULL;
     }
 
-    nret = snprintf(date_time, LCRD_LOG_TIME_MAX_LEN, "%04d%02d%02d%02d%02d%02d.%03ld",
+    nret = snprintf(date_time, ISULAD_LOG_TIME_MAX_LEN, "%04d%02d%02d%02d%02d%02d.%03ld",
                     ptm.tm_year + FIRST_YEAR_OF_GMT, ptm.tm_mon + 1, ptm.tm_mday, ptm.tm_hour, ptm.tm_min, ptm.tm_sec,
                     timestamp.tv_nsec / SEC_TO_NSEC);
 
-    if (nret < 0 || nret >= LCRD_LOG_TIME_MAX_LEN) {
+    if (nret < 0 || nret >= ISULAD_LOG_TIME_MAX_LEN) {
         COMMAND_ERROR("Sprintf failed");
         return NULL;
     }
@@ -257,7 +257,7 @@ static int do_log_by_driver(const struct log_object_metadata *meta, const char *
             do_stderr_log(meta, date_time, msg);
             break;
         case LOG_DRIVER_FIFO:
-            if (g_lcrd_log_fd == -1) {
+            if (g_isulad_log_fd == -1) {
                 fprintf(stderr, "Do not set log file\n");
                 return -1;
             }
@@ -308,12 +308,12 @@ void do_fifo_log(const struct log_object_metadata *meta, const char *timestamp, 
     int nret = 0;
     size_t size = 0;
     char *tmp_prefix = NULL;
-    char log_buffer[LCRD_LOG_BUFFER_SIZE] = { 0 };
+    char log_buffer[ISULAD_LOG_BUFFER_SIZE] = { 0 };
 
     if (meta == NULL || meta->level > g_log_level) {
         return;
     }
-    log_fd = g_lcrd_log_fd;
+    log_fd = g_isulad_log_fd;
     if (log_fd == -1) {
         return;
     }

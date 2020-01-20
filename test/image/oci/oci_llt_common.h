@@ -33,8 +33,8 @@ extern "C" {
         DECLARE_WRAPPER_V(conf_get_graph_run_path, char *, ());\
         DEFINE_WRAPPER_V(conf_get_graph_run_path, char *, (), ());\
         \
-        DECLARE_WRAPPER_V(conf_get_lcrd_storage_driver, char *, ());\
-        DEFINE_WRAPPER_V(conf_get_lcrd_storage_driver, char *, (), ());\
+        DECLARE_WRAPPER_V(conf_get_isulad_storage_driver, char *, ());\
+        DEFINE_WRAPPER_V(conf_get_isulad_storage_driver, char *, (), ());\
         \
         DECLARE_WRAPPER_V(conf_get_storage_opts, char **, ());\
         DEFINE_WRAPPER_V(conf_get_storage_opts, char **, (), ());\
@@ -56,7 +56,7 @@ extern "C" {
     {\
         MOCK_SET_V(conf_get_graph_rootpath, conf_get_graph_rootpath_success);\
         MOCK_SET_V(conf_get_graph_run_path, conf_get_graph_run_path_success);\
-        MOCK_SET_V(conf_get_lcrd_storage_driver, conf_get_lcrd_storage_driver_success);\
+        MOCK_SET_V(conf_get_isulad_storage_driver, conf_get_isulad_storage_driver_success);\
         MOCK_SET_V(conf_get_storage_opts, conf_get_storage_opts_success);\
         MOCK_SET_V(conf_get_registry_list, conf_get_registry_list_success);\
         MOCK_SET_V(conf_get_insecure_registry_list, conf_get_insecure_registry_list_success);\
@@ -67,7 +67,7 @@ extern "C" {
     {\
         MOCK_CLEAR(conf_get_graph_rootpath);\
         MOCK_CLEAR(conf_get_graph_run_path);\
-        MOCK_CLEAR(conf_get_lcrd_storage_driver);\
+        MOCK_CLEAR(conf_get_isulad_storage_driver);\
         MOCK_CLEAR(conf_get_storage_opts);\
         MOCK_CLEAR(conf_get_registry_list);\
         MOCK_CLEAR(conf_get_insecure_registry_list);\
@@ -78,7 +78,7 @@ char *json_path(const char *file);
 int execvp_success(const char *file, char * const argv[]);
 char *conf_get_graph_rootpath_success();
 char *conf_get_graph_run_path_success();
-char *conf_get_lcrd_storage_driver_success();
+char *conf_get_isulad_storage_driver_success();
 char **conf_get_storage_opts_success();
 char **conf_get_registry_list_success();
 char **conf_get_insecure_registry_list_success();

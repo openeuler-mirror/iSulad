@@ -1,1 +1,1 @@
-#cmakedefine VERSION "@LCRD_VERSION@"
+#cmakedefine VERSION "@ISULAD_VERSION@"

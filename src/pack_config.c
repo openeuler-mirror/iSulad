@@ -71,7 +71,7 @@ cleanup:
     return ret;
 }
 
-static int pack_host_config_ns_change_files(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_config_ns_change_files(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -101,7 +101,7 @@ out:
     return ret;
 }
 
-static int pack_host_config_cap_add(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_config_cap_add(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -140,7 +140,7 @@ out:
     return ret;
 }
 
-static int pack_host_config_cap_drop(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_config_cap_drop(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -180,7 +180,7 @@ out:
     return ret;
 }
 
-static int pack_host_config_caps(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_config_caps(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
 
@@ -200,7 +200,7 @@ out:
     return ret;
 }
 
-static int pack_host_network_extra_hosts(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_network_extra_hosts(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -226,7 +226,7 @@ out:
     return ret;
 }
 
-static int pack_host_network_dns(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_network_dns(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -253,7 +253,7 @@ out:
     return ret;
 }
 
-static int pack_host_network_dns_options(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_network_dns_options(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -280,7 +280,7 @@ out:
     return ret;
 }
 
-static int pack_host_network_dns_search(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_network_dns_search(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -307,7 +307,7 @@ out:
     return ret;
 }
 
-static int pack_host_config_network(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_config_network(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
 
@@ -585,7 +585,7 @@ out:
     return ulimit;
 }
 
-static void pack_cgroup_resources_cpu(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static void pack_cgroup_resources_cpu(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     /* cgroup blkio weight */
     if (srcconfig->cr->blkio_weight) {
@@ -626,7 +626,7 @@ static void pack_cgroup_resources_cpu(host_config *dstconfig, const lcrc_host_co
     }
 }
 
-static void pack_cgroup_resources_mem(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static void pack_cgroup_resources_mem(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     /* memory limit */
     if (srcconfig->cr->memory) {
@@ -649,7 +649,7 @@ static void pack_cgroup_resources_mem(host_config *dstconfig, const lcrc_host_co
     }
 }
 
-static void pack_cgroup_resources(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static void pack_cgroup_resources(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     pack_cgroup_resources_cpu(dstconfig, srcconfig);
 
@@ -663,7 +663,7 @@ static void pack_cgroup_resources(host_config *dstconfig, const lcrc_host_config
     dstconfig->oom_score_adj = (int)srcconfig->cr->oom_score_adj;
 }
 
-static int pack_hostconfig_ulimits(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_hostconfig_ulimits(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i;
@@ -712,7 +712,7 @@ out:
     return ret;
 }
 
-static int pack_hostconfig_cgroup(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_hostconfig_cgroup(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
 
@@ -1163,7 +1163,7 @@ erro_out:
     return NULL;
 }
 
-static int parse_seccomp(const lcrc_host_config_t *srcconfig, host_config *dstconfig)
+static int parse_seccomp(const isula_host_config_t *srcconfig, host_config *dstconfig)
 {
     int ret = 0;
     int nret = 0;
@@ -1241,7 +1241,7 @@ out:
     return ret;
 }
 
-static int parse_no_new_privileges(const lcrc_host_config_t *srcconfig, host_config *dstconfig)
+static int parse_no_new_privileges(const isula_host_config_t *srcconfig, host_config *dstconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1272,7 +1272,7 @@ static int parse_no_new_privileges(const lcrc_host_config_t *srcconfig, host_con
     return ret;
 }
 
-int generate_storage_opts(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+int generate_storage_opts(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t j;
@@ -1301,7 +1301,7 @@ out:
     return ret;
 }
 
-static int generate_sysctls(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+static int generate_sysctls(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t j;
@@ -1326,7 +1326,7 @@ out:
     return ret;
 }
 
-int generate_devices(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+int generate_devices(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1359,7 +1359,7 @@ out:
     return ret;
 }
 
-static int generate_blkio_weight_device(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+static int generate_blkio_weight_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1395,7 +1395,7 @@ out:
     return ret;
 }
 
-static int generate_blkio_throttle_read_bps_device(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+static int generate_blkio_throttle_read_bps_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1437,7 +1437,7 @@ out:
     return ret;
 }
 
-static int generate_blkio_throttle_write_bps_device(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+static int generate_blkio_throttle_write_bps_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1479,7 +1479,7 @@ out:
     return ret;
 }
 
-static int generate_blkio(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+static int generate_blkio(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret;
 
@@ -1504,7 +1504,7 @@ out:
     return ret;
 }
 
-int generate_hugetlb_limits(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+int generate_hugetlb_limits(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1538,7 +1538,7 @@ out:
     return ret;
 }
 
-int generate_binds(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+int generate_binds(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1567,7 +1567,7 @@ out:
     return ret;
 }
 
-int generate_groups(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+int generate_groups(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1595,7 +1595,7 @@ out:
     return ret;
 }
 
-int generate_security(host_config **dstconfig, const lcrc_host_config_t *srcconfig)
+int generate_security(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
 
@@ -1636,7 +1636,7 @@ static inline void check_and_strdup_s(char **dst_item, const char *src_item)
     }
 }
 
-static int pack_host_config_common(host_config *dstconfig, const lcrc_host_config_t *srcconfig)
+static int pack_host_config_common(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
 
@@ -1709,7 +1709,7 @@ out:
     return ret;
 }
 
-int generate_hostconfig(const lcrc_host_config_t *srcconfig, char **hostconfigstr)
+int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr)
 {
     int ret = 0;
     parser_error err = NULL;
@@ -1776,7 +1776,7 @@ out:
 }
 
 static int pack_container_custom_config_log(container_custom_config *custom_spec,
-                                            const lcrc_container_config_t *custom_conf)
+                                            const isula_container_config_t *custom_conf)
 {
     int ret = 0;
 
@@ -1802,7 +1802,7 @@ out:
 }
 
 static int pack_container_custom_config_args(container_custom_config *custom_spec,
-                                             const lcrc_container_config_t *custom_conf)
+                                             const isula_container_config_t *custom_conf)
 {
     int ret = 0;
     int i;
@@ -1841,7 +1841,7 @@ out:
 }
 
 static int pack_container_custom_config_mounts(container_custom_config *custom_spec,
-                                               const lcrc_container_config_t *custom_conf)
+                                               const isula_container_config_t *custom_conf)
 {
     int ret = 0;
     int i = 0;
@@ -1868,7 +1868,7 @@ out:
 }
 
 static int pack_container_custom_config_array(container_custom_config *custom_spec,
-                                              const lcrc_container_config_t *custom_conf)
+                                              const isula_container_config_t *custom_conf)
 {
     int ret = 0;
     int i = 0;
@@ -1894,7 +1894,7 @@ out:
     return ret;
 }
 
-static bool have_health_check(const lcrc_container_config_t *custom_conf)
+static bool have_health_check(const isula_container_config_t *custom_conf)
 {
     bool have_health_settings = false;
 
@@ -1930,7 +1930,7 @@ out:
 }
 
 static int pack_custom_with_health_check(container_custom_config *custom_spec,
-                                         const lcrc_container_config_t *custom_conf, bool have_health_settings,
+                                         const isula_container_config_t *custom_conf, bool have_health_settings,
                                          defs_health_check *health_config)
 {
     int ret = 0;
@@ -1963,7 +1963,7 @@ out:
 }
 
 static int pack_container_custom_config_health(container_custom_config *custom_spec,
-                                               const lcrc_container_config_t *custom_conf)
+                                               const isula_container_config_t *custom_conf)
 {
     int ret = 0;
     bool have_health_settings = false;
@@ -2003,7 +2003,7 @@ out:
 }
 
 static int pack_container_custom_config_annotation(container_custom_config *custom_spec,
-                                                   const lcrc_container_config_t *custom_conf)
+                                                   const isula_container_config_t *custom_conf)
 {
     int ret = 0;
     size_t j;
@@ -2029,7 +2029,7 @@ out:
 }
 
 static int pack_container_custom_config_pre(container_custom_config *custom_spec,
-                                            const lcrc_container_config_t *custom_conf)
+                                            const isula_container_config_t *custom_conf)
 {
     int ret = 0;
 
@@ -2063,7 +2063,7 @@ out:
 
 /* translate create_custom_config to container_custom_config */
 static int pack_container_custom_config(container_custom_config *custom_spec,
-                                        const lcrc_container_config_t *custom_conf)
+                                        const isula_container_config_t *custom_conf)
 {
     int ret = -1;
 
@@ -2114,7 +2114,7 @@ out:
     return ret;
 }
 
-int generate_container_config(const lcrc_container_config_t *custom_conf, char **custom_config_str)
+int generate_container_config(const isula_container_config_t *custom_conf, char **custom_config_str)
 {
     int ret = 0;
     container_custom_config *custom_spec = NULL;

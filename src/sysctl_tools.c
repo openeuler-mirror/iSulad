@@ -78,15 +78,15 @@ int set_sysctl(const char *sysctl, int new_value, char **err)
     int fd = -1;
     ssize_t rsize;
     char fullpath[PATH_MAX] = { 0 };
-    char buff[LCRD_NUMSTRLEN64] = { 0 };
+    char buff[ISULAD_NUMSTRLEN64] = { 0 };
 
     ret = snprintf(fullpath, PATH_MAX, "%s/%s", SYSCTL_BASE, sysctl);
     if (ret < 0 || ret >= PATH_MAX) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }
-    ret = snprintf(buff, LCRD_NUMSTRLEN64, "%d", new_value);
-    if (ret < 0 || ret >= LCRD_NUMSTRLEN64) {
+    ret = snprintf(buff, ISULAD_NUMSTRLEN64, "%d", new_value);
+    if (ret < 0 || ret >= ISULAD_NUMSTRLEN64) {
         *err = util_strdup_s("Out of memory");
         goto free_out;
     }

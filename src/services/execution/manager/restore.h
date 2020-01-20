@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide restore definition
  ******************************************************************************/
-#ifndef __LCRD_RESTORE_H
-#define __LCRD_RESTORE_H
+#ifndef __ISULAD_RESTORE_H
+#define __ISULAD_RESTORE_H
 
 #include <stdbool.h>
 #include <stdint.h>

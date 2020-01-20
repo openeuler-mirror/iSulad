@@ -21,7 +21,7 @@
 #include "container_copy_to_request.h"
 #include "container_exec_request.h"
 #include "utils.h"
-#include "lcrdtar.h"
+#include "libtar.h"
 #include "stoppable_thread.h"
 #include "container.grpc.pb.h"
 #include "client_base.h"
@@ -38,8 +38,8 @@ using grpc::Status;
 using grpc::StatusCode;
 using google::protobuf::Timestamp;
 
-class ContainerVersion : public ClientBase<ContainerService, ContainerService::Stub, lcrc_version_request,
-    VersionRequest, lcrc_version_response, VersionResponse> {
+class ContainerVersion : public ClientBase<ContainerService, ContainerService::Stub, isula_version_request,
+    VersionRequest, isula_version_response, VersionResponse> {
 public:
     explicit ContainerVersion(void *args)
         : ClientBase(args)
@@ -47,7 +47,7 @@ public:
     }
     ~ContainerVersion() = default;
 
-    int response_from_grpc(VersionResponse *gresponse, lcrc_version_response *response) override
+    int response_from_grpc(VersionResponse *gresponse, isula_version_response *response) override
     {
         if (!gresponse->version().empty()) {
             response->version = util_strdup_s(gresponse->version().c_str());
@@ -74,8 +74,8 @@ public:
     }
 };
 
-class ContainerInfo : public ClientBase<ContainerService, ContainerService::Stub, lcrc_info_request, InfoRequest,
-    lcrc_info_response, InfoResponse> {
+class ContainerInfo : public ClientBase<ContainerService, ContainerService::Stub, isula_info_request, InfoRequest,
+    isula_info_response, InfoResponse> {
 public:
     explicit ContainerInfo(void *args)
         : ClientBase(args)
@@ -83,7 +83,7 @@ public:
     }
     ~ContainerInfo() = default;
 
-    int response_from_grpc(InfoResponse *gresponse, lcrc_info_response *response) override
+    int response_from_grpc(InfoResponse *gresponse, isula_info_response *response) override
     {
         if (!gresponse->version().empty()) {
             response->version = util_strdup_s(gresponse->version().c_str());
@@ -115,7 +115,7 @@ public:
     }
 
 private:
-    void get_os_info_from_grpc(lcrc_info_response *response, InfoResponse *gresponse)
+    void get_os_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
     {
         if (!gresponse->kversion().empty()) {
             response->kversion = util_strdup_s(gresponse->kversion().c_str());
@@ -138,7 +138,7 @@ private:
         }
     }
 
-    void get_proxy_info_from_grpc(lcrc_info_response *response, InfoResponse *gresponse)
+    void get_proxy_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
     {
         if (!gresponse->http_proxy().empty()) {
             response->http_proxy = util_strdup_s(gresponse->http_proxy().c_str());
@@ -152,8 +152,8 @@ private:
     }
 };
 
-class ContainerCreate : public ClientBase<ContainerService, ContainerService::Stub, lcrc_create_request, CreateRequest,
-    lcrc_create_response, CreateResponse> {
+class ContainerCreate : public ClientBase<ContainerService, ContainerService::Stub, isula_create_request, CreateRequest,
+    isula_create_response, CreateResponse> {
 public:
     explicit ContainerCreate(void *args)
         : ClientBase(args)
@@ -161,7 +161,7 @@ public:
     }
     ~ContainerCreate() = default;
 
-    int request_to_grpc(const lcrc_create_request *request, CreateRequest *grequest) override
+    int request_to_grpc(const isula_create_request *request, CreateRequest *grequest) override
     {
         int ret = 0;
         char *host_json = nullptr, *config_json = nullptr;
@@ -203,7 +203,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(CreateResponse *gresponse, lcrc_create_response *response) override
+    int response_from_grpc(CreateResponse *gresponse, isula_create_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -245,8 +245,8 @@ public:
     }
 };
 
-class ContainerStart : public ClientBase<ContainerService, ContainerService::Stub, lcrc_start_request, StartRequest,
-    lcrc_start_response, StartResponse> {
+class ContainerStart : public ClientBase<ContainerService, ContainerService::Stub, isula_start_request, StartRequest,
+    isula_start_response, StartResponse> {
 public:
     explicit ContainerStart(void *args)
         : ClientBase(args)
@@ -254,7 +254,7 @@ public:
     }
     ~ContainerStart() = default;
 
-    int request_to_grpc(const lcrc_start_request *request, StartRequest *grequest) override
+    int request_to_grpc(const isula_start_request *request, StartRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -279,7 +279,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(StartResponse *gresponse, struct lcrc_start_response *response) override
+    int response_from_grpc(StartResponse *gresponse, struct isula_start_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -340,8 +340,8 @@ private:
     std::shared_ptr<ClientReaderWriter<RemoteStartRequest, RemoteStartResponse>> m_stream;
 };
 
-class ContainerRemoteStart : public ClientBase<ContainerService, ContainerService::Stub, lcrc_start_request,
-    RemoteStartRequest, lcrc_start_response, RemoteStartResponse> {
+class ContainerRemoteStart : public ClientBase<ContainerService, ContainerService::Stub, isula_start_request,
+    RemoteStartRequest, isula_start_response, RemoteStartResponse> {
 public:
     explicit ContainerRemoteStart(void *args)
         : ClientBase(args)
@@ -349,7 +349,7 @@ public:
     }
     ~ContainerRemoteStart() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct lcrc_start_request *request)
+    int set_custom_header_metadata(ClientContext &context, const struct isula_start_request *request)
     {
         if (request == nullptr || request->name == nullptr) {
             ERROR("Missing container id in the request");
@@ -372,7 +372,7 @@ public:
         return 0;
     }
 
-    void get_server_trailing_metadata(ClientContext &context, lcrc_start_response *response)
+    void get_server_trailing_metadata(ClientContext &context, isula_start_response *response)
     {
         auto metadata = context.GetServerTrailingMetadata();
         auto cc = metadata.find("cc");
@@ -387,13 +387,13 @@ public:
         }
     }
 
-    int run(const struct lcrc_start_request *request, struct lcrc_start_response *response) override
+    int run(const struct isula_start_request *request, struct isula_start_response *response) override
     {
         ClientContext context;
 
         if (set_custom_header_metadata(context, request) != 0) {
             ERROR("Failed to translate request to grpc");
-            response->cc = LCRD_ERR_INPUT;
+            response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
 
@@ -433,8 +433,8 @@ public:
 
         get_server_trailing_metadata(context, response);
 
-        if (response->server_errono != LCRD_SUCCESS) {
-            response->cc = LCRD_ERR_EXEC;
+        if (response->server_errono != ISULAD_SUCCESS) {
+            response->cc = ISULAD_ERR_EXEC;
             goto out;
         }
 out:
@@ -444,11 +444,11 @@ out:
                 writer.join();
             }
         }
-        return (response->cc == LCRD_SUCCESS) ? 0 : -1;
+        return (response->cc == ISULAD_SUCCESS) ? 0 : -1;
     }
 };
-class ContainerTop : public ClientBase<ContainerService, ContainerService::Stub, lcrc_top_request, TopRequest,
-    lcrc_top_response, TopResponse> {
+class ContainerTop : public ClientBase<ContainerService, ContainerService::Stub, isula_top_request, TopRequest,
+    isula_top_response, TopResponse> {
 public:
     explicit ContainerTop(void *args)
         : ClientBase(args)
@@ -456,7 +456,7 @@ public:
     }
     ~ContainerTop() = default;
 
-    int request_to_grpc(const lcrc_top_request *request, TopRequest *grequest) override
+    int request_to_grpc(const isula_top_request *request, TopRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -474,7 +474,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(TopResponse *gresponse, struct lcrc_top_response *response) override
+    int response_from_grpc(TopResponse *gresponse, struct isula_top_response *response) override
     {
         int i = 0;
         int num = gresponse->processes_size();
@@ -503,7 +503,7 @@ public:
         response->processes = (char **)util_common_calloc_s(num * sizeof(char *));
         if (response->processes == nullptr) {
             ERROR("out of memory");
-            response->cc = LCRD_ERR_MEMOUT;
+            response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
         for (i = 0; i < num; i++) {
@@ -529,8 +529,8 @@ public:
     }
 };
 
-class ContainerStop : public ClientBase<ContainerService, ContainerService::Stub, lcrc_stop_request, StopRequest,
-    lcrc_stop_response, StopResponse> {
+class ContainerStop : public ClientBase<ContainerService, ContainerService::Stub, isula_stop_request, StopRequest,
+    isula_stop_response, StopResponse> {
 public:
     explicit ContainerStop(void *args)
         : ClientBase(args)
@@ -538,7 +538,7 @@ public:
     }
     ~ContainerStop() = default;
 
-    int request_to_grpc(const lcrc_stop_request *request, StopRequest *grequest) override
+    int request_to_grpc(const isula_stop_request *request, StopRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -553,7 +553,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(StopResponse *gresponse, lcrc_stop_response *response) override
+    int response_from_grpc(StopResponse *gresponse, isula_stop_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -579,8 +579,8 @@ public:
     }
 };
 
-class ContainerRename : public ClientBase<ContainerService, ContainerService::Stub, lcrc_rename_request, RenameRequest,
-    lcrc_rename_response, RenameResponse> {
+class ContainerRename : public ClientBase<ContainerService, ContainerService::Stub, isula_rename_request, RenameRequest,
+    isula_rename_response, RenameResponse> {
 public:
     explicit ContainerRename(void *args)
         : ClientBase(args)
@@ -588,7 +588,7 @@ public:
     }
     ~ContainerRename() = default;
 
-    int request_to_grpc(const lcrc_rename_request *request, RenameRequest *grequest) override
+    int request_to_grpc(const isula_rename_request *request, RenameRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -605,7 +605,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(RenameResponse *gresponse, lcrc_rename_response *response) override
+    int response_from_grpc(RenameResponse *gresponse, isula_rename_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -636,8 +636,8 @@ public:
     }
 };
 
-class ContainerResize : public ClientBase<ContainerService, ContainerService::Stub, lcrc_resize_request, ResizeRequest,
-    lcrc_resize_response, ResizeResponse> {
+class ContainerResize : public ClientBase<ContainerService, ContainerService::Stub, isula_resize_request, ResizeRequest,
+    isula_resize_response, ResizeResponse> {
 public:
     explicit ContainerResize(void *args)
         : ClientBase(args)
@@ -645,7 +645,7 @@ public:
     }
     ~ContainerResize() = default;
 
-    int request_to_grpc(const lcrc_resize_request *request, ResizeRequest *grequest) override
+    int request_to_grpc(const isula_resize_request *request, ResizeRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -664,7 +664,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ResizeResponse *gresponse, lcrc_resize_response *response) override
+    int response_from_grpc(ResizeResponse *gresponse, isula_resize_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -691,8 +691,8 @@ public:
 };
 
 
-class ContainerRestart : public ClientBase<ContainerService, ContainerService::Stub, lcrc_restart_request,
-    RestartRequest, lcrc_restart_response, RestartResponse> {
+class ContainerRestart : public ClientBase<ContainerService, ContainerService::Stub, isula_restart_request,
+    RestartRequest, isula_restart_response, RestartResponse> {
 public:
     explicit ContainerRestart(void *args)
         : ClientBase(args)
@@ -700,7 +700,7 @@ public:
     }
     ~ContainerRestart() = default;
 
-    int request_to_grpc(const lcrc_restart_request *request, RestartRequest *grequest) override
+    int request_to_grpc(const isula_restart_request *request, RestartRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -714,7 +714,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(RestartResponse *gresponse, lcrc_restart_response *response) override
+    int response_from_grpc(RestartResponse *gresponse, isula_restart_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -740,8 +740,8 @@ public:
     }
 };
 
-class ContainerKill : public ClientBase<ContainerService, ContainerService::Stub, lcrc_kill_request, KillRequest,
-    lcrc_kill_response, KillResponse> {
+class ContainerKill : public ClientBase<ContainerService, ContainerService::Stub, isula_kill_request, KillRequest,
+    isula_kill_response, KillResponse> {
 public:
     explicit ContainerKill(void *args)
         : ClientBase(args)
@@ -749,7 +749,7 @@ public:
     }
     ~ContainerKill() = default;
 
-    int request_to_grpc(const lcrc_kill_request *request, KillRequest *grequest) override
+    int request_to_grpc(const isula_kill_request *request, KillRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -763,7 +763,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(KillResponse *gresponse, lcrc_kill_response *response) override
+    int response_from_grpc(KillResponse *gresponse, isula_kill_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -789,8 +789,8 @@ public:
     }
 };
 
-class ContainerExec : public ClientBase<ContainerService, ContainerService::Stub, lcrc_exec_request, ExecRequest,
-    lcrc_exec_response, ExecResponse> {
+class ContainerExec : public ClientBase<ContainerService, ContainerService::Stub, isula_exec_request, ExecRequest,
+    isula_exec_response, ExecResponse> {
 public:
     explicit ContainerExec(void *args)
         : ClientBase(args)
@@ -798,7 +798,7 @@ public:
     }
     ~ContainerExec() = default;
 
-    int request_to_grpc(const lcrc_exec_request *request, ExecRequest *grequest) override
+    int request_to_grpc(const isula_exec_request *request, ExecRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -837,7 +837,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ExecResponse *gresponse, lcrc_exec_response *response) override
+    int response_from_grpc(ExecResponse *gresponse, isula_exec_response *response) override
     {
         response->server_errono = gresponse->cc();
         response->exit_code = gresponse->exit_code();
@@ -899,8 +899,8 @@ private:
     std::shared_ptr<ClientReaderWriter<RemoteExecRequest, RemoteExecResponse>> m_stream;
 };
 
-class ContainerRemoteExec : public ClientBase<ContainerService, ContainerService::Stub, lcrc_exec_request,
-    RemoteExecRequest, lcrc_exec_response, RemoteExecResponse> {
+class ContainerRemoteExec : public ClientBase<ContainerService, ContainerService::Stub, isula_exec_request,
+    RemoteExecRequest, isula_exec_response, RemoteExecResponse> {
 public:
     explicit ContainerRemoteExec(void *args)
         : ClientBase(args)
@@ -908,8 +908,8 @@ public:
     }
     ~ContainerRemoteExec() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct lcrc_exec_request *request,
-                                   struct lcrc_exec_response *response)
+    int set_custom_header_metadata(ClientContext &context, const struct isula_exec_request *request,
+                                   struct isula_exec_response *response)
     {
         int ret = 0;
         char *json = nullptr;
@@ -956,7 +956,7 @@ out:
         free(json);
         return ret;
     }
-    void get_server_trailing_metadata(ClientContext &context, lcrc_exec_response *response)
+    void get_server_trailing_metadata(ClientContext &context, isula_exec_response *response)
     {
         auto metadata = context.GetServerTrailingMetadata();
         auto cc = metadata.find("cc");
@@ -975,13 +975,13 @@ out:
             response->errmsg = util_strdup_s(tmpstr.c_str());
         }
     }
-    int run(const struct lcrc_exec_request *request, struct lcrc_exec_response *response) override
+    int run(const struct isula_exec_request *request, struct isula_exec_response *response) override
     {
         ClientContext context;
 
         if (set_custom_header_metadata(context, request, response) != 0) {
             ERROR("Failed to translate request to grpc");
-            response->cc = LCRD_ERR_INPUT;
+            response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
 
@@ -1010,8 +1010,8 @@ out:
 
         get_server_trailing_metadata(context, response);
 
-        if (response->server_errono != LCRD_SUCCESS) {
-            response->cc = LCRD_ERR_EXEC;
+        if (response->server_errono != ISULAD_SUCCESS) {
+            response->cc = ISULAD_ERR_EXEC;
             goto out;
         }
 out:
@@ -1019,12 +1019,12 @@ out:
         if (writer.joinable()) {
             writer.join();
         }
-        return (response->cc == LCRD_SUCCESS) ? 0 : -1;
+        return (response->cc == ISULAD_SUCCESS) ? 0 : -1;
     }
 };
 
-class ContainerInspect : public ClientBase<ContainerService, ContainerService::Stub, lcrc_inspect_request,
-    InspectContainerRequest, lcrc_inspect_response, InspectContainerResponse> {
+class ContainerInspect : public ClientBase<ContainerService, ContainerService::Stub, isula_inspect_request,
+    InspectContainerRequest, isula_inspect_response, InspectContainerResponse> {
 public:
     explicit ContainerInspect(void *args)
         : ClientBase(args)
@@ -1032,7 +1032,7 @@ public:
     }
     ~ContainerInspect() = default;
 
-    int request_to_grpc(const lcrc_inspect_request *request, InspectContainerRequest *grequest) override
+    int request_to_grpc(const isula_inspect_request *request, InspectContainerRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1047,7 +1047,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(InspectContainerResponse *gresponse, lcrc_inspect_response *response) override
+    int response_from_grpc(InspectContainerResponse *gresponse, isula_inspect_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->containerjson().empty()) {
@@ -1077,8 +1077,8 @@ public:
     }
 };
 
-class ContainerDelete : public ClientBase<ContainerService, ContainerService::Stub, lcrc_delete_request, DeleteRequest,
-    lcrc_delete_response, DeleteResponse> {
+class ContainerDelete : public ClientBase<ContainerService, ContainerService::Stub, isula_delete_request, DeleteRequest,
+    isula_delete_response, DeleteResponse> {
 public:
     explicit ContainerDelete(void *args)
         : ClientBase(args)
@@ -1086,7 +1086,7 @@ public:
     }
     ~ContainerDelete() = default;
 
-    int request_to_grpc(const lcrc_delete_request *request, DeleteRequest *grequest) override
+    int request_to_grpc(const isula_delete_request *request, DeleteRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1100,7 +1100,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(DeleteResponse *gresponse, lcrc_delete_response *response) override
+    int response_from_grpc(DeleteResponse *gresponse, isula_delete_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->id().empty()) {
@@ -1129,8 +1129,8 @@ public:
     }
 };
 
-class ContainerList : public ClientBase<ContainerService, ContainerService::Stub, lcrc_list_request, ListRequest,
-    lcrc_list_response, ListResponse> {
+class ContainerList : public ClientBase<ContainerService, ContainerService::Stub, isula_list_request, ListRequest,
+    isula_list_response, ListResponse> {
 public:
     explicit ContainerList(void *args)
         : ClientBase(args)
@@ -1138,7 +1138,7 @@ public:
     }
     ~ContainerList() = default;
 
-    int request_to_grpc(const lcrc_list_request *request, ListRequest *grequest) override
+    int request_to_grpc(const isula_list_request *request, ListRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1156,7 +1156,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ListResponse *gresponse, lcrc_list_response *response) override
+    int response_from_grpc(ListResponse *gresponse, isula_list_response *response) override
     {
         int i = 0;
         int num = gresponse->containers_size();
@@ -1170,15 +1170,15 @@ public:
             }
             return 0;
         }
-        if ((size_t)num > SIZE_MAX / sizeof(lcrc_container_summary_info *)) {
+        if ((size_t)num > SIZE_MAX / sizeof(isula_container_summary_info *)) {
             ERROR("Too many summary info!");
             return -1;
         }
-        response->container_summary = (struct lcrc_container_summary_info **)util_common_calloc_s(
-                                          sizeof(struct lcrc_container_summary_info *) * (size_t)num);
+        response->container_summary = (struct isula_container_summary_info **)util_common_calloc_s(
+                                          sizeof(struct isula_container_summary_info *) * (size_t)num);
         if (response->container_summary == nullptr) {
             ERROR("out of memory");
-            response->cc = LCRD_ERR_MEMOUT;
+            response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
 
@@ -1197,13 +1197,13 @@ public:
     }
 
 private:
-    int get_container_summary_from_grpc(lcrc_list_response *response, ListResponse *gresponse, int index)
+    int get_container_summary_from_grpc(isula_list_response *response, ListResponse *gresponse, int index)
     {
         response->container_summary[index] =
-            (struct lcrc_container_summary_info *)util_common_calloc_s(sizeof(struct lcrc_container_summary_info));
+            (struct isula_container_summary_info *)util_common_calloc_s(sizeof(struct isula_container_summary_info));
         if (response->container_summary[index] == nullptr) {
             ERROR("out of memory");
-            response->cc = LCRD_ERR_MEMOUT;
+            response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
         const Container &in = gresponse->containers(index);
@@ -1242,8 +1242,8 @@ private:
     }
 };
 
-class ContainerWait : public ClientBase<ContainerService, ContainerService::Stub, lcrc_wait_request, WaitRequest,
-    lcrc_wait_response, WaitResponse> {
+class ContainerWait : public ClientBase<ContainerService, ContainerService::Stub, isula_wait_request, WaitRequest,
+    isula_wait_response, WaitResponse> {
 public:
     explicit ContainerWait(void *args)
         : ClientBase(args)
@@ -1251,7 +1251,7 @@ public:
     }
     ~ContainerWait() = default;
 
-    int request_to_grpc(const lcrc_wait_request *request, WaitRequest *grequest) override
+    int request_to_grpc(const isula_wait_request *request, WaitRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1264,7 +1264,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(WaitResponse *gresponse, lcrc_wait_response *response) override
+    int response_from_grpc(WaitResponse *gresponse, isula_wait_response *response) override
     {
         response->exit_code = (int)gresponse->exit_code();
         response->server_errono = gresponse->cc();
@@ -1325,8 +1325,8 @@ private:
     std::shared_ptr<ClientReaderWriter<AttachRequest, AttachResponse>> m_stream;
 };
 
-class ContainerAttach : public ClientBase<ContainerService, ContainerService::Stub, lcrc_attach_request, AttachRequest,
-    lcrc_attach_response, AttachResponse> {
+class ContainerAttach : public ClientBase<ContainerService, ContainerService::Stub, isula_attach_request, AttachRequest,
+    isula_attach_response, AttachResponse> {
 public:
     explicit ContainerAttach(void *args)
         : ClientBase(args)
@@ -1334,7 +1334,7 @@ public:
     }
     ~ContainerAttach() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct lcrc_attach_request *request)
+    int set_custom_header_metadata(ClientContext &context, const struct isula_attach_request *request)
     {
         if (request == nullptr || request->name == nullptr) {
             ERROR("Missing container id in the request");
@@ -1357,7 +1357,7 @@ public:
 
         return 0;
     }
-    void get_server_trailing_metadata(ClientContext &context, lcrc_attach_response *response)
+    void get_server_trailing_metadata(ClientContext &context, isula_attach_response *response)
     {
         auto metadata = context.GetServerTrailingMetadata();
         auto cc = metadata.find("cc");
@@ -1372,13 +1372,13 @@ public:
         }
     }
 
-    int run(const struct lcrc_attach_request *request, struct lcrc_attach_response *response) override
+    int run(const struct isula_attach_request *request, struct isula_attach_response *response) override
     {
         ClientContext context;
 
         if (set_custom_header_metadata(context, request) != 0) {
             ERROR("Failed to translate request to grpc");
-            response->cc = LCRD_ERR_INPUT;
+            response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
 
@@ -1414,8 +1414,8 @@ public:
 
         get_server_trailing_metadata(context, response);
 
-        if (response->server_errono != LCRD_SUCCESS) {
-            response->cc = LCRD_ERR_EXEC;
+        if (response->server_errono != ISULAD_SUCCESS) {
+            response->cc = ISULAD_ERR_EXEC;
         }
 
 out:
@@ -1425,12 +1425,12 @@ out:
                 writer.join();
             }
         }
-        return (response->cc == LCRD_SUCCESS) ? 0 : -1;
+        return (response->cc == ISULAD_SUCCESS) ? 0 : -1;
     }
 };
 
-class ContainerPause : public ClientBase<ContainerService, ContainerService::Stub, lcrc_pause_request, PauseRequest,
-    lcrc_pause_response, PauseResponse> {
+class ContainerPause : public ClientBase<ContainerService, ContainerService::Stub, isula_pause_request, PauseRequest,
+    isula_pause_response, PauseResponse> {
 public:
     explicit ContainerPause(void *args)
         : ClientBase(args)
@@ -1438,7 +1438,7 @@ public:
     }
     ~ContainerPause() = default;
 
-    int request_to_grpc(const lcrc_pause_request *request, PauseRequest *grequest) override
+    int request_to_grpc(const isula_pause_request *request, PauseRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1451,7 +1451,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(PauseResponse *gresponse, lcrc_pause_response *response) override
+    int response_from_grpc(PauseResponse *gresponse, isula_pause_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1477,8 +1477,8 @@ public:
     }
 };
 
-class ContainerResume : public ClientBase<ContainerService, ContainerService::Stub, lcrc_resume_request, ResumeRequest,
-    lcrc_resume_response, ResumeResponse> {
+class ContainerResume : public ClientBase<ContainerService, ContainerService::Stub, isula_resume_request, ResumeRequest,
+    isula_resume_response, ResumeResponse> {
 public:
     explicit ContainerResume(void *args)
         : ClientBase(args)
@@ -1486,7 +1486,7 @@ public:
     }
     ~ContainerResume() = default;
 
-    int request_to_grpc(const lcrc_resume_request *request, ResumeRequest *grequest) override
+    int request_to_grpc(const isula_resume_request *request, ResumeRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1499,7 +1499,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ResumeResponse *gresponse, lcrc_resume_response *response) override
+    int response_from_grpc(ResumeResponse *gresponse, isula_resume_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1525,8 +1525,8 @@ public:
     }
 };
 
-class ContainerExport : public ClientBase<ContainerService, ContainerService::Stub, lcrc_export_request, ExportRequest,
-    lcrc_export_response, ExportResponse> {
+class ContainerExport : public ClientBase<ContainerService, ContainerService::Stub, isula_export_request, ExportRequest,
+    isula_export_response, ExportResponse> {
 public:
     explicit ContainerExport(void *args)
         : ClientBase(args)
@@ -1534,7 +1534,7 @@ public:
     }
     ~ContainerExport() = default;
 
-    int request_to_grpc(const lcrc_export_request *request, ExportRequest *grequest) override
+    int request_to_grpc(const isula_export_request *request, ExportRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1550,7 +1550,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ExportResponse *gresponse, lcrc_export_response *response) override
+    int response_from_grpc(ExportResponse *gresponse, isula_export_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1580,8 +1580,8 @@ public:
     }
 };
 
-class ContainerUpdate : public ClientBase<ContainerService, ContainerService::Stub, lcrc_update_request, UpdateRequest,
-    lcrc_update_response, UpdateResponse> {
+class ContainerUpdate : public ClientBase<ContainerService, ContainerService::Stub, isula_update_request, UpdateRequest,
+    isula_update_response, UpdateResponse> {
 public:
     explicit ContainerUpdate(void *args)
         : ClientBase(args)
@@ -1589,7 +1589,7 @@ public:
     }
     ~ContainerUpdate() = default;
 
-    int request_to_grpc(const lcrc_update_request *request, UpdateRequest *grequest) override
+    int request_to_grpc(const isula_update_request *request, UpdateRequest *grequest) override
     {
         int ret = 0;
         char *json = nullptr;
@@ -1598,7 +1598,7 @@ public:
             return -1;
         }
 
-        lcrc_host_config_t hostconfig;
+        isula_host_config_t hostconfig;
         (void)memset(&hostconfig, 0, sizeof(hostconfig));
 
         if (request->updateconfig) {
@@ -1622,7 +1622,7 @@ cleanup:
         return ret;
     }
 
-    int response_from_grpc(UpdateResponse *gresponse, lcrc_update_response *response) override
+    int response_from_grpc(UpdateResponse *gresponse, isula_update_response *response) override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1648,8 +1648,8 @@ cleanup:
     }
 };
 
-class ContainerStats : public ClientBase<ContainerService, ContainerService::Stub, lcrc_stats_request, StatsRequest,
-    lcrc_stats_response, StatsResponse> {
+class ContainerStats : public ClientBase<ContainerService, ContainerService::Stub, isula_stats_request, StatsRequest,
+    isula_stats_response, StatsResponse> {
 public:
     explicit ContainerStats(void *args)
         : ClientBase(args)
@@ -1657,7 +1657,7 @@ public:
     }
     ~ContainerStats() = default;
 
-    int request_to_grpc(const lcrc_stats_request *request, StatsRequest *grequest) override
+    int request_to_grpc(const isula_stats_request *request, StatsRequest *grequest) override
     {
         if (request == nullptr) {
             return -1;
@@ -1672,12 +1672,12 @@ public:
         return 0;
     }
 
-    int response_from_grpc(StatsResponse *gresponse, lcrc_stats_response *response) override
+    int response_from_grpc(StatsResponse *gresponse, isula_stats_response *response) override
     {
         int size = gresponse->containers_size();
         if (size > 0) {
             response->container_stats =
-                static_cast<lcrc_container_info *>(util_common_calloc_s(size * sizeof(struct lcrc_container_info)));
+                static_cast<isula_container_info *>(util_common_calloc_s(size * sizeof(struct isula_container_info)));
             if (response->container_stats == nullptr) {
                 ERROR("Out of memory");
                 return -1;
@@ -1718,8 +1718,8 @@ public:
     }
 };
 
-class ContainerEvents : public ClientBase<ContainerService, ContainerService::Stub, lcrc_events_request, EventsRequest,
-    lcrc_events_response, Event> {
+class ContainerEvents : public ClientBase<ContainerService, ContainerService::Stub, isula_events_request, EventsRequest,
+    isula_events_response, Event> {
 public:
     explicit ContainerEvents(void *args)
         : ClientBase(args)
@@ -1727,27 +1727,27 @@ public:
     }
     ~ContainerEvents() = default;
 
-    int run(const struct lcrc_events_request *request, struct lcrc_events_response *response) override
+    int run(const struct isula_events_request *request, struct isula_events_response *response) override
     {
         int ret;
         EventsRequest req;
         Event event;
         ClientContext context;
         Status status;
-        container_events_format_t lcrc_event;
+        container_events_format_t isula_event;
 
         ret = events_request_to_grpc(request, &req);
         if (ret != 0) {
             ERROR("Failed to translate request to grpc");
-            response->server_errono = LCRD_ERR_INPUT;
+            response->server_errono = ISULAD_ERR_INPUT;
             return -1;
         }
 
         std::unique_ptr<ClientReader<Event>> reader(stub_->Events(&context, req));
         while (reader->Read(&event)) {
-            event_from_grpc(&lcrc_event, &event);
+            event_from_grpc(&isula_event, &event);
             if (request->cb != nullptr) {
-                request->cb(&lcrc_event);
+                request->cb(&isula_event);
             }
         }
         status = reader->Finish();
@@ -1757,11 +1757,11 @@ public:
             return -1;
         }
 
-        if (response->server_errono != LCRD_SUCCESS) {
-            response->cc = LCRD_ERR_EXEC;
+        if (response->server_errono != ISULAD_SUCCESS) {
+            response->cc = ISULAD_ERR_EXEC;
         }
 
-        return (response->cc == LCRD_SUCCESS) ? 0 : -1;
+        return (response->cc == ISULAD_SUCCESS) ? 0 : -1;
     }
 
 private:
@@ -1798,7 +1798,7 @@ private:
         }
     }
 
-    int events_request_to_grpc(const struct lcrc_events_request *request, EventsRequest *grequest)
+    int events_request_to_grpc(const struct isula_events_request *request, EventsRequest *grequest)
     {
         if (request == nullptr) {
             return -1;
@@ -1862,7 +1862,7 @@ static int CopyFromContainerFinish(void *context, char **err)
                  status.error_code() == grpc::StatusCode::INTERNAL)) {
                 *err = util_strdup_s(status.error_message().c_str());
             } else {
-                *err = util_strdup_s(errno_to_error_message(LCRD_ERR_CONNECT));
+                *err = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
             }
             return -1;
         }
@@ -1873,8 +1873,8 @@ static int CopyFromContainerFinish(void *context, char **err)
 }
 
 class CopyFromContainer
-    : public ClientBase<ContainerService, ContainerService::Stub, lcrc_copy_from_container_request,
-      CopyFromContainerRequest, lcrc_copy_from_container_response, CopyFromContainerResponse> {
+    : public ClientBase<ContainerService, ContainerService::Stub, isula_copy_from_container_request,
+      CopyFromContainerRequest, isula_copy_from_container_response, CopyFromContainerResponse> {
 public:
     explicit CopyFromContainer(void *args)
         : ClientBase(args)
@@ -1882,8 +1882,8 @@ public:
     }
     ~CopyFromContainer() = default;
 
-    int run(const struct lcrc_copy_from_container_request *request,
-            struct lcrc_copy_from_container_response *response) override
+    int run(const struct isula_copy_from_container_request *request,
+            struct isula_copy_from_container_response *response) override
     {
         int ret;
         CopyFromContainerResponse res;
@@ -1895,7 +1895,7 @@ public:
         ret = copy_from_container_request_to_grpc(request, &ctx->request);
         if (ret != 0) {
             ERROR("Failed to translate request to grpc");
-            response->server_errono = LCRD_ERR_INPUT;
+            response->server_errono = ISULAD_ERR_INPUT;
             delete ctx;
             return -1;
         }
@@ -1941,7 +1941,7 @@ public:
     }
 
 private:
-    int copy_from_container_request_to_grpc(const struct lcrc_copy_from_container_request *request,
+    int copy_from_container_request_to_grpc(const struct isula_copy_from_container_request *request,
                                             CopyFromContainerRequest *grequest)
     {
         if (request == nullptr) {
@@ -2003,8 +2003,8 @@ private:
 };
 
 class CopyToContainer
-    : public ClientBase<ContainerService, ContainerService::Stub, lcrc_copy_to_container_request,
-      CopyToContainerRequest, lcrc_copy_to_container_response, CopyToContainerResponse> {
+    : public ClientBase<ContainerService, ContainerService::Stub, isula_copy_to_container_request,
+      CopyToContainerRequest, isula_copy_to_container_response, CopyToContainerResponse> {
 public:
     explicit CopyToContainer(void *args)
         : ClientBase(args)
@@ -2012,8 +2012,8 @@ public:
     }
     ~CopyToContainer() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct lcrc_copy_to_container_request *request,
-                                   struct lcrc_copy_to_container_response *response)
+    int set_custom_header_metadata(ClientContext &context, const struct isula_copy_to_container_request *request,
+                                   struct isula_copy_to_container_response *response)
     {
         int ret = 0;
         char *json = nullptr;
@@ -2056,13 +2056,13 @@ out:
         return ret;
     }
 
-    int run(const struct lcrc_copy_to_container_request *request, struct lcrc_copy_to_container_response *response)
+    int run(const struct isula_copy_to_container_request *request, struct isula_copy_to_container_response *response)
     override
     {
         ClientContext context;
         if (set_custom_header_metadata(context, request, response) != 0) {
             ERROR("Failed to translate request to grpc");
-            response->cc = LCRD_ERR_INPUT;
+            response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
         using StreamRSharedPtr = std::shared_ptr<ClientReaderWriter<CopyToContainerRequest, CopyToContainerResponse>>;
@@ -2093,8 +2093,8 @@ out:
     }
 };
 
-class ContainerLogs : public ClientBase<ContainerService, ContainerService::Stub, lcrc_logs_request, LogsRequest,
-    lcrc_logs_response, LogsResponse> {
+class ContainerLogs : public ClientBase<ContainerService, ContainerService::Stub, isula_logs_request, LogsRequest,
+    isula_logs_response, LogsResponse> {
 public:
     explicit ContainerLogs(void *args)
         : ClientBase(args)
@@ -2102,7 +2102,7 @@ public:
     }
     ~ContainerLogs() = default;
 
-    int run(const struct lcrc_logs_request *request, struct lcrc_logs_response *response) override
+    int run(const struct isula_logs_request *request, struct isula_logs_response *response) override
     {
         ClientContext context;
         LogsRequest grequest;
@@ -2121,7 +2121,7 @@ public:
 
         if (logs_request_to_grpc(request, &grequest) != 0) {
             ERROR("Failed to transform container request to grpc");
-            response->server_errono = LCRD_ERR_INPUT;
+            response->server_errono = ISULAD_ERR_INPUT;
             return -1;
         }
 
@@ -2141,7 +2141,7 @@ public:
     }
 
 private:
-    void show_container_log(const struct lcrc_logs_request *request, const LogsResponse &gresponse)
+    void show_container_log(const struct isula_logs_request *request, const LogsResponse &gresponse)
     {
         static std::ostream *os = nullptr;
 
@@ -2159,7 +2159,7 @@ private:
         (*os) << gresponse.data();
     }
 
-    int logs_request_to_grpc(const struct lcrc_logs_request *request, LogsRequest *grequest)
+    int logs_request_to_grpc(const struct isula_logs_request *request, LogsRequest *grequest)
     {
         if (request == nullptr) {
             return -1;
@@ -2184,41 +2184,41 @@ private:
     }
 };
 
-int grpc_containers_client_ops_init(lcrc_connect_ops *ops)
+int grpc_containers_client_ops_init(isula_connect_ops *ops)
 {
     if (ops == nullptr) {
         return -1;
     }
     // implement following interface
-    ops->container.version = container_func<lcrc_version_request, lcrc_version_response, ContainerVersion>;
-    ops->container.info = container_func<lcrc_info_request, lcrc_info_response, ContainerInfo>;
-    ops->container.create = container_func<lcrc_create_request, lcrc_create_response, ContainerCreate>;
-    ops->container.start = container_func<lcrc_start_request, lcrc_start_response, ContainerStart>;
-    ops->container.remote_start = container_func<lcrc_start_request, lcrc_start_response, ContainerRemoteStart>;
-    ops->container.stop = container_func<lcrc_stop_request, lcrc_stop_response, ContainerStop>;
-    ops->container.restart = container_func<lcrc_restart_request, lcrc_restart_response, ContainerRestart>;
-    ops->container.remove = container_func<lcrc_delete_request, lcrc_delete_response, ContainerDelete>;
-    ops->container.list = container_func<lcrc_list_request, lcrc_list_response, ContainerList>;
-    ops->container.exec = container_func<lcrc_exec_request, lcrc_exec_response, ContainerExec>;
-    ops->container.remote_exec = container_func<lcrc_exec_request, lcrc_exec_response, ContainerRemoteExec>;
-    ops->container.attach = container_func<lcrc_attach_request, lcrc_attach_response, ContainerAttach>;
-    ops->container.pause = container_func<lcrc_pause_request, lcrc_pause_response, ContainerPause>;
-    ops->container.resume = container_func<lcrc_resume_request, lcrc_resume_response, ContainerResume>;
-    ops->container.update = container_func<lcrc_update_request, lcrc_update_response, ContainerUpdate>;
-    ops->container.kill = container_func<lcrc_kill_request, lcrc_kill_response, ContainerKill>;
-    ops->container.stats = container_func<lcrc_stats_request, lcrc_stats_response, ContainerStats>;
-    ops->container.wait = container_func<lcrc_wait_request, lcrc_wait_response, ContainerWait>;
-    ops->container.events = container_func<lcrc_events_request, lcrc_events_response, ContainerEvents>;
-    ops->container.inspect = container_func<lcrc_inspect_request, lcrc_inspect_response, ContainerInspect>;
-    ops->container.export_rootfs = container_func<lcrc_export_request, lcrc_export_response, ContainerExport>;
+    ops->container.version = container_func<isula_version_request, isula_version_response, ContainerVersion>;
+    ops->container.info = container_func<isula_info_request, isula_info_response, ContainerInfo>;
+    ops->container.create = container_func<isula_create_request, isula_create_response, ContainerCreate>;
+    ops->container.start = container_func<isula_start_request, isula_start_response, ContainerStart>;
+    ops->container.remote_start = container_func<isula_start_request, isula_start_response, ContainerRemoteStart>;
+    ops->container.stop = container_func<isula_stop_request, isula_stop_response, ContainerStop>;
+    ops->container.restart = container_func<isula_restart_request, isula_restart_response, ContainerRestart>;
+    ops->container.remove = container_func<isula_delete_request, isula_delete_response, ContainerDelete>;
+    ops->container.list = container_func<isula_list_request, isula_list_response, ContainerList>;
+    ops->container.exec = container_func<isula_exec_request, isula_exec_response, ContainerExec>;
+    ops->container.remote_exec = container_func<isula_exec_request, isula_exec_response, ContainerRemoteExec>;
+    ops->container.attach = container_func<isula_attach_request, isula_attach_response, ContainerAttach>;
+    ops->container.pause = container_func<isula_pause_request, isula_pause_response, ContainerPause>;
+    ops->container.resume = container_func<isula_resume_request, isula_resume_response, ContainerResume>;
+    ops->container.update = container_func<isula_update_request, isula_update_response, ContainerUpdate>;
+    ops->container.kill = container_func<isula_kill_request, isula_kill_response, ContainerKill>;
+    ops->container.stats = container_func<isula_stats_request, isula_stats_response, ContainerStats>;
+    ops->container.wait = container_func<isula_wait_request, isula_wait_response, ContainerWait>;
+    ops->container.events = container_func<isula_events_request, isula_events_response, ContainerEvents>;
+    ops->container.inspect = container_func<isula_inspect_request, isula_inspect_response, ContainerInspect>;
+    ops->container.export_rootfs = container_func<isula_export_request, isula_export_response, ContainerExport>;
     ops->container.copy_from_container =
-        container_func<lcrc_copy_from_container_request, lcrc_copy_from_container_response, CopyFromContainer>;
+        container_func<isula_copy_from_container_request, isula_copy_from_container_response, CopyFromContainer>;
     ops->container.copy_to_container =
-        container_func<lcrc_copy_to_container_request, lcrc_copy_to_container_response, CopyToContainer>;
-    ops->container.top = container_func<lcrc_top_request, lcrc_top_response, ContainerTop>;
-    ops->container.rename = container_func<lcrc_rename_request, lcrc_rename_response, ContainerRename>;
-    ops->container.resize = container_func<lcrc_resize_request, lcrc_resize_response, ContainerResize>;
-    ops->container.logs = container_func<lcrc_logs_request, lcrc_logs_response, ContainerLogs>;
+        container_func<isula_copy_to_container_request, isula_copy_to_container_response, CopyToContainer>;
+    ops->container.top = container_func<isula_top_request, isula_top_response, ContainerTop>;
+    ops->container.rename = container_func<isula_rename_request, isula_rename_response, ContainerRename>;
+    ops->container.resize = container_func<isula_resize_request, isula_resize_response, ContainerResize>;
+    ops->container.logs = container_func<isula_logs_request, isula_logs_response, ContainerLogs>;
 
     return 0;
 }

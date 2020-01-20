@@ -37,7 +37,7 @@
 #include "utils.h"
 #include "config.h"
 #include "path.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "namespace.h"
 #include "parse_common.h"
 #include "specs_mount.h"
@@ -645,7 +645,7 @@ static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_elem
                 // Destination + Mode is not a valid volume - volumes
                 // cannot include a mode. eg /foo:rw
                 ERROR("Invalid volume specification '%s'", volume);
-                lcrd_set_error_message("Invalid volume specification '%s',Invalid mode:%s", volume, array[1]);
+                isulad_set_error_message("Invalid volume specification '%s',Invalid mode:%s", volume, array[1]);
                 ret = -1;
                 break;
             }
@@ -657,7 +657,7 @@ static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_elem
             mount_element->destination = util_strdup_s(array[1]);
             if (!util_valid_mount_mode(array[2])) {
                 ERROR("Invalid volume specification '%s'", volume);
-                lcrd_set_error_message("Invalid volume specification '%s'.Invalid mode:%s", volume, array[2]);
+                isulad_set_error_message("Invalid volume specification '%s'.Invalid mode:%s", volume, array[2]);
                 ret = -1;
                 break;
             }
@@ -821,8 +821,8 @@ static int get_devices_from_path(const host_config_devices_element *dev_map, oci
     ret = stat(dev_map->path_on_host, &st);
     if (ret < 0) {
         ERROR("device %s no exists", dev_map->path_on_host);
-        lcrd_set_error_message("Error gathering device information while adding device \"%s\",stat %s: "
-                               "no such file or directory", dev_map->path_on_host, dev_map->path_on_host);
+        isulad_set_error_message("Error gathering device information while adding device \"%s\",stat %s: "
+                                 "no such file or directory", dev_map->path_on_host, dev_map->path_on_host);
         return -1;
     }
 
@@ -972,7 +972,7 @@ static int get_read_bps_devices_from_path(const host_config_blkio_device_read_bp
     ret = stat(read_bps_dev->path, &st);
     if (ret < 0) {
         ERROR("Failed to get state of device:%s", read_bps_dev->path);
-        lcrd_set_error_message("no such file or directory: %s", read_bps_dev->path);
+        isulad_set_error_message("no such file or directory: %s", read_bps_dev->path);
         return -1;
     }
 
@@ -1028,7 +1028,7 @@ static int get_write_bps_devices_from_path(const host_config_blkio_device_write_
     ret = stat(write_bps_dev->path, &st);
     if (ret < 0) {
         ERROR("no such file or directory :%s", write_bps_dev->path);
-        lcrd_set_error_message("no such file or directory: %s", write_bps_dev->path);
+        isulad_set_error_message("no such file or directory: %s", write_bps_dev->path);
         return -1;
     }
 
@@ -1087,7 +1087,7 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
     /* malloc for linux->device */
     if (devices_len > LIST_DEVICE_SIZE_MAX - oci_spec->linux->devices_len) {
         ERROR("Too many linux devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
-        lcrd_set_error_message("Too many linux devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
+        isulad_set_error_message("Too many linux devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -1199,15 +1199,15 @@ static int merge_all_devices_in_dir(const char *dir, const char *dir_container, 
     ret = get_devices(dir, &devices, &devices_len, 0);
     if (ret != 0) {
         ERROR("Failed to get host's device in directory:%s", dir);
-        lcrd_set_error_message("Failed to get host's device in directory:%s", dir);
+        isulad_set_error_message("Failed to get host's device in directory:%s", dir);
         ret = -1;
         goto out;
     }
     if (devices_len == 0) {
         ERROR("Error gathering device information while adding devices in directory \"%s\":no available device nodes",
               dir);
-        lcrd_set_error_message("Error gathering device information while adding devices in directory"
-                               " \"%s\":,no available device nodes", dir);
+        isulad_set_error_message("Error gathering device information while adding devices in directory"
+                                 " \"%s\":,no available device nodes", dir);
         ret = -1;
         goto out;
     }
@@ -1413,7 +1413,7 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
     }
     if (volumes_len > LIST_SIZE_MAX - oci_spec->mounts_len) {
         ERROR("Too many volumes to merge, the limit is %d", LIST_SIZE_MAX);
-        lcrd_set_error_message("Too many volumes to merge, the limit is %d", LIST_SIZE_MAX);
+        isulad_set_error_message("Too many volumes to merge, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -1606,7 +1606,7 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
 
     if (oci_spec->linux->resources->block_io->weight_device_len > LIST_DEVICE_SIZE_MAX - blkio_weight_device_len) {
         ERROR("Too many weight devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
-        lcrd_set_error_message("Too many weight devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
+        isulad_set_error_message("Too many weight devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -1659,8 +1659,8 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
     if (oci_spec->linux->resources->block_io->throttle_read_bps_device_len >
         LIST_DEVICE_SIZE_MAX - throttle_read_bps_device_len) {
         ERROR("Too many throttle read bps devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
-        lcrd_set_error_message("Too many throttle read bps devices devices to merge, the limit is %d",
-                               LIST_DEVICE_SIZE_MAX);
+        isulad_set_error_message("Too many throttle read bps devices devices to merge, the limit is %d",
+                                 LIST_DEVICE_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -1712,8 +1712,8 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
     if (oci_spec->linux->resources->block_io->throttle_write_bps_device_len >
         LIST_DEVICE_SIZE_MAX - throttle_write_bps_device_len) {
         ERROR("Too many throttle write bps devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
-        lcrd_set_error_message("Too many throttle write bps devices devices to merge, the limit is %d",
-                               LIST_DEVICE_SIZE_MAX);
+        isulad_set_error_message("Too many throttle write bps devices devices to merge, the limit is %d",
+                                 LIST_DEVICE_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -2099,7 +2099,7 @@ int add_rootfs_mount(const oci_runtime_spec *container)
     int ret = 0;
     char *mntparent = NULL;
 
-    mntparent = conf_get_lcrd_mount_rootfs();
+    mntparent = conf_get_isulad_mount_rootfs();
     if (mntparent == NULL) {
         ERROR("Failed to get mount parent directory");
         ret = -1;

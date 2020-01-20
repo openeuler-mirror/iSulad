@@ -103,47 +103,47 @@ list(REMOVE_DUPLICATES SHARED_SRCS)
 
 add_subdirectory(http)
 
-# ------ build liblcrc ------
+# ------ build libisula ------
 if (OPENSSL_VERIFY)
     list(APPEND CONNECTOR ${CMAKE_CURRENT_SOURCE_DIR}/http/certificate.c)
 endif()
 
-add_library(liblcrc ${LIBTYPE} 
-    ${CMAKE_CURRENT_SOURCE_DIR}/liblcrc.c
+add_library(libisula ${LIBTYPE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/libisula.c
     ${CMAKE_CURRENT_SOURCE_DIR}/pack_config.c
     ${CONNECTOR}
     ${SHARED_SRCS}
     )
 
-target_include_directories(liblcrc PUBLIC 
+target_include_directories(libisula PUBLIC
     ${SHARED_INCS}
     ${CONNECTOR_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/http
     )
 
-# set liblcrc FLAGS
-set_target_properties(liblcrc PROPERTIES PREFIX "")
-target_link_libraries(liblcrc ${LIBYAJL_LIBRARY} ${LIBSECUREC_LIBRARY})
+# set libisula FLAGS
+set_target_properties(libisula PROPERTIES PREFIX "")
+target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${LIBSECUREC_LIBRARY})
 
 if (GRPC_CONNECTOR)
-    target_link_libraries(liblcrc -Wl,--as-needed -lstdc++ -lcrypto)
-    target_link_libraries(liblcrc -Wl,--as-needed ${PROTOBUF_LIBRARY})
-    target_link_libraries(liblcrc -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+    target_link_libraries(libisula -Wl,--as-needed -lstdc++ -lcrypto)
+    target_link_libraries(libisula -Wl,--as-needed ${PROTOBUF_LIBRARY})
+    target_link_libraries(libisula -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 else()
-    target_link_libraries(liblcrc ${EVHTP_LIBRARY} ${EVENT_LIBRARY} ${ZLIB_LIBRARY} -ldl libhttpclient)
+    target_link_libraries(libisula ${EVHTP_LIBRARY} ${EVENT_LIBRARY} ${ZLIB_LIBRARY} -ldl libhttpclient)
 endif()
-# ------ build liblcrc finish -----
+# ------ build libisula finish -----
 
 add_subdirectory(cmd)
-# ------ build lcrc -------
-add_executable(lcrc
-    ${LCRC_SRCS}
+# ------ build isula -------
+add_executable(isula
+    ${ISULA_SRCS}
     )
-target_include_directories(lcrc PUBLIC ${LCRC_INCS} ${SHARED_INCS})
-target_link_libraries(lcrc liblcrc -lpthread)
-# ------ build lcrc finish -------
+target_include_directories(isula PUBLIC ${ISULA_INCS} ${SHARED_INCS})
+target_link_libraries(isula libisula -lpthread)
+# ------ build isula finish -------
 
-# ------ build lcrd -------
+# ------ build isulad -------
 add_subdirectory(services)
 add_subdirectory(image)
 add_subdirectory(runtime)
@@ -170,9 +170,9 @@ add_subdirectory(plugin)
 add_subdirectory(map)
 add_subdirectory(config)
 
-add_executable(lcrd
+add_executable(isulad
     ${CONNECT_SOCKET} ${SHARED_SRCS}
-    ${LCRD_SRCS} ${SERVICES_SRCS}
+    ${ISULAD_SRCS} ${SERVICES_SRCS}
     ${HTTP_SRCS}
     ${ENGINES_SRCS}
     ${IMAGE_SRCS}
@@ -181,19 +181,19 @@ add_executable(lcrd
     ${MAP_SRCS} ${CONFIG_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/filters.c
     ${CMAKE_CURRENT_SOURCE_DIR}/namespace.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/liblcrd.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/libisulad.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sysctl_tools.c
     ${WEBSOCKET_SERVICE_SRCS}
     )
 
-target_include_directories(lcrd PUBLIC
+target_include_directories(isulad PUBLIC
     ${SHARED_INCS}
     ${CONNECT_SOCKET_INCS}
     ${SERVICES_INCS}
     ${IMAGE_INCS}
     ${RUNTIME_INCS}
     ${ENGINES_INCS}
-    ${LCRD_INCS}
+    ${ISULAD_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin
     ${CMAKE_CURRENT_SOURCE_DIR}/map
     ${CMAKE_CURRENT_SOURCE_DIR}/config
@@ -201,41 +201,41 @@ target_include_directories(lcrd PUBLIC
     ${WEBSOCKET_SERVICE_INCS}
     )
 
-target_link_libraries(lcrd ${LIBYAJL_LIBRARY} ${LIBSECUREC_LIBRARY} ${SYSTEMD_LIBRARY})
-target_link_libraries(lcrd -ldl ${ZLIB_LIBRARY} -lpthread libhttpclient)
+target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${LIBSECUREC_LIBRARY} ${SYSTEMD_LIBRARY})
+target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} -lpthread libhttpclient)
 if (ENABLE_EMBEDDED_IMAGE)
-    target_link_libraries(lcrd ${SQLITE3_LIBRARY})
+    target_link_libraries(isulad ${SQLITE3_LIBRARY})
 endif()
 
 if (GRPC_CONNECTOR)
     message("GRPC iSulad")
-    target_link_libraries(lcrd -Wl,--as-needed -lstdc++ -lcrypto)
-    target_link_libraries(lcrd -Wl,--as-needed ${PROTOBUF_LIBRARY})
-    target_link_libraries(lcrd -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
-    target_link_libraries(lcrd ${CLIBCNI_LIBRARY} ${WEBSOCKET_LIBRARY})
+    target_link_libraries(isulad -Wl,--as-needed -lstdc++ -lcrypto)
+    target_link_libraries(isulad -Wl,--as-needed ${PROTOBUF_LIBRARY})
+    target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+    target_link_libraries(isulad ${CLIBCNI_LIBRARY} ${WEBSOCKET_LIBRARY})
 else()
     message("Restful iSulad")
-    target_link_libraries(lcrd ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
+    target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
 endif()
 
 if (ENABLE_OCI_IMAGE)
-    target_link_libraries(lcrd -Wl,--as-needed -lstdc++)
-    target_link_libraries(lcrd -Wl,--as-needed ${PROTOBUF_LIBRARY})
-    target_link_libraries(lcrd -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+    target_link_libraries(isulad -Wl,--as-needed -lstdc++)
+    target_link_libraries(isulad -Wl,--as-needed ${PROTOBUF_LIBRARY})
+    target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 endif()
 
 if (ISULAD_GCOV)
-    target_link_libraries(lcrc -lgcov)
-    target_link_libraries(liblcrc -lgcov)
-    target_link_libraries(lcrd -lgcov)
+    target_link_libraries(isula -lgcov)
+    target_link_libraries(libisula -lgcov)
+    target_link_libraries(isulad -lgcov)
 endif()
 
-# ------ build lcrd finish -------
+# ------ build isulad finish -------
 
 # ------ install binary --------
-install(TARGETS liblcrc
+install(TARGETS libisula
   LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(TARGETS lcrc
+install(TARGETS isula
 	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(TARGETS lcrd
+install(TARGETS isulad
 	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

@@ -15,13 +15,13 @@
 #ifndef __GRPC_IMAGES_CLIENT_H
 #define __GRPC_IMAGES_CLIENT_H
 
-#include "lcrc_connect.h"
+#include "isula_connect.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int grpc_images_client_ops_init(lcrc_connect_ops *ops);
+int grpc_images_client_ops_init(isula_connect_ops *ops);
 
 #ifdef __cplusplus
 }

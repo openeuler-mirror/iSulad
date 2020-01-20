@@ -19,7 +19,7 @@
 
 #include "log.h"
 #include "utils.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "constants.h"
 #include "oci_common_operators.h"
 

@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
 
 static int generate_isula_logout_request(const char *server, struct isula_logout_request **ireq)
@@ -40,7 +40,7 @@ static int generate_isula_logout_request(const char *server, struct isula_logout
 static inline int is_valid_arguments(const char *server)
 {
     if (server == NULL) {
-        lcrd_set_error_message("Logout requires server address");
+        isulad_set_error_message("Logout requires server address");
         return -1;
     }
     return 0;
@@ -89,7 +89,7 @@ int isula_do_logout(const char *server)
     ret = im_ops->logout(ireq, iresp, &conf);
     if (ret != 0) {
         ERROR("Failed to logout with error: %s", iresp->errmsg);
-        lcrd_set_error_message("Failed to logout with error: %s", iresp->errmsg);
+        isulad_set_error_message("Failed to logout with error: %s", iresp->errmsg);
     }
 
 out:

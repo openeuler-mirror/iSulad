@@ -40,7 +40,7 @@ public:
     int Init(const struct service_arguments *args)
     {
         if (args == nullptr || args->hosts == nullptr) {
-            ERROR("lcrd config socket address is empty");
+            ERROR("isulad config socket address is empty");
             return -1;
         }
 

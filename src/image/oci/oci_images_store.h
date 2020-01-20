@@ -44,5 +44,5 @@ int oci_image_store_init();
 }
 #endif
 
-#endif /* __LCRD_MEMORY_STORE_H__ */
+#endif /* __ISULAD_MEMORY_STORE_H__ */
 

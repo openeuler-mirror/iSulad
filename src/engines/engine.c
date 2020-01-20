@@ -22,18 +22,18 @@
 
 #include "constants.h"
 #include "linked_list.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "log.h"
 #include "utils.h"
 #include "lcr_engine.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 
-struct lcrd_engine_operation_lists {
-    pthread_rwlock_t lcrd_engines_op_rwlock;
-    struct linked_list lcrd_engines_op_list;
+struct isulad_engine_operation_lists {
+    pthread_rwlock_t isulad_engines_op_rwlock;
+    struct linked_list isulad_engines_op_list;
 };
 
-static struct lcrd_engine_operation_lists g_lcrd_engines_lists;
+static struct isulad_engine_operation_lists g_isulad_engines_lists;
 
 typedef int (*engine_init_func_t)(struct engine_operation *ops);
 
@@ -42,17 +42,17 @@ int engines_global_init()
 {
     int ret = 0;
 
-    (void)memset(&g_lcrd_engines_lists, 0, sizeof(struct lcrd_engine_operation_lists));
-    /* init lcrd_engines_op_rwlock */
+    (void)memset(&g_isulad_engines_lists, 0, sizeof(struct isulad_engine_operation_lists));
+    /* init isulad_engines_op_rwlock */
 
-    ret = pthread_rwlock_init(&g_lcrd_engines_lists.lcrd_engines_op_rwlock, NULL);
+    ret = pthread_rwlock_init(&g_isulad_engines_lists.isulad_engines_op_rwlock, NULL);
     if (ret != 0) {
-        ERROR("Failed to init lcrd conf rwlock");
+        ERROR("Failed to init isulad conf rwlock");
         ret = -1;
         goto out;
     }
 
-    linked_list_init(&g_lcrd_engines_lists.lcrd_engines_op_list);
+    linked_list_init(&g_isulad_engines_lists.isulad_engines_op_list);
 
 out:
     return ret;
@@ -72,14 +72,14 @@ static int engine_routine_log_init(const struct engine_operation *eop)
     }
 
     engine_log_path = conf_get_engine_log_file();
-    if (lcrd_server_conf_rdlock()) {
+    if (isulad_server_conf_rdlock()) {
         ret = -1;
         goto out;
     }
 
     args = conf_get_server_conf();
     if (args == NULL) {
-        ERROR("Failed to get lcrd server config");
+        ERROR("Failed to get isulad server config");
         ret = -1;
         goto unlock_out;
     }
@@ -97,7 +97,7 @@ static int engine_routine_log_init(const struct engine_operation *eop)
     }
 
 unlock_out:
-    if (lcrd_server_conf_unlock()) {
+    if (isulad_server_conf_unlock()) {
         ret = -1;
         goto out;
     }
@@ -143,7 +143,7 @@ static struct engine_operation *query_engine_locked(const char *name)
     struct linked_list *it = NULL;
     struct linked_list *next = NULL;
 
-    linked_list_for_each_safe(it, &g_lcrd_engines_lists.lcrd_engines_op_list, next) {
+    linked_list_for_each_safe(it, &g_isulad_engines_lists.isulad_engines_op_list, next) {
         engine_op = (struct engine_operation *)it->elem;
         if (engine_op == NULL) {
             DEBUG("Invalid engine list elem");
@@ -172,7 +172,7 @@ static struct engine_operation *new_engine_locked(const char *name)
 
     if (engine_op == NULL) {
         ERROR("Failed to initialize engine or runtime: %s", name);
-        lcrd_set_error_message("Failed to initialize engine or runtime: %s", name);
+        isulad_set_error_message("Failed to initialize engine or runtime: %s", name);
         return NULL;
     }
 
@@ -215,8 +215,8 @@ int engines_discovery(const char *name)
         return -1;
     }
 
-    if (pthread_rwlock_wrlock(&g_lcrd_engines_lists.lcrd_engines_op_rwlock)) {
-        ERROR("Failed to acquire lcrd engines list write lock");
+    if (pthread_rwlock_wrlock(&g_isulad_engines_lists.isulad_engines_op_rwlock)) {
+        ERROR("Failed to acquire isulad engines list write lock");
         return -1;
     }
 
@@ -242,11 +242,11 @@ int engines_discovery(const char *name)
     }
 
     linked_list_add_elem(newnode, engine_op);
-    linked_list_add_tail(&g_lcrd_engines_lists.lcrd_engines_op_list, newnode);
+    linked_list_add_tail(&g_isulad_engines_lists.isulad_engines_op_list, newnode);
 
 unlock_out:
-    if (pthread_rwlock_unlock(&g_lcrd_engines_lists.lcrd_engines_op_rwlock)) {
-        ERROR("Failed to release lcrd engines list write lock");
+    if (pthread_rwlock_unlock(&g_isulad_engines_lists.isulad_engines_op_rwlock)) {
+        ERROR("Failed to release isulad engines list write lock");
         ret = -1;
     }
 
@@ -264,13 +264,13 @@ static struct engine_operation *engines_check_handler_exist(const char *name)
         goto out;
     }
 
-    if (pthread_rwlock_rdlock(&g_lcrd_engines_lists.lcrd_engines_op_rwlock)) {
-        ERROR("Failed to acquire lcrd engines list read lock");
+    if (pthread_rwlock_rdlock(&g_isulad_engines_lists.isulad_engines_op_rwlock)) {
+        ERROR("Failed to acquire isulad engines list read lock");
         engine_op = NULL;
         goto out;
     }
 
-    linked_list_for_each_safe(it, &g_lcrd_engines_lists.lcrd_engines_op_list, next) {
+    linked_list_for_each_safe(it, &g_isulad_engines_lists.isulad_engines_op_list, next) {
         engine_op = (struct engine_operation *)it->elem;
         if (engine_op == NULL) {
             DEBUG("Invalid engine list elem");
@@ -284,8 +284,8 @@ static struct engine_operation *engines_check_handler_exist(const char *name)
         engine_op = NULL;
     }
 
-    if (pthread_rwlock_unlock(&g_lcrd_engines_lists.lcrd_engines_op_rwlock)) {
-        CRIT("Failed to release lcrd engines list read lock");
+    if (pthread_rwlock_unlock(&g_isulad_engines_lists.isulad_engines_op_rwlock)) {
+        CRIT("Failed to release isulad engines list read lock");
         engine_op = NULL;
         goto out;
     }

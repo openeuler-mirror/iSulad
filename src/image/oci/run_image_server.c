@@ -28,7 +28,7 @@
 #include "isula_image.h"
 #include "isula_health_check.h"
 #include "global_config.h"
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "log.h"
 #include "utils_file.h"
 #include "utils.h"

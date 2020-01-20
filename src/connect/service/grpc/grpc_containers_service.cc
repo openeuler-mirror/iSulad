@@ -41,7 +41,7 @@ void protobuf_timestamp_from_grpc(types_timestamp_t *timestamp, const Timestamp 
     timestamp->nanos = gtimestamp.nanos();
 }
 
-void event_to_grpc(const struct lcrd_events_format *event, Event *gevent)
+void event_to_grpc(const struct isulad_events_format *event, Event *gevent)
 {
     gevent->Clear();
     if (event->id != nullptr) {
@@ -65,7 +65,7 @@ void event_to_grpc(const struct lcrd_events_format *event, Event *gevent)
     }
 }
 
-void copy_from_container_response_to_grpc(const struct lcrd_copy_from_container_response *copy,
+void copy_from_container_response_to_grpc(const struct isulad_copy_from_container_response *copy,
                                           CopyFromContainerResponse *gcopy)
 {
     gcopy->Clear();
@@ -90,7 +90,7 @@ bool grpc_add_initial_metadata(void *context, const char *header, const char *va
 
 bool grpc_event_write_function(void *writer, void *data)
 {
-    struct lcrd_events_format *event = (struct lcrd_events_format *)data;
+    struct isulad_events_format *event = (struct isulad_events_format *)data;
     ServerWriter<Event> *gwriter = (ServerWriter<Event> *)writer;
     Event gevent;
     event_to_grpc(event, &gevent);
@@ -99,14 +99,14 @@ bool grpc_event_write_function(void *writer, void *data)
 
 bool grpc_copy_from_container_write_function(void *writer, void *data)
 {
-    struct lcrd_copy_from_container_response *copy = (struct lcrd_copy_from_container_response *)data;
+    struct isulad_copy_from_container_response *copy = (struct isulad_copy_from_container_response *)data;
     ServerWriter<CopyFromContainerResponse> *gwriter = (ServerWriter<CopyFromContainerResponse> *)writer;
     CopyFromContainerResponse gcopy;
     copy_from_container_response_to_grpc(copy, &gcopy);
     return gwriter->Write(gcopy);
 }
 
-static bool copy_to_container_data_from_grpc(struct lcrd_copy_to_container_data *copy,
+static bool copy_to_container_data_from_grpc(struct isulad_copy_to_container_data *copy,
                                              CopyToContainerRequest *gcopy)
 {
     size_t len = (size_t)gcopy->data().length();
@@ -127,7 +127,7 @@ static bool copy_to_container_data_from_grpc(struct lcrd_copy_to_container_data 
 
 bool grpc_copy_to_container_read_function(void *reader, void *data)
 {
-    struct lcrd_copy_to_container_data *copy = (struct lcrd_copy_to_container_data *)data;
+    struct isulad_copy_to_container_data *copy = (struct isulad_copy_to_container_data *)data;
     ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream =
         (ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *)reader;
     CopyToContainerRequest gcopy;
@@ -156,7 +156,7 @@ Status ContainerServiceImpl::Version(ServerContext *context, const VersionReques
     tret = version_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -166,8 +166,8 @@ Status ContainerServiceImpl::Version(ServerContext *context, const VersionReques
     free_container_version_request(container_req);
     free_container_version_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -192,7 +192,7 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
     tret = info_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -202,8 +202,8 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
     free_host_info_request(container_req);
     free_host_info_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -228,7 +228,7 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest 
     tret = create_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -238,8 +238,8 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest 
     free_container_create_request(container_req);
     free_container_create_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -264,7 +264,7 @@ Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *r
     tret = start_request_from_grpc(request, &req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::CANCELLED;
     }
 
@@ -274,8 +274,8 @@ Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *r
     free_container_start_request(req);
     free_container_start_response(res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -421,7 +421,7 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
     tret = top_request_from_grpc(request, &req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::CANCELLED;
     }
 
@@ -431,8 +431,8 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
     free_container_top_request(req);
     free_container_top_response(res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -457,7 +457,7 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
     tret = stop_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -467,8 +467,8 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
     free_container_stop_request(container_req);
     free_container_stop_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -493,7 +493,7 @@ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartReques
     tret = restart_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -503,8 +503,8 @@ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartReques
     free_container_restart_request(container_req);
     free_container_restart_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -529,7 +529,7 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
     tret = kill_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -539,8 +539,8 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
     free_container_kill_request(container_req);
     free_container_kill_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -565,7 +565,7 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest 
     tret = delete_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -575,8 +575,8 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest 
     free_container_delete_request(container_req);
     free_container_delete_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -601,7 +601,7 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
     tret = exec_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::CANCELLED;
     }
 
@@ -611,8 +611,8 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
     free_container_exec_request(container_req);
     free_container_exec_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -734,7 +734,7 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
     tret = inspect_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -749,8 +749,8 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
     free_container_inspect_request(container_req);
     free_container_inspect_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -775,7 +775,7 @@ Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *req
     tret = list_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -785,8 +785,8 @@ Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *req
     free_container_list_request(container_req);
     free_container_list_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -952,7 +952,7 @@ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *r
     tret = pause_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -962,8 +962,8 @@ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *r
     free_container_pause_request(container_req);
     free_container_pause_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -988,7 +988,7 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest 
     tret = resume_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -998,8 +998,8 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest 
     free_container_resume_request(container_req);
     free_container_resume_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -1024,7 +1024,7 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
     tret = export_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -1034,8 +1034,8 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
     free_container_export_request(container_req);
     free_container_export_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -1046,8 +1046,8 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
 {
     int ret, tret;
     service_callback_t *cb = nullptr;
-    struct lcrd_container_rename_request *lcrdreq = nullptr;
-    struct lcrd_container_rename_response *lcrdres = nullptr;
+    struct isulad_container_rename_request *isuladreq = nullptr;
+    struct isulad_container_rename_response *isuladres = nullptr;
 
     auto status = GrpcServerTlsAuth::auth(context, "container_rename");
     if (!status.ok()) {
@@ -1059,21 +1059,21 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
 
-    tret = container_rename_request_from_grpc(request, &lcrdreq);
+    tret = container_rename_request_from_grpc(request, &isuladreq);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
-    ret = cb->container.rename(lcrdreq, &lcrdres);
-    tret = container_rename_response_to_grpc(lcrdres, reply);
+    ret = cb->container.rename(isuladreq, &isuladres);
+    tret = container_rename_response_to_grpc(isuladres, reply);
 
-    lcrd_container_rename_request_free(lcrdreq);
-    lcrd_container_rename_response_free(lcrdres);
+    isulad_container_rename_request_free(isuladreq);
+    isulad_container_rename_response_free(isuladres);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -1084,8 +1084,8 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest 
 {
     int ret, tret;
     service_callback_t *cb = nullptr;
-    struct lcrd_container_resize_request *lcrdreq = nullptr;
-    struct lcrd_container_resize_response *lcrdres = nullptr;
+    struct isulad_container_resize_request *isuladreq = nullptr;
+    struct isulad_container_resize_response *isuladres = nullptr;
 
     auto status = GrpcServerTlsAuth::auth(context, "container_resize");
     if (!status.ok()) {
@@ -1097,21 +1097,21 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest 
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
 
-    tret = container_resize_request_from_grpc(request, &lcrdreq);
+    tret = container_resize_request_from_grpc(request, &isuladreq);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
-    ret = cb->container.resize(lcrdreq, &lcrdres);
-    tret = container_resize_response_to_grpc(lcrdres, reply);
+    ret = cb->container.resize(isuladreq, &isuladres);
+    tret = container_resize_response_to_grpc(isuladres, reply);
 
-    lcrd_container_resize_request_free(lcrdreq);
-    lcrd_container_resize_response_free(lcrdres);
+    isulad_container_resize_request_free(isuladreq);
+    isulad_container_resize_response_free(isuladres);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -1136,7 +1136,7 @@ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest 
     tret = update_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -1146,8 +1146,8 @@ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest 
     free_container_update_request(container_req);
     free_container_update_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -1172,7 +1172,7 @@ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *r
     tret = stats_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -1182,8 +1182,8 @@ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *r
     free_container_stats_request(container_req);
     free_container_stats_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -1209,7 +1209,7 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
     tret = wait_request_from_grpc(request, &container_req);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
-        reply->set_cc(LCRD_ERR_INPUT);
+        reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
     }
 
@@ -1219,8 +1219,8 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
     free_container_wait_request(container_req);
     free_container_wait_response(container_res);
     if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(LCRD_ERR_INTERNAL));
-        reply->set_cc(LCRD_ERR_INTERNAL);
+        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+        reply->set_cc(ISULAD_ERR_INTERNAL);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
     return Status::OK;
@@ -1230,7 +1230,7 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
 {
     int ret, tret;
     service_callback_t *cb = nullptr;
-    lcrd_events_request *lcrdreq = nullptr;
+    isulad_events_request *isuladreq = nullptr;
     stream_func_wrapper stream = { 0 };
 
     auto status = GrpcServerTlsAuth::auth(context, "docker_events");
@@ -1242,7 +1242,7 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
 
-    tret = events_request_from_grpc(request, &lcrdreq);
+    tret = events_request_from_grpc(request, &isuladreq);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
         return Status(StatusCode::INTERNAL, "Failed to transform grpc request");
@@ -1253,8 +1253,8 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
     stream.write_func = &grpc_event_write_function;
     stream.writer = (void *)writer;
 
-    ret = cb->container.events(lcrdreq, &stream);
-    lcrd_events_request_free(lcrdreq);
+    ret = cb->container.events(isuladreq, &stream);
+    isulad_events_request_free(isuladreq);
     if (ret != 0) {
         return Status(StatusCode::INTERNAL, "Failed to execute events callback");
     }
@@ -1266,7 +1266,7 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
 {
     int ret, tret;
     service_callback_t *cb = nullptr;
-    lcrd_copy_from_container_request *lcrdreq = nullptr;
+    isulad_copy_from_container_request *isuladreq = nullptr;
 
     auto status = GrpcServerTlsAuth::auth(context, "container_archive");
     if (!status.ok()) {
@@ -1277,7 +1277,7 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
 
-    tret = copy_from_container_request_from_grpc(request, &lcrdreq);
+    tret = copy_from_container_request_from_grpc(request, &isuladreq);
     if (tret != 0) {
         ERROR("Failed to transform grpc request");
         return Status(StatusCode::UNKNOWN, "Failed to transform grpc request");
@@ -1291,8 +1291,8 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
     stream.writer = (void *)writer;
 
     char *err = nullptr;
-    ret = cb->container.copy_from_container(lcrdreq, &stream, &err);
-    lcrd_copy_from_container_request_free(lcrdreq);
+    ret = cb->container.copy_from_container(isuladreq, &stream, &err);
+    isulad_copy_from_container_request_free(isuladreq);
     std::string errmsg = (err != nullptr) ? err : "Failed to execute copy_from_container callback";
     free(err);
     if (ret != 0) {
@@ -1308,7 +1308,7 @@ Status ContainerServiceImpl::CopyToContainer(
 {
     int ret;
     service_callback_t *cb = nullptr;
-    container_copy_to_request *lcrdreq = nullptr;
+    container_copy_to_request *isuladreq = nullptr;
 
     auto status = GrpcServerTlsAuth::auth(context, "container_archive");
     if (!status.ok()) {
@@ -1324,8 +1324,8 @@ Status ContainerServiceImpl::CopyToContainer(
     if (iter != metadata.end()) {
         char *err = nullptr;
         std::string json = std::string(iter->second.data(), iter->second.length());
-        lcrdreq = container_copy_to_request_parse_data(json.c_str(), nullptr, &err);
-        if (lcrdreq == nullptr) {
+        isuladreq = container_copy_to_request_parse_data(json.c_str(), nullptr, &err);
+        if (isuladreq == nullptr) {
             std::string errmsg = "Invalid copy to container json: ";
             errmsg += (err != nullptr) ? err : "unknown";
             free(err);
@@ -1341,8 +1341,8 @@ Status ContainerServiceImpl::CopyToContainer(
     wrapper.read_func = &grpc_copy_to_container_read_function;
 
     char *err = nullptr;
-    ret = cb->container.copy_to_container(lcrdreq, &wrapper, &err);
-    free_container_copy_to_request(lcrdreq);
+    ret = cb->container.copy_to_container(isuladreq, &wrapper, &err);
+    free_container_copy_to_request(isuladreq);
     std::string msg = (err != nullptr) ? err : "Failed to execute copy_to_container callback";
     free(err);
 
@@ -1372,9 +1372,9 @@ void log_to_grpc(const logger_json_file *log, LogsResponse *glog)
     }
 }
 
-int ContainerServiceImpl::logs_request_from_grpc(const LogsRequest *grequest, struct lcrd_logs_request **request)
+int ContainerServiceImpl::logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request)
 {
-    *request = (struct lcrd_logs_request *)util_common_calloc_s(sizeof(struct lcrd_logs_request));
+    *request = (struct isulad_logs_request *)util_common_calloc_s(sizeof(struct isulad_logs_request));
     if (*request == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -1413,8 +1413,8 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest* req
 {
     int ret = 0;
     service_callback_t *cb = nullptr;
-    struct lcrd_logs_request *lcrd_request = nullptr;
-    struct lcrd_logs_response *lcrd_response = nullptr;
+    struct isulad_logs_request *isulad_request = nullptr;
+    struct isulad_logs_response *isulad_response = nullptr;
     stream_func_wrapper stream = { 0 };
 
     auto status = GrpcServerTlsAuth::auth(context, "container_logs");
@@ -1427,7 +1427,7 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest* req
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
 
-    ret = logs_request_from_grpc(request, &lcrd_request);
+    ret = logs_request_from_grpc(request, &isulad_request);
     if (ret != 0) {
         ERROR("Failed to transform grpc request");
         return Status(StatusCode::UNKNOWN, "Failed to transform grpc request");
@@ -1438,14 +1438,14 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest* req
     stream.write_func = &grpc_logs_write_function;
     stream.writer = (void *)writer;
 
-    ret = cb->container.logs(lcrd_request, &stream, &lcrd_response);
-    lcrd_logs_request_free(lcrd_request);
+    ret = cb->container.logs(isulad_request, &stream, &isulad_response);
+    isulad_logs_request_free(isulad_request);
     std::string errmsg = "Failed to execute logs";
-    if (lcrd_response == nullptr) {
+    if (isulad_response == nullptr) {
         return Status(StatusCode::UNKNOWN, errmsg);
     }
-    errmsg = (lcrd_response->errmsg != nullptr) ? lcrd_response->errmsg : "Failed to execute logs";
-    lcrd_logs_response_free(lcrd_response);
+    errmsg = (isulad_response->errmsg != nullptr) ? isulad_response->errmsg : "Failed to execute logs";
+    isulad_logs_response_free(isulad_response);
     if (ret != 0) {
         return Status(StatusCode::UNKNOWN, errmsg);
     }

@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "utils.h"
 
 #define QUOTA_SIZE_OPTION "overlay2.size"
@@ -45,12 +45,12 @@ int overlay2_parse_options(struct graphdriver *driver, const char **options, siz
 
         dup = util_strdup_s(options[i]);
         if (dup == NULL) {
-            lcrd_set_error_message("Out of memory");
+            isulad_set_error_message("Out of memory");
             return -1;
         }
         p = strchr(dup, '=');
         if (!p) {
-            lcrd_set_error_message("Unable to parse key/value option: '%s'", dup);
+            isulad_set_error_message("Unable to parse key/value option: '%s'", dup);
             free(dup);
             return -1;
         }
@@ -60,16 +60,16 @@ int overlay2_parse_options(struct graphdriver *driver, const char **options, siz
             int64_t converted = 0;
             ret = util_parse_byte_size_string(val, &converted);
             if (ret != 0) {
-                lcrd_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
+                isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
             }
         } else if (strcasecmp(dup, "overlay2.override_kernel_check") == 0) {
             bool converted_bool = 0;
             ret = util_str_to_bool(val, &converted_bool);
             if (ret != 0) {
-                lcrd_set_error_message("Invalid bool: '%s': %s", val, strerror(-ret));
+                isulad_set_error_message("Invalid bool: '%s': %s", val, strerror(-ret));
             }
         } else {
-            lcrd_set_error_message("Overlay2: unknown option: '%s'", dup);
+            isulad_set_error_message("Overlay2: unknown option: '%s'", dup);
             ret = -1;
         }
         free(dup);

@@ -3,7 +3,7 @@
 # the iSulad daemon socket configuration
 #
 # Modify these options if you want to change the way the iSulad daemon runs
-# OPTIONS='-H unix:///var/run/lcrd.sock'
+# OPTIONS='-H unix:///var/run/isulad.sock'
 # OPTIONS='-H tcp://0.0.0.0:2375'
 # OPTIONS='-H tcp://0.0.0.0:2375 --tlsverify --tlscacert=/root/.iSulad/ca.pem --tlscert=/root/.iSulad/server-cert.pem --tlskey=/root/.iSulad/server-key.pem'
 
@@ -11,12 +11,12 @@
 #
 # 'DOCKER_CERT_PATH' contains the location of the client configuration files used for TLS verification.
 #ISULAD_CERT_PATH=/etc/iSulad
-# 'DOCKER_HOST' specifies the daemon socket to connect to. The default is a local socket(unix:///var/run/lcrd.sock).
+# 'DOCKER_HOST' specifies the daemon socket to connect to. The default is a local socket(unix:///var/run/isulad.sock).
 #ISULAD_HOST=tcp://127.0.0.1:2375
 # 'DOCKER_TLS_VERIFY' enables Transport Layer Security (TLS) for the local Docker client
 #ISULAD_TLS_VERIFY=1
 
 # Modify 'SYSMONITOR_OPTIONS' if you want to change the way the iSulad daemon runs,because client need to adapt daemon
-#SYSMONITOR_OPTIONS='-H unix:///var/run/lcrd.sock'
+#SYSMONITOR_OPTIONS='-H unix:///var/run/isulad.sock'
 #SYSMONITOR_OPTIONS='-H tcp://127.0.0.1:2375'
 #SYSMONITOR_OPTIONS='-H tcp://127.0.0.1:2375 --tlsverify --tlscacert=/root/.iSulad/ca.pem --tlscert=/root/.iSulad/cert.pem --tlskey=/root/.iSulad/key.pem'

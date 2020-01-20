@@ -16,7 +16,7 @@
 
 #include <stddef.h>
 
-#include "lcrd_config.h"
+#include "isulad_config.h"
 #include "log.h"
 #ifdef ENABLE_OCI_IMAGE
 #include "driver.h"
@@ -33,7 +33,7 @@ static int pack_global_graph_driver(const char * const *options, bool ignore_sto
 
     i = *count;
 
-    graph_driver = conf_get_lcrd_storage_driver();
+    graph_driver = conf_get_isulad_storage_driver();
     if (graph_driver == NULL) {
         COMMAND_ERROR("Failed to get graph driver");
         goto out;
@@ -41,7 +41,7 @@ static int pack_global_graph_driver(const char * const *options, bool ignore_sto
     driver = graphdriver_get(graph_driver);
     if (strcmp(graph_driver, "overlay2") == 0) {
         // Treating overlay2 as overlay cause image was downloaded always
-        // in '/var/lib/lcrd/storage/overlay' directory.
+        // in '/var/lib/isulad/storage/overlay' directory.
         // See iSulad-kit/vendor/github.com/containers/storage/drivers/overlay/overlay.go,
         // Driver is inited by name "overlay".
         graph_driver[strlen(graph_driver) - 1] = '\0';
@@ -121,7 +121,7 @@ static char *adapt_log_level()
     char *isulad_level = NULL;
     char *adapted_level = NULL;
 
-    isulad_level = conf_get_lcrd_loglevel();
+    isulad_level = conf_get_isulad_loglevel();
     if (isulad_level == NULL) {
         goto out;
     }

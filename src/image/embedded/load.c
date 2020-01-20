@@ -16,7 +16,7 @@
 #include <string.h>
 
 #include "error.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "embedded_image.h"
 #include "lim.h"
 #include "limits.h"
@@ -97,26 +97,26 @@ static char *get_digest(const char *file)
 
     if (strlen(sgn_file) > PATH_MAX || realpath(sgn_file, real_path) == NULL) {
         ERROR("get real path of %s failed", sgn_file);
-        lcrd_try_set_error_message("Manifest's signature file not exist");
+        isulad_try_set_error_message("Manifest's signature file not exist");
         goto out;
     }
 
     if (!util_file_exists(real_path)) {
-        lcrd_try_set_error_message("Manifest's signature file not exist");
+        isulad_try_set_error_message("Manifest's signature file not exist");
         goto out;
     }
 
     digest = util_read_text_file(real_path);
     if (digest == NULL) {
         ERROR("read digest from file %s failed", real_path);
-        lcrd_try_set_error_message("Invalid manifest: invalid digest");
+        isulad_try_set_error_message("Invalid manifest: invalid digest");
         goto out;
     }
 
     if (strnlen(digest, digest_len + 1) != digest_len) {
         DEBUG("digest %s too short", digest);
         UTIL_FREE_AND_SET_NULL(digest);
-        lcrd_try_set_error_message("Invalid manifest: invalid digest");
+        isulad_try_set_error_message("Invalid manifest: invalid digest");
 
         goto out;
     }
@@ -145,19 +145,19 @@ static int load_image(char *file)
 
     if (strlen(file) > PATH_MAX || !realpath(file, real_path)) {
         ERROR("invalid file path %s", file);
-        lcrd_try_set_error_message("Invalid manifest: manifest not found");
+        isulad_try_set_error_message("Invalid manifest: manifest not found");
         return EINVALIDARGS;
     }
 
     if (!util_file_exists(real_path)) {
         ERROR("file %s not exist", file);
-        lcrd_try_set_error_message("Invalid manifest: manifest not found");
+        isulad_try_set_error_message("Invalid manifest: manifest not found");
         return EINVALIDARGS;
     }
 
     if (!util_valid_file(real_path, S_IFREG)) {
         ERROR("manifest file %s is not a regular file", real_path);
-        lcrd_try_set_error_message("Invalid manifest: manifest is not a regular file");
+        isulad_try_set_error_message("Invalid manifest: manifest is not a regular file");
         return EINVALIDARGS;
     }
 

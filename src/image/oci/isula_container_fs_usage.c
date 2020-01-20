@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "liblcrd.h"
+#include "libisulad.h"
 #include "log.h"
 
 static int generate_isula_container_fs_usage_request(const char *name_id,
@@ -94,7 +94,7 @@ int isula_container_fs_usage(const char *name_id, char **usages)
     ret = im_ops->container_fs_usage(ireq, iresp, &conf);
     if (ret != 0) {
         ERROR("Get container %s fs usage failed: %s", name_id, iresp->errmsg);
-        lcrd_set_error_message("Failed to container fs info with error: %s", iresp->errmsg);
+        isulad_set_error_message("Failed to container fs info with error: %s", iresp->errmsg);
         goto out;
     }
     *usages = iresp->usage;

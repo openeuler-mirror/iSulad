@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container supervisor definition
  ******************************************************************************/
-#ifndef __LCRD_SUPERVISOR_H
-#define __LCRD_SUPERVISOR_H
+#ifndef __ISULAD_SUPERVISOR_H
+#define __ISULAD_SUPERVISOR_H
 #include <pthread.h>
 #include <semaphore.h>
 #include "container_unix.h"

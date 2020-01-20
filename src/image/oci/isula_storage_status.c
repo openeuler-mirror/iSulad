@@ -67,7 +67,7 @@ int isula_do_storage_status(im_storage_status_response *resp)
     nret = im_ops->storage_status(&ireq, iresp, &conf);
     if (nret != 0) {
         ERROR("Failed to get storage status with error: %s", iresp->errmsg);
-        lcrd_set_error_message("Failed to get storage status with error: %s", iresp->errmsg);
+        isulad_set_error_message("Failed to get storage status with error: %s", iresp->errmsg);
         ret = -1;
         goto out;
     }
