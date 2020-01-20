@@ -62,6 +62,12 @@
             "no_proxy": {
                 "type": "string"
             },
+            "driver_name": {
+                "type": "string"
+            },
+            "driver_status": {
+                "type": "string"
+            },
             "cc": {
                 "type": "uint32"
             },

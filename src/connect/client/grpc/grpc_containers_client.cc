@@ -105,6 +105,7 @@ public:
         }
         response->total_mem = gresponse->total_mem();
         get_proxy_info_from_grpc(response, gresponse);
+        get_driver_info_from_grpc(response, gresponse);
 
         return 0;
     }
@@ -148,6 +149,16 @@ private:
         }
         if (!gresponse->no_proxy().empty()) {
             response->no_proxy = util_strdup_s(gresponse->no_proxy().c_str());
+        }
+    }
+
+    void get_driver_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
+    {
+        if (!gresponse->driver_name().empty()) {
+            response->driver_name = util_strdup_s(gresponse->driver_name().c_str());
+        }
+        if (!gresponse->driver_status().empty()) {
+            response->driver_status = util_strdup_s(gresponse->driver_status().c_str());
         }
     }
 };

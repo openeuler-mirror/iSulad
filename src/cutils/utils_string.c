@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "utils.h"
 #include "log.h"
 
@@ -264,6 +265,30 @@ int util_parse_byte_size_string(const char *s, int64_t *converted)
     ret = util_parse_size_int_and_float(dup, mltpl, converted);
     free(dup);
     return ret;
+}
+
+int util_parse_percent_string(const char *s, long *converted)
+{
+    char *dup = NULL;
+
+    if (s == NULL || converted == NULL || s[0] == 0 || strlen(s) < 2 || s[strlen(s) - 1] != '%') {
+        return -EINVAL;
+    }
+    dup = util_strdup_s(s);
+    if (dup == NULL) {
+        return -ENOMEM;
+    }
+    dup[strlen(dup) - 1] = 0;
+
+    *converted = strtol(dup, NULL, 10);
+    if ((errno == ERANGE && (*converted == LONG_MAX || *converted == LONG_MIN)) ||
+        (errno != 0 && *converted == 0) || *converted < 0 || *converted >= 100) {
+        free(dup);
+        return -EINVAL;
+    }
+
+    free(dup);
+    return 0;
 }
 
 static char **util_shrink_array(char **orig_array, size_t new_size)

@@ -843,11 +843,9 @@ public:
         }
         resp->server_errono = gresp->cc();
 
-        if (!gresp->backing_fs().empty()) {
-            resp->backing_fs = util_strdup_s(gresp->backing_fs().c_str());
+        if (!gresp->status().empty()) {
+            resp->status = util_strdup_s(gresp->status().c_str());
         }
-        resp->supports_d_type = gresp->supports_d_type();
-        resp->native_overlay_diff = gresp->native_overlay_diff();
         return 0;
     }
 
