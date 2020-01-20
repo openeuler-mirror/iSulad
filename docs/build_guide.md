@@ -50,7 +50,7 @@ Let's suppose that you built an image called `iSulad:dev`.
 Then from the iSulad source root directory you can run the following command:
 
 ```sh
-$ sudo docker run -tid --name YOUR_CONTAINER_NAME -v /var/lib/isulad:/var/lib/lcrd -v `pwd`:/src/isulad --privileged iSulad:dev
+$ sudo docker run -tid --name YOUR_CONTAINER_NAME -v /var/lib/isulad:/var/lib/isulad -v `pwd`:/src/isulad --privileged iSulad:dev
 ```
 
 Let's suppose that you run an container named `iSulad_build`. Then you can use the following commands to build iSulad in your container `iSulad_build`:
@@ -70,5 +70,5 @@ $ sudo docker exec -it iSulad_build bash
 Now You can use direct command to start `iSulad` server in the container：
 
 ```sh
-$ sudo lcrd  # run the server with default socket name and default log level and images manage function
+$ sudo isulad # run the server with default socket name and default log level and images manage function
 ```
