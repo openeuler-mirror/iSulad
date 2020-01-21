@@ -109,6 +109,7 @@ rm -rf %{buildroot}
 
 %pre
 # support update from lcrd to isulad, will remove in next version
+if [ "$1" = "2" ]; then
 %if 0%{?is_systemd}
 systemctl stop lcrd
 systemctl disable lcrd
@@ -118,6 +119,7 @@ fi
 %else
 /sbin/chkconfig --del lcrd
 %endif
+fi
 
 %post
 if ! getent group isulad > /dev/null; then
