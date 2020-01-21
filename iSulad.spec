@@ -1,5 +1,5 @@
 %global _version 1.1.9
-%global _release 20200120.104710.gitdf7191f2
+%global _release 20200121.100120.gite61a5e35
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -32,7 +32,7 @@ Requires(preun): initscripts
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
 BuildRequires: grpc grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
-BuildRequires: http-parser http-parser-devel libevhtp-devel libevent-devel
+BuildRequires: http-parser-devel libevhtp-devel libevent-devel
 BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
@@ -109,6 +109,7 @@ rm -rf %{buildroot}
 
 %pre
 # support update from lcrd to isulad, will remove in next version
+if [ "$1" = "2" ]; then
 %if 0%{?is_systemd}
 systemctl stop lcrd
 systemctl disable lcrd
@@ -118,6 +119,7 @@ fi
 %else
 /sbin/chkconfig --del lcrd
 %endif
+fi
 
 %post
 if ! getent group isulad > /dev/null; then
