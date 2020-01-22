@@ -134,7 +134,7 @@ struct command g_commands[] = {
         "wait", cmd_wait_main, g_cmd_wait_desc, NULL, &g_cmd_wait_args
     },
     {
-        // `wait` sub-command
+        // `logs` sub-command
         "logs", cmd_logs_main, g_cmd_logs_desc, NULL, &g_cmd_logs_args
     },
 #endif
