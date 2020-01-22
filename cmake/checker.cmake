@@ -100,7 +100,7 @@ if (GRPC_CONNECTOR OR ENABLE_OCI_IMAGE)
 
 endif()
 
-if (GRPC_CONNECTOR)
+#if (GRPC_CONNECTOR)
     # check websocket
     find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
     _CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
@@ -115,7 +115,12 @@ if (GRPC_CONNECTOR)
     find_library(CLIBCNI_LIBRARY clibcni
         HINTS ${PC_CLIBCNI_LIBDIR} ${PC_CLIBCNI_LIBRARY_DIRS})
     _CHECK(CLIBCNI_LIBRARY "CLIBCNI_LIBRARY-NOTFOUND" "libclibcni.so")
-else()
+#else()
+
+    #
+    #  For the reason that the build process need evhtp lib, cmake need to
+    #  do lib check job
+    #
     pkg_check_modules(PC_EVENT "event>=2.1.8")
     find_path(EVENT_INCLUDE_DIR event.h
         HINTS ${PC_EVENT_INCLUDEDIR} ${PC_EVENT_INCLUDE_DIRS})
@@ -131,7 +136,7 @@ else()
     find_library(EVHTP_LIBRARY evhtp
         HINTS ${PC_EVHTP_LIBDIR} ${PC_EVHTP_LIBRARY_DIRS})
     _CHECK(EVHTP_LIBRARY "EVHTP_LIBRARY-NOTFOUND" "libevhtp.so")
-endif()
+#endif()
 
 if (ENABLE_EMBEDDED_IMAGE)
     pkg_check_modules(PC_SQLITE3 "sqlite3>=3.7.17")
