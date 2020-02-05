@@ -1256,6 +1256,28 @@ out:
     return plugins;
 }
 
+/* conf get websocket server listening port */
+int32_t conf_get_websocket_server_listening_port()
+{
+    int32_t port = 0;
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return port;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL) {
+        goto out;
+    }
+
+    port = conf->json_confs->websocket_server_listening_port;
+
+out:
+    (void)isulad_server_conf_unlock();
+    return port;
+}
+
 /* save args to conf */
 int save_args_to_conf(struct service_arguments *args)
 {
@@ -1792,6 +1814,10 @@ int merge_json_confs_into_global(struct service_arguments *args)
     }
     if (tmp_json_confs->image_layer_check) {
         args->json_confs->image_layer_check = tmp_json_confs->image_layer_check;
+    }
+
+    if (tmp_json_confs->websocket_server_listening_port) {
+        args->json_confs->websocket_server_listening_port = tmp_json_confs->websocket_server_listening_port;
     }
 
     override_bool_pointer_value(&args->json_confs->use_decrypted_key, &tmp_json_confs->use_decrypted_key);
