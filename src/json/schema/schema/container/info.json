@@ -8,15 +8,6 @@
     "image_type": {
       "type": "string"
     },
-    "pid": {
-      "type": "int32"
-    },
-    "has_pid": {
-      "type": "boolean"
-    },
-    "status": {
-      "type": "integer"
-    },
     "pids_current": {
       "type": "uint64"
     },

@@ -103,11 +103,6 @@ typedef struct _engine_start_request_t {
     uint32_t start_timeout;
     const char *container_pidfile;
     const char *exit_fifo;
-
-    uid_t uid;
-    gid_t gid;
-    gid_t *additional_gids;
-    size_t additional_gids_len;
 } engine_start_request_t;
 
 typedef struct _engine_exec_request_t {
@@ -132,7 +127,7 @@ typedef struct _engine_exec_request_t {
 } engine_exec_request_t;
 
 
-typedef bool (*engine_create_t)(const char *, const char *, const char *, void *);
+typedef bool (*engine_create_t)(const char *, const char *, void *);
 
 typedef bool (*engine_start_t)(const engine_start_request_t *request);
 

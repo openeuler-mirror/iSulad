@@ -27,7 +27,6 @@
 #include "callback.h"
 #include "container_inspect.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "errors.h"
 #include "cri_image_service.h"
 #include "cri_pod_network.h"
@@ -168,12 +167,12 @@ private:
     void ApplySandboxResources(const runtime::v1alpha2::LinuxPodSandboxConfig *lc, host_config *hc, Errors &error);
 
     void ApplySandboxLinuxOptions(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, host_config *hc,
-                                  container_custom_config *custom_config, Errors &error);
+                                  container_config *container_config, Errors &error);
 
     void MakeSandboxIsuladConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc,
-                                 container_custom_config *custom_config, Errors &error);
+                                 container_config *container_config, Errors &error);
 
-    void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_custom_config *cConfig,
+    void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_config *container_config,
                              Errors &error);
 
     void GetContainerLogPath(const std::string &containerID, char **path, char **realPath, Errors &error);
@@ -226,7 +225,7 @@ private:
                                                      host_config *hostconfig, Errors &error);
     int PackCreateContainerHostConfigDevices(const runtime::v1alpha2::ContainerConfig &containerConfig,
                                              host_config *hostconfig, Errors &error);
-    container_custom_config *
+    container_config *
     GenerateCreateContainerCustomConfig(const std::string &realPodSandboxID,
                                         const runtime::v1alpha2::ContainerConfig &containerConfig,
                                         const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error);
@@ -253,7 +252,7 @@ private:
                                                                     std::string &jsonCheckpoint, Errors &error);
     container_create_request *PackCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
                                                          const std::string &image, host_config *hostconfig,
-                                                         container_custom_config *custom_config, Errors &error);
+                                                         container_config *container_config, Errors &error);
     int GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork, std::string &name, std::string &ns,
                                std::string &realSandboxID, std::map<std::string, std::string> &stdAnnos, Errors &error);
     int StopAllContainersInSandbox(const std::string &realSandboxID, Errors &error);

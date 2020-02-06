@@ -32,7 +32,6 @@
 #include "log.h"
 #include "oci_runtime_spec.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "utils.h"
 #include "config.h"
 #include "path.h"
@@ -572,7 +571,7 @@ static bool b_user_found(const char *user, const struct passwd *pwbufp)
 }
 
 
-static int proc_by_fpasswd(FILE *f_passwd, const char *user, oci_runtime_spec_process_user *puser,
+static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *puser,
                            char **matched_username)
 {
     int ret = 0;
@@ -659,7 +658,7 @@ static int append_additional_gids(gid_t gid, gid_t **additional_gids, size_t *le
     return 0;
 }
 
-static int search_group_list(struct group *gbufp, const char *username, oci_runtime_spec_process_user *puser)
+static int search_group_list(struct group *gbufp, const char *username, defs_process_user *puser)
 {
     char **username_list = gbufp->gr_mem;
     while (username_list != NULL && *username_list != NULL) {
@@ -694,7 +693,7 @@ static bool check_group_found(const char *group, const struct group *gbufp)
     return false;
 }
 
-static int do_proc_by_froup(FILE *f_group, const char *group, oci_runtime_spec_process_user *puser,
+static int do_proc_by_froup(FILE *f_group, const char *group, defs_process_user *puser,
                             const char *matched_username, int *groupcnt)
 {
     int errval = 0;
@@ -729,7 +728,7 @@ static int do_proc_by_froup(FILE *f_group, const char *group, oci_runtime_spec_p
     return 0;
 }
 
-static int proc_by_fgroup(FILE *f_group, const char *group, oci_runtime_spec_process_user *puser,
+static int proc_by_fgroup(FILE *f_group, const char *group, defs_process_user *puser,
                           const char *matched_username)
 {
     int ret = 0;
@@ -764,7 +763,7 @@ out:
     return ret;
 }
 
-static int get_exec_user(const char *username, FILE *f_passwd, FILE *f_group, oci_runtime_spec_process_user *puser)
+static int get_exec_user(const char *username, FILE *f_passwd, FILE *f_group, defs_process_user *puser)
 {
     int ret = 0;
     char *tmp = NULL;
@@ -831,7 +830,7 @@ static bool group_matched(const char *group, const struct group *gbufp)
 }
 
 static int get_one_additional_group(const char *additional_group, struct group *groups, size_t groups_len,
-                                    oci_runtime_spec_process_user *puser)
+                                    defs_process_user *puser)
 {
     int ret = 0;
     int gret = -1;
@@ -878,7 +877,7 @@ out:
 
 
 int get_additional_groups(char **additional_groups, size_t additional_groups_len,
-                          FILE *f_group, oci_runtime_spec_process_user *puser)
+                          FILE *f_group, defs_process_user *puser)
 {
     int ret = 0;
     size_t i;
@@ -942,7 +941,7 @@ static int resolve_basefs(const char *basefs, char **resolved_basefs)
     return 0;
 }
 
-int get_user(const char *basefs, const host_config *hc, const char *userstr, oci_runtime_spec_process_user *puser)
+int get_user(const char *basefs, const host_config *hc, const char *userstr, defs_process_user *puser)
 {
     int ret = 0;
     FILE *f_passwd = NULL;
@@ -1002,46 +1001,9 @@ cleanup:
     return ret;
 }
 
-static int make_sure_oci_spec_porcess_user(oci_runtime_spec *oci_spec)
-{
-    int ret = 0;
-
-    ret = make_sure_oci_spec_process(oci_spec);
-    if (ret < 0) {
-        return -1;
-    }
-
-    if (oci_spec->process->user == NULL) {
-        oci_spec->process->user = util_common_calloc_s(sizeof(oci_runtime_spec_process_user));
-        if (oci_spec->process->user == NULL) {
-            return -1;
-        }
-    }
-    return 0;
-}
-
-int merge_user(const char *basefs, oci_runtime_spec *oci_spec, const host_config *hc, const char *user)
-{
-    int ret = 0;
-
-    ret = make_sure_oci_spec_porcess_user(oci_spec);
-    if (ret < 0) {
-        goto out;
-    }
-
-    if (get_user(basefs, hc, user, oci_spec->process->user)) {
-        ERROR("Failed to get user with '%s'", user ? user : "");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
 char *oci_container_get_env(const oci_runtime_spec *oci_spec, const char *key)
 {
-    const oci_runtime_spec_process *op = NULL;
+    const defs_process *op = NULL;
 
     if (oci_spec == NULL) {
         ERROR("nil oci_spec");
@@ -1070,7 +1032,7 @@ int make_sure_oci_spec_linux(oci_runtime_spec *oci_spec)
 int make_sure_oci_spec_process(oci_runtime_spec *oci_spec)
 {
     if (oci_spec->process == NULL) {
-        oci_spec->process = util_common_calloc_s(sizeof(oci_runtime_spec_process));
+        oci_spec->process = util_common_calloc_s(sizeof(defs_process));
         if (oci_spec->process == NULL) {
             return -1;
         }
@@ -1088,7 +1050,7 @@ int make_sure_oci_spec_linux_resources(oci_runtime_spec *oci_spec)
     }
 
     if (oci_spec->linux->resources == NULL) {
-        oci_spec->linux->resources = util_common_calloc_s(sizeof(oci_runtime_config_linux_resources));
+        oci_spec->linux->resources = util_common_calloc_s(sizeof(defs_resources));
         if (oci_spec->linux->resources == NULL) {
             return -1;
         }
@@ -1106,8 +1068,7 @@ int make_sure_oci_spec_linux_resources_blkio(oci_runtime_spec *oci_spec)
     }
 
     if (oci_spec->linux->resources->block_io == NULL) {
-        oci_spec->linux->resources->block_io =
-            util_common_calloc_s(sizeof(oci_runtime_config_linux_resources_block_io));
+        oci_spec->linux->resources->block_io = util_common_calloc_s(sizeof(defs_resources_block_io));
         if (oci_spec->linux->resources->block_io == NULL) {
             return -1;
         }
@@ -1119,21 +1080,21 @@ int merge_ulimits_pre(oci_runtime_spec *oci_spec, size_t host_ulimits_len)
 {
     int ret;
     size_t new_size, old_size, tmp;
-    oci_runtime_spec_process_rlimits_element **rlimits_temp = NULL;
+    defs_process_rlimits_element **rlimits_temp = NULL;
 
     ret = make_sure_oci_spec_process(oci_spec);
     if (ret < 0) {
         goto out;
     }
 
-    tmp = SIZE_MAX / sizeof(oci_runtime_spec_process_rlimits_element *) - oci_spec->process->rlimits_len;
+    tmp = SIZE_MAX / sizeof(defs_process_rlimits_element *) - oci_spec->process->rlimits_len;
     if (host_ulimits_len > tmp) {
         ERROR("Too many rlimits to merge!");
         ret = -1;
         goto out;
     }
-    old_size = oci_spec->process->rlimits_len * sizeof(oci_runtime_spec_process_rlimits_element *);
-    new_size = (oci_spec->process->rlimits_len + host_ulimits_len) * sizeof(oci_runtime_spec_process_rlimits_element *);
+    old_size = oci_spec->process->rlimits_len * sizeof(defs_process_rlimits_element *);
+    new_size = (oci_spec->process->rlimits_len + host_ulimits_len) * sizeof(defs_process_rlimits_element *);
     ret = mem_realloc((void **)&rlimits_temp, new_size, oci_spec->process->rlimits, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for rlimits");
@@ -1145,14 +1106,14 @@ out:
     return ret;
 }
 
-int trans_ulimit_to_rlimit(oci_runtime_spec_process_rlimits_element **rlimit_dst,
+int trans_ulimit_to_rlimit(defs_process_rlimits_element **rlimit_dst,
                            const host_config_ulimits_element *ulimit)
 {
 #define RLIMIT_PRE "RLIMIT_"
     int ret = 0;
     size_t j, namelen;
     char *typename = NULL;
-    oci_runtime_spec_process_rlimits_element *rlimit = NULL;
+    defs_process_rlimits_element *rlimit = NULL;
 
     // name + "RLIMIT_" + '\0'
     if (strlen(ulimit->name) > ((SIZE_MAX - strlen(RLIMIT_PRE)) - 1)) {
@@ -1173,7 +1134,7 @@ int trans_ulimit_to_rlimit(oci_runtime_spec_process_rlimits_element **rlimit_dst
         typename[j + strlen(RLIMIT_PRE)] = (char)toupper((int)(ulimit->name[j]));
     }
 
-    rlimit = util_common_calloc_s(sizeof(oci_runtime_spec_process_rlimits_element));
+    rlimit = util_common_calloc_s(sizeof(defs_process_rlimits_element));
     if (rlimit == NULL) {
         ERROR("Failed to malloc memory for rlimit");
         ret = -1;
@@ -1191,7 +1152,7 @@ out:
     return ret;
 }
 
-static int do_merge_one_ulimit(const oci_runtime_spec *oci_spec, oci_runtime_spec_process_rlimits_element *rlimit)
+static int do_merge_one_ulimit(const oci_runtime_spec *oci_spec, defs_process_rlimits_element *rlimit)
 {
     size_t j;
     bool exists = false;
@@ -1222,7 +1183,7 @@ static int do_merge_one_ulimit(const oci_runtime_spec *oci_spec, oci_runtime_spe
 
 static int merge_one_ulimit(const oci_runtime_spec *oci_spec, const host_config_ulimits_element *ulimit)
 {
-    oci_runtime_spec_process_rlimits_element *rlimit = NULL;
+    defs_process_rlimits_element *rlimit = NULL;
 
     if (trans_ulimit_to_rlimit(&rlimit, ulimit) != 0) {
         return -1;

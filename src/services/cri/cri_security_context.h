@@ -18,15 +18,15 @@
 #include <string>
 #include "api.pb.h"
 #include "errors.h"
-#include "container_custom_config.h"
 #include "host_config.h"
+#include "container_config.h"
 
 namespace CRISecurity {
-void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_custom_config *config,
+void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_config *config,
                                  host_config *hc, Errors &error);
 
 void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig &lc, const std::string &podSandboxID,
-                                   container_custom_config *config, host_config *hc, Errors &errorr);
+                                   container_config *config, host_config *hc, Errors &errorr);
 
 } // namespace CRISecurity
 

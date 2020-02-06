@@ -30,98 +30,113 @@
 #include "mediatype.h"
 #include "embedded_config_merge.h"
 
-int merge_env_config(oci_runtime_spec *oci_spec,
-                     embedded_manifest **manifest)
+static int embedded_merge_entrypoint(embedded_config *config, container_config *container_spec)
 {
-    if ((*manifest)->config->env && (*manifest)->config->env_len != 0) {
-        int ret = merge_env(oci_spec, (const char **)(*manifest)->config->env, (*manifest)->config->env_len);
-        if (ret != 0) {
-            ERROR("Failed to merge environment variables");
-            return -1;
-        }
-    }
-    return 0;
-}
-
-int replace_cmds_config(container_custom_config *custom_spec,
-                        embedded_manifest **manifest)
-{
-    embedded_config *config = (*manifest)->config;
-
-    if (config->entrypoint && custom_spec->entrypoint_len == 0) {
+    if (config->entrypoint && container_spec->entrypoint_len == 0) {
         int ret = dup_array_of_strings((const char **)config->entrypoint, config->entrypoint_len,
-                                       &(custom_spec->entrypoint), &(custom_spec->entrypoint_len));
+                                       &(container_spec->entrypoint), &(container_spec->entrypoint_len));
         if (ret != 0) {
             ERROR("Failed to duplicate entrypoint from manifest");
             return -1;
         }
-        custom_spec->entrypoint_len = (*manifest)->config->entrypoint_len;
+        container_spec->entrypoint_len = config->entrypoint_len;
     }
     return 0;
 }
 
-int merge_config(oci_runtime_spec *oci_spec,
-                 container_custom_config *custom_spec,
-                 const char *image_config,
-                 embedded_manifest **manifest)
+static int embedded_merge_env(const embedded_config *config, container_config *container_spec)
 {
-    if ((*manifest)->config != NULL) {
-        if ((*manifest)->config->workdir != NULL) {
-            free(oci_spec->process->cwd);
-            oci_spec->process->cwd = util_strdup_s((*manifest)->config->workdir);
+    int ret = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
+    size_t i = 0;
+    size_t j = 0;
+    char **temp = NULL;
+    char **im_kv = NULL;
+    char **custom_kv = NULL;
+
+    if (config->env == NULL || config->env_len == 0) {
+        return 0;
+    }
+
+    if (config->env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
+        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+    new_size = (container_spec->env_len + config->env_len) * sizeof(char *);
+    old_size = container_spec->env_len * sizeof(char *);
+    ret = mem_realloc((void **)&temp, new_size, container_spec->env, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for envionment variables");
+        ret = -1;
+        goto out;
+    }
+
+    container_spec->env = temp;
+    for (i = 0; i < config->env_len; i++) {
+        bool found = false;
+        im_kv = util_string_split(config->env[i], '=');
+        if (im_kv == NULL) {
+            continue;
         }
 
-        if (merge_env_config(oci_spec, manifest) != 0) {
+        for (j = 0; j < container_spec->env_len; j++) {
+            custom_kv = util_string_split(container_spec->env[i], '=');
+            if (custom_kv == NULL) {
+                continue;
+            }
+            if (strcmp(im_kv[0], custom_kv[0]) == 0) {
+                found = true;
+            }
+            util_free_array(custom_kv);
+            custom_kv = NULL;
+            if (found) {
+                break;
+            }
+        }
+
+        if (!found) {
+            container_spec->env[container_spec->env_len] = util_strdup_s(config->env[i]);
+            container_spec->env_len++;
+        }
+        util_free_array(im_kv);
+        im_kv = NULL;
+    }
+out:
+    return ret;
+}
+
+
+static int merge_embedded_config(const embedded_manifest *manifest, container_config *container_spec)
+{
+    if (manifest->config != NULL) {
+        if (manifest->config->workdir != NULL) {
+            free(container_spec->working_dir);
+            container_spec->working_dir = util_strdup_s(manifest->config->workdir);
+        }
+
+        if (embedded_merge_env(manifest->config, container_spec) != 0) {
             return -1;
         }
 
-        return replace_cmds_config(custom_spec, manifest);
+        return embedded_merge_entrypoint(manifest->config, container_spec);
     }
     return 0;
 }
 
-int pre_deal_config(oci_runtime_spec *oci_spec,
-                    container_custom_config *custom_spec,
-                    const char *image_config,
-                    embedded_manifest **manifest,
-                    char **config_path,
-                    char **err)
-{
-    bool param_error = (oci_spec == NULL || image_config == NULL);
-    if (param_error) {
-        ERROR("invalid NULL param");
-        return -1;
-    }
-
-    *manifest = embedded_manifest_parse_data(image_config, 0, err);
-    if (*manifest == NULL) {
-        ERROR("parse manifest failed: %s", *err);
-        return -1;
-    }
-
-    if (merge_config(oci_spec, custom_spec, image_config, manifest) != 0) {
-        return -1;
-    }
-
-    int ret = lim_query_image_data((*manifest)->image_name, IMAGE_DATA_TYPE_CONFIG_PATH, config_path, NULL);
-    if (ret != 0) {
-        ERROR("query config path for image %s failed", (*manifest)->image_name);
-        return -1;
-    }
-    return 0;
-}
-
-int gen_abs_path(embedded_manifest **manifest, char **abs_path, char *config_path, char *real_path, int i)
+static int gen_abs_path(const embedded_manifest *manifest, char **abs_path, char *config_path, char *real_path, int i)
 {
     /* change source to absolute path */
-    if ((*manifest)->layers[i]->path_in_host[0] == '/') {
-        (*abs_path) = util_strdup_s((*manifest)->layers[i]->path_in_host);
+    if (manifest->layers[i]->path_in_host[0] == '/') {
+        (*abs_path) = util_strdup_s(manifest->layers[i]->path_in_host);
     } else {
-        (*abs_path) = util_add_path(config_path, (*manifest)->layers[i]->path_in_host);
+        (*abs_path) = util_add_path(config_path, manifest->layers[i]->path_in_host);
     }
     if ((*abs_path) == NULL) {
         ERROR("add path %s and %s failed", config_path,
-              (*manifest)->layers[i]->path_in_host);
+              manifest->layers[i]->path_in_host);
         return -1;
     }
 
@@ -132,7 +147,7 @@ int gen_abs_path(embedded_manifest **manifest, char **abs_path, char *config_pat
     return 0;
 }
 
-int gen_one_mount(embedded_manifest *manifest, char *mount, char *real_path, int i)
+static int gen_one_mount(const embedded_manifest *manifest, char *mount, char *real_path, int i)
 {
     int nret = 0;
     if (manifest->layers[i]->media_type == NULL) {
@@ -148,27 +163,62 @@ int gen_one_mount(embedded_manifest *manifest, char *mount, char *real_path, int
                         "type=bind,ro=true,bind-propagation=rprivate,src=%s,dst=%s",
                         real_path, manifest->layers[i]->path_in_container);
     }
-    if (nret < 0 || (size_t)nret >= (PATH_MAX * 3)) {
+    if (nret < 0 || nret >= (PATH_MAX * 3)) {
         ERROR("print string for mounts failed");
         return -1;
     }
     return 0;
 }
 
-int embedded_image_merge_config(oci_runtime_spec *oci_spec,
-                                container_custom_config *custom_spec,
-                                const char *image_config)
+static int embedded_append_mounts(char **volumes, size_t volumes_len, container_config *container_spec)
 {
     int ret = 0;
-    char *err = NULL;
-    embedded_manifest *manifest = NULL;
+    size_t i = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
+    char **temp = NULL;
+
+    if (volumes == NULL || volumes_len == 0) {
+        return 0;
+    }
+    if (volumes_len > LIST_ENV_SIZE_MAX - container_spec->mounts_len) {
+        ERROR("The length of mounts is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of mounts is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+    new_size = (container_spec->mounts_len + volumes_len) * sizeof(char *);
+    old_size = container_spec->mounts_len * sizeof(char *);
+    ret = mem_realloc((void **)&temp, new_size, container_spec->mounts, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for mounts");
+        ret = -1;
+        goto out;
+    }
+
+    container_spec->mounts = temp;
+
+    for (i = 0; i < volumes_len; i++) {
+        container_spec->mounts[container_spec->mounts_len] = util_strdup_s(volumes[i]);
+        container_spec->mounts_len++;
+    }
+
+out:
+    return ret;
+}
+
+static int embedded_merge_mounts(const embedded_manifest *manifest, container_config *container_spec)
+{
+    int ret = 0;
     int i = 0;
-    char **mounts = NULL;
-    size_t cap = 0;
     char *config_path = NULL;
     char *abs_path = NULL;
+    size_t cap = 0;
+    char **mounts = NULL;
 
-    if (pre_deal_config(oci_spec, custom_spec, image_config, &manifest, &config_path, &err) != 0) {
+    ret = lim_query_image_data(manifest->image_name, IMAGE_DATA_TYPE_CONFIG_PATH, &config_path, NULL);
+    if (ret != 0) {
+        ERROR("query config path for image %s failed", manifest->image_name);
         ret = -1;
         goto out;
     }
@@ -192,7 +242,7 @@ int embedded_image_merge_config(oci_runtime_spec *oci_spec,
             goto out;
         }
 
-        if (gen_abs_path(&manifest, &abs_path, config_path, real_path, i) != 0) {
+        if (gen_abs_path(manifest, &abs_path, config_path, real_path, i) != 0) {
             ret = -1;
             goto out;
         }
@@ -204,18 +254,46 @@ int embedded_image_merge_config(oci_runtime_spec *oci_spec,
         }
     }
 
-    ret = merge_volumes(oci_spec, mounts, util_array_len((const char **)mounts), NULL, parse_mount);
+    ret = embedded_append_mounts(mounts, util_array_len((const char **)mounts), container_spec);
     if (ret) {
         ERROR("Failed to merge layer into mounts");
         goto out;
     }
 
 out:
-    free(err);
     util_free_array(mounts);
-    free_embedded_manifest(manifest);
     free(abs_path);
     UTIL_FREE_AND_SET_NULL(config_path);
+    return ret;
+}
+
+int embedded_image_merge_config(const char *image_config, container_config *container_spec)
+{
+    int ret = 0;
+    char *err = NULL;
+    embedded_manifest *manifest = NULL;
+
+    manifest = embedded_manifest_parse_data(image_config, 0, &err);
+    if (manifest == NULL) {
+        ERROR("parse manifest failed: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (merge_embedded_config(manifest, container_spec) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = embedded_merge_mounts(manifest, container_spec);
+    if (ret != 0) {
+        ERROR("query config path for image %s failed", manifest->image_name);
+        ret = -1;
+        goto out;
+    }
+out:
+    free(err);
+    free_embedded_manifest(manifest);
     return ret;
 }
 

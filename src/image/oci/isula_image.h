@@ -32,7 +32,7 @@ int isula_get_filesystem_info(im_fs_info_response **response);
 int isual_load_image(const im_load_request *request);
 
 int isula_prepare_rf(const im_prepare_request *request, char **real_rootfs);
-int isula_merge_conf_rf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
+int isula_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
                         const im_prepare_request *request, char **real_rootfs);
 int isula_mount_rf(const im_mount_request *request);
 int isula_umount_rf(const im_umount_request *request);

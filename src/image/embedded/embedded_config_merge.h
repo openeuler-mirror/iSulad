@@ -21,9 +21,7 @@
 extern "C" {
 #endif
 
-int embedded_image_merge_config(oci_runtime_spec *oci_spec,
-                                container_custom_config *custom_spec,
-                                const char *image_config);
+int embedded_image_merge_config(const char *image_config, container_config *container_spec);
 
 #ifdef __cplusplus
 }

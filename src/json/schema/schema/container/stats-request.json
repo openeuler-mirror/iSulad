@@ -5,9 +5,6 @@
         "filters": {
             "$ref": "../defs.json#/definitions/filters"
         },
-        "runtime": {
-            "type": "string"
-        },
         "containers": {
             "$ref": "../defs.json#/definitions/ArrayOfStrings"
         },

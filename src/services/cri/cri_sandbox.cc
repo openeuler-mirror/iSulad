@@ -33,7 +33,6 @@
 #include "naming.h"
 #include "host_config.h"
 #include "cri_helpers.h"
-#include "container_custom_config.h"
 #include "checkpoint_handler.h"
 #include "cri_security_context.h"
 
@@ -128,7 +127,7 @@ void CRIRuntimeServiceImpl::ApplySandboxResources(const runtime::v1alpha2::Linux
 }
 
 void CRIRuntimeServiceImpl::ApplySandboxLinuxOptions(const runtime::v1alpha2::LinuxPodSandboxConfig &lc,
-                                                     host_config *hc, container_custom_config *custom_config,
+                                                     host_config *hc, container_config *custom_config,
                                                      Errors &error)
 {
     CRISecurity::ApplySandboxSecurityContext(lc, custom_config, hc, error);
@@ -202,7 +201,7 @@ void CRIRuntimeServiceImpl::MergeSecurityContextToHostConfig(const runtime::v1al
 }
 
 void CRIRuntimeServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc,
-                                                    container_custom_config *custom_config, Errors &error)
+                                                    container_config *custom_config, Errors &error)
 {
     custom_config->labels = CRIHelpers::MakeLabels(c.labels(), error);
     if (error.NotEmpty()) {
@@ -311,7 +310,7 @@ void CRIRuntimeServiceImpl::SetupSandboxFiles(const std::string &resolvPath,
 container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
     const runtime::v1alpha2::PodSandboxConfig &config,
     const std::string &image, host_config *hostconfig,
-    container_custom_config *custom_config, Errors &error)
+    container_config *custom_config, Errors &error)
 {
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perror = nullptr;
@@ -332,7 +331,7 @@ container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
         error.Errorf("Failed to generate host config json: %s", perror);
         goto error_out;
     }
-    create_request->customconfig = container_custom_config_generate_json(custom_config, &ctx, &perror);
+    create_request->customconfig = container_config_generate_json(custom_config, &ctx, &perror);
     if (create_request->customconfig == nullptr) {
         error.Errorf("Failed to generate custom config json: %s", perror);
         goto error_out;
@@ -353,7 +352,7 @@ container_create_request *CRIRuntimeServiceImpl::GenerateSandboxCreateContainerR
 {
     container_create_request *create_request = nullptr;
     host_config *hostconfig = nullptr;
-    container_custom_config *custom_config = nullptr;
+    container_config *custom_config = nullptr;
     cri::PodSandboxCheckpoint checkpoint;
 
     hostconfig = (host_config *)util_common_calloc_s(sizeof(host_config));
@@ -362,7 +361,7 @@ container_create_request *CRIRuntimeServiceImpl::GenerateSandboxCreateContainerR
         goto error_out;
     }
 
-    custom_config = (container_custom_config *)util_common_calloc_s(sizeof(container_custom_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     if (custom_config == nullptr) {
         error.SetError("Out of memory");
         goto error_out;
@@ -401,7 +400,7 @@ error_out:
     create_request = nullptr;
 cleanup:
     free_host_config(hostconfig);
-    free_container_custom_config(custom_config);
+    free_container_config(custom_config);
     return create_request;
 }
 

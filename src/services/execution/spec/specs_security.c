@@ -37,7 +37,6 @@
 #include "oci_runtime_spec.h"
 #include "docker_seccomp.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "utils.h"
 #include "config.h"
 #include "isulad_config.h"
@@ -285,14 +284,14 @@ free_out:
     return ret;
 }
 
-int refill_oci_process_capabilities(oci_runtime_spec_process_capabilities **caps, const char **src_caps,
+int refill_oci_process_capabilities(defs_process_capabilities **caps, const char **src_caps,
                                     size_t src_caps_len)
 {
     int ret = 0;
     size_t i = 0;
 
     if (*caps == NULL) {
-        *caps = util_common_calloc_s(sizeof(oci_runtime_spec_process_capabilities));
+        *caps = util_common_calloc_s(sizeof(defs_process_capabilities));
         if (*caps == NULL) {
             ret = -1;
             goto out;
@@ -383,7 +382,7 @@ static bool is_arch_in_seccomp(const docker_seccomp *seccomp, const char *arch)
     return false;
 }
 
-static bool is_cap_in_seccomp(const oci_runtime_spec_process_capabilities *capabilites, const char *cap)
+static bool is_cap_in_seccomp(const defs_process_capabilities *capabilites, const char *cap)
 {
     size_t i = 0;
 
@@ -400,7 +399,7 @@ static bool is_cap_in_seccomp(const oci_runtime_spec_process_capabilities *capab
 }
 
 static void meet_include(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                         const oci_runtime_spec_process_capabilities *capabilites, bool *meet_include_arch,
+                         const defs_process_capabilities *capabilites, bool *meet_include_arch,
                          bool *meet_include_cap)
 {
     size_t i;
@@ -433,7 +432,7 @@ static void meet_include(const docker_seccomp *seccomp, const docker_seccomp_sys
 }
 
 static void meet_exclude(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                         const oci_runtime_spec_process_capabilities *capabilites, bool *meet_exclude_arch,
+                         const defs_process_capabilities *capabilites, bool *meet_exclude_arch,
                          bool *meet_exclude_cap)
 {
     size_t i;
@@ -467,7 +466,7 @@ static void meet_exclude(const docker_seccomp *seccomp, const docker_seccomp_sys
 }
 
 static bool meet_filtering_rules(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                                 const oci_runtime_spec_process_capabilities *capabilites)
+                                 const defs_process_capabilities *capabilites)
 {
     bool meet_include_arch = false;
     bool meet_include_cap = false;
@@ -520,7 +519,7 @@ static int dup_architectures_to_oci_spec(const docker_seccomp *docker_seccomp_sp
 }
 
 static int dup_syscall_args_to_oci_spec(const docker_seccomp_syscalls_element *docker_syscall,
-                                        oci_runtime_defs_linux_syscall *oci_syscall)
+                                        defs_syscall *oci_syscall)
 {
     size_t i = 0;
 
@@ -528,20 +527,20 @@ static int dup_syscall_args_to_oci_spec(const docker_seccomp_syscalls_element *d
         return 0;
     }
 
-    if (docker_syscall->args_len > (SIZE_MAX / sizeof(oci_runtime_defs_linux_syscall_arg *))) {
+    if (docker_syscall->args_len > (SIZE_MAX / sizeof(defs_syscall_arg *))) {
         return -1;
     }
 
-    oci_syscall->args = util_common_calloc_s(docker_syscall->args_len * sizeof(oci_runtime_defs_linux_syscall_arg *));
+    oci_syscall->args = util_common_calloc_s(docker_syscall->args_len * sizeof(defs_syscall_arg *));
     if (oci_syscall->args == NULL) {
         return -1;
     }
     for (i = 0; i < docker_syscall->args_len; i++) {
-        oci_syscall->args[i] = util_common_calloc_s(sizeof(oci_runtime_defs_linux_syscall_arg));
+        oci_syscall->args[i] = util_common_calloc_s(sizeof(defs_syscall_arg));
         if (oci_syscall->args[i] == NULL) {
             return -1;
         }
-        oci_runtime_defs_linux_syscall_arg *args_element = oci_syscall->args[i];
+        defs_syscall_arg *args_element = oci_syscall->args[i];
         args_element->index = docker_syscall->args[i]->index;
         args_element->value = docker_syscall->args[i]->value;
         args_element->value_two = docker_syscall->args[i]->value_two;
@@ -554,23 +553,23 @@ static int dup_syscall_args_to_oci_spec(const docker_seccomp_syscalls_element *d
 
 static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
                                    oci_runtime_config_linux_seccomp *oci_seccomp_spec,
-                                   const oci_runtime_spec_process_capabilities *capabilites)
+                                   const defs_process_capabilities *capabilites)
 {
     int ret = 0;
     size_t i, j, k;
     size_t new_size, old_size;
-    oci_runtime_defs_linux_syscall **tmp_syscalls = NULL;
+    defs_syscall **tmp_syscalls = NULL;
 
     if (docker_seccomp_spec->syscalls_len == 0) {
         return 0;
     }
 
-    if (docker_seccomp_spec->syscalls_len > (SIZE_MAX / sizeof(oci_runtime_defs_linux_syscall *))) {
+    if (docker_seccomp_spec->syscalls_len > (SIZE_MAX / sizeof(defs_syscall *))) {
         return -1;
     }
 
     oci_seccomp_spec->syscalls =
-        util_common_calloc_s(docker_seccomp_spec->syscalls_len * sizeof(oci_runtime_defs_linux_syscall *));
+        util_common_calloc_s(docker_seccomp_spec->syscalls_len * sizeof(defs_syscall *));
     if (oci_seccomp_spec->syscalls == NULL) {
         return -1;
     }
@@ -579,7 +578,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
             continue;
         }
         k = oci_seccomp_spec->syscalls_len;
-        oci_seccomp_spec->syscalls[k] = util_common_calloc_s(sizeof(oci_runtime_defs_linux_syscall));
+        oci_seccomp_spec->syscalls[k] = util_common_calloc_s(sizeof(defs_syscall));
         if (oci_seccomp_spec->syscalls[k] == NULL) {
             return -1;
         }
@@ -604,8 +603,8 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
         }
     }
 
-    new_size = sizeof(oci_runtime_defs_linux_syscall *) * oci_seccomp_spec->syscalls_len;
-    old_size = sizeof(oci_runtime_defs_linux_syscall *) * docker_seccomp_spec->syscalls_len;
+    new_size = sizeof(defs_syscall *) * oci_seccomp_spec->syscalls_len;
+    old_size = sizeof(defs_syscall *) * docker_seccomp_spec->syscalls_len;
     ret = mem_realloc((void **)&tmp_syscalls, new_size, oci_seccomp_spec->syscalls, old_size);
     if (ret < 0) {
         ERROR("Out of memory");
@@ -617,7 +616,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
 }
 
 static oci_runtime_config_linux_seccomp *trans_docker_seccomp_to_oci_format(
-    const docker_seccomp *docker_seccomp_spec, const oci_runtime_spec_process_capabilities *capabilites)
+    const docker_seccomp *docker_seccomp_spec, const defs_process_capabilities *capabilites)
 {
     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
 
@@ -650,7 +649,7 @@ done:
     return oci_seccomp_spec;
 }
 
-int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const oci_runtime_spec_process_capabilities *capabilites)
+int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_capabilities *capabilites)
 {
     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
     docker_seccomp *docker_seccomp_spec = NULL;
@@ -679,21 +678,21 @@ int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const oci_runtime_spe
 }
 
 static int append_systemcall_to_seccomp(oci_runtime_config_linux_seccomp *seccomp,
-                                        oci_runtime_defs_linux_syscall *element)
+                                        defs_syscall *element)
 {
     int nret = 0;
     size_t old_size, new_size;
-    oci_runtime_defs_linux_syscall **tmp_syscalls = NULL;
+    defs_syscall **tmp_syscalls = NULL;
     if (seccomp == NULL || element == NULL) {
         return -1;
     }
 
-    if (seccomp->syscalls_len > SIZE_MAX / sizeof(oci_runtime_defs_linux_syscall *) - 1) {
+    if (seccomp->syscalls_len > SIZE_MAX / sizeof(defs_syscall *) - 1) {
         CRIT("Too many syscalls to append!");
         return -1;
     }
-    new_size = (seccomp->syscalls_len + 1) * sizeof(oci_runtime_defs_linux_syscall *);
-    old_size = new_size - sizeof(oci_runtime_defs_linux_syscall *);
+    new_size = (seccomp->syscalls_len + 1) * sizeof(defs_syscall *);
+    old_size = new_size - sizeof(defs_syscall *);
     nret = mem_realloc((void **)&tmp_syscalls, new_size, seccomp->syscalls, old_size);
     if (nret < 0) {
         CRIT("Memory allocation error.");
@@ -705,13 +704,13 @@ static int append_systemcall_to_seccomp(oci_runtime_config_linux_seccomp *seccom
     return 0;
 }
 
-static oci_runtime_defs_linux_syscall *make_seccomp_syscalls_element(const char **names, size_t names_len,
-                                                                     const char *action, size_t args_len,
-                                                                     oci_runtime_defs_linux_syscall_arg **args)
+static defs_syscall *make_seccomp_syscalls_element(const char **names, size_t names_len,
+                                                   const char *action, size_t args_len,
+                                                   defs_syscall_arg **args)
 {
     size_t i = 0;
-    oci_runtime_defs_linux_syscall *ret = NULL;
-    ret = util_common_calloc_s(sizeof(oci_runtime_defs_linux_syscall));
+    defs_syscall *ret = NULL;
+    ret = util_common_calloc_s(sizeof(defs_syscall));
     if (ret == NULL) {
         CRIT("Memory allocation error.");
         goto out;
@@ -719,17 +718,17 @@ static oci_runtime_defs_linux_syscall *make_seccomp_syscalls_element(const char 
     ret->action = util_strdup_s(action ? action : "");
     ret->args_len = args_len;
     if (args_len) {
-        if (args_len > SIZE_MAX / sizeof(oci_runtime_defs_linux_syscall_arg *)) {
+        if (args_len > SIZE_MAX / sizeof(defs_syscall_arg *)) {
             CRIT("Too many seccomp syscalls!");
             goto out;
         }
-        ret->args = util_common_calloc_s(args_len * sizeof(oci_runtime_defs_linux_syscall_arg *));
+        ret->args = util_common_calloc_s(args_len * sizeof(defs_syscall_arg *));
         if (ret->args == NULL) {
             CRIT("Memory allocation error.");
             goto out;
         }
         for (i = 0; i < args_len; i++) {
-            ret->args[i] = util_common_calloc_s(sizeof(oci_runtime_defs_linux_syscall_arg));
+            ret->args[i] = util_common_calloc_s(sizeof(defs_syscall_arg));
             if (ret->args[i] == NULL) {
                 CRIT("Memory allocation error.");
                 goto out;
@@ -758,7 +757,7 @@ static oci_runtime_defs_linux_syscall *make_seccomp_syscalls_element(const char 
     return ret;
 
 out:
-    free_oci_runtime_defs_linux_syscall(ret);
+    free_defs_syscall(ret);
     ret = NULL;
     return ret;
 }
@@ -771,7 +770,7 @@ static int make_sure_oci_spec_process_capabilities(oci_runtime_spec *oci_spec)
     }
 
     if (oci_spec->process->capabilities == NULL) {
-        oci_spec->process->capabilities = util_common_calloc_s(sizeof(oci_runtime_spec_process_capabilities));
+        oci_spec->process->capabilities = util_common_calloc_s(sizeof(defs_process_capabilities));
         if (oci_spec->process->capabilities == NULL) {
             return -1;
         }

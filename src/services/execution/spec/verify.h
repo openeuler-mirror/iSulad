@@ -22,11 +22,11 @@ int verify_container_settings(const oci_runtime_spec *container);
 
 int verify_oci_hook(const oci_runtime_spec_hooks *h);
 
-int verify_container_settings_start(const char *rootpath, const char *id);
+int verify_container_settings_start(const oci_runtime_spec *oci_spec);
 
 int verify_host_config_settings(host_config *hostconfig, bool update);
 
-int verify_health_check_parameter(const container_custom_config *custom_spec);
+int verify_health_check_parameter(const container_config *container_spec);
 
 
 #endif /* __VERIFY_H */

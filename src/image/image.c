@@ -662,15 +662,15 @@ bool im_config_image_exist(const char *image_name)
 }
 
 int im_merge_image_config(const char *id, const char *image_type, const char *image_name,
-                          const char *ext_config_image, oci_runtime_spec *oci_spec,
-                          host_config *host_spec, container_custom_config *custom_spec,
+                          const char *ext_config_image,
+                          host_config *host_spec, container_config *container_spec,
                           char **real_rootfs)
 {
     int ret = 0;
     struct bim *bim = NULL;
     im_prepare_request *request = NULL;
 
-    if (real_rootfs == NULL || oci_spec == NULL || image_type == NULL) {
+    if (real_rootfs == NULL || image_type == NULL) {
         ERROR("Invalid input arguments");
         ret = -1;
         goto out;
@@ -702,7 +702,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
 
     EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", id, image_name);
 
-    ret = bim->ops->merge_conf(oci_spec, host_spec, custom_spec, request, real_rootfs);
+    ret = bim->ops->merge_conf(host_spec, container_spec, request, real_rootfs);
     request->storage_opt = NULL;
     if (ret != 0) {
         ERROR("Failed to merge image %s config, config image is %s", image_name, ext_config_image);
@@ -720,7 +720,7 @@ out:
 }
 
 int im_get_user_conf(const char *image_type, const char *basefs, host_config *hc, const char *userstr,
-                     oci_runtime_spec_process_user *puser)
+                     defs_process_user *puser)
 {
     int ret = 0;
     struct bim *bim = NULL;
