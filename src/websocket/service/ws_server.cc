@@ -24,6 +24,7 @@
 #include "utils.h"
 #include "request_cache.h"
 #include "constants.h"
+#include "isulad_config.h"
 
 struct lws_context *WebsocketServer::m_context = nullptr;
 std::atomic<WebsocketServer *> WebsocketServer::m_instance;
@@ -385,6 +386,12 @@ void WebsocketServer::ServiceWorkThread(int threadid)
 
 void WebsocketServer::Start(Errors &err)
 {
+    m_listenPort = conf_get_websocket_server_listening_port();
+    if (m_listenPort == 0) {
+        err.SetError("Failed to get websocket server listening port from daemon config");
+        return;
+    }
+
     if (CreateContext() < 0) {
         err.SetError("Websocket server start failed!, please check your network status"
                      "(eg: port " + std::to_string(m_listenPort) + "is occupied)");

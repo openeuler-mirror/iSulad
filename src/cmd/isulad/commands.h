@@ -99,7 +99,10 @@ int update_default_ulimit(struct service_arguments *args);
     { CMD_OPT_TYPE_STRING_DUP, false, "tlskey", 0, &(cmdargs)->json_confs->tls_config->key_file, \
         "Path to TLS key file (default \"/root/.iSulad/key.pem\")", NULL }, \
     { CMD_OPT_TYPE_CALLBACK, false, "default-ulimit", 0, &(cmdargs)->default_ulimit, \
-        "Default ulimits for containers (default [])", command_default_ulimit_append }
+        "Default ulimits for containers (default [])", command_default_ulimit_append }, \
+    { CMD_OPT_TYPE_CALLBACK, false, "websocket-server-listening-port", 0, \
+        &(cmdargs)->json_confs->websocket_server_listening_port, \
+        "CRI websocket streaming service listening port (default 10350)", command_convert_uint }
 
 #endif /* __COMMAND_H */
 

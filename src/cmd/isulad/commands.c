@@ -228,6 +228,27 @@ out:
     return ret;
 }
 
+static int check_websocket_server_listening_port(const struct service_arguments *args)
+{
+#define MIN_REGISTER_PORT 1024
+#define MAX_REGISTER_PORT 49151
+    int ret = 0;
+
+    if (args->json_confs->websocket_server_listening_port < MIN_REGISTER_PORT ||
+        args->json_confs->websocket_server_listening_port > MAX_REGISTER_PORT) {
+        COMMAND_ERROR("Invalid websocket server listening port: '%d' (range: %d-%d)",
+                      args->json_confs->websocket_server_listening_port,
+                      MIN_REGISTER_PORT, MAX_REGISTER_PORT);
+        ERROR("Invalid websocket server listening port: '%d' (range: %d-%d)",
+              args->json_confs->websocket_server_listening_port,
+              MIN_REGISTER_PORT, MAX_REGISTER_PORT);
+        ret = -1;
+        goto out;
+    }
+out:
+    return ret;
+}
+
 int check_args(struct service_arguments *args)
 {
     int ret = 0;
@@ -287,6 +308,11 @@ int check_args(struct service_arguments *args)
     }
 
     if (check_args_auth_plugin(args) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (check_websocket_server_listening_port(args) != 0) {
         ret = -1;
         goto out;
     }

@@ -57,6 +57,7 @@ struct service_arguments {
     /* default configs */
     host_config_ulimits_element **default_ulimit;
     size_t default_ulimit_len;
+    unsigned int websocket_server_listening_port;
 
     // remaining arguments
     char * const *argv;
