@@ -118,6 +118,9 @@
         "cgroup-parent": {
             "type": "string"
         },
+        "websocket-server-listening-port": {
+            "type": "int32"
+        },
         "default-ulimits": {
             "type": "object",
             "patternProperties": {

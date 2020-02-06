@@ -116,7 +116,7 @@ private:
     RouteCallbackRegister m_handler;
     static std::map<struct lws *, session_data> m_wsis;
     url::URLDatum m_url;
-    int m_listenPort = 10251;
+    int m_listenPort;
 };
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len);
