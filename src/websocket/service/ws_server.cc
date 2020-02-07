@@ -217,7 +217,8 @@ int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
 
     lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI);
     if (strlen(buf) == 0) {
-        lws_close_reason(wsi, LWS_CLOSE_STATUS_PROTOCOL_ERR, (unsigned char *)("Invalid URL"), strlen("Invalid URL"));
+        ERROR("invalid url");
+        CloseWsSession(wsi);
         return -1;
     }
 
@@ -264,10 +265,7 @@ int WebsocketServer::Wswrite(struct lws *wsi, void *in, size_t len)
     auto it = m_wsis.find(wsi);
     if (it != m_wsis.end()) {
         if (it->second.close) {
-            const std::string closeMsg = "websocket session disconnected";
-            DEBUG(closeMsg.c_str());
-            lws_close_reason(wsi, LWS_CLOSE_STATUS_GOINGAWAY, (unsigned char *)(closeMsg.c_str()),
-                             closeMsg.length());
+            DEBUG("websocket session disconnected");
             return -1;
         }
         it->second.buf_mutex->lock();
