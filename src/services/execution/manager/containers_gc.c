@@ -25,6 +25,7 @@
 #include "utils.h"
 #include "execution.h"
 #include "containers_store.h"
+#include "runtime.h"
 
 static containers_gc_t g_gc_containers;
 
@@ -385,6 +386,57 @@ static void add_to_list_tail_to_retry_gc(struct linked_list *it)
     gc_containers_unlock();
 }
 
+static int do_runtime_resume_container(const container_t *cont)
+{
+    int ret = 0;
+    rt_resume_params_t params = { 0 };
+    const char *id = cont->common_config->id;
+
+    params.rootpath = cont->root_path;
+
+    if (runtime_resume(id, cont->runtime, &params)) {
+        ERROR("Failed to resume container:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    state_reset_paused(cont->state);
+
+    if (container_to_disk(cont)) {
+        ERROR("Failed to save container \"%s\" to disk", id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static void try_to_resume_container(const char *id, const char *runtime)
+{
+    int ret = 0;
+    container_t *cont = NULL;
+
+    if (id == NULL || runtime == NULL) {
+        ERROR("Invalid input arguments");
+        goto out;
+    }
+
+    cont = containers_store_get(id);
+    if (cont == NULL) {
+        WARN("No such container:%s", id);
+        goto out;
+    }
+
+    ret = do_runtime_resume_container(cont);
+    if (ret != 0) {
+        ERROR("try to runtime resume failed");
+        goto out;
+    }
+out:
+    container_unref(cont);
+}
+
 static void gc_container_process(struct linked_list *it)
 {
     int ret = 0;
@@ -424,6 +476,7 @@ static void gc_container_process(struct linked_list *it)
         free_container_garbage_config_gc_containers_element(gc_cont);
         free(it);
     } else {
+        try_to_resume_container(id, runtime);
         ret = kill(pid, SIGKILL);
         if (ret < 0 && errno != ESRCH) {
             ERROR("Can not kill process (pid=%d) with SIGKILL for container %s", pid, id);
