@@ -498,7 +498,7 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
-static int resume_container(container_t *cont)
+static int do_resume_container(container_t *cont)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
@@ -662,7 +662,7 @@ static int container_resume_cb(const container_resume_request *request, containe
         goto pack_response;
     }
 
-    ret = resume_container(cont);
+    ret = do_resume_container(cont);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
