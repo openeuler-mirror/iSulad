@@ -205,10 +205,14 @@ static void try_to_set_container_running(Container_Status status, container_t *c
 static int restore_stopped_container(Container_Status status, const container_t *cont, bool *need_save)
 {
     const char *id = cont->common_config->id;
+    pid_t pid = 0;
 
     if (status != CONTAINER_STATUS_STOPPED && \
         status != CONTAINER_STATUS_CREATED) {
-        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
+        if (util_process_alive(cont->state->state->pid, cont->state->state->start_time)) {
+            pid = cont->state->state->pid;
+        }
+        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, pid);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
