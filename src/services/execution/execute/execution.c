@@ -52,6 +52,7 @@
 #include "specs_extend.h"
 #include "utils.h"
 #include "error.h"
+#include "namespace.h"
 
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
@@ -1631,6 +1632,23 @@ out:
     return ret;
 }
 
+static void umouont_share_shm(container_t *cont)
+{
+    if (has_mount_for(cont, "/dev/shm")) {
+        return;
+    }
+    if (cont->hostconfig->ipc_mode == NULL || is_shareable(cont->hostconfig->ipc_mode)) {
+        if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
+            return;
+        }
+
+        INFO("Umounting share shm: %s", cont->common_config->shm_path);
+        if (umount2(cont->common_config->shm_path, MNT_DETACH)) {
+            ERROR("Failed to umount the target: %s", cont->common_config->shm_path);
+        }
+    }
+}
+
 static int do_cleanup_container_resources(container_t *cont)
 {
     int ret = 0;
@@ -1685,6 +1703,8 @@ static int do_cleanup_container_resources(container_t *cont)
         ret = -1;
         goto out;
     }
+
+    umouont_share_shm(cont);
 
     umount_host_channel(cont->hostconfig->host_channel);
 

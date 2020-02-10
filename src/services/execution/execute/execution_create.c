@@ -771,6 +771,9 @@ int container_create_cb(const container_create_request *request,
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
+    // update runtime of host config
+    free(host_spec->runtime);
+    host_spec->runtime = util_strdup_s(runtime);
 
     v2_spec = util_common_calloc_s(sizeof(container_config_v2_common_config));
     if (v2_spec == NULL) {

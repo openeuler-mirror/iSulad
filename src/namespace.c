@@ -21,7 +21,7 @@
 #include "containers_store.h"
 
 
-static char *connected_container(const char *mode)
+char *connected_container(const char *mode)
 {
     const char *p = mode != NULL ? (mode + strlen(SHARE_NAMESPACE_PREFIX)) : NULL;
 

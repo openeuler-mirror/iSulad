@@ -21,6 +21,7 @@
 #define SHARE_NAMESPACE_PREFIX "container:"
 #define SHARE_NAMESPACE_HOST "host"
 #define SHARE_NAMESPACE_NONE "none"
+#define SHARE_NAMESPACE_SHAREABLE "shareable"
 
 #define SHARE_NAMESPACE_PID_HOST_PATH "/proc/1/ns/pid"
 #define SHARE_NAMESPACE_NET_HOST_PATH "/proc/1/ns/net"
@@ -67,6 +68,16 @@ static inline bool is_container(const char *mode)
     }
     return false;
 }
+
+static inline bool is_shareable(const char *mode)
+{
+    if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_SHAREABLE) == 0) {
+        return true;
+    }
+    return false;
+}
+
+char *connected_container(const char *mode);
 
 char *get_share_namespace_path(const char *type, const char *src_path);
 

@@ -97,18 +97,6 @@
 			]
 		},
 		{
-			"destination": "/dev/shm",
-			"type": "tmpfs",
-			"source": "shm",
-			"options": [
-				"nosuid",
-				"noexec",
-				"nodev",
-				"mode=1777",
-				"size=65536k"
-			]
-		},
-		{
 			"destination": "/sys/fs/cgroup",
 			"type": "cgroup",
 			"source": "cgroup",
