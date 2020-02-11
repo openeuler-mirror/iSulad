@@ -58,6 +58,12 @@ static int pack_global_graph_driver(const char * const *options, bool ignore_sto
         add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_DRIVER_OPTIONS], *p);
     }
 
+    if (strcmp(graph_driver, "devicemapper") == 0) {
+        // option "test=false" is used when devicemapper thinpool is created automatically by iSulad-kit.
+        // Make "test" always be true to avoid config check as we always create thinpool manually.
+        add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_DRIVER_OPTIONS], "test=true");
+    }
+
     ret = 0;
     *count = i;
 out:

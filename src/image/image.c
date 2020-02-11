@@ -1745,6 +1745,8 @@ void free_im_storage_status_response(im_storage_status_response *ptr)
     }
     free(ptr->backing_fs);
     ptr->backing_fs = NULL;
+    free(ptr->status);
+    ptr->status = NULL;
     free(ptr);
 }
 

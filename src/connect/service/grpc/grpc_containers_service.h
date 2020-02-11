@@ -218,6 +218,8 @@ private:
 
     int pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
+    int pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+
     int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
 };
 

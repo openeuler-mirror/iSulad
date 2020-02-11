@@ -20,6 +20,7 @@
 #include <linux/limits.h>
 
 #include "driver_overlay2.h"
+#include "driver_devmapper.h"
 #include "utils.h"
 #include "libisulad.h"
 #include "log.h"
@@ -35,8 +36,18 @@ static const struct graphdriver_ops g_overlay2_ops = {
     .is_quota_options = overlay2_is_quota_options,
 };
 
+/* devicemapper */
+#define DRIVER_DEVMAPPER_NAME "devicemapper"
+
+static const struct graphdriver_ops g_devmapper_ops = {
+    .init = devmapper_init,
+    .parse_options = devmapper_parse_options,
+    .is_quota_options = devmapper_is_quota_options,
+};
+
 static struct graphdriver g_drivers[] = {
-    {.name = DRIVER_OVERLAY2_NAME, .ops = &g_overlay2_ops}
+    {.name = DRIVER_OVERLAY2_NAME, .ops = &g_overlay2_ops},
+    {.name = DRIVER_DEVMAPPER_NAME, .ops = &g_devmapper_ops}
 };
 
 static const size_t g_numdrivers = sizeof(g_drivers) / sizeof(struct graphdriver);
@@ -101,8 +112,7 @@ struct graphdriver_status *graphdriver_get_status(void)
     }
 
     status->backing_fs = util_strdup_s(resp->backing_fs);
-    status->supports_d_type = resp->supports_d_type;
-    status->native_overlay_diff = resp->native_overlay_diff;
+    status->status = util_strdup_s(resp->status);
 
     ret = 0;
 free_out:
@@ -178,6 +188,7 @@ void free_graphdriver_status(struct graphdriver_status *status)
         return;
     }
     free(status->backing_fs);
+    free(status->status);
     free(status);
 }
 

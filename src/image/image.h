@@ -55,8 +55,7 @@ typedef struct {
 
 typedef struct {
     char *backing_fs;
-    bool supports_d_type;
-    bool native_overlay_diff;
+    char *status;
 } im_storage_status_response;
 
 typedef struct {
