@@ -52,7 +52,7 @@ void isula_exit(void)
 {
     int nret;
 
-    isula_kit_exit();
+    isula_img_exit();
     nret = pthread_cancel(g_monitor_thread);
     if (nret != 0) {
         SYSERROR("Cancel isula monitor thread failed");
@@ -70,7 +70,7 @@ static int start_isula_image_server(void)
 
     im_opt_timeout = im_opt_timeout >= MIN_OPT_TIMEOUT ? im_opt_timeout : MIN_OPT_TIMEOUT;
 
-    // check whether isula_kit is running by systemd
+    // check whether isulad-img is running by systemd
     if (util_file_exists(ISULA_IMAGE_SERVER_DEFAULT_SOCK)) {
         if (!conf_update_im_server_sock_addr(ISULA_IMAGE_SERVER_DEFAULT_SOCK)) {
             ERROR("Update image socket address failed");

@@ -36,7 +36,7 @@ BuildRequires: http-parser-devel libevhtp-devel libevent-devel
 BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
-Requires:      iSulad-kit lcr lxc clibcni
+Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf yajl
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp

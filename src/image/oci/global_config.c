@@ -42,14 +42,14 @@ static int pack_global_graph_driver(const char * const *options, bool ignore_sto
     if (strcmp(graph_driver, "overlay2") == 0) {
         // Treating overlay2 as overlay cause image was downloaded always
         // in '/var/lib/isulad/storage/overlay' directory.
-        // See iSulad-kit/vendor/github.com/containers/storage/drivers/overlay/overlay.go,
+        // See iSulad-img/vendor/github.com/containers/storage/drivers/overlay/overlay.go,
         // Driver is inited by name "overlay".
         graph_driver[strlen(graph_driver) - 1] = '\0';
     }
     add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_DRIVER_NAME], graph_driver);
 
     graph_opts = conf_get_storage_opts();
-    // since iSulad-kit will set quota when pull image, which is differ from docker,
+    // since iSulad-img will set quota when pull image, which is differ from docker,
     // and we may get some error if setted, ignore it if neccessary.
     for (p = graph_opts; (p != NULL) && (*p != NULL); p++) {
         if (ignore_storage_opt_size && driver != NULL && driver->ops->is_quota_options(driver, *p)) {
