@@ -149,7 +149,7 @@ static void list_print_quiet(struct isula_container_summary_info **info, const s
             continue;
         }
 
-        printf("%-*s ", (int)length->id_length, in->id ? in->id : "-");
+        printf("%-*s", (int)length->id_length, in->id ? in->id : "-");
         printf("\n");
     }
 }

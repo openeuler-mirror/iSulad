@@ -222,7 +222,7 @@ static void images_info_print_quiet(const struct isula_list_images_response *res
 
     for (i = 0, in = response->images_list; in != NULL && i < response->images_num; i++, in++) {
         char *digest = util_short_digest(in->digest);
-        printf("%-*s ", SHORT_DIGEST_LEN, digest ? digest : "<none>");
+        printf("%-*s", SHORT_DIGEST_LEN, digest ? digest : "<none>");
         printf("\n");
         free(digest);
     }
