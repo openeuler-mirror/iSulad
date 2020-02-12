@@ -2061,7 +2061,7 @@ out:
     return ret;
 }
 
-/* translate create_custom_config to container_custom_config */
+/* translate create_custom_config to container_config */
 static int pack_container_custom_config(container_config *container_spec,
                                         const isula_container_config_t *custom_conf)
 {
