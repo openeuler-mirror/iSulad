@@ -69,7 +69,8 @@ public:
 
 class PodSandboxManager {
 public:
-    virtual std::string RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, Errors &error) = 0;
+    virtual std::string RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &runtimeHandler,
+                                      Errors &error) = 0;
 
     virtual void StopPodSandbox(const std::string &podSandboxID, Errors &error) = 0;
 

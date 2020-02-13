@@ -316,7 +316,8 @@ void CRIRuntimeServiceImpl::SetupSandboxFiles(const std::string &resolvPath,
 container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
     const runtime::v1alpha2::PodSandboxConfig &config,
     const std::string &image, host_config *hostconfig,
-    container_config *custom_config, Errors &error)
+    container_config *custom_config,
+    const std::string &runtimeHandler, Errors &error)
 {
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perror = nullptr;
@@ -329,6 +330,11 @@ container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
 
     std::string sandboxName = CRINaming::MakeSandboxName(config.metadata());
     create_request->id = util_strdup_s(sandboxName.c_str());
+    
+    if (!runtimeHandler.empty()) {
+        create_request->runtime = util_strdup_s(runtimeHandler.c_str());
+    }
+    
     create_request->image = util_strdup_s(image.c_str());
 
     create_request->hostconfig = host_config_generate_json(hostconfig, &ctx, &perror);
@@ -353,6 +359,7 @@ error_out:
 container_create_request *CRIRuntimeServiceImpl::GenerateSandboxCreateContainerRequest(
     const runtime::v1alpha2::PodSandboxConfig &config,
     const std::string &image, std::string &jsonCheckpoint,
+    const std::string &runtimeHandler,
     Errors &error)
 {
     container_create_request *create_request = nullptr;
@@ -393,7 +400,7 @@ container_create_request *CRIRuntimeServiceImpl::GenerateSandboxCreateContainerR
         goto error_out;
     }
 
-    create_request = PackCreateContainerRequest(config, image, hostconfig, custom_config, error);
+    create_request = PackCreateContainerRequest(config, image, hostconfig, custom_config, runtimeHandler, error);
     if (create_request == nullptr) {
         error.SetError("Failed to pack create container request");
         goto error_out;
@@ -411,11 +418,12 @@ cleanup:
 
 std::string CRIRuntimeServiceImpl::CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config,
                                                           const std::string &image, std::string &jsonCheckpoint,
+                                                          const std::string &runtimeHandler,
                                                           Errors &error)
 {
     std::string response_id { "" };
     container_create_request *create_request =
-        GenerateSandboxCreateContainerRequest(config, image, jsonCheckpoint, error);
+        GenerateSandboxCreateContainerRequest(config, image, jsonCheckpoint, runtimeHandler, error);
     if (error.NotEmpty()) {
         return response_id;
     }
@@ -542,7 +550,9 @@ cleanup:
     free_container_inspect(inspect_data);
 }
 
-std::string CRIRuntimeServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, Errors &error)
+std::string CRIRuntimeServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
+                                                 const std::string &runtimeHandler,
+                                                 Errors &error)
 {
     std::string response_id;
     std::string jsonCheckpoint;
@@ -560,7 +570,7 @@ std::string CRIRuntimeServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSan
     }
 
     // Step 2: Create the sandbox container.
-    response_id = CreateSandboxContainer(config, image, jsonCheckpoint, error);
+    response_id = CreateSandboxContainer(config, image, jsonCheckpoint, runtimeHandler, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }

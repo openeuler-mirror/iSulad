@@ -85,6 +85,33 @@ cleanup:
     return realID;
 }
 
+std::string CRIRuntimeServiceImpl::GetContainerOrSandboxRuntime(const std::string &realID, Errors &error)
+{
+    std::string runtime;
+    if (m_cb == nullptr || m_cb->container.get_runtime == nullptr) {
+        error.SetError("Unimplemented callback");
+        return runtime;
+    }
+    container_get_runtime_response *response { nullptr };
+
+    if (m_cb->container.get_runtime(realID.c_str(), &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to call get id callback");
+        }
+        goto cleanup;
+    }
+
+    if (response->runtime != nullptr) {
+        runtime = response->runtime;
+    }
+
+cleanup:
+    free_container_get_runtime_response(response);
+    return runtime;
+}
+
 void CRIRuntimeServiceImpl::GetContainerTimeStamps(container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
                                                    int64_t *finishedAt, Errors &err)
 {
@@ -298,7 +325,7 @@ cleanup:
 
 container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(
     const std::string &realPodSandboxID, const runtime::v1alpha2::ContainerConfig &containerConfig,
-    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error)
+    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, const std::string &podSandboxRuntime, Errors &error)
 {
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
@@ -313,6 +340,10 @@ container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(
 
     std::string cname = CRINaming::MakeContainerName(podSandboxConfig, containerConfig);
     request->id = util_strdup_s(cname.c_str());
+
+    if (!podSandboxRuntime.empty()) {
+        request->runtime = util_strdup_s(podSandboxRuntime.c_str());
+    }
 
     if (!containerConfig.image().image().empty()) {
         request->image = util_strdup_s(containerConfig.image().image().c_str());
@@ -368,6 +399,7 @@ std::string CRIRuntimeServiceImpl::CreateContainer(const std::string &podSandbox
                                                    Errors &error)
 {
     std::string response_id { "" };
+    std::string podSandboxRuntime { "" };
 
     if (m_cb == nullptr || m_cb->container.create == nullptr) {
         error.SetError("Unimplemented callback");
@@ -383,7 +415,9 @@ std::string CRIRuntimeServiceImpl::CreateContainer(const std::string &podSandbox
         goto cleanup;
     }
 
-    request = GenerateCreateContainerRequest(realPodSandboxID, containerConfig, podSandboxConfig, error);
+    podSandboxRuntime = GetContainerOrSandboxRuntime(realPodSandboxID, error);
+
+    request = GenerateCreateContainerRequest(realPodSandboxID, containerConfig, podSandboxConfig, podSandboxRuntime, error);
     if (error.NotEmpty()) {
         error.SetError("Failed to generate create container request");
         goto cleanup;
@@ -399,6 +433,7 @@ std::string CRIRuntimeServiceImpl::CreateContainer(const std::string &podSandbox
     }
 
     response_id = response->id;
+
 cleanup:
     free_container_create_request(request);
     free_container_create_response(response);
