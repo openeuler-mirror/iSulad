@@ -25,7 +25,6 @@
 
 #include "log.h"
 #include "utils.h"
-#include "container_custom_config.h"
 #include "timestamp.h"
 #include "cri_helpers.h"
 #include "path.h"
@@ -115,12 +114,12 @@ void CRIRuntimeServiceImpl::GetContainerTimeStamps(container_inspect *inspect, i
     }
 }
 
-container_custom_config *CRIRuntimeServiceImpl::GenerateCreateContainerCustomConfig(
+container_config *CRIRuntimeServiceImpl::GenerateCreateContainerCustomConfig(
     const std::string &realPodSandboxID, const runtime::v1alpha2::ContainerConfig &containerConfig,
     const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error)
 {
-    container_custom_config *custom_config =
-        (container_custom_config *)util_common_calloc_s(sizeof(container_custom_config));
+    container_config *custom_config =
+        (container_config *)util_common_calloc_s(sizeof(container_config));
     if (custom_config == nullptr) {
         error.SetError("Out of memory");
         goto cleanup;
@@ -168,7 +167,7 @@ container_custom_config *CRIRuntimeServiceImpl::GenerateCreateContainerCustomCon
     return custom_config;
 
 cleanup:
-    free_container_custom_config(custom_config);
+    free_container_config(custom_config);
     return nullptr;
 }
 
@@ -308,7 +307,7 @@ container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(
         request->image = util_strdup_s(containerConfig.image().image().c_str());
     }
 
-    container_custom_config *custom_config { nullptr };
+    container_config *custom_config { nullptr };
 
     host_config *hostconfig = GenerateCreateContainerHostConfig(containerConfig, error);
     if (error.NotEmpty()) {
@@ -338,7 +337,7 @@ container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(
         goto cleanup;
     }
 
-    request->customconfig = container_custom_config_generate_json(custom_config, &ctx, &perror);
+    request->customconfig = container_config_generate_json(custom_config, &ctx, &perror);
     if (request->customconfig == nullptr) {
         error.Errorf("Failed to generate custom config json: %s", perror);
         free_container_create_request(request);
@@ -347,7 +346,7 @@ container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(
     }
 cleanup:
     free_host_config(hostconfig);
-    free_container_custom_config(custom_config);
+    free_container_config(custom_config);
     free(perror);
     return request;
 }
@@ -396,7 +395,7 @@ cleanup:
 }
 
 void CRIRuntimeServiceImpl::MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config,
-                                                container_custom_config *cConfig, Errors &error)
+                                                container_config *cConfig, Errors &error)
 {
     if (config.command_size() > 0) {
         if (static_cast<size_t>(config.command_size()) > SIZE_MAX / sizeof(char *)) {
@@ -964,7 +963,6 @@ void CRIRuntimeServiceImpl::ListContainerStats(
         goto cleanup;
     }
     request->all = true;
-    request->runtime = util_strdup_s(CRIHelpers::Constants::DEFAULT_RUNTIME_NAME.c_str());
 
     request->filters = (defs_filters *)util_common_calloc_s(sizeof(defs_filters));
     if (request->filters == nullptr) {

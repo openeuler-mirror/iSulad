@@ -52,7 +52,7 @@ void isula_exit(void)
 {
     int nret;
 
-    isula_kit_exit();
+    isula_img_exit();
     nret = pthread_cancel(g_monitor_thread);
     if (nret != 0) {
         SYSERROR("Cancel isula monitor thread failed");
@@ -70,7 +70,7 @@ static int start_isula_image_server(void)
 
     im_opt_timeout = im_opt_timeout >= MIN_OPT_TIMEOUT ? im_opt_timeout : MIN_OPT_TIMEOUT;
 
-    // check whether isula_kit is running by systemd
+    // check whether isulad-img is running by systemd
     if (util_file_exists(ISULA_IMAGE_SERVER_DEFAULT_SOCK)) {
         if (!conf_update_im_server_sock_addr(ISULA_IMAGE_SERVER_DEFAULT_SOCK)) {
             ERROR("Update image socket address failed");
@@ -156,7 +156,7 @@ int isula_prepare_rf(const im_prepare_request *request, char **real_rootfs)
                                                    real_rootfs, NULL);
 }
 
-int isula_merge_conf_rf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
+int isula_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
                         const im_prepare_request *request, char **real_rootfs)
 {
     oci_image_spec *image = NULL;
@@ -173,7 +173,7 @@ int isula_merge_conf_rf(oci_runtime_spec *oci_spec, const host_config *host_spec
         ERROR("Get prepare rootfs failed of image: %s", request->image_name);
         goto out;
     }
-    ret = oci_image_conf_merge_into_spec(request->image_name, oci_spec, custom_spec);
+    ret = oci_image_conf_merge_into_spec(request->image_name, container_spec);
     if (ret != 0) {
         ERROR("Failed to merge oci config for image: %s", request->image_name);
         goto out;

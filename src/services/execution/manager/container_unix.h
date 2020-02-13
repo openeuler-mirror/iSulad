@@ -19,7 +19,6 @@
 
 #include "libisulad.h"
 #include "util_atomic.h"
-#include "container_custom_config.h"
 #include "container_config_v2.h"
 #include "host_config.h"
 #include "container_state.h"
@@ -81,9 +80,7 @@ char *container_get_env_nolock(const container_t *cont, const char *key);
 int v2_spec_make_basic_info(const char *id, const char *name, const char *image_name, const char *image_type,
                             container_config_v2_common_config *v2_spec);
 
-int v2_spec_merge_custom_spec(const container_custom_config *custom_spec, container_config_v2_common_config *v2_spec);
-
-int v2_spec_merge_oci_spec(const oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec);
+int v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec);
 
 char *container_get_command(const container_t *cont);
 

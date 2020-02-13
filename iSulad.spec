@@ -1,5 +1,5 @@
-%global _version 1.1.9
-%global _release 20200206.104209.gitd282adb9
+%global _version 1.1.11
+%global _release 20200204.221506.git50cfadfa
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -36,7 +36,7 @@ BuildRequires: http-parser-devel libevhtp-devel libevent-devel
 BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
-Requires:      iSulad-kit lcr lxc clibcni
+Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf yajl
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp

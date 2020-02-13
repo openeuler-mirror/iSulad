@@ -198,6 +198,8 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     struct utsname u;
     im_image_count_request *im_request = NULL;
     char *rootpath = NULL;
+    char *graph_driver = NULL;
+    struct graphdriver_status *driver_status = NULL;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -228,6 +230,19 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     }
 #ifdef ENABLE_OCI_IMAGE
     im_request->type = util_strdup_s(IMAGE_TYPE_OCI);
+
+    graph_driver = conf_get_isulad_storage_driver();
+    if (graph_driver == NULL) {
+        ERROR("Failed to get graph driver name info!");
+        goto pack_response;
+    }
+
+    driver_status = graphdriver_get_status();
+    if (driver_status == NULL) {
+        ERROR("Failed to get graph driver status info!");
+        cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
 #endif
     images_num = im_get_image_count(im_request);
 
@@ -308,12 +323,18 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     (*response)->http_proxy = util_strdup_s(http_proxy);
     (*response)->https_proxy = util_strdup_s(https_proxy);
     (*response)->no_proxy = util_strdup_s(no_proxy);
+#ifdef ENABLE_OCI_IMAGE
+    (*response)->driver_name = util_strdup_s(graph_driver);
+    (*response)->driver_status = util_strdup_s(driver_status->status);
+#endif
 
 pack_response:
     if (*response != NULL) {
         (*response)->cc = cc;
     }
     free(rootpath);
+    free(graph_driver);
+    free_graphdriver_status(driver_status);
     free(huge_page_size);
     free(operating_system);
     free_im_image_count_request(im_request);

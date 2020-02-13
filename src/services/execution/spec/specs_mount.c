@@ -33,7 +33,6 @@
 #include "oci_runtime_spec.h"
 #include "oci_runtime_hooks.h"
 #include "host_config.h"
-#include "container_custom_config.h"
 #include "utils.h"
 #include "config.h"
 #include "path.h"
@@ -130,17 +129,17 @@ out:
     return ret;
 }
 
-int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_custom_config *custom_spec)
+int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_config *container_spec)
 {
     size_t i, array_str_len;
     int ret = 0;
     char **array_str = NULL;
 
-    if (custom_spec == NULL) {
+    if (container_spec == NULL) {
         return -1;
     }
 
-    array_str = util_string_split(custom_spec->ns_change_opt, ',');
+    array_str = util_string_split(container_spec->ns_change_opt, ',');
     if (array_str == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -806,8 +805,8 @@ erro_out:
     return NULL;
 }
 
-static int get_devices_from_path(const host_config_devices_element *dev_map, oci_runtime_defs_linux_device *spec_dev,
-                                 oci_runtime_defs_linux_device_cgroup *spec_dev_cgroup)
+static int get_devices_from_path(const host_config_devices_element *dev_map, defs_device *spec_dev,
+                                 defs_device_cgroup *spec_dev_cgroup)
 {
     int ret = 0;
     struct stat st;
@@ -860,22 +859,22 @@ static int get_devices_from_path(const host_config_devices_element *dev_map, oci
     return 0;
 }
 
-static int merge_custom_device(oci_runtime_defs_linux_device **out_spec_dev,
-                               oci_runtime_defs_linux_device_cgroup **out_spec_dev_cgroup,
+static int merge_custom_device(defs_device **out_spec_dev,
+                               defs_device_cgroup **out_spec_dev_cgroup,
                                const host_config_devices_element *dev_map)
 {
     int ret = 0;
-    oci_runtime_defs_linux_device *spec_dev = NULL;
-    oci_runtime_defs_linux_device_cgroup *spec_dev_cgroup = NULL;
+    defs_device *spec_dev = NULL;
+    defs_device_cgroup *spec_dev_cgroup = NULL;
 
-    spec_dev = util_common_calloc_s(sizeof(oci_runtime_defs_linux_device));
+    spec_dev = util_common_calloc_s(sizeof(defs_device));
     if (spec_dev == NULL) {
         ERROR("Memory out");
         ret = -1;
         goto erro_out;
     }
 
-    spec_dev_cgroup = util_common_calloc_s(sizeof(oci_runtime_defs_linux_device_cgroup));
+    spec_dev_cgroup = util_common_calloc_s(sizeof(defs_device_cgroup));
     if (spec_dev_cgroup == NULL) {
         ERROR("Memory out");
         ret = -1;
@@ -894,14 +893,14 @@ static int merge_custom_device(oci_runtime_defs_linux_device **out_spec_dev,
     goto out;
 
 erro_out:
-    free_oci_runtime_defs_linux_device(spec_dev);
-    free_oci_runtime_defs_linux_device_cgroup(spec_dev_cgroup);
+    free_defs_device(spec_dev);
+    free_defs_device_cgroup(spec_dev_cgroup);
 out:
     return ret;
 }
 
 static int get_weight_devices_from_path(const host_config_blkio_weight_device_element *weight_dev,
-                                        oci_runtime_defs_linux_block_io_device_weight *spec_weight_dev)
+                                        defs_block_io_device_weight *spec_weight_dev)
 {
     int ret = 0;
     struct stat st;
@@ -929,13 +928,13 @@ static int get_weight_devices_from_path(const host_config_blkio_weight_device_el
     return 0;
 }
 
-static int merge_host_config_blk_weight_device(oci_runtime_defs_linux_block_io_device_weight **out_spec_weight_dev,
+static int merge_host_config_blk_weight_device(defs_block_io_device_weight **out_spec_weight_dev,
                                                const host_config_blkio_weight_device_element *weight_dev)
 {
     int ret = 0;
-    oci_runtime_defs_linux_block_io_device_weight *spec_weight_dev = NULL;
+    defs_block_io_device_weight *spec_weight_dev = NULL;
 
-    spec_weight_dev = util_common_calloc_s(sizeof(oci_runtime_defs_linux_block_io_device_weight));
+    spec_weight_dev = util_common_calloc_s(sizeof(defs_block_io_device_weight));
     if (spec_weight_dev == NULL) {
         ERROR("Memory out");
         ret = -1;
@@ -953,14 +952,14 @@ static int merge_host_config_blk_weight_device(oci_runtime_defs_linux_block_io_d
     goto out;
 
 erro_out:
-    free_oci_runtime_defs_linux_block_io_device_weight(spec_weight_dev);
+    free_defs_block_io_device_weight(spec_weight_dev);
 
 out:
     return ret;
 }
 
 static int get_read_bps_devices_from_path(const host_config_blkio_device_read_bps_element *read_bps_dev,
-                                          oci_runtime_defs_linux_block_io_device_throttle *spec_read_bps_dev)
+                                          defs_block_io_device_throttle *spec_read_bps_dev)
 {
     int ret = 0;
     struct stat st;
@@ -985,13 +984,13 @@ static int get_read_bps_devices_from_path(const host_config_blkio_device_read_bp
 }
 
 static int merge_host_config_blk_read_bps_device(
-    oci_runtime_defs_linux_block_io_device_throttle **out_spec_read_bps_dev,
+    defs_block_io_device_throttle **out_spec_read_bps_dev,
     const host_config_blkio_device_read_bps_element *blkio_device_read_bps)
 {
     int ret = 0;
-    oci_runtime_defs_linux_block_io_device_throttle *spec_read_bps_dev = NULL;
+    defs_block_io_device_throttle *spec_read_bps_dev = NULL;
 
-    spec_read_bps_dev = util_common_calloc_s(sizeof(oci_runtime_defs_linux_block_io_device_throttle));
+    spec_read_bps_dev = util_common_calloc_s(sizeof(defs_block_io_device_throttle));
     if (spec_read_bps_dev == NULL) {
         ERROR("Memory out");
         ret = -1;
@@ -1009,14 +1008,14 @@ static int merge_host_config_blk_read_bps_device(
     goto out;
 
 erro_out:
-    free_oci_runtime_defs_linux_block_io_device_throttle(spec_read_bps_dev);
+    free_defs_block_io_device_throttle(spec_read_bps_dev);
 
 out:
     return ret;
 }
 
 static int get_write_bps_devices_from_path(const host_config_blkio_device_write_bps_element *write_bps_dev,
-                                           oci_runtime_defs_linux_block_io_device_throttle *spec_write_bps_dev)
+                                           defs_block_io_device_throttle *spec_write_bps_dev)
 {
     int ret = 0;
     struct stat st;
@@ -1041,13 +1040,13 @@ static int get_write_bps_devices_from_path(const host_config_blkio_device_write_
 }
 
 static int merge_host_config_blk_write_bps_device(
-    oci_runtime_defs_linux_block_io_device_throttle **out_spec_write_bps_dev,
+    defs_block_io_device_throttle **out_spec_write_bps_dev,
     const host_config_blkio_device_write_bps_element *blkio_device_write_bps)
 {
     int ret = 0;
-    oci_runtime_defs_linux_block_io_device_throttle *spec_write_bps_dev = NULL;
+    defs_block_io_device_throttle *spec_write_bps_dev = NULL;
 
-    spec_write_bps_dev = util_common_calloc_s(sizeof(oci_runtime_defs_linux_block_io_device_throttle));
+    spec_write_bps_dev = util_common_calloc_s(sizeof(defs_block_io_device_throttle));
     if (spec_write_bps_dev == NULL) {
         ERROR("Memory out");
         ret = -1;
@@ -1065,7 +1064,7 @@ static int merge_host_config_blk_write_bps_device(
     goto out;
 
 erro_out:
-    free_oci_runtime_defs_linux_block_io_device_throttle(spec_write_bps_dev);
+    free_defs_block_io_device_throttle(spec_write_bps_dev);
 
 out:
     return ret;
@@ -1077,7 +1076,7 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
     int ret = 0;
     size_t new_size = 0, old_size = 0;
     size_t i = 0;
-    oci_runtime_defs_linux_device **spec_dev = NULL;
+    defs_device **spec_dev = NULL;
 
     ret = make_sure_oci_spec_linux_resources(oci_spec);
     if (ret < 0) {
@@ -1091,8 +1090,8 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
         ret = -1;
         goto out;
     }
-    new_size = (oci_spec->linux->devices_len + devices_len) * sizeof(oci_runtime_defs_linux_device *);
-    old_size = oci_spec->linux->devices_len * sizeof(oci_runtime_defs_linux_device *);
+    new_size = (oci_spec->linux->devices_len + devices_len) * sizeof(defs_device *);
+    old_size = oci_spec->linux->devices_len * sizeof(defs_device *);
     ret = mem_realloc((void **)&spec_dev, new_size, oci_spec->linux->devices, old_size);
     if (ret != 0) {
         ERROR("Out of memory");
@@ -1102,16 +1101,16 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
     oci_spec->linux->devices = spec_dev;
 
     /* malloc for cgroup->device */
-    oci_runtime_defs_linux_device_cgroup **spec_cgroup_dev = NULL;
-    if (devices_len > SIZE_MAX / sizeof(oci_runtime_defs_linux_device_cgroup *) -
+    defs_device_cgroup **spec_cgroup_dev = NULL;
+    if (devices_len > SIZE_MAX / sizeof(defs_device_cgroup *) -
         oci_spec->linux->resources->devices_len) {
         ERROR("Too many cgroup devices to merge!");
         ret = -1;
         goto out;
     }
     new_size = (oci_spec->linux->resources->devices_len + devices_len)
-               * sizeof(oci_runtime_defs_linux_device_cgroup *);
-    old_size = oci_spec->linux->resources->devices_len * sizeof(oci_runtime_defs_linux_device_cgroup *);
+               * sizeof(defs_device_cgroup *);
+    old_size = oci_spec->linux->resources->devices_len * sizeof(defs_device_cgroup *);
     ret = mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
     if (ret != 0) {
         ERROR("Out of memory");
@@ -1243,8 +1242,8 @@ int merge_all_devices_and_all_permission(oci_runtime_spec *oci_spec)
 {
     int ret = 0;
     size_t i = 0;
-    oci_runtime_config_linux_resources *ptr = NULL;
-    oci_runtime_defs_linux_device_cgroup *spec_dev_cgroup = NULL;
+    defs_resources *ptr = NULL;
+    defs_device_cgroup *spec_dev_cgroup = NULL;
 
     ret = merge_all_devices_in_dir("/dev", NULL, NULL, oci_spec);
     if (ret != 0) {
@@ -1261,7 +1260,7 @@ int merge_all_devices_and_all_permission(oci_runtime_spec *oci_spec)
     ptr = oci_spec->linux->resources;
     if (ptr->devices != NULL) {
         for (i = 0; i < ptr->devices_len; i++) {
-            free_oci_runtime_defs_linux_device_cgroup(ptr->devices[i]);
+            free_defs_device_cgroup(ptr->devices[i]);
             ptr->devices[i] = NULL;
         }
         free(ptr->devices);
@@ -1269,7 +1268,7 @@ int merge_all_devices_and_all_permission(oci_runtime_spec *oci_spec)
         ptr->devices_len = 0;
     }
 
-    ptr->devices = util_common_calloc_s(sizeof(oci_runtime_defs_linux_device_cgroup *));
+    ptr->devices = util_common_calloc_s(sizeof(defs_device_cgroup *));
     if (ptr->devices == NULL) {
         ret = -1;
         goto out;
@@ -1277,7 +1276,7 @@ int merge_all_devices_and_all_permission(oci_runtime_spec *oci_spec)
 
     ptr->devices_len = 1;
 
-    spec_dev_cgroup = util_common_calloc_s(sizeof(oci_runtime_defs_linux_device_cgroup));
+    spec_dev_cgroup = util_common_calloc_s(sizeof(defs_device_cgroup));
     if (spec_dev_cgroup == NULL) {
         ret = -1;
         goto out;
@@ -1498,14 +1497,14 @@ static int merge_custom_one_device(oci_runtime_spec *oci_spec, const host_config
     }
 
     /* malloc for linux->device */
-    oci_runtime_defs_linux_device **spec_dev = NULL;
-    if (oci_spec->linux->devices_len > SIZE_MAX / sizeof(oci_runtime_defs_linux_device *) - 1) {
+    defs_device **spec_dev = NULL;
+    if (oci_spec->linux->devices_len > SIZE_MAX / sizeof(defs_device *) - 1) {
         ERROR("Too many linux devices to merge!");
         ret = -1;
         goto out;
     }
-    new_size = (oci_spec->linux->devices_len + 1) * sizeof(oci_runtime_defs_linux_device *);
-    old_size = new_size - sizeof(oci_runtime_defs_linux_device *);
+    new_size = (oci_spec->linux->devices_len + 1) * sizeof(defs_device *);
+    old_size = new_size - sizeof(defs_device *);
     ret = mem_realloc((void **)&spec_dev, new_size, oci_spec->linux->devices, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for devices");
@@ -1516,14 +1515,14 @@ static int merge_custom_one_device(oci_runtime_spec *oci_spec, const host_config
     oci_spec->linux->devices = spec_dev;
 
     /* malloc for cgroup->device */
-    oci_runtime_defs_linux_device_cgroup **spec_cgroup_dev = NULL;
-    if (oci_spec->linux->resources->devices_len > SIZE_MAX / sizeof(oci_runtime_defs_linux_device_cgroup *) - 1) {
+    defs_device_cgroup **spec_cgroup_dev = NULL;
+    if (oci_spec->linux->resources->devices_len > SIZE_MAX / sizeof(defs_device_cgroup *) - 1) {
         ERROR("Too many cgroup devices to merge!");
         ret = -1;
         goto out;
     }
-    new_size = (oci_spec->linux->resources->devices_len + 1) * sizeof(oci_runtime_defs_linux_device_cgroup *);
-    old_size = new_size - sizeof(oci_runtime_defs_linux_device_cgroup *);
+    new_size = (oci_spec->linux->resources->devices_len + 1) * sizeof(defs_device_cgroup *);
+    old_size = new_size - sizeof(defs_device_cgroup *);
     ret = mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for cgroup devices");
@@ -1597,7 +1596,7 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
     size_t new_size = 0;
     size_t old_size = 0;
     size_t i = 0;
-    oci_runtime_defs_linux_block_io_device_weight **weight_device = NULL;
+    defs_block_io_device_weight **weight_device = NULL;
 
     ret = make_sure_oci_spec_linux_resources_blkio(oci_spec);
     if (ret < 0) {
@@ -1612,9 +1611,9 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
     }
 
     new_size = (oci_spec->linux->resources->block_io->weight_device_len + blkio_weight_device_len)
-               * sizeof(oci_runtime_defs_linux_block_io_device_weight *);
+               * sizeof(defs_block_io_device_weight *);
     old_size = oci_spec->linux->resources->block_io->weight_device_len *
-               sizeof(oci_runtime_defs_linux_block_io_device_weight *);
+               sizeof(defs_block_io_device_weight *);
     ret = mem_realloc((void **)&weight_device, new_size,  oci_spec->linux->resources->block_io->weight_device,
                       old_size);
     if (ret != 0) {
@@ -1649,7 +1648,7 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
     size_t new_size = 0;
     size_t old_size = 0;
     size_t i = 0;
-    oci_runtime_defs_linux_block_io_device_throttle **throttle_read_bps_device = NULL;
+    defs_block_io_device_throttle **throttle_read_bps_device = NULL;
 
     ret = make_sure_oci_spec_linux_resources_blkio(oci_spec);
     if (ret < 0) {
@@ -1666,9 +1665,9 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
     }
 
     new_size = (oci_spec->linux->resources->block_io->throttle_read_bps_device_len + throttle_read_bps_device_len)
-               * sizeof(oci_runtime_defs_linux_block_io_device_throttle *);
+               * sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_read_bps_device_len *
-               sizeof(oci_runtime_defs_linux_block_io_device_throttle *);
+               sizeof(defs_block_io_device_throttle *);
     ret = mem_realloc((void **)&throttle_read_bps_device, new_size,
                       oci_spec->linux->resources->block_io->throttle_read_bps_device, old_size);
     if (ret != 0) {
@@ -1702,7 +1701,7 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
     size_t new_size = 0;
     size_t old_size = 0;
     size_t i = 0;
-    oci_runtime_defs_linux_block_io_device_throttle **throttle_write_bps_device = NULL;
+    defs_block_io_device_throttle **throttle_write_bps_device = NULL;
 
     ret = make_sure_oci_spec_linux_resources_blkio(oci_spec);
     if (ret < 0) {
@@ -1719,9 +1718,9 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
     }
 
     new_size = (oci_spec->linux->resources->block_io->throttle_write_bps_device_len + throttle_write_bps_device_len)
-               * sizeof(oci_runtime_defs_linux_block_io_device_throttle *);
+               * sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_write_bps_device_len *
-               sizeof(oci_runtime_defs_linux_block_io_device_throttle *);
+               sizeof(defs_block_io_device_throttle *);
     ret = mem_realloc((void **)&throttle_write_bps_device, new_size,
                       oci_spec->linux->resources->block_io->throttle_write_bps_device, old_size);
     if (ret != 0) {
@@ -1957,35 +1956,68 @@ static int change_dev_shm_size(oci_runtime_spec *oci_spec, int64_t shm_size)
     return -1;
 }
 
-static int merge_volumes_to_mount(oci_runtime_spec *oci_spec, host_config *host_spec,
-                                  container_config_v2_common_config *common_config)
+static inline bool is_mount_destination_hosts(const char *destination)
+{
+    return strcmp(destination, "/etc/hosts") == 0;
+}
+
+static inline bool is_mount_destination_resolv(const char *destination)
+{
+    return strcmp(destination, "/etc/resolv.conf") == 0;
+}
+
+static inline bool is_mount_destination_hostname(const char *destination)
+{
+    return strcmp(destination, "/etc/hostname") == 0;
+}
+
+
+/* find whether mount entry with destination "/etc/hostname" "/etc/hosts" "/etc/resolv.conf" exits in mount
+ * if not exists: append mounts to ocispec by v2_spec
+ * if exists: replace the source in v2_spec
+ */
+static int append_network_files_mounts(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
+    size_t i = 0;
+    bool has_hosts_mount = false;
+    bool has_resolv_mount = false;
+    bool has_hostname_mount = false;
 
-    if (host_spec->binds != NULL && host_spec->binds_len) {
-        ret = merge_volumes(oci_spec, host_spec->binds,
-                            host_spec->binds_len, common_config,
-                            parse_volume);
-        if (ret) {
-            ERROR("Failed to merge volumes");
-            goto out;
+    for (i = 0; i < oci_spec->mounts_len; i++) {
+        if (is_mount_destination_hosts(oci_spec->mounts[i]->destination)) {
+            has_hosts_mount = true;
+            free(v2_spec->hosts_path);
+            v2_spec->hosts_path = util_strdup_s(oci_spec->mounts[i]->source);
+        }
+        if (is_mount_destination_resolv(oci_spec->mounts[i]->destination)) {
+            has_resolv_mount = true;
+            free(v2_spec->resolv_conf_path);
+            v2_spec->resolv_conf_path = util_strdup_s(oci_spec->mounts[i]->source);
+        }
+        if (is_mount_destination_hostname(oci_spec->mounts[i]->destination)) {
+            has_hostname_mount = true;
+            free(v2_spec->hostname_path);
+            v2_spec->hostname_path = util_strdup_s(oci_spec->mounts[i]->source);
         }
     }
 
-out:
-    return ret;
-}
-
-static int merge_host_channel_to_mount(oci_runtime_spec *oci_spec, host_config *host_spec)
-{
-    int ret = 0;
-
-    if (host_spec->host_channel == NULL) {
-        return 0;
+    /* add network config files */
+    if (!has_hosts_mount && !mount_file(oci_spec, v2_spec->hosts_path, ETC_HOSTS)) {
+        ERROR("Merge hosts mount failed");
+        ret = -1;
+        goto out;
+    }
+    if (!has_resolv_mount &&
+        !mount_file(oci_spec, v2_spec->resolv_conf_path, RESOLV_CONF_PATH)) {
+        ERROR("Merge resolv.conf mount failed");
+        ret = -1;
+        goto out;
     }
 
-    if (!add_host_channel_mount(oci_spec, host_spec->host_channel)) {
-        ERROR("Failed to merge host channel mount");
+    if (!has_hostname_mount &&
+        !mount_file(oci_spec, v2_spec->hostname_path, ETC_HOSTNAME)) {
+        ERROR("Merge hostname mount failed");
         ret = -1;
         goto out;
     }
@@ -1994,28 +2026,41 @@ out:
     return ret;
 }
 
-static int merge_mounts_to_mount_filesystem(oci_runtime_spec *oci_spec, container_custom_config *custom_spec,
-                                            host_config *host_spec, container_config_v2_common_config *common_config)
+int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
+                      container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
+    container_config *container_spec = v2_spec->config;
 
-    if (custom_spec->mounts && custom_spec->mounts_len) {
-        ret = merge_volumes(oci_spec, custom_spec->mounts,
-                            custom_spec->mounts_len, common_config,
+    /* volumes to mount */
+    if (host_spec->binds != NULL && host_spec->binds_len) {
+        ret = merge_volumes(oci_spec, host_spec->binds,
+                            host_spec->binds_len, v2_spec,
+                            parse_volume);
+        if (ret) {
+            ERROR("Failed to merge volumes");
+            goto out;
+        }
+    }
+
+    /* host channel to mount */
+    if (host_spec->host_channel != NULL) {
+        if (!add_host_channel_mount(oci_spec, host_spec->host_channel)) {
+            ERROR("Failed to merge host channel mount");
+            goto out;
+        }
+    }
+
+    /* mounts to mount filesystem */
+    if (container_spec->mounts && container_spec->mounts_len) {
+        ret = merge_volumes(oci_spec, container_spec->mounts,
+                            container_spec->mounts_len, v2_spec,
                             parse_mount);
         if (ret) {
             ERROR("Failed to merge mounts");
             goto out;
         }
     }
-
-out:
-    return ret;
-}
-
-static int merge_shm_size(oci_runtime_spec *oci_spec, host_config *host_spec)
-{
-    int ret = 0;
 
     if (host_spec->shm_size >= 0) {
         if (host_spec->shm_size == 0) {
@@ -2029,26 +2074,10 @@ static int merge_shm_size(oci_runtime_spec *oci_spec, host_config *host_spec)
         }
     }
 
-out:
-    return ret;
-}
-
-static int merge_network_config_files(oci_runtime_spec *oci_spec, host_config *host_spec,
-                                      container_config_v2_common_config *common_config)
-{
-    int ret = 0;
-
-    if (is_container(host_spec->network_mode)) {
-        /* add network config files */
-        if (common_config->hosts_path != NULL && !mount_file(oci_spec, common_config->hosts_path, ETC_HOSTS)) {
-            ERROR("Merge hosts mount failed");
-            ret = -1;
-            goto out;
-        }
-        if (common_config->resolv_conf_path != NULL &&
-            !mount_file(oci_spec, common_config->resolv_conf_path, RESOLV_CONF_PATH)) {
-            ERROR("Merge resolv.conf mount failed");
-            ret = -1;
+    if (!host_spec->system_container) {
+        ret = append_network_files_mounts(oci_spec, v2_spec);
+        if (ret) {
+            ERROR("Failed to append network mounts");
             goto out;
         }
     }
@@ -2057,44 +2086,7 @@ out:
     return ret;
 }
 
-int merge_conf_mounts(oci_runtime_spec *oci_spec, container_custom_config *custom_spec, host_config *host_spec,
-                      container_config_v2_common_config *common_config)
-{
-    int ret = 0;
-
-    /* volumes to mount */
-    ret = merge_volumes_to_mount(oci_spec, host_spec, common_config);
-    if (ret != 0) {
-        goto out;
-    }
-
-    /* host channel to mount */
-    if (merge_host_channel_to_mount(oci_spec, host_spec) != 0) {
-        ret = -1;
-        goto out;
-    }
-
-    /* mounts to mount filesystem */
-    if (merge_mounts_to_mount_filesystem(oci_spec, custom_spec, host_spec, common_config) != 0) {
-        ret = -1;
-        goto out;
-    }
-
-    if (merge_shm_size(oci_spec, host_spec) != 0) {
-        ret = -1;
-        goto out;
-    }
-
-    if (merge_network_config_files(oci_spec, host_spec, common_config) != 0) {
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
-int add_rootfs_mount(const oci_runtime_spec *container)
+int add_rootfs_mount(const container_config *container_spec)
 {
     int ret = 0;
     char *mntparent = NULL;
@@ -2105,7 +2097,7 @@ int add_rootfs_mount(const oci_runtime_spec *container)
         ret = -1;
         goto out;
     }
-    if (append_json_map_string_string(container->annotations, "rootfs.mount", mntparent)) {
+    if (append_json_map_string_string(container_spec->annotations, "rootfs.mount", mntparent)) {
         ERROR("Realloc annotatinons failed");
         ret = -1;
         goto out;

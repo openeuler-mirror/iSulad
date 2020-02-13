@@ -31,7 +31,6 @@ typedef struct _rt_create_params_t {
     const char *rootfs;
     const char *bundle;
     const char *state;
-    const char *real_rootfs;
     void *oci_config_data;
     bool terminal;
     const char *stdin;
@@ -54,7 +53,6 @@ typedef struct _rt_start_params_t {
 
     const char *container_pidfile;
     const char *exit_fifo;
-    const oci_runtime_spec_process_user *puser;
 } rt_start_params_t;
 
 typedef struct _rt_restart_params_t {
@@ -87,12 +85,8 @@ typedef struct _rt_exec_params_t {
     const char *loglevel;
     const char **console_fifos;
     int64_t timeout;
-    const char *user;
-    const char * const *args;
-    size_t args_len;
-    const char * const *envs;
-    size_t envs_len;
     const char *suffix;
+    defs_process *spec;
 } rt_exec_params_t;
 
 typedef struct _rt_pause_params_t {

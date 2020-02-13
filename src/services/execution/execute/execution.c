@@ -514,7 +514,7 @@ static int prepare_user_remap_config(const container_t *cont)
     return 0;
 }
 
-static int generate_user_and_groups_conf(const container_t *cont, oci_runtime_spec_process_user **puser)
+static int generate_user_and_groups_conf(const container_t *cont, defs_process_user **puser)
 {
     int ret = -1;
     char *username = NULL;
@@ -524,7 +524,7 @@ static int generate_user_and_groups_conf(const container_t *cont, oci_runtime_sp
         return -1;
     }
 
-    *puser = util_common_calloc_s(sizeof(oci_runtime_spec_process_user));
+    *puser = util_common_calloc_s(sizeof(defs_process_user));
     if (*puser == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -534,11 +534,12 @@ static int generate_user_and_groups_conf(const container_t *cont, oci_runtime_sp
         username = cont->common_config->config->user;
     }
 
+    /* username may be NULL, we will handle it as UID 0 in get_user */
     ret = im_get_user_conf(cont->common_config->image_type, cont->common_config->base_fs, cont->hostconfig, username,
                            *puser);
     if (ret != 0) {
         ERROR("Get user failed with '%s'", username ? username : "");
-        free_oci_runtime_spec_process_user(*puser);
+        free_defs_process_user(*puser);
         *puser = NULL;
     }
 
@@ -678,6 +679,25 @@ static void clean_resources_on_failure(const container_t *cont, const char *engi
     return;
 }
 
+static int renew_oci_config(const container_t *cont, const oci_runtime_spec *oci_spec)
+{
+    int ret = 0;
+    defs_process_user *puser = NULL;
+
+    if (generate_user_and_groups_conf(cont, &puser) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    free_defs_process_user(oci_spec->process->user);
+    oci_spec->process->user = puser;
+    puser = NULL;
+
+out:
+    free_defs_process_user(puser);
+    return ret;
+}
+
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm,
                               container_pid_t *pid_info)
 {
@@ -692,11 +712,20 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     char *logdriver = NULL;
     char *exit_fifo = NULL;
     char *pidfile = NULL;
-    oci_runtime_spec_process_user *puser = NULL;
+    char bundle[PATH_MAX] = { 0 };
     const char *runtime = cont->runtime;
     const char *id = cont->common_config->id;
+    oci_runtime_spec *oci_spec = NULL;
+    rt_create_params_t create_params = { 0 };
     rt_start_params_t start_params = { 0 };
 
+    nret = snprintf(bundle, sizeof(bundle), "%s/%s", cont->root_path, id);
+    if (nret < 0 || (size_t)nret >= sizeof(bundle)) {
+        ERROR("Failed to print bundle string");
+        ret = -1;
+        goto out;
+    }
+    DEBUG("bd:%s, state:%s", bundle, cont->state_path);
     if (mount_dev_tmpfs_for_system_container(cont) < 0) {
         ret = -1;
         goto out;
@@ -730,6 +759,13 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto out;
     }
 
+    oci_spec = load_oci_config(cont->root_path, id);
+    if (oci_spec == NULL) {
+        ERROR("Failed to load oci config");
+        ret = -1;
+        goto close_exit_fd;
+    }
+
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image, id);
     if (nret != 0) {
         ERROR("Failed to mount rootfs for container %s", id);
@@ -737,7 +773,31 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
-    if (generate_user_and_groups_conf(cont, &puser) != 0) {
+    if (renew_oci_config(cont, oci_spec) != 0) {
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    if (verify_container_settings_start(oci_spec) != 0) {
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    start_timeout = conf_get_start_timeout();
+    if (cont->common_config->config != NULL) {
+        tty = cont->common_config->config->tty;
+        open_stdin = cont->common_config->config->open_stdin;
+    }
+
+    create_params.bundle = bundle;
+    create_params.state = cont->state_path;
+    create_params.oci_config_data = oci_spec;
+    create_params.terminal = tty;
+    create_params.stdin = console_fifos[0];
+    create_params.stdout = console_fifos[1];
+    create_params.stderr = console_fifos[2];
+
+    if (runtime_create(id, runtime, &create_params) != 0) {
         ret = -1;
         goto close_exit_fd;
     }
@@ -749,17 +809,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
-    if (verify_container_settings_start(cont->root_path, id) != 0) {
-        ret = -1;
-        goto close_exit_fd;
-    }
-
-    start_timeout = conf_get_start_timeout();
-    if (cont->common_config->config != NULL) {
-        tty = cont->common_config->config->tty;
-        open_stdin = cont->common_config->config->open_stdin;
-    }
-
     start_params.rootpath = cont->root_path;
     start_params.tty = tty;
     start_params.open_stdin = open_stdin;
@@ -769,7 +818,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     start_params.start_timeout = start_timeout;
     start_params.container_pidfile = pidfile;
     start_params.exit_fifo = exit_fifo;
-    start_params.puser = puser;
 
     ret = runtime_start(id, runtime, &start_params, pid_info);
     if (ret == 0) {
@@ -788,13 +836,14 @@ close_exit_fd:
 
 clean_resources:
     clean_resources_on_failure(cont, engine_log_path, loglevel);
+
 out:
-    free_oci_runtime_spec_process_user(puser);
     free(loglevel);
     free(engine_log_path);
     free(logdriver);
     free(exit_fifo);
     free(pidfile);
+    free_oci_runtime_spec(oci_spec);
     if (ret != 0) {
         umount_rootfs_on_failure(cont);
         (void)umount_dev_tmpfs_for_system_container(cont);
@@ -1232,10 +1281,6 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
         goto out;
     }
 
-    if (verify_container_settings_start(cont->root_path, id)) {
-        cc = ISULAD_ERR_EXEC;
-        goto out;
-    }
     if (is_running(cont->state)) {
         INFO("Container is already running");
         goto out;
@@ -1273,7 +1318,7 @@ static uint32_t do_restart_container(container_t *cont, int timeout)
     if (ret == -1) {
         container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
         return ISULAD_ERR_EXEC;
-    } else if (ret == -2) {
+    } else if (ret == RUNTIME_NOT_IMPLEMENT_RESET) {
         /* runtime don't implement restart, use stop and start */
         return stop_and_start(cont, timeout);
     }

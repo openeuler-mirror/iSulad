@@ -71,6 +71,8 @@ int util_write_file(const char *fname, const char *content, size_t content_len);
 
 char *verify_file_and_get_real_path(const char *file);
 
+int util_copy_file(const char *src_file, const char *dst_file);
+
 #ifdef __cplusplus
 }
 #endif

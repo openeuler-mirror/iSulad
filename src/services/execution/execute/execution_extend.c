@@ -41,6 +41,7 @@
 #include "execution_extend.h"
 #include "sysinfo.h"
 #include "health_check.h"
+#include "specs.h"
 #include "runtime.h"
 
 #include "filters.h"
@@ -497,7 +498,7 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
-static int resume_container(container_t *cont)
+static int do_resume_container(container_t *cont)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
@@ -661,7 +662,7 @@ static int container_resume_cb(const container_resume_request *request, containe
         goto pack_response;
     }
 
-    ret = resume_container(cont);
+    ret = do_resume_container(cont);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
@@ -1000,6 +1001,8 @@ static int do_update_resources(const container_update_request *request, containe
     parser_error err = NULL;
     host_config *hostconfig = NULL;
     host_config *backup_hostconfig = NULL;
+    oci_runtime_spec *oci_spec = NULL;
+    oci_runtime_spec *backup_oci_spec = NULL;
     rt_update_params_t params = { 0 };
 
     if (request->host_config == NULL) {
@@ -1029,28 +1032,66 @@ static int do_update_resources(const container_update_request *request, containe
     }
 
     if (update_container(cont, hostconfig)) {
-        host_config_restore_unlocking(cont, backup_hostconfig);
         ret = -1;
-        goto unlock_out;
+        goto restore_hostspec;
     }
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
-        host_config_restore_unlocking(cont, backup_hostconfig);
         ret = -1;
-        goto unlock_out;
+        goto restore_hostspec;
     }
 
     if (hostconfig->restart_policy && hostconfig->restart_policy->name) {
         container_update_restart_manager(cont, hostconfig->restart_policy);
     }
 
-    params.rootpath = cont->root_path;
-    params.hostconfig = hostconfig;
-    if (runtime_update(id, cont->runtime, &params)) {
-        ERROR("Update container %s failed", id);
+    oci_spec = load_oci_config(cont->root_path, id);
+    if (oci_spec == NULL) {
+        ERROR("Failed to load oci config");
         ret = -1;
-        goto unlock_out;
+        goto restore_hostspec;
     }
+
+    backup_oci_spec = load_oci_config(cont->root_path, id);
+    if (oci_spec == NULL) {
+        ERROR("Failed to load oci config");
+        ret = -1;
+        goto restore_hostspec;
+    }
+
+    ret = merge_conf_cgroup(oci_spec, hostconfig);
+    if (ret != 0) {
+        ERROR("Failed to merge cgroup config to oci spec");
+        ret = -1;
+        goto restore_hostspec;
+    }
+
+    if (save_oci_config(id, cont->root_path, oci_spec) != 0) {
+        ERROR("Failed to save updated oci spec");
+        ret = -1;
+        goto restore_ocispec;
+    }
+
+    if (is_running(cont->state)) {
+        params.rootpath = cont->root_path;
+        params.hostconfig = hostconfig;
+        if (runtime_update(id, cont->runtime, &params)) {
+            ERROR("Update container %s failed", id);
+            ret = -1;
+            goto restore_ocispec;
+        }
+    }
+
+    goto unlock_out;
+
+restore_ocispec:
+    if (save_oci_config(id, cont->root_path, backup_oci_spec) != 0) {
+        ERROR("Failed to restore oci spec");
+        ret = -1;
+    }
+
+restore_hostspec:
+    host_config_restore_unlocking(cont, backup_hostconfig);
 
 unlock_out:
     container_unlock(cont);
@@ -1059,6 +1100,8 @@ out:
         free_host_config(backup_hostconfig);
     }
     free_host_config(hostconfig);
+    free_oci_runtime_spec(oci_spec);
+    free_oci_runtime_spec(backup_oci_spec);
     free(err);
     return ret;
 }

@@ -376,6 +376,8 @@ message InfoResponse {
     string http_proxy = 20;
     string https_proxy = 21;
     string no_proxy = 22;
+    string driver_name = 23;
+    string driver_status = 24;
 }
 
 message UpdateRequest {

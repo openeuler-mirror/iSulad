@@ -141,11 +141,9 @@ message LoadImageResponose {
 message GraphdriverStatusRequest {}
 
 message GraphdriverStatusResponse {
-    string backing_fs = 1;
-    bool supports_d_type = 2;
-    bool native_overlay_diff = 3;
-    string errmsg = 4;
-    uint32 cc = 5;
+    string status = 1;
+    string errmsg = 2;
+    uint32 cc = 3;
 }
 
 message ContainerFsUsageRequest {

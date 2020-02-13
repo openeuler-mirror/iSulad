@@ -205,10 +205,14 @@ static void try_to_set_container_running(Container_Status status, container_t *c
 static int restore_stopped_container(Container_Status status, const container_t *cont, bool *need_save)
 {
     const char *id = cont->common_config->id;
+    pid_t pid = 0;
 
     if (status != CONTAINER_STATUS_STOPPED && \
         status != CONTAINER_STATUS_CREATED) {
-        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
+        if (util_process_alive(cont->state->state->pid, cont->state->state->start_time)) {
+            pid = cont->state->state->pid;
+        }
+        int nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, pid);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
@@ -291,18 +295,8 @@ static int restore_state(container_t *cont)
     const char *runtime = cont->runtime;
     rt_status_params_t params = { 0 };
     struct engine_container_status_info real_status = { 0 };
-    Container_Status status = CONTAINER_STATUS_UNKNOWN;
+    Container_Status status = state_get_status(cont->state);
 
-    params.rootpath = cont->root_path;
-
-    nret = runtime_status(id, runtime, &params, &real_status);
-    if (nret != 0) {
-        ERROR("Failed to restore container %s, due to can not load container status", id);
-        ret = -1;
-        goto out;
-    }
-
-    status = state_get_status(cont->state);
     (void)container_exit_on_next(cont); /* cancel restart policy */
 
 #ifdef ENABLE_OCI_IMAGE
@@ -313,6 +307,14 @@ static int restore_state(container_t *cont)
         goto out;
     }
 #endif
+
+    params.rootpath = cont->root_path;
+    nret = runtime_status(id, runtime, &params, &real_status);
+    if (nret != 0) {
+        ERROR("Failed to restore container %s, make real status to STOPPED. Due to can not load container with status %d", id,
+              status);
+        real_status.status = ENGINE_CONTAINER_STATUS_STOPPED;
+    }
 
     if (real_status.status == ENGINE_CONTAINER_STATUS_STOPPED) {
         ret = restore_stopped_container(status, cont, &need_save);
@@ -335,12 +337,11 @@ static int restore_state(container_t *cont)
         goto out;
     }
 
+out:
     if (is_removal_in_progress(cont->state)) {
         state_reset_removal_in_progress(cont->state);
         need_save = true;
     }
-
-out:
     if (need_save && container_to_disk(cont) != 0) {
         ERROR("Failed to re-save container \"%s\" to disk", id);
         ret = -1;

@@ -58,73 +58,6 @@ bool oci_detect(const char *image_name)
     return oci_image_exist(image_name);
 }
 
-// format: [status xx: val]
-static int get_graphdriver_status_line_value(const char *line, char **start, char **end)
-{
-    char *pstart = NULL;
-    char *pend = NULL;
-
-    pstart = strchr(line, ':');
-    if (pstart == NULL) {
-        ERROR("Invalid output: %s", line);
-        return -1;
-    }
-    pstart++;
-    if (*pstart != ' ') {
-        ERROR("Invalid output: %s", line);
-        return -1;
-    }
-    pstart++;
-
-    pend = strchr(pstart, '\n');
-    if (pend == NULL) {
-        ERROR("Invalid output: %s", pstart);
-        return -1;
-    }
-    *pend++ = '\0';
-
-    *start = pstart;
-    *end = pend;
-    return 0;
-}
-
-int pack_storage_status_response(const char *stdout_buffer, im_storage_status_response *resp)
-{
-    char *pstart = NULL;
-    char *pend = NULL;
-    int nret = -1;
-
-    // Backing Filesystem: extfs
-    if (get_graphdriver_status_line_value(stdout_buffer, &pstart, &pend) != 0) {
-        goto free_out;
-    }
-    resp->backing_fs = util_strdup_s(pstart);
-
-    // Supports d_type: true
-    if (get_graphdriver_status_line_value(pend, &pstart, &pend) != 0) {
-        goto free_out;
-    }
-    nret = util_str_to_bool(pstart, &resp->supports_d_type);
-    if (nret < 0) {
-        ERROR("Invalid output: %s", pstart);
-        goto free_out;
-    }
-
-    // Native Overlay Diff: true
-    if (get_graphdriver_status_line_value(pend, &pstart, &pend) != 0) {
-        goto free_out;
-    }
-    nret = util_str_to_bool(pstart, &resp->native_overlay_diff);
-    if (nret < 0) {
-        ERROR("Invalid output: %s", pstart);
-        goto free_out;
-    }
-    nret = 0;
-free_out:
-
-    return nret;
-}
-
 char *get_last_part(char **parts)
 {
     char *last_part = NULL;
@@ -244,7 +177,7 @@ static void oci_strip_dockerio(const imagetool_image *image)
     return;
 }
 
-int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, oci_runtime_spec_process_user *puser)
+int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser)
 {
     if (basefs == NULL || puser == NULL) {
         ERROR("Empty basefs or puser");
@@ -796,14 +729,13 @@ int oci_get_all_images(const im_list_request *request, imagetool_images_list **i
     return isula_list_images(request, images);
 }
 
-int oci_image_conf_merge_into_spec(const char *image_name, oci_runtime_spec *oci_spec,
-                                   container_custom_config *custom_spec)
+int oci_image_conf_merge_into_spec(const char *image_name, container_config *container_spec)
 {
     int ret = 0;
     oci_image_t *image_info = NULL;
     char *resolved_name = NULL;
 
-    if (oci_spec == NULL || image_name == NULL) {
+    if (container_spec == NULL || image_name == NULL) {
         ERROR("invalid NULL param");
         return -1;
     }
@@ -822,7 +754,7 @@ int oci_image_conf_merge_into_spec(const char *image_name, oci_runtime_spec *oci
         goto out;
     }
 
-    ret = oci_image_merge_config(image_info->info, oci_spec, custom_spec);
+    ret = oci_image_merge_config(image_info->info, container_spec);
     if (ret != 0) {
         ERROR("Failed to merge oci config for image %s", resolved_name);
         ret = -1;

@@ -223,9 +223,7 @@ struct isula_storage_status_request {
 };
 
 struct isula_storage_status_response {
-    char *backing_fs;
-    bool supports_d_type;
-    bool native_overlay_diff;
+    char *status;
 
     char *errmsg;
     uint32_t cc;

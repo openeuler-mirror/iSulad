@@ -101,7 +101,7 @@ char *ext_resolve_image_name(const char *image_name)
     return util_strdup_s(image_name);
 }
 
-int ext_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
+int ext_merge_conf(const host_config *host_spec, container_config *container_spec,
                    const im_prepare_request *request, char **real_rootfs)
 #ifdef ENABLE_OCI_IMAGE
 {
@@ -148,7 +148,7 @@ int ext_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, con
         goto out;
     }
 
-    ret = oci_image_merge_config(image_info->info, oci_spec, custom_spec);
+    ret = oci_image_merge_config(image_info->info, container_spec);
 
 out:
     free(resolved_name);
@@ -181,7 +181,7 @@ out:
 }
 #endif
 
-int ext_get_user_conf(const char *basefs, host_config *hc, const char *userstr, oci_runtime_spec_process_user *puser)
+int ext_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser)
 {
     if (basefs == NULL || puser == NULL) {
         ERROR("Empty basefs or puser");

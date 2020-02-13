@@ -247,12 +247,12 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	make install && \
 	ldconfig
 
-# install iSulad-kit
+# install iSulad-img
 RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	set -x && \
 	cd ~ && \
-	git clone https://gitee.com/openeuler/iSulad-kit.git && \
-	cd iSulad-kit && \
+	git clone https://gitee.com/openeuler/iSulad-img.git && \
+	cd iSulad-img && \
 	./apply-patch && \
 	make -j $(nproc) && \
 	make install && \

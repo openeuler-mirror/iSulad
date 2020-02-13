@@ -94,15 +94,13 @@ int embedded_delete_rf(const im_delete_request *request)
     return 0;
 }
 
-static int do_merge_embedded_image_conf(oci_runtime_spec *oci_spec,
-                                        container_custom_config *custom_spec,
-                                        const char *image_name)
+static int do_merge_embedded_image_conf(const char *image_name, container_config *container_spec)
 {
     int ret = 0;
     char *image_config = NULL;
     char *image_type = NULL;
 
-    if (oci_spec == NULL || image_name == NULL) {
+    if (container_spec == NULL || image_name == NULL) {
         ERROR("invalid NULL param");
         return -1;
     }
@@ -114,7 +112,7 @@ static int do_merge_embedded_image_conf(oci_runtime_spec *oci_spec,
     }
 
     if (strcmp(image_type, IMAGE_TYPE_EMBEDDED) == 0) {
-        ret = embedded_image_merge_config(oci_spec, custom_spec, image_config);
+        ret = embedded_image_merge_config(image_config, container_spec);
         if (ret != 0) {
             goto out;
         }
@@ -132,7 +130,7 @@ out:
 }
 
 
-int embedded_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec, container_custom_config *custom_spec,
+int embedded_merge_conf(const host_config *host_spec, container_config *container_spec,
                         const im_prepare_request *request, char **real_rootfs)
 {
     int ret = 0;
@@ -149,13 +147,7 @@ int embedded_merge_conf(oci_runtime_spec *oci_spec, const host_config *host_spec
         return nret;
     }
 
-    if (merge_user("/", oci_spec, host_spec, custom_spec->user)) {
-        ERROR("Failed to merge user: %s", custom_spec->user);
-        ret = -1;
-        goto umount;
-    }
-
-    nret = do_merge_embedded_image_conf(oci_spec, custom_spec, request->image_name);
+    nret = do_merge_embedded_image_conf(request->image_name, container_spec);
     if (nret != 0) {
         ret = nret;
         goto umount;
@@ -171,10 +163,13 @@ umount:
     return ret;
 }
 
-int embedded_get_user_conf(const char *basefs, host_config *hc, const char *userstr,
-                           oci_runtime_spec_process_user *puser)
+int embedded_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser)
 {
-    return 0;
+    if (puser == NULL) {
+        ERROR("Empty basefs or puser");
+        return -1;
+    }
+    return get_user("/", hc, userstr, puser);;
 }
 
 static int embedded_images_to_imagetool_images(struct db_all_images *all_images,

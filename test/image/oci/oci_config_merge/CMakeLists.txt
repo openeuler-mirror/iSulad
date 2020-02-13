@@ -19,11 +19,9 @@ add_executable(${EXE}
     ${CMAKE_BINARY_DIR}/json/host_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/specs_extend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/libisulad.c
-    ${CMAKE_BINARY_DIR}/json/oci_runtime_defs_linux.c
     ${CMAKE_BINARY_DIR}/json/defs.c
     ${CMAKE_BINARY_DIR}/json/container_config_v2.c
     ${CMAKE_BINARY_DIR}/json/container_config.c
-    ${CMAKE_BINARY_DIR}/json/container_custom_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/config/isulad_config.c
     ${CMAKE_BINARY_DIR}/json/oci_runtime_spec.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/sysinfo.c

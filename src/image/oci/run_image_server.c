@@ -48,7 +48,7 @@ const char *g_imtool_gb_options[] = {
     NULL,
 };
 
-#define ISULA_IMAGE_SERVER_CMD "isulad_kit"
+#define ISULA_IMAGE_SERVER_CMD "isulad-img"
 #define ISULA_IMAGE_DAEMON "daemon"
 #define ISULA_IMAGE_DAEMON_HOST "--host"
 #define ISULA_IMAGE_DAEMON_OPTION_TLS_VERIFY "--tls-verify=false"
@@ -59,9 +59,9 @@ const char *g_imtool_gb_options[] = {
 #define ONE_TENTH_SECOND 100000
 
 static pthread_mutex_t g_mutex;
-static pid_t g_isulad_kit_pid = -1;
-static unsigned long long g_isulad_kit_start_time = 0;
-static bool g_isula_kit_exit = false;
+static pid_t g_isulad_img_pid = -1;
+static unsigned long long g_isulad_img_start_time = 0;
+static bool g_isula_img_exit = false;
 
 static int pack_isula_image_global_options(char *params[], size_t *count, bool ignore_storage_opt_size)
 {
@@ -206,10 +206,10 @@ static void kill_old_image_server(pid_t server_pid, unsigned long long start_tim
     }
 }
 
-static void *heartbeat_for_isulad_kit(void *arg)
+static void *heartbeat_for_isulad_img(void *arg)
 {
-    pid_t tmp_isulad_kit_pid = -1;
-    unsigned long long tmp_isulad_kit_start_time = 0;
+    pid_t tmp_isulad_img_pid = -1;
+    unsigned long long tmp_isulad_img_start_time = 0;
 
     if (pthread_detach(pthread_self()) != 0) {
         ERROR("Detach heartbeat thread failed");
@@ -224,22 +224,22 @@ static void *heartbeat_for_isulad_kit(void *arg)
             continue;
         }
 
-        tmp_isulad_kit_pid = g_isulad_kit_pid;
-        tmp_isulad_kit_start_time = g_isulad_kit_start_time;
+        tmp_isulad_img_pid = g_isulad_img_pid;
+        tmp_isulad_img_start_time = g_isulad_img_start_time;
 
         if (pthread_mutex_unlock(&g_mutex) != 0) {
-            ERROR("Lock isulad kit pid failed");
+            ERROR("Lock isulad img pid failed");
             break;
         }
 
-        if (tmp_isulad_kit_pid == -1) {
+        if (tmp_isulad_img_pid == -1) {
             usleep_nointerupt(ONE_TENTH_SECOND);
             continue;
         }
 
         do_check_mainloop();
 
-        kill_old_image_server(tmp_isulad_kit_pid, tmp_isulad_kit_start_time, HALF_A_SECOND);
+        kill_old_image_server(tmp_isulad_img_pid, tmp_isulad_img_start_time, HALF_A_SECOND);
     }
 
     return NULL;
@@ -299,7 +299,7 @@ static int isula_image_server_load_first_check(const struct server_monitor_conf 
     }
 
     /* 1. If health check success, send a mutex to main thread and make it run again;
-     * 2. Sync data between iSulad and iSulad-kit.
+     * 2. Sync data between iSulad and iSulad-img.
      */
     if (retry) {
         ret = isula_sync_images();
@@ -323,37 +323,37 @@ out:
     return ret;
 }
 
-void isula_kit_exit()
+void isula_img_exit()
 {
     if (pthread_mutex_lock(&g_mutex) != 0) {
-        ERROR("Lock isulad kit pid failed");
+        ERROR("Lock isulad img pid failed");
         return;
     }
 
-    g_isula_kit_exit = true;
-    kill_old_image_server(g_isulad_kit_pid, g_isulad_kit_start_time, ONE_TENTH_SECOND);
+    g_isula_img_exit = true;
+    kill_old_image_server(g_isulad_img_pid, g_isulad_img_start_time, ONE_TENTH_SECOND);
 
     if (pthread_mutex_unlock(&g_mutex) != 0) {
-        ERROR("Unlock isulad kit pid failed");
+        ERROR("Unlock isulad img pid failed");
     }
 }
 
-static void update_isulad_kit_pid_info(pid_t pid, unsigned long long start_time)
+static void update_isulad_img_pid_info(pid_t pid, unsigned long long start_time)
 {
     if (pthread_mutex_lock(&g_mutex) != 0) {
-        ERROR("Lock isulad kit pid failed");
+        ERROR("Lock isulad img pid failed");
         return;
     }
 
-    g_isulad_kit_start_time = start_time;
-    g_isulad_kit_pid = pid;
+    g_isulad_img_start_time = start_time;
+    g_isulad_img_pid = pid;
 
     if (pthread_mutex_unlock(&g_mutex) != 0) {
-        ERROR("Unlock isulad kit pid failed");
+        ERROR("Unlock isulad img pid failed");
     }
 }
 
-static int load_isula_image_server(const struct server_monitor_conf *conf, bool retry, pid_t *kit_pid)
+static int load_isula_image_server(const struct server_monitor_conf *conf, bool retry, pid_t *img_pid)
 {
     pid_t pid = 0;
     int ret = 0;
@@ -368,7 +368,7 @@ static int load_isula_image_server(const struct server_monitor_conf *conf, bool 
     }
 
     if (pid == (pid_t)0) {
-        // child to load isula-kit binary
+        // child to load isulad-img binary
         nret = prctl(PR_SET_PDEATHSIG, SIGKILL, (unsigned long)0, (unsigned long)0, (unsigned long)0);
         if (nret < 0) {
             COMMAND_ERROR("Failed to set parent death signal");
@@ -381,18 +381,18 @@ static int load_isula_image_server(const struct server_monitor_conf *conf, bool 
         }
         execute_run_isula_image_server(NULL);
     }
-    *kit_pid = pid;
+    *img_pid = pid;
 
     /* parent */
     start_time = get_image_server_start_time(pid);
 
-    /* check first load isulad kit is success. */
+    /* check first load isulad img is success. */
     if (isula_image_server_load_first_check(conf, retry) != 0) {
         ret = -1;
     }
 
-    /* update isulad_kit information */
-    update_isulad_kit_pid_info(pid, start_time);
+    /* update isulad-img information */
+    update_isulad_img_pid_info(pid, start_time);
 
 out:
     return ret;
@@ -417,7 +417,7 @@ void *isula_image_server_monitor(void *arg)
     struct server_monitor_conf *conf = (struct server_monitor_conf *)arg;
     bool retry_flag = false;
     pthread_t wp_thread;
-    pid_t isulad_kit_pid;
+    pid_t isulad_img_pid;
 
     if (conf == NULL) {
         ERROR("Invalid arguments");
@@ -430,7 +430,7 @@ void *isula_image_server_monitor(void *arg)
         goto pexit;
     }
 
-    nret = pthread_create(&wp_thread, NULL, heartbeat_for_isulad_kit, NULL);
+    nret = pthread_create(&wp_thread, NULL, heartbeat_for_isulad_img, NULL);
     if (nret != 0) {
         ERROR("Create heartbeat thread failed: %s", strerror(nret));
         goto pexit;
@@ -446,42 +446,42 @@ void *isula_image_server_monitor(void *arg)
 
 retry:
     remove_old_socket_file();
-    isulad_kit_pid = (pid_t) - 1;
+    isulad_img_pid = (pid_t) - 1;
     // First, fork new process to run image server binary.
-    nret = load_isula_image_server(conf, retry_flag, &isulad_kit_pid);
+    nret = load_isula_image_server(conf, retry_flag, &isulad_img_pid);
     if (nret != 0) {
         if (!retry_flag) {
-            ERROR("First start isulad kit failed");
+            ERROR("First start isulad img failed");
             goto pexit;
         }
         WARN("Load isula image server failed");
     }
 
     retry_flag = true;
-    if (isulad_kit_pid == (pid_t) - 1) {
+    if (isulad_img_pid == (pid_t) - 1) {
         usleep_nointerupt(HALF_A_SECOND);
         goto retry;
     }
-    /* waitpid for isulad_kit process */
-    nret = wait_for_pid(isulad_kit_pid);
+    /* waitpid for isulad-img process */
+    nret = wait_for_pid(isulad_img_pid);
     if (nret != 0) {
-        SYSERROR("Wait isulad kit failed");
+        SYSERROR("Wait isulad img failed");
     }
 
-    /* clean old isulad_kit information */
+    /* clean old isulad-img information */
     if (pthread_mutex_lock(&g_mutex) != 0) {
-        ERROR("Lock isulad kit pid failed");
+        ERROR("Lock isulad img pid failed");
     }
 
-    g_isulad_kit_start_time = 0;
-    g_isulad_kit_pid = -1;
-    if (g_isula_kit_exit) {
+    g_isulad_img_start_time = 0;
+    g_isulad_img_pid = -1;
+    if (g_isula_img_exit) {
         (void)pthread_mutex_unlock(&g_mutex);
         goto pexit;
     }
 
     if (pthread_mutex_unlock(&g_mutex) != 0) {
-        ERROR("Unlock isulad kit pid failed");
+        ERROR("Unlock isulad img pid failed");
     }
 
     usleep_nointerupt(HALF_A_SECOND);

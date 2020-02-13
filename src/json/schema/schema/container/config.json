@@ -88,6 +88,32 @@
         },
         "HealthCheck": {
             "$ref": "../defs.json#/definitions/HealthCheck"
+        },
+    	"SystemContainer": {
+            "type": "boolean"
+        },
+        "NsChangeOpt": {
+            "type": "string"
+        },
+        "Mounts": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+	"LogConfig": {
+            "type": "object",
+            "properties": {
+                "log_file": {
+                    "type": "string"
+                },
+                "log_file_size": {
+                    "type": "string"
+                },
+                "log_file_rotate": {
+                    "type": "uint64"
+                }
+            }
         }
     },
     "required": [
