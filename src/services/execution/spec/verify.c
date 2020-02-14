@@ -33,6 +33,7 @@
 #include "specs.h"
 #include "verify.h"
 #include "isulad_config.h"
+#include "selinux_label.h"
 
 /* verify hook timeout */
 static int verify_hook_timeout(int t)
@@ -1459,10 +1460,10 @@ out:
 static int verify_custom_mount(defs_mount **mounts, size_t len)
 {
     int ret = 0;
-    size_t i = 0;
+    size_t i;
     defs_mount *iter = NULL;
 
-    for (; i < len; ++i) {
+    for (i = 0; i < len; ++i) {
         iter = *(mounts + i);
         if (iter == NULL || strcmp(iter->type, "bind")) {
             continue;
@@ -1909,6 +1910,41 @@ out:
     return ret;
 }
 
+static int relabel_mounts_if_needed(defs_mount **mounts, size_t len, const char *mount_label)
+{
+    int ret = 0;
+    size_t i, j;
+    defs_mount *iter = NULL;
+
+    for (i = 0; i < len; ++i) {
+        bool need_relabel = false;
+        bool is_shared = false;
+        iter = *(mounts + i);
+        if (iter == NULL) {
+            continue;
+        }
+
+        for (j = 0; j < iter->options_len; j++) {
+            if (strcmp(iter->options[j], "Z") == 0) {
+                need_relabel = true;
+                is_shared = false;
+            } else if (strcmp(iter->options[j], "z") == 0) {
+                need_relabel = true;
+                is_shared = true;
+            }
+        }
+
+        if (need_relabel && relabel(iter->source, mount_label, is_shared) != 0) {
+            ERROR("Error setting label on mount source '%s'", iter->source);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    return ret;
+}
+
 /* verify container settings start */
 int verify_container_settings_start(const oci_runtime_spec *oci_spec)
 {
@@ -1916,9 +1952,20 @@ int verify_container_settings_start(const oci_runtime_spec *oci_spec)
 
     /* verify custom mount info, ensure source path exist */
     if (oci_spec->mounts != NULL && oci_spec->mounts_len > 0) {
-        ret = verify_custom_mount(oci_spec->mounts, oci_spec->mounts_len);
+        if (verify_custom_mount(oci_spec->mounts, oci_spec->mounts_len) != 0) {
+            ERROR("Failed to verify custom mount");
+            ret = -1;
+            goto out;
+        }
+        if (relabel_mounts_if_needed(oci_spec->mounts, oci_spec->mounts_len,
+                                     oci_spec->linux->mount_label) != 0) {
+            ERROR("Failed to relabel mount");
+            ret = -1;
+            goto out;
+        }
     }
 
+out:
     return ret;
 }
 

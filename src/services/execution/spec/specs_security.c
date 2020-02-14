@@ -44,6 +44,7 @@
 #include "container_def.h"
 #include "libisulad.h"
 #include "specs_extend.h"
+#include "selinux_label.h"
 
 #define MAX_CAP_LEN 32
 
@@ -859,29 +860,52 @@ out:
     return ret;
 }
 
-int merge_no_new_privileges(oci_runtime_spec *oci_spec, const host_config *host_spec)
+int merge_no_new_privileges(oci_runtime_spec *oci_spec, bool value)
 {
     int ret = 0;
-    size_t i = 0;
 
     ret = make_sure_oci_spec_process(oci_spec);
     if (ret < 0) {
         goto out;
     }
-    oci_spec->process->no_new_privileges = false;
 
-    if (host_spec->security_opt == NULL || host_spec->security_opt_len == 0) {
-        return 0;
+    oci_spec->process->no_new_privileges = value;
+
+out:
+    return ret;
+}
+
+
+int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec,
+                  const char **label_opts, size_t label_opts_len)
+{
+    char *process_label = NULL;
+    char *mount_label = NULL;
+
+    int ret = make_sure_oci_spec_process(oci_spec);
+    if (ret < 0) {
+        goto out;
     }
 
-    for (i = 0; i < host_spec->security_opt_len; i++) {
-        if (strcmp(host_spec->security_opt[i], "no-new-privileges") == 0) {
-            oci_spec->process->no_new_privileges = true;
-            break;
-        }
+    if (init_label(label_opts, label_opts_len, &process_label, &mount_label) != 0) {
+        ERROR("Failed to append label");
+        ret = -1;
+        goto out;
+    }
+
+    if (mount_label != NULL) {
+        oci_spec->linux->mount_label = util_strdup_s(mount_label);
+        v2_spec->mount_label = util_strdup_s(mount_label);
+    }
+
+    if (process_label != NULL) {
+        oci_spec->process->selinux_label = util_strdup_s(process_label);
+        v2_spec->process_label = util_strdup_s(process_label);
     }
 
 out:
+    free(process_label);
+    free(mount_label);
     return ret;
 }
 
@@ -1001,54 +1025,38 @@ out:
     return ret;
 }
 
-int merge_seccomp(oci_runtime_spec *oci_spec, const host_config *host_spec)
+int merge_seccomp(oci_runtime_spec *oci_spec, const char *seccomp_profile)
 {
     int ret = 0;
-    size_t k = 0;
     parser_error err = NULL;
-    char *seccomp_json = NULL;
     docker_seccomp *docker_seccomp = NULL;
 
-    if (host_spec->security_opt == NULL || host_spec->security_opt_len == 0) {
+    if (seccomp_profile == NULL) {
         return 0;
     }
 
-    if (host_spec->security_opt_len > LIST_SIZE_MAX) {
-        ERROR("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
-        isulad_set_error_message("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
+    ret = make_sure_oci_spec_linux(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+    // free default seccomp
+    free_oci_runtime_config_linux_seccomp(oci_spec->linux->seccomp);
+    oci_spec->linux->seccomp = NULL;
+
+    if (strcmp(seccomp_profile, "unconfined") == 0) {
+        goto out;
+    }
+    docker_seccomp = docker_seccomp_parse_data((const char *)seccomp_profile, NULL, &err);
+    if (docker_seccomp == NULL) {
+        ERROR("Failed to parse host config data:%s", err);
         ret = -1;
         goto out;
     }
-    for (k = 0; k < host_spec->security_opt_len; k++) {
-        if (strncmp(host_spec->security_opt[k], "seccomp=", strlen("seccomp=")) != 0) {
-            continue;
-        }
-        ret = make_sure_oci_spec_linux(oci_spec);
-        if (ret < 0) {
-            goto out;
-        }
-        // free default seccomp
-        free_oci_runtime_config_linux_seccomp(oci_spec->linux->seccomp);
-        oci_spec->linux->seccomp = NULL;
-
-        seccomp_json = host_spec->security_opt[k] + strlen("seccomp") + 1;
-        if (strcmp(seccomp_json, "unconfined") == 0) {
-            continue;
-        }
-        docker_seccomp = docker_seccomp_parse_data((const char *)seccomp_json, NULL, &err);
-        if (docker_seccomp == NULL) {
-            ERROR("Failed to parse host config data:%s", err);
-            ret = -1;
-            goto out;
-        }
-        oci_spec->linux->seccomp = trans_docker_seccomp_to_oci_format(docker_seccomp, oci_spec->process->capabilities);
-        if (oci_spec->linux->seccomp == NULL) {
-            ERROR("Failed to trans docker seccomp format to oci profile");
-            ret = -1;
-            goto out;
-        }
-        free_docker_seccomp(docker_seccomp);
-        docker_seccomp = NULL;
+    oci_spec->linux->seccomp = trans_docker_seccomp_to_oci_format(docker_seccomp, oci_spec->process->capabilities);
+    if (oci_spec->linux->seccomp == NULL) {
+        ERROR("Failed to trans docker seccomp format to oci profile");
+        ret = -1;
+        goto out;
     }
 
 out:

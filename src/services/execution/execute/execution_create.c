@@ -848,7 +848,6 @@ int container_create_cb(const container_create_request *request,
 
     v2_spec->config = container_spec;
 
-    /* set network config to v2_spec */
     if (init_container_network_confs(id, runtime_root, host_spec, v2_spec) != 0) {
         ERROR("Init Network files failed");
         cc = ISULAD_ERR_INPUT;
@@ -901,7 +900,7 @@ int container_create_cb(const container_create_request *request,
         goto clean_rootfs;
     }
 
-    if (verify_container_settings(oci_spec)) {
+    if (verify_container_settings(oci_spec) != 0) {
         ERROR("Failed to verify container settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;

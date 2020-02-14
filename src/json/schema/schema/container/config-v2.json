@@ -94,6 +94,18 @@
                 },
                 "id": {
                     "type": "string"
+                },
+                "MountLabel": {
+                    "type": "string"
+                },
+                "ProcessLabel": {
+                    "type": "string"
+                },
+                "SeccompProfile": {
+                    "type": "string"
+                },
+                "NoNewPrivileges": {
+                    "type": "boolean"
                 }
             },
             "required": [

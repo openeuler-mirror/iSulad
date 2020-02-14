@@ -44,6 +44,7 @@
 #include "specs_mount.h"
 #include "specs_extend.h"
 #include "containers_store.h"
+#include "selinux_label.h"
 
 static int get_devices(const char *dir, char ***devices, size_t *device_len,
                        int recursive_depth);
@@ -699,7 +700,10 @@ defs_mount *parse_volume(const char *volume)
     defs_mount *mount_element = NULL;
     char **modes = NULL;
     char dstpath[PATH_MAX] = { 0x00 };
-    char *rw = "rw", *pro = DefaultPropagationMode;
+    char *rw = "rw";
+    char *pro = DefaultPropagationMode;
+    char *label = NULL;
+    size_t options_len = 3;
 
     ret = check_volume_element(volume);
     if (ret != 0) {
@@ -724,7 +728,7 @@ defs_mount *parse_volume(const char *volume)
         } else if (util_valid_propagation_mode(modes[i])) {
             pro = modes[i];
         } else if (util_valid_label_mode(modes[i])) {
-            WARN("Valid mode '%s' found but not configured for now", modes[i]);
+            label = modes[i];
         } else if (util_valid_copy_mode(modes[i])) {
             WARN("Valid mode '%s' found but not configured for now", modes[i]);
         }
@@ -737,8 +741,10 @@ defs_mount *parse_volume(const char *volume)
     }
     free(mount_element->destination);
     mount_element->destination = util_strdup_s(dstpath);
-
-    mount_element->options = util_common_calloc_s(3 * sizeof(char *));
+    if (label != NULL) {
+        options_len++;
+    }
+    mount_element->options = util_common_calloc_s(options_len * sizeof(char *));
     if (mount_element->options == NULL) {
         ERROR("Out of memory");
         mount_element->options_len = 0;
@@ -748,7 +754,10 @@ defs_mount *parse_volume(const char *volume)
     mount_element->options[0] = util_strdup_s(rw);
     mount_element->options[1] = util_strdup_s(pro);
     mount_element->options[2] = util_strdup_s("rbind");
-    mount_element->options_len = 3;
+    if (options_len >= 4) {
+        mount_element->options[3] = util_strdup_s(label);
+    }
+    mount_element->options_len = options_len;
     mount_element->type = util_strdup_s("bind");
 
 free_out:
@@ -1983,13 +1992,15 @@ static inline bool is_mount_destination_hostname(const char *destination)
  * if not exists: append mounts to ocispec by v2_spec
  * if exists: replace the source in v2_spec
  */
-static int append_network_files_mounts(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec)
+static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
+                                       container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     size_t i = 0;
     bool has_hosts_mount = false;
     bool has_resolv_mount = false;
     bool has_hostname_mount = false;
+    bool share = is_container(host_spec->network_mode);
 
     for (i = 0; i < oci_spec->mounts_len; i++) {
         if (is_mount_destination_hosts(oci_spec->mounts[i]->destination)) {
@@ -2009,24 +2020,54 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, container_con
         }
     }
 
-    /* add network config files */
-    if (!has_hosts_mount && !mount_file(oci_spec, v2_spec->hosts_path, ETC_HOSTS)) {
-        ERROR("Merge hosts mount failed");
-        ret = -1;
-        goto out;
+    if (!util_file_exists(v2_spec->hosts_path)) {
+        WARN("HostsPath set to %s, but can't stat this filename (err = %v); skipping", v2_spec->resolv_conf_path);
+    } else {
+        /* add network config files */
+        if (!has_hosts_mount) {
+            if (relabel(v2_spec->hosts_path, v2_spec->mount_label, share) != 0) {
+                ERROR("Error to relabel hosts path: %s", v2_spec->hosts_path);
+                ret = -1;
+                goto out;
+            }
+            if (!mount_file(oci_spec, v2_spec->hosts_path, ETC_HOSTS)) {
+                ERROR("Merge hosts mount failed");
+                ret = -1;
+                goto out;
+            }
+        }
     }
-    if (!has_resolv_mount &&
-        !mount_file(oci_spec, v2_spec->resolv_conf_path, RESOLV_CONF_PATH)) {
-        ERROR("Merge resolv.conf mount failed");
-        ret = -1;
-        goto out;
+    if (!util_file_exists(v2_spec->resolv_conf_path)) {
+        WARN("ResolvConfPath set to %s, but can't stat this filename (err = %v); skipping", v2_spec->resolv_conf_path);
+    } else {
+        if (!has_resolv_mount) {
+            if (relabel(v2_spec->resolv_conf_path, v2_spec->mount_label, share) != 0) {
+                ERROR("Error to relabel resolv.conf path: %s", v2_spec->resolv_conf_path);
+                ret = -1;
+                goto out;
+            }
+            if (!mount_file(oci_spec, v2_spec->resolv_conf_path, RESOLV_CONF_PATH)) {
+                ERROR("Merge resolv.conf mount failed");
+                ret = -1;
+                goto out;
+            }
+        }
     }
 
-    if (!has_hostname_mount &&
-        !mount_file(oci_spec, v2_spec->hostname_path, ETC_HOSTNAME)) {
-        ERROR("Merge hostname mount failed");
-        ret = -1;
-        goto out;
+    if (!util_file_exists(v2_spec->hostname_path)) {
+        WARN("HostnamePath set to %s, but can't stat this filename (err = %v); skipping", v2_spec->resolv_conf_path);
+    } else {
+        if (!has_hostname_mount) {
+            if (relabel(v2_spec->hostname_path, v2_spec->mount_label, share) != 0) {
+                ERROR("Error to relabel hostname path: %s", v2_spec->hostname_path);
+                return -1;
+            }
+            if (!mount_file(oci_spec, v2_spec->hostname_path, ETC_HOSTNAME)) {
+                ERROR("Merge hostname mount failed");
+                ret = -1;
+                goto out;
+            }
+        }
     }
 
 out:
@@ -2092,6 +2133,7 @@ static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
 
     free(c_root_path);
     return spath;
+    
 err_out:
     free(spath);
     free(c_root_path);
@@ -2326,7 +2368,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
     }
 
     if (!host_spec->system_container) {
-        ret = append_network_files_mounts(oci_spec, v2_spec);
+        ret = append_network_files_mounts(oci_spec, host_spec, v2_spec);
         if (ret) {
             ERROR("Failed to append network mounts");
             goto out;

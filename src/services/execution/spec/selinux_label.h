@@ -9,22 +9,30 @@
  * PURPOSE.
  * See the Mulan PSL v1 for more details.
  * Author: wujing
- * Create: 2019-12-19
- * Description: provide grpc client mock
+ * Create: 2019-12-15
+ * Description: provide selinux label handle function definition
  ******************************************************************************/
 
-#ifndef GRPC_CLIENT_MOCK_H_
-#define GRPC_CLIENT_MOCK_H_
+#ifndef __SELINUX_LABLE_H
+#define __SELINUX_LABLE_H
 
-#include <gmock/gmock.h>
-#include "grpc_client.h"
+#include <stddef.h>
+#include <stdbool.h>
 
-class MockGrpcClient {
-public:
-    virtual ~MockGrpcClient() = default;
-    MOCK_METHOD1(GrpcOpsInit, int(isula_connect_ops *ops));
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void GrpcClient_SetMock(MockGrpcClient* mock);
+int selinux_state_init(void);
+void selinux_set_disabled();
+bool selinux_get_enable();
+int init_label(const char **label_opts, size_t label_opts_len, char **process_label, char **mount_label);
+int relabel(const char *path, const char *file_label, bool shared);
+int get_disable_security_opt(char ***labels, size_t *labels_len);
+int dup_security_opt(const char *src, char ***dst, size_t *len);
 
-#endif  // GRPC_CLIENT_MOCK_H_
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __SELINUX_LABLE_H */

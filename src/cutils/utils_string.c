@@ -382,6 +382,49 @@ err_out:
     return NULL;
 }
 
+char **util_string_split_n(const char *src, char sep, size_t n)
+{
+    char **res_array = NULL;
+    const char *index = NULL;
+    char *token = NULL;
+    char *str = NULL;
+    size_t count = 0;
+    int tmp_errno;
+
+    if (src == NULL || n == 0) {
+        return NULL;
+    }
+
+    if (src[0] == '\0') {
+        return make_empty_array();
+    }
+    str = util_strdup_s(src);
+    index = str;
+    for (token = strchr(index, sep); token != NULL; token = strchr(index, sep)) {
+        count++;
+        if (count >= n) {
+            break;
+        }
+        *token = '\0';
+        if (util_array_append(&res_array, index) != 0) {
+            goto err_out;
+        }
+        index = token + 1;
+    }
+    if (util_array_append(&res_array, index) != 0) {
+        goto err_out;
+    }
+    free(str);
+    return res_array;
+
+err_out:
+    tmp_errno = errno;
+    free(str);
+    util_free_array(res_array);
+    errno = tmp_errno;
+    return NULL;
+}
+
 char **util_string_split(const char *src_str, char _sep)
 {
     char *token = NULL;

@@ -15,6 +15,7 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <stdio_ext.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <time.h>
@@ -56,6 +57,7 @@
 #include "supervisor.h"
 #include "containers_gc.h"
 #include "plugin.h"
+#include "selinux_label.h"
 
 
 #ifdef ENABLE_OCI_IMAGE
@@ -772,6 +774,80 @@ out:
     return ret;
 }
 
+static int overlay_supports_selinux(bool *supported)
+{
+#define KALLSYMS_ITEM_MAX_LEN 100
+    int ret = 0;
+    FILE *fp = NULL;
+    char *buf = NULL;
+    size_t len;
+    ssize_t num;
+
+    *supported = false;
+    fp = fopen("/proc/kallsyms", "re");
+    if (fp == NULL) {
+        ERROR("Failed to open /proc/kallsyms: %s", strerror(errno));
+        return -1;
+    }
+    __fsetlocking(fp, FSETLOCKING_BYCALLER);
+
+    for (num = getline(&buf, &len, fp); num != -1; num = getline(&buf, &len, fp)) {
+        char sym_addr[KALLSYMS_ITEM_MAX_LEN] = { 0 };
+        char sym_type[KALLSYMS_ITEM_MAX_LEN] = { 0 };
+        char sym_name[KALLSYMS_ITEM_MAX_LEN] = { 0 };
+
+        if (sscanf(buf, "%s %s %s", sym_addr, sym_type, sym_name) != 3) {
+            ERROR("sscanf buffer failed");
+            ret = -1;
+            goto out;
+        }
+
+        // Check for presence of symbol security_inode_copy_up.
+        if (strcmp(sym_name, "security_inode_copy_up") == 0) {
+            *supported = true;
+            goto out;
+        }
+    }
+
+out:
+    free(buf);
+    fclose(fp);
+    return ret;
+}
+
+static int configure_kernel_security_support(const struct service_arguments *args)
+{
+    if (selinux_state_init() != 0) {
+        ERROR("Failed to init selinux state");
+        return -1;
+    }
+
+    if (args->json_confs->selinux_enabled) {
+        if (!selinux_get_enable()) {
+            WARN("iSulad could not enable SELinux on the host system");
+            return 0;
+        }
+
+        if (strcmp(args->json_confs->storage_driver, "overlay") == 0 ||
+            strcmp(args->json_confs->storage_driver, "overlay2") == 0) {
+            // If driver is overlay or overlay2, make sure kernel
+            // supports selinux with overlay.
+            bool supported = false;
+
+            if (overlay_supports_selinux(&supported)) {
+                return -1;
+            }
+            if (!supported) {
+                WARN("SELinux is not supported with the %s graph driver on this kernel",
+                     args->json_confs->storage_driver);
+            }
+        }
+    } else {
+        selinux_set_disabled();
+    }
+    return 0;
+}
+
 static int update_server_args(struct service_arguments *args)
 {
     int ret = 0;
@@ -815,6 +891,13 @@ static int update_server_args(struct service_arguments *args)
 
     /* parse image opt timeout */
     if (parse_conf_time_duration(args) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    // Configure and validate the kernels security support. Note this is a Linux/FreeBSD
+    // operation only, so it is safe to pass *just* the runtime OS graphdriver.
+    if (configure_kernel_security_support(args)) {
         ret = -1;
         goto out;
     }

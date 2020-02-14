@@ -128,28 +128,31 @@
             "type": "object",
             "patternProperties": {
                 ".{1,}": {
-		            "type": "object",
-		            "required": [
-		                "Name",
-		                "Hard",
-		                "Soft"
-		            ],
-		            "properties": {
-		                "Name": {
-		                    "type": "string"
-		                },
-		                "Hard": {
-		                    "type": "int64"
-		                },
-		                "Soft": {
-		                    "type": "int64"
-		                }
-		            }
+                    "type": "object",
+                    "required": [
+                        "Name",
+                        "Hard",
+                        "Soft"
+                    ],
+                    "properties": {
+                        "Name": {
+                            "type": "string"
+                        },
+                        "Hard": {
+                            "type": "int64"
+                        },
+                        "Soft": {
+                            "type": "int64"
+                        }
+                    }
                 }
             }
         },
         "runtimes": {
             "$ref": "defs.json#/definitions/mapStringObjectRuntimes"
+        },
+        "selinux-enabled" : {
+            "type": "boolean"
         }
     }
 }

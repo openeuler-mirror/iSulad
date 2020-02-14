@@ -102,7 +102,9 @@ int update_default_ulimit(struct service_arguments *args);
         "Default ulimits for containers (default [])", command_default_ulimit_append }, \
     { CMD_OPT_TYPE_CALLBACK, false, "websocket-server-listening-port", 0, \
         &(cmdargs)->json_confs->websocket_server_listening_port, \
-        "CRI websocket streaming service listening port (default 10350)", command_convert_uint }
+        "CRI websocket streaming service listening port (default 10350)", command_convert_uint }, \
+    { CMD_OPT_TYPE_BOOL, false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled, \
+        "Enable selinux support", NULL}
 
 #endif /* __COMMAND_H */
 
