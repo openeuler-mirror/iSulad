@@ -16,10 +16,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <sys/sysmacros.h>
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <pwd.h>
 #include <grp.h>
 #include <sys/stat.h>
@@ -41,6 +43,7 @@
 #include "parse_common.h"
 #include "specs_mount.h"
 #include "specs_extend.h"
+#include "containers_store.h"
 
 static int get_devices(const char *dir, char ***devices, size_t *device_len,
                        int recursive_depth);
@@ -1918,14 +1921,18 @@ out_free:
     return ret;
 }
 
-static int change_dev_shm_size(oci_runtime_spec *oci_spec, int64_t shm_size)
+static int change_dev_shm_size(oci_runtime_spec *oci_spec, host_config *host_spec)
 {
     size_t i = 0;
     size_t j = 0;
     char size_opt[MOUNT_PROPERTIES_SIZE] = { 0 };
     char *tmp = NULL;
 
-    int nret = snprintf(size_opt, sizeof(size_opt), "size=%lld", (long long int)shm_size);
+    if (is_none(host_spec->ipc_mode)) {
+        return 0;
+    }
+
+    int nret = snprintf(size_opt, sizeof(size_opt), "size=%lld", (long long int)host_spec->shm_size);
     if (nret < 0 || (size_t)nret >= sizeof(size_opt)) {
         ERROR("Out of memory");
         return -1;
@@ -2026,6 +2033,237 @@ out:
     return ret;
 }
 
+static int chown_for_shm(const char *shm_path, const char *user_remap)
+{
+    unsigned int host_uid = 0;
+    unsigned int host_gid = 0;
+    unsigned int size = 0;
+
+    if (shm_path == NULL) {
+        return 0;
+    }
+
+    if (user_remap != NULL) {
+        if (util_parse_user_remap(user_remap, &host_uid, &host_gid, &size)) {
+            ERROR("Failed to split string '%s'.", user_remap);
+            return -1;
+        }
+        if (chown(shm_path, host_uid, host_gid) != 0) {
+            ERROR("Failed to chown host path '%s'.", shm_path);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
+{
+#define SHM_MOUNT_FILE_NAME "/mounts/shm/"
+    char *c_root_path = NULL;
+    size_t slen = 0;
+    char *spath = NULL;
+    int nret = 0;
+
+    if (truntime == NULL) {
+        truntime = "lcr";
+    }
+    c_root_path = conf_get_routine_rootdir(truntime);
+    if (c_root_path == NULL) {
+        goto err_out;
+    }
+
+    // c_root_path + "/" + cid + "/mounts/shm"
+    if (strlen(c_root_path) > (((PATH_MAX - strlen(cid)) - 1) - strlen(SHM_MOUNT_FILE_NAME)) - 1) {
+        ERROR("Too large path");
+        goto err_out;
+    }
+    slen = strlen(c_root_path) + 1 + strlen(cid) + strlen(SHM_MOUNT_FILE_NAME) + 1;
+    spath = util_smart_calloc_s(sizeof(char), slen);
+    if (spath == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+
+    nret = sprintf(spath, "%s/%s/mounts/shm/", c_root_path, cid);
+    if (nret < 0) {
+        ERROR("Sprintf failed");
+        goto err_out;
+    }
+
+    return spath;
+err_out:
+    free(spath);
+    free(c_root_path);
+    return NULL;
+}
+
+static bool has_mount_shm(host_config *host_spec, container_config_v2_common_config *v2_spec)
+{
+    container_t *cont = NULL;
+    bool ret = false;
+
+    cont = util_common_calloc_s(sizeof(container_t));
+    if (cont == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+    cont->common_config = v2_spec;
+    cont->hostconfig = host_spec;
+
+    ret = has_mount_for(cont, "/dev/shm");
+
+    cont->common_config = NULL;
+    cont->hostconfig = NULL;
+out:
+    free(cont);
+    return ret;
+}
+
+static int prepare_share_shm(oci_runtime_spec *oci_spec, host_config *host_spec,
+                             container_config_v2_common_config *v2_spec)
+{
+#define MAX_PROPERTY_LEN 64
+    char shmproperty[MAX_PROPERTY_LEN] = {0};
+    int ret = -1;
+    int nret = 0;
+    bool has_mount = false;
+    char *spath = NULL;
+
+    // has mount for /dev/shm
+    if (has_mount_shm(host_spec, v2_spec)) {
+        return 0;
+    }
+
+    spath = get_prepare_share_shm_path(host_spec->runtime, v2_spec->id);
+    if (spath == NULL) {
+        goto out;
+    }
+
+    nret = util_mkdir_p(spath, 0700);
+    if (nret != 0) {
+        ERROR("Build shm dir failed");
+        goto out;
+    }
+    nret = sprintf(shmproperty, "mode=1777,size=%"PRId64, host_spec->shm_size);
+    if (nret < 0) {
+        ERROR("Sprintf failed");
+        goto out;
+    }
+
+    nret = mount("shm", spath, "tmpfs", MS_NOEXEC | MS_NODEV | MS_NOSUID, shmproperty);
+    if (nret < 0) {
+        ERROR("Mount %s failed: %s", spath, strerror(errno));
+        goto out;
+    }
+    has_mount = true;
+
+    nret = chown_for_shm(spath, host_spec->user_remap);
+    if (nret != 0) {
+        goto out;
+    }
+
+    v2_spec->shm_path = spath;
+    spath = NULL;
+    ret = 0;
+out:
+    if (ret != 0 && has_mount) {
+        (void)umount(spath);
+    }
+    free(spath);
+    return ret;
+}
+
+static bool add_shm_mount(oci_runtime_spec *container, const char *shm_path)
+{
+    char **options = NULL;
+    size_t options_len = 3;
+    bool ret = false;
+    defs_mount *tmp_mounts = NULL;
+
+    if (options_len > SIZE_MAX / sizeof(char *)) {
+        ERROR("Invalid option size");
+        return ret;
+    }
+    options = util_common_calloc_s(options_len * sizeof(char *));
+    if (options == NULL) {
+        ERROR("Out of memory");
+        goto out_free;
+    }
+    options[0] = util_strdup_s("rbind");
+    options[1] = util_strdup_s("rprivate");
+    // default shm size is 64MB
+    options[2] = util_strdup_s("size=65536k");
+    /* generate mount node */
+    tmp_mounts = util_common_calloc_s(sizeof(defs_mount));
+    if (tmp_mounts == NULL) {
+        ERROR("Malloc tmp_mounts memory failed");
+        goto out_free;
+    }
+
+    tmp_mounts->destination = util_strdup_s("/dev/shm");
+    tmp_mounts->source = util_strdup_s(shm_path);
+    tmp_mounts->type = util_strdup_s("bind");
+    tmp_mounts->options = options;
+    tmp_mounts->options_len = options_len;
+    options = NULL;
+
+    /* expand mount array */
+    if (!mounts_expand(container, 1)) {
+        goto out_free;
+    }
+    /* add a new mount node */
+    container->mounts[container->mounts_len - 1] = tmp_mounts;
+
+    ret = true;
+out_free:
+
+    if (!ret) {
+        util_free_array(options);
+        free_defs_mount(tmp_mounts);
+    }
+    return ret;
+}
+
+#define SHM_MOUNT_POINT "/dev/shm"
+static int setup_ipc_dirs(oci_runtime_spec *oci_spec, host_config *host_spec,
+                          container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    container_t *cont = NULL;
+    char *tmp_cid = NULL;
+    char *right_path = NULL;
+
+    // setup shareable dirs
+    if (host_spec->ipc_mode == NULL || is_shareable(host_spec->ipc_mode)) {
+        return prepare_share_shm(oci_spec, host_spec, v2_spec);
+    }
+
+    if (is_container(host_spec->ipc_mode)) {
+        tmp_cid = connected_container(host_spec->ipc_mode);
+        cont = containers_store_get(tmp_cid);
+        if (cont == NULL) {
+            ERROR("Invalid share path: %s", host_spec->ipc_mode);
+            ret = -1;
+            goto out;
+        }
+        right_path = util_strdup_s(cont->common_config->shm_path);
+        container_unref(cont);
+    } else if (is_host(host_spec->ipc_mode)) {
+        if (!util_file_exists(SHM_MOUNT_POINT)) {
+            ERROR("/dev/shm is not mounted, but must be for --ipc=host");
+            ret = -1;
+            goto out;
+        }
+        right_path = util_strdup_s(SHM_MOUNT_POINT);
+    }
+
+    free(v2_spec->shm_path);
+    v2_spec->shm_path = right_path;
+out:
+    free(tmp_cid);
+    return ret;
+}
+
 int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
                       container_config_v2_common_config *v2_spec)
 {
@@ -2062,12 +2300,24 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
         }
     }
 
-    if (host_spec->shm_size >= 0) {
-        if (host_spec->shm_size == 0) {
-            host_spec->shm_size = DEFAULT_SHM_SIZE;
-        }
+    if (host_spec->shm_size == 0) {
+        host_spec->shm_size = DEFAULT_SHM_SIZE;
+    }
 
-        ret = change_dev_shm_size(oci_spec, host_spec->shm_size);
+    /* setup ipc dir */
+    if (setup_ipc_dirs(oci_spec, host_spec, v2_spec) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    /* add ipc mount */
+    if (v2_spec->shm_path != NULL) {
+        // check whether duplication
+        add_shm_mount(oci_spec, v2_spec->shm_path);
+    }
+
+    if (host_spec->shm_size > 0) {
+        ret = change_dev_shm_size(oci_spec, host_spec);
         if (ret) {
             ERROR("Failed to set dev shm size");
             goto out;

@@ -40,6 +40,9 @@
                 "ResolvConfPath": {
                     "type": "string"
                 },
+                "ShmPath": {
+                    "type": "string"
+                },
                 "LogPath": {
                     "type": "string"
                 },
