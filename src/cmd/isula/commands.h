@@ -18,6 +18,10 @@
 #include "arguments.h"
 #include <semaphore.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define CLIENT_RUNDIR "/var/run/isula"
 
 // A command is described by:
@@ -69,5 +73,10 @@ int commmand_default_help(const char * const program_name,
                           const char **argv);
 
 int run_command(struct command *commands, int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __COMMAND_H */
 

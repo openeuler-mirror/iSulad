@@ -17,10 +17,18 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_version_desc[];
 extern const char g_cmd_version_usage[];
 extern struct client_arguments g_cmd_version_args;
 int cmd_version_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_VERSION_H */
 

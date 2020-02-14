@@ -18,12 +18,20 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_pull_desc[];
 extern const char g_cmd_pull_usage[];
 extern struct client_arguments g_cmd_pull_args;
 int client_pull(const struct client_arguments *args);
 
 int cmd_pull_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_PULL_IMAGE_H */
 

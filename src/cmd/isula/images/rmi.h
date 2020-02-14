@@ -17,6 +17,10 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define RMI_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, "Force removal of the image", NULL }
 
@@ -24,6 +28,10 @@ extern const char g_cmd_rmi_desc[];
 extern const char g_cmd_rmi_usage[];
 extern struct client_arguments g_cmd_rmi_args;
 int cmd_rmi_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_REMOVE_IMAGE_H */
 

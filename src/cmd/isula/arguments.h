@@ -26,6 +26,10 @@
 #include "json_common.h"
 #include "isula_connect.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* max arguments can be specify in client */
 #define MAX_CLIENT_ARGS 1000
 
@@ -322,15 +326,15 @@ struct client_arguments {
     { CMD_OPT_TYPE_STRING_DUP, false, "host", 'H', &(cmdargs).socket, \
         "Daemon socket(s) to connect to", command_valid_socket }, \
     { CMD_OPT_TYPE_BOOL, false, "tls", 0, &(cmdargs).tls, \
-        "Use TLS; implied by --tlsverify", NULL}, \
+      "Use TLS; implied by --tlsverify", NULL}, \
     { CMD_OPT_TYPE_BOOL, false, "tlsverify", 0, &(cmdargs).tls_verify, \
-        "Use TLS and verify the remote", NULL}, \
+      "Use TLS and verify the remote", NULL}, \
     { CMD_OPT_TYPE_STRING_DUP, false, "tlscacert", 0, &(cmdargs).ca_file, \
-        "Trust certs signed only by this CA (default \"/root/.iSulad/ca.pem\")", NULL }, \
+      "Trust certs signed only by this CA (default \"/root/.iSulad/ca.pem\")", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "tlscert", 0, &(cmdargs).cert_file, \
-        "Path to TLS certificate file (default \"/root/.iSulad/cert.pem\")", NULL }, \
+      "Path to TLS certificate file (default \"/root/.iSulad/cert.pem\")", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "tlskey", 0, &(cmdargs).key_file, \
-        "Path to TLS key file (default \"/root/.iSulad/key.pem\")", NULL }, \
+      "Path to TLS key file (default \"/root/.iSulad/key.pem\")", NULL }, \
     { CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL }
 
 #define VERSION_OPTIONS(cmdargs) \
@@ -349,6 +353,10 @@ extern void isulad_screen_print(uint32_t cc, uint32_t server_errono,
 extern void client_print_error(uint32_t cc, uint32_t server_errono, const char *errmsg);
 
 extern client_connect_config_t get_connect_config(const struct client_arguments *args);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ISULA_ARGUMENTS_H */
 

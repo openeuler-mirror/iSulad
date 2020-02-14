@@ -17,10 +17,14 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define LOAD_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_STRING, false, "input", 'i', &(cmdargs).file, "Read from a manifest or an archive", NULL }, \
     { CMD_OPT_TYPE_STRING, false, "tag", 0, &(cmdargs).tag, \
-        "Name and optionally a tag in the 'name:tag' format, valid if type is docker", NULL }
+      "Name and optionally a tag in the 'name:tag' format, valid if type is docker", NULL }
 
 #define EMBEDDED_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_STRING, false, "type", 't', &(cmdargs).type, "Image type, embedded or docker(default)", NULL }
@@ -28,6 +32,10 @@
 extern const char g_cmd_load_desc[];
 extern struct client_arguments g_cmd_load_args;
 int cmd_load_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_LOAD_H */
 
