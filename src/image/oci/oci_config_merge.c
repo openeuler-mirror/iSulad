@@ -97,8 +97,6 @@ static int oci_image_merge_env(const oci_image_spec_config *config, container_co
     }
 out:
     return ret;
-
-    return 0;
 }
 
 static int do_duplicate_commands(const oci_image_spec_config *config, container_config *container_spec)

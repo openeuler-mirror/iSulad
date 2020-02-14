@@ -248,7 +248,115 @@ out:
     return ret;
 }
 
-int merge_exec_process_env(defs_process *spec, const container_config *container_spec, const char **env, size_t env_len)
+static int do_append_process_exec_env(const char **default_env, defs_process *spec)
+{
+    int ret = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
+    size_t i = 0;
+    size_t j = 0;
+    char **temp = NULL;
+    char **default_kv = NULL;
+    char **custom_kv = NULL;
+    size_t default_env_len = util_array_len(default_env);
+
+    if (default_env_len == 0) {
+        return 0;
+    }
+
+    if (default_env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
+        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+    new_size = (spec->env_len + default_env_len) * sizeof(char *);
+    old_size = spec->env_len * sizeof(char *);
+    ret = mem_realloc((void **)&temp, new_size, spec->env, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for envionment variables");
+        ret = -1;
+        goto out;
+    }
+
+    spec->env = temp;
+    for (i = 0; i < default_env_len; i++) {
+        bool found = false;
+        default_kv = util_string_split(default_env[i], '=');
+        if (default_kv == NULL) {
+            continue;
+        }
+
+        for (j = 0; j < spec->env_len; j++) {
+            custom_kv = util_string_split(spec->env[i], '=');
+            if (custom_kv == NULL) {
+                continue;
+            }
+            if (strcmp(default_kv[0], custom_kv[0]) == 0) {
+                found = true;
+            }
+            util_free_array(custom_kv);
+            custom_kv = NULL;
+            if (found) {
+                break;
+            }
+        }
+
+        if (!found) {
+            spec->env[spec->env_len] = util_strdup_s(default_env[i]);
+            spec->env_len++;
+        }
+        util_free_array(default_kv);
+        default_kv = NULL;
+    }
+out:
+    return ret;
+}
+
+static int append_necessary_process_env(bool tty, const container_config *container_spec, defs_process *spec)
+{
+    int ret = 0;
+    int nret = 0;
+    char **default_env = NULL;
+    char host_name_str[MAX_HOST_NAME_LEN + 10] = { 0 };
+
+    if (util_array_append(&default_env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin") != 0) {
+        ERROR("Failed to append default exec env");
+        ret = -1;
+        goto out;
+    }
+
+    if (container_spec->hostname != NULL) {
+        nret = snprintf(host_name_str, sizeof(host_name_str), "HOSTNAME=%s", container_spec->hostname);
+        if (nret < 0 || (size_t)nret >= sizeof(host_name_str)) {
+            ERROR("hostname is too long");
+            ret = -1;
+            goto out;
+        }
+        if (util_array_append(&default_env, host_name_str) != 0) {
+            ERROR("Failed to append default exec env");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    if (tty) {
+        if (util_array_append(&default_env, "TERM=xterm") != 0) {
+            ERROR("Failed to append default exec env");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    ret = do_append_process_exec_env((const char **)default_env, spec);
+
+out:
+    util_free_array(default_env);
+    return ret;
+}
+
+static int merge_exec_process_env(defs_process *spec, const container_config *container_spec, const char **env,
+                                  size_t env_len)
 {
     int ret = 0;
     size_t env_count = 0;
@@ -337,6 +445,12 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
     ret = merge_exec_process_env(spec, container_spec, (const char **)request->env, request->env_len);
     if (ret != 0) {
         ERROR("Failed to dup args for exec process spec");
+        goto err_out;
+    }
+
+    ret = append_necessary_process_env(request->tty, container_spec, spec);
+    if (ret != 0) {
+        ERROR("Failed to append necessary for exec process spec");
         goto err_out;
     }
 
