@@ -15,6 +15,10 @@
 #ifndef __CMD_RESTART_H
 #define __CMD_RESTART_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define RESTART_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_CALLBACK, false, "time", 't', &(cmdargs).time, \
         "Seconds to wait for stop before killing it (default 10)", command_convert_int }
@@ -23,6 +27,10 @@ extern const char g_cmd_restart_desc[];
 extern const char g_cmd_restart_usage[];
 extern struct client_arguments g_cmd_restart_args;
 int cmd_restart_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_RESTART_H */
 

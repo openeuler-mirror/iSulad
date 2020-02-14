@@ -19,6 +19,10 @@
 #include "commands.h"
 #include <termios.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_start_desc[];
 extern struct client_arguments g_cmd_start_args;
 
@@ -28,5 +32,10 @@ void client_restore_console(bool reset_tty, const struct termios *oldtios, struc
 int client_start(const struct client_arguments *args, bool *reset_tty, struct termios *oldtios,
                  struct command_fifo_config **console_fifos);
 int cmd_start_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __CMD_START_H */
 

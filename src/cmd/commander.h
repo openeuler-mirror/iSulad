@@ -21,6 +21,10 @@
 
 #include "host_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef COMMANDER_MAX_OPTIONS
 #define COMMANDER_MAX_OPTIONS 64
 #endif
@@ -111,6 +115,10 @@ int ulimit_array_append(host_config_ulimits_element ***default_ulimit,
 int check_default_ulimit_type(const char *type);
 
 void free_default_ulimit(host_config_ulimits_element **default_ulimit);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COMMANDER_H */
 

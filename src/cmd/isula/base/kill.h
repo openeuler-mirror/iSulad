@@ -18,6 +18,10 @@
 #include "arguments.h"
 #include "wait.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define KILL_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_STRING, false, "signal", 's', &(cmdargs).signal, \
         "Signal to send to the container (default \"SIGKILL\")", NULL }
@@ -26,5 +30,10 @@ extern const char g_cmd_kill_desc[];
 extern const char g_cmd_kill_usage[];
 extern struct client_arguments g_cmd_kill_args;
 int cmd_kill_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 

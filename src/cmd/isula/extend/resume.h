@@ -17,10 +17,18 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_resume_desc[];
 extern const char g_cmd_resume_usage[];
 extern struct client_arguments g_cmd_resume_args;
 int cmd_resume_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
