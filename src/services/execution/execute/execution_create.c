@@ -873,6 +873,11 @@ int container_create_cb(const container_create_request *request,
         goto clean_rootfs;
     }
 
+    ret = merge_oci_cgroups_path(id, oci_spec, host_spec);
+    if (ret < 0) {
+        goto clean_rootfs;
+    }
+
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
         ERROR("Failed to merge config for syscontainer");
         cc = ISULAD_ERR_EXEC;

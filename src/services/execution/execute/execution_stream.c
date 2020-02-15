@@ -519,6 +519,7 @@ static int exec_container(container_t *cont, const char *runtime, char * const c
     params.rootpath = cont->root_path;
     params.timeout = request->timeout;
     params.suffix = request->suffix;
+    params.state = cont->state_path;
     params.spec = process_spec;
 
     if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
@@ -1169,7 +1170,7 @@ static int pause_container(const container_t *cont)
     const char *id = cont->common_config->id;
 
     params.rootpath = cont->root_path;
-
+    params.state = cont->state_path;
     if (runtime_pause(id, cont->runtime, &params)) {
         ERROR("Failed to pause container:%s", id);
         ret = -1;
@@ -1195,7 +1196,7 @@ static int resume_container(const container_t *cont)
     const char *id = cont->common_config->id;
 
     params.rootpath = cont->root_path;
-
+    params.state = cont->state_path;
     if (runtime_resume(id, cont->runtime, &params)) {
         ERROR("Failed to resume container:%s", id);
         ret = -1;
