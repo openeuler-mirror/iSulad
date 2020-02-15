@@ -559,7 +559,7 @@ void *health_check_run(void *arg)
     container_req->tty = false;
     container_req->attach_stdin = false;
     container_req->attach_stdout = true;
-    container_req->attach_stderr = true;
+    container_req->attach_stderr = false;
     container_req->timeout = timeout_with_default(config->health_check->timeout, DEFAULT_PROBE_TIMEOUT) / Time_Second;
     container_req->container_id = util_strdup_s(cont->common_config->id);
     container_req->argv = cmd_slice;

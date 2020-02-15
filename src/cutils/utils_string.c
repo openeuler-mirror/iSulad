@@ -79,6 +79,18 @@ bool strings_contains_any(const char *str, const char *substr)
     return false;
 }
 
+bool strings_contains_word(const char *str, const char *substr)
+{
+    if (str == NULL || substr == NULL) {
+        return false;
+    }
+
+    if (strcasestr(str, substr) != NULL) {
+        return true;
+    }
+    return false;
+}
+
 int strings_count(const char *str, unsigned char c)
 {
     size_t i = 0;

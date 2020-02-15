@@ -25,6 +25,8 @@ extern "C" {
 
 bool strings_contains_any(const char *str, const char *substr);
 
+bool strings_contains_word(const char *str, const char *substr);
+
 int strings_count(const char *str, unsigned char c);
 
 bool strings_in_slice(const char **strarray, size_t alen, const char *str);

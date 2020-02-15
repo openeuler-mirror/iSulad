@@ -55,6 +55,8 @@ FILE *util_fopen(const char *filename, const char *mode);
 
 char *util_full_file_digest(const char *filename);
 
+char *util_path_dir(const char *path);
+
 char *util_add_path(const char *path, const char *name);
 
 char *util_read_text_file(const char *path);

@@ -232,6 +232,25 @@
                 }
             }
         },
+        "mapStringObjectRuntimes": {
+            "type": "object",
+            "patternProperties": {
+                ".{1,}": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string"
+                        },
+                        "runtime-args": {
+                            "type":"array",
+                            "items": {
+                                "type":"string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "ociVersion": {
             "description": "The version of Open Container Runtime Specification that the document complies with",
             "type": "string"

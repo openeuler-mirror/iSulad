@@ -217,6 +217,12 @@ void CRIRuntimeServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alpha2::Pod
     if (error.NotEmpty()) {
         return;
     }
+    if (append_json_map_string_string(custom_config->annotations,
+                                      CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_KEY.c_str(),
+                                      CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX.c_str()) != 0) {
+        error.SetError("Append container type into annotation failed");
+        return;
+    }
 
     if (!c.hostname().empty()) {
         custom_config->hostname = util_strdup_s(c.hostname().c_str());
@@ -323,7 +329,6 @@ container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
 
     std::string sandboxName = CRINaming::MakeSandboxName(config.metadata());
     create_request->id = util_strdup_s(sandboxName.c_str());
-    create_request->runtime = util_strdup_s(CRIHelpers::Constants::DEFAULT_RUNTIME_NAME.c_str());
     create_request->image = util_strdup_s(image.c_str());
 
     create_request->hostconfig = host_config_generate_json(hostconfig, &ctx, &perror);
