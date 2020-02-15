@@ -68,6 +68,7 @@ install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/
 
 install -d $RPM_BUILD_ROOT/%{_bindir}
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
+install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
