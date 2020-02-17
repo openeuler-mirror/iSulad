@@ -15,7 +15,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/sha256/sha256.c
     ${CMAKE_BINARY_DIR}/json/json_common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/path.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/specs_mount.c
     ${CMAKE_BINARY_DIR}/json/host_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/specs_extend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/libisulad.c
@@ -31,6 +30,10 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/json/schema/src/read_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/isulad/arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/image/oci/oci_llt_common.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/containers_store_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/namespace_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/container_unix_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec/specs_mount.c
     ${CMAKE_BINARY_DIR}/json/imagetool_image.c
     ${CMAKE_BINARY_DIR}/json/oci_image_spec.c
     oci_config_merge_llt.cc)
@@ -41,8 +44,12 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/image/oci
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/map
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/engines
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/json
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/spec
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/manager
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/execution/events
     ${CMAKE_BINARY_DIR}/json
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/sha256
@@ -52,7 +59,8 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/json/schema/src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/console
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/image/oci
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks
     )
 
 set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_common_calloc_s -Wl,--wrap,util_smart_calloc_s -Wl,--wrap,merge_env")
-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} -lyajl -lz)
+target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)

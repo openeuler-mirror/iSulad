@@ -18,6 +18,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SHARE_NAMESPACE_PREFIX "container:"
 #define SHARE_NAMESPACE_HOST "host"
 #define SHARE_NAMESPACE_NONE "none"
@@ -80,6 +84,10 @@ static inline bool is_shareable(const char *mode)
 char *connected_container(const char *mode);
 
 char *get_share_namespace_path(const char *type, const char *src_path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
