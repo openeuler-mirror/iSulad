@@ -290,10 +290,10 @@ out:
 static bool shim_alive(const char *workdir)
 {
     int pid = 0;
-    char *fpid = util_path_join(workdir, "shim-pid");
+    char fpid[PATH_MAX] = {0};
     int ret = 0;
 
-    if (fpid == NULL) {
+    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
         ERROR("failed make shim-pid full path");
         return false;
     }
@@ -341,22 +341,24 @@ static void runtime_exec_param_dump(const char **params)
     }
 }
 
-static void runtime_exec_param_init(char **params, size_t params_num, runtime_exec_info *rei)
+static void runtime_exec_param_init(runtime_exec_info *rei)
 {
-    size_t i = 0, j = 0;
+    const char **params = (const char **)rei->params;
+    size_t j = 0;
 
-    add_array_elem(params, params_num, &i, rei->cmd);
+    *params++ = rei->cmd;
+
     for (j = 0; j < rei->args_len; j++) {
-        add_array_elem(params, params_num, &i, *(rei->args + j));
+        *params++ = *(rei->args + j);
     }
 
-    add_array_elem(params, params_num, &i, rei->subcmd);
+    *params++ = rei->subcmd;
     for (j = 0; j < rei->opts_len; j++) {
-        add_array_elem(params, params_num, &i, *(rei->opts + j));
+        *params++ = *(rei->opts + j);
     }
 
     if (rei->id) {
-        add_array_elem(params, params_num, &i, rei->id);
+        *params++ = rei->id;
     }
 }
 
@@ -376,7 +378,7 @@ static void runtime_exec_info_init(runtime_exec_info *rei,
     rei->params = params;
     rei->params_num = params_num;
 
-    runtime_exec_param_init(rei->params, rei->params_num, rei);
+    runtime_exec_param_init(rei);
     runtime_exec_param_dump((const char **)rei->params);
 }
 
@@ -386,22 +388,18 @@ static void runtime_exec_func(void *arg)
     runtime_exec_info *rei = (runtime_exec_info *) arg;
 
     if (rei == NULL) {
-        ERROR("missing runtime exec info");
-        return;
-    }
-
-    if (util_check_inherited(true, -1) != 0) {
-        ERROR("close inherited fds failed");
-        return;
+        dprintf(STDERR_FILENO, "missing runtime exec info");
+        _exit(EXIT_FAILURE);
     }
 
     if (chdir(rei->workdir) < 0) {
-        ERROR("chdir %s failed", rei->workdir);
-        return;
+        dprintf(STDERR_FILENO, "chdir %s failed", rei->workdir);
+        _exit(EXIT_FAILURE);
     }
 
     execvp(rei->cmd, rei->params);
-    ERROR("exec %s %s %s failed", rei->cmd, rei->subcmd, rei->id);
+    dprintf(STDERR_FILENO, "exec %s %s %s failed", rei->cmd, rei->subcmd, rei->id);
+    _exit(EXIT_FAILURE);
 }
 
 static int status_string_to_int(const char *status)
@@ -522,7 +520,7 @@ static int shim_create(bool fg, const char *id, const char *workdir,
     int num = 0;
     int ret = 0;
     char exec_buff[BUFSIZ + 1] = { 0 };
-    char *fpid = util_path_join(workdir, "shim-pid");
+    char fpid[PATH_MAX] = {0};
     const char *params[PARAM_NUM] = {0};
     int i = 0;
     int status = 0;
@@ -535,14 +533,13 @@ static int shim_create(bool fg, const char *id, const char *workdir,
     params[i++] = "2m0s";
     runtime_exec_param_dump(params);
 
-    if (fpid == NULL) {
+    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
         ERROR("failed make shim-pid full path");
         return -1;
     }
 
     if (pipe2(exec_fd, O_CLOEXEC) != 0) {
         ERROR("failed to create pipe for shim create");
-        free(fpid);
         return -1;
     }
 
@@ -551,7 +548,6 @@ static int shim_create(bool fg, const char *id, const char *workdir,
         ERROR("failed fork for shim parent %s", strerror(errno));
         close(exec_fd[0]);
         close(exec_fd[1]);
-        free(fpid);
         return -1;
     }
 
@@ -618,7 +614,6 @@ out:
         show_shim_runtime_errlog(workdir);
         kill(pid, SIGKILL);             /* can kill other process? */
     }
-    free(fpid);
 
     return ret;
 }
@@ -667,9 +662,9 @@ static int get_container_process_pid(const char *workdir)
 static void shim_kill_force(const char *workdir)
 {
     int pid = 0;
-    char *fpid = util_path_join(workdir, "shim-pid");
+    char fpid[PATH_MAX] = {0};
 
-    if (fpid == NULL) {
+    if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
         INFO("shim-pid not exist");
         return;
     }
@@ -683,7 +678,6 @@ static void shim_kill_force(const char *workdir)
     kill(pid, SIGKILL);
 
 out:
-    free(fpid);
     INFO("kill shim force %s", workdir);
 }
 
@@ -695,7 +689,13 @@ int rt_isula_create(const char *id, const char *runtime,
     const char **runtime_args = NULL;
     size_t runtime_args_len = get_runtime_args(runtime, &runtime_args);
     int ret = 0;
-    char *workdir = util_path_join(params->state, id);
+    char workdir[PATH_MAX] = {0};
+
+    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
+        INFO("make full workdir failed");
+        ret = -1;
+        goto out;
+    }
 
     ret = create_process_json_file(workdir, false, params->exit_fifo, NULL,
                                    params->stdin, params->stdout, params->stderr, runtime_args,
@@ -714,7 +714,6 @@ int rt_isula_create(const char *id, const char *runtime,
     }
 
 out:
-    free(workdir);
     return ret;
 }
 
@@ -722,11 +721,11 @@ int rt_isula_start(const char *id, const char *runtime,
                    const rt_start_params_t *params,
                    container_pid_t *pid_info)
 {
-    char *workdir = util_path_join(params->state, id);
+    char workdir[PATH_MAX] = {0};
     pid_t pid = 0;
     int ret = 0;
 
-    if (workdir == NULL) {
+    if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
         ERROR("%s: missing shim workdir", id);
         return -1;
     }
@@ -755,7 +754,6 @@ out:
         show_shim_runtime_errlog(workdir);
         shim_kill_force(workdir);
     }
-    free(workdir);
 
     return ret;
 }
@@ -901,6 +899,7 @@ int rt_isula_exec(const char *id, const char *runtime,
     }
 
 out:
+    UTIL_FREE_AND_SET_NULL(exec_id);
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
     } else {
