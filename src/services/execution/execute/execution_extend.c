@@ -1053,7 +1053,7 @@ static int do_update_resources(const container_update_request *request, containe
     }
 
     backup_oci_spec = load_oci_config(cont->root_path, id);
-    if (oci_spec == NULL) {
+    if (backup_oci_spec == NULL) {
         ERROR("Failed to load oci config");
         ret = -1;
         goto restore_hostspec;

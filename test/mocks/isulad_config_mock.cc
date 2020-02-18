@@ -39,3 +39,45 @@ int parse_log_opts(struct service_arguments *args, const char *key, const char *
     }
     return -1;
 }
+
+int conf_get_isulad_default_ulimit(host_config_ulimits_element ***ulimit)
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->GetUlimit(ulimit);
+    }
+    return -1;
+}
+
+int conf_get_isulad_hooks(oci_runtime_spec_hooks **phooks)
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->GetHooks(phooks);
+    }
+    return -1;
+}
+
+/* conf get isulad mount rootfs */
+char *conf_get_isulad_mount_rootfs()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->GetMountrootfs();
+    }
+    return nullptr;
+}
+
+/* conf get isulad cgroup parent for containers */
+char *conf_get_isulad_cgroup_parent()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->GetCgroupParent();
+    }
+    return nullptr;
+}
+
+char *conf_get_isulad_native_umask()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->GetUmask();
+    }
+    return nullptr;
+}
