@@ -40,7 +40,7 @@ extern "C" {
 #define SECCOMP_DEFAULT_PATH "/etc/isulad/seccomp_default.json"
 #endif
 #ifndef OCI_VERSION
-#define OCI_VERSION "1.0.0-rc5-dev"
+#define OCI_VERSION "1.0.1"
 #endif
 
 typedef enum {

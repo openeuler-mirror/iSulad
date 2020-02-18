@@ -143,6 +143,18 @@ target_include_directories(isula PUBLIC ${ISULA_INCS} ${SHARED_INCS})
 target_link_libraries(isula libisula -lpthread)
 # ------ build isula finish -------
 
+# ------ build isulad-shim -------
+add_executable(isulad-shim
+    ${ISULAD_SHIM_SRCS}
+    ${CMAKE_BINARY_DIR}/json/shim_client_process_state.c
+    ${CMAKE_BINARY_DIR}/json/json_common.c
+    ${commonjsonsrcs}
+    )
+target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
+target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} -lpthread)
+
+# ------ build isula-shim finish -------
+
 # ------ build isulad -------
 add_subdirectory(services)
 add_subdirectory(image)
@@ -236,6 +248,8 @@ endif()
 install(TARGETS libisula
   LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(TARGETS isula
+	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(TARGETS isulad-shim
 	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(TARGETS isulad
 	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

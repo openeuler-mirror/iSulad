@@ -5,6 +5,9 @@
         "hosts": {
             "type": "ArrayOfStrings"
         },
+        "default-runtime": {
+            "type": "string"
+        },
         "group": {
             "type": "string"
         },
@@ -144,6 +147,9 @@
 		            }
                 }
             }
+        },
+        "runtimes": {
+            "$ref": "defs.json#/definitions/mapStringObjectRuntimes"
         }
     }
 }

@@ -37,7 +37,7 @@ const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
 
 struct client_arguments g_cmd_create_args = {
-    .runtime = "lcr",
+    .runtime = "",
     .restart = "no",
     .log_file_size = "1MB",
     .log_file_rotate = 7,

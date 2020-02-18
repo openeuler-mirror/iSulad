@@ -25,6 +25,7 @@
 #include "log.h"
 #include "utils.h"
 #include "lcr_rt_ops.h"
+#include "isula_rt_ops.h"
 
 static const struct rt_ops g_lcr_rt_ops = {
     .detect = rt_lcr_detect,
@@ -45,8 +46,28 @@ static const struct rt_ops g_lcr_rt_ops = {
     .rt_exec_resize = rt_lcr_exec_resize,
 };
 
+static const struct rt_ops g_isula_rt_ops = {
+    .detect = rt_isula_detect,
+    .rt_create = rt_isula_create,
+    .rt_start = rt_isula_start,
+    .rt_restart = rt_isula_restart,
+    .rt_clean_resource = rt_isula_clean_resource,
+    .rt_rm = rt_isula_rm,
+    .rt_status = rt_isula_status,
+    .rt_exec = rt_isula_exec,
+    .rt_pause = rt_isula_pause,
+    .rt_resume = rt_isula_resume,
+    .rt_attach = rt_isula_attach,
+    .rt_update = rt_isula_update,
+    .rt_listpids = rt_isula_listpids,
+    .rt_resources_stats = rt_isula_resources_stats,
+    .rt_resize = rt_isula_resize,
+    .rt_exec_resize = rt_isula_exec_resize,
+};
+
 static const struct rt_ops *g_rt_ops[] = {
-    &g_lcr_rt_ops
+    &g_lcr_rt_ops,
+    &g_isula_rt_ops,
 };
 
 static const size_t g_rt_nums = sizeof(g_rt_ops) / sizeof(struct rt_ops *);

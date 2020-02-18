@@ -44,6 +44,56 @@
 #include "error.h"
 #include "constants.h"
 
+static int runtime_check(const char *name, bool *runtime_res)
+{
+    int ret = 0;
+    struct service_arguments *args = NULL;
+    defs_map_string_object_runtimes *runtimes = NULL;
+
+    if (isulad_server_conf_rdlock()) {
+        ret = -1;
+        goto out;
+    }
+
+    args = conf_get_server_conf();
+    if (args == NULL) {
+        ERROR("Failed to get isulad server config");
+        ret = -1;
+        goto unlock_out;
+    }
+
+    if (args->json_confs != NULL) {
+        runtimes = args->json_confs->runtimes;
+    }
+    if (runtimes == NULL) {
+        EVENT("isulad runtimes param is null");
+        goto unlock_out;
+    }
+
+    size_t runtime_nums = runtimes->len;
+    for (size_t i = 0; i < runtime_nums; i++) {
+        if (strcmp(name, runtimes->keys[i]) == 0) {
+            *runtime_res = true;
+            goto unlock_out;
+        }
+    }
+unlock_out:
+    if (isulad_server_conf_unlock()) {
+        ERROR("Failed to unlock isulad server config");
+        ret = -1;
+    }
+out:
+    if (strcmp(name, "runc") == 0 || strcmp(name, "lcr") == 0) {
+        *runtime_res = true;
+    }
+
+    if (strcmp(name, "kata-runtime") == 0) {
+        *runtime_res = true;
+    }
+
+    return ret;
+}
+
 static int create_request_check(const container_create_request *request)
 {
     int ret = 0;
@@ -64,20 +114,6 @@ static int create_request_check(const container_create_request *request)
     if (request->image != NULL && !util_valid_image_name(request->image)) {
         ERROR("invalid image name %s", request->image);
         isulad_set_error_message("Invalid image name '%s'", request->image);
-        ret = -1;
-        goto out;
-    }
-
-    if (request->runtime == NULL) {
-        ERROR("Receive NULL Request runtime");
-        ret = -1;
-        goto out;
-    }
-
-    if (!util_valid_runtime_name(request->runtime)) {
-        ERROR("Invalid runtime name:%s", request->runtime);
-        isulad_set_error_message("Invalid runtime name (%s), only \"lcr\" supported.",
-                                 request->runtime);
         ret = -1;
         goto out;
     }
@@ -685,9 +721,27 @@ static int get_request_image_info(const container_create_request *request, char 
 static int preparate_runtime_environment(const container_create_request *request, const char *id,
                                          char **runtime, char **runtime_root, uint32_t *cc)
 {
-    *runtime = get_runtime_from_request(request);
+    bool runtime_res = false;
+
+    if (request->runtime) {
+        *runtime = get_runtime_from_request(request);
+    } else {
+        *runtime = conf_get_default_runtime();
+    }
     if (*runtime == NULL) {
         *cc = ISULAD_ERR_INPUT;
+        return -1;
+    }
+
+    if (runtime_check(*runtime, &runtime_res) != 0) {
+        ERROR("Runtimes param check failed");
+        return -1;
+    }
+
+    if (!runtime_res) {
+        ERROR("Invalid runtime name:%s", *runtime);
+        isulad_set_error_message("Invalid runtime name (%s).",
+                                 *runtime);
         return -1;
     }
 
@@ -816,6 +870,11 @@ int container_create_cb(const container_create_request *request,
     oci_spec = generate_oci_config(host_spec, real_rootfs, v2_spec);
     if (oci_spec == NULL) {
         cc = ISULAD_ERR_EXEC;
+        goto clean_rootfs;
+    }
+
+    ret = merge_oci_cgroups_path(id, oci_spec, host_spec);
+    if (ret < 0) {
         goto clean_rootfs;
     }
 

@@ -155,6 +155,19 @@ container_config *CRIRuntimeServiceImpl::GenerateCreateContainerCustomConfig(
         }
     }
 
+    if (append_json_map_string_string(custom_config->annotations,
+                                      CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_KEY.c_str(),
+                                      CRIHelpers::Constants::CONTAINER_TYPE_ANNOTATION_CONTAINER.c_str())) {
+        error.SetError("Append map string string failed");
+        goto cleanup;
+    }
+    if (append_json_map_string_string(custom_config->annotations,
+                                      CRIHelpers::Constants::SANDBOX_ID_ANNOTATION_KEY.c_str(),
+                                      realPodSandboxID.c_str())) {
+        error.SetError("Append map string string failed");
+        goto cleanup;
+    }
+
     if (append_json_map_string_string(custom_config->labels, CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str(),
                                       realPodSandboxID.c_str())) {
         error.SetError("Append map string string failed");
@@ -300,8 +313,6 @@ container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(
 
     std::string cname = CRINaming::MakeContainerName(podSandboxConfig, containerConfig);
     request->id = util_strdup_s(cname.c_str());
-
-    request->runtime = util_strdup_s(CRIHelpers::Constants::DEFAULT_RUNTIME_NAME.c_str());
 
     if (!containerConfig.image().image().empty()) {
         request->image = util_strdup_s(containerConfig.image().image().c_str());

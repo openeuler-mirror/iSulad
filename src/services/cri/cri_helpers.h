@@ -49,6 +49,10 @@ public:
     static const std::string NETWORK_READY;
     static const std::string POD_CHECKPOINT_KEY;
     static const size_t MAX_CHECKPOINT_KEY_LEN { 250 };
+    static const std::string CONTAINER_TYPE_ANNOTATION_KEY;
+    static const std::string CONTAINER_TYPE_ANNOTATION_CONTAINER;
+    static const std::string CONTAINER_TYPE_ANNOTATION_SANDBOX;
+    static const std::string SANDBOX_ID_ANNOTATION_KEY;
 };
 std::string GetDefaultSandboxImage(Errors &err);
 

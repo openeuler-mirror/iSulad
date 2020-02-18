@@ -274,7 +274,7 @@ bool util_valid_runtime_name(const char *name)
         return false;
     }
 
-    return strcasecmp(name, "lcr") == 0;
+    return true;
 }
 
 bool util_valid_host_name(const char *name)

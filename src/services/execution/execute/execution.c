@@ -790,19 +790,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         open_stdin = cont->common_config->config->open_stdin;
     }
 
-    create_params.bundle = bundle;
-    create_params.state = cont->state_path;
-    create_params.oci_config_data = oci_spec;
-    create_params.terminal = tty;
-    create_params.stdin = console_fifos[0];
-    create_params.stdout = console_fifos[1];
-    create_params.stderr = console_fifos[2];
-
-    if (runtime_create(id, runtime, &create_params) != 0) {
-        ret = -1;
-        goto close_exit_fd;
-    }
-
     if (plugin_event_container_pre_start(cont)) {
         ERROR("Plugin event pre start failed ");
         plugin_event_container_post_stop(cont); /* ignore error */
@@ -810,7 +797,22 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
+    create_params.bundle = bundle;
+    create_params.state = cont->state_path;
+    create_params.oci_config_data = oci_spec;
+    create_params.terminal = tty;
+    create_params.stdin = console_fifos[0];
+    create_params.stdout = console_fifos[1];
+    create_params.stderr = console_fifos[2];
+    create_params.exit_fifo = exit_fifo;
+
+    if (runtime_create(id, runtime, &create_params) != 0) {
+        ret = -1;
+        goto close_exit_fd;
+    }
+
     start_params.rootpath = cont->root_path;
+    start_params.state = cont->state_path;
     start_params.tty = tty;
     start_params.open_stdin = open_stdin;
     start_params.logpath = engine_log_path;
@@ -1126,6 +1128,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
     }
     if (signal == SIGKILL && need_unpause) {
         params.rootpath = cont->root_path;
+        params.state = cont->state_path;
         if (runtime_resume(id, cont->runtime, &params) != 0) {
             ERROR("Cannot unpause container: %s", id);
             ret = -1;

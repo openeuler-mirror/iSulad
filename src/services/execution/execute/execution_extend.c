@@ -521,7 +521,7 @@ static int do_resume_container(container_t *cont)
     }
 
     params.rootpath = cont->root_path;
-
+    params.state = cont->state_path;
     if (runtime_resume(id, cont->runtime, &params)) {
         ERROR("Failed to resume container:%s", id);
         ret = -1;
@@ -708,7 +708,7 @@ static int pause_container(container_t *cont)
     }
 
     params.rootpath = cont->root_path;
-
+    params.state = cont->state_path;
     if (runtime_pause(id, cont->runtime, &params)) {
         ERROR("Failed to pause container:%s", id);
         ret = -1;

@@ -230,10 +230,6 @@ public:
     {
         int nret = -1;
 
-        if (req.runtime().empty()) {
-            ERROR("Missing runtime in the request");
-            return nret;
-        }
         if (req.rootfs().empty() && req.image().empty()) {
             ERROR("Missing container rootfs or image arguments in the request");
             return nret;

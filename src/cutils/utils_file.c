@@ -552,7 +552,7 @@ char *util_full_file_digest(const char *filename)
     return full_digest;
 }
 
-static char *util_path_dir(const char *path)
+char *util_path_dir(const char *path)
 {
     char *dir = NULL;
     int len = 0;
