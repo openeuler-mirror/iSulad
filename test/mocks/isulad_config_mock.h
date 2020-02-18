@@ -24,6 +24,11 @@ public:
     virtual ~MockIsuladConf() = default;
     MOCK_METHOD1(GetRuntimeDir, char *(const char *name));
     MOCK_METHOD3(ParseLogopts, int(struct service_arguments *args, const char *key, const char *value));
+    MOCK_METHOD0(GetMountrootfs, char *(void));
+    MOCK_METHOD1(GetHooks, int(oci_runtime_spec_hooks **phooks));
+    MOCK_METHOD1(GetUlimit, int(host_config_ulimits_element ***ulimit));
+    MOCK_METHOD0(GetCgroupParent, char *(void));
+    MOCK_METHOD0(GetUmask, char *(void));
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf* mock);

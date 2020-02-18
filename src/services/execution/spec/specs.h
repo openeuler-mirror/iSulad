@@ -22,17 +22,24 @@
 #include "oci_runtime_hooks.h"
 #include "oci_runtime_spec.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int merge_all_specs(host_config *host_spec,
                     const char *real_rootfs,
                     container_config_v2_common_config *v2_spec, oci_runtime_spec *oci_spec);
-int merge_oci_cgroups_path(const char *id, const oci_runtime_spec *oci_spec,
+int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec,
                            const host_config *host_spec);
 int merge_global_config(oci_runtime_spec *oci_spec);
 oci_runtime_spec *load_oci_config(const char *rootpath, const char *name);
 oci_runtime_spec *default_spec(bool system_container);
 int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec);
 int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

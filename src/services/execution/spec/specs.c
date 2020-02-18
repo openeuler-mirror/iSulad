@@ -1221,6 +1221,11 @@ int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
 
+    if (oci_spec == NULL || host_spec == NULL) {
+        ret = -1;
+        goto out;
+    }
+
     ret = merge_conf_cgroup_cpu(oci_spec, host_spec);
     if (ret != 0) {
         goto out;
@@ -1764,13 +1769,23 @@ out:
     return ret;
 }
 
-int merge_oci_cgroups_path(const char *id, const oci_runtime_spec *oci_spec,
-                           const host_config *host_spec)
+int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
-    char cleaned[PATH_MAX] = { 0 };
     char *default_cgroup_parent = NULL;
     char *path = NULL;
+
+    if (id == NULL || oci_spec == NULL || host_spec == NULL) {
+        ERROR("Invalid arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (make_sure_oci_spec_linux(oci_spec) != 0) {
+        ERROR("Failed to make oci spec linux");
+        ret = -1;
+        goto out;
+    }
 
     default_cgroup_parent = conf_get_isulad_cgroup_parent();
     path = default_cgroup_parent;
@@ -1779,16 +1794,13 @@ int merge_oci_cgroups_path(const char *id, const oci_runtime_spec *oci_spec,
     }
 
     if (path == NULL) {
-        oci_spec->linux->cgroups_path = util_add_path("/isulad", id);
+        free(oci_spec->linux->cgroups_path);
+        oci_spec->linux->cgroups_path = util_path_join("/isulad", id);
         return 0;
     }
 
-    if (cleanpath(path, cleaned, sizeof(cleaned)) == NULL) {
-        ERROR("Failed to clean path: %s", path);
-        ret = -1;
-        goto out;
-    }
-    oci_spec->linux->cgroups_path = util_add_path(cleaned, id);
+    free(oci_spec->linux->cgroups_path);
+    oci_spec->linux->cgroups_path = util_path_join(path, id);
 
 out:
     UTIL_FREE_AND_SET_NULL(default_cgroup_parent);
