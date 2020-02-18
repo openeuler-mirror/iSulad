@@ -81,3 +81,19 @@ char *conf_get_isulad_native_umask()
     }
     return nullptr;
 }
+
+char *conf_get_graph_rootpath()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetGraphRootpath();
+    }
+    return nullptr;
+}
+
+char *conf_get_isulad_storage_driver()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetIsuladStorageDriver();
+    }
+    return nullptr;
+}

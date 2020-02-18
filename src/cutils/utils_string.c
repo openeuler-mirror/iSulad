@@ -283,7 +283,8 @@ int util_parse_percent_string(const char *s, long *converted)
 {
     char *dup = NULL;
 
-    if (s == NULL || converted == NULL || s[0] == 0 || strlen(s) < 2 || s[strlen(s) - 1] != '%') {
+    if (s == NULL || converted == NULL || s[0] == 0 || strlen(s) < 2 || s[strlen(s) - 1] != '%' ||
+        strspn(s, "0123456789%") != strlen(s)) {
         return -EINVAL;
     }
     dup = util_strdup_s(s);
@@ -294,7 +295,7 @@ int util_parse_percent_string(const char *s, long *converted)
 
     *converted = strtol(dup, NULL, 10);
     if ((errno == ERANGE && (*converted == LONG_MAX || *converted == LONG_MIN)) ||
-        (errno != 0 && *converted == 0) || *converted < 0 || *converted >= 100) {
+        (errno != 0 && *converted == 0) || *converted < 0 || *converted > 100) {
         free(dup);
         return -EINVAL;
     }
