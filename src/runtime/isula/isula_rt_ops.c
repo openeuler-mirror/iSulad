@@ -123,20 +123,29 @@ static char *get_err_message(const char *workdir, const char *file)
 
 static void show_shim_runtime_errlog(const char *workdir)
 {
-    char *msg = NULL;
+    char buf[BUFSIZ] = {0};
+    char *log1 = NULL;
+    char *log2 = NULL;
 
-    msg = get_err_message(workdir, "shim-log.json");
-    if (msg != NULL) {
-        ERROR("shim-log error %s", msg);
-        isulad_set_error_message("shim-log error %s", msg);
-        free(msg);
+    log1 = get_err_message(workdir, "shim-log.json");
+    if (log1 != NULL) {
+        ERROR("shim-log error %s", log1);
+    } else {
+        log1 = util_strdup_s("NULL");
     }
-    msg = get_err_message(workdir, "log.json");
-    if (msg != NULL) {
-        ERROR("runtime-log error %s", msg);
-        isulad_set_error_message("runtime-log error %s", msg);
-        free(msg);
+
+    log2 = get_err_message(workdir, "log.json");
+    if (log2 != NULL) {
+        ERROR("runtime-log error %s", log2);
+    } else {
+        log2 = util_strdup_s("NULL");
     }
+
+    (void)snprintf(buf, sizeof(buf), "shim-log error: %s\nruntime-log error: %s\n", log1, log2);
+    isulad_set_error_message(buf);
+
+    UTIL_FREE_AND_SET_NULL(log1);
+    UTIL_FREE_AND_SET_NULL(log2);
 }
 
 bool rt_isula_detect(const char *runtime)
