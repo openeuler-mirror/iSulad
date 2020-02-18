@@ -365,14 +365,16 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
     request.lcrpath = params->rootpath;
     request.logpath = params->logpath;
     request.loglevel = params->loglevel;
-    request.args = (const char **)params->spec->args;
-    request.args_len = params->spec->args_len;
-    request.env = (const char **)params->spec->env;
-    request.env_len = params->spec->env_len;
+    if (params->spec != NULL) {
+        request.args = (const char **)params->spec->args;
+        request.args_len = params->spec->args_len;
+        request.env = (const char **)params->spec->env;
+        request.env_len = params->spec->env_len;
+    }
     request.console_fifos = params->console_fifos;
     request.timeout = params->timeout;
     request.suffix = params->suffix;
-    if (params->spec->user != NULL) {
+    if (params->spec != NULL && params->spec->user != NULL) {
         if (generate_user_string_by_uid_gid(params->spec->user, &user) != 0) {
             ret = -1;
             goto out;
@@ -548,15 +550,21 @@ int rt_lcr_listpids(const char *name, const char *runtime, const rt_listpids_par
     int ret = 0;
     struct engine_operation *engine_ops = NULL;
 
+    if (out == NULL) {
+        ERROR("Invalid arguments");
+        ret = -1;
+        goto out;
+    }
+
     engine_ops = engines_get_handler(runtime);
     if (engine_ops == NULL || engine_ops->engine_get_container_pids_op == NULL) {
-        DEBUG("Failed to get engine top operations");
+        ERROR("Failed to get engine top operations");
         ret = -1;
         goto out;
     }
 
     if (!engine_ops->engine_get_container_pids_op(name, params->rootpath, &(out->pids), &(out->pids_len))) {
-        DEBUG("Top container %s failed", name);
+        ERROR("Top container %s failed", name);
         const char *tmpmsg = NULL;
         if (engine_ops->engine_get_errmsg_op != NULL) {
             tmpmsg = engine_ops->engine_get_errmsg_op();
