@@ -71,7 +71,8 @@ static int runtime_check(const char *name, bool *runtime_res)
     }
 
     size_t runtime_nums = runtimes->len;
-    for (size_t i = 0; i < runtime_nums; i++) {
+    size_t i;
+    for (i = 0; i < runtime_nums; i++) {
         if (strcmp(name, runtimes->keys[i]) == 0) {
             *runtime_res = true;
             goto unlock_out;

@@ -83,6 +83,7 @@ static int open_fifo_noblock(const char *path, mode_t mode)
 
 static int receive_fd(int sock)
 {
+    u_char *pfd = NULL;
     int fd = -1;
     int cmsgsize = CMSG_LEN(sizeof(int));
     struct cmsghdr* cmptr = (struct cmsghdr*)calloc(1, cmsgsize);
@@ -110,7 +111,8 @@ static int receive_fd(int sock)
         return -1;
     }
 
-    fd = *(int *)CMSG_DATA(cmptr);
+    pfd = CMSG_DATA(cmptr);
+    fd = *(int *)pfd;
     free(cmptr);
 
     return fd;
@@ -457,6 +459,7 @@ static void* task_io_loop(void *data)
     process_t *p = (process_t*)data;
     int wait_fds = 0;
     struct epoll_event evs[MAX_EVENTS];
+    int i;
 
     p->io_loop_fd = epoll_create1(EPOLL_CLOEXEC);
     if (p->io_loop_fd < 0) {
@@ -474,7 +477,7 @@ static void* task_io_loop(void *data)
             _exit(EXIT_FAILURE);
         }
 
-        for (int i = 0; i < wait_fds; i++) {
+        for (i = 0; i < wait_fds; i++) {
             io_thread_t *thd_io = (io_thread_t*)evs[i].data.ptr;
             do_io_copy(thd_io->ioc->fd_from, evs[i].events, thd_io);
         }
@@ -560,6 +563,7 @@ static stdio_t* initialize_io(process_t *p)
 {
     int ret = SHIM_ERR;
     int stdio_fd[3][2] = { {-1, -1}, {-1, -1}, {-1, -1} };
+    int i, j;
 
     stdio_t *stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
     p->stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
@@ -581,8 +585,8 @@ static stdio_t* initialize_io(process_t *p)
     p->stdio->err = stdio_fd[2][1];// w
     stdio->err = stdio_fd[2][0];// r
 
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 2; j++) {
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 2; j++) {
             ret = fchown(stdio_fd[i][j], p->state->root_uid, p->state->root_gid);
             if (ret != SHIM_OK) {
                 goto failure;
@@ -601,8 +605,8 @@ failure:
         free(p->stdio);
         p->stdio = NULL;
     }
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 2; j++) {
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 2; j++) {
             if (stdio_fd[i][j] > 0) {
                 close(stdio_fd[i][j]);
             }
@@ -673,6 +677,7 @@ process_t* new_process(char *id, char *bundle, char *runtime)
 {
     shim_client_process_state* p_state;
     process_t* p = NULL;
+    int i;
 
     p_state = load_process();
     if (p_state == NULL) {
@@ -694,7 +699,7 @@ process_t* new_process(char *id, char *bundle, char *runtime)
     p->ctr_pid = -1;
     p->stdio = NULL;
     p->shim_io = NULL;
-    for (int i = 0; i < 3; i ++) {
+    for (i = 0; i < 3; i ++) {
         p->io_threads[i] = NULL;
     }
 
@@ -735,8 +740,9 @@ static void get_runtime_cmd(process_t *p, const char *log_path, const char *pid_
                             const char *params[])
 {
     int i = 0;
+    int j;
     params[i++] = p->runtime;
-    for (int j = 0; j < p->state->runtime_args_len; j++) {
+    for (j = 0; j < p->state->runtime_args_len; j++) {
         params[i++] = p->state->runtime_args[j];
     }
     params[i++] = "--log";
@@ -796,9 +802,10 @@ static void process_kill_all(process_t *p)
     char output[BUFSIZ] = { 0 };
     int output_len = BUFSIZ;
     int i = 0;
+    int j;
 
     params[i++] = p->runtime;
-    for (int j = 0; j < p->state->runtime_args_len; j++) {
+    for (j = 0; j < p->state->runtime_args_len; j++) {
         params[i++] = p->state->runtime_args[j];
     }
     params[i++] = "kill";
@@ -821,6 +828,7 @@ void process_delete(process_t *p)
     char output[BUFSIZ] = { 0 };
     int output_len = BUFSIZ;
     int i = 0;
+    int j;
     char log_path[PATH_MAX] = { 0 };
     char *cwd;
 
@@ -836,7 +844,7 @@ void process_delete(process_t *p)
     params[i++] = "--log-format";
     params[i++] = "json";
     params[i++] = p->runtime;
-    for (int j = 0; j < p->state->runtime_args_len; j++) {
+    for (j = 0; j < p->state->runtime_args_len; j++) {
         params[i++] = p->state->runtime_args[j];
     }
 
@@ -966,6 +974,7 @@ int process_signal_handle_routine(process_t *p)
 {
     int ret = SHIM_ERR;
     bool exit_shim = false;
+    int i;
 
     for (;;) {
         int status;
@@ -994,7 +1003,7 @@ int process_signal_handle_routine(process_t *p)
         if (exit_shim) {
             process_kill_all(p);
             process_delete(p);
-            for (int i = 0; i < 3; i ++) {
+            for (i = 0; i < 3; i ++) {
                 destory_io_thread(p, i);
             }
             return status;
