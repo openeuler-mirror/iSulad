@@ -115,6 +115,22 @@ static void pack_get_id_response(container_get_id_response *response, const char
     }
 }
 
+static void pack_get_runtime_response(container_get_runtime_response *response, const char *runtime, uint32_t cc)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    response->cc = cc;
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
+        DAEMON_CLEAR_ERRMSG();
+    }
+    if (runtime != NULL) {
+        response->runtime = util_strdup_s(runtime);
+    }
+}
+
 /*
  * This function gets long id of container by name or short id
  */
@@ -161,6 +177,49 @@ static int container_get_id_cb(const container_get_id_request *request, containe
 
 pack_response:
     pack_get_id_response(*response, id, cc);
+
+    container_unref(cont);
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
+}
+
+static int container_get_runtime_cb(const char *real_id, container_get_runtime_response **response)
+{
+    char *runtime = NULL;
+    uint32_t cc = ISULAD_SUCCESS;
+    container_t *cont = NULL;
+
+    DAEMON_CLEAR_ERRMSG();
+    if (real_id == NULL || response == NULL) {
+        ERROR("Invalid NULL input");
+        return -1;
+    }
+
+    *response = util_common_calloc_s(sizeof(container_get_runtime_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto pack_response;
+    }
+
+    if (!util_valid_container_id_or_name(real_id)) {
+        ERROR("Invalid container name: %s", real_id);
+        isulad_set_error_message("Invalid container name: %s", real_id);
+        cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    cont = containers_store_get(real_id);
+    if (cont == NULL) {
+        cc = ISULAD_ERR_EXEC;
+        ERROR("No such container: %s", real_id);
+        isulad_set_error_message("No such container: %s", real_id);
+        goto pack_response;
+    }
+
+    runtime = cont->runtime;
+
+pack_response:
+    pack_get_runtime_response(*response, runtime, cc);
 
     container_unref(cont);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
@@ -1899,6 +1958,7 @@ pack_response:
 void container_callback_init(service_container_callback_t *cb)
 {
     cb->get_id = container_get_id_cb;
+    cb->get_runtime = container_get_runtime_cb;
     cb->create = container_create_cb;
     cb->start = container_start_cb;
     cb->stop = container_stop_cb;
