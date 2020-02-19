@@ -20,6 +20,8 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <thread>
+
 #include <clibcni/api.h>
 
 #include "network_plugin.h"
@@ -48,9 +50,9 @@ public:
     {
         m_name = name;
     }
-    void InsertPath(const std::string &path)
+    void SetPaths(std::vector<std::string> &binDirs)
     {
-        m_path.push_back(path);
+        m_path = binDirs;
     }
     std::string GetNetworkConfigJsonStr()
     {
@@ -64,6 +66,13 @@ public:
     {
         return m_networkConfig->first_plugin_name ? m_networkConfig->first_plugin_name : "";
     }
+    struct cni_network_list_conf *UpdateCNIConfList(struct cni_network_list_conf *newConf)
+    {
+        struct cni_network_list_conf *result = m_networkConfig;
+        m_networkConfig = newConf;
+        return result;
+    }
+
     char **GetPaths(Errors &err);
 
 private:
@@ -76,8 +85,8 @@ private:
 
 class CniNetworkPlugin : public NetworkPlugin {
 public:
-    CniNetworkPlugin(const std::string &binDir, const std::string &pluginDir,
-                     const std::string &vendorCNIDirPrefix = "");
+    CniNetworkPlugin(std::vector<std::string> &binDirs, const std::string &confDir,
+                     const std::string &podCidr = "");
 
     virtual ~CniNetworkPlugin();
 
@@ -90,12 +99,13 @@ public:
 
     std::map<int, bool> *Capabilities() override;
 
-    void SetUpPod(const std::string &ns, const std::string &name, const std::string &networkPlane,
+    void SetUpPod(const std::string &ns, const std::string &name,
                   const std::string &interfaceName, const std::string &podSandboxID,
-                  const std::map<std::string, std::string> &annotations, Errors &error) override;
+                  const std::map<std::string, std::string> &annotations,
+                  const std::map<std::string, std::string> &options, Errors &error) override;
 
-    void TearDownPod(const std::string &ns, const std::string &name, const std::string &networkPlane,
-                     const std::string &interfaceName, const std::string &podSandboxID,
+    void TearDownPod(const std::string &ns, const std::string &name,
+                     const std::string &networkPlane, const std::string &podSandboxID,
                      const std::map<std::string, std::string> &annotations, Errors &error) override;
 
     void GetPodNetworkStatus(const std::string &ns, const std::string &name, const std::string &interfaceName,
@@ -105,27 +115,34 @@ public:
 
     virtual void SetLoNetwork(std::unique_ptr<CNINetwork> lo);
 
+    virtual void SetDefaultNetwork(std::unique_ptr<CNINetwork> network);
+
 private:
     virtual void PlatformInit(Errors &error);
     virtual void SyncNetworkConfig();
 
-    virtual void GetCNINetwork(const std::string &pluginDir, const std::string &binDir,
-                               const std::string &vendorCNIDirPrefix, Errors &error);
+    virtual void GetDefaultCNINetwork(const std::string &pluginDir, std::vector<std::string> &binDirs, Errors &error);
 
     virtual void CheckInitialized(Errors &error);
 
-    virtual void AddToNetwork(CNINetwork *network, const std::string &jsonCheckpoint, const std::string &podName,
+    virtual void AddToNetwork(CNINetwork *network, const std::string &podName,
                               const std::string &podNamespace, const std::string &interfaceName,
-                              const std::string &podSandboxID, const std::string &podNetnsPath, struct result **presult,
-                              Errors &error);
+                              const std::string &podSandboxID, const std::string &podNetnsPath,
+                              const std::map<std::string, std::string> &annotations,
+                              const std::map<std::string, std::string> &options,
+                              struct result **presult, Errors &error);
 
-    virtual void DeleteFromNetwork(CNINetwork *network, const std::string &jsonCheckpoint, const std::string &podName,
+    virtual void DeleteFromNetwork(CNINetwork *network, const std::string &podName,
                                    const std::string &podNamespace, const std::string &interfaceName,
-                                   const std::string &podSandboxID, const std::string &podNetnsPath, Errors &error);
+                                   const std::string &podSandboxID, const std::string &podNetnsPath,
+                                   const std::map<std::string, std::string> &annotations,
+                                   Errors &error);
 
-    virtual void BuildCNIRuntimeConf(const std::string &podName, const std::string &jsonCheckpoint,
+    virtual void BuildCNIRuntimeConf(const std::string &podName,
                                      const std::string &podNs, const std::string &interfaceName,
                                      const std::string &podSandboxID, const std::string &podNetnsPath,
+                                     const std::map<std::string, std::string> &annotations,
+                                     const std::map<std::string, std::string> &options,
                                      struct runtime_conf **cni_rc, Errors &error);
 
 private:
@@ -135,21 +152,23 @@ private:
     int GetCNIConfFiles(const std::string &pluginDir, std::vector<std::string> &vect_files, Errors &err);
     int LoadCNIConfigFileList(const std::string &elem, struct cni_network_list_conf **n_list);
     int InsertConfNameToAllPanes(struct cni_network_list_conf *n_list, std::set<std::string> &allPanes, Errors &err);
-    int InsertNewNetwork(struct cni_network_list_conf *n_list,
-                         std::map<std::string, std::unique_ptr<CNINetwork>> &newNets, const std::string &binDir,
-                         const std::string &vendorCNIDirPrefix, Errors &err);
     void ResetCNINetwork(std::map<std::string, std::unique_ptr<CNINetwork>> &newNets, Errors &err);
+    void UpdateDefaultNetwork();
 
     NoopNetworkPlugin m_noop;
     std::unique_ptr<CNINetwork> m_loNetwork { nullptr };
+
+    std::unique_ptr<CNINetwork> m_defaultNetwork { nullptr };
     CRIRuntimeServiceImpl *m_criImpl { nullptr };
     std::string m_nsenterPath;
-    std::string m_pluginDir;
-    std::string m_vendorCNIDirPrefix;
-    std::string m_binDir;
+    std::string m_confDir;
+    std::vector<std::string> m_binDirs;
+    std::string m_podCidr;
 
     pthread_rwlock_t m_netsLock = PTHREAD_RWLOCK_INITIALIZER;
-    std::map<std::string, std::unique_ptr<CNINetwork>> m_networks;
+
+    std::thread m_syncThread;
+    bool m_needFinish;
 };
 
 } // namespace Network

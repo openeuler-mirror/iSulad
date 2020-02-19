@@ -16,7 +16,7 @@
 
 #set -xe
 
-usage()
+function usage()
 {
     echo  "Usage: sh llt.sh [OPTIONS]"
     echo  "Use llt.sh to control llt operation"
