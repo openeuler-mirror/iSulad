@@ -157,12 +157,8 @@ bool rt_isula_detect(const char *runtime)
     return false;
 }
 
-static int create_process_json_file(const char *workdir, bool exec,
-                                    const char *exit_fifo, const char *control_fifo,
-                                    const char *stdin, const char *stdout, const char *stderr,
-                                    const char **runtime_args, size_t runtime_args_len, defs_process *process)
+static int create_process_json_file(const char *workdir, const shim_client_process_state *p)
 {
-    shim_client_process_state *p = NULL;
     struct parser_context ctx = {OPT_GEN_SIMPLIFY, 0};
     parser_error perr = NULL;
     char *data = NULL;
@@ -173,17 +169,6 @@ static int create_process_json_file(const char *workdir, bool exec,
         ERROR("failed make process.json full path");
         return -1;
     }
-
-    p = util_common_calloc_s(sizeof(shim_client_process_state));
-    p->exec = exec;
-    p->exit_fifo = (char *)exit_fifo;
-    p->control_fifo = (char *)control_fifo;
-    p->isulad_stdin = (char *)stdin;
-    p->isulad_stdout = (char *)stdout;
-    p->isulad_stderr = (char *)stderr;
-    p->runtime_args = (char **)runtime_args;
-    p->runtime_args_len = runtime_args_len;
-    copy_process(p, process);
 
     data = shim_client_process_state_generate_json(p, &ctx, &perr);
     if (data == NULL) {
@@ -200,7 +185,6 @@ static int create_process_json_file(const char *workdir, bool exec,
 
 out:
     UTIL_FREE_AND_SET_NULL(perr);
-    UTIL_FREE_AND_SET_NULL(p); /* field in p shall free by caller */
     UTIL_FREE_AND_SET_NULL(data);
 
     return retcode;
@@ -699,6 +683,7 @@ int rt_isula_create(const char *id, const char *runtime,
     size_t runtime_args_len = get_runtime_args(runtime, &runtime_args);
     int ret = 0;
     char workdir[PATH_MAX] = {0};
+    shim_client_process_state p = {0};
 
     if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
         INFO("make full workdir failed");
@@ -706,9 +691,17 @@ int rt_isula_create(const char *id, const char *runtime,
         goto out;
     }
 
-    ret = create_process_json_file(workdir, false, params->exit_fifo, NULL,
-                                   params->stdin, params->stdout, params->stderr, runtime_args,
-                                   runtime_args_len, config->process);
+    p.exit_fifo = (char *)params->exit_fifo;
+    p.open_tty = params->tty;
+    p.open_stdin = params->open_stdin;
+    p.isulad_stdin = (char *)params->stdin;
+    p.isulad_stdout = (char *)params->stdout;
+    p.isulad_stderr = (char *)params->stderr;
+    p.runtime_args = (char **)runtime_args;
+    p.runtime_args_len = runtime_args_len;
+    copy_process(&p, config->process);
+
+    ret = create_process_json_file(workdir, &p);
     if (ret != 0) {
         ERROR("%s: failed create json file", id);
         goto out;
@@ -860,6 +853,7 @@ int rt_isula_exec(const char *id, const char *runtime,
     int ret = 0;
     char bundle[PATH_MAX] = {0};
     int pid = 0;
+    shim_client_process_state p = {0};
 
     ret = snprintf(bundle, sizeof(bundle), "%s/%s", params->rootpath, id);
     if (ret < 0) {
@@ -885,9 +879,15 @@ int rt_isula_exec(const char *id, const char *runtime,
         goto out;
     }
 
-    ret = create_process_json_file(workdir, true, NULL, NULL,
-                                   params->console_fifos[0], params->console_fifos[1], params->console_fifos[2],
-                                   runtime_args, runtime_args_len, process);
+    p.exec = true;
+    p.isulad_stdin = (char *)params->console_fifos[0];
+    p.isulad_stdout = (char *)params->console_fifos[1];
+    p.isulad_stderr = (char *)params->console_fifos[2];
+    p.runtime_args = (char **)runtime_args;
+    p.runtime_args_len = runtime_args_len;
+    copy_process(&p, process);
+
+    ret = create_process_json_file(workdir, &p);
     if (ret != 0) {
         ERROR("%s: failed create exec json file");
         goto out;

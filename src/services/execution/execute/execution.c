@@ -870,6 +870,8 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     create_params.stdout = console_fifos[1];
     create_params.stderr = console_fifos[2];
     create_params.exit_fifo = exit_fifo;
+    create_params.tty = tty;
+    create_params.open_stdin = open_stdin;
 
     if (runtime_create(id, runtime, &create_params) != 0) {
         ret = -1;
