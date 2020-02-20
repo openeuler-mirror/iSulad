@@ -722,6 +722,13 @@ static int container_exec_cb(const container_exec_request *request, container_ex
             cc = ISULAD_ERR_EXEC;
             goto pack_response;
         }
+    } else {
+        if (cont->common_config->config->user != NULL) {
+            if (get_exec_user_info(cont, cont->common_config->config->user, &puser) != 0) {
+                cc = ISULAD_ERR_EXEC;
+                goto pack_response;
+            }
+        }
     }
 
     if (exec_prepare_console(cont, request, stdinfd, stdout_handler, fifos, &fifopath, &sync_fd, &thread_id)) {
