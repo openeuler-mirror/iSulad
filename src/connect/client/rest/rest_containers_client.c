@@ -330,7 +330,7 @@ static int unpack_create_response(const struct parsed_http_message *message, voi
         response->id = util_strdup_s(cresponse->id);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -364,7 +364,7 @@ static int unpack_start_response(const struct parsed_http_message *message, void
         start_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -455,7 +455,7 @@ static int unpack_list_response(const struct parsed_http_message *message, void 
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
     if (unpack_container_info_for_list_response(cresponse, response)) {
@@ -493,7 +493,7 @@ static int unpack_attach_response(const struct parsed_http_message *message, voi
         attach_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -527,7 +527,7 @@ static int unpack_resume_response(const struct parsed_http_message *message, voi
         resume_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -562,7 +562,7 @@ static int unpack_wait_response(const struct parsed_http_message *message, void 
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -830,7 +830,7 @@ static int unpack_stop_response(const struct parsed_http_message *message, void 
         stop_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -930,7 +930,7 @@ static int unpack_restart_response(const struct parsed_http_message *message, vo
         response->errmsg = util_strdup_s(cres->errmsg);
     }
     ret = (cres->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -1043,7 +1043,7 @@ static int unpack_update_response(const struct parsed_http_message *message, voi
         update_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -1150,7 +1150,7 @@ static int unpack_version_response(const struct parsed_http_message *message, vo
         version_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -1249,7 +1249,7 @@ static int unpack_pause_response(const struct parsed_http_message *message, void
         pause_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -1349,7 +1349,7 @@ static int unpack_kill_response(const struct parsed_http_message *message, void 
         kill_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -1449,7 +1449,7 @@ static int unpack_remove_response(const struct parsed_http_message *message, voi
         delete_response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -1554,7 +1554,7 @@ static int unpack_inspect_response(const struct parsed_http_message *message, vo
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -1704,7 +1704,7 @@ static int unpack_exec_response(const struct parsed_http_message *message, void 
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
