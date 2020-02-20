@@ -843,6 +843,12 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
+    if (save_oci_config(id, cont->root_path, oci_spec) != 0) {
+        ERROR("Failed to save container settings");
+        ret = -1;
+        goto close_exit_fd;
+    }
+
     start_timeout = conf_get_start_timeout();
     if (cont->common_config->config != NULL) {
         tty = cont->common_config->config->tty;
