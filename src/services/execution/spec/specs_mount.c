@@ -2090,6 +2090,7 @@ static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
         goto err_out;
     }
 
+    free(c_root_path);
     return spath;
 err_out:
     free(spath);
