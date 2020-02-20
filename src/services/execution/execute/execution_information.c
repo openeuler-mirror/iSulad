@@ -1216,6 +1216,18 @@ static int pack_inspect_general_data(const container_t *cont, container_inspect 
     if (cont->common_config->resolv_conf_path != NULL) {
         inspect->resolv_conf_path = util_strdup_s(cont->common_config->resolv_conf_path);
     }
+    if (cont->common_config->mount_label != NULL) {
+        inspect->mount_label = util_strdup_s(cont->common_config->mount_label);
+    }
+    if (cont->common_config->process_label != NULL) {
+        inspect->process_label = util_strdup_s(cont->common_config->process_label);
+    }
+
+    if (cont->common_config->seccomp_profile != NULL) {
+        inspect->seccomp_profile = util_strdup_s(cont->common_config->seccomp_profile);
+    }
+
+    inspect->no_new_privileges = cont->common_config->no_new_privileges;
 
     if (mount_point_to_inspect(cont, inspect) != 0) {
         ERROR("Failed to transform to mount point");

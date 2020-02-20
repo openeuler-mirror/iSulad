@@ -14,13 +14,12 @@
  ******************************************************************************/
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
 #include <stdarg.h>
 
 #include "libisulad.h"
-#include "log.h"
-#include "pack_config.h"
 #include "utils.h"
 
 // record the errno

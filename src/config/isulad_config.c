@@ -1862,6 +1862,8 @@ int merge_json_confs_into_global(struct service_arguments *args)
         goto out;
     }
 
+    args->json_confs->selinux_enabled = tmp_json_confs->selinux_enabled;
+
 out:
     free(err);
     free_isulad_daemon_configs(tmp_json_confs);

@@ -27,9 +27,11 @@ int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, c
 int refill_oci_process_capabilities(defs_process_capabilities **caps,
                                     const char **src_caps, size_t src_caps_len);
 int merge_sysctls(oci_runtime_spec *oci_spec, const json_map_string_string *sysctls);
-int merge_no_new_privileges(oci_runtime_spec *oci_spec, const host_config *host_spec);
+int merge_no_new_privileges(oci_runtime_spec *oci_spec, bool value);
 int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_config *host_spec);
-int merge_seccomp(oci_runtime_spec *oci_spec, const host_config *host_spec);
+int merge_seccomp(oci_runtime_spec *oci_spec, const char *seccomp_profile);
+int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec,
+                  const char **label_opts, size_t label_opts_len);
 
 #endif
 

@@ -1162,76 +1162,83 @@ erro_out:
     free_host_config_host_channel(host_channel);
     return NULL;
 }
+static int append_no_new_privileges_to_security_opts(host_config *dstconfig)
+{
+    int ret = 0;
+    size_t new_size, old_size;
+    char **tmp_security_opt = NULL;
 
-static int parse_seccomp(const isula_host_config_t *srcconfig, host_config *dstconfig)
+    if (dstconfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
+        COMMAND_ERROR("Out of memory");
+        return -1;
+    }
+    new_size = (dstconfig->security_opt_len + 1) * sizeof(char *);
+    old_size = dstconfig->security_opt_len * sizeof(char *);
+    ret = mem_realloc((void **)(&tmp_security_opt), new_size, (void *)dstconfig->security_opt, old_size);
+    if (ret != 0) {
+        COMMAND_ERROR("Out of memory");
+        return ret;
+    }
+    dstconfig->security_opt = tmp_security_opt;
+    dstconfig->security_opt[dstconfig->security_opt_len++] = util_strdup_s("no-new-privileges");
+
+    return ret;
+}
+
+static int append_seccomp_to_security_opts(const char *full_opt, const char *seccomp_file, host_config *dstconfig)
 {
     int ret = 0;
     int nret = 0;
-    int seccomp_count = 0;
-    size_t i = 0;
     size_t size = 0;
-    char *seccomp_file = NULL;
     char *seccomp_json = NULL;
     char *tmp_str = NULL;
     docker_seccomp *seccomp_spec = NULL;
     parser_error err = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
 
-    for (i = 0; i < srcconfig->security_len; i++) {
-        // add seccomp
-        if (strncmp(srcconfig->security[i], "seccomp=", strlen("seccomp=")) == 0) {
-            seccomp_file = srcconfig->security[i] + strlen("seccomp") + 1;
-            if (strcmp(seccomp_file, "unconfined") == 0) {
-                dstconfig->security_opt[seccomp_count++] = util_strdup_s(srcconfig->security[i]);
-                dstconfig->security_opt_len++;
-                continue;
-            }
-            seccomp_spec = get_seccomp_security_opt_spec(seccomp_file);
-            if (seccomp_spec == NULL) {
-                ERROR("Failed to parse docker format seccomp specification file \"%s\", error message: %s",
-                      seccomp_file, err);
-                COMMAND_ERROR("failed to parse seccomp file: %s", seccomp_file);
-                ret = -1;
-                goto out;
-            }
-
-            seccomp_json = docker_seccomp_generate_json(seccomp_spec, &ctx, &err);
-            if (seccomp_json == NULL) {
-                COMMAND_ERROR("failed to generate seccomp json!");
-                ret = -1;
-                goto out;
-            }
-
-            free_docker_seccomp(seccomp_spec);
-            seccomp_spec = NULL;
-            if (strlen(seccomp_json) > (SIZE_MAX - strlen("seccomp=")) - 1) {
-                COMMAND_ERROR("seccomp json is too big!");
-                ret = -1;
-                goto out;
-            }
-            size = strlen("seccomp=") + strlen(seccomp_json) + 1;
-            tmp_str = util_common_calloc_s(size);
-            if (tmp_str == NULL) {
-                COMMAND_ERROR("out of memory");
-                ret = -1;
-                goto out;
-            }
-            nret = snprintf(tmp_str, size, "seccomp=%s", seccomp_json);
-            if (nret < 0 || (size_t)nret >= size) {
-                COMMAND_ERROR("failed to sprintf buffer!");
-                ret = -1;
-                goto out;
-            }
-            dstconfig->security_opt[seccomp_count++] = util_strdup_s(tmp_str);
-            dstconfig->security_opt_len++;
-            free(tmp_str);
-            tmp_str = NULL;
-            free(err);
-            err = NULL;
-            free(seccomp_json);
-            seccomp_json = NULL;
-        }
+    if (strcmp(seccomp_file, "unconfined") == 0) {
+        dstconfig->security_opt[dstconfig->security_opt_len] = util_strdup_s(full_opt);
+        dstconfig->security_opt_len++;
+        return 0;
     }
+
+    seccomp_spec = get_seccomp_security_opt_spec(seccomp_file);
+    if (seccomp_spec == NULL) {
+        ERROR("Failed to parse docker format seccomp specification file \"%s\", error message: %s",
+              seccomp_file, err);
+        COMMAND_ERROR("failed to parse seccomp file: %s", seccomp_file);
+        ret = -1;
+        goto out;
+    }
+
+    seccomp_json = docker_seccomp_generate_json(seccomp_spec, &ctx, &err);
+    if (seccomp_json == NULL) {
+        COMMAND_ERROR("failed to generate seccomp json!");
+        ret = -1;
+        goto out;
+    }
+
+    if (strlen(seccomp_json) > (SIZE_MAX - strlen("seccomp=")) - 1) {
+        COMMAND_ERROR("seccomp json is too big!");
+        ret = -1;
+        goto out;
+    }
+    size = strlen("seccomp=") + strlen(seccomp_json) + 1;
+    tmp_str = util_common_calloc_s(size);
+    if (tmp_str == NULL) {
+        COMMAND_ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+    nret = snprintf(tmp_str, size, "seccomp=%s", seccomp_json);
+    if (nret < 0 || nret >= size) {
+        COMMAND_ERROR("failed to sprintf buffer!");
+        ret = -1;
+        goto out;
+    }
+    dstconfig->security_opt[dstconfig->security_opt_len] = util_strdup_s(tmp_str);
+    dstconfig->security_opt_len++;
+
 out:
     free(seccomp_json);
     free(tmp_str);
@@ -1241,34 +1248,66 @@ out:
     return ret;
 }
 
-static int parse_no_new_privileges(const isula_host_config_t *srcconfig, host_config *dstconfig)
+static int append_selinux_label_to_security_opts(const char *selinux_label, host_config *dstconfig)
 {
     int ret = 0;
-    size_t i = 0;
     size_t new_size;
     size_t old_size;
     char **tmp_security_opt = NULL;
 
+    if (dstconfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
+        COMMAND_ERROR("Too large security options");
+        return -1;
+    }
+    new_size = (dstconfig->security_opt_len + 1) * sizeof(char *);
+    old_size = dstconfig->security_opt_len * sizeof(char *);
+    ret = mem_realloc((void **)(&tmp_security_opt), new_size, (void *)dstconfig->security_opt, old_size);
+    if (ret != 0) {
+        COMMAND_ERROR("Out of memory");
+        return ret;
+    }
+    dstconfig->security_opt = tmp_security_opt;
+    dstconfig->security_opt[dstconfig->security_opt_len++] = util_strdup_s(selinux_label);
+
+    return ret;
+}
+
+static int parse_security_opts(const isula_host_config_t *srcconfig, host_config *dstconfig)
+{
+    int ret = 0;
+    size_t i;
+    char **items = NULL;
+
     for (i = 0; i < srcconfig->security_len; i++) {
-        // no new privileges
-        if (strcmp(srcconfig->security[i], "no-new-privileges") == 0) {
-            if (dstconfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
-                COMMAND_ERROR("Out of memory");
-                return -1;
+        items = util_string_split_n(srcconfig->security[i], '=', 2);
+        if (util_array_len((const char **)items) == 1) {
+            if (strcmp(items[0], "no-new-privileges") != 0) {
+                ret = -1;
+            } else {
+                ret = append_no_new_privileges_to_security_opts(dstconfig);
             }
-            new_size = (dstconfig->security_opt_len + 1) * sizeof(char *);
-            old_size = dstconfig->security_opt_len * sizeof(char *);
-            ret = mem_realloc((void **)(&tmp_security_opt), new_size, (void *)dstconfig->security_opt, old_size);
-            if (ret != 0) {
-                COMMAND_ERROR("Out of memory");
-                return ret;
+        } else {
+            if (strcmp(items[0], "seccomp") == 0) {
+                ret = append_seccomp_to_security_opts(srcconfig->security[i], items[1], dstconfig);
+            } else if (strcmp(items[0], "label") == 0) {
+                ret = append_selinux_label_to_security_opts(srcconfig->security[i], dstconfig);
+            } else {
+                ret = -1;
             }
-            dstconfig->security_opt = tmp_security_opt;
-            dstconfig->security_opt[dstconfig->security_opt_len++] = util_strdup_s(srcconfig->security[i]);
-            break;
         }
+
+        if (ret != 0) {
+            COMMAND_ERROR("Invalid --security-opt: %s", srcconfig->security[i]);
+            ret = -1;
+            goto out;
+        }
+
+        util_free_array(items);
+        items = NULL;
     }
 
+out:
+    util_free_array(items);
     return ret;
 }
 
@@ -1615,13 +1654,8 @@ int generate_security(host_config **dstconfig, const isula_host_config_t *srccon
         goto out;
     }
 
-    ret = parse_seccomp(srcconfig, (*dstconfig));
-    if (ret < 0) {
-        goto out;
-    }
-
-    ret = parse_no_new_privileges(srcconfig, (*dstconfig));
-    if (ret < 0) {
+    if (parse_security_opts(srcconfig, (*dstconfig)) != 0) {
+        ret = -1;
         goto out;
     }
 

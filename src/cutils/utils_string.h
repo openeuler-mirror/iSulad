@@ -47,6 +47,8 @@ char **util_string_split(const char *src_str, char _sep);
 // note that every delimiter bytes  is considered to be a single delimiter
 char **util_string_split_multi(const char *src_str, char delim);
 
+char **util_string_split_n(const char *src_str, char delim, size_t n);
+
 const char *str_skip_str(const char *str, const char *skip);
 
 char *util_string_delchar(const char *ss, unsigned char c);

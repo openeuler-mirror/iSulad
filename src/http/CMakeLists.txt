@@ -16,7 +16,7 @@ target_include_directories(libhttpclient PUBLIC
 
 # set libhttpclient FLAGS
 set_target_properties(libhttpclient PROPERTIES PREFIX "")
-target_link_libraries(libhttpclient ${HTTP_PARSER_LIBRARY} ${CURL_LIBRARY} ${LIBSECUREC_LIBRARY})
+target_link_libraries(libhttpclient ${HTTP_PARSER_LIBRARY} ${CURL_LIBRARY})
 
 if (ISULAD_GCOV)
     target_link_libraries(libhttpclient -lgcov)

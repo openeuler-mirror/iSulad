@@ -1,5 +1,5 @@
-%global _version 1.1.11
-%global _release 20200213.091554.git2cbd4087
+%global _version 1.1.12
+%global _release 20200220.130857.git34c343a5
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -30,17 +30,17 @@ Requires(preun): initscripts
 %endif
 
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
-BuildRequires: grpc grpc-devel protobuf-devel
+BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
 BuildRequires: http-parser-devel
-BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
+BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
 Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf yajl
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
-Requires:      libcap libwebsockets
+Requires:      libcap libselinux libwebsockets
 Requires:      systemd
 
 %description

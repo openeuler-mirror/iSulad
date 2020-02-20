@@ -35,6 +35,7 @@
 #include "containers_store.h"
 #include "namespace.h"
 #include "path.h"
+#include "selinux_label.h"
 
 static int write_hostname_to_file(const char *rootfs, const char *hostname)
 {

@@ -28,6 +28,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -515,9 +516,9 @@ static int console_init(process_t *p)
         return SHIM_SYS_ERR(errno);
     }
 
-    memset(&addr, 0, sizeof(addr));
+    (void)memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, p->console_sock_path, strlen(p->console_sock_path));
+    (void)strcpy(addr.sun_path, p->console_sock_path);
 
     // bind
     ret = bind(fd, (struct sockaddr*)&addr, sizeof(addr));

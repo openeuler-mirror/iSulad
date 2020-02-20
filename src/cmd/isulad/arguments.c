@@ -157,6 +157,7 @@ int service_arguments_init(struct service_arguments *args)
     args->default_ulimit = NULL;
     args->default_ulimit_len = 0;
     args->json_confs->websocket_server_listening_port = DEFAULT_WEBSOCKET_SERVER_LISTENING_PORT;
+    args->json_confs->selinux_enabled = false;
 
     ret = 0;
 
