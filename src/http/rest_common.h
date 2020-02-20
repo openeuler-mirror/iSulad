@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-// Response status from restful server 
+// Response status from restful server
 #define RESTFUL_RES_ERROR 0
 #define RESTFUL_RES_OK 200
 #define RESTFUL_RES_NOTFOUND 404

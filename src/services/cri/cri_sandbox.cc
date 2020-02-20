@@ -330,11 +330,11 @@ container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
 
     std::string sandboxName = CRINaming::MakeSandboxName(config.metadata());
     create_request->id = util_strdup_s(sandboxName.c_str());
-    
+
     if (!runtimeHandler.empty()) {
         create_request->runtime = util_strdup_s(runtimeHandler.c_str());
     }
-    
+
     create_request->image = util_strdup_s(image.c_str());
 
     create_request->hostconfig = host_config_generate_json(hostconfig, &ctx, &perror);
