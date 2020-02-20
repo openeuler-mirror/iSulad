@@ -37,6 +37,10 @@ int devmapper_parse_options(struct graphdriver *driver, const char **options, si
 {
     size_t i = 0;
 
+    if (driver == NULL) {
+        return -1;
+    }
+
     for (i = 0; options != NULL && i < options_len; i++) {
         char *dup = NULL;
         char *p = NULL;
@@ -69,8 +73,9 @@ int devmapper_parse_options(struct graphdriver *driver, const char **options, si
         } else if (strcasecmp(dup, "dm.min_free_space") == 0) {
             long converted = 0;
             ret = util_parse_percent_string(val, &converted);
-            if (ret != 0) {
+            if (ret != 0 || converted == 100) {
                 isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
+                ret = -1;
             }
         } else if (strcasecmp(dup, "dm.basesize") == 0) {
             int64_t converted = 0;

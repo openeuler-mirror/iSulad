@@ -29,6 +29,8 @@ public:
     MOCK_METHOD1(GetUlimit, int(host_config_ulimits_element ***ulimit));
     MOCK_METHOD0(GetCgroupParent, char *(void));
     MOCK_METHOD0(GetUmask, char *(void));
+    MOCK_METHOD0(ConfGetGraphRootpath, char *(void));
+    MOCK_METHOD0(ConfGetIsuladStorageDriver, char *(void));
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf* mock);
