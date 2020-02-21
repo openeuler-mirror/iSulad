@@ -51,13 +51,13 @@ TEST_F(SELinuxLabelUnitTest, test_init_label_normal)
     const char *full_label[] =  { "user:fakeuser", "level:s0:c1,c2", "type:faketype", "role:fakerole" };
 
     std::vector<std::tuple<const char **, size_t, int, std::string, std::string>> normal {
-        { disable_label, 1, 0, "", ""},
-        { user_label, 1, 0, "fakeuser:system_r:container_t:s0", "fakeuser:object_r:container_file_t:s0"},
-        { role_label, 1, 0, "system_u:fakerole:container_t:s0", "system_u:object_r:container_file_t:s0"},
-        { type_label, 1, 0, "system_u:system_r:faketype:s0", "system_u:object_r:container_file_t:s0"},
-        { level_label, 1, 0, "system_u:system_r:container_t:s0:c1,c2", "system_u:object_r:container_file_t:s0:c1,c2"},
-        { full_label, 4, 0, "fakeuser:fakerole:faketype:s0:c1,c2",  "fakeuser:object_r:container_file_t:s0:c1,c2"},
-        { nullptr, 0, 0, "system_u:system_r:container_t:s0", "system_u:object_r:container_file_t:s0"},
+        std::make_tuple(disable_label, 1, 0, "", ""),
+        std::make_tuple(user_label, 1, 0, "fakeuser:system_r:container_t:s0", "fakeuser:object_r:container_file_t:s0"),
+        std::make_tuple(role_label, 1, 0, "system_u:fakerole:container_t:s0", "system_u:object_r:container_file_t:s0"),
+        std::make_tuple(type_label, 1, 0, "system_u:system_r:faketype:s0", "system_u:object_r:container_file_t:s0"),
+        std::make_tuple(level_label, 1, 0, "system_u:system_r:container_t:s0:c1,c2", "system_u:object_r:container_file_t:s0:c1,c2"),
+        std::make_tuple(full_label, 4, 0, "fakeuser:fakerole:faketype:s0:c1,c2",  "fakeuser:object_r:container_file_t:s0:c1,c2"),
+        std::make_tuple(nullptr, 0, 0, "system_u:system_r:container_t:s0", "system_u:object_r:container_file_t:s0"),
     };
 
     if (!is_selinux_enabled()) {
@@ -95,8 +95,8 @@ TEST_F(SELinuxLabelUnitTest, test_init_label_abnormal)
     const char *invalid_value_label[] =  { "user:" };
 
     std::vector<std::tuple<const char **, size_t, int, std::string, std::string>> normal {
-        { invalid_key_label, 1, -1, "", ""},
-        { invalid_value_label, 1, -1, "", ""},
+        std::make_tuple(invalid_key_label, 1, -1, "", ""),
+        std::make_tuple(invalid_value_label, 1, -1, "", ""),
     };
 
     if (!is_selinux_enabled()) {
@@ -174,10 +174,10 @@ protected:
 TEST_F(SELinuxRelabelUnitTest, test_relabel_normal)
 {
     std::vector<std::tuple<std::string, bool, int, std::string>> normal {
-        { "system_u:object_r:container_file_t:s0:c100,c200", false, 0, "system_u:object_r:container_file_t:s0:c100,c200" },
-        { "system_u:object_r:container_file_t:s0:c300,c300", false, 0, "system_u:object_r:container_file_t:s0:c300" },
-        { "system_u:object_r:container_file_t:s0:c100,c200", true, 0, "system_u:object_r:container_file_t:s0" },
-        { "system_u:object_r:container_file_t:s0:c300,c300", true, 0, "system_u:object_r:container_file_t:s0" },
+        std::make_tuple("system_u:object_r:container_file_t:s0:c100,c200", false, 0, "system_u:object_r:container_file_t:s0:c100,c200" ),
+        std::make_tuple("system_u:object_r:container_file_t:s0:c300,c300", false, 0, "system_u:object_r:container_file_t:s0:c300" ),
+        std::make_tuple("system_u:object_r:container_file_t:s0:c100,c200", true, 0, "system_u:object_r:container_file_t:s0" ),
+        std::make_tuple("system_u:object_r:container_file_t:s0:c300,c300", true, 0, "system_u:object_r:container_file_t:s0" ),
     };
 
     if (!is_selinux_enabled()) {
@@ -198,17 +198,21 @@ TEST_F(SELinuxRelabelUnitTest, test_relabel_abnormal)
 {
     std::vector<std::tuple<std::string, std::string, bool, int>> abnormal {
         // exclude path test
-        { "/", "system_u:object_r:root_t:s0", true, -1 },
-        { "/usr", "system_u:object_r:usr_t:s0", true, -1 },
-        { "/etc", "system_u:object_r:etc_t:s0", true, -1 },
-        { "/tmp", "system_u:object_r:tmp_t:s0", true, -1 },
-        { "/home", "system_u:object_r:home_root_t:s0", true, -1 },
-        { "/run", "system_u:object_r:var_run_t:s0", true, -1 },
-        { "/var", "system_u:object_r:var_t:s0", true, -1 },
-        { "/root", "system_u:object_r:admin_home_t:s0", true, -1 },
+        std::make_tuple("/", "system_u:object_r:root_t:s0", true, -1 ),
+        std::make_tuple("/usr", "system_u:object_r:usr_t:s0", true, -1 ),
+        std::make_tuple("/etc", "system_u:object_r:etc_t:s0", true, -1 ),
+        std::make_tuple("/tmp", "system_u:object_r:tmp_t:s0", true, -1 ),
+        std::make_tuple("/home", "system_u:object_r:home_root_t:s0", true, -1 ),
+        std::make_tuple("/run", "system_u:object_r:var_run_t:s0", true, -1 ),
+        std::make_tuple("/var", "system_u:object_r:var_t:s0", true, -1 ),
+        std::make_tuple("/root", "system_u:object_r:admin_home_t:s0", true, -1 ),
         // bad prefix test
-        { "/usr/xxx", "system_u:object_r:usr_t:s0", true, -1 },
+        std::make_tuple("/usr/xxx", "system_u:object_r:usr_t:s0", true, -1 ),
     };
+
+    if (!is_selinux_enabled()) {
+        SUCCEED() << "WARNING: The current machine does not support SELinux";
+    }
 
     for (const auto &elem : abnormal) {
         ASSERT_EQ(relabel(std::get<0>(elem).c_str(), std::get<1>(elem).c_str(), std::get<2>(elem)), std::get<3>(elem));
