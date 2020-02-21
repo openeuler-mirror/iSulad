@@ -632,9 +632,10 @@ out:
 
 static bool valid_options(const char *opt)
 {
+    size_t i;
     const char *opts[] = { "disable", "type", "user", "role", "level" };
 
-    for (size_t i = 0; i < sizeof(opts) / sizeof(char *); i++) {
+    for (i = 0; i < sizeof(opts) / sizeof(char *); i++) {
         if (strcmp(opt, opts[i]) == 0) {
             return true;
         }
@@ -768,9 +769,10 @@ int init_label(const char **label_opts, size_t label_opts_len, char **dst_proces
     }
 
     if (process_label != NULL) {
+        size_t i;
         pcon = context_new(process_label);
         mcon = context_new(mount_label);
-        for (size_t i = 0; i < label_opts_len; i++) {
+        for (i = 0; i < label_opts_len; i++) {
             if (strcmp(label_opts[i], "disable") == 0) {
                 goto out;
             }
