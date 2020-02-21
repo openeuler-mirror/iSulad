@@ -62,6 +62,7 @@ TEST_F(SELinuxLabelUnitTest, test_init_label_normal)
 
     if (!is_selinux_enabled()) {
         SUCCEED() << "WARNING: The current machine does not support SELinux";
+        return;
     }
 
     for (const auto &elem : normal) {
@@ -101,6 +102,7 @@ TEST_F(SELinuxLabelUnitTest, test_init_label_abnormal)
 
     if (!is_selinux_enabled()) {
         SUCCEED() << "WARNING: The current machine does not support SELinux";
+        return;
     }
 
     for (const auto &elem : normal) {
@@ -174,14 +176,15 @@ protected:
 TEST_F(SELinuxRelabelUnitTest, test_relabel_normal)
 {
     std::vector<std::tuple<std::string, bool, int, std::string>> normal {
-        std::make_tuple("system_u:object_r:container_file_t:s0:c100,c200", false, 0, "system_u:object_r:container_file_t:s0:c100,c200" ),
-        std::make_tuple("system_u:object_r:container_file_t:s0:c300,c300", false, 0, "system_u:object_r:container_file_t:s0:c300" ),
-        std::make_tuple("system_u:object_r:container_file_t:s0:c100,c200", true, 0, "system_u:object_r:container_file_t:s0" ),
-        std::make_tuple("system_u:object_r:container_file_t:s0:c300,c300", true, 0, "system_u:object_r:container_file_t:s0" ),
+        std::make_tuple("system_u:object_r:container_file_t:s0:c100,c200", false, 0, "system_u:object_r:container_file_t:s0:c100,c200"),
+        std::make_tuple("system_u:object_r:container_file_t:s0:c300,c300", false, 0, "system_u:object_r:container_file_t:s0:c300"),
+        std::make_tuple("system_u:object_r:container_file_t:s0:c100,c200", true, 0, "system_u:object_r:container_file_t:s0"),
+        std::make_tuple("system_u:object_r:container_file_t:s0:c300,c300", true, 0, "system_u:object_r:container_file_t:s0"),
     };
 
     if (!is_selinux_enabled()) {
         SUCCEED() << "WARNING: The current machine does not support SELinux";
+        return;
     }
 
     for (const auto &elem : normal) {
@@ -198,23 +201,37 @@ TEST_F(SELinuxRelabelUnitTest, test_relabel_abnormal)
 {
     std::vector<std::tuple<std::string, std::string, bool, int>> abnormal {
         // exclude path test
-        std::make_tuple("/", "system_u:object_r:root_t:s0", true, -1 ),
-        std::make_tuple("/usr", "system_u:object_r:usr_t:s0", true, -1 ),
-        std::make_tuple("/etc", "system_u:object_r:etc_t:s0", true, -1 ),
-        std::make_tuple("/tmp", "system_u:object_r:tmp_t:s0", true, -1 ),
-        std::make_tuple("/home", "system_u:object_r:home_root_t:s0", true, -1 ),
-        std::make_tuple("/run", "system_u:object_r:var_run_t:s0", true, -1 ),
-        std::make_tuple("/var", "system_u:object_r:var_t:s0", true, -1 ),
-        std::make_tuple("/root", "system_u:object_r:admin_home_t:s0", true, -1 ),
+        std::make_tuple("/", "system_u:object_r:root_t:s0", true, -1),
+        std::make_tuple("/usr", "system_u:object_r:usr_t:s0", true, -1),
+        std::make_tuple("/etc", "system_u:object_r:etc_t:s0", true, -1),
+        std::make_tuple("/tmp", "system_u:object_r:tmp_t:s0", true, -1),
+        std::make_tuple("/home", "system_u:object_r:home_root_t:s0", true, -1),
+        std::make_tuple("/run", "system_u:object_r:var_run_t:s0", true, -1),
+        std::make_tuple("/var", "system_u:object_r:var_t:s0", true, -1),
+        std::make_tuple("/root", "system_u:object_r:admin_home_t:s0", true, -1),
         // bad prefix test
-        std::make_tuple("/usr/xxx", "system_u:object_r:usr_t:s0", true, -1 ),
+        std::make_tuple("/usr/xxx", "system_u:object_r:usr_t:s0", true, -1),
     };
 
     if (!is_selinux_enabled()) {
         SUCCEED() << "WARNING: The current machine does not support SELinux";
+        return;
     }
 
     for (const auto &elem : abnormal) {
         ASSERT_EQ(relabel(std::get<0>(elem).c_str(), std::get<1>(elem).c_str(), std::get<2>(elem)), std::get<3>(elem));
     }
 }
+
+TEST_F(SELinuxRelabelUnitTest, test_get_disable_security_opt)
+{
+    char **labels = nullptr;
+    size_t labels_len;
+
+    ASSERT_EQ(get_disable_security_opt(&labels, &labels_len), 0);
+    ASSERT_EQ(labels_len, 1);
+    ASSERT_NE(labels[0], "label=disable");
+
+    util_free_array(labels);
+}
+
