@@ -156,6 +156,12 @@
         "exec": {
             "type": "boolean"
         },
+        "open_tty": {
+            "type": "boolean"
+        },
+        "open_stdin": {
+            "type": "boolean"
+        },
         "isuladStdin": {
             "type": "string"
         },

@@ -37,6 +37,8 @@ typedef struct _rt_create_params_t {
     const char *stdout;
     const char *stderr;
     const char *exit_fifo;
+    bool tty;
+    bool open_stdin;
 } rt_create_params_t;
 
 
