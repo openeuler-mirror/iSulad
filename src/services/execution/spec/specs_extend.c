@@ -589,11 +589,12 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
             userfound = b_user_found(user, pwbufp);
             // Take the first match as valid user
             if (userfound) {
+                // oci spec donot use username spec on linux
                 free(puser->username);
-                puser->username = util_strdup_s(pwbufp->pw_name);
+                puser->username = NULL;
                 puser->uid = pwbufp->pw_uid;
                 puser->gid = pwbufp->pw_gid;
-                *matched_username = puser->username;
+                *matched_username = util_strdup_s(pwbufp->pw_name);
                 break;
             }
             errval = fgetpwent_r(f_passwd, &pw, buf, sizeof(buf), &pwbufp);
@@ -789,6 +790,7 @@ static int get_exec_user(const char *username, FILE *f_passwd, FILE *f_group, de
     }
 
 cleanup:
+    free(matched_username);
     free(tmp);
     return ret;
 }
