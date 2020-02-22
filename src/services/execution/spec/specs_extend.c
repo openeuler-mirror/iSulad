@@ -88,6 +88,10 @@ MERGE_HOOKS_ITEM_DEF(poststop)
 
 int merge_hooks(oci_runtime_spec_hooks *dest, oci_runtime_spec_hooks *src)
 {
+    if (dest == NULL || src == NULL) {
+        return -1;
+    }
+
     if (merge_prestart_conf(dest, src) || merge_poststart_conf(dest, src) || merge_poststop_conf(dest, src)) {
         return -1;
     }
