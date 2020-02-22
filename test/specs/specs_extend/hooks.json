@@ -1,0 +1,38 @@
+{
+    "prestart": [
+            {
+                "path": "/home/hooks/start.bash",
+                "args": ["arg0", "arg1", "arg2"],
+                "timeout": 40,
+                "env":  [ "key1=value1"]
+            }
+        ],
+    "poststart": [
+            {
+                "path": "/home/hooks/post1.bash",
+                "args": ["arg5", "arg6", "arg7"],
+                "timeout": 60,
+                "env":  [ "key2=value221"]
+            },
+            {
+                "path": "/home/hooks/post2.bash",
+                "args": ["arg51", "arg61", "arg71"],
+                "timeout": 61,
+                "env":  [ "key3=value3"]
+            }
+        ],
+    "poststop": [
+            {
+                "path": "/home/hooks/stop1.bash",
+                "args": ["arg11", "arg12", "arg13"],
+                "timeout": 60,
+                "env":  [ "key2=value221"]
+            },
+            {
+                "path": "/home/hooks/stop2.bash",
+                "args": ["arg52", "arg62", "arg72"],
+                "timeout": 62,
+                "env":  [ "key4=value4"]
+            }
+    ]
+}
