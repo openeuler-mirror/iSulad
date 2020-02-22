@@ -668,9 +668,11 @@ static int open_generic_io(process_t *p)
 static void adapt_for_isulad_stdin(process_t *p)
 {
     // iSulad: close stdin pipe if we do not want open_stdin with container stdin just like lxc
-    if (p->shim_io != NULL && p->shim_io->in != -1 && !file_exists(p->state->isulad_stdin)) {
-        close(p->shim_io->in);
-        p->shim_io->in = -1;
+    if (!p->state->open_stdin && !file_exists(p->state->isulad_stdin)) {
+        if (p->shim_io != NULL && p->shim_io->in != -1) {
+            close(p->shim_io->in);
+            p->shim_io->in = -1;
+        }
     }
 }
 
