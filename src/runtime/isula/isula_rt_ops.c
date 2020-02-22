@@ -481,7 +481,7 @@ out:
 
 static int runtime_call_delete_force(const char *workdir, const char *runtime, const char *id)
 {
-    const char *opts[1] = {"-f"};
+    const char *opts[1] = {"--force"};
     return runtime_call_simple(workdir, runtime, "delete", opts, 1, id);
 }
 
