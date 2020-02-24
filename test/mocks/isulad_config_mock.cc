@@ -97,3 +97,18 @@ char *conf_get_isulad_storage_driver()
     }
     return nullptr;
 }
+
+int isulad_server_conf_rdlock()
+{
+    return 0;
+}
+
+int isulad_server_conf_unlock()
+{
+    return 0;
+}
+
+struct service_arguments *conf_get_server_conf()
+{
+    return NULL;
+}
