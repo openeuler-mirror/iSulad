@@ -41,3 +41,8 @@ bool has_mount_for(container_t *cont, const char *mpath)
     }
     return false;
 }
+
+int container_read_proc(uint32_t pid, container_pid_t *pid_info)
+{
+    return 0;
+}

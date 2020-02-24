@@ -247,6 +247,10 @@ static int get_runtime_args(const char *runtime, const char ***args)
     defs_map_string_object_runtimes *runtimes = NULL;
     size_t i = 0;
 
+    if (runtime == NULL) {
+        return 0;
+    }
+
     if (isulad_server_conf_rdlock()) {
         ERROR("failed to lock server config");
         goto out;
@@ -677,13 +681,20 @@ out:
 int rt_isula_create(const char *id, const char *runtime,
                     const rt_create_params_t *params)
 {
-    oci_runtime_spec *config = params->oci_config_data;
+    oci_runtime_spec *config = NULL;
     const char *cmd = NULL;
     const char **runtime_args = NULL;
-    size_t runtime_args_len = get_runtime_args(runtime, &runtime_args);
+    size_t runtime_args_len = 0;
     int ret = 0;
     char workdir[PATH_MAX] = {0};
     shim_client_process_state p = {0};
+
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
+    config = params->oci_config_data;
+    runtime_args_len = get_runtime_args(runtime, &runtime_args);
 
     if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
         INFO("make full workdir failed");
@@ -727,6 +738,10 @@ int rt_isula_start(const char *id, const char *runtime,
     pid_t pid = 0;
     int ret = 0;
 
+    if (id == NULL || runtime == NULL || params == NULL || pid_info == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
     if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
         ERROR("%s: missing shim workdir", id);
         return -1;
@@ -772,6 +787,16 @@ int rt_isula_clean_resource(const char *id, const char *runtime,
 {
     char workdir[PATH_MAX] = {0};
 
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
+
+    if (params->statepath == NULL) {
+        ERROR("missing state path");
+        return -1;
+    }
+
     if (snprintf(workdir, sizeof(workdir), "%s/%s", params->statepath, id) < 0) {
         ERROR("failed get shim workdir");
         return -1;
@@ -796,6 +821,14 @@ int rt_isula_rm(const char *id, const char *runtime, const rt_rm_params_t *param
 {
     char libdir[PATH_MAX] = {0};
 
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
+    if (params->rootpath == NULL) {
+        ERROR("missing root path");
+        return -1;
+    }
     if (snprintf(libdir, sizeof(libdir), "%s/%s", params->rootpath, id) < 0) {
         ERROR("failed get shim workdir");
         return -1;
@@ -845,15 +878,22 @@ int rt_isula_exec(const char *id, const char *runtime,
                   const rt_exec_params_t *params, int *exit_code)
 {
     char *exec_id = NULL;
-    defs_process *process = params->spec;
+    defs_process *process = NULL;
     const char **runtime_args = NULL;
-    size_t runtime_args_len = get_runtime_args(runtime, &runtime_args);
+    size_t runtime_args_len = 0;
     char workdir[PATH_MAX] = {0};
     const char *cmd = NULL;
     int ret = 0;
     char bundle[PATH_MAX] = {0};
     int pid = 0;
     shim_client_process_state p = {0};
+
+    if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
+    process = params->spec;
+    runtime_args_len = get_runtime_args(runtime, &runtime_args);
 
     ret = snprintf(bundle, sizeof(bundle), "%s/%s", params->rootpath, id);
     if (ret < 0) {
@@ -925,6 +965,11 @@ int rt_isula_status(const char *id, const char *runtime,
 {
     char workdir[PATH_MAX] = {0};
     int ret = 0;
+
+    if (id == NULL || runtime == NULL || params == NULL || status == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
 
     ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
     if (ret < 0) {
