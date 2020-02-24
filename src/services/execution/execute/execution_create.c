@@ -729,9 +729,9 @@ static int preparate_runtime_environment(const container_create_request *request
     } else {
         *runtime = conf_get_default_runtime();
     }
+
     if (*runtime == NULL) {
-        *cc = ISULAD_ERR_INPUT;
-        return -1;
+        *runtime = util_strdup_s(DEFAULT_RUNTIME_NAME);
     }
 
     if (runtime_check(*runtime, &runtime_res) != 0) {

@@ -25,6 +25,7 @@ extern "C" {
 #endif
 
 #define DEFAULT_IM_SERVER_SOCK_ADDR "unix:///var/run/isulad/isula_image.sock"
+#define DEFAULT_RUNTIME_NAME "lcr"
 
 struct isulad_conf {
     pthread_rwlock_t isulad_conf_rwlock;
