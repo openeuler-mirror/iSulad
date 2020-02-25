@@ -46,3 +46,33 @@ int container_read_proc(uint32_t pid, container_pid_t *pid_info)
 {
     return 0;
 }
+
+int container_to_disk(const container_t *cont)
+{
+    if (g_container_unix_mock != nullptr) {
+        return g_container_unix_mock->ContainerToDisk(cont);
+    }
+    return 0;
+}
+
+void container_unlock(container_t *cont)
+{
+    if (g_container_unix_mock != nullptr) {
+        return g_container_unix_mock->ContainerUnlock(cont);
+    }
+}
+
+void container_lock(container_t *cont)
+{
+    if (g_container_unix_mock != nullptr) {
+        return g_container_unix_mock->ContainerLock(cont);
+    }
+}
+
+void container_update_restart_manager(container_t *cont, const host_config_restart_policy *policy)
+{
+    if (g_container_unix_mock != nullptr) {
+        return g_container_unix_mock->ContainerUpdateRestartManager(cont, policy);
+    }
+}
+

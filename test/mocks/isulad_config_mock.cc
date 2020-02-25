@@ -112,3 +112,19 @@ struct service_arguments *conf_get_server_conf()
 {
     return NULL;
 }
+
+int get_system_cpu_usage(uint64_t *val)
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->GetSystemCpuUsage(val);
+    }
+    return 0;
+}
+
+char *conf_get_isulad_storage_driver_backing_fs()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetIsuladStorageDriverBackingFs();
+    }
+    return nullptr;
+}

@@ -8,26 +8,26 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v1 for more details.
- * Author: wangfengtu
- * Create: 2020-02-19
- * Description: provide image mock
+ * Author: jikui
+ * Create: 2020-02-25
+ * Description: provide sysinfo mock
  ******************************************************************************/
 
-#ifndef IMAGE_MOCK_H_
-#define IMAGE_MOCK_H_
+#ifndef SYSINFO_MOCK_H_
+#define SYSINFO_MOCK_H_
 
 #include <gmock/gmock.h>
-#include "image.h"
+#include "sysinfo.h"
 
-class MockImage {
+class MockSysinfo {
 public:
-    virtual ~MockImage() = default;
-    MOCK_METHOD2(ImGetStorageStatus, int(const char *, im_storage_status_response **));
-    MOCK_METHOD1(FreeImStorageStatusResponse, void(im_storage_status_response *));
-    MOCK_METHOD1(ImContainerExport, int(const im_export_request *request));
-    MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
+    MOCK_METHOD0(GetDefaultTotalMemSize, uint64_t(void));
+    MOCK_METHOD2(FindMountInfo, mountinfo_t*(mountinfo_t **minfos, const char *dir));
+    MOCK_METHOD1(FreeMountsInfo, void(mountinfo_t **minfos));
+    MOCK_METHOD2(ValidateHugetlb, char*(const char *pagesize, uint64_t limit));
+    MOCK_METHOD1(FreeSysinfo, void(sysinfo_t *sysinfo));
 };
 
-void MockImage_SetMock(MockImage* mock);
+void MockSysinfo_SetMock(MockSysinfo* mock);
 
-#endif  // IMAGE_MOCK_H_
+#endif

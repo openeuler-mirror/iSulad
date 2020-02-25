@@ -8,26 +8,25 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v1 for more details.
- * Author: wangfengtu
- * Create: 2020-02-19
- * Description: provide image mock
+ * Author: jikui
+ * Create: 2020-02-25
+ * Description: provide collector mock
  ******************************************************************************/
 
-#ifndef IMAGE_MOCK_H_
-#define IMAGE_MOCK_H_
+#ifndef COLLECTOR_MOCK_H_
+#define COLLECTOR_MOCK_H_
 
 #include <gmock/gmock.h>
-#include "image.h"
+#include "collector.h"
 
-class MockImage {
+class MockCollector {
 public:
-    virtual ~MockImage() = default;
-    MOCK_METHOD2(ImGetStorageStatus, int(const char *, im_storage_status_response **));
-    MOCK_METHOD1(FreeImStorageStatusResponse, void(im_storage_status_response *));
-    MOCK_METHOD1(ImContainerExport, int(const im_export_request *request));
-    MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
+    MOCK_METHOD4(EventsSubscribe, int(const char *name, const types_timestamp_t *since, const types_timestamp_t *until,
+                                      const stream_func_wrapper *stream));
+    MOCK_METHOD4(AddMonitorClient, int(const char *name, const types_timestamp_t *since, const types_timestamp_t *until,
+                                       const stream_func_wrapper *stream));
 };
 
-void MockImage_SetMock(MockImage* mock);
+void MockCollector_SetMock(MockCollector* mock);
 
-#endif  // IMAGE_MOCK_H_
+#endif

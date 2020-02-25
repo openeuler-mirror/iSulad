@@ -31,6 +31,9 @@ public:
     MOCK_METHOD0(GetUmask, char *(void));
     MOCK_METHOD0(ConfGetGraphRootpath, char *(void));
     MOCK_METHOD0(ConfGetIsuladStorageDriver, char *(void));
+    MOCK_METHOD1(GetSystemCpuUsage, int(uint64_t *val));
+    MOCK_METHOD0(ConfGetIsuladStorageDriverBackingFs, char*());
+
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf* mock);

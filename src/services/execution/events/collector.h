@@ -21,6 +21,10 @@
 #include "libisulad.h"
 #include "monitord.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct context_lists {
     pthread_mutex_t context_mutex;
     struct linked_list context_list;
@@ -41,6 +45,10 @@ struct isulad_events_format *dup_event(const struct isulad_events_format *event)
 void free_event(struct isulad_events_format *event);
 
 int isulad_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __COLLECTOR_H */
 
