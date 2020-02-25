@@ -43,6 +43,7 @@
 #include "utils.h"
 #include "error.h"
 #include "constants.h"
+#include "namespace.h"
 
 static int runtime_check(const char *name, bool *runtime_res)
 {
@@ -588,6 +589,43 @@ void umount_host_channel(const host_config_host_channel *host_channel)
     }
 }
 
+void umount_share_shm(container_t *cont)
+{
+    if (has_mount_for(cont, "/dev/shm")) {
+        return;
+    }
+    if (cont->hostconfig->ipc_mode == NULL || is_shareable(cont->hostconfig->ipc_mode)) {
+        if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
+            return;
+        }
+
+        INFO("Umounting share shm: %s", cont->common_config->shm_path);
+        if (umount2(cont->common_config->shm_path, MNT_DETACH)) {
+            SYSERROR("Failed to umount the target: %s", cont->common_config->shm_path);
+        }
+    }
+}
+
+static void umount_shm_by_configs(host_config *host_spec, container_config_v2_common_config *v2_spec)
+{
+    container_t *cont = NULL;
+
+    cont = util_common_calloc_s(sizeof(container_t));
+    if (cont == NULL) {
+        ERROR("Out of memory");
+        return;
+    }
+    cont->common_config = v2_spec;
+    cont->hostconfig = host_spec;
+
+    umount_share_shm(cont);
+
+    cont->common_config = NULL;
+    cont->hostconfig = NULL;
+
+    free(cont);
+}
+
 static int create_container_root_dir(const char *id, const char *runtime_root)
 {
     int ret = 0;
@@ -870,18 +908,18 @@ int container_create_cb(const container_create_request *request,
     oci_spec = generate_oci_config(host_spec, real_rootfs, v2_spec);
     if (oci_spec == NULL) {
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
     }
 
     ret = merge_oci_cgroups_path(id, oci_spec, host_spec);
     if (ret < 0) {
-        goto clean_rootfs;
+        goto umount_shm;
     }
 
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
         ERROR("Failed to merge config for syscontainer");
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
     }
 
     /* modify oci_spec by plugin. */
@@ -889,7 +927,7 @@ int container_create_cb(const container_create_request *request,
         ERROR("Plugin event pre create failed");
         (void)plugin_event_container_post_remove2(id, oci_spec); /* ignore error */
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
     }
 
     host_channel = dup_host_channel(host_spec->host_channel);
@@ -897,7 +935,7 @@ int container_create_cb(const container_create_request *request,
         ERROR("Failed to prepare host channel with '%s'", host_spec->host_channel);
         sleep(111);
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
     }
 
     if (verify_container_settings(oci_spec) != 0) {
@@ -929,6 +967,8 @@ int container_create_cb(const container_create_request *request,
 
 umount_channel:
     umount_host_channel(host_channel);
+umount_shm:
+    umount_shm_by_configs(host_spec, v2_spec);
 
 clean_rootfs:
     (void)im_remove_container_rootfs(image_type, id);
