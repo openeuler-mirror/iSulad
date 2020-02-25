@@ -992,19 +992,24 @@ out:
 int rt_isula_attach(const char *id, const char *runtime,
                     const rt_attach_params_t *params)
 {
-    ERROR("rt_isula_attach not impl");
-    return 0;
+    isulad_set_error_message("isula attach not support on isulad-shim");
+    return -1;
 }
 
 int rt_isula_update(const char *id, const char *runtime, const rt_update_params_t *params)
 {
-    ERROR("rt_isula_update not impl");
-    return 0;
+    isulad_set_error_message("isula update not support on isulad-shim");
+    return -1;
 }
 
 int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t *params)
 {
     char workdir[PATH_MAX] = {0};
+
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
 
     if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
         ERROR("failed join workdir %s/%s", params->state, id);
@@ -1018,6 +1023,11 @@ int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_
 {
     char workdir[PATH_MAX] = {0};
 
+    if (id == NULL || runtime == NULL || params == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
+
     if (snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id) < 0) {
         ERROR("failed join workdir %s/%s", params->state, id);
         return -1;
@@ -1028,16 +1038,16 @@ int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_
 
 int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out)
 {
-    ERROR("rt_isula_listpids not impl");
-    return 0;
+    isulad_set_error_message("isula top/listpids not support on isulad-shim");
+    return -1;
 }
 
 int rt_isula_resources_stats(const char *name, const char *runtime,
                              const rt_stats_params_t *params,
                              struct engine_container_resources_stats_info *rs_stats)
 {
-    ERROR("rt_isula_resources_stats not impl");
-    return 0;
+    isulad_set_error_message("isula stats not support on isulad-shim");
+    return -1;
 }
 
 int rt_isula_resize(const char *id, const char *runtime, const rt_resize_params_t *params)
