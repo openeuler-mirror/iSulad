@@ -127,6 +127,6 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_status)
     ASSERT_EQ(rt_isula_status("123", nullptr, nullptr, nullptr), -1);
     ASSERT_EQ(rt_isula_status("123", "kata-runtime", nullptr, nullptr), -1);
     ASSERT_EQ(rt_isula_status("123", "kata-runtime", &params, nullptr), -1);
-    params.state="/var/run/isulad/kata-runtime";
+    params.state = "/var/run/isulad/kata-runtime";
     ASSERT_EQ(rt_isula_status("123", "kata-runtime", &params, &status), -1);
 }

@@ -8,26 +8,26 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v1 for more details.
- * Author: wangfengtu
- * Create: 2020-02-19
- * Description: provide image mock
+ * Author: jikui
+ * Create: 2020-02-25
+ * Description: provide containers_gc mock
  ******************************************************************************/
 
-#ifndef IMAGE_MOCK_H_
-#define IMAGE_MOCK_H_
+#include "containers_gc_mock.h"
 
-#include <gmock/gmock.h>
-#include "image.h"
+namespace {
+MockContainersGc *g_containers_gc_mock = NULL;
+}
 
-class MockImage {
-public:
-    virtual ~MockImage() = default;
-    MOCK_METHOD2(ImGetStorageStatus, int(const char *, im_storage_status_response **));
-    MOCK_METHOD1(FreeImStorageStatusResponse, void(im_storage_status_response *));
-    MOCK_METHOD1(ImContainerExport, int(const im_export_request *request));
-    MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
-};
+void MockContainersGc_SetMock(MockContainersGc *mock)
+{
+    g_containers_gc_mock = mock;
+}
 
-void MockImage_SetMock(MockImage* mock);
-
-#endif  // IMAGE_MOCK_H_
+bool gc_is_gc_progress(const char *id)
+{
+    if (g_containers_gc_mock != nullptr) {
+        return g_containers_gc_mock->GcIsGcProgress(id);
+    }
+    return true;
+}

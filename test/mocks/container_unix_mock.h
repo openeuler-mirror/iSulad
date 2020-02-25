@@ -23,7 +23,11 @@ class MockContainerUnix {
 public:
     virtual ~MockContainerUnix() = default;
     MOCK_METHOD2(HasMountFor, bool(container_t *cont, const char *mpath));
+    MOCK_METHOD1(ContainerToDisk, int(const container_t *cont));
+    MOCK_METHOD1(ContainerUnlock, void(const container_t *cont));
+    MOCK_METHOD1(ContainerLock, void(const container_t *cont));
     MOCK_METHOD1(ContainerUnref, void(container_t *cont));
+    MOCK_METHOD2(ContainerUpdateRestartManager, void(container_t *cont, const host_config_restart_policy *policy));
 };
 
 void MockContainerUnix_SetMock(MockContainerUnix* mock);

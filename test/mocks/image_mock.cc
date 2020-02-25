@@ -40,3 +40,18 @@ void free_im_storage_status_response(im_storage_status_response *ptr)
     }
     return;
 }
+
+int im_container_export(const im_export_request *request)
+{
+    if (g_image_mock != nullptr) {
+        return g_image_mock->ImContainerExport(request);
+    }
+    return 0;
+}
+
+void free_im_export_request(im_export_request *ptr)
+{
+    if (g_image_mock != nullptr) {
+        return g_image_mock->FreeImExportRequest(ptr);
+    }
+}

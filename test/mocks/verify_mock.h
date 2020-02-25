@@ -8,26 +8,22 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v1 for more details.
- * Author: wangfengtu
- * Create: 2020-02-19
- * Description: provide image mock
+ * Author: jikui
+ * Create: 2020-02-25
+ * Description: provide verify mock
  ******************************************************************************/
 
-#ifndef IMAGE_MOCK_H_
-#define IMAGE_MOCK_H_
+#ifndef VERIFY_MOCK_H_
+#define VERIFY_MOCK_H_
 
 #include <gmock/gmock.h>
-#include "image.h"
+#include "verify.h"
 
-class MockImage {
+class MockVerify {
 public:
-    virtual ~MockImage() = default;
-    MOCK_METHOD2(ImGetStorageStatus, int(const char *, im_storage_status_response **));
-    MOCK_METHOD1(FreeImStorageStatusResponse, void(im_storage_status_response *));
-    MOCK_METHOD1(ImContainerExport, int(const im_export_request *request));
-    MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
+    MOCK_METHOD2(VerifyHostConfigSettings, int(host_config *hostconfig, bool update));
 };
 
-void MockImage_SetMock(MockImage* mock);
+void MockVerify_SetMock(MockVerify* mock);
 
-#endif  // IMAGE_MOCK_H_
+#endif
