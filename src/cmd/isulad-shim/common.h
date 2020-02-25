@@ -18,6 +18,10 @@
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // error code
 #define SHIM_ERR_BASE (-10000)
 #define SHIM_SYS_ERR(err) (SHIM_ERR_BASE-err)
@@ -59,6 +63,10 @@ int generate_random_str(char *id, size_t len);
 void close_fd(int *pfd);
 
 int open_no_inherit(const char *path, int flag, mode_t mode);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

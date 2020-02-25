@@ -21,6 +21,10 @@
 #include <stdbool.h>
 #include "shim_client_process_state.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
     stdid_in = 0,
     stdid_out,
@@ -88,6 +92,9 @@ int create_process(process_t *p);
 int process_signal_handle_routine(process_t *p);
 void process_delete(process_t *p);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
