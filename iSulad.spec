@@ -34,7 +34,7 @@ BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
-BuildRequires: systemd-devel git
+BuildRequires: systemd-devel git python3
 
 Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf yajl

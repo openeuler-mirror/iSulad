@@ -3,9 +3,9 @@ include(CheckIncludeFile)
 # check depends library and headers
 find_package(PkgConfig REQUIRED)
 
-# check python
-find_program(CMD_PYTHON python)
-_CHECK(CMD_PYTHON "CMD_PYTHON-NOTFOUND" "python")
+# check python3
+find_program(CMD_PYTHON python3)
+_CHECK(CMD_PYTHON "CMD_PYTHON-NOTFOUND" "python3")
 
 # check tools
 find_program(CMD_TAR tar)
