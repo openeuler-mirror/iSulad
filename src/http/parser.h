@@ -84,6 +84,7 @@ struct parsed_http_message {
 
 int parse_http(const char *buf, size_t len, struct parsed_http_message *m,
                enum http_parser_type type);
+char *get_header_value(const struct parsed_http_message *m, const char *header);
 
 #endif
 

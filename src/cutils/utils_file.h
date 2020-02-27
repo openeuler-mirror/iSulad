@@ -55,6 +55,8 @@ int util_open(const char *filename, int flags, mode_t mode);
 
 FILE *util_fopen(const char *filename, const char *mode);
 
+char *util_file_digest(const char *filename);
+
 char *util_full_file_digest(const char *filename);
 
 char *util_path_dir(const char *path);

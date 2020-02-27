@@ -15,6 +15,8 @@
 #ifndef ISULAD_HTTP_H
 #define ISULAD_HTTP_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -55,6 +57,16 @@ struct http_get_options {
     char *authorization;
 
     char *accepts;
+
+    char **custom_headers;
+
+    bool debug;
+    bool ssl_verify_peer;
+    bool ssl_verify_host;
+
+    char *ca_file;
+    char *cert_file;
+    char *key_file;
 
     void *progressinfo;
     progress_info_func progress_info_op;

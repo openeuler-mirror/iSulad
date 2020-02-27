@@ -67,12 +67,16 @@
 
 #define MediaTypeJson "application/json"
 
-#define DOCKER_REGISTRY "docker.io"
-#define DOCKER_HOST "registry-1.docker.io"
-
-#define REGISTRY_PREFIX "/v2"
-#define MANIFESTS "/manifests"
-#define BLOBS "/blobs"
+#define DOCKER_HOSTNAME "docker.io"
+#define DOCKER_V1HOSTNAME "index.docker.io"
+#define DOCKER_REGISTRY "registry-1.docker.io"
+#define DOCKER_MANIFEST_SCHEMA2_JSON "application/vnd.docker.distribution.manifest.v2+json"
+#define DOCKER_MANIFEST_SCHEMA2_LIST "application/vnd.docker.distribution.manifest.list.v2+json"
+#define DOCKER_MANIFEST_SCHEMA1_JSON "application/vnd.docker.distribution.manifest.v1+json"
+#define DOCKER_MANIFEST_SCHEMA1_PRETTYJWS "application/vnd.docker.distribution.manifest.v1+prettyjws"
+#define MEDIA_TYPE_APPLICATION_JSON "application/json"
+#define OCI_MANIFEST_V1_JSON "application/vnd.oci.image.manifest.v1+json"
+#define OCI_INDEX_V1_JSON "application/vnd.oci.image.index.v1+json"
 
 #endif
 

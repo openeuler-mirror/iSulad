@@ -777,3 +777,42 @@ bool util_is_space_string(const char *str)
 
     return true;
 }
+
+bool util_has_prefix(const char *str, const char *prefix)
+{
+    if (str == NULL || prefix == NULL) {
+        return false;
+    }
+
+    if (strlen(str) < strlen(prefix)) {
+        return false;
+    }
+
+    if (strcmp(str, prefix)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool util_has_suffix(const char *str, const char *suffix)
+{
+    size_t str_len = 0;
+    size_t suffix_len = 0;
+
+    if (str == NULL || suffix == NULL) {
+        return false;
+    }
+
+    str_len = strlen(str);
+    suffix_len = strlen(suffix);
+    if (str_len < suffix_len) {
+        return false;
+    }
+
+    if (strcmp(str + str_len - suffix_len, suffix)) {
+        return false;
+    }
+
+    return true;
+}

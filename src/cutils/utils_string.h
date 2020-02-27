@@ -71,6 +71,10 @@ char *util_sub_string(const char *source, size_t offset, size_t length);
 
 bool util_is_space_string(const char *str);
 
+bool util_has_prefix(const char *str, const char *prefix);
+
+bool util_has_suffix(const char *str, const char *suffix);
+
 #ifdef __cplusplus
 }
 #endif

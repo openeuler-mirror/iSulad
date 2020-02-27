@@ -25,7 +25,8 @@ extern "C" {
 #endif
 
 char *oci_normalize_image_name(const char *name);
-
+int oci_split_image_name(const char *image_name, char **host, char **name, char **tag);
+char *oci_full_image_name(const char *host, const char *name, const char *tag);
 bool oci_detect(const char *image_name);
 char *oci_resolve_image_name(const char *name);
 int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser);

@@ -16,140 +16,42 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "isula_image_connect.h"
 #include "isula_helper.h"
-#include "connect.h"
 #include "oci_images_store.h"
 #include "oci_common_operators.h"
-
-static bool need_new_isula_auth(const im_pull_request *request)
-{
-    return ((request->username != NULL) || (request->password != NULL) || (request->auth != NULL) ||
-            (request->server_address != NULL) || (request->identity_token != NULL) ||
-            (request->registry_token != NULL));
-}
-
-static int generate_isula_auth_from_im_pull_request(const im_pull_request *request, struct isula_pull_request *ireq)
-{
-    if (!need_new_isula_auth(request)) {
-        return 0;
-    }
-
-    ireq->auth = (struct isula_auth_config *)util_common_calloc_s(sizeof(struct isula_auth_config));
-    if (ireq->auth == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    ireq->auth->username = util_strdup_s(request->username);
-    ireq->auth->password = util_strdup_s(request->password);
-    ireq->auth->auth = util_strdup_s(request->auth);
-    ireq->auth->server_address = util_strdup_s(request->server_address);
-    ireq->auth->identity_token = util_strdup_s(request->identity_token);
-    ireq->auth->registry_token = util_strdup_s(request->registry_token);
-
-    return 0;
-}
-
-static int im_pull_request_to_isula_request(const im_pull_request *request, struct isula_pull_request **ireq)
-{
-    struct isula_pull_request *tmpreq = NULL;
-    int ret = -1;
-
-    if (request == NULL || ireq == NULL) {
-        return -1;
-    }
-    tmpreq = (struct isula_pull_request *)util_common_calloc_s(sizeof(struct isula_pull_request));
-    if (tmpreq == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    if (request->image != NULL) {
-        tmpreq->image = (struct image_spec *)util_common_calloc_s(sizeof(struct image_spec));
-        if (tmpreq->image == NULL) {
-            ERROR("Out of memory");
-            goto err_out;
-        }
-        tmpreq->image->image = util_strdup_s(request->image);
-    }
-
-    ret = generate_isula_auth_from_im_pull_request(request, tmpreq);
-    if (ret != 0) {
-        goto err_out;
-    }
-
-    *ireq = tmpreq;
-    return 0;
-err_out:
-    free_isula_pull_request(tmpreq);
-    return -1;
-}
-
-static int isula_pull_response_to_im(const struct isula_pull_response *iresp, im_pull_response **response)
-{
-    if (iresp == NULL) {
-        INFO("Get empty isula response");
-        return 0;
-    }
-    *response = (im_pull_response *)util_common_calloc_s(sizeof(im_pull_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    (*response)->errmsg = util_strdup_s(iresp->errmsg);
-    (*response)->image_ref = util_strdup_s(iresp->image_ref);
-    return 0;
-}
+#include "registry.h"
 
 int isula_pull_image(const im_pull_request *request, im_pull_response **response)
 {
-    isula_image_ops *im_ops = NULL;
-    struct isula_pull_request *ireq = NULL;
-    struct isula_pull_response *iresp = NULL;
     int ret = -1;
-    client_connect_config_t conf = { 0 };
     char *normalized = NULL;
+    registry_pull_options *options = NULL;
 
-    im_ops = get_isula_image_ops();
-    if (im_ops == NULL) {
-        ERROR("Don't init isula server grpc client");
-        return -1;
-    }
-    if (im_ops->pull == NULL) {
-        ERROR("Umimplement pull operator");
+    if (request == NULL || request->image == NULL || response == NULL) {
+        ERROR("Invalid NULL param");
         return -1;
     }
 
-    ret = im_pull_request_to_isula_request(request, &ireq);
-    if (ret != 0) {
-        ERROR("Parse im pull request failed");
-        return -1;
-    }
-
-    iresp = (struct isula_pull_response *)util_common_calloc_s(sizeof(struct isula_pull_response));
-    if (iresp == NULL) {
+    options = (registry_pull_options *)util_common_calloc_s(sizeof(registry_pull_options));
+    if (options == NULL) {
         ERROR("Out of memory");
-        ret = -1;
         goto err_out;
     }
 
-    ret = get_isula_image_connect_config(&conf);
+    options->image_name = util_strdup_s(request->image);
+
+    ret = registry_pull(options);
     if (ret != 0) {
+        ERROR("registry pull failed");
         goto err_out;
     }
 
-    INFO("Send pull image GRPC request");
-    ret = im_ops->pull(ireq, iresp, &conf);
-    if (ret != 0) {
-        ERROR("Pull image failed: %s", iresp != NULL ? iresp->errmsg : "null");
+    *response = (im_pull_response *)util_common_calloc_s(sizeof(im_pull_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
         goto err_out;
     }
-
-    ret = isula_pull_response_to_im(iresp, response);
-    if (ret != 0) {
-        ERROR("Parse response failed");
-        goto err_out;
-    }
+    (*response)->image_ref = util_strdup_s(request->image);
 
     normalized = oci_normalize_image_name(request->image);
     if (normalized == NULL) {
@@ -170,9 +72,7 @@ err_out:
     *response = NULL;
     ret = -1;
 out:
+    free_registry_pull_options(options);
     free(normalized);
-    free_client_connect_config_value(&conf);
-    free_isula_pull_request(ireq);
-    free_isula_pull_response(iresp);
     return ret;
 }

@@ -1611,3 +1611,13 @@ restart:
     closedir(directory);
     return 0;
 }
+
+int get_cpu_num_cores(void)
+{
+    int ncpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
+    if (ncpus < 1) {
+        ERROR("Cannot determine number of CPUs: assuming 1\n");
+        ncpus = 1;
+    }
+    return ncpus;
+}

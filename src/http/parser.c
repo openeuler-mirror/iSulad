@@ -308,3 +308,17 @@ out:
     return ret;
 }
 
+char *get_header_value(const struct parsed_http_message *m, const char *header)
+{
+    int i = 0;
+    char *ret = NULL;
+
+    for (i = 0; i < m->num_headers; i++) {
+        if (strcmp(m->headers[i][0], header) == 0) {
+            ret = (char *)m->headers[i][1];
+            break;
+        }
+    }
+
+    return ret;
+}

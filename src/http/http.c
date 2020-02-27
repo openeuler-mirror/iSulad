@@ -59,6 +59,18 @@ void free_http_get_options(struct http_get_options *options)
     free(options->unix_socket_path);
     options->unix_socket_path = NULL;
 
+    util_free_array(options->custom_headers);
+    options->custom_headers = NULL;
+
+    free(options->ca_file);
+    options->ca_file = NULL;
+
+    free(options->cert_file);
+    options->cert_file = NULL;
+
+    free(options->key_file);
+    options->key_file = NULL;
+
     /* The options->output is a FILE pointer, we should not free it here */
     free(options);
     return;
@@ -81,6 +93,8 @@ struct curl_slist *http_get_chunk_header(const struct http_get_options *options)
     size_t len = 0;
     struct curl_slist *chunk = NULL;
     char *header = NULL;
+    char **custom_headers = NULL;
+    int i = 0;
 
     if (options->with_header_auth && options->authorization) {
         if (strlen(options->authorization) > (SIZE_MAX - strlen("Authorization: ")) - 1) {
@@ -110,6 +124,11 @@ struct curl_slist *http_get_chunk_header(const struct http_get_options *options)
         chunk = curl_slist_append(chunk, "Content-Type: application/json");
         // Disable "Expect: 100-continue"
         chunk = curl_slist_append(chunk, "Expect:");
+    }
+
+    custom_headers = options->custom_headers;
+    for (i = 0; custom_headers != NULL && custom_headers[i] != 0; i++) {
+        chunk = curl_slist_append(chunk, custom_headers[i]);
     }
 
     if (options->with_header_accept && options->accepts) {
@@ -181,6 +200,31 @@ static int http_custom_options(CURL *curl_handle, const struct http_get_options 
         curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, options->input);
         curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, options->input_len);
         curl_easy_setopt(curl_handle, CURLOPT_POST, 1L);
+    }
+
+    if (options->debug) {
+        curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
+    }
+
+    if (options->ssl_verify_peer) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 1L);
+    } else {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    }
+    if (options->ssl_verify_host) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 2L);
+    } else {
+        curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    }
+
+    if (options->ca_file != NULL) {
+        curl_easy_setopt(curl_handle, CURLOPT_CAINFO, options->ca_file);
+    }
+    if (options->cert_file != NULL) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSLCERT, options->cert_file);
+    }
+    if (options->key_file != NULL) {
+        curl_easy_setopt(curl_handle, CURLOPT_SSLKEY, options->key_file);
     }
 
     return ret;
@@ -287,7 +331,6 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     /* provide a buffer to store errors in */
     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0);
 
     ret = http_custom_options(curl_handle, options);
     if (ret) {
