@@ -2,6 +2,7 @@ set(CHECKED_INCLUDE_DIRS
     ${STD_HEADER_CTYPE}
     ${STD_HEADER_SYS_PARAM}
     ${LIBYAJL_INCLUDE_DIR}
+    ${LIBARCHIVE_INCLUDE_DIR}
     ${HTTP_PARSER_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIR}
@@ -105,7 +106,7 @@ target_include_directories(libisula PUBLIC
 
 # set libisula FLAGS
 set_target_properties(libisula PROPERTIES PREFIX "")
-target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY})
+target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY})
 
 if (GRPC_CONNECTOR)
     target_link_libraries(libisula -Wl,--as-needed -lstdc++ -lcrypto)
@@ -188,7 +189,7 @@ target_include_directories(isulad PUBLIC
     ${WEBSOCKET_SERVICE_INCS}
     )
 
-target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY})
+target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY})
 target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread libhttpclient)
 if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(isulad ${SQLITE3_LIBRARY})

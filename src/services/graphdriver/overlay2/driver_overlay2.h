@@ -21,11 +21,24 @@
 extern "C" {
 #endif
 
-int overlay2_init(struct graphdriver *driver);
-
-int overlay2_parse_options(struct graphdriver *driver, const char **options, size_t options_len);
+int overlay2_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
 bool overlay2_is_quota_options(struct graphdriver *driver, const char *option);
+
+int overlay2_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
+                       const struct driver_create_opts *create_opts);
+
+int overlay2_rm_layer(const char *id, const struct graphdriver *driver);
+
+char *overlay2_mount_layer(const char *id, const struct graphdriver *driver,
+                           const struct driver_mount_opts *mount_opts);
+
+int overlay2_umount_layer(const char *id, const struct graphdriver *driver);
+
+bool overlay2_layer_exists(const char *id, const struct graphdriver *driver);
+
+int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
+                        int64_t *layer_size);
 
 #ifdef __cplusplus
 }

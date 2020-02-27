@@ -21,9 +21,7 @@
 extern "C" {
 #endif
 
-int devmapper_init(struct graphdriver *driver);
-
-int devmapper_parse_options(struct graphdriver *driver, const char **options, size_t options_len);
+int devmapper_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
 bool devmapper_is_quota_options(struct graphdriver *driver, const char *option);
 

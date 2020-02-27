@@ -822,7 +822,7 @@ int oci_image_store_init()
         goto out;
     }
 
-    ret = load_all_oci_images();
+    //ret = load_all_oci_images();
 
 out:
     return ret;

@@ -64,6 +64,7 @@ void isula_exit(void)
 
 static int start_isula_image_server(void)
 {
+    return 0;
 #define MIN_OPT_TIMEOUT 15
     struct server_monitor_conf sm_conf = { 0 };
     struct timespec ts = { 0 };

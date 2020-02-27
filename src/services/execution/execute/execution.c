@@ -476,7 +476,7 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
     if (host_channel == NULL) {
         return 0;
     }
-    if (detect_mount(host_channel->path_on_host)) {
+    if (util_detect_mounted(host_channel->path_on_host)) {
         return 0;
     }
     int nret = snprintf(properties, sizeof(properties), "mode=1777,size=%llu",

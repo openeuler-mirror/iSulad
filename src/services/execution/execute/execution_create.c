@@ -617,7 +617,7 @@ void umount_host_channel(const host_config_host_channel *host_channel)
         return;
     }
 
-    if (detect_mount(host_channel->path_on_host)) {
+    if (util_detect_mounted(host_channel->path_on_host)) {
         if (umount2(host_channel->path_on_host, MNT_DETACH)) {
             ERROR("Failed to umount the target: %s", host_channel->path_on_host);
         }

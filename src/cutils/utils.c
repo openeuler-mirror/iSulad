@@ -1555,3 +1555,59 @@ out:
     util_free_array(arr);
     return ret;
 }
+
+int util_check_inherited_exclude_fds(bool closeall, int *fds_to_ignore, size_t len_fds)
+{
+    struct dirent *pdirent = NULL;
+    int fd, fddir;
+    DIR *directory = NULL;
+    size_t i = 0;
+
+restart:
+    directory = opendir("/proc/self/fd");
+    if (directory == NULL) {
+        WARN("Failed to open directory: %m.");
+        return -1;
+    }
+
+    fddir = dirfd(directory);
+    pdirent = readdir(directory);
+    for (; pdirent != NULL; pdirent = readdir(directory)) {
+        if (util_dir_skip_current(pdirent)) {
+            continue;
+        }
+
+        if (util_safe_int(pdirent->d_name, &fd) < 0) {
+            continue;
+        }
+
+        for (i = 0; i < len_fds; i++) {
+            if (fds_to_ignore[i] == fd) {
+                break;
+            }
+        }
+
+        if (i < len_fds && fd == fds_to_ignore[i]) {
+            continue;
+        }
+
+        if (util_is_std_fileno(fd) || fd == fddir) {
+            continue;
+        }
+
+        if (closeall) {
+            if (fd >= 0) {
+                close(fd);
+                fd = -1;
+            }
+            if (directory != NULL) {
+                closedir(directory);
+                directory = NULL;
+            }
+            goto restart;
+        }
+    }
+
+    closedir(directory);
+    return 0;
+}

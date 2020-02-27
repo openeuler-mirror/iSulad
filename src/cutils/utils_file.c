@@ -23,8 +23,6 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <linux/fs.h>
 #include <regex.h>
 #include <dirent.h>
 
@@ -202,39 +200,6 @@ static bool check_dir_valid(const char *dirpath, int recursive_depth, int *failu
     return true;
 }
 
-static int mark_file_mutable(const char *fname)
-{
-    int ret = 0;
-    int fd = -EBADF;
-    int attributes = 0;
-
-    fd = open(fname, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
-    if (fd < 0) {
-        ERROR("Failed to open file to modify flags:%s, %s", fname, strerror(errno));
-        return -1;
-    }
-
-    if (ioctl(fd, FS_IOC_GETFLAGS, &attributes) < 0) {
-        ERROR("Failed to retrieve file flags");
-        ret = -1;
-        goto out;
-    }
-
-    attributes &= ~FS_IMMUTABLE_FL;
-
-    if (ioctl(fd, FS_IOC_SETFLAGS, &attributes) < 0) {
-        ERROR("Failed to set file flags");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    if (fd >= 0) {
-        close(fd);
-    }
-    return ret;
-}
-
 static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int recursive_depth, int *saved_errno,
                                       int failure)
 {
@@ -244,19 +209,11 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
         }
     } else {
         if (unlink(fname) < 0) {
-            ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+            ERROR("Failed to delete %s: %s", fname, strerror(errno));
             if (*saved_errno == 0) {
                 *saved_errno = errno;
             }
-
-            if (mark_file_mutable(fname) != 0) {
-                ERROR("Failed to mark file mutable");
-            }
-
-            if (unlink(fname) < 0) {
-                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
-                failure = 1;
-            }
+            failure = 1;
         }
     }
 
@@ -568,7 +525,7 @@ FILE *util_fopen(const char *filename, const char *mode)
     return fp;
 }
 
-static char *util_file_digest(const char *filename)
+char *util_file_digest(const char *filename)
 {
     FILE *fp = NULL;
     char *digest = NULL;
@@ -584,7 +541,7 @@ static char *util_file_digest(const char *filename)
         return NULL;
     }
 
-    digest = sha256_digest(fp, false);
+    digest = sha256_digest_file(filename, false);
     if (digest == NULL) {
         ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
         goto err_out;
@@ -592,6 +549,39 @@ static char *util_file_digest(const char *filename)
 
 err_out:
     fclose(fp);
+
+    return digest;
+}
+
+char *util_gzip_digest(const char *filename)
+{
+    int ret = 0;
+    char *digest = NULL;
+    bool gzip = false;
+
+    if (filename == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    ret = util_gzip_compressed(filename, &gzip);
+    if (ret != 0) {
+        ERROR("Failed to check if it's gzip compressed");
+        return NULL;
+    }
+
+    if (!gzip) {
+        ERROR("File %s is not gziped", filename);
+        return NULL;
+    }
+
+    digest = sha256_digest_file(filename, true);
+    if (digest == NULL) {
+        ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
+        goto err_out;
+    }
+
+err_out:
 
     return digest;
 }
@@ -607,6 +597,66 @@ char *util_full_file_digest(const char *filename)
     }
 
     digest = util_file_digest(filename);
+    full_digest = util_full_digest(digest);
+    free(digest);
+
+    return full_digest;
+}
+
+int util_gzip_compressed(const char *filename, bool *gzip)
+{
+#define GZIPHEADERLEN 3
+    const char gzip_key[GZIPHEADERLEN] = {0x1F, 0x8B, 0x08};
+    char data[GZIPHEADERLEN] = {0};
+    size_t size_read = 0;
+    int i = 0;
+    FILE *f = NULL;
+    int ret = 0;
+
+    f = fopen(filename, "rb");
+    if (f == NULL) {
+        ERROR("Failed to open file %s: %s", filename, strerror(errno));
+        return -1;
+    }
+
+    size_read = fread(data, 1, GZIPHEADERLEN, f);
+    if ((0 == size_read && !feof(f)) || size_read > GZIPHEADERLEN) {
+        ERROR("Failed to read file %s, size read %d", filename, (int)size_read);
+        ret = -1;
+        goto out;
+    }
+
+    if (size_read < GZIPHEADERLEN) {
+        *gzip = false;
+        goto out;
+    }
+
+    for (i = 0; i < GZIPHEADERLEN; i++) {
+        if (data[i] != gzip_key[i]) {
+            *gzip = false;
+            goto out;
+        }
+    }
+    *gzip = true;
+
+out:
+    fclose(f);
+    f = NULL;
+
+    return ret;
+}
+
+char *util_full_gzip_digest(const char *filename)
+{
+    char *digest = NULL;
+    char *full_digest = NULL;
+
+    if (filename == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    digest = util_gzip_digest(filename);
     full_digest = util_full_digest(digest);
     free(digest);
 
@@ -638,7 +688,59 @@ char *util_path_dir(const char *path)
         }
     }
 
+    if (i == 0 && dir[0] == '/') {
+        free(dir);
+        return util_strdup_s("/");
+    }
+
     return dir;
+}
+
+char *util_path_base(const char *path)
+{
+    char *dir = NULL;
+    int len = 0;
+    int i = 0;
+
+    if (path == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    len = (int)strlen(path);
+    if (len == 0) {
+        return util_strdup_s(".");
+    }
+
+    dir = util_strdup_s(path);
+
+    // strip last slashes
+    for (i = len - 1; i >= 0; i--) {
+        if (dir[i] != '/') {
+            break;
+        }
+        dir[i] = '\0';
+    }
+
+    len = (int)strlen(dir);
+    if (len == 0) {
+        free(dir);
+        return util_strdup_s("/");
+    }
+
+    for (i = len - 1; i >= 0; i--) {
+        if (dir[i] == '/') {
+            break;
+        }
+    }
+
+    if (i < 0) {
+        return dir;
+    }
+
+    char *result = util_strdup_s(&dir[i + 1]);
+    free(dir);
+    return result;
 }
 
 char *util_add_path(const char *path, const char *name)
@@ -674,7 +776,7 @@ char *util_read_text_file(const char *path)
 
     filp = util_fopen(path, "r");
     if (filp == NULL) {
-        ERROR("open file %s failed", path);
+        SYSERROR("open file %s failed", path);
         goto err_out;
     }
 
@@ -733,6 +835,39 @@ int64_t util_file_size(const char *filename)
     }
 
     return (int64_t)st.st_size;
+}
+
+int util_scan_subdirs(const char *directory, subdir_callback_t cb)
+{
+    DIR *dir = NULL;
+    struct dirent *direntp = NULL;
+    int ret = 0;
+
+    if (directory == NULL || cb == NULL) {
+        return -1;
+    }
+
+    dir = opendir(directory);
+    if (dir == NULL) {
+        ERROR("Failed to open directory: %s error:%s", directory, strerror(errno));
+        return -1;
+    }
+
+    direntp = readdir(dir);
+    for (; direntp != NULL; direntp = readdir(dir)) {
+        if (strncmp(direntp->d_name, ".", 1) == 0) {
+            continue;
+        }
+
+        if (!cb(directory, direntp)) {
+            ERROR("Dealwith subdir: %s failed", direntp->d_name);
+            ret = -1;
+            break;
+        }
+    }
+
+    closedir(dir);
+    return ret;
 }
 
 int util_list_all_subdir(const char *directory, char ***out)
@@ -995,51 +1130,92 @@ free_out:
     return ret;
 }
 
-char *util_path_base(const char *path)
+static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_depth, int64_t *total_size,
+                                          int64_t *total_inode)
 {
-    char *dir = NULL;
-    int len = 0;
-    int i = 0;
+    int nret = 0;
+    struct dirent *pdirent = NULL;
+    DIR *directory = NULL;
+    char fname[MAXPATHLEN];
 
-    if (path == NULL) {
-        ERROR("invalid NULL param");
-        return NULL;
+    directory = opendir(dirpath);
+    if (directory == NULL) {
+        ERROR("Failed to open %s", dirpath);
+        return;
     }
+    pdirent = readdir(directory);
+    for (; pdirent != NULL; pdirent = readdir(directory)) {
+        struct stat fstat;
+        int pathname_len;
 
-    len = (int)strlen(path);
-    if (len == 0) {
-        return util_strdup_s(".");
-    }
-
-    dir = util_strdup_s(path);
-
-    // strip last slashes
-    for (i = len - 1; i >= 0; i--) {
-        if (dir[i] != '/') {
-            break;
+        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+            continue;
         }
-        dir[i] = '\0';
-    }
 
-    len = (int)strlen(dir);
-    if (len == 0) {
-        free(dir);
-        return util_strdup_s("/");
-    }
+        (void)memset(fname, 0, sizeof(fname));
 
-    for (i = len - 1; i >= 0; i--) {
-        if (dir[i] == '/') {
-            break;
+        pathname_len = snprintf(fname, MAXPATHLEN, "%s/%s", dirpath, pdirent->d_name);
+        if (pathname_len < 0 || pathname_len >= MAXPATHLEN) {
+            ERROR("Pathname too long");
+            continue;
+        }
+
+        nret = lstat(fname, &fstat);
+        if (nret) {
+            ERROR("Failed to stat %s", fname);
+            continue;
+        }
+
+        if (S_ISDIR(fstat.st_mode)) {
+            int64_t subdir_size = 0;
+            int64_t subdir_inode = 0;
+            util_calculate_dir_size(fname, (recursive_depth + 1), &subdir_size, &subdir_inode);
+            *total_size = *total_size + subdir_size;
+            *total_inode = *total_inode + subdir_inode;
+        } else {
+            *total_size = *total_size + fstat.st_size;
+            *total_inode = *total_inode + 1;
         }
     }
 
-    if (i < 0) {
-        return dir;
+    nret = closedir(directory);
+    if (nret) {
+        ERROR("Failed to close directory %s", dirpath);
     }
 
-    char *result = util_strdup_s(&dir[i + 1]);
-    free(dir);
-    return result;
+    return;
+}
+
+void util_calculate_dir_size(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode)
+{
+    int64_t total_size_tmp = 0;
+    int64_t total_inode_tmp = 0;
+
+    if (dirpath == NULL) {
+        return;
+    }
+
+    if ((recursive_depth + 1) > MAX_PATH_DEPTH) {
+        ERROR("Reach max path depth: %s", dirpath);
+        goto out;
+    }
+
+    if (!util_dir_exists(dirpath)) {
+        ERROR("dir not exists: %s", dirpath);
+        goto out;
+    }
+
+    recursive_cal_dir_size_helper(dirpath, recursive_depth, &total_size_tmp, &total_inode_tmp);
+
+    if (total_size != NULL) {
+        *total_size = total_size_tmp;
+    }
+    if (total_inode != NULL) {
+        *total_inode = total_inode_tmp;
+    }
+
+out:
+    return;
 }
 
 static char *get_random_tmp_file(const char *fname)

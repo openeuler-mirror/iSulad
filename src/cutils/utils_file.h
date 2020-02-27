@@ -83,6 +83,8 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
 
 char *isula_utils_read_file(const char *path);
 
+int64_t util_calculate_dir_size(const char *dirpath, int recursive_depth);
+
 #ifdef __cplusplus
 }
 #endif

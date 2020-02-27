@@ -902,15 +902,6 @@ static int update_server_args(struct service_arguments *args)
         goto out;
     }
 
-#ifdef ENABLE_OCI_IMAGE
-    args->driver = graphdriver_init(args->json_confs->storage_driver, args->json_confs->storage_opts,
-                                    args->json_confs->storage_opts_len);
-    if (args->driver == NULL) {
-        ret = -1;
-        goto out;
-    }
-#endif
-
 out:
     return ret;
 }
@@ -1110,23 +1101,28 @@ static int isulad_server_init_common()
         goto out;
     }
 
-    if (isulad_server_conf_rdlock()) {
-        goto out;
-    }
-
     args = conf_get_server_conf();
     if (args == NULL) {
         ERROR("Failed to get isulad server config");
-        goto unlock_out;
+        goto out;
     }
 
     if (isulad_server_pre_init(args, log_full_path, fifo_full_path) != 0) {
-        goto unlock_out;
+        goto out;
     }
+
+#ifdef ENABLE_OCI_IMAGE
+    args->driver = graphdriver_init(args->json_confs->storage_driver, args->json_confs->graph,
+                                    args->json_confs->storage_opts,
+                                    args->json_confs->storage_opts_len);
+    if (args->driver == NULL) {
+        goto out;
+    }
+#endif
 
     if (image_module_init(args->json_confs->graph)) {
         ERROR("Failed to init image manager");
-        goto unlock_out;
+        goto out;
     }
 
 #ifdef ENABLE_OCI_IMAGE
@@ -1136,20 +1132,15 @@ static int isulad_server_init_common()
 
     if (containers_store_init()) {
         ERROR("Failed to init containers store");
-        goto unlock_out;
+        goto out;
     }
 
     if (name_index_init()) {
         ERROR("Failed to init name index");
-        goto unlock_out;
+        goto out;
     }
 
     ret = 0;
-unlock_out:
-    if (isulad_server_conf_unlock()) {
-        ret = -1;
-        goto out;
-    }
 
 out:
     free(log_full_path);

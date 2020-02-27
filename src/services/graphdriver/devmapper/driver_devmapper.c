@@ -17,23 +17,14 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include "log.h"
 #include "libisulad.h"
 #include "utils.h"
 
 #define DM_LOG_FATAL 2
 #define DM_LOG_DEBUG 7
 
-int devmapper_init(struct graphdriver *driver)
-{
-    return 0;
-}
-
-bool devmapper_is_quota_options(struct graphdriver *driver, const char *option)
-{
-    return false;
-}
-
-int devmapper_parse_options(struct graphdriver *driver, const char **options, size_t options_len)
+static int devmapper_parse_options(struct graphdriver *driver, const char **options, size_t options_len)
 {
     size_t i = 0;
 
@@ -49,12 +40,12 @@ int devmapper_parse_options(struct graphdriver *driver, const char **options, si
 
         dup = util_strdup_s(options[i]);
         if (dup == NULL) {
-            isulad_set_error_message("Out of memory");
+            ERROR("Out of memory");
             return -1;
         }
         p = strchr(dup, '=');
         if (!p) {
-            isulad_set_error_message("Unable to parse key/value option: '%s'", dup);
+            ERROR("Unable to parse key/value option: '%s'", dup);
             free(dup);
             return -1;
         }
@@ -62,31 +53,31 @@ int devmapper_parse_options(struct graphdriver *driver, const char **options, si
         val = p + 1;
         if (strcasecmp(dup, "dm.fs") == 0) {
             if (strcmp(val, "ext4")) {
-                isulad_set_error_message("Invalid filesystem: '%s': not supported", val);
+                ERROR("Invalid filesystem: '%s': not supported", val);
                 ret = -1;
             }
         } else if (strcasecmp(dup, "dm.thinpooldev") == 0) {
             if (!strcmp(val, "")) {
-                isulad_set_error_message("Invalid thinpool device, it must not be empty");
+                ERROR("Invalid thinpool device, it must not be empty");
                 ret = -1;
             }
         } else if (strcasecmp(dup, "dm.min_free_space") == 0) {
             long converted = 0;
             ret = util_parse_percent_string(val, &converted);
             if (ret != 0 || converted == 100) {
-                isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
+                ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
                 ret = -1;
             }
         } else if (strcasecmp(dup, "dm.basesize") == 0) {
             int64_t converted = 0;
             ret = util_parse_byte_size_string(val, &converted);
             if (ret != 0) {
-                isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
+                ERROR("Invalid size: '%s': %s", val, strerror(-ret));
             }
         } else if (strcasecmp(dup, "dm.mkfsarg") == 0 || strcasecmp(dup, "dm.mountopt") == 0) {
             /* We have no way to check validation here, validation is checked when using them. */
         } else {
-            isulad_set_error_message("devicemapper: unknown option: '%s'", dup);
+            ERROR("devicemapper: unknown option: '%s'", dup);
             ret = -1;
         }
         free(dup);
@@ -96,4 +87,33 @@ int devmapper_parse_options(struct graphdriver *driver, const char **options, si
     }
 
     return 0;
+}
+
+int devmapper_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
+{
+    int ret = 0;
+
+    if (driver == NULL || drvier_home == NULL || options == NULL) {
+        return -1;
+    }
+
+    if (util_mkdir_p(drvier_home, 0700) != 0) {
+        ERROR("Unable to create driver home directory %s.", drvier_home);
+        ret = -1;
+        goto out;
+    }
+
+    ret = devmapper_parse_options(driver, options, len);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+bool devmapper_is_quota_options(struct graphdriver *driver, const char *option)
+{
+    return false;
 }

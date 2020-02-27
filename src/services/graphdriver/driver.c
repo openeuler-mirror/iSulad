@@ -26,14 +26,20 @@
 #include "isula_libutils/log.h"
 #include "isulad_config.h"
 #include "image.h"
+#include "util_archive.h"
 
 /* overlay/overlay2 */
 #define DRIVER_OVERLAY_NAME "overlay"
 #define DRIVER_OVERLAY2_NAME "overlay2"
 static const struct graphdriver_ops g_overlay2_ops = {
     .init = overlay2_init,
-    .parse_options = overlay2_parse_options,
     .is_quota_options = overlay2_is_quota_options,
+    .create_rw = overlay2_create_rw,
+    .rm_layer = overlay2_rm_layer,
+    .mount_layer = overlay2_mount_layer,
+    .umount_layer = overlay2_umount_layer,
+    .exists = overlay2_layer_exists,
+    .apply_diff = overlay2_apply_diff,
 };
 
 /* devicemapper */
@@ -41,7 +47,6 @@ static const struct graphdriver_ops g_overlay2_ops = {
 
 static const struct graphdriver_ops g_devmapper_ops = {
     .init = devmapper_init,
-    .parse_options = devmapper_parse_options,
     .is_quota_options = devmapper_is_quota_options,
 };
 
@@ -52,27 +57,64 @@ static struct graphdriver g_drivers[] = {
 
 static const size_t g_numdrivers = sizeof(g_drivers) / sizeof(struct graphdriver);
 
-struct graphdriver *graphdriver_init(const char *name, char **storage_opts, size_t storage_opts_len)
+struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
+                                     size_t storage_opts_len)
 {
     size_t i = 0;
+    char driver_home[PATH_MAX] = { 0 };
+    //test
+    struct driver_create_opts test_create_opts = { 0 };
+    struct driver_mount_opts test_mount_opts = { 0 };
 
-    if (name == NULL || storage_opts == NULL) {
+    if (name == NULL || storage_opts == NULL || isulad_root == NULL) {
+        return NULL;
+    }
+
+    int nret = snprintf(driver_home, PATH_MAX, "%s/%s/%s", isulad_root, "storage", name);
+    if (nret < 0 || (size_t)nret >= PATH_MAX) {
+        ERROR("Sprintf graph driver path failed");
         return NULL;
     }
 
     for (i = 0; i < g_numdrivers; i++) {
         if (strcmp(name, g_drivers[i].name) == 0) {
-            if (g_drivers[i].ops->init(&g_drivers[i])) {
+            if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)storage_opts, storage_opts_len)) {
                 return NULL;
             }
-            if (g_drivers[i].ops->parse_options(&g_drivers[i], (const char **)storage_opts, storage_opts_len)) {
+            //just for test
+            if (g_drivers[i].ops->create_rw("1", "", &g_drivers[i], &test_create_opts) != 0) {
                 return NULL;
             }
+            if (g_drivers[i].ops->create_rw("2", "1", &g_drivers[i], &test_create_opts) != 0) {
+                return NULL;
+            }
+            if (g_drivers[i].ops->create_rw("3", "2", &g_drivers[i], &test_create_opts) != 0) {
+                return NULL;
+            }
+
+            if (g_drivers[i].ops->create_rw("4", "3", &g_drivers[i], &test_create_opts) != 0) {
+                return NULL;
+            }
+            char *test_merged = g_drivers[i].ops->mount_layer("4", &g_drivers[i], &test_mount_opts);
+            if (test_merged == NULL) {
+                return NULL;
+            }
+            ERROR("mount: %s", test_merged);
+
+            if (test_archive() != 0) {
+                ERROR("Failed!!!");
+            }
+
+            //if (g_drivers[i].ops->rm_layer("3", &g_drivers[i]) != 0) {
+            //    return NULL;
+            // }
+            // end test
+
             return &g_drivers[i];
         }
     }
 
-    isulad_set_error_message("Invalid storage driver name: '%s'", name);
+    ERROR("Invalid storage driver name: '%s'", name);
     return NULL;
 }
 
