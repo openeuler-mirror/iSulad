@@ -428,13 +428,23 @@ static int trans_one_image(image_list_images_response *response, size_t image_in
     }
 
     if (im_image->created != NULL) {
-        if (time_tz_to_seconds_nanos(im_image->created,
-                                     &(out_image->created_at->seconds),
-                                     &(out_image->created_at->nanos))) {
-            ERROR("Failed to translate created to seconds and nanos");
+        int64_t created_nanos = 0;
+        types_timestamp_t timestamp;
+
+        if (to_unix_nanos_from_str(im_image->created, &created_nanos) != 0) {
+            ERROR("Failed to translate created time to nanos");
             ret = -1;
             goto out;
         }
+
+        if (!unix_nanos_to_timestamp(created_nanos, &timestamp) != 0) {
+            ERROR("Failed to translate nanos to timestamp");
+            ret = -1;
+            goto out;
+        }
+
+        out_image->created_at->seconds = timestamp.seconds;
+        out_image->created_at->nanos = timestamp.nanos;
     }
 
 out:

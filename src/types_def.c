@@ -836,7 +836,7 @@ int time_format_duration_ago(const char *in, char *out, size_t len)
     return 0;
 }
 
-int time_tz_to_seconds_nanos(const char *time_tz, int64_t *seconds, int32_t *nanos)
+static int time_tz_to_seconds_nanos(const char *time_tz, int64_t *seconds, int32_t *nanos)
 {
     int nret = 0;
     struct tm t = { 0 };
@@ -853,14 +853,9 @@ int time_tz_to_seconds_nanos(const char *time_tz, int64_t *seconds, int32_t *nan
         return 0;
     }
 
-    if (!util_valid_time_tz(time_tz)) {
-        ERROR("invalid time %s", time_tz);
-        return -1;
-    }
-
     /* translate to rfc339NanoLocal */
     time_str = util_strdup_s(time_tz);
-    time_str[strlen(time_str) - 1] = 0; /* strip last 'Z' */
+    time_str[strlen(time_str) - 1] = '\0'; /* strip last 'Z' */
 
     if (!get_tm_from_str(time_str, &t, &nano)) {
         ERROR("get tm from string %s failed", time_str);
@@ -895,6 +890,11 @@ int to_unix_nanos_from_str(const char *str, int64_t *nanos)
     *nanos = 0;
     if (str == NULL || !strcmp(str, "") || !strcmp(str, defaultContainerTime)) {
         return 0;
+    }
+
+    if (!util_valid_time_tz(str)) {
+        ERROR("invalid time %s", str);
+        return -1;
     }
 
     if (str[strlen(str) - 1] == 'Z') {

@@ -52,8 +52,6 @@ bool get_now_time_buffer(char *timebuffer, size_t maxsize);
 
 int get_time_interval(types_timestamp_t first, types_timestamp_t last, int64_t *result);
 
-int time_tz_to_seconds_nanos(const char *time_tz, int64_t *seconds, int32_t *nanos);
-
 int to_unix_nanos_from_str(const char *str, int64_t *nanos);
 
 bool parsing_time(const char *format, const char *time, struct tm *tm, int32_t *nanos);

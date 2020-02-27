@@ -16,14 +16,17 @@
 #include "selinux_label.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include "selinux_mock.h"
+#include "syscall_mock.h"
 
 using namespace std;
+using ::testing::DoAll;
+using ::testing::SetArgPointee;
+using ::testing::ByRef;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::_;
 
-#include "selinux_mock.h"
-#include "syscall_mock.h"
 class SELinuxGetEnableUnitTest : public testing::Test {
 public:
     void SetUp() override
@@ -41,9 +44,25 @@ public:
     NiceMock<MockSyscall> m_syscall;
 };
 
-TEST_F(SELinuxGetEnableUnitTest, test_selinux_get_enable)
+TEST_F(SELinuxGetEnableUnitTest, test_selinux_get_enable_abnormal)
 {
     EXPECT_CALL(m_syscall, Statfs(_, _)).WillRepeatedly(Return(EPERM));
     EXPECT_CALL(m_selinux, SelinuxfsExists()).WillOnce(Return(-1));
     ASSERT_EQ(selinux_get_enable(), false);
 }
+
+TEST_F(SELinuxGetEnableUnitTest, test_selinux_get_enable_normal)
+{
+    const uint32_t selinuxfsMagic = 0xf97cff8c;
+    struct statfs sfbuf {
+        .f_type = selinuxfsMagic,
+         .f_flags = 0
+    };
+
+    EXPECT_CALL(m_syscall, Statfs(_, _))
+    .WillOnce(Return(EPERM))
+    .WillOnce(DoAll(SetArgPointee<1>(ByRef(sfbuf)), Return(0)));
+    EXPECT_CALL(m_selinux, SelinuxfsExists()).WillOnce(Return(-1));
+    ASSERT_EQ(selinux_get_enable(), true);
+}
+
