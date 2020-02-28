@@ -923,6 +923,10 @@ void CRIRuntimeServiceImpl::ContainerStatsToGRPC(
     container_stats_response *response,
     std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
 {
+    if (response == nullptr) {
+        return;
+    }
+
     for (size_t i {}; i < response->container_stats_len; i++) {
         using ContainerStatsPtr = std::unique_ptr<runtime::v1alpha2::ContainerStats>;
         ContainerStatsPtr container(new (std::nothrow) runtime::v1alpha2::ContainerStats);
