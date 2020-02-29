@@ -89,63 +89,71 @@ static void file_read_int(const char *fname, int *val)
     free(sint);
 }
 
-static char *get_err_message(const char *workdir, const char *file)
+static void get_err_message(char *buf, int buf_size, const char *workdir, const char *file)
 {
     char fname[PATH_MAX] = {0};
     FILE *fp = NULL;
     char *pline = NULL;
+    char *lines[3] = {0};
     size_t length = 0;
 
     if (snprintf(fname, sizeof(fname), "%s/%s", workdir, file) < 0) {
         ERROR("failed make full path %s/%s", workdir, file);
-        return NULL;
+        return;
     }
 
     fp = util_fopen(fname, "r");
     if (fp == NULL) {
-        return NULL;
+        return;
     }
 
     while (getline(&pline, &length, fp) != -1) {
         if (pline == NULL) {
-            return NULL;
+            break;
         }
         if (strings_contains_word(pline, "error")) {
-            return pline;
+            if (lines[0] == NULL) {
+                lines[0] = pline;
+                pline = NULL;
+                continue;
+            }
+            if (lines[1] == NULL) {
+                lines[1] = pline;
+                pline = NULL;
+                continue;
+            }
+            if (lines[2] == NULL) {
+                lines[2] = pline;
+                pline = NULL;
+                break;
+            }
         }
     }
 
-    if (pline != NULL) {
-        free(pline);
+    if (lines[2] != NULL) {
+        (void)snprintf(buf, buf_size, "%s%s%s", lines[0], lines[1], lines[2]);
+    } else if (lines[1] != NULL) {
+        (void)snprintf(buf, buf_size, "%s%s", lines[0], lines[1]);
+    } else if (lines[0] != NULL) {
+        (void)snprintf(buf, buf_size, "%s", lines[0]);
     }
-    return NULL;
+
+    UTIL_FREE_AND_SET_NULL(pline);
+    UTIL_FREE_AND_SET_NULL(lines[0]);
+    UTIL_FREE_AND_SET_NULL(lines[1]);
+    UTIL_FREE_AND_SET_NULL(lines[2]);
 }
 
 static void show_shim_runtime_errlog(const char *workdir)
 {
     char buf[BUFSIZ] = {0};
-    char *log1 = NULL;
-    char *log2 = NULL;
+    char buf1[BUFSIZ/2] = {0};
+    char buf2[BUFSIZ/2] = {0};
 
-    log1 = get_err_message(workdir, "shim-log.json");
-    if (log1 != NULL) {
-        ERROR("shim-log error %s", log1);
-    } else {
-        log1 = util_strdup_s("NULL");
-    }
-
-    log2 = get_err_message(workdir, "log.json");
-    if (log2 != NULL) {
-        ERROR("runtime-log error %s", log2);
-    } else {
-        log2 = util_strdup_s("NULL");
-    }
-
-    (void)snprintf(buf, sizeof(buf), "shim-log error: %s\nruntime-log error: %s\n", log1, log2);
+    get_err_message(buf1, BUFSIZ/2, workdir, "shim-log.json");
+    get_err_message(buf2, BUFSIZ/2, workdir, "log.json");
+    (void)snprintf(buf, sizeof(buf), "shim-log error: %s\nruntime-log error: %s\n", buf1, buf2);
     isulad_set_error_message(buf);
-
-    UTIL_FREE_AND_SET_NULL(log1);
-    UTIL_FREE_AND_SET_NULL(log2);
 }
 
 bool rt_isula_detect(const char *runtime)
@@ -357,6 +365,9 @@ static void runtime_exec_param_init(runtime_exec_info *rei)
     if (rei->id) {
         *params++ = rei->id;
     }
+    if (strcmp(rei->subcmd, "kill") == 0) {
+        *params++ = "9";
+    }
 }
 
 static void runtime_exec_info_init(runtime_exec_info *rei,
@@ -473,7 +484,7 @@ static int runtime_call_simple(const char *workdir, const char *runtime,
 
     runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
-        ERROR("call runtime %s failed stderr %s", subcmd, stderr);
+        WARN("call runtime %s failed stderr %s", subcmd, stderr);
         goto out;
     }
 
@@ -481,6 +492,11 @@ out:
     UTIL_FREE_AND_SET_NULL(stdout);
     UTIL_FREE_AND_SET_NULL(stderr);
     return ret;
+}
+
+static int runtime_call_kill_force(const char *workdir, const char *runtime, const char *id)
+{
+    return runtime_call_simple(workdir, runtime, "kill", NULL, 0, id);
 }
 
 static int runtime_call_delete_force(const char *workdir, const char *runtime, const char *id)
@@ -806,6 +822,7 @@ int rt_isula_clean_resource(const char *id, const char *runtime,
         shim_kill_force(workdir);
     }
 
+    (void)runtime_call_kill_force(workdir, runtime, id);
     (void)runtime_call_delete_force(workdir, runtime, id);
 
     if (util_recursive_rmdir(workdir, 0) != 0) {
