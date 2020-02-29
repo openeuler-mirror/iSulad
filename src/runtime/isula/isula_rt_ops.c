@@ -357,6 +357,9 @@ static void runtime_exec_param_init(runtime_exec_info *rei)
     if (rei->id) {
         *params++ = rei->id;
     }
+    if (strcmp(rei->subcmd, "kill") == 0) {
+        *params++ = "9";
+    }
 }
 
 static void runtime_exec_info_init(runtime_exec_info *rei,
@@ -473,7 +476,7 @@ static int runtime_call_simple(const char *workdir, const char *runtime,
 
     runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
-        ERROR("call runtime %s failed stderr %s", subcmd, stderr);
+        WARN("call runtime %s failed stderr %s", subcmd, stderr);
         goto out;
     }
 
@@ -481,6 +484,11 @@ out:
     UTIL_FREE_AND_SET_NULL(stdout);
     UTIL_FREE_AND_SET_NULL(stderr);
     return ret;
+}
+
+static int runtime_call_kill_force(const char *workdir, const char *runtime, const char *id)
+{
+    return runtime_call_simple(workdir, runtime, "kill", NULL, 0, id);
 }
 
 static int runtime_call_delete_force(const char *workdir, const char *runtime, const char *id)
@@ -806,6 +814,7 @@ int rt_isula_clean_resource(const char *id, const char *runtime,
         shim_kill_force(workdir);
     }
 
+    (void)runtime_call_kill_force(workdir, runtime, id);
     (void)runtime_call_delete_force(workdir, runtime, id);
 
     if (util_recursive_rmdir(workdir, 0) != 0) {
