@@ -590,7 +590,7 @@ cleanup:
     return ret;
 }
 
-static int merge_resolv(const host_config *host_spec, const char *rootfs)
+static int merge_resolv(const host_config *host_spec, const char *rootfs, const char *resolv_conf_path)
 {
     int ret = 0;
     size_t length = 0;
@@ -608,7 +608,7 @@ static int merge_resolv(const host_config *host_spec, const char *rootfs)
         ret = -1;
         goto error_out;
     }
-    ret = fopen_network(&fp, &file_path, rootfs, "/etc/resolv.conf");
+    ret = fopen_network(&fp, &file_path, rootfs, resolv_conf_path);
     if (ret != 0) {
         goto error_out;
     }
@@ -687,16 +687,35 @@ out:
     return ret;
 }
 
-int merge_network(const host_config *host_spec, const char *rootfs, const char *hostname)
+static int merge_network_for_universal_container(const host_config *host_spec, const char *runtime_root, const char *id)
+{
+    int ret = 0;
+    int nret = 0;
+    char root_path[PATH_MAX] = {0x00};
+
+    if (runtime_root == NULL || id == NULL) {
+        ERROR("empty runtime root or id");
+        return -1;
+    }
+
+    nret = snprintf(root_path, PATH_MAX, "%s/%s", runtime_root, id);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to print string");
+        return -1;
+    }
+
+    ret = merge_resolv(host_spec, root_path, "/resolv.conf");
+    if (ret) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int merge_network_for_syscontainer(const host_config *host_spec, const char *rootfs, const char *hostname)
 {
     int ret = 0;
 
-    if (host_spec == NULL) {
-        return -1;
-    }
-    if (!host_spec->system_container || rootfs == NULL) {
-        return 0;
-    }
     ret = write_hostname_to_file(rootfs, hostname);
     if (ret) {
         return -1;
@@ -713,7 +732,7 @@ int merge_network(const host_config *host_spec, const char *rootfs, const char *
     if (ret) {
         return -1;
     }
-    ret = merge_resolv(host_spec, rootfs);
+    ret = merge_resolv(host_spec, rootfs, "/etc/resolv.conf");
     if (ret) {
         return -1;
     }
@@ -722,6 +741,24 @@ int merge_network(const host_config *host_spec, const char *rootfs, const char *
         return -1;
     }
     return 0;
+}
+
+int merge_network(const host_config *host_spec, const char *rootfs, const char *runtime_root,
+                  const char *id, const char *hostname)
+{
+    int ret = 0;
+
+    if (host_spec == NULL) {
+        return -1;
+    }
+
+    if (!host_spec->system_container || rootfs == NULL) {
+        ret = merge_network_for_universal_container(host_spec, runtime_root, id);
+    } else {
+        ret = merge_network_for_syscontainer(host_spec, rootfs, hostname);
+    }
+
+    return ret;
 }
 
 static container_t *get_networked_container(const char *id, const char *connected_id, bool check_state)
