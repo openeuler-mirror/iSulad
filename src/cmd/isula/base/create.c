@@ -13,6 +13,7 @@
  * Description: provide container create functions
  ******************************************************************************/
 #include <unistd.h>
+#include <stdio_ext.h>
 #include <regex.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -414,6 +415,149 @@ out:
     return ret;
 }
 
+static bool validate_label(const char *label)
+{
+    bool ret = true;
+    char **arr = util_string_split_n(label, '=', 2);
+    if (arr == NULL) {
+        ERROR("Failed to split label string");
+        ret = false;
+        goto out;
+    }
+
+    if (strlen(arr[0]) == 0) {
+        ERROR("Invalid label: %s, empty name", label);
+        ret = false;
+        goto out;
+    }
+
+out:
+    util_free_array(arr);
+    return ret;
+}
+
+static int request_pack_custom_label(struct client_arguments *args, isula_container_config_t *conf)
+{
+    int ret = 0;
+    size_t i;
+
+    if (args->custom_conf.label == NULL) {
+        return 0;
+    }
+
+    for (i = 0; i < util_array_len((const char **)(args->custom_conf.label)); i++) {
+        if (!validate_label(args->custom_conf.label[i])) {
+            COMMAND_ERROR("Invalid label '%s': empty name", args->custom_conf.label[i]);
+            ret = -1;
+            goto out;
+        }
+        if (util_array_append(&conf->label, args->custom_conf.label[i]) != 0) {
+            COMMAND_ERROR("Failed to append custom config label list");
+            ret = -1;
+            goto out;
+        }
+    }
+    util_free_array(args->custom_conf.label);
+    args->custom_conf.label = conf->label; /* make sure args->custom_conf.label point to valid memory. */
+    conf->label_len = util_array_len((const char **)(conf->label));
+
+out:
+    return ret;
+}
+
+static int read_label_from_file(const char *path, size_t file_size, isula_container_config_t *conf)
+{
+    int ret = 0;
+    FILE *fp = NULL;
+    char *buf = NULL;
+    size_t len;
+    ssize_t num;
+
+    if (file_size == 0) {
+        return 0;
+    }
+    fp = fopen(path, "re");
+    if (fp == NULL) {
+        ERROR("Failed to open '%s'", path);
+        return -1;
+    }
+    __fsetlocking(fp, FSETLOCKING_BYCALLER);
+    num = getline(&buf, &len, fp);
+    while (num != -1) {
+        size_t len = strlen(buf);
+        if (len == 1) {
+            num = getline(&buf, &len, fp);
+            continue;
+        }
+        buf[len - 1] = '\0';
+        if (!validate_label(buf)) {
+            COMMAND_ERROR("Invalid label '%s': empty name", buf);
+            ret = -1;
+            goto out;
+        }
+        if (util_array_append(&conf->label, buf) != 0) {
+            ERROR("Failed to append label");
+            ret = -1;
+            goto out;
+        }
+        num = getline(&buf, &len, fp);
+    }
+
+out:
+    free(buf);
+    fclose(fp);
+    return ret;
+}
+
+static int append_labels_to_conf(const char *label_file, isula_container_config_t *conf)
+{
+    int ret = 0;
+    size_t file_size;
+
+    if (!util_file_exists(label_file)) {
+        COMMAND_ERROR("label file not exists: %s", label_file);
+        ret = -1;
+        goto out;
+    }
+    file_size = util_file_size(label_file);
+    if (file_size > REGULAR_FILE_SIZE) {
+        COMMAND_ERROR("label file '%s', size exceed limit: %lld", label_file, REGULAR_FILE_SIZE);
+        ret = -1;
+        goto out;
+    }
+
+    if (read_label_from_file(label_file, file_size, conf) != 0) {
+        COMMAND_ERROR("failed to read label from file: %s", label_file);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int request_pack_custom_label_file(const struct client_arguments *args, isula_container_config_t *conf)
+{
+    int ret = 0;
+    size_t i;
+    char **label_files = args->custom_conf.label_file;
+    size_t label_files_size = util_array_len((const char **)label_files);
+    if (label_files_size == 0) {
+        return 0;
+    }
+
+    for (i = 0; i < label_files_size; i++) {
+        if (append_labels_to_conf(label_files[i], conf) != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+    conf->label_len = util_array_len((const char **)(conf->label));
+
+out:
+    return ret;
+}
+
 static void request_pack_custom_user(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.user != NULL) {
@@ -577,8 +721,18 @@ static int request_pack_custom_conf(struct client_arguments *args, isula_contain
         return -1;
     }
 
-    /* Make sure --env has higher priority than --env-file */
+    /* make sure --env has higher priority than --env-file */
     if (request_pack_custom_env(args, conf) != 0) {
+        return -1;
+    }
+
+    /* append labels from label file */
+    if (request_pack_custom_label_file(args, conf) != 0) {
+        return -1;
+    }
+
+    /* make sure --label has higher priority than --label-file */
+    if (request_pack_custom_label(args, conf) != 0) {
         return -1;
     }
 
@@ -587,7 +741,7 @@ static int request_pack_custom_conf(struct client_arguments *args, isula_contain
 
     request_pack_custom_hostname(args, conf);
 
-    /* alldevices */
+    /* all devices */
     request_pack_custom_all_devices(args, conf);
 
     /* system container */
@@ -1225,6 +1379,7 @@ out:
 
     return ret;
 }
+
 int callback_annotation(command_option_t *option, const char *value)
 {
     struct client_arguments *args = (struct client_arguments *)option->data;

@@ -37,6 +37,9 @@ typedef struct isula_container_config {
     char **env;
     size_t env_len;
 
+    char **label;
+    size_t label_len;
+
     char *hostname;
 
     char *user;

@@ -53,6 +53,10 @@ extern "C" {
       "Set environment variables", command_append_array }, \
     { CMD_OPT_TYPE_CALLBACK, false, "env-file", 0, &(cmdargs).custom_conf.env_file, \
       "Read in a file of environment variables", command_append_array }, \
+    { CMD_OPT_TYPE_CALLBACK, false, "label", 'l', &(cmdargs).custom_conf.label, \
+      "Set metadata on container (default [])", command_append_array }, \
+    { CMD_OPT_TYPE_CALLBACK, false, "label-file", 0, &(cmdargs).custom_conf.label_file, \
+      "Read in a line delimited file of labels (default [])", command_append_array }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "entrypoint", 0, &(cmdargs).custom_conf.entrypoint, \
       "Entrypoint to run when starting the container", NULL }, \
     { CMD_OPT_TYPE_STRING, false, "external-rootfs", 0, &(cmdargs).external_rootfs, \

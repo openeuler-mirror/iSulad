@@ -41,7 +41,7 @@ public:
 
 TEST_F(IsuladShimUnitTest, test_new_process)
 {
-    string id="aaaabbbbccccdddd";
+    string id = "aaaabbbbccccdddd";
     string bundle = "/home/isulad/bundle";
     string runtime = "kata-runtime";
 
@@ -54,7 +54,7 @@ TEST_F(IsuladShimUnitTest, test_open_no_inherit)
     string exist_file = "/tmp/test_open_no_inherit_exist";
     string non_file = "/tmp/test_open_no_inherit_non";
     int fd_exist = -1;
-    
+
     fd_exist = open_no_inherit(exist_file.c_str(), O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
     EXPECT_GT(fd_exist, 0);
     EXPECT_EQ(open_no_inherit(non_file.c_str(), O_WRONLY, -1), -1);
@@ -77,7 +77,7 @@ TEST_F(IsuladShimUnitTest, test_read_write_nointr)
     EXPECT_EQ(read_nointr(0, NULL, 32), -1);
     EXPECT_EQ(read_nointr(1, NULL, 32), -1);
 
-    fd_wr = open_no_inherit(test_file.c_str(), O_CREAT | O_RDWR | O_APPEND | O_SYNC , 0640);
+    fd_wr = open_no_inherit(test_file.c_str(), O_CREAT | O_RDWR | O_APPEND | O_SYNC, 0640);
     EXPECT_GT(fd_wr, 0);
     nwrite = write_nointr(fd_wr, test_string.c_str(), 5);
     EXPECT_EQ(nwrite, 5);
@@ -95,7 +95,7 @@ TEST_F(IsuladShimUnitTest, test_file_exist)
     string exist_file = "/tmp/test_exist_exist";
     string non_file = "/tmp/test_exist_non";
     int fd_exist = -1;
-    
+
     fd_exist = open_no_inherit(exist_file.c_str(), O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0640);
     EXPECT_GT(fd_exist, 0);
     EXPECT_TRUE(file_exists(exist_file.c_str()));
