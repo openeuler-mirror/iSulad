@@ -30,6 +30,7 @@
 #include "isulad_config.h"
 
 #define SHIM_BINARY "isulad-shim"
+#define SHIM_LOG_SIZE ((BUFSIZ-100)/2)
 #define PID_WAIT_TIME 120
 
 static void copy_process(shim_client_process_state *p, defs_process *dp)
@@ -147,11 +148,11 @@ static void get_err_message(char *buf, int buf_size, const char *workdir, const 
 static void show_shim_runtime_errlog(const char *workdir)
 {
     char buf[BUFSIZ] = {0};
-    char buf1[BUFSIZ/2] = {0};
-    char buf2[BUFSIZ/2] = {0};
+    char buf1[SHIM_LOG_SIZE] = {0};
+    char buf2[SHIM_LOG_SIZE] = {0};
 
-    get_err_message(buf1, BUFSIZ/2, workdir, "shim-log.json");
-    get_err_message(buf2, BUFSIZ/2, workdir, "log.json");
+    get_err_message(buf1, sizeof(buf1), workdir, "shim-log.json");
+    get_err_message(buf2, sizeof(buf2), workdir, "log.json");
     ERROR("shim-log: %s", buf1);
     ERROR("runtime-log: %s", buf2);
     (void)snprintf(buf, sizeof(buf), "shim-log error: %s\nruntime-log error: %s\n", buf1, buf2);
