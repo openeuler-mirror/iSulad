@@ -1258,6 +1258,7 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
     if (ret != 0) {
         return Status(StatusCode::INTERNAL, "Failed to execute events callback");
     }
+
     return Status::OK;
 }
 

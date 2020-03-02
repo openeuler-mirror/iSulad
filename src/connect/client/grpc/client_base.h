@@ -113,16 +113,12 @@ public:
             context.set_deadline(tDeadline);
         }
 
-        // Set common name from cert.perm
-        char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
-        ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
-                                            ClientBaseConstants::COMMON_NAME_LEN);
-        if (ret != 0) {
-            ERROR("Failed to get common name in: %s", m_certFile.c_str());
+        // Set metadata for authorization
+        if (SetMetadataInfo(context) != 0) {
+            ERROR("Failed to set metadata info for authorization");
+            response->cc = ISULAD_ERR_INPUT;
             return -1;
         }
-        context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
-        context.AddMetadata("tls_mode", m_tlsMode);
 
         ret = request_to_grpc(request, &req);
         if (ret != 0) {
@@ -175,7 +171,7 @@ protected:
         return Status::OK;
     };
 
-    static std::string ReadTextFile(const char *file)
+    std::string ReadTextFile(const char *file)
     {
         char *real_file = verify_file_and_get_real_path(file);
         if (real_file == nullptr) {
@@ -193,6 +189,22 @@ protected:
         }
         free(real_file);
         return ss.str();
+    }
+
+    int SetMetadataInfo(ClientContext &context)
+    {
+        // Set common name from cert.perm
+        char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
+        int ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
+                                            ClientBaseConstants::COMMON_NAME_LEN);
+        if (ret != 0) {
+            ERROR("Failed to get common name in: %s", m_certFile.c_str());
+            return -1;
+        }
+        context.AddMetadata("username", std::string(common_name_value, strlen(common_name_value)));
+        context.AddMetadata("tls_mode", m_tlsMode);
+
+        return 0;
     }
 
     std::unique_ptr<sTB> stub_;

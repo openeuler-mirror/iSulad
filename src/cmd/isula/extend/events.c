@@ -116,7 +116,7 @@ static int client_event(struct client_arguments *args)
 
     config = get_connect_config(args);
     ret = ops->container.events(&request, response, &config);
-    if (ret) {
+    if (ret != 0) {
         COMMAND_ERROR("Failed to get container events, %s",
                       response->errmsg ? response->errmsg : errno_to_error_message(response->cc));
     }
