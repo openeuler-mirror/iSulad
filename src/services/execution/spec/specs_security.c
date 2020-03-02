@@ -45,6 +45,7 @@
 #include "libisulad.h"
 #include "specs_extend.h"
 #include "selinux_label.h"
+#include "specs.h"
 
 #define MAX_CAP_LEN 32
 
@@ -984,6 +985,10 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
                                                         };
     char **adds = NULL;
     size_t adds_len = 0;
+    bool no_new_privileges = false;
+    char **label_opts = NULL;
+    size_t label_opts_len = 0;
+    char *seccomp_profile = NULL;
 
     ret = get_adds_cap_for_system_container(host_spec, &adds, &adds_len);
     if (ret != 0) {
@@ -1009,6 +1014,16 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
         goto out;
     }
 
+    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts,
+                             &label_opts_len, &seccomp_profile);
+    if (ret != 0) {
+        ERROR("Failed to parse security opt");
+        goto out;
+    }
+    /* do not append to seccomp if seccomp profile is NULL or unconfined */
+    if (seccomp_profile == NULL || strcmp(seccomp_profile, "unconfined") == 0) {
+        goto out;
+    }
     ret = append_systemcall_to_seccomp(
               oci_spec->linux->seccomp,
               make_seccomp_syscalls_element((const char **)unblocked_systemcall_for_system_container,
@@ -1021,6 +1036,8 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
         goto out;
     }
 out:
+    util_free_array(label_opts);
+    free(seccomp_profile);
     free_adds_cap_for_system_container(adds, adds_len);
     return ret;
 }
