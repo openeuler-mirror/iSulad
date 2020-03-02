@@ -1928,6 +1928,72 @@ out:
     return ret;
 }
 
+static int get_label_key_value(const char *label, char **key, char **value)
+{
+    int ret = 0;
+    char **arr = util_string_split_n(label, '=', 2);
+    if (arr == NULL) {
+        ERROR("Failed to split input label");
+        ret = -1;
+        goto out;
+    }
+
+    *key = util_strdup_s(arr[0]);
+    if (util_array_len((const char **)arr) == 1) {
+        *value = util_strdup_s("");
+    } else {
+        *value = util_strdup_s(arr[1]);
+    }
+
+out:
+    util_free_array(arr);
+    return ret;
+}
+
+static int pack_container_custom_config_labels(container_config *container_spec,
+                                               const isula_container_config_t *custom_conf)
+{
+    int ret = 0;
+    int i;
+    char *key = NULL;
+    char *value = NULL;
+
+    if (custom_conf->label_len == 0 || custom_conf->label == NULL) {
+        return 0;
+    }
+
+    /* labels */
+    container_spec->labels = util_common_calloc_s(sizeof(json_map_string_string));
+    if (container_spec->labels == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < custom_conf->label_len; i++) {
+        if (get_label_key_value(custom_conf->label[i], &key, &value) != 0) {
+            ERROR("Failed to get key and value of label");
+            ret = -1;
+            goto out;
+        }
+
+        if (append_json_map_string_string(container_spec->labels, key, value)) {
+            ERROR("Append map failed");
+            ret = -1;
+            goto out;
+        }
+        free(key);
+        key = NULL;
+        free(value);
+        value = NULL;
+    }
+
+out:
+    free(key);
+    free(value);
+    return ret;
+}
+
 static bool have_health_check(const isula_container_config_t *custom_conf)
 {
     bool have_health_settings = false;
@@ -2083,6 +2149,11 @@ static int pack_container_custom_config_pre(container_config *container_spec,
     }
 
     ret = pack_container_custom_config_array(container_spec, custom_conf);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = pack_container_custom_config_labels(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
     }

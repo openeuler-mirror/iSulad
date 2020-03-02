@@ -43,6 +43,12 @@ struct custom_configs {
     /* environment variables file */
     char **env_file;
 
+    /* label */
+    char **label;
+
+    /* label file */
+    char **label_file;
+
     /* hugepage limits */
     char **hugepage_limits;
 
