@@ -842,19 +842,21 @@ void process_delete(process_t *p)
     }
     snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
 
-    params[i++] = "--log";
-    params[i++] = log_path;
-    params[i++] = "--log-format";
-    params[i++] = "json";
     params[i++] = p->runtime;
     for (j = 0; j < p->state->runtime_args_len; j++) {
         params[i++] = p->state->runtime_args[j];
     }
+    params[i++] = "--log";
+    params[i++] = log_path;
+    params[i++] = "--log-format";
+    params[i++] = "json";
 
     params[i++] = "delete";
+    params[i++] = "--force";
     params[i++] = p->id;
 
-    cmd_combined_output(p->runtime, params, output, &output_len);
+    (void)cmd_combined_output(p->runtime, params, output, &output_len);
+    free(cwd);
 
     return;
 }
@@ -984,9 +986,6 @@ int process_signal_handle_routine(process_t *p)
         ret = reap_container(p->ctr_pid, &status);
         if (ret == SHIM_OK) {
             exit_shim = true;
-            if (p->exit_fd > 0) {
-                (void)write_nointr(p->exit_fd, &status, sizeof(int));
-            }
             if (status == CONTAINER_ACTION_REBOOT) {
                 ret = setenv("CONTAINER_ACTION", "reboot", 1);
                 if (ret != SHIM_OK) {
@@ -1006,6 +1005,9 @@ int process_signal_handle_routine(process_t *p)
         if (exit_shim) {
             process_kill_all(p);
             process_delete(p);
+            if (p->exit_fd > 0) {
+                (void)write_nointr(p->exit_fd, &status, sizeof(int));
+            }
             for (i = 0; i < 3; i ++) {
                 destory_io_thread(p, i);
             }
