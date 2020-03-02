@@ -37,6 +37,9 @@ oci_runtime_spec *default_spec(bool system_container);
 int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec);
 int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec);
 
+int parse_security_opt(const host_config *host_spec, bool *no_new_privileges,
+                              char ***label_opts, size_t *label_opts_len,
+                              char **seccomp_profile);
 #ifdef __cplusplus
 }
 #endif

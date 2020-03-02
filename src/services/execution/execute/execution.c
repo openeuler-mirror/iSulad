@@ -527,9 +527,23 @@ static int mount_dev_tmpfs_for_system_container(const container_t *cont)
             return -1;
         }
     }
-    if (mount("tmpfs", rootfs_dev_path, "tmpfs", 0, "size=500000,mode=755")) {
-        ERROR("Failed to mount dev tmpfs on '%s'", rootfs_dev_path);
-        return -1;
+    /* set /dev mount size to half of container memory limit */
+    if (cont->hostconfig->memory > 0) {
+        char mnt_opt[MOUNT_PROPERTIES_SIZE] = { 0 };
+        nret = snprintf(mnt_opt, sizeof(mnt_opt), "size=%lld,mode=755", (long long int)(cont->hostconfig->memory / 2));
+        if (nret < 0 || (size_t)nret >= sizeof(mnt_opt)) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        if (mount("tmpfs", rootfs_dev_path, "tmpfs", 0, mnt_opt) != 0) {
+            ERROR("Failed to mount dev tmpfs on '%s'", rootfs_dev_path);
+            return -1;
+        }
+    } else {
+        if (mount("tmpfs", rootfs_dev_path, "tmpfs", 0, "mode=755") != 0) {
+            ERROR("Failed to mount dev tmpfs on '%s'", rootfs_dev_path);
+            return -1;
+        }
     }
     if (cont->hostconfig->user_remap != NULL) {
         unsigned int host_uid = 0;
