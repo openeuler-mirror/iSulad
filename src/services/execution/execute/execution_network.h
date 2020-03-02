@@ -23,7 +23,8 @@
 extern "C" {
 #endif
 
-int merge_network(const host_config *host_spec, const char *rootfs, const char *hostname);
+int merge_network(const host_config *host_spec, const char *rootfs, const char *runtime_root,
+                  const char *id, const char *hostname);
 
 int container_initialize_networking(const container_t *cont);
 
