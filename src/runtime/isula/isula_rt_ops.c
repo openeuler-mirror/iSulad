@@ -152,6 +152,8 @@ static void show_shim_runtime_errlog(const char *workdir)
 
     get_err_message(buf1, BUFSIZ/2, workdir, "shim-log.json");
     get_err_message(buf2, BUFSIZ/2, workdir, "log.json");
+    ERROR("shim-log: %s", buf1);
+    ERROR("runtime-log: %s", buf2);
     (void)snprintf(buf, sizeof(buf), "shim-log error: %s\nruntime-log error: %s\n", buf1, buf2);
     isulad_set_error_message(buf);
 }
@@ -1009,12 +1011,14 @@ out:
 int rt_isula_attach(const char *id, const char *runtime,
                     const rt_attach_params_t *params)
 {
+    ERROR("isula attach not support on isulad-shim");
     isulad_set_error_message("isula attach not support on isulad-shim");
     return -1;
 }
 
 int rt_isula_update(const char *id, const char *runtime, const rt_update_params_t *params)
 {
+    ERROR("isula update not support on isulad-shim");
     isulad_set_error_message("isula update not support on isulad-shim");
     return -1;
 }
@@ -1055,6 +1059,7 @@ int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_
 
 int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out)
 {
+    ERROR("isula top/listpids not support on isulad-shim");
     isulad_set_error_message("isula top/listpids not support on isulad-shim");
     return -1;
 }
@@ -1063,6 +1068,7 @@ int rt_isula_resources_stats(const char *name, const char *runtime,
                              const rt_stats_params_t *params,
                              struct engine_container_resources_stats_info *rs_stats)
 {
+    ERROR("isula stats not support on isulad-shim");
     isulad_set_error_message("isula stats not support on isulad-shim");
     return -1;
 }
