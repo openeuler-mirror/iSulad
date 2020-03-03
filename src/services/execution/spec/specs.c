@@ -1692,8 +1692,8 @@ out:
 }
 
 int parse_security_opt(const host_config *host_spec, bool *no_new_privileges,
-                              char ***label_opts, size_t *label_opts_len,
-                              char **seccomp_profile)
+                       char ***label_opts, size_t *label_opts_len,
+                       char **seccomp_profile)
 {
     int ret = 0;
     size_t i;

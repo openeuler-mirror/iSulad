@@ -1743,6 +1743,12 @@ public:
         Status status;
         container_events_format_t isula_event;
 
+        if (SetMetadataInfo(context)) {
+            ERROR("Failed to set metadata info for authorization");
+            response->cc = ISULAD_ERR_INPUT;
+            return -1;
+        }
+
         ret = events_request_to_grpc(request, &req);
         if (ret != 0) {
             ERROR("Failed to translate request to grpc");

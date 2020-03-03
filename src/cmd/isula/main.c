@@ -33,6 +33,7 @@
 #include "pause.h"
 #include "resume.h"
 #include "logs.h"
+#include "events.h"
 #include "kill.h"
 #include "load.h"
 #include "update.h"
@@ -136,6 +137,10 @@ struct command g_commands[] = {
     {
         // `logs` sub-command
         "logs", cmd_logs_main, g_cmd_logs_desc, NULL, &g_cmd_logs_args
+    },
+    {
+        // `events` sub-command
+        "events", cmd_events_main, g_cmd_events_desc, NULL, &g_cmd_events_args
     },
 #endif
     {
