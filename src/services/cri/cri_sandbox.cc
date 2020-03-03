@@ -307,7 +307,7 @@ void CRIRuntimeServiceImpl::SetupSandboxFiles(const std::string &resolvPath,
 
     if (!resolvContentStrs.empty()) {
         std::string resolvContent = CXXUtils::StringsJoin(resolvContentStrs, "\n") + "\n";
-        if (util_write_file(resolvPath.c_str(), resolvContent.c_str(), resolvContent.size()) != 0) {
+        if (util_write_file(resolvPath.c_str(), resolvContent.c_str(), resolvContent.size(), DEFAULT_SECURE_FILE_MODE) != 0) {
             error.SetError("Failed to write resolv content");
         }
     }

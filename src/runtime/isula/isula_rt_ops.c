@@ -60,7 +60,7 @@ static int file_write_int(const char *fname, int val)
         return -1;
     }
 
-    if (util_write_file(fname, sint, strlen(sint)) < 0) {
+    if (util_write_file(fname, sint, strlen(sint), DEFAULT_SECURE_FILE_MODE) < 0) {
         return -1;
     }
 
@@ -188,7 +188,7 @@ static int create_process_json_file(const char *workdir, const shim_client_proce
         goto out;
     }
 
-    if (util_write_file(fname, data, strlen(data)) != 0) {
+    if (util_write_file(fname, data, strlen(data), DEFAULT_SECURE_FILE_MODE) != 0) {
         retcode = -1;
         ERROR("failed write process.json");
         goto out;
