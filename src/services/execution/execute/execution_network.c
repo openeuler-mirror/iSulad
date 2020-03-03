@@ -48,7 +48,7 @@ static int write_hostname_to_file(const char *rootfs, const char *hostname)
         goto error_out;
     }
     if (hostname != NULL) {
-        ret = util_write_file(file_path, hostname, strlen(hostname));
+        ret = util_write_file(file_path, hostname, strlen(hostname), NETWORK_MOUNT_FILE_MODE);
         if (ret) {
             SYSERROR("Failed to write %s", file_path);
             isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
@@ -140,7 +140,7 @@ static int write_content_to_file(const char *file_path, const char *content)
     int ret = 0;
 
     if (content != NULL) {
-        ret = util_write_file(file_path, content, strlen(content));
+        ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
         if (ret != 0) {
             SYSERROR("Failed to write file %s", file_path);
             isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
@@ -869,7 +869,7 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
     }
 
 
-    if (util_write_file(file_path, hostname_content, strlen(hostname_content)) != 0) {
+    if (util_write_file(file_path, hostname_content, strlen(hostname_content), NETWORK_MOUNT_FILE_MODE) != 0) {
         ERROR("Failed to create default hostname");
         ret = -1;
         goto out;
@@ -915,7 +915,7 @@ static int write_default_hosts(const char *file_path, const char *hostname)
         goto out_free;
     }
 
-    ret = util_write_file(file_path, content, strlen(content));
+    ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
     if (ret != 0) {
         ret = -1;
         goto out_free;
@@ -941,7 +941,7 @@ static int create_default_hosts(const char *id, const char *rootpath, bool share
     }
 
     if (share_host && util_file_exists(ETC_HOSTS)) {
-        ret = util_copy_file(ETC_HOSTS, file_path);
+        ret = util_copy_file(ETC_HOSTS, file_path, NETWORK_MOUNT_FILE_MODE);
     } else {
         ret = write_default_hosts(file_path, v2_spec->config->hostname);
     }
@@ -962,7 +962,7 @@ static int write_default_resolve(const char *file_path)
 {
     const char *default_ipv4_dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";;
 
-    return util_write_file(file_path, default_ipv4_dns, strlen(default_ipv4_dns));
+    return util_write_file(file_path, default_ipv4_dns, strlen(default_ipv4_dns), NETWORK_MOUNT_FILE_MODE);
 }
 
 static int create_default_resolv(const char *id, const char *rootpath, container_config_v2_common_config *v2_spec)
@@ -978,7 +978,7 @@ static int create_default_resolv(const char *id, const char *rootpath, container
     }
 
     if (util_file_exists(RESOLV_CONF_PATH)) {
-        ret = util_copy_file(RESOLV_CONF_PATH, file_path);
+        ret = util_copy_file(RESOLV_CONF_PATH, file_path, NETWORK_MOUNT_FILE_MODE);
     } else {
         ret = write_default_resolve(file_path);
     }

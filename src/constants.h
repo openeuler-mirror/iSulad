@@ -46,6 +46,8 @@
 
 #define DEBUG_DIRECTORY_MODE 0750
 
+#define NETWORK_MOUNT_FILE_MODE 0644
+
 #define ISULAD_CONFIG "/etc/isulad"
 
 #define ISULAD_DAEMON_JSON_CONF_FILE ISULAD_CONFIG "/daemon.json"

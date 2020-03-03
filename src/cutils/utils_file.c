@@ -822,7 +822,7 @@ free_out:
     return ret;
 }
 
-int util_write_file(const char *fname, const char *content, size_t content_len)
+int util_write_file(const char *fname, const char *content, size_t content_len, mode_t mode)
 {
     int ret = 0;
     int dst_fd = -1;
@@ -834,7 +834,7 @@ int util_write_file(const char *fname, const char *content, size_t content_len)
     if (content == NULL || content_len == 0) {
         return 0;
     }
-    dst_fd = util_open(fname, O_WRONLY | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
+    dst_fd = util_open(fname, O_WRONLY | O_CREAT | O_TRUNC, mode);
     if (dst_fd < 0) {
         ERROR("Creat file: %s, failed: %s", fname, strerror(errno));
         ret = -1;
@@ -877,7 +877,7 @@ char *verify_file_and_get_real_path(const char *file)
     return util_strdup_s(resolved_path);
 }
 
-int util_copy_file(const char *src_file, const char *dst_file)
+int util_copy_file(const char *src_file, const char *dst_file, mode_t mode)
 {
 #define BUFSIZE 4096
     int ret = 0;
@@ -902,7 +902,7 @@ int util_copy_file(const char *src_file, const char *dst_file)
         ret = -1;
         goto free_out;
     }
-    dst_fd = util_open(dst_file, O_WRONLY | O_CREAT | O_TRUNC, DEFAULT_SECURE_FILE_MODE);
+    dst_fd = util_open(dst_file, O_WRONLY | O_CREAT | O_TRUNC, mode);
     if (dst_fd < 0) {
         ERROR("Creat file: %s, failed: %s", dst_file, strerror(errno));
         ret = -1;
