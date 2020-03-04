@@ -63,7 +63,7 @@ int isula_rootfs_umount(const char *name_id, bool force)
     struct isula_umount_request *ireq = NULL;
     struct isula_umount_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
 
     im_ops = get_isula_image_ops();
     if (im_ops == NULL) {

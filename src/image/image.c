@@ -163,6 +163,10 @@ static const struct bim_type *bim_query(const char *image_name)
             WARN("Unimplements resolve image name in %s", g_bims[i].image_type);
             continue;
         }
+        if (g_bims[i].ops->detect == NULL) {
+            WARN("Unimplements detect in %s", g_bims[i].image_type);
+            continue;
+        }
         temp = g_bims[i].ops->resolve_image_name(image_name);
         if (temp == NULL) {
             isulad_append_error_message("Failed to resovle image name%s", image_name);
@@ -235,6 +239,12 @@ static struct bim *bim_get(const char *image_type, const char *image_name, const
 
     bim->ops = q->ops;
     bim->type = q->image_type;
+
+    if (bim->ops->resolve_image_name == NULL) {
+        ERROR("Unimplements resolve image name");
+        bim_put(bim);
+        return NULL;
+    }
 
     if (image_name != NULL) {
         bim->image_name = bim->ops->resolve_image_name(image_name);
@@ -1049,13 +1059,40 @@ void free_im_load_response(im_load_response *ptr)
     free(ptr);
 }
 
+static bool check_login_request(const im_login_request *request)
+{
+    if (request == NULL) {
+        ERROR("Invalid input arguments");
+        return false;
+    }
+
+    if (request->server == NULL) {
+        ERROR("Login requires server address");
+        isulad_set_error_message("Login requires server address");
+        return false;
+    }
+
+    if (request->type == NULL) {
+        ERROR("Login requires image type");
+        isulad_set_error_message("Login requires image type");
+        return false;
+    }
+
+    if (request->username == NULL || request->password == NULL) {
+        ERROR("Missing username or password");
+        isulad_set_error_message("Missing username or password");
+        return false;
+    }
+    return true;
+}
+
 int im_login(const im_login_request *request, im_login_response **response)
 {
     int ret = -1;
     struct bim *bim = NULL;
 
-    if (request == NULL || response == NULL) {
-        ERROR("Invalid input arguments");
+    if (response == NULL) {
+        ERROR("Empty response");
         return -1;
     }
 
@@ -1065,27 +1102,18 @@ int im_login(const im_login_request *request, im_login_response **response)
         return -1;
     }
 
-    if (request->server == NULL) {
-        ERROR("Login requires server address");
-        isulad_set_error_message("Login requires server address");
-        goto pack_response;
-    }
-
-    if (request->type == NULL) {
-        ERROR("Login requires image type");
-        isulad_set_error_message("Login requires image type");
-        goto pack_response;
-    }
-
-    if (request->username == NULL || request->password == NULL) {
-        ERROR("Missing username or password");
-        isulad_set_error_message("Missing username or password");
+    if (!check_login_request(request)) {
         goto pack_response;
     }
 
     bim = bim_get(request->type, NULL, NULL, NULL);
     if (bim == NULL) {
         ERROR("Failed to init bim, image type:%s", request->type);
+        goto pack_response;
+    }
+
+    if (bim->ops->login == NULL) {
+        ERROR("Unimplements login in %s", bim->type);
         goto pack_response;
     }
 
@@ -1142,13 +1170,34 @@ void free_im_login_response(im_login_response *ptr)
     free(ptr);
 }
 
+static bool check_logout_request(const im_logout_request *request)
+{
+    if (request == NULL) {
+        ERROR("Invalid input arguments");
+        return false;
+    }
+
+    if (request->server == NULL) {
+        ERROR("Logout requires server address");
+        isulad_set_error_message("Logout requires server address");
+        return false;
+    }
+
+    if (request->type == NULL) {
+        ERROR("Logout requires image type");
+        isulad_set_error_message("Logout requires image type");
+        return false;
+    }
+    return true;
+}
+
 int im_logout(const im_logout_request *request, im_logout_response **response)
 {
     int ret = -1;
     struct bim *bim = NULL;
 
-    if (request == NULL || response == NULL) {
-        ERROR("Invalid input arguments");
+    if (response == NULL) {
+        ERROR("Empty response");
         return -1;
     }
 
@@ -1158,21 +1207,18 @@ int im_logout(const im_logout_request *request, im_logout_response **response)
         return -1;
     }
 
-    if (request->server == NULL) {
-        ERROR("Logout requires server address");
-        isulad_set_error_message("Logout requires server address");
-        goto pack_response;
-    }
-
-    if (request->type == NULL) {
-        ERROR("Logout requires image type");
-        isulad_set_error_message("Logout requires image type");
+    if (!check_logout_request(request)) {
         goto pack_response;
     }
 
     bim = bim_get(request->type, NULL, NULL, NULL);
     if (bim == NULL) {
         ERROR("Failed to init bim, image type:%s", request->type);
+        goto pack_response;
+    }
+
+    if (bim->ops->logout == NULL) {
+        ERROR("Unimplements logout in %s", bim->type);
         goto pack_response;
     }
 
@@ -1616,6 +1662,10 @@ static int bims_init(const struct im_configs *conf)
     size_t i;
 
     for (i = 0; i < g_numbims; i++) {
+        if (g_bims[i].ops->init == NULL) {
+            WARN("Unimplements init in %s", g_bims[i].image_type);
+            continue;
+        }
         ret = g_bims[i].ops->init(conf);
         if (ret != 0) {
             ERROR("Failed to init bim %s", g_bims[i].image_type);
