@@ -111,7 +111,7 @@ imagetool_image *isula_image_get_image_info_by_name(const char *image_name)
     struct isula_status_request *ireq = NULL;
     struct isula_status_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
     imagetool_image *result = NULL;
     int ret = -1;
 

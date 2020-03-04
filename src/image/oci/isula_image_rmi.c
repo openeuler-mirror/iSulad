@@ -56,7 +56,7 @@ int isula_image_rmi(const char *image, bool force, char **errmsg)
     struct isula_rmi_request *ireq = NULL;
     struct isula_rmi_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
 
     im_ops = get_isula_image_ops();
     if (im_ops == NULL) {
