@@ -806,7 +806,7 @@ char *conf_get_isulad_log_gather_fifo_path()
         ERROR("Out of memory");
         goto err_out;
     }
-    nret = snprintf(logfile, len, "%s%s", statedir, "LOG_GATHER_FIFO_NAME");
+    nret = snprintf(logfile, len, "%s%s", statedir, LOG_GATHER_FIFO_NAME);
     if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf log file failed");
         goto err_out;
