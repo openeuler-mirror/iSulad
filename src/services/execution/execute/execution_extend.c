@@ -670,6 +670,7 @@ static int container_resume_cb(const container_resume_request *request, containe
     }
 
     EVENT("Event: {Object: %s, Type: Resumed}", id);
+    (void)isulad_monitor_send_container_event(id, UNPAUSE, -1, 0, NULL, NULL);
 
 pack_response:
     pack_resume_response(*response, cc, id);
@@ -810,6 +811,7 @@ static int container_pause_cb(const container_pause_request *request,
     }
 
     EVENT("Event: {Object: %s, Type: Paused}", id);
+    (void)isulad_monitor_send_container_event(id, PAUSE, -1, 0, NULL, NULL);
 
 pack_response:
     pack_pause_response(*response, cc, id);
@@ -1173,6 +1175,7 @@ static int container_update_cb(const container_update_request *request, containe
     }
 
     EVENT("Event: {Object: %s, Type: updated}", id);
+    (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
 
 pack_response:
     pack_update_response(*response, cc, id);
@@ -1260,6 +1263,7 @@ static int container_export_cb(const container_export_request *request, containe
         goto pack_response;
     }
 
+    (void)isulad_monitor_send_container_event(id, EXPORT, -1, 0, NULL, NULL);
 pack_response:
     pack_export_response(*response, cc, id);
     container_unref(cont);
@@ -1432,6 +1436,7 @@ static int container_resize_cb(const struct isulad_container_resize_request *req
     }
 
     EVENT("Event: {Object: %s, Type: Resized}", id);
+    (void)isulad_monitor_send_container_event(id, RESIZE, -1, 0, NULL, NULL);
 
 pack_response:
     pack_resize_response(*response, cc, id);

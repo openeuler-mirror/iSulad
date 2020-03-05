@@ -55,11 +55,35 @@ typedef enum {
     EVENTS_TYPE_THAWED = 8,
     EVENTS_TYPE_OOM = 9,
     EVENTS_TYPE_CREATE = 10,
-    EVENTS_TYPE_START = 11,
-    EVENTS_TYPE_EXEC_ADDED = 12,
-    EVENTS_TYPE_PAUSED1 = 13,
-    EVENTS_TYPE_MAX_STATE = 14
+    EVENTS_TYPE_START,
+    EVENTS_TYPE_RESTART,
+    EVENTS_TYPE_STOP,
+    EVENTS_TYPE_EXEC_CREATE,
+    EVENTS_TYPE_EXEC_START,
+    EVENTS_TYPE_EXEC_DIE,
+    EVENTS_TYPE_ATTACH,
+    EVENTS_TYPE_KILL,
+    EVENTS_TYPE_TOP,
+    EVENTS_TYPE_RENAME,
+    EVENTS_TYPE_ARCHIVE_PATH,
+    EVENTS_TYPE_EXTRACT_TO_DIR,
+    EVENTS_TYPE_UPDATE,
+    EVENTS_TYPE_PAUSE,
+    EVENTS_TYPE_UNPAUSE,
+    EVENTS_TYPE_EXPORT,
+    EVENTS_TYPE_RESIZE,
+    EVENTS_TYPE_PAUSED1,
+    EVENTS_TYPE_MAX_STATE
 } container_events_type_t;
+
+typedef enum {
+    EVENTS_TYPE_IMAGE_LOAD = 0,
+    EVENTS_TYPE_IMAGE_REMOVE,
+    EVENTS_TYPE_IMAGE_PULL,
+    EVENTS_TYPE_IMAGE_LOGIN,
+    EVENTS_TYPE_IMAGE_LOGOUT,
+    EVENTS_TYPE_IMAGE_MAX_STATE
+} image_events_type_t;
 
 typedef enum {
     CONTAINER_STATUS_UNKNOWN = 0,
@@ -73,9 +97,15 @@ typedef enum {
 } Container_Status;
 
 typedef enum {
-    STOPPED, STARTING, RUNNING, STOPPING,
-    ABORTING, FREEZING, FROZEN, THAWED, MAX_STATE
+    EXIT, STOPPED, STARTING, RUNNING, STOPPING, ABORTING, FREEZING,
+    FROZEN, THAWED, OOM, CREATE, START, RESTART, STOP, EXEC_CREATE, EXEC_START, EXEC_DIE, ATTACH,
+    KILL, TOP, RENAME, ARCHIVE_PATH, EXTRACT_TO_DIR, UPDATE, PAUSE, UNPAUSE, EXPORT, RESIZE, PAUSED1, MAX_STATE,
 } runtime_state_t;
+
+typedef enum {
+    IM_LOAD, IM_REMOVE, IM_PULL, IM_LOGIN, IM_LOGOUT
+} image_state_t;
+
 
 typedef enum {
     HEALTH_SERVING_STATUS_UNKNOWN = 0,
@@ -100,6 +130,11 @@ typedef enum {
     WAIT_CONDITION_REMOVED = 1
 } wait_condition_t;
 
+typedef enum {
+    CONTAINER_EVENT,
+    IMAGE_EVENT
+} msg_event_type_t;
+
 typedef struct container_cgroup_resources {
     uint16_t blkio_weight;
     int64_t cpu_shares;
@@ -119,18 +154,16 @@ typedef struct container_cgroup_resources {
 } container_cgroup_resources_t;
 
 typedef struct container_events_format {
-    char *id;
-    uint32_t has_type;
-    container_events_type_t type;
-    uint32_t has_pid;
-    uint32_t pid;
-    uint32_t has_exit_status;
-    uint32_t exit_status;
     types_timestamp_t timestamp;
+    char *opt;
+    char *id;
+    char **annotations;
+    char annotations_len;
 } container_events_format_t;
 
 void container_cgroup_resources_free(container_cgroup_resources_t *cr);
 
+void container_events_format_free(container_events_format_t *value);
 
 typedef void (*container_events_callback_t)(const container_events_format_t *event);
 

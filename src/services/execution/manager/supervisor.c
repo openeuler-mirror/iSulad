@@ -187,7 +187,7 @@ retry:
         }
     }
 
-    (void)isulad_monitor_send_event(name, STOPPED, (int)pid, data->exit_code);
+    (void)isulad_monitor_send_container_event(name, STOPPED, (int)pid, data->exit_code, NULL, NULL);
 
     supervisor_handler_data_free(data);
 

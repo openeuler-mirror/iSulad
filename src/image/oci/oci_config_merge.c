@@ -170,6 +170,44 @@ static int oci_image_merge_entrypoint(const oci_image_spec_config *config, conta
     return 0;
 }
 
+static int make_sure_container_config_labels(container_config *container_spec)
+{
+    if (container_spec->labels != NULL) {
+        return 0;
+    }
+
+    container_spec->labels = util_common_calloc_s(sizeof(json_map_string_string));
+    if (container_spec->labels == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int oci_image_merge_labels(const oci_image_spec_config *config, container_config *container_spec)
+{
+    size_t i;
+
+    if (config->labels == NULL || config->labels->len == 0) {
+        return 0;
+    }
+
+    if (make_sure_container_config_labels(container_spec) != 0) {
+        return -1;
+    }
+
+    for (i = 0; i < config->labels->len; i++) {
+        int ret = append_json_map_string_string(container_spec->labels,
+                                                config->labels->keys[i], config->labels->values[i]);
+        if (ret < 0) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static void oci_image_merge_user(const char *user, container_config *container_spec)
 {
     if (container_spec->user != NULL) {
@@ -311,6 +349,11 @@ int oci_image_merge_config(imagetool_image *image_conf, container_config *contai
         }
 
         oci_image_merge_user(image_conf->spec->config->user, container_spec);
+
+        if (oci_image_merge_labels(image_conf->spec->config, container_spec) != 0) {
+            ret = -1;
+            goto out;
+        }
 
         // ignore volumes now
     }

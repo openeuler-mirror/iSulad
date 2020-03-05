@@ -42,9 +42,10 @@ int events_subscribe(const char *name, const types_timestamp_t *since, const typ
 
 struct isulad_events_format *dup_event(const struct isulad_events_format *event);
 
-void free_event(struct isulad_events_format *event);
+int isulad_monitor_send_container_event(const char *name, runtime_state_t state, int pid, int exit_code,
+                                        const char *args, const char *extra_annations);
 
-int isulad_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code);
+int isulad_monitor_send_image_event(const char *name, image_state_t state);
 
 #ifdef __cplusplus
 }

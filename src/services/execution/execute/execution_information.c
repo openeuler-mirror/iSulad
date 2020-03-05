@@ -44,6 +44,7 @@
 #include "list.h"
 #include "utils.h"
 #include "error.h"
+#include "collector.h"
 
 static int container_version_cb(const container_version_request *request, container_version_response **response)
 {
@@ -814,6 +815,7 @@ static int container_top_cb(container_top_request *request, container_top_respon
         (*response)->processes[i] = util_strdup_s(processes[i]);
     }
     (*response)->processes_len = util_array_len((const char **)processes);
+    (void)isulad_monitor_send_container_event(id, TOP, -1, 0, NULL, NULL);
 
 pack_response:
     if (*response != NULL) {
@@ -1638,11 +1640,13 @@ out:
 static int container_rename_cb(const struct isulad_container_rename_request *request,
                                struct isulad_container_rename_response **response)
 {
+    int nret = 0;
     uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
     char *old_name = NULL;
     char *new_name = NULL;
     container_t *cont = NULL;
+    char annotations[EXTRA_ANNOTATION_MAX] = {0};
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -1682,7 +1686,14 @@ static int container_rename_cb(const struct isulad_container_rename_request *req
         goto pack_response;
     }
 
+    nret = snprintf(annotations, sizeof(annotations), "oldName=%s", request->old_name);
+    if (nret < 0 || (size_t)nret >= sizeof(annotations)) {
+        cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
+
     EVENT("Event: {Object: %s, Type: Renamed to %s}", id, new_name);
+    (void)isulad_monitor_send_container_event(id, RENAME, -1, 0, NULL, annotations);
     goto pack_response;
 
 pack_response:

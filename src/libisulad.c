@@ -233,3 +233,26 @@ void container_log_config_free(struct container_log_config *conf)
     free(conf);
 }
 
+void isulad_events_format_free(struct isulad_events_format *value)
+{
+    size_t i;
+
+    if (value == NULL) {
+        return;
+    }
+    free(value->id);
+    value->id = NULL;
+
+    free(value->opt);
+    value->opt = NULL;
+
+    for (i = 0; i < value->annotations_len; i++) {
+        free(value->annotations[i]);
+        value->annotations[i] = NULL;
+    }
+    free(value->annotations);
+    value->annotations = NULL;
+
+    free(value);
+}
+

@@ -61,7 +61,7 @@ void events_handler_free(events_handler_t *handler)
     linked_list_for_each_safe(it, &(handler->events_list), next) {
         event = (struct isulad_events_format *)it->elem;
         linked_list_del(it);
-        free_event(event);
+        isulad_events_format_free(event);
         free(it);
         it = NULL;
     }
@@ -184,20 +184,6 @@ static int container_state_changed(container_t *cont, const struct isulad_events
             }
 
             break;
-        case EVENTS_TYPE_EXIT:
-        case EVENTS_TYPE_STARTING:
-        case EVENTS_TYPE_RUNNING1:
-        case EVENTS_TYPE_STOPPING:
-        case EVENTS_TYPE_ABORTING:
-        case EVENTS_TYPE_FREEZING:
-        case EVENTS_TYPE_FROZEN:
-        case EVENTS_TYPE_THAWED:
-        case EVENTS_TYPE_OOM:
-        case EVENTS_TYPE_CREATE:
-        case EVENTS_TYPE_START:
-        case EVENTS_TYPE_EXEC_ADDED:
-        case EVENTS_TYPE_PAUSED1:
-        case EVENTS_TYPE_MAX_STATE:
         default:
             /* ignore garbage */
             break;
@@ -231,7 +217,7 @@ static int handle_one(container_t *cont, events_handler_t *handler)
         ERROR("Failed to change container %s state", cont->common_config->id);
     }
 
-    free_event(events);
+    isulad_events_format_free(events);
     events = NULL;
 
     free(it);

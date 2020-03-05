@@ -34,6 +34,7 @@
 #include "isulad_config.h"
 #include "mediatype.h"
 #include "filters.h"
+#include "collector.h"
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image_unix.h"
 #include "oci_images_store.h"
@@ -114,6 +115,8 @@ static int image_load_cb(const image_load_image_request *request,
 
     EVENT("Image Event: {Object: %s, Type: Loaded}",
           request->file);
+
+    (void)isulad_monitor_send_image_event(request->file, IM_LOAD);
 out:
 
     if (*response != NULL) {
@@ -194,6 +197,7 @@ static int login_cb(const image_login_request *request,
     }
 
     EVENT("Image Event: {Object: %s, Type: Logined}", request->server);
+    (void)isulad_monitor_send_image_event(request->server, IM_LOGIN);
 out:
 
     if (response != NULL && *response != NULL) {
@@ -271,6 +275,7 @@ static int logout_cb(const image_logout_request *request,
     }
 
     EVENT("Image Event: {Object: %s, Type: Logouted}", request->server);
+    (void)isulad_monitor_send_image_event(request->server, IM_LOGOUT);
 out:
 
     if (response != NULL && *response != NULL) {
@@ -353,8 +358,7 @@ static int image_remove_cb(const image_delete_image_request *request,
     if (!util_valid_image_name(image_ref)) {
         ERROR("Invalid image name %s", image_ref);
         cc = ISULAD_ERR_INPUT;
-        isulad_try_set_error_message("Invalid image name:%s",
-                                     image_ref);
+        isulad_try_set_error_message("Invalid image name:%s", image_ref);
         goto out;
     }
 
