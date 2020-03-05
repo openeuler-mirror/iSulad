@@ -1004,16 +1004,6 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
         goto out;
     }
 
-    ret = make_sure_oci_spec_linux(oci_spec);
-    if (ret < 0) {
-        goto out;
-    }
-
-    ret = make_sure_oci_spec_linux_seccomp(oci_spec);
-    if (ret < 0) {
-        goto out;
-    }
-
     ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts,
                              &label_opts_len, &seccomp_profile);
     if (ret != 0) {
@@ -1024,6 +1014,17 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
     if (seccomp_profile == NULL || strcmp(seccomp_profile, "unconfined") == 0) {
         goto out;
     }
+
+    ret = make_sure_oci_spec_linux(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    ret = make_sure_oci_spec_linux_seccomp(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
     ret = append_systemcall_to_seccomp(
               oci_spec->linux->seccomp,
               make_seccomp_syscalls_element((const char **)unblocked_systemcall_for_system_container,
