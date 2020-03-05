@@ -108,10 +108,11 @@ bool file_exists(const char *f)
 int cmd_combined_output(const char *binary, const char *params[], void *output, int *output_len)
 {
     int ret = SHIM_ERR;
+    int status = 0;
     int exec_fd[2] = { -1, -1 };
     int stdio[2] = { -1, -1 };
     pid_t pid = 0;
-    char exec_buff[BUFSIZ + 1] = { 0 };
+    char exec_buff[BUFSIZ] = { 0 };
     ssize_t nread;
 
     if (pipe2(exec_fd, O_CLOEXEC) != 0) {
@@ -135,23 +136,24 @@ int cmd_combined_output(const char *binary, const char *params[], void *output, 
         dup2(stdio[1], 2);
         execvp(binary, (char * const *)params);
         (void)dprintf(exec_fd[1], "fork/exec error: %s", strerror(errno));
+        _exit(EXIT_FAILURE);
     }
 
     // parent
     close(exec_fd[1]);
     close(stdio[1]);
-    nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
+    nread = read_nointr(exec_fd[0], exec_buff, BUFSIZ - 1);
     if (nread > 0) {
         ret = SHIM_ERR;
         goto out;
     }
-    *output_len = read_nointr(stdio[0], output, 8191);
+    *output_len = read_nointr(stdio[0], output, BUFSIZ - 1);
 
     close(stdio[0]);
     close(exec_fd[0]);
-    int status = 0;
     wait(&status);
     ret = SHIM_OK;
+
 out:
     if (ret != SHIM_OK && pid != 0) {
         kill(pid, 9);
