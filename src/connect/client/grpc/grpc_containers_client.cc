@@ -1741,7 +1741,7 @@ public:
         Event event;
         ClientContext context;
         Status status;
-        container_events_format_t isula_event;
+        container_events_format_t *isula_event = nullptr;
 
         if (SetMetadataInfo(context)) {
             ERROR("Failed to set metadata info for authorization");
@@ -1758,10 +1758,18 @@ public:
 
         std::unique_ptr<ClientReader<Event>> reader(stub_->Events(&context, req));
         while (reader->Read(&event)) {
-            event_from_grpc(&isula_event, &event);
-            if (request->cb != nullptr) {
-                request->cb(&isula_event);
+            isula_event = (container_events_format_t *)util_common_calloc_s(sizeof(container_events_format_t));
+            if (isula_event == nullptr) {
+                ERROR("Out of memory");
+                response->server_errono = ISULAD_ERR_EXEC;
+                return -1;
             }
+            event_from_grpc(isula_event, &event);
+            if (request->cb != nullptr) {
+                request->cb(isula_event);
+            }
+            container_events_format_free(isula_event);
+            isula_event = nullptr;
         }
         status = reader->Finish();
         if (!status.ok()) {
@@ -1795,19 +1803,24 @@ private:
     void event_from_grpc(container_events_format_t *event, Event *gevent)
     {
         (void)memset(event, 0, sizeof(*event));
-        if (!gevent->id().empty()) {
-            event->id = (char *)gevent->id().c_str();
-        }
-
-        event->has_type = true;
-        event->type = (container_events_type_t)((int)gevent->type());
-        event->has_pid = (int)gevent->pid() != -1;
-        event->pid = (uint32_t)gevent->pid();
-        event->has_exit_status = true;
-        event->exit_status = gevent->exit_status();
 
         if (gevent->has_timestamp()) {
             protobuf_timestamp_from_grpc(&event->timestamp, gevent->timestamp());
+        }
+
+        if (!gevent->opt().empty()) {
+            event->opt = util_strdup_s(gevent->opt().c_str());
+        }
+
+        if (!gevent->id().empty()) {
+            event->id = util_strdup_s(gevent->id().c_str());
+        }
+
+        google::protobuf::Map<std::string, std::string> map = gevent->annotations();
+        for (auto iter = map.cbegin(); iter != map.cend(); ++iter) {
+            std::string anno = iter->first + "=" + iter->second;
+            (void)util_array_append(&event->annotations, anno.c_str());
+            event->annotations_len++;
         }
     }
 

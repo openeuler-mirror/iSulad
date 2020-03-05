@@ -44,6 +44,7 @@
 #include "error.h"
 #include "constants.h"
 #include "namespace.h"
+#include "collector.h"
 
 static int runtime_check(const char *name, bool *runtime_res)
 {
@@ -963,6 +964,7 @@ int container_create_cb(const container_create_request *request,
     }
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
+    (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
     goto pack_response;
 
 umount_channel:

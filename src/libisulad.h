@@ -159,14 +159,17 @@ struct create_custom_config {
 };
 
 struct isulad_events_format {
-    char *id;
+    types_timestamp_t timestamp;
     uint32_t has_type;
     container_events_type_t type;
+    char *opt;
+    char *id;
+    char **annotations;
+    size_t annotations_len;
     uint32_t has_pid;
     uint32_t pid;
     uint32_t has_exit_status;
     uint32_t exit_status;
-    types_timestamp_t timestamp;
 };
 
 typedef void (handle_events_callback_t)(struct isulad_events_format *event);
@@ -293,6 +296,7 @@ struct container_log_config {
     int rotate;
     int64_t size;
 };
+
 void container_log_config_free(struct container_log_config *conf);
 
 void isulad_events_request_free(struct isulad_events_request *request);
@@ -317,6 +321,9 @@ void isulad_container_resize_response_free(struct isulad_container_resize_respon
 
 void isulad_logs_request_free(struct isulad_logs_request *request);
 void isulad_logs_response_free(struct isulad_logs_response *response);
+
+void isulad_events_format_free(struct isulad_events_format *value);
+
 #ifdef __cplusplus
 }
 #endif

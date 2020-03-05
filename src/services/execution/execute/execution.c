@@ -52,6 +52,7 @@
 #include "specs_extend.h"
 #include "utils.h"
 #include "error.h"
+#include "collector.h"
 
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
@@ -1157,6 +1158,7 @@ static int container_start_cb(const container_start_request *request, container_
     }
 
     EVENT("Event: {Object: %s, Type: Running}", id);
+    (void)isulad_monitor_send_container_event(id, START, -1, 0, NULL, NULL);
 
 pack_response:
     delete_daemon_fifos(fifopath, (const char **)fifos);
@@ -1177,9 +1179,11 @@ pack_response:
 static int kill_with_signal(container_t *cont, uint32_t signal)
 {
     int ret = 0;
+    int nret = 0;
     const char *id = cont->common_config->id;
     bool need_unpause = is_paused(cont->state);
     rt_resume_params_t params = { 0 };
+    char annotations[EXTRA_ANNOTATION_MAX] = {0};
 
     if (container_exit_on_next(cont)) {
         ERROR("Failed to cancel restart manager");
@@ -1215,6 +1219,15 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
             goto out;
         }
     }
+
+    nret = snprintf(annotations, sizeof(annotations), "signal=%d", signal);
+    if (nret < 0 || (size_t)nret >= sizeof(annotations)) {
+        ERROR("Failed to get signal string", id);
+        ret = -1;
+        goto out;
+    }
+
+    (void)isulad_monitor_send_container_event(id, KILL, -1, 0, NULL, annotations);
 
 out:
     return ret;
@@ -1470,6 +1483,8 @@ static int container_restart_cb(const container_restart_request *request,
     }
 
     EVENT("Event: {Object: %s, Type: Restarted}", id);
+    (void)isulad_monitor_send_container_event(id, RESTART, -1, 0, NULL, NULL);
+
 pack_response:
     pack_restart_response(*response, cc, id);
     container_unref(cont);
@@ -1559,6 +1574,7 @@ static int container_stop_cb(const container_stop_request *request,
     }
 
     INFO("Stoped Container:%s", id);
+    (void)isulad_monitor_send_container_event(id, STOP, -1, 0, NULL, NULL);
 
 pack_response:
     pack_stop_response(*response, cc, id);

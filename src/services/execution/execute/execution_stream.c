@@ -45,6 +45,7 @@
 #include "logger_json_file.h"
 #include "constants.h"
 #include "runtime.h"
+#include "collector.h"
 
 static char *create_single_fifo(const char *statepath, const char *subpath, const char *stdflag)
 {
@@ -661,6 +662,51 @@ static int get_exec_user_info(const container_t *cont, const char *username, def
 out:
     return ret;
 }
+static void get_exec_command(const container_config *conf, const container_exec_request *request,
+                             char *exec_command, size_t len)
+{
+    size_t i;
+    bool should_abbreviated = false;
+    size_t start = 0;
+    size_t end = 0;
+
+    for (i = 0; i < conf->entrypoint_len; i++) {
+        if (strlen(conf->entrypoint[i]) < len - strlen(exec_command)) {
+            (void)strcat(exec_command, conf->entrypoint[i]);
+            (void)strcat(exec_command, " ");
+        } else {
+            should_abbreviated = true;
+            goto out;
+        }
+    }
+
+    for (i = 0; i < request->argv_len; i++) {
+        if (strlen(request->argv[i]) < len - strlen(exec_command)) {
+            (void)strcat(exec_command, request->argv[i]);
+            if (i != request->argv_len) {
+                (void)strcat(exec_command, " ");
+            }
+        } else {
+            should_abbreviated = true;
+            goto out;
+        }
+    }
+
+out:
+    if (should_abbreviated) {
+        if (strlen(exec_command) <= len - 1 - 3) {
+            start = strlen(exec_command);
+            end = start + 3;
+        } else {
+            start = len - 1 - 3;
+            end = len - 1;
+        }
+
+        for (i = start; i < end; i++) {
+            exec_command[i] = '.';
+        }
+    }
+}
 
 static int container_exec_cb(const container_exec_request *request, container_exec_response **response,
                              int stdinfd, struct io_write_wrapper *stdout_handler)
@@ -674,6 +720,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     pthread_t thread_id = 0;
     container_t *cont = NULL;
     defs_process_user *puser = NULL;
+    char exec_command[ARGS_MAX] = {0x00};
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -688,6 +735,9 @@ static int container_exec_cb(const container_exec_request *request, container_ex
 
     set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: execing}", id);
+
+    get_exec_command(cont->common_config->config, request, exec_command, sizeof(exec_command));
+    (void)isulad_monitor_send_container_event(id, EXEC_CREATE, -1, 0, exec_command, NULL);
 
     if (gc_is_gc_progress(id)) {
         isulad_set_error_message("You cannot exec container %s in garbage collector progress.", id);
@@ -735,13 +785,14 @@ static int container_exec_cb(const container_exec_request *request, container_ex
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
-
+    (void)isulad_monitor_send_container_event(id, EXEC_START, -1, 0, exec_command, NULL);
     if (exec_container(cont, cont->runtime, (char * const *)fifos, puser, request, &exit_code)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     EVENT("Event: {Object: %s, Type: execed}", id);
+    (void)isulad_monitor_send_container_event(id, EXEC_DIE, -1, 0, NULL, NULL);
 
 pack_response:
     container_exec_cb_end(*response, cc, exit_code, sync_fd, thread_id);
@@ -901,6 +952,8 @@ static int container_attach_cb(const container_attach_request *request, containe
     params.stdin = fifos[0];
     params.stdout = fifos[1];
     params.stderr = fifos[2];
+
+    (void)isulad_monitor_send_container_event(id, ATTACH, -1, 0, NULL, NULL);
 
     if (runtime_attach(cont->common_config->id, cont->runtime, &params)) {
         ERROR("Runtime attach container failed");
@@ -1285,6 +1338,7 @@ static int copy_from_container_cb(const struct isulad_copy_from_container_reques
         goto cleanup_rootfs;
     }
 
+    (void)isulad_monitor_send_container_event(cont->common_config->id, ARCHIVE_PATH, -1, 0, NULL, NULL);
     ret = 0;
 cleanup_rootfs:
     if (im_umount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
@@ -1576,6 +1630,7 @@ static int copy_to_container_cb(const container_copy_to_request *request,
         goto cleanup_rootfs;
     }
 
+    (void)isulad_monitor_send_container_event(cont->common_config->id, EXTRACT_TO_DIR, -1, 0, NULL, NULL);
     ret = 0;
 
 cleanup_rootfs:

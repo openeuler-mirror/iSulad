@@ -25,6 +25,8 @@ public:
                                       const stream_func_wrapper *stream));
     MOCK_METHOD4(AddMonitorClient, int(const char *name, const types_timestamp_t *since, const types_timestamp_t *until,
                                        const stream_func_wrapper *stream));
+    MOCK_METHOD6(IsuladMonitorSendContainerEvent, int(const char *name, runtime_state_t state, int pid, int exit_code,
+                                                      const char *args, const char *extra_annations));
 };
 
 void MockCollector_SetMock(MockCollector* mock);

@@ -41,28 +41,37 @@ void protobuf_timestamp_from_grpc(types_timestamp_t *timestamp, const Timestamp 
     timestamp->nanos = gtimestamp.nanos();
 }
 
-void event_to_grpc(const struct isulad_events_format *event, Event *gevent)
+int event_to_grpc(const struct isulad_events_format *event, Event *gevent)
 {
     gevent->Clear();
-    if (event->id != nullptr) {
-        gevent->set_id(event->id);
-    }
-
-    if (event->has_type != 0) {
-        gevent->set_type((EventType)event->type);
-    }
-    if (event->has_pid != 0) {
-        gevent->set_pid((int32_t)(event->pid));
-    } else {
-        gevent->set_pid(-1);
-    }
-    if (event->has_exit_status != 0) {
-        gevent->set_exit_status(event->exit_status);
-    }
 
     if (event->timestamp.has_seconds != 0 || event->timestamp.has_nanos != 0) {
         protobuf_timestamp_to_grpc((const types_timestamp_t *)(&event->timestamp), gevent->mutable_timestamp());
     }
+
+    if (event->opt != nullptr) {
+        gevent->set_opt(event->opt);
+    }
+
+    if (event->id != nullptr) {
+        gevent->set_id(event->id);
+    }
+
+    if (event->annotations_len != 0 && event->annotations != nullptr) {
+        google::protobuf::Map<std::string, std::string> *map = gevent->mutable_annotations();
+        for (size_t i {0}; i < event->annotations_len; i++) {
+            char **elems = util_string_split_n(event->annotations[i], '=', 2);
+            if (util_array_len((const char **)elems) != 2) {
+                ERROR("Invalid annotation info");
+                util_free_array(elems);
+                return -1;
+            }
+            (*map)[elems[0]] = elems[1];
+            util_free_array(elems);
+        }
+    }
+
+    return 0;
 }
 
 void copy_from_container_response_to_grpc(const struct isulad_copy_from_container_response *copy,
@@ -93,7 +102,9 @@ bool grpc_event_write_function(void *writer, void *data)
     struct isulad_events_format *event = (struct isulad_events_format *)data;
     ServerWriter<Event> *gwriter = (ServerWriter<Event> *)writer;
     Event gevent;
-    event_to_grpc(event, &gevent);
+    if (event_to_grpc(event, &gevent) != 0) {
+        return false;
+    }
     return gwriter->Write(gevent);
 }
 

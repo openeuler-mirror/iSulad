@@ -41,3 +41,12 @@ int add_monitor_client(char *name, const types_timestamp_t *since, const types_t
     }
     return 0;
 }
+
+int isulad_monitor_send_container_event(const char *name, runtime_state_t state, int pid, int exit_code,
+                                        const char *args, const char *extra_annations)
+{
+    if (g_collector_mock != nullptr) {
+        return g_collector_mock->IsuladMonitorSendContainerEvent(name, state, pid, exit_code, args, extra_annations);
+    }
+    return 0;
+}
