@@ -130,6 +130,7 @@ static void get_err_message(char *buf, int buf_size, const char *workdir, const 
             }
         }
     }
+    fclose(fp);
 
     if (lines[2] != NULL) {
         (void)snprintf(buf, buf_size, "%s%s%s", lines[0], lines[1], lines[2]);
