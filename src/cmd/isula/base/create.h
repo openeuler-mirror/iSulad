@@ -93,6 +93,8 @@ extern "C" {
       "Memory soft limit", command_convert_membytes }, \
     { CMD_OPT_TYPE_CALLBACK, false, "memory-swap", 0, &(cmdargs).cr.memory_swap, \
       "Swap limit equal to memory plus swap: '-1' to enable unlimited swap", command_convert_memswapbytes }, \
+    { CMD_OPT_TYPE_CALLBACK, false, "memory-swappiness", 0, &(cmdargs).cr.swappiness, \
+      "Tune container memory swappiness (0 to 100) (default -1)", command_convert_swappiness }, \
     { CMD_OPT_TYPE_CALLBACK, false, "mount", 0, &(cmdargs).custom_conf.mounts, \
       "Attach a filesystem mount to the service", command_append_array }, \
     { CMD_OPT_TYPE_CALLBACK, false, "group-add", 0, &(cmdargs).custom_conf.group_add, \

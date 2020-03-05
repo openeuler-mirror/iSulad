@@ -173,6 +173,8 @@ static int request_pack_host_config_cgroup(const struct client_arguments *args, 
     /* kernel memory limit */
     hostconfig->cr->kernel_memory = args->cr.kernel_memory_limit;
 
+    hostconfig->cr->swappiness = args->cr.swappiness;
+
     request_pack_host_config_limit(args, hostconfig);
 
     return 0;

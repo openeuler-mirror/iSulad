@@ -213,6 +213,9 @@
         "MemorySwap": {
             "type": "int64"
         },
+        "MemorySwappiness": {
+            "$ref": "defs.json#/definitions/uint64Pointer"
+        },
         "OomKillDisable": {
             "type": "boolean"
         },

@@ -151,6 +151,7 @@ typedef struct container_cgroup_resources {
     int64_t pids_limit;
     int64_t files_limit;
     int64_t oom_score_adj;
+    int64_t swappiness;
 } container_cgroup_resources_t;
 
 typedef struct container_events_format {
