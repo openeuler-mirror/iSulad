@@ -78,10 +78,8 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
 
     cont = util_common_calloc_s(sizeof(container_t));
     if (cont == NULL) {
-        free_container_config_v2_common_config(tmp_common_config);
-        free_host_config(tmp_host_config);
         ERROR("Out of memory");
-        return NULL;
+        goto error_out;
     }
 
     atomic_int_set(&cont->refcnt, 1);
@@ -124,6 +122,12 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     return cont;
 
 error_out:
+    if (cont != NULL) {
+        *common_config = cont->common_config;
+        *hostconfig = cont->hostconfig;
+        cont->common_config = NULL;
+        cont->hostconfig = NULL;
+    }
     container_unref(cont);
     return NULL;
 }
