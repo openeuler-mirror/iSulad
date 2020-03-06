@@ -1017,6 +1017,25 @@ out:
     return ret;
 }
 
+static int merge_memory_swappiness(oci_runtime_spec *oci_spec, uint64_t *memory_swappiness)
+{
+    int ret = 0;
+
+    ret = make_sure_oci_spec_linux_resources_mem(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    if (memory_swappiness == NULL) {
+        oci_spec->linux->resources->memory->swappiness = (uint64_t)(-1);
+    } else {
+        oci_spec->linux->resources->memory->swappiness = *memory_swappiness;
+    }
+
+out:
+    return ret;
+}
+
 static int merge_conf_cgroup_memory(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
@@ -1067,6 +1086,12 @@ static int merge_conf_cgroup_memory(oci_runtime_spec *oci_spec, const host_confi
             ERROR("Failed to merge cgroup kernel_memory");
             goto out;
         }
+    }
+
+    ret = merge_memory_swappiness(oci_spec, host_spec->memory_swappiness);
+    if (ret != 0) {
+        ERROR("Failed to merge cgroup memory_swappiness");
+        goto out;
     }
 
 out:

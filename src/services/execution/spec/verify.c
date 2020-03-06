@@ -169,7 +169,7 @@ out:
 
 static inline bool is_swappiness_invalid(uint64_t swapiness)
 {
-    return (int64_t)swapiness < -1 || swapiness > 100;
+    return (int64_t)swapiness < -1 || (int64_t)swapiness > 100;
 }
 
 /* verify memory swappiness */
@@ -1700,6 +1700,13 @@ static int host_config_settings_memory(const sysinfo_t *sysinfo, const host_conf
     ret = verify_memory_kernel(sysinfo, hostconfig->kernel_memory);
     if (ret != 0) {
         goto out;
+    }
+
+    if (hostconfig->memory_swappiness != NULL) {
+        ret = verify_memory_swappiness(sysinfo, *(hostconfig->memory_swappiness));
+        if (ret != 0) {
+            goto out;
+        }
     }
 
 out:

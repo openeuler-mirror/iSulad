@@ -647,6 +647,14 @@ static void pack_cgroup_resources_mem(host_config *dstconfig, const isula_host_c
     if (srcconfig->cr->kernel_memory) {
         dstconfig->kernel_memory = srcconfig->cr->kernel_memory;
     }
+
+    // swappiness
+    if (srcconfig->cr->swappiness != -1) {
+        dstconfig->memory_swappiness = util_common_calloc_s(sizeof(uint64_t));
+        if (dstconfig->memory_swappiness != NULL) {
+            *(dstconfig->memory_swappiness) = (uint64_t)(srcconfig->cr->swappiness);
+        }
+    }
 }
 
 static void pack_cgroup_resources(host_config *dstconfig, const isula_host_config_t *srcconfig)
