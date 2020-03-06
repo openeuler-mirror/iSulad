@@ -589,6 +589,9 @@ void umount_share_shm(container_t *cont)
     if (has_mount_for(cont, "/dev/shm")) {
         return;
     }
+    if (cont->hostconfig == NULL) {
+        return;
+    }
     if (cont->hostconfig->ipc_mode == NULL || is_shareable(cont->hostconfig->ipc_mode)) {
         if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
             return;
