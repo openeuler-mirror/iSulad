@@ -45,6 +45,10 @@ const std::string Constants::DOCKER_PULLABLE_IMAGEID_PREFIX { "docker-pullable:/
 const std::string Constants::RUNTIME_READY { "RuntimeReady" };
 const std::string Constants::NETWORK_READY { "NetworkReady" };
 const std::string Constants::POD_CHECKPOINT_KEY { "cri.sandbox.isulad.checkpoint" };
+const std::string Constants::CONTAINER_TYPE_ANNOTATION_KEY { "io.kubernetes.cri.container-type" };
+const std::string Constants::CONTAINER_TYPE_ANNOTATION_CONTAINER { "container" };
+const std::string Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX { "sandbox" };
+const std::string Constants::SANDBOX_ID_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-id" };
 
 const char *InternalLabelKeys[] = {
     CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),

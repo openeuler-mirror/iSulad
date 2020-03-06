@@ -17,16 +17,24 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define STOP_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, "Stop by force killing", NULL }, \
     { CMD_OPT_TYPE_CALLBACK, false, "time", 't', &(cmdargs).time, \
-        "Seconds to wait for stop before killing it (default 10)", command_convert_int }
+      "Seconds to wait for stop before killing it (default 10)", command_convert_int }
 
 extern const char g_cmd_stop_desc[];
 extern const char g_cmd_stop_usage[];
 extern struct client_arguments g_cmd_stop_args;
 
 int cmd_stop_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_STOP_H */
 

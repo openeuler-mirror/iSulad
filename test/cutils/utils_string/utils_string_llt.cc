@@ -757,3 +757,52 @@ TEST(utils_string_llt, test_dup_array_of_strings)
     MOCK_CLEAR(calloc);
 }
 
+TEST(utils_string_llt, test_parse_percent_string)
+{
+    long converted = 0;
+    int ret = 0;
+    const char *correct1 = "10%";
+    const char *correct2 = "0%";
+    const char *correct3 = "100%";
+    const char *correct4 = "99%";
+    const char *wrong1 = "50";
+    const char *wrong2 = "-10%";
+    const char *wrong3 = "101%";
+    const char *wrong4 = "a10%";
+    const char *wrong5 = "10%k";
+    const char *wrong6 = "1x0%";
+
+    ret = util_parse_percent_string(correct1, &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 10);
+
+    ret = util_parse_percent_string(correct2, &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 0);
+
+    ret = util_parse_percent_string(correct3, &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 100);
+
+    ret = util_parse_percent_string(correct4, &converted);
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(converted, 99);
+
+    ret = util_parse_percent_string(wrong1, &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_percent_string(wrong2, &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_percent_string(wrong3, &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_percent_string(wrong4, &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_percent_string(wrong5, &converted);
+    ASSERT_NE(ret, 0);
+
+    ret = util_parse_percent_string(wrong6, &converted);
+    ASSERT_NE(ret, 0);
+}

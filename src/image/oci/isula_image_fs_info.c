@@ -107,7 +107,7 @@ int isula_image_fs_info(im_fs_info_response *resp)
     struct isula_image_fs_info_request ireq = {0};
     struct isula_image_fs_info_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
 
     if (resp == NULL) {
         ERROR("Invalid arguments");

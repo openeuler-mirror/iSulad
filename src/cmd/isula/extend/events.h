@@ -17,18 +17,26 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define EVENTS_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_STRING, false, "name", 'n', &(cmdargs).name, \
         "Name of the container", NULL }, \
     { CMD_OPT_TYPE_STRING, false, "since", 'S', &(cmdargs).since, \
-        "Show all events created since this timestamp", NULL }, \
+      "Show all events created since this timestamp", NULL }, \
     { CMD_OPT_TYPE_STRING, false, "until", 'U', &(cmdargs).until, \
-        "Show all events created until this timestamp", NULL }
+      "Show all events created until this timestamp", NULL }
 
 extern const char g_cmd_events_desc[];
 extern const char g_cmd_events_usage[];
 extern struct client_arguments g_cmd_events_args;
 int cmd_events_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_EVENT_H */
 

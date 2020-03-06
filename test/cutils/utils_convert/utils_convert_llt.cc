@@ -185,7 +185,7 @@ TEST(utils_convert, test_util_safe_strtod)
 TEST(utils_convert, test_util_str_to_bool)
 {
     int ret;
-    bool converted;
+    bool converted = false;
     ret = util_str_to_bool("1", &converted);
     ASSERT_EQ(ret, 0);
     ASSERT_TRUE(converted);

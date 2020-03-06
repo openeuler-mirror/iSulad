@@ -17,6 +17,11 @@
 
 #include "oci_runtime_spec.h"
 #include "host_config.h"
+#include "container_config.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int verify_container_settings(const oci_runtime_spec *container);
 
@@ -28,6 +33,9 @@ int verify_host_config_settings(host_config *hostconfig, bool update);
 
 int verify_health_check_parameter(const container_config *container_spec);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __VERIFY_H */
 

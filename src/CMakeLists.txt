@@ -13,7 +13,6 @@ list(REMOVE_DUPLICATES JSON_FILES)
 set(CHECKED_INCLUDE_DIRS
     ${STD_HEADER_CTYPE}
     ${STD_HEADER_SYS_PARAM}
-    ${LIBSECUREC_INCLUDE_DIR}
     ${LIBYAJL_INCLUDE_DIR}
     ${HTTP_PARSER_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
@@ -123,7 +122,7 @@ target_include_directories(libisula PUBLIC
 
 # set libisula FLAGS
 set_target_properties(libisula PROPERTIES PREFIX "")
-target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${LIBSECUREC_LIBRARY})
+target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY})
 
 if (GRPC_CONNECTOR)
     target_link_libraries(libisula -Wl,--as-needed -lstdc++ -lcrypto)
@@ -142,6 +141,18 @@ add_executable(isula
 target_include_directories(isula PUBLIC ${ISULA_INCS} ${SHARED_INCS})
 target_link_libraries(isula libisula -lpthread)
 # ------ build isula finish -------
+
+# ------ build isulad-shim -------
+add_executable(isulad-shim
+    ${ISULAD_SHIM_SRCS}
+    ${CMAKE_BINARY_DIR}/json/shim_client_process_state.c
+    ${CMAKE_BINARY_DIR}/json/json_common.c
+    ${commonjsonsrcs}
+    )
+target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
+target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} -lpthread)
+
+# ------ build isula-shim finish -------
 
 # ------ build isulad -------
 add_subdirectory(services)
@@ -201,7 +212,7 @@ target_include_directories(isulad PUBLIC
     ${WEBSOCKET_SERVICE_INCS}
     )
 
-target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${LIBSECUREC_LIBRARY} ${SYSTEMD_LIBRARY})
+target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY})
 target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} -lpthread libhttpclient)
 if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(isulad ${SQLITE3_LIBRARY})
@@ -236,6 +247,8 @@ endif()
 install(TARGETS libisula
   LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(TARGETS isula
+	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(TARGETS isulad-shim
 	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(TARGETS isulad
 	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

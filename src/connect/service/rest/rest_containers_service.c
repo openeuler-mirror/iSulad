@@ -208,14 +208,14 @@ static void evhtp_send_create_repsponse(evhtp_request_t *req, container_create_r
 
     if (response == NULL) {
         ERROR("Failed to generate create response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = container_create_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Create: failed to generate request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -345,14 +345,14 @@ static void evhtp_send_start_repsponse(evhtp_request_t *req, container_start_res
 
     if (response == NULL) {
         ERROR("Failed to generate start response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = container_start_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate start request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -373,14 +373,14 @@ static void evhtp_send_list_repsponse(evhtp_request_t *req, container_list_respo
 
     if (response == NULL) {
         ERROR("Failed to generate inspect response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = container_list_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate list request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -402,7 +402,7 @@ static void evhtp_send_wait_repsponse(evhtp_request_t *req, container_wait_respo
     responsedata = container_wait_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate wait request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -424,26 +424,26 @@ static void rest_create_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.create == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceCreate);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.create(crequest, &cresponse);
 
-    evhtp_send_create_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_create_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_create_response(cresponse);
     free_container_create_request(crequest);
@@ -459,26 +459,26 @@ static void rest_start_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.start == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceStart);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.start(crequest, &cresponse, -1, NULL, NULL);
 
-    evhtp_send_start_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_start_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_start_request(crequest);
     free_container_start_response(cresponse);
@@ -494,26 +494,26 @@ static void rest_wait_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.wait == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceWait);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.wait(crequest, &cresponse);
 
-    evhtp_send_wait_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_wait_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_wait_request(crequest);
     free_container_wait_response(cresponse);
@@ -528,14 +528,14 @@ static void evhtp_send_stop_repsponse(evhtp_request_t *req, container_stop_respo
 
     if (response == NULL) {
         ERROR("Failed to generate stop response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = container_stop_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate stop request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -557,26 +557,26 @@ static void rest_stop_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.stop == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceStop);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.stop(crequest, &cresponse);
 
-    evhtp_send_stop_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_stop_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_stop_response(cresponse);
     free_container_stop_request(crequest);
@@ -591,13 +591,13 @@ static void evhtp_send_restart_response(evhtp_request_t *req, container_restart_
 
     if (response == NULL) {
         ERROR("Failed to generate restart response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
     responsedata = container_restart_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate restart response json: %s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -618,27 +618,27 @@ static void rest_restart_cb(evhtp_request_t *req, void *arg)
     container_restart_response *cresponse = NULL;
 
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     cb = get_service_callback();
     if (cb == NULL || cb->container.restart == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceRestart);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.restart(crequest, &cresponse);
 
-    evhtp_send_restart_response(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_restart_response(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_restart_request(crequest);
     free_container_restart_response(cresponse);
@@ -654,7 +654,7 @@ static void evhtp_send_version_repsponse(evhtp_request_t *req, container_version
     responsedata = container_version_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate version request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -676,26 +676,26 @@ static void rest_version_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.version == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceVersion);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.version(crequest, &cresponse);
 
-    evhtp_send_version_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_version_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_version_request(crequest);
     free_container_version_response(cresponse);
@@ -710,14 +710,14 @@ static void evhtp_send_update_repsponse(evhtp_request_t *req, container_update_r
 
     if (response == NULL) {
         ERROR("Invalid NULL response");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = container_update_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate update request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -739,25 +739,25 @@ static void rest_update_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.update == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&container_req, ContainerServiceUpdate);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.update(container_req, &container_res);
-    evhtp_send_update_repsponse(req, container_res, EVHTP_RES_OK);
+    evhtp_send_update_repsponse(req, container_res, RESTFUL_RES_OK);
 
 out:
     free_container_update_request(container_req);
@@ -773,13 +773,13 @@ static void evhtp_send_kill_repsponse(evhtp_request_t *req, container_kill_respo
 
     if (response == NULL) {
         ERROR("Failed to generate kill response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
     responsedata = container_kill_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate kill request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -801,26 +801,26 @@ static void rest_kill_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.kill == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceKill);
     if (tret < 0) {
         ERROR("bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.kill(crequest, &cresponse);
 
-    evhtp_send_kill_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_kill_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_kill_request(crequest);
     free_container_kill_response(cresponse);
@@ -836,14 +836,14 @@ static void evhtp_send_container_inspect_repsponse(evhtp_request_t *req, contain
 
     if (response == NULL) {
         ERROR("Failed to generate inspect response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = container_inspect_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate inspect request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -865,26 +865,26 @@ static void rest_container_inspect_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.inspect == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceInspect);
     if (tret < 0) {
         ERROR("bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.inspect(crequest, &cresponse);
 
-    evhtp_send_container_inspect_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_container_inspect_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_inspect_request(crequest);
     free_container_inspect_response(cresponse);
@@ -899,14 +899,14 @@ static void evhtp_send_exec_repsponse(evhtp_request_t *req, container_exec_respo
 
     if (response == NULL) {
         ERROR("Failed to generate exec response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = container_exec_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate exec request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -928,26 +928,26 @@ static void rest_exec_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || !cb->container.exec) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceExec);
     if (tret < 0) {
         ERROR("bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.exec(crequest, &cresponse, -1, NULL);
 
-    evhtp_send_exec_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_exec_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_exec_request(crequest);
     free_container_exec_response(cresponse);
@@ -962,13 +962,13 @@ static void evhtp_send_remove_repsponse(evhtp_request_t *req, container_delete_r
 
     if (response == NULL) {
         ERROR("Failed to generate remove response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
     responsedata = container_delete_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate remove request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -990,26 +990,26 @@ static void rest_remove_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.remove == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceRemove);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.remove(crequest, &cresponse);
 
-    evhtp_send_remove_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_remove_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_delete_request(crequest);
     free_container_delete_response(cresponse);
@@ -1025,26 +1025,26 @@ static void rest_list_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->container.list == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = action_request_from_rest(req, (void **)&crequest, ContainerServiceList);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->container.list(crequest, &cresponse);
 
-    evhtp_send_list_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_list_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_container_list_request(crequest);
     free_container_list_response(cresponse);

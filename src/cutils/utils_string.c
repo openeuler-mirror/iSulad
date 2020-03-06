@@ -79,6 +79,18 @@ bool strings_contains_any(const char *str, const char *substr)
     return false;
 }
 
+bool strings_contains_word(const char *str, const char *substr)
+{
+    if (str == NULL || substr == NULL) {
+        return false;
+    }
+
+    if (strcasestr(str, substr) != NULL) {
+        return true;
+    }
+    return false;
+}
+
 int strings_count(const char *str, unsigned char c)
 {
     size_t i = 0;
@@ -271,7 +283,8 @@ int util_parse_percent_string(const char *s, long *converted)
 {
     char *dup = NULL;
 
-    if (s == NULL || converted == NULL || s[0] == 0 || strlen(s) < 2 || s[strlen(s) - 1] != '%') {
+    if (s == NULL || converted == NULL || s[0] == 0 || strlen(s) < 2 || s[strlen(s) - 1] != '%' ||
+        strspn(s, "0123456789%") != strlen(s)) {
         return -EINVAL;
     }
     dup = util_strdup_s(s);
@@ -282,7 +295,7 @@ int util_parse_percent_string(const char *s, long *converted)
 
     *converted = strtol(dup, NULL, 10);
     if ((errno == ERANGE && (*converted == LONG_MAX || *converted == LONG_MIN)) ||
-        (errno != 0 && *converted == 0) || *converted < 0 || *converted >= 100) {
+        (errno != 0 && *converted == 0) || *converted < 0 || *converted > 100) {
         free(dup);
         return -EINVAL;
     }
@@ -364,6 +377,49 @@ char **util_string_split_multi(const char *src_str, char delim)
 err_out:
     tmp_errno = errno;
     free(tmpstr);
+    util_free_array(res_array);
+    errno = tmp_errno;
+    return NULL;
+}
+
+char **util_string_split_n(const char *src, char sep, size_t n)
+{
+    char **res_array = NULL;
+    const char *index = NULL;
+    char *token = NULL;
+    char *str = NULL;
+    size_t count = 0;
+    int tmp_errno;
+
+    if (src == NULL || n == 0) {
+        return NULL;
+    }
+
+    if (src[0] == '\0') {
+        return make_empty_array();
+    }
+    str = util_strdup_s(src);
+    index = str;
+    for (token = strchr(index, sep); token != NULL; token = strchr(index, sep)) {
+        count++;
+        if (count >= n) {
+            break;
+        }
+        *token = '\0';
+        if (util_array_append(&res_array, index) != 0) {
+            goto err_out;
+        }
+        index = token + 1;
+    }
+    if (util_array_append(&res_array, index) != 0) {
+        goto err_out;
+    }
+    free(str);
+    return res_array;
+
+err_out:
+    tmp_errno = errno;
+    free(str);
     util_free_array(res_array);
     errno = tmp_errno;
     return NULL;

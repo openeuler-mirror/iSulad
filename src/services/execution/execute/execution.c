@@ -52,6 +52,7 @@
 #include "specs_extend.h"
 #include "utils.h"
 #include "error.h"
+#include "collector.h"
 
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
@@ -114,6 +115,22 @@ static void pack_get_id_response(container_get_id_response *response, const char
     }
 }
 
+static void pack_get_runtime_response(container_get_runtime_response *response, const char *runtime, uint32_t cc)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    response->cc = cc;
+    if (g_isulad_errmsg != NULL) {
+        response->errmsg = util_strdup_s(g_isulad_errmsg);
+        DAEMON_CLEAR_ERRMSG();
+    }
+    if (runtime != NULL) {
+        response->runtime = util_strdup_s(runtime);
+    }
+}
+
 /*
  * This function gets long id of container by name or short id
  */
@@ -160,6 +177,49 @@ static int container_get_id_cb(const container_get_id_request *request, containe
 
 pack_response:
     pack_get_id_response(*response, id, cc);
+
+    container_unref(cont);
+    return (cc == ISULAD_SUCCESS) ? 0 : -1;
+}
+
+static int container_get_runtime_cb(const char *real_id, container_get_runtime_response **response)
+{
+    char *runtime = NULL;
+    uint32_t cc = ISULAD_SUCCESS;
+    container_t *cont = NULL;
+
+    DAEMON_CLEAR_ERRMSG();
+    if (real_id == NULL || response == NULL) {
+        ERROR("Invalid NULL input");
+        return -1;
+    }
+
+    *response = util_common_calloc_s(sizeof(container_get_runtime_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto pack_response;
+    }
+
+    if (!util_valid_container_id_or_name(real_id)) {
+        ERROR("Invalid container name: %s", real_id);
+        isulad_set_error_message("Invalid container name: %s", real_id);
+        cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    cont = containers_store_get(real_id);
+    if (cont == NULL) {
+        cc = ISULAD_ERR_EXEC;
+        ERROR("No such container: %s", real_id);
+        isulad_set_error_message("No such container: %s", real_id);
+        goto pack_response;
+    }
+
+    runtime = cont->runtime;
+
+pack_response:
+    pack_get_runtime_response(*response, runtime, cc);
 
     container_unref(cont);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
@@ -468,9 +528,23 @@ static int mount_dev_tmpfs_for_system_container(const container_t *cont)
             return -1;
         }
     }
-    if (mount("tmpfs", rootfs_dev_path, "tmpfs", 0, "size=500000,mode=755")) {
-        ERROR("Failed to mount dev tmpfs on '%s'", rootfs_dev_path);
-        return -1;
+    /* set /dev mount size to half of container memory limit */
+    if (cont->hostconfig->memory > 0) {
+        char mnt_opt[MOUNT_PROPERTIES_SIZE] = { 0 };
+        nret = snprintf(mnt_opt, sizeof(mnt_opt), "size=%lld,mode=755", (long long int)(cont->hostconfig->memory / 2));
+        if (nret < 0 || (size_t)nret >= sizeof(mnt_opt)) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        if (mount("tmpfs", rootfs_dev_path, "tmpfs", 0, mnt_opt) != 0) {
+            ERROR("Failed to mount dev tmpfs on '%s'", rootfs_dev_path);
+            return -1;
+        }
+    } else {
+        if (mount("tmpfs", rootfs_dev_path, "tmpfs", 0, "mode=755") != 0) {
+            ERROR("Failed to mount dev tmpfs on '%s'", rootfs_dev_path);
+            return -1;
+        }
     }
     if (cont->hostconfig->user_remap != NULL) {
         unsigned int host_uid = 0;
@@ -783,23 +857,16 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
+    if (save_oci_config(id, cont->root_path, oci_spec) != 0) {
+        ERROR("Failed to save container settings");
+        ret = -1;
+        goto close_exit_fd;
+    }
+
     start_timeout = conf_get_start_timeout();
     if (cont->common_config->config != NULL) {
         tty = cont->common_config->config->tty;
         open_stdin = cont->common_config->config->open_stdin;
-    }
-
-    create_params.bundle = bundle;
-    create_params.state = cont->state_path;
-    create_params.oci_config_data = oci_spec;
-    create_params.terminal = tty;
-    create_params.stdin = console_fifos[0];
-    create_params.stdout = console_fifos[1];
-    create_params.stderr = console_fifos[2];
-
-    if (runtime_create(id, runtime, &create_params) != 0) {
-        ret = -1;
-        goto close_exit_fd;
     }
 
     if (plugin_event_container_pre_start(cont)) {
@@ -809,7 +876,24 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
+    create_params.bundle = bundle;
+    create_params.state = cont->state_path;
+    create_params.oci_config_data = oci_spec;
+    create_params.terminal = tty;
+    create_params.stdin = console_fifos[0];
+    create_params.stdout = console_fifos[1];
+    create_params.stderr = console_fifos[2];
+    create_params.exit_fifo = exit_fifo;
+    create_params.tty = tty;
+    create_params.open_stdin = open_stdin;
+
+    if (runtime_create(id, runtime, &create_params) != 0) {
+        ret = -1;
+        goto close_exit_fd;
+    }
+
     start_params.rootpath = cont->root_path;
+    start_params.state = cont->state_path;
     start_params.tty = tty;
     start_params.open_stdin = open_stdin;
     start_params.logpath = engine_log_path;
@@ -1074,6 +1158,7 @@ static int container_start_cb(const container_start_request *request, container_
     }
 
     EVENT("Event: {Object: %s, Type: Running}", id);
+    (void)isulad_monitor_send_container_event(id, START, -1, 0, NULL, NULL);
 
 pack_response:
     delete_daemon_fifos(fifopath, (const char **)fifos);
@@ -1094,9 +1179,11 @@ pack_response:
 static int kill_with_signal(container_t *cont, uint32_t signal)
 {
     int ret = 0;
+    int nret = 0;
     const char *id = cont->common_config->id;
     bool need_unpause = is_paused(cont->state);
     rt_resume_params_t params = { 0 };
+    char annotations[EXTRA_ANNOTATION_MAX] = {0};
 
     if (container_exit_on_next(cont)) {
         ERROR("Failed to cancel restart manager");
@@ -1125,12 +1212,22 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
     }
     if (signal == SIGKILL && need_unpause) {
         params.rootpath = cont->root_path;
+        params.state = cont->state_path;
         if (runtime_resume(id, cont->runtime, &params) != 0) {
             ERROR("Cannot unpause container: %s", id);
             ret = -1;
             goto out;
         }
     }
+
+    nret = snprintf(annotations, sizeof(annotations), "signal=%d", signal);
+    if (nret < 0 || (size_t)nret >= sizeof(annotations)) {
+        ERROR("Failed to get signal string", id);
+        ret = -1;
+        goto out;
+    }
+
+    (void)isulad_monitor_send_container_event(id, KILL, -1, 0, NULL, annotations);
 
 out:
     return ret;
@@ -1386,6 +1483,8 @@ static int container_restart_cb(const container_restart_request *request,
     }
 
     EVENT("Event: {Object: %s, Type: Restarted}", id);
+    (void)isulad_monitor_send_container_event(id, RESTART, -1, 0, NULL, NULL);
+
 pack_response:
     pack_restart_response(*response, cc, id);
     container_unref(cont);
@@ -1475,6 +1574,7 @@ static int container_stop_cb(const container_stop_request *request,
     }
 
     INFO("Stoped Container:%s", id);
+    (void)isulad_monitor_send_container_event(id, STOP, -1, 0, NULL, NULL);
 
 pack_response:
     pack_stop_response(*response, cc, id);
@@ -1686,6 +1786,8 @@ static int do_cleanup_container_resources(container_t *cont)
         goto out;
     }
 
+    umount_share_shm(cont);
+
     umount_host_channel(cont->hostconfig->host_channel);
 
     if (do_runtime_rm_helper(id, runtime, rootpath) != 0) {
@@ -1876,6 +1978,7 @@ pack_response:
 void container_callback_init(service_container_callback_t *cb)
 {
     cb->get_id = container_get_id_cb;
+    cb->get_runtime = container_get_runtime_cb;
     cb->create = container_create_cb;
     cb->start = container_start_cb;
     cb->stop = container_stop_cb;

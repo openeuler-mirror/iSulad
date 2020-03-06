@@ -16,10 +16,18 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_logout_desc[];
 extern const char g_cmd_logout_usage[];
 extern struct client_arguments g_cmd_logout_args;
 int cmd_logout_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_LOGOUT_H */
 

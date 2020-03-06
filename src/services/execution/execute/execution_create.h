@@ -28,6 +28,8 @@ int container_create_cb(const container_create_request *request,
 
 void umount_host_channel(const host_config_host_channel *host_channel);
 
+void umount_share_shm(container_t *cont);
+
 #ifdef __cplusplus
 }
 #endif

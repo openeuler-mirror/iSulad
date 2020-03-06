@@ -41,6 +41,21 @@ static int generate_isula_umount_request(const char *name_id, bool force, struct
     return 0;
 }
 
+static bool is_container_nonexist_error(const struct isula_umount_response *iresp)
+{
+#define CONTAINER_NOT_KNOWN_ERR "container not known"
+    if (iresp == NULL || iresp->errmsg == NULL) {
+        return false;
+    }
+
+    if (strstr(iresp->errmsg, CONTAINER_NOT_KNOWN_ERR) != NULL) {
+        DEBUG("Container may already removed");
+        return true;
+    }
+
+    return false;
+}
+
 int isula_rootfs_umount(const char *name_id, bool force)
 {
     int ret = 0;
@@ -48,7 +63,7 @@ int isula_rootfs_umount(const char *name_id, bool force)
     struct isula_umount_request *ireq = NULL;
     struct isula_umount_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
 
     im_ops = get_isula_image_ops();
     if (im_ops == NULL) {
@@ -81,7 +96,7 @@ int isula_rootfs_umount(const char *name_id, bool force)
 
     INFO("Send umount rootfs GRPC request");
     nret = im_ops->umount(ireq, iresp, &conf);
-    if (nret != 0) {
+    if (nret != 0 && !is_container_nonexist_error(iresp)) {
         ERROR("Remove rootfs %s failed: %s", name_id, iresp != NULL ? iresp->errmsg : "null");
         ret = -1;
     }

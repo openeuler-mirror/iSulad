@@ -1,0 +1,6 @@
+{
+    "ShmSize": 67108864,
+    "RestartPolicy": {
+        "Name": "no"
+    }
+}

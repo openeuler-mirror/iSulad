@@ -17,10 +17,18 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_pause_desc[];
 extern const char g_cmd_pause_usage[];
 extern struct client_arguments g_cmd_pause_args;
 int cmd_pause_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

@@ -43,6 +43,59 @@
 #include "utils.h"
 #include "error.h"
 #include "constants.h"
+#include "namespace.h"
+#include "collector.h"
+
+static int runtime_check(const char *name, bool *runtime_res)
+{
+    int ret = 0;
+    struct service_arguments *args = NULL;
+    defs_map_string_object_runtimes *runtimes = NULL;
+
+    if (isulad_server_conf_rdlock()) {
+        ret = -1;
+        goto out;
+    }
+
+    args = conf_get_server_conf();
+    if (args == NULL) {
+        ERROR("Failed to get isulad server config");
+        ret = -1;
+        goto unlock_out;
+    }
+
+    if (args->json_confs != NULL) {
+        runtimes = args->json_confs->runtimes;
+    }
+    if (runtimes == NULL) {
+        EVENT("isulad runtimes param is null");
+        goto unlock_out;
+    }
+
+    size_t runtime_nums = runtimes->len;
+    size_t i;
+    for (i = 0; i < runtime_nums; i++) {
+        if (strcmp(name, runtimes->keys[i]) == 0) {
+            *runtime_res = true;
+            goto unlock_out;
+        }
+    }
+unlock_out:
+    if (isulad_server_conf_unlock()) {
+        ERROR("Failed to unlock isulad server config");
+        ret = -1;
+    }
+out:
+    if (strcmp(name, "runc") == 0 || strcmp(name, "lcr") == 0) {
+        *runtime_res = true;
+    }
+
+    if (strcmp(name, "kata-runtime") == 0) {
+        *runtime_res = true;
+    }
+
+    return ret;
+}
 
 static int create_request_check(const container_create_request *request)
 {
@@ -64,20 +117,6 @@ static int create_request_check(const container_create_request *request)
     if (request->image != NULL && !util_valid_image_name(request->image)) {
         ERROR("invalid image name %s", request->image);
         isulad_set_error_message("Invalid image name '%s'", request->image);
-        ret = -1;
-        goto out;
-    }
-
-    if (request->runtime == NULL) {
-        ERROR("Receive NULL Request runtime");
-        ret = -1;
-        goto out;
-    }
-
-    if (!util_valid_runtime_name(request->runtime)) {
-        ERROR("Invalid runtime name:%s", request->runtime);
-        isulad_set_error_message("Invalid runtime name (%s), only \"lcr\" supported.",
-                                 request->runtime);
         ret = -1;
         goto out;
     }
@@ -249,12 +288,6 @@ static int merge_config_for_syscontainer(const container_create_request *request
 
     if (!host_spec->system_container || request->rootfs == NULL) {
         return 0;
-    }
-
-    if (merge_network(host_spec, request->rootfs, container_spec->hostname) != 0) {
-        ERROR("Failed to merge network config");
-        ret = -1;
-        goto out;
     }
 
     if (append_json_map_string_string(oci_spec->annotations, "rootfs.mount", request->rootfs)) {
@@ -551,6 +584,46 @@ void umount_host_channel(const host_config_host_channel *host_channel)
     }
 }
 
+void umount_share_shm(container_t *cont)
+{
+    if (has_mount_for(cont, "/dev/shm")) {
+        return;
+    }
+    if (cont->hostconfig == NULL) {
+        return;
+    }
+    if (cont->hostconfig->ipc_mode == NULL || is_shareable(cont->hostconfig->ipc_mode)) {
+        if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
+            return;
+        }
+
+        INFO("Umounting share shm: %s", cont->common_config->shm_path);
+        if (umount2(cont->common_config->shm_path, MNT_DETACH)) {
+            SYSERROR("Failed to umount the target: %s", cont->common_config->shm_path);
+        }
+    }
+}
+
+static void umount_shm_by_configs(host_config *host_spec, container_config_v2_common_config *v2_spec)
+{
+    container_t *cont = NULL;
+
+    cont = util_common_calloc_s(sizeof(container_t));
+    if (cont == NULL) {
+        ERROR("Out of memory");
+        return;
+    }
+    cont->common_config = v2_spec;
+    cont->hostconfig = host_spec;
+
+    umount_share_shm(cont);
+
+    cont->common_config = NULL;
+    cont->hostconfig = NULL;
+
+    free(cont);
+}
+
 static int create_container_root_dir(const char *id, const char *runtime_root)
 {
     int ret = 0;
@@ -685,9 +758,27 @@ static int get_request_image_info(const container_create_request *request, char 
 static int preparate_runtime_environment(const container_create_request *request, const char *id,
                                          char **runtime, char **runtime_root, uint32_t *cc)
 {
-    *runtime = get_runtime_from_request(request);
+    bool runtime_res = false;
+
+    if (request->runtime) {
+        *runtime = get_runtime_from_request(request);
+    } else {
+        *runtime = conf_get_default_runtime();
+    }
+
     if (*runtime == NULL) {
-        *cc = ISULAD_ERR_INPUT;
+        *runtime = util_strdup_s(DEFAULT_RUNTIME_NAME);
+    }
+
+    if (runtime_check(*runtime, &runtime_res) != 0) {
+        ERROR("Runtimes param check failed");
+        return -1;
+    }
+
+    if (!runtime_res) {
+        ERROR("Invalid runtime name:%s", *runtime);
+        isulad_set_error_message("Invalid runtime name (%s).",
+                                 *runtime);
         return -1;
     }
 
@@ -771,6 +862,9 @@ int container_create_cb(const container_create_request *request,
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
+    // update runtime of host config
+    free(host_spec->runtime);
+    host_spec->runtime = util_strdup_s(runtime);
 
     v2_spec = util_common_calloc_s(sizeof(container_config_v2_common_config));
     if (v2_spec == NULL) {
@@ -790,7 +884,6 @@ int container_create_cb(const container_create_request *request,
 
     v2_spec->config = container_spec;
 
-    /* set network config to v2_spec */
     if (init_container_network_confs(id, runtime_root, host_spec, v2_spec) != 0) {
         ERROR("Init Network files failed");
         cc = ISULAD_ERR_INPUT;
@@ -813,13 +906,24 @@ int container_create_cb(const container_create_request *request,
     oci_spec = generate_oci_config(host_spec, real_rootfs, v2_spec);
     if (oci_spec == NULL) {
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
+    }
+
+    ret = merge_oci_cgroups_path(id, oci_spec, host_spec);
+    if (ret < 0) {
+        goto umount_shm;
     }
 
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
         ERROR("Failed to merge config for syscontainer");
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
+    }
+
+    if (merge_network(host_spec, request->rootfs, runtime_root, id, container_spec->hostname) != 0) {
+        ERROR("Failed to merge network config");
+        cc = ISULAD_ERR_EXEC;
+        goto umount_shm;
     }
 
     /* modify oci_spec by plugin. */
@@ -827,7 +931,7 @@ int container_create_cb(const container_create_request *request,
         ERROR("Plugin event pre create failed");
         (void)plugin_event_container_post_remove2(id, oci_spec); /* ignore error */
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
     }
 
     host_channel = dup_host_channel(host_spec->host_channel);
@@ -835,10 +939,10 @@ int container_create_cb(const container_create_request *request,
         ERROR("Failed to prepare host channel with '%s'", host_spec->host_channel);
         sleep(111);
         cc = ISULAD_ERR_EXEC;
-        goto clean_rootfs;
+        goto umount_shm;
     }
 
-    if (verify_container_settings(oci_spec)) {
+    if (verify_container_settings(oci_spec) != 0) {
         ERROR("Failed to verify container settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
@@ -863,10 +967,13 @@ int container_create_cb(const container_create_request *request,
     }
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
+    (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
     goto pack_response;
 
 umount_channel:
     umount_host_channel(host_channel);
+umount_shm:
+    umount_shm_by_configs(host_spec, v2_spec);
 
 clean_rootfs:
     (void)im_remove_container_rootfs(image_type, id);

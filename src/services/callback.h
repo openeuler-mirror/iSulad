@@ -19,6 +19,7 @@
 #include "console.h"
 #include "container_get_id_request.h"
 #include "container_get_id_response.h"
+#include "container_get_runtime_response.h"
 #include "container_create_request.h"
 #include "container_create_response.h"
 #include "container_start_request.h"
@@ -89,6 +90,8 @@ typedef struct {
     int(*info)(const host_info_request *request, host_info_response **response);
 
     int(*get_id)(const container_get_id_request *request, container_get_id_response **response);
+
+    int(*get_runtime)(const char *real_id, container_get_runtime_response **response);
 
     int(*create)(const container_create_request *request, container_create_response **response);
 

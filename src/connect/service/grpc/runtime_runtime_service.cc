@@ -194,7 +194,7 @@ grpc::Status RuntimeRuntimeServiceImpl::RunPodSandbox(
     runtime::v1alpha2::RunPodSandboxResponse *reply)
 {
     Errors error;
-    std::string responseID = rService.RunPodSandbox(request->config(), error);
+    std::string responseID = rService.RunPodSandbox(request->config(), request->runtime_handler(), error);
     if (!error.Empty() || responseID.empty()) {
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }

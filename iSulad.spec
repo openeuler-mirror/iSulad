@@ -1,5 +1,5 @@
-%global _version 1.1.11
-%global _release 20200204.221506.git50cfadfa
+%global _version 1.1.12
+%global _release 20200306.143730.gitb83d1ed8
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -30,18 +30,18 @@ Requires(preun): initscripts
 %endif
 
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
-BuildRequires: grpc grpc-devel protobuf-devel
+BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
-BuildRequires: http-parser-devel libevhtp-devel libevent-devel
-BuildRequires: libseccomp-devel libcap-devel libwebsockets libwebsockets-devel
+BuildRequires: http-parser-devel
+BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git python3
 
 Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf yajl
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
-Requires:      libcap libwebsockets
-Requires:      libevhtp libevent systemd
+Requires:      libcap libselinux libwebsockets
+Requires:      systemd
 
 %description
 This is a umbrella project for gRPC-services based Lightweight Container
@@ -68,6 +68,7 @@ install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/
 
 install -d $RPM_BUILD_ROOT/%{_bindir}
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
+install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad

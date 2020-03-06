@@ -119,6 +119,7 @@ public:
     explicit ISulaContainerPrepare(void *args) : ClientBase(args)
     {
     }
+    ~ISulaContainerPrepare() = default;
 
     int request_to_grpc(const isula_prepare_request *req, isula::ContainerPrepareRequest *grequest) override
     {
@@ -184,6 +185,8 @@ public:
     {
     }
 
+    ~ISulaContainerRemove() = default;
+
     int request_to_grpc(const isula_remove_request *req, isula::ContainerRemoveRequest *grequest) override
     {
         if (req == nullptr) {
@@ -227,6 +230,8 @@ public:
     {
     }
 
+    ~ISulaContainerMount() = default;
+
     int request_to_grpc(const isula_mount_request *req, isula::ContainerMountRequest *grequest) override
     {
         if (req == nullptr) {
@@ -269,6 +274,8 @@ public:
     explicit ISulaContainerUmount(void *args) : ClientBase(args)
     {
     }
+
+    ~ISulaContainerUmount() = default;
 
     int request_to_grpc(const isula_umount_request *req, isula::ContainerUmountRequest *grequest) override
     {
@@ -314,6 +321,8 @@ public:
     {
     }
 
+    ~ISulaContainersList() = default;
+
     int request_to_grpc(const isula_containers_list_request *req, isula::ListContainersRequest *grequest) override
     {
         if (req == nullptr) {
@@ -358,6 +367,8 @@ public:
     explicit ISulaImagePull(void *args) : ClientBase(args)
     {
     }
+
+    ~ISulaImagePull() = default;
 
     int request_to_grpc(const isula_pull_request *req, isula::PullImageRequest *grequest) override
     {
@@ -437,6 +448,7 @@ public:
     explicit ISulaImageStatus(void *args) : ClientBase(args)
     {
     }
+    ~ISulaImageStatus() = default;
 
     int request_to_grpc(const isula_status_request *req, isula::ImageStatusRequest *grequest) override
     {
@@ -508,6 +520,7 @@ public:
     explicit ISulaListImages(void *args) : ClientBase(args)
     {
     }
+    ~ISulaListImages() = default;
 
     int request_to_grpc(const isula_list_request *req, isula::ListImagesRequest *grequest) override
     {
@@ -574,6 +587,7 @@ public:
     explicit ISulaRmi(void *args) : ClientBase(args)
     {
     }
+    ~ISulaRmi() = default;
 
     int request_to_grpc(const isula_rmi_request *req, isula::RemoveImageRequest *grequest) override
     {
@@ -625,6 +639,7 @@ public:
     explicit ISulaLoad(void *args) : ClientBase(args)
     {
     }
+    ~ISulaLoad() = default;
 
     int request_to_grpc(const isula_load_request *req, isula::LoadImageRequest *grequest) override
     {
@@ -682,6 +697,7 @@ public:
     explicit ISulaLogin(void *args) : ClientBase(args)
     {
     }
+    ~ISulaLogin() = default;
 
     int request_to_grpc(const isula_login_request *req, isula::LoginRequest *grequest) override
     {
@@ -736,6 +752,7 @@ public:
     explicit ISulaLogout(void *args) : ClientBase(args)
     {
     }
+    ~ISulaLogout() = default;
 
     int request_to_grpc(const isula_logout_request *req, isula::LogoutRequest *grequest) override
     {
@@ -780,6 +797,7 @@ public:
     explicit ISulaExport(void *args) : ClientBase(args)
     {
     }
+    ~ISulaExport() = default;
 
     int request_to_grpc(const isula_export_request *req, isula::ContainerExportRequest *grequest) override
     {
@@ -835,6 +853,7 @@ public:
     explicit ISulaStorageStatus(void *args) : ClientBase(args)
     {
     }
+    ~ISulaStorageStatus() = default;
 
     int response_from_grpc(isula::GraphdriverStatusResponse *gresp, isula_storage_status_response *resp) override
     {
@@ -863,6 +882,7 @@ public:
     explicit ISulaContainerFsUsage(void *args) : ClientBase(args)
     {
     }
+    ~ISulaContainerFsUsage() = default;
 
     int request_to_grpc(const isula_container_fs_usage_request *req, isula::ContainerFsUsageRequest *grequest) override
     {
@@ -912,6 +932,7 @@ public:
     explicit ISulaImageFsInfo(void *args) : ClientBase(args)
     {
     }
+    ~ISulaImageFsInfo() = default;
 
     int response_from_grpc(isula::ImageFsInfoResponse *gresp, isula_image_fs_info_response *resp) override
     {
@@ -993,6 +1014,7 @@ public:
     explicit ISulaHealthCheck(void *args) : ClientBase(args)
     {
     }
+    ~ISulaHealthCheck() = default;
 
     int response_from_grpc(isula::HealthCheckResponse *gresp, isula_health_check_response *resp) override
     {

@@ -103,7 +103,7 @@ static int isula_pull_response_to_im(const struct isula_pull_response *iresp, im
 
 int isula_pull_image(const im_pull_request *request, im_pull_response **response)
 {
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
     struct isula_pull_request *ireq = NULL;
     struct isula_pull_response *iresp = NULL;
     int ret = -1;

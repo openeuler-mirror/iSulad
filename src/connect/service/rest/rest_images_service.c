@@ -78,7 +78,7 @@ static void evhtp_send_image_load_repsponse(evhtp_request_t *req,
     responsedata = image_load_image_response_generate_json(response, NULL, &err);
     if (responsedata == NULL) {
         ERROR("Load: failed to generate request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
     evhtp_send_response(req, responsedata, rescode);
@@ -126,7 +126,7 @@ static void evhtp_send_image_list_repsponse(evhtp_request_t *req,
     responsedata = image_list_images_response_generate_json(response, NULL, &err);
     if (responsedata == NULL) {
         ERROR("List: failed to generate request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
     evhtp_send_response(req, responsedata, rescode);
@@ -198,7 +198,7 @@ static void evhtp_send_image_delete_repsponse(evhtp_request_t *req,
     }
 
     ERROR("Delete: failed to generate request json:%s", err);
-    evhtp_send_reply(req, EVHTP_RES_ERROR);
+    evhtp_send_reply(req, RESTFUL_RES_ERROR);
 out:
     free(responsedata);
     free(err);
@@ -259,14 +259,14 @@ static void evhtp_send_image_inspect_repsponse(evhtp_request_t *req,
 
     if (response == NULL) {
         ERROR("Failed to generate inspect response info");
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
     responsedata = image_inspect_response_generate_json(response, &ctx, &err);
     if (responsedata == NULL) {
         ERROR("Failed to generate inspect request json:%s", err);
-        evhtp_send_reply(req, EVHTP_RES_ERROR);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
         goto out;
     }
 
@@ -288,26 +288,26 @@ static void rest_image_load_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->image.load == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = image_load_request_from_rest(req, &crequest);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->image.load(crequest, &cresponse);
 
-    evhtp_send_image_load_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_image_load_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_image_load_image_request(crequest);
     free_image_load_image_response(cresponse);
@@ -323,26 +323,26 @@ static void rest_image_list_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->image.list == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = image_list_request_from_rest(req, &crequest);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->image.list(crequest, &cresponse);
 
-    evhtp_send_image_list_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_image_list_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_image_list_images_request(crequest);
     free_image_list_images_response(cresponse);
@@ -358,26 +358,26 @@ static void rest_image_delete_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->image.remove == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = image_delete_request_from_rest(req, &crequest);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->image.remove(crequest, &cresponse);
 
-    evhtp_send_image_delete_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_image_delete_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_image_delete_image_request(crequest);
     free_image_delete_image_response(cresponse);
@@ -393,26 +393,26 @@ static void rest_image_inspect_cb(evhtp_request_t *req, void *arg)
 
     // only deal with POST request
     if (evhtp_request_get_method(req) != htp_method_POST) {
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
     cb = get_service_callback();
     if (cb == NULL || cb->image.inspect == NULL) {
         ERROR("Unimplemented callback");
-        evhtp_send_reply(req, EVHTP_RES_NOTIMPL);
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
 
     tret = image_inspect_request_from_rest(req, &crequest);
     if (tret < 0) {
         ERROR("Bad request");
-        evhtp_send_reply(req, EVHTP_RES_SERVERR);
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
         goto out;
     }
 
     (void)cb->image.inspect(crequest, &cresponse);
 
-    evhtp_send_image_inspect_repsponse(req, cresponse, EVHTP_RES_OK);
+    evhtp_send_image_inspect_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
     free_image_inspect_request(crequest);
     free_image_inspect_response(cresponse);

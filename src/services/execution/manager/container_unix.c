@@ -78,10 +78,8 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
 
     cont = util_common_calloc_s(sizeof(container_t));
     if (cont == NULL) {
-        free_container_config_v2_common_config(tmp_common_config);
-        free_host_config(tmp_host_config);
         ERROR("Out of memory");
-        return NULL;
+        goto error_out;
     }
 
     atomic_int_set(&cont->refcnt, 1);
@@ -124,6 +122,12 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     return cont;
 
 error_out:
+    if (cont != NULL) {
+        *common_config = cont->common_config;
+        *hostconfig = cont->hostconfig;
+        cont->common_config = NULL;
+        cont->hostconfig = NULL;
+    }
     container_unref(cont);
     return NULL;
 }
@@ -1054,4 +1058,46 @@ out:
     return ret;
 }
 
+/*
+ * @cont: check container
+ * @mpath: target mount path
+ * */
+bool has_mount_for(container_t *cont, const char *mpath)
+{
+    size_t i = 0;
+    char *work = NULL;
+
+    if (cont == NULL || mpath == NULL) {
+        return false;
+    }
+
+    if (cont->common_config == NULL) {
+        return false;
+    }
+
+    if (cont->common_config->mount_points == NULL) {
+        return false;
+    }
+
+    for (; i < cont->common_config->mount_points->len; i++) {
+        if (strcmp(cont->common_config->mount_points->keys[i], mpath) == 0) {
+            return true;
+        }
+    }
+
+    if (cont->hostconfig == NULL) {
+        return false;
+    }
+    for (i = 0; i < cont->hostconfig->binds_len; i++) {
+        work = strrchr(cont->hostconfig->binds[i], ':');
+        if (work == NULL) {
+            continue;
+        }
+        if (strcmp(work, mpath) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
 

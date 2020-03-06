@@ -1,5 +1,6 @@
 {
     "group": "isulad",
+    "default-runtime": "lcr",
     "graph": "/var/lib/isulad",
     "state": "/var/run/isulad",
     "engine": "lcr",

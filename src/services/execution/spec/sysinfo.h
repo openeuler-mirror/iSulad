@@ -22,6 +22,10 @@
 #define etcOsRelease "/etc/os-release"
 #define altOsRelease "/usr/lib/os-release"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     bool limit;
     bool swap;
@@ -133,6 +137,10 @@ mountinfo_t **getmountsinfo(void);
 mountinfo_t *find_mount_info(mountinfo_t **minfos, const char *dir);
 
 void free_mounts_info(mountinfo_t **minfos);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __SYSINFO_H */
 

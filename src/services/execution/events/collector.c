@@ -32,6 +32,8 @@
 #include "isulad_config.h"
 #include "libisulad.h"
 #include "containers_store.h"
+#include "container_unix.h"
+#include "image.h"
 
 static struct context_lists g_context_lists;
 
@@ -126,6 +128,300 @@ static container_events_type_t lcrsta2Evetype(int value)
     return et;
 }
 
+static const char * const g_isulad_event_strtype[] = {
+    "exit", "die", "starting", "running", "stopping", "aborting", "freezing", "frozen", "thawed",
+    "oom", "create", "start", "restart", "stop", "exec_create", "exec_start", "exec_die", "attach",
+    "kill", "top", "reanme", "archive-path", "extract-to-dir", "update", "pause", "unpause", "export",
+    "resize", "paused1",
+};
+
+/* isulad event sta2str */
+static const char *isulad_event_sta2str(container_events_type_t sta)
+{
+    if (sta > EVENTS_TYPE_PAUSED1) {
+        return NULL;
+    }
+
+    return g_isulad_event_strtype[sta];
+}
+
+static const char * const g_isulad_image_event_strtype[] = {
+    "load", "remove", "pull", "login", "logout"
+};
+
+static const char *isulad_image_event_sta2str(image_events_type_t sta)
+{
+    if (sta > EVENTS_TYPE_IMAGE_LOGOUT) {
+        return NULL;
+    }
+
+    return g_isulad_image_event_strtype[sta];
+}
+
+static void supplement_msg_for_events_handler(const struct monitord_msg *msg, struct isulad_events_format *format_msg)
+{
+    if (msg->pid != -1) {
+        format_msg->has_pid = true;
+        format_msg->pid = (uint32_t)msg->pid;
+    }
+
+    format_msg->has_type = true;
+    format_msg->type = lcrsta2Evetype(msg->value);
+    if (format_msg->type == EVENTS_TYPE_STOPPED1) {
+        format_msg->has_exit_status = true;
+        if (msg->exit_code >= 0) {
+            format_msg->exit_status = (uint32_t)msg->exit_code;
+        } else {
+            format_msg->exit_status = 125;
+        }
+    }
+}
+
+static int supplement_operator_for_container_msg(const struct monitord_msg *msg,
+                                                 struct isulad_events_format *format_msg)
+{
+#define OPERATOR_MAX_LEN 50
+    int nret = 0;
+    char opt[OPERATOR_MAX_LEN] = {0x00};
+
+    if (strlen(msg->args) != 0) {
+        nret = snprintf(opt, sizeof(opt), "container %s: %s", isulad_event_sta2str(msg->value), msg->args);
+    } else {
+        nret = snprintf(opt, sizeof(opt), "container %s", isulad_event_sta2str(msg->value));
+    }
+    if (nret < 0 || nret >= sizeof(opt)) {
+        return -1;
+    }
+
+    free(format_msg->opt);
+    format_msg->opt = util_strdup_s(opt);
+
+    return 0;
+}
+
+static int supplement_pid_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+                                            struct isulad_events_format *format_msg)
+{
+    int nret = 0;
+    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+
+    if (cont->state == NULL || cont->state->state == NULL ||  cont->state->state->pid <= 0) {
+        return 0;
+    }
+
+    nret = snprintf(info, sizeof(info), "pid=%u", cont->state->state->pid);
+    if (nret < 0 || nret >= sizeof(info)) {
+        return -1;
+    }
+
+    if (util_array_append(&format_msg->annotations, info) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int supplement_exitcode_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+                                                 struct isulad_events_format *format_msg)
+{
+    int nret = 0;
+    int exit_code = 0;
+    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+
+    if (format_msg->exit_status != 0) {
+        exit_code = format_msg->exit_status;
+    } else if (cont->state != NULL && cont->state->state != NULL && cont->state->state->exit_code != 0) {
+        exit_code = cont->state->state->exit_code;
+    }
+
+    if (exit_code == 0) {
+        return 0;
+    }
+
+    nret = snprintf(info, sizeof(info), "exitCode=%u", exit_code);
+    if (nret < 0 || nret >= sizeof(info)) {
+        return -1;
+    }
+
+    if (util_array_append(&format_msg->annotations, info) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int supplement_image_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+                                              struct isulad_events_format *format_msg)
+{
+    int nret = 0;
+    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+
+    if (cont->common_config == NULL || cont->common_config->image == NULL) {
+        return 0;
+    }
+
+    nret = snprintf(info, sizeof(info), "image=%s", cont->common_config->image);
+    if (nret < 0 || nret >= sizeof(info)) {
+        return -1;
+    }
+
+    if (util_array_append(&format_msg->annotations, info) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int supplement_name_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+                                             struct isulad_events_format *format_msg)
+{
+    int nret = 0;
+    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+
+    if (cont->common_config == NULL || cont->common_config->name == NULL) {
+        return 0;
+    }
+
+    nret = snprintf(info, sizeof(info), "name=%s", cont->common_config->name);
+    if (nret < 0 || nret >= sizeof(info)) {
+        return -1;
+    }
+
+    if (util_array_append(&format_msg->annotations, info) != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int supplement_labels_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+                                               struct isulad_events_format *format_msg)
+{
+    size_t i;
+
+    if (cont->common_config == NULL ||
+        cont->common_config->config->labels == NULL ||
+        cont->common_config->config->labels->len == 0) {
+        return 0;
+    }
+
+    for (i = 0; i < cont->common_config->config->labels->len; i++) {
+        char info[EXTRA_ANNOTATION_MAX] = {0x00};
+        int nret = snprintf(info, sizeof(info), "%s=%s", cont->common_config->config->labels->keys[i],
+                            cont->common_config->config->labels->values[i]);
+        if (nret < 0 || nret >= sizeof(info)) {
+            return -1;
+        }
+
+        if (util_array_append(&format_msg->annotations, info) != 0) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int supplement_annotations_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+                                                    struct isulad_events_format *format_msg)
+{
+
+    if (supplement_pid_for_container_msg(cont, msg, format_msg) != 0) {
+        ERROR("Failed to supplement pid info");
+        return -1;
+    }
+
+    if (supplement_exitcode_for_container_msg(cont, msg, format_msg) != 0) {
+        ERROR("Failed to supplement exitCode info");
+        return -1;
+    }
+
+    if (supplement_image_for_container_msg(cont, msg, format_msg) != 0) {
+        ERROR("Failed to supplement image info");
+        return -1;
+    }
+
+    if (supplement_name_for_container_msg(cont, msg, format_msg) != 0) {
+        ERROR("Failed to supplement name info");
+        return -1;
+    }
+
+    if (supplement_labels_for_container_msg(cont, msg, format_msg) != 0) {
+        ERROR("Failed to supplement label info");
+        return -1;
+    }
+
+    if (strlen(msg->extra_annations) != 0) {
+        if (util_array_append(&format_msg->annotations, msg->extra_annations) != 0) {
+            ERROR("Failed to supplement extra annations info");
+            return -1;
+        }
+    }
+
+    format_msg->annotations_len = util_array_len((const char **)format_msg->annotations);
+
+    return 0;
+}
+
+static int supplement_msg_for_container(struct monitord_msg *msg, struct isulad_events_format *format_msg)
+{
+    int ret = 0;
+    container_t *cont = containers_store_get(msg->name);
+    if (cont == NULL) {
+        ERROR("No such container:%s", msg->name);
+        ret = -1;
+        goto out;
+    }
+
+    // pid & exit_status parameter for events handler
+    supplement_msg_for_events_handler(msg, format_msg);
+
+    if (cont->common_config != NULL && cont->common_config->id != NULL) {
+        format_msg->id = util_strdup_s(cont->common_config->id);
+    }
+
+    if (supplement_operator_for_container_msg(msg, format_msg) != 0) {
+        ERROR("Failed to supplement operator info");
+        ret = -1;
+        goto out;
+    }
+
+    if (supplement_annotations_for_container_msg(cont, msg, format_msg) != 0) {
+        ERROR("Failed to supplement annotations info");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    container_unref(cont);
+    return ret;
+}
+
+static int supplement_msg_for_image(struct monitord_msg *msg, struct isulad_events_format *format_msg)
+{
+#define OPERATOR_MAX_LEN 50
+    int ret = 0;
+    int nret = 0;
+    char opt[OPERATOR_MAX_LEN] = {0x00};
+
+    format_msg->id = util_strdup_s(msg->name);
+
+    nret = snprintf(opt, sizeof(opt), "image %s", isulad_image_event_sta2str(msg->value));
+    if (nret < 0 || nret >= sizeof(opt)) {
+        ERROR("Get operator operator info failed");
+        ret = -1;
+        goto out;
+    }
+    format_msg->opt = util_strdup_s(opt);
+
+out:
+    return ret;
+}
+
 /* format_msg */
 static bool format_msg(struct isulad_events_format *r, struct monitord_msg *msg)
 {
@@ -147,26 +443,16 @@ static bool format_msg(struct isulad_events_format *r, struct monitord_msg *msg)
 
     r->has_pid = false;
     switch (msg->type) {
-        case monitord_msg_state:
-            r->id = msg->name;
-            if (msg->pid != -1) {
-                r->has_pid = true;
-                r->pid = (uint32_t)msg->pid;
-            }
-            r->has_type = true;
-            r->type = lcrsta2Evetype(msg->value);
-            if (r->type == EVENTS_TYPE_STOPPED1) {
-                r->has_exit_status = true;
-                if (msg->exit_code >= 0) {
-                    r->exit_status = (uint32_t)msg->exit_code;
-                } else {
-                    r->exit_status = 125;
-                }
+        case MONITORD_MSG_STATE:
+            if (msg->event_type == CONTAINER_EVENT) {
+                supplement_msg_for_container(msg, r);
+            } else if (msg->event_type == IMAGE_EVENT) {
+                supplement_msg_for_image(msg, r);
             }
             ret = true;
             break;
-        case monitord_msg_priority:
-        case monitord_msg_exit_code:
+        case MONITORD_MSG_PRIORITY:
+        case MONITORD_MSG_EXIT_CODE:
         default:
             /* ignore garbage */
             ret = false;
@@ -174,20 +460,6 @@ static bool format_msg(struct isulad_events_format *r, struct monitord_msg *msg)
             break;
     }
     return ret;
-}
-
-static const char * const g_isulad_event_strtype[] = {
-    "EXIT",   "STOPPED", "STARTING", "RUNNING", "STOPPING", "ABORTING",   "FREEZING",
-    "FROZEN", "THAWED",  "OOM",      "CREATE",  "START",    "EXEC_ADDED", "PAUSED1",
-};
-
-/* isulad event sta2str */
-static const char *isulad_event_sta2str(container_events_type_t sta)
-{
-    if (sta > EVENTS_TYPE_PAUSED1) {
-        return NULL;
-    }
-    return g_isulad_event_strtype[sta];
 }
 
 /* isulad monitor fifo send */
@@ -231,16 +503,20 @@ out:
     }
 }
 
-/* isulad monitor send event */
-int isulad_monitor_send_event(const char *name, runtime_state_t state, int pid, int exit_code)
+/* isulad monitor send container event */
+int isulad_monitor_send_container_event(const char *name, runtime_state_t state, int pid, int exit_code,
+                                        const char *args, const char *extra_annations)
 {
     int ret = 0;
     char *statedir = NULL;
     struct monitord_msg msg = {
-        .type = monitord_msg_state,
+        .type = MONITORD_MSG_STATE,
+        .event_type = CONTAINER_EVENT,
         .value = state,
         .pid = -1,
-        .exit_code = -1
+        .exit_code = -1,
+        .args = {0x00},
+        .extra_annations = {0x00}
     };
 
     if (name == NULL) {
@@ -257,7 +533,18 @@ int isulad_monitor_send_event(const char *name, runtime_state_t state, int pid, 
     }
 
     (void)strncpy(msg.name, name, sizeof(msg.name) - 1);
-    msg.name[sizeof(msg.name) - 1] = 0;
+    msg.name[sizeof(msg.name) - 1] = '\0';
+
+    if (args != NULL) {
+        (void)strncpy(msg.args, args, sizeof(msg.args) - 1);
+        msg.args[sizeof(msg.args) - 1] = '\0';
+    }
+
+    if (extra_annations != NULL) {
+        (void)strncpy(msg.extra_annations, extra_annations, sizeof(msg.extra_annations) - 1);
+        msg.extra_annations[sizeof(msg.extra_annations) - 1] = '\0';
+    }
+
     if (pid > 0) {
         msg.pid = pid;
     }
@@ -272,68 +559,142 @@ out:
     return ret;
 }
 
+/* isulad monitor send image event */
+int isulad_monitor_send_image_event(const char *name, image_state_t state)
+{
+    int ret = 0;
+    char *statedir = NULL;
+
+    struct monitord_msg msg = {
+        .type = MONITORD_MSG_STATE,
+        .event_type = IMAGE_EVENT,
+        .value = state,
+        .args = {0x00},
+        .extra_annations = {0x00}
+    };
+
+    if (name == NULL) {
+        CRIT("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    statedir = conf_get_isulad_statedir();
+    if (statedir == NULL) {
+        CRIT("Can not get isulad root path");
+        ret = -1;
+        goto out;
+    }
+
+    (void)strncpy(msg.name, name, sizeof(msg.name) - 1);
+    msg.name[sizeof(msg.name) - 1] = '\0';
+
+    isulad_monitor_fifo_send(&msg, statedir);
+
+out:
+    free(statedir);
+    return ret;
+}
+
+static int calculate_annaotation_info_len(const struct isulad_events_format *events)
+{
+    size_t i;
+    size_t len = 0;
+    for (i = 0; i < events->annotations_len; i++) {
+        len += strlen(events->annotations[i]);
+    }
+    len += events->annotations_len * 2; // length of ", " and "()"
+    len += 1; // length of '\0'
+
+    return len;
+}
+
 /* write events log */
 static int write_events_log(const struct isulad_events_format *events)
 {
-#define PID_PREFIX ", Pid: "
-#define EXIT_CODE_PREFIX ", ExitCode: "
-
     int ret = 0;
-    int nret = 0;
-    char *pid_str = NULL;
-    char *exit_status_str = NULL;
-
+    size_t i;
+    char *annotation = NULL;
+    size_t len = 0;
     if (events == NULL) {
         goto out;
     }
 
-    if (events->has_pid) {
-        nret = asprintf(&pid_str, "%s%u", PID_PREFIX, events->pid);
-        if (nret < 0) {
-            ERROR("Sprintf pid failed");
+    len = calculate_annaotation_info_len(events);
+    if (len == 1) {
+        EVENT("Event: {Object: %s, Type: %s}", events->id, events->opt);
+    } else {
+        annotation = (char *)util_common_calloc_s(len);
+        if (annotation == NULL) {
+            ERROR("Out of memory");
             ret = -1;
             goto out;
         }
-    }
 
-    if (events->has_exit_status) {
-        nret = asprintf(&exit_status_str, "%s%u", EXIT_CODE_PREFIX, events->exit_status);
-        if (nret < 0) {
-            ERROR("Sprintf exit status failed");
-            ret = -1;
-            goto out;
+        (void)strcat(annotation, "(");
+        for (i = 0; i < events->annotations_len; i++) {
+            (void)strcat(annotation, events->annotations[i]);
+            if (i != events->annotations_len - 1) {
+                (void)strcat(annotation, ", ");
+            }
         }
-    }
+        (void)strcat(annotation, ")");
 
-    EVENT("Event: {Object: %s, Type: %s%s%s}", events->id,
-          (events->has_type ? isulad_event_sta2str((container_events_type_t)events->type) : "-"),
-          (events->has_pid ? pid_str : ""), (events->has_exit_status ? exit_status_str : ""));
+        EVENT("Event: {Object: %s, Type: %s %s}", events->id, events->opt, annotation);
+    }
 
 out:
-    free(pid_str);
-    free(exit_status_str);
+    free(annotation);
     return ret;
 }
 
 /* events copy */
-static void event_copy(const struct isulad_events_format *src, struct isulad_events_format *dest)
+static int event_copy(const struct isulad_events_format *src, struct isulad_events_format *dest)
 {
+    size_t i;
     if (src == NULL || dest == NULL) {
-        return;
+        return 0;
     }
 
-    free(dest->id);
-    dest->id = util_strdup_s(src->id);
-    dest->has_type = src->has_type;
-    dest->type = src->type;
-    dest->has_pid = src->has_pid;
-    dest->pid = src->pid;
-    dest->has_exit_status = src->has_exit_status;
-    dest->exit_status = src->exit_status;
     dest->timestamp.has_seconds = src->timestamp.has_seconds;
     dest->timestamp.seconds = src->timestamp.seconds;
     dest->timestamp.has_nanos = src->timestamp.has_nanos;
     dest->timestamp.nanos = src->timestamp.nanos;
+
+    if (src->id != NULL) {
+        free(dest->id);
+        dest->id = util_strdup_s(src->id);
+    }
+
+    if (src->opt != NULL) {
+        free(dest->opt);
+        dest->opt = util_strdup_s(src->opt);
+    }
+
+    if (src->annotations_len != 0) {
+        util_free_array(dest->annotations);
+        dest->annotations = (char **)util_common_calloc_s(src->annotations_len * sizeof(char *));
+        if (dest->annotations == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        if (dest->annotations)
+            for (i = 0; i < src->annotations_len; i++) {
+                dest->annotations[i] = util_strdup_s(src->annotations[i]);
+            }
+        dest->annotations_len = src->annotations_len;
+    }
+
+    dest->has_type = src->has_type;
+    dest->type = src->type;
+
+    dest->has_pid = src->has_pid;
+    dest->pid = src->pid;
+    dest->has_exit_status = src->has_exit_status;
+    dest->exit_status = src->exit_status;
+
+    return 0;
 }
 
 /* events append */
@@ -362,7 +723,12 @@ static void events_append(const struct isulad_events_format *event)
             goto unlock;
         }
 
-        event_copy(event, tmpevent);
+        if (event_copy(event, tmpevent) != 0) {
+            CRIT("Failed to copy event.");
+            isulad_events_format_free(tmpevent);
+            free(newnode);
+            goto unlock;
+        }
 
         linked_list_add_elem(newnode, tmpevent);
         linked_list_add_tail(&g_events_buffer.event_list, newnode);
@@ -373,7 +739,10 @@ static void events_append(const struct isulad_events_format *event)
             linked_list_del(firstnode);
 
             tmpevent = (struct isulad_events_format *)firstnode->elem;
-            event_copy(event, tmpevent);
+            if (event_copy(event, tmpevent) != 0) {
+                CRIT("Failed to copy event.");
+                goto unlock;
+            }
 
             linked_list_add_tail(&g_events_buffer.event_list, firstnode);
         }
@@ -668,28 +1037,38 @@ out:
 /* events handler */
 void events_handler(struct monitord_msg *msg)
 {
-    struct isulad_events_format events = { 0 };
+    struct isulad_events_format *events = NULL;
 
     if (msg == NULL) {
         ERROR("Invalid input arguments");
         return;
     }
 
-    if (format_msg(&events, msg) != true) {
+    events = (struct isulad_events_format *)util_common_calloc_s(sizeof(struct isulad_events_format));
+    if (events == NULL) {
+        ERROR("Out of memory");
         return;
+    }
+
+    if (format_msg(events, msg) != true) {
+        ERROR("Failed to format massage");
+        goto out;
     }
 
     /* post events to events handler */
-    if (post_event_to_events_hander(&events)) {
-        ERROR("Failed to handle %s STOPPED events with pid %d", events.id, events.pid);
-        return;
+    if (post_event_to_events_hander(events)) {
+        ERROR("Failed to handle %s STOPPED events with pid %d", events->id, msg->pid);
+        goto out;
     }
 
     /* forward events to grpc clients */
-    events_forward(&events);
+    events_forward(events);
 
     /* log event into isulad.log */
-    (void)write_events_log(&events);
+    (void)write_events_log(events);
+
+out:
+    isulad_events_format_free(events);
 }
 
 /* dup event */
@@ -711,17 +1090,6 @@ struct isulad_events_format *dup_event(const struct isulad_events_format *event)
     return out;
 }
 
-/* free event */
-void free_event(struct isulad_events_format *event)
-{
-    if (event == NULL) {
-        return;
-    }
-    free(event->id);
-    event->id = NULL;
-    free(event);
-    return;
-}
 
 /* add monitor client */
 int add_monitor_client(char *name, const types_timestamp_t *since, const types_timestamp_t *until,
@@ -825,4 +1193,3 @@ int newcollector()
 out:
     return ret;
 }
-

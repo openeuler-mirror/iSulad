@@ -25,6 +25,8 @@ extern "C" {
 
 bool strings_contains_any(const char *str, const char *substr);
 
+bool strings_contains_word(const char *str, const char *substr);
+
 int strings_count(const char *str, unsigned char c);
 
 bool strings_in_slice(const char **strarray, size_t alen, const char *str);
@@ -44,6 +46,8 @@ char **util_string_split(const char *src_str, char _sep);
 // Breaks src_str into an array of string according to _sep,
 // note that every delimiter bytes  is considered to be a single delimiter
 char **util_string_split_multi(const char *src_str, char delim);
+
+char **util_string_split_n(const char *src_str, char delim, size_t n);
 
 const char *str_skip_str(const char *str, const char *skip);
 

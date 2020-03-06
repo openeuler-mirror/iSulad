@@ -174,7 +174,7 @@ static int unpack_image_list_response(const struct parsed_http_message *message,
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -213,7 +213,7 @@ static int unpack_image_load_response(const struct parsed_http_message *message,
         c_load_response->errmsg = util_strdup_s(load_response->errmsg);
     }
     ret = (load_response->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -279,7 +279,7 @@ static int unpack_image_delete_response(const struct parsed_http_message *messag
         c_rmi_response->errmsg = util_strdup_s(delete_response->errmsg);
     }
     ret = (delete_response->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
@@ -416,7 +416,7 @@ static int unpack_inspect_response(const struct parsed_http_message *message, vo
         response->errmsg = util_strdup_s(cresponse->errmsg);
     }
     ret = (cresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
-    if (message->status_code == EVHTP_RES_SERVERR) {
+    if (message->status_code == RESTFUL_RES_SERVERR) {
         ret = -1;
     }
 
