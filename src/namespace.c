@@ -21,7 +21,7 @@
 #include "containers_store.h"
 
 
-static char *connected_container(const char *mode)
+char *connected_container(const char *mode)
 {
     const char *p = mode != NULL ? (mode + strlen(SHARE_NAMESPACE_PREFIX)) : NULL;
 
@@ -95,5 +95,26 @@ char *get_share_namespace_path(const char *type, const char *src_path)
     }
 
     return tmp_mode;
+}
+
+char *get_container_process_label(const char *cid)
+{
+    char *result = NULL;
+    container_t *cont = NULL;
+
+    if (cid == NULL) {
+        return NULL;
+    }
+
+    cont = containers_store_get(cid);
+    if (cont == NULL) {
+        ERROR("Invalid share path: %s", cid);
+        goto out;
+    }
+    result = util_strdup_s(cont->common_config->process_label);
+    container_unref(cont);
+
+out:
+    return result;
 }
 

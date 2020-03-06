@@ -29,7 +29,7 @@ const char g_cmd_run_desc[] = "Run a command in a new container";
 const char g_cmd_run_usage[] = "run [OPTIONS] ROOTFS|IMAGE [COMMAND] [ARG...]";
 static int run_checker(struct client_arguments *args);
 struct client_arguments g_cmd_run_args = {
-    .runtime = "lcr",
+    .runtime = "",
     .restart = "no",
     .log_file = NULL,
     .log_file_size = "1MB",

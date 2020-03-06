@@ -61,7 +61,7 @@ int isula_do_login(const char *server, const char *username, const char *passwor
     struct isula_login_request *ireq = NULL;
     struct isula_login_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
 
     if (is_valid_arguments(server, username, password) != 0) {
         ERROR("Invalid arguments");

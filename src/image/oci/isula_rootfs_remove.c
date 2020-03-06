@@ -47,7 +47,7 @@ int isula_rootfs_remove(const char *name_id)
     struct isula_remove_request *ireq = NULL;
     struct isula_remove_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
 
     im_ops = get_isula_image_ops();
     if (im_ops == NULL) {

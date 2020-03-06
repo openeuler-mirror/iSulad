@@ -17,16 +17,24 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define INSPECT_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_STRING, false, "format", 'f', &(cmdargs).format, \
         "Format the output using the given go template", NULL }, \
     { CMD_OPT_TYPE_CALLBACK, false, "time", 't', &(cmdargs).time, \
-        "Seconds to wait for inspect timeout (default 120)", command_convert_int }
+      "Seconds to wait for inspect timeout (default 120)", command_convert_int }
 
 extern const char g_cmd_inspect_desc[];
 extern const char g_cmd_inspect_usage[];
 extern struct client_arguments g_cmd_inspect_args;
 int cmd_inspect_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_INSPECT_H */
 

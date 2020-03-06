@@ -382,12 +382,6 @@ static bool validate_create_time(char *created)
         return false;
     }
 
-    /* ensure time can be processed by us */
-    if (time_tz_to_seconds_nanos(created, NULL, NULL)) {
-        ERROR("invalid created time %s, invalid time value", created);
-        isulad_try_set_error_message("Invalid content in manifest: invalid created time");
-        return false;
-    }
     return true;
 }
 

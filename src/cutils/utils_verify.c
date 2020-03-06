@@ -274,7 +274,7 @@ bool util_valid_runtime_name(const char *name)
         return false;
     }
 
-    return strcasecmp(name, "lcr") == 0;
+    return true;
 }
 
 bool util_valid_host_name(const char *name)
@@ -386,7 +386,7 @@ cleanup:
 
 bool util_valid_time_tz(const char *time)
 {
-    char *patten = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]{2,9})?Z$";
+    char *patten = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]{2,9})?(Z|[+-][0-9]{2}:[0-9]{2})$";
 
     if (time == NULL) {
         ERROR("invalid NULL param");

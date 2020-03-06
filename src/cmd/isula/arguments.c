@@ -135,6 +135,9 @@ int client_arguments_init(struct client_arguments *args)
         return -1;
     }
 
+    // default swappiness should be set to -1
+    args->cr.swappiness = -1;
+
     return 0;
 }
 

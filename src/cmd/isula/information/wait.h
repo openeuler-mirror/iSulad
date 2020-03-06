@@ -17,11 +17,19 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char g_cmd_wait_desc[];
 extern const char g_cmd_wait_usage[];
 extern struct client_arguments g_cmd_wait_args;
 int cmd_wait_main(int argc, const char **argv);
 int client_wait(const struct client_arguments *args, unsigned int *exit_code);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CMD_WAIT_H */
 

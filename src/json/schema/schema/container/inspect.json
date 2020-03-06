@@ -75,6 +75,18 @@
         "RestartCount":{
             "type":"integer"
         },
+        "MountLabel":{
+            "type":"string"
+        },
+        "ProcessLabel":{
+            "type":"string"
+        },
+        "SeccompProfile": {
+            "type": "string"
+        },
+        "NoNewPrivileges": {
+            "type": "boolean"
+        },
         "HostConfig":{
             "$ref": "../host-config.json"
         },

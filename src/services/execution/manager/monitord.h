@@ -18,16 +18,23 @@
 #include <semaphore.h>
 #include <limits.h>
 #include "engine.h"
+#include "libisulad.h"
+
+#define ARGS_MAX                255	 /* # args chars in a monitord msg */
+#define EXTRA_ANNOTATION_MAX    1024 /* # annotation chars in a monitord msg */
 
 typedef enum {
-    monitord_msg_state,
-    monitord_msg_priority,
-    monitord_msg_exit_code
+    MONITORD_MSG_STATE,
+    MONITORD_MSG_PRIORITY,
+    MONITORD_MSG_EXIT_CODE
 } msg_type_t;
 
 struct monitord_msg {
     msg_type_t type;
+    msg_event_type_t event_type;
     char name[NAME_MAX + 1];
+    char args[ARGS_MAX];
+    char extra_annations[EXTRA_ANNOTATION_MAX];
     int value;
     int exit_code;
     int pid;

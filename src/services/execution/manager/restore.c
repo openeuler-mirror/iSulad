@@ -309,6 +309,7 @@ static int restore_state(container_t *cont)
 #endif
 
     params.rootpath = cont->root_path;
+    params.state = cont->state_path;
     nret = runtime_status(id, runtime, &params, &real_status);
     if (nret != 0) {
         ERROR("Failed to restore container %s, make real status to STOPPED. Due to can not load container with status %d", id,

@@ -25,6 +25,7 @@ extern "C" {
 #endif
 
 #define DEFAULT_IM_SERVER_SOCK_ADDR "unix:///var/run/isulad/isula_image.sock"
+#define DEFAULT_RUNTIME_NAME "lcr"
 
 struct isulad_conf {
     pthread_rwlock_t isulad_conf_rwlock;
@@ -91,6 +92,8 @@ char *conf_get_isulad_cgroup_parent();
 unsigned int conf_get_im_opt_timeout();
 
 char *conf_get_im_server_sock_addr();
+
+char *conf_get_default_runtime();
 
 bool conf_update_im_server_sock_addr(const char *new_sock_addr);
 

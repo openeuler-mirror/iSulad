@@ -36,11 +36,15 @@ typedef struct _rt_create_params_t {
     const char *stdin;
     const char *stdout;
     const char *stderr;
+    const char *exit_fifo;
+    bool tty;
+    bool open_stdin;
 } rt_create_params_t;
 
 
 typedef struct _rt_start_params_t {
     const char *rootpath;
+    const char *state;
     bool tty;
     bool open_stdin;
 
@@ -73,6 +77,7 @@ typedef struct _rt_rm_params_t {
 
 typedef struct _rt_status_params_t {
     const char *rootpath;
+    const char *state;
 } rt_status_params_t;
 
 typedef struct _rt_stats_params_t {
@@ -81,6 +86,7 @@ typedef struct _rt_stats_params_t {
 
 typedef struct _rt_exec_params_t {
     const char *rootpath;
+    const char *state;
     const char *logpath;
     const char *loglevel;
     const char **console_fifos;
@@ -91,10 +97,12 @@ typedef struct _rt_exec_params_t {
 
 typedef struct _rt_pause_params_t {
     const char *rootpath;
+    const char *state;
 } rt_pause_params_t;
 
 typedef struct _rt_resume_params_t {
     const char *rootpath;
+    const char *state;
 } rt_resume_params_t;
 
 typedef struct _rt_attach_params_t {

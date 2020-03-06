@@ -147,7 +147,7 @@ int isula_list_images(const im_list_request *request, imagetool_images_list **im
     struct isula_list_request *ireq = NULL;
     struct isula_list_response *iresp = NULL;
     client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops;
+    isula_image_ops *im_ops = NULL;
     int ret = -1;
 
     im_ops = get_isula_image_ops();

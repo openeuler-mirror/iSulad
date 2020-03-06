@@ -737,6 +737,23 @@ int command_convert_memswapbytes(command_option_t *option, const char *arg)
     return 0;
 }
 
+int command_convert_swappiness(command_option_t *option, const char *arg)
+{
+    if (option == NULL) {
+        return -1;
+    }
+    if (strcmp(arg, "-1") == 0) {
+        *(int64_t *)(option->data) = -1;
+        return 0;
+    }
+    if (util_parse_byte_size_string(arg, option->data) || (*(int64_t *)(option->data)) < 0 ||
+        (*(int64_t *)(option->data)) > 100) {
+        COMMAND_ERROR("Invalid value \"%s\" for flag --%s. Valid memory swappiness range is 0-100", arg, option->large);
+        return EINVALIDARGS;
+    }
+    return 0;
+}
+
 size_t ulimit_array_len(host_config_ulimits_element **default_ulimit)
 {
     size_t len = 0;

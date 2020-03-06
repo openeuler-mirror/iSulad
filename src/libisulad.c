@@ -14,13 +14,12 @@
  ******************************************************************************/
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
 #include <stdarg.h>
 
 #include "libisulad.h"
-#include "log.h"
-#include "pack_config.h"
 #include "utils.h"
 
 // record the errno
@@ -232,5 +231,28 @@ void container_log_config_free(struct container_log_config *conf)
     conf->rotate = 0;
     conf->size = 0;
     free(conf);
+}
+
+void isulad_events_format_free(struct isulad_events_format *value)
+{
+    size_t i;
+
+    if (value == NULL) {
+        return;
+    }
+    free(value->id);
+    value->id = NULL;
+
+    free(value->opt);
+    value->opt = NULL;
+
+    for (i = 0; i < value->annotations_len; i++) {
+        free(value->annotations[i]);
+        value->annotations[i] = NULL;
+    }
+    free(value->annotations);
+    value->annotations = NULL;
+
+    free(value);
 }
 

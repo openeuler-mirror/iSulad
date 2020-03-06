@@ -17,6 +17,10 @@
 
 #include "arguments.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define HEALTH_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_STRING, false, "service", 'S', &(cmdargs).service, "GRPC service name", NULL }
 
@@ -24,6 +28,10 @@ extern const char g_cmd_health_check_desc[];
 extern const char g_cmd_health_check_usage[];
 extern struct client_arguments g_cmd_health_check_args;
 int cmd_health_check_main(int argc, const char **argv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

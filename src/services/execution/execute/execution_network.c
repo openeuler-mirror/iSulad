@@ -35,6 +35,7 @@
 #include "containers_store.h"
 #include "namespace.h"
 #include "path.h"
+#include "selinux_label.h"
 
 static int write_hostname_to_file(const char *rootfs, const char *hostname)
 {
@@ -47,7 +48,7 @@ static int write_hostname_to_file(const char *rootfs, const char *hostname)
         goto error_out;
     }
     if (hostname != NULL) {
-        ret = util_write_file(file_path, hostname, strlen(hostname));
+        ret = util_write_file(file_path, hostname, strlen(hostname), NETWORK_MOUNT_FILE_MODE);
         if (ret) {
             SYSERROR("Failed to write %s", file_path);
             isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
@@ -139,7 +140,7 @@ static int write_content_to_file(const char *file_path, const char *content)
     int ret = 0;
 
     if (content != NULL) {
-        ret = util_write_file(file_path, content, strlen(content));
+        ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
         if (ret != 0) {
             SYSERROR("Failed to write file %s", file_path);
             isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
@@ -589,7 +590,7 @@ cleanup:
     return ret;
 }
 
-static int merge_resolv(const host_config *host_spec, const char *rootfs)
+static int merge_resolv(const host_config *host_spec, const char *rootfs, const char *resolv_conf_path)
 {
     int ret = 0;
     size_t length = 0;
@@ -607,7 +608,7 @@ static int merge_resolv(const host_config *host_spec, const char *rootfs)
         ret = -1;
         goto error_out;
     }
-    ret = fopen_network(&fp, &file_path, rootfs, "/etc/resolv.conf");
+    ret = fopen_network(&fp, &file_path, rootfs, resolv_conf_path);
     if (ret != 0) {
         goto error_out;
     }
@@ -686,16 +687,35 @@ out:
     return ret;
 }
 
-int merge_network(const host_config *host_spec, const char *rootfs, const char *hostname)
+static int merge_network_for_universal_container(const host_config *host_spec, const char *runtime_root, const char *id)
+{
+    int ret = 0;
+    int nret = 0;
+    char root_path[PATH_MAX] = {0x00};
+
+    if (runtime_root == NULL || id == NULL) {
+        ERROR("empty runtime root or id");
+        return -1;
+    }
+
+    nret = snprintf(root_path, PATH_MAX, "%s/%s", runtime_root, id);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to print string");
+        return -1;
+    }
+
+    ret = merge_resolv(host_spec, root_path, "/resolv.conf");
+    if (ret) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int merge_network_for_syscontainer(const host_config *host_spec, const char *rootfs, const char *hostname)
 {
     int ret = 0;
 
-    if (host_spec == NULL) {
-        return -1;
-    }
-    if (!host_spec->system_container || rootfs == NULL) {
-        return 0;
-    }
     ret = write_hostname_to_file(rootfs, hostname);
     if (ret) {
         return -1;
@@ -712,7 +732,7 @@ int merge_network(const host_config *host_spec, const char *rootfs, const char *
     if (ret) {
         return -1;
     }
-    ret = merge_resolv(host_spec, rootfs);
+    ret = merge_resolv(host_spec, rootfs, "/etc/resolv.conf");
     if (ret) {
         return -1;
     }
@@ -721,6 +741,24 @@ int merge_network(const host_config *host_spec, const char *rootfs, const char *
         return -1;
     }
     return 0;
+}
+
+int merge_network(const host_config *host_spec, const char *rootfs, const char *runtime_root,
+                  const char *id, const char *hostname)
+{
+    int ret = 0;
+
+    if (host_spec == NULL) {
+        return -1;
+    }
+
+    if (!host_spec->system_container || rootfs == NULL) {
+        ret = merge_network_for_universal_container(host_spec, runtime_root, id);
+    } else {
+        ret = merge_network_for_syscontainer(host_spec, rootfs, hostname);
+    }
+
+    return ret;
 }
 
 static container_t *get_networked_container(const char *id, const char *connected_id, bool check_state)
@@ -831,7 +869,7 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
     }
 
 
-    if (util_write_file(file_path, hostname_content, strlen(hostname_content)) != 0) {
+    if (util_write_file(file_path, hostname_content, strlen(hostname_content), NETWORK_MOUNT_FILE_MODE) != 0) {
         ERROR("Failed to create default hostname");
         ret = -1;
         goto out;
@@ -877,7 +915,7 @@ static int write_default_hosts(const char *file_path, const char *hostname)
         goto out_free;
     }
 
-    ret = util_write_file(file_path, content, strlen(content));
+    ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
     if (ret != 0) {
         ret = -1;
         goto out_free;
@@ -903,7 +941,7 @@ static int create_default_hosts(const char *id, const char *rootpath, bool share
     }
 
     if (share_host && util_file_exists(ETC_HOSTS)) {
-        ret = util_copy_file(ETC_HOSTS, file_path);
+        ret = util_copy_file(ETC_HOSTS, file_path, NETWORK_MOUNT_FILE_MODE);
     } else {
         ret = write_default_hosts(file_path, v2_spec->config->hostname);
     }
@@ -924,7 +962,7 @@ static int write_default_resolve(const char *file_path)
 {
     const char *default_ipv4_dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";;
 
-    return util_write_file(file_path, default_ipv4_dns, strlen(default_ipv4_dns));
+    return util_write_file(file_path, default_ipv4_dns, strlen(default_ipv4_dns), NETWORK_MOUNT_FILE_MODE);
 }
 
 static int create_default_resolv(const char *id, const char *rootpath, container_config_v2_common_config *v2_spec)
@@ -940,7 +978,7 @@ static int create_default_resolv(const char *id, const char *rootpath, container
     }
 
     if (util_file_exists(RESOLV_CONF_PATH)) {
-        ret = util_copy_file(RESOLV_CONF_PATH, file_path);
+        ret = util_copy_file(RESOLV_CONF_PATH, file_path, NETWORK_MOUNT_FILE_MODE);
     } else {
         ret = write_default_resolve(file_path);
     }

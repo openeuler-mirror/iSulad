@@ -45,6 +45,7 @@
 #include "logger_json_file.h"
 #include "constants.h"
 #include "runtime.h"
+#include "collector.h"
 
 static char *create_single_fifo(const char *statepath, const char *subpath, const char *stdflag)
 {
@@ -248,7 +249,115 @@ out:
     return ret;
 }
 
-int merge_exec_process_env(defs_process *spec, const container_config *container_spec, const char **env, size_t env_len)
+static int do_append_process_exec_env(const char **default_env, defs_process *spec)
+{
+    int ret = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
+    size_t i = 0;
+    size_t j = 0;
+    char **temp = NULL;
+    char **default_kv = NULL;
+    char **custom_kv = NULL;
+    size_t default_env_len = util_array_len(default_env);
+
+    if (default_env_len == 0) {
+        return 0;
+    }
+
+    if (default_env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
+        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+    new_size = (spec->env_len + default_env_len) * sizeof(char *);
+    old_size = spec->env_len * sizeof(char *);
+    ret = mem_realloc((void **)&temp, new_size, spec->env, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for envionment variables");
+        ret = -1;
+        goto out;
+    }
+
+    spec->env = temp;
+    for (i = 0; i < default_env_len; i++) {
+        bool found = false;
+        default_kv = util_string_split(default_env[i], '=');
+        if (default_kv == NULL) {
+            continue;
+        }
+
+        for (j = 0; j < spec->env_len; j++) {
+            custom_kv = util_string_split(spec->env[i], '=');
+            if (custom_kv == NULL) {
+                continue;
+            }
+            if (strcmp(default_kv[0], custom_kv[0]) == 0) {
+                found = true;
+            }
+            util_free_array(custom_kv);
+            custom_kv = NULL;
+            if (found) {
+                break;
+            }
+        }
+
+        if (!found) {
+            spec->env[spec->env_len] = util_strdup_s(default_env[i]);
+            spec->env_len++;
+        }
+        util_free_array(default_kv);
+        default_kv = NULL;
+    }
+out:
+    return ret;
+}
+
+static int append_necessary_process_env(bool tty, const container_config *container_spec, defs_process *spec)
+{
+    int ret = 0;
+    int nret = 0;
+    char **default_env = NULL;
+    char host_name_str[MAX_HOST_NAME_LEN + 10] = { 0 };
+
+    if (util_array_append(&default_env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin") != 0) {
+        ERROR("Failed to append default exec env");
+        ret = -1;
+        goto out;
+    }
+
+    if (container_spec->hostname != NULL) {
+        nret = snprintf(host_name_str, sizeof(host_name_str), "HOSTNAME=%s", container_spec->hostname);
+        if (nret < 0 || (size_t)nret >= sizeof(host_name_str)) {
+            ERROR("hostname is too long");
+            ret = -1;
+            goto out;
+        }
+        if (util_array_append(&default_env, host_name_str) != 0) {
+            ERROR("Failed to append default exec env");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    if (tty) {
+        if (util_array_append(&default_env, "TERM=xterm") != 0) {
+            ERROR("Failed to append default exec env");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    ret = do_append_process_exec_env((const char **)default_env, spec);
+
+out:
+    util_free_array(default_env);
+    return ret;
+}
+
+static int merge_exec_process_env(defs_process *spec, const container_config *container_spec, const char **env,
+                                  size_t env_len)
 {
     int ret = 0;
     size_t env_count = 0;
@@ -340,6 +449,12 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
         goto err_out;
     }
 
+    ret = append_necessary_process_env(request->tty, container_spec, spec);
+    if (ret != 0) {
+        ERROR("Failed to append necessary for exec process spec");
+        goto err_out;
+    }
+
     ret = dup_array_of_strings((const char **)request->argv, request->argv_len, &(spec->args), &(spec->args_len));
     if (ret != 0) {
         ERROR("Failed to dup envs for exec process spec");
@@ -405,6 +520,7 @@ static int exec_container(container_t *cont, const char *runtime, char * const c
     params.rootpath = cont->root_path;
     params.timeout = request->timeout;
     params.suffix = request->suffix;
+    params.state = cont->state_path;
     params.spec = process_spec;
 
     if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
@@ -546,6 +662,51 @@ static int get_exec_user_info(const container_t *cont, const char *username, def
 out:
     return ret;
 }
+static void get_exec_command(const container_config *conf, const container_exec_request *request,
+                             char *exec_command, size_t len)
+{
+    size_t i;
+    bool should_abbreviated = false;
+    size_t start = 0;
+    size_t end = 0;
+
+    for (i = 0; i < conf->entrypoint_len; i++) {
+        if (strlen(conf->entrypoint[i]) < len - strlen(exec_command)) {
+            (void)strcat(exec_command, conf->entrypoint[i]);
+            (void)strcat(exec_command, " ");
+        } else {
+            should_abbreviated = true;
+            goto out;
+        }
+    }
+
+    for (i = 0; i < request->argv_len; i++) {
+        if (strlen(request->argv[i]) < len - strlen(exec_command)) {
+            (void)strcat(exec_command, request->argv[i]);
+            if (i != request->argv_len) {
+                (void)strcat(exec_command, " ");
+            }
+        } else {
+            should_abbreviated = true;
+            goto out;
+        }
+    }
+
+out:
+    if (should_abbreviated) {
+        if (strlen(exec_command) <= len - 1 - 3) {
+            start = strlen(exec_command);
+            end = start + 3;
+        } else {
+            start = len - 1 - 3;
+            end = len - 1;
+        }
+
+        for (i = start; i < end; i++) {
+            exec_command[i] = '.';
+        }
+    }
+}
 
 static int container_exec_cb(const container_exec_request *request, container_exec_response **response,
                              int stdinfd, struct io_write_wrapper *stdout_handler)
@@ -559,6 +720,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     pthread_t thread_id = 0;
     container_t *cont = NULL;
     defs_process_user *puser = NULL;
+    char exec_command[ARGS_MAX] = {0x00};
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -573,6 +735,9 @@ static int container_exec_cb(const container_exec_request *request, container_ex
 
     set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: execing}", id);
+
+    get_exec_command(cont->common_config->config, request, exec_command, sizeof(exec_command));
+    (void)isulad_monitor_send_container_event(id, EXEC_CREATE, -1, 0, exec_command, NULL);
 
     if (gc_is_gc_progress(id)) {
         isulad_set_error_message("You cannot exec container %s in garbage collector progress.", id);
@@ -607,19 +772,27 @@ static int container_exec_cb(const container_exec_request *request, container_ex
             cc = ISULAD_ERR_EXEC;
             goto pack_response;
         }
+    } else {
+        if (cont->common_config->config->user != NULL) {
+            if (get_exec_user_info(cont, cont->common_config->config->user, &puser) != 0) {
+                cc = ISULAD_ERR_EXEC;
+                goto pack_response;
+            }
+        }
     }
 
     if (exec_prepare_console(cont, request, stdinfd, stdout_handler, fifos, &fifopath, &sync_fd, &thread_id)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
-
+    (void)isulad_monitor_send_container_event(id, EXEC_START, -1, 0, exec_command, NULL);
     if (exec_container(cont, cont->runtime, (char * const *)fifos, puser, request, &exit_code)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
     EVENT("Event: {Object: %s, Type: execed}", id);
+    (void)isulad_monitor_send_container_event(id, EXEC_DIE, -1, 0, NULL, NULL);
 
 pack_response:
     container_exec_cb_end(*response, cc, exit_code, sync_fd, thread_id);
@@ -779,6 +952,8 @@ static int container_attach_cb(const container_attach_request *request, containe
     params.stdin = fifos[0];
     params.stdout = fifos[1];
     params.stderr = fifos[2];
+
+    (void)isulad_monitor_send_container_event(id, ATTACH, -1, 0, NULL, NULL);
 
     if (runtime_attach(cont->common_config->id, cont->runtime, &params)) {
         ERROR("Runtime attach container failed");
@@ -1055,7 +1230,7 @@ static int pause_container(const container_t *cont)
     const char *id = cont->common_config->id;
 
     params.rootpath = cont->root_path;
-
+    params.state = cont->state_path;
     if (runtime_pause(id, cont->runtime, &params)) {
         ERROR("Failed to pause container:%s", id);
         ret = -1;
@@ -1081,7 +1256,7 @@ static int resume_container(const container_t *cont)
     const char *id = cont->common_config->id;
 
     params.rootpath = cont->root_path;
-
+    params.state = cont->state_path;
     if (runtime_resume(id, cont->runtime, &params)) {
         ERROR("Failed to resume container:%s", id);
         ret = -1;
@@ -1163,6 +1338,7 @@ static int copy_from_container_cb(const struct isulad_copy_from_container_reques
         goto cleanup_rootfs;
     }
 
+    (void)isulad_monitor_send_container_event(cont->common_config->id, ARCHIVE_PATH, -1, 0, NULL, NULL);
     ret = 0;
 cleanup_rootfs:
     if (im_umount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
@@ -1454,6 +1630,7 @@ static int copy_to_container_cb(const container_copy_to_request *request,
         goto cleanup_rootfs;
     }
 
+    (void)isulad_monitor_send_container_event(cont->common_config->id, EXTRACT_TO_DIR, -1, 0, NULL, NULL);
     ret = 0;
 
 cleanup_rootfs:

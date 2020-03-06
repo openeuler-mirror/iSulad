@@ -32,3 +32,27 @@ void container_cgroup_resources_free(container_cgroup_resources_t *cr)
     free(cr);
 }
 
+void container_events_format_free(container_events_format_t *value)
+{
+    size_t i;
+
+    if (value == NULL) {
+        return;
+    }
+
+    free(value->opt);
+    value->opt = NULL;
+
+    free(value->id);
+    value->id = NULL;
+
+    for (i = 0; i < value->annotations_len; i++) {
+        free(value->annotations[i]);
+        value->annotations[i] = NULL;
+    }
+
+    free(value->annotations);
+    value->annotations = NULL;
+
+    free(value);
+}

@@ -52,15 +52,15 @@ static int g_ops_status = 0;
 /* check status code */
 int check_status_code(int status_code)
 {
-    if (status_code == EVHTP_RES_OK || status_code == EVHTP_RES_SERVERR) {
+    if (status_code == RESTFUL_RES_OK || status_code == RESTFUL_RES_SERVERR) {
         return 0;
-    } else if (status_code == EVHTP_RES_NOTIMPL) {
+    } else if (status_code == RESTFUL_RES_NOTIMPL) {
         ERROR("Not implement interface");
         return -1;
-    } else if (status_code == EVHTP_RES_NOTFOUND) {
+    } else if (status_code == RESTFUL_RES_NOTFOUND) {
         ERROR("Can not connect to service");
         return -1;
-    } else if (status_code == EVHTP_RES_ERROR) {
+    } else if (status_code == RESTFUL_RES_ERROR) {
         ERROR("Server internal error");
         return -1;
     }

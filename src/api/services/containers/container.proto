@@ -84,11 +84,10 @@ message Container_info {
 }
 
 message Event {
-	string id = 1;
-	EventType type = 2;
-	int32 pid = 3;
-	uint32 exit_status = 4;
-	google.protobuf.Timestamp timestamp = 5;
+	google.protobuf.Timestamp timestamp = 1;
+	string opt = 2;
+	string id = 3;
+	map<string, string> annotations= 4;
 }
 
 service ContainerService {

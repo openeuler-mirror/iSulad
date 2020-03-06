@@ -45,6 +45,7 @@
 #include "image.h"
 #include "path.h"
 #include "constants.h"
+#include "selinux_label.h"
 
 #ifndef CLONE_NEWUTS
 #define CLONE_NEWUTS            0x04000000
@@ -206,7 +207,7 @@ static int make_annotations_cgroup_dir(const container_config *container_spec, c
         path = default_cgroup_parent;
     }
     if (path == NULL) {
-        goto out;
+        path = "/isulad";
     }
     if (cleanpath(path, cleaned, sizeof(cleaned)) == NULL) {
         ERROR("Failed to clean path: %s", path);
@@ -1016,6 +1017,25 @@ out:
     return ret;
 }
 
+static int merge_memory_swappiness(oci_runtime_spec *oci_spec, uint64_t *memory_swappiness)
+{
+    int ret = 0;
+
+    ret = make_sure_oci_spec_linux_resources_mem(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    if (memory_swappiness == NULL) {
+        oci_spec->linux->resources->memory->swappiness = (uint64_t)(-1);
+    } else {
+        oci_spec->linux->resources->memory->swappiness = *memory_swappiness;
+    }
+
+out:
+    return ret;
+}
+
 static int merge_conf_cgroup_memory(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
@@ -1066,6 +1086,12 @@ static int merge_conf_cgroup_memory(oci_runtime_spec *oci_spec, const host_confi
             ERROR("Failed to merge cgroup kernel_memory");
             goto out;
         }
+    }
+
+    ret = merge_memory_swappiness(oci_spec, host_spec->memory_swappiness);
+    if (ret != 0) {
+        ERROR("Failed to merge cgroup memory_swappiness");
+        goto out;
     }
 
 out:
@@ -1220,6 +1246,11 @@ out:
 int merge_conf_cgroup(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
+
+    if (oci_spec == NULL || host_spec == NULL) {
+        ret = -1;
+        goto out;
+    }
 
     ret = merge_conf_cgroup_cpu(oci_spec, host_spec);
     if (ret != 0) {
@@ -1657,9 +1688,283 @@ out:
     return ret;
 }
 
-static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spec)
+static int split_security_opt(const char *security_opt, char ***items, size_t *items_size)
 {
     int ret = 0;
+
+    if (strings_contains_any(security_opt, "=")) {
+        *items = util_string_split_n(security_opt, '=', 2);
+        if (*items == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        *items_size = util_array_len((const char **)*items);
+    } else if (strings_contains_any(security_opt, ":")) {
+        *items = util_string_split_n(security_opt, ':', 2);
+        if (*items == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        *items_size = util_array_len((const char **)*items);
+        WARN("Security options with `:` as a separator are deprecated and will be completely unsupported"
+             " in new version, use `=` instead.");
+    }
+
+out:
+    return ret;
+}
+
+int parse_security_opt(const host_config *host_spec, bool *no_new_privileges,
+                       char ***label_opts, size_t *label_opts_len,
+                       char **seccomp_profile)
+{
+    int ret = 0;
+    size_t i;
+    char **items = NULL;
+    size_t items_size = 0;
+
+    if (host_spec->security_opt == NULL || host_spec->security_opt_len == 0) {
+        return 0;
+    }
+    if (host_spec->security_opt_len > LIST_SIZE_MAX) {
+        ERROR("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
+        isulad_set_error_message("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < host_spec->security_opt_len; i++) {
+        if (strcmp(host_spec->security_opt[i], "no-new-privileges") == 0) {
+            *no_new_privileges = true;
+            continue;
+        } else if (strcmp(host_spec->security_opt[i], "disable") == 0) {
+            ret = util_array_append(label_opts, "disable");
+            if (ret != 0) {
+                ERROR("Failed to append disable label");
+                ret = -1;
+                goto out;
+            }
+            (*label_opts_len)++;
+            continue;
+        }
+
+        if (split_security_opt(host_spec->security_opt[i], &items, &items_size)) {
+            ret = -1;
+            goto out;
+        }
+
+        if (items_size != 2) {
+            ERROR("invalid --security-opt: %s", host_spec->security_opt[i]);
+            ret = -1;
+            goto out;
+        }
+
+        if (strcmp(items[0], "label") == 0) {
+            ret = util_array_append(label_opts, items[1]);
+            if (ret != 0) {
+                ERROR("Failed to append label");
+                ret = -1;
+                goto out;
+            }
+            (*label_opts_len)++;
+        } else if (strcmp(items[0], "seccomp") == 0) {
+            free(*seccomp_profile);
+            *seccomp_profile = util_strdup_s(items[1]);
+        } else {
+            ERROR("invalid --security-opt: %s", host_spec->security_opt[i]);
+            ret = -1;
+            goto out;
+        }
+        util_free_array(items);
+        items = NULL;
+    }
+
+out:
+    util_free_array(items);
+    return ret;
+}
+
+static int to_host_config_selinux_labels(const char **labels, size_t len, char ***dst, size_t *dst_len)
+{
+    int ret = 0;
+    size_t i;
+    char *item = NULL;
+
+    for (i = 0; i < len; i++) {
+        item = util_string_append(labels[i], "label=");
+        if (item == NULL) {
+            ERROR("Failed to append string");
+            ret = -1;
+            goto out;
+        }
+        if (util_array_append(dst, item) != 0) {
+            ERROR("Failed to append label");
+            ret = -1;
+            goto out;
+        }
+    }
+    *dst_len = util_array_len((const char **)*dst);
+
+out:
+    free(item);
+    return ret;
+}
+
+static int handle_host_or_privileged_mode(host_config *hc)
+{
+    int ret = 0;
+    char **labels = NULL;
+    size_t labels_len = 0;
+
+    if (get_disable_security_opt(&labels, &labels_len) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (to_host_config_selinux_labels((const char **)labels, labels_len,
+                                      &hc->security_opt, &hc->security_opt_len) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    util_free_array(labels);
+    return ret;
+}
+
+static int handle_ipc_pid_label(host_config *hc, const char **ipc_label, size_t ipc_label_len,
+                                const char **pid_label, size_t pid_label_len)
+{
+    int ret = 0;
+    size_t i;
+
+    if (pid_label != NULL && ipc_label != NULL) {
+        if (pid_label_len != ipc_label_len) {
+            ERROR("--ipc and --pid containers SELinux labels aren't the same");
+            ret = -1;
+            goto out;
+        }
+        for (i = 0; i < pid_label_len; i++) {
+            if (strcmp(pid_label[i], ipc_label[i]) != 0) {
+                ERROR("--ipc and --pid containers SELinux labels aren't the same");
+                ret = -1;
+                goto out;
+            }
+        }
+        if (to_host_config_selinux_labels((const char **)pid_label, pid_label_len,
+                                          &hc->security_opt, &hc->security_opt_len) != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    return ret;
+}
+
+static int handle_connected_container_mode(host_config *hc)
+{
+    int ret = 0;
+    char **ipc_label = NULL;
+    size_t ipc_label_len = 0;
+    char **pid_label = NULL;
+    size_t pid_label_len = 0;
+
+    char *ipc_container = connected_container(hc->ipc_mode);
+    char *pid_container = connected_container(hc->pid_mode);
+    if (ipc_container != NULL) {
+        char *ipc_process_label = get_container_process_label(ipc_container);
+        if (dup_security_opt(ipc_process_label, &ipc_label, &ipc_label_len) != 0) {
+            free(ipc_process_label);
+            ret = -1;
+            goto out;
+        }
+        if (pid_container == NULL) {
+            if (to_host_config_selinux_labels((const char **)ipc_label, ipc_label_len, &hc->security_opt,
+                                              &hc->security_opt_len) != 0) {
+                free(ipc_process_label);
+                ret = -1;
+                goto out;
+            }
+        }
+        free(ipc_process_label);
+    }
+
+    if (pid_container != NULL) {
+        char *pid_process_label = get_container_process_label(pid_container);
+
+        if (dup_security_opt(pid_process_label, &pid_label, &pid_label_len) != 0) {
+            free(pid_process_label);
+            ret = -1;
+            goto out;
+        }
+        if (ipc_container == NULL) {
+            if (to_host_config_selinux_labels((const char **)pid_label, pid_label_len, &hc->security_opt,
+                                              &hc->security_opt_len) != 0) {
+                free(pid_process_label);
+                ret = -1;
+                goto out;
+            }
+        }
+        free(pid_process_label);
+    }
+
+    if (handle_ipc_pid_label(hc, (const char **)ipc_label, ipc_label_len,
+                             (const char **)pid_label, pid_label_len) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    util_free_array(ipc_label);
+    util_free_array(pid_label);
+    free(ipc_container);
+    free(pid_container);
+    return ret;
+}
+
+static int generate_security_opt(host_config *hc)
+{
+    size_t i;
+
+    for (i = 0; i < hc->security_opt_len; i++) {
+        char **items = util_string_split(hc->security_opt[i], '=');
+        if (*items == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        size_t len = util_array_len((const char **)(items));
+        if (len != 0 && strcmp(items[0], "label") == 0) {
+            util_free_array(items);
+            return 0;
+        }
+        util_free_array(items);
+    }
+
+    if (is_host(hc->ipc_mode) || is_host(hc->pid_mode) || hc->privileged) {
+        return handle_host_or_privileged_mode(hc);
+    }
+
+    return handle_connected_container_mode(hc);
+}
+
+
+static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
+                               container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    bool no_new_privileges = false;
+    char **label_opts = NULL;
+    size_t label_opts_len = 0;
+    char *seccomp_profile = NULL;
+
+    ret = generate_security_opt(host_spec);
+    if (ret != 0) {
+        ERROR("Failed to generate security opt");
+        goto out;
+    }
 
     ret = merge_caps(oci_spec, (const char **)host_spec->cap_add, host_spec->cap_add_len,
                      (const char **)host_spec->cap_drop, host_spec->cap_drop_len);
@@ -1674,14 +1979,37 @@ static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spe
         goto out;
     }
 
+    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts,
+                             &label_opts_len, &seccomp_profile);
+    if (ret != 0) {
+        ERROR("Failed to parse security opt");
+        goto out;
+    }
+
     // merge external parameter
-    ret = merge_seccomp(oci_spec, host_spec);
+    ret = merge_seccomp(oci_spec, seccomp_profile);
     if (ret != 0) {
         ERROR("Failed to merge user seccomp file");
         goto out;
     }
+    v2_spec->seccomp_profile = util_strdup_s(seccomp_profile);
+
+    ret = merge_no_new_privileges(oci_spec, no_new_privileges);
+    if (ret != 0) {
+        ERROR("Failed to merge no new privileges");
+        goto out;
+    }
+    v2_spec->no_new_privileges = no_new_privileges;
+
+    ret = merge_selinux(oci_spec, v2_spec, (const char **)label_opts, label_opts_len);
+    if (ret != 0) {
+        ERROR("Failed to merge selinux config");
+        goto out;
+    }
 
 out:
+    util_free_array(label_opts);
+    free(seccomp_profile);
     return ret;
 }
 
@@ -1698,6 +2026,11 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs,
     }
     v2_spec->base_fs = util_strdup_s(real_rootfs);
 
+    ret = merge_security_conf(oci_spec, host_spec, v2_spec);
+    if (ret != 0) {
+        ERROR("Failed to merge user security config");
+        goto out;
+    }
 
     ret = merge_resources_conf(oci_spec, host_spec, v2_spec);
     if (ret != 0) {
@@ -1713,12 +2046,6 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs,
     ret = merge_sysctls(oci_spec, host_spec->sysctls);
     if (ret != 0) {
         ret = -1;
-        goto out;
-    }
-
-    ret = merge_security_conf(oci_spec, host_spec);
-    if (ret != 0) {
-        ERROR("Failed to merge user seccomp file");
         goto out;
     }
 
@@ -1748,12 +2075,6 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs,
         goto out;
     }
 
-    ret = merge_no_new_privileges(oci_spec, host_spec);
-    if (ret != 0) {
-        ERROR("Failed to merge no new privileges");
-        goto out;
-    }
-
     ret = make_userns_remap(oci_spec, host_spec->user_remap);
     if (ret != 0) {
         ERROR("Failed to make user remap for container");
@@ -1761,6 +2082,44 @@ int merge_all_specs(host_config *host_spec, const char *real_rootfs,
     }
 
 out:
+    return ret;
+}
+
+int merge_oci_cgroups_path(const char *id, oci_runtime_spec *oci_spec, const host_config *host_spec)
+{
+    int ret = 0;
+    char *default_cgroup_parent = NULL;
+    char *path = NULL;
+
+    if (id == NULL || oci_spec == NULL || host_spec == NULL) {
+        ERROR("Invalid arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (make_sure_oci_spec_linux(oci_spec) != 0) {
+        ERROR("Failed to make oci spec linux");
+        ret = -1;
+        goto out;
+    }
+
+    default_cgroup_parent = conf_get_isulad_cgroup_parent();
+    path = default_cgroup_parent;
+    if (host_spec->cgroup_parent != NULL) {
+        path = host_spec->cgroup_parent;
+    }
+
+    if (path == NULL) {
+        free(oci_spec->linux->cgroups_path);
+        oci_spec->linux->cgroups_path = util_path_join("/isulad", id);
+        return 0;
+    }
+
+    free(oci_spec->linux->cgroups_path);
+    oci_spec->linux->cgroups_path = util_path_join(path, id);
+
+out:
+    UTIL_FREE_AND_SET_NULL(default_cgroup_parent);
     return ret;
 }
 
@@ -1833,7 +2192,7 @@ int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec
         goto out_free;
     }
 
-    if (util_write_file(file_path, json_container, strlen(json_container)) != 0) {
+    if (util_write_file(file_path, json_container, strlen(json_container), DEFAULT_SECURE_FILE_MODE) != 0) {
         ERROR("write json container failed: %s", strerror(errno));
         ret = -1;
         goto out_free;

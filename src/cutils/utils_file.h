@@ -55,6 +55,8 @@ FILE *util_fopen(const char *filename, const char *mode);
 
 char *util_full_file_digest(const char *filename);
 
+char *util_path_dir(const char *path);
+
 char *util_add_path(const char *path, const char *name);
 
 char *util_read_text_file(const char *path);
@@ -67,11 +69,11 @@ int util_file2str(const char *filename, char *buf, size_t len);
 
 char *look_path(const char *file, char **err);
 
-int util_write_file(const char *fname, const char *content, size_t content_len);
+int util_write_file(const char *fname, const char *content, size_t content_len, mode_t mode);
 
 char *verify_file_and_get_real_path(const char *file);
 
-int util_copy_file(const char *src_file, const char *dst_file);
+int util_copy_file(const char *src_file, const char *dst_file, mode_t mode);
 
 #ifdef __cplusplus
 }

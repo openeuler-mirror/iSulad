@@ -88,6 +88,10 @@ MERGE_HOOKS_ITEM_DEF(poststop)
 
 int merge_hooks(oci_runtime_spec_hooks *dest, oci_runtime_spec_hooks *src)
 {
+    if (dest == NULL || src == NULL) {
+        return -1;
+    }
+
     if (merge_prestart_conf(dest, src) || merge_poststart_conf(dest, src) || merge_poststop_conf(dest, src)) {
         return -1;
     }
@@ -589,11 +593,12 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
             userfound = b_user_found(user, pwbufp);
             // Take the first match as valid user
             if (userfound) {
+                // oci spec donot use username spec on linux
                 free(puser->username);
-                puser->username = util_strdup_s(pwbufp->pw_name);
+                puser->username = NULL;
                 puser->uid = pwbufp->pw_uid;
                 puser->gid = pwbufp->pw_gid;
-                *matched_username = puser->username;
+                *matched_username = util_strdup_s(pwbufp->pw_name);
                 break;
             }
             errval = fgetpwent_r(f_passwd, &pw, buf, sizeof(buf), &pwbufp);
@@ -789,6 +794,7 @@ static int get_exec_user(const char *username, FILE *f_passwd, FILE *f_group, de
     }
 
 cleanup:
+    free(matched_username);
     free(tmp);
     return ret;
 }

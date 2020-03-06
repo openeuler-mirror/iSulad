@@ -806,7 +806,7 @@ char *conf_get_isulad_log_gather_fifo_path()
         ERROR("Out of memory");
         goto err_out;
     }
-    nret = snprintf(logfile, len, "%s%s", statedir, "LOG_GATHER_FIFO_NAME");
+    nret = snprintf(logfile, len, "%s%s", statedir, LOG_GATHER_FIFO_NAME);
     if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf log file failed");
         goto err_out;
@@ -1200,6 +1200,28 @@ char *conf_get_im_server_sock_addr()
     }
 
     result = util_strdup_s(conf->json_confs->image_server_sock_addr);
+
+out:
+    (void)isulad_server_conf_unlock();
+    return result;
+}
+
+char *conf_get_default_runtime()
+{
+    struct service_arguments *conf = NULL;
+    char *result = NULL;
+
+    if (isulad_server_conf_rdlock()) {
+        ERROR("BUG conf_rdlock failed");
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL) {
+        goto out;
+    }
+
+    result = strings_to_lower(conf->json_confs->default_runtime);
 
 out:
     (void)isulad_server_conf_unlock();
@@ -1765,6 +1787,7 @@ int merge_json_confs_into_global(struct service_arguments *args)
         goto out;
     }
 
+    override_string_value(&args->json_confs->default_runtime, &tmp_json_confs->default_runtime);
     override_string_value(&args->json_confs->group, &tmp_json_confs->group);
     override_string_value(&args->json_confs->graph, &tmp_json_confs->graph);
     override_string_value(&args->json_confs->state, &tmp_json_confs->state);
@@ -1789,6 +1812,9 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->network_plugin, &tmp_json_confs->network_plugin);
     override_string_value(&args->json_confs->cni_bin_dir, &tmp_json_confs->cni_bin_dir);
     override_string_value(&args->json_confs->cni_conf_dir, &tmp_json_confs->cni_conf_dir);
+
+    args->json_confs->runtimes = tmp_json_confs->runtimes;
+    tmp_json_confs->runtimes = NULL;
 
     // Daemon storage-driver
     if (merge_storage_conf_into_global(args, tmp_json_confs)) {
@@ -1835,6 +1861,8 @@ int merge_json_confs_into_global(struct service_arguments *args)
         ret = -1;
         goto out;
     }
+
+    args->json_confs->selinux_enabled = tmp_json_confs->selinux_enabled;
 
 out:
     free(err);
