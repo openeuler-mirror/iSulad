@@ -58,9 +58,8 @@ static shim_client_process_state* load_process()
     p_state = shim_client_process_state_parse_file("process.json", NULL, &err);
     if (p_state == NULL) {
         write_message(g_log_fd, ERR_MSG, "parse process state failed");
-        goto out;
     }
-out:
+
     if (err != NULL) {
         free(err);
     }
@@ -156,6 +155,7 @@ static int add_io_dispatch(int epfd, io_thread_t *io_thd, int from, int to)
 
         ret = epoll_ctl(epfd, EPOLL_CTL_ADD, from, &ev);
         if (ret != SHIM_OK) {
+            free(fn);
             write_message(g_log_fd, ERR_MSG, "add fd %d to epoll loop failed:%d", from, SHIM_SYS_ERR(errno));
             pthread_mutex_unlock(&(ioc->mutex));
             return SHIM_ERR;
@@ -417,13 +417,13 @@ static void* task_console_accept(void *data)
     conn_fd = accept(ac->listen_fd, NULL, NULL);
     if (conn_fd < 0) {
         write_message(g_log_fd, ERR_MSG, "accept from fd %d failed:%d", ac->listen_fd, SHIM_SYS_ERR(errno));
-        exit(EXIT_FAILURE);
+        goto out;
     }
 
     recv_fd = receive_fd(conn_fd);
     if (check_fd(recv_fd) != true) {
         write_message(g_log_fd, ERR_MSG, "check console fd failed");
-        exit(EXIT_FAILURE);
+        goto out;
     }
 
     // do console io copy
@@ -431,18 +431,19 @@ static void* task_console_accept(void *data)
     // p.state.stdin---->runtime.console
     ret = connect_to_isulad(ac->p, stdid_in, ac->p->state->isulad_stdin, recv_fd);
     if (ret != SHIM_OK) {
-        exit(EXIT_FAILURE);
+        goto out;
     }
 
     // p.state.stdout<------runtime.console
     ret = connect_to_isulad(ac->p, stdid_out, ac->p->state->isulad_stdout, recv_fd);
     if (ret != SHIM_OK) {
-        exit(EXIT_FAILURE);
+        goto out;
     }
 
     // if the terminal is used, we do not need to active the io copy of stderr pipe
     destory_io_thread(ac->p, stdid_err);
 
+out:
     // release listen socket
     close_fd(&ac->listen_fd);
     if (ac->p->console_sock_path != NULL) {
@@ -451,6 +452,9 @@ static void* task_console_accept(void *data)
         ac->p->console_sock_path = NULL;
     }
     free(ac);
+    if (ret != SHIM_OK) {
+        exit(EXIT_FAILURE);
+    }
 
     return NULL;
 }
@@ -513,7 +517,8 @@ static int console_init(process_t *p)
 
     fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
-        return SHIM_SYS_ERR(errno);
+        write_message(g_log_fd, ERR_MSG, "create socket failed:%d", SHIM_SYS_ERR(errno));
+        goto failure;
     }
 
     (void)memset(&addr, 0, sizeof(addr));
@@ -556,6 +561,7 @@ failure:
     if (ac != NULL) {
         free(ac);
     }
+    unlink(p->console_sock_path);
 
     return SHIM_ERR;
 }
@@ -628,12 +634,7 @@ static int open_terminal_io(process_t *p)
     }
 
     // begin listen and accept fd from p->console_sock_path
-    ret = console_init(p);
-    if (ret != SHIM_OK) {
-        write_message(g_log_fd, ERR_MSG, "init console failed:%d", ret);
-        return SHIM_ERR;
-    }
-    return SHIM_OK;
+    return console_init(p);
 }
 
 
@@ -821,7 +822,7 @@ static void process_kill_all(process_t *p)
     return;
 }
 
-void process_delete(process_t *p)
+static void process_delete(process_t *p)
 {
     if (p->state->exec) {
         return;
