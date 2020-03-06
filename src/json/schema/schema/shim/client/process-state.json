@@ -188,6 +188,15 @@
         },
         "rootGID": {
             "type": "integer"
+        },
+        "logPath": {
+            "type": "string"
+        },
+        "logMaxfile": {
+            "type": "integer"
+        },
+        "logMaxsize": {
+            "type": "int64"
         }
     }
 }

@@ -35,9 +35,11 @@
 
 #include "common.h"
 #include "process.h"
+#include "terminal.h"
 
 #define MAX_EVENTS 100
 #define DEFAULT_IO_COPY_BUF (16*1024)
+#define DEFAULT_LOG_FILE_SIZE (4*1024)
 
 extern int g_log_fd;
 
@@ -143,6 +145,10 @@ static int add_io_dispatch(int epfd, io_thread_t *io_thd, int from, int to)
         return SHIM_ERR;
     }
     fn->fd = to;
+    fn->is_log = false;
+    if (io_thd->terminal != NULL && to == io_thd->terminal->fd) {
+        fn->is_log = true;
+    }
     fn->next = NULL;
 
     pthread_mutex_lock(&(ioc->mutex));
@@ -254,11 +260,15 @@ static void* task_io_copy(void *data)
         } else {
             fd_node_t *fn = ioc->fd_to;
             for (; fn != NULL; fn = fn->next) {
-                int w_count;
-                w_count = write_nointr(fn->fd, buf, r_count);
-                if (w_count < 0) {
-                    // remove the write fd
-                    remove_io_dispatch(io_thd, -1, fn->fd);
+                if (fn->is_log) {
+                    shim_write_container_log_file(io_thd->terminal, ioc->id == stdid_out ? "stdout" : "stderr", buf, r_count);
+                } else {
+                    int w_count = 0;
+                    w_count = write_nointr(fn->fd, buf, r_count);
+                    if (w_count < 0) {
+                        // remove the write fd
+                        remove_io_dispatch(io_thd, -1, fn->fd);
+                    }
                 }
             }
         }
@@ -318,6 +328,8 @@ static int process_io_start(process_t *p, int std_id)
     io_thd->epfd = p->io_loop_fd;
     io_thd->ioc = ioc;
     io_thd->shutdown = false;
+    io_thd->terminal = std_id != stdid_in ? p->terminal : NULL;
+
     p->io_threads[std_id] = io_thd;
 
     ret = pthread_create(&(io_thd->tid), NULL, task_io_copy, io_thd);
@@ -398,6 +410,9 @@ static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio,
     }
 
     if (*fd_from != -1) {
+        if (std_id != stdid_in && p->io_threads[std_id]->terminal != NULL) {
+            (void)add_io_dispatch(p->io_loop_fd, p->io_threads[std_id], *fd_from, p->terminal->fd);
+        }
         return add_io_dispatch(p->io_loop_fd, p->io_threads[std_id], *fd_from, *fd_to);
     }
 
@@ -677,11 +692,61 @@ static void adapt_for_isulad_stdin(process_t *p)
     }
 }
 
+static int terminal_init(log_terminal **terminal, shim_client_process_state *p_state)
+{
+    log_terminal *log_term = NULL;
+
+    log_term = calloc(1, sizeof(log_terminal));
+    if (log_term == NULL) {
+        write_message(g_log_fd, ERR_MSG, "Failed to calloc log_terminal");
+        goto clean_out;
+    }
+
+    if (pthread_rwlock_init(&log_term->log_terminal_rwlock, NULL) != 0) {
+        write_message(g_log_fd, ERR_MSG, "Failed to init isulad conf rwlock");
+        goto clean_out;
+    }
+
+    if (p_state == NULL) {
+        goto clean_out;
+    }
+
+    log_term->log_path = p_state->log_path;
+    /* Default to disable log. */
+    log_term->fd = -1;
+    log_term->log_maxfile = 1;
+    /* Default value 4k, the min size of a single log file */
+    log_term->log_maxsize = DEFAULT_LOG_FILE_SIZE;
+
+    if (p_state->log_maxfile > log_term->log_maxfile) {
+        log_term->log_maxfile = (unsigned int)p_state->log_maxfile;
+    }
+
+    if (p_state->log_maxsize > log_term->log_maxsize) {
+        log_term->log_maxsize = (uint64_t)p_state->log_maxsize;
+    }
+
+    if (log_term->log_path != NULL) {
+        if (shim_create_container_log_file(log_term)) {
+            goto clean_out;
+        }
+    }
+
+    *terminal = log_term;
+
+    return SHIM_OK;
+clean_out:
+    free(log_term);
+    *terminal = NULL;
+    return SHIM_ERR;
+}
+
 process_t* new_process(char *id, char *bundle, char *runtime)
 {
     shim_client_process_state* p_state;
     process_t* p = NULL;
     int i;
+    int ret;
 
     p_state = load_process();
     if (p_state == NULL) {
@@ -692,6 +757,13 @@ process_t* new_process(char *id, char *bundle, char *runtime)
     if (p == NULL) {
         return NULL;
     }
+    ret = terminal_init(&(p->terminal), p_state);
+    if (ret != SHIM_OK) {
+        free(p);
+        p = NULL;
+        return p;
+    }
+
     p->id = id;
     p->bundle = bundle;
     p->runtime = runtime;
@@ -703,6 +775,7 @@ process_t* new_process(char *id, char *bundle, char *runtime)
     p->ctr_pid = -1;
     p->stdio = NULL;
     p->shim_io = NULL;
+
     for (i = 0; i < 3; i ++) {
         p->io_threads[i] = NULL;
     }
@@ -725,7 +798,6 @@ int open_io(process_t *p)
 
     return open_generic_io(p);
 }
-
 
 int process_io_init(process_t *p)
 {
