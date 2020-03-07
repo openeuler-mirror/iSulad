@@ -220,7 +220,7 @@ void isula_ns_change_files_free(isula_host_config_t *hostconfig)
         return;
     }
 
-    util_free_array(hostconfig->ns_change_files);
+    util_free_array_by_len(hostconfig->ns_change_files, hostconfig->ns_change_files_len);
     hostconfig->ns_change_files = NULL;
     hostconfig->ns_change_files_len = 0;
 }
@@ -252,11 +252,11 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
         return;
     }
 
-    util_free_array(hostconfig->cap_add);
+    util_free_array_by_len(hostconfig->cap_add, hostconfig->cap_add_len);
     hostconfig->cap_add = NULL;
     hostconfig->cap_add_len = 0;
 
-    util_free_array(hostconfig->cap_drop);
+    util_free_array_by_len(hostconfig->cap_drop, hostconfig->cap_drop_len);
     hostconfig->cap_drop = NULL;
     hostconfig->cap_drop_len = 0;
 
@@ -266,11 +266,11 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     free_json_map_string_string(hostconfig->sysctls);
     hostconfig->sysctls = NULL;
 
-    util_free_array(hostconfig->devices);
+    util_free_array_by_len(hostconfig->devices, hostconfig->devices_len);
     hostconfig->devices = NULL;
     hostconfig->devices_len = 0;
 
-    util_free_array(hostconfig->hugetlbs);
+    util_free_array_by_len(hostconfig->hugetlbs, hostconfig->hugetlbs_len);
     hostconfig->hugetlbs = NULL;
     hostconfig->hugetlbs_len = 0;
 
@@ -292,7 +292,7 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     free(hostconfig->user_remap);
     hostconfig->user_remap = NULL;
 
-    util_free_array(hostconfig->ulimits);
+    util_free_array_by_len(hostconfig->ulimits, hostconfig->ulimits_len);
     hostconfig->ulimits = NULL;
     hostconfig->ulimits_len = 0;
 
@@ -311,11 +311,11 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     free(hostconfig->cgroup_parent);
     hostconfig->cgroup_parent = NULL;
 
-    util_free_array(hostconfig->binds);
+    util_free_array_by_len(hostconfig->binds, hostconfig->binds_len);
     hostconfig->binds = NULL;
     hostconfig->binds_len = 0;
 
-    util_free_array(hostconfig->blkio_weight_device);
+    util_free_array_by_len(hostconfig->blkio_weight_device, hostconfig->blkio_weight_device_len);
     hostconfig->blkio_weight_device = NULL;
     hostconfig->blkio_weight_device_len = 0;
 
@@ -332,7 +332,7 @@ void isula_container_config_free(isula_container_config_t *config)
         return;
     }
 
-    util_free_array(config->env);
+    util_free_array_by_len(config->env, config->env_len);
     config->env = NULL;
     config->env_len = 0;
 
@@ -342,11 +342,11 @@ void isula_container_config_free(isula_container_config_t *config)
     free(config->user);
     config->user = NULL;
 
-    util_free_array(config->mounts);
+    util_free_array_by_len(config->mounts, config->mounts_len);
     config->mounts = NULL;
     config->mounts_len = 0;
 
-    util_free_array(config->cmd);
+    util_free_array_by_len(config->cmd, config->cmd_len);
     config->cmd = NULL;
     config->cmd_len = 0;
 

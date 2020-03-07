@@ -180,7 +180,7 @@ void service_arguments_free(struct service_arguments *args)
     free(args->logpath);
     args->logpath = NULL;
 
-    util_free_array(args->hosts);
+    util_free_array_by_len(args->hosts, args->hosts_len);
     args->hosts = NULL;
     args->hosts_len = 0;
 

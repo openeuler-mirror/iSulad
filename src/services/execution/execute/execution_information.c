@@ -450,7 +450,8 @@ out:
     return ret;
 }
 
-int parse_output(char **title, char ***process, const char *output, const pid_t *pids, size_t pids_len)
+int parse_output(char **title, char ***process, size_t *process_len, const char *output, const pid_t *pids,
+                 size_t pids_len)
 {
     int ret = 0;
     int pid_num = 0;
@@ -479,6 +480,7 @@ int parse_output(char **title, char ***process, const char *output, const pid_t 
     }
 
     ret = parse_output_by_lines(*process, tmp, pid_num, stime, pids, pids_len);
+    *process_len = util_array_len((const char **)(*process));
 
 out:
     util_free_array(tmp);
@@ -755,6 +757,7 @@ static int container_top_cb(container_top_request *request, container_top_respon
     char *stderr_buffer = NULL;
     char *titles = NULL;
     char **processes = NULL;
+    size_t process_len = 0;
     pid_t *pids = NULL;
     size_t pids_len = 0;
     container_t *cont = NULL;
@@ -792,17 +795,17 @@ static int container_top_cb(container_top_request *request, container_top_respon
         goto pack_response;
     }
 
-    if (parse_output(&titles, &processes, stdout_buffer, pids, pids_len)) {
+    if (parse_output(&titles, &processes, &process_len, stdout_buffer, pids, pids_len)) {
         ERROR("Failed to parse output!");
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
-    if (util_array_len((const char **)processes) > SIZE_MAX / sizeof(char *)) {
+    if (process_len > SIZE_MAX / sizeof(char *)) {
         ERROR("invalid processe size");
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
-    (*response)->processes = util_common_calloc_s(util_array_len((const char **)processes) * sizeof(char *));
+    (*response)->processes = util_common_calloc_s(process_len * sizeof(char *));
     if ((*response)->processes == NULL) {
         ERROR("Out of memory");
         cc = ISULAD_ERR_EXEC;
@@ -811,10 +814,10 @@ static int container_top_cb(container_top_request *request, container_top_respon
 
     (*response)->titles = titles;
     titles = NULL;
-    for (i = 0; i < util_array_len((const char **)processes); i++) {
+    for (i = 0; i < process_len; i++) {
         (*response)->processes[i] = util_strdup_s(processes[i]);
     }
-    (*response)->processes_len = util_array_len((const char **)processes);
+    (*response)->processes_len = process_len;
     (void)isulad_monitor_send_container_event(id, TOP, -1, 0, NULL, NULL);
 
 pack_response:
@@ -830,7 +833,7 @@ pack_response:
     stderr_buffer = NULL;
     free(pid_args);
     free(titles);
-    util_free_array(processes);
+    util_free_array_by_len(processes, process_len);
     free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
