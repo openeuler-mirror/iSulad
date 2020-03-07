@@ -248,7 +248,7 @@ static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint
 
 static int umount_dev_tmpfs_for_system_container(const container_t *cont)
 {
-    if (cont->hostconfig != NULL && cont->hostconfig->system_container) {
+    if (cont->hostconfig != NULL && cont->hostconfig->system_container && cont->hostconfig->external_rootfs != NULL) {
         char rootfs_dev_path[PATH_MAX] = { 0 };
         int nret = snprintf(rootfs_dev_path, sizeof(rootfs_dev_path), "%s/dev", cont->common_config->base_fs);
         if ((size_t)nret >= sizeof(rootfs_dev_path) || nret < 0) {
@@ -514,7 +514,7 @@ static int mount_dev_tmpfs_for_system_container(const container_t *cont)
     if (cont == NULL || cont->hostconfig == NULL || cont->common_config == NULL) {
         return 0;
     }
-    if (!cont->hostconfig->system_container) {
+    if (!cont->hostconfig->system_container || cont->hostconfig->external_rootfs == NULL) {
         return 0;
     }
     int nret = snprintf(rootfs_dev_path, sizeof(rootfs_dev_path), "%s/dev", cont->common_config->base_fs);
