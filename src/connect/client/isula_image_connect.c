@@ -97,7 +97,7 @@ void free_isula_prepare_request(struct isula_prepare_request *req)
     req->name = NULL;
     free(req->image);
     req->image = NULL;
-    util_free_array(req->storage_opts);
+    util_free_array_by_len(req->storage_opts, req->storage_opts_len);
     req->storage_opts = NULL;
     req->storage_opts_len = 0;
     free(req);
@@ -210,10 +210,10 @@ void free_image_metadata(struct image_metadata *data)
     }
     free(data->id);
     data->id = NULL;
-    util_free_array(data->repo_tags);
+    util_free_array_by_len(data->repo_tags, data->repo_tags_len);
     data->repo_tags = NULL;
     data->repo_tags_len = 0;
-    util_free_array(data->repo_digests);
+    util_free_array_by_len(data->repo_digests, data->repo_digests_len);
     data->repo_digests = NULL;
     data->repo_digests_len = 0;
     free(data->username);

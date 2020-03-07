@@ -682,7 +682,7 @@ static int event_copy(const struct isulad_events_format *src, struct isulad_even
         for (i = 0; i < src->annotations_len; i++) {
             dest->annotations[i] = util_strdup_s(src->annotations[i]);
         }
-        
+
         dest->annotations_len = src->annotations_len;
     }
 
