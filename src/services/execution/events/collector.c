@@ -180,9 +180,9 @@ static void supplement_msg_for_events_handler(const struct monitord_msg *msg, st
 static int supplement_operator_for_container_msg(const struct monitord_msg *msg,
                                                  struct isulad_events_format *format_msg)
 {
-#define OPERATOR_MAX_LEN 50
+#define CONTAINER_OPERATOR_MAX_LEN 300
     int nret = 0;
-    char opt[OPERATOR_MAX_LEN] = {0x00};
+    char opt[CONTAINER_OPERATOR_MAX_LEN] = {0x00};
 
     if (strlen(msg->args) != 0) {
         nret = snprintf(opt, sizeof(opt), "container %s: %s", isulad_event_sta2str(msg->value), msg->args);
@@ -403,10 +403,10 @@ out:
 
 static int supplement_msg_for_image(struct monitord_msg *msg, struct isulad_events_format *format_msg)
 {
-#define OPERATOR_MAX_LEN 50
+#define IMAGE_OPERATOR_MAX_LEN 50
     int ret = 0;
     int nret = 0;
-    char opt[OPERATOR_MAX_LEN] = {0x00};
+    char opt[IMAGE_OPERATOR_MAX_LEN] = {0x00};
 
     format_msg->id = util_strdup_s(msg->name);
 
@@ -672,17 +672,17 @@ static int event_copy(const struct isulad_events_format *src, struct isulad_even
     }
 
     if (src->annotations_len != 0) {
-        util_free_array(dest->annotations);
+        util_free_array_by_len(dest->annotations, dest->annotations_len);
         dest->annotations = (char **)util_common_calloc_s(src->annotations_len * sizeof(char *));
         if (dest->annotations == NULL) {
             ERROR("Out of memory");
             return -1;
         }
 
-        if (dest->annotations)
-            for (i = 0; i < src->annotations_len; i++) {
-                dest->annotations[i] = util_strdup_s(src->annotations[i]);
-            }
+        for (i = 0; i < src->annotations_len; i++) {
+            dest->annotations[i] = util_strdup_s(src->annotations[i]);
+        }
+        
         dest->annotations_len = src->annotations_len;
     }
 
