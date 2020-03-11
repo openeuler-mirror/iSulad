@@ -1874,7 +1874,7 @@ static bool mount_file(oci_runtime_spec *container, const char *src_path, const 
 out_free:
 
     if (!ret) {
-        util_free_array(options);
+        util_free_array_by_len(options, options_len);
         free_defs_mount(tmp_mounts);
     }
     return ret;
@@ -1924,7 +1924,7 @@ static bool add_host_channel_mount(oci_runtime_spec *container, const host_confi
 out_free:
 
     if (!ret) {
-        util_free_array(options);
+        util_free_array_by_len(options, options_len);
         free_defs_mount(tmp_mounts);
     }
     return ret;
@@ -2261,7 +2261,7 @@ static bool add_shm_mount(oci_runtime_spec *container, const char *shm_path)
 out_free:
 
     if (!ret) {
-        util_free_array(options);
+        util_free_array_by_len(options, options_len);
         free_defs_mount(tmp_mounts);
     }
     return ret;
