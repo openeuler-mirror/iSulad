@@ -59,6 +59,9 @@ $ sudo isula rm test
 ### Build from source
 Build requirements for developers are listed in [build_guide](./docs/build_guide.md)
 
+### Integration
+Integrate with `kubenetes` are listed in [integration.md](./docs/integration.md)
+
 ## How to Contribute
 
 We always welcome new contributors. And we are happy to provide guidance for the new contributors.

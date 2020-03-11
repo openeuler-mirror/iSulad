@@ -22,7 +22,7 @@
 
 
 FROM	centos:7.6.1810
-MAINTAINER LiFeng <lifeng68huawei.com>
+MAINTAINER LiFeng <lifeng68@huawei.com>
 
 # Install dependency package
 RUN yum clean all && yum swap -y fakesystemd systemd && \

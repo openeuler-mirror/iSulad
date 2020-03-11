@@ -285,12 +285,23 @@ static int merge_config_for_syscontainer(const container_create_request *request
                                          const container_config *container_spec, const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
+    char *value = NULL;
 
-    if (!host_spec->system_container || request->rootfs == NULL) {
+    if (!host_spec->system_container) {
         return 0;
     }
+    if (request->rootfs == NULL) {
+        value = oci_spec->root->path;
+    } else {
+        value = request->rootfs;
+    }
 
-    if (append_json_map_string_string(oci_spec->annotations, "rootfs.mount", request->rootfs)) {
+    if (append_json_map_string_string(oci_spec->annotations, "rootfs.mount", value)) {
+        ERROR("Realloc annotations failed");
+        ret = -1;
+        goto out;
+    }
+    if (request->rootfs != NULL && append_json_map_string_string(oci_spec->annotations, "external.rootfs", "true")) {
         ERROR("Realloc annotations failed");
         ret = -1;
         goto out;
