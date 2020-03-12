@@ -147,6 +147,7 @@ add_executable(isulad-shim
     ${ISULAD_SHIM_SRCS}
     ${CMAKE_BINARY_DIR}/json/shim_client_process_state.c
     ${CMAKE_BINARY_DIR}/json/json_common.c
+    ${CMAKE_BINARY_DIR}/json/logger_json_file.c
     ${commonjsonsrcs}
     )
 target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
