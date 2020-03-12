@@ -262,7 +262,7 @@ struct engine_operation *lcr_engine_init()
 {
     void *lcr_handler = NULL;
     struct engine_operation *eop = NULL;
-    lcr_handler = dlopen("liblcr.so", RTLD_NOW | RTLD_DEEPBIND);
+    lcr_handler = dlopen("liblcr.so", RTLD_NOW);
     if (lcr_handler == NULL) {
         ERROR("Plugin error: %s", dlerror());
         return NULL;
