@@ -116,6 +116,9 @@ bool get_timestamp(const char *str_time, types_timestamp_t *timestamp)
         return false;
     }
 
+    // set tm_isdst be kept as -1 to let the system decide if its dst or not
+    tm_day.tm_isdst = -1;
+
     seconds = (int64_t)mktime(&tm_day);
     timestamp->has_seconds = true;
     timestamp->seconds = seconds;
@@ -559,7 +562,11 @@ static int64_t get_minmus_time(struct tm *tm1, struct tm *tm2)
         return -1;
     }
 
+    // set tm_isdst be kept as -1 to let the system decide if its dst or not
+    tm1->tm_isdst = -1;
     tmseconds1 = (int64_t)mktime(tm1);
+    // set tm_isdst be kept as -1 to let the system decide if its dst or not
+    tm2->tm_isdst = -1;
     tmseconds2 = (int64_t)mktime(tm2);
     result = tmseconds1 - tmseconds2;
     return result;
@@ -911,6 +918,10 @@ int to_unix_nanos_from_str(const char *str, int64_t *nanos)
         ERROR("Transform str to timestamp failed");
         return -1;
     }
+
+    // set tm_isdst be kept as -1 to let the system decide if its dst or not
+    tm.tm_isdst = -1;
+
     *nanos = mktime(&tm) * Time_Second + nano;
     return 0;
 }
