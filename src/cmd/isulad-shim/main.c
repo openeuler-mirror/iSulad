@@ -153,10 +153,5 @@ int main(int argc, char **argv)
 
     released_timeout_exit();
 
-    ret = process_signal_handle_routine(p);
-    if (ret != SHIM_OK) {
-        exit(EXIT_FAILURE);
-    }
-
-    exit(EXIT_SUCCESS);
+    return process_signal_handle_routine(p);
 }
