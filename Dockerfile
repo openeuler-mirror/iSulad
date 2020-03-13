@@ -63,8 +63,11 @@ RUN yum clean all && yum swap -y fakesystemd systemd && \
 			gmock \
 			gmock-devel \
 			cppcheck \
+			python3 \
+			python3-pip \
 			python \
 			python-pip \
+			device-mapper-devel \
 			libcurl-devel \
 			zlib-devel \
 			glibc-headers \
