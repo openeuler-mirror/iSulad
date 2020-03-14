@@ -20,6 +20,7 @@
 #include <semaphore.h>
 #include <stdbool.h>
 #include "shim_client_process_state.h"
+#include "terminal.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +40,7 @@ typedef struct {
 
 typedef struct fd_node {
     int fd;
+    bool is_log;
     struct fd_node *next;
 } fd_node_t;
 
@@ -56,6 +58,7 @@ typedef struct {
     sem_t sem_thd;
     io_copy_t *ioc;
     bool shutdown;
+    log_terminal *terminal;
 } io_thread_t;
 
 typedef struct process {
@@ -66,6 +69,7 @@ typedef struct process {
     int io_loop_fd;
     int exit_fd;
     int ctr_pid;
+    log_terminal *terminal;
     stdio_t *stdio;
     stdio_t *shim_io;
     io_thread_t *io_threads[3];// stdin,stdout,stderr

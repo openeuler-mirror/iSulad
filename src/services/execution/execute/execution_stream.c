@@ -356,39 +356,49 @@ out:
     return ret;
 }
 
-static int merge_exec_process_env(defs_process *spec, const container_config *container_spec, const char **env,
-                                  size_t env_len)
+static int merge_exec_from_container_env(defs_process *spec, const container_config *container_spec)
 {
     int ret = 0;
-    size_t env_count = 0;
     size_t i = 0;
 
-    if (env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
+    if (container_spec->env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
         ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
     }
-    env_count = container_spec->env_len + env_len;
-    if (env_count == 0) {
-        ret = 0;
-        goto out;
+
+    for (i = 0; i < container_spec->env_len; i++) {
+        ret = util_array_append(&(spec->env), container_spec->env[i]);
+        if (ret != 0) {
+            ERROR("Failed to append container env to exec process env");
+            goto out;
+        }
+        spec->env_len++;
     }
 
-    spec->env = util_common_calloc_s(env_count * sizeof(char *));
-    if (spec->env == NULL) {
-        ERROR("Failed to malloc memory for envionment variables");
+out:
+    return ret;
+}
+
+static int merge_envs_from_request_env(defs_process *spec, const char **envs, size_t env_len)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    if (env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
+        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
     }
 
-    for (i = 0; i < container_spec->env_len; i++) {
-        spec->env[spec->env_len] = util_strdup_s(container_spec->env[i]);
-        spec->env_len++;
-    }
-
     for (i = 0; i < env_len; i++) {
-        spec->env[spec->env_len] = util_strdup_s(env[i]);
+        ret = util_array_append(&(spec->env), envs[i]);
+        if (ret != 0) {
+            ERROR("Failed to append request env to exec process env");
+            goto out;
+        }
         spec->env_len++;
     }
 
@@ -433,7 +443,7 @@ out:
 }
 
 static defs_process *make_exec_process_spec(const container_config *container_spec, defs_process_user *puser,
-                                            const container_exec_request *request)
+                                            const char *runtime, const container_exec_request *request)
 {
     int ret = 0;
     defs_process *spec = NULL;
@@ -443,16 +453,26 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
         return NULL;
     }
 
-    ret = merge_exec_process_env(spec, container_spec, (const char **)request->env, request->env_len);
+    if (strcasecmp(runtime, "lcr") != 0) {
+        ret = merge_exec_from_container_env(spec, container_spec);
+        if (ret != 0) {
+            ERROR("Failed to dup args for exec process spec");
+            goto err_out;
+        }
+    }
+
+    ret = merge_envs_from_request_env(spec, (const char **)request->env, request->env_len);
     if (ret != 0) {
         ERROR("Failed to dup args for exec process spec");
         goto err_out;
     }
 
-    ret = append_necessary_process_env(request->tty, container_spec, spec);
-    if (ret != 0) {
-        ERROR("Failed to append necessary for exec process spec");
-        goto err_out;
+    if (strcasecmp(runtime, "lcr") != 0) {
+        ret = append_necessary_process_env(request->tty, container_spec, spec);
+        if (ret != 0) {
+            ERROR("Failed to append necessary for exec process spec");
+            goto err_out;
+        }
     }
 
     ret = dup_array_of_strings((const char **)request->argv, request->argv_len, &(spec->args), &(spec->args_len));
@@ -507,7 +527,7 @@ static int exec_container(container_t *cont, const char *runtime, char * const c
         goto out;
     }
 
-    process_spec = make_exec_process_spec(cont->common_config->config, puser, request);
+    process_spec = make_exec_process_spec(cont->common_config->config, puser, runtime, request);
     if (process_spec == NULL) {
         ERROR("Exec: Failed to make process spec");
         ret = -1;

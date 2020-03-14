@@ -28,10 +28,13 @@
 #include "shim_client_process_state.h"
 #include "oci_runtime_state.h"
 #include "isulad_config.h"
+#include "utils_string.h"
+#include "libisulad.h"
 
 #define SHIM_BINARY "isulad-shim"
 #define SHIM_LOG_SIZE ((BUFSIZ-100)/2)
 #define PID_WAIT_TIME 120
+
 
 static void copy_process(shim_client_process_state *p, defs_process *dp)
 {
@@ -50,6 +53,31 @@ static void copy_process(shim_client_process_state *p, defs_process *dp)
     p->no_new_privileges = dp->no_new_privileges;
     p->rlimits = (shim_client_process_state_rlimits_element **)dp->rlimits;
     p->rlimits_len = dp->rlimits_len;
+}
+
+static void copy_annotations(shim_client_process_state *p, json_map_string_string *anno)
+{
+    size_t i;
+    if (anno == NULL) {
+        return;
+    }
+    for (i = 0; i < anno->len; i++) {
+        if (strcmp(anno->keys[i], CONTAINER_LOG_CONFIG_KEY_FILE) == 0) {
+            p->log_path = anno->values[i];
+        } else if (strcmp(anno->keys[i], CONTAINER_LOG_CONFIG_KEY_ROTATE) == 0) {
+            int tmaxfile = 0;
+            if (util_safe_int(anno->values[i], &tmaxfile) == 0 && tmaxfile > 0) {
+                p->log_maxfile = tmaxfile;
+            }
+            continue;
+        }
+        if (strcmp(anno->keys[i], CONTAINER_LOG_CONFIG_KEY_SIZE) == 0) {
+            int64_t tmaxsize = 0;
+            if (util_parse_byte_size_string(anno->values[i], &tmaxsize) == 0 && tmaxsize > 0) {
+                p->log_maxsize = tmaxsize;
+            }
+        }
+    }
 }
 
 static int file_write_int(const char *fname, int val)
@@ -731,6 +759,7 @@ int rt_isula_create(const char *id, const char *runtime,
     p.runtime_args = (char **)runtime_args;
     p.runtime_args_len = runtime_args_len;
     copy_process(&p, config->process);
+    copy_annotations(&p, config->annotations);
 
     ret = create_process_json_file(workdir, &p);
     if (ret != 0) {
