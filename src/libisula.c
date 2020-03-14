@@ -211,6 +211,13 @@ void isula_info_response_free(struct isula_info_response *response)
 
     free(response->no_proxy);
     response->no_proxy = NULL;
+
+    free(response->driver_name);
+    response->driver_name = NULL;
+
+    free(response->driver_status);
+    response->driver_status = NULL;
+
     free(response);
 }
 
