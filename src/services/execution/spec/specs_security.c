@@ -1010,8 +1010,8 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
         ERROR("Failed to parse security opt");
         goto out;
     }
-    /* do not append to seccomp if seccomp profile is NULL or unconfined */
-    if (seccomp_profile == NULL || strcmp(seccomp_profile, "unconfined") == 0) {
+    /* do not append to seccomp if seccomp profile unconfined */
+    if (seccomp_profile != NULL && strcmp(seccomp_profile, "unconfined") == 0) {
         goto out;
     }
 
