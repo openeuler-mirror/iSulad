@@ -603,6 +603,10 @@ void umount_share_shm(container_t *cont)
     if (cont->hostconfig == NULL) {
         return;
     }
+    // ignore shm of system container
+    if (cont->hostconfig->system_container) {
+        return;
+    }
     if (cont->hostconfig->ipc_mode == NULL || is_shareable(cont->hostconfig->ipc_mode)) {
         if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
             return;

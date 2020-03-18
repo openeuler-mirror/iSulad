@@ -2276,6 +2276,10 @@ static int setup_ipc_dirs(oci_runtime_spec *oci_spec, host_config *host_spec,
     char *tmp_cid = NULL;
     char *right_path = NULL;
 
+    // ignore shm of system container
+    if (host_spec->system_container) {
+        return 0;
+    }
     // setup shareable dirs
     if (host_spec->ipc_mode == NULL || is_shareable(host_spec->ipc_mode)) {
         return prepare_share_shm(oci_spec, host_spec, v2_spec);
