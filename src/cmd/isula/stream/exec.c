@@ -153,17 +153,6 @@ static int exec_prepare_console(struct command_fifo_config **command_fifos, bool
 {
     int ret = 0;
     int istty = 0;
-    container_inspect *inspect_data = NULL;
-
-    if (inspect_container(&g_cmd_exec_args, &inspect_data)) {
-        ERROR("inspect data error");
-        ret = ECOMMON;
-        goto out;
-    }
-
-    if (inspect_data->id != NULL) {
-        g_cmd_exec_args.name = util_strdup_s(inspect_data->id);
-    }
 
     istty = isatty(0);
     if (istty && custom_cfg->tty && custom_cfg->attach_stdin) {
@@ -196,7 +185,6 @@ static int exec_prepare_console(struct command_fifo_config **command_fifos, bool
     }
 
 out:
-    free_container_inspect(inspect_data);
     return ret;
 }
 
@@ -228,7 +216,6 @@ static int remote_cmd_exec(const struct client_arguments *args, uint32_t *exit_c
     client_connect_config_t config = { 0 };
     struct termios oldtios;
     bool reset_tty = false;
-    container_inspect *inspect_data = NULL;
 
     ops = get_connect_client_ops();
     if (ops == NULL || !ops->container.remote_exec) {
@@ -241,14 +228,6 @@ static int remote_cmd_exec(const struct client_arguments *args, uint32_t *exit_c
         ERROR("Out of memory");
         return ECOMMON;
     }
-
-    if (inspect_container(args, &inspect_data)) {
-        ERROR("inspect data error");
-        ret = ECOMMON;
-        goto out;
-    }
-
-    g_cmd_exec_args.name = util_strdup_s(inspect_data->id);
 
     request.name = args->name;
     request.suffix = args->exec_suffix;
@@ -279,7 +258,6 @@ static int remote_cmd_exec(const struct client_arguments *args, uint32_t *exit_c
     }
 
 out:
-    free_container_inspect(inspect_data);
     if (reset_tty && tcsetattr(0, TCSAFLUSH, &oldtios) < 0) {
         WARN("Failed to reset terminal properties: %s.", strerror(errno));
     }
@@ -435,6 +413,7 @@ int cmd_exec_main(int argc, const char **argv)
     int ret = 0;
     uint32_t exit_code = 0;
     struct custom_configs *custom_cfg = NULL;
+    container_inspect *inspect_data = NULL;
 
     ret = exec_cmd_init(argc, argv);
     if (ret) {
@@ -463,6 +442,16 @@ int cmd_exec_main(int argc, const char **argv)
         goto out;
     }
 
+    if (inspect_container(&g_cmd_exec_args, &inspect_data)) {
+        ERROR("inspect data error");
+        ret = ECOMMON;
+        goto out;
+    }
+
+    if (inspect_data->id != NULL) {
+        g_cmd_exec_args.name = util_strdup_s(inspect_data->id);
+    }
+
     if (custom_cfg->tty && isatty(STDIN_FILENO) && (custom_cfg->attach_stdin || custom_cfg->attach_stdout ||
                                                     custom_cfg->attach_stderr)) {
         (void)exec_client_console_resize_thread(&g_cmd_exec_args);
@@ -483,6 +472,7 @@ int cmd_exec_main(int argc, const char **argv)
     }
 
 out:
+    free_container_inspect(inspect_data);
     exit(exit_code ? (int)exit_code : ret);
 }
 
