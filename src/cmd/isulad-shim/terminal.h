@@ -24,10 +24,6 @@
 extern "C" {
 #endif
 
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
-
 typedef struct {
     uint64_t log_maxsize;
     char *log_path;

@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <linux/limits.h>
 #include <limits.h>
 #include "terminal.h"
 #include "common.h"
@@ -69,8 +70,12 @@ static int shim_rename_old_log_file(log_terminal *terminal)
 static int shim_dump_log_file(log_terminal *terminal)
 {
     int ret;
-    char *file_newname;
+    char *file_newname = NULL;
     size_t len_path = strlen(terminal->log_path) + sizeof(".1");
+
+    if (len_path > PATH_MAX) {
+        return SHIM_ERR;
+    }
 
     /* isulad: rotate old log file first */
     ret = shim_rename_old_log_file(terminal);
