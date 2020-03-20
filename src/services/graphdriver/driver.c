@@ -40,6 +40,8 @@ static const struct graphdriver_ops g_overlay2_ops = {
     .umount_layer = overlay2_umount_layer,
     .exists = overlay2_layer_exists,
     .apply_diff = overlay2_apply_diff,
+    .get_layer_metadata = overlay2_get_layer_metadata,
+    .get_driver_status = overlay2_get_driver_status,
 };
 
 /* devicemapper */

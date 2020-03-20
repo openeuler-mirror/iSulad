@@ -244,6 +244,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
         ret = -1;
         goto out;
     }
+    driver->support_dtype = true;
 
     if (!driver->overlay_opts->skip_mount_home) {
         ret = util_ensure_mounted_as(drvier_home, "private");
@@ -1328,5 +1329,154 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
 out:
     free(layer_dir);
     free(layer_diff);
+    return ret;
+}
+
+static int get_lower_dirs(const char *layer_dir, const struct graphdriver *driver, char **abs_lower_dir)
+{
+    int ret = 0;
+    char *lowers_str = NULL;
+    char **lowers = NULL;
+    char **abs_lowers = NULL;
+    size_t lowers_size = 0;
+    size_t i = 0;
+
+    lowers_str = read_layer_lower_file(layer_dir);
+    lowers = util_string_split(lowers_str, ':');
+    lowers_size = util_array_len((const char **)lowers);
+
+    if (lowers_size == 0) {
+        ret = 0;
+        goto out;
+    }
+
+    for (i = 0; i < lowers_size; i++) {
+        if (append_abs_lower_path(driver->home, lowers[i], &abs_lowers) != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+
+    *abs_lower_dir = util_string_join(":", (const char **)abs_lowers, util_array_len((const char **)abs_lowers));
+    if (*abs_lower_dir == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(lowers_str);
+    util_free_array(lowers);
+    util_free_array(abs_lowers);
+    return ret;
+}
+
+int overlay2_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info)
+{
+    int ret = 0;
+    char *layer_dir = NULL;
+    char *work_dir = NULL;
+    char *merged_dir = NULL;
+    char *upper_dir = NULL;
+    char *lower_dir = NULL;
+
+    if (id == NULL || driver == NULL || map_info == NULL) {
+        ERROR("invalid argument");
+        ret = -1;
+        goto out;
+    }
+
+    layer_dir = util_path_join(driver->home, id);
+    if (layer_dir == NULL) {
+        ERROR("Failed to join layer dir:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    work_dir = util_path_join(layer_dir, "work");
+    if (work_dir == NULL) {
+        ERROR("Failed to join layer work dir:%s", layer_dir);
+        ret = -1;
+        goto out;
+    }
+    if (append_json_map_string_string(map_info, "WorkDir", work_dir) != 0) {
+        ERROR("Failed to append layer work dir:%s", work_dir);
+        ret = -1;
+        goto out;
+    }
+
+    merged_dir = util_path_join(layer_dir, "merged");
+    if (merged_dir == NULL) {
+        ERROR("Failed to join layer merged dir:%s", layer_dir);
+        ret = -1;
+        goto out;
+    }
+    if (append_json_map_string_string(map_info, "MergedDir", merged_dir) != 0) {
+        ERROR("Failed to append layer merged dir:%s", merged_dir);
+        ret = -1;
+        goto out;
+    }
+
+    upper_dir = util_path_join(layer_dir, "diff");
+    if (upper_dir == NULL) {
+        ERROR("Failed to join layer upper_dir dir:%s", layer_dir);
+        ret = -1;
+        goto out;
+    }
+    if (append_json_map_string_string(map_info, "UpperDir", upper_dir) != 0) {
+        ERROR("Failed to append layer upper dir:%s", upper_dir);
+        ret = -1;
+        goto out;
+    }
+
+    if (get_lower_dirs(layer_dir, driver, &lower_dir) != 0) {
+        ERROR("Failed to get layer lower dir:%s", layer_dir);
+        ret = -1;
+        goto out;
+    }
+    if (lower_dir != NULL && append_json_map_string_string(map_info, "LowerDir", lower_dir) != 0) {
+        ERROR("Failed to append layer lower dir:%s", lower_dir);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(layer_dir);
+    free(work_dir);
+    free(merged_dir);
+    free(upper_dir);
+    free(lower_dir);
+    return ret;
+}
+
+int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status)
+{
+#define MAX_INFO_LENGTH 100
+#define BACK_FS         "Backing Filesystem"
+#define SUPPORT_DTYPE   "Supports d_type: true\n"
+    int ret = 0;
+    int nret = 0;
+    char tmp[MAX_INFO_LENGTH] = { 0 };
+
+    if (driver == NULL || status == NULL) {
+        return -1;
+    }
+
+    status->backing_fs = util_strdup_s(driver->backing_fs);
+
+    nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %s\n", BACK_FS, driver->backing_fs);
+    if (nret < 0 || nret >= MAX_INFO_LENGTH) {
+        ERROR("Failed to get backing fs");
+        ret = -1;
+        goto out;
+    }
+
+    status->status = util_string_append(SUPPORT_DTYPE, tmp);
+    if (status->status == NULL) {
+        ERROR("Failed to append SUPPORT_DTYPE");
+        ret = -1;
+        goto out;
+    }
+
+out:
     return ret;
 }

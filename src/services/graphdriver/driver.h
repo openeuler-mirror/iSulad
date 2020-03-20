@@ -40,6 +40,11 @@ struct driver_mount_opts {
     size_t options_len;
 };
 
+struct graphdriver_status {
+    char *backing_fs;
+    char *status;
+};
+
 struct graphdriver_ops {
     int (*init)(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
@@ -58,6 +63,10 @@ struct graphdriver_ops {
 
     int (*apply_diff)(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
                       int64_t *layer_size);
+
+    int (*get_layer_metadata)(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
+
+    int (*get_driver_status)(const struct graphdriver *driver, struct graphdriver_status *status);
 };
 
 struct graphdriver {
@@ -66,14 +75,10 @@ struct graphdriver {
     const char *name;
     const char *home;
     char *backing_fs;
+    bool support_dtype;
 
     // options for overlay2
     struct overlay_options *overlay_opts;
-};
-
-struct graphdriver_status {
-    char *backing_fs;
-    char *status;
 };
 
 struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
