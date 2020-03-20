@@ -85,18 +85,16 @@ struct fsxattr {
 
 #endif
 
-typedef struct {
-    uint64_t size;
-} quota_config;
-
 struct pquota_control {
     char *backing_fs_type;
     char *backing_fs_device;
     uint32_t next_project_id;
     pthread_rwlock_t rwlock;
     // ops
-    int (*set_quota)(const char *target, struct pquota_control *ctrl, const quota_config *pquota);
+    int (*set_quota)(const char *target, struct pquota_control *ctrl, uint64_t size);
 };
+
+struct pquota_control *project_quota_control_init(const char *home_dir, const char *fs);
 
 #ifdef __cplusplus
 }

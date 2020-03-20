@@ -35,6 +35,7 @@ static struct graphdriver *g_graphdriver = NULL;
 static const struct graphdriver_ops g_overlay2_ops = {
     .init = overlay2_init,
     .create_rw = overlay2_create_rw,
+    .create_ro = overlay2_create_ro,
     .rm_layer = overlay2_rm_layer,
     .mount_layer = overlay2_mount_layer,
     .umount_layer = overlay2_umount_layer,
@@ -95,7 +96,7 @@ struct graphdriver *graphdriver_get()
 }
 
 
-int graphdriver_create_rw(const char *id, const char *parent, const struct driver_create_opts *create_opts)
+int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts)
 {
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
@@ -122,7 +123,7 @@ int graphdriver_create_ro(const char *id, const char *parent, const struct drive
         return -1;
     }
 
-    return g_graphdriver->ops->create_rw(id, parent, g_graphdriver, create_opts);;
+    return g_graphdriver->ops->create_ro(id, parent, g_graphdriver, create_opts);;
 }
 
 int graphdriver_rm_layer(const char *id)

@@ -49,6 +49,10 @@ struct graphdriver_ops {
     int (*init)(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
     int (*create_rw)(const char *id, const char *parent, const struct graphdriver *driver,
+                     struct driver_create_opts *create_opts);
+
+
+    int (*create_ro)(const char *id, const char *parent, const struct graphdriver *driver,
                      const struct driver_create_opts *create_opts);
 
     int (*rm_layer)(const char *id, const struct graphdriver *driver);
@@ -77,6 +81,9 @@ struct graphdriver {
     char *backing_fs;
     bool support_dtype;
 
+    bool support_quota;
+    struct pquota_control *quota_ctrl;
+
     // options for overlay2
     struct overlay_options *overlay_opts;
 };
@@ -86,7 +93,7 @@ struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, 
 
 struct graphdriver *graphdriver_get(void);
 
-int graphdriver_create_rw(const char *id, const char *parent, const struct driver_create_opts *create_opts);
+int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts);
 
 int graphdriver_create_ro(const char *id, const char *parent, const struct driver_create_opts *create_opts);
 

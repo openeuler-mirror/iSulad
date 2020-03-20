@@ -28,6 +28,7 @@
 #include "path.h"
 #include "utils.h"
 #include "util_archive.h"
+#include "project_quota.h"
 
 #define OVERLAY_LINK_DIR "l"
 #define QUOTA_SIZE_OPTION "overlay2.size"
@@ -37,6 +38,34 @@
 // The idLength should be selected such that following equation is true (512 is a buffer for label metadata).
 // ((idLength + len(linkDir) + 1) * maxDepth) <= (pageSize - 512)
 #define MAX_LAYER_ID_LENGTH 26
+
+void free_driver_create_opts(struct driver_create_opts *opts)
+{
+    if (opts == NULL) {
+        return;
+    }
+    free(opts->mount_label);
+    opts->mount_label = NULL;
+
+    free_json_map_string_string(opts->storage_opt);
+    opts->storage_opt = NULL;
+
+    free(opts);
+}
+
+void free_driver_mount_opts(struct driver_mount_opts *opts)
+{
+    if (opts == NULL) {
+        return;
+    }
+    free(opts->mount_label);
+    opts->mount_label = NULL;
+
+    util_free_array_by_len(opts->options, opts->options_len);
+    opts->options = NULL;
+
+    free(opts);
+}
 
 static int overlay2_parse_options(struct graphdriver *driver, const char **options, size_t options_len)
 {
@@ -78,7 +107,7 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
                 ret = -1;
                 goto out;
             }
-            overlay_opts->quota = converted;
+            overlay_opts->default_quota = converted;
         } else if (strcasecmp(dup, QUOTA_BASESIZE_OPTIONS) == 0) {
             int64_t converted = 0;
             ret = util_parse_byte_size_string(val, &converted);
@@ -87,7 +116,7 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
                 ret = -1;
                 goto out;
             }
-            overlay_opts->quota_basesize = converted;
+            overlay_opts->default_quota = converted;
         } else if (strcasecmp(dup, "overlay2.override_kernel_check") == 0) {
             bool converted_bool = 0;
             ret = util_str_to_bool(val, &converted_bool);
@@ -188,6 +217,11 @@ static void rm_invalid_symlink(const char *dirpath)
     return;
 }
 
+static bool check_bk_fs_support_quota(const char *backing_fs)
+{
+    return strcmp(backing_fs, "xfs") == 0 || strcmp(backing_fs, "extfs") == 0;
+}
+
 int overlay2_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
 {
     int ret = 0;
@@ -252,6 +286,16 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
             ret = -1;
             goto out;
         }
+    }
+
+    if (check_bk_fs_support_quota(driver->backing_fs)) {
+        driver->quota_ctrl = project_quota_control_init(driver->home, driver->backing_fs);
+        if (driver->quota_ctrl == NULL) {
+            ERROR("Failed to init quota ctrl");
+            ret = -1;
+            goto out;
+        }
+        driver->support_quota = true;
     }
 
 out:
@@ -604,15 +648,41 @@ out:
     return ret;
 }
 
-int overlay2_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
-                       const struct driver_create_opts *create_opts)
+static int set_dir_quota(const char *dir, const json_map_string_string *opts, const struct graphdriver *driver)
+{
+    int ret = 0;
+    size_t i = 0;
+    uint64_t quota = 0;
+
+    for (i = 0; i < opts->len; i++) {
+        if (strcasecmp("size", opts->keys[i]) == 0) {
+            int64_t converted = 0;
+            ret = util_parse_byte_size_string(opts->values[i], &converted);
+            if (ret != 0) {
+                ERROR("Invalid size: '%s': %s", opts->values[i], strerror(-ret));
+                ret = -1;
+                goto out;
+            }
+            quota = (uint64_t)converted;
+            break;
+        } else {
+            ERROR("Unknown option %s", opts->keys[i]);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    ret = driver->quota_ctrl->set_quota(dir, driver->quota_ctrl, quota);
+
+out:
+    return ret;
+}
+
+static int do_create(const char *id, const char *parent, const struct graphdriver *driver,
+                     const struct driver_create_opts *create_opts)
 {
     int ret = 0;
     char *layer_dir = NULL;
-
-    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
-        return -1;
-    }
 
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
@@ -632,6 +702,14 @@ int overlay2_create_rw(const char *id, const char *parent, const struct graphdri
         goto out;
     }
 
+    if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0) {
+        if (set_dir_quota(layer_dir, create_opts->storage_opt, driver) != 0) {
+            ERROR("Unable to set layer quota %s", layer_dir);
+            ret = -1;
+            goto out;
+        }
+    }
+
     if (mk_sub_directorys(id, parent, layer_dir, driver->home) != 0) {
         ret = -1;
         goto err_out;
@@ -646,6 +724,93 @@ err_out:
 
 out:
     free(layer_dir);
+    return ret;
+}
+
+static int apply_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota)
+{
+    int ret = 0;
+    size_t i = 0;
+    char tmp[50] = { 0 };//tmp to hold unit64
+
+    ret = snprintf(tmp, sizeof(tmp), "%llu", (unsigned long long)quota);
+    if (ret < 0 || ret >= sizeof(tmp)) {
+        ERROR("Failed to make quota string");
+        ret = -1;
+        goto out;
+    }
+
+    if (ori_opts->storage_opt == NULL) {
+        ori_opts->storage_opt = util_common_calloc_s(sizeof(json_map_string_string));
+        if (ori_opts->storage_opt == NULL) {
+            ERROR("Memory out");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    for (i = 0; i < ori_opts->storage_opt->len; i++) {
+        if (strcasecmp("size", ori_opts->storage_opt->keys[i]) == 0) {
+            break;
+        }
+    }
+    if (i == ori_opts->storage_opt->len) {
+        ret = append_json_map_string_string(ori_opts->storage_opt, "size", tmp);
+        if (ret != 0) {
+            ERROR("Failed to append quota size option");
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    return ret;
+}
+
+int overlay2_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
+                       struct driver_create_opts *create_opts)
+{
+    int ret = 0;
+
+    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
+        return -1;
+    }
+
+    if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0 && !driver->support_quota) {
+        ERROR("--storage-opt is supported only for overlay over xfs or ext4 with 'pquota' mount option");
+        ret = -1;
+        goto out;
+    }
+
+    if (apply_quota_opts(create_opts, driver->overlay_opts->default_quota) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = do_create(id, parent, driver, create_opts);
+
+out:
+    return ret;
+}
+
+int overlay2_create_ro(const char *id, const char *parent, const struct graphdriver *driver,
+                       const struct driver_create_opts *create_opts)
+{
+    int ret = 0;
+
+    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
+        return -1;
+    }
+
+    if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0) {
+        ERROR("--storage-opt size is only supported for ReadWrite Layers");
+        ret = -1;
+        goto out;
+    }
+
+    ret = do_create(id, parent, driver, create_opts);
+
+out:
     return ret;
 }
 

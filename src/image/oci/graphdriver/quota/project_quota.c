@@ -97,11 +97,11 @@ out:
     return ret;
 }
 
-static int ext4_set_project_quota(const char *backing_fs_blockdev, uint32_t project_id, const quota_config *pquota)
+static int ext4_set_project_quota(const char *backing_fs_blockdev, uint32_t project_id, uint64_t size)
 {
     int ret;
     struct dqblk d = {0};
-    d.dqb_bhardlimit = pquota->size / SIZE_KB;
+    d.dqb_bhardlimit = size / SIZE_KB;
     d.dqb_bsoftlimit = d.dqb_bhardlimit;
     d.dqb_valid = QIF_LIMITS;
 
@@ -113,12 +113,12 @@ static int ext4_set_project_quota(const char *backing_fs_blockdev, uint32_t proj
     return ret;
 }
 
-static int ext4_set_quota(const char *target, struct pquota_control *ctrl, const quota_config *pquota)
+static int ext4_set_quota(const char *target, struct pquota_control *ctrl, uint64_t size)
 {
     int ret = 0;
     uint32_t project_id = 0;
 
-    if (target == NULL || pquota == NULL || ctrl == NULL) {
+    if (target == NULL || ctrl == NULL) {
         return -1;
     }
 
@@ -136,7 +136,7 @@ static int ext4_set_quota(const char *target, struct pquota_control *ctrl, const
     }
     ctrl->next_project_id++;
 
-    if (ext4_set_project_quota(ctrl->backing_fs_device, project_id, pquota) != 0) {
+    if (ext4_set_project_quota(ctrl->backing_fs_device, project_id, size) != 0) {
         ERROR("Failed to set project id %d to %s.", project_id, target);
         ret = -1;
         goto unlock;
@@ -148,7 +148,7 @@ out:
     return ret;
 }
 
-static int xfs_set_project_quota(const char *backing_fs_blockdev, uint32_t project_id, const quota_config *pquota)
+static int xfs_set_project_quota(const char *backing_fs_blockdev, uint32_t project_id, uint64_t size)
 {
     int ret;
     fs_disk_quota_t d = {0};
@@ -156,7 +156,7 @@ static int xfs_set_project_quota(const char *backing_fs_blockdev, uint32_t proje
     d.d_id = project_id;
     d.d_flags = FS_PROJ_QUOTA;
     d.d_fieldmask = FS_DQ_BHARD | FS_DQ_BSOFT;
-    d.d_blk_hardlimit = (pquota->size / 512);
+    d.d_blk_hardlimit = (size / 512);
     d.d_blk_softlimit = d.d_blk_hardlimit;
 
     ret = quotactl(QCMD(Q_XSETQLIM, FS_PROJ_QUOTA), backing_fs_blockdev,
@@ -167,12 +167,12 @@ static int xfs_set_project_quota(const char *backing_fs_blockdev, uint32_t proje
     return ret;
 }
 
-static int xfs_set_quota(const char *target, struct pquota_control *ctrl, const quota_config *pquota)
+static int xfs_set_quota(const char *target, struct pquota_control *ctrl, uint64_t size)
 {
     int ret = 0;
     uint32_t project_id = 0;
 
-    if (target == NULL || pquota == NULL || ctrl == NULL) {
+    if (target == NULL || ctrl == NULL) {
         return -1;
     }
 
@@ -190,7 +190,7 @@ static int xfs_set_quota(const char *target, struct pquota_control *ctrl, const 
     }
     ctrl->next_project_id++;
 
-    if (xfs_set_project_quota(ctrl->backing_fs_device, project_id, pquota) != 0) {
+    if (xfs_set_project_quota(ctrl->backing_fs_device, project_id, size) != 0) {
         ERROR("Failed to set project id %d to %s.", project_id, target);
         ret = -1;
         goto unlock;

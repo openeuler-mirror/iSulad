@@ -26,8 +26,7 @@ extern "C" {
 
 struct overlay_options {
     bool override_kernelcheck;
-    uint64_t quota;
-    uint64_t quota_basesize;
+    uint64_t default_quota;
     const char *mount_program;
     bool skip_mount_home;
     const char *mount_options;
