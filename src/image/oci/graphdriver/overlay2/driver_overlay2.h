@@ -44,6 +44,8 @@ int overlay2_get_layer_metadata(const char *id, const struct graphdriver *driver
 
 int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status);
 
+int overlay2_clean_up(const struct graphdriver *driver);
+
 #ifdef __cplusplus
 }
 #endif

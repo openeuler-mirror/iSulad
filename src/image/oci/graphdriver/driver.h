@@ -48,8 +48,6 @@ struct graphdriver_status {
 struct graphdriver_ops {
     int (*init)(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
-    bool (*is_quota_options)(struct graphdriver *driver, const char *option);
-
     int (*create_rw)(const char *id, const char *parent, const struct graphdriver *driver,
                      const struct driver_create_opts *create_opts);
 
@@ -67,6 +65,8 @@ struct graphdriver_ops {
     int (*get_layer_metadata)(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
 
     int (*get_driver_status)(const struct graphdriver *driver, struct graphdriver_status *status);
+
+    int (*clean_up)(const struct graphdriver *driver);
 };
 
 struct graphdriver {
@@ -84,17 +84,29 @@ struct graphdriver {
 struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
                                      size_t storage_opts_len);
 
-struct graphdriver *graphdriver_get(const char *name);
+struct graphdriver *graphdriver_get(void);
+
+int graphdriver_create_rw(const char *id, const char *parent, const struct driver_create_opts *create_opts);
+
+int graphdriver_create_ro(const char *id, const char *parent, const struct driver_create_opts *create_opts);
+
+int graphdriver_rm_layer(const char *id);
+
+char *graphdriver_mount_layer(const char *id, const struct driver_mount_opts *mount_opts);
+
+int graphdriver_umount_layer(const char *id);
+
+bool graphdriver_layer_exists(const char *id);
+
+int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content, int64_t *layer_size);
+
+int graphdriver_get_layer_metadata(const char *id, json_map_string_string *map_info);
 
 struct graphdriver_status *graphdriver_get_status(void);
 
-container_inspect_graph_driver *graphdriver_get_metadata(char *id);
-
-int update_graphdriver_status(struct graphdriver **driver);
-
-void graphdriver_umount_mntpoint(void);
-
 void free_graphdriver_status(struct graphdriver_status *status);
+
+int graphdriver_cleanup(void);
 
 #ifdef __cplusplus
 }

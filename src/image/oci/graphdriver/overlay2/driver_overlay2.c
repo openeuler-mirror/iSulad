@@ -1480,3 +1480,11 @@ int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdri
 out:
     return ret;
 }
+
+int overlay2_clean_up(const struct graphdriver *driver)
+{
+    if (driver == NULL) {
+        return -1;
+    }
+    return umount(driver->home);
+}

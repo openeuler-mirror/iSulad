@@ -28,12 +28,12 @@
 #include "image.h"
 #include "util_archive.h"
 
-/* overlay/overlay2 */
-#define DRIVER_OVERLAY_NAME "overlay"
+static struct graphdriver *g_graphdriver = NULL;
+
+/* overlay2 */
 #define DRIVER_OVERLAY2_NAME "overlay2"
 static const struct graphdriver_ops g_overlay2_ops = {
     .init = overlay2_init,
-    .is_quota_options = overlay2_is_quota_options,
     .create_rw = overlay2_create_rw,
     .rm_layer = overlay2_rm_layer,
     .mount_layer = overlay2_mount_layer,
@@ -42,6 +42,7 @@ static const struct graphdriver_ops g_overlay2_ops = {
     .apply_diff = overlay2_apply_diff,
     .get_layer_metadata = overlay2_get_layer_metadata,
     .get_driver_status = overlay2_get_driver_status,
+    .clean_up = overlay2_clean_up,
 };
 
 /* devicemapper */
@@ -49,7 +50,6 @@ static const struct graphdriver_ops g_overlay2_ops = {
 
 static const struct graphdriver_ops g_devmapper_ops = {
     .init = devmapper_init,
-    .is_quota_options = devmapper_is_quota_options,
 };
 
 static struct graphdriver g_drivers[] = {
@@ -64,9 +64,6 @@ struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, 
 {
     size_t i = 0;
     char driver_home[PATH_MAX] = { 0 };
-    //test
-    struct driver_create_opts test_create_opts = { 0 };
-    struct driver_mount_opts test_mount_opts = { 0 };
 
     if (name == NULL || storage_opts == NULL || isulad_root == NULL) {
         return NULL;
@@ -80,72 +77,151 @@ struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, 
 
     for (i = 0; i < g_numdrivers; i++) {
         if (strcmp(name, g_drivers[i].name) == 0) {
-            if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)storage_opts, storage_opts_len)) {
-                return NULL;
+            if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)storage_opts, storage_opts_len) != 0) {
+                goto out;
             }
-            //just for test
-            if (g_drivers[i].ops->create_rw("1", "", &g_drivers[i], &test_create_opts) != 0) {
-                return NULL;
-            }
-            if (g_drivers[i].ops->create_rw("2", "1", &g_drivers[i], &test_create_opts) != 0) {
-                return NULL;
-            }
-            if (g_drivers[i].ops->create_rw("3", "2", &g_drivers[i], &test_create_opts) != 0) {
-                return NULL;
-            }
-
-            if (g_drivers[i].ops->create_rw("4", "3", &g_drivers[i], &test_create_opts) != 0) {
-                return NULL;
-            }
-            char *test_merged = g_drivers[i].ops->mount_layer("4", &g_drivers[i], &test_mount_opts);
-            if (test_merged == NULL) {
-                return NULL;
-            }
-            ERROR("mount: %s", test_merged);
-
-            if (test_archive() != 0) {
-                ERROR("Failed!!!");
-            }
-
-            //if (g_drivers[i].ops->rm_layer("3", &g_drivers[i]) != 0) {
-            //    return NULL;
-            // }
-            // end test
-
-            return &g_drivers[i];
+            g_graphdriver = &g_drivers[i];
+            break;
         }
     }
 
-    ERROR("Invalid storage driver name: '%s'", name);
-    return NULL;
+out:
+    return g_graphdriver;
 }
 
-struct graphdriver *graphdriver_get(const char *name)
+struct graphdriver *graphdriver_get()
 {
-    size_t i = 0;
+    return g_graphdriver;
+}
 
-    if (name == NULL) {
+
+int graphdriver_create_rw(const char *id, const char *parent, const struct driver_create_opts *create_opts)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL || parent == NULL || create_opts == NULL) {
+        ERROR("Invalid input arguments for driver create");
+        return -1;
+    }
+
+    return g_graphdriver->ops->create_rw(id, parent, g_graphdriver, create_opts);;
+}
+
+int graphdriver_create_ro(const char *id, const char *parent, const struct driver_create_opts *create_opts)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL || parent == NULL || create_opts == NULL) {
+        ERROR("Invalid input arguments for driver create");
+        return -1;
+    }
+
+    return g_graphdriver->ops->create_rw(id, parent, g_graphdriver, create_opts);;
+}
+
+int graphdriver_rm_layer(const char *id)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL) {
+        ERROR("Invalid input arguments for driver remove layer");
+        return -1;
+    }
+
+    return g_graphdriver->ops->rm_layer(id, g_graphdriver);
+}
+
+char *graphdriver_mount_layer(const char *id, const struct driver_mount_opts *mount_opts)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
         return NULL;
     }
 
-    for (i = 0; i < g_numdrivers; i++) {
-        if (strcmp(name, g_drivers[i].name) == 0) {
-            return &g_drivers[i];
-        }
+    if (id == NULL || mount_opts == NULL) {
+        ERROR("Invalid input arguments for driver mount layer");
+        return NULL;
     }
 
-    isulad_set_error_message("Invalid storage driver name: '%s'", name);
-    return NULL;
+    return g_graphdriver->ops->mount_layer(id, g_graphdriver, mount_opts);
+}
+
+int graphdriver_umount_layer(const char *id)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL) {
+        ERROR("Invalid input arguments for driver umount layer");
+        return -1;
+    }
+
+    return g_graphdriver->ops->umount_layer(id, g_graphdriver);
+}
+
+bool graphdriver_layer_exists(const char *id)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL) {
+        ERROR("Invalid input arguments for driver exists layer");
+        return -1;
+    }
+
+    return g_graphdriver->ops->exists(id, g_graphdriver);
+}
+
+int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content, int64_t *layer_size)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL || content == NULL || layer_size == NULL) {
+        ERROR("Invalid input arguments for driver umount layer");
+        return -1;
+    }
+
+    return g_graphdriver->ops->apply_diff(id, g_graphdriver, content, layer_size);
+}
+
+int graphdriver_get_layer_metadata(const char *id, json_map_string_string *map_info)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL || map_info == NULL) {
+        ERROR("Invalid input arguments for driver umount layer");
+        return -1;
+    }
+
+    return g_graphdriver->ops->get_layer_metadata(id, g_graphdriver, map_info);
 }
 
 struct graphdriver_status *graphdriver_get_status(void)
 {
-    struct graphdriver_status *status = NULL;
     int ret = -1;
-    im_storage_status_response *resp = NULL;
+    struct graphdriver_status *status = NULL;
 
-    ret = im_get_storage_status(IMAGE_TYPE_OCI, &resp);
-    if (ret != 0) {
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
         return NULL;
     }
 
@@ -155,146 +231,18 @@ struct graphdriver_status *graphdriver_get_status(void)
         goto free_out;
     }
 
-    status->backing_fs = util_strdup_s(resp->backing_fs);
-    status->status = util_strdup_s(resp->status);
+    ret = g_graphdriver->ops->get_driver_status(g_graphdriver, status);
+    if (ret != 0) {
+        ERROR("Failed to get driver status");
+        goto free_out;
+    }
 
-    ret = 0;
 free_out:
-    free_im_storage_status_response(resp);
     if (ret != 0) {
         free_graphdriver_status(status);
         return NULL;
     }
     return status;
-}
-
-container_inspect_graph_driver *graphdriver_get_metadata(char *id)
-{
-    container_inspect_graph_driver *inspect_driver = NULL;
-    int ret = -1;
-    im_storage_metadata_response *resp = NULL;
-    int i = 0;
-
-    ret = im_get_storage_metadata(IMAGE_TYPE_OCI, id, &resp);
-    if (ret != 0) {
-        goto free_out;
-    }
-
-    if (resp->name == NULL || resp->metadata == NULL) {
-        ERROR("Failed to get metadata or name");
-        ret = -1;
-        goto free_out;
-    }
-
-    inspect_driver = util_common_calloc_s(sizeof(container_inspect_graph_driver));
-    if (inspect_driver == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto free_out;
-    }
-    inspect_driver->data = util_common_calloc_s(sizeof(container_inspect_graph_driver_data));
-    if (inspect_driver->data == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto free_out;
-    }
-
-    inspect_driver->name = util_strdup_s(resp->name);
-
-    if (!strcmp(resp->name, DRIVER_OVERLAY_NAME) || !strcmp(resp->name, DRIVER_OVERLAY2_NAME)) {
-        for (i = 0; i < resp->metadata->len; i++) {
-            if (!strcmp(resp->metadata->keys[i], "LowerDir")) {
-                inspect_driver->data->lower_dir = util_strdup_s(resp->metadata->values[i]);
-            } else if (!strcmp(resp->metadata->keys[i], "MergedDir")) {
-                inspect_driver->data->merged_dir = util_strdup_s(resp->metadata->values[i]);
-            } else if (!strcmp(resp->metadata->keys[i], "UpperDir")) {
-                inspect_driver->data->upper_dir = util_strdup_s(resp->metadata->values[i]);
-            } else if (!strcmp(resp->metadata->keys[i], "WorkDir")) {
-                inspect_driver->data->work_dir = util_strdup_s(resp->metadata->values[i]);
-            }
-        }
-    } else if (!strcmp(resp->name, DRIVER_DEVMAPPER_NAME)) {
-        for (i = 0; i < resp->metadata->len; i++) {
-            if (!strcmp(resp->metadata->keys[i], "DeviceId")) {
-                inspect_driver->data->device_id = util_strdup_s(resp->metadata->values[i]);
-            } else if (!strcmp(resp->metadata->keys[i], "DeviceName")) {
-                inspect_driver->data->device_name = util_strdup_s(resp->metadata->values[i]);
-            } else if (!strcmp(resp->metadata->keys[i], "DeviceSize")) {
-                inspect_driver->data->device_size = util_strdup_s(resp->metadata->values[i]);
-            }
-        }
-    } else {
-        ERROR("Unsupported driver %s", resp->name);
-        ret = -1;
-        goto free_out;
-    }
-
-    ret = 0;
-free_out:
-    free_im_storage_metadata_response(resp);
-    if (ret != 0) {
-        free_container_inspect_graph_driver(inspect_driver);
-        return NULL;
-    }
-    return inspect_driver;
-}
-
-int update_graphdriver_status(struct graphdriver **driver)
-{
-    struct graphdriver_status *status = NULL;
-    int ret = 0;
-
-    if (driver == NULL) {
-        return -1;
-    }
-
-    status = graphdriver_get_status();
-    if (status == NULL) {
-        ERROR("Can not get driver status");
-        return -1;
-    }
-    if (*driver == NULL) {
-        *driver = util_common_calloc_s(sizeof(struct graphdriver));
-        if (*driver == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-    }
-    free((*driver)->backing_fs);
-    (*driver)->backing_fs = util_strdup_s(status->backing_fs);
-out:
-    free_graphdriver_status(status);
-    return ret;
-}
-
-void graphdriver_umount_mntpoint(void)
-{
-    char *root = NULL;
-    char *driver_name = NULL;
-    char mp[PATH_MAX] = { 0 };
-    int nret = 0;
-
-    root = conf_get_graph_rootpath();
-    driver_name = conf_get_isulad_storage_driver();
-    if (root == NULL || driver_name == NULL) {
-        WARN("No root or driver name specified");
-        goto cleanup;
-    }
-    if (strcmp(driver_name, "overlay2") == 0) {
-        driver_name[strlen(driver_name) - 1] = '\0';
-    }
-    nret = snprintf(mp, sizeof(mp), "%s/%s", root, driver_name);
-    if (nret < 0 || (size_t)nret >= sizeof(mp)) {
-        WARN("Failed to print string");
-        goto cleanup;
-    }
-    if (umount(mp) < 0 && errno != EINVAL) {
-        WARN("Can not umount: %s: %s", mp, strerror(errno));
-    }
-cleanup:
-    free(root);
-    free(driver_name);
 }
 
 void free_graphdriver_status(struct graphdriver_status *status)
@@ -307,3 +255,12 @@ void free_graphdriver_status(struct graphdriver_status *status)
     free(status);
 }
 
+int graphdriver_cleanup(void)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    return g_graphdriver->ops->clean_up(g_graphdriver);
+}

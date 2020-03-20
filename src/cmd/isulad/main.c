@@ -189,7 +189,7 @@ static void umount_daemon_mntpoint()
         mntdir = NULL;
     }
 
-    graphdriver_umount_mntpoint();
+    graphdriver_cleanup();
 }
 #endif
 
@@ -1124,11 +1124,6 @@ static int isulad_server_init_common()
         ERROR("Failed to init image manager");
         goto out;
     }
-
-#ifdef ENABLE_OCI_IMAGE
-    /* update status of graphdriver after image server running */
-    update_graphdriver_status(&(args->driver));
-#endif
 
     if (containers_store_init()) {
         ERROR("Failed to init containers store");
