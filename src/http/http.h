@@ -78,7 +78,7 @@ struct http_get_options {
 #define HTTP_REQUEST_FILE           1
 
 /* authz unix sock and request url */
-#define AUTHZ_UNIX_SOCK             "/run/docker/plugins/authz-broker.sock"
+#define AUTHZ_UNIX_SOCK             "/run/isulad/plugins/authz-broker.sock"
 #define AUTHZ_REQUEST_URL           "http://localhost/isulad.auth"
 
 /* http response code */

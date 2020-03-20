@@ -1,5 +1,5 @@
 %global _version 2.0.0
-%global _release 20200317.234132.gite3328fb3
+%global _release 20200321.032232.gitaec8336d
 %global is_systemd 1
 %global debug_package %{nil}
 
