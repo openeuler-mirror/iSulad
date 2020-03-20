@@ -70,12 +70,13 @@ static int shim_rename_old_log_file(log_terminal *terminal)
 static int shim_dump_log_file(log_terminal *terminal)
 {
     int ret;
+    size_t len_path;
     char *file_newname = NULL;
-    size_t len_path = strlen(terminal->log_path) + sizeof(".1");
 
-    if (len_path > PATH_MAX) {
+    if (strlen(terminal->log_path) > (PATH_MAX - sizeof(".1"))) {
         return SHIM_ERR;
     }
+    len_path = strlen(terminal->log_path) + sizeof(".1");
 
     /* isulad: rotate old log file first */
     ret = shim_rename_old_log_file(terminal);
