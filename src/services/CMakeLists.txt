@@ -11,12 +11,6 @@ add_subdirectory(execution)
 list(APPEND local_services_srcs ${EXECUTION_SRCS})
 list(APPEND local_services_incs ${EXECUTION_INCS})
 
-if (ENABLE_OCI_IMAGE)
-	add_subdirectory(graphdriver)
-	list(APPEND local_services_srcs ${GRAPHDRIVER_SRCS})
-	list(APPEND local_services_incs ${GRAPHDRIVER_INCS})
-endif()
-
 add_subdirectory(image)
 list(APPEND local_services_srcs ${IMAGE_SRCS})
 list(APPEND local_services_incs ${CMAKE_CURRENT_SOURCE_DIR}/image)
