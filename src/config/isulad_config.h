@@ -76,10 +76,6 @@ char *conf_get_graph_rootpath();
 
 char *conf_get_graph_run_path();
 
-char *conf_get_isulad_storage_driver();
-
-char *conf_get_isulad_storage_driver_backing_fs();
-
 char **conf_get_storage_opts();
 
 char **conf_get_insecure_registry_list();

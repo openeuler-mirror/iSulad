@@ -80,7 +80,7 @@ static const struct bim_ops g_embedded_ops = {
 #ifdef ENABLE_OCI_IMAGE
 static const struct bim_ops g_isula_ops = {
     .init = isula_init,
-    .clean_resource = isula_exit,
+    .clean_resource = NULL,
     .detect = oci_detect,
 
     .prepare_rf = isula_prepare_rf,

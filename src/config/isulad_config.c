@@ -451,49 +451,6 @@ out:
 }
 
 #ifdef ENABLE_OCI_IMAGE
-/* conf get graph driver */
-char *conf_get_isulad_storage_driver()
-{
-    char *driver = NULL;
-    struct service_arguments *conf = NULL;
-
-    if (isulad_server_conf_rdlock() != 0) {
-        return NULL;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL || conf->driver->name == NULL) {
-        goto out;
-    }
-
-    driver = util_strdup_s(conf->driver->name);
-
-out:
-    (void)isulad_server_conf_unlock();
-    return driver;
-}
-
-/* conf get graph driver */
-char *conf_get_isulad_storage_driver_backing_fs()
-{
-    char *fs = NULL;
-    struct service_arguments *conf = NULL;
-
-    if (isulad_server_conf_rdlock() != 0) {
-        return NULL;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL || conf->driver->backing_fs == NULL) {
-        goto out;
-    }
-
-    fs = util_strdup_s(conf->driver->backing_fs);
-
-out:
-    (void)isulad_server_conf_unlock();
-    return fs;
-}
 
 /* conf get graph driver opts */
 char **conf_get_storage_opts()

@@ -232,13 +232,6 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     }
 #ifdef ENABLE_OCI_IMAGE
     im_request->type = util_strdup_s(IMAGE_TYPE_OCI);
-
-    graph_driver = conf_get_isulad_storage_driver();
-    if (graph_driver == NULL) {
-        ERROR("Failed to get graph driver name info!");
-        goto pack_response;
-    }
-
     driver_status = graphdriver_get_status();
     if (driver_status == NULL) {
         ERROR("Failed to get graph driver status info!");
@@ -326,7 +319,7 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     (*response)->https_proxy = util_strdup_s(https_proxy);
     (*response)->no_proxy = util_strdup_s(no_proxy);
 #ifdef ENABLE_OCI_IMAGE
-    (*response)->driver_name = util_strdup_s(graph_driver);
+    (*response)->driver_name = util_strdup_s(driver_status->driver_name);
     (*response)->driver_status = util_strdup_s(driver_status->status);
 #endif
 

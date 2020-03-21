@@ -35,6 +35,7 @@ int util_mount(const char *src, const char *dst, const char *mtype, const char *
 int util_force_mount(const char *src, const char *dst, const char *mtype, const char *mntopts);
 bool util_detect_mounted(const char *path);
 int util_ensure_mounted_as(const char *dst, const char *mntopts);
+int util_mount_from(const char *base, const char *src, const char *dst, const char *mtype, const char *mntopts);
 #ifdef __cplusplus
 }
 #endif

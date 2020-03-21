@@ -30,9 +30,18 @@
 #include "util_archive.h"
 #include "project_quota.h"
 
-#define OVERLAY_LINK_DIR "l"
-#define QUOTA_SIZE_OPTION "overlay2.size"
-#define QUOTA_BASESIZE_OPTIONS "overlay2.basesize"
+#define OVERLAY_LINK_DIR        "l"
+#define OVERLAY_LAYER_DIFF      "diff"
+#define OVERLAY_LAYER_MERGED    "merged"
+#define OVERLAY_LAYER_WORK      "work"
+#define OVERLAY_LAYER_LOWER     "lower"
+#define OVERLAY_LAYER_LINK      "link"
+#define OVERLAY_LAYER_EMPTY     "empty"
+
+#define OVERLAY_LAYER_MAX_DEPTH 128
+
+#define QUOTA_SIZE_OPTION       "overlay2.size"
+#define QUOTA_BASESIZE_OPTIONS  "overlay2.basesize"
 // MAX_LAYER_ID_LENGTH represents the number of random characters which can be used to create the unique link identifer
 // for every layer. If this value is too long then the page size limit for the mount command may be exceeded.
 // The idLength should be selected such that following equation is true (512 is a buffer for label metadata).
@@ -222,6 +231,29 @@ static bool check_bk_fs_support_quota(const char *backing_fs)
     return strcmp(backing_fs, "xfs") == 0 || strcmp(backing_fs, "extfs") == 0;
 }
 
+static int driver_init_quota(struct graphdriver *driver)
+{
+    int ret = 0;
+
+    if (check_bk_fs_support_quota(driver->backing_fs)) {
+        driver->quota_ctrl = project_quota_control_init(driver->home, driver->backing_fs);
+        if (driver->quota_ctrl != NULL) {
+            driver->support_quota = true;
+        } else if (driver->overlay_opts->default_quota != 0) {
+            ERROR("Storage option overlay.size not supported. Filesystem does not support Project Quota");
+            ret = -1;
+            goto out;
+        }
+    } else if (driver->overlay_opts->default_quota != 0) {
+        ERROR("Storage option overlay.size only supported for backingFS XFS or ext4.");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 int overlay2_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
 {
     int ret = 0;
@@ -281,21 +313,15 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
     driver->support_dtype = true;
 
     if (!driver->overlay_opts->skip_mount_home) {
-        ret = util_ensure_mounted_as(drvier_home, "private");
-        if (ret != 0) {
+        if (util_ensure_mounted_as(drvier_home, "private") != 0) {
             ret = -1;
             goto out;
         }
     }
 
-    if (check_bk_fs_support_quota(driver->backing_fs)) {
-        driver->quota_ctrl = project_quota_control_init(driver->home, driver->backing_fs);
-        if (driver->quota_ctrl == NULL) {
-            ERROR("Failed to init quota ctrl");
-            ret = -1;
-            goto out;
-        }
-        driver->support_quota = true;
+    if (driver_init_quota(driver) != 0) {
+        ret = -1;
+        goto out;
     }
 
 out:
@@ -336,7 +362,7 @@ static int mk_diff_directory(const char *layer_dir)
     int ret = 0;
     char *diff_dir = NULL;
 
-    diff_dir = util_path_join(layer_dir, "diff");
+    diff_dir = util_path_join(layer_dir, OVERLAY_LAYER_DIFF);
     if (diff_dir == NULL) {
         ERROR("Failed to join layer diff dir:%s", layer_dir);
         ret = -1;
@@ -413,7 +439,7 @@ static int mk_diff_symlink(const char *id, const char *layer_dir, const char *dr
         goto out;
     }
 
-    link_file = util_path_join(layer_dir, "link");
+    link_file = util_path_join(layer_dir, OVERLAY_LAYER_LINK);
     if (link_file == NULL) {
         ERROR("Failed to get layer link file %s", layer_dir);
         ret = -1;
@@ -437,7 +463,7 @@ static int mk_work_directory(const char *layer_dir)
     int ret = 0;
     char *work_dir = NULL;
 
-    work_dir = util_path_join(layer_dir, "work");
+    work_dir = util_path_join(layer_dir, OVERLAY_LAYER_WORK);
     if (work_dir == NULL) {
         ERROR("Failed to join layer work dir:%s", layer_dir);
         ret = -1;
@@ -460,7 +486,7 @@ static int mk_merged_directory(const char *layer_dir)
     int ret = 0;
     char *merged_dir = NULL;
 
-    merged_dir = util_path_join(layer_dir, "merged");
+    merged_dir = util_path_join(layer_dir, OVERLAY_LAYER_MERGED);
     if (merged_dir == NULL) {
         ERROR("Failed to join layer merged dir:%s", layer_dir);
         ret = -1;
@@ -483,7 +509,7 @@ static int mk_empty_directory(const char *layer_dir)
     int ret = 0;
     char *empty_dir = NULL;
 
-    empty_dir = util_path_join(layer_dir, "empty");
+    empty_dir = util_path_join(layer_dir, OVERLAY_LAYER_EMPTY);
     if (empty_dir == NULL) {
         ERROR("Failed to join layer empty dir:%s", empty_dir);
         ret = -1;
@@ -498,6 +524,26 @@ static int mk_empty_directory(const char *layer_dir)
 
 out:
     free(empty_dir);
+    return ret;
+}
+
+const static int check_lower_depth(const char *lowers_str)
+{
+    int ret = 0;
+    char **lowers_arr = NULL;
+    size_t lowers_size = 0;
+
+    lowers_arr = util_string_split(lowers_str, ':');
+    lowers_size = util_array_len((const char **)lowers_arr);
+
+    if (lowers_size > OVERLAY_LAYER_MAX_DEPTH) {
+        ERROR("Max depth exceeded %s", lowers_str);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    util_free_array(lowers_arr);
     return ret;
 }
 
@@ -518,7 +564,7 @@ static char *get_lower(const char *parent, const char *driver_home)
         goto out;
     }
 
-    parent_link_file = util_path_join(parent_dir, "link");
+    parent_link_file = util_path_join(parent_dir, OVERLAY_LAYER_LINK);
     if (parent_link_file == NULL) {
         ERROR("Failed to get parent link %s", parent_dir);
         goto out;
@@ -537,7 +583,7 @@ static char *get_lower(const char *parent, const char *driver_home)
 
     lower_len = strlen(OVERLAY_LINK_DIR) + 1 + strlen(parent_link) + 1;
 
-    parent_lower_file = util_path_join(parent_dir, "lower");
+    parent_lower_file = util_path_join(parent_dir, OVERLAY_LAYER_LOWER);
     if (parent_lower_file == NULL) {
         ERROR("Failed to get parent lower %s", parent_dir);
         goto out;
@@ -563,6 +609,10 @@ static char *get_lower(const char *parent, const char *driver_home)
         goto err_out;
     }
 
+    if (check_lower_depth(lower) != 0) {
+        goto err_out;
+    }
+
     goto out;
 
 err_out:
@@ -583,7 +633,7 @@ static int write_lowers(const char *layer_dir, const char *lowers)
     int ret = 0;
     char *lowers_file = NULL;
 
-    lowers_file = util_path_join(layer_dir, "lower");
+    lowers_file = util_path_join(layer_dir, OVERLAY_LAYER_LOWER);
     if (lowers_file == NULL) {
         ERROR("Failed to get layer lower file %s", layer_dir);
         ret = -1;
@@ -648,7 +698,7 @@ out:
     return ret;
 }
 
-static int set_dir_quota(const char *dir, const json_map_string_string *opts, const struct graphdriver *driver)
+static int set_layer_quota(const char *dir, const json_map_string_string *opts, const struct graphdriver *driver)
 {
     int ret = 0;
     size_t i = 0;
@@ -703,7 +753,7 @@ static int do_create(const char *id, const char *parent, const struct graphdrive
     }
 
     if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0) {
-        if (set_dir_quota(layer_dir, create_opts->storage_opt, driver) != 0) {
+        if (set_layer_quota(layer_dir, create_opts->storage_opt, driver) != 0) {
             ERROR("Unable to set layer quota %s", layer_dir);
             ret = -1;
             goto out;
@@ -782,7 +832,7 @@ int overlay2_create_rw(const char *id, const char *parent, const struct graphdri
         goto out;
     }
 
-    if (apply_quota_opts(create_opts, driver->overlay_opts->default_quota) != 0) {
+    if (driver->support_quota && apply_quota_opts(create_opts, driver->overlay_opts->default_quota) != 0) {
         ret = -1;
         goto out;
     }
@@ -819,7 +869,7 @@ static char *read_layer_link_file(const char *layer_dir)
     char *link_file = NULL;
     char *link = NULL;
 
-    link_file = util_path_join(layer_dir, "link");
+    link_file = util_path_join(layer_dir, OVERLAY_LAYER_LINK);
     if (link_file == NULL) {
         ERROR("Failed to get link %s", layer_dir);
         goto out;
@@ -836,7 +886,7 @@ static char *read_layer_lower_file(const char *layer_dir)
     char *lower_file = NULL;
     char *lower = NULL;
 
-    lower_file = util_path_join(layer_dir, "lower");
+    lower_file = util_path_join(layer_dir, OVERLAY_LAYER_LOWER);
     if (lower_file == NULL) {
         ERROR("Failed to get lower %s", layer_dir);
         goto out;
@@ -927,7 +977,7 @@ static int append_abs_empty_path(const char *layer_dir, char ***abs_lowers)
     int ret = 0;
     char *abs_path = NULL;
 
-    abs_path = util_path_join(layer_dir, "empty");
+    abs_path = util_path_join(layer_dir, OVERLAY_LAYER_EMPTY);
     if (!util_dir_exists(abs_path)) {
         SYSERROR("Can't stat absolute layer:%s", abs_path);
         ret = -1;
@@ -1102,13 +1152,13 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
     char *work_dir = NULL;
     char *tmp = NULL;
 
-    upper_dir = util_path_join(layer_dir, "diff");
+    upper_dir = util_path_join(layer_dir, OVERLAY_LAYER_DIFF);
     if (upper_dir == NULL) {
         ERROR("Failed to join layer diff dir:%s", layer_dir);
         goto error_out;
     }
 
-    work_dir = util_path_join(layer_dir, "work");
+    work_dir = util_path_join(layer_dir, OVERLAY_LAYER_WORK);
     if (work_dir == NULL) {
         ERROR("Failed to join layer work dir:%s", layer_dir);
         goto error_out;
@@ -1174,7 +1224,7 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
         goto error_out;
     }
 
-    work_dir = util_path_join("/work", id);
+    work_dir = util_string_append("/work", id);
     if (work_dir == NULL) {
         ERROR("Failed to join layer work dir:%s", id);
         goto error_out;
@@ -1225,7 +1275,7 @@ out:
 }
 
 static char *generate_mount_opt_data(const char *id, const char *layer_dir, const struct graphdriver *driver,
-                                     const struct driver_mount_opts *mount_opts)
+                                     const struct driver_mount_opts *mount_opts, bool *use_rel_mount)
 {
     int ret = 0;
     char *mount_data = NULL;
@@ -1246,10 +1296,17 @@ static char *generate_mount_opt_data(const char *id, const char *layer_dir, cons
     }
     if (strlen(mount_data) > page_size) {
         free(mount_data);
+        *use_rel_mount = true;
         mount_data = get_rel_mount_opt_data(id, rel_lower_dir, driver, mount_opts);
         if (mount_data == NULL) {
             ERROR("Failed to get abs mount opt data");
             goto out;
+        }
+        if (strlen(mount_data) > page_size) {
+            ERROR("cannot mount layer, mount label too large %s", mount_data);
+            free(mount_data);
+            mount_data = NULL;
+            goto  out;
         }
     }
 
@@ -1259,29 +1316,73 @@ out:
     return mount_data;
 }
 
+static int abs_mount(const char *layer_dir, const char *merged_dir, const char *mount_data)
+{
+    int ret = 0;
+
+    ret = util_mount("overlay", merged_dir, "overlay", mount_data);
+    if (ret != 0) {
+        ERROR("Failed to mount %s with option \"%s\"", merged_dir, mount_data);
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int rel_mount(const char *driver_home, const char *id, const char *mount_data)
+{
+    int ret = 0;
+    char *mount_target = NULL;
+
+    mount_target = util_string_append("/merged", id);
+    if (mount_target == NULL) {
+        ERROR("Failed to join layer merged dir:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_mount_from(driver_home, "overlay", mount_target, "overlay", mount_data);
+    if (ret != 0) {
+        ERROR("Failed to mount %s with option \"%s\"", mount_target, mount_data);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(mount_target);
+    return ret;
+}
+
 static char *do_mount_layer(const char *id, const char *layer_dir, const struct graphdriver *driver,
                             const struct driver_mount_opts *mount_opts)
 {
-    int nret = 0;
     char *merged_dir = NULL;
     char *mount_data = NULL;
+    bool use_rel_mount = false;
 
-    mount_data = generate_mount_opt_data(id, layer_dir, driver, mount_opts);
+    mount_data = generate_mount_opt_data(id, layer_dir, driver, mount_opts, &use_rel_mount);
     if (mount_data == NULL) {
         ERROR("Failed to get mount data");
         goto error_out;
     }
 
-    merged_dir = util_path_join(layer_dir, "merged");
+    merged_dir = util_path_join(layer_dir, OVERLAY_LAYER_MERGED);
     if (merged_dir == NULL) {
         ERROR("Failed to join layer merged dir:%s", layer_dir);
         goto error_out;
     }
 
-    nret = util_mount("overlay", merged_dir, "overlay", mount_data);
-    if (nret != 0) {
-        ERROR("Failed to mount %s with option \"%s\"", merged_dir, mount_data);
-        goto error_out;
+    if (!use_rel_mount) {
+        if (abs_mount(layer_dir, merged_dir, mount_data) != 0) {
+            ERROR("Failed to mount %s with option \"%s\"", merged_dir, mount_data);
+            goto error_out;
+        }
+    } else {
+        if (rel_mount(driver->home, id, mount_data) != 0) {
+            ERROR("Failed to mount %s from %s with option \"%s\"", id, driver->home, mount_data);
+            goto error_out;
+        }
     }
 
     goto out;
@@ -1349,7 +1450,7 @@ int overlay2_umount_layer(const char *id, const struct graphdriver *driver)
         goto out;
     }
 
-    merged_dir = util_path_join(layer_dir, "merged");
+    merged_dir = util_path_join(layer_dir, OVERLAY_LAYER_MERGED);
     if (merged_dir == NULL) {
         ERROR("Failed to join layer merged dir:%s", layer_dir);
         ret = -1;
@@ -1473,7 +1574,7 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
         goto out;
     }
 
-    layer_diff = util_path_join(layer_dir, "diff");
+    layer_diff = util_path_join(layer_dir, OVERLAY_LAYER_DIFF);
     if (layer_diff == NULL) {
         ERROR("Failed to join layer diff dir:%s", id);
         ret = -1;
@@ -1557,7 +1658,7 @@ int overlay2_get_layer_metadata(const char *id, const struct graphdriver *driver
         goto out;
     }
 
-    work_dir = util_path_join(layer_dir, "work");
+    work_dir = util_path_join(layer_dir, OVERLAY_LAYER_WORK);
     if (work_dir == NULL) {
         ERROR("Failed to join layer work dir:%s", layer_dir);
         ret = -1;
@@ -1569,7 +1670,7 @@ int overlay2_get_layer_metadata(const char *id, const struct graphdriver *driver
         goto out;
     }
 
-    merged_dir = util_path_join(layer_dir, "merged");
+    merged_dir = util_path_join(layer_dir, OVERLAY_LAYER_MERGED);
     if (merged_dir == NULL) {
         ERROR("Failed to join layer merged dir:%s", layer_dir);
         ret = -1;
@@ -1581,7 +1682,7 @@ int overlay2_get_layer_metadata(const char *id, const struct graphdriver *driver
         goto out;
     }
 
-    upper_dir = util_path_join(layer_dir, "diff");
+    upper_dir = util_path_join(layer_dir, OVERLAY_LAYER_DIFF);
     if (upper_dir == NULL) {
         ERROR("Failed to join layer upper_dir dir:%s", layer_dir);
         ret = -1;
@@ -1625,6 +1726,8 @@ int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdri
     if (driver == NULL || status == NULL) {
         return -1;
     }
+
+    status->driver_name = util_strdup_s(driver->name);
 
     status->backing_fs = util_strdup_s(driver->backing_fs);
 

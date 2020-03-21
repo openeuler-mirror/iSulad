@@ -1112,10 +1112,9 @@ static int isulad_server_init_common()
     }
 
 #ifdef ENABLE_OCI_IMAGE
-    args->driver = graphdriver_init(args->json_confs->storage_driver, args->json_confs->graph,
-                                    args->json_confs->storage_opts,
-                                    args->json_confs->storage_opts_len);
-    if (args->driver == NULL) {
+    if (graphdriver_init(args->json_confs->storage_driver, args->json_confs->graph,
+                         args->json_confs->storage_opts,
+                         args->json_confs->storage_opts_len) != 0) {
         goto out;
     }
 #endif

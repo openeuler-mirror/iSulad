@@ -831,35 +831,28 @@ static bool is_storage_opts_valid(const json_map_string_string *storage_opts)
 static int verify_storage_opts(const host_config *hc)
 {
     int ret = 0;
-    char *driver = NULL;
     json_map_string_string *storage_opts = NULL;
+    struct graphdriver_status *driver_status = NULL;
 
     if (hc != NULL) {
         storage_opts = hc->storage_opt;
     }
 
-    driver = conf_get_isulad_storage_driver();
-    if (driver == NULL) {
-        ERROR("Failed to get storage driver");
-        return -1;
+    driver_status = graphdriver_get_status();
+    if (driver_status == NULL) {
+        ERROR("Failed to get graph driver status info!");
+        ret = -1;
+        goto cleanup;
     }
 
-    if (storage_opts == NULL || storage_opts->len == 0 || strcmp(driver, "overlay2") != 0) {
+    if (storage_opts == NULL || storage_opts->len == 0 || strcmp(driver_status->driver_name, "overlay2") != 0) {
         goto cleanup;
     }
 
     if (storage_opts->len > 0) {
-        char *backing_fs = NULL;
-        backing_fs = conf_get_isulad_storage_driver_backing_fs();
-        if (backing_fs == NULL) {
-            ERROR("No backing fs detected");
-            ret = -1;
-            goto cleanup;
-        }
-        if (strcmp(backing_fs, "xfs") == 0) {
+        if (strcmp(driver_status->backing_fs, "xfs") == 0) {
             WARN("Filesystem quota for overlay2 over xfs is not totally support");
         }
-        free(backing_fs);
     }
 
     if (!is_storage_opts_valid(storage_opts)) {
@@ -868,7 +861,7 @@ static int verify_storage_opts(const host_config *hc)
     }
 
 cleanup:
-    free(driver);
+    free_graphdriver_status(driver_status);
     return ret;
 }
 #endif

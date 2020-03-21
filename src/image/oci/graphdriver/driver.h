@@ -41,6 +41,7 @@ struct driver_mount_opts {
 };
 
 struct graphdriver_status {
+    char *driver_name;
     char *backing_fs;
     char *status;
 };
@@ -88,10 +89,8 @@ struct graphdriver {
     struct overlay_options *overlay_opts;
 };
 
-struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
-                                     size_t storage_opts_len);
-
-struct graphdriver *graphdriver_get(void);
+int graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
+                     size_t storage_opts_len);
 
 int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts);
 

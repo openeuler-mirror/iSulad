@@ -60,25 +60,29 @@ static struct graphdriver g_drivers[] = {
 
 static const size_t g_numdrivers = sizeof(g_drivers) / sizeof(struct graphdriver);
 
-struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
-                                     size_t storage_opts_len)
+int graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
+                     size_t storage_opts_len)
 {
+    int ret = 0;
     size_t i = 0;
     char driver_home[PATH_MAX] = { 0 };
 
     if (name == NULL || storage_opts == NULL || isulad_root == NULL) {
-        return NULL;
+        ret = -1;
+        goto out;
     }
 
     int nret = snprintf(driver_home, PATH_MAX, "%s/%s/%s", isulad_root, "storage", name);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Sprintf graph driver path failed");
-        return NULL;
+        ret = -1;
+        goto out;
     }
 
     for (i = 0; i < g_numdrivers; i++) {
         if (strcmp(name, g_drivers[i].name) == 0) {
             if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)storage_opts, storage_opts_len) != 0) {
+                ret = -1;
                 goto out;
             }
             g_graphdriver = &g_drivers[i];
@@ -86,15 +90,26 @@ struct graphdriver *graphdriver_init(const char *name, const char *isulad_root, 
         }
     }
 
+    if (i == g_numdrivers) {
+        ERROR("unsupported driver %s", name);
+        ret = -1;
+        goto out;
+    }
+
+    //just for test
+    struct driver_create_opts test_create_opts = { 0 };
+    struct driver_mount_opts test_mount_opts = { 0 };
+    graphdriver_create_ro("1", "", &test_create_opts);
+    graphdriver_create_ro("2", "1", &test_create_opts);
+    graphdriver_create_ro("3", "2", &test_create_opts);
+    graphdriver_create_ro("4", "3", &test_create_opts);
+    graphdriver_create_rw("5", "4", &test_create_opts);
+    ERROR("mount: %s", graphdriver_mount_layer("5", &test_mount_opts));
+    //end test
+
 out:
-    return g_graphdriver;
+    return ret;
 }
-
-struct graphdriver *graphdriver_get()
-{
-    return g_graphdriver;
-}
-
 
 int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts)
 {
@@ -251,8 +266,12 @@ void free_graphdriver_status(struct graphdriver_status *status)
     if (status == NULL) {
         return;
     }
+    free(status->driver_name);
+    status->driver_name = NULL;
     free(status->backing_fs);
+    status->backing_fs = NULL;
     free(status->status);
+    status->status = NULL;
     free(status);
 }
 

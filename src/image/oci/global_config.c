@@ -24,48 +24,7 @@
 static int pack_global_graph_driver(const char * const *options, bool ignore_storage_opt_size, char *params[],
                                     size_t *count)
 {
-    int ret = -1;
-    char *graph_driver = NULL;
-    char **graph_opts = NULL;
-    char **p = NULL;
-    size_t i = 0;
-
-    i = *count;
-
-    graph_driver = conf_get_isulad_storage_driver();
-    if (graph_driver == NULL) {
-        COMMAND_ERROR("Failed to get graph driver");
-        goto out;
-    }
-
-    if (strcmp(graph_driver, "overlay2") == 0) {
-        // Treating overlay2 as overlay cause image was downloaded always
-        // in '/var/lib/isulad/storage/overlay' directory.
-        // See iSulad-img/vendor/github.com/containers/storage/drivers/overlay/overlay.go,
-        // Driver is inited by name "overlay".
-        graph_driver[strlen(graph_driver) - 1] = '\0';
-    }
-    add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_DRIVER_NAME], graph_driver);
-
-    graph_opts = conf_get_storage_opts();
-    // since iSulad-img will set quota when pull image, which is differ from docker,
-    // and we may get some error if setted, ignore it if neccessary.
-    for (p = graph_opts; (p != NULL) && (*p != NULL); p++) {
-        add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_DRIVER_OPTIONS], *p);
-    }
-
-    if (strcmp(graph_driver, "devicemapper") == 0) {
-        // option "test=false" is used when devicemapper thinpool is created automatically by iSulad-kit.
-        // Make "test" always be true to avoid config check as we always create thinpool manually.
-        add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_DRIVER_OPTIONS], "test=true");
-    }
-
-    ret = 0;
-    *count = i;
-out:
-    free(graph_driver);
-    util_free_array(graph_opts);
-    return ret;
+    return 0;
 }
 #endif
 

@@ -456,7 +456,7 @@ int util_mount(const char *src, const char *dst, const char *mtype, const char *
 
     if ((mntflags & MS_REMOUNT) != MS_REMOUNT) {
         if (util_detect_mounted(dst)) {
-            DEBUG("mount dst %s had been mounted, skip mount", dst);
+            ERROR("mount dst %s had been mounted, skip mount", dst);
             ret = 0;
             goto out;
         }
@@ -490,5 +490,73 @@ int util_ensure_mounted_as(const char *dst, const char *mntopts)
     ret = util_force_mount("", dst, "none", mntopts);
 
 out:
+    return ret;
+}
+
+static int util_mount_from_handler(const char *src, const char *dst, const char *mtype, const char *mntopts)
+{
+    int ret = 0;
+    unsigned long mntflags = 0L;
+    char *mntdata = NULL;
+
+    ret = util_parse_mntopts(mntopts, &mntflags, &mntdata);
+    if (ret != 0) {
+        ERROR("Failed to parse mount options:%s", mntopts);
+        ret = -1;
+        goto out;
+    }
+
+    ret = mount(src, dst, mtype, mntflags, mntdata);
+    if (ret < 0) {
+        ERROR("Failed to mount from %s to %s:%s", src, dst, strerror(errno));
+        goto out;
+    }
+out:
+    return ret;
+}
+
+int util_mount_from(const char *base, const char *src, const char *dst, const char *mtype, const char *mntopts)
+{
+    int ret = 0;
+    pid_t pid = -1;
+    int keepfds[] = {-1};
+
+    pid = fork();
+    if (pid == (pid_t) - 1) {
+        ERROR("Failed to fork: %s", strerror(errno));
+        goto cleanup;
+    }
+
+    if (pid == (pid_t)0) {
+        keepfds[0] = log_get_log_fd();
+        ret = util_check_inherited_exclude_fds(true, keepfds, 1);
+        if (ret != 0) {
+            ERROR("Failed to close fds.");
+            ret = -1;
+            goto child_out;
+        }
+
+        if (chdir(base) != 0) {
+            SYSERROR("Failed to chroot to %s", base);
+            ret = -1;
+            goto child_out;
+        }
+
+        ret = util_mount_from_handler(src, dst, mtype, mntopts);
+
+child_out:
+        if (ret != 0) {
+            exit(EXIT_FAILURE);
+        } else {
+            exit(EXIT_SUCCESS);
+        }
+    }
+
+    ret = wait_for_pid(pid);
+    if (ret != 0) {
+        ERROR("Wait util_mount_from failed");
+    }
+
+cleanup:
     return ret;
 }

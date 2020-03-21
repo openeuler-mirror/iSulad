@@ -39,9 +39,7 @@ struct service_arguments {
 
     // struct service_arguments *server_conf;
     isulad_daemon_configs *json_confs;
-#ifdef ENABLE_OCI_IMAGE
-    struct graphdriver *driver;
-#endif
+
     /* parsed configs */
     oci_runtime_spec_hooks *hooks;
 
