@@ -316,7 +316,7 @@ static int check_parent_valid(const char *parent, const struct graphdriver *driv
     if (strcmp(parent, "") != 0) {
         parent_dir = util_path_join(driver->home, parent);
         if (parent_dir == NULL) {
-            ERROR("Failed to join layer dir:%S", parent);
+            ERROR("Failed to join layer dir:%s", parent);
             ret = -1;
             goto out;
         }
@@ -338,7 +338,7 @@ static int mk_diff_directory(const char *layer_dir)
 
     diff_dir = util_path_join(layer_dir, "diff");
     if (diff_dir == NULL) {
-        ERROR("Failed to join layer diff dir:%S", layer_dir);
+        ERROR("Failed to join layer diff dir:%s", layer_dir);
         ret = -1;
         goto out;
     }
@@ -439,7 +439,7 @@ static int mk_work_directory(const char *layer_dir)
 
     work_dir = util_path_join(layer_dir, "work");
     if (work_dir == NULL) {
-        ERROR("Failed to join layer work dir:%S", layer_dir);
+        ERROR("Failed to join layer work dir:%s", layer_dir);
         ret = -1;
         goto out;
     }
@@ -462,7 +462,7 @@ static int mk_merged_directory(const char *layer_dir)
 
     merged_dir = util_path_join(layer_dir, "merged");
     if (merged_dir == NULL) {
-        ERROR("Failed to join layer merged dir:%S", layer_dir);
+        ERROR("Failed to join layer merged dir:%s", layer_dir);
         ret = -1;
         goto out;
     }
@@ -485,7 +485,7 @@ static int mk_empty_directory(const char *layer_dir)
 
     empty_dir = util_path_join(layer_dir, "empty");
     if (empty_dir == NULL) {
-        ERROR("Failed to join layer empty dir:%S", empty_dir);
+        ERROR("Failed to join layer empty dir:%s", empty_dir);
         ret = -1;
         goto out;
     }
@@ -686,7 +686,7 @@ static int do_create(const char *id, const char *parent, const struct graphdrive
 
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
-        ERROR("Failed to join layer dir:%S", id);
+        ERROR("Failed to join layer dir:%s", id);
         ret = -1;
         goto out;
     }
@@ -863,7 +863,7 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
 
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
-        ERROR("Failed to join layer dir:%S", id);
+        ERROR("Failed to join layer dir:%s", id);
         ret = -1;
         goto out;
     }
@@ -1306,7 +1306,7 @@ char *overlay2_mount_layer(const char *id, const struct graphdriver *driver, con
 
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
-        ERROR("Failed to join layer dir:%S", id);
+        ERROR("Failed to join layer dir:%s", id);
         goto out;
     }
 
@@ -1338,7 +1338,7 @@ int overlay2_umount_layer(const char *id, const struct graphdriver *driver)
 
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
-        ERROR("Failed to join layer dir:%S", id);
+        ERROR("Failed to join layer dir:%s", id);
         ret = -1;
         goto out;
     }
@@ -1351,7 +1351,7 @@ int overlay2_umount_layer(const char *id, const struct graphdriver *driver)
 
     merged_dir = util_path_join(layer_dir, "merged");
     if (merged_dir == NULL) {
-        ERROR("Failed to join layer merged dir:%S", layer_dir);
+        ERROR("Failed to join layer merged dir:%s", layer_dir);
         ret = -1;
         goto out;
     }
@@ -1375,7 +1375,7 @@ bool is_valid_layer_link(const char *link_id, const struct graphdriver *driver)
 
     link_dir = util_path_join(driver->home, OVERLAY_LINK_DIR);
     if (link_dir == NULL) {
-        ERROR("Failed to join layer link dir:%S", driver->home);
+        ERROR("Failed to join layer link dir:%s", driver->home);
         valid = false;
         goto out;
     }
@@ -1388,7 +1388,7 @@ bool is_valid_layer_link(const char *link_id, const struct graphdriver *driver)
 
     link_file = util_path_join(link_dir, link_id);
     if (link_file == NULL) {
-        ERROR("Failed to join layer link file:%S", link_id);
+        ERROR("Failed to join layer link file:%s", link_id);
         valid = false;
         goto out;
     }
@@ -1419,7 +1419,7 @@ bool overlay2_layer_exists(const char *id, const struct graphdriver *driver)
 
     layer_dir = util_path_join(driver->home, id);
     if (layer_dir == NULL) {
-        ERROR("Failed to join layer dir:%S", id);
+        ERROR("Failed to join layer dir:%s", id);
         exists = false;
         goto out;
     }
@@ -1432,7 +1432,7 @@ bool overlay2_layer_exists(const char *id, const struct graphdriver *driver)
 
     link_id = read_layer_link_file(layer_dir);
     if (link_id == NULL) {
-        ERROR("Failed to get layer link data:%S", layer_dir);
+        ERROR("Failed to get layer link data:%s", layer_dir);
         exists = false;
         goto out;
     }

@@ -136,6 +136,8 @@ static int ext4_set_quota(const char *target, struct pquota_control *ctrl, uint6
     }
     ctrl->next_project_id++;
 
+    EVENT("Set directory %s project ID:%u quota size: %llu", target, project_id, size);
+
     if (ext4_set_project_quota(ctrl->backing_fs_device, project_id, size) != 0) {
         ERROR("Failed to set project id %d to %s.", project_id, target);
         ret = -1;
@@ -189,6 +191,8 @@ static int xfs_set_quota(const char *target, struct pquota_control *ctrl, uint64
         goto unlock;
     }
     ctrl->next_project_id++;
+
+    EVENT("Set directory %s project ID:%u quota size: %llu", target, project_id, size);
 
     if (xfs_set_project_quota(ctrl->backing_fs_device, project_id, size) != 0) {
         ERROR("Failed to set project id %d to %s.", project_id, target);
