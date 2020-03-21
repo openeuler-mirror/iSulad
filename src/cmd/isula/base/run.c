@@ -31,9 +31,6 @@ static int run_checker(struct client_arguments *args);
 struct client_arguments g_cmd_run_args = {
     .runtime = "",
     .restart = "no",
-    .log_file = NULL,
-    .log_file_size = "1MB",
-    .log_file_rotate = 7,
 };
 
 static int local_cmd_start(struct client_arguments *args, uint32_t *exit_code)

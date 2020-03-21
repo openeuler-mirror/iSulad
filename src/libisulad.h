@@ -27,10 +27,6 @@ extern "C" {
 /* record the isulad errmsg */
 extern __thread char *g_isulad_errmsg;
 
-#define CONTAINER_LOG_CONFIG_KEY_FILE "log.console.file"
-#define CONTAINER_LOG_CONFIG_KEY_ROTATE "log.console.filerotate"
-#define CONTAINER_LOG_CONFIG_KEY_SIZE "log.console.filesize"
-
 #define BLOBS_PATH "blobs/sha256"
 #define DIFF_LAYERS_PATH "snapshots/diff"
 #define DEFAULT_TCP_HOST "tcp://localhost:2375"
@@ -149,11 +145,6 @@ struct create_custom_config {
     /* init command args */
     int command_len;
     char * const *commands;
-
-    /* console log options */
-    char *log_file;
-    char *log_file_size;
-    unsigned int log_file_rotate;
 
     char *share_ns[NAMESPACE_MAX];
 };
@@ -292,6 +283,7 @@ struct isulad_create_image_response {
 };
 
 struct container_log_config {
+    char *driver;
     char *path;
     int rotate;
     int64_t size;

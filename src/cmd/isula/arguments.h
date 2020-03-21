@@ -235,9 +235,8 @@ struct client_arguments {
     char *external_rootfs;
     char *create_rootfs;
     char *image_name;
-    char *log_file;
-    char *log_file_size;
-    unsigned int log_file_rotate;
+
+    char *log_driver;
 
     /* notes: we should free the mem in custom_conf by hand */
     struct custom_configs custom_conf;

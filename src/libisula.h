@@ -69,11 +69,7 @@ typedef struct isula_container_config {
     char **cmd;
     size_t cmd_len;
 
-    char *log_file;
-
-    char *log_file_size;
-
-    unsigned int log_file_rotate;
+    char *log_driver;
 
     json_map_string_string *annotations;
 

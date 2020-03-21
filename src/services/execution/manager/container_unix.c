@@ -427,6 +427,7 @@ int v2_spec_make_basic_info(const char *id, const char *name, const char *image_
 int v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
+    int i = 0;
     container_config *container_spec = NULL;
 
     if (v2_spec == NULL) {
@@ -435,8 +436,13 @@ int v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec)
 
     container_spec = v2_spec->config;
 
-    if (container_spec->log_config != NULL && container_spec->log_config->log_file != NULL) {
-        v2_spec->log_path = util_strdup_s(container_spec->log_config->log_file);
+    if (container_spec->annotations != NULL) {
+        for (; i < container_spec->annotations->len; i++) {
+            if (strcmp(container_spec->annotations->keys[i], CONTAINER_LOG_CONFIG_KEY_FILE) == 0) {
+                v2_spec->log_path = util_strdup_s(container_spec->annotations->values[i]);
+                break;
+            }
+        }
     }
 
     if (pack_path_and_args_from_container_spec(container_spec, v2_spec) != 0) {
@@ -678,6 +684,8 @@ static int do_parse_container_log_config(const char *key, const char *value, con
         return util_safe_int(value, &(cont->log_rotate));
     } else if (strcmp(key, CONTAINER_LOG_CONFIG_KEY_SIZE) == 0) {
         return util_parse_byte_size_string(value, &(cont->log_maxsize));
+    } else if (strcmp(key, CONTAINER_LOG_CONFIG_KEY_DRIVER) == 0) {
+        cont->log_driver = util_strdup_s(value);
     }
     return 0;
 }

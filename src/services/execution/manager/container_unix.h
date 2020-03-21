@@ -51,6 +51,7 @@ typedef struct _container_t_ {
     health_check_manager_t *health_check;
 
     /* log configs of container */
+    char *log_driver;
     char *log_path;
     int log_rotate;
     int64_t log_maxsize;
