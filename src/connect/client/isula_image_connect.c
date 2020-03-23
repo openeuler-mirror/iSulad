@@ -470,6 +470,20 @@ void free_isula_storage_status_response(struct isula_storage_status_response *pt
     free(ptr);
 }
 
+void free_isula_storage_metadata_response(struct isula_storage_metadata_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_json_map_string_string(ptr->metadata);
+    ptr->metadata = NULL;
+    free(ptr->name);
+    ptr->name = NULL;
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+    free(ptr);
+}
+
 void free_isula_health_check_request(struct isula_health_check_request *ptr)
 {
     if (ptr == NULL) {

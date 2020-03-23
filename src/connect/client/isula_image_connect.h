@@ -230,6 +230,19 @@ struct isula_storage_status_response {
     uint32_t server_errono;
 };
 
+struct isula_storage_metadata_request {
+    char *container_id;
+};
+
+struct isula_storage_metadata_response {
+    json_map_string_string *metadata;
+    char *name;
+
+    char *errmsg;
+    uint32_t cc;
+    uint32_t server_errono;
+};
+
 struct isula_container_fs_usage_request {
     char *name_id;
 };
@@ -297,6 +310,10 @@ typedef struct {
     int (*storage_status)(const struct isula_storage_status_request *req, struct isula_storage_status_response *resp,
                           void *arg);
 
+    int (*storage_metadata)(const struct isula_storage_metadata_request *req,
+                            struct isula_storage_metadata_response *resp,
+                            void *arg);
+
     int (*health_check)(const struct isula_health_check_request *req,
                         struct isula_health_check_response *resp, void *arg);
 } isula_image_ops;
@@ -354,6 +371,8 @@ void free_isula_container_fs_usage_response(struct isula_container_fs_usage_resp
 
 void free_isula_storage_status_request(struct isula_storage_status_request *ptr);
 void free_isula_storage_status_response(struct isula_storage_status_response *ptr);
+
+void free_isula_storage_metadata_response(struct isula_storage_metadata_response *ptr);
 
 void free_isula_health_check_request(struct isula_health_check_request *ptr);
 void free_isula_health_check_response(struct isula_health_check_response *ptr);
