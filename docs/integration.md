@@ -29,7 +29,7 @@
 3. Start `kubelet` based on the configuration or default value:
 
    ```bash
-   $ /usr/bin/bubelet 
+   $ /usr/bin/kubelet 
    --container-runtime-endpoint=unix:///var/run/isulad.sock
    --image-service-endpoint=unix:///var/run/isulad.sock 
    --pod-infra-container-image=my-pause:1.0.0
