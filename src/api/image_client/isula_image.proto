@@ -78,6 +78,9 @@ service ImageService {
     // get status of graphdriver
     rpc GraphdriverStatus(GraphdriverStatusRequest) returns (GraphdriverStatusResponse) {}
 
+    // get metadata of graphdriver
+    rpc GraphdriverMetadata(GraphdriverMetadataRequest) returns (GraphdriverMetadataResponse) {}
+
     // login registry
     rpc Login(LoginRequest) returns (LoginResponse) {}
     // logout registry
@@ -144,6 +147,17 @@ message GraphdriverStatusResponse {
     string status = 1;
     string errmsg = 2;
     uint32 cc = 3;
+}
+
+message GraphdriverMetadataRequest {
+    string name_id = 1;
+}
+
+message GraphdriverMetadataResponse {
+    map<string,string> metadata = 1;
+    string name = 2;
+    string errmsg = 3;
+    uint32 cc = 4;
 }
 
 message ContainerFsUsageRequest {

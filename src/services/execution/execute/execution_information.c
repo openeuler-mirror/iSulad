@@ -199,8 +199,10 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     struct utsname u;
     im_image_count_request *im_request = NULL;
     char *rootpath = NULL;
+#ifdef ENABLE_OCI_IMAGE
     char *graph_driver = NULL;
     struct graphdriver_status *driver_status = NULL;
+#endif
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -334,8 +336,10 @@ pack_response:
         (*response)->cc = cc;
     }
     free(rootpath);
+#ifdef ENABLE_OCI_IMAGE
     free(graph_driver);
     free_graphdriver_status(driver_status);
+#endif
     free(huge_page_size);
     free(operating_system);
     free_im_image_count_request(im_request);
@@ -1339,6 +1343,15 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
         ret = -1;
         goto out;
     }
+
+#ifdef ENABLE_OCI_IMAGE
+    inspect->graph_driver = graphdriver_get_metadata(cont->common_config->id);
+    if (inspect->graph_driver == NULL) {
+        ret = -1;
+        goto out;
+    }
+#endif
+
 out:
     *out_inspect = inspect;
     return ret;

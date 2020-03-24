@@ -59,6 +59,12 @@ typedef struct {
 } im_storage_status_response;
 
 typedef struct {
+    json_map_string_string *metadata;
+    char *name;
+    char *errmsg;
+} im_storage_metadata_response;
+
+typedef struct {
     imagetool_fs_info *fs_info;
     char *errmsg;
 } im_fs_info_response;
@@ -238,6 +244,8 @@ struct bim_ops {
 
     int (*get_storage_status)(im_storage_status_response **response);
 
+    int (*get_storage_metadata)(char *id, im_storage_metadata_response **response);
+
     /* load image */
     int (*load_image)(const im_load_request *request);
 
@@ -362,6 +370,10 @@ void free_im_fs_info_response(im_fs_info_response *ptr);
 int im_get_storage_status(const char *image_type, im_storage_status_response **response);
 
 void free_im_storage_status_response(im_storage_status_response *ptr);
+
+int im_get_storage_metadata(const char *image_type, char *id, im_storage_metadata_response **response);
+
+void free_im_storage_metadata_response(im_storage_metadata_response *ptr);
 
 size_t im_get_image_count(const im_image_count_request *request);
 
