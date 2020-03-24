@@ -344,7 +344,7 @@ static bool fs_support_quota(const char *fs)
         return false;
     }
 
-    return (strcmp(fs, "xfs") == 0 || strcmp(fs, "ext4") == 0);
+    return (strcmp(fs, "xfs") == 0 || strcmp(fs, "extfs") == 0);
 }
 
 struct pquota_control *project_quota_control_init(const char *home_dir, const char *fs)
@@ -397,7 +397,7 @@ struct pquota_control *project_quota_control_init(const char *home_dir, const ch
 
     ctrl->backing_fs_type = util_strdup_s(fs);
 
-    if (strcmp(ctrl->backing_fs_type, "ext4") == 0) {
+    if (strcmp(ctrl->backing_fs_type, "extfs") == 0) {
         ctrl->set_quota = ext4_set_quota;
     } else {
         ctrl->set_quota = xfs_set_quota;
