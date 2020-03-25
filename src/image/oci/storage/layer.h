@@ -16,6 +16,10 @@
 #ifndef __OCI_STORAGE_LAYER_H
 #define __OCI_STORAGE_LAYER_H
 
+#include <stdint.h>
+
+#include "defs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,10 +31,15 @@ struct layer_config {
     char **driver_opts;
     size_t driver_opts_len;
 
+    defs_id_mapping *uid_map;
+    size_t uid_map_len;
+    defs_id_mapping *gid_map;
+    size_t gid_map_len;
+
 };
 
 struct layer_store_ops {
-    int (*init)(const struct im_configs *conf);
+    int (*init)(const struct layer_config *conf);
 };
 
 #ifdef __cplusplus
