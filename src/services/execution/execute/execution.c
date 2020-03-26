@@ -256,8 +256,7 @@ static int umount_dev_tmpfs_for_system_container(const container_t *cont)
             return -1;
         }
         if (umount(rootfs_dev_path) < 0 && errno != ENOENT) {
-            ERROR("Failed to umount dev tmpfs: %s, error: %s", rootfs_dev_path, strerror(errno));
-            return -1;
+            WARN("Failed to umount dev tmpfs: %s, error: %s", rootfs_dev_path, strerror(errno));
         }
     }
     return 0;
