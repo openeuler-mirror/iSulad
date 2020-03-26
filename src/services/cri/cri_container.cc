@@ -867,6 +867,10 @@ void CRIRuntimeServiceImpl::PackContainerStatsAttributes(
 
     container->mutable_attributes()->set_id(id);
     auto status = ContainerStatus(std::string(id), error);
+    if (status == nullptr) {
+        return;
+    }
+
     if (status->has_metadata()) {
         std::unique_ptr<runtime::v1alpha2::ContainerMetadata> metadata(
             new (std::nothrow) runtime::v1alpha2::ContainerMetadata(status->metadata()));

@@ -26,6 +26,7 @@
 #include "engine.h"
 #include "constants.h"
 #include "shim_client_process_state.h"
+#include "shim_client_runtime_stats.h"
 #include "oci_runtime_state.h"
 #include "isulad_config.h"
 #include "utils_string.h"
@@ -499,6 +500,60 @@ static int runtime_call_status(const char *workdir, const char *runtime,
 
 out:
     free_oci_runtime_state(state);
+    UTIL_FREE_AND_SET_NULL(stdout);
+    UTIL_FREE_AND_SET_NULL(stderr);
+    UTIL_FREE_AND_SET_NULL(perr);
+    return ret;
+}
+
+static int runtime_call_stats(const char *workdir, const char *runtime,
+                              const char *id, struct engine_container_resources_stats_info *info)
+{
+    char *stdout = NULL;
+    char *stderr = NULL;
+    shim_client_runtime_stats *stats = NULL;
+    struct parser_context ctx = {OPT_GEN_SIMPLIFY, 0};
+    parser_error perr = NULL;
+    runtime_exec_info rei = { 0 };
+    int ret = 0;
+    char *params[PARAM_NUM] = {0};
+    const char *opts[1] = {"--stats"};
+
+    runtime_exec_info_init(&rei, workdir, runtime, "events", opts, 1, id, params, PARAM_NUM);
+
+    if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
+        ERROR("call runtime events --stats failed: %s", stderr);
+        ret = -1;
+        goto out;
+    }
+
+    if (stdout == NULL) {
+        ERROR("call runtime events --stats no stdout");
+        ret = -1;
+        goto out;
+    }
+
+    stats = shim_client_runtime_stats_parse_data(stdout, &ctx, &perr);
+    if (stats == NULL) {
+        ERROR("call runtime events --stats parse json failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (stats != NULL && stats->data != NULL && stats->data->pids != NULL) {
+        info->pids_current = stats->data->pids->current;
+    }
+    if (stats != NULL && stats->data != NULL && stats->data->cpu != NULL && stats->data->cpu->usage) {
+        info->cpu_use_nanos = stats->data->cpu->usage->total;
+        info->cpu_system_use = stats->data->cpu->usage->kernel;
+    }
+    if (stats != NULL && stats->data != NULL && stats->data->memory != NULL && stats->data->memory->usage) {
+        info->mem_used = stats->data->memory->usage->usage;
+        info->mem_limit = stats->data->memory->usage->limit;
+    }
+
+out:
+    free_shim_client_runtime_stats(stats);
     UTIL_FREE_AND_SET_NULL(stdout);
     UTIL_FREE_AND_SET_NULL(stderr);
     UTIL_FREE_AND_SET_NULL(perr);
@@ -1095,13 +1150,34 @@ int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_p
     return -1;
 }
 
-int rt_isula_resources_stats(const char *name, const char *runtime,
+int rt_isula_resources_stats(const char *id, const char *runtime,
                              const rt_stats_params_t *params,
                              struct engine_container_resources_stats_info *rs_stats)
 {
-    ERROR("isula stats not support on isulad-shim");
-    isulad_set_error_message("isula stats not support on isulad-shim");
-    return -1;
+    char workdir[PATH_MAX] = {0};
+    int ret = 0;
+
+    if (id == NULL || runtime == NULL || params == NULL || rs_stats == NULL) {
+        ERROR("nullptr arguments not allowed");
+        return -1;
+    }
+
+    ret = snprintf(workdir, sizeof(workdir), "%s/%s", params->state, id);
+    if (ret < 0) {
+        ERROR("failed join full workdir %s/%s", params->rootpath, id);
+        goto out;
+    }
+
+    if (!shim_alive(workdir)) {
+        ERROR("shim dead %s", workdir);
+        ret = -1;
+        goto out;
+    }
+
+    ret = runtime_call_stats(workdir, runtime, id, rs_stats);
+
+out:
+    return ret;
 }
 
 int rt_isula_resize(const char *id, const char *runtime, const rt_resize_params_t *params)

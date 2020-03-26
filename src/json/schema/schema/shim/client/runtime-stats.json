@@ -1,0 +1,54 @@
+{
+    "description": "runtime stats",
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "object",
+            "properties": {
+                "pids": {
+                    "type": "object",
+                    "properties": {
+                        "current": {
+                            "$ref": "../../defs.json#/definitions/uint64"
+                        }
+                    }
+                },
+                "cpu": {
+                    "type": "object",
+                    "properties": {
+                        "usage": {
+                            "type": "object",
+                            "properties": {
+                                "kernel": {
+                                    "$ref": "../../defs.json#/definitions/uint64"
+                                },
+                                "user": {
+                                    "$ref": "../../defs.json#/definitions/uint64"
+                                },
+                                "total": {
+                                    "$ref": "../../defs.json#/definitions/uint64"
+                                }
+                            }
+                        }
+                    }
+                },
+                "memory": {
+                    "type": "object",
+                    "properties": {
+                        "usage": {
+                            "type": "object",
+                            "properties": {
+                                "usage": {
+                                    "$ref": "../../defs.json#/definitions/uint64"
+                                },
+                                "limit": {
+                                    "$ref": "../../defs.json#/definitions/uint64"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
