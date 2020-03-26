@@ -17,12 +17,6 @@
         "mountlabel": {
             "type": "string"
         },
-        "mountpoint": {
-            "type": "string"
-        },
-        "mountcount": {
-            "type": "string"
-        },
         "created": {
             "type": "string"
         },

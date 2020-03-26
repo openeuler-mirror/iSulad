@@ -1,4 +1,3 @@
-
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
  * iSulad licensed under the Mulan PSL v1.
@@ -10,37 +9,40 @@
  * PURPOSE.
  * See the Mulan PSL v1 for more details.
  * Author: liuhao
- * Create: 2020-03-24
- * Description: provide layer store function definition
+ * Create: 2020-03-26
+ * Description: provide layer function definition
  ******************************************************************************/
 #ifndef __OCI_STORAGE_LAYER_H
 #define __OCI_STORAGE_LAYER_H
 
 #include <stdint.h>
 
-#include "defs.h"
+#include "storage_layer.h"
+#include "storage_mount_point.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct layer_config {
-    /*configs for graph driver */
-    char *driver_name;
-    char *driver_root;
-    char **driver_opts;
-    size_t driver_opts_len;
+typedef struct _layer_t_ {
+    pthread_mutex_t mutex;
+    bool init_mutex;
 
-    defs_id_mapping *uid_map;
-    size_t uid_map_len;
-    defs_id_mapping *gid_map;
-    size_t gid_map_len;
+    char *layer_json_path;
+    storage_layer *slayer;
 
-};
+    char *mount_point_json_path;
+    storage_mount_point *smount_point;
 
-struct layer_store_ops {
-    int (*init)(const struct layer_config *conf);
-};
+    uint64_t refcnt;
+} layer_t;
+
+void layer_ref_inc(layer_t *layer);
+void layer_ref_dec(layer_t *layer);
+layer_t *load_layer(const char *fname, const char *mountpoint_fname);
+int save_layer(layer_t *layer);
+int save_mount_point(layer_t *layer);
+void free_layer_t(layer_t *ptr);
 
 #ifdef __cplusplus
 }
