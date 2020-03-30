@@ -698,12 +698,12 @@ out:
     return ret;
 }
 
-static int write_env_to_target_file(const container_t *cont)
+static int write_env_to_target_file(const container_t *cont, const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
     char *env_path = NULL;
 
-    if (cont->hostconfig->env_target_file == NULL || cont->common_config->config == NULL) {
+    if (cont->hostconfig->env_target_file == NULL || oci_spec->process == NULL) {
         return 0;
     }
     env_path = util_path_join(cont->common_config->base_fs, cont->hostconfig->env_target_file);
@@ -712,8 +712,8 @@ static int write_env_to_target_file(const container_t *cont)
         return -1;
     }
     ret = write_env_content(env_path,
-                            (const char **)cont->common_config->config->env,
-                            cont->common_config->config->env_len);
+                            (const char **)oci_spec->process->env,
+                            oci_spec->process->env_len);
     free(env_path);
     return ret;
 }
@@ -809,11 +809,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto out;
     }
 
-    if (write_env_to_target_file(cont) < 0) {
-        ret = -1;
-        goto out;
-    }
-
     if (reset_rm && !reset_restart_manager(cont, true)) {
         ERROR("Failed to reset restart manager");
         isulad_set_error_message("Failed to reset restart manager");
@@ -835,6 +830,11 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     oci_spec = load_oci_config(cont->root_path, id);
     if (oci_spec == NULL) {
         ERROR("Failed to load oci config");
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    if (write_env_to_target_file(cont, oci_spec) < 0) {
         ret = -1;
         goto close_exit_fd;
     }
