@@ -33,6 +33,7 @@
    --container-runtime-endpoint=unix:///var/run/isulad.sock
    --image-service-endpoint=unix:///var/run/isulad.sock 
    --pod-infra-container-image=my-pause:1.0.0
+   --container-runtime=remote
    ...
    ```
 
@@ -44,10 +45,6 @@ RuntimeClass is used for selecting the container runtime configuration to use to
 
    ```json
    "runtimes": {
-           "runc":{
-               "path": "/usr/bin/runc",
-               "runtime-args": []
-           },
            "kata-runtime": {
                "path": "/usr/bin/kata-runtime",
                "runtime-args": [
@@ -92,7 +89,7 @@ RuntimeClass is used for selecting the container runtime configuration to use to
    $ sudo systemctl restart isulad
    ```
 
-4. Define `RuntimeClass CRD` for example:
+4. Define `kata-runtime.yaml` for example:
 
    ```yaml
    apiVersion: node.k8s.io/v1beta1
@@ -101,6 +98,8 @@ RuntimeClass is used for selecting the container runtime configuration to use to
      name: kata-runtime
    handler: kata-runtime
    ```
+
+   Execute `kubectl apply -f kata-runtime.yaml`
 
 5. Define pod spec `kata-pod.yaml` for example:
 
@@ -116,7 +115,6 @@ RuntimeClass is used for selecting the container runtime configuration to use to
        image: busybox:latest
        command: ["/bin/sh"]
        args: ["-c", "sleep 1000"]
-     hostNetwork: true
    ```
 
 6. Run pod:
@@ -128,4 +126,91 @@ RuntimeClass is used for selecting the container runtime configuration to use to
    kata-pod-example   1/1     Running   4          2s
    ```
 
-   
+
+## CNI Network Configuration
+
+iSulad realize the CRI interface to connect to the CNI network, parse the CNI network configuration files, join or exit CNI network. In this section, we call CRI interface to start pod to verify the CNI network configuration for simplicity.
+
+1. Configure `isulad` in `/etc/isulad/daemon.json` :
+
+   ```json
+   "network-plugin": "cni",
+   "cni-bin-dir": "/opt/cni/bin",
+   "cni-conf-dir": "/etc/cni/net.d",
+   ```
+
+2. Prepare CNI network plugins:
+
+   Compile and genetate the CNI plugin binaries, and copy binaries to the directory `/opt/cni/bin`.
+
+   ```bash
+   $ git clone https://github.com/containernetworking/plugins.git
+   $ cd plugins && ./build_linux.sh
+   $ cd ./bin && ls
+   bandwidth bridge dhcp firewall flannel ...
+   ```
+
+3. Prepare CNI network configuration:
+
+   The conf file suffix can be `.conflist` or  `.conf`, the difference is whether it contains multiple plugins. For example, we create `10-mynet.conflist`  file under directory `/etc/cni/net.d/`, the content is as follows:
+
+   ```json
+   {
+       "cniVersion": "0.3.1",
+       "name": "default",
+       "plugins": [
+           {
+               "name": "default",
+               "type": "ptp",
+               "ipMasq": true,
+               "ipam": {
+                   "type": "host-local",
+                   "subnet": "10.1.0.0/16",
+                   "routes": [
+                       {
+                           "dst": "0.0.0.0/0"
+                       }
+                   ]
+               }
+           },
+           {
+               "type": "portmap",
+               "capabilities": {
+                   "portMappings": true
+               }
+           }
+       ]
+   }
+   ```
+
+4. Configure sandbox-config.json :
+
+   ```json
+   {
+       "port_mappings":[{"protocol": 1, "container_port": 80, "host_port": 8080}],
+       "metadata": {
+           "name": "test",
+           "namespace": "default",
+           "attempt": 1,
+           "uid": "hdishd83djaidwnduwk28bcsb"
+       },
+       "labels": {
+   	    "filter_label_key": "filter_label_val" 
+       },
+       "linux": {
+       }
+   }
+   ```
+
+5. Restart `isulad` and start Pod:
+
+   ```sh
+   $ sudo systemctl restart isulad
+   $ sudo crictl -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock runp sandbox-config.json
+   ```
+
+6. View pod network informations:
+
+   ```sh
+   $ sudo crictl -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock inspectp <pod-id>
+   ```
