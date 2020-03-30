@@ -74,7 +74,7 @@ static int oci_image_merge_env(const oci_image_spec_config *config, container_co
         }
 
         for (j = 0; j < container_spec->env_len; j++) {
-            custom_kv = util_string_split(container_spec->env[i], '=');
+            custom_kv = util_string_split(container_spec->env[j], '=');
             if (custom_kv == NULL) {
                 continue;
             }
