@@ -224,6 +224,8 @@ void free_image_metadata(struct image_metadata *data)
     data->loaded = NULL;
     free(data->oci_spec);
     data->oci_spec = NULL;
+    free_defs_health_check(data->health_check);
+    data->health_check = NULL;
     free(data);
 }
 

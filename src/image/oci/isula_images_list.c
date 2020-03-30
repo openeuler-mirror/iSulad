@@ -89,6 +89,9 @@ static int pack_imagetool_image(struct image_metadata *data, imagetool_image **i
         goto err_out;
     }
 
+    tmp_img->healthcheck = data->health_check;
+    data->health_check = NULL;
+
     free(err);
     *image = tmp_img;
     return 0;

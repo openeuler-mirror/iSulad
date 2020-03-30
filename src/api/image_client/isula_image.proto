@@ -426,6 +426,15 @@ message ListImagesRequest {
     bool check = 2;
 }
 
+message HealthCheck {
+    repeated string test = 1;
+    int64 interval = 2;
+    int64 timeout = 3;
+    int64 start_period = 4;
+    int32 retries = 5;
+    bool exit_on_unhealthy = 6;
+}
+
 // Basic information about a container image.
 message Image {
     // ID of the image.
@@ -452,6 +461,9 @@ message Image {
 
     // oci image spec
     ImageSpec spec = 9;
+
+    // Health check
+    HealthCheck healthcheck = 10;
 }
 
 message ListImagesResponse {

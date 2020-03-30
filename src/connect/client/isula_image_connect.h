@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "json_common.h"
+#include "defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +117,8 @@ struct image_metadata {
     char *loaded;
 
     char *oci_spec;
+
+    defs_health_check *health_check;
 };
 
 struct isula_status_request {
