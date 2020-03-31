@@ -1,0 +1,15 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+        "next_device_id": {
+			"type": "integer"
+		},
+		"base_device_filesystem": {
+			"type": "string"
+        },
+        "base_device_uuid": {
+			"type": "string"
+        }
+	}
+}

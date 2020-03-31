@@ -208,6 +208,7 @@ endif()
 
 if (ENABLE_OCI_IMAGE)
     target_link_libraries(isulad -Wl,--as-needed -lstdc++)
+    target_link_libraries(isulad -Wl,--as-needed -ldevmapper)
     target_link_libraries(isulad -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 endif()

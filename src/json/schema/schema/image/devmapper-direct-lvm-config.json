@@ -1,0 +1,21 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+		"device": {
+			"type": "string"
+		},
+		"thinp_percent": {
+			"type": "uint64"
+		},
+		"thinp_meta_percent": {
+			"type": "uint64"
+        },
+        "auto_extend_percent": {
+            "type": "uint64"
+        },
+        "auto_extend_threshold": {
+            "type": "uint64"
+        }
+	}
+}

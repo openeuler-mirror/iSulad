@@ -1,0 +1,21 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"type": "object",
+	"properties": {
+        "device_id": {
+			"type": "integer"
+		},
+		"size": {
+			"type": "uint64"
+        },
+        "transaction_id": {
+			"type": "uint64"
+        },
+        "initialized": {
+            "type": "boolean"
+        },
+        "deleted": {
+            "type": "boolean"
+        }	
+	}
+}

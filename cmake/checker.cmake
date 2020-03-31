@@ -125,6 +125,11 @@ if (GRPC_CONNECTOR OR ENABLE_OCI_IMAGE)
     find_library(GPR_LIBRARY gpr)
     _CHECK(GPR_LIBRARY "GPR_LIBRARY-NOTFOUND" "libgpr.so")
 
+    # check devmapper
+    find_path(DEVMAPPER_INCLUDE_DIR libdevmapper.h)
+    _CHECK(DEVMAPPER_INCLUDE_DIR "DEVMAPPER_INCLUDE_DIR-NOTFOUND" "libdevmapper.h")
+    find_library(DEVMAPPER_LIBRARY devmapper)
+    _CHECK(DEVMAPPER_LIBRARY "DEVMAPPER_LIBRARY-NOTFOUND" "libdevmapper.so")
 endif()
 
 if (GRPC_CONNECTOR)
