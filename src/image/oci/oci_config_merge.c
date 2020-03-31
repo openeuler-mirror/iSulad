@@ -27,11 +27,10 @@
 
 static void oci_image_merge_working_dir(const char *working_dir, container_config *container_spec)
 {
-    if (working_dir == NULL) {
+    if (container_spec->working_dir != NULL || working_dir == NULL) {
         return;
     }
 
-    free(container_spec->working_dir);
     container_spec->working_dir = util_strdup_s(working_dir);
 }
 
