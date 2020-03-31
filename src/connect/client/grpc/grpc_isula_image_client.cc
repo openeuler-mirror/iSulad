@@ -64,6 +64,44 @@ int copy_image_digests_metadata(const isula::Image &gimage, struct image_metadat
     return 0;
 }
 
+static int copy_image_health_check_config(const isula::Image &gimage, struct image_metadata *metadata)
+{
+    int ret = 0;
+    defs_health_check *health_check = nullptr;
+
+    if (!gimage.has_healthcheck()) {
+        return 0;
+    }
+
+    health_check = (defs_health_check *)util_common_calloc_s(sizeof(defs_health_check));
+    if (health_check == nullptr) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    health_check->test = (char **)util_common_calloc_s(gimage.healthcheck().test_size() * sizeof(char *));
+    if (health_check->test == nullptr) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    for (int i {0}; i < gimage.healthcheck().test_size(); i++) {
+        health_check->test[i] = util_strdup_s(gimage.healthcheck().test(i).c_str());
+    }
+    health_check->test_len = gimage.healthcheck().test_size();
+    health_check->interval = (int64_t)gimage.healthcheck().interval();
+    health_check->timeout = (int64_t)gimage.healthcheck().timeout();
+    health_check->retries = (int)gimage.healthcheck().retries();
+    health_check->exit_on_unhealthy = gimage.healthcheck().exit_on_unhealthy();
+
+    metadata->health_check = health_check;
+    health_check = nullptr;
+
+out:
+    free_defs_health_check(health_check);
+    return ret;
+}
+
 int copy_image_metadata(const isula::Image &gimage, struct image_metadata **metadata)
 {
     struct image_metadata *tmp_data = (struct image_metadata *)util_common_calloc_s(sizeof(struct image_metadata));
@@ -105,8 +143,14 @@ int copy_image_metadata(const isula::Image &gimage, struct image_metadata **meta
     if (gimage.has_spec() && !gimage.spec().image().empty()) {
         tmp_data->oci_spec = util_strdup_s(gimage.spec().image().c_str());
     }
+
+    if (copy_image_health_check_config(gimage, tmp_data) != 0) {
+        goto err_out;
+    }
+
     *metadata = tmp_data;
     return 0;
+
 err_out:
     free_image_metadata(tmp_data);
     return -1;
