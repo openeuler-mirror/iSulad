@@ -424,6 +424,7 @@ static int get_containers_stats(char **idsarray, size_t ids_len, const struct st
         if (is_running(cont->state)) {
             rt_stats_params_t params = { 0 };
             params.rootpath = cont->root_path;
+            params.state = cont->state_path;
 
             nret = runtime_resources_stats(cont->common_config->id, cont->runtime, &params, &einfo);
             if (nret != 0) {
