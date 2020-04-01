@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "digest": {
+      "type": "string"
+    },
+	"names": {
+		"type": "array",
+		"items": {
+			"type": "string"
+		}
+    },
+    "layer": {
+      "type": "string"
+    },
+    "mapped-layers": {
+		"type": "array",
+		"items": {
+			"type": "string"
+		}
+    },
+    "metadata": {
+      "type": "string"
+    },
+    "big-data-names": {
+		"type": "array",
+		"items": {
+			"type": "string"
+		}
+    },
+    "big-data-sizes": {
+        "$ref": "../defs.json#/definitions/mapStringInt64"
+    },
+    "big-data-digests": {
+        "$ref": "../defs.json#/definitions/mapStringString"
+    },
+    "created": {
+        "type": "string"
+    },
+    "loaded": {
+        "type": "string"
+    }
+  }
+}

@@ -75,6 +75,8 @@ static int plugin_event_post_remove_handle(const plugin_t *plugin, const char *c
 
 enum plugin_action { ACTIVE_PLUGIN, DEACTIVE_PLUGIN };
 
+plugin_manager_t *g_plugin_manager;
+
 static inline int check_err(int err, const char *msg)
 {
     if (err) {
