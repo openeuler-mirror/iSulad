@@ -23,6 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <libwebsockets.h>
 
 #include "sha256.h"
 #include "isula_libutils/log.h"
@@ -262,5 +263,31 @@ char *sha256_digest(void *stream, bool isgzip)
         digest[cnt] = buffer_out[cnt];
     }
     return digest;
+}
+
+char *sha256_digest_str(const char *val)
+{
+    SHA256_CTX ctx;
+    unsigned char hash[SHA256_DIGEST_LENGTH] = { 0x00 };
+    char output_buffer[(SHA256_DIGEST_LENGTH * 2) + 1] = { 0x00 };
+    int i = 0;
+
+    if (val == NULL) {
+        return NULL;
+    }
+
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, val, strlen(val));
+    SHA256_Final(hash, &ctx);
+
+    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        int ret = snprintf(output_buffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
+        if (ret >= 3 || ret < 0) {
+            return "";
+        }
+    }
+    output_buffer[SHA256_DIGEST_LENGTH * 2] = '\0';
+
+    return util_strdup_s(output_buffer);
 }
 

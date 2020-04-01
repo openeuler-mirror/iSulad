@@ -1,0 +1,61 @@
+{
+  "description": "Docker manifest schema2",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 2
+    },
+    "mediaType": {
+      "type": "string"
+    },
+    "config": {
+      "type": "object",
+      "required": [
+	"mediaType",
+        "size",
+        "digest"
+      ],
+      "properties": {
+        "mediaType": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "digest": {
+          "$ref": "../defs.json#/definitions/digest"
+        }
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+	  "mediaType",
+          "size",
+          "digest"
+        ],
+        "properties": {
+          "mediaType": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "digest": {
+            "$ref": "../defs.json#/definitions/digest"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "mediaType",
+    "config"
+  ]
+}

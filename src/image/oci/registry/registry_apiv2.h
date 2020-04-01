@@ -21,7 +21,11 @@
 extern "C" {
 #endif
 
-int fetch_manifests(pull_descriptor *desc);
+int fetch_manifest(pull_descriptor *desc);
+
+int fetch_config(pull_descriptor *desc);
+
+int fetch_layer(pull_descriptor *desc, size_t index);
 
 #ifdef __cplusplus
 }

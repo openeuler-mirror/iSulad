@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <limits.h>
+#include <sys/utsname.h>
 
 #include "log.h"
 #include "buffer.h"
@@ -29,6 +30,7 @@
 #include "parser.h"
 #include "mediatype.h"
 #include "oci_image_index.h"
+#include "registry_manifest_list.h"
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-API-Version: registry/2.0"
 #define MAX_ACCEPT_LEN 128
@@ -684,37 +686,316 @@ out:
     return ret;
 }
 
-static int normalized_host_os_arch(char **host_os, char **host_arch, char **variant)
+static char *get_cpu_variant()
 {
-    return 0;
+    char *variant = NULL;
+    char *cpuinfo = NULL;
+    char *start_pos = NULL;
+    char *end_pos = NULL;
+
+    cpuinfo = util_read_text_file("/proc/cpuinfo");
+    if (cpuinfo == NULL) {
+        ERROR("read /proc/cpuinfo failed");
+        return NULL;
+    }
+
+    start_pos = strstr(cpuinfo, "CPU architecture");
+    if (start_pos == NULL) {
+        ERROR("can not found the key \"CPU architecture\" when try to get cpu variant");
+        goto out;
+    }
+    end_pos = strchr(start_pos, '\n');
+    if (end_pos != NULL) {
+        *end_pos = 0;
+    }
+    start_pos = strchr(start_pos, ':');
+    if (start_pos == NULL) {
+        ERROR("can not found delimiter \":\" when try to get cpu variant");
+        goto out;
+    }
+    util_trim_newline(start_pos);
+    start_pos = util_trim_space(start_pos);
+
+    variant = util_strdup_s(start_pos);
+
+out:
+    free(cpuinfo);
+    cpuinfo = NULL;
+
+    return variant;
+}
+
+static int normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
+{
+    int ret = 0;
+    struct utsname uts;
+    char *tmp_variant = NULL;
+
+    if (host_os == NULL || host_arch == NULL || host_variant == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    if (uname(&uts) < 0) {
+        ERROR("Failed to read host arch and os: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    *host_os = util_strdup_s(uts.sysname);
+
+    if (strcasecmp("i386", uts.machine) == 0) {
+        *host_arch = util_strdup_s("386");
+    } else if ((strcasecmp("x86_64", uts.machine) == 0)
+               || (strcasecmp("x86-64", uts.machine) == 0)) {
+        *host_arch = util_strdup_s("amd64");
+    } else if (strcasecmp("aarch64", uts.machine) == 0) {
+        *host_arch = strdup("arm64");
+    } else if ((strcasecmp("armhf", uts.machine) == 0)
+               || (strcasecmp("armel", uts.machine) == 0)) {
+        *host_arch = strdup("arm");
+    } else {
+        *host_arch = strdup(uts.machine);
+    }
+
+    if (!strcmp(*host_arch, "arm") || !strcmp(*host_arch, "arm64")) {
+        *host_variant = get_cpu_variant();
+        if (!strcmp(*host_arch, "arm64") && *host_variant != NULL &&
+            (!strcmp(*host_variant, "8") || !strcmp(*host_variant, "v8"))) {
+            free(*host_variant);
+            *host_variant = NULL;
+        }
+        if (!strcmp(*host_arch, "arm") && *host_variant == NULL) {
+            *host_variant = util_strdup_s("v7");
+        } else if (!strcmp(*host_arch, "arm") && *host_variant != NULL) {
+            tmp_variant = *host_variant;
+            *host_variant = NULL;
+            if (!strcmp(tmp_variant, "5")) {
+                *host_variant = util_strdup_s("v5");
+            } else if (!strcmp(tmp_variant, "6")) {
+                *host_variant = util_strdup_s("v6");
+            } else if (!strcmp(tmp_variant, "7")) {
+                *host_variant = util_strdup_s("v7");
+            } else if (!strcmp(tmp_variant, "8")) {
+                *host_variant = util_strdup_s("v8");
+            }
+            free(tmp_variant);
+            tmp_variant = NULL;
+        }
+    }
+
+out:
+    if (ret != 0) {
+        free(*host_os);
+        *host_os = NULL;
+        free(*host_arch);
+        *host_arch = NULL;
+        free(*host_variant);
+        *host_variant = NULL;
+    }
+
+    return ret;
+}
+
+static bool is_variant_same(char *variant1, char *variant2)
+{
+    if (variant1 == NULL && variant2 == NULL) {
+        return true;
+    }
+    if (variant1 == NULL || variant2 == NULL) {
+        return false;
+    }
+    return !strcmp(variant1, variant2);
+}
+
+static int select_oci_manifest(oci_image_index *index, char **content_type, char **digest)
+{
+    size_t i = 0;
+    int ret = 0;
+    char *host_os = NULL;
+    char *host_arch = NULL;
+    char *host_variant = NULL;
+    oci_image_index_manifests_platform *platform = NULL;
+    bool found = false;
+
+    if (index == NULL || content_type == NULL || digest == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    ret = normalized_host_os_arch(&host_os, &host_arch, &host_variant);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < index->manifests_len; i++) {
+        platform = index->manifests[i]->platform;
+        if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
+            continue;
+        }
+        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os) &&
+            is_variant_same(host_variant, platform->variant)) {
+            free(*content_type);
+            *content_type = util_strdup_s(index->manifests[i]->media_type);
+            free(*digest);
+            *digest = util_strdup_s(index->manifests[i]->digest);
+            found = true;
+            goto out;
+        }
+    }
+
+    // Compatiable with manifests which didn't have variant
+    for (i = 0; i < index->manifests_len; i++) {
+        platform = index->manifests[i]->platform;
+        if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
+            continue;
+        }
+        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os)) {
+            free(*content_type);
+            *content_type = util_strdup_s(index->manifests[i]->media_type);
+            free(*digest);
+            *digest = util_strdup_s(index->manifests[i]->digest);
+            found = true;
+            goto out;
+        }
+    }
+    ret = -1;
+    ERROR("Cann't match any manifest, host os %s, host arch %s, host variant %s", host_os, host_arch, host_variant);
+
+out:
+    free(host_os);
+    host_os = NULL;
+    free(host_arch);
+    host_arch = NULL;
+    free(host_variant);
+    host_variant = NULL;
+
+    if (found && (*digest == NULL || *content_type == NULL)) {
+        ERROR("Matched manifest have NULL digest or mediatype in manifest, mediatype %s, digest %s",
+              *content_type, *digest);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static int select_docker_manifest(registry_manifest_list *manifests, char **content_type, char **digest)
+{
+    size_t i = 0;
+    int ret = 0;
+    char *host_os = NULL;
+    char *host_arch = NULL;
+    char *host_variant = NULL;
+    registry_manifest_list_manifests_platform *platform = NULL;
+    bool found = false;
+
+    if (manifests == NULL || content_type == NULL || digest == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    ret = normalized_host_os_arch(&host_os, &host_arch, &host_variant);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < manifests->manifests_len; i++) {
+        platform = manifests->manifests[i]->platform;
+        if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
+            continue;
+        }
+        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os) &&
+            is_variant_same(host_variant, platform->variant)) {
+            free(*content_type);
+            *content_type = util_strdup_s(manifests->manifests[i]->media_type);
+            free(*digest);
+            *digest = util_strdup_s(manifests->manifests[i]->digest);
+            found = true;
+            goto out;
+        }
+    }
+
+    // Compatiable with manifests which didn't have variant
+    for (i = 0; i < manifests->manifests_len; i++) {
+        platform = manifests->manifests[i]->platform;
+        if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
+            continue;
+        }
+        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os)) {
+            free(*content_type);
+            *content_type = util_strdup_s(manifests->manifests[i]->media_type);
+            free(*digest);
+            *digest = util_strdup_s(manifests->manifests[i]->digest);
+            found = true;
+            goto out;
+        }
+    }
+    ret = -1;
+    ERROR("Cann't match any manifest, host os %s, host arch %s, host variant %s", host_os, host_arch, host_variant);
+
+out:
+    free(host_os);
+    host_os = NULL;
+    free(host_arch);
+    host_arch = NULL;
+    free(host_variant);
+    host_variant = NULL;
+
+    if (found && (*digest == NULL || *content_type == NULL)) {
+        ERROR("Matched manifest have NULL digest or mediatype in manifest, mediatype %s, digest %s",
+              *content_type, *digest);
+        ret = -1;
+    }
+
+    return ret;
 }
 
 static int select_manifest(char *file, char **content_type, char **digest)
 {
     int ret = 0;
     oci_image_index *index = NULL;
+    registry_manifest_list *manifests = NULL;
     parser_error err = NULL;
-    char *host_os = NULL;
-    char *host_arch = NULL;
-    char *variant = NULL;
 
     if (file == NULL || content_type == NULL || *content_type == NULL || digest == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
     }
 
-    ret = normalized_host_os_arch(&host_os, &host_arch, &variant);
-    if (ret != 0) {
-        ret = -1;
-        goto out;
-    }
-
     if (!strcmp(*content_type, OCI_INDEX_V1_JSON)) {
         index = oci_image_index_parse_file((const char *)file, NULL, &err);
         if (index == NULL) {
+            ERROR("parse oci image index failed: %s", err);
             ret = -1;
             goto out;
         }
+        ret = select_oci_manifest(index, content_type, digest);
+        if (ret != 0) {
+            ERROR("select oci manifest failed");
+            ret = -1;
+            goto out;
+        }
+    } else if (!strcmp(*content_type, DOCKER_MANIFEST_SCHEMA2_LIST)) {
+        manifests = registry_manifest_list_parse_file((const char *)file, NULL, &err);
+        if (manifests == NULL) {
+            ERROR("parse docker image manifest list failed: %s", err);
+            ret = -1;
+            goto out;
+        }
+
+        ret = select_docker_manifest(manifests, content_type, digest);
+        if (ret != 0) {
+            ERROR("select docker manifest failed");
+            ret = -1;
+            goto out;
+        }
+    } else {
+        // This should not happen
+        ERROR("Unexpected content type %s", *content_type);
+        ret = -1;
+        goto out;
     }
 
 out:
@@ -722,12 +1003,12 @@ out:
         free_oci_image_index(index);
         index = NULL;
     }
-    free(host_os);
-    host_os = NULL;
-    free(host_arch);
-    host_arch = NULL;
-    free(variant);
-    variant = NULL;
+    if (manifests != NULL) {
+        free_registry_manifest_list(manifests);
+        manifests = NULL;
+    }
+    free(err);
+    err = NULL;
 
     return ret;
 }
@@ -737,6 +1018,7 @@ static int fetch_manifests_data(pull_descriptor *desc, char *file, char **conten
     int ret = 0;
     int sret = 0;
     char path[PATH_MAX] = { 0 };
+    char *manifest_text = NULL;
 
     if (desc == NULL || path == NULL || file == NULL || content_type == NULL || *content_type == NULL ||
         digest == NULL) {
@@ -765,7 +1047,10 @@ static int fetch_manifests_data(pull_descriptor *desc, char *file, char **conten
     if (!strcmp(*content_type, DOCKER_MANIFEST_SCHEMA2_LIST) || !strcmp(*content_type, OCI_INDEX_V1_JSON)) {
         ret = select_manifest(file, content_type, digest);
         if (ret != 0) {
-            ERROR("select manifest failed");
+            manifest_text = util_read_text_file(file);
+            ERROR("select manifest failed, manifests:%s", manifest_text);
+            free(manifest_text);
+            manifest_text = NULL;
             goto out;
         }
 
@@ -788,7 +1073,7 @@ out:
     return ret;
 }
 
-int fetch_manifests(pull_descriptor *desc)
+int fetch_manifest(pull_descriptor *desc)
 {
     int ret = 0;
     int sret = 0;
@@ -819,11 +1104,98 @@ int fetch_manifests(pull_descriptor *desc)
         goto out;
     }
 
+    desc->manifest.media_type = util_strdup_s(content_type);
+    desc->manifest.digest = util_strdup_s(digest);
+    desc->manifest.file = util_strdup_s(file);
+
 out:
     free(content_type);
     content_type = NULL;
     free(digest);
     digest = NULL;
+
+    return ret;
+}
+
+int fetch_config(pull_descriptor *desc)
+{
+    int ret = 0;
+    int sret = 0;
+    char file[PATH_MAX] = { 0 };
+    char path[PATH_MAX] = { 0 };
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    sret = snprintf(file, sizeof(file), "%s/config", desc->blobpath);
+    if (sret < 0 || (size_t)sret >= sizeof(file)) {
+        ERROR("Failed to sprintf file for config");
+        return -1;
+    }
+
+    sret = snprintf(path, sizeof(path), "/v2/%s/blobs/%s", desc->name, desc->config.digest);
+    if (sret < 0 || (size_t)sret >= sizeof(path)) {
+        ERROR("Failed to sprintf path for config");
+        ret = -1;
+        goto out;
+    }
+
+    ret = fetch_data(desc, path, file, desc->config.media_type, desc->config.digest);
+    if (ret != 0) {
+        ERROR("registry: Get %s failed", path);
+        goto out;
+    }
+
+    desc->config.file = util_strdup_s(file);
+
+out:
+
+    return ret;
+}
+
+int fetch_layer(pull_descriptor *desc, size_t index)
+{
+    int ret = 0;
+    int sret = 0;
+    char file[PATH_MAX] = { 0 };
+    char path[PATH_MAX] = { 0 };
+    layer_blob *layer = NULL;
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    if (index >= desc->layers_len) {
+        ERROR("Invalid layer index %d, total layer number %d", index, desc->layers_len);
+        return -1;
+    }
+
+    sret = snprintf(file, sizeof(file), "%s/%d", desc->blobpath, (int)index);
+    if (sret < 0 || (size_t)sret >= sizeof(file)) {
+        ERROR("Failed to sprintf file for layer %lu", index);
+        return -1;
+    }
+
+    layer = &desc->layers[index];
+    sret = snprintf(path, sizeof(path), "/v2/%s/blobs/%s", desc->name, layer->digest);
+    if (sret < 0 || (size_t)sret >= sizeof(path)) {
+        ERROR("Failed to sprintf path for layer %d, name %s, digest %s", index, desc->name, layer->digest);
+        ret = -1;
+        goto out;
+    }
+
+    ret = fetch_data(desc, path, file, layer->media_type, layer->digest);
+    if (ret != 0) {
+        ERROR("registry: Get %s failed", path);
+        goto out;
+    }
+
+    layer->file = util_strdup_s(file);
+
+out:
 
     return ret;
 }

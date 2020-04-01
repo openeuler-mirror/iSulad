@@ -128,7 +128,7 @@ int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
 }
 
 int oci_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
-                        const im_prepare_request *request, char **real_rootfs)
+                      const im_prepare_request *request, char **real_rootfs)
 {
     oci_image_spec *image = NULL;
     int ret = -1;

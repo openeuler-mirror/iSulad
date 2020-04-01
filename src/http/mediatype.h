@@ -77,6 +77,9 @@
 #define MEDIA_TYPE_APPLICATION_JSON "application/json"
 #define OCI_MANIFEST_V1_JSON "application/vnd.oci.image.manifest.v1+json"
 #define OCI_INDEX_V1_JSON "application/vnd.oci.image.index.v1+json"
+#define DOCKER_IMAGE_LAYER_TAR_GZIP "application/vnd.docker.image.rootfs.diff.tar.gzip"
+#define DOCKER_IMAGE_V1 "application/vnd.docker.container.image.v1+json"
+#define OCI_IMAGE_V1 "application/vnd.oci.image.config.v1+json"
 
 #endif
 
