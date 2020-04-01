@@ -100,7 +100,7 @@ image_devmapper_direct_lvm_config *read_lvm_config(const char *root)
 
     cfg = image_devmapper_direct_lvm_config_parse_file(path, NULL, &err);
     if (cfg == NULL) {
-        ERROR("load setup-config.json failed %s", err != NULL? err:"");
+        ERROR("load setup-config.json failed %s", err != NULL ? err : "");
         goto out;
     }
 

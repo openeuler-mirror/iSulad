@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/sysmacros.h>
 
 #include "log.h"
 #include "libisulad.h"
@@ -83,33 +84,13 @@ struct device_set *devmapper_driver_devices_get()
 
 }
 
-static bool util_has_prefix(const char *str, const char *prefix)
-{
-    bool ret = true;
-    const char *cur_str = str;
-    const char *cur_pre = prefix;
-    size_t pre_len = strlen(prefix);
-    size_t str_len = strlen(str);
-
-    if (str_len < pre_len) {
-        return false;
-    }
-
-    for (int i=0; i < pre_len; i++) {
-        if (*(cur_str+i) != *(cur_pre+i)) {
-            ret = false;
-            break;
-        }
-    }
-    return ret;
-}
 static char *util_trim_prefice_string(char *str, const char *prefix)
 {
     if (str == NULL || !util_has_prefix(str, prefix)) {
         return str;
     }
 
-    char *begin = str+strlen(prefix);
+    char *begin = str + strlen(prefix);
     char *tmp = str;
     while ((*tmp++ = *begin++)) {}
     return str;
@@ -187,9 +168,11 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
     return 0;
 }
 
-void free_device_set(struct device_set *ptr) {
-    if (ptr == NULL)
+void free_device_set(struct device_set *ptr)
+{
+    if (ptr == NULL) {
         return;
+    }
     free(ptr->root);
     ptr->root = NULL;
     free(ptr->device_prefix);
@@ -208,7 +191,7 @@ static int enable_deferred_removal_deletion(struct device_set *devset)
         }
         devset->deferred_remove = true;
     }
-    
+
     if (enable_deferred_deletion) {
         if (!devset->deferred_remove) {
             ERROR("devmapper: Deferred deletion can not be enabled as deferred removal is not enabled. \
@@ -258,16 +241,6 @@ out:
     return file;
 }
 
-static uint64_t major(uint64_t device)
-{
-    return ((device >> 8) & 0xfff);
-}
-
-static uint64_t minor(uint64_t device)
-{
-    return ((device & 0xff) | ((device >> 12) & 0xfff00)); 
-}
-
 static void free_arr(char **arr, size_t len)
 {
     size_t i = 0;
@@ -277,8 +250,8 @@ static void free_arr(char **arr, size_t len)
     }
 
     for (; i < len; i++) {
-        free(*(arr+i));
-        *(arr+i) = NULL;
+        free(*(arr + i));
+        *(arr + i) = NULL;
     }
     free(arr);
     arr = NULL;
@@ -379,14 +352,14 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
     if (strcmp(hash, "") == 0) {
         ret = snprintf(metadata_file, sizeof(metadata_file), "%s/base", metadata_path);
     } else {
-        ret = snprintf(metadata_file, sizeof(metadata_file),"%s/%s", metadata_path, hash);
+        ret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, hash);
     }
     if (ret < 0) {
         goto out;
     }
     info = image_devmapper_device_info_parse_file(metadata_file, NULL, &err);
     if (info == NULL) {
-        ERROR("load metadata file %s failed %s", metadata_file,err != NULL? err:"");
+        ERROR("load metadata file %s failed %s", metadata_file, err != NULL ? err : "");
         goto out;
     }
 
@@ -422,7 +395,7 @@ static image_devmapper_device_info *lookup_device(struct device_set *devset, con
             info = NULL;
         }
     }
-    
+
     return info;
 }
 
@@ -440,7 +413,7 @@ static int device_file_walk(struct device_set *devset)
     }
 
     // 路径权限导致stat为非regular文件，误判为dir，此处需优化
-    while((entry = readdir(dp)) != NULL) {
+    while ((entry = readdir(dp)) != NULL) {
         stat(entry->d_name, &st);
 
         if (S_ISDIR(st.st_mode)) {
@@ -480,9 +453,9 @@ static void count_deleted_devices(struct device_set *devset)
     // TODO:遍历g_metadata_store中全部device
     // for info in devices {
     //     if !info->deleted {
-        //      continue
-        //    }
-        // devset->nr_deleted_devices++;
+    //      continue
+    //    }
+    // devset->nr_deleted_devices++;
     // }
 }
 static int rollback_transaction(struct device_set *devset)
@@ -501,21 +474,21 @@ static int process_pending_transaction(struct device_set *devset)
     }
 
     // If there was open transaction but pool transaction ID is same
-	// as open transaction ID, nothing to roll back.
+    // as open transaction ID, nothing to roll back.
     if (devset->transaction_id == devset->metadata_trans->open_transaction_id) {
         return 0;
     }
 
     // If open transaction ID is less than pool transaction ID, something
-	// is wrong. Bail out.
-    if (devset->transaction_id > devset->metadata_trans->open_transaction_id)
-    {
-        ERROR("devmapper: Open Transaction id %d is less than pool transaction id %d", devset->metadata_trans->open_transaction_id, devset->transaction_id);
+    // is wrong. Bail out.
+    if (devset->transaction_id > devset->metadata_trans->open_transaction_id) {
+        ERROR("devmapper: Open Transaction id %d is less than pool transaction id %d",
+              devset->metadata_trans->open_transaction_id, devset->transaction_id);
         return -1;
     }
 
     // TODO: Pool transaction ID is not same as open transaction. There is
-	// a transaction which was not completed.
+    // a transaction which was not completed.
     ret = rollback_transaction(devset);
     if (ret != 0) {
         ERROR("devmapper: Rolling back open transaction failed");
@@ -656,7 +629,7 @@ static bool is_device_id_free(struct device_set *devset, int device_id)
 
     mask = 1 << (device_id % 8);
     value_ptr = map_search(devset->device_id_map, &key);
-    return value_ptr ? (*value_ptr & mask) == 0: (value & mask) == 0;
+    return value_ptr ? (*value_ptr & mask) == 0 : (value & mask) == 0;
 }
 
 static void inc_next_device_id(struct device_set *devset)
@@ -700,7 +673,7 @@ static char *metadata_file(struct device_set *devset, const char *hash)
         return NULL;
     }
 
-    file = strcmp(hash, "") == 0 ? util_strdup_s("base"):util_strdup_s(hash);
+    file = strcmp(hash, "") == 0 ? util_strdup_s("base") : util_strdup_s(hash);
     if (file == NULL) {
         goto out;
     }
@@ -713,7 +686,7 @@ out:
     return full_path;
 }
 
-static int save_metadata(struct device_set *devset,image_devmapper_device_info *info, const char *hash)
+static int save_metadata(struct device_set *devset, image_devmapper_device_info *info, const char *hash)
 {
     int ret = 0;
     char *metadata_json = NULL;
@@ -859,7 +832,8 @@ static int unregister_device(struct device_set *devset, const char *hash)
     return ret;
 }
 
-static image_devmapper_device_info *register_device(struct device_set *devset, int id, const char *hash, uint64_t size, uint64_t transaction_id)
+static image_devmapper_device_info *register_device(struct device_set *devset, int id, const char *hash, uint64_t size,
+                                                    uint64_t transaction_id)
 {
     int ret;
     bool store_res = false;
@@ -911,7 +885,7 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
 
     ret = open_transaction(devset, hash, device_id);
     if (ret != 0) {
-        ERROR("devmapper: Error opening transaction hash = %s deviceID = %d",hash, device_id);
+        ERROR("devmapper: Error opening transaction hash = %s deviceID = %d", hash, device_id);
         return NULL;
     }
     pool_dev = get_pool_dev_name(devset);
@@ -925,18 +899,18 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
         if (ret != 0) {
             // TODO: 如果错误类型为device id exists
             // Device ID already exists. This should not
-			// happen. Now we have a mechanism to find
-			// a free device ID. So something is not right.
-			// Give a warning and continue.
+            // happen. Now we have a mechanism to find
+            // a free device ID. So something is not right.
+            // Give a warning and continue.
             if (true) {
-                 ret = get_next_free_device_id(devset, &device_id);
+                ret = get_next_free_device_id(devset, &device_id);
                 if (ret == 0) {
                     // ERROR();
                     return NULL;
                 }
                 ret = refresh_transaction(devset, device_id);
                 if (ret != 0) {
-                    ERROR("devmapper: Error refres open transaction deviceID = %d",hash, device_id);
+                    ERROR("devmapper: Error refres open transaction deviceID = %d", hash, device_id);
                     return NULL;
                 }
                 continue;
@@ -945,7 +919,7 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
             return NULL;
         }
         break;
-    } while(true);
+    } while (true);
 
     info = register_device(devset, device_id, hash, devset->base_fs_size, devset->metadata_trans->open_transaction_id);
     if (info == NULL) {
@@ -965,7 +939,8 @@ out:
     return info;
 }
 
-static int activate_device_if_needed(struct device_set *devset, image_devmapper_device_info *info, const char *hash, bool ignore_deleted)
+static int activate_device_if_needed(struct device_set *devset, image_devmapper_device_info *info, const char *hash,
+                                     bool ignore_deleted)
 {
     int ret = 0;
 
@@ -1008,8 +983,8 @@ out:
     return ret;
 }
 
-static int pool_status(struct device_set *devset, uint64_t *total_size_in_sectors, uint64_t *transaction_id,\
-                        uint64_t *data_used, uint64_t *data_total, uint64_t *metadata_used, uint64_t *metadata_total)
+static int pool_status(struct device_set *devset, uint64_t *total_size_in_sectors, uint64_t *transaction_id, \
+                       uint64_t *data_used, uint64_t *data_total, uint64_t *metadata_used, uint64_t *metadata_total)
 {
     uint64_t start;
     uint64_t length;
@@ -1033,7 +1008,7 @@ static int pool_status(struct device_set *devset, uint64_t *total_size_in_sector
         return -1;
     }
     *total_size_in_sectors = length;
-    // TODO: parse params 
+    // TODO: parse params
     //fmt.Sscanf(params, "%d %d/%d %d/%d", &transactionID, &metadataUsed, &metadataTotal, &dataUsed, &dataTotal)
     *transaction_id = 0;
     *data_total = 0;
@@ -1053,14 +1028,16 @@ static int check_thin_pool(struct device_set *devset)
     uint64_t data_total, metadata_used, metadata_total;
     int ret = 0;
 
-    ret = pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used, &metadata_total);
+    ret = pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
+                      &metadata_total);
     if (ret != 0) {
         //ERROR()
         return -1;
     }
 
     if (data_used != 0) {
-        ERROR("devmapper: Unable to take ownership of thin-pool (%s) that already has used data blocks", devset->thin_pool_device);
+        ERROR("devmapper: Unable to take ownership of thin-pool (%s) that already has used data blocks",
+              devset->thin_pool_device);
         return -1;
     }
 
@@ -1069,7 +1046,8 @@ static int check_thin_pool(struct device_set *devset)
         return -1;
     }
 
-    DEBUG("devmapper:total_size_in_sectors:%u, data_total:%u, metadata_used:%u, metadata_total:%u", total_size_in_sectors, data_total, metadata_used, metadata_total);
+    DEBUG("devmapper:total_size_in_sectors:%u, data_total:%u, metadata_used:%u, metadata_total:%u", total_size_in_sectors,
+          data_total, metadata_used, metadata_total);
 
     return ret;
 
@@ -1082,8 +1060,8 @@ static int setup_base_image(struct device_set *devset)
     info = lookup_device(devset, "");
 
     // base image already exists. If it is initialized properly, do UUID
-	// verification and return. Otherwise remove image and set it up
-	// fresh.
+    // verification and return. Otherwise remove image and set it up
+    // fresh.
     if (info != NULL) {
         if (info->initialized && !info->deleted) {
             // TODO:
@@ -1091,7 +1069,7 @@ static int setup_base_image(struct device_set *devset)
     }
 
     // If we are setting up base image for the first time, make sure
-	// thin pool is empty.
+    // thin pool is empty.
     if (devset->thin_pool_device != NULL && strlen(devset->thin_pool_device) != 0 && info == NULL) {
         ret = check_thin_pool(devset);
         if (ret != 0) {
@@ -1120,6 +1098,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
     char *params = NULL;
     bool pool_exist;
     char *pool_name = NULL;
+    size_t i = 0;
 
     ret = enable_deferred_removal_deletion(devset);
     if (ret != 0) {
@@ -1153,7 +1132,8 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
         ERROR("devmapper: Error looking up dir %s", devset->root);
         goto out;
     }
-    ret = snprintf(prefix, sizeof(prefix), "container-%lu:%lu-%lu", major(st.st_dev), minor(st.st_dev), st.st_ino);
+    ret = snprintf(prefix, sizeof(prefix), "container-%u:%u-%u", major(st.st_dev), minor(st.st_dev),
+                   (unsigned int)st.st_ino);
     if (ret < 0 || (size_t)ret >= sizeof(prefix)) {
         ERROR("Failed to sprintf device prefix");
         goto out;
@@ -1163,30 +1143,30 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
     if (ret != 0) {
         DEBUG("devicemapper: failed to get device list");
     }
-    for (size_t i = 0; i < devices_len; i++) {
-        if (!util_has_prefix(*(devices_list+i), devset->device_prefix)) {
+    for (i = 0; i < devices_len; i++) {
+        if (!util_has_prefix(*(devices_list + i), devset->device_prefix)) {
             continue;
         }
-        ret = get_status(&start, &length, &target_type, &params, *(devices_list+i));
+        ret = get_status(&start, &length, &target_type, &params, *(devices_list + i));
         if (ret != 0) {
-            WARN("devmapper: get device status %s failed", *(devices_list+i));
+            WARN("devmapper: get device status %s failed", *(devices_list + i));
             continue;
         }
         // remove broken device
         if (length == 0) {
-            ret = remove_device(*(devices_list+i));
+            ret = remove_device(*(devices_list + i));
             if (ret != 0) {
-                WARN("devmapper: remove broken device %s failed", *(devices_list+i));
+                WARN("devmapper: remove broken device %s failed", *(devices_list + i));
             }
-            DEBUG("devmapper: remove broken device: %s", *(devices_list+i));
+            DEBUG("devmapper: remove broken device: %s", *(devices_list + i));
         }
-        (void)snprintf(device_path, sizeof(device_path), "/dev/mapper/%s", *(devices_list+i));
+        (void)snprintf(device_path, sizeof(device_path), "/dev/mapper/%s", *(devices_list + i));
         if (stat(device_path, &st)) {
-            ret = remove_device(*(devices_list+i));
+            ret = remove_device(*(devices_list + i));
             if (ret != 0) {
-                WARN("devmapper: remove incompelete device %s", *(devices_list+i));
+                WARN("devmapper: remove incompelete device %s", *(devices_list + i));
             }
-            DEBUG("devmapper: remove incompelete device: %s", *(devices_list+i));
+            DEBUG("devmapper: remove incompelete device: %s", *(devices_list + i));
         }
     }
 
@@ -1208,7 +1188,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
     }
 
     // Right now this loads only NextDeviceID. If there is more metadata
-	// down the line, we might have to move it earlier.
+    // down the line, we might have to move it earlier.
     ret = load_deviceset_metadata(devset);
     if (ret != 0) {
         //ERROR();
@@ -1243,7 +1223,7 @@ int devmapper_init(struct graphdriver *driver, const char *drvier_home, const ch
     int ret = 0;
     struct device_set *devset = NULL;
     image_devmapper_direct_lvm_config *lvm_setup_config = NULL;
-    
+
     if (driver == NULL || drvier_home == NULL || options == NULL) {
         return -1;
     }
@@ -1266,7 +1246,7 @@ int devmapper_init(struct graphdriver *driver, const char *drvier_home, const ch
     if (devset->device_id_map == NULL) {
         // ERROR();
     }
-    
+
     // metadata db
     ret = metadata_store_init();
     if (ret != 0) {
@@ -1322,7 +1302,7 @@ bool devmapper_is_quota_options(struct graphdriver *driver, const char *option)
 }
 
 int devmapper_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
-                       const struct driver_create_opts *create_opts)
+                        const struct driver_create_opts *create_opts)
 {
 
 
@@ -1337,7 +1317,7 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
 }
 
 char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
-                           const struct driver_mount_opts *mount_opts)
+                            const struct driver_mount_opts *mount_opts)
 {
 
     return NULL;
@@ -1354,7 +1334,7 @@ bool devmapper_layer_exists(const char *id, const struct graphdriver *driver)
 }
 
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
-                        int64_t *layer_size)
+                         int64_t *layer_size)
 {
     return 0;
 }

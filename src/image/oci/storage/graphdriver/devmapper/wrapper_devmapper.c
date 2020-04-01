@@ -33,7 +33,7 @@ int set_name(struct dm_task *dmt, const char *name)
     if (ret != 1) {
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -45,7 +45,7 @@ int set_message(struct dm_task *dmt, const char *message)
     if (ret != 1) {
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -57,7 +57,7 @@ int set_sector(struct dm_task *dmt, uint64_t sector)
     if (ret != 1) {
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -69,7 +69,7 @@ int set_add_node(struct dm_task *dmt, dm_add_node_t add_node)
     if (ret != 1) {
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -81,7 +81,7 @@ int set_ro(struct dm_task *dmt)
     if (ret != 1) {
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -94,7 +94,7 @@ int set_dev_dir(const char *dir)
     if (ret != 1) {
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -229,7 +229,7 @@ int get_info(struct dm_info *info, const char *name)
         ERROR("devicemapper: get info err");
         goto cleanup;
     }
-    
+
     ret = 0;
 
 cleanup:
@@ -240,7 +240,7 @@ cleanup:
 // cookie值为获取到的
 int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags)
 {
-// int dm_task_set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags);
+    // int dm_task_set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags);
     int ret;
 
     if (cookie == NULL) {
@@ -284,54 +284,58 @@ int remove_device(const char *name)
     // 单开一个线程wait device删除成功
 
     ret = 0;
- out:
+out:
     free(dmt);
-    return ret;      
+    return ret;
 }
 
 // from devmapper_wrapper.go
 // FIXME: how to use dm_task_get_names directly
-static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size) {
-	struct dm_names *ns, *ns1;
-	unsigned next = 0;
-	char **result;
-	int i = 0;
+static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size)
+{
+    struct dm_names *ns, *ns1;
+    unsigned next = 0;
+    char **result;
+    int i = 0;
 
-	if (!(ns = dm_task_get_names(dmt)))
-		return NULL;
+    if (!(ns = dm_task_get_names(dmt))) {
+        return NULL;
+    }
 
-	// No devices found
-	if (!ns->dev)
-		return NULL;
+    // No devices found
+    if (!ns->dev) {
+        return NULL;
+    }
 
-	// calucate the total devices
-	ns1 = ns;
-	*size = 0;
-	do {
-		ns1 = (struct dm_names *)((char *) ns1 + next);
-		(*size)++;
-		next = ns1->next;
-	} while (next);
+    // calucate the total devices
+    ns1 = ns;
+    *size = 0;
+    do {
+        ns1 = (struct dm_names *)((char *) ns1 + next);
+        (*size)++;
+        next = ns1->next;
+    } while (next);
 
-	result = malloc(sizeof(char *)* (*size));
-	if (!result)
-		return NULL;
+    result = malloc(sizeof(char *) * (*size));
+    if (!result) {
+        return NULL;
+    }
 
-	next = 0;
-	do {
-		ns = (struct dm_names *)((char *) ns + next);
-		result[i++] = strdup(ns->name);
-		next = ns->next;
-	} while (next);
+    next = 0;
+    do {
+        ns = (struct dm_names *)((char *) ns + next);
+        result[i++] = strdup(ns->name);
+        next = ns->next;
+    } while (next);
 
-	return result;
+    return result;
 }
 
 int get_device_list(char ***list, size_t *length)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
-    
+
     if (list == NULL || length == NULL) {
         return -1;
     }
@@ -349,7 +353,7 @@ int get_device_list(char ***list, size_t *length)
         goto cleanup;
     }
 
-    
+
     *list = local_dm_task_get_names(dmt, length);
     if (*list == NULL) {
         *length = 0;
@@ -382,7 +386,7 @@ bool udev_set_sync_support(bool enable)
     if (ret != 0) {
         return true;
     }
-    
+
     return false;
 }
 
@@ -413,7 +417,7 @@ int dev_create_device(const char *pool_fname, int device_id)
         // ERROR()
         goto cleanup;
     }
-    
+
     ret = set_message(dmt, message);
     if (ret != 0) {
         ret = -1;
@@ -427,7 +431,7 @@ int dev_create_device(const char *pool_fname, int device_id)
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
-    
+
     ret = 0;
 
 cleanup:
@@ -465,7 +469,7 @@ int dev_delete_device(const char *pool_fname, int device_id)
         // ERROR()
         goto cleanup;
     }
-    
+
     ret = set_message(dmt, message);
     if (ret != 0) {
         ret = -1;
@@ -478,7 +482,7 @@ int dev_delete_device(const char *pool_fname, int device_id)
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
-    
+
     ret = 0;
 
 cleanup:

@@ -52,7 +52,7 @@ struct device_set {
     char *thin_pool_device;
 
     image_devmapper_transaction *metadata_trans;
-    
+
     bool overrid_udev_sync_check;
     bool deferred_remove;
     bool deferred_delete;
@@ -75,19 +75,19 @@ int devmapper_init(struct graphdriver *driver, const char *drvier_home, const ch
 bool devmapper_is_quota_options(struct graphdriver *driver, const char *option);
 
 int devmapper_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
-                       const struct driver_create_opts *create_opts);
+                        const struct driver_create_opts *create_opts);
 
 int devmapper_rm_layer(const char *id, const struct graphdriver *driver);
 
 char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
-                           const struct driver_mount_opts *mount_opts);
+                            const struct driver_mount_opts *mount_opts);
 
 int devmapper_umount_layer(const char *id, const struct graphdriver *driver);
 
 bool devmapper_layer_exists(const char *id, const struct graphdriver *driver);
 
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
-                        int64_t *layer_size);
+                         int64_t *layer_size);
 
 int devmapper_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
 
