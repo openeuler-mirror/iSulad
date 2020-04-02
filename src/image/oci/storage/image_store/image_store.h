@@ -19,7 +19,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "storage_image.h"
-#include "timestamp.h"
+#include "types_def.h"
 #include "map.h"
 
 #ifdef __cplusplus
@@ -31,89 +31,69 @@ extern "C" {
 #define IMAGE_DIGEST_BIG_DATA_KEY "manifest"
 #define IMAGE_NAME_LEN            64
 
+// Load the image in the dir folder
+int new_image_store(const char *dir);
 
-typedef struct file_locker {
-    // key: string  value: struct flock
-    map_t *lock_files;
-    pthread_mutex_t lock_files_lock;
-} file_locker_t;
+// Create an image that has a specified ID (or a random one) and optional names, using the specified layer as
+// its topmost (hopefully read-only) layer.  That layer can be referenced by multiple images.
+storage_image *image_store_create(const char *id, const char **names, size_t names_len,
+                                  const char *layer, const char *metadata, const types_timestamp_t *time, const char *searchable_digest);
 
-typedef struct digest_image {
-    storage_image **images;
-    size_t images_len;
-} digest_image_t;
+// Attempt to translate a name to an ID.  Most methods do this implicitly.
+storage_image *image_store_lookup(const char *id);
 
-typedef struct image_store {
-    file_locker_t lockfile;
-    file_locker_t rolockfile;
-    char *dir;
-    storage_image **images;
-    size_t images_len;
-    map_t *idindex;
-    map_t *byid;
-    map_t *byname;
-    map_t *bydigest;
+// Remove the record of the image.
+int image_store_delete(const char *id);
 
-    // flag for daemon
-    bool daemon;
-    bool loaded;
-} image_store_t, *image_store_ptr;
+// Remove records of all images
+int image_store_wipe();
 
-// // ROImageStore interface: Provides bookkeeping for information about Images.
-// typedef struct ro_image_store_ops {
-// // TODO: ROFileBasedStore
-// // TODO: ROMetadataStore
-// // TODO: ROBigDataStore
-//
-// // Check if there is an image with the given ID or name.
-// bool (*exists)(const char *id);
-//
-// // Retrieve information about an image given an ID or name.
-// int (*get)(const char *id, storage_image *image);
-//
-// // Attempt to translate a name to an ID.  Most methods do this implicitly.
-// int (*lookup)(const char *name, char **id);
-//
-// // Return a slice enumerating the known images.
-// int (*images)(storage_image **images, size_t *len);
-//
-// // Return a slice enumerating the images which have a big data
-// // item with the name ImageDigestBigDataKey and the specified digest.
-// int (*by_digest)(storage_image **images, size_t *len);
-// } ro_image_store_ops_t;
-//
-// // ImageStore interface: Provides bookkeeping for information about Images.
-// typedef struct image_store_opt {
-// // ROImageStore
-// // RWFileBasedStore
-// // RWMetadataStore
-// // RWBigDataStore
-// // FlaggableStore
-//
-// // Create an image that has a specified ID (or a random one) and
-// // optional names, using the specified layer as its topmost (hopefully
-// // read-only) layer.  That layer can be referenced by multiple images.
-// int (*create)(const char *id, const char **names, size_t names_len, const char *layer, const char *metadata,
-//         timestamp time, const char *searchable_digest, storage_image *image);
-//
-// // Replace the list of names associated with an image with the supplied values.
-// int (*set_names)(const char *id, const char **names, size_t names_len);
-//
-// // Remove the record of the image.
-// int (*delete)(const char *id);
-//
-// // Remove records of all images
-// int (*wipe)();
-//
-// // Set the image pulled time
-// int (*set_loaded_time)(const char *id, timestamp loaded);
-//
-// // Add the name for an image. Duplicate names are removed from the list automatically.
-// int (*add_name)(const char *id, const char *name);
-// } image_store_ops_t;
-//
-int new_image_store(bool daemon, bool readonly, const char *dir, image_store_t **image_store);
-void free_image_store(image_store_t *image_store);
+// Stores a (potentially large) piece of data associated with this ID.
+int image_store_set_big_data(const char *id, const char *key, const char *data);
+
+// Add the name for an image. Duplicate names are removed from the list automatically.
+int image_store_add_name(const char *id, const char *name);
+
+// Replace the list of names associated with an image with the supplied values.
+int image_store_set_names(const char *id, const char **names, size_t names_len);
+
+// Updates the metadata associated with the item with the specified ID.
+int image_store_set_metadata(const char *id, const char *metadata);
+
+// Set the image pulled time
+int image_store_set_load_time(const char *id,  const types_timestamp_t *time);
+
+// Saves the contents of the store to disk.
+int image_store_save(storage_image *image);
+
+// Check if there is an image with the given ID or name.
+bool image_store_exists(const char *id);
+
+// Retrieve information about an image given an ID or name.
+const storage_image *image_store_get_image(const char *id);
+
+// Retrieves a (potentially large) piece of data associated with this ID, if it has previously been set.
+char *image_store_big_data(const char *id, const char *key);
+
+// Retrieves the size of a (potentially large) piece of data associated with this ID, if it has previously been set.
+int64_t image_store_big_data_size(const char *id, const char *key);
+
+// Retrieves the digest of a (potentially large) piece of data associated with this ID, if it has previously been set.
+const char *image_store_big_data_digest(const char *id, const char *key);
+
+// Returns a list of the names of previously-stored pieces of data.
+int image_store_big_data_names(const char *id, char ***names, size_t *names_len);
+
+// Reads metadata associated with an item with the specified ID.
+const char *image_store_metadata(const char *id);
+
+// Return a slice enumerating the known images.
+int image_store_get_all_images(storage_image ***images, size_t *len);
+
+// Return a slice enumerating the images which have a big data
+// item with the name ImageDigestBigDataKey and the specified digest.
+int image_store_get_images_by_digest(const char *digest, storage_image ***images, size_t *len);
+
 #ifdef __cplusplus
 }
 #endif

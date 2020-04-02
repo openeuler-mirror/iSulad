@@ -254,6 +254,11 @@ function astyle_fix() {
 }
 
 function astyle_format() {
+    which astyle
+    if [[ $? -ne 0 ]]; then
+        echo "please install astyle tool first"
+        exit 1
+    fi
     echo -e "\
 =================================================================================================\033[1;36m
         ___    _____ ________  __ __     ______       ______ ____   ____   __  ___ ___   ______
