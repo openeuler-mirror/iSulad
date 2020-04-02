@@ -18,18 +18,23 @@
 #include <stdint.h>
 
 #include "console.h"
-#include "driver.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct layer_config {
+struct layer_store_mount_opts {
+    char *mount_label;
+    char **options;
+    size_t options_len;
+};
+
+struct layer_store_config {
     /*configs for graph driver */
     char *driver_name;
     char *driver_root;
 
-    struct driver_mount_opts *opts;
+    struct layer_store_mount_opts *opts;
 };
 
 struct layer {
@@ -48,29 +53,32 @@ struct layer_opts {
     char **names;
     size_t names_len;
     bool writable;
-    struct driver_mount_opts *opts;
+
+    // mount options
+    struct layer_store_mount_opts *opts;
 };
 
-int layer_store_init(const struct layer_config *conf);
+int layer_store_init(const struct layer_store_config *conf);
 
-bool layer_check(const char *id);
-int layer_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content, char **new_id);
-int layer_delete(const char *id);
-bool layer_exists(const char *id);
-struct layer** layer_list();
-bool layer_is_used(const char *id);
-struct layer** layers_by_compress_digest(const char *digest);
-struct layer** layers_by_uncompress_digest(const char *digest);
-int layer_lookup(const char *name, char **found_id);
-int layer_mount(const char *id, const struct driver_mount_opts *opts);
-int layer_umount(const char *id, bool force);
-int layer_mounted(const char *id);
-int layer_set_names(const char *id, const char * const* names, size_t names_len);
-struct graphdriver_status* layer_status();
-int layer_try_repair_lowers(const char *id);
+bool layer_store_check(const char *id);
+int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content,
+                       char **new_id);
+int layer_store_delete(const char *id);
+bool layer_store_exists(const char *id);
+struct layer** layer_store_list();
+bool layer_store_is_used(const char *id);
+struct layer** layer_store_by_compress_digest(const char *digest);
+struct layer** layer_store_by_uncompress_digest(const char *digest);
+int layer_store_lookup(const char *name, char **found_id);
+int layer_store_mount(const char *id, const struct layer_store_mount_opts *opts);
+int layer_store_umount(const char *id, bool force);
+int layer_store_mounted(const char *id);
+int layer_store_set_names(const char *id, const char * const* names, size_t names_len);
+struct graphdriver_status* layer_store_status();
+int layer_store_try_repair_lowers(const char *id);
 
 void free_layer(struct layer *l);
-void free_layer_config(struct layer_config *conf);
+void free_layer_store_config(struct layer_store_config *conf);
 void free_layer_opts(struct layer_opts *opts);
 
 #ifdef __cplusplus

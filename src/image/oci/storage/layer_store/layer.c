@@ -21,7 +21,8 @@
 #include "utils.h"
 #include "log.h"
 
-static layer_t *new_layer(const char *layer_path, storage_layer *slayer, const char *mount_point_path, storage_mount_point *smount_point)
+static layer_t *new_layer(const char *layer_path, storage_layer *slayer, const char *mount_point_path,
+                          storage_mount_point *smount_point)
 {
     layer_t *result = NULL;
     int nret = 0;

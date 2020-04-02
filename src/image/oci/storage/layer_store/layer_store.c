@@ -36,7 +36,7 @@ static layer_store_metadata g_metadata;
 void layer_store_cleanup()
 {
     struct linked_list *item = NULL;
-    struct linked_list *next= NULL;
+    struct linked_list *next = NULL;
     linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         linked_list_del(item);
     }
@@ -56,7 +56,7 @@ static void layer_map_kvfree(void *key, void *value)
     layer_ref_dec((layer_t *)value);
 }
 
-int layer_store_init(const struct layer_config *conf)
+int layer_store_init(const struct layer_store_config *conf)
 {
     int nret;
 
@@ -95,64 +95,65 @@ free_out:
     return -1;
 }
 
-bool layer_check(const char *id)
+bool layer_store_check(const char *id)
 {
     return true;
 }
 
-int layer_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content, char **new_id)
+int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content,
+                       char **new_id)
 {
     return 0;
 }
-int layer_delete(const char *id)
+int layer_store_delete(const char *id)
 {
     return 0;
 }
-bool layer_exists(const char *id)
+bool layer_store_exists(const char *id)
 {
     return true;
 }
-struct layer** layer_list()
+struct layer** layer_store_list()
 {
     return NULL;
 }
-bool layer_is_used(const char *id)
+bool layer_store_is_used(const char *id)
 {
     return true;
 }
-struct layer** layers_by_compress_digest(const char *digest)
+struct layer** layer_store_by_compress_digest(const char *digest)
 {
     return NULL;
 }
-struct layer** layers_by_uncompress_digest(const char *digest)
+struct layer** layer_store_by_uncompress_digest(const char *digest)
 {
     return NULL;
 }
-int layer_lookup(const char *name, char **found_id)
+int layer_store_lookup(const char *name, char **found_id)
 {
     return 0;
 }
-int layer_mount(const char *id, const struct driver_mount_opts *opts)
+int layer_store_mount(const char *id, const struct layer_store_mount_opts *opts)
 {
     return 0;
 }
-int layer_umount(const char *id, bool force)
+int layer_store_umount(const char *id, bool force)
 {
     return 0;
 }
-int layer_mounted(const char *id)
+int layer_store_mounted(const char *id)
 {
     return 0;
 }
-int layer_set_names(const char *id, const char * const* names, size_t names_len)
+int layer_store_set_names(const char *id, const char * const* names, size_t names_len)
 {
     return 0;
 }
-struct graphdriver_status* layer_status()
+struct graphdriver_status* layer_store_status()
 {
     return NULL;
 }
-int layer_try_repair_lowers(const char *id)
+int layer_store_try_repair_lowers(const char *id)
 {
     return 0;
 }
@@ -175,7 +176,7 @@ void free_layer(struct layer *ptr)
     free(ptr);
 }
 
-void free_layer_config(struct layer_config *ptr)
+void free_layer_store_config(struct layer_store_config *ptr)
 {
     if (ptr == NULL) {
         return;
@@ -184,6 +185,8 @@ void free_layer_config(struct layer_config *ptr)
     ptr->driver_name = NULL;
     free(ptr->driver_root);
     ptr->driver_root = NULL;
+
+    //TODO: free mount options
     free(ptr);
 }
 
@@ -192,4 +195,6 @@ void free_layer_opts(struct layer_opts *ptr)
     if (ptr == NULL) {
         return;
     }
+
+    //TODO: free mount options
 }
