@@ -26,21 +26,17 @@
 extern "C" {
 #endif
 
-// the name of the big data item whose contents we consider useful for computing a "digest" of the
-// image, by which we can locate the image later.
-#define IMAGE_DIGEST_BIG_DATA_KEY "manifest"
-#define IMAGE_NAME_LEN            64
-
 // Load the image in the dir folder
 int new_image_store(const char *dir);
 
 // Create an image that has a specified ID (or a random one) and optional names, using the specified layer as
 // its topmost (hopefully read-only) layer.  That layer can be referenced by multiple images.
 storage_image *image_store_create(const char *id, const char **names, size_t names_len,
-                                  const char *layer, const char *metadata, const types_timestamp_t *time, const char *searchable_digest);
+                                  const char *layer, const char *metadata,
+                                  const types_timestamp_t *time, const char *searchable_digest);
 
 // Attempt to translate a name to an ID.  Most methods do this implicitly.
-storage_image *image_store_lookup(const char *id);
+const char *image_store_lookup(const char *id);
 
 // Remove the record of the image.
 int image_store_delete(const char *id);

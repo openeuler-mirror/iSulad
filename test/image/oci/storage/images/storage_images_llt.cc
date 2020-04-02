@@ -18,6 +18,9 @@
 #include <tuple>
 #include <fstream>
 #include <climits>
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <gtest/gtest.h>
 #include "path.h"
 
@@ -37,6 +40,17 @@ std::string GetDirectory()
     }
 
     return static_cast<std::string>(abs_path);
+}
+
+bool dirExists(const char* path)
+{
+    DIR *dp = NULL;
+    if ((dp = opendir(path)) == NULL) {
+        return false;
+    }
+
+    closedir(dp);
+    return true;
 }
 
 /********************************test data 1: image.json**************************************
@@ -187,8 +201,8 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     std::string metadata {"{}"};
     types_timestamp_t time {0x00};
     std::string searchableDigest {"manifest"};
-    auto created_image = image_store_create(id.c_str(), names, sizeof(names)/sizeof(names[0]),
-            layer.c_str(), metadata.c_str(), &time, searchableDigest.c_str());
+    auto created_image = image_store_create(id.c_str(), names, sizeof(names) / sizeof(names[0]),
+                                            layer.c_str(), metadata.c_str(), &time, searchableDigest.c_str());
     ASSERT_NE(created_image, nullptr);
 
     auto image = image_store_get_image(id.c_str());
@@ -204,4 +218,59 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     ASSERT_EQ(image_store_delete(id.c_str()), 0);
     ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);
+    ASSERT_FALSE(dirExists((std::string(real_path) + "/" + id).c_str()));
+}
+
+TEST_F(StorageImagesUnitTest, test_image_store_lookup)
+{
+    std::string id {"e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b"};
+    std::string name { "rnd-dockerhub.huawei.com/official/busybox:latest" };
+    std::string truncatedId {"e4db68de4ff27"};
+    std::string incorrectId {"4db68de4ff27"};
+
+    ASSERT_STREQ(image_store_lookup(name.c_str()), id.c_str());
+    ASSERT_STREQ(image_store_lookup(truncatedId.c_str()), id.c_str());
+    ASSERT_EQ(image_store_lookup(incorrectId.c_str()), nullptr);
+}
+
+TEST_F(StorageImagesUnitTest, test_image_store_exists)
+{
+    std::string id {"39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10"};
+    std::string name { "rnd-dockerhub.huawei.com/official/centos:latest" };
+    std::string truncatedId {"398"};
+    std::string incorrectId {"ff67da98ab8540d713209"};
+
+    ASSERT_TRUE(image_store_exists(name.c_str()));
+    ASSERT_TRUE(image_store_exists(truncatedId.c_str()));
+    ASSERT_FALSE(image_store_exists(incorrectId.c_str()));
+}
+
+TEST_F(StorageImagesUnitTest, test_image_store_metadata)
+{
+    std::string incorrectId {"ff67da98ab8540d713209"};
+
+    for (auto elem : ids) {
+        ASSERT_STREQ(image_store_metadata(elem.c_str()), "{}");
+    }
+
+    ASSERT_EQ(image_store_metadata(incorrectId.c_str()), nullptr);
+}
+
+// int image_store_get_all_images(storage_image ***images, size_t *len);
+TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
+{
+    storage_image **images = NULL;
+    size_t len = 0;
+
+    ASSERT_EQ(image_store_get_all_images(&images, &len), 0);
+    ASSERT_EQ(len, 2);
+    for (size_t i {}; i < len; i++) {
+        ASSERT_NE(find(ids.begin(), ids.end(), std::string(images[i]->id)), ids.end());
+    }
+
+    for (size_t i {}; i < len; i++) {
+        free_storage_image(images[i]);
+        images[i] = NULL;
+    }
+    free(images);
 }

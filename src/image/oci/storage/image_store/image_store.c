@@ -27,6 +27,11 @@
 #include "constants.h"
 #include "read_file.h"
 
+// the name of the big data item whose contents we consider useful for computing a "digest" of the
+// image, by which we can locate the image later.
+#define IMAGE_DIGEST_BIG_DATA_KEY "manifest"
+#define IMAGE_NAME_LEN            64
+
 typedef struct file_locker {
     // key: string  value: struct flock
     map_t *lock_files;
@@ -1036,7 +1041,7 @@ out:
     return value;
 }
 
-storage_image *image_store_lookup(const char *id)
+static storage_image *lookup(const char *id)
 {
     storage_image *value = NULL;
 
@@ -1061,6 +1066,23 @@ storage_image *image_store_lookup(const char *id)
     }
 
     return NULL;
+}
+
+const char *image_store_lookup(const char *id)
+{
+    storage_image * image = NULL;
+
+    if (g_image_store == NULL || id == NULL) {
+        return NULL;
+    }
+
+    image = lookup(id);
+    if (image == NULL) {
+        ERROR("Image not known");
+        return NULL;
+    }
+
+    return image->id;
 }
 
 static const char *get_value_from_json_map_string_string(json_map_string_string *map, const char *key)
@@ -1171,7 +1193,7 @@ int image_store_delete(const char *id)
         return -1;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("image not known");
         return -1;
@@ -1552,7 +1574,7 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
         return -1;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("Failed to lookup image from store");
         ret = -1;
@@ -1647,7 +1669,7 @@ int image_store_add_name(const char *id, const char *name)
         return -1;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("image not known");
         ret = -1;
@@ -1738,7 +1760,7 @@ int image_store_set_names(const char *id, const char **names, size_t names_len)
         return -1;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("image not known");
         ret = -1;
@@ -1800,7 +1822,7 @@ int image_store_set_metadata(const char *id, const char *metadata)
         return -1;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("image not known");
         ret = -1;
@@ -1827,7 +1849,7 @@ int image_store_set_load_time(const char *id,  const types_timestamp_t *time)
         return -1;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("image not known");
         ret = -1;
@@ -1854,7 +1876,7 @@ bool image_store_exists(const char *id)
         return false;
     }
 
-    return image_store_lookup(id) != NULL;
+    return lookup(id) != NULL;
 }
 
 const storage_image *image_store_get_image(const char *id)
@@ -1865,7 +1887,7 @@ const storage_image *image_store_get_image(const char *id)
         return false;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("Image not known");
         return NULL;
@@ -1887,7 +1909,7 @@ char *image_store_big_data(const char *id, const char *key)
         return NULL;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("Image not known");
         return NULL;
@@ -1920,7 +1942,7 @@ int64_t image_store_big_data_size(const char *id, const char *key)
         goto out;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("Image not known");
         goto out;
@@ -1937,7 +1959,7 @@ int64_t image_store_big_data_size(const char *id, const char *key)
             goto out;
         }
 
-        image = image_store_lookup(id);
+        image = lookup(id);
         if (image == NULL) {
             ERROR("Image not known");
             goto out;
@@ -1965,7 +1987,7 @@ const char *image_store_big_data_digest(const char *id, const char *key)
         return NULL;
     }
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("Image not known");
         return NULL;
@@ -1983,7 +2005,7 @@ const char *image_store_big_data_digest(const char *id, const char *key)
             goto out;
         }
 
-        image = image_store_lookup(id);
+        image = lookup(id);
         if (image == NULL) {
             ERROR("Image not known");
             goto out;
@@ -2004,7 +2026,7 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
 {
     storage_image *image = NULL;
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("Image not known");
         return -1;
@@ -2022,7 +2044,7 @@ const char *image_store_metadata(const char *id)
 {
     storage_image *image = NULL;
 
-    image = image_store_lookup(id);
+    image = lookup(id);
     if (image == NULL) {
         ERROR("Image not known");
         return NULL;
