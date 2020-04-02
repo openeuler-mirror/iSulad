@@ -107,7 +107,7 @@ static void image_store_digest_field_kvfree(void *key, void *value)
 
 static int get_image_path(image_store_t *image_store, const char *id, char *path, size_t len)
 {
-    int nret = snprintf(path, len, "%s/%s/%s", image_store->dir, id, "image.json");
+    int nret = snprintf(path, len, "%s/%s/image.json", image_store->dir, id);
 
     return (nret < 0 || (size_t)nret >= len) ? -1 : 0;
 }
@@ -297,12 +297,12 @@ int save_image(image_store_t *image_store, storage_image *image)
 {
     int ret = 0;
     char image_path[PATH_MAX] = {0x00};
-    char *image_dir = NULL;
+    char image_dir[PATH_MAX] = {0x00};
     parser_error err = NULL;
     char *json_data = NULL;
 
     if (!is_read_write()) {
-        ERROR("not allowed to modify the read-only image store at %s/images.json", g_image_store->dir);
+        ERROR("not allowed to modify the read-only image store at %s", image_store->dir);
         return -1;
     }
 
@@ -316,8 +316,8 @@ int save_image(image_store_t *image_store, storage_image *image)
         return -1;
     }
 
-    image_dir = dirname(image_path);
-    ret = util_mkdir_p(image_dir, IMAGE_STORE_PATH_MODE);
+    strcpy(image_dir, image_path);
+    ret = util_mkdir_p(dirname(image_dir), IMAGE_STORE_PATH_MODE);
     if (ret < 0) {
         ERROR("Failed to create image directory %s.", image_path);
         return -1;
@@ -401,6 +401,9 @@ static int implicit_digest(storage_image *image, map_t *digests)
 {
     size_t index = 0;
     digest_image_t *tmp_digest_images = NULL;
+    if (image->big_data_digests == NULL) {
+        return 0;
+    }
 
     if (get_index_by_key((const char **)image->big_data_digests->keys,
                          image->big_data_digests->len, IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
@@ -426,6 +429,11 @@ static int explicit_digest(storage_image *image, map_t *digests)
     size_t index = 0;
     digest_image_t *tmp_digest_images = NULL;
     char *value = NULL;
+
+    if (image->big_data_digests == NULL) {
+        return 0;
+    }
+
     if (get_index_by_key((const char **)image->big_data_digests->keys,
                          image->big_data_digests->len, IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
         value = image->big_data_digests->values[index];
@@ -680,7 +688,7 @@ static int string_array_unique(const char **elements, size_t length, char ***uni
     }
 
     tmp_elements_len = map_size(map);
-    tmp_elements = (char **)util_common_calloc_s(*unique_elements_len * sizeof(char *));
+    tmp_elements = (char **)util_common_calloc_s(tmp_elements_len * sizeof(char *));
     if (tmp_elements == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -887,6 +895,8 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
         //
         // }
         // }
+    } else {
+        dst_id = util_strdup_s(id);
     }
 
     if (map_search(g_image_store->byid, (void *)id) != NULL) {
@@ -928,7 +938,6 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
 
     image->names = unique_names;
     image->names_len = unique_names_len;
-    unique_names = NULL;
 
     image->layer = util_strdup_s(layer);
 
@@ -976,9 +985,7 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
         goto out;
     }
 
-    // TODO: copy image
     duped_image = copy_image(image);
-
 
 out:
     free(dst_id);
@@ -1060,6 +1067,9 @@ static const char *get_value_from_json_map_string_string(json_map_string_string 
 {
     size_t i;
 
+    if (map == NULL) {
+        return NULL;
+    }
     for (i = 0; i < map->len; i++) {
         if (strcmp(key, map->keys[i]) == 0) {
             return map->values[i];

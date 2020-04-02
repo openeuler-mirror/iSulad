@@ -12,7 +12,6 @@
  * Create: 2020-03-30
  * Description: provide oci storage images unit test
  ******************************************************************************/
-
 #include "image_store.h"
 #include <iostream>
 #include <algorithm>
@@ -166,7 +165,21 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_STREQ(image->loaded, "2020-03-16T03:46:17.439778957Z");
 }
 
-/*TEST_F(StorageImagesUnitTest, test_images_create)
+/********************************test data *************************************************
+{
+    "id": "50551ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
+    "digest": "manifest",
+    "names": [
+        "euleros:3.1",
+        "hello_world:latest"
+    ],
+    "layer": "9994458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
+    "metadata": "{}",
+    "created": "2020-04-02T05:44:23.408951489-04:00",
+    "loaded": "2020-04-02T05:44:23.408987703-04:00"
+}
+******************************************************************************************/
+TEST_F(StorageImagesUnitTest, test_image_store_create)
 {
     std::string id {"50551ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10"};
     const char *names[2] = {"hello_world:latest", "euleros:3.1"};
@@ -174,7 +187,21 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     std::string metadata {"{}"};
     types_timestamp_t time {0x00};
     std::string searchableDigest {"manifest"};
-    auto image = create(image_store, id.c_str(), names, sizeof(names)/sizeof(names[0]),
+    auto created_image = image_store_create(id.c_str(), names, sizeof(names)/sizeof(names[0]),
             layer.c_str(), metadata.c_str(), &time, searchableDigest.c_str());
+    ASSERT_NE(created_image, nullptr);
+
+    auto image = image_store_get_image(id.c_str());
     ASSERT_NE(image, nullptr);
-}*/
+    ASSERT_STREQ(image->digest, "manifest");
+    ASSERT_EQ(image->names_len, 2);
+    ASSERT_STREQ(image->names[0], "euleros:3.1");
+    ASSERT_STREQ(image->names[1], "hello_world:latest");
+    ASSERT_STREQ(image->layer, "9994458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
+    ASSERT_STREQ(image->metadata, "{}");
+    ASSERT_NE(image->created, nullptr);
+    ASSERT_NE(image->loaded, nullptr);
+
+    ASSERT_EQ(image_store_delete(id.c_str()), 0);
+    ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);
+}
