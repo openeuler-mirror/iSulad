@@ -115,10 +115,6 @@ int client_arguments_init(struct client_arguments *args)
     }
     args->name = NULL;
     args->create_rootfs = NULL;
-    args->log_file = NULL;
-    // maximum number of rotate files : 7
-    args->log_file_rotate = 7;
-    args->log_file_size = "30KB";
     args->argc = 0;
     args->argv = NULL;
     host = getenv("ISULAD_HOST");
@@ -127,6 +123,7 @@ int client_arguments_init(struct client_arguments *args)
     } else {
         args->socket = util_strdup_s(DEFAULT_UNIX_SOCKET);
     }
+    args->log_driver = util_strdup_s("json-file");
 
     (void)memset(&args->custom_conf, 0, sizeof(struct custom_configs));
     (void)memset(&args->cr, 0, sizeof(struct args_cgroup_resources));
@@ -220,6 +217,9 @@ void client_arguments_free(struct client_arguments *args)
 
     free(args->create_rootfs);
     args->create_rootfs = NULL;
+
+    free(args->log_driver);
+    args->log_driver = NULL;
 
     free_json_map_string_string(args->annotations);
     args->annotations = NULL;

@@ -1817,32 +1817,6 @@ out:
     return ret;
 }
 
-static int pack_container_custom_config_log(container_config *container_spec,
-                                            const isula_container_config_t *custom_conf)
-{
-    int ret = 0;
-
-    /* log config */
-    container_spec->log_config = util_common_calloc_s(sizeof(container_config_log_config));
-    if (container_spec->log_config == NULL) {
-        ret = -1;
-        goto out;
-    }
-    if (custom_conf->log_file != NULL) {
-        container_spec->log_config->log_file = util_strdup_s(custom_conf->log_file);
-    }
-
-    if (custom_conf->log_file_size != NULL) {
-        container_spec->log_config->log_file_size = util_strdup_s(custom_conf->log_file_size);
-    }
-
-    if (custom_conf->log_file_rotate) {
-        container_spec->log_config->log_file_rotate = custom_conf->log_file_rotate;
-    }
-out:
-    return ret;
-}
-
 static int pack_container_custom_config_args(container_config *container_spec,
                                              const isula_container_config_t *custom_conf)
 {
@@ -2141,11 +2115,6 @@ static int pack_container_custom_config_pre(container_config *container_spec,
 {
     int ret = 0;
 
-    ret = pack_container_custom_config_log(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
-
     ret = pack_container_custom_config_args(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
@@ -2192,6 +2161,7 @@ static int pack_container_custom_config(container_config *container_spec,
     if (custom_conf->hostname != NULL) {
         container_spec->hostname = util_strdup_s(custom_conf->hostname);
     }
+    container_spec->log_driver = util_strdup_s(custom_conf->log_driver);
 
     /* console config */
     container_spec->tty = custom_conf->tty;

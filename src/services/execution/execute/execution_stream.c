@@ -2238,6 +2238,7 @@ static int container_get_container_log_config(const container_t *cont, struct co
         return -1;
     }
     (*log_config)->path = util_strdup_s(cont->log_path);
+    (*log_config)->driver = util_strdup_s(cont->log_driver);
     (*log_config)->rotate = cont->log_rotate;
     (*log_config)->size = cont->log_maxsize;
 
@@ -2254,6 +2255,20 @@ static void pack_logs_response(struct isulad_logs_response *response, uint32_t c
         response->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
+}
+
+static bool support_logs(struct container_log_config *log_config)
+{
+    if (log_config->driver == NULL) {
+        return true;
+    }
+
+    // syslog do not support logs
+    if (strcmp(CONTAINER_LOG_CONFIG_SYSLOG_DRIVER, log_config->driver) == 0) {
+        return false;
+    }
+
+    return true;
 }
 
 static int container_logs_cb(const struct isulad_logs_request *request, stream_func_wrapper *stream,
@@ -2302,6 +2317,11 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
         goto out;
     }
     if (container_get_container_log_config(cont, &log_config) != 0) {
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    if (!support_logs(log_config)) {
+        isulad_set_error_message("Do not support logs for log driver: %s", log_config->driver);
         cc = ISULAD_ERR_EXEC;
         goto out;
     }

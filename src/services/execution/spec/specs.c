@@ -119,46 +119,17 @@ out:
 
 static int make_annotations_log_console(const container_config *container_spec)
 {
-    int ret = 0;
-    int nret = 0;
-    char tmp_str[ISULAD_NUMSTRLEN64] = {0};
-
-    if (container_spec->log_config != NULL) {
-        if (container_spec->log_config->log_file != NULL) {
-            if (append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_FILE,
-                                              container_spec->log_config->log_file)) {
-                ERROR("append log console file failed");
-                ret = -1;
-                goto out;
-            }
-        }
-
-        nret = snprintf(tmp_str, sizeof(tmp_str), "%llu",
-                        (unsigned long long)(container_spec->log_config->log_file_rotate));
-        if (nret < 0 || (size_t)nret >= sizeof(tmp_str)) {
-            ERROR("create rotate string failed");
-            ret = -1;
-            goto out;
-        }
-
-        if (append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_ROTATE, tmp_str)) {
-            ERROR("append log console file rotate failed");
-            ret = -1;
-            goto out;
-        }
-
-        if (container_spec->log_config->log_file_size != NULL) {
-            if (append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_SIZE,
-                                              container_spec->log_config->log_file_size)) {
-                ERROR("append log console file size failed");
-                ret = -1;
-                goto out;
-            }
-        }
+    if (container_spec->log_driver == NULL) {
+        return 0;
     }
 
-out:
-    return ret;
+    if (append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_DRIVER,
+                                      container_spec->log_driver) != 0) {
+        ERROR("append log console driver failed");
+        return -1;
+    }
+
+    return 0;
 }
 
 static int make_annotations_network_mode(const container_config *container_spec, const host_config *host_spec)

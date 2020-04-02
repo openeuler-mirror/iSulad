@@ -64,5 +64,14 @@
 
 #define DEFAULT_WEBSOCKET_SERVER_LISTENING_PORT 10350
 
+#define CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER "json-file"
+#define CONTAINER_LOG_CONFIG_SYSLOG_DRIVER "syslog"
+#define CONTAINER_LOG_CONFIG_KEY_DRIVER "log.console.driver"
+#define CONTAINER_LOG_CONFIG_KEY_FILE "log.console.file"
+#define CONTAINER_LOG_CONFIG_KEY_ROTATE "log.console.filerotate"
+#define CONTAINER_LOG_CONFIG_KEY_SIZE "log.console.filesize"
+#define CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG "log.console.tag"
+#define CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY "log.console.facility"
+
 #endif
 

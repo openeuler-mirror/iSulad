@@ -228,6 +228,8 @@ void container_log_config_free(struct container_log_config *conf)
     }
     free(conf->path);
     conf->path = NULL;
+    free(conf->driver);
+    conf->driver = NULL;
     conf->rotate = 0;
     conf->size = 0;
     free(conf);

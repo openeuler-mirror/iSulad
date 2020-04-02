@@ -360,11 +360,8 @@ void isula_container_config_free(isula_container_config_t *config)
     free(config->entrypoint);
     config->entrypoint = NULL;
 
-    free(config->log_file);
-    config->log_file = NULL;
-
-    free(config->log_file_size);
-    config->log_file_size = NULL;
+    free(config->log_driver);
+    config->log_driver = NULL;
 
     free_json_map_string_string(config->annotations);
     config->annotations = NULL;

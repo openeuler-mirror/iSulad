@@ -40,8 +40,6 @@ const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE
 struct client_arguments g_cmd_create_args = {
     .runtime = "",
     .restart = "no",
-    .log_file_size = "1MB",
-    .log_file_rotate = 7,
     .cr.oom_score_adj = 0,
     .custom_conf.health_interval = 0,
     .custom_conf.health_timeout = 0,
@@ -633,15 +631,7 @@ static void request_pack_custom_args(const struct client_arguments *args, isula_
 
 static void request_pack_custom_log_options(const struct client_arguments *args, isula_container_config_t *conf)
 {
-    if (args->log_file != NULL) {
-        conf->log_file = args->log_file;
-    }
-    if (args->log_file_size != NULL) {
-        conf->log_file_size = args->log_file_size;
-    }
-    conf->log_file_rotate = args->log_file_rotate;
-
-    return;
+    conf->log_driver = util_strdup_s(args->log_driver);
 }
 
 static int request_pack_custom_log_accel(struct client_arguments *args, isula_container_config_t *conf)
@@ -1241,34 +1231,119 @@ out:
     return ret;
 }
 
-static int log_opt_parse_options(struct client_arguments *args, const char *optkey, const char *value)
+static int add_new_annotation(const char *key, const char *value, struct client_arguments *args)
+{
+    if (key == NULL || value == NULL) {
+        return -1;
+    }
+
+    if (args->annotations == NULL) {
+        args->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+        if (args->annotations == NULL) {
+            COMMAND_ERROR("Out Memory");
+            return -1;
+        }
+    }
+
+    if (append_json_map_string_string(args->annotations, key, value)) {
+        COMMAND_ERROR("Failed to append annotation key:%s, value:%s", key, value);
+        return -1;
+    }
+
+    return 0;
+}
+
+typedef int (*log_opt_callback_t)(const char *key, const char *value, struct client_arguments *args);
+
+typedef struct log_opt_parse {
+    const char *key;
+    const char *anno_key;
+    log_opt_callback_t cb;
+} log_opt_parse_t;
+
+static int log_opt_common_cb(const char *key, const char *value, struct client_arguments *args)
+{
+    return add_new_annotation(key, value, args);
+}
+
+static int log_opt_max_file_cb(const char *key, const char *value, struct client_arguments *args)
+{
+    unsigned int ptr = 0;
+    int ret = -1;
+
+    if (util_safe_uint(value, &ptr)) {
+        return ret;
+    }
+    if (ptr == 0) {
+        COMMAND_ERROR("Invalid option 'max-file', value:%s", value);
+        return ret;
+    }
+
+    return add_new_annotation(key, value, args);
+}
+
+static int log_opt_syslog_facility(const char *key, const char *value, struct client_arguments *args)
+{
+#define FACILITIES_LEN 20
+    const char *facility_keys[FACILITIES_LEN] = {
+        "kern", "user", "mail", "daemon", "auth",
+        "syslog", "lpr", "news", "uucp", "cron", "authpriv", "ftp",
+        "local0", "local1", "local2", "local3", "local4", "local5", "local6", "local7"
+    };
+    int i;
+
+    for (i = 0; i < FACILITIES_LEN; i++) {
+        if (strcmp(facility_keys[i], value) == 0) {
+            break;
+        }
+    }
+
+    if (i == FACILITIES_LEN) {
+        return -1;
+    }
+
+    return add_new_annotation(key, value, args);
+}
+
+static int log_opt_disable_log_cb(const char *key, const char *value, struct client_arguments *args)
 {
     int ret = -1;
 
-    if (strcmp(optkey, "max-size") == 0) {
-        args->log_file_size = util_strdup_s(value);
+    if (strcmp(value, "true") == 0) {
+        ret = add_new_annotation(key, "none", args);
+    } else if (strcmp(value, "false") == 0) {
         ret = 0;
-    } else if (strcmp(optkey, "max-file") == 0) {
-        if (util_safe_uint(value, &args->log_file_rotate)) {
-            goto out;
-        }
-        if (args->log_file_rotate == 0) {
-            COMMAND_ERROR("Invalid option 'max-file' key:%s, value:%s", optkey, value);
-            goto out;
-        }
-        ret = 0;
-    } else if (strcmp(optkey, "disable-log") == 0) {
-        if (strcmp(value, "true") == 0) {
-            args->log_file = util_strdup_s("none");
-            ret = 0;
-        } else if (strcmp(value, "false") == 0) {
-            args->log_file = NULL;
-            ret = 0;
-        } else {
-            COMMAND_ERROR("Invalid option 'disable-log' key:%s, value:%s", optkey, value);
+    } else {
+        COMMAND_ERROR("Invalid option 'disable-log', value:%s", value);
+    }
+
+    return ret;
+}
+
+static int log_opt_parse_options(struct client_arguments *args, const char *optkey, const char *value)
+{
+#define OPTIONS_MAX 5
+    log_opt_parse_t log_opts[OPTIONS_MAX] = {
+        { .key = "max-size", .anno_key = CONTAINER_LOG_CONFIG_KEY_SIZE, .cb = &log_opt_common_cb, },
+        { .key = "max-file", .anno_key = CONTAINER_LOG_CONFIG_KEY_ROTATE, .cb = &log_opt_max_file_cb, },
+        { .key = "disable-log", .anno_key = CONTAINER_LOG_CONFIG_KEY_FILE, .cb = &log_opt_disable_log_cb, },
+        { .key = "syslog-tag", .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG, .cb = &log_opt_common_cb, },
+        { .key = "syslog-facility", .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY, .cb = &log_opt_syslog_facility, },
+    };
+    int ret = -1;
+    int i ;
+
+    for (i = 0; i < OPTIONS_MAX; i++) {
+        if (strcmp(optkey, log_opts[i].key) == 0) {
+            ret = log_opts[i].cb(log_opts[i].anno_key, value, args);
+            break;
         }
     }
-out:
+
+    if (i == OPTIONS_MAX) {
+        COMMAND_ERROR("Unsupported log opt: %s", optkey);
+    }
+
     return ret;
 }
 
@@ -1324,10 +1399,37 @@ out:
 
     return ret;
 }
+
 int callback_log_opt(command_option_t *option, const char *value)
 {
     struct client_arguments *args = (struct client_arguments *)option->data;
     return log_opt_parser(args, value);
+}
+
+int callback_log_driver(command_option_t *option, const char *value)
+{
+#define DRIVER_MAX 2
+    const char *drivers[] = {CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER, CONTAINER_LOG_CONFIG_SYSLOG_DRIVER};
+    int i = 0;
+    struct client_arguments *args = (struct client_arguments *)option->data;
+
+    if (value == NULL) {
+        return -1;
+    }
+
+    for (; i < DRIVER_MAX; i++) {
+        if (strcmp(value, drivers[i]) == 0) {
+            break;
+        }
+    }
+    if (i == DRIVER_MAX) {
+        return -1;
+    }
+
+    free(args->log_driver);
+    args->log_driver = util_strdup_s(value);
+
+    return 0;
 }
 
 static int annotation_parser(struct client_arguments *args, const char *option)
@@ -1358,20 +1460,7 @@ static int annotation_parser(struct client_arguments *args, const char *option)
         goto out;
     }
 
-    if (args->annotations == NULL) {
-        args->annotations = util_common_calloc_s(sizeof(json_map_string_string));
-        if (args->annotations == NULL) {
-            COMMAND_ERROR("Out Memory");
-            goto out;
-        }
-    }
-
-    if (append_json_map_string_string(args->annotations, optkey, value)) {
-        COMMAND_ERROR("Failed to append annotation key:%s, value:%s", optkey, value);
-        goto out;
-    }
-
-    ret = 0;
+    ret = add_new_annotation(optkey, value, args);
 
 out:
     if (ret < 0) {

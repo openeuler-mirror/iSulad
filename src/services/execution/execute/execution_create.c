@@ -204,18 +204,37 @@ static int add_default_log_config_to_container_spec(const char *id, const char *
                                                     container_config *container_spec)
 {
     int ret = 0;
+    int i = 0;
+    bool file_found = false;
+    bool rotate_found = false;
+    bool size_found = false;
 
     /* generate default log path */
-    if (container_spec->log_config == NULL) {
-        container_spec->log_config = util_common_calloc_s(sizeof(container_config_log_config));
-        if (container_spec->log_config == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
+    if (container_spec->log_driver != NULL &&
+        strcmp(CONTAINER_LOG_CONFIG_SYSLOG_DRIVER, container_spec->log_driver) == 0) {
+        return 0;
     }
 
-    if (container_spec->log_config->log_file == NULL) {
+    if (container_spec->annotations == NULL) {
+        container_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+    }
+    if (container_spec->annotations == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (; i < container_spec->annotations->len; i++) {
+        const char *tmp_key = container_spec->annotations->keys[i];
+        if (strcmp(CONTAINER_LOG_CONFIG_KEY_FILE, tmp_key) == 0) {
+            file_found = true;
+        } else if (strcmp(CONTAINER_LOG_CONFIG_KEY_ROTATE, tmp_key) == 0) {
+            rotate_found = true;
+        } else if (strcmp(CONTAINER_LOG_CONFIG_KEY_SIZE, tmp_key) == 0) {
+            size_found = true;
+        }
+    }
+    if (!file_found) {
         char default_path[PATH_MAX] = { 0 };
         int nret = snprintf(default_path, PATH_MAX, "%s/%s/console.log", runtime_root, id);
         if (nret < 0 || nret >= PATH_MAX) {
@@ -223,7 +242,22 @@ static int add_default_log_config_to_container_spec(const char *id, const char *
             ret = -1;
             goto out;
         }
-        container_spec->log_config->log_file = util_strdup_s(default_path);
+        ret = append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_FILE, default_path);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+    if (!rotate_found) {
+        ret = append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_ROTATE, "7");
+        if (ret != 0) {
+            goto out;
+        }
+    }
+    if (!size_found) {
+        ret = append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_SIZE, "30KB");
+        if (ret != 0) {
+            goto out;
+        }
     }
 
 out:
