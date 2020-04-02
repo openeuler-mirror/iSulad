@@ -144,7 +144,23 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
                        struct storage_img_create_options *opts)
 {
     int ret = 0;
+    storage_image *img = NULL;
 
+    if (id == NULL || parent_id == NULL || metadata == NULL || opts == NULL) {
+        ERROR("Invalid arguments for image create");
+        ret = -1;
+        goto out;
+    }
+
+    img = image_store_create(id, NULL, 0, parent_id, metadata, opts->create_time, opts->digest);
+    if (img == NULL) {
+        ERROR("Failed to create img");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_storage_image(img);
     return ret;
 }
 
