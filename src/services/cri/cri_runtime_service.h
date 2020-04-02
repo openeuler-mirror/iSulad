@@ -247,7 +247,7 @@ private:
                              const std::string &jsonCheckpoint, Errors &error);
     void SetupUserDefinedNetworkPlane(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &response_id,
                                       container_inspect *inspect_data, std::map<std::string, std::string> &stdAnnos,
-                                      Errors &error);
+                                      std::map<std::string, std::string> &options, Errors &error);
     void StartSandboxContainer(const std::string &response_id, Errors &error);
     std::string CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image,
                                        std::string &jsonCheckpoint, const std::string &runtimeHandler, Errors &error);

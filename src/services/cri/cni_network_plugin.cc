@@ -19,21 +19,18 @@
 #include <vector>
 #include <utility>
 #include <set>
+#include <chrono>
 
+#include "cxxutils.h"
 #include "log.h"
 #include "utils.h"
 #include "cri_helpers.h"
 
 namespace Network {
-static std::string VendorCNIDir(const std::string &prefix, const std::string &pluginType)
-{
-    return prefix + "/opt/" + pluginType + "/bin";
-}
-
-static std::unique_ptr<CNINetwork> GetLoNetwork(const std::string &binDir, const std::string &vendorDirPrefix)
+static std::unique_ptr<CNINetwork> GetLoNetwork(std::vector<std::string> binDirs, const std::string &vendorDirPrefix)
 {
     const std::string loNetConfListJson { "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\","
-        "\"plugins\":[{\"type\": \"loopback\" }]}" };
+                                          "\"plugins\":[{\"type\": \"loopback\" }]}" };
 
     char *cerr { nullptr };
     struct cni_network_list_conf *loConf {
@@ -62,8 +59,7 @@ static std::unique_ptr<CNINetwork> GetLoNetwork(const std::string &binDir, const
         return nullptr;
     }
 
-    result->InsertPath(VendorCNIDir(vendorDirPrefix, "loopback"));
-    result->InsertPath(binDir);
+    result->SetPaths(binDirs);
 
     return result;
 }
@@ -92,8 +88,9 @@ void ProbeNetworkPlugins(const std::string &pluginDir, const std::string &binDir
                          std::vector<std::shared_ptr<NetworkPlugin>> *plugins)
 {
     const std::string useBinDir = binDir.empty() ? DEFAULT_CNI_DIR : binDir;
-    auto plugin = std::make_shared<CniNetworkPlugin>(useBinDir, pluginDir);
-    plugin->SetLoNetwork(GetLoNetwork(useBinDir, ""));
+    std::vector<std::string> binDirs = CXXUtils::Split(useBinDir, ',');
+    auto plugin = std::make_shared<CniNetworkPlugin>(binDirs, pluginDir);
+    plugin->SetLoNetwork(GetLoNetwork(binDirs, ""));
     plugins->push_back(plugin);
 }
 
@@ -104,17 +101,28 @@ void CniNetworkPlugin::SetLoNetwork(std::unique_ptr<CNINetwork> lo)
     }
 }
 
-CniNetworkPlugin::CniNetworkPlugin(const std::string &binDir, const std::string &pluginDir,
-                                   const std::string &vendorCNIDirPrefix)
-    : m_pluginDir(pluginDir)
-    , m_vendorCNIDirPrefix(vendorCNIDirPrefix)
-    , m_binDir(binDir)
+void CniNetworkPlugin::SetDefaultNetwork(std::unique_ptr<CNINetwork> network)
+{
+    if (network != nullptr) {
+        m_defaultNetwork = std::move(network);
+    }
+}
+
+CniNetworkPlugin::CniNetworkPlugin(std::vector<std::string> &binDirs, const std::string &confDir,
+                                   const std::string &podCidr)
+    : m_confDir(confDir)
+    , m_binDirs(binDirs)
+    , m_podCidr(podCidr)
+    , m_needFinish(false)
 {
 }
 
 CniNetworkPlugin::~CniNetworkPlugin()
 {
-    m_networks.clear();
+    m_needFinish = true;
+    if (m_syncThread.joinable()) {
+        m_syncThread.join();
+    }
 }
 
 void CniNetworkPlugin::PlatformInit(Errors &error)
@@ -232,65 +240,16 @@ out:
     return ret;
 }
 
-int CniNetworkPlugin::InsertNewNetwork(struct cni_network_list_conf *n_list,
-                                       std::map<std::string, std::unique_ptr<CNINetwork>> &newNets,
-                                       const std::string &binDir, const std::string &vendorCNIDirPrefix, Errors &err)
-{
-    std::string confType { "" };
-
-    if (n_list == nullptr) {
-        err.Errorf("Invalid arguments");
-        return -1;
-    }
-    if (n_list->first_plugin_type != nullptr) {
-        confType = n_list->first_plugin_type;
-    }
-
-    std::string tpath = VendorCNIDir(vendorCNIDirPrefix, confType);
-    if (tpath.empty()) {
-        free_cni_network_list_conf(n_list);
-        err.SetError("Out of memory");
-        return -1;
-    }
-    std::unique_ptr<CNINetwork> network(new (std::nothrow) CNINetwork(n_list->name, n_list));
-    if (network == nullptr) {
-        free_cni_network_list_conf(n_list);
-        err.SetError("Out of memory");
-        return -1;
-    }
-    network->InsertPath(tpath);
-    network->InsertPath(binDir);
-
-    std::string n_key(network->GetName());
-    newNets.insert(std::pair<std::string, std::unique_ptr<CNINetwork>>(n_key, std::move(network)));
-    DEBUG("---parse cni network: %s finish ----", n_key.c_str());
-
-    return 0;
-}
-
-void CniNetworkPlugin::ResetCNINetwork(std::map<std::string, std::unique_ptr<CNINetwork>> &newNets, Errors &err)
-{
-    std::string pluginNames { "map[" };
-
-    m_networks.clear();
-    for (auto iter = newNets.begin(); iter != newNets.end(); iter++) {
-        m_networks[iter->first] = std::move(iter->second);
-        pluginNames += (iter->first + " ");
-    }
-    INFO("Loaded cni plugins successfully, all plugins: %s]", pluginNames.substr(0, pluginNames.length() - 1).c_str());
-}
-
-void CniNetworkPlugin::GetCNINetwork(const std::string &pluginDir, const std::string &binDir,
-                                     const std::string &vendorCNIDirPrefix, Errors &err)
+void CniNetworkPlugin::GetDefaultCNINetwork(const std::string &confDir, std::vector<std::string> &binDirs, Errors &err)
 {
     std::vector<std::string> files;
-    std::set<std::string> allPanes;
-    std::map<std::string, std::unique_ptr<CNINetwork>> newNets;
+    bool found = false;
 
-    if (GetCNIConfFiles(pluginDir, files, err) != 0) {
+    if (GetCNIConfFiles(confDir, files, err) != 0) {
         goto free_out;
     }
 
+    sort(files.begin(), files.end());
     for (auto elem : files) {
         struct cni_network_list_conf *n_list = nullptr;
 
@@ -305,23 +264,16 @@ void CniNetworkPlugin::GetCNINetwork(const std::string &pluginDir, const std::st
             continue;
         }
 
-        if (InsertConfNameToAllPanes(n_list, allPanes, err) != 0) {
-            goto free_out;
-        }
-
-        if (InsertNewNetwork(n_list, newNets, binDir, vendorCNIDirPrefix, err) != 0) {
-            goto free_out;
-        }
+        m_defaultNetwork = std::unique_ptr<CNINetwork>(new (std::nothrow) CNINetwork(n_list->name, n_list));
+        m_defaultNetwork->SetPaths(binDirs);
+        found = true;
+        break;
     }
-
-    if (newNets.size() == 0) {
-        err.Errorf("No valid networks found in %s", pluginDir.c_str());
-        goto free_out;
+    if (!found) {
+        err.Errorf("No valid networks found in %s", confDir.c_str());
     }
-    ResetCNINetwork(newNets, err);
 
 free_out:
-    newNets.clear();
     return;
 }
 
@@ -332,9 +284,9 @@ void CniNetworkPlugin::CheckInitialized(Errors &err)
         ERROR("%s", err.GetCMessage());
         return;
     }
-    size_t len = m_networks.size();
+    bool inited = (m_defaultNetwork != nullptr);
     UnlockNetworkMap(err);
-    if (len == 0) {
+    if (!inited) {
         err.AppendError("cni config uninitialized");
     }
 }
@@ -347,7 +299,7 @@ void CniNetworkPlugin::SyncNetworkConfig()
         ERROR("%s", err.GetCMessage());
         return;
     }
-    GetCNINetwork(m_pluginDir, m_binDir, m_vendorCNIDirPrefix, err);
+    GetDefaultCNINetwork(m_confDir, m_binDirs, err);
     if (err.NotEmpty()) {
         WARN("Unable to update cni config: %s", err.GetCMessage());
     }
@@ -375,6 +327,10 @@ void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &h
     m_criImpl = criImpl;
     SyncNetworkConfig();
 
+    // start a thread to sync network config from confDir periodically to detect network config updates in every 5 seconds
+    m_syncThread = std::thread([&]() {
+        UpdateDefaultNetwork();
+    });
     return;
 }
 
@@ -390,9 +346,10 @@ void CniNetworkPlugin::Status(Errors &err)
     CheckInitialized(err);
 }
 
-void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, const std::string &networkPlane,
+void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name,
                                 const std::string &interfaceName, const std::string &id,
-                                const std::map<std::string, std::string> &annotations, Errors &err)
+                                const std::map<std::string, std::string> &annotations,
+                                const std::map<std::string, std::string> &options, Errors &err)
 {
     CheckInitialized(err);
     if (err.NotEmpty()) {
@@ -403,16 +360,10 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         ERROR("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
         return;
     }
-    auto iter = annotations.find(CRIHelpers::Constants::POD_CHECKPOINT_KEY);
-    std::string jsonCheckpoint { "" };
-    if (iter != annotations.end()) {
-        jsonCheckpoint = iter->second;
-    }
-    DEBUG("add checkpoint: ", jsonCheckpoint.c_str());
 
     struct result *preResult = nullptr;
     if (m_loNetwork != nullptr) {
-        AddToNetwork(m_loNetwork.get(), jsonCheckpoint, name, ns, interfaceName, id, netnsPath, &preResult, err);
+        AddToNetwork(m_loNetwork.get(), name, ns, interfaceName, id, netnsPath, annotations, options, &preResult, err);
         free_result(preResult);
         preResult = nullptr;
         if (err.NotEmpty()) {
@@ -426,26 +377,20 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         ERROR("%s", err.GetCMessage());
         return;
     }
-    auto netIter = m_networks.find(networkPlane);
-    if (netIter == m_networks.end()) {
-        ERROR("Can't find cni plugin for network plane %s.", networkPlane.c_str());
-        err.Errorf("Can't find cni plugin for network plane %s.", networkPlane.c_str());
-        goto unlock_out;
-    }
 
-    AddToNetwork((netIter->second).get(), jsonCheckpoint, name, ns, interfaceName, id, netnsPath, &preResult, err);
+    AddToNetwork(m_defaultNetwork.get(), name, ns, interfaceName, id, netnsPath, annotations, options, &preResult, err);
+
     free_result(preResult);
     preResult = nullptr;
     if (err.NotEmpty()) {
         ERROR("Error while adding to cni network: %s", err.GetCMessage());
     }
 
-unlock_out:
     UnlockNetworkMap(err);
 }
 
-void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &networkPlane,
-                                   const std::string &interfaceName, const std::string &id,
+void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
+                                   const std::string &id,
                                    const std::map<std::string, std::string> &annotations, Errors &err)
 {
     CheckInitialized(err);
@@ -459,27 +404,14 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
         err.Clear();
     }
 
-    auto iter = annotations.find(CRIHelpers::Constants::POD_CHECKPOINT_KEY);
-    std::string jsonCheckpoint = "";
-    if (iter != annotations.end()) {
-        jsonCheckpoint = iter->second;
-    }
-    DEBUG("delete checkpoint: ", jsonCheckpoint.c_str());
     RLockNetworkMap(err);
     if (err.NotEmpty()) {
         ERROR("%s", err.GetCMessage());
         return;
     }
-    auto netIter = m_networks.find(networkPlane);
-    if (netIter == m_networks.end()) {
-        ERROR("Can't find cni plugin for network plane %s.", networkPlane.c_str());
-        err.Errorf("Can't find cni plugin for network plane %s.", networkPlane.c_str());
-        goto unlock_out;
-    }
 
-    DeleteFromNetwork((netIter->second).get(), jsonCheckpoint, name, ns, interfaceName, id, netnsPath, err);
+    DeleteFromNetwork(m_defaultNetwork.get(), name, ns, interfaceName, id, netnsPath, annotations, err);
 
-unlock_out:
     UnlockNetworkMap(err);
 }
 
@@ -490,7 +422,30 @@ std::map<int, bool> *CniNetworkPlugin::Capabilities()
 
 void CniNetworkPlugin::Event(const std::string &name, std::map<std::string, std::string> &details)
 {
-    m_noop.Event(name, details);
+    if (name != CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE) {
+        return;
+    }
+
+    auto iter = details.find(CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR);
+    if (iter == details.end()) {
+        WARN("%s event didn't contain pod CIDR", CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE.c_str());
+        return;
+    }
+
+    Errors err;
+    WLockNetworkMap(err);
+    if (err.NotEmpty()) {
+        ERROR("%s", err.GetCMessage());
+        return;
+    }
+    if (m_podCidr.empty()) {
+        WARN("Ignoring subsequent pod CIDR update to %s", iter->second.c_str());
+        goto unlock_out;
+    }
+    m_podCidr = iter->second;
+
+unlock_out:
+    UnlockNetworkMap(err);
 }
 
 void CniNetworkPlugin::GetPodNetworkStatus(const std::string &ns, const std::string &name,
@@ -526,9 +481,11 @@ out:
     INFO("get_pod_network_status: %s", podSandboxID.c_str());
 }
 
-void CniNetworkPlugin::AddToNetwork(CNINetwork *snetwork, const std::string &jsonCheckpoint, const std::string &podName,
+void CniNetworkPlugin::AddToNetwork(CNINetwork *snetwork, const std::string &podName,
                                     const std::string &podNamespace, const std::string &interfaceName,
                                     const std::string &podSandboxID, const std::string &podNetnsPath,
+                                    const std::map<std::string, std::string> &annotations,
+                                    const std::map<std::string, std::string> &options,
                                     struct result **presult, Errors &err)
 {
     struct runtime_conf *rc {
@@ -540,7 +497,8 @@ void CniNetworkPlugin::AddToNetwork(CNINetwork *snetwork, const std::string &jso
         ERROR("Invalid arguments");
         return;
     }
-    BuildCNIRuntimeConf(podName, jsonCheckpoint, podNamespace, interfaceName, podSandboxID, podNetnsPath, &rc, err);
+
+    BuildCNIRuntimeConf(podName, podNamespace, interfaceName, podSandboxID, podNetnsPath, annotations, options, &rc, err);
     if (err.NotEmpty()) {
         ERROR("Error adding network when building cni runtime conf: %s", err.GetCMessage());
         return;
@@ -566,10 +524,12 @@ void CniNetworkPlugin::AddToNetwork(CNINetwork *snetwork, const std::string &jso
     free(serr);
 }
 
-void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network, const std::string &jsonCheckpoint,
+void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network,
                                          const std::string &podName, const std::string &podNamespace,
                                          const std::string &interfaceName, const std::string &podSandboxID,
-                                         const std::string &podNetnsPath, Errors &err)
+                                         const std::string &podNetnsPath,
+                                         const std::map<std::string, std::string> &annotations,
+                                         Errors &err)
 {
     struct runtime_conf *rc {
         nullptr
@@ -580,7 +540,8 @@ void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network, const std::string 
         ERROR("Invalid arguments");
         return;
     }
-    BuildCNIRuntimeConf(podName, jsonCheckpoint, podNamespace, interfaceName, podSandboxID, podNetnsPath, &rc, err);
+    std::map<std::string, std::string> options;
+    BuildCNIRuntimeConf(podName, podNamespace, interfaceName, podSandboxID, podNetnsPath, annotations, options, &rc, err);
     if (err.NotEmpty()) {
         ERROR("Error deleting network when building cni runtime conf: %s", err.GetCMessage());
         return;
@@ -606,20 +567,25 @@ void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network, const std::string 
     free(serr);
 }
 
-void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std::string &jsonCheckpoint,
-                                           const std::string &podNs, const std::string &interfaceName,
-                                           const std::string &podSandboxID, const std::string &podNetnsPath,
-                                           struct runtime_conf **cni_rc, Errors &err)
+static void PrepareRuntimeConf(const std::string &podName,
+                               const std::string &podNs, const std::string &interfaceName,
+                               const std::string &podSandboxID, const std::string &podNetnsPath,
+                               const std::map<std::string, std::string> &options,
+                               struct runtime_conf **cni_rc, Errors &err)
 {
-    std::vector<cri::PortMapping> portMappings;
-    INFO("Got netns path %s", podNetnsPath.c_str());
-    INFO("Using podns path %s", podNs.c_str());
-
+    const size_t defaultLen = 5;
     if (cni_rc == nullptr) {
         err.Errorf("Invalid arguments");
         ERROR("Invalid arguments");
         return;
     }
+
+    auto iter = options.find("UID");
+    std::string podUID {""};
+    if (iter != options.end()) {
+        podUID = iter->second;
+    }
+
     struct runtime_conf *rt = (struct runtime_conf *)util_common_calloc_s(sizeof(struct runtime_conf));
     if (rt == nullptr) {
         ERROR("Out of memory");
@@ -631,13 +597,13 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std
     rt->netns = util_strdup_s(podNetnsPath.c_str());
     rt->ifname = util_strdup_s(interfaceName.c_str());
 
-    rt->args = (char *(*)[2])util_common_calloc_s(sizeof(char *) * 2 * 4);
+    rt->args = (char *(*)[2])util_common_calloc_s(sizeof(char *) * 2 * defaultLen);
     if (rt->args == nullptr) {
         ERROR("Out of memory");
         err.SetError("Out of memory");
         goto free_out;
     }
-    rt->args_len = 4;
+    rt->args_len = defaultLen;
     rt->args[0][0] = util_strdup_s("IgnoreUnknown");
     rt->args[0][1] = util_strdup_s("1");
     rt->args[1][0] = util_strdup_s("K8S_POD_NAMESPACE");
@@ -646,6 +612,39 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std
     rt->args[2][1] = util_strdup_s(podName.c_str());
     rt->args[3][0] = util_strdup_s("K8S_POD_INFRA_CONTAINER_ID");
     rt->args[3][1] = util_strdup_s(podSandboxID.c_str());
+    rt->args[4][0] = util_strdup_s("K8S_POD_UID");
+    rt->args[4][1] = util_strdup_s(podUID.c_str());
+
+    *cni_rc = rt;
+    return;
+free_out:
+    free_runtime_conf(rt);
+}
+
+void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName,
+                                           const std::string &podNs, const std::string &interfaceName,
+                                           const std::string &podSandboxID, const std::string &podNetnsPath,
+                                           const std::map<std::string, std::string> &annotations,
+                                           const std::map<std::string, std::string> &options,
+                                           struct runtime_conf **cni_rc, Errors &err)
+{
+    PrepareRuntimeConf(podName, podNs, interfaceName, podSandboxID, podNetnsPath, options, cni_rc, err);
+    if (err.NotEmpty()) {
+        return;
+    }
+    struct runtime_conf *rt = *cni_rc;
+    *cni_rc = nullptr;
+
+    auto iter = annotations.find(CRIHelpers::Constants::POD_CHECKPOINT_KEY);
+    std::string jsonCheckpoint { "" };
+    if (iter != annotations.end()) {
+        jsonCheckpoint = iter->second;
+    }
+    DEBUG("add checkpoint: ", jsonCheckpoint.c_str());
+
+    std::vector<cri::PortMapping> portMappings;
+    INFO("Got netns path %s", podNetnsPath.c_str());
+    INFO("Using podns path %s", podNs.c_str());
 
     if (!jsonCheckpoint.empty()) {
         cri::PodSandboxCheckpoint checkpoint;
@@ -720,6 +719,22 @@ void CniNetworkPlugin::UnlockNetworkMap(Errors &error)
     int ret = pthread_rwlock_unlock(&m_netsLock);
     if (ret != 0) {
         error.Errorf("Unlock failed: %s", strerror(ret));
+    }
+}
+
+void CniNetworkPlugin::UpdateDefaultNetwork()
+{
+#define DEFAULT_SYNC_CONFIG_CNT 50
+#define DEFAULT_SYNC_CONFIG_PERIOD 100
+
+    while (true) {
+        for (int i = 0; i < DEFAULT_SYNC_CONFIG_PERIOD; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SYNC_CONFIG_PERIOD));
+            if (m_needFinish) {
+                return;
+            }
+        }
+        SyncNetworkConfig();
     }
 }
 

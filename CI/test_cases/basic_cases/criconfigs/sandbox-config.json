@@ -1,0 +1,11 @@
+{
+    "port_mappings":[{"protocol": 1, "container_port": 80, "host_port": 8080}],
+    "metadata": {
+        "name": "test",
+        "namespace": "default",
+        "attempt": 1,
+        "uid": "hdishd83djaidwnduwk28bcsb"
+    },
+    "linux": {
+    }
+}

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+basepath=/tmp/cnilogs/
+mkdir -p $basepath
+secs=`date "+%s"`
+confpath=${basepath}/${secs}.netconf
+envpath=${basepath}/${secs}.env
+
+env | grep CNI_CONTAINERID >/dev/null 2>&1
+if [ $? -eq 0 ];then
+	confpath=${basepath}/${CNI_CONTAINERID}.netconf
+	envpath=${basepath}/${CNI_CONTAINERID}.env
+fi
+
+read -r line
+echo $line > ${confpath}
+
+env > ${envpath}
+
+echo "{
+    \"cniVersion\": \"0.3.1\",
+    \"dns\": {}
+}"

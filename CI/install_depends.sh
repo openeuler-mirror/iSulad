@@ -25,7 +25,9 @@ buildstatus=${builddir}/build.fail
 
 declare -a buildlogs
 build_log_isulad_img=${builddir}/build.isulad_img.log
-buildlogs+=(${build_log_isulad_img})
+build_log_crictl=${builddir}/build.crictl.log
+build_log_cni_plugins=${builddir}/build.cni_plugins.log
+buildlogs+=(${build_log_isulad_img} ${build_log_crictl} ${build_log_cni_plugins})
 
 mkdir -p ${builddir}/rpm
 mkdir -p ${builddir}/bin
@@ -45,6 +47,29 @@ function make_isulad_img()
     make DESTDIR=${builddir} install
 }
 
+#install crictl
+function make_crictl()
+{
+    cd ~
+    git clone -b release-1.14 https://gitee.com/duguhaotian/cri-tools.git
+    cd cri-tools
+    make -j $nproc
+    cp ./_output/bin/crictl ${builddir}/bin/
+}
+
+#install cni plugins
+function make_cni_plugins()
+{
+    local CNI_PLUGINS_COMMIT=b93d284d18dfc8ba93265fa0aa859c7e92df411b
+    cd ~
+    git clone https://gitee.com/duguhaotian/plugins.git
+    cd plugins
+    git checkout -q "$CNI_PLUGINS_COMMIT"
+    ./build.sh
+    mkdir -p ${builddir}/cni/bin/
+    cp bin/* ${builddir}/cni/bin/
+}
+
 function check_make_status()
 {
     set +e
@@ -61,6 +86,8 @@ function check_make_status()
 
 rm -rf ${buildstatus}
 check_make_status make_isulad_img ${build_log_isulad_img} &
+check_make_status make_crictl ${build_log_crictl} &
+check_make_status make_cni_plugins ${build_log_cni_plugins} &
 
 # install lxc
 cd ~

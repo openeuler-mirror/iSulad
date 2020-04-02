@@ -109,14 +109,11 @@ cleanup:
 
 void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error)
 {
-    const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE { "pod-cidr-change" };
-    const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod-cidr" };
-
     INFO("iSulad cri received runtime config: %s", config.network_config().pod_cidr().c_str());
     if (m_pluginManager != nullptr && config.has_network_config() && !(config.network_config().pod_cidr().empty())) {
         std::map<std::string, std::string> events;
-        events[NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR] = config.network_config().pod_cidr();
-        m_pluginManager->Event(NET_PLUGIN_EVENT_POD_CIDR_CHANGE, events);
+        events[CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR] = config.network_config().pod_cidr();
+        m_pluginManager->Event(CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE, events);
     }
     return;
 }

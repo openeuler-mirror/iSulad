@@ -343,6 +343,7 @@ done
 for container in ${containers[@]}
 do
     {
+        docker cp ${cptemp}/cni ${container}:/opt
         docker cp ${cptemp}/bin ${container}:/usr
         docker cp ${cptemp}/etc ${container}:/
         docker cp ${cptemp}/usr/bin ${container}:/usr
