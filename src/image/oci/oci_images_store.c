@@ -324,7 +324,8 @@ static void remove_graph_root()
     int ret = 0;
     char *graph_root = NULL;
 
-    graph_root = conf_get_graph_rootpath();
+    //TODO replce funtion with storge module uninstall
+    //graph_root = conf_get_graph_rootpath();
     if (graph_root == NULL) {
         ERROR("Failed to get image graph root path");
         return;

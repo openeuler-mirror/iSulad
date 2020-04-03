@@ -45,6 +45,7 @@
 #include "engine.h"
 #include "utils.h"
 #include "isulad_config.h"
+#include "storage.h"
 #include "image.h"
 #include "sysinfo.h"
 #include "verify.h"
@@ -1090,6 +1091,51 @@ out:
     return ret;
 }
 
+static int storage_module_init_helper(const struct service_arguments *args)
+{
+    int ret = 0;
+    struct storage_module_init_options *storage_opts = NULL;
+
+    storage_opts = util_common_calloc_s(sizeof(struct storage_module_init_options));
+    if (storage_opts == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    storage_opts->driver_name = util_strdup_s(args->json_confs->storage_driver);
+    storage_opts->storage_root = util_path_join(args->json_confs->graph, GRAPH_ROOTPATH_NAME);
+    if (storage_opts->storage_root == NULL) {
+        ERROR("Failed to get storage root dir");
+        ret = -1;
+        goto out;
+    }
+
+    storage_opts->storage_run_root = util_path_join(args->json_confs->state, GRAPH_ROOTPATH_NAME);
+    if (storage_opts->storage_run_root == NULL) {
+        ERROR("Failed to get storage run root dir");
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_array_of_strings((const char **)args->json_confs->storage_opts,
+                             args->json_confs->storage_opts_len, &storage_opts->driver_opts, &storage_opts->driver_opts_len) != 0) {
+        ERROR("Failed to get storage storage opts");
+        ret = -1;
+        goto out;
+    }
+
+    if (storage_module_init(storage_opts) != 0) {
+        ERROR("Failed to init storage module");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_storage_module_init_options(storage_opts);
+    return ret;
+}
+
 static int isulad_server_init_common()
 {
     int ret = -1;
@@ -1112,9 +1158,7 @@ static int isulad_server_init_common()
     }
 
 #ifdef ENABLE_OCI_IMAGE
-    if (graphdriver_init(args->json_confs->storage_driver, args->json_confs->graph,
-                         args->json_confs->storage_opts,
-                         args->json_confs->storage_opts_len) != 0) {
+    if (storage_module_init_helper(args) != 0) {
         goto out;
     }
 #endif

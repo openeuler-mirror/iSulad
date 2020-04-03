@@ -28,50 +28,6 @@ static int pack_global_graph_driver(const char * const *options, bool ignore_sto
 }
 #endif
 
-static int pack_global_graph_root(const char * const *options, char *params[], size_t *count)
-{
-    int ret = -1;
-    char *graph_root = NULL;
-    size_t i = 0;
-
-    i = *count;
-
-    graph_root = conf_get_graph_rootpath();
-    if (graph_root == NULL) {
-        COMMAND_ERROR("Failed to get graph root directory");
-        goto out;
-    }
-    add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_GRAPH_ROOT], graph_root);
-
-    ret = 0;
-    *count = i;
-out:
-    free(graph_root);
-    return ret;
-}
-
-static int pack_global_graph_run(const char * const *options, char *params[], size_t *count)
-{
-    int ret = -1;
-    char *graph_run = NULL;
-    size_t i = 0;
-
-    i = *count;
-
-    graph_run = conf_get_graph_run_path();
-    if (graph_run == NULL) {
-        COMMAND_ERROR("Failed to get graph run directory");
-        goto out;
-    }
-    add_array_kv(params, PARAM_NUM, &i, options[GB_OPTION_RUN_ROOT], graph_run);
-
-    ret = 0;
-    *count = i;
-out:
-    free(graph_run);
-    return ret;
-}
-
 static char *adapt_log_level()
 {
 #define LOG_LEVEL_MAX 5
@@ -192,14 +148,6 @@ int pack_global_options(const char * const *options, char *params[], size_t *cou
     }
 
     i = *count;
-
-    if (pack_global_graph_root(options, params, &i) != 0) {
-        goto out;
-    }
-
-    if (pack_global_graph_run(options, params, &i) != 0) {
-        goto out;
-    }
 
 #ifdef ENABLE_OCI_IMAGE
     if (pack_global_graph_driver(options, ignore_storage_opt_size, params, &i) != 0) {

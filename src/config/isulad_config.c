@@ -30,9 +30,9 @@
 #include "isulad_config.h"
 #include "sysinfo.h"
 #include "libisulad.h"
+#include "storage.h"
 
 #define ENGINE_ROOTPATH_NAME "engines"
-#define GRAPH_ROOTPATH_NAME "storage"
 #define GRAPH_ROOTPATH_CHECKED_FLAG "NEED_CHECK"
 
 #define INCREMENT_INTREVAL 2
@@ -215,45 +215,6 @@ free_out:
     return epath;
 }
 
-/* conf get graph rootpath */
-char *conf_get_graph_rootpath()
-{
-    char *epath = NULL;
-    char *rootpath = NULL;
-    size_t len;
-
-    rootpath = conf_get_isulad_rootdir();
-    if (rootpath == NULL) {
-        ERROR("Get rootpath failed");
-        return epath;
-    }
-    if (strlen(rootpath) > (SIZE_MAX - strlen(GRAPH_ROOTPATH_NAME)) - 2) {
-        ERROR("Root path is too long");
-        goto free_out;
-    }
-    len = strlen(rootpath) + 1 + strlen(GRAPH_ROOTPATH_NAME) + 1;
-    if (len > PATH_MAX) {
-        ERROR("The size of path exceeds the limit");
-        goto free_out;
-    }
-    epath = util_common_calloc_s(len);
-    if (epath == NULL) {
-        ERROR("Out of memory");
-        goto free_out;
-    }
-
-    int nret = snprintf(epath, len, "%s/%s", rootpath, GRAPH_ROOTPATH_NAME);
-    if (nret < 0 || (size_t)nret >= len) {
-        ERROR("Sprintf graph path failed");
-        free(epath);
-        epath = NULL;
-    }
-
-free_out:
-    free(rootpath);
-    return epath;
-}
-
 /* conf get graph checked flag file path */
 char *conf_get_graph_check_flag_file()
 {
@@ -284,45 +245,6 @@ char *conf_get_graph_check_flag_file()
     int nret = snprintf(epath, len, "%s/%s/%s", rootpath, GRAPH_ROOTPATH_NAME, GRAPH_ROOTPATH_CHECKED_FLAG);
     if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf graph checked flag failed");
-        free(epath);
-        epath = NULL;
-    }
-
-free_out:
-    free(rootpath);
-    return epath;
-}
-
-/* conf get graph run path */
-char *conf_get_graph_run_path()
-{
-    char *epath = NULL;
-    char *rootpath = NULL;
-    size_t len;
-
-    rootpath = conf_get_isulad_statedir();
-    if (rootpath == NULL) {
-        ERROR("Get rootpath failed");
-        return epath;
-    }
-    if (strlen(rootpath) > (SIZE_MAX - strlen(GRAPH_ROOTPATH_NAME)) - 2) {
-        ERROR("Root path is too long");
-        goto free_out;
-    }
-    len = strlen(rootpath) + 1 + strlen(GRAPH_ROOTPATH_NAME) + 1;
-    if (len > PATH_MAX) {
-        ERROR("The size of path exceeds the limit");
-        goto free_out;
-    }
-    epath = util_common_calloc_s(len);
-    if (epath == NULL) {
-        ERROR("Out of memory");
-        goto free_out;
-    }
-
-    int nret = snprintf(epath, len, "%s/%s", rootpath, GRAPH_ROOTPATH_NAME);
-    if (nret < 0 || (size_t)nret >= len) {
-        ERROR("Sprintf graph run path failed");
         free(epath);
         epath = NULL;
     }

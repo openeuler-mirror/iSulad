@@ -22,6 +22,7 @@
 #include "json_common.h"
 #include "console.h"
 #include "driver_overlay2_types.h"
+#include "storage.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,8 +90,7 @@ struct graphdriver {
     struct overlay_options *overlay_opts;
 };
 
-int graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
-                     size_t storage_opts_len);
+int graphdriver_init(struct storage_module_init_options *opts);
 
 int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts);
 

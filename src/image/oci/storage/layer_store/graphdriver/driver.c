@@ -60,19 +60,18 @@ static struct graphdriver g_drivers[] = {
 
 static const size_t g_numdrivers = sizeof(g_drivers) / sizeof(struct graphdriver);
 
-int graphdriver_init(const char *name, const char *isulad_root, char **storage_opts,
-                     size_t storage_opts_len)
+int graphdriver_init(struct storage_module_init_options *opts)
 {
     int ret = 0;
     size_t i = 0;
     char driver_home[PATH_MAX] = { 0 };
 
-    if (name == NULL || storage_opts == NULL || isulad_root == NULL) {
+    if (opts == NULL || opts->storage_root == NULL || opts->driver_name == NULL) {
         ret = -1;
         goto out;
     }
 
-    int nret = snprintf(driver_home, PATH_MAX, "%s/%s/%s", isulad_root, "storage", name);
+    int nret = snprintf(driver_home, PATH_MAX, "%s/%s", opts->storage_root, opts->driver_name);
     if (nret < 0 || (size_t)nret >= PATH_MAX) {
         ERROR("Sprintf graph driver path failed");
         ret = -1;
@@ -80,8 +79,8 @@ int graphdriver_init(const char *name, const char *isulad_root, char **storage_o
     }
 
     for (i = 0; i < g_numdrivers; i++) {
-        if (strcmp(name, g_drivers[i].name) == 0) {
-            if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)storage_opts, storage_opts_len) != 0) {
+        if (strcmp(opts->driver_name, g_drivers[i].name) == 0) {
+            if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)opts->driver_opts, opts->driver_opts_len) != 0) {
                 ret = -1;
                 goto out;
             }
@@ -91,7 +90,7 @@ int graphdriver_init(const char *name, const char *isulad_root, char **storage_o
     }
 
     if (i == g_numdrivers) {
-        ERROR("unsupported driver %s", name);
+        ERROR("unsupported driver %s", opts->driver_name);
         ret = -1;
         goto out;
     }

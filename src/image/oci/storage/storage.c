@@ -332,3 +332,24 @@ out:
     return ret;
 }
 
+void free_storage_module_init_options(struct storage_module_init_options *opts)
+{
+    if (opts == NULL) {
+        return;
+    }
+
+    free(opts->driver_name);
+    opts->driver_name = NULL;
+
+    free(opts->storage_root);
+    opts->storage_root = NULL;
+
+    free(opts->storage_run_root);
+    opts->storage_run_root = NULL;
+
+    util_free_array_by_len(opts->driver_opts, opts->driver_opts_len);
+    opts->driver_opts = NULL;
+    opts->driver_opts_len = 0;
+
+    free(opts);
+}

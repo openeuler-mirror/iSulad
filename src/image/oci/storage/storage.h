@@ -25,6 +25,8 @@
 extern "C" {
 #endif
 
+#define GRAPH_ROOTPATH_NAME "storage"
+
 struct layer {
     char *id;
     char *parent;
@@ -58,6 +60,8 @@ struct storage_img_create_options {
 };
 
 int storage_module_init(struct storage_module_init_options *opts);
+
+void free_storage_module_init_options(struct storage_module_init_options *opts);
 
 int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);
 

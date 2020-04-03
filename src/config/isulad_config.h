@@ -72,10 +72,6 @@ unsigned int conf_get_start_timeout();
 
 int init_cgroups_path(const char *path, int recursive_depth);
 
-char *conf_get_graph_rootpath();
-
-char *conf_get_graph_run_path();
-
 char **conf_get_storage_opts();
 
 char **conf_get_insecure_registry_list();
