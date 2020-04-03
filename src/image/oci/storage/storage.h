@@ -72,7 +72,7 @@ int storage_layer_try_repair_lowers(const char *id, const char *last_layer_id);
 int storage_img_create(const char *id, const char *parent_id, const char *metadata,
                        struct storage_img_create_options *opts);
 
-storage_image *storage_img_get(const char *img_id);
+const storage_image *storage_img_get(const char *img_id);
 
 int storage_img_set_big_data(const char *img_id, const char *key, const char *val);
 

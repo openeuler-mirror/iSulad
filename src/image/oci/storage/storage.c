@@ -168,14 +168,14 @@ out:
     return ret;
 }
 
-storage_image *storage_img_get(const char *img_id)
+const storage_image *storage_img_get(const char *img_id)
 {
     if (img_id == NULL) {
         ERROR("Invalid arguments for image get");
         return NULL;
     }
 
-    return image_store_lookup(img_id);
+    return image_store_get_image(img_id);
 }
 
 int storage_img_set_big_data(const char *img_id, const char *key, const char *val)
