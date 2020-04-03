@@ -809,7 +809,7 @@ static int preparate_runtime_environment(const container_create_request *request
 {
     bool runtime_res = false;
 
-    if (request->runtime) {
+    if (util_valid_str(request->runtime)) {
         *runtime = get_runtime_from_request(request);
     } else {
         *runtime = conf_get_default_runtime();
@@ -821,6 +821,7 @@ static int preparate_runtime_environment(const container_create_request *request
 
     if (runtime_check(*runtime, &runtime_res) != 0) {
         ERROR("Runtimes param check failed");
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
@@ -828,6 +829,7 @@ static int preparate_runtime_environment(const container_create_request *request
         ERROR("Invalid runtime name:%s", *runtime);
         isulad_set_error_message("Invalid runtime name (%s).",
                                  *runtime);
+        *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
