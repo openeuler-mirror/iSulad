@@ -19,18 +19,45 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "types_def.h"
-#include "layer_store.h"
-#include "image_store.h"
+#include "storage_image.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct layer {
+    char *id;
+    char *parent;
+    char *mount_point;
+    int mount_count;
+    char *compressed_digest;
+    int64_t compress_size;
+    char *uncompressed_digest;
+    int64_t uncompress_size;
+};
+
+struct storage_module_init_options {
+    // storage_run_root is the filesystem path under which we can store run-time info
+    // e.g. /var/run/isulad/storage
+    char *storage_run_root;
+
+    // storage_root is the filesystem path under which we will store the contents of layers, images, and containers
+    // e.g. /var/lib/isulad/storage
+    char *storage_root;
+
+    char *driver_name;
+
+    // driver_opts are driver-specific options.
+    char **driver_opts;
+    size_t driver_opts_len;
+};
 
 struct storage_img_create_options {
     types_timestamp_t *create_time;
     char *digest;
 };
 
+int storage_module_init(struct storage_module_init_options *opts);
 
 int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);
 

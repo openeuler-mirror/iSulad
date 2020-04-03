@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 
+#include "storage.h"
 #include "console.h"
 
 #ifdef __cplusplus
@@ -29,25 +30,6 @@ struct layer_store_mount_opts {
     size_t options_len;
 };
 
-struct layer_store_config {
-    /*configs for graph driver */
-    char *driver_name;
-    char *driver_root;
-
-    struct layer_store_mount_opts *opts;
-};
-
-struct layer {
-    char *id;
-    char *parent;
-    char *mount_point;
-    int mount_count;
-    char *compressed_digest;
-    int64_t compress_size;
-    char *uncompressed_digest;
-    int64_t uncompress_size;
-};
-
 struct layer_opts {
     char *parent;
     char **names;
@@ -58,7 +40,7 @@ struct layer_opts {
     struct layer_store_mount_opts *opts;
 };
 
-int layer_store_init(const struct layer_store_config *conf);
+int layer_store_init(const struct storage_module_init_options *conf);
 
 bool layer_store_check(const char *id);
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content,
@@ -78,7 +60,6 @@ struct graphdriver_status* layer_store_status();
 int layer_store_try_repair_lowers(const char *id);
 
 void free_layer(struct layer *l);
-void free_layer_store_config(struct layer_store_config *conf);
 void free_layer_opts(struct layer_opts *opts);
 
 #ifdef __cplusplus

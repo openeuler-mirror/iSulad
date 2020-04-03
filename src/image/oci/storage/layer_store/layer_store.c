@@ -56,7 +56,7 @@ static void layer_map_kvfree(void *key, void *value)
     layer_ref_dec((layer_t *)value);
 }
 
-int layer_store_init(const struct layer_store_config *conf)
+int layer_store_init(const struct storage_module_init_options *conf)
 {
     int nret;
 
@@ -173,20 +173,6 @@ void free_layer(struct layer *ptr)
     ptr->compressed_digest = NULL;
     free(ptr->uncompressed_digest);
     ptr->uncompressed_digest = NULL;
-    free(ptr);
-}
-
-void free_layer_store_config(struct layer_store_config *ptr)
-{
-    if (ptr == NULL) {
-        return;
-    }
-    free(ptr->driver_name);
-    ptr->driver_name = NULL;
-    free(ptr->driver_root);
-    ptr->driver_root = NULL;
-
-    //TODO: free mount options
     free(ptr);
 }
 

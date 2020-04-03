@@ -18,7 +18,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pthread.h>
-#include "storage_image.h"
+#include "storage.h"
 #include "types_def.h"
 #include "map.h"
 
@@ -27,7 +27,7 @@ extern "C" {
 #endif
 
 // Load the image in the dir folder
-int new_image_store(const char *dir);
+int image_store_init(struct storage_module_init_options *opts);
 
 // Create an image that has a specified ID (or a random one) and optional names, using the specified layer as
 // its topmost (hopefully read-only) layer.  That layer can be referenced by multiple images.

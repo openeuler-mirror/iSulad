@@ -601,10 +601,11 @@ static int image_store_load(image_store_t *image_store)
     return load_helper(image_store);
 }
 
-int new_image_store(const char *dir)
+int image_store_init(struct storage_module_init_options *opts)
 {
     int ret = 0;
     image_store_t *store = NULL;
+    char *dir = NULL;// todo gipath := filepath.Join(s.graphRoot, driverPrefix+"images")
 
     ret = util_mkdir_p(dir, IMAGE_STORE_PATH_MODE);
     if (ret < 0) {

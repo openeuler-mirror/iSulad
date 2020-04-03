@@ -16,9 +16,13 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
+#include "console.h"
 #include "utils.h"
 #include "log.h"
+#include "layer_store.h"
+#include "image_store.h"
 
 static ssize_t layer_archive_io_read(void *context, void *buf, size_t buf_len)
 {
@@ -260,6 +264,66 @@ int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_ti
 
     if (image_store_set_load_time(img_id, loaded_time) != 0) {
         ERROR("Failed to set img %s loaded time", img_id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int check_module_init_opt(struct storage_module_init_options *opts)
+{
+    if (opts == NULL || opts->driver_name == NULL || opts->storage_root == NULL || opts->storage_run_root == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int make_storage_directory(struct storage_module_init_options *opts)
+{
+    int ret = 0;
+
+    if (util_mkdir_p(opts->storage_root, IMAGE_STORE_PATH_MODE) != 0) {
+        SYSERROR("Failed to make %s", opts->storage_root);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_mkdir_p(opts->storage_run_root, IMAGE_STORE_PATH_MODE) != 0) {
+        SYSERROR("Failed to make %s", opts->storage_run_root);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+int storage_module_init(struct storage_module_init_options *opts)
+{
+    int ret = 0;
+
+    if (check_module_init_opt(opts) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (make_storage_directory(opts) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_init(opts) != 0) {
+        ERROR("Failed to init layer store");
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_init(opts) != 0) {
+        ERROR("Failed to init image store");
         ret = -1;
         goto out;
     }
