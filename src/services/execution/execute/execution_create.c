@@ -776,27 +776,21 @@ static int get_request_container_info(const container_create_request *request, c
     return 0;
 }
 
-static int get_request_image_info(const container_create_request *request, char **image_type,
-                                  const char **ext_config_image, const char **image_name)
+static int get_request_image_info(const container_create_request *request, char **image_type, char **image_name)
 {
     *image_type = im_get_image_type(request->image, request->rootfs);
     if (*image_type == NULL) {
         return -1;
     }
 
-    if (request->rootfs != NULL) {
-        *image_name = request->rootfs;
-        // Do not use none image because none image has no config.
-        if (strcmp(request->image, "none") && strcmp(request->image, "none:latest")) {
-            *ext_config_image = request->image;
-        }
-    } else {
-        *image_name = request->image;
+    // Do not use none image because none image has no config.
+    if (strcmp(request->image, "none") && strcmp(request->image, "none:latest")) {
+        *image_name = util_strdup_s(request->image);
     }
 
     // Check if config image exist if provided.
-    if (*ext_config_image != NULL) {
-        if (!im_config_image_exist(*ext_config_image)) {
+    if (*image_name != NULL) {
+        if (!im_config_image_exist(*image_name)) {
             return -1;
         }
     }
@@ -881,8 +875,7 @@ int container_create_cb(const container_create_request *request,
     char *runtime = NULL;
     char *name = NULL;
     char *id = NULL;
-    const char *image_name = NULL;
-    const char *ext_config_image = NULL;
+    char *image_name = NULL;
     oci_runtime_spec *oci_spec = NULL;
     host_config *host_spec = NULL;
     container_config *container_spec = NULL;
@@ -900,7 +893,7 @@ int container_create_cb(const container_create_request *request,
         goto pack_response;
     }
 
-    if (get_request_image_info(request, &image_type, &ext_config_image, &image_name) != 0) {
+    if (get_request_image_info(request, &image_type, &image_name) != 0) {
         cc = ISULAD_ERR_EXEC;
         goto clean_nameindex;
     }
@@ -941,7 +934,7 @@ int container_create_cb(const container_create_request *request,
         goto clean_container_root_dir;
     }
 
-    ret = im_merge_image_config(id, image_type, image_name, ext_config_image, host_spec,
+    ret = im_merge_image_config(id, image_type, image_name, request->rootfs, host_spec,
                                 v2_spec->config, &real_rootfs);
     if (ret != 0) {
         ERROR("Can not merge container_spec with image config");
@@ -1042,6 +1035,7 @@ pack_response:
     free(runtime_root);
     free(real_rootfs);
     free(image_type);
+    free(image_name);
     free(name);
     free(id);
     free_oci_runtime_spec(oci_spec);

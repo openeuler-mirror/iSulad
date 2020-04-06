@@ -534,8 +534,8 @@ void free_im_prepare_request(im_prepare_request *request)
     request->image_name = NULL;
     free(request->container_id);
     request->container_id = NULL;
-    free(request->ext_config_image);
-    request->ext_config_image = NULL;
+    free(request->rootfs);
+    request->rootfs = NULL;
 
     free_json_map_string_string(request->storage_opt);
     request->storage_opt = NULL;
@@ -706,8 +706,7 @@ bool im_config_image_exist(const char *image_name)
 }
 
 int im_merge_image_config(const char *id, const char *image_type, const char *image_name,
-                          const char *ext_config_image,
-                          host_config *host_spec, container_config *container_spec,
+                          const char *rootfs, host_config *host_spec, container_config *container_spec,
                           char **real_rootfs)
 {
     int ret = 0;
@@ -720,7 +719,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
         goto out;
     }
 
-    bim = bim_get(image_type, image_name, ext_config_image, id);
+    bim = bim_get(image_type, image_name, rootfs, id);
     if (bim == NULL) {
         ERROR("Failed to init bim of image %s", image_name);
         ret = -1;
@@ -739,7 +738,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
     }
     request->container_id = util_strdup_s(id);
     request->image_name = util_strdup_s(image_name);
-    request->ext_config_image = util_strdup_s(ext_config_image);
+    request->rootfs = util_strdup_s(rootfs);
     if (host_spec != NULL) {
         request->storage_opt = host_spec->storage_opt;
     }
@@ -749,7 +748,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
     ret = bim->ops->merge_conf(host_spec, container_spec, request, real_rootfs);
     request->storage_opt = NULL;
     if (ret != 0) {
-        ERROR("Failed to merge image %s config, config image is %s", image_name, ext_config_image);
+        ERROR("Failed to merge image %s config", image_name);
         ret = -1;
         goto out;
     }
