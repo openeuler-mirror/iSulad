@@ -2317,6 +2317,17 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
     int ret = 0;
     container_config *container_spec = v2_spec->config;
 
+    /* mounts to mount filesystem */
+    if (container_spec->mounts && container_spec->mounts_len) {
+        ret = merge_volumes(oci_spec, container_spec->mounts,
+                            container_spec->mounts_len, v2_spec,
+                            parse_mount);
+        if (ret) {
+            ERROR("Failed to merge mounts");
+            goto out;
+        }
+    }
+
     /* volumes to mount */
     if (host_spec->binds != NULL && host_spec->binds_len) {
         ret = merge_volumes(oci_spec, host_spec->binds,
@@ -2332,17 +2343,6 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
     if (host_spec->host_channel != NULL) {
         if (!add_host_channel_mount(oci_spec, host_spec->host_channel)) {
             ERROR("Failed to merge host channel mount");
-            goto out;
-        }
-    }
-
-    /* mounts to mount filesystem */
-    if (container_spec->mounts && container_spec->mounts_len) {
-        ret = merge_volumes(oci_spec, container_spec->mounts,
-                            container_spec->mounts_len, v2_spec,
-                            parse_mount);
-        if (ret) {
-            ERROR("Failed to merge mounts");
             goto out;
         }
     }
