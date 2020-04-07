@@ -69,8 +69,6 @@ static const struct bim_ops g_embedded_ops = {
 
     .login = NULL,
     .logout = NULL,
-
-    .health_check = NULL,
     .tag_image = NULL,
     .import = NULL,
 };
@@ -106,8 +104,6 @@ static const struct bim_ops g_isula_ops = {
     .pull_image = isula_pull_rf,
     .login = isula_login,
     .logout = isula_logout,
-
-    .health_check = isula_health_check,
     .tag_image = isula_tag,
     .import = isula_import,
 };
@@ -142,8 +138,6 @@ static const struct bim_ops g_ext_ops = {
     .pull_image = NULL,
     .login = ext_login,
     .logout = ext_logout,
-
-    .health_check = NULL,
     .tag_image = NULL,
     .import = NULL,
 };
@@ -391,33 +385,6 @@ int im_get_filesystem_info(const char *image_type, im_fs_info_response **respons
         goto out;
     }
     EVENT("Event: {Object: get image filesystem info, Type: inspected}");
-
-out:
-    return ret;
-}
-
-int im_health_check(const char *image_type)
-{
-    int ret = -1;
-    const struct bim_type *q = NULL;
-
-    if (image_type == NULL) {
-        ERROR("Image type is required");
-        goto out;
-    }
-
-    q = get_bim_by_type(image_type);
-    if (q == NULL) {
-        ERROR("Get bim failed");
-        goto out;
-    }
-
-    if (q->ops->health_check == NULL) {
-        ERROR("Health check umimplement");
-        goto out;
-    }
-
-    ret = q->ops->health_check();
 
 out:
     return ret;

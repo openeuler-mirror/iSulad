@@ -30,7 +30,7 @@ namespace Network {
 static std::unique_ptr<CNINetwork> GetLoNetwork(std::vector<std::string> binDirs, const std::string &vendorDirPrefix)
 {
     const std::string loNetConfListJson { "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\","
-                                          "\"plugins\":[{\"type\": \"loopback\" }]}" };
+        "\"plugins\":[{\"type\": \"loopback\" }]}" };
 
     char *cerr { nullptr };
     struct cni_network_list_conf *loConf {

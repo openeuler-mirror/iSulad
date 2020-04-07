@@ -280,9 +280,6 @@ struct bim_ops {
     /* logout */
     int (*logout)(const im_logout_request *request);
 
-    /* health check */
-    int (*health_check)(void);
-
     /* Add a tag to the image */
     int (*tag_image)(const im_tag_request *request);
 };
@@ -420,8 +417,6 @@ int im_container_export(const im_export_request *request);
 void free_im_export_request(im_export_request *ptr);
 
 int im_resolv_image_name(const char *image_type, const char *image_name, char **resolved_name);
-
-int im_health_check(const char *image_type);
 
 void im_sync_containers_isuladkit(void);
 

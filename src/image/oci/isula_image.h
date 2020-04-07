@@ -24,7 +24,6 @@ extern "C" {
 #endif
 
 int isula_init(const struct im_configs *conf);
-void isula_exit(void);
 
 int isula_pull_rf(const im_pull_request *request, im_pull_response **response);
 int isula_rmi(const im_remove_request *request);

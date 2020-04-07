@@ -18,7 +18,6 @@
 #include <semaphore.h>
 
 #include "isula_libutils/log.h"
-#include "run_image_server.h"
 #include "isula_image_connect.h"
 #include "isula_image_pull.h"
 #include "isula_rootfs_prepare.h"
@@ -47,73 +46,6 @@
 #include "utils.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
-#define ISULA_IMAGE_SERVER_DEFAULT_SOCK "/var/run/isula_image.sock"
-
-pthread_t g_monitor_thread;
-
-void isula_exit(void)
-{
-    int nret;
-
-    isula_img_exit();
-    nret = pthread_cancel(g_monitor_thread);
-    if (nret != 0) {
-        SYSERROR("Cancel isula monitor thread failed");
-    }
-}
-
-static int start_isula_image_server(void)
-{
-    return 0;
-#define MIN_OPT_TIMEOUT 15
-    struct server_monitor_conf sm_conf = { 0 };
-    struct timespec ts = { 0 };
-    sem_t wait_monitor_sem;
-    unsigned int im_opt_timeout = conf_get_im_opt_timeout();
-    int ret = 0;
-
-    im_opt_timeout = im_opt_timeout >= MIN_OPT_TIMEOUT ? im_opt_timeout : MIN_OPT_TIMEOUT;
-
-    // check whether isulad-img is running by systemd
-    if (util_file_exists(ISULA_IMAGE_SERVER_DEFAULT_SOCK)) {
-        if (!conf_update_im_server_sock_addr(ISULA_IMAGE_SERVER_DEFAULT_SOCK)) {
-            ERROR("Update image socket address failed");
-            return -1;
-        }
-        return 0;
-    }
-
-    if (sem_init(&wait_monitor_sem, 0, 0) != 0) {
-        ERROR("Semaphore init failed");
-        ret = -1;
-        goto out;
-    }
-    sm_conf.wait_ok = &wait_monitor_sem;
-
-    ret = pthread_create(&g_monitor_thread, NULL, isula_image_server_monitor, (void *)(&sm_conf));
-    if (ret != 0) {
-        ERROR("Create isula image monitor thread failed: %s", strerror(ret));
-        goto out;
-    }
-
-    if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
-        SYSERROR("Get real time failed");
-        ret = -1;
-        goto out;
-    }
-    ts.tv_sec += (time_t)im_opt_timeout; // set deadline
-
-    ret = sem_timedwait(&wait_monitor_sem, &ts);
-    if (ret != 0) {
-        SYSERROR("Image Server Start failed");
-        goto out;
-    }
-    INFO("Image Server is Running...");
-
-out:
-    sem_destroy(&wait_monitor_sem);
-    return ret;
-}
 
 /*
  * start isula image grpc server
@@ -131,11 +63,6 @@ int isula_init(const struct im_configs *conf)
     ret = isula_image_ops_init();
     if (ret != 0) {
         ERROR("Init grpc client for isula image server failed");
-        goto out;
-    }
-
-    ret = start_isula_image_server();
-    if (ret != 0) {
         goto out;
     }
 
