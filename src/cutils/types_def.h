@@ -48,6 +48,8 @@ bool get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_
 
 bool get_now_time_stamp(types_timestamp_t *timestamp);
 
+bool get_now_local_utc_time_buffer(char *timebuffer, size_t maxsize);
+
 bool get_now_time_buffer(char *timebuffer, size_t maxsize);
 
 int get_time_interval(types_timestamp_t first, types_timestamp_t last, int64_t *result);

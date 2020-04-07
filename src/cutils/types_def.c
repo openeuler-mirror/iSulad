@@ -130,8 +130,7 @@ bool get_timestamp(const char *str_time, types_timestamp_t *timestamp)
     return true;
 }
 
-/* get time buffer */
-bool get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize)
+bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize, bool local_utc)
 {
     struct tm tm_utc = { 0 };
     struct tm tm_local = { 0 };
@@ -154,6 +153,12 @@ bool get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_
         nanos = 0;
     }
 
+    if (local_utc) {
+        nret = snprintf(timebuffer + strlen(timebuffer),
+                        maxsize - strlen(timebuffer), ".%09dZ", nanos);
+        goto out;
+    }
+
     gmtime_r(&seconds, &tm_utc);
     tm_zone = tm_local.tm_hour - tm_utc.tm_hour;
     if (tm_zone < -12) {
@@ -169,12 +174,20 @@ bool get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_
         nret = snprintf(timebuffer + strlen(timebuffer),
                         maxsize - strlen(timebuffer), ".%09d-%02d:00", nanos, -tm_zone);
     }
+
+out:
     if (nret < 0 || nret >= maxsize - strlen(timebuffer)) {
         ERROR("sprintf timebuffer failed");
         return false;
     }
 
     return true;
+}
+
+/* get time buffer */
+bool get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize)
+{
+    return get_time_buffer_help(timestamp, timebuffer, maxsize, false);
 }
 
 bool get_now_time_stamp(types_timestamp_t *timestamp)
@@ -204,6 +217,18 @@ bool get_now_time_buffer(char *timebuffer, size_t maxsize)
     }
 
     return get_time_buffer(&timestamp, timebuffer, maxsize);
+}
+
+/* get now local utc time buffer */
+bool get_now_local_utc_time_buffer(char *timebuffer, size_t maxsize)
+{
+    types_timestamp_t timestamp;
+
+    if (get_now_time_stamp(&timestamp) == false) {
+        return false;
+    }
+
+    return get_time_buffer_help(&timestamp, timebuffer, maxsize, true);
 }
 
 int get_time_interval(types_timestamp_t first, types_timestamp_t last, int64_t *result)

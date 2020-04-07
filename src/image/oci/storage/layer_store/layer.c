@@ -21,16 +21,10 @@
 #include "utils.h"
 #include "log.h"
 
-static layer_t *new_layer(const char *layer_path, storage_layer *slayer, const char *mount_point_path,
-                          storage_mount_point *smount_point)
+layer_t *create_empty_layer()
 {
     layer_t *result = NULL;
     int nret = 0;
-
-    if (slayer == NULL) {
-        ERROR("Empty storage layer");
-        goto err_out;
-    }
 
     result = (layer_t *)util_smart_calloc_s(sizeof(layer_t), 1);
     if (result == NULL) {
@@ -46,15 +40,33 @@ static layer_t *new_layer(const char *layer_path, storage_layer *slayer, const c
     }
     result->init_mutex = true;
 
+    return result;
+err_out:
+    free_layer_t(result);
+    return NULL;
+}
+
+static layer_t *new_layer(const char *layer_path, storage_layer *slayer, const char *mount_point_path,
+                          storage_mount_point *smount_point)
+{
+    layer_t *result = NULL;
+
+    if (slayer == NULL) {
+        ERROR("Empty storage layer");
+        goto out;
+    }
+
+    result = create_empty_layer();
+    if (result == NULL) {
+        goto out;
+    }
     result->layer_json_path = util_strdup_s(layer_path);
     result->mount_point_json_path = util_strdup_s(mount_point_path);
     result->slayer = slayer;
     result->smount_point = smount_point;
 
+out:
     return result;
-err_out:
-    free_layer_t(result);
-    return NULL;
 }
 
 void layer_ref_inc(layer_t *layer)

@@ -26,8 +26,7 @@ extern "C" {
 
 struct layer_store_mount_opts {
     char *mount_label;
-    char **options;
-    size_t options_len;
+    json_map_string_string *mount_opts;
 };
 
 struct layer_opts {
@@ -51,7 +50,7 @@ struct layer** layer_store_list();
 bool layer_store_is_used(const char *id);
 struct layer** layer_store_by_compress_digest(const char *digest);
 struct layer** layer_store_by_uncompress_digest(const char *digest);
-int layer_store_lookup(const char *name, char **found_id);
+char *layer_store_lookup(const char *name);
 int layer_store_mount(const char *id, const struct layer_store_mount_opts *opts);
 int layer_store_umount(const char *id, bool force);
 int layer_store_mounted(const char *id);

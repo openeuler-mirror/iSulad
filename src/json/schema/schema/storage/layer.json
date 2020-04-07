@@ -34,15 +34,6 @@
         },
         "compression": {
             "type": "uint32"
-        },
-        "uidmap": {
-            "$ref": "../defs.json#/definitions/IDMapping"
-        },
-        "gidmap": {
-            "$ref": "../defs.json#/definitions/IDMapping"
-        },
-        "flags": {
-            "$ref": "../defs.json#/definitions/mapStringString"
         }
     }
 }
