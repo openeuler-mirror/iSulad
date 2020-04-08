@@ -2,6 +2,8 @@
 #include "device_setup.h"
 #include "utils_file.h"
 #include "log.h"
+#include "utils_string.h"
+#include "utils.h"
 
 
 
@@ -133,4 +135,48 @@ int setup_direct_lvm(image_devmapper_direct_lvm_config *cfg)
     //lookpath
     // TODO: 执行上述命令
     return 0;
+}
+
+// ProbeFsType returns the filesystem name for the given device id.
+// device: /dev/mapper/%s-hash
+char *probe_fs_type(const char *device)
+{
+    return NULL;
+}
+
+void append_mount_options(char **dest, const char *suffix)
+{
+    char *res_string = NULL;
+    size_t length;
+
+    if (dest == NULL) {
+        // ERROR();
+        return;
+    }
+
+    if (*dest == NULL) {
+        *dest = util_strdup_s(suffix);
+    }
+
+    if (suffix == NULL) {
+        return;
+    }
+
+    if (strlen(suffix) > ((SIZE_MAX - strlen(*dest) - strlen(",")) - 1)) {
+        ERROR("String is too long to be appended");
+        return;
+    }
+
+    length = strlen(*dest) + strlen(",") + strlen(suffix) + 1;
+    res_string = util_common_calloc_s(length);
+    if (res_string == NULL) {
+        ERROR("Out of memory");
+        return;
+    }
+    (void)strcat(res_string, *dest);
+    (void)strcat(res_string, ",");
+    (void)strcat(res_string, suffix);
+
+    free(*dest);
+    *dest = res_string;
 }

@@ -17,6 +17,8 @@
 
 #include <libdevmapper.h>
 #include <stdbool.h>
+#include <semaphore.h>
+#include <pthread.h>
 
 #include "driver.h"
 
@@ -24,28 +26,52 @@
 extern "C" {
 #endif
 
-// typedef enum {
-//     DM_DEVICE_CREATE,
-//     DM_DEVICE_RELOAD,
-//     DM_DEVICE_REMOVE,
-//     DM_DEVICE_REMOVE_ALL,
-//     DM_DEVICE_SUSPEND,
-//     DM_DEVICE_RESUME,
-//     DM_DEVICE_INFO,
-//     DM_DEVICE_DEPS,
-//     DM_DEVICE_RENAME,
-//     DM_DEVICE_VERSION,
-//     DM_DEVICE_STATUS,
-//     DM_DEVICE_TABLE,
-//     DM_DEVICE_WAITEVENT,
-//     DM_DEVICE_LIST,
-//     DM_DEVICE_CLEAR,
-//     DM_DEVICE_MKNODES,
-//     DM_DEVICE_LIST_VERSIONS,
-//     DM_DEVICE_TARGET_MSG,
-//     DM_DEVICE_SET_GEOMETRY
-// } task_type_t;
+#define DEV_ERR -1
+#define DEV_OK 0
+#define DEV_INIT 1
 
+typedef enum {
+    ERR_TASK_RUN = 2,
+    ERR_TASK_SET_NAME,
+    ERR_TASK_SET_MESSAGE,
+    ERR_TASK_SET_ADD_NODE, // dm_task_set_add_node failed
+    ERR_TASK_SET_RO, // dm_task_set_ro failed
+    ERR_TASK_ADD_TARGET, //dm_task_add_target failed
+    ERR_TASK_SET_SECTOR,
+    ERR_TASK_GET_DEPS,
+    ERR_TASK_GET_INFO,
+    ERR_TASK_GET_DRIVER_VERSION,
+    ERR_TASK_GET_NAMES,
+    ERR_TASK_DEFERRED_REMOVE,
+    ERR_TASK_SET_COOKIE, //dm_task_set_cookie failed
+    ERR_NIL_COOKIE, //cookie ptr can't be nil
+    ERR_GET_BLOCK_SIZE,
+    ERR_UDEV_WAIT,
+    ERR_UDEV_WAIT_TIMEOUT,
+    ERR_SET_DEV_DIR,
+    ERR_GET_LIBRARY_VERSION,
+    ERR_CREATE_REMOVE_TASK,
+    ERR_RUN_REMOVE_DEVICE,
+    ERR_INVALID_ADD_NODE, // Invalid AddNode type
+    ERR_BUSY, // Device is Busy
+    ERR_DEVICE_ID_EXISTS,
+    ERR_ENXIO // No such device or address
+} dm_err_t;
+
+typedef enum {
+    LOG_LEVEL_FATAL = 2,
+    LOG_LEVEL_ERR,
+    LOG_LEVEL_WARN,
+    LOG_LEVEL_NOTICE,
+    LOG_LEVEL_INFO,
+    LOG_LEVEL_DEBUG
+} dm_log_level_t;
+
+typedef struct {
+    uint32_t cookie;
+    pthread_mutex_t udev_mutex;
+    int state; // 0: ok 1:err_udev_wait  2: err_udev_wait_timeout
+} udev_wait_pth_t;
 
 
 struct dm_task* task_create(int type);
@@ -66,22 +92,33 @@ int set_dev_dir(const char *dir);
 
 struct dm_task* task_create_named(int type, const char *name);
 
+void log_with_errno_init();
 
-int get_table(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name);
+int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name);
 
-int get_status(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name);
+int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name);
 
-int get_info(struct dm_info *info, const char *name);
+int dev_get_info(struct dm_info *info, const char *name);
 
-int remove_device(const char *name);
+int dev_remove_device(const char *name);
 
-int get_device_list(char ***list, size_t *length);
+int dev_get_device_list(char ***list, size_t *length);
 
 bool udev_set_sync_support(bool enable);
 
 int dev_create_device(const char *pool_dev_name, int device_id);
 
 int dev_delete_device(const char *pool_fname, int device_id);
+
+int dev_get_info_with_deferred(const char *pool_fname, struct dm_info *dmi);
+
+int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size);
+
+void dev_udev_wait(uint32_t cookie);
+
+int dev_block_device_discard(const char *path);
+
+int dev_cancel_deferred_remove(const char *dm_name);
 
 #ifdef __cplusplus
 }

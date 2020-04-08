@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/sysmacros.h>
+#include <sys/mount.h>
 
 #include "log.h"
 #include "libisulad.h"
@@ -256,11 +257,31 @@ static void free_arr(char **arr, size_t len)
     free(arr);
     arr = NULL;
 }
+
+// such as return :container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
+// dm_name
+static char *get_dm_name(struct device_set *devset, const char *hash)
+{
+    char buff[PATH_MAX] = { 0 };
+
+    if (hash == NULL) {
+        return NULL;
+    }
+
+    if (snprintf(buff, sizeof(buff), "%s-%s", devset->device_prefix, strcmp(hash, "") == 0 ? "base" : hash) < 0) {
+        return NULL;
+    }
+
+    return util_strdup_s(buff);
+}
+
+// /dev/mapper/container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
 static char *get_dev_name(const char *name)
 {
     return util_string_append(name, DEVMAPPER_DECICE_DIRECTORY);
 }
 
+// thin-pool or isulad-thinpool
 static char *get_pool_name(struct device_set *devset)
 {
     char thinp_name[PATH_MAX] = { 0 };
@@ -281,6 +302,7 @@ static char *get_pool_name(struct device_set *devset)
     return util_strdup_s(devset->thin_pool_device);
 }
 
+// /dev/mapper/thin-pool
 static char *get_pool_dev_name(struct device_set *devset)
 {
     char *pool_name = NULL;
@@ -300,34 +322,34 @@ static bool thin_pool_exists(struct device_set *devset, const char *pool_name)
 {
     int ret;
     bool exist = true;
-    struct dm_info *info = NULL;
+    struct dm_info *dinfo = NULL;
     uint64_t start, length;
     char *target_type = NULL;
     char *params = NULL;
 
-    info = util_common_calloc_s(sizeof(struct dm_info));
-    if (info == NULL) {
+    dinfo = util_common_calloc_s(sizeof(struct dm_info));
+    if (dinfo == NULL) {
         return false;
     }
 
-    ret = get_info(info, pool_name);
+    ret = dev_get_info(dinfo, pool_name);
     if (ret != 0) {
         exist = false;
         goto out;
     }
 
-    if (info->exists == 0) {
+    if (dinfo->exists == 0) {
         exist = false;
         goto out;
     }
 
-    ret = get_status(&start, &length, &target_type, &params, pool_name);
+    ret = dev_get_status(&start, &length, &target_type, &params, pool_name);
     if (ret != 0 || strcmp(target_type, "thin-pool")) {
         exist = false;
     }
 
 out:
-    free(info);
+    free(dinfo);
     free(target_type);
     free(params);
     return exist;
@@ -376,6 +398,110 @@ out:
     return info;
 }
 
+static void run_blkid_get_uuid(void *args)
+{
+    char **tmp_args = (char **)args;
+    size_t CMD_ARGS_NUM = 6;
+
+    if (util_array_len((const char **)tmp_args) != CMD_ARGS_NUM) {
+        COMMAND_ERROR("Blkid get uuid need six args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+// /dev/mapper/container-253:0-409697-401641a00390ccd2b21eb464f5eb5a7b735c3731b717e7bffafe65971f4cb498
+static char *get_device_uuid(const char *dev_fname)
+{
+    char **args = NULL;
+    char *stdout = NULL;
+    char *stderr = NULL;
+    char *uuid = NULL;
+
+    if (dev_fname == NULL) {
+        return uuid;
+    }
+
+    args = (char **)util_common_calloc_s(sizeof(char *) * 7);
+    if (args == NULL) {
+        ERROR("Out of memory");
+        return uuid;
+    }
+
+    args[0] = util_strdup_s("blkid");
+    args[1] = util_strdup_s("-s");
+    args[2] = util_strdup_s("UUID");
+    args[3] = util_strdup_s("-o");
+    args[4] = util_strdup_s("value");
+    args[5] = util_strdup_s(dev_fname);
+    if (!util_exec_cmd(run_blkid_get_uuid, args, NULL, &stdout, &stderr)) {
+        ERROR("Unexpected command output %s with error: %s", stdout, stderr);
+        goto free_out;
+    }
+
+    if (stdout == NULL) {
+        ERROR("call blkid -s UUID -o value %s no stdout", dev_fname);
+        goto free_out;
+    }
+
+    uuid = util_strdup_s(stdout);
+    DEBUG("devmapper: UUID for device: %s is:%s", dev_fname, uuid);
+
+free_out:
+    util_free_array(args);
+    UTIL_FREE_AND_SET_NULL(stdout);
+    UTIL_FREE_AND_SET_NULL(stderr);
+    return uuid;
+}
+
+static void run_grow_rootfs(void *args)
+{
+    char **tmp_args = (char **)args;
+    size_t CMD_ARGS_NUM = 2;
+
+    if (util_array_len((const char**)tmp_args) != CMD_ARGS_NUM) {
+        COMMAND_ERROR("grow rootfs need three args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static int exec_grow_fs_command(const char *command, const char *dev_fname)
+{
+    int ret = 0;
+    char **args = NULL;
+    char *stdout = NULL;
+    char *stderr = NULL;
+
+    if (command == NULL || dev_fname == NULL) {
+        // ERROR();
+        return -1;
+    }
+
+    args = (char **)util_common_calloc_s(sizeof(char *) * 3);
+    if (args == NULL) {
+        ret = -1;
+        ERROR("Out of memory");
+        goto free_out;
+    }
+
+    args[0] = util_strdup_s(command);
+    args[1] = util_strdup_s(dev_fname);
+    if (!util_exec_cmd(run_grow_rootfs, args, NULL, &stdout, &stderr)) {
+        ret = -1;
+        ERROR("Grow rootfs failed, unexpected command output %s with error: %s", stdout, stderr);
+        goto free_out;
+    }
+
+free_out:
+    util_free_array(args);
+    UTIL_FREE_AND_SET_NULL(stdout);
+    UTIL_FREE_AND_SET_NULL(stderr);
+    return ret;
+}
+
 static image_devmapper_device_info *lookup_device(struct device_set *devset, const char *hash)
 {
     image_devmapper_device_info *info = NULL;
@@ -398,6 +524,25 @@ static image_devmapper_device_info *lookup_device(struct device_set *devset, con
 
     return info;
 }
+
+static uint64_t get_base_device_size(struct device_set *devset)
+{
+    uint64_t res;
+    image_devmapper_device_info *info = NULL;
+
+    info = lookup_device(devset, "");
+    if (info == NULL) {
+        return 0;
+    }
+    res = info->size;
+    free_image_devmapper_device_info(info);
+    return res;
+}
+
+// static char *get_base_device_fs(struct device_set *devset)
+// {
+//     return util_strdup_s(devset->base_device_filesystem);
+// }
 
 static int device_file_walk(struct device_set *devset)
 {
@@ -508,7 +653,7 @@ static int init_metadata(struct device_set *devset, const char *pool_name)
     char *target_type = NULL;
     char *params = NULL;
 
-    ret = get_status(&start, &length, &target_type, &params, pool_name);
+    ret = dev_get_status(&start, &length, &target_type, &params, pool_name);
     if (ret != 0) {
         return -1;
     }
@@ -686,18 +831,18 @@ out:
     return full_path;
 }
 
-static int save_metadata(struct device_set *devset, image_devmapper_device_info *info, const char *hash)
+static int save_metadata(struct device_set *devset, image_devmapper_device_info *info)
 {
     int ret = 0;
     char *metadata_json = NULL;
     char *fname = NULL;
     parser_error err = NULL;
 
-    if (info == NULL || hash == NULL) {
+    if (info == NULL) {
         return -1;
     }
 
-    fname = metadata_file(devset, hash);
+    fname = metadata_file(devset, info->hash);
     if (fname == NULL) {
         ERROR("devmapper: get metadata file full path failed");
         return -1;
@@ -755,6 +900,54 @@ out:
     UTIL_FREE_AND_SET_NULL(trans_json);
     return ret;
 }
+
+static int save_deviceset_matadata(struct device_set *devset)
+{
+    int ret = 0;
+    image_devmapper_deviceset_metadata *devset_metadata = NULL;
+    char *metadata_json = NULL;
+    char *fname = NULL;
+    parser_error err = NULL;
+
+    fname = deviceset_mata_file(devset);
+    if (fname == NULL) {
+        ret = -1;
+        ERROR("devmapper: get deviceset metadata file full path failed");
+        goto free_out;
+    }
+
+    devset_metadata = util_common_calloc_s(sizeof(image_devmapper_deviceset_metadata));
+    if (devset_metadata == NULL) {
+        ret = -1;
+        ERROR("devmapper: Out of memory");
+        goto free_out;
+    }
+
+    devset_metadata->base_device_filesystem = util_strdup_s(devset->base_device_filesystem);
+    devset_metadata->base_device_uuid = util_strdup_s(devset->base_device_uuid);
+    devset_metadata->next_device_id = devset->next_device_id;
+
+    metadata_json = image_devmapper_deviceset_metadata_generate_json(devset_metadata, NULL, &err);
+    if (metadata_json == NULL) {
+        ret = -1;
+        ERROR("devmapper: generate deviceset metadata json error %s", err);
+        goto free_out;
+    }
+
+    if (util_write_file(fname, metadata_json, strlen(metadata_json), DEFAULT_SECURE_FILE_MODE) != 0) {
+        ret = -1;
+        ERROR("failed write process.json");
+        goto free_out;
+    }
+
+free_out:
+    free_image_devmapper_deviceset_metadata(devset_metadata);
+    UTIL_FREE_AND_SET_NULL(err);
+    UTIL_FREE_AND_SET_NULL(metadata_json);
+    UTIL_FREE_AND_SET_NULL(fname);
+    return ret;
+}
+
 static int open_transaction(struct device_set *devset, const char *hash, int id)
 {
     int ret = 0;
@@ -856,7 +1049,7 @@ static image_devmapper_device_info *register_device(struct device_set *devset, i
         goto out;
     }
 
-    ret = save_metadata(devset, info, hash);
+    ret = save_metadata(devset, info);
     if (ret != 0) {
         if (!metadata_store_remove(hash)) {
             ERROR("devmapper: metadata file %s store remove failed", hash);
@@ -939,17 +1132,204 @@ out:
     return info;
 }
 
-static int activate_device_if_needed(struct device_set *devset, image_devmapper_device_info *info, const char *hash,
-                                     bool ignore_deleted)
+static int cancel_deferred_removal(struct device_set *devset, const char *hash)
 {
-    int ret = 0;
+    int i = 0;
+    int ret;
+    int retries = 100;
+    char *dm_name = NULL;
 
-    if (info->deleted && !ignore_deleted) {
-        ERROR("devmapper: Can't activate device %v as it is marked for deletion", hash);
+    dm_name = get_dm_name(devset, hash);
+    if (dm_name == NULL) {
+        ERROR("devmapper: get dm device name failed");
         return -1;
     }
-    // TODO
 
+    for (; i < retries; i++) {
+        ret = dev_cancel_deferred_remove(dm_name);
+        if (ret != 0) {
+            if (ret != ERR_BUSY) {
+                sleep(0.1);
+                continue;
+            }
+        }
+        break;
+    }
+
+    UTIL_FREE_AND_SET_NULL(dm_name);
+    return ret;
+}
+
+static int cancel_deferred_removal_if_needed(struct device_set *devset, image_devmapper_device_info *info)
+{
+    int ret = 0;
+    char *dm_name = NULL;
+    struct dm_info dmi = { 0 };
+
+    if (!devset->deferred_remove == 0) {
+        return ret;
+    }
+
+    dm_name = get_dm_name(devset, info->hash);
+    if (dm_name == NULL) {
+        ERROR("devmapper: get dm device name failed");
+        goto out;
+    }
+
+    DEBUG("devmapper: cancelDeferredRemovalIfNeeded START(%s)", dm_name);
+
+    ret = dev_get_info_with_deferred(dm_name, &dmi);
+    if (ret != 0) {
+        // ERROR();
+        goto out;
+    }
+
+    if (dmi.deferred_remove == 0) {
+        ret = 0;
+        goto out;
+    }
+
+    ret = cancel_deferred_removal(devset, info->hash);
+    if (ret != 0 && ret != ERR_BUSY) {
+        // If Error is ErrEnxio. Device is probably already gone. Continue.
+        goto out;
+    }
+    ret = 0;
+
+out:
+    UTIL_FREE_AND_SET_NULL(dm_name);
+    return ret;
+}
+
+static int activate_device_if_needed(struct device_set *devset, image_devmapper_device_info *info, bool ignore_deleted)
+{
+    int ret = 0;
+    struct dm_info dinfo = { 0 };
+    char *dm_name = NULL;
+    char *pool_dev_name = NULL;
+
+    if (info->deleted && !ignore_deleted) {
+        ERROR("devmapper: Can't activate device %v as it is marked for deletion", info->hash);
+        return -1;
+    }
+
+    ret = cancel_deferred_removal_if_needed(devset, info);
+    if (ret != 0) {
+        ERROR("devmapper: Device Deferred Removal Cancellation Failed");
+        return ret;
+    }
+
+    dm_name = get_dm_name(devset, info->hash);
+    if (dm_name == NULL) {
+        ERROR("devmapper: get dm device name failed");
+        return -1;
+    }
+
+    ret = dev_get_info(&dinfo, dm_name);
+    if (ret != 0) {
+        ERROR("devmapper: get device info failed");
+        goto out;
+    }
+
+    if (dinfo.exists != 0) {
+        ret = 0;
+        goto out;
+    }
+
+    pool_dev_name = get_pool_dev_name(devset);
+    if (pool_dev_name == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = dev_active_device(pool_dev_name, dm_name, info->device_id, info->size);
+
+out:
+    UTIL_FREE_AND_SET_NULL(dm_name);
+    UTIL_FREE_AND_SET_NULL(pool_dev_name);
+    return ret;
+}
+
+static int deactivate_device_mode(struct device_set *devset, image_devmapper_device_info *dev_info,
+                                  bool deferred_remove)
+{
+    int ret;
+    char *dm_name = NULL;
+    struct dm_info dinfo;
+
+    dm_name = get_dm_name(devset, dev_info->hash);
+    if (dm_name == NULL) {
+        ERROR("devmapper: get dm device name failed");
+        return -1;
+    }
+
+    ret = dev_get_info(&dinfo, dm_name);
+    if (ret != 0) {
+        ERROR("devmapper: get device info failed");
+        goto free_out;
+    }
+
+    if (dinfo.exists == 0) {
+        ret = 0;
+        goto free_out;
+    }
+
+    if (deferred_remove) {
+        ret = dev_remove_device(dm_name);
+    }
+
+
+free_out:
+    UTIL_FREE_AND_SET_NULL(dm_name);
+    return ret;
+}
+
+static int deactivate_device(struct device_set *devset, image_devmapper_device_info *dev_info)
+{
+    return deactivate_device_mode(devset, dev_info, devset->deferred_remove);
+}
+
+static int save_base_device_uuid(struct device_set *devset, image_devmapper_device_info *info)
+{
+    int ret = 0;
+    char *base_dev_uuid = NULL;
+    char *dev_fname = NULL;
+    char *dm_name = NULL;
+
+    ret = activate_device_if_needed(devset, info, false);
+    if (ret != 0) {
+        // ERROR();
+        return ret;
+    }
+
+    dm_name = get_dm_name(devset, info->hash);
+    if (dm_name == NULL) {
+        ret = -1;
+        ERROR("devmapper: get dm name failed");
+        goto free_out;
+    }
+    dev_fname = get_dev_name(dm_name);
+
+    base_dev_uuid = get_device_uuid(dev_fname);
+    if (base_dev_uuid == NULL) {
+        ret = -1;
+        // ERROR();
+        goto free_out;
+    }
+
+    devset->base_device_uuid = util_strdup_s(base_dev_uuid);
+
+    ret = save_deviceset_matadata(devset);
+    if (ret != 0) {
+        ERROR("devmapper: save deviceset metadata failed");
+        goto free_out;
+    }
+
+free_out:
+    deactivate_device(devset, info);
+    UTIL_FREE_AND_SET_NULL(dm_name);
+    UTIL_FREE_AND_SET_NULL(dev_fname);
+    UTIL_FREE_AND_SET_NULL(base_dev_uuid);
     return ret;
 }
 
@@ -966,17 +1346,31 @@ static int create_base_image(struct device_set *devset)
 
     DEBUG("devmapper: Creating filesystem on base device-mapper thin volume");
 
-    ret = activate_device_if_needed(devset, info, "", false);
+    ret = activate_device_if_needed(devset, info, false);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    // TODO
-    // create_filesystem();
-    // save_metadata();
-    // save_base_device_uuid();
+    // TODO:
+    // ret = create_file_system(info);
+    // if (ret != 0) {
+    //     goto out;
+    // }
 
+    info->initialized = true;
+
+    ret = save_metadata(devset, info);
+    if (ret != 0) {
+        // ERROR();
+        info->initialized = false;
+        goto out;
+    }
+
+    ret = save_base_device_uuid(devset, info);
+    if (ret != 0) {
+        ERROR("devmapper: Could not query and save base device UUID");
+    }
 
 out:
     free_image_devmapper_device_info(info);
@@ -1002,7 +1396,7 @@ static int pool_status(struct device_set *devset, uint64_t *total_size_in_sector
         return -1;
     }
 
-    ret = get_status(&start, &length, &target_type, &params, name);
+    ret = dev_get_status(&start, &length, &target_type, &params, name);
     if (ret != 0) {
         free(name);
         return -1;
@@ -1052,33 +1446,385 @@ static int check_thin_pool(struct device_set *devset)
     return ret;
 
 }
+
+static int save_base_device_filesystem(struct device_set *devset, const char *fs)
+{
+    devset->base_device_filesystem = util_strdup_s(fs);
+    return save_deviceset_matadata(devset);
+}
+
+static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_device_info *base_info)
+{
+    int ret = 0;
+    char *dm_name = NULL;
+    char *dev_fname = NULL;
+    char *uuid = NULL;
+    char *fs_type = NULL;
+
+    ret = activate_device_if_needed(devset, base_info, false);
+    if (ret != 0) {
+        return ret;
+    }
+
+    dm_name = get_dm_name(devset, base_info->hash);
+    if (dm_name == NULL) {
+        ret = -1;
+        ERROR("devmapper: get dm name failed");
+        goto free_out;
+    }
+    dev_fname = get_dev_name(dm_name);
+
+    uuid = get_device_uuid(dev_fname);
+    if (uuid == NULL) {
+        ret = -1;
+        // ERROR();
+        goto free_out;
+    }
+
+    if (strcmp(devset->base_device_uuid, uuid) != 0) {
+        ERROR("devmapper: Current Base Device UUID:%s does not match with stored UUID:%s. \
+        Possibly using a different thin pool than last invocation", uuid, devset->base_device_uuid);
+        goto free_out;
+    }
+
+    if (devset->base_device_filesystem == NULL) {
+        fs_type = probe_fs_type(dev_fname);
+        if (fs_type == NULL) {
+            goto free_out;
+        }
+
+        ret = save_base_device_filesystem(devset, fs_type);
+        if (ret != 0) {
+            goto free_out;
+        }
+    }
+
+    if (devset->filesystem == NULL || strcmp(devset->base_device_filesystem, devset->filesystem) != 0) {
+        WARN("devmapper: Base device already exists and has filesystem %s on it. User specified filesystem %s will be ignored.",
+             \
+             devset->base_device_filesystem, devset->filesystem);
+        devset->filesystem = util_strdup_s(devset->base_device_filesystem);
+    }
+
+free_out:
+    deactivate_device(devset, base_info);
+    UTIL_FREE_AND_SET_NULL(dm_name);
+    UTIL_FREE_AND_SET_NULL(dev_fname);
+    UTIL_FREE_AND_SET_NULL(uuid);
+    UTIL_FREE_AND_SET_NULL(fs_type);
+    return ret;
+}
+
+static int setup_verify_baseimages_uuidfs(struct device_set *devset, image_devmapper_device_info *base_info)
+{
+    int ret = 0;
+
+    if (base_info == NULL) {
+        return -1;
+    }
+
+    // If BaseDeviceUUID is nil (upgrade case), save it and return success.
+    if (devset->base_device_uuid == NULL) {
+        ret = save_base_device_uuid(devset, base_info);
+        if (ret != 0) {
+            ERROR("devmapper: Could not query and save base device UUID");
+        }
+        return ret;
+    }
+
+    ret = verify_base_device_uuidfs(devset, base_info);
+    if (ret != 0) {
+        ERROR("devmapper: Base Device UUID and Filesystem verification failed");
+    }
+    return ret;
+}
+
+// 对未挂载的文件系统扩容或者在线扩容，需要内核支持此功能
+static int grow_fs(struct device_set *devset, image_devmapper_device_info *info)
+{
+#define FS_MOUNT_POINT "/run/containers/storage/mnt"
+    int ret = 0;
+    char *mount_opt = NULL;
+    char *pool_name = NULL;
+    char *dev_fname = NULL;
+
+    if (activate_device_if_needed(devset, info, false) != 0) {
+        ERROR("Error activating devmapper device");
+        return -1;
+    }
+
+    if (!util_dir_exists(FS_MOUNT_POINT)) {
+        ret = util_mkdir_p(FS_MOUNT_POINT, DEFAULT_DEVICE_SET_MODE);
+        if (ret != 0) {
+            goto free_out;
+        }
+    }
+
+    if (strcmp(devset->base_device_filesystem, "xfs") == 0) {
+        append_mount_options(&mount_opt, "nouuid");
+    }
+    append_mount_options(&mount_opt, devset->mount_options);
+
+    pool_name = get_pool_name(devset);
+    dev_fname = get_dev_name(pool_name);
+    if (dev_fname == NULL) {
+        ERROR("devmapper: pool device name is NULL");
+        goto free_out;
+    }
+
+    ret = util_mount(dev_fname, FS_MOUNT_POINT, devset->base_device_filesystem, mount_opt);
+    if (ret != 0) {
+        ERROR("Error mounting '%s' on '%s' ", dev_fname, FS_MOUNT_POINT);
+        goto free_out;
+    }
+
+    if (strcmp(devset->base_device_filesystem, "ext4") == 0) {
+        if (exec_grow_fs_command("resize2fs", dev_fname) != 0) {
+            ERROR("Failed execute resize2fs to grow rootfs");
+        }
+    } else if (strcmp(devset->base_device_filesystem, "xfs") == 0) {
+        if (exec_grow_fs_command("xfs_growfs", dev_fname) != 0) {
+            ERROR("Failed execute xfs_growfs to grow rootfs");
+        }
+    } else {
+        ERROR("Unsupported filesystem type %s", devset->base_device_filesystem);
+    }
+
+    ret = umount2(FS_MOUNT_POINT, MNT_DETACH);
+    if (ret < 0 && errno != EINVAL) {
+        WARN("Failed to umount directory %s:%s", FS_MOUNT_POINT, strerror(errno));
+    }
+
+free_out:
+    deactivate_device(devset, info);
+    UTIL_FREE_AND_SET_NULL(pool_name);
+    UTIL_FREE_AND_SET_NULL(dev_fname);
+    UTIL_FREE_AND_SET_NULL(mount_opt);
+    return ret;
+}
+
+static int check_grow_base_device_fs(struct device_set *devset, image_devmapper_device_info *base_info)
+{
+    int ret = 0;
+    uint64_t base_dev_size;
+
+    if (!user_base_size) {
+        return ret;
+    }
+
+    base_dev_size = get_base_device_size(devset);
+
+    if (devset->base_fs_size < base_dev_size) {
+        ERROR("devmapper: Base fs size cannot be smaller than %d", base_dev_size);
+        return -1;
+    }
+
+    if (devset->base_fs_size == base_dev_size) {
+        return 0;
+    }
+
+    base_info->size = devset->base_fs_size;
+
+    ret = save_metadata(devset, base_info);
+    if (ret != 0) {
+        // Try to remove unused device
+
+        if (!metadata_store_remove(base_info->hash)) {
+            ERROR("devmapper: remove unused device from store failed");
+        }
+        return -1;
+    }
+    return grow_fs(devset, base_info);
+}
+
+static int mark_for_deferred_deletion(struct device_set *devset, image_devmapper_device_info *info)
+{
+    int ret = 0;
+
+    if (info->deleted) {
+        return ret;
+    }
+
+    info->deleted = true;
+
+    ret = save_metadata(devset, info);
+    if (ret != 0) {
+        info->deleted = false;
+        return ret;
+    }
+    devset->nr_deleted_devices++;
+    return 0;
+}
+
+static int delete_transaction(struct device_set *devset, image_devmapper_device_info *info, bool sync_delete)
+{
+    int ret;
+    char *pool_fname = NULL;
+
+    ret = open_transaction(devset, info->hash, info->device_id);
+    if (ret != 0) {
+        return -1;
+    }
+
+    pool_fname = get_pool_dev_name(devset);
+    ret = dev_delete_device(pool_fname, info->device_id);
+    if (ret != 0) {
+        // If syncDelete is true, we want to return error. If deferred
+        // deletion is not enabled, we return an error. If error is
+        // something other then EBUSY, return an error.
+        if (sync_delete || !devset->deferred_delete || ret == ERR_BUSY) {
+            DEBUG("devmapper: Error deleting device");
+            return ret;
+        }
+    }
+
+    if (ret == 0) {
+        ret = unregister_device(devset, info->hash);
+        if (ret != 0) {
+            goto out;
+        }
+        if (info->deleted) {
+            devset->nr_deleted_devices--;
+        }
+        mark_device_id_free(devset, info->device_id);
+    } else {
+        ret = mark_for_deferred_deletion(devset, info);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+
+out:
+    UTIL_FREE_AND_SET_NULL(pool_fname);
+    return 0;
+}
+
+// Issue discard only if device open count is zero.
+static void issue_discard(struct device_set *devset, image_devmapper_device_info *info)
+{
+    int ret;
+    struct dm_info dinfo;
+    char *dm_name = NULL;
+    char *dev_fname = NULL;
+
+    ret = activate_device_if_needed(devset, info, true);
+    if (ret != 0) {
+        // ERROR();
+        goto free_out;
+    }
+
+    dm_name = get_dm_name(devset, info->hash);
+    if (dm_name == NULL) {
+        goto free_out;
+    }
+
+    ret = dev_get_info(&dinfo, dm_name);
+    if (ret != 0) {
+        goto free_out;
+    }
+
+    if (dinfo.open_count != 0) {
+        DEBUG("devmapper: Device: %s is in use. OpenCount=%d. Not issuing discards.", info->hash, dinfo.open_count);
+        goto free_out;
+    }
+
+    dev_fname = get_dev_name(dm_name);
+    if (dev_fname == NULL) {
+        goto free_out;
+    }
+
+    ret = dev_block_device_discard(dev_fname);
+
+free_out:
+    UTIL_FREE_AND_SET_NULL(dm_name);
+    UTIL_FREE_AND_SET_NULL(dev_fname);
+}
+
+int delete_device(struct device_set *devset, const char *hash, bool sync_delete)
+{
+    int ret;
+    bool deferred_remove;
+    image_devmapper_device_info *info = NULL;
+
+    info = lookup_device(devset, hash);
+    if (info == NULL) {
+        ERROR("devmapper: lookup device failed");
+        return -1;
+    }
+    if (devset->do_blk_discard) {
+        issue_discard(devset, info);
+    }
+
+    deferred_remove = devset->deferred_remove;
+    if (!devset->deferred_delete) {
+        deferred_remove = false;
+    }
+
+    ret = deactivate_device_mode(devset, info, deferred_remove);
+    if (ret != 0) {
+        ERROR("devmapper: Error deactivating device");
+        goto free_out;
+    }
+
+    ret = delete_transaction(devset, info, sync_delete);
+    if (ret != 0) {
+        goto free_out;
+    }
+
+free_out:
+    free_image_devmapper_device_info(info);
+    return ret;
+}
+
 static int setup_base_image(struct device_set *devset)
 {
     int ret;
-    image_devmapper_device_info *info = NULL;
+    image_devmapper_device_info *old_info = NULL;
 
-    info = lookup_device(devset, "");
+    old_info = lookup_device(devset, "");
+    if (old_info == NULL) {
+        ERROR("devmapper: lookup device failed");
+        return -1;
+    }
 
     // base image already exists. If it is initialized properly, do UUID
     // verification and return. Otherwise remove image and set it up
     // fresh.
-    if (info != NULL) {
-        if (info->initialized && !info->deleted) {
-            // TODO:
+    if (old_info != NULL) {
+        if (old_info->initialized && !old_info->deleted) {
+            ret = setup_verify_baseimages_uuidfs(devset, old_info);
+            if (ret != 0) {
+                // ERROR();
+                goto out;
+            }
+
+            ret = check_grow_base_device_fs(devset, old_info);
+            if (ret != 0) {
+                // ERROR();
+            }
+            goto out;
+        }
+
+        DEBUG("devmapper: Removing uninitialized base image");
+        ret = delete_device(devset, "", true);
+        if (ret != 0) {
+            goto out;
         }
     }
 
     // If we are setting up base image for the first time, make sure
     // thin pool is empty.
-    if (devset->thin_pool_device != NULL && strlen(devset->thin_pool_device) != 0 && info == NULL) {
+    if (util_valid_str(devset->thin_pool_device) && old_info == NULL) {
         ret = check_thin_pool(devset);
         if (ret != 0) {
-            return -1;
+            goto out;
         }
     }
 
     ret = create_base_image(devset);
 
+out:
+    free_image_devmapper_device_info(old_info);
     return ret;
 }
 
@@ -1139,7 +1885,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
         goto out;
     }
 
-    ret = get_device_list(&devices_list, &devices_len);
+    ret = dev_get_device_list(&devices_list, &devices_len);
     if (ret != 0) {
         DEBUG("devicemapper: failed to get device list");
     }
@@ -1147,14 +1893,14 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
         if (!util_has_prefix(*(devices_list + i), devset->device_prefix)) {
             continue;
         }
-        ret = get_status(&start, &length, &target_type, &params, *(devices_list + i));
+        ret = dev_get_status(&start, &length, &target_type, &params, *(devices_list + i));
         if (ret != 0) {
             WARN("devmapper: get device status %s failed", *(devices_list + i));
             continue;
         }
         // remove broken device
         if (length == 0) {
-            ret = remove_device(*(devices_list + i));
+            ret = dev_remove_device(*(devices_list + i));
             if (ret != 0) {
                 WARN("devmapper: remove broken device %s failed", *(devices_list + i));
             }
@@ -1162,7 +1908,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
         }
         (void)snprintf(device_path, sizeof(device_path), "/dev/mapper/%s", *(devices_list + i));
         if (stat(device_path, &st)) {
-            ret = remove_device(*(devices_list + i));
+            ret = dev_remove_device(*(devices_list + i));
             if (ret != 0) {
                 WARN("devmapper: remove incompelete device %s", *(devices_list + i));
             }
@@ -1174,6 +1920,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
     pool_name = get_pool_name(devset);
     if (pool_name == NULL) {
         //error
+        goto out;
     }
     pool_exist = thin_pool_exists(devset, pool_name);
 
@@ -1185,6 +1932,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
     ret = init_metadata(devset, pool_name);
     if (ret != 0) {
         // ERROR();
+        goto out;
     }
 
     // Right now this loads only NextDeviceID. If there is more metadata
@@ -1192,6 +1940,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
     ret = load_deviceset_metadata(devset);
     if (ret != 0) {
         //ERROR();
+        goto out;
     }
 
     // Setup the base image
@@ -1199,6 +1948,7 @@ static int do_devmapper_init(struct device_set *devset, bool do_init)
         ret = setup_base_image(devset);
         if (ret != 0) {
             // ERROR();
+            goto out;
         }
     }
 
@@ -1227,6 +1977,8 @@ int devmapper_init(struct graphdriver *driver, const char *drvier_home, const ch
     if (driver == NULL || drvier_home == NULL || options == NULL) {
         return -1;
     }
+    // init devmapper log
+    log_with_errno_init();
 
     lvm_setup_config = util_common_calloc_s(sizeof(image_devmapper_direct_lvm_config));
     if (lvm_setup_config == NULL) {
@@ -1304,22 +2056,17 @@ bool devmapper_is_quota_options(struct graphdriver *driver, const char *option)
 int devmapper_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
                         const struct driver_create_opts *create_opts)
 {
-
-
-
     return 0;
 }
 
 int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
 {
-
     return 0;
 }
 
 char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
                             const struct driver_mount_opts *mount_opts)
 {
-
     return NULL;
 }
 

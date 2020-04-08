@@ -26,6 +26,8 @@ int verify_block_device(const char *dev, bool force);
 image_devmapper_direct_lvm_config *read_lvm_config(const char *root);
 int write_lvm_config(const char *root, image_devmapper_direct_lvm_config *cfg);
 int setup_direct_lvm(image_devmapper_direct_lvm_config *cfg);
+char *probe_fs_type(const char *device);
+void append_mount_options(char **dest, const char *suffix);
 
 #ifdef __cplusplus
 }

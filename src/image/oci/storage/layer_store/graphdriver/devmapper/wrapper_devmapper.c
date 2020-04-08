@@ -12,9 +12,20 @@
 * Create: 2020-01-19
 * Description: wrap libdevmapper function to manuplite devicemapper
 ******************************************************************************/
+#define _GNU_SOURCE
+#include <sys/time.h>
+#include <stdio.h>
 
 #include "wrapper_devmapper.h"
 #include "log.h"
+#include "utils_verify.h"
+#include "utils.h"
+
+static bool dm_saw_busy = false;
+static bool dm_saw_exist = false;
+static bool dm_saw_enxio = false; // no such device or address
+// static bool dm_saw_eno_data = false; // no data available
+static int64_t dm_udev_wait_timeout = 0;
 
 
 struct dm_task* task_create(int type)
@@ -65,9 +76,13 @@ int set_add_node(struct dm_task *dmt, dm_add_node_t add_node)
 {
     int ret;
 
+    if (add_node != DM_ADD_NODE_ON_RESUME && add_node != DM_ADD_NODE_ON_CREATE) {
+        return ERR_INVALID_ADD_NODE;
+    }
+
     ret = dm_task_set_add_node(dmt, add_node);
     if (ret != 1) {
-        return -1;
+        return ERR_TASK_SET_ADD_NODE;
     }
 
     return 0;
@@ -84,7 +99,17 @@ int set_ro(struct dm_task *dmt)
 
     return 0;
 }
+static int add_target(struct dm_task *dmt, uint64_t start, uint64_t size, const char *ttype, const char *params)
+{
+    int ret = 0;
 
+    ret = dm_task_add_target(dmt, start, size, ttype, params);
+    if (ret != 1) {
+        ret = ERR_TASK_ADD_TARGET;
+    }
+
+    return ret;
+}
 
 int set_dev_dir(const char *dir)
 {
@@ -126,7 +151,7 @@ cleanup:
 
 // GetTable is the programmatic example for "dmsetup table".
 // It outputs the current table for the specified device name.
-int get_table(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name)
+int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
@@ -167,7 +192,7 @@ cleanup:
 
 // GetStatus is the programmatic example of "dmsetup status".
 // It outputs status information for the specified device name.
-int get_status(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name)
+int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
@@ -206,7 +231,7 @@ cleanup:
     return ret;
 }
 
-int get_info(struct dm_info *info, const char *name)
+int dev_get_info(struct dm_info *info, const char *name)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
@@ -245,25 +270,110 @@ int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags)
 
     if (cookie == NULL) {
         ERROR("cookie ptr can't be nil");
-        return -1;
+        return ERR_NIL_COOKIE;
     }
 
     ret = dm_task_set_cookie(dmt, cookie, flags);
     if (ret != 1) {
         ERROR("dm_task_set_cookie failed");
-        return -1;
+        return ERR_TASK_SET_COOKIE;
     }
 
     return 0;
 }
 
-int remove_device(const char *name)
+static void *udev_wait_process(void *data)
+{
+    udev_wait_pth_t *uwait = (udev_wait_pth_t *)data;
+    int ret;
+
+    ret = dm_udev_wait(uwait->cookie);
+    if (ret != 1) {
+        pthread_mutex_lock(&uwait->udev_mutex);
+        uwait->state = ERR_UDEV_WAIT;
+        pthread_mutex_unlock(&uwait->udev_mutex);
+        pthread_exit((void *)ERR_UDEV_WAIT);
+    }
+
+    pthread_mutex_lock(&uwait->udev_mutex);
+    uwait->state = DEV_OK;
+    pthread_mutex_unlock(&uwait->udev_mutex);
+    pthread_exit((void *)0);
+}
+
+// UdevWait waits for any processes that are waiting for udev to complete the specified cookie.
+void dev_udev_wait(uint32_t cookie)
+{
+    pthread_t tid;
+    int thread_result;
+    udev_wait_pth_t *uwait = NULL;
+    int ret = 0;
+    float timeout = 0;
+    struct timeval start, end;
+
+    ret = gettimeofday(&start, NULL);
+    if (ret != 0) {
+        ERROR("devmapper: get time failed");
+        goto free_out;
+    }
+
+    uwait = util_common_calloc_s(sizeof(udev_wait_pth_t));
+    if (uwait == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+    uwait->cookie = cookie;
+    uwait->state = DEV_INIT;
+
+    ret = pthread_mutex_init(&uwait->udev_mutex, NULL);
+    if (ret != 0) {
+        ERROR("Udev mutex initialized failed");
+        goto free_out;
+    }
+
+    ret = pthread_create(&tid, NULL, udev_wait_process, uwait);
+    if (ret != 0) {
+        ERROR("devmapper: create udev wait process thread failed");
+        goto free_out;
+    }
+
+    while (true) {
+        pthread_mutex_lock(&uwait->udev_mutex);
+        if (uwait->state != DEV_INIT) {
+            goto free_out;
+        }
+        pthread_mutex_unlock(&uwait->udev_mutex);
+
+        ret = gettimeofday(&end, NULL);
+        if (ret != 0) {
+            ERROR("devmapper: get time failed");
+            goto free_out;
+        }
+        timeout = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000; // seconds
+        if (timeout >= (float)dm_udev_wait_timeout) {
+            ret = dm_udev_complete(cookie);
+            if (ret != 1) {
+                goto free_out;
+            }
+            INFO("devmapper: udev wait join thread start...");
+            pthread_join(tid, (void *)&thread_result);
+            INFO("devmapper: udev wait join thread end exit %d", thread_result);
+            break;
+        }
+    }
+
+free_out:
+    pthread_mutex_destroy(&uwait->udev_mutex);
+    UTIL_FREE_AND_SET_NULL(uwait);
+}
+
+int dev_remove_device(const char *pool_fname)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
     uint32_t cookie;
 
-    dmt = task_create_named(DM_DEVICE_REMOVE, name);
+    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
     if (dmt == NULL) {
         return -1;
     }
@@ -288,6 +398,51 @@ out:
     free(dmt);
     return ret;
 }
+
+int dev_remove_device_deferred(const char *pool_fname)
+{
+    int ret = 0;
+    struct dm_task *dmt = NULL;
+    uint32_t cookie;
+    uint16_t flags = DM_UDEV_DISABLE_LIBRARY_FALLBACK;
+
+    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
+    if (dmt == NULL) {
+        return -1;
+    }
+
+    ret = dm_task_deferred_remove(dmt);
+    if (ret != 1) {
+        // ERROR();
+        return ERR_TASK_DEFERRED_REMOVE;
+    }
+
+    ret = set_cookie(dmt, &cookie, flags);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+
+    // TODO: udev_wait(cookie)
+    // 单开一个线程wait device删除成功
+
+    dm_saw_enxio = false;
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ret = ERR_TASK_RUN;
+        if (dm_saw_enxio) {
+            ret = ERR_ENXIO;
+        }
+        ERROR("devicemapper: Error running RemoveDeviceDeferred %d", ret);
+    }
+
+    ret = 0;
+out:
+    free(dmt);
+    return ret;
+}
+
 
 // from devmapper_wrapper.go
 // FIXME: how to use dm_task_get_names directly
@@ -331,7 +486,7 @@ static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size)
     return result;
 }
 
-int get_device_list(char ***list, size_t *length)
+int dev_get_device_list(char ***list, size_t *length)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
@@ -489,3 +644,207 @@ cleanup:
     free(dmt);
     return ret;
 }
+
+int dev_get_info_with_deferred(const char *pool_fname, struct dm_info *dmi)
+{
+    int ret = 0;
+    struct dm_task *dmt = NULL;
+
+    dmt = task_create_named(DM_DEVICE_INFO, pool_fname);
+    if (dmt == NULL) {
+        return -1;
+    }
+
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ret = -1;
+        ERROR("devicemapper: task run failed");
+        goto cleanup;
+    }
+
+    ret = dm_task_get_info(dmt, dmi);
+    if (ret != 1) {
+        ret = -1;
+        ERROR("devicemapper: get info err");
+        goto cleanup;
+    }
+
+    ret = 0;
+
+cleanup:
+    free(dmt);
+    return ret;
+
+}
+
+int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size)
+{
+    int ret = 0;
+    uint64_t start = 0;
+    uint32_t cookie;
+    uint16_t flags = 0;
+    char params[PATH_MAX] = { 0 };
+    struct dm_task *dmt = NULL;
+    dm_add_node_t add_node_type = DM_ADD_NODE_ON_CREATE;
+
+    dmt = task_create_named(DM_DEVICE_CREATE, name);
+    if (dmt == NULL) {
+        ERROR("devicemapper:create named task failed");
+        goto out;
+    }
+
+    ret = snprintf(params, sizeof(params), "%s %d", pool_name, device_id);
+    if (ret < 0) {
+        // ERROR();
+        goto out;
+    }
+
+    ret = add_target(dmt, start, size / 512, "thin", params);
+    if (ret != 0) {
+        ERROR("devicemapper: Can't add target");
+        goto out;
+    }
+
+    ret = set_add_node(dmt, add_node_type);
+    if (ret != 0) {
+        ERROR("devicemapper: Can't add node");
+        goto out;
+    }
+
+    ret = set_cookie(dmt, &cookie, flags);
+    if (ret != 0) {
+        ERROR("devicemapper: Can't set cookie %d", ret);
+        goto out;
+    }
+
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ERROR("devicemapper: Error running deviceCreate (ActivateDevice) %d", ret);
+    }
+
+    dev_udev_wait(cookie);
+
+out:
+    free(dmt);
+    return ret;
+}
+
+int dev_cancel_deferred_remove(const char *dm_name)
+{
+    int ret = 0;
+    uint64_t sector = 0;
+    struct dm_task *dmt = NULL;
+
+    dmt = task_create_named(DM_DEVICE_TARGET_MSG, dm_name);
+    if (dmt == NULL) {
+        ERROR("devicemapper:create named task failed");
+        return -1;
+    }
+
+    ret = set_sector(dmt, sector);
+    if (ret != 0) {
+        ret = -1;
+        ERROR("devicemapper: Can't set sector");
+        goto cleanup;
+    }
+
+    ret = set_message(dmt, "@cancel_deferred_remove");
+    if (ret != 0) {
+        ret = -1;
+        goto cleanup;
+    }
+
+    dm_saw_busy = false;
+    dm_saw_enxio = false;
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        if (dm_saw_busy) {
+            return ERR_BUSY;
+        } else if (dm_saw_enxio) {
+            return ERR_ENXIO;
+        }
+        ret = -1;
+        ERROR("devicemapper: Error running CancelDeferredRemove");
+        goto cleanup;
+    }
+
+    ret = 0;
+
+cleanup:
+    free(dmt);
+    return ret;
+}
+
+// DMLog is the logging callback containing all of the information from devicemapper.
+static void dm_log(int level, char *file, int line, int dm_errno_or_class, char *message)
+{
+    switch (level) {
+        case LOG_LEVEL_FATAL:
+        case LOG_LEVEL_ERR:
+            ERROR("libdevmapper(%d): %s:%d (%d) %s", level, file, line, dm_errno_or_class, message);
+            break;
+        case LOG_LEVEL_WARN:
+            WARN("libdevmapper(%d): %s:%d (%d) %s", level, file, line, dm_errno_or_class, message);
+            break;
+        case LOG_LEVEL_NOTICE:
+        case LOG_LEVEL_INFO:
+            INFO("libdevmapper(%d): %s:%d (%d) %s", level, file, line, dm_errno_or_class, message);
+            break;
+        case LOG_LEVEL_DEBUG:
+            DEBUG("libdevmapper(%d): %s:%d (%d) %s", level, file, line, dm_errno_or_class, message);
+            break;
+        default:
+            INFO("libdevmapper(%d): %s:%d (%d) %s", level, file, line, dm_errno_or_class, message);
+    }
+
+}
+
+void storage_devmapper_log_callback(int level, char *file, int line, int dm_errno_or_class, char *message)
+{
+    if (level < LOG_LEVEL_DEBUG) {
+        if (strstr(message, "busy") != NULL) {
+            dm_saw_busy = true;
+        }
+        if (strstr(message, "File exist") != NULL) {
+            dm_saw_exist = true;
+        }
+
+        if (strstr(message, "No such device or address") != NULL) {
+            dm_saw_enxio = true;
+        }
+    }
+    dm_log(level, file, line, dm_errno_or_class, message);
+}
+
+static void	log_cb(int level, const char *file, int line, int dm_errno_or_class, const char *f, ...)
+{
+    char *buffer = NULL;
+    va_list ap;
+    int ret;
+
+    va_start(ap, f);
+    ret = vasprintf(&buffer, f, ap);
+    va_end(ap);
+    if (ret < 0) {
+        // memory allocation failed -- should never happen?
+        return;
+    }
+
+    storage_devmapper_log_callback(level, (char *)file, line, dm_errno_or_class, buffer);
+    free(buffer);
+}
+
+void log_with_errno_init()
+{
+    dm_log_with_errno_init(log_cb);
+}
+
+// BlockDeviceDiscard runs discard for the given path.
+// This is used as a workaround for the kernel not discarding block so
+// on the thin pool when we remove a thinp device, so we do it
+// manually
+int dev_block_device_discard(const char *path)
+{
+    return 0;
+}
+

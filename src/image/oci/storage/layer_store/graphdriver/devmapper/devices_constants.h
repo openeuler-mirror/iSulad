@@ -20,7 +20,7 @@
 #define DEVICE_SET_METAFILE "deviceset-metadata"
 #define TRANSACTION_METADATA "transaction-metadata"
 #define DEVICE_DIRECTORY "/dev"
-#define DEVMAPPER_DECICE_DIRECTORY "/dev/mapper"
+#define DEVMAPPER_DECICE_DIRECTORY "/dev/mapper/"
 #define DEFAULT_THIN_BLOCK_SIZE 128
 #define DEFAULT_METADATA_LOOPBACK_SIZE (2 * 1024 * 1024 * 1024)
 // #define DEFAULT_BASE_FS_SIZE (10 * 1024 * 1024 * 1024)
@@ -31,6 +31,7 @@
 #define DEFAULT_MIN_FREE_SPACE_PERCENT 10
 
 #define DEFAULT_DEVICE_SET_MODE 0700
+
 
 
 
