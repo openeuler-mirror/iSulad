@@ -10,9 +10,9 @@
  * See the Mulan PSL v2 for more details.
 * Author: liuhao
 * Create: 2019-07-15
-* Description: provide isula image operator definition
+* Description: provide oci image operator definition
 *******************************************************************************/
-#include "isula_image.h"
+#include "oci_image.h"
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -34,7 +34,6 @@
 #include "isula_container_export.h"
 #include "isula_login.h"
 #include "isula_logout.h"
-#include "isula_health_check.h"
 #include "isula_images_list.h"
 #include "isula_containers_list.h"
 #include "isula_storage_metadata.h"
@@ -47,22 +46,63 @@
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 
-/*
- * start isula image grpc server
- * */
-int isula_init(const struct im_configs *conf)
+
+static int storage_module_init_helper(const struct service_arguments *args)
+{
+    int ret = 0;
+    struct storage_module_init_options *storage_opts = NULL;
+
+    storage_opts = util_common_calloc_s(sizeof(struct storage_module_init_options));
+    if (storage_opts == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    storage_opts->driver_name = util_strdup_s(args->json_confs->storage_driver);
+    storage_opts->storage_root = util_path_join(args->json_confs->graph, GRAPH_ROOTPATH_NAME);
+    if (storage_opts->storage_root == NULL) {
+        ERROR("Failed to get storage root dir");
+        ret = -1;
+        goto out;
+    }
+
+    storage_opts->storage_run_root = util_path_join(args->json_confs->state, GRAPH_ROOTPATH_NAME);
+    if (storage_opts->storage_run_root == NULL) {
+        ERROR("Failed to get storage run root dir");
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_array_of_strings((const char **)args->json_confs->storage_opts,
+                             args->json_confs->storage_opts_len, &storage_opts->driver_opts, &storage_opts->driver_opts_len) != 0) {
+        ERROR("Failed to get storage storage opts");
+        ret = -1;
+        goto out;
+    }
+
+    if (storage_module_init(storage_opts) != 0) {
+        ERROR("Failed to init storage module");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_storage_module_init_options(storage_opts);
+    return ret;
+}
+
+int oci_init(const struct service_arguments *args)
 {
     int ret = -1;
 
-    if (conf == NULL) {
+    if (args == NULL) {
         ERROR("Invalid image config");
         return ret;
     }
 
-    /* init grpc client */
-    ret = isula_image_ops_init();
-    if (ret != 0) {
-        ERROR("Init grpc client for isula image server failed");
+    if (storage_module_init_helper(args) != 0) {
+        ret = -1;
         goto out;
     }
 
@@ -71,12 +111,12 @@ out:
     return ret;
 }
 
-int isula_pull_rf(const im_pull_request *request, im_pull_response **response)
+int oci_pull_rf(const im_pull_request *request, im_pull_response **response)
 {
     return isula_pull_image(request, response);
 }
 
-int isula_prepare_rf(const im_prepare_request *request, char **real_rootfs)
+int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
 {
     if (request == NULL) {
         ERROR("Bim is NULL");
@@ -87,7 +127,7 @@ int isula_prepare_rf(const im_prepare_request *request, char **real_rootfs)
                                                    real_rootfs, NULL);
 }
 
-int isula_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
+int oci_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
                         const im_prepare_request *request, char **real_rootfs)
 {
     oci_image_spec *image = NULL;
@@ -115,7 +155,7 @@ out:
     return ret;
 }
 
-int isula_delete_rf(const im_delete_request *request)
+int oci_delete_rf(const im_delete_request *request)
 {
     if (request == NULL) {
         ERROR("Request is NULL");
@@ -124,7 +164,7 @@ int isula_delete_rf(const im_delete_request *request)
     return isula_rootfs_remove(request->name_id);
 }
 
-int isula_mount_rf(const im_mount_request *request)
+int oci_mount_rf(const im_mount_request *request)
 {
     if (request == NULL) {
         ERROR("Invalid arguments");
@@ -133,7 +173,7 @@ int isula_mount_rf(const im_mount_request *request)
     return isula_rootfs_mount(request->name_id);
 }
 
-int isula_umount_rf(const im_umount_request *request)
+int oci_umount_rf(const im_umount_request *request)
 {
     if (request == NULL) {
         ERROR("Invalid arguments");
@@ -143,7 +183,7 @@ int isula_umount_rf(const im_umount_request *request)
     return isula_rootfs_umount(request->name_id, request->force);
 }
 
-int isula_rmi(const im_remove_request *request)
+int oci_rmi(const im_remove_request *request)
 {
     int ret = -1;
     char *real_image_name = NULL;
@@ -290,7 +330,7 @@ out:
     return ret;
 }
 
-int isula_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage)
+int oci_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage)
 {
     int ret = 0;
     char *output = NULL;
@@ -319,7 +359,7 @@ out:
     return ret;
 }
 
-int isula_get_filesystem_info(im_fs_info_response **response)
+int oci_get_filesystem_info(im_fs_info_response **response)
 {
     int ret = -1;
 
@@ -346,7 +386,7 @@ err_out:
     return -1;
 }
 
-int isula_get_storage_status(im_storage_status_response **response)
+int oci_get_storage_status(im_storage_status_response **response)
 {
     int ret = -1;
 
@@ -375,7 +415,7 @@ err_out:
     return ret;
 }
 
-int isula_get_storage_metadata(char *id, im_storage_metadata_response **response)
+int oci_get_storage_metadata(char *id, im_storage_metadata_response **response)
 {
     int ret = -1;
 
@@ -404,7 +444,7 @@ err_out:
     return ret;
 }
 
-int isual_load_image(const im_load_request *request)
+int oci_load_image(const im_load_request *request)
 {
     char **refs = NULL;
     int ret = 0;
@@ -438,7 +478,7 @@ out:
     return ret;
 }
 
-int isula_export_rf(const im_export_request *request)
+int oci_export_rf(const im_export_request *request)
 {
     int ret = 0;
 
@@ -455,7 +495,7 @@ int isula_export_rf(const im_export_request *request)
     return ret;
 }
 
-int isula_login(const im_login_request *request)
+int oci_login(const im_login_request *request)
 {
     int ret = 0;
 
@@ -472,7 +512,7 @@ int isula_login(const im_login_request *request)
     return ret;
 }
 
-int isula_logout(const im_logout_request *request)
+int oci_logout(const im_logout_request *request)
 {
     int ret = 0;
 
@@ -489,12 +529,7 @@ int isula_logout(const im_logout_request *request)
     return ret;
 }
 
-int isula_health_check(void)
-{
-    return isula_do_health_check();
-}
-
-int isula_sync_images(void)
+int oci_sync_images(void)
 {
     int ret = 0;
     size_t i = 0;
@@ -549,7 +584,7 @@ static inline void cleanup_container_rootfs(const char *name_id, bool mounted)
     }
 }
 
-int isula_sync_containers(void)
+int oci_sync_containers(void)
 {
     int ret = 0;
     size_t i = 0;

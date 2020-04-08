@@ -365,14 +365,14 @@ int embedded_inspect_image(const im_inspect_request *request, char **inspected_j
     return lim_query_image_data(image_ref, IMAGE_DATA_TYPE_CONFIG, inspected_json, NULL);
 }
 
-int embedded_init(const struct im_configs *conf)
+int embedded_init(const struct service_arguments *args)
 {
-    if (conf == NULL) {
+    if (args == NULL) {
         ERROR("Invalid image configs");
         return -1;
     }
 
-    return lim_init(conf->rootpath);
+    return lim_init(args->json_confs->graph);
 }
 
 

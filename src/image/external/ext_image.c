@@ -229,7 +229,7 @@ int ext_logout(const im_logout_request *request)
     return 0;
 }
 
-int ext_init(const struct im_configs *conf)
+int ext_init(const struct service_arguments *args)
 {
     return 0;
 }

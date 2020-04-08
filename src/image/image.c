@@ -31,7 +31,7 @@
 #include "collector.h"
 
 #ifdef ENABLE_OCI_IMAGE
-#include "isula_image.h"
+#include "oci_image.h"
 #include "oci_images_store.h"
 #endif
 
@@ -76,34 +76,34 @@ static const struct bim_ops g_embedded_ops = {
 
 /* isula image server */
 #ifdef ENABLE_OCI_IMAGE
-static const struct bim_ops g_isula_ops = {
-    .init = isula_init,
+static const struct bim_ops g_oci_ops = {
+    .init = oci_init,
     .clean_resource = NULL,
     .detect = oci_detect,
 
-    .prepare_rf = isula_prepare_rf,
-    .mount_rf = isula_mount_rf,
-    .umount_rf = isula_umount_rf,
-    .delete_rf = isula_delete_rf,
-    .export_rf = isula_export_rf,
+    .prepare_rf = oci_prepare_rf,
+    .mount_rf = oci_mount_rf,
+    .umount_rf = oci_umount_rf,
+    .delete_rf = oci_delete_rf,
+    .export_rf = oci_export_rf,
 
-    .merge_conf = isula_merge_conf_rf,
+    .merge_conf = oci_merge_conf_rf,
     .get_user_conf = oci_get_user_conf,
 
     .list_ims = oci_list_images,
     .get_image_count = oci_images_store_size,
-    .rm_image = isula_rmi,
+    .rm_image = oci_rmi,
     .inspect_image = oci_inspect_image,
     .resolve_image_name = oci_resolve_image_name,
-    .container_fs_usage = isula_container_filesystem_usage,
-    .get_filesystem_info = isula_get_filesystem_info,
-    .get_storage_status = isula_get_storage_status,
-    .get_storage_metadata = isula_get_storage_metadata,
+    .container_fs_usage = oci_container_filesystem_usage,
+    .get_filesystem_info = oci_get_filesystem_info,
+    .get_storage_status = oci_get_storage_status,
+    .get_storage_metadata = oci_get_storage_metadata,
     .image_status = oci_status_image,
-    .load_image = isual_load_image,
-    .pull_image = isula_pull_rf,
-    .login = isula_login,
-    .logout = isula_logout,
+    .load_image = oci_load_image,
+    .pull_image = oci_pull_rf,
+    .login = oci_login,
+    .logout = oci_logout,
     .tag_image = isula_tag,
     .import = isula_import,
 };
@@ -146,7 +146,7 @@ static const struct bim_type g_bims[] = {
 #ifdef ENABLE_OCI_IMAGE
     {
         .image_type = IMAGE_TYPE_OCI,
-        .ops = &g_isula_ops,
+        .ops = &g_oci_ops,
     },
 #endif
     { .image_type = IMAGE_TYPE_EXTERNAL, .ops = &g_ext_ops },
@@ -1812,19 +1812,7 @@ void free_im_export_request(im_export_request *ptr)
     free(ptr);
 }
 
-void free_im_configs(struct im_configs *conf)
-{
-    if (conf == NULL) {
-        return;
-    }
-    free(conf->rootpath);
-    conf->rootpath = NULL;
-    free(conf->server_sock);
-    conf->server_sock = NULL;
-    free(conf);
-}
-
-static int bims_init(const struct im_configs *conf)
+static int bims_init(const struct service_arguments *args)
 {
     int ret = 0;
     size_t i;
@@ -1834,7 +1822,7 @@ static int bims_init(const struct im_configs *conf)
             WARN("Unimplements init in %s", g_bims[i].image_type);
             continue;
         }
-        ret = g_bims[i].ops->init(conf);
+        ret = g_bims[i].ops->init(args);
         if (ret != 0) {
             ERROR("Failed to init bim %s", g_bims[i].image_type);
             break;
@@ -1844,21 +1832,14 @@ static int bims_init(const struct im_configs *conf)
     return ret;
 }
 
-int image_module_init(const char *rootpath)
+int image_module_init(const struct service_arguments *args)
 {
-    struct im_configs *conf;
-    int ret = -1;
-
-    conf = (struct im_configs *)util_common_calloc_s(sizeof(struct im_configs));
-    if (conf == NULL) {
-        ERROR("Out of memory");
-        return ret;
+    if (args == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
     }
-    conf->rootpath = util_strdup_s(rootpath);
-    ret = bims_init(conf);
 
-    free_im_configs(conf);
-    return ret;
+    return bims_init(args);
 }
 
 void image_module_exit()
@@ -1986,7 +1967,7 @@ void im_sync_containers_isuladkit(void)
 {
     DEBUG("Sync containers...");
 #ifdef ENABLE_OCI_IMAGE
-    if (isula_sync_containers() != 0) {
+    if (oci_sync_containers() != 0) {
         WARN("Sync containers with remote failed!!");
     }
 #endif

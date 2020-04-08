@@ -24,6 +24,7 @@
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
 #include "libisulad.h"
+#include "arguments.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image_type.h"
@@ -214,14 +215,8 @@ typedef struct {
     char *name_id;
 } im_container_fs_usage_request;
 
-/* configs of image driver */
-struct im_configs {
-    char *rootpath;
-    char *server_sock;
-};
-
 struct bim_ops {
-    int (*init)(const struct im_configs *conf);
+    int (*init)(const struct service_arguments *args);
     void (*clean_resource)(void);
 
     /* detect whether image is of this bim type */
@@ -299,7 +294,7 @@ struct bim_type {
     const struct bim_ops *ops;
 };
 
-int image_module_init(const char *rootpath);
+int image_module_init(const struct service_arguments *args);
 
 void image_module_exit();
 
@@ -387,8 +382,6 @@ int im_logout(const im_logout_request *request, im_logout_response **response);
 void free_im_logout_request(im_logout_request *ptr);
 
 void free_im_logout_response(im_logout_response *ptr);
-
-void free_im_configs(struct im_configs *conf);
 
 int im_image_status(im_status_request *request, im_status_response **response);
 
