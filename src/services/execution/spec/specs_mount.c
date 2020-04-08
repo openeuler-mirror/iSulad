@@ -2363,7 +2363,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
         add_shm_mount(oci_spec, v2_spec->shm_path);
     }
 
-    if (host_spec->shm_size > 0) {
+    if (!has_mount_shm(host_spec, v2_spec) && host_spec->shm_size > 0) {
         ret = change_dev_shm_size(oci_spec, host_spec);
         if (ret) {
             ERROR("Failed to set dev shm size");
