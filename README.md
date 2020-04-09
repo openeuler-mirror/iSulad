@@ -71,4 +71,4 @@ iSulad follows the kernel coding conventions. You can find a detailed introducti
 
 ## Licensing
 
-iSulad is licensed under the Mulan PSL v1.
+iSulad is licensed under the Mulan PSL v2.
