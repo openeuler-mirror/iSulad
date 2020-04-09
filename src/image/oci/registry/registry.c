@@ -32,9 +32,12 @@
 #include "registry_manifest_schema2.h"
 #include "registry_manifest_schema1.h"
 #include "docker_image_config_v2.h"
+#include "image_manifest_v1_compatibility.h"
 #include "sha256.h"
 
 #define MAX_LAYER_NUM 125
+#define MANIFEST_BIG_DATA_KEY "manifest"
+#define ROOTFS_TYPE "layers"
 
 static int parse_manifest_schema1(pull_descriptor *desc)
 {
@@ -43,6 +46,7 @@ static int parse_manifest_schema1(pull_descriptor *desc)
     int ret = 0;
     int i = 0;
     size_t index = 0;
+    image_manifest_v1_compatibility *v1config = NULL;
 
     manifest = registry_manifest_schema1_parse_file(desc->manifest.file, NULL, &err);
     if (manifest == NULL) {
@@ -71,16 +75,29 @@ static int parse_manifest_schema1(pull_descriptor *desc)
     }
 
     for (i = (int)manifest->fs_layers_len - 1, index = 0; i >= 0; i--, index++) {
+        free(err);
+        err = NULL;
+        v1config = image_manifest_v1_compatibility_parse_data(manifest->history[i]->v1compatibility, NULL, &err);
+        if (v1config == NULL) {
+            ERROR("parse v1 compatibility %d failed, err: %s", i, err);
+            ret = -1;
+            goto out;
+        }
+
+        desc->layers[index].empty_layer = v1config->throwaway;
+        // Cann't download an empty layer, skip related infomation.
+        if (v1config->throwaway) {
+            continue;
+        }
+
         desc->layers[index].media_type = util_strdup_s(DOCKER_IMAGE_LAYER_TAR_GZIP);
         desc->layers[index].digest = util_strdup_s(manifest->fs_layers[i]->blob_sum);
     }
     desc->layers_len = manifest->fs_layers_len;
 
 out:
-    if (manifest != NULL) {
-        free_registry_manifest_schema1(manifest);
-        manifest = NULL;
-    }
+    free_registry_manifest_schema1(manifest);
+    manifest = NULL;
     free(err);
     err = NULL;
 
@@ -119,6 +136,12 @@ static int parse_manifest_schema2(pull_descriptor *desc)
     }
 
     for (i = 0; i < manifest->layers_len; i++) {
+        if (strcmp(manifest->layers[i]->media_type, DOCKER_IMAGE_LAYER_TAR_GZIP) &&
+            strcmp(manifest->layers[i]->media_type, DOCKER_IMAGE_LAYER_FOREIGN_TAR_GZIP)) {
+            ERROR("Unsupported layer's media type %s, layer index %d", manifest->layers[i]->media_type, i);
+            ret = -1;
+            goto out;
+        }
         desc->layers[i].media_type = util_strdup_s(manifest->layers[i]->media_type);
         desc->layers[i].size = manifest->layers[i]->size;
         desc->layers[i].digest = util_strdup_s(manifest->layers[i]->digest);
@@ -168,6 +191,11 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
     }
 
     for (i = 0; i < manifest->layers_len; i++) {
+        if (strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_TAR_GZIP)) {
+            ERROR("Unsupported layer's media type %s, layer index %d", manifest->layers[i]->media_type, i);
+            ret = -1;
+            goto out;
+        }
         desc->layers[i].media_type = util_strdup_s(manifest->layers[i]->media_type);
         desc->layers[i].size = manifest->layers[i]->size;
         desc->layers[i].digest = util_strdup_s(manifest->layers[i]->digest);
@@ -185,7 +213,7 @@ out:
     return ret;
 }
 
-static bool is_manifest_schema1(char *media_type)
+static bool is_manifest_schemav1(char *media_type)
 {
     if (media_type == NULL) {
         return false;
@@ -215,7 +243,7 @@ static int parse_manifest(pull_descriptor *desc)
         ret = parse_manifest_schema2(desc);
     } else if (!strcmp(media_type, OCI_MANIFEST_V1_JSON)) {
         ret = parse_manifest_ociv1(desc);
-    } else if (is_manifest_schema1(media_type)) {
+    } else if (is_manifest_schemav1(media_type)) {
         WARN("found manifest schema1 %s, it has been deprecated", media_type);
         ret = parse_manifest_schema1(desc);
     } else {
@@ -230,15 +258,297 @@ static int parse_manifest(pull_descriptor *desc)
     return ret;
 }
 
-static int check_image(pull_descriptor *desc)
+static int verify_or_calc_diffid(pull_descriptor *desc)
 {
-    // TODO
-    return 0;
+    size_t i = 0;
+    int ret = 0;
+    char *diff_id = NULL;
+    bool gzip = false;
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    for (i = 0; i < desc->layers_len; i++) {
+        ret = util_gzip_compressed(desc->layers[i].file, &gzip);
+        if (ret != 0) {
+            // consider it as gziped just like media type indicated if we cann't determined if it's gziped.
+            gzip = true;
+        }
+
+        if (gzip) {
+            diff_id = util_full_gzip_digest(desc->layers[i].file);
+        } else {
+            diff_id = util_full_file_digest(desc->layers[i].file);
+        }
+        if (diff_id == NULL) {
+            ERROR("calculate digest failed for file %s", desc->layers[i].file);
+            ret = -1;
+            goto out;
+        }
+        if (!is_manifest_schemav1(desc->manifest.media_type)) {
+            // manifest schema v1 doesn't have diff id, here we save it for later use.
+            desc->layers[i].diff_id = util_strdup_s(diff_id);
+        } else {
+            if (strcmp(desc->layers[i].diff_id, diff_id)) {
+                ERROR("check diff id of layer %d failed, expect %s, got %s", i, desc->layers[i].diff_id, diff_id);
+                ret = -1;
+                goto out;
+            }
+        }
+        free(diff_id);
+        diff_id = NULL;
+    }
+
+out:
+    free(diff_id);
+    diff_id = NULL;
+
+    return ret;
+}
+
+static char *without_sha256_prefix(char *digest)
+{
+    return digest + strlen(SHA256_PREFIX);
+}
+
+static int register_layers(pull_descriptor *desc)
+{
+    int ret = 0;
+    size_t i = 0;
+    struct layer *l = NULL;
+    char *id = NULL;
+    char *parent = NULL;
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    if (desc->layers_len == 0) {
+        ERROR("No layer found failed");
+        return -1;
+    }
+
+    for (i = 0; i < desc->layers_len; i++) {
+        id = without_sha256_prefix(desc->layers[i].chain_id);
+        if (desc->layers[i].already_exist) {
+            l = storage_layer_get(id);
+            if (l != NULL) {
+                free_layer(l);
+                l = NULL;
+                ret = storage_layer_try_repair_lowers(id, parent);
+                if (ret != 0) {
+                    ERROR("try to repair lowers for layer %s failed", id);
+                }
+                parent = id;
+                continue;
+            }
+            ERROR("Pull image failed, because layer %s has be deleted when pulling image", id);
+            ret = -1;
+            goto out;
+        }
+
+        ret = storage_layer_create(id, parent, false, desc->layers[i].file);
+        if (ret != 0) {
+            ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i].file);
+            goto out;
+        }
+
+        parent = id;
+    }
+
+out:
+
+    return ret;
+}
+
+static int create_image(pull_descriptor *desc, char *image_id)
+{
+    int ret = 0;
+    size_t top_layer_index = 0;
+    struct storage_img_create_options opts = {0};
+    char *top_layer_id = NULL;
+    storage_image *image = NULL;
+
+    if (desc == NULL || image_id == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    top_layer_index = desc->layers_len - 1;
+    opts.create_time = &desc->config.create_time;
+    opts.digest = desc->manifest.digest;
+    top_layer_id = without_sha256_prefix(desc->layers[top_layer_index].chain_id);
+    ret = storage_img_create(image_id, top_layer_id, NULL, &opts);
+    if (ret != 0) {
+        image = (storage_image *)storage_img_get(image_id);
+        if (image == NULL || image->layer == NULL) {
+            ERROR("create image %s for %s failed", image_id, desc->dest_image_name);
+            goto out;
+        }
+
+        if (strcmp(image->layer, top_layer_id)) {
+            ERROR("error committing image, image id %s exist, but top layer doesn't match. local %s, download %s",
+                  image_id, image->layer, top_layer_id);
+            ret = -1;
+            goto out;
+        }
+
+        goto out;
+    }
+
+    ret = storage_img_add_name(image_id, desc->dest_image_name);
+    if (ret != 0) {
+        ERROR("add image name failed");
+        goto out;
+    }
+
+out:
+
+    free_storage_image(image);
+    image = NULL;
+
+    return ret;
+}
+
+static int set_manifest(pull_descriptor *desc, char *image_id)
+{
+    int ret = 0;
+    char *manifest_str = NULL;
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    manifest_str = util_read_text_file(desc->manifest.file);
+    if (manifest_str == NULL) {
+        ERROR("read file %s content failed", desc->manifest.file);
+        ret = -1;
+        goto out;
+    }
+
+    ret = storage_img_set_big_data(image_id, MANIFEST_BIG_DATA_KEY, manifest_str);
+    if (ret != 0) {
+        ERROR("set big data failed");
+        goto out;
+    }
+
+out:
+
+    free(manifest_str);
+    manifest_str = NULL;
+
+    return ret;
+}
+
+static int set_config(pull_descriptor *desc, char *image_id)
+{
+    int ret = 0;
+    char *config_str = NULL;
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    config_str = util_read_text_file(desc->config.file);
+    if (config_str == NULL) {
+        ERROR("read file %s content failed", desc->config.file);
+        ret = -1;
+        goto out;
+    }
+
+    ret = storage_img_set_big_data(image_id, desc->config.digest, config_str);
+    if (ret != 0) {
+        ERROR("set big data failed");
+        goto out;
+    }
+
+out:
+
+    free(config_str);
+    config_str = NULL;
+
+    return ret;
+}
+
+static int set_loaded_time(pull_descriptor *desc, char *image_id)
+{
+    int ret = 0;
+    types_timestamp_t now = {0};
+
+    if (!get_now_time_stamp(&now)) {
+        ret = -1;
+        ERROR("get now time stamp failed");
+        goto out;
+    }
+
+    ret = storage_img_set_loaded_time(image_id, &now);
+    if (ret != 0) {
+        ERROR("set loaded time failed");
+        goto out;
+    }
+
+out:
+
+    return ret;
 }
 
 static int register_image(pull_descriptor *desc)
 {
-    return 0;
+    int ret = 0;
+    char *image_id = NULL;
+    bool image_created = false;
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    ret = register_layers(desc);
+    if (ret != 0) {
+        ERROR("registry layers failed");
+        goto out;
+    }
+
+    image_id = without_sha256_prefix(desc->config.digest);
+    ret = create_image(desc, image_id);
+    if (ret != 0) {
+        ERROR("create image failed");
+        goto out;
+    }
+    image_created = true;
+
+    ret = set_config(desc, image_id);
+    if (ret != 0) {
+        ERROR("set image config failed");
+        goto out;
+    }
+
+    ret = set_manifest(desc, image_id);
+    if (ret != 0) {
+        ERROR("set manifest failed");
+        goto out;
+    }
+
+    ret = set_loaded_time(desc, image_id);
+    if (ret != 0) {
+        ERROR("set loaded time failed");
+        goto out;
+    }
+
+out:
+
+    if (ret != 0 && image_created) {
+        if (storage_img_delete(image_id, true)) {
+            ERROR("delete image %d failed", image_id);
+        }
+    }
+
+    return ret;
 }
 
 static char *calc_chain_id(char *parent_chain_id, char *diff_id)
@@ -290,6 +600,26 @@ out:
     return full_digest;
 }
 
+static types_timestamp_t created_to_timestamp(char *created)
+{
+    int64_t nanos = 0;
+    types_timestamp_t timestamp = {0};
+
+    if (to_unix_nanos_from_str(created, &nanos) != 0) {
+        ERROR("Failed to get created time from image config");
+        goto out;
+    }
+
+    timestamp.has_seconds = true;
+    timestamp.seconds = nanos / Time_Second;
+    timestamp.has_nanos = true;
+    timestamp.nanos = nanos % Time_Second;
+
+out:
+
+    return timestamp;
+}
+
 static int parse_docker_config(pull_descriptor *desc)
 {
     int ret = 0;
@@ -328,6 +658,8 @@ static int parse_docker_config(pull_descriptor *desc)
         }
         parent_chain_id = desc->layers[i].chain_id;
     }
+
+    desc->config.create_time = created_to_timestamp(config->created);
 
 out:
 
@@ -379,6 +711,8 @@ static int parse_oci_config(pull_descriptor *desc)
         }
         parent_chain_id = desc->layers[i].chain_id;
     }
+
+    desc->config.create_time = created_to_timestamp(config->created);
 
 out:
     if (config != NULL) {
@@ -474,6 +808,7 @@ static int fetch_layers(pull_descriptor *desc)
 {
     size_t i = 0;
     int ret = 0;
+    struct layer *l = NULL;
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -481,10 +816,25 @@ static int fetch_layers(pull_descriptor *desc)
     }
 
     for (i = 0; i < desc->layers_len; i++) {
+        // Skip empty layer
+        if (desc->layers[i].empty_layer) {
+            continue;
+        }
+
+        // Skip layer that already exist in local store
+        if (desc->layers[i].chain_id) {
+            l = storage_layer_get(without_sha256_prefix(desc->layers[i].chain_id));
+            if (l != NULL) {
+                desc->layers[i].already_exist = true;
+                free_layer(l);
+                l = NULL;
+                continue;
+            }
+        }
+
         // TODO:
-        // 1. fetch layers only it doesn't exist
-        // 2. fetch layers in threads
-        // 3. fetch maxium 5 layers concurrently
+        // 1. fetch layers in threads
+        // 2. fetch maxium 5 layers concurrently
         ret = fetch_layer(desc, i);
         if (ret != 0) {
             ERROR("fetch layer %d failed", i);
@@ -493,6 +843,200 @@ static int fetch_layers(pull_descriptor *desc)
     }
 
 out:
+
+    return ret;
+}
+
+static void free_items_not_inherit(docker_image_config_v2 *config)
+{
+    size_t i = 0;
+
+    if (config == NULL) {
+        return;
+    }
+    free(config->id);
+    config->id = NULL;
+    free(config->parent);
+    config->parent = NULL;
+    config->size = 0;
+    free_docker_image_rootfs(config->rootfs);
+    config->rootfs = NULL;
+
+    for (i = 0; i < config->history_len; i++) {
+        free_docker_image_history(config->history[i]);
+        config->history[i] = NULL;
+    }
+    config->history = NULL;
+
+    return;
+}
+
+static char *convert_created_by(docker_image_config_v2 *config)
+{
+    size_t i = 0;
+    char *created_by = NULL;
+    size_t size = 0;
+
+    if (config == NULL || config->container_config == NULL || config->container_config->cmd == NULL ||
+        config->container_config->cmd_len == 0) {
+        return NULL;
+    }
+
+    for (i = 0; i < config->container_config->cmd_len; i++) {
+        size += strlen(config->container_config->cmd[i]) + 1; // +1 for ' ' or '\0'
+    }
+
+    created_by = util_common_calloc_s(size);
+    if (created_by == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    for (i = 0; i < config->container_config->cmd_len; i++) {
+        if (i != 0) {
+            (void)strcat(created_by, " ");
+        }
+        (void)strcat(created_by, config->container_config->cmd[i]);
+    }
+
+    return created_by;
+}
+
+static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 *config,
+                                  registry_manifest_schema1 *manifest)
+{
+    int i = 0;
+    int ret = 0;
+    size_t history_index = 0;
+    parser_error err = NULL;
+    docker_image_config_v2 *v1config = NULL;
+    docker_image_history *history = NULL;
+
+    if (desc == NULL || config == NULL || manifest == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    config->rootfs = util_common_calloc_s(sizeof(docker_image_rootfs));
+    config->history = util_common_calloc_s(sizeof(docker_image_history*)*desc->layers_len);
+    if (config->rootfs == NULL || config->history) {
+        ERROR("out of memory");
+        return -1;
+    }
+    config->rootfs->type = util_strdup_s(ROOTFS_TYPE);
+
+    history_index = manifest->history_len - 1;
+    for (i = 0; i < desc->layers_len; i++) {
+        v1config = docker_image_config_v2_parse_data(manifest->history[history_index]->v1compatibility, NULL, &err);
+        if (v1config == NULL) {
+            ERROR("parse v1 compatibility config failed, err: %s", err);
+            ret = -1;
+            goto out;
+        }
+        free(err);
+        err = NULL;
+
+        history = util_common_calloc_s(sizeof(docker_image_history));
+        if (history == NULL) {
+            ERROR("out of memory");
+            ret = -1;
+            goto out;
+        }
+
+        history->created = v1config->created;
+        v1config->created = NULL;
+        history->author = v1config->author;
+        v1config->author = NULL;
+        history->created_by = convert_created_by(v1config);
+        history->comment = v1config->comment;
+        v1config->comment = NULL;
+        history->empty_layer = desc->layers[i].empty_layer;
+
+        config->history[i] = history;
+        config->history_len++;
+
+        free_docker_image_config_v2(v1config);
+        v1config = NULL;
+        history_index--;
+        if (desc->layers[i].empty_layer) {
+            continue;
+        }
+
+        ret = util_array_append(&config->rootfs->diff_ids, desc->layers[i].diff_id);
+        if (ret != 0) {
+            ERROR("append diff id to rootfs failed");
+            ret = -1;
+            goto out;
+        }
+        config->rootfs->diff_ids_len++;
+    }
+
+out:
+    free(err);
+    err = NULL;
+    free_docker_image_config_v2(v1config);
+    v1config = NULL;
+
+    return ret;
+}
+
+static int create_config_from_v1config(pull_descriptor *desc)
+{
+    int ret = 0;
+    parser_error err = NULL;
+    docker_image_config_v2 *config = NULL;
+    registry_manifest_schema1 *manifest = NULL;
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    manifest = registry_manifest_schema1_parse_file(desc->manifest.file, NULL, &err);
+    if (manifest == NULL) {
+        ERROR("parse manifest schema1 failed, err: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (manifest->fs_layers_len != desc->layers_len || manifest->fs_layers_len != manifest->history_len ||
+        manifest->history_len == 0) {
+        ERROR("Invalid length manifest, fs layers length %d, histroy length %d, layers length %d",
+              manifest->fs_layers_len, manifest->history_len, desc->layers_len);
+        ret = -1;
+        goto out;
+    }
+
+    // We need to convert v1 config to v2 config, so preserve v2 config's items only,
+    // parse it as v2 config can do this directly.
+    free(err);
+    err = NULL;
+    config = docker_image_config_v2_parse_data(manifest->history[0]->v1compatibility, NULL, &err);
+    if (config == NULL) {
+        ERROR("parse image config v2 failed, err: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    // Delete items that do not want to inherit
+    free_items_not_inherit(config);
+
+    // Add rootfs and history
+    ret = add_rootfs_and_history(desc, config, manifest);
+    if (ret != 0) {
+        ERROR("Add rootfs and history to config failed");
+        goto out;
+    }
+
+    desc->config.create_time = created_to_timestamp(config->created);
+
+out:
+    free_registry_manifest_schema1(manifest);
+    manifest = NULL;
+    free_docker_image_config_v2(config);
+    config = NULL;
+    free(err);
+    err = NULL;
 
     return ret;
 }
@@ -514,7 +1058,7 @@ static int registry_fetch(pull_descriptor *desc)
 
     // manifest schema1 cann't pull config, the config is composited by
     // the history[0].v1Compatibility in manifest and rootfs's diffID
-    if (!is_manifest_schema1(desc->manifest.media_type)) {
+    if (!is_manifest_schemav1(desc->manifest.media_type)) {
         ret = fetch_and_parse_config(desc);
         if (ret != 0) {
             ERROR("fetch and parse config failed");
@@ -528,17 +1072,25 @@ static int registry_fetch(pull_descriptor *desc)
         goto out;
     }
 
-    // If it's manifest schema1, create config. The config is composited by
-    // the history[0].v1Compatibility in manifest and rootfs's diffID
-    // note: manifest schema1 has been deprecated.
-    if (!is_manifest_schema1(desc->manifest.media_type)) {
-        // TODO: transform config
-    }
-
-    ret = check_image(desc);
+    // If it's manifest schema v2 or oci image, verify layer's digest(diff id).
+    // If it's manifest schema v1, calc layer's digest(diff id).
+    // note: manifest schema v1 doesn't contains layer's diff id, so we can't
+    // verify it's layer's diff id.
+    ret = verify_or_calc_diffid(desc);
     if (ret != 0) {
         ERROR("check image failed, image invalid");
         goto out;
+    }
+
+    // If it's manifest schema1, create config. The config is composited by
+    // the history[0].v1Compatibility in manifest and rootfs's diffID
+    // note: manifest schema1 has been deprecated.
+    if (is_manifest_schemav1(desc->manifest.media_type)) {
+        ret = create_config_from_v1config(desc);
+        if (ret != 0) {
+            ERROR("create config from v1 config failed");
+            goto out;
+        }
     }
 
 out:
@@ -555,6 +1107,11 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
 
     if (desc == NULL || options == NULL) {
         ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    if (!util_valid_image_name(options->dest_image_name)) {
+        ERROR("Invalid dest image name %s", options->dest_image_name);
         return -1;
     }
 
@@ -592,6 +1149,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         goto out;
     }
 
+    desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
     desc->blobpath = util_strdup_s(blobpath);
     desc->skip_tls_verify = options->comm_opt.skip_tls_verify;

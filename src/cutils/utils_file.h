@@ -59,6 +59,10 @@ char *util_file_digest(const char *filename);
 
 char *util_full_file_digest(const char *filename);
 
+int util_gzip_compressed(const char *filename, bool *gzip);
+
+char *util_full_gzip_digest(const char *filename);
+
 char *util_path_dir(const char *path);
 
 char *util_add_path(const char *path, const char *name);

@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include "types_def.h"
+
 // 8 is enough for challenge, usually only one challenge is provided.
 #define CHALLENGE_MAX 8
 
@@ -29,9 +31,11 @@ typedef struct {
     char *digest;
     // Downloaded file path
     char *file;
+    types_timestamp_t create_time;
 } config_blob;
 
 typedef struct {
+    bool empty_layer;
     char *media_type;
     // blob size
     size_t size;
@@ -44,11 +48,11 @@ typedef struct {
     // Downloaded file path
     char *file;
     // already exist on local store
-    char *already_exist;
+    bool already_exist;
 } layer_blob;
 
 typedef struct {
-    char *full_name;
+    char *dest_image_name;
     char *host;
     char *name;
     char *tag;

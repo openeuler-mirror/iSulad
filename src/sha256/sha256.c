@@ -55,6 +55,7 @@ static bool stream_check_error(void *stream, bool isgzip)
         return true;
     }
     if (gzerr != NULL && strcmp(gzerr, "") != 0) {
+        ERROR("gzread error: %s", gzerr);
         return true;
     }
     return false;
@@ -283,7 +284,7 @@ char *sha256_digest_str(const char *val)
     for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         int ret = snprintf(output_buffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
         if (ret >= 3 || ret < 0) {
-            return "";
+            return NULL;
         }
     }
     output_buffer[SHA256_DIGEST_LENGTH * 2] = '\0';
@@ -291,3 +292,84 @@ char *sha256_digest_str(const char *val)
     return util_strdup_s(output_buffer);
 }
 
+char *sha256_digest_file(const char *filename, bool isgzip)
+{
+    SHA256_CTX ctx;
+    unsigned char hash[SHA256_DIGEST_LENGTH] = { 0x00 };
+    char output_buffer[(SHA256_DIGEST_LENGTH * 2) + 1] = { 0x00 };
+    int i = 0;
+    char *buffer = NULL;
+    int n = 0;
+    int ret = 0;
+    void *stream = NULL;
+
+    if (filename == NULL) {
+        ERROR("Invalid NULL pointer");
+        return NULL;
+    }
+
+    if (isgzip) {
+        stream = (void*)gzopen(filename, "r");
+    } else {
+        stream = (void*)fopen(filename, "r");
+    }
+    if (stream == NULL) {
+        ERROR("open file %s failed: %s", filename, strerror(errno));
+        return NULL;
+    }
+
+    buffer = util_common_calloc_s(BLKSIZE);
+    if (buffer == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    SHA256_Init(&ctx);
+
+    while (true) {
+        if (isgzip) {
+            n = gzread((gzFile)stream, buffer, BLKSIZE);
+        } else {
+            n = fread(buffer, 1, BLKSIZE, (FILE *)stream);
+        }
+        if (n <= 0) {
+            if (stream_check_error(stream, isgzip)) {
+                ret = -1;
+                goto out;
+            }
+            break;
+        }
+
+        if (n > 0) {
+            SHA256_Update(&ctx, buffer, n);
+        }
+
+        if (stream_check_eof(stream, isgzip)) {
+            break;
+        }
+    }
+
+    SHA256_Final(hash, &ctx);
+
+    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        int sret = snprintf(output_buffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
+        if (sret >= 3 || sret < 0) {
+            ERROR("snprintf failed when calc sha256 from file %s, result is %s", filename, sret);
+            return NULL;
+        }
+    }
+    output_buffer[SHA256_DIGEST_LENGTH * 2] = '\0';
+
+out:
+    if (isgzip) {
+        gzclose((gzFile)stream);
+    } else {
+        fclose((FILE*)stream);
+    }
+
+    if (ret == 0) {
+        return util_strdup_s(output_buffer);
+    } else {
+        return NULL;
+    }
+}

@@ -39,6 +39,7 @@ int isula_pull_image(const im_pull_request *request, im_pull_response **response
     }
 
     options->image_name = util_strdup_s(request->image);
+    options->dest_image_name = util_strdup_s(request->image);
 
     ret = registry_pull(options);
     if (ret != 0) {

@@ -42,6 +42,8 @@ extern int sha256sum_calculate(void *stream, char *buffer_out, size_t len,
    The result is a 64 characters string without prefix "sha256:"  */
 char *sha256_digest(void *stream, bool isgzip);
 
+char *sha256_digest_file(const char *filename, bool isgzip);
+
 char *sha256_digest_str(const char *val);
 
 # ifdef __cplusplus

@@ -35,6 +35,7 @@ typedef struct {
     registry_options comm_opt;
     registry_auth auth;
     char *image_name;
+    char *dest_image_name;
 } registry_pull_options;
 
 typedef struct {
