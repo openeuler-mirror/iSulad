@@ -30,7 +30,18 @@ function do_test_t()
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
-    isula stop $containername
+    isula stop -t 0 $containername
+    fn_check_eq "$?" "0" "stop failed"
+    testcontainer $containername exited
+
+    isula rm $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    isula run --name $containername -td -v /dev/shm:/dev/shm busybox
+    fn_check_eq "$?" "0" "run failed"
+    testcontainer $containername running
+
+    isula stop -t 0 $containername
     fn_check_eq "$?" "0" "stop failed"
     testcontainer $containername exited
 
