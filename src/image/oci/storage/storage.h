@@ -85,9 +85,11 @@ int storage_img_set_names(const char *img_id, const char **names, size_t names_l
 /* layer operations */
 int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);
 
-struct layer *storage_layer_get(const char *id);
+struct layer *storage_layer_get(const char *layer_id);
 
-int storage_layer_try_repair_lowers(const char *id, const char *last_layer_id);
+int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer_id);
+
+int storage_layer_set_names(const char *layer_id, const char **names, size_t names_len);
 
 void free_layer(struct layer *l);
 

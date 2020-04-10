@@ -130,7 +130,7 @@ out:
     return ret;
 }
 
-struct layer *storage_layer_get(const char *id)
+struct layer *storage_layer_get(const char *layer_id)
 {
     // TODO call layer_store functions to get layer info
     return NULL;
@@ -154,13 +154,42 @@ void free_layer(struct layer *ptr)
     free(ptr);
 }
 
-int storage_layer_try_repair_lowers(const char *id, const char *last_layer_id)
+int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer_id)
 {
     // TODO layer_store_try_repair_lowers
     int ret = 0;
 
     return ret;
 }
+
+int storage_layer_set_names(const char *layer_id, const char **names, size_t names_len)
+{
+    int ret = 0;
+    char **unique_names = NULL;
+    size_t unique_names_len = 0;
+
+    if (layer_id == NULL || names == NULL || names_len == 0) {
+        ERROR("Invalid arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+        ERROR("Failed to unique names");
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_set_names(layer_id, (const char **)unique_names, unique_names_len) != 0) {
+        ERROR("Failed to set layer %s names", layer_id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 
 int storage_img_create(const char *id, const char *parent_id, const char *metadata,
                        struct storage_img_create_options *opts)
