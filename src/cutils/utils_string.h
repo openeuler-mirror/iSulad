@@ -75,6 +75,9 @@ bool util_has_prefix(const char *str, const char *prefix);
 
 bool util_has_suffix(const char *str, const char *suffix);
 
+int util_string_array_unique(const char **elements, size_t length, char ***unique_elements,
+                             size_t *unique_elements_len);
+
 #ifdef __cplusplus
 }
 #endif

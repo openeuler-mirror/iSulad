@@ -63,12 +63,7 @@ int storage_module_init(struct storage_module_init_options *opts);
 
 void free_storage_module_init_options(struct storage_module_init_options *opts);
 
-int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);
-
-struct layer *storage_layer_get(const char *id);
-
-int storage_layer_try_repair_lowers(const char *id, const char *last_layer_id);
-
+/* image operations */
 int storage_img_create(const char *id, const char *parent_id, const char *metadata,
                        struct storage_img_create_options *opts);
 
@@ -83,6 +78,18 @@ int storage_img_delete(const char *img_id, bool commit);
 int storage_img_set_meta_data(const char *img_id, const char *meta);
 
 int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_time);
+
+int storage_img_set_names(const char *img_id, const char **names, size_t names_len);
+
+
+/* layer operations */
+int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);
+
+struct layer *storage_layer_get(const char *id);
+
+int storage_layer_try_repair_lowers(const char *id, const char *last_layer_id);
+
+void free_layer(struct layer *l);
 
 #ifdef __cplusplus
 }

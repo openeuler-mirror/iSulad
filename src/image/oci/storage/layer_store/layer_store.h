@@ -59,7 +59,6 @@ int layer_store_set_names(const char *id, const char * const* names, size_t name
 struct graphdriver_status* layer_store_status();
 int layer_store_try_repair_lowers(const char *id);
 
-void free_layer(struct layer *l);
 void free_layer_opts(struct layer_opts *opts);
 
 #ifdef __cplusplus

@@ -158,24 +158,6 @@ int layer_store_try_repair_lowers(const char *id)
     return 0;
 }
 
-void free_layer(struct layer *ptr)
-{
-    if (ptr == NULL) {
-        return;
-    }
-    free(ptr->id);
-    ptr->id = NULL;
-    free(ptr->parent);
-    ptr->parent = NULL;
-    free(ptr->mount_point);
-    ptr->mount_point = NULL;
-    free(ptr->compressed_digest);
-    ptr->compressed_digest = NULL;
-    free(ptr->uncompressed_digest);
-    ptr->uncompressed_digest = NULL;
-    free(ptr);
-}
-
 void free_layer_opts(struct layer_opts *ptr)
 {
     if (ptr == NULL) {

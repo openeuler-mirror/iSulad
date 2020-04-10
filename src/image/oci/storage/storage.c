@@ -136,6 +136,24 @@ struct layer *storage_layer_get(const char *id)
     return NULL;
 }
 
+void free_layer(struct layer *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->id);
+    ptr->id = NULL;
+    free(ptr->parent);
+    ptr->parent = NULL;
+    free(ptr->mount_point);
+    ptr->mount_point = NULL;
+    free(ptr->compressed_digest);
+    ptr->compressed_digest = NULL;
+    free(ptr->uncompressed_digest);
+    ptr->uncompressed_digest = NULL;
+    free(ptr);
+}
+
 int storage_layer_try_repair_lowers(const char *id, const char *last_layer_id)
 {
     // TODO layer_store_try_repair_lowers
@@ -190,6 +208,34 @@ int storage_img_set_big_data(const char *img_id, const char *key, const char *va
 
     if (image_store_set_big_data(img_id, key, val) != 0) {
         ERROR("Failed to set img %s big data %s=%s", img_id, key, val);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+int storage_img_set_names(const char *img_id, const char **names, size_t names_len)
+{
+    int ret = 0;
+    char **unique_names = NULL;
+    size_t unique_names_len = 0;
+
+    if (img_id == NULL || names == NULL || names_len == 0) {
+        ERROR("Invalid arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+        ERROR("Failed to unique names");
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_set_names(img_id, (const char **)unique_names, unique_names_len) != 0) {
+        ERROR("Failed to set img %s names", img_id);
         ret = -1;
         goto out;
     }

@@ -183,7 +183,6 @@ target_include_directories(isulad PUBLIC
     ${ENGINES_INCS}
     ${ISULAD_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin
-    ${CMAKE_CURRENT_SOURCE_DIR}/map
     ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/http
     ${WEBSOCKET_SERVICE_INCS}

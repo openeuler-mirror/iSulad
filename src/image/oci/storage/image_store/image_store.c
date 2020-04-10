@@ -668,63 +668,6 @@ out:
     return ret;
 }
 
-static int string_array_unique(const char **elements, size_t length, char ***unique_elements,
-                               size_t *unique_elements_len)
-{
-    int ret = 0;
-    size_t i;
-    map_t *map = NULL;
-    map_itor *itor = NULL;
-    char **tmp_elements = NULL;
-    size_t tmp_elements_len = 0;
-
-    map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
-    if (map == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    for (i = 0; i < length; i++) {
-        bool b = true;
-        if (!map_replace(map, (void *)elements[i], (void *)(&b))) {
-            ERROR("Failed to replace map element");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    tmp_elements_len = map_size(map);
-    tmp_elements = (char **)util_common_calloc_s(tmp_elements_len * sizeof(char *));
-    if (tmp_elements == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    itor = map_itor_new(map);
-    if (itor == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    i = 0;
-    for (; map_itor_valid(itor); map_itor_next(itor)) {
-        tmp_elements[i++] = util_strdup_s(map_itor_key(itor));
-    }
-
-    *unique_elements = tmp_elements;
-    *unique_elements_len = tmp_elements_len;
-    tmp_elements = NULL;
-    tmp_elements_len = 0;
-
-out:
-    map_free(map);
-    map_itor_free(itor);
-    util_free_array_by_len(tmp_elements, tmp_elements_len);
-    return ret;
-}
-
 static int image_store_append_image(image_store_t *g_image_store, storage_image *image)
 {
     storage_image **new_images = NULL;
@@ -911,7 +854,7 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
         goto out;
     }
 
-    if (string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
         ERROR("Failed to unique names");
         ret = -1;
         goto out;
@@ -1689,7 +1632,7 @@ int image_store_add_name(const char *id, const char *name)
         goto out;
     }
 
-    if (string_array_unique((const char **)names, names_len, &unique_names, &unique_names_len) != 0) {
+    if (util_string_array_unique((const char **)names, names_len, &unique_names, &unique_names_len) != 0) {
         ERROR("Failed to unique names");
         ret = -1;
         goto out;
@@ -1768,7 +1711,7 @@ int image_store_set_names(const char *id, const char **names, size_t names_len)
         goto out;
     }
 
-    if (string_array_unique((const char **)names, names_len, &unique_names, &unique_names_len) != 0) {
+    if (util_string_array_unique((const char **)names, names_len, &unique_names, &unique_names_len) != 0) {
         ERROR("Failed to unique names");
         ret = -1;
         goto out;
