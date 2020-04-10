@@ -51,7 +51,8 @@ int AttachServe::Execute(struct lws *wsi, const std::string &token,
     stringWriter.write_func = WsWriteToClient;
     stringWriter.close_func = closeWsConnect;
     container_req->attach_stderr = false;
-    int ret = cb->container.attach(container_req, &container_res, read_pipe_fd, &stringWriter, nullptr);
+    int ret = cb->container.attach(container_req, &container_res,
+                                   container_req->attach_stdin ? read_pipe_fd : -1, &stringWriter, nullptr);
     free_container_attach_request(container_req);
     free_container_attach_response(container_res);
 
