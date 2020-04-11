@@ -635,7 +635,7 @@ struct layer** layer_store_by_uncompress_digest(const char *digest)
     return NULL;
 }
 
-char *layer_store_lookup(const char *name);
+char *layer_store_lookup(const char *name)
 {
     return NULL;
 }
