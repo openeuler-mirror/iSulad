@@ -20,6 +20,7 @@
 #include "utils.h"
 #include "libisulad.h"
 #include "isula_libutils/log.h"
+#include "registry.h"
 
 static int is_valid_arguments(const char *server, const char *username, const char *password)
 {
@@ -36,73 +37,25 @@ static int is_valid_arguments(const char *server, const char *username, const ch
     return 0;
 }
 
-static int generate_isula_login_request(const char *server, const char *username, const char *password,
-                                        struct isula_login_request **ireq)
-{
-    struct isula_login_request *tmp_req = NULL;
-
-    tmp_req = (struct isula_login_request *)util_common_calloc_s(sizeof(struct isula_login_request));
-    if (tmp_req == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    tmp_req->server = util_strdup_s(server);
-    tmp_req->username = util_strdup_s(username);
-    tmp_req->password = util_strdup_s(password);
-
-    *ireq = tmp_req;
-    return 0;
-}
-
 int isula_do_login(const char *server, const char *username, const char *password)
 {
     int ret = -1;
-    struct isula_login_request *ireq = NULL;
-    struct isula_login_response *iresp = NULL;
-    client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops = NULL;
+    registry_login_options options;
 
     if (is_valid_arguments(server, username, password) != 0) {
         ERROR("Invalid arguments");
         return -1;
     }
 
-    im_ops = get_isula_image_ops();
-    if (im_ops == NULL) {
-        ERROR("Don't init isula server grpc client");
-        return -1;
-    }
-    if (im_ops->login == NULL) {
-        ERROR("Umimplement login operator");
-        return -1;
-    }
-
-    ret = generate_isula_login_request(server, username, password, &ireq);
+    options.host = (char *) server;
+    options.auth.username = (char *) username;
+    options.auth.password = (char *) password;
+    ret = registry_login(&options);
     if (ret != 0) {
+        ERROR("registry login failed");
         goto out;
-    }
-
-    iresp = (struct isula_login_response *)util_common_calloc_s(sizeof(struct isula_login_response));
-    if (iresp == NULL) {
-        ERROR("Out of memory");
-        goto out;
-    }
-
-    ret = get_isula_image_connect_config(&conf);
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = im_ops->login(ireq, iresp, &conf);
-    if (ret != 0) {
-        ERROR("Failed to login with error: %s", iresp->errmsg);
-        isulad_set_error_message("Failed to login with error: %s", iresp->errmsg);
     }
 
 out:
-    free_isula_login_request(ireq);
-    free_isula_login_response(iresp);
-    free_client_connect_config_value(&conf);
     return ret;
 }

@@ -27,6 +27,8 @@ int fetch_config(pull_descriptor *desc);
 
 int fetch_layer(pull_descriptor *desc, size_t index);
 
+int login_to_registry(pull_descriptor *desc);
+
 #ifdef __cplusplus
 }
 #endif

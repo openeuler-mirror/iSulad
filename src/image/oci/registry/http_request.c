@@ -25,7 +25,6 @@
 #include "http.h"
 #include "http_request.h"
 #include "utils.h"
-#include "utils_base64.h"
 #include "parser.h"
 #include "certs.h"
 #include "auths.h"
@@ -99,7 +98,7 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
     if (!strcmp(host, desc->host)) {
         options->ssl_verify_host = !desc->skip_tls_verify;
         if (!desc->cert_loaded) {
-            ret = certs_load(desc->cert_path, desc->use_decrypted_key, &desc->ca_file, &desc->cert_file,
+            ret = certs_load(host, desc->use_decrypted_key, &desc->ca_file, &desc->cert_file,
                              &desc->key_file);
             if (ret != 0) {
                 ret = -1;
@@ -111,7 +110,7 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
         options->cert_file = util_strdup_s(desc->cert_file);
         options->key_file = util_strdup_s(desc->key_file);
     } else {
-        ret = certs_load(desc->cert_path, desc->use_decrypted_key, &options->ca_file, &options->cert_file,
+        ret = certs_load(host, desc->use_decrypted_key, &options->ca_file, &options->cert_file,
                          &options->key_file);
         if (ret != 0) {
             ret = -1;
@@ -145,22 +144,21 @@ static char *encode_auth(const char *username, const char *password)
         return NULL;
     }
 
-    auth_len = strlen(username) + strlen(password) + 1;
-    auth = util_common_calloc_s(auth_len);
+    auth_len = strlen(username) + strlen(":") + strlen(password);
+    auth = util_common_calloc_s(auth_len + 1);
     if (auth == NULL) {
         ERROR("out of memory");
         return NULL;
     }
-
     // username:password
-    nret = snprintf(auth, auth_len, "%s:%s", username, password);
-    if (nret < 0 || (size_t)nret >= auth_len) {
+    nret = snprintf(auth, auth_len + 1, "%s:%s", username, password);
+    if (nret < 0 || (size_t)nret > auth_len) {
         ret = -1;
         ERROR("Failed to sprintf username and password");
         goto out;
     }
 
-    auth_base64_len = util_base64_encode_len(strlen(auth)) + 1;
+    auth_base64_len = util_base64_encode_len(strlen(auth));
     auth_base64 = util_common_calloc_s(auth_base64_len);
     if (auth_base64 == NULL) {
         ret = -1;
@@ -168,7 +166,7 @@ static char *encode_auth(const char *username, const char *password)
         goto out;
     }
 
-    nret = util_base64_encode_string(auth, strlen(auth), auth_base64, auth_base64_len);
+    nret = util_base64_encode((unsigned char *)auth, strlen(auth), auth_base64, auth_base64_len);
     if (nret < 0) {
         ret = -1;
         ERROR("Encode auth to base64 failed");
@@ -268,14 +266,6 @@ static int setup_auth_basic(pull_descriptor *desc, char ***custom_headers)
         return -1;
     }
 
-    if (!desc->auth_loaded) {
-        ret = auths_load(desc->host, desc->use_decrypted_key, &desc->username, &desc->password);
-        if (ret != 0) {
-            goto out;
-        }
-        desc->auth_loaded = true;
-    }
-
     // Setup auth config only when username and password are provided.
     if (desc->username == NULL || desc->password == NULL) {
         return 0;
@@ -373,14 +363,6 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
     if (desc == NULL || custom_headers == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
-    }
-
-    if (!desc->auth_loaded) {
-        ret = auths_load(desc->host, desc->use_decrypted_key, &desc->username, &desc->password);
-        if (ret != 0) {
-            goto out;
-        }
-        desc->auth_loaded = true;
     }
 
     for (i = 0; i < CHALLENGE_MAX; i++) {
@@ -597,7 +579,7 @@ static char *build_get_token_url(challenge *c, char *username, char *scope)
     size_t url_len = 0;
 
     // Do not check username, it can be NULL
-    if (c == NULL || scope == NULL || c->realm == NULL) {
+    if (c == NULL || c->realm == NULL) {
         ERROR("Invalid NULL pointer");
         return NULL;
     }

@@ -21,6 +21,7 @@
 #include <limits.h>
 #include <sys/utsname.h>
 
+#include "registry_type.h"
 #include "log.h"
 #include "buffer.h"
 #include "http.h"
@@ -31,6 +32,7 @@
 #include "mediatype.h"
 #include "oci_image_index.h"
 #include "registry_manifest_list.h"
+#include "auths.h"
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-API-Version: registry/2.0"
 #define MAX_ACCEPT_LEN 128
@@ -64,25 +66,6 @@ static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http
 out:
 
     return ret;
-}
-
-static void free_challenge(challenge *c)
-{
-    if (c == NULL) {
-        return;
-    }
-
-    free(c->schema);
-    c->schema = NULL;
-    free(c->realm);
-    c->realm = NULL;
-    free(c->service);
-    c->service = NULL;
-    free(c->cached_token);
-    c->cached_token = NULL;
-    c->expires_time = 0;
-
-    return;
 }
 
 static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
@@ -1196,6 +1179,44 @@ int fetch_layer(pull_descriptor *desc, size_t index)
     layer->file = util_strdup_s(file);
 
 out:
+
+    return ret;
+}
+
+int login_to_registry(pull_descriptor *desc)
+{
+    int ret = 0;
+    int sret = 0;
+    char *resp_buffer = NULL;
+    char path[PATH_MAX] = { 0 };
+
+    if (desc == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    sret = snprintf(path, sizeof(path), "/v2/");
+    if (sret < 0 || (size_t)sret >= sizeof(path)) {
+        ERROR("Failed to sprintf path for login");
+        ret = -1;
+        goto out;
+    }
+
+    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY);
+    if (ret != 0) {
+        ERROR("registry: Get %s failed, resp: %s", path, resp_buffer);
+        goto out;
+    }
+
+    ret = auths_save(desc->host, desc->username, desc->password);
+    if (ret != 0) {
+        ERROR("failed to save auth of host %s, use decrypted key %d", desc->host, desc->use_decrypted_key);
+        goto out;
+    }
+out:
+
+    free(resp_buffer);
+    resp_buffer = NULL;
 
     return ret;
 }

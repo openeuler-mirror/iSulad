@@ -20,22 +20,7 @@
 #include "utils.h"
 #include "libisulad.h"
 #include "isula_libutils/log.h"
-
-static int generate_isula_logout_request(const char *server, struct isula_logout_request **ireq)
-{
-    struct isula_logout_request *tmp_req = NULL;
-
-    tmp_req = (struct isula_logout_request *)util_common_calloc_s(sizeof(struct isula_logout_request));
-    if (tmp_req == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    tmp_req->server = util_strdup_s(server);
-
-    *ireq = tmp_req;
-    return 0;
-}
+#include "registry.h"
 
 static inline int is_valid_arguments(const char *server)
 {
@@ -49,52 +34,19 @@ static inline int is_valid_arguments(const char *server)
 int isula_do_logout(const char *server)
 {
     int ret = -1;
-    struct isula_logout_request *ireq = NULL;
-    struct isula_logout_response *iresp = NULL;
-    client_connect_config_t conf = { 0 };
-    isula_image_ops *im_ops = NULL;
 
     if (is_valid_arguments(server) != 0) {
         ERROR("Invlaid arguments");
         return -1;
     }
 
-    im_ops = get_isula_image_ops();
-    if (im_ops == NULL) {
-        ERROR("Don't init isula server grpc client");
-        return -1;
-    }
-
-    if (im_ops->logout == NULL) {
-        ERROR("Umimplement logout operator");
-        return -1;
-    }
-
-    ret = generate_isula_logout_request(server, &ireq);
+    ret = registry_logout((char *)server);
     if (ret != 0) {
+        ERROR("registry logout failed");
         goto out;
-    }
-
-    iresp = (struct isula_logout_response *)util_common_calloc_s(sizeof(struct isula_logout_response));
-    if (iresp == NULL) {
-        ERROR("Out of memory");
-        goto out;
-    }
-
-    ret = get_isula_image_connect_config(&conf);
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = im_ops->logout(ireq, iresp, &conf);
-    if (ret != 0) {
-        ERROR("Failed to logout with error: %s", iresp->errmsg);
-        isulad_set_error_message("Failed to logout with error: %s", iresp->errmsg);
     }
 
 out:
-    free_isula_logout_request(ireq);
-    free_isula_logout_response(iresp);
-    free_client_connect_config_value(&conf);
+
     return ret;
 }

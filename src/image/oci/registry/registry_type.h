@@ -57,13 +57,10 @@ typedef struct {
     char *name;
     char *tag;
 
-    char *auth_file_path;
-    bool auth_loaded;
     char *username;
     char *password;
 
-    char *use_decrypted_key;
-    char *cert_path;
+    bool use_decrypted_key;
     bool cert_loaded;
     char *ca_file;
     char *cert_file;
@@ -85,6 +82,7 @@ typedef struct {
     size_t layers_len;
 } pull_descriptor;
 
+void free_challenge(challenge *c);
 void free_pull_desc(pull_descriptor *desc);
 
 #endif

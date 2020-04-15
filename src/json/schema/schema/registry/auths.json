@@ -1,0 +1,10 @@
+{
+  "description": "json file to save auths for login",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "auths": {
+      "$ref": "../defs.json#/definitions/mapStringObjectAuths"
+    }
+  }
+}

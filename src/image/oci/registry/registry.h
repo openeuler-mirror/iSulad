@@ -20,9 +20,7 @@ extern "C" {
 #endif
 
 typedef struct {
-    char *cert_path;
-    char *auth_file_path;
-    char *use_decrypted_key;
+    bool use_decrypted_key;
     bool skip_tls_verify;
 } registry_options;
 
@@ -46,7 +44,8 @@ typedef struct {
 
 int registry_pull(registry_pull_options *options);
 int registry_login(registry_login_options *options);
-int registry_logout(char *auth_file_path, char *host);
+int registry_logout(char *host);
+
 void free_registry_pull_options(registry_pull_options *options);
 void free_registry_login_options(registry_login_options *options);
 

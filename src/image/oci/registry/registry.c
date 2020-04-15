@@ -1152,7 +1152,23 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
     desc->blobpath = util_strdup_s(blobpath);
+    desc->use_decrypted_key = options->comm_opt.use_decrypted_key;
     desc->skip_tls_verify = options->comm_opt.skip_tls_verify;
+
+    if (options->auth.username != NULL && options->auth.password != NULL) {
+        desc->username = util_strdup_s(options->auth.username);
+        desc->password = util_strdup_s(options->auth.password);
+    } else {
+        free(desc->username);
+        desc->username = NULL;
+        free(desc->password);
+        desc->password = NULL;
+        ret = auths_load(desc->host, &desc->username, &desc->password);
+        if (ret != 0) {
+            ERROR("Failed to load auths");
+            goto out;
+        }
+    }
 
 out:
 
@@ -1213,26 +1229,46 @@ out:
 
 int registry_login(registry_login_options *options)
 {
-    return 0;
-}
+    int ret = 0;
+    pull_descriptor *desc = NULL;
 
-int registry_logout(char *auth_file_path, char *host)
-{
-    return 0;
-}
-
-static void free_registry_options(registry_options *options)
-{
-    if (options == NULL) {
-        return;
+    if (options == NULL || options->host == NULL || options->auth.username == NULL ||
+        options->auth.password == NULL || strlen(options->auth.username) == 0 ||
+        strlen(options->auth.password) == 0) {
+        ERROR("Invalid NULL param");
+        return -1;
     }
-    free(options->cert_path);
-    options->cert_path = NULL;
-    free(options->auth_file_path);
-    options->auth_file_path = NULL;
-    free(options->use_decrypted_key);
-    options->use_decrypted_key = NULL;
-    return;
+
+    desc = util_common_calloc_s(sizeof(pull_descriptor));
+    if (desc == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    desc->host = util_strdup_s(options->host);
+    desc->use_decrypted_key = options->comm_opt.use_decrypted_key;
+    desc->skip_tls_verify = options->comm_opt.skip_tls_verify;
+    desc->username = util_strdup_s(options->auth.username);
+    desc->password = util_strdup_s(options->auth.password);
+
+    ret = login_to_registry(desc);
+    if (ret != 0) {
+        ERROR("login to registry failed");
+        goto out;
+    }
+
+out:
+
+    free_pull_desc(desc);
+    desc = NULL;
+
+    return ret;
+}
+
+int registry_logout(char *host)
+{
+    return auths_delete(host);
 }
 
 static void free_registry_auth(registry_auth *auth)
@@ -1249,7 +1285,6 @@ static void free_registry_auth(registry_auth *auth)
 
 void free_registry_pull_options(registry_pull_options *options)
 {
-    free_registry_options(&options->comm_opt);
     free_registry_auth(&options->auth);
     free(options->image_name);
     options->image_name = NULL;
@@ -1259,7 +1294,6 @@ void free_registry_pull_options(registry_pull_options *options)
 
 void free_registry_login_options(registry_login_options *options)
 {
-    free_registry_options(&options->comm_opt);
     free_registry_auth(&options->auth);
     free(options->host);
     options->host = NULL;
@@ -1267,7 +1301,117 @@ void free_registry_login_options(registry_login_options *options)
     return;
 }
 
+void free_challenge(challenge *c)
+{
+    if (c == NULL) {
+        return;
+    }
+
+    free(c->schema);
+    c->schema = NULL;
+    free(c->realm);
+    c->realm = NULL;
+    free(c->service);
+    c->service = NULL;
+    free(c->cached_token);
+    c->cached_token = NULL;
+    c->expires_time = 0;
+
+    return;
+}
+
+void free_layer_blob(layer_blob *layer)
+{
+    if (layer == NULL) {
+        return;
+    }
+    layer->empty_layer = false;
+    free(layer->media_type);
+    layer->media_type = NULL;
+    layer->size = 0;
+    free(layer->digest);
+    layer->digest = NULL;
+    free(layer->diff_id);
+    layer->diff_id = NULL;
+    free(layer->chain_id);
+    layer->chain_id = NULL;
+    free(layer->file);
+    layer->file = NULL;
+    layer->already_exist = false;
+    return;
+}
+
 void free_pull_desc(pull_descriptor *desc)
 {
+    int i = 0;
+
+    if (desc == NULL) {
+        return;
+    }
+
+    free(desc->dest_image_name);
+    desc->dest_image_name = NULL;
+    free(desc->host);
+    desc->host = NULL;
+    free(desc->name);
+    desc->name = NULL;
+    free(desc->tag);
+    desc->tag = NULL;
+
+    free_sensitive_string(desc->username);
+    desc->username = NULL;
+    free_sensitive_string(desc->password);
+    desc->password = NULL;
+
+    desc->use_decrypted_key = false;
+    desc->cert_loaded = false;
+    free(desc->ca_file);
+    desc->ca_file = NULL;
+    free(desc->cert_file);
+    desc->cert_file = NULL;
+    free(desc->key_file);
+    desc->key_file = NULL;
+
+    free(desc->blobpath);
+    desc->blobpath = NULL;
+    free(desc->protocol);
+    desc->protocol = NULL;
+    desc->skip_tls_verify = false;
+    desc->already_ping = false;
+    free(desc->scope);
+    desc->scope = NULL;
+
+    for (i = 0; i < CHALLENGE_MAX; i++) {
+        free_challenge(&desc->challenges[i]);
+    }
+    util_free_array(desc->headers);
+    desc->headers = NULL;
+
+    free(desc->manifest.media_type);
+    desc->manifest.media_type = NULL;
+    desc->manifest.size = 0;
+    free(desc->manifest.digest);
+    desc->manifest.digest = NULL;
+    free(desc->manifest.file);
+    desc->manifest.file = NULL;
+
+    free(desc->config.media_type);
+    desc->config.media_type = NULL;
+    desc->config.size = 0;
+    free(desc->config.digest);
+    desc->config.digest = NULL;
+    free(desc->config.file);
+    desc->config.file = NULL;
+    desc->config.create_time.has_seconds = 0;
+    desc->config.create_time.seconds = 0;
+    desc->config.create_time.has_nanos = 0;
+    desc->config.create_time.nanos = 0;
+
+    for (i = 0; i < desc->layers_len; i++) {
+        free_layer_blob(&desc->layers[i]);
+    }
+    free(desc->layers);
+    desc->layers = NULL;
+    desc->layers_len = 0;
     return;
 }

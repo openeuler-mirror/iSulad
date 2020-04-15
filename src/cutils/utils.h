@@ -35,6 +35,8 @@
 #include "utils_verify.h"
 #include "utils_regex.h"
 #include "utils_fs.h"
+#include "utils_base64.h"
+#include "utils_aes.h"
 
 #ifdef __cplusplus
 extern "C" {

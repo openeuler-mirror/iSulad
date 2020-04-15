@@ -9,25 +9,20 @@
  * PURPOSE.
  * See the Mulan PSL v1 for more details.
  * Author: wangfengtu
- * Create: 2020-03-20
- * Description: provide auths file process definition
+ * Create: 2020-04-23
+ * Description: provide aes process definition
  ******************************************************************************/
-#ifndef __IMAGE_AUTHS_H
-#define __IMAGE_AUTHS_H
+#ifndef __IMAGE_AES_H
+#define __IMAGE_AES_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define AUTH_FILE_PATH "/root/.isulad/auths.json"
-#define AUTH_FILE_MODE 0600
-#define MAX_AUTHS_LEN 65536
+#define AUTH_AESKEY "/root/.isulad/aeskey"
 
-int auths_load(char *host, char **username, char **password);
-
-int auths_save(char *host, char *username, char *password);
-
-int auths_delete(char *host);
+int aes_decode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len);
+int aes_encode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len);
 
 #ifdef __cplusplus
 }
