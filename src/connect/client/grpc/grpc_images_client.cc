@@ -167,6 +167,62 @@ public:
     }
 };
 
+class ImageTag : public ClientBase<ImagesService, ImagesService::Stub, isula_tag_request, TagImageRequest,
+    isula_tag_response, TagImageResponse> {
+public:
+    explicit ImageTag(void *args)
+        : ClientBase(args)
+    {
+    }
+    ~ImageTag() = default;
+
+    int request_to_grpc(const isula_tag_request *request, TagImageRequest *grequest) override
+    {
+        if (request == nullptr) {
+            return -1;
+        }
+
+        if (request->src_name != nullptr) {
+            grequest->set_src_name(request->src_name);
+        }
+        if (request->dest_name != nullptr) {
+            grequest->set_dest_name(request->dest_name);
+        }
+
+        return 0;
+    }
+
+    int response_from_grpc(TagImageResponse *gresponse, isula_tag_response *response) override
+    {
+        response->server_errono = (uint32_t)gresponse->cc();
+
+        if (!gresponse->errmsg().empty()) {
+            response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+        }
+
+        return 0;
+    }
+
+    int check_parameter(const TagImageRequest &req) override
+    {
+        if (req.src_name().empty()) {
+            ERROR("Missing source image name in the request");
+            return -1;
+        }
+        if (req.dest_name().empty()) {
+            ERROR("Missing destition image name in the request");
+            return -1;
+        }
+
+        return 0;
+    }
+
+    Status grpc_call(ClientContext *context, const TagImageRequest &req, TagImageResponse *reply) override
+    {
+        return stub_->Tag(context, req, reply);
+    }
+};
+
 class ImagesLoad : public ClientBase<ImagesService, ImagesService::Stub, isula_load_request, LoadImageRequest,
     isula_load_response, LoadImageResponse> {
 public:
@@ -468,6 +524,7 @@ int grpc_images_client_ops_init(isula_connect_ops *ops)
     ops->image.inspect = container_func<isula_inspect_request, isula_inspect_response, ImageInspect>;
     ops->image.login = container_func<isula_login_request, isula_login_response, Login>;
     ops->image.logout = container_func<isula_logout_request, isula_logout_response, Logout>;
+    ops->image.tag = container_func<isula_tag_request, isula_tag_response, ImageTag>;
 
     return 0;
 }

@@ -677,6 +677,62 @@ public:
     }
 };
 
+class ISulaTag : public ClientBase<isula::ImageService, isula::ImageService::Stub, isula_tag_request,
+    isula::TagImageRequest, isula_tag_response, isula::TagImageResponse> {
+public:
+    explicit ISulaTag(void *args) : ClientBase(args)
+    {
+    }
+    ~ISulaTag() = default;
+
+    int request_to_grpc(const isula_tag_request *req, isula::TagImageRequest *grequest) override
+    {
+        if (req == nullptr) {
+            return -1;
+        }
+        if (req->src_name == nullptr || req->src_name->image == nullptr ||
+            req->dest_name == nullptr || req->dest_name->image == nullptr) {
+            return -1;
+        }
+        isula::ImageSpec *src_image = new (std::nothrow) isula::ImageSpec;
+        isula::ImageSpec *dest_image = new (std::nothrow) isula::ImageSpec;
+        if (src_image == nullptr || dest_image == nullptr) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        src_image->set_image(req->src_name->image);
+        dest_image->set_image(req->dest_name->image);
+        grequest->set_allocated_srcname(src_image);
+        grequest->set_allocated_destname(dest_image);
+        return 0;
+    }
+
+    int response_from_grpc(isula::TagImageResponse *gresp, isula_tag_response *resp) override
+    {
+        if (!gresp->errmsg().empty()) {
+            resp->errmsg = util_strdup_s(gresp->errmsg().c_str());
+        }
+        resp->server_errono = gresp->cc();
+        return 0;
+    }
+
+    int check_parameter(const isula::TagImageRequest &req) override
+    {
+        if (req.has_srcname() && !req.srcname().image().empty() &&
+            req.has_destname() && !req.destname().image().empty()) {
+            return 0;
+        }
+        ERROR("Image name is required.");
+        return -1;
+    }
+
+    Status grpc_call(ClientContext *context, const isula::TagImageRequest &req,
+                     isula::TagImageResponse *reply) override
+    {
+        return stub_->TagImage(context, req, reply);
+    }
+};
+
 class ISulaLoad : public ClientBase<isula::ImageService, isula::ImageService::Stub, isula_load_request,
     isula::LoadImageRequest, isula_load_response, isula::LoadImageResponose> {
 public:
@@ -1141,6 +1197,7 @@ int grpc_isula_image_client_ops_init(isula_image_ops *ops)
 
     ops->pull = container_func<isula_pull_request, isula_pull_response, ISulaImagePull>;
     ops->rmi = container_func<isula_rmi_request, isula_rmi_response, ISulaRmi>;
+    ops->tag = container_func<isula_tag_request, isula_tag_response, ISulaTag>;
     ops->load = container_func<isula_load_request, isula_load_response, ISulaLoad>;
     ops->login = container_func<isula_login_request, isula_login_response, ISulaLogin>;
     ops->logout = container_func<isula_logout_request, isula_logout_response, ISulaLogout>;

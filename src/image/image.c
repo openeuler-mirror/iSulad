@@ -71,6 +71,7 @@ static const struct bim_ops g_embedded_ops = {
     .logout = NULL,
 
     .health_check = NULL,
+    .tag_image = NULL,
 };
 #endif
 
@@ -106,6 +107,7 @@ static const struct bim_ops g_isula_ops = {
     .logout = isula_logout,
 
     .health_check = isula_health_check,
+    .tag_image = isula_tag,
 };
 #endif
 
@@ -140,6 +142,7 @@ static const struct bim_ops g_ext_ops = {
     .logout = ext_logout,
 
     .health_check = NULL,
+    .tag_image = NULL,
 };
 
 static const struct bim_type g_bims[] = {
@@ -1426,6 +1429,68 @@ pack_response:
     return ret;
 }
 
+int im_tag_image(const im_tag_request *request, im_tag_response **response)
+{
+    int ret = -1;
+    char *src_name = NULL;
+    char *dest_name = NULL;
+    const struct bim_type *bim_type = NULL;
+    struct bim *bim = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    *response = util_common_calloc_s(sizeof(im_remove_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (request->src_name.image == NULL || request->dest_name.image == NULL) {
+        ERROR("remove image requires source image ref and dest image ref");
+        isulad_set_error_message("remove image requires source image ref and dest image ref");
+        goto pack_response;
+    }
+
+    src_name = util_strdup_s(request->src_name.image);
+    dest_name = util_strdup_s(request->dest_name.image);
+
+    bim_type = bim_query(src_name);
+    if (bim_type == NULL) {
+        ERROR("No such image:%s", src_name);
+        isulad_set_error_message("No such image:%s", src_name);
+        goto pack_response;
+    }
+
+    bim = bim_get(bim_type->image_type, src_name, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim for image %s", src_name);
+        goto pack_response;
+    }
+    if (bim->ops->tag_image == NULL) {
+        ERROR("Unimplements tag image in %s", bim->type);
+        goto pack_response;
+    }
+
+    ret = bim->ops->tag_image(request);
+    if (ret != 0) {
+        ERROR("Failed to tag image %s to %s", src_name, dest_name);
+        ret = -1;
+        goto pack_response;
+    }
+
+pack_response:
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+    }
+    free(src_name);
+    free(dest_name);
+    bim_put(bim);
+    return ret;
+}
+
 void free_im_remove_request(im_remove_request *ptr)
 {
     if (ptr == NULL) {
@@ -1438,6 +1503,30 @@ void free_im_remove_request(im_remove_request *ptr)
 }
 
 void free_im_remove_response(im_remove_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+
+    free(ptr);
+}
+
+void free_im_tag_request(im_tag_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->src_name.image);
+    ptr->src_name.image = NULL;
+    free(ptr->dest_name.image);
+    ptr->dest_name.image = NULL;
+    free(ptr);
+}
+
+void free_im_tag_response(im_tag_response *ptr)
 {
     if (ptr == NULL) {
         return;

@@ -88,6 +88,9 @@ service ImageService {
 
     // health check service
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
+
+    // Add a tag to the image
+    rpc TagImage(TagImageRequest) returns (TagImageResponse) {}
 }
 
 message HealthCheckRequest {}
@@ -582,4 +585,14 @@ message ImageFsInfoResponse {
 
     string errmsg = 2;
     uint32 cc = 3;
+}
+
+message TagImageRequest {
+    ImageSpec srcName = 1;
+    ImageSpec destName = 2;
+}
+
+message TagImageResponse {
+    string errmsg = 1;
+    uint32 cc = 2;
 }

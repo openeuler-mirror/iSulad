@@ -104,6 +104,15 @@ typedef struct {
 } im_remove_response;
 
 typedef struct {
+    image_spec src_name;
+    image_spec dest_name;
+} im_tag_request;
+
+typedef struct {
+    char *errmsg;
+} im_tag_response;
+
+typedef struct {
     // Spec of the image.
     image_spec image;
 } im_inspect_request;
@@ -260,6 +269,8 @@ struct bim_ops {
 
     /* health check */
     int (*health_check)(void);
+    /* Add a tag to the image */
+    int (*tag_image)(const im_tag_request *request);
 };
 
 struct bim {
@@ -317,6 +328,12 @@ int im_rm_image(const im_remove_request *request, im_remove_response **response)
 void free_im_remove_request(im_remove_request *ptr);
 
 void free_im_remove_response(im_remove_response *ptr);
+
+int im_tag_image(const im_tag_request *request, im_tag_response **response);
+
+void free_im_tag_request(im_tag_request *ptr);
+
+void free_im_tag_response(im_tag_response *ptr);
 
 int im_inspect_image(const im_inspect_request *request, im_inspect_response **response);
 

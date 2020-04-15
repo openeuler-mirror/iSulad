@@ -302,6 +302,28 @@ void free_isula_rmi_response(struct isula_rmi_response *ptr)
     free(ptr);
 }
 
+void free_isula_tag_request(struct isula_tag_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_image_spec(ptr->src_name);
+    ptr->src_name = NULL;
+    free_image_spec(ptr->dest_name);
+    ptr->dest_name = NULL;
+    free(ptr);
+}
+
+void free_isula_tag_response(struct isula_tag_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+    free(ptr);
+}
+
 void free_isula_load_request(struct isula_load_request *ptr)
 {
     if (ptr == NULL) {

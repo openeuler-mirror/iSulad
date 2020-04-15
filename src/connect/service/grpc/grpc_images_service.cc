@@ -151,6 +151,27 @@ int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *
     return 0;
 }
 
+int ImagesServiceImpl::image_tag_request_from_grpc(const TagImageRequest *grequest,
+                                                   image_tag_image_request **request)
+{
+    image_tag_image_request *tmpreq = (image_tag_image_request *)util_common_calloc_s(
+                                          sizeof(image_tag_image_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->src_name().empty()) {
+        tmpreq->src_name = util_strdup_s(grequest->src_name().c_str());
+    }
+    if (!grequest->dest_name().empty()) {
+        tmpreq->dest_name = util_strdup_s(grequest->dest_name().c_str());
+    }
+    *request = tmpreq;
+
+    return 0;
+}
+
 int ImagesServiceImpl::image_load_request_from_grpc(
     const LoadImageRequest *grequest, image_load_image_request **request)
 {
@@ -271,6 +292,39 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
 
     free_image_delete_image_request(image_req);
     free_image_delete_image_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+        reply->set_cc(ISULAD_ERR_INPUT);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+    return Status::OK;
+}
+
+Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *request, TagImageResponse *reply)
+{
+    auto status = GrpcServerTlsAuth::auth(context, "image_tag");
+    if (!status.ok()) {
+        return status;
+    }
+    service_callback_t *cb = get_service_callback();
+    if (cb == nullptr || cb->image.tag == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    image_tag_image_request *image_req = nullptr;
+    int tret = image_tag_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(ISULAD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    image_tag_image_response *image_res = nullptr;
+    int ret = cb->image.tag(image_req, &image_res);
+    tret = response_to_grpc(image_res, reply);
+
+    free_image_tag_image_request(image_req);
+    free_image_tag_image_response(image_res);
     if (tret != 0) {
         reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
         reply->set_cc(ISULAD_ERR_INPUT);
