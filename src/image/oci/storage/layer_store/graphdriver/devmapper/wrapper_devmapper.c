@@ -123,7 +123,7 @@ int set_dev_dir(const char *dir)
     return 0;
 }
 
-struct dm_task* task_create_named(int type, const char *pool_dev_name)
+struct dm_task* task_create_named(int type, const char *dm_name)
 {
     int ret;
     struct dm_task *dmt = NULL;
@@ -135,9 +135,9 @@ struct dm_task* task_create_named(int type, const char *pool_dev_name)
         return dmt;
     }
 
-    ret = dm_task_set_name(dmt, pool_dev_name);
+    ret = dm_task_set_name(dmt, dm_name);
     if (ret != 1) {
-        ERROR("devicemapper: Can't set task pool name %s", pool_dev_name);
+        ERROR("devicemapper: Can't set task name %s", dm_name);
         goto cleanup;
     }
 
@@ -645,12 +645,12 @@ cleanup:
     return ret;
 }
 
-int dev_get_info_with_deferred(const char *pool_fname, struct dm_info *dmi)
+int dev_get_info_with_deferred(const char *dm_name, struct dm_info *dmi)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
 
-    dmt = task_create_named(DM_DEVICE_INFO, pool_fname);
+    dmt = task_create_named(DM_DEVICE_INFO, dm_name);
     if (dmt == NULL) {
         return -1;
     }
@@ -675,6 +675,66 @@ cleanup:
     free(dmt);
     return ret;
 
+}
+
+// SuspendDevice is the programmatic example of "dmsetup suspend".
+// It suspends the specified device.
+int dev_suspend_device(const char *dm_name)
+{
+    int ret = 0;
+    struct dm_task *dmt = NULL;
+
+    dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
+    if (dmt == NULL) {
+        ret = -1;
+        ERROR("devicemapper:create named task failed");
+        goto out;
+    }
+
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ret = -1;
+        ERROR("devicemapper: Error running deviceCreate (ActivateDevice) %d", ret);
+    }
+
+out:
+    free(dmt);
+    return ret;
+}
+
+// ResumeDevice is the programmatic example of "dmsetup resume".
+// It un-suspends the specified device.
+int dev_resume_device(const char *dm_name)
+{
+    int ret = 0;
+    uint32_t cookie;
+    uint16_t flags = 0;
+    struct dm_task *dmt = NULL;
+
+    dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
+    if (dmt == NULL) {
+        ret = -1;
+        ERROR("devicemapper:create named task failed");
+        goto out;
+    }
+
+    ret = set_cookie(dmt, &cookie, flags);
+    if (ret != 0) {
+        ERROR("devicemapper: Can't set cookie %d", ret);
+        goto out;
+    }
+
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ret = -1;
+        ERROR("devicemapper: Error running deviceResume %d", ret);
+    }
+
+    dev_udev_wait(cookie);
+
+out:
+    free(dmt);
+    return ret;
 }
 
 int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size)
@@ -848,3 +908,107 @@ int dev_block_device_discard(const char *path)
     return 0;
 }
 
+// CreateSnapDeviceRaw creates a snapshot device. Caller needs to suspend and resume the origin device if it is active.
+int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_device_id)
+{
+    int ret = 0;
+    uint64_t sector = 0;
+    char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
+    struct dm_task *dmt = NULL;
+
+    dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_name);
+    if (dmt == NULL) {
+        ERROR("devicemapper:create named task failed");
+        return -1;
+    }
+
+    ret = set_sector(dmt, sector);
+    if (ret != 0) {
+        ret = -1;
+        ERROR("devicemapper: Can't set sector");
+        goto cleanup;
+    }
+
+    if (snprintf(message, sizeof(message), "create_snap %d %d", device_id, base_device_id) < 0) {
+        ret = -1;
+        // ERROR()
+        goto cleanup;
+    }
+
+    ret = set_message(dmt, message);
+    if (ret != 0) {
+        ret = -1;
+        ERROR("devicemapper: Can't set message %s", message);
+        goto cleanup;
+    }
+
+    dm_saw_exist = false;
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        if (dm_saw_exist) {
+            ret = ERR_DEVICE_ID_EXISTS;
+        } else {
+            ret = -1;
+        }
+        ERROR("devicemapper: Error running deviceCreate (CreateSnapDeviceRaw)");
+        goto cleanup;
+    }
+
+    ret = 0;
+
+cleanup:
+    free(dmt);
+    return ret;
+}
+
+// SetTransactionID sets a transaction id for the specified device name.
+int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_id)
+{
+    int ret = 0;
+    uint64_t sector = 0;
+    char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
+    struct dm_task *dmt = NULL;
+
+    if (pool_name == NULL) {
+        ERROR("devicemapper: pool full name is NULL");
+        return -1;
+    }
+
+    dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_name);
+    if (dmt == NULL) {
+        ERROR("devicemapper:create named task %s failed", pool_name);
+        return -1;
+    }
+
+    ret = set_sector(dmt, sector);
+    if (ret != 0) {
+        ret = -1;
+        ERROR("devicemapper: Can't set sector");
+        goto cleanup;
+    }
+
+    if (snprintf(message, sizeof(message), "set_transaction_id %lu %lu", old_id, new_id) < 0) {
+        ret = -1;
+        // ERROR()
+        goto cleanup;
+    }
+
+    ret = set_message(dmt, message);
+    if (ret != 0) {
+        ret = -1;
+        goto cleanup;
+    }
+
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ret = -1;
+        ERROR("devicemapper: task run failed");
+        goto cleanup;
+    }
+
+    ret = 0;
+
+cleanup:
+    free(dmt);
+    return ret;
+}

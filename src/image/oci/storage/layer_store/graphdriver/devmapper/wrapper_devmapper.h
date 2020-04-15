@@ -110,7 +110,11 @@ int dev_create_device(const char *pool_dev_name, int device_id);
 
 int dev_delete_device(const char *pool_fname, int device_id);
 
-int dev_get_info_with_deferred(const char *pool_fname, struct dm_info *dmi);
+int dev_get_info_with_deferred(const char *dm_name, struct dm_info *dmi);
+
+int dev_suspend_device(const char *dm_name);
+
+int dev_resume_device(const char *dm_name);
 
 int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size);
 
@@ -119,6 +123,10 @@ void dev_udev_wait(uint32_t cookie);
 int dev_block_device_discard(const char *path);
 
 int dev_cancel_deferred_remove(const char *dm_name);
+
+int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_device_id);
+
+int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_id);
 
 #ifdef __cplusplus
 }
