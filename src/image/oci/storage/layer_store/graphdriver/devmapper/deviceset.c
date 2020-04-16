@@ -31,6 +31,7 @@
 #include "devices_constants.h"
 #include "device_setup.h"
 #include "libdevmapper.h"
+#include "driver.h"
 
 #define DM_LOG_FATAL 2
 #define DM_LOG_DEBUG 7
@@ -279,6 +280,23 @@ static char *get_dm_name(struct device_set *devset, const char *hash)
 static char *get_dev_name(const char *name)
 {
     return util_string_append(name, DEVMAPPER_DECICE_DIRECTORY);
+}
+
+char *dev_name(struct device_set *devset, image_devmapper_device_info *info)
+{
+    char *res_str = NULL;
+    char *dm_name = NULL;
+
+    dm_name = get_dm_name(devset, info->hash);
+    if (dm_name == NULL) {
+        goto out;
+    }
+
+    res_str = get_dev_name(dm_name);
+
+out:
+    free(dm_name);
+    return res_str;
 }
 
 // thin-pool or isulad-thinpool
@@ -2412,6 +2430,151 @@ free_out:
         return -1;
     }
     free_image_devmapper_device_info(base_info);
+    free_image_devmapper_device_info(info);
+    return ret;
+}
+
+// moptions->options_len > 0
+static char *generate_mount_options(const struct driver_mount_opts *moptions, const char *dev_options)
+{
+    char *res_str = NULL;
+    char *options = NULL;
+    bool add_nouuid = false;
+
+    options = util_strdup_s(dev_options);
+    if (moptions != NULL && moptions->options_len > 0) {
+        add_nouuid = !util_valid_str(options) || strings_contains_word("nouuid", options);
+        free(options);
+        options = util_string_join(",", (const char **)moptions->options, moptions->options_len);
+        if (add_nouuid) {
+            res_str = util_strdup_s("nouuid");
+        }
+    }
+
+    append_mount_options(&res_str, options);
+
+    free(options);
+    return res_str;
+}
+
+int mount_device(const char *hash, const char *path, const struct driver_mount_opts *mount_opts)
+{
+    int ret = 0;
+    image_devmapper_device_info *info = NULL;
+    struct device_set *devset = NULL;
+    char *dev_fname = NULL;
+    char *options = NULL;
+
+    if (hash == NULL || path  == NULL || mount_opts == NULL) {
+        ERROR("devmapper: failed to mount device");
+        return -1;
+    }
+
+    if (devmapper_conf_wrlock()) {
+        ERROR("lock devmapper conf failed");
+        return -1;
+    }
+
+    devset = devmapper_driver_devices_get();
+    if (devset == NULL) {
+        goto free_out;
+    }
+
+    info = lookup_device(devset, hash);
+    if (info == NULL) {
+        ERROR("devmapper: lookup device %s failed", info);
+        ret = -1;
+        goto free_out;
+    }
+
+    if (info->deleted) {
+        ret = -1;
+        ERROR("devmapper: Base device %s has been marked for deferred deletion", info->hash);
+        goto free_out;
+    }
+    dev_fname = dev_name(devset, info);
+    if (dev_fname) {
+        ERROR("devmapper: failed to get device full name");
+        goto free_out;
+    }
+
+    ret = activate_device_if_needed(devset, info, false);
+    if (ret != 0) {
+        ERROR("devmapper: Error activating devmapper device for %s", hash);
+        goto free_out;
+    }
+
+    options = generate_mount_options(mount_opts, devset->mount_options);
+
+    ret = util_mount(dev_fname, path, "ext4", options);
+    if (ret != 0) {
+        ERROR("devmapper: Error mounting %s on %s", dev_fname, path);
+        goto free_out;
+    }
+
+free_out:
+    if (devmapper_conf_unlock()) {
+        ERROR("unlock devmapper conf failed");
+        ret = -1;
+    }
+    free_image_devmapper_device_info(info);
+    free(dev_fname);
+    free(options);
+    return ret;
+}
+
+// UnmountDevice unmounts the device and removes it from hash.
+int unmount_device(const char *hash, const char *mount_path)
+{
+    int ret = 0;
+    image_devmapper_device_info *info = NULL;
+    struct device_set *devset = NULL;
+
+    if (hash == NULL || mount_path  == NULL) {
+        ERROR("devmapper: failed to unmount device");
+        return -1;
+    }
+
+    if (devmapper_conf_wrlock()) {
+        ERROR("lock devmapper conf failed");
+        return -1;
+    }
+
+    devset = devmapper_driver_devices_get();
+    if (devset == NULL) {
+        goto free_out;
+    }
+
+    info = lookup_device(devset, hash);
+    if (info == NULL) {
+        ERROR("devmapper: lookup device %s failed", info);
+        ret = -1;
+        goto free_out;
+    }
+
+    if (util_detect_mounted(mount_path)) {
+        ret = umount2(mount_path, MNT_DETACH);
+        if (ret < 0 && errno != EINVAL) {
+            WARN("Failed to umount directory %s:%s", mount_path, strerror(errno));
+            goto free_out;
+        }
+    }
+
+    ret = util_path_remove(mount_path);
+    if (ret != 0) {
+        DEBUG("devmapper: doing remove on a unmounted device %s failed", mount_path);
+    }
+
+    ret = deactivate_device(devset, info);
+    if (ret != 0) {
+        ERROR("devmapper: Error deactivating device");
+    }
+
+free_out:
+    if (devmapper_conf_unlock()) {
+        ERROR("unlock devmapper conf failed");
+        ret = -1;
+    }
     free_image_devmapper_device_info(info);
     return ret;
 }
