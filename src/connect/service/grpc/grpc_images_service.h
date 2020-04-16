@@ -47,6 +47,8 @@ public:
 
     Status Delete(ServerContext *context, const DeleteImageRequest *request, DeleteImageResponse *reply) override;
 
+    Status Tag(ServerContext *context, const TagImageRequest *request, TagImageResponse *reply) override;
+
     Status Load(ServerContext *context, const LoadImageRequest *request, LoadImageResponse *reply) override;
 
     Status Inspect(ServerContext *context, const InspectImageRequest *request, InspectImageResponse *reply) override;
@@ -76,6 +78,8 @@ private:
     int image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse);
 
     int image_remove_request_from_grpc(const DeleteImageRequest *grequest, image_delete_image_request **request);
+
+    int image_tag_request_from_grpc(const TagImageRequest *grequest, image_tag_image_request **request);
 
     int image_load_request_from_grpc(const LoadImageRequest *grequest, image_load_image_request **request);
 

@@ -1181,6 +1181,36 @@ void isula_rmi_response_free(struct isula_rmi_response *response)
     return;
 }
 
+/* isula tag request free */
+void isula_tag_request_free(struct isula_tag_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->src_name);
+    request->src_name = NULL;
+    free(request->dest_name);
+    request->dest_name = NULL;
+
+    free(request);
+    return;
+}
+
+/* isula tag response free */
+void isula_tag_response_free(struct isula_tag_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+    return;
+}
+
 /* isula pull response free */
 void isula_pull_request_free(struct isula_pull_request *request)
 {

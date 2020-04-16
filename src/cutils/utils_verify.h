@@ -56,6 +56,8 @@ bool util_valid_file(const char *path, uint32_t fmod);
 
 bool util_valid_digest(const char *digest);
 
+bool util_valid_tag(const char *tag);
+
 bool util_valid_digest_file(const char *path, const char *digest);
 
 bool util_valid_key_type(const char *key);

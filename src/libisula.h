@@ -605,6 +605,17 @@ struct isula_pull_request {
     char *image_name;
 };
 
+struct isula_tag_request {
+    char *src_name;
+    char *dest_name;
+};
+
+struct isula_tag_response {
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
 struct isula_pull_response {
     char *image_ref;
     uint32_t cc;
@@ -807,6 +818,10 @@ void isula_list_images_response_free(struct isula_list_images_response *response
 void isula_rmi_request_free(struct isula_rmi_request *request);
 
 void isula_rmi_response_free(struct isula_rmi_response *response);
+
+void isula_tag_request_free(struct isula_tag_request *request);
+
+void isula_tag_response_free(struct isula_tag_response *response);
 
 void isula_load_request_free(struct isula_load_request *request);
 

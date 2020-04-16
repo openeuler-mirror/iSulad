@@ -26,6 +26,7 @@
 #include "isula_rootfs_mount.h"
 #include "isula_rootfs_umount.h"
 #include "isula_image_rmi.h"
+#include "isula_image_tag.h"
 #include "isula_container_fs_usage.h"
 #include "isula_image_fs_info.h"
 #include "isula_storage_status.h"
@@ -260,6 +261,62 @@ unlock:
 out:
     oci_image_unref(image_info);
     free(real_image_name);
+    free(errmsg);
+    return ret;
+}
+
+int isula_tag(const im_tag_request *request)
+{
+    int ret = -1;
+    char *src_name = NULL;
+    char *dest_name = NULL;
+    oci_image_t *image_info = NULL;
+    char *errmsg = NULL;
+
+    if (request == NULL || request->src_name.image == NULL || request->dest_name.image == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    src_name = oci_resolve_image_name(request->src_name.image);
+    if (src_name == NULL) {
+        ret = -1;
+        ERROR("Failed to resolve source image name");
+        goto out;
+    }
+    dest_name = oci_normalize_image_name(request->dest_name.image);
+    if (src_name == NULL) {
+        ret = -1;
+        ERROR("Failed to resolve source image name");
+        goto out;
+    }
+
+    image_info = oci_images_store_get(src_name);
+    if (image_info == NULL) {
+        INFO("No such image exist %s", src_name);
+        ret = -1;
+        goto out;
+    }
+    oci_image_lock(image_info);
+
+    ret = isula_image_tag(src_name, dest_name, &errmsg);
+    if (ret != 0) {
+        isulad_set_error_message("Failed to tag image with error: %s", errmsg);
+        ERROR("Failed to tag image '%s' to '%s' with error: %s", src_name, dest_name, errmsg);
+        goto out;
+    }
+
+    ret = register_new_oci_image_into_memory(dest_name);
+    if (ret != 0) {
+        ERROR("Register image %s into store failed", dest_name);
+        goto out;
+    }
+
+out:
+    oci_image_unlock(image_info);
+    oci_image_unref(image_info);
+    free(src_name);
+    free(dest_name);
     free(errmsg);
     return ret;
 }

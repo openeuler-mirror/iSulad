@@ -60,6 +60,8 @@
 #include "host_info_response.h"
 #include "image_delete_image_request.h"
 #include "image_delete_image_response.h"
+#include "image_tag_image_request.h"
+#include "image_tag_image_response.h"
 #include "image_load_image_request.h"
 #include "image_load_image_response.h"
 #include "image_inspect_request.h"
@@ -157,6 +159,8 @@ typedef struct {
     int(*login)(const image_login_request *request, image_login_response **response);
 
     int(*logout)(const image_logout_request *request, image_logout_response **response);
+
+    int(*tag)(const image_tag_image_request *request, image_tag_image_response **response);
 } service_image_callback_t;
 
 typedef struct {
