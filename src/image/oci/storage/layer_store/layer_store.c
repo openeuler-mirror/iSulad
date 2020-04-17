@@ -292,6 +292,7 @@ static int driver_create_layer(const char *id, const char *parent, bool writable
 {
     struct driver_create_opts c_opts = { 0 };
     int ret = 0;
+    size_t i = 0;
 
     if (opt != NULL) {
         c_opts.mount_label = util_strdup_s(opt->mount_label);
@@ -302,7 +303,7 @@ static int driver_create_layer(const char *id, const char *parent, bool writable
                 ret = -1;
                 goto free_out;
             }
-            for (size_t i = 0; i < opt->mount_opts->len; i++) {
+            for (i = 0; i < opt->mount_opts->len; i++) {
                 ret = append_json_map_string_string(c_opts.storage_opt, opt->mount_opts->keys[i], opt->mount_opts->values[i]);
                 if (ret != 0) {
                     ERROR("Out of memory");
@@ -337,6 +338,7 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
     int ret = 0;
     storage_layer *slayer = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
+    size_t i = 0;
 
     slayer = util_smart_calloc_s(sizeof(storage_layer), 1);
     if (slayer == NULL) {
@@ -365,7 +367,7 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
             goto free_out;
         }
     }
-    for (size_t i = 0; i < opts->names_len; i++) {
+    for (i = 0; i < opts->names_len; i++) {
         slayer->names[i] = util_strdup_s(opts->names[i]);
         slayer->names_len++;
     }
@@ -385,6 +387,7 @@ static int update_digest_map(map_t *by_digest, const char *old_val, const char *
     char **old_list = NULL;
     size_t old_len = 0;
     int ret = 0;
+    size_t i = 0;
 
     if (new_val != NULL) {
         char **tmp_new_list = NULL;
@@ -397,7 +400,7 @@ static int update_digest_map(map_t *by_digest, const char *old_val, const char *
             ret = -1;
             goto out;
         }
-        for (size_t i = 0; i < new_len; i++) {
+        for (i = 0; i < new_len; i++) {
             tmp_new_list[new_len] = new_list[i];
             new_list[i] = NULL;
         }
@@ -406,7 +409,7 @@ static int update_digest_map(map_t *by_digest, const char *old_val, const char *
         if (!map_replace(by_digest, (void *)new_val, (void *)tmp_new_list)) {
             ERROR("Insert new digest failed");
             // recover new list
-            for (size_t i = 0; i < new_len; i++) {
+            for (i = 0; i < new_len; i++) {
                 new_list[i] = tmp_new_list[i];
             }
             free(tmp_new_list[new_len]);
