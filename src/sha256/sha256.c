@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <libwebsockets.h>
+#include <openssl/sha.h>
 
 #include "sha256.h"
 #include "isula_libutils/log.h"

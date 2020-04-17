@@ -274,7 +274,7 @@ out:
     return ret;
 }
 
-int isula_tag(const im_tag_request *request)
+int oci_tag(const im_tag_request *request)
 {
     int ret = -1;
     char *src_name = NULL;

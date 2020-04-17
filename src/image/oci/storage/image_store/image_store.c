@@ -1349,32 +1349,6 @@ static void update_json_map_string_int64(json_map_string_int64 *map, const char 
     }
 }
 
-static char *calc_sha256_with_string(const char *val)
-{
-    SHA256_CTX ctx;
-    unsigned char hash[SHA256_DIGEST_LENGTH] = { 0x00 };
-    char output_buffer[(SHA256_DIGEST_LENGTH * 2) + 1] = { 0x00 };
-    int i;
-
-    if (val == NULL) {
-        return NULL;
-    }
-
-    SHA256_Init(&ctx);
-    SHA256_Update(&ctx, val, strlen(val));
-    SHA256_Final(hash, &ctx);
-
-    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        int ret = snprintf(output_buffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
-        if (ret >= 3 || ret < 0) {
-            return "";
-        }
-    }
-    output_buffer[SHA256_DIGEST_LENGTH * 2] = '\0';
-
-    return util_strdup_s(output_buffer);
-}
-
 static void update_json_map_string_string(json_map_string_string *map, const char *key, const char *value)
 {
     size_t i;
@@ -1446,7 +1420,7 @@ static int update_image_with_big_data(storage_image *image, const char *key, con
     }
 
     old_digest = get_value_from_json_map_string_string(image->big_data_digests, key);
-    new_digest = calc_sha256_with_string(data);
+    new_digest = sha256_digest_str(data);
     if (old_digest != NULL) {
         update_json_map_string_string(image->big_data_digests, key, new_digest);
     } else {

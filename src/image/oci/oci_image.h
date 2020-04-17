@@ -48,7 +48,7 @@ int oci_logout(const im_logout_request *request);
 int oci_sync_images(void);
 
 int oci_sync_containers(void);
-int isula_tag(const im_tag_request *request);
+int oci_tag(const im_tag_request *request);
 #ifdef __cplusplus
 }
 #endif
