@@ -71,7 +71,7 @@ cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMA
 make -j $(nproc)
 make install
 sed -i 's/"log-driver": "stdout"/"log-driver": "file"/g' ${builddir}/etc/isulad/daemon.json
-sed -i "/registry-mirrors/a\        \"docker.io\"" ${builddir}/etc/isulad/daemon.json
+sed -i "/registry-mirrors/a\        \"https://hub-mirror.c.163.com\"" ${builddir}/etc/isulad/daemon.json
 
 # build rest version
 cd $ISULAD_COPY_PATH
@@ -82,4 +82,4 @@ cmake -DLIB_INSTALL_DIR=${restbuilddir}/lib -DCMAKE_INSTALL_PREFIX=${restbuilddi
 make -j $(nproc)
 make install
 sed -i 's/"log-driver": "stdout"/"log-driver": "file"/g' ${restbuilddir}/etc/isulad/daemon.json
-sed -i "/registry-mirrors/a\        \"docker.io\"" ${restbuilddir}/etc/isulad/daemon.json
+sed -i "/registry-mirrors/a\        \"https://hub-mirror.c.163.com\"" ${restbuilddir}/etc/isulad/daemon.json
