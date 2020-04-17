@@ -38,7 +38,7 @@ int devmapper_init(struct graphdriver *driver, const char *drvier_home, const ch
     return device_init(driver, drvier_home, options, len);
 }
 
-int do_create(const char *id, const char *parent, const struct driver_create_opts *create_opts)
+static int do_create(const char *id, const char *parent, const struct driver_create_opts *create_opts)
 {
     return add_device(id, parent, create_opts->storage_opt);
 }
@@ -54,15 +54,58 @@ int devmapper_create_rw(const char *id, const char *parent, const struct graphdr
     return do_create(id, parent, create_opts);
 }
 
+// Create adds a device with a given id and the parent.
 int devmapper_create_ro(const char *id, const char *parent, const struct graphdriver *driver,
                         const struct driver_create_opts *create_opts)
 {
-    return 0;
+    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
+        return -1;
+    }
+
+    return do_create(id, parent, create_opts);
 }
 
+// Remove removes a device with a given id, unmounts the filesystem.
 int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
 {
-    return 0;
+    char *mnt_parent_dir = NULL;
+    char *mnt_point_dir = NULL;
+    int ret = 0;
+
+    if (id == NULL || driver == NULL) {
+        return -1;
+    }
+
+    if (!has_device(id)) {
+        return 0;
+    }
+
+    ret = delete_device(id, false);
+    if (ret != 0) {
+        ERROR("failed to remove device %s", id);
+        return ret;
+    }
+
+    mnt_parent_dir = util_path_join(driver->home, "mnt");
+    if (mnt_parent_dir == NULL) {
+        ret = -1;
+        ERROR("Failed to join devmapper mnt dir %s", id);
+        goto out;
+    }
+
+    mnt_point_dir = util_path_join(mnt_parent_dir, id);
+    if (mnt_point_dir == NULL) {
+        ret = -1;
+        ERROR("Failed to join devampper mount point dir %s", id);
+        goto out;
+    }
+
+    ret = util_path_remove(mnt_point_dir);
+
+out:
+    free(mnt_parent_dir);
+    free(mnt_point_dir);
+    return ret;
 }
 
 static int write_file(const char *fpath, const char *buf)
@@ -162,12 +205,42 @@ out:
 
 int devmapper_umount_layer(const char *id, const struct graphdriver *driver)
 {
-    return 0;
+    int ret = 0;
+    char *mp = NULL;
+    char *mnt_dir = NULL;
+
+    if (id == NULL || driver == NULL) {
+        return -1;
+    }
+
+    mnt_dir = util_path_join(driver->home, "mnt");
+    if (mnt_dir == NULL) {
+        ERROR("Failed to join layer dir mnt");
+        ret = -1;
+        goto out;
+    }
+
+    mp = util_path_join(mnt_dir, id);
+    if (mp == NULL) {
+        ERROR("Failed to join layer dir:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    ret = unmount_device(id, mp);
+    if (ret != 0) {
+        DEBUG("devmapper: unmount %s failed", mp);
+    }
+
+out:
+    free(mnt_dir);
+    free(mp);
+    return ret;
 }
 
 bool devmapper_layer_exists(const char *id, const struct graphdriver *driver)
 {
-    return true;
+    return has_device(id);
 }
 
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,

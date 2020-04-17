@@ -170,7 +170,7 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
     return 0;
 }
 
-void free_device_set(struct device_set *ptr)
+static void free_device_set(struct device_set *ptr)
 {
     if (ptr == NULL) {
         return;
@@ -1996,7 +1996,7 @@ free_out:
     UTIL_FREE_AND_SET_NULL(dev_fname);
 }
 
-int delete_device(struct device_set *devset, const char *hash, bool sync_delete)
+static int do_delete_device(struct device_set *devset, const char *hash, bool sync_delete)
 {
     int ret;
     bool deferred_remove;
@@ -2062,7 +2062,7 @@ static int setup_base_image(struct device_set *devset)
         }
 
         DEBUG("devmapper: Removing uninitialized base image");
-        ret = delete_device(devset, "", true);
+        ret = do_delete_device(devset, "", true);
         if (ret != 0) {
             goto out;
         }
@@ -2574,6 +2574,81 @@ free_out:
     if (devmapper_conf_unlock()) {
         ERROR("unlock devmapper conf failed");
         ret = -1;
+    }
+    free_image_devmapper_device_info(info);
+    return ret;
+}
+
+bool has_device(const char *hash)
+{
+    bool res = false;
+    image_devmapper_device_info *info = NULL;
+    struct device_set *devset = NULL;
+
+    if (hash == NULL) {
+        ERROR("devmapper: failed to judge device metadata exists");
+        return false;
+    }
+
+    if (devmapper_conf_wrlock()) {
+        ERROR("lock devmapper conf failed");
+        return false;
+    }
+
+    devset = devmapper_driver_devices_get();
+    if (devset == NULL) {
+        goto free_out;
+    }
+
+    info = lookup_device(devset, hash);
+    if (info == NULL) {
+        ERROR("devmapper: lookup device %s failed", hash);
+        goto free_out;
+    }
+
+    res = true;
+free_out:
+    if (devmapper_conf_unlock()) {
+        ERROR("unlock devmapper conf failed");
+    }
+    free_image_devmapper_device_info(info);
+    return res;
+}
+
+int delete_device(const char *hash, bool sync_delete)
+{
+    int ret = 0;
+    image_devmapper_device_info *info = NULL;
+    struct device_set *devset = NULL;
+
+    if (hash == NULL) {
+        return -1;
+    }
+
+    if (devmapper_conf_wrlock()) {
+        ERROR("lock devmapper conf failed");
+        return -1;
+    }
+
+    devset = devmapper_driver_devices_get();
+    if (devset == NULL) {
+        ret = -1;
+        goto free_out;
+    }
+
+    info = lookup_device(devset, hash);
+    if (info == NULL) {
+        ret = -1;
+        ERROR("devmapper: lookup device %s failed", hash);
+        goto free_out;
+    }
+
+    ret = do_delete_device(devset, hash, sync_delete);
+
+free_out:
+    if (devmapper_conf_unlock()) {
+        ret = -1;
+        ERROR("unlock devmapper conf failed");
     }
     free_image_devmapper_device_info(info);
     return ret;

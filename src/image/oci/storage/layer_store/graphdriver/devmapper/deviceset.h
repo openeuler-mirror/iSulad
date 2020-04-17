@@ -80,6 +80,9 @@ struct device_set *devmapper_driver_devices_get();
 int add_device(const char *hash, const char *base_hash, const json_map_string_string *storage_opts);
 int mount_device(const char *hash, const char *path, const struct driver_mount_opts *mount_opts);
 int unmount_device(const char *hash, const char *mount_path);
+bool has_device(const char *hash);
+
+int delete_device(const char *hash, bool sync_delete);
 
 #ifdef __cplusplus
 }
