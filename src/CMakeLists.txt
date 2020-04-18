@@ -106,10 +106,10 @@ target_include_directories(libisula PUBLIC
 
 # set libisula FLAGS
 set_target_properties(libisula PROPERTIES PREFIX "")
-target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY})
+target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
 
 if (GRPC_CONNECTOR)
-    target_link_libraries(libisula -Wl,--as-needed -lstdc++ -lcrypto)
+    target_link_libraries(libisula -Wl,--as-needed -lstdc++)
     target_link_libraries(libisula -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(libisula -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 else()
@@ -188,7 +188,7 @@ target_include_directories(isulad PUBLIC
     ${WEBSOCKET_SERVICE_INCS}
     )
 
-target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY})
+target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
 target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread libhttpclient)
 if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(isulad ${SQLITE3_LIBRARY})
@@ -196,11 +196,10 @@ endif()
 
 if (GRPC_CONNECTOR)
     message("GRPC iSulad")
-    target_link_libraries(isulad -Wl,--as-needed -lstdc++ -lcrypto)
+    target_link_libraries(isulad -Wl,--as-needed -lstdc++)
     target_link_libraries(isulad -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
-    target_link_libraries(isulad ${CLIBCNI_LIBRARY} ${WEBSOCKET_LIBRARY})
-    target_link_libraries(isula ${WEBSOCKET_LIBRARY})
+    target_link_libraries(isulad ${CLIBCNI_LIBRARY})
 else()
     message("Restful iSulad")
     target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})

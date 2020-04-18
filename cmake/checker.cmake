@@ -65,6 +65,18 @@ find_library(LIBARCHIVE_LIBRARY archive
     HINTS ${PC_LIBARCHIVE_LIBDIR} ${PC_LIBARCHIVE_LIBRARY_DIRS})
 _CHECK(LIBARCHIVE_LIBRARY "LIBARCHIVE_LIBRARY-NOTFOUND" "libarchive.so")
 
+# check libcrypto
+pkg_check_modules(PC_CRYPTO REQUIRED "libcrypto")
+find_library(CRYPTO_LIBRARY crypto
+    HINTS ${PC_CRYPTO_LIBDIR} ${PC_LIBCRYPTO_LIBRARY_DIRS})
+_CHECK(CRYPTO_LIBRARY "CRYPTO_LIBRARY-NOTFOUND" "libcrypto.so")
+
+# check websocket
+find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
+_CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
+find_library(WEBSOCKET_LIBRARY websockets)
+_CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
+
 find_path(HTTP_PARSER_INCLUDE_DIR http_parser.h)
 _CHECK(HTTP_PARSER_INCLUDE_DIR "HTTP_PARSER_INCLUDE_DIR-NOTFOUND" "http_parser.h")
 find_library(HTTP_PARSER_LIBRARY http_parser)
@@ -133,12 +145,6 @@ if (GRPC_CONNECTOR OR ENABLE_OCI_IMAGE)
 endif()
 
 if (GRPC_CONNECTOR)
-    # check websocket
-    find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
-    _CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
-    find_library(WEBSOCKET_LIBRARY websockets)
-    _CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
-
     # check clibcni
     pkg_check_modules(PC_CLIBCNI REQUIRED "clibcni")
     find_path(CLIBCNI_INCLUDE_DIR clibcni/api.h
