@@ -85,7 +85,7 @@ extern "C" {
       "Kernel memory limit", command_convert_membytes }, \
     { CMD_OPT_TYPE_CALLBACK, false, "hugetlb-limit", 0, &(cmdargs).custom_conf.hugepage_limits, \
       "Huge page limit (format: [size:]<limit>, e.g. --hugetlb-limit 2MB:32MB)", command_append_array }, \
-    { CMD_OPT_TYPE_CALLBACK, false, "log-driver", 'n', &(cmdargs), \
+    { CMD_OPT_TYPE_CALLBACK, false, "log-driver", 0, &(cmdargs), \
       "Container log driver, support syslog and json-file", callback_log_driver }, \
     { CMD_OPT_TYPE_CALLBACK, false, "log-opt", 0, &(cmdargs), \
       "Container log options, value formate: key=value", callback_log_opt }, \
