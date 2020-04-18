@@ -65,6 +65,12 @@ struct device_set {
     image_devmapper_direct_lvm_config *lvm_setup_config;
 };
 
+struct device_metadata {
+    int device_id;
+    uint64_t device_size;
+    char *device_name;
+};
+
 struct devmapper_conf {
     pthread_rwlock_t devmapper_driver_rwlock;
     struct device_set *devset;
@@ -83,6 +89,8 @@ int unmount_device(const char *hash, const char *mount_path);
 bool has_device(const char *hash);
 
 int delete_device(const char *hash, bool sync_delete);
+
+int export_device_metadata(struct device_metadata *dev_metadata, const char *hash);
 
 #ifdef __cplusplus
 }

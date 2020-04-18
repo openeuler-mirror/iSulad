@@ -440,6 +440,10 @@ int util_check_inherited_exclude_fds(bool closeall, int *fds_to_ignore, size_t l
 
 int get_cpu_num_cores(void);
 
+char *util_uint_to_string(long long unsigned int data);
+
+char *util_int_to_string(long long int data);
+
 #ifdef __cplusplus
 }
 #endif

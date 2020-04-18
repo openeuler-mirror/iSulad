@@ -2653,3 +2653,54 @@ free_out:
     free_image_devmapper_device_info(info);
     return ret;
 }
+
+int export_device_metadata(struct device_metadata *dev_metadata, const char *hash)
+{
+    int ret = 0;
+    image_devmapper_device_info *info = NULL;
+    struct device_set *devset = NULL;
+    char *dm_name = NULL;
+
+    if (hash == NULL || dev_metadata == NULL) {
+        return -1;
+    }
+
+    if (devmapper_conf_wrlock()) {
+        ERROR("lock devmapper conf failed");
+        return -1;
+    }
+
+    devset = devmapper_driver_devices_get();
+    if (devset == NULL) {
+        ret = -1;
+        goto free_out;
+    }
+
+    dm_name = get_dm_name(devset, hash);
+    if (dm_name == NULL) {
+        ret = -1;
+        ERROR("devmapper: failed to get dm %s name", hash);
+        goto free_out;
+    }
+
+    info = lookup_device(devset, hash);
+    if (info == NULL) {
+        ret = -1;
+        ERROR("devmapper: lookup device %s failed", hash);
+        goto free_out;
+    }
+
+    dev_metadata->device_id = info->device_id;
+    dev_metadata->device_size = info->size;
+    dev_metadata->device_name = util_strdup_s(dm_name);
+
+free_out:
+    if (devmapper_conf_unlock()) {
+        ret = -1;
+        ERROR("unlock devmapper conf failed");
+    }
+    free_image_devmapper_device_info(info);
+    free(dm_name);
+    return ret;
+
+}

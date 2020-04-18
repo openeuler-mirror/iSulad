@@ -251,7 +251,92 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
 
 int devmapper_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info)
 {
-    return 0;
+    int ret = 0;
+    char *mnt_dir = NULL;
+    char *id_dir = NULL;
+    char *rootfs_dir = NULL;
+    struct device_metadata dev_metadata;
+    char *device_id_str = NULL;
+    char *device_size_str = NULL;
+
+
+    if (id == NULL || driver == NULL || map_info == NULL) {
+        ERROR("invalid argument");
+        ret = -1;
+        goto out;
+    }
+
+    ret = export_device_metadata(&dev_metadata, id);
+    if (ret != 0) {
+        ERROR("Failed to export device metadata of device %s", id);
+        goto out;
+    }
+
+    device_id_str = util_int_to_string(dev_metadata.device_id);
+    if (device_id_str == NULL) {
+        ret = -1;
+        ERROR("Failed to map long long int to string");
+        goto out;
+    }
+
+    device_size_str = util_uint_to_string(dev_metadata.device_size);
+    if (device_size_str == NULL) {
+        ret = -1;
+        ERROR("Failed to map long long unsigned int to string");
+        goto out;
+    }
+
+    mnt_dir = util_path_join(driver->home, "mnt");
+    if (mnt_dir == NULL) {
+        ret = -1;
+        ERROR("Failed to join mnt dir");
+        goto out;
+    }
+
+    id_dir = util_path_join(mnt_dir, id);
+    if (id_dir == NULL) {
+        ERROR("Failed to join devmapper id dir:%s", id);
+        ret = -1;
+        goto out;
+    }
+    rootfs_dir = util_path_join(id_dir, "rootfs");
+    if (rootfs_dir == NULL) {
+        ret = -1;
+        ERROR("Failed to join devmapper rootfs dir");
+        goto out;
+    }
+
+    if (append_json_map_string_string(map_info, "DeviceId", device_id_str) != 0) {
+        ERROR("Failed to append device id:%s", device_id_str);
+        ret = -1;
+        goto out;
+    }
+
+    if (append_json_map_string_string(map_info, "DeviceSize", device_size_str) != 0) {
+        ERROR("Failed to append device size:%s", device_size_str);
+        ret = -1;
+        goto out;
+    }
+
+    if (append_json_map_string_string(map_info, "DeviceName", dev_metadata.device_name) != 0) {
+        ERROR("Failed to append device name:%s", dev_metadata.device_name);
+        ret = -1;
+        goto out;
+    }
+
+    if (append_json_map_string_string(map_info, "MergedDir", rootfs_dir) != 0) {
+        ERROR("Failed to append device merge dir:%s", rootfs_dir);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(mnt_dir);
+    free(id_dir);
+    free(rootfs_dir);
+    free(device_id_str);
+    free(device_size_str);
+    return ret;
 }
 
 int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status)
