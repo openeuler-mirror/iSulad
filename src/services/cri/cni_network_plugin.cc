@@ -101,10 +101,25 @@ void CniNetworkPlugin::SetLoNetwork(std::unique_ptr<CNINetwork> lo)
     }
 }
 
-void CniNetworkPlugin::SetDefaultNetwork(std::unique_ptr<CNINetwork> network)
+void CniNetworkPlugin::SetDefaultNetwork(std::unique_ptr<CNINetwork> network,
+                                         std::vector<std::string> &binDirs, Errors &err)
 {
-    if (network != nullptr) {
-        m_defaultNetwork = std::move(network);
+    if (network == nullptr) {
+        return;
+    }
+    WLockNetworkMap(err);
+    if (err.NotEmpty()) {
+        ERROR("%s", err.GetCMessage());
+        return;
+    }
+    m_defaultNetwork = std::move(network);
+    m_defaultNetwork->SetPaths(binDirs);
+
+    DEBUG("Update new cni network: \"%s\"", m_defaultNetwork->GetName().c_str());
+
+    UnlockNetworkMap(err);
+    if (err.NotEmpty()) {
+        ERROR("%s", err.GetCMessage());
     }
 }
 
@@ -264,8 +279,7 @@ void CniNetworkPlugin::GetDefaultCNINetwork(const std::string &confDir, std::vec
             continue;
         }
 
-        m_defaultNetwork = std::unique_ptr<CNINetwork>(new (std::nothrow) CNINetwork(n_list->name, n_list));
-        m_defaultNetwork->SetPaths(binDirs);
+        SetDefaultNetwork(std::unique_ptr<CNINetwork>(new (std::nothrow) CNINetwork(n_list->name, n_list)), binDirs, err);
         found = true;
         break;
     }
@@ -294,18 +308,9 @@ void CniNetworkPlugin::CheckInitialized(Errors &err)
 void CniNetworkPlugin::SyncNetworkConfig()
 {
     Errors err;
-    WLockNetworkMap(err);
-    if (err.NotEmpty()) {
-        ERROR("%s", err.GetCMessage());
-        return;
-    }
     GetDefaultCNINetwork(m_confDir, m_binDirs, err);
     if (err.NotEmpty()) {
         WARN("Unable to update cni config: %s", err.GetCMessage());
-    }
-    UnlockNetworkMap(err);
-    if (err.NotEmpty()) {
-        ERROR("%s", err.GetCMessage());
     }
 }
 
@@ -341,8 +346,6 @@ const std::string &CniNetworkPlugin::Name() const
 
 void CniNetworkPlugin::Status(Errors &err)
 {
-    SyncNetworkConfig();
-
     CheckInitialized(err);
 }
 
@@ -420,6 +423,27 @@ std::map<int, bool> *CniNetworkPlugin::Capabilities()
     return m_noop.Capabilities();
 }
 
+void CniNetworkPlugin::SetPodCidr(const std::string &podCidr)
+{
+    Errors err;
+
+    WLockNetworkMap(err);
+    if (err.NotEmpty()) {
+        ERROR("%s", err.GetCMessage());
+        return;
+    }
+
+    if (!m_podCidr.empty()) {
+        WARN("Ignoring subsequent pod CIDR update to %s", podCidr.c_str());
+        goto unlock_out;
+    }
+
+    m_podCidr = podCidr;
+
+unlock_out:
+    UnlockNetworkMap(err);
+}
+
 void CniNetworkPlugin::Event(const std::string &name, std::map<std::string, std::string> &details)
 {
     if (name != CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE) {
@@ -432,20 +456,7 @@ void CniNetworkPlugin::Event(const std::string &name, std::map<std::string, std:
         return;
     }
 
-    Errors err;
-    WLockNetworkMap(err);
-    if (err.NotEmpty()) {
-        ERROR("%s", err.GetCMessage());
-        return;
-    }
-    if (m_podCidr.empty()) {
-        WARN("Ignoring subsequent pod CIDR update to %s", iter->second.c_str());
-        goto unlock_out;
-    }
-    m_podCidr = iter->second;
-
-unlock_out:
-    UnlockNetworkMap(err);
+    SetPodCidr(iter->second);
 }
 
 void CniNetworkPlugin::GetPodNetworkStatus(const std::string &ns, const std::string &name,
@@ -724,12 +735,14 @@ void CniNetworkPlugin::UnlockNetworkMap(Errors &error)
 
 void CniNetworkPlugin::UpdateDefaultNetwork()
 {
-#define DEFAULT_SYNC_CONFIG_CNT 50
-#define DEFAULT_SYNC_CONFIG_PERIOD 100
+    const int defaultSyncConfigCnt = 5;
+    const int defaultSyncConfigPeriod = 1000;
+
+    pthread_setname_np(pthread_self(), "CNIUpdater");
 
     while (true) {
-        for (int i = 0; i < DEFAULT_SYNC_CONFIG_PERIOD; i++) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SYNC_CONFIG_PERIOD));
+        for (int i = 0; i < defaultSyncConfigCnt; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(defaultSyncConfigPeriod));
             if (m_needFinish) {
                 return;
             }

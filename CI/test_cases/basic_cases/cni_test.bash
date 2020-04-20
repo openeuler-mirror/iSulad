@@ -117,10 +117,19 @@ function default_cni_config()
 function new_cni_config()
 {
     cp ${data_path}/bridge.json /etc/cni/net.d/
-    # wait cni updated
-    crictl info
     sync;sync;
-    sleep 2
+    tail $ISUALD_LOG
+    # wait cni updated
+    s=`date "+%s"`
+    for ((i=0;i<30;i++)); do
+        sleep 1
+        cur=`date "+%s"`
+        let "t=cur-s"
+        if [ $t -gt 6 ];then
+            break
+        fi
+    done
+    tail $ISUALD_LOG
     do_test_help "10\.2\."
 }
 
