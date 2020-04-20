@@ -6,7 +6,7 @@
             "type": "string"
         },
         "count": {
-            "type": "string"
+            "type": "int32"
         },
         "path": {
             "type": "string"

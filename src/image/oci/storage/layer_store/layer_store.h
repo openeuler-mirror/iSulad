@@ -44,6 +44,7 @@ int layer_store_init(const struct storage_module_init_options *conf);
 bool layer_store_check(const char *id);
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content,
                        char **new_id);
+int layer_store_remove_layer(const char *id);
 int layer_store_delete(const char *id);
 bool layer_store_exists(const char *id);
 struct layer** layer_store_list();
