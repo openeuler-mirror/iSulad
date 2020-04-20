@@ -23,6 +23,7 @@
 #include <dirent.h>
 #include <sys/sysmacros.h>
 #include <sys/mount.h>
+#include <sys/vfs.h>
 
 #include "log.h"
 #include "libisulad.h"
@@ -2702,5 +2703,144 @@ free_out:
     free_image_devmapper_device_info(info);
     free(dm_name);
     return ret;
+}
 
+void free_devmapper_status(struct status *st)
+{
+    if (st == NULL) {
+        return;
+    }
+    free(st->pool_name);
+    st->pool_name = NULL;
+    free(st->data_file);
+    st->data_file = NULL;
+    free(st->data_loopback);
+    st->data_loopback =  NULL;
+    free(st->metadata_file);
+    st->metadata_file = NULL;
+    free(st->metadata_loopback);
+    st->metadata_loopback = NULL;
+    free(st->base_device_fs);
+    st->base_device_fs = NULL;
+
+    free(st);
+}
+
+static bool is_real_file(const char *f)
+{
+    struct stat st;
+    int nret;
+
+    if (f == NULL) {
+        return false;
+    }
+
+    nret = stat(f, &st);
+    if (nret < 0) {
+        return false;
+    }
+
+    return S_ISREG(st.st_mode);
+}
+
+static int get_underlying_available_space(const char *loop_file, uint64_t *available)
+{
+    struct statfs buf;
+    int ret;
+
+    if (loop_file == NULL) {
+        return -1;
+    }
+
+    ret = statfs(loop_file, &buf);
+    if (ret < 0) {
+        WARN("devmapper: can not stat loopfile filesystem %s", loop_file);
+        return ret;
+    }
+
+    *available = buf.f_bfree * buf.f_bsize;
+
+    return 0;
+}
+
+struct status *device_set_status()
+{
+    int ret = 0;
+    struct status *st = NULL;
+    struct device_set *devset = NULL;
+    uint64_t total_size_in_sectors, transaction_id, data_used;
+    uint64_t data_total, metadata_used, metadata_total;
+    uint64_t min_free_data;
+
+    st = util_common_calloc_s(sizeof(struct status));
+    if (st == NULL) {
+        ERROR("devmapper: out of memory");
+        return NULL;
+    }
+
+    if (devmapper_conf_rdlock()) {
+        ERROR("lock devmapper conf failed");
+        free_devmapper_status(st);
+        st = NULL;
+        return NULL;
+    }
+
+    devset = devmapper_driver_devices_get();
+    if (devset == NULL) {
+        free_devmapper_status(st);
+        st = NULL;
+        goto free_out;
+    }
+
+    st->pool_name = get_pool_name(devset);
+    st->data_file = util_strdup_s(devset->data_device);
+    st->data_loopback = util_strdup_s(devset->data_loop_file);
+    st->metadata_file = util_strdup_s(devset->metadata_device);
+    st->metadata_loopback = util_strdup_s(devset->metadata_loop_file);
+    st->udev_sync_supported = udev_sync_supported();
+    st->deferred_remove_enabled = devset->deferred_remove;
+    st->deferred_delete_enabled = devset->deferred_delete;
+    st->deferred_deleted_device_count = devset->nr_deleted_devices;
+    st->base_device_size = get_base_device_size(devset);
+    st->base_device_fs = util_strdup_s(devset->base_device_filesystem);
+
+    ret = pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
+                      &metadata_total);
+    if (ret == 0) {
+        uint64_t block_size_in_sectors = total_size_in_sectors / data_total;
+        st->data.used = data_used * block_size_in_sectors * 512;
+        st->data.total = data_total * block_size_in_sectors * 512;
+        st->data.available = st->data.total - st->data.used;
+
+        st->metadata.used = metadata_used * 4096;
+        st->metadata.total = metadata_total * 4096;
+        st->metadata.available = st->metadata.total - st->metadata.used;
+
+        st->sector_size = block_size_in_sectors * 512;
+
+        if (is_real_file(devset->data_loop_file)) {
+            uint64_t actual_space;
+            ret = get_underlying_available_space(devset->data_loop_file, &actual_space);
+            if (ret == 0 && actual_space < st->metadata.available) {
+                st->data.available = actual_space;
+            }
+        }
+
+        if (is_real_file(devset->metadata_loop_file)) {
+            uint64_t actual_space;
+            ret = get_underlying_available_space(devset->data_loop_file, &actual_space);
+            if (ret == 0 && actual_space < st->metadata.available) {
+                st->metadata.available = actual_space;
+            }
+        }
+
+        min_free_data = (data_total * (uint64_t)devset->min_free_space_percent) / 100;
+        st->min_free_space = min_free_data * block_size_in_sectors * 512;
+    }
+
+free_out:
+    if (devmapper_conf_unlock()) {
+        ERROR("unlock devmapper conf failed");
+    }
+    return st;
 }

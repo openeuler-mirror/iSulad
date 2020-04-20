@@ -54,6 +54,7 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
 
 int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status);
 
+
 #ifdef __cplusplus
 }
 #endif

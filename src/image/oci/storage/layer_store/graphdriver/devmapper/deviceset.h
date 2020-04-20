@@ -76,6 +76,33 @@ struct devmapper_conf {
     struct device_set *devset;
 };
 
+struct disk_usage {
+    // Used bytes on the disk.
+    uint64_t used;
+    // Total bytes on the disk.
+    uint64_t total;
+    // Available bytes on the disk.
+    uint64_t available;
+};
+
+struct status {
+    char *pool_name;
+    char *data_file;
+    char *data_loopback;
+    char *metadata_file;
+    char *metadata_loopback;
+    struct disk_usage metadata;
+    struct disk_usage data;
+    uint64_t base_device_size;
+    char *base_device_fs;
+    uint64_t sector_size;
+    bool udev_sync_supported;
+    bool deferred_remove_enabled;
+    bool deferred_delete_enabled;
+    unsigned int deferred_deleted_device_count;
+    uint64_t min_free_space;
+};
+
 int device_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
 int devmapper_conf_rdlock();
@@ -91,6 +118,9 @@ bool has_device(const char *hash);
 int delete_device(const char *hash, bool sync_delete);
 
 int export_device_metadata(struct device_metadata *dev_metadata, const char *hash);
+struct status *device_set_status();
+void free_devmapper_status(struct status *st);
+
 
 #ifdef __cplusplus
 }

@@ -525,6 +525,11 @@ cleanup:
     return ret;
 }
 
+bool udev_sync_supported()
+{
+    return  dm_udev_get_sync_support() != 0;
+}
+
 bool udev_set_sync_support(bool enable)
 {
     int enable_sync = 1;

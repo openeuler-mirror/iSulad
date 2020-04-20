@@ -32,6 +32,7 @@
 #include "device_setup.h"
 #include "deviceset.h"
 #include "json_common.h"
+#include "util_archive.h"
 
 int devmapper_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
 {
@@ -238,6 +239,20 @@ out:
     return ret;
 }
 
+static void free_driver_mount_opts(struct driver_mount_opts *opts)
+{
+    if (opts == NULL) {
+        return;
+    }
+    free(opts->mount_label);
+    opts->mount_label = NULL;
+
+    util_free_array_by_len(opts->options, opts->options_len);
+    opts->options = NULL;
+
+    free(opts);
+}
+
 bool devmapper_layer_exists(const char *id, const struct graphdriver *driver)
 {
     return has_device(id);
@@ -246,7 +261,45 @@ bool devmapper_layer_exists(const char *id, const struct graphdriver *driver)
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
                          int64_t *layer_size)
 {
-    return 0;
+    struct driver_mount_opts *mount_opts = NULL;
+    char *layer_fs = NULL;
+    int ret = 0;
+    struct archive_options options = { 0 };
+
+    if (id == NULL || driver == NULL || content == NULL) {
+        ERROR("invalid argument");
+        return -1;
+    }
+
+    mount_opts = util_common_calloc_s(sizeof(struct driver_mount_opts));
+    if (mount_opts == NULL) {
+        ERROR("devmapper: out of memory");
+        return -1;
+    }
+
+    layer_fs = devmapper_mount_layer(id, driver, mount_opts);
+    if (layer_fs == NULL) {
+        ERROR("devmapper: failed to mount layer %s", id);
+        ret = -1;
+        goto out;
+    }
+
+    options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
+
+    ret = archive_unpack(content, layer_fs, &options);
+    if (ret != 0) {
+        ERROR("devmapper: failed to unpack to :%s", layer_fs);
+    }
+
+    if (devmapper_umount_layer(id, driver)) {
+        ERROR("devmapper: failed to umount layer %s", id);
+        ret = -1;
+    }
+
+out:
+    free_driver_mount_opts(mount_opts);
+    free(layer_fs);
+    return ret;
 }
 
 int devmapper_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info)
@@ -341,5 +394,22 @@ out:
 
 int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status)
 {
-    return 0;
+    int ret = 0;
+    struct status *st = NULL;
+
+    if (driver == NULL || status == NULL) {
+        return -1;
+    }
+
+    st = device_set_status();
+    if (st == NULL) {
+        ERROR("Failed to get device set status");
+        return -1;
+    }
+
+    status->driver_name = util_strdup_s(driver->name);
+    // TODO
+
+    free_devmapper_status(st);
+    return ret;
 }

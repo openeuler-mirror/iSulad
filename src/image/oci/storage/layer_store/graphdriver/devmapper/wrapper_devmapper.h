@@ -104,6 +104,8 @@ int dev_remove_device(const char *name);
 
 int dev_get_device_list(char ***list, size_t *length);
 
+bool udev_sync_supported();
+
 bool udev_set_sync_support(bool enable);
 
 int dev_create_device(const char *pool_dev_name, int device_id);
