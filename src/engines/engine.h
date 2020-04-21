@@ -124,6 +124,9 @@ typedef struct _engine_exec_request_t {
     int64_t timeout;
 
     const char *suffix;
+
+    bool tty;
+    bool open_stdin;
 } engine_exec_request_t;
 
 

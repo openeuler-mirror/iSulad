@@ -422,10 +422,8 @@ int cmd_exec_main(int argc, const char **argv)
 
     custom_cfg = &g_cmd_exec_args.custom_conf;
 
-    custom_cfg->tty = true;
-    custom_cfg->open_stdin = true;
     custom_cfg->attach_stdout = true;
-    custom_cfg->attach_stderr = false;
+    custom_cfg->attach_stderr = true;
     custom_cfg->attach_stdin = custom_cfg->open_stdin;
 
     if (g_cmd_exec_args.detach) {
