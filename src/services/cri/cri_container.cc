@@ -1312,8 +1312,8 @@ void CRIRuntimeServiceImpl::ExecSyncFromGRPC(const std::string &containerID,
         error.SetError("Out of memory");
         return;
     }
-    (*request)->tty = true;
-    (*request)->attach_stdin = true;
+    (*request)->tty = false;
+    (*request)->attach_stdin = false;
     (*request)->attach_stdout = true;
     (*request)->attach_stderr = true;
     (*request)->timeout = timeout;

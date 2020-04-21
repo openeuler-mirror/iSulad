@@ -94,6 +94,7 @@ typedef struct _rt_exec_params_t {
     int64_t timeout;
     const char *suffix;
     defs_process *spec;
+    bool attach_stdin;
 } rt_exec_params_t;
 
 typedef struct _rt_pause_params_t {
