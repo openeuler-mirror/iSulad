@@ -112,6 +112,8 @@ struct graphdriver_status *graphdriver_get_status(void);
 
 void free_graphdriver_status(struct graphdriver_status *status);
 
+void free_graphdriver_mount_opts(struct driver_mount_opts *opts);
+
 int graphdriver_cleanup(void);
 
 #ifdef __cplusplus

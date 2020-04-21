@@ -21,6 +21,7 @@
 
 #include "driver_overlay2.h"
 #include "driver_devmapper.h"
+#include "utils_array.h"
 #include "utils.h"
 #include "libisulad.h"
 #include "isula_libutils/log.h"
@@ -272,6 +273,18 @@ void free_graphdriver_status(struct graphdriver_status *status)
     free(status->status);
     status->status = NULL;
     free(status);
+}
+
+void free_graphdriver_mount_opts(struct driver_mount_opts *opts)
+{
+    if (opts == NULL) {
+        return;
+    }
+    free(opts->mount_label);
+    opts->mount_label = NULL;
+    util_free_array_by_len(opts->options, opts->options_len);
+
+    free(opts);
 }
 
 int graphdriver_cleanup(void)
