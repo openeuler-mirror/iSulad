@@ -115,8 +115,6 @@ public:
 
     virtual void SetLoNetwork(std::unique_ptr<CNINetwork> lo);
 
-    virtual void SetDefaultNetwork(std::unique_ptr<CNINetwork> network);
-
 private:
     virtual void PlatformInit(Errors &error);
     virtual void SyncNetworkConfig();
@@ -149,6 +147,8 @@ private:
     void RLockNetworkMap(Errors &error);
     void WLockNetworkMap(Errors &error);
     void UnlockNetworkMap(Errors &error);
+    void SetDefaultNetwork(std::unique_ptr<CNINetwork> network, std::vector<std::string> &binDirs, Errors &err);
+    void SetPodCidr(const std::string &podCidr);
     int GetCNIConfFiles(const std::string &pluginDir, std::vector<std::string> &vect_files, Errors &err);
     int LoadCNIConfigFileList(const std::string &elem, struct cni_network_list_conf **n_list);
     int InsertConfNameToAllPanes(struct cni_network_list_conf *n_list, std::set<std::string> &allPanes, Errors &err);
