@@ -945,7 +945,7 @@ static void rest_exec_cb(evhtp_request_t *req, void *arg)
         goto out;
     }
 
-    (void)cb->container.exec(crequest, &cresponse, -1, NULL);
+    (void)cb->container.exec(crequest, &cresponse, -1, NULL, NULL);
 
     evhtp_send_exec_repsponse(req, cresponse, RESTFUL_RES_OK);
 out:
