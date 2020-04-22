@@ -997,12 +997,117 @@ int layer_store_umount(const char *id, bool force)
 
 int layer_store_mounted(const char *id)
 {
-    return 0;
+    layer_t *l = NULL;
+    int ret = 0;
+
+    if (id == NULL) {
+        return ret;
+    }
+    // TODO: add lock
+    l = lookup(id);
+    if (l == NULL) {
+        ERROR("layer not known");
+        return ret;
+    }
+
+    if (l->smount_point != NULL) {
+        ret = l->smount_point->count;
+    }
+
+    layer_ref_dec(l);
+    return ret;
 }
+
+static void remove_name(const char *name)
+{
+    size_t i = 0;
+    layer_t *l = map_search(g_metadata.by_name, (void *)name);
+    if (l == NULL) {
+        return;
+    }
+
+    while (i < l->slayer->names_len) {
+        if (strcmp(name, l->slayer->names[i]) == 0) {
+            free(l->slayer->names[i]);
+            size_t j = i + 1;
+            for (; j < l->slayer->names_len; j++) {
+                l->slayer->names[j - 1] = l->slayer->names[j];
+                l->slayer->names[j] = NULL;
+            }
+            l->slayer->names_len -= 1;
+            continue;
+        }
+        i++;
+    }
+
+    layer_ref_dec(l);
+}
+
+// only use to recover name which remove by remove_name
+static void recover_name(const char *name)
+{
+    layer_t *l = map_search(g_metadata.by_name, (void *)name);
+    if (l == NULL) {
+        return;
+    }
+
+    l->slayer->names[l->slayer->names_len] = util_strdup_s(name);
+    l->slayer->names_len += 1;
+
+    layer_ref_dec(l);
+}
+
 int layer_store_set_names(const char *id, const char * const* names, size_t names_len)
 {
+    layer_t *l = NULL;
+    int ret = -1;
+    size_t i = 0;
+    size_t j = 0;
+
+    if (id == NULL) {
+        return ret;
+    }
+    // TODO: add lock
+    l = lookup(id);
+    if (l == NULL) {
+        ERROR("layer not known");
+        return ret;
+    }
+    // remove old names relation
+    for (; i < l->slayer->names_len; i++) {
+        if (!map_remove(g_metadata.by_name, (void *)l->slayer->names[i])) {
+            ERROR("Remove name %s failed", l->slayer->names[i]);
+            goto recover_out;
+        }
+    }
+
+    // replace new names
+    for (; j < names_len; j++) {
+        remove_name(names[j]);
+        if (!map_replace(g_metadata.by_name, (void *)names[j], (void *)l)) {
+            ERROR("Replace new name %s failed", names[j]);
+            goto recover_out;
+        }
+    }
+
     return 0;
+recover_out:
+    while (i > 0) {
+        i--;
+        if (!map_insert(g_metadata.by_name, (void *)l->slayer->names[i], (void *)l)) {
+            NOTICE("Recover name: %s failed", l->slayer->names[i]);
+        }
+    }
+    while (j > 0) {
+        j--;
+        if (!map_remove(g_metadata.by_name, (void *)names[j])) {
+            NOTICE("Recover new name %s failed", names[j]);
+        }
+        recover_name(names[j]);
+    }
+    return -1;
 }
+
 struct graphdriver_status* layer_store_status()
 {
     return NULL;
