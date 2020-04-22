@@ -557,7 +557,9 @@ void *health_check_run(void *arg)
         ERROR("Out of memory");
         goto out;
     }
-    container_req->tty = false;
+
+    // Set tty to true, compatible with busybox
+    container_req->tty = true;
     container_req->attach_stdin = false;
     container_req->attach_stdout = true;
     container_req->attach_stderr = true;
