@@ -616,7 +616,7 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
         return Status::CANCELLED;
     }
 
-    ret = cb->container.exec(container_req, &container_res, -1, nullptr);
+    ret = cb->container.exec(container_req, &container_res, -1, nullptr, nullptr);
     tret = exec_response_to_grpc(container_res, reply);
 
     free_container_exec_request(container_req);
@@ -629,7 +629,7 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
     return Status::OK;
 }
 
-ssize_t WriteExecResponseToRemoteClient(void *context, const void *data, size_t len)
+ssize_t WriteExecStdoutResponseToRemoteClient(void *context, const void *data, size_t len)
 {
     if (context == nullptr || data == nullptr || len == 0) {
         return 0;
@@ -637,6 +637,21 @@ ssize_t WriteExecResponseToRemoteClient(void *context, const void *data, size_t 
     auto stream = static_cast<ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *>(context);
     RemoteExecResponse response;
     response.set_stdout((char *)data, len);
+    if (!stream->Write(response)) {
+        ERROR("Failed to write request to grpc client");
+        return -1;
+    }
+    return (ssize_t)len;
+}
+
+ssize_t WriteExecStderrResponseToRemoteClient(void *context, const void *data, size_t len)
+{
+    if (context == nullptr || data == nullptr || len == 0) {
+        return 0;
+    }
+    auto stream = static_cast<ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *>(context);
+    RemoteExecResponse response;
+    response.set_stderr((char *)data, len);
     if (!stream->Write(response)) {
         ERROR("Failed to write request to grpc client");
         return -1;
@@ -720,11 +735,15 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
         });
     }
 
-    struct io_write_wrapper stringWriter = { 0 };
-    stringWriter.context = (void *)stream;
-    stringWriter.write_func = WriteExecResponseToRemoteClient;
-    stringWriter.close_func = nullptr;
-    (void)cb->container.exec(container_req, &container_res, read_pipe_fd[0], &stringWriter);
+    struct io_write_wrapper StdoutstringWriter = { 0 };
+    StdoutstringWriter.context = (void *)stream;
+    StdoutstringWriter.write_func = WriteExecStdoutResponseToRemoteClient;
+    StdoutstringWriter.close_func = nullptr;
+    struct io_write_wrapper StderrstringWriter = { 0 };
+    StderrstringWriter.context = (void *)stream;
+    StderrstringWriter.write_func = WriteExecStderrResponseToRemoteClient;
+    StderrstringWriter.close_func = nullptr;
+    (void)cb->container.exec(container_req, &container_res, read_pipe_fd[0], &StdoutstringWriter, &StderrstringWriter);
 
     RemoteExecResponse finish_response;
     finish_response.set_finish(true);

@@ -1004,7 +1004,12 @@ out:
             if (stream_response.finish()) {
                 break;
             }
-            std::cout << stream_response.stdout() << std::flush;
+            if (!stream_response.stdout().empty()) {
+                std::cout << stream_response.stdout() << std::flush;
+            }
+            if (!stream_response.stderr().empty()) {
+                std::cerr << stream_response.stderr() << std::flush;
+            }
         }
         write_task.stop();
         stream->WritesDone();

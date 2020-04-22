@@ -45,11 +45,14 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
         ERROR("Failed to transform grpc request!");
         return -1;
     }
-    struct io_write_wrapper stringWriter = { 0 };
-    stringWriter.context = (void *)wsi;
-    stringWriter.write_func = WsWriteToClient;
+    struct io_write_wrapper StdoutstringWriter = { 0 };
+    StdoutstringWriter.context = (void *)wsi;
+    StdoutstringWriter.write_func = WsWriteStdoutToClient;
+    struct io_write_wrapper StderrstringWriter = { 0 };
+    StderrstringWriter.context = (void *)wsi;
+    StderrstringWriter.write_func = WsWriteStderrToClient;
     int ret = cb->container.exec(container_req, &container_res,
-                                 container_req->attach_stdin ? read_pipe_fd : -1, &stringWriter);
+                                 container_req->attach_stdin ? read_pipe_fd : -1, &StdoutstringWriter, &StderrstringWriter);
     if (ret != 0) {
         std::string message;
         if (container_res != nullptr && container_res->errmsg != nullptr) {
@@ -57,11 +60,11 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
         } else {
             message = "Failed to call exec container callback. ";
         }
-        WsWriteToClient(wsi, message.c_str(), message.length());
+        WsWriteStdoutToClient(wsi, message.c_str(), message.length());
     }
     if (container_res != nullptr && container_res->exit_code != 0) {
         std::string exit_info = "Exit code :" + std::to_string((int)container_res->exit_code) + "\n";
-        WsWriteToClient(wsi, exit_info.c_str(), exit_info.length());
+        WsWriteStdoutToClient(wsi, exit_info.c_str(), exit_info.length());
     }
     free_container_exec_request(container_req);
     free_container_exec_response(container_res);

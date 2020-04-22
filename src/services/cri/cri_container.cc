@@ -1339,7 +1339,8 @@ void CRIRuntimeServiceImpl::ExecSync(const std::string &containerID,
                                      const google::protobuf::RepeatedPtrField<std::string> &cmd, int64_t timeout,
                                      runtime::v1alpha2::ExecSyncResponse *reply, Errors &error)
 {
-    struct io_write_wrapper stringWriter = { 0 };
+    struct io_write_wrapper StdoutstringWriter = { 0 };
+    struct io_write_wrapper StderrstringWriter = { 0 };
 
     if (m_cb == nullptr || m_cb->container.exec == nullptr) {
         error.SetError("Unimplemented callback");
@@ -1365,9 +1366,12 @@ void CRIRuntimeServiceImpl::ExecSync(const std::string &containerID,
         goto cleanup;
     }
 
-    stringWriter.context = (void *)reply->mutable_stdout();
-    stringWriter.write_func = WriteToString;
-    if (m_cb->container.exec(request, &response, -1, &stringWriter)) {
+    StdoutstringWriter.context = (void *)reply->mutable_stdout();
+    StdoutstringWriter.write_func = WriteToString;
+
+    StderrstringWriter.context = (void *)reply->mutable_stderr();
+    StderrstringWriter.write_func = WriteToString;
+    if (m_cb->container.exec(request, &response, -1, &StdoutstringWriter, &StderrstringWriter)) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
         } else {

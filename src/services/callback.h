@@ -113,7 +113,7 @@ typedef struct {
     int(*list)(const container_list_request *request, container_list_response **response);
 
     int(*exec)(const container_exec_request *request, container_exec_response **response,
-               int stdinfd, struct io_write_wrapper *stdout);
+               int stdinfd, struct io_write_wrapper *stdout, struct io_write_wrapper *stderr);
 
     int(*attach)(const container_attach_request *request, container_attach_response **response,
                  int stdinfd, struct io_write_wrapper *stdout, struct io_write_wrapper *stderr);
