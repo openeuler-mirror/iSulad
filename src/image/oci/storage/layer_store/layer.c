@@ -20,6 +20,7 @@
 #include "util_atomic.h"
 #include "utils.h"
 #include "log.h"
+#include "utils_file.h"
 
 layer_t *create_empty_layer()
 {
@@ -108,13 +109,15 @@ layer_t *load_layer(const char *fname, const char *mountpoint_fname)
         ERROR("Parse layer failed: %s", err);
         goto free_out;
     }
-    if (mountpoint_fname != NULL) {
+
+    if (mountpoint_fname != NULL && util_file_exists(mountpoint_fname)) {
         smount_point = storage_mount_point_parse_file(mountpoint_fname, NULL, &err);
         if (smount_point == NULL) {
             ERROR("Parse mount point failed: %s", err);
             goto free_out;
         }
     }
+
     result = new_layer(fname, slayer, mountpoint_fname, smount_point);
     if (result == NULL) {
         goto free_out;

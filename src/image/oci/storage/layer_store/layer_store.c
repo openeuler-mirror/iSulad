@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <limits.h>
 
+#include "json_common.h"
 #include "layer.h"
 #include "driver.h"
 #include "linked_list.h"
@@ -26,6 +27,7 @@
 #include "types_def.h"
 #include "utils.h"
 #include "utils_array.h"
+#include "utils_file.h"
 #include "log.h"
 
 typedef struct __layer_store_metadata_t {
@@ -41,6 +43,15 @@ typedef struct __layer_store_metadata_t {
 static layer_store_metadata g_metadata;
 static char *g_root_dir;
 static char *g_run_dir;
+
+static inline char *layer_json_path(const char *id);
+static inline char *tar_split_path(const char *id);
+static inline char *mountpoint_json_path(const char *id);
+static inline char *layer_json_path(const char *id);
+
+static bool remove_name(const char *name);
+static void recover_name(const char *name);
+static int update_digest_map(map_t *by_digest, const char *old_val, const char *new_val, const char *id);
 
 void layer_store_cleanup()
 {
@@ -73,6 +84,42 @@ static void digest_map_kvfree(void *key, void *value)
     free(key);
 
     util_free_array((char **)value);
+}
+
+static bool append_layer_into_list(layer_t *l)
+{
+    struct linked_list *item = NULL;
+
+    if (l == NULL) {
+        return true;
+    }
+
+    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
+    if (item == NULL) {
+        ERROR("Out of memory");
+        return false;
+    }
+    linked_list_add_elem(item, l);
+    linked_list_add_tail(&g_metadata.layers_list, item);
+    g_metadata.layers_list_len += 1;
+
+    return true;
+}
+
+static void remove_layer_list_tail()
+{
+    struct linked_list *item = NULL;
+
+    if (linked_list_empty(&g_metadata.layers_list)) {
+        return;
+    }
+
+    item = g_metadata.layers_list.next;
+    linked_list_del(item);
+
+    layer_ref_dec((layer_t *)item->elem);
+    free(item);
+    g_metadata.layers_list_len -= 1;
 }
 
 static bool init_from_conf(const struct storage_module_init_options *conf)
@@ -113,9 +160,127 @@ free_out:
     return false;
 }
 
+static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir)
+{
+#define LAYER_NAME_LEN 64
+    bool ret = true;
+    char tmpdir[PATH_MAX] = { 0 };
+    int nret = 0;
+    char *rpath = NULL;
+    char *mount_point_path = NULL;
+    layer_t *l = NULL;
+
+    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", path_name, sub_dir->d_name);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Sprintf: %s failed", sub_dir->d_name);
+        return false;
+    }
+
+    if (!util_dir_exists(tmpdir)) {
+        // ignore non-dir
+        DEBUG("%s is not directory", sub_dir->d_name);
+        return true;
+    }
+
+    if (strlen(sub_dir->d_name) != LAYER_NAME_LEN) {
+        DEBUG("%s is invalid subdir name", sub_dir->d_name);
+        return true;
+    }
+
+    rpath = layer_json_path(sub_dir->d_name);
+    if (rpath == NULL) {
+        return false;
+    }
+    mount_point_path = mountpoint_json_path(sub_dir->d_name);
+    if (mount_point_path == NULL) {
+        ret = false;
+        goto free_out;
+    }
+
+    l = load_layer(rpath, mount_point_path);
+    if (l == NULL) {
+        WARN("load layer: %s failed", sub_dir->d_name);
+        goto free_out;
+    }
+    if (l->slayer->diff_digest == NULL &&
+        (!util_file_exists(rpath) || !graphdriver_layer_exists(sub_dir->d_name))) {
+        ERROR("Invalid data of layer: %s, remove it", sub_dir->d_name);
+        if (util_path_remove(rpath) != 0) {
+            ERROR("Remove layer: %s failed", rpath);
+        }
+        if (graphdriver_rm_layer(sub_dir->d_name) != 0) {
+            ERROR("Remove driver data of %s failed", sub_dir->d_name);
+        }
+        goto free_out;
+    }
+    // update memory store list
+    ret = append_layer_into_list(l);
+
+free_out:
+    free(rpath);
+    free(mount_point_path);
+    return ret;
+}
+
+static int load_layers_from_json_files()
+{
+    int ret = 0;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+    bool should_save = false;
+
+    ret = util_scan_subdirs(g_root_dir, load_layer_json_cb);
+    if (ret != 0) {
+        return -1;
+    }
+
+    linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
+        layer_t *tl = (layer_t *)item->elem;
+        size_t i = 0;
+
+        for (; i < tl->slayer->names_len; i++) {
+            if (remove_name(tl->slayer->names[i])) {
+                should_save = true;
+            }
+            if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
+                ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
+                goto err_out;
+            }
+        }
+
+        ret = update_digest_map(g_metadata.by_compress_digest, NULL, tl->slayer->compressed_diff_digest, tl->slayer->id);
+        if (ret != 0) {
+            goto err_out;
+        }
+
+        ret = update_digest_map(g_metadata.by_uncompress_digest, NULL, tl->slayer->diff_digest, tl->slayer->id);
+        if (ret != 0) {
+            goto err_out;
+        }
+
+        // check complete
+        if (tl->incompelte) {
+            if (layer_store_delete(tl->slayer->id) != 0) {
+                goto err_out;
+            }
+            should_save = true;
+        }
+
+        if (should_save && save_layer(tl) != 0) {
+            goto err_out;
+        }
+    }
+
+    return 0;
+err_out:
+    // clear memory store
+    layer_store_cleanup();
+    return -1;
+}
+
 int layer_store_init(const struct storage_module_init_options *conf)
 {
-    int nret;
+    int nret = 0;
 
     if (!init_from_conf(conf)) {
         goto free_out;
@@ -160,7 +325,11 @@ int layer_store_init(const struct storage_module_init_options *conf)
         ERROR("Failed to new uncompress map");
         goto free_out;
     }
-    //TODO: load layer json files
+
+    // TODO: load layer json files
+    if (load_layers_from_json_files() != 0) {
+        goto free_out;
+    }
 
     return 0;
 free_out:
@@ -171,7 +340,7 @@ free_out:
 static inline char *tar_split_path(const char *id)
 {
     char *result = NULL;
-    int nret;
+    int nret = 0;
 
     nret = asprintf(&result, "%s/%s/%s.tar-split.gz", g_root_dir, id, id);
     if (nret < 0 || nret > PATH_MAX) {
@@ -185,7 +354,7 @@ static inline char *tar_split_path(const char *id)
 static inline char *layer_json_path(const char *id)
 {
     char *result = NULL;
-    int nret;
+    int nret = 0;
 
     nret = asprintf(&result, "%s/%s/layer.json", g_root_dir, id);
     if (nret < 0 || nret > PATH_MAX) {
@@ -199,7 +368,7 @@ static inline char *layer_json_path(const char *id)
 static inline char *mountpoint_json_path(const char *id)
 {
     char *result = NULL;
-    int nret;
+    int nret = 0;
 
     nret = asprintf(&result, "%s/%s.json", g_run_dir, id);
     if (nret < 0 || nret > PATH_MAX) {
@@ -233,6 +402,8 @@ out:
 bool layer_store_check(const char *id)
 {
     layer_t *l = NULL;
+    bool ret = false;
+
     if (id == NULL) {
         return false;
     }
@@ -246,15 +417,14 @@ bool layer_store_check(const char *id)
     l = lookup(id);
     if (l == NULL) {
         ERROR("layer not known");
-        goto err_out;
+        goto out;
     }
     //TODO: read tar split file and verify
 
+    ret = true;
+out:
     layer_ref_dec(l);
-    return true;
-err_out:
-    layer_ref_dec(l);
-    return false;
+    return ret;
 }
 
 static char *generate_random_layer_id()
@@ -455,6 +625,7 @@ static int remove_memory_stores(const char *id)
     struct linked_list *next = NULL;
     layer_t *l = NULL;
     size_t i = 0;
+    int ret = 0;
 
     l = lookup(id);
     if (l == NULL) {
@@ -464,7 +635,8 @@ static int remove_memory_stores(const char *id)
 
     if (update_digest_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, NULL, l->slayer->id) != 0) {
         ERROR("Remove %s from compress digest failed", id);
-        return -1;
+        ret = -1;
+        goto out;
     }
     if (update_digest_map(g_metadata.by_uncompress_digest, l->slayer->diff_digest, NULL, l->slayer->id) != 0) {
         // ignore this error, because only happen at out of memory;
@@ -483,40 +655,38 @@ static int remove_memory_stores(const char *id)
     }
 
     linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
-        layer_t *l = (layer_t *)item->elem;
-        if (strcmp(l->slayer->id, id) != 0) {
+        layer_t *tl = (layer_t *)item->elem;
+        if (strcmp(tl->slayer->id, id) != 0) {
             continue;
         }
         linked_list_del(item);
-        layer_ref_dec(l);
+        layer_ref_dec(tl);
         free(item);
         g_metadata.layers_list_len -= 1;
         break;
     }
 
-    return 0;
+out:
+    layer_ref_dec(l);
+    return ret;
 }
 
 static int insert_memory_stores(const char *id, const struct layer_opts *opts, layer_t *l)
 {
-    size_t i = 0;
-    struct linked_list *item = NULL;
     int ret = 0;
+    size_t i = 0;
 
-    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
-    if (item == NULL) {
-        ERROR("Out of memory");
+    if (!append_layer_into_list(l)) {
         ret = -1;
         goto out;
     }
-    linked_list_add_elem(item, l);
-    linked_list_add_tail(&g_metadata.layers_list, item);
-    g_metadata.layers_list_len += 1;
+
     if (!map_insert(g_metadata.by_id, (void *)id, (void *)l)) {
         ERROR("Update by id failed");
         ret = -1;
         goto clear_list;
     }
+
     for (; i < opts->names_len; i++) {
         if (!map_insert(g_metadata.by_name, (void *)opts->names[i], (void *)l)) {
             ERROR("Update by names failed");
@@ -536,8 +706,7 @@ clear_by_name:
         WARN("Remove layer: %s failed", id);
     }
 clear_list:
-    linked_list_del(item);
-    free(item);
+    remove_layer_list_tail();
 out:
     return ret;
 }
@@ -788,7 +957,7 @@ struct layer** layer_store_list()
     return result;
 err_out:
     while (i >= 0) {
-        free(result[i]);
+        free_layer(result[i]);
         i--;
     }
     free(result);
@@ -845,7 +1014,7 @@ static struct layer **layers_by_digest_map(map_t *m, const char *digest)
     return result;
 free_out:
     while (result != NULL && i >= 0) {
-        free(result[i]);
+        free_layer(result[i]);
     }
     free(result);
     return NULL;
@@ -896,6 +1065,13 @@ static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
             return NULL;
         }
     }
+    if (l->mount_point_json_path == NULL) {
+        l->mount_point_json_path = mountpoint_json_path(l->slayer->id);
+        if (l->mount_point_json_path == NULL) {
+            return NULL;
+        }
+    }
+
     save_cnt = l->smount_point->count;
     save_path = l->smount_point->path;
 
@@ -1018,12 +1194,13 @@ int layer_store_mounted(const char *id)
     return ret;
 }
 
-static void remove_name(const char *name)
+static bool remove_name(const char *name)
 {
     size_t i = 0;
+    bool ret = false;
     layer_t *l = map_search(g_metadata.by_name, (void *)name);
     if (l == NULL) {
-        return;
+        return false;
     }
 
     while (i < l->slayer->names_len) {
@@ -1035,12 +1212,13 @@ static void remove_name(const char *name)
                 l->slayer->names[j] = NULL;
             }
             l->slayer->names_len -= 1;
+            ret = true;
             continue;
         }
         i++;
     }
 
-    layer_ref_dec(l);
+    return ret;
 }
 
 // only use to recover name which remove by remove_name
@@ -1053,8 +1231,6 @@ static void recover_name(const char *name)
 
     l->slayer->names[l->slayer->names_len] = util_strdup_s(name);
     l->slayer->names_len += 1;
-
-    layer_ref_dec(l);
 }
 
 int layer_store_set_names(const char *id, const char * const* names, size_t names_len)
@@ -1063,10 +1239,17 @@ int layer_store_set_names(const char *id, const char * const* names, size_t name
     int ret = -1;
     size_t i = 0;
     size_t j = 0;
+    bool *founds = NULL;
 
     if (id == NULL) {
         return ret;
     }
+    founds = util_smart_calloc_s(sizeof(bool), names_len);
+    if (founds == NULL) {
+        ERROR("Out of memory");
+        return ret;
+    }
+
     // TODO: add lock
     l = lookup(id);
     if (l == NULL) {
@@ -1083,13 +1266,15 @@ int layer_store_set_names(const char *id, const char * const* names, size_t name
 
     // replace new names
     for (; j < names_len; j++) {
-        remove_name(names[j]);
+        founds[j] = remove_name(names[j]);
         if (!map_replace(g_metadata.by_name, (void *)names[j], (void *)l)) {
             ERROR("Replace new name %s failed", names[j]);
             goto recover_out;
         }
     }
 
+    free(founds);
+    layer_ref_dec(l);
     return 0;
 recover_out:
     while (i > 0) {
@@ -1103,17 +1288,45 @@ recover_out:
         if (!map_remove(g_metadata.by_name, (void *)names[j])) {
             NOTICE("Recover new name %s failed", names[j]);
         }
-        recover_name(names[j]);
+        if (names[j]) {
+            recover_name(names[j]);
+        }
     }
+    free(founds);
+    layer_ref_dec(l);
     return -1;
 }
 
-struct graphdriver_status* layer_store_status()
+struct layer_store_status *layer_store_status()
 {
-    return NULL;
+    struct graphdriver_status *d_status = NULL;
+    struct layer_store_status *result = NULL;
+
+    d_status = graphdriver_get_status();
+
+    if (d_status == NULL) {
+        return NULL;
+    }
+    result = util_common_calloc_s(sizeof(struct layer_store_status));
+    if (result == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+    result->backing_fs = d_status->backing_fs;
+    d_status->backing_fs = NULL;
+    result->status = d_status->status;
+    d_status->status = NULL;
+    result->driver_name = d_status->driver_name;
+    d_status->driver_name = NULL;
+
+out:
+    free_graphdriver_status(d_status);
+    return result;
 }
+
 int layer_store_try_repair_lowers(const char *id)
 {
+    // TODO: driver need add this api
     return 0;
 }
 
@@ -1122,6 +1335,40 @@ void free_layer_opts(struct layer_opts *ptr)
     if (ptr == NULL) {
         return;
     }
+    free(ptr->parent);
+    ptr->parent = NULL;
+    util_free_array_by_len(ptr->names, ptr->names_len);
+    ptr->names = NULL;
+    ptr->names_len = 0;
 
-    //TODO: free mount options
+    free_layer_store_mount_opts(ptr->opts);
+    ptr->opts = NULL;
+    free(ptr);
 }
+
+void free_layer_store_mount_opts(struct layer_store_mount_opts *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->mount_label);
+    ptr->mount_label = NULL;
+    free_json_map_string_string(ptr->mount_opts);
+    ptr->mount_opts = NULL;
+    free(ptr);
+}
+
+void free_layer_store_status(struct layer_store_status *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->backing_fs);
+    ptr->backing_fs = NULL;
+    free(ptr->driver_name);
+    ptr->driver_name = NULL;
+    free(ptr->status);
+    ptr->status = NULL;
+    free(ptr);
+}
+
