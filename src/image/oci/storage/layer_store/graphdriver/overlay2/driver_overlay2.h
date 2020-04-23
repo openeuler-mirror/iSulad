@@ -53,6 +53,8 @@ void free_driver_create_opts(struct driver_create_opts *opts);
 
 void free_driver_mount_opts(struct driver_mount_opts *opts);
 
+int overlay2_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver);
+
 #ifdef __cplusplus
 }
 #endif

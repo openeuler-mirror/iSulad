@@ -1756,3 +1756,81 @@ int overlay2_clean_up(const struct graphdriver *driver)
     }
     return umount(driver->home);
 }
+
+static int check_lower_valid(const char *driver_home, const char *lower)
+{
+    int ret = 0;
+    char *abs_path = NULL;
+
+    abs_path = util_path_join(driver_home, lower);
+    if (!util_dir_exists(abs_path)) {
+        SYSERROR("Can't stat absolute layer:%s", abs_path);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(abs_path);
+    return ret;
+}
+
+int overlay2_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver)
+{
+    int ret = 0;
+    char *layer_dir = NULL;
+    char *lowers_str = NULL;
+    char *lowers_repaired = NULL;
+    char **lowers_arr = NULL;
+    size_t lowers_size = 0;
+
+    if (id == NULL || driver == NULL || parent == NULL) {
+        return -1;
+    }
+
+    layer_dir = util_path_join(driver->home, id);
+    if (layer_dir == NULL) {
+        ERROR("Failed to join layer dir:%s", id);
+        goto out;
+    }
+
+    if (!util_dir_exists(layer_dir)) {
+        SYSERROR("layer dir %s not exist", layer_dir);
+        goto out;
+    }
+
+    lowers_str = read_layer_lower_file(layer_dir);
+    lowers_arr = util_string_split(lowers_str, ':');
+    lowers_size = util_array_len((const char **)lowers_arr);
+
+    if (lowers_size != 0) {
+        if (check_lower_valid(driver->home, lowers_arr[0]) == 0) {
+            DEBUG("Try to repair layer %s, success check", id);
+            ret = 0;
+            goto out;
+        }
+    }
+
+    if (strcmp(parent, "") == 0) {
+        if (mk_empty_directory(layer_dir) != 0) {
+            ret = -1;
+            goto out;
+        }
+    } else {
+        lowers_repaired = get_lower(parent, driver->home);
+        if (lowers_repaired == NULL) {
+            ret = -1;
+            goto out;
+        }
+        if (write_lowers(layer_dir, lowers_repaired) != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    free(layer_dir);
+    free(lowers_str);
+    util_free_array(lowers_arr);
+    free(lowers_repaired);
+    return ret;
+}

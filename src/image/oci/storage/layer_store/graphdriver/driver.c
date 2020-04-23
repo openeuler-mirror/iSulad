@@ -45,6 +45,7 @@ static const struct graphdriver_ops g_overlay2_ops = {
     .get_layer_metadata = overlay2_get_layer_metadata,
     .get_driver_status = overlay2_get_driver_status,
     .clean_up = overlay2_clean_up,
+    .try_repair_lowers = overlay2_repair_lowers,
 };
 
 /* devicemapper */
@@ -295,4 +296,19 @@ int graphdriver_cleanup(void)
     }
 
     return g_graphdriver->ops->clean_up(g_graphdriver);
+}
+
+int graphdriver_try_repair_lowers(const char *id, const char *parent)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL || parent == NULL) {
+        ERROR("Invalid input arguments for driver repair lower");
+        return -1;
+    }
+
+    return g_graphdriver->ops->try_repair_lowers(id, parent, g_graphdriver);
 }
