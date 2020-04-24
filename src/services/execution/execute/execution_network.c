@@ -41,22 +41,37 @@ static int write_hostname_to_file(const char *rootfs, const char *hostname)
 {
     int ret = 0;
     char *file_path = NULL;
+    char *tmp = NULL;
+    char sbuf[MAX_HOST_NAME_LEN] = { 0 };
+
+    if (hostname == NULL) {
+        goto out;
+    }
 
     if (realpath_in_scope(rootfs, "/etc/hostname", &file_path) < 0) {
         SYSERROR("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
         isulad_set_error_message("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
-        goto error_out;
+        goto out;
     }
-    if (hostname != NULL) {
-        ret = util_write_file(file_path, hostname, strlen(hostname), NETWORK_MOUNT_FILE_MODE);
-        if (ret) {
-            SYSERROR("Failed to write %s", file_path);
-            isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
-            goto error_out;
+
+    if (util_file_exists(file_path) && util_file2str(file_path, sbuf, sizeof(sbuf)) > 0) {
+        tmp = util_strdup_s(sbuf);
+        (void)util_trim_newline(tmp);
+        tmp = util_trim_space(tmp);
+        if (strcmp("", tmp) != 0 && strcmp("localhost", tmp) != 0) {
+            goto out;
         }
     }
 
-error_out:
+    ret = util_write_file(file_path, hostname, strlen(hostname), NETWORK_MOUNT_FILE_MODE);
+    if (ret) {
+        SYSERROR("Failed to write %s", file_path);
+        isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
+        goto out;
+    }
+
+out:
+    free(tmp);
     free(file_path);
     return ret;
 }

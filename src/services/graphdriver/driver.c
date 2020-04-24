@@ -27,8 +27,8 @@
 #include "isulad_config.h"
 #include "image.h"
 
-/* overlay2 */
-
+/* overlay/overlay2 */
+#define DRIVER_OVERLAY_NAME "overlay"
 #define DRIVER_OVERLAY2_NAME "overlay2"
 static const struct graphdriver_ops g_overlay2_ops = {
     .init = overlay2_init,
@@ -122,6 +122,77 @@ free_out:
         return NULL;
     }
     return status;
+}
+
+container_inspect_graph_driver *graphdriver_get_metadata(char *id)
+{
+    container_inspect_graph_driver *inspect_driver = NULL;
+    int ret = -1;
+    im_storage_metadata_response *resp = NULL;
+    int i = 0;
+
+    ret = im_get_storage_metadata(IMAGE_TYPE_OCI, id, &resp);
+    if (ret != 0) {
+        goto free_out;
+    }
+
+    if (resp->name == NULL || resp->metadata == NULL) {
+        ERROR("Failed to get metadata or name");
+        ret = -1;
+        goto free_out;
+    }
+
+    inspect_driver = util_common_calloc_s(sizeof(container_inspect_graph_driver));
+    if (inspect_driver == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto free_out;
+    }
+    inspect_driver->data = util_common_calloc_s(sizeof(container_inspect_graph_driver_data));
+    if (inspect_driver->data == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto free_out;
+    }
+
+    inspect_driver->name = util_strdup_s(resp->name);
+
+    if (!strcmp(resp->name, DRIVER_OVERLAY_NAME) || !strcmp(resp->name, DRIVER_OVERLAY2_NAME)) {
+        for (i = 0; i < resp->metadata->len; i++) {
+            if (!strcmp(resp->metadata->keys[i], "LowerDir")) {
+                inspect_driver->data->lower_dir = util_strdup_s(resp->metadata->values[i]);
+            } else if (!strcmp(resp->metadata->keys[i], "MergedDir")) {
+                inspect_driver->data->merged_dir = util_strdup_s(resp->metadata->values[i]);
+            } else if (!strcmp(resp->metadata->keys[i], "UpperDir")) {
+                inspect_driver->data->upper_dir = util_strdup_s(resp->metadata->values[i]);
+            } else if (!strcmp(resp->metadata->keys[i], "WorkDir")) {
+                inspect_driver->data->work_dir = util_strdup_s(resp->metadata->values[i]);
+            }
+        }
+    } else if (!strcmp(resp->name, DRIVER_DEVMAPPER_NAME)) {
+        for (i = 0; i < resp->metadata->len; i++) {
+            if (!strcmp(resp->metadata->keys[i], "DeviceId")) {
+                inspect_driver->data->device_id = util_strdup_s(resp->metadata->values[i]);
+            } else if (!strcmp(resp->metadata->keys[i], "DeviceName")) {
+                inspect_driver->data->device_name = util_strdup_s(resp->metadata->values[i]);
+            } else if (!strcmp(resp->metadata->keys[i], "DeviceSize")) {
+                inspect_driver->data->device_size = util_strdup_s(resp->metadata->values[i]);
+            }
+        }
+    } else {
+        ERROR("Unsupported driver %s", resp->name);
+        ret = -1;
+        goto free_out;
+    }
+
+    ret = 0;
+free_out:
+    free_im_storage_metadata_response(resp);
+    if (ret != 0) {
+        free_container_inspect_graph_driver(inspect_driver);
+        return NULL;
+    }
+    return inspect_driver;
 }
 
 int update_graphdriver_status(struct graphdriver **driver)

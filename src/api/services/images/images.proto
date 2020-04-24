@@ -70,6 +70,9 @@ service ImagesService {
 
 	// Logout from a Docker registry
 	rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+	// Add a tag to the image
+	rpc Tag(TagImageRequest) returns (TagImageResponse);
 }
 
 message Image {
@@ -124,6 +127,16 @@ message DeleteImageResponse {
 	string name = 1;
 	uint32 cc = 2;
 	string errmsg = 3;
+}
+
+message TagImageRequest {
+	string src_name = 1;
+	string dest_name = 2;
+}
+
+message TagImageResponse {
+	uint32 cc = 1;
+	string errmsg = 2;
 }
 
 message LoadImageRequest {

@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "container_inspect.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +50,8 @@ struct graphdriver *graphdriver_init(const char *name, char **storage_opts, size
 struct graphdriver *graphdriver_get(const char *name);
 
 struct graphdriver_status *graphdriver_get_status(void);
+
+container_inspect_graph_driver *graphdriver_get_metadata(char *id);
 
 int update_graphdriver_status(struct graphdriver **driver);
 

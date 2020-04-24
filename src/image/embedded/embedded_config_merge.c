@@ -83,7 +83,7 @@ static int embedded_merge_env(const embedded_config *config, container_config *c
         }
 
         for (j = 0; j < container_spec->env_len; j++) {
-            custom_kv = util_string_split(container_spec->env[i], '=');
+            custom_kv = util_string_split(container_spec->env[j], '=');
             if (custom_kv == NULL) {
                 continue;
             }
@@ -112,8 +112,7 @@ out:
 static int merge_embedded_config(const embedded_manifest *manifest, container_config *container_spec)
 {
     if (manifest->config != NULL) {
-        if (manifest->config->workdir != NULL) {
-            free(container_spec->working_dir);
+        if (container_spec->working_dir == NULL) {
             container_spec->working_dir = util_strdup_s(manifest->config->workdir);
         }
 
@@ -175,8 +174,8 @@ static int embedded_append_mounts(char **volumes, size_t volumes_len, container_
     int ret = 0;
     size_t i = 0;
     size_t new_size = 0;
-    size_t old_size = 0;
     char **temp = NULL;
+    size_t temp_len = 0;
 
     if (volumes == NULL || volumes_len == 0) {
         return 0;
@@ -188,20 +187,28 @@ static int embedded_append_mounts(char **volumes, size_t volumes_len, container_
         goto out;
     }
     new_size = (container_spec->mounts_len + volumes_len) * sizeof(char *);
-    old_size = container_spec->mounts_len * sizeof(char *);
-    ret = mem_realloc((void **)&temp, new_size, container_spec->mounts, old_size);
-    if (ret != 0) {
+    temp = util_common_calloc_s(new_size);
+    if (temp == NULL) {
         ERROR("Failed to realloc memory for mounts");
         ret = -1;
         goto out;
     }
 
-    container_spec->mounts = temp;
-
     for (i = 0; i < volumes_len; i++) {
-        container_spec->mounts[container_spec->mounts_len] = util_strdup_s(volumes[i]);
-        container_spec->mounts_len++;
+        temp[temp_len] = util_strdup_s(volumes[i]);
+        temp_len++;
     }
+
+    for (i = 0; i < container_spec->mounts_len; i++) {
+        temp[temp_len] = util_strdup_s(container_spec->mounts[i]);
+        temp_len++;
+        free(container_spec->mounts[i]);
+        container_spec->mounts[i] = NULL;
+    }
+
+    free(container_spec->mounts);
+    container_spec->mounts = temp;
+    container_spec->mounts_len = temp_len;
 
 out:
     return ret;
@@ -223,8 +230,7 @@ static int embedded_merge_mounts(const embedded_manifest *manifest, container_co
         goto out;
     }
 
-    ret = util_grow_array(&mounts, &cap, manifest->layers_len,
-                          manifest->layers_len);
+    ret = util_grow_array(&mounts, &cap, manifest->layers_len, manifest->layers_len);
     if (ret != 0) {
         ERROR("grow array failed");
         ret = -1;
