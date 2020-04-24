@@ -1045,24 +1045,4 @@ out:
     return ret;
 }
 
-int container_initialize_networking(const container_t *cont)
-{
-    int ret = 0;
-    size_t len = strlen(SHARE_NAMESPACE_PREFIX);
-    container_t *nc = NULL;
-    host_config *hc = cont->hostconfig;
-
-    // is container mode
-    if (is_container(hc->network_mode)) {
-        nc = get_networked_container(cont->common_config->id, hc->network_mode + len, true);
-        if (nc == NULL) {
-            ERROR("Error to get networked container");
-            return -1;
-        }
-    }
-
-    container_unref(nc);
-    return ret;
-}
-
 
