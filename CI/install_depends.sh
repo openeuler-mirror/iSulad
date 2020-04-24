@@ -93,14 +93,15 @@ check_make_status make_cni_plugins ${build_log_cni_plugins} &
 cd ~
 git clone https://gitee.com/src-openeuler/lxc.git
 cd lxc
-tar xf lxc-3.0.3.tar.gz
-cd lxc-3.0.3
+tar xf lxc-4.0.1.tar.gz
+cd lxc-4.0.1
 mv ../*.patch .
 for var in $(ls 0*.patch | sort -n)
 do
     patch -p1 < ${var}
 done
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
+sed -i '/unmount-namespace/d' ./lxc.spec.in
 ./autogen.sh
 ./configure --sysconfdir=/etc
 make rpm

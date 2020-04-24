@@ -721,7 +721,6 @@ def gen_common_files(out):
     Interface: None
     History: 2019-06-17
     """
-    print(out, "  gao\n")
     with open(os.path.join(out, 'json_common.h'), "w") as \
             header_file, open(os.path.join(out, 'json_common.c'), "w") as source_file:
         fcntl.flock(header_file, fcntl.LOCK_EX)
