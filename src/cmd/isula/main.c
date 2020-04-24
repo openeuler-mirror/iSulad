@@ -28,6 +28,7 @@
 #include "run.h"
 #include "images.h"
 #include "rmi.h"
+#include "tag.h"
 #include "wait.h"
 #include "restart.h"
 #include "pause.h"
@@ -189,6 +190,10 @@ struct command g_commands[] = {
     {
         // `logout` sub-command
         "logout", cmd_logout_main, g_cmd_logout_desc, NULL, &g_cmd_logout_args
+    },
+    {
+        // `tag` sub-command
+        "tag", cmd_tag_main, g_cmd_tag_desc, NULL, &g_cmd_tag_args
     },
 #endif
     { NULL, NULL, NULL, NULL, NULL } // End of the list

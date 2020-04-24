@@ -384,6 +384,111 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
+/* tag image */
+static int tag_image(const char *src_name, const char *dest_name)
+{
+    int ret = 0;
+    im_tag_request *im_request = NULL;
+    im_tag_response *im_response = NULL;
+
+    if (src_name == NULL || dest_name == NULL) {
+        ERROR("invalid NULL param");
+        return EINVALIDARGS;
+    }
+
+    im_request = util_common_calloc_s(sizeof(im_tag_request));
+    if (im_request == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    im_request->src_name.image = util_strdup_s(src_name);
+    im_request->dest_name.image = util_strdup_s(dest_name);
+
+    ret = im_tag_image(im_request, &im_response);
+    if (ret != 0) {
+        if (im_response != NULL && im_response->errmsg != NULL) {
+            ERROR("Tag image %s to %s failed:%s", src_name, dest_name, im_response->errmsg);
+            isulad_try_set_error_message("Tag image %s to %s failed:%s", src_name, dest_name, im_response->errmsg);
+        } else {
+            ERROR("Tag image %s to %s failed", src_name, dest_name);
+            isulad_try_set_error_message("Tag image %s to %s failed");
+        }
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_im_tag_request(im_request);
+    free_im_tag_response(im_response);
+
+    return ret;
+}
+
+/* image tag cb */
+static int image_tag_cb(const image_tag_image_request *request,
+                        image_tag_image_response **response)
+{
+    int ret = -1;
+    char *src_name = NULL;
+    char *dest_name = NULL;
+    uint32_t cc = ISULAD_SUCCESS;
+
+    DAEMON_CLEAR_ERRMSG();
+
+    if (request == NULL || request->src_name == NULL || response == NULL ||
+        request->dest_name == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    src_name = request->src_name;
+    dest_name = request->dest_name;
+
+    *response = util_common_calloc_s(sizeof(image_delete_image_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto out;
+    }
+
+    if (!util_valid_image_name(src_name)) {
+        ERROR("Invalid image name %s", src_name);
+        cc = ISULAD_ERR_INPUT;
+        isulad_try_set_error_message("Invalid image name:%s", src_name);
+        goto out;
+    }
+
+    if (!util_valid_image_name(dest_name)) {
+        ERROR("Invalid image name %s", dest_name);
+        cc = ISULAD_ERR_INPUT;
+        isulad_try_set_error_message("Invalid image name:%s", dest_name);
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Tagging}", src_name);
+
+    ret = tag_image(src_name, dest_name);
+    if (ret != 0) {
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Tagged}", src_name);
+
+out:
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
 static bool valid_repo_tags(char * const * const repo_tags, size_t repo_index)
 {
     if (repo_tags != NULL && repo_tags[repo_index] != NULL) {
@@ -890,5 +995,6 @@ void image_callback_init(service_image_callback_t *cb)
     cb->inspect = image_inspect_cb;
     cb->login = login_cb;
     cb->logout = logout_cb;
+    cb->tag = image_tag_cb;
 }
 

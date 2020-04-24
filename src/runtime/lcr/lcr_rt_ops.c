@@ -382,6 +382,11 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
         request.user = user;
     }
 
+    request.open_stdin = params->attach_stdin;
+    if (params->spec != NULL) {
+        request.tty = params->spec->terminal;
+    }
+
     if (!engine_ops->engine_exec_op(&request, exit_code)) {
         const char *tmpmsg = NULL;
         if (engine_ops->engine_get_errmsg_op != NULL) {

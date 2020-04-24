@@ -60,16 +60,16 @@ int ext_prepare_rf(const im_prepare_request *request, char **real_rootfs)
     }
 
     if (real_rootfs != NULL) {
-        if (request->image_name != NULL) {
+        if (request->rootfs != NULL) {
             char real_path[PATH_MAX] = { 0 };
-            if (request->image_name[0] != '/') {
+            if (request->rootfs[0] != '/') {
                 ERROR("Rootfs should be absolutely path");
                 isulad_set_error_message("Rootfs should be absolutely path");
                 return -1;
             }
-            if (realpath(request->image_name, real_path) == NULL) {
-                ERROR("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
-                isulad_set_error_message("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
+            if (realpath(request->rootfs, real_path) == NULL) {
+                ERROR("Failed to clean rootfs path '%s': %s", request->rootfs, strerror(errno));
+                isulad_set_error_message("Failed to clean rootfs path '%s': %s", request->rootfs, strerror(errno));
                 return -1;
             }
             *real_rootfs = util_strdup_s(real_path);
@@ -128,15 +128,15 @@ int ext_merge_conf(const host_config *host_spec, container_config *container_spe
     }
 
     // No config neeed merge if NULL.
-    if (request->ext_config_image == NULL) {
+    if (request->image_name == NULL) {
         ret = 0;
         goto out;
     }
 
     // Get image's config and merge configs.
-    resolved_name = oci_resolve_image_name(request->ext_config_image);
+    resolved_name = oci_resolve_image_name(request->image_name);
     if (resolved_name == NULL) {
-        ERROR("Resolve external config image name failed, image name is %s", request->ext_config_image);
+        ERROR("Resolve external config image name failed, image name is %s", request->image_name);
         ret = -1;
         goto out;
     }

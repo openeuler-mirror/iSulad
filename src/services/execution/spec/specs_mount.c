@@ -2311,11 +2311,30 @@ out:
     return ret;
 }
 
+int destination_compare(const void *p1, const void *p2)
+{
+    defs_mount *mount_1 = *(defs_mount **)p1;
+    defs_mount *mount_2 = *(defs_mount **)p2;
+
+    return strcmp(mount_1->destination, mount_2->destination);
+}
+
 int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
                       container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     container_config *container_spec = v2_spec->config;
+
+    /* mounts to mount filesystem */
+    if (container_spec->mounts && container_spec->mounts_len) {
+        ret = merge_volumes(oci_spec, container_spec->mounts,
+                            container_spec->mounts_len, v2_spec,
+                            parse_mount);
+        if (ret) {
+            ERROR("Failed to merge mounts");
+            goto out;
+        }
+    }
 
     /* volumes to mount */
     if (host_spec->binds != NULL && host_spec->binds_len) {
@@ -2336,17 +2355,6 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
         }
     }
 
-    /* mounts to mount filesystem */
-    if (container_spec->mounts && container_spec->mounts_len) {
-        ret = merge_volumes(oci_spec, container_spec->mounts,
-                            container_spec->mounts_len, v2_spec,
-                            parse_mount);
-        if (ret) {
-            ERROR("Failed to merge mounts");
-            goto out;
-        }
-    }
-
     if (host_spec->shm_size == 0) {
         host_spec->shm_size = DEFAULT_SHM_SIZE;
     }
@@ -2363,7 +2371,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
         add_shm_mount(oci_spec, v2_spec->shm_path);
     }
 
-    if (host_spec->shm_size > 0) {
+    if (!has_mount_shm(host_spec, v2_spec) && host_spec->shm_size > 0) {
         ret = change_dev_shm_size(oci_spec, host_spec);
         if (ret) {
             ERROR("Failed to set dev shm size");
@@ -2378,6 +2386,8 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
             goto out;
         }
     }
+
+    qsort(oci_spec->mounts, oci_spec->mounts_len, sizeof(oci_spec->mounts[0]), destination_compare);
 
 out:
     return ret;

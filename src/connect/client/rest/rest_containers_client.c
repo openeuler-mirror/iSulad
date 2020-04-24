@@ -427,6 +427,7 @@ static int unpack_container_info_for_list_response(container_list_response *cres
                                     util_strdup_s(cresponse->containers[i]->finishat) : util_strdup_s("-");
         summary_info[i]->exit_code = cresponse->containers[i]->exit_code;
         summary_info[i]->restart_count = (unsigned int)cresponse->containers[i]->restartcount;
+        summary_info[i]->created = cresponse->containers[i]->created;
     }
 
     return 0;

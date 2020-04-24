@@ -28,6 +28,7 @@ void isula_exit(void);
 
 int isula_pull_rf(const im_pull_request *request, im_pull_response **response);
 int isula_rmi(const im_remove_request *request);
+int isula_tag(const im_tag_request *request);
 int isula_get_filesystem_info(im_fs_info_response **response);
 int isual_load_image(const im_load_request *request);
 
@@ -41,6 +42,7 @@ int isula_export_rf(const im_export_request *request);
 int isula_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
 
 int isula_get_storage_status(im_storage_status_response **response);
+int isula_get_storage_metadata(char *id, im_storage_metadata_response **response);
 
 int isula_login(const im_login_request *request);
 int isula_logout(const im_logout_request *request);

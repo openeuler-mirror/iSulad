@@ -89,8 +89,9 @@ static int engine_routine_log_init(const struct engine_operation *eop)
         ret = -1;
         goto unlock_out;
     }
+    // log throught fifo, so we need disable stderr by quiet (set to 1)
     ret = eop->engine_log_init_op(args->progname, engine_log_path, args->json_confs->log_level, eop->engine_type,
-                                  args->quiet, NULL);
+                                  1, NULL);
     if (ret != 0) {
         ret = -1;
         goto unlock_out;

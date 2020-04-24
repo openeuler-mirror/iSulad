@@ -65,6 +65,8 @@
 #define PluginServicePostStop "/PluginService/PostStop"
 #define PluginServicePostRemove "/PluginService/PostRemove"
 
+static plugin_manager_t *g_plugin_manager;
+
 static int pm_init_plugin(const plugin_t *plugin);
 
 static int plugin_event_pre_start_handle(const plugin_t *plugin, const char *cid);

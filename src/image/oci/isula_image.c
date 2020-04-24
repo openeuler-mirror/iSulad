@@ -26,6 +26,7 @@
 #include "isula_rootfs_mount.h"
 #include "isula_rootfs_umount.h"
 #include "isula_image_rmi.h"
+#include "isula_image_tag.h"
 #include "isula_container_fs_usage.h"
 #include "isula_image_fs_info.h"
 #include "isula_storage_status.h"
@@ -36,6 +37,7 @@
 #include "isula_health_check.h"
 #include "isula_images_list.h"
 #include "isula_containers_list.h"
+#include "isula_storage_metadata.h"
 
 #include "containers_store.h"
 #include "oci_images_store.h"
@@ -263,6 +265,62 @@ out:
     return ret;
 }
 
+int isula_tag(const im_tag_request *request)
+{
+    int ret = -1;
+    char *src_name = NULL;
+    char *dest_name = NULL;
+    oci_image_t *image_info = NULL;
+    char *errmsg = NULL;
+
+    if (request == NULL || request->src_name.image == NULL || request->dest_name.image == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    src_name = oci_resolve_image_name(request->src_name.image);
+    if (src_name == NULL) {
+        ret = -1;
+        ERROR("Failed to resolve source image name");
+        goto out;
+    }
+    dest_name = oci_normalize_image_name(request->dest_name.image);
+    if (src_name == NULL) {
+        ret = -1;
+        ERROR("Failed to resolve source image name");
+        goto out;
+    }
+
+    image_info = oci_images_store_get(src_name);
+    if (image_info == NULL) {
+        INFO("No such image exist %s", src_name);
+        ret = -1;
+        goto out;
+    }
+    oci_image_lock(image_info);
+
+    ret = isula_image_tag(src_name, dest_name, &errmsg);
+    if (ret != 0) {
+        isulad_set_error_message("Failed to tag image with error: %s", errmsg);
+        ERROR("Failed to tag image '%s' to '%s' with error: %s", src_name, dest_name, errmsg);
+        goto out;
+    }
+
+    ret = register_new_oci_image_into_memory(dest_name);
+    if (ret != 0) {
+        ERROR("Register image %s into store failed", dest_name);
+        goto out;
+    }
+
+out:
+    oci_image_unlock(image_info);
+    oci_image_unref(image_info);
+    free(src_name);
+    free(dest_name);
+    free(errmsg);
+    return ret;
+}
+
 int isula_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage)
 {
     int ret = 0;
@@ -344,6 +402,35 @@ int isula_get_storage_status(im_storage_status_response **response)
     return 0;
 err_out:
     free_im_storage_status_response(*response);
+    *response = NULL;
+    return ret;
+}
+
+int isula_get_storage_metadata(char *id, im_storage_metadata_response **response)
+{
+    int ret = -1;
+
+    if (response == NULL || id == NULL) {
+        ERROR("Invalid input arguments");
+        return ret;
+    }
+
+    *response = (im_storage_metadata_response *)util_common_calloc_s(sizeof(im_storage_metadata_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return ret;
+    }
+
+    ret = isula_do_storage_metadata(id, *response);
+    if (ret != 0) {
+        ERROR("Get get storage metadata failed");
+        ret = -1;
+        goto err_out;
+    }
+
+    return 0;
+err_out:
+    free_im_storage_metadata_response(*response);
     *response = NULL;
     return ret;
 }

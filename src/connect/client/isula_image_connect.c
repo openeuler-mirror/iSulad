@@ -224,6 +224,8 @@ void free_image_metadata(struct image_metadata *data)
     data->loaded = NULL;
     free(data->oci_spec);
     data->oci_spec = NULL;
+    free_defs_health_check(data->health_check);
+    data->health_check = NULL;
     free(data);
 }
 
@@ -291,6 +293,28 @@ void free_isula_rmi_request(struct isula_rmi_request *ptr)
 }
 
 void free_isula_rmi_response(struct isula_rmi_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+    free(ptr);
+}
+
+void free_isula_tag_request(struct isula_tag_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_image_spec(ptr->src_name);
+    ptr->src_name = NULL;
+    free_image_spec(ptr->dest_name);
+    ptr->dest_name = NULL;
+    free(ptr);
+}
+
+void free_isula_tag_response(struct isula_tag_response *ptr)
 {
     if (ptr == NULL) {
         return;
@@ -465,6 +489,20 @@ void free_isula_storage_status_response(struct isula_storage_status_response *pt
     }
     free(ptr->status);
     ptr->status = NULL;
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+    free(ptr);
+}
+
+void free_isula_storage_metadata_response(struct isula_storage_metadata_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_json_map_string_string(ptr->metadata);
+    ptr->metadata = NULL;
+    free(ptr->name);
+    ptr->name = NULL;
     free(ptr->errmsg);
     ptr->errmsg = NULL;
     free(ptr);
