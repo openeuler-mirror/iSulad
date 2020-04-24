@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: wangfengtu
  * Create: 2020-02-27
  * Description: provide registry functions
@@ -38,6 +38,8 @@
 #define MAX_LAYER_NUM 125
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define ROOTFS_TYPE "layers"
+
+static registry_init_options g_options;
 
 static int parse_manifest_schema1(pull_descriptor *desc)
 {
@@ -1152,8 +1154,8 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
     desc->blobpath = util_strdup_s(blobpath);
-    desc->use_decrypted_key = options->comm_opt.use_decrypted_key;
-    desc->skip_tls_verify = options->comm_opt.skip_tls_verify;
+    desc->use_decrypted_key = g_options.use_decrypted_key;
+    desc->skip_tls_verify = g_options.skip_tls_verify;
 
     if (options->auth.username != NULL && options->auth.password != NULL) {
         desc->username = util_strdup_s(options->auth.username);
@@ -1227,6 +1229,19 @@ out:
     return ret;
 }
 
+int registry_init(registry_init_options *options)
+{
+    if (options == NULL) {
+        ERROR("Invalid NULL param when init registry module");
+        return -1;
+    }
+
+    g_options.use_decrypted_key = options->use_decrypted_key;
+    g_options.skip_tls_verify = options->skip_tls_verify;
+
+    return 0;
+}
+
 int registry_login(registry_login_options *options)
 {
     int ret = 0;
@@ -1247,8 +1262,8 @@ int registry_login(registry_login_options *options)
     }
 
     desc->host = util_strdup_s(options->host);
-    desc->use_decrypted_key = options->comm_opt.use_decrypted_key;
-    desc->skip_tls_verify = options->comm_opt.skip_tls_verify;
+    desc->use_decrypted_key = g_options.use_decrypted_key;
+    desc->skip_tls_verify = g_options.skip_tls_verify;
     desc->username = util_strdup_s(options->auth.username);
     desc->password = util_strdup_s(options->auth.password);
 

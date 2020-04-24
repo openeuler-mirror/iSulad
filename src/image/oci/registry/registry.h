@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: wangfengtu
  * Create: 2020-02-27
  * Description: provide registry definition
@@ -22,7 +22,7 @@ extern "C" {
 typedef struct {
     bool use_decrypted_key;
     bool skip_tls_verify;
-} registry_options;
+} registry_init_options;
 
 typedef struct {
     char *username;
@@ -30,18 +30,17 @@ typedef struct {
 } registry_auth;
 
 typedef struct {
-    registry_options comm_opt;
     registry_auth auth;
     char *image_name;
     char *dest_image_name;
 } registry_pull_options;
 
 typedef struct {
-    registry_options comm_opt;
     registry_auth auth;
     char *host;
 } registry_login_options;
 
+int registry_init(registry_init_options *options);
 int registry_pull(registry_pull_options *options);
 int registry_login(registry_login_options *options);
 int registry_logout(char *host);

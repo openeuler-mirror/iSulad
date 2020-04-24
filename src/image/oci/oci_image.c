@@ -37,6 +37,7 @@
 #include "isula_images_list.h"
 #include "isula_containers_list.h"
 #include "isula_storage_metadata.h"
+#include "registry.h"
 
 #include "containers_store.h"
 #include "oci_images_store.h"
@@ -95,10 +96,18 @@ out:
 int oci_init(const struct service_arguments *args)
 {
     int ret = -1;
+    registry_init_options options;
 
     if (args == NULL) {
         ERROR("Invalid image config");
         return ret;
+    }
+
+    options.use_decrypted_key = conf_get_use_decrypted_key_flag();
+    options.skip_tls_verify = conf_get_skip_insecure_verify_flag();
+    ret = registry_init(&options);
+    if (ret != 0) {
+        goto out;
     }
 
     if (storage_module_init_helper(args) != 0) {
