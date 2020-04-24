@@ -53,6 +53,7 @@
 #include "utils.h"
 #include "error.h"
 #include "collector.h"
+#include "specs.h"
 
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
@@ -752,7 +753,7 @@ static void clean_resources_on_failure(const container_t *cont, const char *engi
     return;
 }
 
-static int renew_oci_config(const container_t *cont, const oci_runtime_spec *oci_spec)
+static int update_process_user(const container_t *cont, const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
     defs_process_user *puser = NULL;
@@ -768,6 +769,26 @@ static int renew_oci_config(const container_t *cont, const oci_runtime_spec *oci
 
 out:
     free_defs_process_user(puser);
+    return ret;
+}
+
+static int renew_oci_config(const container_t *cont, oci_runtime_spec *oci_spec)
+{
+    int ret = 0;
+
+    ret = update_process_user(cont, oci_spec);
+    if (ret != 0) {
+        ERROR("Failed to update process user");
+        goto out;
+    }
+
+    ret = merge_share_namespace(oci_spec, cont->hostconfig);
+    if (ret != 0) {
+        ERROR("Failed to merge share ns");
+        goto out;
+    }
+
+out:
     return ret;
 }
 
@@ -991,12 +1012,6 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
     if (gc_is_gc_progress(cont->common_config->id)) {
         isulad_set_error_message("You cannot start container %s in garbage collector progress.", cont->common_config->id);
         ERROR("You cannot start container %s in garbage collector progress.", cont->common_config->id);
-        ret = -1;
-        goto out;
-    }
-
-    if (container_initialize_networking(cont) != 0) {
-        ERROR("Failed to initialize networking");
         ret = -1;
         goto out;
     }
