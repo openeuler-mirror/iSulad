@@ -2311,6 +2311,14 @@ out:
     return ret;
 }
 
+int destination_compare(const void *p1, const void *p2)
+{
+    defs_mount *mount_1 = *(defs_mount **)p1;
+    defs_mount *mount_2 = *(defs_mount **)p2;
+
+    return strcmp(mount_1->destination, mount_2->destination);
+}
+
 int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
                       container_config_v2_common_config *v2_spec)
 {
@@ -2378,6 +2386,8 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
             goto out;
         }
     }
+
+    qsort(oci_spec->mounts, oci_spec->mounts_len, sizeof(oci_spec->mounts[0]), destination_compare);
 
 out:
     return ret;
