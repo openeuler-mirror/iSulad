@@ -78,8 +78,6 @@ typedef struct plugin_manager {
     map_t *eps;                         /* watch_event:plugins */
 } plugin_manager_t;
 
-plugin_manager_t *g_plugin_manager;
-
 /*
  * init at isulad start, scan and init/sync all plugins
  */
