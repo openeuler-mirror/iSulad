@@ -1397,3 +1397,87 @@ char *isula_utils_read_file(const char *path)
     (void)fclose(fp);
     return buf;
 }
+
+static char *get_random_tmp_file(const char *fname)
+{
+#define RANDOM_TMP_PATH 10
+    int nret = 0;
+    char *result = NULL;
+    char *base = NULL;
+    char *dir = NULL;
+    char rpath[PATH_MAX] = { 0x00 };
+    char random_tmp[RANDOM_TMP_PATH + 1] = { 0x00 };
+
+    base = util_path_base(fname);
+    if (base == NULL) {
+        ERROR("Failed to get base of %s", fname);
+        goto out;
+    }
+
+    dir = util_path_dir(fname);
+    if (dir == NULL) {
+        ERROR("Failed to get dir of %s", fname);
+        goto out;
+    }
+
+    if (util_generate_random_str(random_tmp, (size_t)RANDOM_TMP_PATH)) {
+        ERROR("Failed to generate random str for random path");
+        goto out;
+    }
+
+    nret = snprintf(rpath, PATH_MAX, ".tmp-%s-%s", base, random_tmp);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to generate tmp base file");
+        goto out;
+    }
+
+    result = util_path_join(dir, rpath);
+
+out:
+    free(base);
+    free(dir);
+    return result;
+}
+
+int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode)
+{
+    int ret = 0;
+    char *tmp_file = NULL;
+    char rpath[PATH_MAX] = { 0x00 };
+
+    if (fname == NULL) {
+        return -1;
+    }
+    if (content == NULL || content_len == 0) {
+        return 0;
+    }
+
+    if (cleanpath(fname, rpath, sizeof(rpath)) == NULL) {
+        return -1;
+    }
+
+    tmp_file = get_random_tmp_file(fname);
+    if (tmp_file == NULL) {
+        ERROR("Failed to get tmp file for %s", fname);
+        ret = -1;
+        goto free_out;
+    }
+
+    ret = util_write_file(tmp_file, content, content_len, mode);
+    if (ret != 0) {
+        ERROR("Failed to write content to tmp file for %s", tmp_file);
+        ret = -1;
+        goto free_out;
+    }
+
+    ret = rename(tmp_file, rpath);
+    if (ret != 0) {
+        ERROR("Failed to rename old file %s to target %s", tmp_file, rpath);
+        ret = -1;
+        goto free_out;
+    }
+
+free_out:
+    free(tmp_file);
+    return ret;
+}

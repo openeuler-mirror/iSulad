@@ -127,7 +127,7 @@ protected:
     }
 
     std::vector<std::string> ids { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
-                                   "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
+        "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
     char real_path[PATH_MAX] = { 0x00 };
 };
 
@@ -316,9 +316,9 @@ TEST_F(StorageImagesUnitTest, test_image_store_wipe)
         ASSERT_TRUE(dirExists((std::string(real_path) + "/overlay-images/" + elem).c_str()));
     }
 
-     ASSERT_EQ(image_store_wipe(), 0);
+    ASSERT_EQ(image_store_wipe(), 0);
 
-     for (auto elem : ids) {
+    for (auto elem : ids) {
         ASSERT_FALSE(image_store_exists(elem.c_str()));
         ASSERT_FALSE(dirExists((std::string(real_path) + "/overlay-images/" + elem).c_str()));
     }

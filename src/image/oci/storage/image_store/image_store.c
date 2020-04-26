@@ -897,7 +897,7 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
     }
 
     bret = (!time->has_seconds && !time->has_nanos) ? get_now_time_buffer(timebuffer, sizeof(timebuffer)) :
-                                                      get_time_buffer(time, timebuffer, sizeof(timebuffer));
+           get_time_buffer(time, timebuffer, sizeof(timebuffer));
     if (!bret) {
         ERROR("Failed to get time buffer");
         ret = -1;

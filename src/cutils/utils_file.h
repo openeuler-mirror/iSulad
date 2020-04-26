@@ -96,6 +96,8 @@ typedef bool (*subdir_callback_t)(const char *, const struct dirent *);
 
 int util_scan_subdirs(const char *directory, subdir_callback_t cb);
 
+int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode);
+
 #ifdef __cplusplus
 }
 #endif
