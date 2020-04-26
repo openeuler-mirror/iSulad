@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide image functions
  ******************************************************************************/
+
 #include "driver.h"
 
 #include <stdlib.h>
@@ -33,6 +34,8 @@ static struct graphdriver *g_graphdriver = NULL;
 
 /* overlay2 */
 #define DRIVER_OVERLAY2_NAME "overlay2"
+#define DRIVER_OVERLAY_NAME "overlay"
+
 static const struct graphdriver_ops g_overlay2_ops = {
     .init = overlay2_init,
     .create_rw = overlay2_create_rw,
@@ -56,7 +59,8 @@ static const struct graphdriver_ops g_devmapper_ops = {
 };
 
 static struct graphdriver g_drivers[] = {
-    {.name = DRIVER_OVERLAY2_NAME, .ops = &g_overlay2_ops},
+    {.name = DRIVER_OVERLAY2_NAME,  .ops = &g_overlay2_ops},
+    {.name = DRIVER_OVERLAY_NAME,   .ops = &g_overlay2_ops},
     {.name = DRIVER_DEVMAPPER_NAME, .ops = &g_devmapper_ops}
 };
 
@@ -96,17 +100,6 @@ int graphdriver_init(struct storage_module_init_options *opts)
         ret = -1;
         goto out;
     }
-
-    //just for test
-    struct driver_create_opts test_create_opts = { 0 };
-    struct driver_mount_opts test_mount_opts = { 0 };
-    graphdriver_create_ro("1", "", &test_create_opts);
-    graphdriver_create_ro("2", "1", &test_create_opts);
-    graphdriver_create_ro("3", "2", &test_create_opts);
-    graphdriver_create_ro("4", "3", &test_create_opts);
-    graphdriver_create_rw("5", "4", &test_create_opts);
-    ERROR("mount: %s", graphdriver_mount_layer("5", &test_mount_opts));
-    //end test
 
 out:
     return ret;
