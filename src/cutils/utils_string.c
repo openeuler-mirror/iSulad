@@ -789,7 +789,7 @@ bool util_has_prefix(const char *str, const char *prefix)
         return false;
     }
 
-    if (strcmp(str, prefix)) {
+    if (strncmp(str, prefix, strlen(prefix))) {
         return false;
     }
 
