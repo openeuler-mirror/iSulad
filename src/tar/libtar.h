@@ -29,7 +29,6 @@
 extern "C" {
 #endif
 
-#define GZIPHEADERLEN 3
 #define ARCHIVE_BLOCK_SIZE (32 * 1024)
 
 struct archive_copy_info {

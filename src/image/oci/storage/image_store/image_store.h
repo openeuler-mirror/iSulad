@@ -36,7 +36,7 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
                                   const types_timestamp_t *time, const char *searchable_digest);
 
 // Attempt to translate a name to an ID.  Most methods do this implicitly.
-const char *image_store_lookup(const char *id);
+char *image_store_lookup(const char *id);
 
 // Remove the record of the image.
 int image_store_delete(const char *id);
@@ -75,13 +75,13 @@ char *image_store_big_data(const char *id, const char *key);
 int64_t image_store_big_data_size(const char *id, const char *key);
 
 // Retrieves the digest of a (potentially large) piece of data associated with this ID, if it has previously been set.
-const char *image_store_big_data_digest(const char *id, const char *key);
+char *image_store_big_data_digest(const char *id, const char *key);
 
 // Returns a list of the names of previously-stored pieces of data.
 int image_store_big_data_names(const char *id, char ***names, size_t *names_len);
 
 // Reads metadata associated with an item with the specified ID.
-const char *image_store_metadata(const char *id);
+char *image_store_metadata(const char *id);
 
 // Return a slice enumerating the known images.
 int image_store_get_all_images(storage_image ***images, size_t *len);

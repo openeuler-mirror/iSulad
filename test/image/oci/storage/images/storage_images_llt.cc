@@ -13,6 +13,7 @@
  * Description: provide oci storage images unit test
  ******************************************************************************/
 #include "image_store.h"
+#include <cstring>
 #include <iostream>
 #include <algorithm>
 #include <tuple>
@@ -23,6 +24,7 @@
 #include <sys/stat.h>
 #include <gtest/gtest.h>
 #include "path.h"
+#include "storage.h"
 
 std::string GetDirectory()
 {
@@ -42,7 +44,7 @@ std::string GetDirectory()
     return static_cast<std::string>(abs_path);
 }
 
-bool dirExists(const char* path)
+bool dirExists(const char *path)
 {
     DIR *dp = NULL;
     if ((dp = opendir(path)) == NULL) {
@@ -109,19 +111,22 @@ class StorageImagesUnitTest : public testing::Test {
 protected:
     void SetUp() override
     {
+        struct storage_module_init_options opts;
         std::string dir = GetDirectory() + "/data";
 
         ASSERT_STRNE(cleanpath(dir.c_str(), real_path, sizeof(real_path)), nullptr);
-        ASSERT_EQ(new_image_store(real_path), 0);
+        opts.storage_root = strdup(real_path);
+        ASSERT_EQ(image_store_init(&opts), 0);
+        free(opts.storage_root);
     }
+
     void TearDown() override
     {
     }
-    std::vector<std::string> ids {
-        "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
-        "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b"
-    };
-    char real_path[PATH_MAX] = {0x00};
+
+    std::vector<std::string> ids { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
+                                   "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
+    char real_path[PATH_MAX] = { 0x00 };
 };
 
 TEST_F(StorageImagesUnitTest, test_images_load)
@@ -139,7 +144,8 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_EQ(image->big_data_sizes->len, 2);
     ASSERT_STREQ(image->big_data_sizes->keys[0], "manifest");
     ASSERT_EQ(image->big_data_sizes->values[0], 741);
-    ASSERT_STREQ(image->big_data_sizes->keys[1], "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
+    ASSERT_STREQ(image->big_data_sizes->keys[1],
+                 "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
     ASSERT_EQ(image->big_data_sizes->values[1], 2235);
     ASSERT_EQ(image->big_data_digests->len, 2);
     ASSERT_STREQ(image->big_data_digests->keys[0],
@@ -163,7 +169,8 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_STREQ(image->big_data_names[0], "sha256:e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b");
     ASSERT_STREQ(image->big_data_names[1], "manifest");
     ASSERT_EQ(image->big_data_sizes->len, 2);
-    ASSERT_STREQ(image->big_data_sizes->keys[0], "sha256:e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b");
+    ASSERT_STREQ(image->big_data_sizes->keys[0],
+                 "sha256:e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b");
     ASSERT_EQ(image->big_data_sizes->values[0], 1497);
     ASSERT_STREQ(image->big_data_sizes->keys[1], "manifest");
     ASSERT_EQ(image->big_data_sizes->values[1], 527);
@@ -195,19 +202,19 @@ TEST_F(StorageImagesUnitTest, test_images_load)
 ******************************************************************************************/
 TEST_F(StorageImagesUnitTest, test_image_store_create)
 {
-    std::string id {"50551ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10"};
-    const char *names[2] = {"hello_world:latest", "euleros:3.1"};
-    std::string layer {"9994458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a"};
-    std::string metadata {"{}"};
-    types_timestamp_t time {0x00};
-    std::string searchableDigest {"manifest"};
-    auto created_image = image_store_create(id.c_str(), names, sizeof(names) / sizeof(names[0]),
-                                            layer.c_str(), metadata.c_str(), &time, searchableDigest.c_str());
+    std::string id { "50551ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10" };
+    const char *names[2] = { "hello_world:latest", "euleros:3.1" };
+    std::string layer { "9994458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a" };
+    std::string metadata { "{}" };
+    types_timestamp_t time { 0x00 };
+    // std::string searchableDigest {"manifest"};
+    auto created_image = image_store_create(id.c_str(), names, sizeof(names) / sizeof(names[0]), layer.c_str(),
+                                            metadata.c_str(), &time, nullptr);
     ASSERT_NE(created_image, nullptr);
 
     auto image = image_store_get_image(id.c_str());
     ASSERT_NE(image, nullptr);
-    ASSERT_STREQ(image->digest, "manifest");
+    // ASSERT_STREQ(image->digest, "manifest");
     ASSERT_EQ(image->names_len, 2);
     ASSERT_STREQ(image->names[0], "euleros:3.1");
     ASSERT_STREQ(image->names[1], "hello_world:latest");
@@ -223,10 +230,10 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
 TEST_F(StorageImagesUnitTest, test_image_store_lookup)
 {
-    std::string id {"e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b"};
+    std::string id { "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
     std::string name { "rnd-dockerhub.huawei.com/official/busybox:latest" };
-    std::string truncatedId {"e4db68de4ff27"};
-    std::string incorrectId {"4db68de4ff27"};
+    std::string truncatedId { "e4db68de4ff27" };
+    std::string incorrectId { "4db68de4ff27" };
 
     ASSERT_STREQ(image_store_lookup(name.c_str()), id.c_str());
     ASSERT_STREQ(image_store_lookup(truncatedId.c_str()), id.c_str());
@@ -235,10 +242,10 @@ TEST_F(StorageImagesUnitTest, test_image_store_lookup)
 
 TEST_F(StorageImagesUnitTest, test_image_store_exists)
 {
-    std::string id {"39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10"};
+    std::string id { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10" };
     std::string name { "rnd-dockerhub.huawei.com/official/centos:latest" };
-    std::string truncatedId {"398"};
-    std::string incorrectId {"ff67da98ab8540d713209"};
+    std::string truncatedId { "398" };
+    std::string incorrectId { "ff67da98ab8540d713209" };
 
     ASSERT_TRUE(image_store_exists(name.c_str()));
     ASSERT_TRUE(image_store_exists(truncatedId.c_str()));
@@ -247,7 +254,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_exists)
 
 TEST_F(StorageImagesUnitTest, test_image_store_metadata)
 {
-    std::string incorrectId {"ff67da98ab8540d713209"};
+    std::string incorrectId { "ff67da98ab8540d713209" };
 
     for (auto elem : ids) {
         ASSERT_STREQ(image_store_metadata(elem.c_str()), "{}");
@@ -256,7 +263,6 @@ TEST_F(StorageImagesUnitTest, test_image_store_metadata)
     ASSERT_EQ(image_store_metadata(incorrectId.c_str()), nullptr);
 }
 
-// int image_store_get_all_images(storage_image ***images, size_t *len);
 TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
 {
     storage_image **images = NULL;
@@ -273,4 +279,48 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
         images[i] = NULL;
     }
     free(images);
+}
+
+TEST_F(StorageImagesUnitTest, test_image_store_delete)
+{
+    std::string backup = std::string(real_path) + ".bak";
+    std::string command = "cp -r " + std::string(real_path) + " " + backup;
+    std::string rm_command = "rm -rf " + std::string(real_path);
+    std::string undo_command = "mv " + backup + " " + std::string(real_path);
+    ASSERT_EQ(system(command.c_str()), 0);
+
+    for (auto elem : ids) {
+        ASSERT_TRUE(image_store_exists(elem.c_str()));
+        ASSERT_TRUE(dirExists((std::string(real_path) + "/overlay-images/" + elem).c_str()));
+        ASSERT_EQ(image_store_delete(elem.c_str()), 0);
+        ASSERT_FALSE(image_store_exists(elem.c_str()));
+        ASSERT_FALSE(dirExists((std::string(real_path) + "/overlay-images/" + elem).c_str()));
+    }
+
+    ASSERT_EQ(system(rm_command.c_str()), 0);
+    ASSERT_EQ(system(undo_command.c_str()), 0);
+}
+
+TEST_F(StorageImagesUnitTest, test_image_store_wipe)
+{
+    std::string backup = std::string(real_path) + ".bak";
+    std::string command = "cp -r " + std::string(real_path) + " " + backup;
+    std::string rm_command = "rm -rf " + std::string(real_path);
+    std::string undo_command = "mv " + backup + " " + std::string(real_path);
+    ASSERT_EQ(system(command.c_str()), 0);
+
+    for (auto elem : ids) {
+        ASSERT_TRUE(image_store_exists(elem.c_str()));
+        ASSERT_TRUE(dirExists((std::string(real_path) + "/overlay-images/" + elem).c_str()));
+    }
+
+     ASSERT_EQ(image_store_wipe(), 0);
+
+     for (auto elem : ids) {
+        ASSERT_FALSE(image_store_exists(elem.c_str()));
+        ASSERT_FALSE(dirExists((std::string(real_path) + "/overlay-images/" + elem).c_str()));
+    }
+
+    ASSERT_EQ(system(rm_command.c_str()), 0);
+    ASSERT_EQ(system(undo_command.c_str()), 0);
 }

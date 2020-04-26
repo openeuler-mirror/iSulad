@@ -14,6 +14,7 @@
  ******************************************************************************/
 #include "image_store.h"
 #include <sys/types.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <linux/limits.h>
 #include <libgen.h>
@@ -30,7 +31,7 @@
 // the name of the big data item whose contents we consider useful for computing a "digest" of the
 // image, by which we can locate the image later.
 #define IMAGE_DIGEST_BIG_DATA_KEY "manifest"
-#define IMAGE_NAME_LEN            64
+#define IMAGE_NAME_LEN 64
 
 typedef struct file_locker {
     // key: string  value: struct flock
@@ -146,7 +147,7 @@ static int append_image_by_image_directory(const char *image_dir, storage_image 
 {
     int ret = 0;
     int nret;
-    char image_path[PATH_MAX] = {0x00};
+    char image_path[PATH_MAX] = { 0x00 };
     storage_image *tmp_image = NULL;
     parser_error err = NULL;
 
@@ -184,7 +185,7 @@ static int get_images_from_json(image_store_t *image_store, storage_image ***ima
     size_t image_dirs_num = 0;
     size_t i;
     char *id_patten = "^[a-f0-9]{64}$";
-    char image_path[PATH_MAX] = {0x00};
+    char image_path[PATH_MAX] = { 0x00 };
 
     ret = util_list_all_subdir(image_store->dir, &image_dirs);
     if (ret != 0) {
@@ -301,8 +302,8 @@ out:
 int save_image(image_store_t *image_store, storage_image *image)
 {
     int ret = 0;
-    char image_path[PATH_MAX] = {0x00};
-    char image_dir[PATH_MAX] = {0x00};
+    char image_path[PATH_MAX] = { 0x00 };
+    char image_dir[PATH_MAX] = { 0x00 };
     parser_error err = NULL;
     char *json_data = NULL;
 
@@ -410,8 +411,8 @@ static int implicit_digest(storage_image *image, map_t *digests)
         return 0;
     }
 
-    if (get_index_by_key((const char **)image->big_data_digests->keys,
-                         image->big_data_digests->len, IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
+    if (get_index_by_key((const char **)image->big_data_digests->keys, image->big_data_digests->len,
+                         IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
         return 0;
     }
 
@@ -439,8 +440,8 @@ static int explicit_digest(storage_image *image, map_t *digests)
         return 0;
     }
 
-    if (get_index_by_key((const char **)image->big_data_digests->keys,
-                         image->big_data_digests->len, IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
+    if (get_index_by_key((const char **)image->big_data_digests->keys, image->big_data_digests->len,
+                         IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
         value = image->big_data_digests->values[index];
     }
 
@@ -461,8 +462,8 @@ static int explicit_digest(storage_image *image, map_t *digests)
     return 0;
 }
 
-static int load_image_to_image_store_field(image_store_t *image_store, storage_image *image,
-                                           map_t *ids, map_t *names, map_t *digests)
+static int load_image_to_image_store_field(image_store_t *image_store, storage_image *image, map_t *ids, map_t *names,
+                                           map_t *digests)
 {
     int ret = 0;
     bool should_save = false;
@@ -603,9 +604,16 @@ static int image_store_load(image_store_t *image_store)
 
 int image_store_init(struct storage_module_init_options *opts)
 {
+#define IMAGE_STORAGE_PATH "overlay-images"
     int ret = 0;
     image_store_t *store = NULL;
-    char *dir = NULL;// todo gipath := filepath.Join(s.graphRoot, driverPrefix+"images")
+    char dir[PATH_MAX] = { 0x00 };
+
+    ret = snprintf(dir, sizeof(dir), "%s/%s", opts->storage_root, IMAGE_STORAGE_PATH);
+    if (ret < 0 || ret >= sizeof(dir)) {
+        ERROR("Failed to compose image store directory");
+        return ret;
+    }
 
     ret = util_mkdir_p(dir, IMAGE_STORE_PATH_MODE);
     if (ret < 0) {
@@ -774,8 +782,8 @@ static storage_image *copy_image(const storage_image *src)
         dst->metadata = util_strdup_s(src->metadata);
     }
 
-    if (dup_array_of_strings((const char **)src->big_data_names, src->big_data_names_len,
-                             &(dst->big_data_names), &(dst->big_data_names_len)) != 0) {
+    if (dup_array_of_strings((const char **)src->big_data_names, src->big_data_names_len, &(dst->big_data_names),
+                             &(dst->big_data_names_len)) != 0) {
         ERROR("Failed to dup big-data names");
         ret = -1;
         goto out;
@@ -860,9 +868,8 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
         goto out;
     }
 
-    bret = (!time->has_seconds && !time->has_nanos) ?
-           get_now_time_buffer(timebuffer, sizeof(timebuffer)) :
-           get_time_buffer(time, timebuffer, sizeof(timebuffer));
+    bret = (!time->has_seconds && !time->has_nanos) ? get_now_time_buffer(timebuffer, sizeof(timebuffer)) :
+                                                      get_time_buffer(time, timebuffer, sizeof(timebuffer));
     if (!bret) {
         ERROR("Failed to get time buffer");
         ret = -1;
@@ -1012,9 +1019,9 @@ static storage_image *lookup(const char *id)
     return NULL;
 }
 
-const char *image_store_lookup(const char *id)
+char *image_store_lookup(const char *id)
 {
-    storage_image * image = NULL;
+    storage_image *image = NULL;
 
     if (g_image_store == NULL || id == NULL) {
         return NULL;
@@ -1026,7 +1033,7 @@ const char *image_store_lookup(const char *id)
         return NULL;
     }
 
-    return image->id;
+    return util_strdup_s(image->id);
 }
 
 static const char *get_value_from_json_map_string_string(json_map_string_string *map, const char *key)
@@ -1045,8 +1052,7 @@ static const char *get_value_from_json_map_string_string(json_map_string_string 
     return NULL;
 }
 
-static digest_image_t *digest_image_slice_without_value(digest_image_t *digest_filter_images,
-                                                        storage_image *image)
+static digest_image_t *digest_image_slice_without_value(digest_image_t *digest_filter_images, storage_image *image)
 {
     size_t i, index;
     digest_image_t *pruned_images = NULL;
@@ -1157,29 +1163,6 @@ int image_store_delete(const char *id)
         }
     }
 
-    for (i = 0; i < g_image_store->images_len; i++) {
-        if (strcmp(image_id, g_image_store->images[i]->id) == 0) {
-            to_delete_index = i;
-        }
-    }
-
-    if (to_delete_index != SIZE_MAX) {
-        for (i = to_delete_index; i < g_image_store->images_len; i++) {
-            if (i + 1 < g_image_store->images_len) {
-                g_image_store->images[i] = g_image_store->images[i + 1];
-            }
-        }
-
-        old_size = g_image_store->images_len * sizeof(storage_image *);
-        new_size = old_size - sizeof(storage_image *);
-        if (mem_realloc((void **)&tmp_images, new_size, (void *)g_image_store->images, old_size) != 0) {
-            ERROR("Out of memory");
-            return -1;
-        }
-        g_image_store->images = tmp_images;
-        g_image_store->images_len--;
-    }
-
     digest = get_value_from_json_map_string_string(image->big_data_digests, IMAGE_DIGEST_BIG_DATA_KEY);
     if (digest != NULL && remove_image_from_digest_index(g_image_store, image, digest) != 0) {
         ERROR("Failed to remove the image from the digest-based index");
@@ -1189,6 +1172,41 @@ int image_store_delete(const char *id)
     if (image->digest != NULL && remove_image_from_digest_index(g_image_store, image, image->digest) != 0) {
         ERROR("Failed to remove the image from the digest-based index");
         return -1;
+    }
+
+    for (i = 0; i < g_image_store->images_len; i++) {
+        if (strcmp(image_id, g_image_store->images[i]->id) == 0) {
+            to_delete_index = i;
+        }
+    }
+
+    if (to_delete_index != SIZE_MAX) {
+        storage_image *to_delete_image = g_image_store->images[to_delete_index];
+
+        for (i = to_delete_index; i < g_image_store->images_len; i++) {
+            if (i + 1 < g_image_store->images_len) {
+                g_image_store->images[i] = g_image_store->images[i + 1];
+            }
+        }
+
+        ERROR("Uriel C delete image: %s", to_delete_image->id);
+        if (g_image_store->images_len > 1) {
+            free_storage_image(to_delete_image);
+            old_size = g_image_store->images_len * sizeof(storage_image *);
+            new_size = old_size - sizeof(storage_image *);
+
+            if (mem_realloc((void **)&tmp_images, new_size, (void *)g_image_store->images, old_size) != 0) {
+                ERROR("Out of memory");
+                return -1;
+            }
+            g_image_store->images = tmp_images;
+            g_image_store->images_len--;
+        } else {
+            free_storage_image(g_image_store->images[0]);
+            g_image_store->images[0] = NULL;
+            free(g_image_store->images);
+            g_image_store->images_len = 0;
+        }
     }
 
     if (get_data_dir(g_image_store, id, image_path, sizeof(image_path)) != 0) {
@@ -1223,7 +1241,7 @@ int image_store_wipe()
 
     for (; map_itor_valid(itor); map_itor_next(itor)) {
         const char *id = map_itor_key(itor);
-        if (tmp_id == NULL) {
+        if (id == NULL) {
             ERROR("Failed to get key from map");
             ret = -1;
             goto out;
@@ -1262,7 +1280,7 @@ static char *make_big_data_base_name(const char *key)
 {
 #define MAX_BIG_DATA_BASE_NAME_LEN 100
     int ret = 0;
-    char encode_name[MAX_BIG_DATA_BASE_NAME_LEN] = {0x00};
+    char encode_name[MAX_BIG_DATA_BASE_NAME_LEN] = { 0x00 };
     char *base_name = NULL;
     size_t name_size;
 
@@ -1294,14 +1312,12 @@ out:
     return base_name;
 }
 
-
-static int get_data_path(image_store_t *g_image_store,
-                         const char *id, const char *key, char *path, size_t len)
+static int get_data_path(image_store_t *g_image_store, const char *id, const char *key, char *path, size_t len)
 {
     int ret = 0;
     int nret = 0;
     char *data_base_name = NULL;
-    char data_dir[PATH_MAX] = {0x00};
+    char data_dir[PATH_MAX] = { 0x00 };
 
     data_base_name = make_big_data_base_name(key);
 
@@ -1320,7 +1336,6 @@ static int get_data_path(image_store_t *g_image_store,
 out:
     free(data_base_name);
     return ret;
-
 }
 
 static bool get_value_from_json_map_string_int64(json_map_string_int64 *map, const char *key, int64_t *value)
@@ -1410,7 +1425,6 @@ static int update_image_with_big_data(storage_image *image, const char *key, con
         append_json_map_string_int64(image->big_data_sizes, key, (int64_t)strlen(data));
     }
 
-
     if (image->big_data_digests == NULL) {
         image->big_data_digests = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
         if (image->big_data_digests == NULL) {
@@ -1477,8 +1491,8 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
     int ret = 0;
     storage_image *image = NULL;
     const char *image_id = NULL;
-    char image_dir[PATH_MAX] = {0x00};
-    char big_data_file[PATH_MAX] = {0x00};
+    char image_dir[PATH_MAX] = { 0x00 };
+    char big_data_file[PATH_MAX] = { 0x00 };
     bool save = false;
 
     if (key == NULL || strlen(key) == 0) {
@@ -1488,7 +1502,8 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
 
     if (!is_read_write()) {
         ERROR("called a write method on a read-only store, "
-              "not allowed to save data items associated with images at %s", g_image_store->dir);
+              "not allowed to save data items associated with images at %s",
+              g_image_store->dir);
         return -1;
     }
 
@@ -1736,7 +1751,8 @@ int image_store_set_metadata(const char *id, const char *metadata)
 
     if (!is_read_write()) {
         ERROR("called a write method on a read-only store, "
-              "not allowed to modify image metadata at %s", g_image_store->dir);
+              "not allowed to modify image metadata at %s",
+              g_image_store->dir);
         return -1;
     }
 
@@ -1755,7 +1771,7 @@ out:
     return ret;
 }
 
-int image_store_set_load_time(const char *id,  const types_timestamp_t *time)
+int image_store_set_load_time(const char *id, const types_timestamp_t *time)
 {
     int ret = 0;
     storage_image *image = NULL;
@@ -1763,7 +1779,8 @@ int image_store_set_load_time(const char *id,  const types_timestamp_t *time)
 
     if (!is_read_write()) {
         ERROR("called a write method on a read-only store, "
-              "not allowed to modify image metadata at %s", g_image_store->dir);
+              "not allowed to modify image metadata at %s",
+              g_image_store->dir);
         return -1;
     }
 
@@ -1820,7 +1837,7 @@ char *image_store_big_data(const char *id, const char *key)
     const char *image_id = NULL;
     size_t filesize;
     char *content = NULL;
-    char filename[PATH_MAX] = {0x00};
+    char filename[PATH_MAX] = { 0x00 };
 
     if (key == NULL || strlen(key) == 0) {
         ERROR("not a valid name for a big data item, can't retrieve image big data value for empty name");
@@ -1894,7 +1911,7 @@ out:
     return -1;
 }
 
-const char *image_store_big_data_digest(const char *id, const char *key)
+char *image_store_big_data_digest(const char *id, const char *key)
 {
     storage_image *image = NULL;
     const char *digest = NULL;
@@ -1913,7 +1930,7 @@ const char *image_store_big_data_digest(const char *id, const char *key)
 
     digest = get_value_from_json_map_string_string(image->big_data_digests, key);
     if (digest != NULL) {
-        return digest;
+        return util_strdup_s(digest);
     }
 
     data = image_store_big_data(id, key);
@@ -1931,7 +1948,7 @@ const char *image_store_big_data_digest(const char *id, const char *key)
 
         digest = get_value_from_json_map_string_string(image->big_data_digests, key);
         if (digest != NULL) {
-            return digest;
+            return util_strdup_s(digest);
         }
     }
 
@@ -1958,7 +1975,7 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
     return 0;
 }
 
-const char *image_store_metadata(const char *id)
+char *image_store_metadata(const char *id)
 {
     storage_image *image = NULL;
 
@@ -1968,7 +1985,7 @@ const char *image_store_metadata(const char *id)
         return NULL;
     }
 
-    return image->metadata;
+    return util_strdup_s(image->metadata);
 }
 
 int image_store_get_all_images(storage_image ***images, size_t *len)

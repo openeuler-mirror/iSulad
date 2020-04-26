@@ -31,7 +31,6 @@
 #include "utils.h"
 #include "sha256.h"
 #include "path.h"
-#include "libtar.h"
 
 bool util_dir_exists(const char *path)
 {
