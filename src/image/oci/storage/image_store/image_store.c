@@ -12,6 +12,7 @@
  * Create: 2020-03-13
  * Description: provide image store functions
  ******************************************************************************/
+#define _GNU_SOURCE
 #include "image_store.h"
 #include <sys/types.h>
 #include <stdio.h>
@@ -32,6 +33,7 @@
 // image, by which we can locate the image later.
 #define IMAGE_DIGEST_BIG_DATA_KEY "manifest"
 #define IMAGE_NAME_LEN 64
+#define IMAGE_JSON "images.json"
 
 typedef struct file_locker {
     // key: string  value: struct flock
@@ -113,7 +115,7 @@ static void image_store_digest_field_kvfree(void *key, void *value)
 
 static int get_image_path(image_store_t *image_store, const char *id, char *path, size_t len)
 {
-    int nret = snprintf(path, len, "%s/%s/image.json", image_store->dir, id);
+    int nret = snprintf(path, len, "%s/%s/%s", image_store->dir, id, IMAGE_JSON);
 
     return (nret < 0 || (size_t)nret >= len) ? -1 : 0;
 }
@@ -151,7 +153,7 @@ static int append_image_by_image_directory(const char *image_dir, storage_image 
     storage_image *tmp_image = NULL;
     parser_error err = NULL;
 
-    nret = snprintf(image_path, sizeof(image_path), "%s/%s", image_dir, "image.json");
+    nret = snprintf(image_path, sizeof(image_path), "%s/%s", image_dir, IMAGE_JSON);
     if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
         ERROR("Failed to get image path");
         return -1;
@@ -331,13 +333,13 @@ int save_image(image_store_t *image_store, storage_image *image)
 
     json_data = storage_image_generate_json(image, NULL, &err);
     if (json_data == NULL) {
-        ERROR("Failed to generate images.json string:%s", err ? err : " ");
+        ERROR("Failed to generate image json path string:%s", err ? err : " ");
         ret = -1;
         goto out;
     }
 
     if (save_file(image_path, json_data, CONFIG_FILE_MODE) != 0) {
-        ERROR("Failed to save images.json file");
+        ERROR("Failed to save image json file");
         ret = -1;
         goto out;
     }
@@ -602,23 +604,47 @@ static int image_store_load(image_store_t *image_store)
     return load_helper(image_store);
 }
 
+
+static char *get_image_store_root_path(const struct storage_module_init_options *opts)
+{
+    int nret = 0;
+    char *root_dir = NULL;
+
+    if (opts == NULL) {
+        return NULL;
+    }
+
+    if (opts->storage_root == NULL || opts->driver_name == NULL) {
+        ERROR("Invalid argument");
+        return NULL;
+    }
+
+    nret = asprintf(&root_dir, "%s/%s-images", opts->storage_root, opts->driver_name);
+    if (nret < 0 || nret > PATH_MAX) {
+        SYSERROR("Create root path failed");
+        free(root_dir);
+        root_dir = NULL;
+    }
+
+    return root_dir;
+}
+
 int image_store_init(struct storage_module_init_options *opts)
 {
-#define IMAGE_STORAGE_PATH "overlay-images"
     int ret = 0;
     image_store_t *store = NULL;
-    char dir[PATH_MAX] = { 0x00 };
+    char *root_dir = NULL;
 
-    ret = snprintf(dir, sizeof(dir), "%s/%s", opts->storage_root, IMAGE_STORAGE_PATH);
-    if (ret < 0 || ret >= sizeof(dir)) {
-        ERROR("Failed to compose image store directory");
+    root_dir = get_image_store_root_path(opts);
+    if (root_dir == NULL) {
         return ret;
     }
 
-    ret = util_mkdir_p(dir, IMAGE_STORE_PATH_MODE);
+    ret = util_mkdir_p(root_dir, IMAGE_STORE_PATH_MODE);
     if (ret < 0) {
-        ERROR("Unable to create image store directory %s.", dir);
-        return ret;
+        ERROR("Unable to create image store directory %s.", root_dir);
+        ret = -1;
+        goto out;
     }
 
     store = (image_store_t *)util_common_calloc_s(sizeof(image_store_t));
@@ -628,7 +654,8 @@ int image_store_init(struct storage_module_init_options *opts)
         goto out;
     }
 
-    store->dir = util_strdup_s(dir);
+    store->dir = root_dir;
+    root_dir = NULL;
     store->images = NULL;
     store->images_len = 0;
     store->idindex = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, image_store_field_kvfree);
@@ -673,6 +700,7 @@ int image_store_init(struct storage_module_init_options *opts)
 
 out:
     free_image_store(store);
+    free(root_dir);
     return ret;
 }
 
@@ -840,7 +868,7 @@ storage_image *image_store_create(const char *id, const char **names, size_t nam
     }
 
     if (!is_read_write()) {
-        ERROR("not allowed to create new images at %s/images.json", g_image_store->dir);
+        ERROR("not allowed to create new images at %s/%s", g_image_store->dir, IMAGE_JSON);
         return NULL;
     }
 
@@ -1139,7 +1167,7 @@ int image_store_delete(const char *id)
     char image_path[PATH_MAX] = { 0x00 };
 
     if (!is_read_write()) {
-        ERROR("not allowed to create new images at %s/images.json", g_image_store->dir);
+        ERROR("not allowed to create new images at %s/%s", g_image_store->dir, IMAGE_JSON);
         return -1;
     }
 
@@ -1189,7 +1217,6 @@ int image_store_delete(const char *id)
             }
         }
 
-        ERROR("Uriel C delete image: %s", to_delete_image->id);
         if (g_image_store->images_len > 1) {
             free_storage_image(to_delete_image);
             old_size = g_image_store->images_len * sizeof(storage_image *);

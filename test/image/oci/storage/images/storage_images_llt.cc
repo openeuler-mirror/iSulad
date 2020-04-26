@@ -116,8 +116,10 @@ protected:
 
         ASSERT_STRNE(cleanpath(dir.c_str(), real_path, sizeof(real_path)), nullptr);
         opts.storage_root = strdup(real_path);
+        opts.driver_name = strdup("overlay");
         ASSERT_EQ(image_store_init(&opts), 0);
         free(opts.storage_root);
+        free(opts.driver_name);
     }
 
     void TearDown() override
