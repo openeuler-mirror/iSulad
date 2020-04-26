@@ -92,7 +92,7 @@ struct graphdriver {
     struct overlay_options *overlay_opts;
 };
 
-int graphdriver_init(struct storage_module_init_options *opts);
+int graphdriver_init(const struct storage_module_init_options *opts);
 
 int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts);
 

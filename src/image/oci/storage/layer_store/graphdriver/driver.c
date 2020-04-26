@@ -66,7 +66,7 @@ static struct graphdriver g_drivers[] = {
 
 static const size_t g_numdrivers = sizeof(g_drivers) / sizeof(struct graphdriver);
 
-int graphdriver_init(struct storage_module_init_options *opts)
+int graphdriver_init(const struct storage_module_init_options *opts)
 {
     int ret = 0;
     size_t i = 0;

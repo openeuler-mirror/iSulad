@@ -147,6 +147,11 @@ static bool init_from_conf(const struct storage_module_init_options *conf)
         SYSERROR("Create root path failed");
         goto free_out;
     }
+
+    nret = graphdriver_init(conf);
+    if (nret != 0) {
+        goto free_out;
+    }
     g_root_dir = tmp_path;
     tmp_path = NULL;
 
@@ -711,6 +716,19 @@ out:
     return ret;
 }
 
+static int apply_diff(const char *id, const struct io_read_wrapper *diff)
+{
+    int64_t size = 0;
+    int ret = 0;
+
+
+    ret = graphdriver_apply_diff(id, diff, &size);
+
+    INFO("Apply layer get size: %lld", size);
+
+    return ret;
+}
+
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *diff,
                        char **new_id)
 {
@@ -771,11 +789,16 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     }
 
     // TODO: write diff data
-    goto clear_memory;
+    ret = apply_diff(lid, diff);
+    if (ret != 0) {
+        goto clear_memory;
+    }
 
     ret = save_layer(l);
     if (ret == 0) {
         DEBUG("create layer success");
+        *new_id = lid;
+        lid = NULL;
         goto free_out;
     }
     ERROR("Save layer failed");
