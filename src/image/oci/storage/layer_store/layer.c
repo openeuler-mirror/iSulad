@@ -146,9 +146,8 @@ int save_layer(layer_t *layer)
         ERROR("Marsh layer failed: %s", jerr);
         goto out;
     }
-    //TODO: use atom write file
-    ret = util_write_file(layer->layer_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE);
 
+    ret = util_atomic_write_file(layer->layer_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE);
 out:
     free(jstr);
     free(jerr);
@@ -170,9 +169,8 @@ int save_mount_point(layer_t *layer)
         ERROR("Marsh mount point failed: %s", jerr);
         goto out;
     }
-    //TODO: use atom write file
-    ret = util_write_file(layer->mount_point_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE);
 
+    ret = util_atomic_write_file(layer->mount_point_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE);
 out:
     free(jstr);
     free(jerr);
