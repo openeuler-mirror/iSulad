@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2018-11-08
  * Description: provide image functions
@@ -60,16 +60,16 @@ int ext_prepare_rf(const im_prepare_request *request, char **real_rootfs)
     }
 
     if (real_rootfs != NULL) {
-        if (request->image_name != NULL) {
+        if (request->rootfs != NULL) {
             char real_path[PATH_MAX] = { 0 };
-            if (request->image_name[0] != '/') {
+            if (request->rootfs[0] != '/') {
                 ERROR("Rootfs should be absolutely path");
                 isulad_set_error_message("Rootfs should be absolutely path");
                 return -1;
             }
-            if (realpath(request->image_name, real_path) == NULL) {
-                ERROR("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
-                isulad_set_error_message("Failed to clean rootfs path '%s': %s", request->image_name, strerror(errno));
+            if (realpath(request->rootfs, real_path) == NULL) {
+                ERROR("Failed to clean rootfs path '%s': %s", request->rootfs, strerror(errno));
+                isulad_set_error_message("Failed to clean rootfs path '%s': %s", request->rootfs, strerror(errno));
                 return -1;
             }
             *real_rootfs = util_strdup_s(real_path);
@@ -128,15 +128,15 @@ int ext_merge_conf(const host_config *host_spec, container_config *container_spe
     }
 
     // No config neeed merge if NULL.
-    if (request->ext_config_image == NULL) {
+    if (request->image_name == NULL) {
         ret = 0;
         goto out;
     }
 
     // Get image's config and merge configs.
-    resolved_name = oci_resolve_image_name(request->ext_config_image);
+    resolved_name = oci_resolve_image_name(request->image_name);
     if (resolved_name == NULL) {
-        ERROR("Resolve external config image name failed, image name is %s", request->ext_config_image);
+        ERROR("Resolve external config image name failed, image name is %s", request->image_name);
         ret = -1;
         goto out;
     }

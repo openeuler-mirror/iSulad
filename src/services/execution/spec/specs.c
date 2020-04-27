@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
  * Description: provide container specs functions
@@ -1378,10 +1378,10 @@ out:
     return ret;
 }
 
-static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const char *mode, const char *type)
+static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const char *path, const char *type)
 {
     int ret = -1;
-    char *tmp_mode = NULL;
+    char *ns_path = NULL;
     size_t len = 0;
     size_t org_len = 0;
     size_t i = 0;
@@ -1391,13 +1391,17 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
     len = oci_spec->linux->namespaces_len;
     work_ns = oci_spec->linux->namespaces;
 
-    tmp_mode = get_share_namespace_path(type, mode);
+    ret = get_share_namespace_path(type, path, &ns_path);
+    if (ret != 0) {
+        ERROR("Failed to get share ns type:%s path:%s", type, path);
+        goto out;
+    }
     for (i = 0; i < org_len; i++) {
         if (strcmp(type, work_ns[i]->type) == 0) {
             free(work_ns[i]->path);
             work_ns[i]->path = NULL;
-            if (tmp_mode != NULL) {
-                work_ns[i]->path = util_strdup_s(tmp_mode);
+            if (ns_path != NULL) {
+                work_ns[i]->path = util_strdup_s(ns_path);
             }
             break;
         }
@@ -1423,14 +1427,14 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
             goto out;
         }
         work_ns[len]->type = util_strdup_s(type);
-        if (tmp_mode != NULL) {
-            work_ns[len]->path = util_strdup_s(tmp_mode);
+        if (ns_path != NULL) {
+            work_ns[len]->path = util_strdup_s(ns_path);
         }
         len++;
     }
     ret = 0;
 out:
-    free(tmp_mode);
+    free(ns_path);
     if (work_ns != NULL) {
         oci_spec->linux->namespaces = work_ns;
         oci_spec->linux->namespaces_len = len;
@@ -1438,16 +1442,16 @@ out:
     return ret;
 }
 
-static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const char *mode, const char *type)
+static int merge_share_single_namespace(const oci_runtime_spec *oci_spec, const char *path, const char *type)
 {
-    if (mode == NULL) {
+    if (path == NULL) {
         return 0;
     }
 
-    return merge_share_namespace_helper(oci_spec, mode, type);
+    return merge_share_namespace_helper(oci_spec, path, type);
 }
 
-static int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec)
+int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = -1;
 
@@ -1600,11 +1604,6 @@ static int merge_resources_conf(oci_runtime_spec *oci_spec, host_config *host_sp
                                 container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
-
-    ret = merge_share_namespace(oci_spec, host_spec);
-    if (ret != 0) {
-        goto out;
-    }
 
     ret = merge_conf_cgroup(oci_spec, host_spec);
     if (ret != 0) {

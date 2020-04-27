@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2018-11-1
  * Description: provide container utils functions
@@ -406,6 +406,34 @@ bool util_valid_digest(const char *digest)
     }
 
     return util_reg_match(patten, digest) == 0;
+}
+
+bool util_valid_tag(const char *tag)
+{
+    char *patten = "^[a-f0-9]{64}$";
+
+    if (tag == NULL) {
+        ERROR("invalid NULL param");
+        return false;
+    }
+
+    if (strlen(tag) >= strlen(SHA256_PREFIX) && !strncasecmp(tag, SHA256_PREFIX, strlen(SHA256_PREFIX))) {
+        ERROR("tag must not prefixed with \"sha256:\"");
+        return false;
+    }
+
+    // cannot specify 64-byte hexadecimal strings
+    if (util_reg_match(patten, tag) == 0) {
+        ERROR("cannot specify 64-byte hexadecimal strings");
+        return false;
+    }
+
+    if (!util_valid_image_name(tag)) {
+        ERROR("Not a valid image name");
+        return false;
+    }
+
+    return true;
 }
 
 bool util_valid_file(const char *path, uint32_t fmod)

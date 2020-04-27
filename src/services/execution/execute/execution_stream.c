@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
  * Description: provide container stream callback function definition
@@ -542,6 +542,7 @@ static int exec_container(container_t *cont, const char *runtime, char * const c
     params.suffix = request->suffix;
     params.state = cont->state_path;
     params.spec = process_spec;
+    params.attach_stdin = request->attach_stdin;
 
     if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
         ERROR("Runtime exec container failed");
@@ -607,8 +608,8 @@ static int container_exec_cb_check(const container_exec_request *request, contai
 }
 
 static int exec_prepare_console(container_t *cont, const container_exec_request *request, int stdinfd,
-                                struct io_write_wrapper *stdout_handler, char **fifos,
-                                char **fifopath, int *sync_fd, pthread_t *thread_id)
+                                struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
+                                char **fifos, char **fifopath, int *sync_fd, pthread_t *thread_id)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
@@ -628,7 +629,7 @@ static int exec_prepare_console(container_t *cont, const container_exec_request 
             goto out;
         }
         if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr,
-                               stdinfd, stdout_handler, NULL, (const char **)fifos, thread_id)) {
+                               stdinfd, stdout_handler, stderr_handler, (const char **)fifos, thread_id)) {
             ret = -1;
             goto out;
         }
@@ -729,7 +730,7 @@ out:
 }
 
 static int container_exec_cb(const container_exec_request *request, container_exec_response **response,
-                             int stdinfd, struct io_write_wrapper *stdout_handler)
+                             int stdinfd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler)
 {
     int exit_code = 0;
     int sync_fd = -1;
@@ -801,7 +802,8 @@ static int container_exec_cb(const container_exec_request *request, container_ex
         }
     }
 
-    if (exec_prepare_console(cont, request, stdinfd, stdout_handler, fifos, &fifopath, &sync_fd, &thread_id)) {
+    if (exec_prepare_console(cont, request, stdinfd, stdout_handler, stderr_handler, fifos, &fifopath, &sync_fd,
+                             &thread_id)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }

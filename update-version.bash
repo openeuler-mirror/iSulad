@@ -1,13 +1,13 @@
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
-# - iSulad licensed under the Mulan PSL v1.
-# - You can use this software according to the terms and conditions of the Mulan PSL v1.
-# - You may obtain a copy of Mulan PSL v1 at:
-# -     http://license.coscl.org.cn/MulanPSL
+# - iSulad licensed under the Mulan PSL v2.
+# - You can use this software according to the terms and conditions of the Mulan PSL v2.
+# - You may obtain a copy of Mulan PSL v2 at:
+# -     http://license.coscl.org.cn/MulanPSL2
 # - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
 # - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
 # - PURPOSE.
-# - See the Mulan PSL v1 for more details.
+# - See the Mulan PSL v2 for more details.
 ##- @Description: generate cetification
 ##- @Author: wujing
 ##- @Create: 2019-04-25
@@ -17,6 +17,7 @@
 # ./update-version.bash
 topDir=$(git rev-parse --show-toplevel)
 specfile="${topDir}/iSulad.spec"
+Cmakefile="${topDir}/CMakeLists.txt"
 Version_CMakefile="${topDir}/cmake/options.cmake"
 old_version=$(cat ${specfile} | grep "%global" | grep "_version" | awk  {'print $3'})
 first_old_version=$(cat ${specfile} | grep "%global" | grep "_version" | awk  {'print $3'} | awk -F "." {'print $1'})
@@ -49,6 +50,7 @@ commit_id=${commit_id_long:0:8}
 new_release=`date "+%Y%m%d"`.`date "+%H%M%S"`.git$commit_id
 echo "The relase version  has been modified, it is ${new_release}"
 sed -i "s/set(ISULAD_VERSION \"${old_version}\")/set(ISULAD_VERSION \"${new_version}\")/g" ${Version_CMakefile}
+sed -i "s/^.*set(GIT_COMMIT_HASH.*$/set(GIT_COMMIT_HASH \"${commit_id_long}\")/g" ${Cmakefile}
 sed -i "s/^\%global _version ${old_version}$/\%global _version ${new_version}/g" ${specfile}
 sed -i "s/^\%global _release ${old_release}$/\%global _release ${new_release}/g" ${specfile}
 

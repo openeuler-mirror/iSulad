@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: wujing
  * Create: 2018-11-1
  * Description: provide health check functions
@@ -516,7 +516,8 @@ void *health_check_run(void *arg)
     char **cmd_slice = NULL;
     char output[REV_BUF_SIZE] = { 0 };
     char timebuffer[TIME_STR_SIZE] = { 0 };
-    struct io_write_wrapper ctx = { 0 };
+    struct io_write_wrapper Stdoutctx = { 0 };
+    struct io_write_wrapper Stderrctx = { 0 };
     container_t *cont = NULL;
     service_callback_t *cb = NULL;
     container_exec_request *container_req = NULL;
@@ -556,10 +557,12 @@ void *health_check_run(void *arg)
         ERROR("Out of memory");
         goto out;
     }
-    container_req->tty = false;
+
+    // Set tty to true, compatible with busybox
+    container_req->tty = true;
     container_req->attach_stdin = false;
     container_req->attach_stdout = true;
-    container_req->attach_stderr = false;
+    container_req->attach_stderr = true;
     container_req->timeout = timeout_with_default(config->health_check->timeout, DEFAULT_PROBE_TIMEOUT) / Time_Second;
     container_req->container_id = util_strdup_s(cont->common_config->id);
     container_req->argv = cmd_slice;
@@ -575,10 +578,13 @@ void *health_check_run(void *arg)
     }
     result->start = util_strdup_s(timebuffer);
 
-    ctx.context = (void *)output;
-    ctx.write_func = write_to_string;
-    ctx.close_func = NULL;
-    ret = cb->container.exec(container_req, &container_res, -1, &ctx);
+    Stdoutctx.context = (void *)output;
+    Stdoutctx.write_func = write_to_string;
+    Stdoutctx.close_func = NULL;
+    Stderrctx.context = (void *)output;
+    Stderrctx.write_func = write_to_string;
+    Stderrctx.close_func = NULL;
+    ret = cb->container.exec(container_req, &container_res, -1, &Stdoutctx, &Stderrctx);
     if (ret != 0) {
         health_check_exec_failed_handle(container_res, result);
     } else {

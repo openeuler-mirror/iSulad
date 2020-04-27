@@ -1,13 +1,13 @@
 /******************************************************************************
 * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
 * Author: liuhao
 * Create: 2019-07-12
 * Description: provide isula connect command definition
@@ -64,6 +64,44 @@ int copy_image_digests_metadata(const isula::Image &gimage, struct image_metadat
     return 0;
 }
 
+static int copy_image_health_check_config(const isula::Image &gimage, struct image_metadata *metadata)
+{
+    int ret = 0;
+    defs_health_check *health_check = nullptr;
+
+    if (!gimage.has_healthcheck()) {
+        return 0;
+    }
+
+    health_check = (defs_health_check *)util_common_calloc_s(sizeof(defs_health_check));
+    if (health_check == nullptr) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    health_check->test = (char **)util_common_calloc_s(gimage.healthcheck().test_size() * sizeof(char *));
+    if (health_check->test == nullptr) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    for (int i {0}; i < gimage.healthcheck().test_size(); i++) {
+        health_check->test[i] = util_strdup_s(gimage.healthcheck().test(i).c_str());
+    }
+    health_check->test_len = gimage.healthcheck().test_size();
+    health_check->interval = (int64_t)gimage.healthcheck().interval();
+    health_check->timeout = (int64_t)gimage.healthcheck().timeout();
+    health_check->retries = (int)gimage.healthcheck().retries();
+    health_check->exit_on_unhealthy = gimage.healthcheck().exit_on_unhealthy();
+
+    metadata->health_check = health_check;
+    health_check = nullptr;
+
+out:
+    free_defs_health_check(health_check);
+    return ret;
+}
+
 int copy_image_metadata(const isula::Image &gimage, struct image_metadata **metadata)
 {
     struct image_metadata *tmp_data = (struct image_metadata *)util_common_calloc_s(sizeof(struct image_metadata));
@@ -105,8 +143,14 @@ int copy_image_metadata(const isula::Image &gimage, struct image_metadata **meta
     if (gimage.has_spec() && !gimage.spec().image().empty()) {
         tmp_data->oci_spec = util_strdup_s(gimage.spec().image().c_str());
     }
+
+    if (copy_image_health_check_config(gimage, tmp_data) != 0) {
+        goto err_out;
+    }
+
     *metadata = tmp_data;
     return 0;
+
 err_out:
     free_image_metadata(tmp_data);
     return -1;
@@ -633,6 +677,62 @@ public:
     }
 };
 
+class ISulaTag : public ClientBase<isula::ImageService, isula::ImageService::Stub, isula_tag_request,
+    isula::TagImageRequest, isula_tag_response, isula::TagImageResponse> {
+public:
+    explicit ISulaTag(void *args) : ClientBase(args)
+    {
+    }
+    ~ISulaTag() = default;
+
+    int request_to_grpc(const isula_tag_request *req, isula::TagImageRequest *grequest) override
+    {
+        if (req == nullptr) {
+            return -1;
+        }
+        if (req->src_name == nullptr || req->src_name->image == nullptr ||
+            req->dest_name == nullptr || req->dest_name->image == nullptr) {
+            return -1;
+        }
+        isula::ImageSpec *src_image = new (std::nothrow) isula::ImageSpec;
+        isula::ImageSpec *dest_image = new (std::nothrow) isula::ImageSpec;
+        if (src_image == nullptr || dest_image == nullptr) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        src_image->set_image(req->src_name->image);
+        dest_image->set_image(req->dest_name->image);
+        grequest->set_allocated_srcname(src_image);
+        grequest->set_allocated_destname(dest_image);
+        return 0;
+    }
+
+    int response_from_grpc(isula::TagImageResponse *gresp, isula_tag_response *resp) override
+    {
+        if (!gresp->errmsg().empty()) {
+            resp->errmsg = util_strdup_s(gresp->errmsg().c_str());
+        }
+        resp->server_errono = gresp->cc();
+        return 0;
+    }
+
+    int check_parameter(const isula::TagImageRequest &req) override
+    {
+        if (req.has_srcname() && !req.srcname().image().empty() &&
+            req.has_destname() && !req.destname().image().empty()) {
+            return 0;
+        }
+        ERROR("Image name is required.");
+        return -1;
+    }
+
+    Status grpc_call(ClientContext *context, const isula::TagImageRequest &req,
+                     isula::TagImageResponse *reply) override
+    {
+        return stub_->TagImage(context, req, reply);
+    }
+};
+
 class ISulaLoad : public ClientBase<isula::ImageService, isula::ImageService::Stub, isula_load_request,
     isula::LoadImageRequest, isula_load_response, isula::LoadImageResponose> {
 public:
@@ -875,6 +975,63 @@ public:
     }
 };
 
+class ISulaStorageMetadata : public
+    ClientBase<isula::ImageService, isula::ImageService::Stub, isula_storage_metadata_request,
+    isula::GraphdriverMetadataRequest, isula_storage_metadata_response, isula::GraphdriverMetadataResponse> {
+public:
+    explicit ISulaStorageMetadata(void *args) : ClientBase(args)
+    {
+    }
+    ~ISulaStorageMetadata() = default;
+
+    int request_to_grpc(const isula_storage_metadata_request *req, isula::GraphdriverMetadataRequest *grequest) override
+    {
+        if (req == nullptr) {
+            isulad_set_error_message("unvalid export request");
+            return -1;
+        }
+        if (req->container_id != nullptr) {
+            grequest->set_name_id(req->container_id);
+        }
+        return 0;
+    }
+
+    int response_from_grpc(isula::GraphdriverMetadataResponse *gresp, isula_storage_metadata_response *resp) override
+    {
+        int metadata_len = gresp->metadata_size();
+        if (metadata_len > 0) {
+            resp->metadata = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+            if (resp->metadata == nullptr) {
+                ERROR("Out of memory");
+                return -1;
+            }
+            for (const auto &iter : gresp->metadata()) {
+                if (append_json_map_string_string(resp->metadata, iter.first.c_str(), iter.second.c_str()) != 0) {
+                    ERROR("Out of memory");
+                    return -1;
+                }
+            }
+        }
+
+        if (!gresp->name().empty()) {
+            resp->name = util_strdup_s(gresp->name().c_str());
+        }
+
+        if (!gresp->errmsg().empty()) {
+            resp->errmsg = util_strdup_s(gresp->errmsg().c_str());
+        }
+        resp->server_errono = gresp->cc();
+
+        return 0;
+    }
+
+    Status grpc_call(ClientContext *context, const isula::GraphdriverMetadataRequest &req,
+                     isula::GraphdriverMetadataResponse *reply) override
+    {
+        return stub_->GraphdriverMetadata(context, req, reply);
+    }
+};
+
 class ISulaContainerFsUsage : public
     ClientBase<isula::ImageService, isula::ImageService::Stub, isula_container_fs_usage_request,
     isula::ContainerFsUsageRequest, isula_container_fs_usage_response, isula::ContainerFsUsageResponse> {
@@ -1040,6 +1197,7 @@ int grpc_isula_image_client_ops_init(isula_image_ops *ops)
 
     ops->pull = container_func<isula_pull_request, isula_pull_response, ISulaImagePull>;
     ops->rmi = container_func<isula_rmi_request, isula_rmi_response, ISulaRmi>;
+    ops->tag = container_func<isula_tag_request, isula_tag_response, ISulaTag>;
     ops->load = container_func<isula_load_request, isula_load_response, ISulaLoad>;
     ops->login = container_func<isula_login_request, isula_login_response, ISulaLogin>;
     ops->logout = container_func<isula_logout_request, isula_logout_response, ISulaLogout>;
@@ -1060,6 +1218,8 @@ int grpc_isula_image_client_ops_init(isula_image_ops *ops)
 
     ops->storage_status = container_func<isula_storage_status_request, isula_storage_status_response,
          ISulaStorageStatus>;
+    ops->storage_metadata = container_func<isula_storage_metadata_request, isula_storage_metadata_response,
+         ISulaStorageMetadata>;
 
     ops->health_check = container_func<isula_health_check_request, isula_health_check_response, ISulaHealthCheck>;
 

@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
  * Description: provide container information callback function definition
@@ -199,8 +199,10 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     struct utsname u;
     im_image_count_request *im_request = NULL;
     char *rootpath = NULL;
+#ifdef ENABLE_OCI_IMAGE
     char *graph_driver = NULL;
     struct graphdriver_status *driver_status = NULL;
+#endif
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -334,8 +336,10 @@ pack_response:
         (*response)->cc = cc;
     }
     free(rootpath);
+#ifdef ENABLE_OCI_IMAGE
     free(graph_driver);
     free_graphdriver_status(driver_status);
+#endif
     free(huge_page_size);
     free(operating_system);
     free_im_image_count_request(im_request);
@@ -1339,6 +1343,17 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
         ret = -1;
         goto out;
     }
+
+#ifdef ENABLE_OCI_IMAGE
+    if (!strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI)) {
+        inspect->graph_driver = graphdriver_get_metadata(cont->common_config->id);
+        if (inspect->graph_driver == NULL) {
+            ret = -1;
+            goto out;
+        }
+    }
+#endif
+
 out:
     *out_inspect = inspect;
     return ret;

@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: lifeng
  * Create: 2018-11-08
  * Description: provide grpc images functions
@@ -47,6 +47,8 @@ public:
 
     Status Delete(ServerContext *context, const DeleteImageRequest *request, DeleteImageResponse *reply) override;
 
+    Status Tag(ServerContext *context, const TagImageRequest *request, TagImageResponse *reply) override;
+
     Status Load(ServerContext *context, const LoadImageRequest *request, LoadImageResponse *reply) override;
 
     Status Inspect(ServerContext *context, const InspectImageRequest *request, InspectImageResponse *reply) override;
@@ -76,6 +78,8 @@ private:
     int image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse);
 
     int image_remove_request_from_grpc(const DeleteImageRequest *grequest, image_delete_image_request **request);
+
+    int image_tag_request_from_grpc(const TagImageRequest *grequest, image_tag_image_request **request);
 
     int image_load_request_from_grpc(const LoadImageRequest *grequest, image_load_image_request **request);
 

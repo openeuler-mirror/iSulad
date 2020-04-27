@@ -1,13 +1,13 @@
 /******************************************************************************
 * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
 * Author: liuhao
 * Create: 2019-07-12
 * Description: provide isula image connect command definition
@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "json_common.h"
+#include "defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +117,8 @@ struct image_metadata {
     char *loaded;
 
     char *oci_spec;
+
+    defs_health_check *health_check;
 };
 
 struct isula_status_request {
@@ -152,6 +155,17 @@ struct isula_rmi_request {
 };
 
 struct isula_rmi_response {
+    char *errmsg;
+    uint32_t cc;
+    uint32_t server_errono;
+};
+
+struct isula_tag_request {
+    struct image_spec *src_name;
+    struct image_spec *dest_name;
+};
+
+struct isula_tag_response {
     char *errmsg;
     uint32_t cc;
     uint32_t server_errono;
@@ -230,6 +244,19 @@ struct isula_storage_status_response {
     uint32_t server_errono;
 };
 
+struct isula_storage_metadata_request {
+    char *container_id;
+};
+
+struct isula_storage_metadata_response {
+    json_map_string_string *metadata;
+    char *name;
+
+    char *errmsg;
+    uint32_t cc;
+    uint32_t server_errono;
+};
+
 struct isula_container_fs_usage_request {
     char *name_id;
 };
@@ -283,6 +310,7 @@ typedef struct {
 
     int (*prepare)(const struct isula_prepare_request *req, struct isula_prepare_response *resp, void *arg);
     int (*remove)(const struct isula_remove_request *req, struct isula_remove_response *resp, void *arg);
+    int (*tag)(const struct isula_tag_request *req, struct isula_tag_response *resp, void *arg);
     int (*mount)(const struct isula_mount_request *req, struct isula_mount_response *resp, void *arg);
     int (*umount)(const struct isula_umount_request *req, struct isula_umount_response *resp, void *arg);
     int (*containers_list)(const struct isula_containers_list_request *req, struct isula_containers_list_response *resp,
@@ -296,6 +324,10 @@ typedef struct {
 
     int (*storage_status)(const struct isula_storage_status_request *req, struct isula_storage_status_response *resp,
                           void *arg);
+
+    int (*storage_metadata)(const struct isula_storage_metadata_request *req,
+                            struct isula_storage_metadata_response *resp,
+                            void *arg);
 
     int (*health_check)(const struct isula_health_check_request *req,
                         struct isula_health_check_response *resp, void *arg);
@@ -316,6 +348,8 @@ void free_isula_prepare_request(struct isula_prepare_request *req);
 void free_isula_prepare_response(struct isula_prepare_response *resp);
 void free_isula_remove_request(struct isula_remove_request *req);
 void free_isula_remove_response(struct isula_remove_response *resp);
+void free_isula_tag_request(struct isula_tag_request *req);
+void free_isula_tag_response(struct isula_tag_response *resp);
 void free_isula_mount_request(struct isula_mount_request *req);
 void free_isula_mount_response(struct isula_mount_response *resp);
 void free_isula_umount_request(struct isula_umount_request *req);
@@ -354,6 +388,8 @@ void free_isula_container_fs_usage_response(struct isula_container_fs_usage_resp
 
 void free_isula_storage_status_request(struct isula_storage_status_request *ptr);
 void free_isula_storage_status_response(struct isula_storage_status_response *ptr);
+
+void free_isula_storage_metadata_response(struct isula_storage_metadata_response *ptr);
 
 void free_isula_health_check_request(struct isula_health_check_request *ptr);
 void free_isula_health_check_response(struct isula_health_check_response *ptr);

@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
  * Description: provide container list callback function definition
@@ -53,6 +53,7 @@
 #include "utils.h"
 #include "error.h"
 #include "collector.h"
+#include "specs.h"
 
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
@@ -256,8 +257,7 @@ static int umount_dev_tmpfs_for_system_container(const container_t *cont)
             return -1;
         }
         if (umount(rootfs_dev_path) < 0 && errno != ENOENT) {
-            ERROR("Failed to umount dev tmpfs: %s, error: %s", rootfs_dev_path, strerror(errno));
-            return -1;
+            WARN("Failed to umount dev tmpfs: %s, error: %s", rootfs_dev_path, strerror(errno));
         }
     }
     return 0;
@@ -699,12 +699,12 @@ out:
     return ret;
 }
 
-static int write_env_to_target_file(const container_t *cont)
+static int write_env_to_target_file(const container_t *cont, const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
     char *env_path = NULL;
 
-    if (cont->hostconfig->env_target_file == NULL || cont->common_config->config == NULL) {
+    if (cont->hostconfig->env_target_file == NULL || oci_spec->process == NULL) {
         return 0;
     }
     env_path = util_path_join(cont->common_config->base_fs, cont->hostconfig->env_target_file);
@@ -713,8 +713,8 @@ static int write_env_to_target_file(const container_t *cont)
         return -1;
     }
     ret = write_env_content(env_path,
-                            (const char **)cont->common_config->config->env,
-                            cont->common_config->config->env_len);
+                            (const char **)oci_spec->process->env,
+                            oci_spec->process->env_len);
     free(env_path);
     return ret;
 }
@@ -753,7 +753,7 @@ static void clean_resources_on_failure(const container_t *cont, const char *engi
     return;
 }
 
-static int renew_oci_config(const container_t *cont, const oci_runtime_spec *oci_spec)
+static int update_process_user(const container_t *cont, const oci_runtime_spec *oci_spec)
 {
     int ret = 0;
     defs_process_user *puser = NULL;
@@ -769,6 +769,26 @@ static int renew_oci_config(const container_t *cont, const oci_runtime_spec *oci
 
 out:
     free_defs_process_user(puser);
+    return ret;
+}
+
+static int renew_oci_config(const container_t *cont, oci_runtime_spec *oci_spec)
+{
+    int ret = 0;
+
+    ret = update_process_user(cont, oci_spec);
+    if (ret != 0) {
+        ERROR("Failed to update process user");
+        goto out;
+    }
+
+    ret = merge_share_namespace(oci_spec, cont->hostconfig);
+    if (ret != 0) {
+        ERROR("Failed to merge share ns");
+        goto out;
+    }
+
+out:
     return ret;
 }
 
@@ -810,11 +830,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto out;
     }
 
-    if (write_env_to_target_file(cont) < 0) {
-        ret = -1;
-        goto out;
-    }
-
     if (reset_rm && !reset_restart_manager(cont, true)) {
         ERROR("Failed to reset restart manager");
         isulad_set_error_message("Failed to reset restart manager");
@@ -836,6 +851,11 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     oci_spec = load_oci_config(cont->root_path, id);
     if (oci_spec == NULL) {
         ERROR("Failed to load oci config");
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    if (write_env_to_target_file(cont, oci_spec) < 0) {
         ret = -1;
         goto close_exit_fd;
     }
@@ -992,12 +1012,6 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
     if (gc_is_gc_progress(cont->common_config->id)) {
         isulad_set_error_message("You cannot start container %s in garbage collector progress.", cont->common_config->id);
         ERROR("You cannot start container %s in garbage collector progress.", cont->common_config->id);
-        ret = -1;
-        goto out;
-    }
-
-    if (container_initialize_networking(cont) != 0) {
-        ERROR("Failed to initialize networking");
         ret = -1;
         goto out;
     }
