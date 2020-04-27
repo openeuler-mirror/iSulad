@@ -1,13 +1,13 @@
 // #######################################################################
 // ##- @Copyright (C) Huawei Technologies., Ltd. 2019-2020. All rights reserved.
-// # - iSulad licensed under the Mulan PSL v1.
-// # - You can use this software according to the terms and conditions of the Mulan PSL v1.
-// # - You may obtain a copy of Mulan PSL v1 at:
-// # -     http://license.coscl.org.cn/MulanPSL
+// # - iSulad licensed under the Mulan PSL v2.
+// # - You can use this software according to the terms and conditions of the Mulan PSL v2.
+// # - You may obtain a copy of Mulan PSL v2 at:
+// # -     http://license.coscl.org.cn/MulanPSL2
 // # - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
 // # - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
 // # - PURPOSE.
-// # - See the Mulan PSL v1 for more details.
+// # - See the Mulan PSL v2 for more details.
 // ##- @Description: generate grpc
 // ##- @Author: wujing
 // ##- @Create: 2020-01-26
@@ -78,6 +78,9 @@ service ImageService {
     // get status of graphdriver
     rpc GraphdriverStatus(GraphdriverStatusRequest) returns (GraphdriverStatusResponse) {}
 
+    // get metadata of graphdriver
+    rpc GraphdriverMetadata(GraphdriverMetadataRequest) returns (GraphdriverMetadataResponse) {}
+
     // login registry
     rpc Login(LoginRequest) returns (LoginResponse) {}
     // logout registry
@@ -85,6 +88,9 @@ service ImageService {
 
     // health check service
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
+
+    // Add a tag to the image
+    rpc TagImage(TagImageRequest) returns (TagImageResponse) {}
 }
 
 message HealthCheckRequest {}
@@ -144,6 +150,17 @@ message GraphdriverStatusResponse {
     string status = 1;
     string errmsg = 2;
     uint32 cc = 3;
+}
+
+message GraphdriverMetadataRequest {
+    string name_id = 1;
+}
+
+message GraphdriverMetadataResponse {
+    map<string,string> metadata = 1;
+    string name = 2;
+    string errmsg = 3;
+    uint32 cc = 4;
 }
 
 message ContainerFsUsageRequest {
@@ -412,6 +429,15 @@ message ListImagesRequest {
     bool check = 2;
 }
 
+message HealthCheck {
+    repeated string test = 1;
+    int64 interval = 2;
+    int64 timeout = 3;
+    int64 start_period = 4;
+    int32 retries = 5;
+    bool exit_on_unhealthy = 6;
+}
+
 // Basic information about a container image.
 message Image {
     // ID of the image.
@@ -438,6 +464,9 @@ message Image {
 
     // oci image spec
     ImageSpec spec = 9;
+
+    // Health check
+    HealthCheck healthcheck = 10;
 }
 
 message ListImagesResponse {
@@ -556,4 +585,14 @@ message ImageFsInfoResponse {
 
     string errmsg = 2;
     uint32 cc = 3;
+}
+
+message TagImageRequest {
+    ImageSpec srcName = 1;
+    ImageSpec destName = 2;
+}
+
+message TagImageResponse {
+    string errmsg = 1;
+    uint32 cc = 2;
 }

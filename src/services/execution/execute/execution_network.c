@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
  * Description: provide container network callback function definition
@@ -41,22 +41,37 @@ static int write_hostname_to_file(const char *rootfs, const char *hostname)
 {
     int ret = 0;
     char *file_path = NULL;
+    char *tmp = NULL;
+    char sbuf[MAX_HOST_NAME_LEN] = { 0 };
+
+    if (hostname == NULL) {
+        goto out;
+    }
 
     if (realpath_in_scope(rootfs, "/etc/hostname", &file_path) < 0) {
         SYSERROR("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
         isulad_set_error_message("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
-        goto error_out;
+        goto out;
     }
-    if (hostname != NULL) {
-        ret = util_write_file(file_path, hostname, strlen(hostname), NETWORK_MOUNT_FILE_MODE);
-        if (ret) {
-            SYSERROR("Failed to write %s", file_path);
-            isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
-            goto error_out;
+
+    if (util_file_exists(file_path) && util_file2str(file_path, sbuf, sizeof(sbuf)) > 0) {
+        tmp = util_strdup_s(sbuf);
+        (void)util_trim_newline(tmp);
+        tmp = util_trim_space(tmp);
+        if (strcmp("", tmp) != 0 && strcmp("localhost", tmp) != 0) {
+            goto out;
         }
     }
 
-error_out:
+    ret = util_write_file(file_path, hostname, strlen(hostname), NETWORK_MOUNT_FILE_MODE);
+    if (ret) {
+        SYSERROR("Failed to write %s", file_path);
+        isulad_set_error_message("Failed to write %s: %s", file_path, strerror(errno));
+        goto out;
+    }
+
+out:
+    free(tmp);
     free(file_path);
     return ret;
 }
@@ -1027,26 +1042,6 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
     }
 
 out:
-    return ret;
-}
-
-int container_initialize_networking(const container_t *cont)
-{
-    int ret = 0;
-    size_t len = strlen(SHARE_NAMESPACE_PREFIX);
-    container_t *nc = NULL;
-    host_config *hc = cont->hostconfig;
-
-    // is container mode
-    if (is_container(hc->network_mode)) {
-        nc = get_networked_container(cont->common_config->id, hc->network_mode + len, true);
-        if (nc == NULL) {
-            ERROR("Error to get networked container");
-            return -1;
-        }
-    }
-
-    container_unref(nc);
     return ret;
 }
 

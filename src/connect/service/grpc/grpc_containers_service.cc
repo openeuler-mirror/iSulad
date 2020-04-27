@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: lifeng
  * Create: 2018-11-08
  * Description: provide grpc container functions
@@ -616,7 +616,7 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
         return Status::CANCELLED;
     }
 
-    ret = cb->container.exec(container_req, &container_res, -1, nullptr);
+    ret = cb->container.exec(container_req, &container_res, -1, nullptr, nullptr);
     tret = exec_response_to_grpc(container_res, reply);
 
     free_container_exec_request(container_req);
@@ -629,7 +629,7 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
     return Status::OK;
 }
 
-ssize_t WriteExecResponseToRemoteClient(void *context, const void *data, size_t len)
+ssize_t WriteExecStdoutResponseToRemoteClient(void *context, const void *data, size_t len)
 {
     if (context == nullptr || data == nullptr || len == 0) {
         return 0;
@@ -644,11 +644,36 @@ ssize_t WriteExecResponseToRemoteClient(void *context, const void *data, size_t 
     return (ssize_t)len;
 }
 
+ssize_t WriteExecStderrResponseToRemoteClient(void *context, const void *data, size_t len)
+{
+    if (context == nullptr || data == nullptr || len == 0) {
+        return 0;
+    }
+    auto stream = static_cast<ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *>(context);
+    RemoteExecResponse response;
+    response.set_stderr((char *)data, len);
+    if (!stream->Write(response)) {
+        ERROR("Failed to write request to grpc client");
+        return -1;
+    }
+    return (ssize_t)len;
+}
+
 class RemoteExecReceiveFromClientTask : public StoppableThread {
 public:
+    RemoteExecReceiveFromClientTask() = default;
     RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream,
                                     int read_pipe_fd) : m_stream(stream), m_read_pipe_fd(read_pipe_fd) {}
     ~RemoteExecReceiveFromClientTask() = default;
+    void SetStream(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream)
+    {
+        m_stream = stream;
+    }
+
+    void SetReadPipeFd(int read_pipe_fd)
+    {
+        m_read_pipe_fd = read_pipe_fd;
+    }
 
     void run()
     {
@@ -688,44 +713,60 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
 
-    int read_pipe_fd[2] = { -1, -1 };
-    if ((pipe2(read_pipe_fd, O_NONBLOCK | O_CLOEXEC)) < 0) {
-        ERROR("create read pipe(grpc server to lxc pipe) fail!");
-        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
-    }
     std::string errmsg;
     if (remote_exec_request_from_stream(context, &container_req, errmsg) != 0) {
         ERROR("Failed to transform grpc request!");
         return Status(StatusCode::UNKNOWN, errmsg);
     }
 
-    RemoteExecReceiveFromClientTask receive_task(stream, read_pipe_fd[1]);
-    std::thread command_writer([&]() {
-        receive_task.run();
-    });
+    int read_pipe_fd[2] = { -1, -1 };
+    RemoteExecReceiveFromClientTask receive_task;
+    std::thread command_writer;
+    if (container_req->attach_stdin) {
+        if ((pipe2(read_pipe_fd, O_NONBLOCK | O_CLOEXEC)) < 0) {
+            ERROR("create read pipe(grpc server to lxc pipe) fail!");
+            return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+        }
 
-    struct io_write_wrapper stringWriter = { 0 };
-    stringWriter.context = (void *)stream;
-    stringWriter.write_func = WriteExecResponseToRemoteClient;
-    stringWriter.close_func = nullptr;
-    (void)cb->container.exec(container_req, &container_res, read_pipe_fd[0], &stringWriter);
+        receive_task.SetStream(stream);
+        receive_task.SetReadPipeFd(read_pipe_fd[1]);
+        command_writer = std::thread([&]() {
+            receive_task.run();
+        });
+    }
+
+    struct io_write_wrapper StdoutstringWriter = { 0 };
+    StdoutstringWriter.context = (void *)stream;
+    StdoutstringWriter.write_func = WriteExecStdoutResponseToRemoteClient;
+    StdoutstringWriter.close_func = nullptr;
+    struct io_write_wrapper StderrstringWriter = { 0 };
+    StderrstringWriter.context = (void *)stream;
+    StderrstringWriter.write_func = WriteExecStderrResponseToRemoteClient;
+    StderrstringWriter.close_func = nullptr;
+    (void)cb->container.exec(container_req, &container_res, read_pipe_fd[0], &StdoutstringWriter, &StderrstringWriter);
 
     RemoteExecResponse finish_response;
     finish_response.set_finish(true);
 
-    receive_task.stop();
+    if (container_req->attach_stdin) {
+        receive_task.stop();
+    }
 
     if (!stream->Write(finish_response)) {
         ERROR("Failed to write finish request to grpc client");
         return Status(StatusCode::INTERNAL, "Internal errors");
     }
 
-    command_writer.join();
+    if (container_req->attach_stdin) {
+        command_writer.join();
+    }
     add_exec_trailing_metadata(context, container_res);
     free_container_exec_request(container_req);
     free_container_exec_response(container_res);
-    close(read_pipe_fd[0]);
-    close(read_pipe_fd[1]);
+    if (read_pipe_fd[0] != -1) {
+        close(read_pipe_fd[0]);
+        close(read_pipe_fd[1]);
+    }
     return Status::OK;
 }
 

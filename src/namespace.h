@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2018-11-08
  * Description: provide namespace definition
@@ -82,7 +82,7 @@ static inline bool is_shareable(const char *mode)
 }
 
 char *connected_container(const char *mode);
-char *get_share_namespace_path(const char *type, const char *src_path);
+int get_share_namespace_path(const char *type, const char *src_path, char **dest_path);
 char *get_container_process_label(const char *path);
 
 #ifdef __cplusplus

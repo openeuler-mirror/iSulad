@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: lifeng
  * Create: 2018-11-08
  * Description: provide ExecServe functions
@@ -45,10 +45,14 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
         ERROR("Failed to transform grpc request!");
         return -1;
     }
-    struct io_write_wrapper stringWriter = { 0 };
-    stringWriter.context = (void *)wsi;
-    stringWriter.write_func = WsWriteToClient;
-    int ret = cb->container.exec(container_req, &container_res, read_pipe_fd, &stringWriter);
+    struct io_write_wrapper StdoutstringWriter = { 0 };
+    StdoutstringWriter.context = (void *)wsi;
+    StdoutstringWriter.write_func = WsWriteStdoutToClient;
+    struct io_write_wrapper StderrstringWriter = { 0 };
+    StderrstringWriter.context = (void *)wsi;
+    StderrstringWriter.write_func = WsWriteStderrToClient;
+    int ret = cb->container.exec(container_req, &container_res,
+                                 container_req->attach_stdin ? read_pipe_fd : -1, &StdoutstringWriter, &StderrstringWriter);
     if (ret != 0) {
         std::string message;
         if (container_res != nullptr && container_res->errmsg != nullptr) {
@@ -56,11 +60,11 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
         } else {
             message = "Failed to call exec container callback. ";
         }
-        WsWriteToClient(wsi, message.c_str(), message.length());
+        WsWriteStdoutToClient(wsi, message.c_str(), message.length());
     }
     if (container_res != nullptr && container_res->exit_code != 0) {
         std::string exit_info = "Exit code :" + std::to_string((int)container_res->exit_code) + "\n";
-        WsWriteToClient(wsi, exit_info.c_str(), exit_info.length());
+        WsWriteStdoutToClient(wsi, exit_info.c_str(), exit_info.length());
     }
     free_container_exec_request(container_req);
     free_container_exec_response(container_res);

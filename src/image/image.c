@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
  * Description: provide image functions
@@ -62,6 +62,7 @@ static const struct bim_ops g_embedded_ops = {
     .container_fs_usage = embedded_filesystem_usage,
     .get_filesystem_info = NULL,
     .get_storage_status = NULL,
+    .get_storage_metadata = NULL,
     .image_status = NULL,
     .load_image = embedded_load_image,
     .pull_image = NULL,
@@ -70,6 +71,7 @@ static const struct bim_ops g_embedded_ops = {
     .logout = NULL,
 
     .health_check = NULL,
+    .tag_image = NULL,
 };
 #endif
 
@@ -97,6 +99,7 @@ static const struct bim_ops g_isula_ops = {
     .container_fs_usage = isula_container_filesystem_usage,
     .get_filesystem_info = isula_get_filesystem_info,
     .get_storage_status = isula_get_storage_status,
+    .get_storage_metadata = isula_get_storage_metadata,
     .image_status = oci_status_image,
     .load_image = isual_load_image,
     .pull_image = isula_pull_rf,
@@ -104,6 +107,7 @@ static const struct bim_ops g_isula_ops = {
     .logout = isula_logout,
 
     .health_check = isula_health_check,
+    .tag_image = isula_tag,
 };
 #endif
 
@@ -131,12 +135,14 @@ static const struct bim_ops g_ext_ops = {
     .image_status = NULL,
     .get_filesystem_info = NULL,
     .get_storage_status = NULL,
+    .get_storage_metadata = NULL,
     .load_image = ext_load_image,
     .pull_image = NULL,
     .login = ext_login,
     .logout = ext_logout,
 
     .health_check = NULL,
+    .tag_image = NULL,
 };
 
 static const struct bim_type g_bims[] = {
@@ -314,6 +320,36 @@ int im_get_storage_status(const char *image_type, im_storage_status_response **r
     if (ret != 0) {
         ERROR("Get storage status failed");
         free_im_storage_status_response(*response);
+        *response = NULL;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+int im_get_storage_metadata(const char *image_type, char *id, im_storage_metadata_response **response)
+{
+    int ret = -1;
+    const struct bim_type *q = NULL;
+
+    if (image_type == NULL || response == NULL) {
+        ERROR("Image type or response is NULL");
+        goto out;
+    }
+    q = get_bim_by_type(image_type);
+    if (q == NULL) {
+        goto out;
+    }
+    if (q->ops->get_storage_metadata == NULL) {
+        ERROR("Get storage metadata umimplements");
+        goto out;
+    }
+
+    ret = q->ops->get_storage_metadata(id, response);
+    if (ret != 0) {
+        ERROR("Get storage metadata failed");
+        free_im_storage_metadata_response(*response);
         *response = NULL;
         goto out;
     }
@@ -501,8 +537,8 @@ void free_im_prepare_request(im_prepare_request *request)
     request->image_name = NULL;
     free(request->container_id);
     request->container_id = NULL;
-    free(request->ext_config_image);
-    request->ext_config_image = NULL;
+    free(request->rootfs);
+    request->rootfs = NULL;
 
     free_json_map_string_string(request->storage_opt);
     request->storage_opt = NULL;
@@ -673,8 +709,7 @@ bool im_config_image_exist(const char *image_name)
 }
 
 int im_merge_image_config(const char *id, const char *image_type, const char *image_name,
-                          const char *ext_config_image,
-                          host_config *host_spec, container_config *container_spec,
+                          const char *rootfs, host_config *host_spec, container_config *container_spec,
                           char **real_rootfs)
 {
     int ret = 0;
@@ -687,7 +722,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
         goto out;
     }
 
-    bim = bim_get(image_type, image_name, ext_config_image, id);
+    bim = bim_get(image_type, image_name, rootfs, id);
     if (bim == NULL) {
         ERROR("Failed to init bim of image %s", image_name);
         ret = -1;
@@ -706,7 +741,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
     }
     request->container_id = util_strdup_s(id);
     request->image_name = util_strdup_s(image_name);
-    request->ext_config_image = util_strdup_s(ext_config_image);
+    request->rootfs = util_strdup_s(rootfs);
     if (host_spec != NULL) {
         request->storage_opt = host_spec->storage_opt;
     }
@@ -716,7 +751,7 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
     ret = bim->ops->merge_conf(host_spec, container_spec, request, real_rootfs);
     request->storage_opt = NULL;
     if (ret != 0) {
-        ERROR("Failed to merge image %s config, config image is %s", image_name, ext_config_image);
+        ERROR("Failed to merge image %s config", image_name);
         ret = -1;
         goto out;
     }
@@ -1394,6 +1429,68 @@ pack_response:
     return ret;
 }
 
+int im_tag_image(const im_tag_request *request, im_tag_response **response)
+{
+    int ret = -1;
+    char *src_name = NULL;
+    char *dest_name = NULL;
+    const struct bim_type *bim_type = NULL;
+    struct bim *bim = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    *response = util_common_calloc_s(sizeof(im_remove_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (request->src_name.image == NULL || request->dest_name.image == NULL) {
+        ERROR("remove image requires source image ref and dest image ref");
+        isulad_set_error_message("remove image requires source image ref and dest image ref");
+        goto pack_response;
+    }
+
+    src_name = util_strdup_s(request->src_name.image);
+    dest_name = util_strdup_s(request->dest_name.image);
+
+    bim_type = bim_query(src_name);
+    if (bim_type == NULL) {
+        ERROR("No such image:%s", src_name);
+        isulad_set_error_message("No such image:%s", src_name);
+        goto pack_response;
+    }
+
+    bim = bim_get(bim_type->image_type, src_name, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim for image %s", src_name);
+        goto pack_response;
+    }
+    if (bim->ops->tag_image == NULL) {
+        ERROR("Unimplements tag image in %s", bim->type);
+        goto pack_response;
+    }
+
+    ret = bim->ops->tag_image(request);
+    if (ret != 0) {
+        ERROR("Failed to tag image %s to %s", src_name, dest_name);
+        ret = -1;
+        goto pack_response;
+    }
+
+pack_response:
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+    }
+    free(src_name);
+    free(dest_name);
+    bim_put(bim);
+    return ret;
+}
+
 void free_im_remove_request(im_remove_request *ptr)
 {
     if (ptr == NULL) {
@@ -1406,6 +1503,30 @@ void free_im_remove_request(im_remove_request *ptr)
 }
 
 void free_im_remove_response(im_remove_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+
+    free(ptr);
+}
+
+void free_im_tag_request(im_tag_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->src_name.image);
+    ptr->src_name.image = NULL;
+    free(ptr->dest_name.image);
+    ptr->dest_name.image = NULL;
+    free(ptr);
+}
+
+void free_im_tag_response(im_tag_response *ptr)
 {
     if (ptr == NULL) {
         return;
@@ -1800,6 +1921,20 @@ void free_im_storage_status_response(im_storage_status_response *ptr)
     ptr->backing_fs = NULL;
     free(ptr->status);
     ptr->status = NULL;
+    free(ptr);
+}
+
+void free_im_storage_metadata_response(im_storage_metadata_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_json_map_string_string(ptr->metadata);
+    ptr->metadata = NULL;
+    free(ptr->name);
+    ptr->name = NULL;
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
     free(ptr);
 }
 

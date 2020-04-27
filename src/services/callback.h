@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2018-11-08
  * Description: provide container callback definition
@@ -60,6 +60,8 @@
 #include "host_info_response.h"
 #include "image_delete_image_request.h"
 #include "image_delete_image_response.h"
+#include "image_tag_image_request.h"
+#include "image_tag_image_response.h"
 #include "image_load_image_request.h"
 #include "image_load_image_response.h"
 #include "image_inspect_request.h"
@@ -111,7 +113,7 @@ typedef struct {
     int(*list)(const container_list_request *request, container_list_response **response);
 
     int(*exec)(const container_exec_request *request, container_exec_response **response,
-               int stdinfd, struct io_write_wrapper *stdout);
+               int stdinfd, struct io_write_wrapper *stdout, struct io_write_wrapper *stderr);
 
     int(*attach)(const container_attach_request *request, container_attach_response **response,
                  int stdinfd, struct io_write_wrapper *stdout, struct io_write_wrapper *stderr);
@@ -157,6 +159,8 @@ typedef struct {
     int(*login)(const image_login_request *request, image_login_response **response);
 
     int(*logout)(const image_logout_request *request, image_logout_response **response);
+
+    int(*tag)(const image_tag_image_request *request, image_tag_image_response **response);
 } service_image_callback_t;
 
 typedef struct {

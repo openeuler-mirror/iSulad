@@ -1,5 +1,5 @@
 %global _version 2.0.0
-%global _release 20200321.032232.gitaec8336d
+%global _release 20200406.224614.gitd03048c0
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -7,7 +7,7 @@ Name:      iSulad
 Version:   %{_version}
 Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
-License:   Mulan PSL v1
+License:   Mulan PSL v2
 URL:       isulad
 Source:    iSulad-2.0.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}

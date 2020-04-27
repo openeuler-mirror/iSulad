@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: weiwei
  * Create: 2017-11-22
  * Description: provide image function definition
@@ -59,6 +59,12 @@ typedef struct {
 } im_storage_status_response;
 
 typedef struct {
+    json_map_string_string *metadata;
+    char *name;
+    char *errmsg;
+} im_storage_metadata_response;
+
+typedef struct {
     imagetool_fs_info *fs_info;
     char *errmsg;
 } im_fs_info_response;
@@ -96,6 +102,15 @@ typedef struct {
 typedef struct {
     char *errmsg;
 } im_remove_response;
+
+typedef struct {
+    image_spec src_name;
+    image_spec dest_name;
+} im_tag_request;
+
+typedef struct {
+    char *errmsg;
+} im_tag_response;
 
 typedef struct {
     // Spec of the image.
@@ -181,7 +196,7 @@ typedef struct {
 typedef struct {
     char *image_name;
     char *container_id;
-    char *ext_config_image;
+    char *rootfs;
     json_map_string_string *storage_opt;
 } im_prepare_request;
 
@@ -238,6 +253,8 @@ struct bim_ops {
 
     int (*get_storage_status)(im_storage_status_response **response);
 
+    int (*get_storage_metadata)(char *id, im_storage_metadata_response **response);
+
     /* load image */
     int (*load_image)(const im_load_request *request);
 
@@ -252,6 +269,8 @@ struct bim_ops {
 
     /* health check */
     int (*health_check)(void);
+    /* Add a tag to the image */
+    int (*tag_image)(const im_tag_request *request);
 };
 
 struct bim {
@@ -292,8 +311,7 @@ int im_umount_container_rootfs(const char *image_type, const char *image_name, c
 int im_remove_container_rootfs(const char *image_type, const char *container_id);
 
 int im_merge_image_config(const char *id, const char *image_type, const char *image_name,
-                          const char *ext_config_image,
-                          host_config *host_spec, container_config *container_spec,
+                          const char *rootfs, host_config *host_spec, container_config *container_spec,
                           char **real_rootfs);
 
 int im_get_user_conf(const char *image_type, const char *basefs, host_config *hc, const char *userstr,
@@ -310,6 +328,12 @@ int im_rm_image(const im_remove_request *request, im_remove_response **response)
 void free_im_remove_request(im_remove_request *ptr);
 
 void free_im_remove_response(im_remove_response *ptr);
+
+int im_tag_image(const im_tag_request *request, im_tag_response **response);
+
+void free_im_tag_request(im_tag_request *ptr);
+
+void free_im_tag_response(im_tag_response *ptr);
 
 int im_inspect_image(const im_inspect_request *request, im_inspect_response **response);
 
@@ -362,6 +386,10 @@ void free_im_fs_info_response(im_fs_info_response *ptr);
 int im_get_storage_status(const char *image_type, im_storage_status_response **response);
 
 void free_im_storage_status_response(im_storage_status_response *ptr);
+
+int im_get_storage_metadata(const char *image_type, char *id, im_storage_metadata_response **response);
+
+void free_im_storage_metadata_response(im_storage_metadata_response *ptr);
 
 size_t im_get_image_count(const im_image_count_request *request);
 
