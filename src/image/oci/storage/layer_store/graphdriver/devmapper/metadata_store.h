@@ -20,6 +20,8 @@ image_devmapper_device_info *metadata_store_get(const char *hash);
 
 bool metadata_store_remove(const char *hash);
 
+char **metadata_store_list_hashes(void);
+
 
 
 

@@ -47,8 +47,8 @@ struct device_set {
     char *data_loop_file;
     char *metadata_device;
     char *metadata_loop_file;
-    bool do_blk_discard;
     uint32_t thin_block_size;
+    bool do_blk_discard;
     char *thin_pool_device;
 
     image_devmapper_transaction *metadata_trans;

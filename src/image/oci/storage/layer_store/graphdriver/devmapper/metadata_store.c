@@ -89,10 +89,80 @@ bool metadata_store_add(const char *hash, image_devmapper_device_info *device)
 
 image_devmapper_device_info *metadata_store_get(const char *hash)
 {
-    return NULL;
+
+    image_devmapper_device_info *device = NULL;
+
+    if (hash == NULL) {
+        return NULL;
+    }
+    if (pthread_rwlock_rdlock(&g_metadata_store->rwlock) != 0) {
+        ERROR("devmapper:lock memory store failed");
+        return device;
+    }
+    device = map_search(g_metadata_store->map, (void *)hash);
+    if (pthread_rwlock_unlock(&g_metadata_store->rwlock) != 0) {
+        ERROR("devmapper:unlock memory store failed");
+    }
+
+    return device;
 }
 
 bool metadata_store_remove(const char *hash)
 {
-    return true;
+    bool ret = false;
+
+    if (pthread_rwlock_wrlock(&g_metadata_store->rwlock) != 0) {
+        ERROR("devmapper:lock memory store failed");
+        return false;
+    }
+
+    ret = map_remove(g_metadata_store->map, (void *)hash);
+    if (pthread_rwlock_unlock(&g_metadata_store->rwlock) != 0) {
+        ERROR("devmapper:unlock memory store failed");
+        return false;
+    }
+    return ret;
+}
+
+/* metadata store list hashes */
+char **metadata_store_list_hashes(void)
+{
+    bool ret = false;
+    char **hashes_array = NULL;
+    map_itor *itor = NULL;
+
+    if (pthread_rwlock_rdlock(&g_metadata_store->rwlock) != 0) {
+        ERROR("devmapper:lock memory store failed");
+        return NULL;
+    }
+
+    if (map_size(g_metadata_store->map) == 0) {
+        ret = true;
+        goto unlock;
+    }
+
+    itor = map_itor_new(g_metadata_store->map);
+    if (itor == NULL) {
+        ERROR("Out of memory");
+        goto unlock;
+    }
+
+    for (; map_itor_valid(itor); map_itor_next(itor)) {
+        char *id = map_itor_key(itor);
+        if (util_array_append(&hashes_array, id ? id : "-")) {
+            ERROR("Out of memory");
+            goto unlock;
+        }
+    }
+    ret = true;
+unlock:
+    if (pthread_rwlock_unlock(&g_metadata_store->rwlock)) {
+        ERROR("unlock metadata store failed");
+    }
+    map_itor_free(itor);
+    if (!ret) {
+        util_free_array(hashes_array);
+        hashes_array = NULL;
+    }
+    return hashes_array;
 }
