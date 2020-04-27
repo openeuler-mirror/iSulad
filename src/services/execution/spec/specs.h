@@ -1,13 +1,13 @@
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
- * iSulad licensed under the Mulan PSL v1.
- * You can use this software according to the terms and conditions of the Mulan PSL v1.
- * You may obtain a copy of Mulan PSL v1 at:
- *     http://license.coscl.org.cn/MulanPSL
+ * iSulad licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  * Author: maoweiyong
  * Create: 2017-11-22
  * Description: provide specs definition
@@ -40,6 +40,8 @@ int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec
 int parse_security_opt(const host_config *host_spec, bool *no_new_privileges,
                        char ***label_opts, size_t *label_opts_len,
                        char **seccomp_profile);
+
+int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec);
 #ifdef __cplusplus
 }
 #endif
