@@ -7,7 +7,7 @@ Name:      iSulad
 Version:   %{_version}
 Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
-License:   Mulan PSL v1
+License:   Mulan PSL v2
 URL:       isulad
 Source:    iSulad-2.0.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
