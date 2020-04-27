@@ -446,7 +446,7 @@ static int mk_diff_symlink(const char *id, const char *layer_dir, const char *dr
         goto out;
     }
 
-    ret = util_write_file(link_file, layer_id, strlen(layer_id), 0644);
+    ret = util_atomic_write_file(link_file, layer_id, strlen(layer_id), 0644);
     if (ret) {
         SYSERROR("Failed to write %s", link_file);
         ret = -1;
@@ -640,7 +640,7 @@ static int write_lowers(const char *layer_dir, const char *lowers)
         goto out;
     }
 
-    ret = util_write_file(lowers_file, lowers, strlen(lowers), 0666);
+    ret = util_atomic_write_file(lowers_file, lowers, strlen(lowers), 0666);
     if (ret) {
         SYSERROR("Failed to write %s", lowers_file);
         ret = -1;

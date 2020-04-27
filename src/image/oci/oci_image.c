@@ -18,25 +18,7 @@
 #include <semaphore.h>
 
 #include "isula_libutils/log.h"
-#include "isula_image_connect.h"
 #include "isula_image_pull.h"
-#include "isula_rootfs_prepare.h"
-#include "isula_rootfs_remove.h"
-#include "isula_rootfs_mount.h"
-#include "isula_rootfs_umount.h"
-#include "isula_image_rmi.h"
-#include "isula_image_tag.h"
-#include "isula_import.h"
-#include "isula_container_fs_usage.h"
-#include "isula_image_fs_info.h"
-#include "isula_storage_status.h"
-#include "isula_image_load.h"
-#include "isula_container_export.h"
-#include "isula_login.h"
-#include "isula_logout.h"
-#include "isula_images_list.h"
-#include "isula_containers_list.h"
-#include "isula_storage_metadata.h"
 #include "registry.h"
 
 #include "containers_store.h"
@@ -132,8 +114,10 @@ int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
         return -1;
     }
 
-    return isula_rootfs_prepare_and_get_image_conf(request->container_id, request->image_name, request->storage_opt,
-                                                   real_rootfs, NULL);
+    // TODO call storage rootfs prepare interface
+    //return isula_rootfs_prepare_and_get_image_conf(request->container_id, request->image_name, request->storage_opt,
+    //                                              real_rootfs, NULL);
+    return 0;
 }
 
 int oci_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
@@ -147,8 +131,9 @@ int oci_merge_conf_rf(const host_config *host_spec, container_config *container_
         return -1;
     }
 
-    ret = isula_rootfs_prepare_and_get_image_conf(request->container_id, request->image_name, host_spec->storage_opt,
-                                                  real_rootfs, &image);
+    // TODO call storage rootfs prepare interface
+    //ret = isula_rootfs_prepare_and_get_image_conf(request->container_id, request->image_name, host_spec->storage_opt,
+    //                                              real_rootfs, &image);
     if (ret != 0) {
         ERROR("Get prepare rootfs failed of image: %s", request->image_name);
         goto out;
@@ -170,7 +155,10 @@ int oci_delete_rf(const im_delete_request *request)
         ERROR("Request is NULL");
         return -1;
     }
-    return isula_rootfs_remove(request->name_id);
+
+    // TODO call storage rootfs remove interface
+    //return isula_rootfs_remove(request->name_id);
+    return 0;
 }
 
 int oci_mount_rf(const im_mount_request *request)
@@ -179,7 +167,9 @@ int oci_mount_rf(const im_mount_request *request)
         ERROR("Invalid arguments");
         return -1;
     }
-    return isula_rootfs_mount(request->name_id);
+    // TODO call storage rootfs mount interface
+    //return isula_rootfs_mount(request->name_id);
+    return 0;
 }
 
 int oci_umount_rf(const im_umount_request *request)
@@ -188,8 +178,9 @@ int oci_umount_rf(const im_umount_request *request)
         ERROR("Invalid arguments");
         return -1;
     }
-
-    return isula_rootfs_umount(request->name_id, request->force);
+    // TODO call storage rootfs umount interface
+    //return isula_rootfs_umount(request->name_id, request->force);
+    return 0;
 }
 
 int oci_rmi(const im_remove_request *request)
@@ -217,7 +208,8 @@ int oci_rmi(const im_remove_request *request)
     }
     oci_image_lock(image_info);
 
-    ret = isula_image_rmi(real_image_name, request->force, &errmsg);
+    // TODO call storage rootfs rmi interface
+    // ret = isula_image_rmi(real_image_name, request->force, &errmsg);
     if (ret != 0) {
         if (strstr(errmsg, IMAGE_NOT_KNOWN_ERR) != NULL) {
             DEBUG("Image %s may already removed", real_image_name);
@@ -317,7 +309,8 @@ int oci_tag(const im_tag_request *request)
     }
     oci_image_lock(image_info);
 
-    ret = isula_image_tag(src_name, dest_name, &errmsg);
+    // TODO call storage rootfs tag interface
+    // ret = isula_image_tag(src_name, dest_name, &errmsg);
     if (ret != 0) {
         isulad_set_error_message("Failed to tag image with error: %s", errmsg);
         ERROR("Failed to tag image '%s' to '%s' with error: %s", src_name, dest_name, errmsg);
@@ -350,7 +343,8 @@ int oci_container_filesystem_usage(const im_container_fs_usage_request *request,
         return -1;
     }
 
-    ret = isula_container_fs_usage(request->name_id, &output);
+    // TODO call storage container fs interface
+    // ret = isula_container_fs_usage(request->name_id, &output);
     if (ret != 0) {
         ERROR("Failed to inspect container filesystem info");
         goto out;
@@ -382,7 +376,8 @@ int oci_get_filesystem_info(im_fs_info_response **response)
         ERROR("Out of memory");
         return -1;
     }
-    ret = isula_image_fs_info(*response);
+    // TODO call storage image fs interface
+    // ret = isula_image_fs_info(*response);
     if (ret != 0) {
         ERROR("Failed to inspect image filesystem info");
         goto err_out;
@@ -410,7 +405,8 @@ int oci_get_storage_status(im_storage_status_response **response)
         return ret;
     }
 
-    ret = isula_do_storage_status(*response);
+    // TODO call storage image status interface
+    //ret = isula_do_storage_status(*response);
     if (ret != 0) {
         ERROR("Get get storage status failed");
         ret = -1;
@@ -439,7 +435,8 @@ int oci_get_storage_metadata(char *id, im_storage_metadata_response **response)
         return ret;
     }
 
-    ret = isula_do_storage_metadata(id, *response);
+    // TODO call storage metadata status interface
+    //ret = isula_do_storage_metadata(id, *response);
     if (ret != 0) {
         ERROR("Get get storage metadata failed");
         ret = -1;
@@ -465,7 +462,8 @@ int oci_load_image(const im_load_request *request)
         return -1;
     }
 
-    ret = isula_image_load(request->file, request->tag, &refs);
+    // TODO call storage metadata load interface
+    //ret = isula_image_load(request->file, request->tag, &refs);
     if (ret != 0) {
         ERROR("Failed to load image");
         goto out;
@@ -496,7 +494,8 @@ int oci_export_rf(const im_export_request *request)
         return -1;
     }
 
-    ret = isula_container_export(request->name_id, request->file, 0, 0, 0);
+    // TODO call storage export load interface
+    //ret = isula_container_export(request->name_id, request->file, 0, 0, 0);
     if (ret != 0) {
         ERROR("Failed to export container: %s", request->name_id);
     }
@@ -513,7 +512,8 @@ int oci_login(const im_login_request *request)
         return -1;
     }
 
-    ret = isula_do_login(request->server, request->username, request->password);
+    // TODO call storage login load interface
+    //ret = isula_do_login(request->server, request->username, request->password);
     if (ret != 0) {
         ERROR("Login failed");
     }
@@ -530,7 +530,8 @@ int oci_logout(const im_logout_request *request)
         return -1;
     }
 
-    ret = isula_do_logout(request->server);
+    // TODO call storage logout load interface
+    //ret = isula_do_logout(request->server);
     if (ret != 0) {
         ERROR("Logout failed");
     }
@@ -538,101 +539,15 @@ int oci_logout(const im_logout_request *request)
     return ret;
 }
 
-int oci_sync_images(void)
-{
-    int ret = 0;
-    size_t i = 0;
-    im_list_request *im_request = NULL;
-    imagetool_images_list *image_list = NULL;
-    oci_image_t *oci_image = NULL;
-    char *errmsg = NULL;
-
-    im_request = (im_list_request *)util_common_calloc_s(sizeof(im_list_request));
-    if (im_request == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    ret = isula_list_images(im_request, &image_list);
-    if (ret != 0) {
-        ERROR("Get remote images list failed");
-        goto out;
-    }
-
-    for (i = 0; i < image_list->images_len; i++) {
-        oci_image = oci_images_store_get((image_list->images[i])->id);
-        if (oci_image != NULL) {
-            continue;
-        }
-        WARN("Cleanup surplus image: %s in remote", (image_list->images[i])->id);
-        ret = isula_image_rmi((image_list->images[i])->id, true, &errmsg);
-        if (ret != 0) {
-            WARN("Remove image: %s failed: %s", (image_list->images[i])->id, errmsg);
-        }
-        free(errmsg);
-        errmsg = NULL;
-        oci_image_unref(oci_image);
-    }
-
-    ret = 0;
-out:
-    free_im_list_request(im_request);
-    free_imagetool_images_list(image_list);
-    return ret;
-}
-
 static inline void cleanup_container_rootfs(const char *name_id, bool mounted)
 {
-    if (mounted && isula_rootfs_umount(name_id, true) != 0) {
-        WARN("Remove rootfs: %s failed", name_id);
-    }
+    // TODO call storage umount interface
+    //if (mounted && isula_rootfs_umount(name_id, true) != 0) {
+    //    WARN("Remove rootfs: %s failed", name_id);
+    //}
 
-    if (isula_rootfs_remove(name_id) != 0) {
-        WARN("Remove rootfs: %s failed", name_id);
-    }
+    // TODO call storage rootfs rm interface
+    //if (isula_rootfs_remove(name_id) != 0) {
+    //    WARN("Remove rootfs: %s failed", name_id);
+    //}
 }
-
-int oci_sync_containers(void)
-{
-    int ret = 0;
-    size_t i = 0;
-    json_map_string_bool *remote_containers_list = NULL;
-    container_t *cont = NULL;
-
-    ret = isula_list_containers(&remote_containers_list);
-    if (ret != 0) {
-        ERROR("Get remote containers list failed");
-        goto out;
-    }
-
-    if (remote_containers_list == NULL) {
-        goto out;
-    }
-
-    for (i = 0; i < remote_containers_list->len; i++) {
-        cont = containers_store_get(remote_containers_list->keys[i]);
-        // cannot found container in local map, then unmount and remove remote rootfs
-        if (cont == NULL) {
-            WARN("Cleanup surplus container: %s in remote", remote_containers_list->keys[i]);
-            cleanup_container_rootfs(remote_containers_list->keys[i], remote_containers_list->values[i]);
-            continue;
-        }
-
-        // local container is stopped, but remote container is mounted. So unmount it.
-        if (!is_running(cont->state) && remote_containers_list->values[i]) {
-            WARN("Unmount unstarted container: %s", remote_containers_list->keys[i]);
-            ret = isula_rootfs_umount(remote_containers_list->keys[i], true);
-            if (ret != 0) {
-                WARN("Unmount rootfs: %s failed", remote_containers_list->keys[i]);
-            }
-        }
-        container_unref(cont);
-    }
-
-    ret = 0;
-out:
-    free_json_map_string_bool(remote_containers_list);
-    return ret;
-}
-

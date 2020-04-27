@@ -347,6 +347,30 @@ out:
     return ret;
 }
 
+int storage_get_all_images(imagetool_images_list **images)
+{
+    int ret = 0;
+    imagetool_images_list *images_tmp = NULL;
+
+    images_tmp = util_common_calloc_s(sizeof(imagetool_images_list));
+    if (images_tmp == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    //    if (image_store_get_all_images(images_tmp) != 0) {
+    //        ret = -1;
+    //        goto out;
+    //    }
+
+    *images = images_tmp;
+    images_tmp = NULL;
+
+out:
+    free_imagetool_images_list(images_tmp);
+    return ret;
+}
+
 static int check_module_init_opt(struct storage_module_init_options *opts)
 {
     if (opts == NULL || opts->driver_name == NULL || opts->storage_root == NULL || opts->storage_run_root == NULL) {

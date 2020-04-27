@@ -140,22 +140,6 @@ add_subdirectory(services)
 add_subdirectory(image)
 add_subdirectory(runtime)
 
-if (ENABLE_OCI_IMAGE)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/types CONNECT_API_TYPES)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/image_client/ IMAGE_CLIENT_SRCS)
-
-    list(APPEND IMAGE_SRCS
-        ${ISULA_IMAGE_CLIENT_SRCS}
-        ${CONNECT_API_TYPES} ${IMAGE_CLIENT_SRCS}
-        )
-    list(APPEND IMAGE_INCS
-        ${CMAKE_BINARY_DIR}/grpc/src/api/types
-        ${CMAKE_BINARY_DIR}/grpc/src/api/image_client
-        ${GRPC_INCLUDE_DIR}
-        ${ISULA_IMAGE_CLIENT_INCS}
-        )
-endif()
-
 add_subdirectory(engines)
 
 add_subdirectory(plugin)

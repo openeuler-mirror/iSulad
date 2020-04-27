@@ -45,9 +45,6 @@ int oci_get_storage_metadata(char *id, im_storage_metadata_response **response);
 int oci_login(const im_login_request *request);
 int oci_logout(const im_logout_request *request);
 
-int oci_sync_images(void);
-
-int oci_sync_containers(void);
 int oci_tag(const im_tag_request *request);
 #ifdef __cplusplus
 }

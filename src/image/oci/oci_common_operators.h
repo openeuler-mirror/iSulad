@@ -35,7 +35,6 @@ int oci_status_image(im_status_request *request, im_status_response **response);
 int oci_inspect_image(const im_inspect_request *request, char **inspected_json);
 
 imagetool_image *oci_get_image_info_by_name(const char *id);
-int oci_get_all_images(const im_list_request *request, imagetool_images_list **images);
 
 int oci_image_conf_merge_into_spec(const char *image_name, container_config *container_spec);
 

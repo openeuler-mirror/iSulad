@@ -411,8 +411,6 @@ void free_im_export_request(im_export_request *ptr);
 
 int im_resolv_image_name(const char *image_type, const char *image_name, char **resolved_name);
 
-void im_sync_containers_isuladkit(void);
-
 #ifdef __cplusplus
 }
 #endif

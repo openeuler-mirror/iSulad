@@ -365,7 +365,7 @@ static int try_list_oci_images(const char *check_file, imagetool_images_list **a
     im_request->check = need_check;
 
     do {
-        ret = oci_get_all_images(im_request, all_images);
+        ret = storage_get_all_images(all_images);
         if (ret != 0 || *all_images == NULL) {
             list_images_ok = false;
             if (retry_count < max_retry) {
@@ -823,7 +823,7 @@ int oci_image_store_init()
         goto out;
     }
 
-    //ret = load_all_oci_images();
+    ret = load_all_oci_images();
 
 out:
     return ret;

@@ -1962,13 +1962,3 @@ void free_im_storage_metadata_response(im_storage_metadata_response *ptr)
     ptr->errmsg = NULL;
     free(ptr);
 }
-
-void im_sync_containers_isuladkit(void)
-{
-    DEBUG("Sync containers...");
-#ifdef ENABLE_OCI_IMAGE
-    if (oci_sync_containers() != 0) {
-        WARN("Sync containers with remote failed!!");
-    }
-#endif
-}

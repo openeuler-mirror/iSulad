@@ -1400,9 +1400,6 @@ static int start_daemon_threads(char **msg)
 
     containers_restore();
 
-    /* sync containers list with remote */
-    im_sync_containers_isuladkit();
-
     if (start_gchandler()) {
         *msg = "Failed to start garbage collecotor handler";
         goto out;

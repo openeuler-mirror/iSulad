@@ -27,8 +27,6 @@
 #include "specs_extend.h"
 #include "oci_config_merge.h"
 
-#include "isula_image_status.h"
-#include "isula_images_list.h"
 #include "filters.h"
 
 #define DEFAULT_TAG ":latest"
@@ -795,14 +793,11 @@ out:
 
 imagetool_image *oci_get_image_info_by_name(const char *id)
 {
-    return isula_image_get_image_info_by_name(id);
+    // TODO call storage image info
+    // return isula_image_get_image_info_by_name(id);
+    return NULL;
 }
 
-/* call low driver to get images list */
-int oci_get_all_images(const im_list_request *request, imagetool_images_list **images)
-{
-    return isula_list_images(request, images);
-}
 
 int oci_image_conf_merge_into_spec(const char *image_name, container_config *container_spec)
 {

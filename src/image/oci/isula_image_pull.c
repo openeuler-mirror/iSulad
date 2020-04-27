@@ -16,7 +16,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "isula_helper.h"
 #include "oci_images_store.h"
 #include "oci_common_operators.h"
 #include "registry.h"
