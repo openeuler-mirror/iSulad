@@ -75,6 +75,10 @@ char *verify_file_and_get_real_path(const char *file);
 
 int util_copy_file(const char *src_file, const char *dst_file, mode_t mode);
 
+char *util_path_base(const char *path);
+
+int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode);
+
 #ifdef __cplusplus
 }
 #endif
