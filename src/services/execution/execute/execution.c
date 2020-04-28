@@ -1745,6 +1745,39 @@ out:
     return ret;
 }
 
+int umount_residual_shm(const char *mount_info, const char *target)
+{
+    if (strncmp(mount_info, target, strlen(target)) != 0) {
+        return 0;
+    }
+
+    DEBUG("Try to umount: %s", mount_info);
+    if (umount2(mount_info, MNT_DETACH)) {
+        SYSERROR("Failed to umount residual mount: %s", mount_info);
+    }
+
+    return 0;
+}
+
+int cleanup_mounts_by_id(const char *id, const char *engine_root_path)
+{
+    char target[PATH_MAX] = {0};
+    int nret = 0;
+
+    nret = snprintf(target, PATH_MAX, "%s/%s", engine_root_path, id);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Sprintf failed");
+        return -1;
+    }
+
+    if (!util_deal_with_mount_info(umount_residual_shm, target)) {
+        ERROR("Cleanup mounts failed");
+        return -1;
+    }
+
+    return 0;
+}
+
 static int do_cleanup_container_resources(container_t *cont)
 {
     int ret = 0;
@@ -1803,6 +1836,9 @@ static int do_cleanup_container_resources(container_t *cont)
     umount_share_shm(cont);
 
     umount_host_channel(cont->hostconfig->host_channel);
+
+    // clean residual mount points
+    cleanup_mounts_by_id(id, rootpath);
 
     if (do_runtime_rm_helper(id, runtime, rootpath) != 0) {
         ret = -1;

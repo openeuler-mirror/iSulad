@@ -460,8 +460,6 @@ static int save_json_config_file(const char *id, const char *rootpath,
 {
     int ret = 0;
     int nret;
-    int fd = -1;
-    ssize_t len = 0;
     char filename[PATH_MAX] = { 0 };
 
     if (json_data == NULL || strlen(json_data) == 0) {
@@ -474,21 +472,12 @@ static int save_json_config_file(const char *id, const char *rootpath,
         goto out;
     }
 
-    fd = util_open(filename, O_CREAT | O_TRUNC | O_CLOEXEC | O_WRONLY, CONFIG_FILE_MODE);
-    if (fd == -1) {
-        ERROR("Create file %s failed: %s", filename, strerror(errno));
-        isulad_set_error_message("Create file '%s' failed: %s", filename, strerror(errno));
-        ret = -1;
-        goto out;
-    }
-
-    len = util_write_nointr(fd, json_data, strlen(json_data));
-    if (len < 0 || ((size_t)len) != strlen(json_data)) {
+    nret = util_atomic_write_file(filename, json_data, strlen(json_data), CONFIG_FILE_MODE);
+    if (nret != 0) {
         ERROR("Write file %s failed: %s", filename, strerror(errno));
         isulad_set_error_message("Write file '%s' failed: %s", filename, strerror(errno));
         ret = -1;
     }
-    close(fd);
 
 out:
     return ret;
