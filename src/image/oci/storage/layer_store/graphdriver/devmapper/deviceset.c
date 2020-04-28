@@ -767,7 +767,6 @@ static void *start_device_deletion_thread(void *arg)
     bool deferred_delete = devset->deferred_delete;
     uint nr_deleted = devset->nr_deleted_devices;
 
-
     res = pthread_detach(pthread_self());
     if (res != 0) {
         CRIT("Set thread detach fail");
@@ -811,7 +810,7 @@ static int init_metadata(struct device_set *devset, const char *pool_name)
         goto out;
     }
 
-    // TODO: start a thread to cleanup deleted devices
+    // start a thread to cleanup deleted devices
     ret = pthread_create(&device_delete_thread, NULL, start_device_deletion_thread, (void *)devset);
     if (ret != 0) {
         CRIT("Thread creation failed");
@@ -1672,13 +1671,88 @@ free_out:
     return ret;
 }
 
+static void run_mkfs_ext4(void *args)
+{
+    char **tmp_args = (char **)args;
+    size_t CMD_ARGS_NUM = 4;
+
+    if (util_array_len((const char **)tmp_args) != CMD_ARGS_NUM) {
+        COMMAND_ERROR("mkfs.ext4 need four args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static int save_base_device_filesystem(struct device_set *devset, const char *fs)
+{
+    free(devset->base_device_filesystem);
+    devset->base_device_filesystem = util_strdup_s(fs);
+    return save_deviceset_matadata(devset);
+}
+
+static int create_file_system(struct device_set *devset, image_devmapper_device_info *info)
+{
+    int ret = 0;
+    char *dev_fname = NULL;
+    char **args = NULL;
+    char *stdout = NULL;
+    char *stderr = NULL;
+
+    dev_fname = dev_name(devset, info);
+    if (dev_fname == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (!util_valid_str(devset->filesystem)) {
+        free(devset->filesystem);
+        devset->filesystem = util_strdup_s("ext4");
+    }
+
+    ret =  save_base_device_filesystem(devset, devset->filesystem);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // Only support ext4 fs type
+    if (strcmp(devset->filesystem, "ext4") != 0) {
+        ERROR("devmapper: Unsupported filesystem type %s", devset->filesystem);
+        ret = -1;
+        goto out;
+    }
+
+    args = (char **)util_common_calloc_s(sizeof(char *) * 5);
+    if (args == NULL) {
+        ERROR("devmapper: out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    args[0] = util_strdup_s("mkfs.ext4");
+    args[1] = util_strdup_s("-E");
+    args[2] = util_strdup_s("nodiscard,lazy_itable_init=0,lazy_journal_init=0");
+    args[3] = util_strdup_s(dev_fname);
+    if (!util_exec_cmd(run_mkfs_ext4, args, NULL, &stdout, &stderr)) {
+        ERROR("Unexpected command output %s with error: %s", stdout, stderr);
+        ret = -1;
+    }
+
+out:
+    util_free_array(args);
+    UTIL_FREE_AND_SET_NULL(stdout);
+    UTIL_FREE_AND_SET_NULL(stderr);
+    UTIL_FREE_AND_SET_NULL(dev_fname);
+    return ret;
+}
+
 static int create_base_image(struct device_set *devset)
 {
     int ret;
     image_devmapper_device_info *info = NULL;
 
     // create initial device
-    info = create_register_device(devset, "");
+    info = create_register_device(devset, "base");
     if (info == NULL) {
         return -1;
     }
@@ -1691,11 +1765,10 @@ static int create_base_image(struct device_set *devset)
         goto out;
     }
 
-    // TODO:
-    // ret = create_file_system(info);
-    // if (ret != 0) {
-    //     goto out;
-    // }
+    ret = create_file_system(devset, info);
+    if (ret != 0) {
+        goto out;
+    }
 
     info->initialized = true;
 
@@ -1745,12 +1818,6 @@ static int check_thin_pool(struct device_set *devset)
 
     return ret;
 
-}
-
-static int save_base_device_filesystem(struct device_set *devset, const char *fs)
-{
-    devset->base_device_filesystem = util_strdup_s(fs);
-    return save_deviceset_matadata(devset);
 }
 
 static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_device_info *base_info)
@@ -2081,7 +2148,7 @@ static int setup_base_image(struct device_set *devset)
     int ret;
     image_devmapper_device_info *old_info = NULL;
 
-    old_info = lookup_device(devset, "");
+    old_info = lookup_device(devset, "base");
     if (old_info == NULL) {
         ERROR("devmapper: lookup device failed");
         return -1;
@@ -2106,7 +2173,7 @@ static int setup_base_image(struct device_set *devset)
         }
 
         DEBUG("devmapper: Removing uninitialized base image");
-        ret = do_delete_device(devset, "", true);
+        ret = do_delete_device(devset, "base", true);
         if (ret != 0) {
             goto out;
         }
@@ -2225,7 +2292,7 @@ static int do_devmapper_init(struct device_set *devset)
     pool_exist = thin_pool_exists(devset, pool_name);
 
     if (!pool_exist || !util_valid_str(devset->thin_pool_device)) {
-        ERROR("devmapper: thin pool is not exist, please create it firstly");
+        ERROR("devmapper: thin pool is not exist or caller did not pass us a pool, please create it firstly");
         goto out;
     }
 
