@@ -34,12 +34,47 @@
 #include "docker_image_config_v2.h"
 #include "image_manifest_v1_compatibility.h"
 #include "sha256.h"
+#include "map.h"
+#include "linked_list.h"
+#include "pthread.h"
 
 #define MAX_LAYER_NUM 125
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define ROOTFS_TYPE "layers"
+#define MAX_CONCURRENT_DOWNLOAD_NUM 5
 
-static registry_init_options g_options;
+typedef struct {
+    pull_descriptor *desc;
+    size_t index;
+    char *blob_digest;
+    char *file;
+    bool use;
+} thread_fetch_info;
+
+typedef struct {
+    pthread_mutex_t mutex;
+    int result;
+    bool complete;
+    char *diffid;
+    struct linked_list file_list;
+    size_t file_list_len;
+} cached_layer;
+
+typedef struct {
+    // options
+    bool use_decrypted_key;
+    bool skip_tls_verify;
+
+    // Share infomation of downloading layers to avoid downloading the same layer.
+    pthread_mutex_t mutex;
+    bool mutex_inited;
+    pthread_cond_t cond;
+    bool cond_inited;
+    map_t *cached_layers;
+    size_t count;
+} registry_global;
+
+static registry_global *g_shared;
 
 static int parse_manifest_schema1(pull_descriptor *desc)
 {
@@ -260,54 +295,193 @@ static int parse_manifest(pull_descriptor *desc)
     return ret;
 }
 
-static int verify_or_calc_diffid(pull_descriptor *desc)
+static void mutex_lock(pthread_mutex_t *mutex)
+{
+    if (pthread_mutex_lock(mutex)) {
+        ERROR("Failed to lock");
+    }
+}
+
+static void mutex_unlock(pthread_mutex_t *mutex)
+{
+    if (pthread_mutex_unlock(mutex)) {
+        ERROR("Failed to unlock");
+    }
+}
+
+static cached_layer *get_cached_layer(char *blob_digest)
+{
+    return map_search(g_shared->cached_layers, blob_digest);
+}
+
+static void del_cached_layer(char *blob_digest, char *file)
+{
+    cached_layer *cache = NULL;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+
+    cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
+    if (cache == NULL) {
+        return;
+    }
+    if (cache->file_list_len != 0) {
+        linked_list_for_each_safe(item, &(cache->file_list), next) {
+            if (strcmp((char *)item->elem, file)) {
+                linked_list_del(item);
+                free((char *)item->elem);
+                free(item);
+                item = NULL;
+                cache->file_list_len--;
+                break;
+            }
+        }
+    }
+
+    if (cache->file_list_len != 0) {
+        return;
+    }
+
+    if (!map_remove(g_shared->cached_layers, blob_digest)) {
+        ERROR("remove %s from cached layers failed", blob_digest);
+        return;
+    }
+
+    return;
+}
+
+static int add_cached_layer(char *blob_digest, char *file)
+{
+    int ret = 0;
+    cached_layer *cache = NULL;
+    struct linked_list *node = NULL;
+    char *src_file = NULL;
+
+    cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
+    if (cache == NULL) {
+        cache = util_common_calloc_s(sizeof(cached_layer));
+        if (cache == NULL) {
+            ERROR("out of memory");
+            return -1;
+        }
+
+        linked_list_init(&cache->file_list);
+        ret = pthread_mutex_init(&cache->mutex, NULL);
+        if (ret != 0) {
+            ERROR("Failed to init mutex for layer cache");
+            free(cache);
+            cache = NULL;
+            return -1;
+        }
+
+        if (!map_insert(g_shared->cached_layers, blob_digest, cache)) {
+            ERROR("Failed to insert cache layer %s", blob_digest);
+            pthread_mutex_destroy(&cache->mutex);
+            free(cache);
+            cache = NULL;
+            return -1;
+        }
+    }
+
+    // Newlay added cached layer need to do a hard link to let
+    // the layer exist in the downloader's directory if the layer
+    // is already downloaded.
+    if (cache->complete && cache->result == 0) {
+        src_file = linked_list_first_elem(&cache->file_list);
+        if (src_file == NULL) {
+            ERROR("Failed to add cache, list's first element is NULL");
+            ret = -1;
+            goto out;
+        }
+
+        if (link(src_file, file) != 0) {
+            ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
+            ret = -1;
+            goto out;
+        }
+    }
+
+    node = util_common_calloc_s(sizeof(struct linked_list));
+    if (node == NULL) {
+        ERROR("Failed to malloc for linked_list");
+        ret = -1;
+        goto out;
+    }
+    linked_list_init(node);
+    linked_list_add_elem(node, util_strdup_s(file));
+    linked_list_add_tail(&cache->file_list, node);
+    node = NULL;
+    cache->file_list_len++;
+
+out:
+    if (ret != 0) {
+        del_cached_layer(blob_digest, file);
+        if (node != NULL) {
+            free(node->elem);
+            node->elem = NULL;
+        }
+        free(node);
+        node = NULL;
+    }
+
+    return ret;
+}
+
+static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, pull_descriptor *desc)
 {
     size_t i = 0;
+    cached_layer *cache = NULL;
+
+    for (i = 0; i < infos_len; i++) {
+        if (infos[i].use) {
+            cache = (cached_layer *)map_search(g_shared->cached_layers, infos[i].blob_digest);
+            if (cache == NULL) {
+                ERROR("no cached layer found error, this should never happen");
+                return -1;
+            }
+
+            desc->layers[i].diff_id = util_strdup_s(cache->diffid);
+            desc->layers[i].file = util_strdup_s(infos[i].file);
+        }
+    }
+
+    return 0;
+}
+
+static char *calc_diffid(char *file)
+{
     int ret = 0;
     char *diff_id = NULL;
     bool gzip = false;
 
-    if (desc == NULL) {
+    if (file == NULL) {
         ERROR("Invalid NULL param");
-        return -1;
+        return NULL;
     }
 
-    for (i = 0; i < desc->layers_len; i++) {
-        ret = util_gzip_compressed(desc->layers[i].file, &gzip);
-        if (ret != 0) {
-            // consider it as gziped just like media type indicated if we cann't determined if it's gziped.
-            gzip = true;
-        }
+    ret = util_gzip_compressed(file, &gzip);
+    if (ret != 0) {
+        // consider it as gziped just like media type indicated if we cann't determined if it's gziped.
+        gzip = true;
+    }
 
-        if (gzip) {
-            diff_id = util_full_gzip_digest(desc->layers[i].file);
-        } else {
-            diff_id = util_full_file_digest(desc->layers[i].file);
-        }
-        if (diff_id == NULL) {
-            ERROR("calculate digest failed for file %s", desc->layers[i].file);
-            ret = -1;
-            goto out;
-        }
-        if (!is_manifest_schemav1(desc->manifest.media_type)) {
-            // manifest schema v1 doesn't have diff id, here we save it for later use.
-            desc->layers[i].diff_id = util_strdup_s(diff_id);
-        } else {
-            if (strcmp(desc->layers[i].diff_id, diff_id)) {
-                ERROR("check diff id of layer %d failed, expect %s, got %s", i, desc->layers[i].diff_id, diff_id);
-                ret = -1;
-                goto out;
-            }
-        }
+    if (gzip) {
+        diff_id = util_full_gzip_digest(file);
+    } else {
+        diff_id = util_full_file_digest(file);
+    }
+    if (diff_id == NULL) {
+        ERROR("calculate digest failed for file %s", file);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
         free(diff_id);
         diff_id = NULL;
     }
 
-out:
-    free(diff_id);
-    diff_id = NULL;
-
-    return ret;
+    return diff_id;
 }
 
 static char *without_sha256_prefix(char *digest)
@@ -322,6 +496,7 @@ static int register_layers(pull_descriptor *desc)
     struct layer *l = NULL;
     char *id = NULL;
     char *parent = NULL;
+    cached_layer *cached = NULL;
 
     if (desc == NULL) {
         ERROR("Invalid NULL pointer");
@@ -352,7 +527,25 @@ static int register_layers(pull_descriptor *desc)
             goto out;
         }
 
-        ret = storage_layer_create(id, parent, false, desc->layers[i].file);
+        mutex_lock(&g_shared->mutex);
+        cached = get_cached_layer(desc->layers[i].digest);
+        mutex_unlock(&g_shared->mutex);
+        if (cached == NULL) {
+            ERROR("get cached layer %s failed, this should never happen");
+            ret = -1;
+            goto out;
+        }
+
+        // Lock this layer when create layer to avoid concurrent create for the same layer.
+        mutex_lock(&cached->mutex);
+        l = storage_layer_get(id);
+        if (l != NULL) {
+            free_layer(l);
+            l = NULL;
+        } else {
+            ret = storage_layer_create(id, parent, false, desc->layers[i].file);
+        }
+        mutex_unlock(&cached->mutex);
         if (ret != 0) {
             ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i].file);
             goto out;
@@ -362,6 +555,11 @@ static int register_layers(pull_descriptor *desc)
     }
 
 out:
+    for (i = 0; i < desc->layers_len; i++) {
+        mutex_lock(&g_shared->mutex);
+        del_cached_layer(desc->layers[i].digest, desc->layers[i].file);
+        mutex_unlock(&g_shared->mutex);
+    }
 
     return ret;
 }
@@ -806,14 +1004,196 @@ out:
     return ret;
 }
 
+static void set_cached_layers_info(char *blob_digest, char *diffid, int result, char *src_file)
+{
+    cached_layer *cache = NULL;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+    char *file = NULL;
+
+    cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
+    if (cache == NULL) {
+        ERROR("can't get cache for %s, this should never happen", blob_digest);
+        return;
+    }
+    free(cache->diffid);
+    cache->diffid = util_strdup_s(diffid);
+    cache->result = result;
+    cache->complete = true;
+
+    if (result != 0) {
+        return;
+    }
+
+    // Do hard links to let the layer exist in every downloader's directory.
+    linked_list_for_each_safe(item, &cache->file_list, next) {
+        file = (char *)item->elem;
+        if (!strcmp(src_file, file)) {
+            continue;
+        }
+        if (link(src_file, file) != 0) {
+            ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
+            cache->result = -1;
+            return;
+        }
+    }
+
+    return;
+}
+
+static void *fetch_layer_in_thread(void *arg)
+{
+    thread_fetch_info *info = (thread_fetch_info *)arg;
+    int ret = 0;
+    char *diffid = NULL;
+
+    ret = pthread_detach(pthread_self());
+    if (ret != 0) {
+        ERROR("Set thread detach fail");
+        goto out;
+    }
+
+    prctl(PR_SET_NAME, "fetch_layer");
+
+    if (fetch_layer(info->desc, info->index) != 0) {
+        ERROR("fetch layer %d failed", info->index);
+        ret = -1;
+        goto out;
+    }
+
+    diffid = calc_diffid(info->file);
+    if (diffid == NULL) {
+        ERROR("calc diffid for layer %d failed", info->index);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    // notify to continue downloading
+    mutex_lock(&g_shared->mutex);
+    g_shared->count--;
+    set_cached_layers_info(info->blob_digest, diffid, ret, info->file);
+    if (pthread_cond_broadcast(&g_shared->cond)) {
+        ERROR("Failed to broadcast");
+    }
+    mutex_unlock(&g_shared->mutex);
+
+    free(diffid);
+    diffid = NULL;
+
+    return NULL;
+}
+
+static int add_fetch_task(thread_fetch_info *info)
+{
+    int ret = 0;
+    int cond_ret = 0;
+    pthread_t tid = 0;
+    bool cached_layers_added = true;
+    cached_layer *cache = NULL;
+
+    mutex_lock(&g_shared->mutex);
+    cache = get_cached_layer(info->blob_digest);
+    if (cache == NULL) {
+        // If there are too many download threads, wait until anyone completed.
+        while (g_shared->count >= MAX_CONCURRENT_DOWNLOAD_NUM) {
+            cond_ret = pthread_cond_wait(&g_shared->cond, &g_shared->mutex);
+            if (cond_ret != 0) {
+                ERROR("condition wait failed, ret %d", cond_ret);
+                ret = -1;
+                goto out;
+            }
+        }
+    }
+
+    ret = add_cached_layer(info->blob_digest, info->file);
+    if (ret != 0) {
+        ERROR("add fetch info failed, ret %d", cond_ret);
+        ret = -1;
+        goto out;
+    }
+    cached_layers_added = true;
+
+    // First request to download this blob.
+    if (cache == NULL) {
+        ret = pthread_create(&tid, NULL, fetch_layer_in_thread, info);
+        if (ret != 0) {
+            ERROR("failed to start thread to fetch layer %d", (int)info->index);
+            goto out;
+        }
+        g_shared->count++;
+    }
+
+out:
+    if (ret != 0 && cached_layers_added) {
+        del_cached_layer(info->blob_digest, info->file);
+    }
+
+    mutex_unlock(&g_shared->mutex);
+
+    return ret;
+}
+
+static void free_thread_fetch_info(thread_fetch_info *info)
+{
+    if (info == NULL) {
+        return;
+    }
+    free(info->blob_digest);
+    info->blob_digest = NULL;
+    free(info->file);
+    info->file = NULL;
+    return;
+}
+
+static bool all_fetch_complete(thread_fetch_info *infos, size_t infos_len, int *result)
+{
+    size_t i = 0;
+    cached_layer *cache = NULL;
+
+    *result = 0;
+    for (i = 0; i < infos_len; i++) {
+        if (!infos[i].use) {
+            continue;
+        }
+
+        cache = (cached_layer *)map_search(g_shared->cached_layers, infos[i].blob_digest);
+        if (cache == NULL) {
+            ERROR("no cached layer found for %s error, this should never happen", infos[i].blob_digest);
+            return true;
+        }
+
+        if (!cache->complete) {
+            return false;
+        }
+
+        if (cache->result != 0) {
+            *result = cache->result;
+        }
+    }
+
+    return true;
+}
+
 static int fetch_layers(pull_descriptor *desc)
 {
     size_t i = 0;
     int ret = 0;
+    int sret = 0;
     struct layer *l = NULL;
+    thread_fetch_info *infos = NULL;
+    char file[PATH_MAX] = { 0 };
+    int cond_ret = 0;
+    int result = 0;
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    infos = util_common_calloc_s(sizeof(thread_fetch_info) * desc->layers_len);
+    if (infos == NULL) {
+        ERROR("out of memory");
         return -1;
     }
 
@@ -834,17 +1214,56 @@ static int fetch_layers(pull_descriptor *desc)
             }
         }
 
-        // TODO:
-        // 1. fetch layers in threads
-        // 2. fetch maxium 5 layers concurrently
-        ret = fetch_layer(desc, i);
+        sret = snprintf(file, sizeof(file), "%s/%d", desc->blobpath, (int)i);
+        if (sret < 0 || (size_t)sret >= sizeof(file)) {
+            ERROR("Failed to sprintf file for layer %d", (int)i);
+            goto out;
+        }
+
+        infos[i].desc = desc;
+        infos[i].index = i;
+        infos[i].use = true;
+        infos[i].file = util_strdup_s(file);
+        infos[i].blob_digest = util_strdup_s(desc->layers[i].digest);
+
+        ret = add_fetch_task(&infos[i]);
         if (ret != 0) {
-            ERROR("fetch layer %d failed", i);
             goto out;
         }
     }
 
+    mutex_lock(&g_shared->mutex);
+    while (!all_fetch_complete(infos, desc->layers_len, &result)) {
+        cond_ret = pthread_cond_wait(&g_shared->cond, &g_shared->mutex);
+        if (cond_ret != 0) {
+            ERROR("condition wait for all layers to complete failed, ret %d", cond_ret);
+            ret = -1;
+            break;
+        }
+    }
+
+    if (ret == 0) {
+        ret = result;
+    }
+
+    ret = set_cached_info_to_desc(infos, desc->layers_len, desc);
+    if (ret != 0) {
+        ERROR("set cached infos to desc failed");
+    }
+
+    mutex_unlock(&g_shared->mutex);
+
 out:
+    for (i = 0; i < desc->layers_len; i++) {
+        if (ret != 0 && infos[i].use) {
+            mutex_lock(&g_shared->mutex);
+            del_cached_layer(infos[i].blob_digest, infos[i].file);
+            mutex_unlock(&g_shared->mutex);
+        }
+        free_thread_fetch_info(&infos[i]);
+    }
+    free(infos);
+    infos = NULL;
 
     return ret;
 }
@@ -1074,16 +1493,6 @@ static int registry_fetch(pull_descriptor *desc)
         goto out;
     }
 
-    // If it's manifest schema v2 or oci image, verify layer's digest(diff id).
-    // If it's manifest schema v1, calc layer's digest(diff id).
-    // note: manifest schema v1 doesn't contains layer's diff id, so we can't
-    // verify it's layer's diff id.
-    ret = verify_or_calc_diffid(desc);
-    if (ret != 0) {
-        ERROR("check image failed, image invalid");
-        goto out;
-    }
-
     // If it's manifest schema1, create config. The config is composited by
     // the history[0].v1Compatibility in manifest and rootfs's diffID
     // note: manifest schema1 has been deprecated.
@@ -1154,8 +1563,8 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
     desc->blobpath = util_strdup_s(blobpath);
-    desc->use_decrypted_key = g_options.use_decrypted_key;
-    desc->skip_tls_verify = g_options.skip_tls_verify;
+    desc->use_decrypted_key = g_shared->use_decrypted_key;
+    desc->skip_tls_verify = g_shared->skip_tls_verify;
 
     if (options->auth.username != NULL && options->auth.password != NULL) {
         desc->username = util_strdup_s(options->auth.username);
@@ -1229,17 +1638,83 @@ out:
     return ret;
 }
 
+static void cached_layers_kvfree(void *key, void *value)
+{
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+
+    cached_layer *cache = (cached_layer *)value;
+    if (cache != NULL) {
+        linked_list_for_each_safe(item, &(cache->file_list), next) {
+            linked_list_del(item);
+            free((char *)item->elem);
+            free(item);
+            item = NULL;
+        }
+        cache->file_list_len = 0;
+
+        free(cache->diffid);
+        cache->diffid = NULL;
+        free(cache);
+        cache = NULL;
+    }
+    free(key);
+    return;
+}
+
 int registry_init(registry_init_options *options)
 {
+    int ret = 0;
+
     if (options == NULL) {
         ERROR("Invalid NULL param when init registry module");
         return -1;
     }
 
-    g_options.use_decrypted_key = options->use_decrypted_key;
-    g_options.skip_tls_verify = options->skip_tls_verify;
+    g_shared = util_common_calloc_s(sizeof(registry_global));
+    if (g_shared == NULL) {
+        ERROR("out of memory");
+        return -1;
+    }
 
-    return 0;
+    ret = pthread_mutex_init(&g_shared->mutex, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init mutex for download info");
+        goto out;
+    }
+    g_shared->mutex_inited = true;
+
+    ret = pthread_cond_init(&g_shared->cond, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init cond for download info");
+        goto out;
+    }
+    g_shared->cond_inited = true;
+
+    g_shared->use_decrypted_key = options->use_decrypted_key;
+    g_shared->skip_tls_verify = options->skip_tls_verify;
+
+    g_shared->cached_layers = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, cached_layers_kvfree);
+    if (g_shared->cached_layers == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+
+    if (ret != 0) {
+        if (g_shared->cond_inited) {
+            pthread_cond_destroy(&g_shared->cond);
+        }
+        if (g_shared->mutex_inited) {
+            pthread_mutex_destroy(&g_shared->mutex);
+        }
+        map_free(g_shared->cached_layers);
+        g_shared->cached_layers = NULL;
+    }
+
+    return ret;
 }
 
 int registry_login(registry_login_options *options)
@@ -1262,8 +1737,8 @@ int registry_login(registry_login_options *options)
     }
 
     desc->host = util_strdup_s(options->host);
-    desc->use_decrypted_key = g_options.use_decrypted_key;
-    desc->skip_tls_verify = g_options.skip_tls_verify;
+    desc->use_decrypted_key = g_shared->use_decrypted_key;
+    desc->skip_tls_verify = g_shared->skip_tls_verify;
     desc->username = util_strdup_s(options->auth.username);
     desc->password = util_strdup_s(options->auth.password);
 

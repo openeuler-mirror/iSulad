@@ -1176,8 +1176,6 @@ int fetch_layer(pull_descriptor *desc, size_t index)
         goto out;
     }
 
-    layer->file = util_strdup_s(file);
-
 out:
 
     return ret;
