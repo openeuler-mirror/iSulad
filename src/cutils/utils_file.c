@@ -23,6 +23,8 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
 #include <regex.h>
 #include <dirent.h>
 
@@ -182,6 +184,39 @@ static bool check_dir_valid(const char *dirpath, int recursive_depth, int *failu
     return true;
 }
 
+static int mark_file_mutable(const char *fname)
+{
+    int ret = 0;
+    int fd = -EBADF;
+    int attributes = 0;
+
+    fd = open(fname, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
+    if (fd < 0) {
+        ERROR("Failed to open file to modify flags:%s, %s", fname, strerror(errno));
+        return -1;
+    }
+
+    if (ioctl(fd, FS_IOC_GETFLAGS, &attributes) < 0) {
+        ERROR("Failed to retrieve file flags");
+        ret = -1;
+        goto out;
+    }
+
+    attributes &= ~FS_IMMUTABLE_FL;
+
+    if (ioctl(fd, FS_IOC_SETFLAGS, &attributes) < 0) {
+        ERROR("Failed to set file flags");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (fd >= 0) {
+        close(fd);
+    }
+    return ret;
+}
+
 static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int recursive_depth, int *saved_errno,
                                       int failure)
 {
@@ -191,11 +226,19 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
         }
     } else {
         if (unlink(fname) < 0) {
-            ERROR("Failed to delete %s: %s", fname, strerror(errno));
+            ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
             if (*saved_errno == 0) {
                 *saved_errno = errno;
             }
-            failure = 1;
+
+            if (mark_file_mutable(fname) != 0) {
+                ERROR("Failed to mark file mutable");
+            }
+
+            if (unlink(fname) < 0) {
+                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+                failure = 1;
+            }
         }
     }
 
