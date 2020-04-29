@@ -22,7 +22,6 @@
 #include "registry.h"
 
 #include "containers_store.h"
-#include "oci_images_store.h"
 
 #include "isulad_config.h"
 #include "utils.h"
@@ -97,7 +96,6 @@ int oci_init(const struct service_arguments *args)
         goto out;
     }
 
-    ret = oci_image_store_init();
 out:
     return ret;
 }
@@ -187,7 +185,6 @@ int oci_rmi(const im_remove_request *request)
 {
     int ret = -1;
     char *real_image_name = NULL;
-    oci_image_t *image_info = NULL;
 
     if (request == NULL || request->image.image == NULL) {
         ERROR("Invalid input arguments");
@@ -199,29 +196,14 @@ int oci_rmi(const im_remove_request *request)
         ERROR("Failed to resolve image name");
         goto out;
     }
-    image_info = oci_images_store_get(real_image_name);
-    if (image_info == NULL) {
-        INFO("No such image exist %s", real_image_name);
-        ret = 0;
-        goto out;
-    }
-    oci_image_lock(image_info);
 
     ret = storage_img_delete(real_image_name, true);
     if (ret != 0) {
         ERROR("Failed to remove image '%s'", real_image_name);
-        goto unlock;
+        goto out;
     }
 
-    ret = remove_oci_image_from_memory(real_image_name);
-    if (ret != 0) {
-        ERROR("Failed to remove image %s from memory", real_image_name);
-    }
-
-unlock:
-    oci_image_unlock(image_info);
 out:
-    oci_image_unref(image_info);
     free(real_image_name);
     return ret;
 }
@@ -271,7 +253,6 @@ int oci_tag(const im_tag_request *request)
     int ret = -1;
     char *src_name = NULL;
     char *dest_name = NULL;
-    oci_image_t *image_info = NULL;
     char *errmsg = NULL;
 
     if (request == NULL || request->src_name.image == NULL || request->dest_name.image == NULL) {
@@ -292,14 +273,6 @@ int oci_tag(const im_tag_request *request)
         goto out;
     }
 
-    image_info = oci_images_store_get(src_name);
-    if (image_info == NULL) {
-        INFO("No such image exist %s", src_name);
-        ret = -1;
-        goto out;
-    }
-    oci_image_lock(image_info);
-
     // TODO call storage rootfs tag interface
     // ret = isula_image_tag(src_name, dest_name, &errmsg);
     if (ret != 0) {
@@ -308,15 +281,7 @@ int oci_tag(const im_tag_request *request)
         goto out;
     }
 
-    ret = register_new_oci_image_into_memory(dest_name);
-    if (ret != 0) {
-        ERROR("Register image %s into store failed", dest_name);
-        goto out;
-    }
-
 out:
-    oci_image_unlock(image_info);
-    oci_image_unref(image_info);
     free(src_name);
     free(dest_name);
     free(errmsg);
@@ -450,10 +415,7 @@ err_out:
 
 int oci_load_image(const im_load_request *request)
 {
-    char **refs = NULL;
     int ret = 0;
-    int ret2 = 0;
-    size_t i = 0;
 
     if (request == NULL) {
         ERROR("Invalid input arguments");
@@ -468,18 +430,6 @@ int oci_load_image(const im_load_request *request)
     }
 
 out:
-    // If some of images are loaded, registery it.
-    for (i = 0; i < util_array_len((const char **)refs); i++) {
-        ret2 = register_new_oci_image_into_memory(refs[i]);
-        if (ret2 != 0) {
-            ERROR("Failed to register new image %s to images store", refs[i]);
-            ret = -1;
-            break;
-        }
-    }
-
-    util_free_array(refs);
-    refs = NULL;
     return ret;
 }
 

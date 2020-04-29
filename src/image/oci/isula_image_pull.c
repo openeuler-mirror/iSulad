@@ -16,14 +16,12 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "oci_images_store.h"
 #include "oci_common_operators.h"
 #include "registry.h"
 
 int isula_pull_image(const im_pull_request *request, im_pull_response **response)
 {
     int ret = -1;
-    char *normalized = NULL;
     registry_pull_options *options = NULL;
 
     if (request == NULL || request->image == NULL || response == NULL) {
@@ -53,19 +51,6 @@ int isula_pull_image(const im_pull_request *request, im_pull_response **response
     }
     (*response)->image_ref = util_strdup_s(request->image);
 
-    normalized = oci_normalize_image_name(request->image);
-    if (normalized == NULL) {
-        ret = -1;
-        ERROR("Normalize image name %s failed", request->image);
-        goto err_out;
-    }
-
-    ret = register_new_oci_image_into_memory(normalized);
-    if (ret != 0) {
-        ERROR("Register image %s into store failed", normalized);
-        goto err_out;
-    }
-
     goto out;
 err_out:
     free_im_pull_response(*response);
@@ -73,6 +58,5 @@ err_out:
     ret = -1;
 out:
     free_registry_pull_options(options);
-    free(normalized);
     return ret;
 }

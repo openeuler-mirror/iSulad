@@ -376,6 +376,11 @@ int storage_get_images_fs_usage(imagetool_fs_info *fs_info)
     return image_store_get_fs_info(fs_info);
 }
 
+bool storage_image_exist(const char *image_or_id)
+{
+    return image_store_exists(image_or_id);
+}
+
 static int check_module_init_opt(struct storage_module_init_options *opts)
 {
     if (opts == NULL || opts->driver_name == NULL || opts->storage_root == NULL || opts->storage_run_root == NULL) {

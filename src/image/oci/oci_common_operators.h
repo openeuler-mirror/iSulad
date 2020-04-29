@@ -38,6 +38,7 @@ imagetool_image *oci_get_image_info_by_name(const char *id);
 
 int oci_image_conf_merge_into_spec(const char *image_name, container_config *container_spec);
 
+size_t oci_get_images_count(void);
 #ifdef __cplusplus
 }
 #endif

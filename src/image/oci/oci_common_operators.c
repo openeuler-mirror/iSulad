@@ -23,7 +23,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "oci_images_store.h"
 #include "specs_extend.h"
 #include "oci_config_merge.h"
 
@@ -33,27 +32,13 @@
 #define DEFAULT_HOSTNAME "docker.io/"
 #define DEFAULT_REPO_PREFIX "library/"
 
-static bool oci_image_exist(const char *image_name)
-{
-    bool ret = false;
-    oci_image_t *image_info = NULL;
-
-    image_info = oci_images_store_get(image_name);
-    if (image_info != NULL) {
-        ret = true;
-        oci_image_unref(image_info);
-    }
-
-    return ret;
-}
-
 bool oci_detect(const char *image_name)
 {
     if (image_name == NULL) {
         return false;
     }
 
-    return oci_image_exist(image_name);
+    return storage_image_exist(image_name);
 }
 
 char *get_last_part(char **parts)
@@ -110,7 +95,7 @@ char *oci_normalize_image_name(const char *name)
 
 char *oci_resolve_image_name(const char *name)
 {
-    if (util_valid_short_sha256_id(name) && oci_image_exist(name)) {
+    if (util_valid_short_sha256_id(name) && storage_image_exist(name)) {
         return util_strdup_s(name);
     }
 
@@ -259,6 +244,7 @@ int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, 
     return get_user(basefs, hc, userstr, puser);
 }
 
+#if 0
 static int dup_oci_image_info(const imagetool_image *src, imagetool_image **dest)
 {
     int ret = -1;
@@ -287,9 +273,12 @@ out:
     free(json);
     return ret;
 }
+#endif
 
 static int oci_list_all_images(imagetool_images_list *images_list)
 {
+#if 0
+    TODO call storage list images
     int ret = 0;
     size_t i = 0;
     oci_image_t **images_info = NULL;
@@ -332,8 +321,11 @@ out:
 
     free(images_info);
     return ret;
+#endif
+    return 0;
 }
 
+#if 0
 static bool image_meet_dangling_filter(const imagetool_image *src, const struct filters_args *filters)
 {
     bool ret = false;
@@ -636,7 +628,7 @@ out:
     free(images_info);
     return ret;
 }
-
+#endif
 static void oci_strip_all_dockerios(const imagetool_images_list *images)
 {
     size_t i = 0;
@@ -669,7 +661,7 @@ int oci_list_images(const im_list_request *request, imagetool_images_list **imag
     }
 
     if (image_filters != NULL) {
-        ret = oci_list_images_by_filters(image_filters, *images);
+        // TODO ret = oci_list_images_by_filters(image_filters, *images);
     } else {
         ret = oci_list_all_images(*images);
     }
@@ -684,12 +676,17 @@ out:
     return ret;
 }
 
+size_t oci_get_images_count(void)
+{
+    // TODO call storage get images count
+    return 0;
+}
+
 int oci_status_image(im_status_request *request, im_status_response **response)
 {
     int ret = 0;
     imagetool_image_status *image = NULL;
     char *image_ref = NULL;
-    oci_image_t *image_info = NULL;
     char *resolved_name = NULL;
 
     if (*response == NULL) {
@@ -723,6 +720,8 @@ int oci_status_image(im_status_request *request, im_status_response **response)
 
     EVENT("Event: {Object: %s, Type: statusing image}", resolved_name);
 
+#if 0
+    TODO get image status from storage
     image_info = oci_images_store_get(resolved_name);
     if (image_info == NULL) {
         ERROR("No such image:%s", resolved_name);
@@ -739,7 +738,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
         ret = -1;
         goto pack_response;
     }
-
+#endif
     oci_strip_dockerio((*response)->image_info->image);
 
     EVENT("Event: {Object: %s, Type: statused image}", resolved_name);
@@ -802,7 +801,6 @@ imagetool_image *oci_get_image_info_by_name(const char *id)
 int oci_image_conf_merge_into_spec(const char *image_name, container_config *container_spec)
 {
     int ret = 0;
-    oci_image_t *image_info = NULL;
     char *resolved_name = NULL;
 
     if (container_spec == NULL || image_name == NULL) {
@@ -817,14 +815,16 @@ int oci_image_conf_merge_into_spec(const char *image_name, container_config *con
         goto out;
     }
 
+    // TODO get image config from storage
+    #if 0
     image_info = oci_images_store_get(resolved_name);
     if (image_info == NULL) {
         ERROR("Get image from image store failed, image name is %s", resolved_name);
         ret = -1;
         goto out;
     }
-
-    ret = oci_image_merge_config(image_info->info, container_spec);
+    #endif
+    ret = oci_image_merge_config(NULL, container_spec);
     if (ret != 0) {
         ERROR("Failed to merge oci config for image %s", resolved_name);
         ret = -1;
@@ -832,7 +832,6 @@ int oci_image_conf_merge_into_spec(const char *image_name, container_config *con
     }
 
 out:
-    oci_image_unref(image_info);
     free(resolved_name);
     return ret;
 }

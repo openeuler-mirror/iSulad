@@ -30,10 +30,6 @@
 #include "image.h"
 #include "runtime.h"
 
-#ifdef ENABLE_OCI_IMAGE
-#include "oci_images_store.h"
-#endif
-
 #include "execution.h"
 
 /* restore supervisor */
@@ -145,7 +141,6 @@ static int check_container_image_exist(const container_t *cont)
     const char *id = cont->common_config->id;
     const char *image_name = cont->common_config->image;
     const char *image_type = cont->common_config->image_type;
-    oci_image_t *image = NULL;
 
     if (image_type == NULL || image_name == NULL) {
         ERROR("Failed to get image type for container %s", id);
@@ -160,13 +155,12 @@ static int check_container_image_exist(const container_t *cont)
             ERROR("Failed to resolve image %s", image_name);
             goto out;
         }
-        image = oci_images_store_get(tmp);
-        if (image == NULL) {
+
+        if (!storage_image_exist(tmp)) {
             WARN("Image %s not exist", tmp);
             ret = -1;
             goto out;
         }
-        oci_image_unref(image);
     }
 
 out:

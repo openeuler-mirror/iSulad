@@ -32,7 +32,6 @@
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image.h"
-#include "oci_images_store.h"
 #endif
 
 #ifdef ENABLE_EMBEDDED_IMAGE
@@ -91,7 +90,7 @@ static const struct bim_ops g_oci_ops = {
     .get_user_conf = oci_get_user_conf,
 
     .list_ims = oci_list_images,
-    .get_image_count = oci_images_store_size,
+    .get_image_count = oci_get_images_count,
     .rm_image = oci_rmi,
     .inspect_image = oci_inspect_image,
     .resolve_image_name = oci_resolve_image_name,

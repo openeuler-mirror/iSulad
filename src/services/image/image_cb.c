@@ -36,8 +36,6 @@
 #include "filters.h"
 #include "collector.h"
 #ifdef ENABLE_OCI_IMAGE
-#include "oci_image_unix.h"
-#include "oci_images_store.h"
 #include "oci_common_operators.h"
 #endif
 
@@ -755,7 +753,6 @@ static bool is_valid_dangling_string(const char *val)
 static bool is_valid_image(const char *val)
 {
     bool ret = true;
-    oci_image_t *image_info = NULL;
     char *resolved_name = NULL;
     int nret = im_resolv_image_name(IMAGE_TYPE_OCI, val, &resolved_name);
     if (nret != 0) {
@@ -763,8 +760,7 @@ static bool is_valid_image(const char *val)
         ret = false;
         goto out;
     }
-    image_info = oci_images_store_get(resolved_name);
-    if (image_info == NULL) {
+    if (!storage_image_exist(resolved_name)) {
         ERROR("No such image: %s", val);
         ret = false;
         goto out;
@@ -772,7 +768,6 @@ static bool is_valid_image(const char *val)
 
 out:
     free(resolved_name);
-    oci_image_unref(image_info);
     return ret;
 }
 
