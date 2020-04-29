@@ -21,6 +21,7 @@ add_executable(${EXE}
     ${CMAKE_BINARY_DIR}/json/json_common.c
     ${CMAKE_BINARY_DIR}/json/defs.c
     ${CMAKE_BINARY_DIR}/json/storage_image.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/image/oci/storage/image_store/image.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/image/oci/storage/image_store/image_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/storage_mock.cc
     storage_images_llt.cc)

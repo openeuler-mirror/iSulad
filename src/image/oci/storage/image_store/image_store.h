@@ -12,8 +12,8 @@
  * Create: 2020-03-13
  * Description: provide images module interface definition
  ******************************************************************************/
-#ifndef __OCI_STORAGE_IMAGES_H
-#define __OCI_STORAGE_IMAGES_H
+#ifndef __OCI_STORAGE_IMAGE_STORE_H
+#define __OCI_STORAGE_IMAGE_STORE_H
 
 #include <stdbool.h>
 #include <string.h>
@@ -21,6 +21,9 @@
 #include "storage.h"
 #include "types_def.h"
 #include "map.h"
+#include "linked_list.h"
+#include "image.h"
+#include "imagetool_images_list.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,10 +33,10 @@ extern "C" {
 int image_store_init(struct storage_module_init_options *opts);
 
 // Create an image that has a specified ID (or a random one) and optional names, using the specified layer as
-// its topmost (hopefully read-only) layer.  That layer can be referenced by multiple images.
-storage_image *image_store_create(const char *id, const char **names, size_t names_len,
-                                  const char *layer, const char *metadata,
-                                  const types_timestamp_t *time, const char *searchable_digest);
+// its topmost (hopefully read-only) layer.  That layer can be referenced by multiple images, return a new id.
+char *image_store_create(const char *id, const char **names, size_t names_len,
+                         const char *layer, const char *metadata,
+                         const types_timestamp_t *time, const char *searchable_digest);
 
 // Attempt to translate a name to an ID.  Most methods do this implicitly.
 char *image_store_lookup(const char *id);
@@ -60,7 +63,7 @@ int image_store_set_metadata(const char *id, const char *metadata);
 int image_store_set_load_time(const char *id,  const types_timestamp_t *time);
 
 // Saves the contents of the store to disk.
-int image_store_save(storage_image *image);
+int image_store_save(image_t *image);
 
 // Check if there is an image with the given ID or name.
 bool image_store_exists(const char *id);
@@ -84,11 +87,12 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
 char *image_store_metadata(const char *id);
 
 // Return a slice enumerating the known images.
-int image_store_get_all_images(storage_image ***images, size_t *len);
+// int image_store_get_all_images(storage_image ***images, size_t *len);
+int image_store_get_all_images(imagetool_images_list *images_list);
 
 // Return a slice enumerating the images which have a big data
 // item with the name ImageDigestBigDataKey and the specified digest.
-int image_store_get_images_by_digest(const char *digest, storage_image ***images, size_t *len);
+// int image_store_get_images_by_digest(const char *digest, linked_list *images, size_t *len);
 
 int image_store_get_fs_info(imagetool_fs_info *fs_info);
 
@@ -96,5 +100,5 @@ int image_store_get_fs_info(imagetool_fs_info *fs_info);
 }
 #endif
 
-#endif /* __OCI_STORAGE_IMAGES_H */
+#endif /* __OCI_STORAGE_IMAGE_STORE_H */
 

@@ -195,7 +195,7 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
                        struct storage_img_create_options *opts)
 {
     int ret = 0;
-    storage_image *img = NULL;
+    char *image_id = NULL;
 
     if (id == NULL || parent_id == NULL || metadata == NULL || opts == NULL) {
         ERROR("Invalid arguments for image create");
@@ -203,15 +203,15 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
         goto out;
     }
 
-    img = image_store_create(id, NULL, 0, parent_id, metadata, opts->create_time, opts->digest);
-    if (img == NULL) {
+    image_id = image_store_create(id, NULL, 0, parent_id, metadata, opts->create_time, opts->digest);
+    if (image_id == NULL) {
         ERROR("Failed to create img");
         ret = -1;
         goto out;
     }
 
 out:
-    free_storage_image(img);
+    free(image_id);
     return ret;
 }
 

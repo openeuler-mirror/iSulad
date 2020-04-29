@@ -265,7 +265,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_metadata)
     ASSERT_EQ(image_store_metadata(incorrectId.c_str()), nullptr);
 }
 
-TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
+/*TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
 {
     storage_image **images = NULL;
     size_t len = 0;
@@ -281,7 +281,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
         images[i] = NULL;
     }
     free(images);
-}
+}*/
 
 TEST_F(StorageImagesUnitTest, test_image_store_delete)
 {
