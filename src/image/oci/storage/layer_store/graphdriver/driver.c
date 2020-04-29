@@ -26,8 +26,6 @@
 #include "utils.h"
 #include "libisulad.h"
 #include "isula_libutils/log.h"
-#include "isulad_config.h"
-#include "image.h"
 #include "util_archive.h"
 
 static struct graphdriver *g_graphdriver = NULL;

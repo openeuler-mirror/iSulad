@@ -138,6 +138,7 @@ int save_layer(layer_t *layer)
     int ret = -1;
 
     if (layer == NULL || layer->layer_json_path == NULL || layer->slayer == NULL) {
+        ERROR("Invalid arguments");
         return ret;
     }
 
@@ -148,6 +149,9 @@ int save_layer(layer_t *layer)
     }
 
     ret = util_atomic_write_file(layer->layer_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE);
+    if (ret != 0) {
+        ERROR("Atomic write layer: %s failed", layer->slayer->id);
+    }
 out:
     free(jstr);
     free(jerr);

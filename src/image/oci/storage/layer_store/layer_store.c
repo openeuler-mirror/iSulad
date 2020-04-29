@@ -114,7 +114,7 @@ static void remove_layer_list_tail()
         return;
     }
 
-    item = g_metadata.layers_list.next;
+    item = g_metadata.layers_list.prev;
     linked_list_del(item);
 
     layer_ref_dec((layer_t *)item->elem);
@@ -255,23 +255,27 @@ static int load_layers_from_json_files()
 
         ret = update_digest_map(g_metadata.by_compress_digest, NULL, tl->slayer->compressed_diff_digest, tl->slayer->id);
         if (ret != 0) {
+            ERROR("update layer: %s compress failed", tl->slayer->id);
             goto err_out;
         }
 
         ret = update_digest_map(g_metadata.by_uncompress_digest, NULL, tl->slayer->diff_digest, tl->slayer->id);
         if (ret != 0) {
+            ERROR("update layer: %s uncompress failed", tl->slayer->id);
             goto err_out;
         }
 
         // check complete
         if (tl->incompelte) {
             if (layer_store_delete(tl->slayer->id) != 0) {
+                ERROR("delete layer: %s failed", tl->slayer->id);
                 goto err_out;
             }
             should_save = true;
         }
 
         if (should_save && save_layer(tl) != 0) {
+            ERROR("save layer: %s failed", tl->slayer->id);
             goto err_out;
         }
     }
@@ -288,23 +292,13 @@ int layer_store_init(const struct storage_module_init_options *conf)
     int nret = 0;
 
     if (!init_from_conf(conf)) {
-        goto free_out;
-    }
-    // build root dir and run dir
-    nret = util_mkdir_p(g_root_dir, IMAGE_STORE_PATH_MODE);
-    if (nret != 0) {
-        ERROR("build root dir of layer store failed");
-        goto free_out;
-    }
-    nret = util_mkdir_p(g_run_dir, IMAGE_STORE_PATH_MODE);
-    if (nret != 0) {
-        ERROR("build run dir of layer store failed");
-        goto free_out;
+        return -1;
     }
 
     // init manager structs
     g_metadata.layers_list_len = 0;
     linked_list_init(&g_metadata.layers_list);
+
     nret = pthread_rwlock_init(&(g_metadata.rwlock), NULL);
     if (nret != 0) {
         ERROR("Failed to init metadata rwlock");
@@ -331,11 +325,24 @@ int layer_store_init(const struct storage_module_init_options *conf)
         goto free_out;
     }
 
+    // build root dir and run dir
+    nret = util_mkdir_p(g_root_dir, IMAGE_STORE_PATH_MODE);
+    if (nret != 0) {
+        ERROR("build root dir of layer store failed");
+        goto free_out;
+    }
+    nret = util_mkdir_p(g_run_dir, IMAGE_STORE_PATH_MODE);
+    if (nret != 0) {
+        ERROR("build run dir of layer store failed");
+        goto free_out;
+    }
+
     // TODO: load layer json files
     if (load_layers_from_json_files() != 0) {
         goto free_out;
     }
 
+    DEBUG("Init layer store success");
     return 0;
 free_out:
     layer_store_cleanup();
@@ -721,6 +728,9 @@ static int apply_diff(const char *id, const struct io_read_wrapper *diff)
     int64_t size = 0;
     int ret = 0;
 
+    if (diff == NULL) {
+        return 0;
+    }
 
     ret = graphdriver_apply_diff(id, diff, &size);
 
@@ -952,7 +962,7 @@ static void copy_json_to_layer(const layer_t *jl, struct layer *l)
     }
 }
 
-struct layer** layer_store_list()
+struct layer** layer_store_list(size_t *layers_len)
 {
     // TODO: add lock
     struct linked_list *item = NULL;
@@ -960,7 +970,7 @@ struct layer** layer_store_list()
     struct layer **result = NULL;
     size_t i = 0;
 
-    result = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), g_metadata.layers_list_len);
+    result = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), g_metadata.layers_list_len + 1);
     if (result == NULL) {
         ERROR("Out of memory");
         return NULL;
@@ -977,6 +987,7 @@ struct layer** layer_store_list()
         i++;
     }
 
+    *layers_len = g_metadata.layers_list_len;
     return result;
 err_out:
     while (i >= 0) {
@@ -1000,7 +1011,7 @@ bool layer_store_is_used(const char *id)
     return true;
 }
 
-static struct layer **layers_by_digest_map(map_t *m, const char *digest)
+static struct layer **layers_by_digest_map(map_t *m, const char *digest, size_t *layers_len)
 {
     char **ids = NULL;
     struct layer **result = NULL;
@@ -1015,7 +1026,7 @@ static struct layer **layers_by_digest_map(map_t *m, const char *digest)
     if (len > 0) {
         layer_t *l = NULL;
 
-        result = util_smart_calloc_s(sizeof(struct layer*), len);
+        result = util_smart_calloc_s(sizeof(struct layer*), len + 1);
         for (; i < len; i++) {
             struct layer *t_layer = util_common_calloc_s(sizeof(struct layer));
             if (t_layer == NULL) {
@@ -1034,6 +1045,7 @@ static struct layer **layers_by_digest_map(map_t *m, const char *digest)
         }
     }
 
+    *layers_len = len;
     return result;
 free_out:
     while (result != NULL && i >= 0) {
@@ -1043,16 +1055,22 @@ free_out:
     return NULL;
 }
 
-struct layer** layer_store_by_compress_digest(const char *digest)
+struct layer** layer_store_by_compress_digest(const char *digest, size_t *layers_len)
 {
+    if (layers_len == NULL) {
+        return NULL;
+    }
     // TODO: add lock
-    return layers_by_digest_map(g_metadata.by_compress_digest, digest);
+    return layers_by_digest_map(g_metadata.by_compress_digest, digest, layers_len);
 }
 
-struct layer** layer_store_by_uncompress_digest(const char *digest)
+struct layer** layer_store_by_uncompress_digest(const char *digest, size_t *layers_len)
 {
+    if (layers_len == NULL) {
+        return NULL;
+    }
     // TODO: add lock
-    return layers_by_digest_map(g_metadata.by_uncompress_digest, digest);
+    return layers_by_digest_map(g_metadata.by_uncompress_digest, digest, layers_len);
 }
 
 char *layer_store_lookup(const char *name)

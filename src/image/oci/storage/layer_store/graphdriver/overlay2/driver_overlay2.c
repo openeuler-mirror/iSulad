@@ -259,7 +259,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
     int ret = 0;
     char *link_dir = NULL;
 
-    if (driver == NULL || drvier_home == NULL || options == NULL) {
+    if (driver == NULL || drvier_home == NULL) {
         return -1;
     }
 
