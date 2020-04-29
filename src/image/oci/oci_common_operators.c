@@ -277,55 +277,10 @@ out:
 
 static int oci_list_all_images(imagetool_images_list *images_list)
 {
-#if 0
-    TODO call storage list images
-    int ret = 0;
-    size_t i = 0;
-    oci_image_t **images_info = NULL;
-    size_t images_num = 0;
-
-    ret = oci_images_store_list(&images_info, &images_num);
-    if (ret != 0) {
-        ERROR("query all oci images info failed");
-        return -1;
-    }
-
-    if (images_num == 0) {
-        ret = 0;
-        goto out;
-    }
-
-    images_list->images = util_smart_calloc_s(sizeof(imagetool_image *), images_num);
-    if (images_list->images == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < images_num; i++) {
-        ret = dup_oci_image_info(images_info[i]->info, &images_list->images[i]);
-        if (ret != 0) {
-            ERROR("Failed to dup oci image %s info", images_info[i]->info->id);
-            ret = -1;
-            goto out;
-        }
-        oci_image_unref(images_info[i]);
-        images_list->images_len++;
-    }
-out:
-    if (ret != 0) {
-        for (; i < images_num; i++) {
-            oci_image_unref(images_info[i]);
-        }
-    }
-
-    free(images_info);
-    return ret;
-#endif
-    return 0;
+    return storage_get_all_images(images_list);
 }
 
-#if 0
+
 static bool image_meet_dangling_filter(const imagetool_image *src, const struct filters_args *filters)
 {
     bool ret = false;
@@ -365,29 +320,27 @@ static bool image_meet_dangling_filter(const imagetool_image *src, const struct 
 static int do_image_time_filter(map_itor *itor, bool is_before_filter, int64_t *cmp_nanos)
 {
     int ret = 0;
-    oci_image_t *image_info = NULL;
     int64_t tmp_nanos = 0;
+    imagetool_image *image_info = NULL;
+
     char *tmp = oci_resolve_image_name(map_itor_key(itor));
     if (tmp == NULL) {
         ERROR("Failed to resolve image name");
         goto out;
     }
 
-    image_info = oci_images_store_get(tmp);
+    // TODO get image info from storage
+    // image_info = oci_images_store_get(tmp);
     if (image_info == NULL) {
         ret = -1;
         goto out;
     }
-    free(tmp);
-    tmp = NULL;
 
-    if (to_unix_nanos_from_str(image_info->info->created, &tmp_nanos) != 0) {
+    if (to_unix_nanos_from_str(image_info->created, &tmp_nanos) != 0) {
         ERROR("Failed to get unix nano from string");
         ret = -1;
         goto out;
     }
-    oci_image_unref(image_info);
-    image_info = NULL;
 
     if (is_before_filter) {
         if (*cmp_nanos > tmp_nanos) {
@@ -400,7 +353,7 @@ static int do_image_time_filter(map_itor *itor, bool is_before_filter, int64_t *
     }
 
 out:
-    oci_image_unref(image_info);
+    free_imagetool_image(image_info);
     free(tmp);
     return ret;
 }
@@ -536,7 +489,7 @@ static bool image_meet_filters(const imagetool_image *src, const struct filters_
            image_meet_reference_filter(src, filters);
 }
 
-static int dup_oci_image_info_by_filters(oci_image_t *src, const struct filters_args *filters,
+static int dup_oci_image_info_by_filters(const imagetool_image *src, const struct filters_args *filters,
                                          imagetool_images_list *images_list)
 {
     int ret = 0;
@@ -546,15 +499,15 @@ static int dup_oci_image_info_by_filters(oci_image_t *src, const struct filters_
     imagetool_image *tmp_image = NULL;
     size_t new_size, old_size;
 
-    if (src == NULL || src->info == NULL) {
+    if (src == NULL) {
         goto out;
     }
 
-    if (!image_meet_filters(src->info, filters)) {
+    if (!image_meet_filters(src, filters)) {
         goto out;
     }
 
-    json = imagetool_image_generate_json(src->info, NULL, &err);
+    json = imagetool_image_generate_json(src, NULL, &err);
     if (json == NULL) {
         ERROR("Failed to generate json: %s", err);
         ret = -1;
@@ -602,33 +555,33 @@ static int oci_list_images_by_filters(struct filters_args *filters, imagetool_im
     int ret = 0;
     int nret;
     size_t i = 0;
-    oci_image_t **images_info = NULL;
-    size_t images_num = 0;
+    imagetool_images_list *all_images = NULL;
 
-    ret = oci_images_store_list(&images_info, &images_num);
-    if (ret != 0) {
-        ERROR("query all oci images info failed");
-        return -1;
-    }
-
-    if (images_num == 0) {
-        ret = 0;
+    all_images = util_common_calloc_s(sizeof(imagetool_images_list));
+    if (all_images == NULL) {
+        ERROR("Memory out");
+        ret = -1;
         goto out;
     }
 
-    for (i = 0; i < images_num; i++) {
-        nret = dup_oci_image_info_by_filters(images_info[i], filters, images_list);
+    if (storage_get_all_images(all_images) != 0) {
+        ERROR("Failed to get all images info");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < all_images->images_len; i++) {
+        nret = dup_oci_image_info_by_filters(all_images->images[i], filters, images_list);
         if (nret != 0) {
             WARN("Failed to dup oci image info");
         }
-        oci_image_unref(images_info[i]);
     }
 
 out:
-    free(images_info);
+    free_imagetool_images_list(all_images);
     return ret;
 }
-#endif
+
 static void oci_strip_all_dockerios(const imagetool_images_list *images)
 {
     size_t i = 0;
@@ -661,7 +614,7 @@ int oci_list_images(const im_list_request *request, imagetool_images_list **imag
     }
 
     if (image_filters != NULL) {
-        // TODO ret = oci_list_images_by_filters(image_filters, *images);
+        ret = oci_list_images_by_filters(image_filters, *images);
     } else {
         ret = oci_list_all_images(*images);
     }

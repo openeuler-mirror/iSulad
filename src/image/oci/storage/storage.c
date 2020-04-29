@@ -347,13 +347,12 @@ out:
     return ret;
 }
 
-int storage_get_all_images(imagetool_images_list **images)
+int storage_get_all_images(imagetool_images_list *images)
 {
     int ret = 0;
-    imagetool_images_list *images_tmp = NULL;
 
-    images_tmp = util_common_calloc_s(sizeof(imagetool_images_list));
-    if (images_tmp == NULL) {
+    if (images == NULL) {
+        ERROR("Invalid input arguments");
         ret = -1;
         goto out;
     }
@@ -362,12 +361,9 @@ int storage_get_all_images(imagetool_images_list **images)
     //        ret = -1;
     //        goto out;
     //    }
-
-    *images = images_tmp;
-    images_tmp = NULL;
+    // ret = image_store_get_all_images(images);
 
 out:
-    free_imagetool_images_list(images_tmp);
     return ret;
 }
 

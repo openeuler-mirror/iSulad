@@ -73,7 +73,6 @@ static const struct bim_ops g_embedded_ops = {
 };
 #endif
 
-/* isula image server */
 #ifdef ENABLE_OCI_IMAGE
 static const struct bim_ops g_oci_ops = {
     .init = oci_init,
