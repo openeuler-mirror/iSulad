@@ -207,6 +207,20 @@ bool get_now_time_stamp(types_timestamp_t *timestamp)
     return true;
 }
 
+int64_t get_now_time_nanos()
+{
+    int err = 0;
+    struct timespec ts;
+
+    err = clock_gettime(CLOCK_REALTIME, &ts);
+    if (err != 0) {
+        ERROR("failed to get time");
+        return 0;
+    }
+
+    return ts.tv_sec * Time_Second + ts.tv_nsec;
+}
+
 /* get now time buffer */
 bool get_now_time_buffer(char *timebuffer, size_t maxsize)
 {

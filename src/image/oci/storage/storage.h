@@ -21,6 +21,7 @@
 #include "types_def.h"
 #include "storage_image.h"
 #include "imagetool_images_list.h"
+#include "imagetool_fs_info.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,6 +84,8 @@ int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_ti
 int storage_img_set_names(const char *img_id, const char **names, size_t names_len);
 
 int storage_get_all_images(imagetool_images_list **images);
+
+int storage_get_images_fs_usage(imagetool_fs_info *fs_info);
 
 /* layer operations */
 int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);

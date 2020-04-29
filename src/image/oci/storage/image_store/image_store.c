@@ -2069,3 +2069,70 @@ int image_store_get_images_by_digest(const char *digest, storage_image ***images
 
     return 0;
 }
+
+int image_store_get_fs_info(imagetool_fs_info *fs_info)
+{
+    int ret = 0;
+    imagetool_fs_info_image_filesystems_element *fs_usage_tmp = NULL;
+    int64_t total_size = 0;
+    int64_t total_inodes = 0;
+
+    if (fs_info == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (g_image_store == NULL) {
+        ERROR("OCI image store net inited yet");
+        return -1;
+    }
+
+    fs_usage_tmp = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_element));
+    if (fs_usage_tmp == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    fs_usage_tmp->timestamp = get_now_time_nanos();
+
+    fs_usage_tmp->fs_id = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_fs_id));
+    if (fs_usage_tmp->fs_id == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_usage_tmp->fs_id->mountpoint = util_strdup_s(g_image_store->dir);
+
+    util_calculate_dir_size(g_image_store->dir, 0, &total_size, &total_inodes);
+
+    fs_usage_tmp->inodes_used = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_inodes_used));
+    if (fs_usage_tmp->inodes_used == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_usage_tmp->inodes_used->value = total_inodes;
+
+    fs_usage_tmp->used_bytes = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_used_bytes));
+    if (fs_usage_tmp->used_bytes == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_usage_tmp->used_bytes->value = total_size;
+
+    fs_info->image_filesystems = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_element *));
+    if (fs_info->image_filesystems == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_info->image_filesystems[0] = fs_usage_tmp;
+    fs_usage_tmp = NULL;
+    fs_info->image_filesystems_len = 1;
+
+out:
+    free_imagetool_fs_info_image_filesystems_element(fs_usage_tmp);
+    return ret;
+}

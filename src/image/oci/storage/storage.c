@@ -371,6 +371,11 @@ out:
     return ret;
 }
 
+int storage_get_images_fs_usage(imagetool_fs_info *fs_info)
+{
+    return image_store_get_fs_info(fs_info);
+}
+
 static int check_module_init_opt(struct storage_module_init_options *opts)
 {
     if (opts == NULL || opts->driver_name == NULL || opts->storage_root == NULL || opts->storage_run_root == NULL) {

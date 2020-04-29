@@ -65,6 +65,8 @@ bool get_tm_from_str(const char *str, struct tm *tm, int32_t *nanos);
 int time_format_duration(const char *in, char *out, size_t len);
 
 int time_format_duration_ago(const char *in, char *out, size_t len);
+
+int64_t get_now_time_nanos();
 #ifdef __cplusplus
 }
 #endif

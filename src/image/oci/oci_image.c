@@ -188,7 +188,6 @@ int oci_rmi(const im_remove_request *request)
     int ret = -1;
     char *real_image_name = NULL;
     oci_image_t *image_info = NULL;
-    char *errmsg = NULL;
 
     if (request == NULL || request->image.image == NULL) {
         ERROR("Invalid input arguments");
@@ -208,30 +207,22 @@ int oci_rmi(const im_remove_request *request)
     }
     oci_image_lock(image_info);
 
-    // TODO call storage rootfs rmi interface
-    // ret = isula_image_rmi(real_image_name, request->force, &errmsg);
+    ret = storage_img_delete(real_image_name, true);
     if (ret != 0) {
-        if (strstr(errmsg, IMAGE_NOT_KNOWN_ERR) != NULL) {
-            DEBUG("Image %s may already removed", real_image_name);
-            ret = 0;
-            goto clean_memory;
-        }
-        isulad_set_error_message("Failed to remove image with error: %s", errmsg);
-        ERROR("Failed to remove image '%s' with error: %s", real_image_name, errmsg);
+        ERROR("Failed to remove image '%s'", real_image_name);
         goto unlock;
     }
 
-clean_memory:
     ret = remove_oci_image_from_memory(real_image_name);
     if (ret != 0) {
         ERROR("Failed to remove image %s from memory", real_image_name);
     }
+
 unlock:
     oci_image_unlock(image_info);
 out:
     oci_image_unref(image_info);
     free(real_image_name);
-    free(errmsg);
     return ret;
 }
 
@@ -376,14 +367,21 @@ int oci_get_filesystem_info(im_fs_info_response **response)
         ERROR("Out of memory");
         return -1;
     }
-    // TODO call storage image fs interface
-    // ret = isula_image_fs_info(*response);
+
+    (*response)->fs_info = util_common_calloc_s(sizeof(imagetool_fs_info));
+    if ((*response)->fs_info == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+
+    ret = storage_get_images_fs_usage((*response)->fs_info);
     if (ret != 0) {
         ERROR("Failed to inspect image filesystem info");
         goto err_out;
     }
 
     return 0;
+
 err_out:
     free_im_fs_info_response(*response);
     *response = NULL;

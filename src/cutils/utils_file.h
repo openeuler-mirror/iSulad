@@ -86,11 +86,9 @@ int util_copy_file(const char *src_file, const char *dst_file, mode_t mode);
 
 char *util_path_base(const char *path);
 
-int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode);
-
 char *isula_utils_read_file(const char *path);
 
-int64_t util_calculate_dir_size(const char *dirpath, int recursive_depth);
+void util_calculate_dir_size(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode);
 
 typedef bool (*subdir_callback_t)(const char *, const struct dirent *);
 

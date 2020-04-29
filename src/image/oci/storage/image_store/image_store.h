@@ -90,6 +90,8 @@ int image_store_get_all_images(storage_image ***images, size_t *len);
 // item with the name ImageDigestBigDataKey and the specified digest.
 int image_store_get_images_by_digest(const char *digest, storage_image ***images, size_t *len);
 
+int image_store_get_fs_info(imagetool_fs_info *fs_info);
+
 #ifdef __cplusplus
 }
 #endif
