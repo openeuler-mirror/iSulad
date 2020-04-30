@@ -215,14 +215,15 @@ out:
     return ret;
 }
 
-const storage_image *storage_img_get(const char *img_id)
+imagetool_image *storage_img_get(const char *img_id)
 {
     if (img_id == NULL) {
         ERROR("Invalid arguments for image get");
         return NULL;
     }
 
-    return image_store_get_image(img_id);
+    return NULL;
+    //return image_store_get_image(img_id);
 }
 
 int storage_img_set_big_data(const char *img_id, const char *key, const char *val)
@@ -357,11 +358,7 @@ int storage_get_all_images(imagetool_images_list *images)
         goto out;
     }
 
-    //    if (image_store_get_all_images(images_tmp) != 0) {
-    //        ret = -1;
-    //        goto out;
-    //    }
-    // ret = image_store_get_all_images(images);
+    ret = image_store_get_all_images(images);
 
 out:
     return ret;

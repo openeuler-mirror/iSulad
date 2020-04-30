@@ -107,6 +107,7 @@ int ext_merge_conf(const host_config *host_spec, container_config *container_spe
     int ret = 0;
     char *resolved_name = NULL;
     im_umount_request umount_request = { 0 };
+    imagetool_image *image_info = NULL;
 
     if (request == NULL) {
         ERROR("Invalid arguments");
@@ -139,19 +140,18 @@ int ext_merge_conf(const host_config *host_spec, container_config *container_spe
         goto out;
     }
 
-    // TODO replace with storage get image spec
-    //image_info = oci_images_store_get(resolved_name);
-    //if (image_info == NULL) {
-    //    ERROR("Get image from image store failed, image name is %s", resolved_name);
-    //    ret = -1;
-     //   goto out;
-    //}
+    image_info = storage_img_get(resolved_name);
+    if (image_info == NULL) {
+        ERROR("Get image from image store failed, image name is %s", resolved_name);
+        ret = -1;
+        goto out;
+    }
 
-    //ret = oci_image_merge_config(image_info->info, container_spec);
+    ret = oci_image_merge_config(image_info, container_spec);
 
 out:
     free(resolved_name);
-    resolved_name = NULL;
+    free_imagetool_image(image_info);
 
     return ret;
 }

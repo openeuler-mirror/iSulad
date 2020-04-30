@@ -329,8 +329,7 @@ static int do_image_time_filter(map_itor *itor, bool is_before_filter, int64_t *
         goto out;
     }
 
-    // TODO get image info from storage
-    // image_info = oci_images_store_get(tmp);
+    image_info = storage_img_get(tmp);
     if (image_info == NULL) {
         ret = -1;
         goto out;
@@ -638,7 +637,8 @@ size_t oci_get_images_count(void)
 int oci_status_image(im_status_request *request, im_status_response **response)
 {
     int ret = 0;
-    imagetool_image_status *image = NULL;
+    imagetool_image_status *image_status = NULL;
+    imagetool_image *image_info = NULL;
     char *image_ref = NULL;
     char *resolved_name = NULL;
 
@@ -647,13 +647,13 @@ int oci_status_image(im_status_request *request, im_status_response **response)
         return -1;
     }
 
-    image = util_common_calloc_s(sizeof(imagetool_image_status));
-    if (image == NULL) {
+    image_status = util_common_calloc_s(sizeof(imagetool_image_status));
+    if (image_status == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto pack_response;
     }
-    (*response)->image_info = image;
+    (*response)->image_info = image_status;
 
     image_ref = request->image.image;
     if (image_ref == NULL) {
@@ -673,9 +673,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
 
     EVENT("Event: {Object: %s, Type: statusing image}", resolved_name);
 
-#if 0
-    TODO get image status from storage
-    image_info = oci_images_store_get(resolved_name);
+    image_info = storage_img_get(resolved_name);
     if (image_info == NULL) {
         ERROR("No such image:%s", resolved_name);
         isulad_set_error_message("No such image:%s", resolved_name);
@@ -683,21 +681,14 @@ int oci_status_image(im_status_request *request, im_status_response **response)
         goto pack_response;
     }
 
-    ret = dup_oci_image_info(image_info->info, &((*response)->image_info->image));
-    oci_image_unref(image_info);
-    if (ret != 0) {
-        ERROR("Failed to dup image info:%s", resolved_name);
-        isulad_set_error_message("Failed to dup image info:%s", resolved_name);
-        ret = -1;
-        goto pack_response;
-    }
-#endif
-    oci_strip_dockerio((*response)->image_info->image);
+    oci_strip_dockerio(image_info);
+
+    (*response)->image_info->image = image_info;
+    image_info = NULL;
 
     EVENT("Event: {Object: %s, Type: statused image}", resolved_name);
 
 pack_response:
-
     free(resolved_name);
     return ret;
 }
@@ -743,18 +734,11 @@ out:
     return ret;
 }
 
-imagetool_image *oci_get_image_info_by_name(const char *id)
-{
-    // TODO call storage image info
-    // return isula_image_get_image_info_by_name(id);
-    return NULL;
-}
-
-
 int oci_image_conf_merge_into_spec(const char *image_name, container_config *container_spec)
 {
     int ret = 0;
     char *resolved_name = NULL;
+    imagetool_image *image_info = NULL;
 
     if (container_spec == NULL || image_name == NULL) {
         ERROR("invalid NULL param");
@@ -768,16 +752,14 @@ int oci_image_conf_merge_into_spec(const char *image_name, container_config *con
         goto out;
     }
 
-    // TODO get image config from storage
-    #if 0
-    image_info = oci_images_store_get(resolved_name);
+    image_info = storage_img_get(resolved_name);
     if (image_info == NULL) {
         ERROR("Get image from image store failed, image name is %s", resolved_name);
         ret = -1;
         goto out;
     }
-    #endif
-    ret = oci_image_merge_config(NULL, container_spec);
+
+    ret = oci_image_merge_config(image_info, container_spec);
     if (ret != 0) {
         ERROR("Failed to merge oci config for image %s", resolved_name);
         ret = -1;

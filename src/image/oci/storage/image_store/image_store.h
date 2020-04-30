@@ -87,7 +87,6 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
 char *image_store_metadata(const char *id);
 
 // Return a slice enumerating the known images.
-// int image_store_get_all_images(storage_image ***images, size_t *len);
 int image_store_get_all_images(imagetool_images_list *images_list);
 
 // Return a slice enumerating the images which have a big data
