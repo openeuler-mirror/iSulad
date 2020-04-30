@@ -2,7 +2,10 @@ project(iSulad_LLT)
 
 SET(EXE storage_layers_llt)
 
+aux_source_directory(${CMAKE_BINARY_DIR}/json json_files)
+
 add_executable(${EXE}
+    ${json_files}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_regex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_verify.c
@@ -23,19 +26,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/json/schema/src/read_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/types_def.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/console/console.c
-    ${CMAKE_BINARY_DIR}/json/json_common.c
-    ${CMAKE_BINARY_DIR}/json/defs.c
-    ${CMAKE_BINARY_DIR}/json/image_devmapper_device_info.c
-    ${CMAKE_BINARY_DIR}/json/image_devmapper_deviceset_metadata.c
-    ${CMAKE_BINARY_DIR}/json/image_devmapper_direct_lvm_config.c
-    ${CMAKE_BINARY_DIR}/json/image_devmapper_transaction.c
-    ${CMAKE_BINARY_DIR}/json/oci_image_spec.c
-    ${CMAKE_BINARY_DIR}/json/imagetool_image.c
-    ${CMAKE_BINARY_DIR}/json/storage_image.c
-    ${CMAKE_BINARY_DIR}/json/imagetool_fs_info.c
-    ${CMAKE_BINARY_DIR}/json/imagetool_images_list.c
-    ${CMAKE_BINARY_DIR}/json/storage_layer.c
-    ${CMAKE_BINARY_DIR}/json/storage_mount_point.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/image/oci/storage/storage.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/image/oci/storage/image_store/image_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/image/oci/storage/layer_store/layer_store.c

@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <limits.h>
 
+#include "storage.h"
 #include "json_common.h"
 #include "layer.h"
 #include "driver.h"
@@ -26,6 +27,7 @@
 #include "map.h"
 #include "types_def.h"
 #include "utils.h"
+#include "util_atomic.h"
 #include "utils_array.h"
 #include "utils_file.h"
 #include "log.h"
@@ -52,6 +54,33 @@ static inline char *layer_json_path(const char *id);
 static bool remove_name(const char *name);
 static void recover_name(const char *name);
 static int update_digest_map(map_t *by_digest, const char *old_val, const char *new_val, const char *id);
+
+static inline bool layer_store_lock(bool writable)
+{
+    int nret = 0;
+
+    if (writable) {
+        nret = pthread_rwlock_wrlock(&g_metadata.rwlock);
+    } else {
+        nret = pthread_rwlock_rdlock(&g_metadata.rwlock);
+    }
+    if (nret != 0) {
+        ERROR("Lock memory store failed: %s", strerror(nret));
+        return false;
+    }
+
+    return true;
+}
+
+static inline void layer_store_unlock()
+{
+    int nret = 0;
+
+    nret = pthread_rwlock_unlock(&g_metadata.rwlock);
+    if (nret != 0) {
+        FATAL("Unlock memory store failed: %s", strerror(nret));
+    }
+}
 
 void layer_store_cleanup()
 {
@@ -86,6 +115,16 @@ static void digest_map_kvfree(void *key, void *value)
     util_free_array((char **)value);
 }
 
+static inline void insert_g_layer_list_item(struct linked_list *item)
+{
+    if (item == NULL) {
+        return;
+    }
+
+    linked_list_add_tail(&g_metadata.layers_list, item);
+    g_metadata.layers_list_len += 1;
+}
+
 static bool append_layer_into_list(layer_t *l)
 {
     struct linked_list *item = NULL;
@@ -99,11 +138,25 @@ static bool append_layer_into_list(layer_t *l)
         ERROR("Out of memory");
         return false;
     }
-    linked_list_add_elem(item, l);
-    linked_list_add_tail(&g_metadata.layers_list, item);
-    g_metadata.layers_list_len += 1;
 
+    linked_list_add_elem(item, l);
+
+    insert_g_layer_list_item(item);
     return true;
+}
+
+static inline void delete_g_layer_list_item(struct linked_list *item)
+{
+    if (item == NULL) {
+        return;
+    }
+
+    linked_list_del(item);
+
+    layer_ref_dec((layer_t *)item->elem);
+    item->elem = NULL;
+    free(item);
+    g_metadata.layers_list_len -= 1;
 }
 
 static void remove_layer_list_tail()
@@ -115,11 +168,8 @@ static void remove_layer_list_tail()
     }
 
     item = g_metadata.layers_list.prev;
-    linked_list_del(item);
 
-    layer_ref_dec((layer_t *)item->elem);
-    free(item);
-    g_metadata.layers_list_len -= 1;
+    delete_g_layer_list_item(item);
 }
 
 static bool init_from_conf(const struct storage_module_init_options *conf)
@@ -234,9 +284,13 @@ static int load_layers_from_json_files()
     struct linked_list *next = NULL;
     bool should_save = false;
 
+    if (!layer_store_lock(true)) {
+        return -1;
+    }
+
     ret = util_scan_subdirs(g_root_dir, load_layer_json_cb);
     if (ret != 0) {
-        return -1;
+        goto unlock_out;
     }
 
     linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
@@ -280,11 +334,15 @@ static int load_layers_from_json_files()
         }
     }
 
-    return 0;
+    ret = 0;
+    goto unlock_out;
 err_out:
     // clear memory store
     layer_store_cleanup();
-    return -1;
+    ret = -1;
+unlock_out:
+    layer_store_unlock();
+    return ret;
 }
 
 int layer_store_init(const struct storage_module_init_options *conf)
@@ -411,6 +469,19 @@ out:
     return l;
 }
 
+static inline layer_t *lookup_with_lock(const char *id)
+{
+    layer_t *ret = NULL;
+
+    if (!layer_store_lock(false)) {
+        return NULL;
+    }
+
+    ret = lookup(id);
+    layer_store_unlock();
+    return ret;
+}
+
 bool layer_store_check(const char *id)
 {
     layer_t *l = NULL;
@@ -426,7 +497,7 @@ bool layer_store_check(const char *id)
         return false;
     }
 
-    l = lookup(id);
+    l = lookup_with_lock(id);
     if (l == NULL) {
         ERROR("layer not known");
         goto out;
@@ -452,6 +523,10 @@ static char *generate_random_layer_id()
         return NULL;
     }
 
+    if (!layer_store_lock(false)) {
+        goto err_out;
+    }
+
     for (; i < max_retry_cnt; i++) {
         if (util_generate_random_str(id, max_layer_id_len) != 0) {
             ERROR("Generate random str failed");
@@ -467,10 +542,13 @@ static char *generate_random_layer_id()
         goto err_out;
     }
 
-    return id;
+    goto unlock;
 err_out:
     free(id);
-    return NULL;
+    id = NULL;
+unlock:
+    layer_store_unlock();
+    return id;
 }
 
 static int driver_create_layer(const char *id, const char *parent, bool writable,
@@ -639,16 +717,21 @@ static int remove_memory_stores(const char *id)
     size_t i = 0;
     int ret = 0;
 
+    if (!layer_store_lock(true)) {
+        return -1;
+    }
+
     l = lookup(id);
     if (l == NULL) {
         ERROR("layer not known");
-        return -1;
+        ret = -1;
+        goto unlock;
     }
 
     if (update_digest_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, NULL, l->slayer->id) != 0) {
         ERROR("Remove %s from compress digest failed", id);
         ret = -1;
-        goto out;
+        goto unlock;
     }
     if (update_digest_map(g_metadata.by_uncompress_digest, l->slayer->diff_digest, NULL, l->slayer->id) != 0) {
         // ignore this error, because only happen at out of memory;
@@ -671,14 +754,12 @@ static int remove_memory_stores(const char *id)
         if (strcmp(tl->slayer->id, id) != 0) {
             continue;
         }
-        linked_list_del(item);
-        layer_ref_dec(tl);
-        free(item);
-        g_metadata.layers_list_len -= 1;
+        delete_g_layer_list_item(item);
         break;
     }
 
-out:
+unlock:
+    layer_store_unlock();
     layer_ref_dec(l);
     return ret;
 }
@@ -687,6 +768,10 @@ static int insert_memory_stores(const char *id, const struct layer_opts *opts, l
 {
     int ret = 0;
     size_t i = 0;
+
+    if (!layer_store_lock(true)) {
+        return -1;
+    }
 
     if (!append_layer_into_list(l)) {
         ret = -1;
@@ -720,6 +805,7 @@ clear_by_name:
 clear_list:
     remove_layer_list_tail();
 out:
+    layer_store_unlock();
     return ret;
 }
 
@@ -739,13 +825,41 @@ static int apply_diff(const char *id, const struct io_read_wrapper *diff)
     return ret;
 }
 
+static int check_create_layer_used(const char *id, const struct layer_opts *opts)
+{
+    layer_t *l = NULL;
+    int ret = 0;
+    size_t i = 0;
+
+    if (!layer_store_lock(false)) {
+        return -1;
+    }
+    l = map_search(g_metadata.by_id, (void *)id);
+    if (l != NULL) {
+        ERROR("that ID is already in use");
+        ret = -1;
+        goto out;
+    }
+    // check names whether used
+    for (; i < opts->names_len; i++) {
+        l = map_search(g_metadata.by_name, (void *)opts->names[i]);
+        if (l != NULL) {
+            ERROR("that name is already in use");
+            ret = -1;
+        }
+    }
+
+out:
+    layer_store_unlock();
+    return ret;
+}
+
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *diff,
                        char **new_id)
 {
     int ret = 0;
     char *lid = util_strdup_s(id);
     layer_t *l = NULL;
-    size_t i = 0;
 
     if (new_id == NULL || opts == NULL) {
         ERROR("Invalid argument");
@@ -759,26 +873,14 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
         return -1;
     }
 
-    l = map_search(g_metadata.by_id, (void *)lid);
-    if (l != NULL) {
-        ERROR("that ID is already in use");
-        ret = -1;
+    ret = check_create_layer_used(lid, opts);
+    if (ret != 0) {
         goto free_out;
-    }
-    // check names whether used
-    for (; i < opts->names_len; i++) {
-        l = map_search(g_metadata.by_name, (void *)opts->names[i]);
-        if (l != NULL) {
-            ERROR("that name is already in use");
-            ret = -1;
-            goto free_out;
-        }
     }
 
     // create layer by driver
     ret = driver_create_layer(lid, opts->parent, opts->writable, opts->opts);
     if (ret != 0) {
-        ret = -1;
         goto free_out;
     }
 
@@ -787,6 +889,9 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
         ret = -1;
         goto driver_remove;
     }
+
+    // lock this layer
+    layer_lock(l);
 
     ret = update_layer_datas(lid, opts, l);
     if (ret != 0) {
@@ -819,6 +924,7 @@ driver_remove:
         (void)graphdriver_rm_layer(lid);
     }
 free_out:
+    layer_unlock(l);
     if (ret != 0) {
         layer_ref_dec(l);
     }
@@ -895,11 +1001,12 @@ int layer_store_delete(const char *id)
         return -1;
     }
 
-    l = lookup(id);
+    l = lookup_with_lock(id);
     if (l == NULL) {
         ERROR("layer not known");
         return -1;
     }
+    layer_lock(l);
     if (l->smount_point != NULL) {
         for (; i < l->smount_point->count; i++) {
             if (umount_helper(l, false) != 0) {
@@ -928,13 +1035,14 @@ int layer_store_delete(const char *id)
 
 free_out:
     free(tspath);
+    layer_unlock(l);
     layer_ref_dec(l);
     return ret;
 }
 
 bool layer_store_exists(const char *id)
 {
-    layer_t *l = lookup(id);
+    layer_t *l = lookup_with_lock(id);
 
     if (l == NULL) {
         return false;
@@ -976,6 +1084,10 @@ struct layer** layer_store_list(size_t *layers_len)
         return NULL;
     }
 
+    if (!layer_store_lock(false)) {
+        goto err_out;
+    }
+
     linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         layer_t *l = (layer_t *)item->elem;
         result[i] = util_common_calloc_s(sizeof(struct layer));
@@ -983,26 +1095,31 @@ struct layer** layer_store_list(size_t *layers_len)
             ERROR("Out of memory");
             goto err_out;
         }
+        layer_lock(l);
         copy_json_to_layer(l, result[i]);
+        layer_unlock(l);
         i++;
     }
 
     *layers_len = g_metadata.layers_list_len;
-    return result;
+    goto unlock;
 err_out:
     while (i >= 0) {
         free_layer(result[i]);
         i--;
     }
     free(result);
-    return NULL;
+    result = NULL;
+unlock:
+    layer_store_unlock();
+    return result;
 }
 
 bool layer_store_is_used(const char *id)
 {
     layer_t *l = NULL;
 
-    l = lookup(id);
+    l = lookup_with_lock(id);
     if (l == NULL) {
         return false;
     }
@@ -1018,9 +1135,12 @@ static struct layer **layers_by_digest_map(map_t *m, const char *digest, size_t 
     size_t len = 0;
     size_t i = 0;
 
+    if (!layer_store_lock(false)) {
+        return NULL;
+    }
     ids = map_search(m, (void *)digest);
     if (ids == NULL) {
-        return NULL;
+        goto unlock;
     }
     len = util_array_len((const char **)ids);
     if (len > 0) {
@@ -1039,20 +1159,25 @@ static struct layer **layers_by_digest_map(map_t *m, const char *digest, size_t 
                 free(t_layer);
                 goto free_out;
             }
+            layer_lock(l);
             copy_json_to_layer(l, t_layer);
             result[i] = t_layer;
+            layer_unlock(l);
             layer_ref_dec(l);
         }
     }
 
     *layers_len = len;
-    return result;
+    goto unlock;
 free_out:
     while (result != NULL && i >= 0) {
         free_layer(result[i]);
     }
     free(result);
-    return NULL;
+    result = NULL;
+unlock:
+    layer_store_unlock();
+    return result;
 }
 
 struct layer** layer_store_by_compress_digest(const char *digest, size_t *layers_len)
@@ -1081,11 +1206,13 @@ char *layer_store_lookup(const char *name)
     if (name == NULL) {
         return result;
     }
-    l = lookup(name);
+    l = lookup_with_lock(name);
     if (l == NULL) {
         return result;
     }
+    layer_lock(l);
     result = util_strdup_s(l->slayer->id);
+    layer_unlock(l);
     layer_ref_dec(l);
     return result;
 }
@@ -1181,12 +1308,14 @@ char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opt
         return NULL;
     }
 
-    l = lookup(id);
+    l = lookup_with_lock(id);
     if (l == NULL) {
         ERROR("layer not known");
         return NULL;
     }
+    layer_lock(l);
     result = mount_helper(l, opts);
+    layer_unlock(l);
 
     layer_ref_dec(l);
     return result;
@@ -1201,12 +1330,14 @@ int layer_store_umount(const char *id, bool force)
         // ignore null id
         return 0;
     }
-    l = lookup(id);
+    l = lookup_with_lock(id);
     if (l == NULL) {
         ERROR("layer not known");
         return -1;
     }
+    layer_lock(l);
     ret = umount_helper(l, force);
+    layer_unlock(l);
 
     layer_ref_dec(l);
     return ret;
@@ -1221,15 +1352,17 @@ int layer_store_mounted(const char *id)
         return ret;
     }
     // TODO: add lock
-    l = lookup(id);
+    l = lookup_with_lock(id);
     if (l == NULL) {
         ERROR("layer not known");
         return ret;
     }
 
+    layer_lock(l);
     if (l->smount_point != NULL) {
         ret = l->smount_point->count;
     }
+    layer_unlock(l);
 
     layer_ref_dec(l);
     return ret;
@@ -1244,6 +1377,7 @@ static bool remove_name(const char *name)
         return false;
     }
 
+    layer_lock(l);
     while (i < l->slayer->names_len) {
         if (strcmp(name, l->slayer->names[i]) == 0) {
             free(l->slayer->names[i]);
@@ -1258,6 +1392,7 @@ static bool remove_name(const char *name)
         }
         i++;
     }
+    layer_unlock(l);
 
     return ret;
 }
@@ -1270,37 +1405,46 @@ static void recover_name(const char *name)
         return;
     }
 
+    layer_lock(l);
     l->slayer->names[l->slayer->names_len] = util_strdup_s(name);
     l->slayer->names_len += 1;
+    layer_unlock(l);
 }
 
 int layer_store_set_names(const char *id, const char * const* names, size_t names_len)
 {
     layer_t *l = NULL;
-    int ret = -1;
+    int ret = 0;
     size_t i = 0;
     size_t j = 0;
     bool *founds = NULL;
 
     if (id == NULL) {
-        return ret;
+        return -1;
     }
+
     founds = util_smart_calloc_s(sizeof(bool), names_len);
     if (founds == NULL) {
         ERROR("Out of memory");
-        return ret;
+        return -1;
     }
 
-    // TODO: add lock
+    if (!layer_store_lock(true)) {
+        ret = -1;
+        goto unlock;
+    }
+
     l = lookup(id);
     if (l == NULL) {
         ERROR("layer not known");
-        return ret;
+        ret = -1;
+        goto unlock;
     }
     // remove old names relation
     for (; i < l->slayer->names_len; i++) {
         if (!map_remove(g_metadata.by_name, (void *)l->slayer->names[i])) {
             ERROR("Remove name %s failed", l->slayer->names[i]);
+            ret = -1;
             goto recover_out;
         }
     }
@@ -1310,13 +1454,12 @@ int layer_store_set_names(const char *id, const char * const* names, size_t name
         founds[j] = remove_name(names[j]);
         if (!map_replace(g_metadata.by_name, (void *)names[j], (void *)l)) {
             ERROR("Replace new name %s failed", names[j]);
+            ret = -1;
             goto recover_out;
         }
     }
 
-    free(founds);
-    layer_ref_dec(l);
-    return 0;
+    goto unlock;
 recover_out:
     while (i > 0) {
         i--;
@@ -1333,9 +1476,11 @@ recover_out:
             recover_name(names[j]);
         }
     }
-    free(founds);
+unlock:
     layer_ref_dec(l);
-    return -1;
+    free(founds);
+    layer_store_unlock();
+    return ret;
 }
 
 struct layer_store_status *layer_store_status()

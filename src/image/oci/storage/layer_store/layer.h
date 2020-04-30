@@ -16,9 +16,11 @@
 #define __OCI_STORAGE_LAYER_H
 
 #include <stdint.h>
+#include <pthread.h>
 
 #include "storage_layer.h"
 #include "storage_mount_point.h"
+#include "log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,7 +47,28 @@ void layer_ref_dec(layer_t *layer);
 layer_t *load_layer(const char *fname, const char *mountpoint_fname);
 int save_layer(layer_t *layer);
 int save_mount_point(layer_t *layer);
-void free_layer_t(layer_t *ptr);
+
+static inline void layer_lock(layer_t *l)
+{
+    if (l == NULL || !(l->init_mutex)) {
+        return;
+    }
+
+    if (pthread_mutex_lock(&l->mutex)) {
+        ERROR("Failed to lock atomic mutex");
+    }
+}
+
+static inline void layer_unlock(layer_t *l)
+{
+    if (l == NULL || !(l->init_mutex)) {
+        return;
+    }
+
+    if (pthread_mutex_unlock(&l->mutex)) {
+        ERROR("Failed to lock atomic mutex");
+    }
+}
 
 #ifdef __cplusplus
 }

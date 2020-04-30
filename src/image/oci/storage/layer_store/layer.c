@@ -22,6 +22,25 @@
 #include "log.h"
 #include "utils_file.h"
 
+static void free_layer_t(layer_t *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free_storage_mount_point(ptr->smount_point);
+    ptr->smount_point = NULL;
+    free_storage_layer(ptr->slayer);
+    ptr->slayer = NULL;
+    if (ptr->init_mutex) {
+        pthread_mutex_destroy(&ptr->mutex);
+    }
+    free(ptr->layer_json_path);
+    ptr->layer_json_path = NULL;
+    free(ptr->mount_point_json_path);
+    ptr->mount_point_json_path = NULL;
+    free(ptr);
+}
+
 layer_t *create_empty_layer()
 {
     layer_t *result = NULL;
@@ -179,24 +198,5 @@ out:
     free(jstr);
     free(jerr);
     return ret;
-}
-
-void free_layer_t(layer_t *ptr)
-{
-    if (ptr == NULL) {
-        return;
-    }
-    free_storage_mount_point(ptr->smount_point);
-    ptr->smount_point = NULL;
-    free_storage_layer(ptr->slayer);
-    ptr->slayer = NULL;
-    if (ptr->init_mutex) {
-        pthread_mutex_destroy(&ptr->mutex);
-    }
-    free(ptr->layer_json_path);
-    ptr->layer_json_path = NULL;
-    free(ptr->mount_point_json_path);
-    ptr->mount_point_json_path = NULL;
-    free(ptr);
 }
 
