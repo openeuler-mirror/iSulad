@@ -52,7 +52,9 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
     StderrstringWriter.context = (void *)wsi;
     StderrstringWriter.write_func = WsWriteStderrToClient;
     int ret = cb->container.exec(container_req, &container_res,
-                                 container_req->attach_stdin ? read_pipe_fd : -1, &StdoutstringWriter, &StderrstringWriter);
+                                 container_req->attach_stdin ? read_pipe_fd : -1,
+                                 container_req->attach_stdout ? &StdoutstringWriter: nullptr,
+                                 container_req->attach_stderr ? &StderrstringWriter : nullptr);
     if (ret != 0) {
         std::string message;
         if (container_res != nullptr && container_res->errmsg != nullptr) {
