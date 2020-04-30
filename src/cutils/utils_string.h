@@ -78,6 +78,8 @@ bool util_has_suffix(const char *str, const char *suffix);
 int util_string_array_unique(const char **elements, size_t length, char ***unique_elements,
                              size_t *unique_elements_len);
 
+int util_parse_bool_string(const char *str, bool *converted);
+
 #ifdef __cplusplus
 }
 #endif

@@ -8,7 +8,7 @@
 * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
 * PURPOSE.
 * See the Mulan PSL v2 for more details.
-* Author: wangfengtu
+* Author: gaohuatao
 * Create: 2020-01-19
 * Description: provide devicemapper graphdriver function definition
 ******************************************************************************/

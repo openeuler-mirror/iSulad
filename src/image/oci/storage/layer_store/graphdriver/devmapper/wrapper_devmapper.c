@@ -111,6 +111,11 @@ static int add_target(struct dm_task *dmt, uint64_t start, uint64_t size, const 
     return ret;
 }
 
+void set_udev_wait_timeout(int64_t t)
+{
+    dm_udev_wait_timeout = t;
+}
+
 int set_dev_dir(const char *dir)
 {
     int ret;
@@ -189,6 +194,43 @@ cleanup:
     free(dmt);
     return ret;
 }
+
+char *dev_get_driver_version()
+{
+    int ret;
+    struct dm_task *dmt = NULL;
+    char *version = NULL;
+    size_t size = 128;
+
+    version = util_common_calloc_s(size);
+    if (version == NULL) {
+        ERROR("devmapper: out of memory");
+        goto cleanup;
+    }
+
+    dmt = task_create(DM_DEVICE_VERSION);
+    if (dmt == NULL) {
+        goto cleanup;
+    }
+
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ERROR("devicemapper: task run failed");
+        goto cleanup;
+    }
+
+    ret = dm_task_get_driver_version(dmt, version, size);
+    if (ret == 0) {
+        free(version);
+        version = NULL;
+        goto cleanup;
+    }
+
+cleanup:
+    free(dmt);
+    return version;
+}
+
 
 // GetStatus is the programmatic example of "dmsetup status".
 // It outputs status information for the specified device name.

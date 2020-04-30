@@ -14,6 +14,11 @@ int validate_lvm_config(image_devmapper_direct_lvm_config *cfg)
 {
     int ret = -1;
 
+    if (cfg == NULL) {
+        ERROR("direct lvm config is empty");
+        return -1;
+    }
+
     if (strlen(cfg->device) == 0) {
         ERROR("must provide device path in `dm.directlvm_device` in order to configure direct-lvm");
         return ret;

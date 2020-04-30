@@ -8,7 +8,7 @@
 * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
 * PURPOSE.
 * See the Mulan PSL v1 for more details.
-* Author: wangfengtu
+* Author: gaohuatao
 * Create: 2020-01-19
 * Description: provide devicemapper graphdriver function definition
 ******************************************************************************/
@@ -47,13 +47,13 @@ struct device_set {
     char *data_loop_file;
     char *metadata_device;
     char *metadata_loop_file;
-    uint32_t thin_block_size;
+    uint64_t thinp_block_size;
     bool do_blk_discard;
     char *thin_pool_device;
 
     image_devmapper_transaction *metadata_trans;
 
-    bool overrid_udev_sync_check;
+    bool override_udev_sync_check;
     bool deferred_remove;
     bool deferred_delete;
     char *base_device_uuid;
@@ -61,6 +61,7 @@ struct device_set {
     uint nr_deleted_devices; // number of deleted devices
     uint32_t min_free_space_percent;
     char *xfs_nospace_retries; // max retries when xfs receives ENOSPC
+    int64_t udev_wait_timeout;
 
     image_devmapper_direct_lvm_config *lvm_setup_config;
 };

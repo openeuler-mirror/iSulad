@@ -8,7 +8,7 @@
 * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
 * PURPOSE.
 * See the Mulan PSL v1 for more details.
-* Author: wangfengtu
+* Author: gaohuatao
 * Create: 2020-01-19
 * Description: provide devicemapper graphdriver function definition
 ******************************************************************************/
@@ -42,6 +42,9 @@ static bool user_base_size = false;
 static bool enable_deferred_removal = false;
 static bool driver_deferred_removal_support = false;
 static bool enable_deferred_deletion = false;
+static bool driver_deferred_remove_support = false;
+static bool lvm_setup_config_force = false;
+
 
 // static int64_t default_udev_wait_timeout = 185;
 static uint64_t default_base_fs_size = 10L * 1024L * 1024L * 1204L;
@@ -127,17 +130,19 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
         *p = '\0';
         val = p + 1;
         if (strcasecmp(dup, "dm.fs") == 0) {
-            if (strcmp(val, "ext4")) {
+            if (strcmp(val, "ext4") == 0) {
+                devset->filesystem = util_strdup_s(val);
+            } else {
                 ERROR("Invalid filesystem: '%s': not supported", val);
                 ret = -1;
             }
         } else if (strcasecmp(dup, "dm.thinpooldev") == 0) {
-            if (!strcmp(val, "")) {
+            if (!util_valid_str(val))  {
                 ERROR("Invalid thinpool device, it must not be empty");
                 ret = -1;
+                goto out;
             }
-            devset->thin_pool_device = util_trim_prefice_string(val, "/dev/mapper");
-
+            devset->thin_pool_device = util_trim_prefice_string(val, "/dev/mapper/");
         } else if (strcasecmp(dup, "dm.min_free_space") == 0) {
             long converted = 0;
             ret = util_parse_percent_string(val, &converted);
@@ -145,23 +150,152 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
                 ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
                 ret = -1;
             }
+            devset->min_free_space_percent = (uint32_t)converted;
+        } else if (strcasecmp(dup, "dm.metadatadev") == 0) {
+            devset->metadata_device = util_strdup_s(val);
+        } else if (strcasecmp(dup, "dm.datadev") == 0) {
+            devset->data_device = util_strdup_s(val);
+        } else if (strcasecmp(dup, "dm.blocksize") == 0) {
+            int64_t converted = 0;
+            ret = util_parse_byte_size_string(val, &converted);
+            if (ret != 0) {
+                ERROR("Invalid blocksize %s:%s", val, strerror(-ret));
+                goto out;
+            }
+            if (converted <= 0) {
+                ERROR("dm.blocksize is lower than zero");
+                ret = -1;
+                goto out;
+            }
+            // convert to 512b sectors
+            devset->thinp_block_size = (uint64_t)converted >> 9;
+        } else if (strcasecmp(dup, "dm.override_udev_sync_check") == 0) {
+            bool converted;
+            ret = util_parse_bool_string(val, &converted);
+            if (ret != 0) {
+                ERROR("Invalid dm.override_udev_sync_check '%s': %s", val, strerror(-ret));
+                goto out;
+            }
+            devset->override_udev_sync_check = converted;
+        } else if (strcasecmp(dup, "dm.use_deferred_removal") == 0) {
+            bool converted;
+            ret = util_parse_bool_string(val, &converted);
+            if (ret != 0) {
+                ERROR("Invalid dm.use_deferred_removal '%s': %s", val, strerror(-ret));
+                goto out;
+            }
+            enable_deferred_removal = converted;
+        } else if (strcasecmp(dup, "dm.use_deferred_deletion") == 0) {
+            bool converted;
+            ret = util_parse_bool_string(val, &converted);
+            if (ret != 0) {
+                ERROR("Invalid dm.use_deferred_deletion '%s': %s", val, strerror(-ret));
+                goto out;
+            }
+            enable_deferred_deletion = converted;
         } else if (strcasecmp(dup, "dm.basesize") == 0) {
             int64_t converted = 0;
             ret = util_parse_byte_size_string(val, &converted);
             if (ret != 0) {
                 ERROR("Invalid size: '%s': %s", val, strerror(-ret));
+                goto out;
             }
-            // 无符号数转换
-            // if (converted > 0) {
+            if (converted <= 0) {
+                ERROR("dm.basesize is lower than zero");
+                ret = -1;
+                goto out;
+            }
             user_base_size = true;
             devset->base_fs_size = (uint64_t)converted;
-            // }
+        } else if (strcasecmp(dup, "dm.directlvm_device") == 0) {
+            devset->lvm_setup_config->device = util_strdup_s(val);
+
+        } else if (strcasecmp(dup, "dm.directlvm_device_force") == 0) {
+            bool converted;
+            ret = util_parse_bool_string(val, &converted);
+            if (ret != 0) {
+                ERROR("Invalid dm.directlvm_device_force '%s': %s", val, strerror(-ret));
+                goto out;
+            }
+            lvm_setup_config_force = converted;
+
+        } else if (strcasecmp(dup, "dm.thinp_percent") == 0) {
+            long converted = 0;
+            ret = util_parse_percent_string(val, &converted);
+            if (ret != 0 || converted == 100) {
+                ERROR("Invalid dm.thinp_percent: '%s': %s", val, strerror(-ret));
+                ret = -1;
+                goto out;
+            }
+            if (converted >= 100 || converted <= 0) {
+                ERROR("dm.thinp_percent must be greater than 0 and less than 100");
+                ret = -1;
+                goto out;
+            }
+            devset->lvm_setup_config->thinp_percent = (uint64_t)converted;
+        } else if (strcasecmp(dup, "dm.thinp_metapercent") == 0) {
+            long converted = 0;
+            ret = util_parse_percent_string(val, &converted);
+            if (ret != 0 || converted == 100) {
+                ERROR("Invalid dm.thinp_metapercent: '%s': %s", val, strerror(-ret));
+                ret = -1;
+                goto out;
+            }
+            if (converted >= 100 || converted <= 0) {
+                ERROR("dm.thinp_metapercent must be greater than 0 and less than 100");
+                ret = -1;
+                goto out;
+            }
+            devset->lvm_setup_config->thinp_meta_percent = (uint64_t)converted;
+        } else if (strcasecmp(dup, "dm.thinp_autoextend_percent") == 0) {
+            long converted = 0;
+            ret = util_parse_percent_string(val, &converted);
+            if (ret != 0 || converted == 100) {
+                ERROR("Invalid dm.thinp_autoextend_percent: '%s': %s", val, strerror(-ret));
+                ret = -1;
+                goto out;
+            }
+            if (converted > 100 || converted <= 0) {
+                ERROR("dm.thinp_autoextend_percent must be greater than 0 and less than 100");
+                ret = -1;
+                goto out;
+            }
+            devset->lvm_setup_config->auto_extend_percent = (uint64_t)converted;
+        } else if (strcasecmp(dup, "dm.thinp_autoextend_threshold") == 0) {
+            long converted = 0;
+            ret = util_parse_percent_string(val, &converted);
+            if (ret != 0 || converted == 100) {
+                ERROR("Invalid dm.thinp_autoextend_threshold: '%s': %s", val, strerror(-ret));
+                ret = -1;
+                goto out;
+            }
+            if (converted > 100 || converted <= 0) {
+                ERROR("dm.thinp_autoextend_threshold must be greater than 0 and less than 100");
+                ret = -1;
+                goto out;
+            }
+            devset->lvm_setup_config->auto_extend_threshold = (uint64_t)converted;
+        } else if (strcasecmp(dup, "dm.udev_wait_timeout") == 0) {
+            int64_t converted = 0;
+            ret = util_parse_byte_size_string(val, &converted);
+            if (ret != 0) {
+                ERROR("Invalid udev_wait_timeout %s:%s", val, strerror(-ret));
+                goto out;
+            }
+            if (converted < 0) {
+                ERROR("dm.udev_wait_timeout is lower than zero");
+                ret = -1;
+                goto out;
+            }
+
+            devset->udev_wait_timeout = converted;
         } else if (strcasecmp(dup, "dm.mkfsarg") == 0 || strcasecmp(dup, "dm.mountopt") == 0) {
             /* We have no way to check validation here, validation is checked when using them. */
         } else {
             ERROR("devicemapper: unknown option: '%s'", dup);
             ret = -1;
         }
+out:
         free(dup);
         if (ret != 0) {
             return ret;
@@ -180,11 +314,13 @@ static void free_device_set(struct device_set *ptr)
     ptr->root = NULL;
     free(ptr->device_prefix);
     ptr->device_prefix = NULL;
+    // TODO
 
     free_image_devmapper_direct_lvm_config(ptr->lvm_setup_config);
     ptr->lvm_setup_config = NULL;
     free(ptr);
 }
+
 static int enable_deferred_removal_deletion(struct device_set *devset)
 {
     if (enable_deferred_removal) {
@@ -376,8 +512,6 @@ static int pool_status(struct device_set *devset, uint64_t *total_size_in_sector
     }
 
     *total_size_in_sectors = length;
-    // TODO: parse params
-    //fmt.Sscanf(params, "%d %d/%d %d/%d", &transactionID, &metadataUsed, &metadataTotal, &dataUsed, &dataTotal)
     if (sscanf(params, "%lu %lu/%lu %lu/%lu", transaction_id, metadata_used, metadata_total, data_used, data_total) != 5) {
         ERROR("devmapper: sscanf device status params failed");
         ret = -1;
@@ -2221,7 +2355,7 @@ static int do_devmapper_init(struct device_set *devset)
     support = udev_set_sync_support(true);
     if (!support) {
         ERROR("devmapper: Udev sync is not supported. This will lead to data loss and unexpected behavior.");
-        if (!devset->overrid_udev_sync_check) {
+        if (!devset->override_udev_sync_check) {
             ERROR("driver not supported");
             return -1;
         }
@@ -2331,11 +2465,66 @@ static void device_id_map_kvfree(void *key, void *value)
     free(value);
 }
 
+static int determine_driver_capabilities(const char *version)
+{
+    int ret = 0;
+    int64_t major, minor;
+    char **tmp_str = NULL;
+    size_t tmp_str_len = 0;
+
+    tmp_str = util_string_split(version, '.');
+    if (tmp_str == NULL) {
+        ret = -1;
+        goto out;
+    }
+    tmp_str_len = util_array_len((const char **)tmp_str);
+    if (tmp_str_len < 2) {
+        ERROR("devmapper: driver version:%s format error", version);
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_parse_byte_size_string(tmp_str[0], &major);
+    if (ret != 0) {
+        ERROR("devmapper: invalid size: '%s': %s", tmp_str[0], strerror(-ret));
+        goto out;
+    }
+
+    if (major > 4) {
+        driver_deferred_remove_support = true;
+        goto out;
+    }
+
+    if (major > 4) {
+        goto out;
+    }
+
+    ret = util_parse_byte_size_string(tmp_str[0], &minor);
+    if (ret != 0) {
+        ERROR("devmapper: invalid size: '%s': %s", tmp_str[1], strerror(-ret));
+        goto out;
+    }
+
+    /*
+     * If major is 4 and minor is 27, then there is no need to
+     * check for patch level as it can not be less than 0.
+     */
+    if (minor >= 27) {
+        driver_deferred_remove_support = true;
+        goto out;
+    }
+
+out:
+    util_free_array(tmp_str);
+    return ret;
+}
+
 int device_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
 {
     int ret = 0;
     struct device_set *devset = NULL;
     image_devmapper_direct_lvm_config *lvm_setup_config = NULL;
+    char *version = NULL;
 
     if (driver == NULL || drvier_home == NULL || options == NULL) {
         return -1;
@@ -2358,12 +2547,33 @@ int device_init(struct graphdriver *driver, const char *drvier_home, const char 
     }
     devset->root = util_strdup_s(driver->home);
     devset->base_fs_size = default_base_fs_size;
-    devset->overrid_udev_sync_check = DEFAULT_UDEV_SYNC_OVERRIDE;
-    devset->thin_block_size = DEFAULT_THIN_BLOCK_SIZE;
+    devset->override_udev_sync_check = DEFAULT_UDEV_SYNC_OVERRIDE;
+    devset->do_blk_discard = false;
+    devset->thinp_block_size = DEFAULT_THIN_BLOCK_SIZE;
     devset->min_free_space_percent = DEFAULT_MIN_FREE_SPACE_PERCENT;
     devset->device_id_map = map_new(MAP_INT_INT, NULL, device_id_map_kvfree);
-    devset->do_blk_discard = false;
+    devset->udev_wait_timeout = DEFAULT_UDEV_WAITTIMEOUT;
 
+    free(devset->lvm_setup_config);
+    devset->lvm_setup_config = lvm_setup_config;
+
+    version = dev_get_driver_version();
+    if (version == NULL) {
+        ERROR("devmapper: driver not supported");
+        ret = -1;
+        goto out;
+    }
+
+    ret = determine_driver_capabilities(version);
+    if (ret != 0) {
+        ERROR("devmapper: determine driver capabilities failed");
+        goto out;
+    }
+
+    if (driver_deferred_removal_support) {
+        enable_deferred_deletion = true;
+        enable_deferred_removal = true;
+    }
 
     if (devset->device_id_map == NULL) {
         ERROR("devmapper: failed to allocate device id map");
@@ -2396,12 +2606,12 @@ int device_init(struct graphdriver *driver, const char *drvier_home, const char 
         goto out;
     }
 
-    ret = validate_lvm_config(lvm_setup_config);
+    set_udev_wait_timeout(devset->udev_wait_timeout);
+
+    ret = validate_lvm_config(devset->lvm_setup_config);
     if (ret != 0) {
         goto out;
     }
-
-    devset->lvm_setup_config = lvm_setup_config;
 
     ret = do_devmapper_init(devset);
     if (ret != 0) {
@@ -2412,28 +2622,31 @@ int device_init(struct graphdriver *driver, const char *drvier_home, const char 
     ret = pthread_rwlock_init(&g_devmapper_conf.devmapper_driver_rwlock, NULL);
     if (ret != 0) {
         ERROR("Failed to init devmapper conf rwlock");
+        goto out;
     }
 
     if (pthread_rwlock_wrlock(&g_devmapper_conf.devmapper_driver_rwlock) != 0) {
         ERROR("Failed to acquire devmapper conf write lock");
         ret = -1;
+        goto out;
     }
 
     if (g_devmapper_conf.devset != NULL) {
         free_device_set(g_devmapper_conf.devset);
-        free(g_devmapper_conf.devset);
     }
     g_devmapper_conf.devset = devset;
 
     if (pthread_rwlock_unlock(&g_devmapper_conf.devmapper_driver_rwlock) != 0) {
         ERROR("Failed to release devmapper conf write lock");
         ret = -1;
+        goto out;
     }
 
     return 0;
 
 out:
     free_device_set(devset); // 递归free
+    free_image_devmapper_direct_lvm_config(lvm_setup_config);
     return ret;
 }
 

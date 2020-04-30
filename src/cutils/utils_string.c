@@ -874,3 +874,22 @@ out:
     util_free_array_by_len(tmp_elements, tmp_elements_len);
     return ret;
 }
+
+int util_parse_bool_string(const char *str, bool *converted)
+{
+    int ret = 0;
+
+    if (str == NULL || converted == NULL) {
+        return -EINVAL;
+    }
+
+    if (strcasecmp(str, "true") == 0) {
+        *converted = true;
+    } else if (strcasecmp(str, "false") == 0) {
+        *converted = false;
+    } else {
+        ret = -EINVAL;
+    }
+
+    return ret;
+}
