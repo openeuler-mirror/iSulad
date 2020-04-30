@@ -43,6 +43,9 @@
     },
     "loaded": {
         "type": "string"
+    },
+    "size": {
+        "type": "uint64"
     }
   }
 }

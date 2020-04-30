@@ -34,12 +34,21 @@
 #include "docker_image_config_v2.h"
 #include "utils_array.h"
 #include "utils_string.h"
+#include "oci_image_spec.h"
+#include "defs.h"
+#include "map.h"
+#include "utils_convert.h"
+#include "oci_image_spec.h"
 
 // the name of the big data item whose contents we consider useful for computing a "digest" of the
 // image, by which we can locate the image later.
 #define IMAGE_DIGEST_BIG_DATA_KEY "manifest"
 #define IMAGE_NAME_LEN 64
 #define IMAGE_JSON "images.json"
+
+#define MAX_IMAGE_NAME_LENGTH 72
+#define DIGIST_PREFIX "@sha256:"
+#define MAX_IMAGE_DIGST_LENGTH 64
 
 typedef struct file_locker {
     // key: string  value: struct flock
@@ -91,7 +100,7 @@ static void free_image_store(image_store_t *image_store)
     (void)map_free(image_store->bydigest);
     image_store->bydigest = NULL;
 
-    linked_list_for_each_safe(item, &(image_store->images_list), next) {
+    linked_list_for_each_safe (item, &(image_store->images_list), next) {
         linked_list_del(item);
         image_ref_dec((image_t *)item->elem);
         free(item);
@@ -116,7 +125,7 @@ static void image_store_digest_field_kvfree(void *key, void *value)
 
     free(key);
     if (val != NULL) {
-        linked_list_for_each_safe(item, &(val->images_list), next) {
+        linked_list_for_each_safe (item, &(val->images_list), next) {
             linked_list_del(item);
             image_ref_dec((image_t *)item->elem);
             free(item);
@@ -414,7 +423,7 @@ static void free_digest_image(digest_image_t *ptr)
         return;
     }
 
-    linked_list_for_each_safe(item, &(ptr->images_list), next) {
+    linked_list_for_each_safe (item, &(ptr->images_list), next) {
         linked_list_del(item);
         image_ref_dec((image_t *)item->elem);
         free(item);
@@ -611,7 +620,7 @@ static int image_store_load(image_store_t *store)
         return -1;
     }
 
-    linked_list_for_each_safe(item, &(store->images_list), next) {
+    linked_list_for_each_safe (item, &(store->images_list), next) {
         if (load_image_to_image_store_field(store, (image_t *)item->elem) != 0) {
             ERROR("Failed to load image to image store");
             return -1;
@@ -762,7 +771,7 @@ out:
     return ret;
 }
 
-static int dup_map_string_int64(const json_map_string_int64 *src, json_map_string_int64 **dst)
+/*static int dup_map_string_int64(const json_map_string_int64 *src, json_map_string_int64 **dst)
 {
     size_t i;
 
@@ -882,7 +891,7 @@ out:
     }
 
     return dst;
-}
+}*/
 
 static char *generate_random_image_id()
 {
@@ -1152,7 +1161,7 @@ static void digest_image_slice_without_value(digest_image_t *digest_filter_image
         return;
     }
 
-    linked_list_for_each_safe(item, &(digest_filter_images->images_list), next) {
+    linked_list_for_each_safe (item, &(digest_filter_images->images_list), next) {
         tmp = (image_t *)item->elem;
         if (strcmp(tmp->simage->id, image->simage->id) == 0) {
             linked_list_del(item);
@@ -1239,7 +1248,7 @@ int image_store_delete(const char *id)
         return -1;
     }
 
-    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
+    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
         image_t *tmp = (image_t *)item->elem;
         if (strcmp(tmp->simage->id, id) != 0) {
             continue;
@@ -1310,11 +1319,11 @@ static bool should_use_origin_name(const char *name)
     for (i = 0; i < strlen(name); i++) {
         char ch = name[i];
         if (ch != '.' && !(ch >= '0' && ch <= '9') && !(ch >= 'a' && ch <= 'z')) {
-            return true;
+            return false;
         }
     }
 
-    return false;
+    return true;
 }
 
 // Convert a BigData key name into an acceptable file name.
@@ -1322,6 +1331,7 @@ static char *make_big_data_base_name(const char *key)
 {
 #define MAX_BIG_DATA_BASE_NAME_LEN 100
     int ret = 0;
+    int nret = 0;
     char encode_name[MAX_BIG_DATA_BASE_NAME_LEN] = { 0x00 };
     char *base_name = NULL;
     size_t name_size;
@@ -1339,11 +1349,13 @@ static char *make_big_data_base_name(const char *key)
         return NULL;
     }
 
-    ret = snprintf(base_name, name_size, "%s%s", "=", encode_name);
-    if (ret < 0 || (size_t)ret >= name_size) {
+    nret = snprintf(base_name, name_size, "=%s", encode_name);
+    if (nret < 0 || (size_t)nret >= name_size) {
         ERROR("Out of memory");
+        ret = -1;
         goto out;
     }
+    DEBUG("big data file name : %s", base_name);
 
 out:
     if (ret != 0) {
@@ -1854,24 +1866,6 @@ bool image_store_exists(const char *id)
     return lookup(id) != NULL;
 }
 
-const storage_image *image_store_get_image(const char *id)
-{
-    image_t *image = NULL;
-    storage_image *dup_image = NULL;
-
-    if (g_image_store == NULL || id == NULL) {
-        return false;
-    }
-
-    image = lookup(id);
-    if (image == NULL) {
-        ERROR("Image not known");
-        return NULL;
-    }
-    dup_image = copy_image(image->simage);
-    return dup_image;
-}
-
 char *image_store_big_data(const char *id, const char *key)
 {
     image_t *image = NULL;
@@ -2055,19 +2049,9 @@ char *image_store_metadata(const char *id)
 }
 imagetool_image;*/
 
-static oci_image_spec *trans_docker_image_config_to_oci(docker_image_config_v2 *config_v2)
-{
-    oci_image_spec *spec = NULL;
-
-    return spec;
-}
-
 static int resort_image_names(const char **names, size_t names_len, char **first_name, char ***image_tags,
                               char ***image_digests)
 {
-#define MAX_IMAGE_NAME_LENGTH 72
-#define DIGIST_PREFIX "@sha256:"
-#define MAX_IMAGE_DIGST_LENGTH 64
     int ret = 0;
     size_t i;
     char *prefix = NULL;
@@ -2090,14 +2074,14 @@ static int resort_image_names(const char **names, size_t names_len, char **first
         }
     }
 
-    if (util_array_len((const char **)(*image_tags)) > 0) {
+    if (util_array_len((const char **)(*image_digests)) > 0) {
         free(*first_name);
-        *first_name = util_strdup_s(*image_digests[0]);
+        *first_name = util_strdup_s((*image_digests)[0]);
     }
 
     if (util_array_len((const char **)(*image_tags)) > 0) {
         free(*first_name);
-        *first_name = util_strdup_s(*image_tags[0]);
+        *first_name = util_strdup_s((*image_tags)[0]);
     }
 
 out:
@@ -2112,8 +2096,11 @@ out:
 static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, const storage_image *img,
                                   char **image_digest, char ***repo_digests)
 {
+    int ret = 0;
     char *img_digest = NULL;
     char *digest = NULL;
+    // map_t *digest_map = NULL;
+    // size_t i;
 
     digest = img->digest;
     if (img->digest == NULL) {
@@ -2135,7 +2122,29 @@ static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, c
 
     // TODO free and set repo_digests
     *repo_digests = *old_repo_digests;
-    return 0;
+
+    /*digest_map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (digest_map == NULL) {
+        ERROR("Failed to create empty digest map");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < util_array_len((const char **)*old_repo_digests); i++) {
+        bool value = true;
+        if (!map_replace(digest_map, (void *)(*old_repo_digests)[i], &value)) {
+            ERROR("Failed to insert pair to digest map: %s", (*old_repo_digests)[i]);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    for (i = 0; i < util_array_len((const char **)image_tags); i++) {
+
+    }*/
+
+    // out:
+    return ret;
 }
 
 static int pack_image_tags_and_repo_digest(const storage_image *img, imagetool_image *info)
@@ -2157,7 +2166,6 @@ static int pack_image_tags_and_repo_digest(const storage_image *img, imagetool_i
         ERROR("Failed to get image repo digests");
         ret = -1;
         goto out;
-
     }
     info->repo_tags = tags;
     info->repo_tags_len = util_array_len((const char **)tags);
@@ -2170,20 +2178,185 @@ out:
     return ret;
 }
 
-static int pack_health_check_from_image(const storage_image *img, imagetool_image *info)
+static int pack_oci_image_spec(const char *filename, imagetool_image *info)
 {
+    int ret = 0;
+    parser_error err = NULL;
+
+    info->spec = oci_image_spec_parse_file(filename, NULL, &err);
+    if (info->spec == NULL) {
+        ERROR("Failed to parse oci image spec file: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(err);
+    return ret;
+}
+
+static void parse_user_group(const char *username, char **user, char **group, char **tmp_dup)
+{
+    char *tmp = NULL;
+    char *pdot = NULL;
+
+    if (user == NULL || group == NULL || tmp_dup == NULL) {
+        return;
+    }
+
+    if (username != NULL) {
+        tmp = util_strdup_s(username);
+
+        // for free tmp in caller
+        *tmp_dup = tmp;
+
+        pdot = strstr(tmp, ":");
+        if (pdot != NULL) {
+            *pdot = '\0';
+            if (pdot != tmp) {
+                // User found
+                *user = tmp;
+            }
+            if (*(pdot + 1) != '\0') {
+                // group found
+                *group = pdot + 1;
+            }
+        } else {
+            // No : found
+            if (*tmp != '\0') {
+                *user = tmp;
+            }
+        }
+    }
+
+    return;
+}
+
+static int pack_health_check_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
+{
+    int ret = 0;
+    size_t i;
+    defs_health_check *healthcheck = NULL;
+
+    if (config_v2->config->health_check == NULL || config_v2->config->health_check->test_len == 0) {
+        return 0;
+    }
+
+    healthcheck = util_common_calloc_s(sizeof(defs_health_check));
+    if (healthcheck == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    healthcheck->test = util_common_calloc_s(sizeof(char *) * config_v2->config->health_check->test_len);
+    if (healthcheck->test == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    for (i = 0; i < config_v2->config->health_check->test_len; i++) {
+        healthcheck->test[i] = util_strdup_s(config_v2->config->health_check->test[i]);
+    }
+    healthcheck->test_len = config_v2->config->health_check->test_len;
+    healthcheck->interval = config_v2->config->health_check->interval;
+    healthcheck->retries = config_v2->config->health_check->retries;
+    healthcheck->start_period = config_v2->config->health_check->start_period;
+    healthcheck->timeout = config_v2->config->health_check->timeout;
+    healthcheck->exit_on_unhealthy = config_v2->config->health_check->exit_on_unhealthy;
+
+    info->healthcheck = healthcheck;
+    healthcheck = NULL;
+
+out:
+    free_defs_health_check(healthcheck);
+    return ret;
+}
+
+static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
+{
+    int ret = 0;
+    char *tmp = NULL;
+    char *user = NULL;
+    char *group = NULL;
+    long long converted;
+
+    if (config_v2->config == NULL || config_v2->config->user == NULL || strlen(config_v2->config->user) == 0) {
+        return 0;
+    }
+
+    // parse user and group by username
+    parse_user_group(config_v2->config->user, &user, &group, &tmp);
+
+    if (user == NULL) {
+        ERROR("Failed to parse user");
+        ret = -1;
+        goto out;
+    }
+    if (util_safe_llong(user, &converted) == 0) {
+        info->uid->value = (int64_t)converted;
+    } else {
+        info->username = util_strdup_s(user);
+    }
+
+out:
+    free(tmp);
+    return ret;
+}
+
+static int pack_size_info_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
+{
+    // TODO: get image size
+    // func (s *storageImageSource) getSize() (int64, error)
     return 0;
+}
+
+static int pack_image_summary_item(const char *filename, imagetool_image *info)
+{
+    int ret = 0;
+    docker_image_config_v2 *config_v2 = NULL;
+    parser_error err = NULL;
+
+    config_v2 = docker_image_config_v2_parse_file(filename, NULL, &err);
+    if (config_v2 == NULL) {
+        ERROR("Failed to parse docker image config v2 : %s", filename);
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_health_check_from_image(config_v2, info) != 0) {
+        ERROR("Failed to pack health check config");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_user_info_from_image(config_v2, info) != 0) {
+        ERROR("Failed to pack health check config");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_size_info_from_image(config_v2, info) != 0) {
+        ERROR("Failed to pack size infomation");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_docker_image_config_v2(config_v2);
+    free(err);
+    return ret;
 }
 
 static imagetool_image *get_image_info(const image_t *image)
 {
     int ret = 0;
+    int nret = 0;
     imagetool_image *info = NULL;
     char *base_name = NULL;
     char *config_file = NULL;
-    parser_error err = NULL;
-    docker_image_config_v2 *config_v2 = NULL;
     storage_image *img = image->simage;
+    char *sha256_key = NULL;
 
     info = util_common_calloc_s(sizeof(imagetool_image));
     if (info == NULL) {
@@ -2191,35 +2364,35 @@ static imagetool_image *get_image_info(const image_t *image)
         return NULL;
     }
 
-    base_name = make_big_data_base_name(img->id);
+    nret = asprintf(&sha256_key, "sha256:%s", img->id);
+    // if (nret < 0 || (size_t)nret > strlen("sha256:") + strlen(img->id) + 1) {
+    if (nret < 0) {
+        ERROR("Failed to get sha256 key");
+        ret = -1;
+        goto out;
+    }
+
+    base_name = make_big_data_base_name(sha256_key);
     if (base_name == NULL) {
         ERROR("Failed to retrieve oci image spec file's base name");
         ret = -1;
         goto out;
     }
 
-    ret = asprintf(&config_file, "%s/%s/%s", g_image_store->dir, img->id, base_name);
-    if (ret < 0 || ret > PATH_MAX) {
+    nret = asprintf(&config_file, "%s/%s/%s", g_image_store->dir, img->id, base_name);
+    if (nret < 0 || nret > PATH_MAX) {
         ERROR("Failed to retrieve oci image spac file");
         ret = -1;
         goto out;
     }
 
-    config_v2 = docker_image_config_v2_parse_file(config_file, NULL, &err);
-    if (config_v2 == NULL) {
-        ERROR("Failed to parse docker image config v2 : %s", config_file);
+    if (pack_oci_image_spec(config_file, info) != 0) {
+        ERROR("Failed to pack oci image spec");
         ret = -1;
         goto out;
     }
 
-    info->spec = trans_docker_image_config_to_oci(config_v2);
-    if (info->spec == NULL) {
-        ERROR("Failed to transform docker image config.v2 spec to oci image spec");
-        ret = -1;
-        goto out;
-    }
-
-    if (pack_health_check_from_image(img, info) != 0) {
+    if (pack_image_summary_item(config_file, info) != 0) {
         ERROR("Failed to pack health check config from image config");
         ret = -1;
         goto out;
@@ -2228,11 +2401,14 @@ static imagetool_image *get_image_info(const image_t *image)
     info->id = util_strdup_s(img->id);
     info->created = util_strdup_s(img->created);
     info->loaded = util_strdup_s(img->loaded);
+
     if (pack_image_tags_and_repo_digest(img, info) != 0) {
         ERROR("Failed to pack image tags and repo digest");
         ret = -1;
         goto out;
     }
+
+    // info->size = img->names_len;
 
 out:
     if (ret != 0) {
@@ -2241,9 +2417,52 @@ out:
     }
     free(base_name);
     free(config_file);
-    free_docker_image_config_v2(config_v2);
+    free(sha256_key);
 
     return info;
+}
+
+/*const storage_image *image_store_get_image(const char *id)
+{
+    image_t *image = NULL;
+    storage_image *dup_image = NULL;
+
+    if (g_image_store == NULL || id == NULL) {
+        return NULL;
+    }
+
+    image = lookup(id);
+    if (image == NULL) {
+        ERROR("Image not known");
+        return NULL;
+    }
+    dup_image = copy_image(image->simage);
+    return dup_image;
+}*/
+
+imagetool_image *image_store_get_image(const char *id)
+{
+    image_t *image = NULL;
+    imagetool_image *imginfo = NULL;
+
+    if (g_image_store == NULL || id == NULL) {
+        ERROR("image store not already");
+        return NULL;
+    }
+
+    image = lookup(id);
+    if (image == NULL) {
+        ERROR("Image not known");
+        return NULL;
+    }
+
+    imginfo = get_image_info(image);
+    if (imginfo == NULL) {
+        ERROR("Failed to get image info");
+        return NULL;
+    }
+
+    return imginfo;
 }
 
 int image_store_get_all_images(imagetool_images_list *images_list)
@@ -2251,7 +2470,6 @@ int image_store_get_all_images(imagetool_images_list *images_list)
     int ret = 0;
     struct linked_list *item = NULL;
     struct linked_list *next = NULL;
-    size_t index = 0;
 
     if (g_image_store == NULL) {
         ERROR("image store not already!");
@@ -2263,7 +2481,6 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         return -1;
     }
 
-
     images_list->images = util_common_calloc_s(g_image_store->images_list_len * sizeof(imagetool_image));
     if (images_list->images == NULL) {
         ERROR("Out of memory");
@@ -2271,14 +2488,14 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         goto out;
     }
 
-    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
+    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
         imagetool_image *imginfo = get_image_info((image_t *)item->elem);
         if (imginfo == NULL) {
             ERROR("Failed to get image info");
             ret = -1;
             goto out;
         }
-        images_list->images[index++] = imginfo;
+        images_list->images[images_list->images_len++] = imginfo;
         imginfo = NULL;
     }
 

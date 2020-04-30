@@ -23,6 +23,7 @@
 #include "map.h"
 #include "linked_list.h"
 #include "image.h"
+#include "imagetool_image.h"
 #include "imagetool_images_list.h"
 
 #ifdef __cplusplus
@@ -69,7 +70,8 @@ int image_store_save(image_t *image);
 bool image_store_exists(const char *id);
 
 // Retrieve information about an image given an ID or name.
-const storage_image *image_store_get_image(const char *id);
+// const storage_image *image_store_get_image(const char *id);
+imagetool_image *image_store_get_image(const char *id);
 
 // Retrieves a (potentially large) piece of data associated with this ID, if it has previously been set.
 char *image_store_big_data(const char *id, const char *key);
