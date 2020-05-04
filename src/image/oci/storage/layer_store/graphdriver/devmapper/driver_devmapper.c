@@ -392,10 +392,85 @@ out:
     return ret;
 }
 
+static void status_append(const char *name, const char *value, uint64_t data, char **status, data_type type)
+{
+#define MAX_INFO_LENGTH 100
+    char tmp[PATH_MAX] = { 0 };
+    char *str = NULL;
+    size_t nret = 0;
+
+    if (name == NULL) {
+        return;
+    }
+
+    switch (type) {
+        case STRING:
+            nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %s\n", name, value);
+            break;
+        case UINT64_T:
+            nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %lu\n", name, data);
+            break;
+        default:
+            break;
+    }
+
+    if (nret < 0 || nret >= MAX_INFO_LENGTH) {
+        ERROR("Failed to print status");
+        return;
+    }
+
+    str = *status;
+    *status = NULL;
+    *status = util_string_append(tmp, str);
+    free(str);
+}
+
+char *status_to_str(const struct status *st)
+{
+    char *str = NULL;
+
+    status_append("Pool Name", st->pool_name, 0, &str, STRING);
+    status_append("Pool Blocksize", NULL, st->sector_size, &str, UINT64_T);
+    status_append("Base Device Size", NULL, st->base_device_size, &str, UINT64_T);
+    status_append("Backing Filesystem", st->base_device_fs, 0, &str, STRING);
+    status_append("Data file", st->data_file, 0, &str, STRING);
+    status_append("Metadata file", st->metadata_file, 0, &str, STRING);
+    status_append("Data Space Used", NULL, st->data.used, &str, UINT64_T);
+    status_append("Data Space Total", NULL, st->data.total, &str, UINT64_T);
+    status_append("Data Space Available", NULL, st->data.available, &str, UINT64_T);
+    status_append("Metadata Space Used", NULL, st->metadata.used, &str, UINT64_T);
+    status_append("Metadata Space Total", NULL, st->metadata.total, &str, UINT64_T);
+    status_append("Metadata Space Available", NULL, st->metadata.available, &str, UINT64_T);
+    status_append("Thin Pool Minimum Free Space", NULL, st->min_free_space, &str, UINT64_T);
+
+    if (st->udev_sync_supported) {
+        status_append("Udev Sync Supported", "true", 0, &str, STRING);
+    } else {
+        status_append("Udev Sync Supported", "false", 0, &str, STRING);
+    }
+
+    if (st->deferred_remove_enabled) {
+        status_append("Deferred Removal Enabled", "true", 0, &str, STRING);
+    } else {
+        status_append("Deferred Removal Enabled", "false", 0, &str, STRING);
+    }
+
+    if (st->deferred_delete_enabled) {
+        status_append("Deferred Deletion Enabled", "true", 0, &str, STRING);
+    } else {
+        status_append("Deferred Deletion Enabled", "false", 0, &str, STRING);
+    }
+
+    status_append("Deferred Deleted Device Count", NULL, st->deferred_deleted_device_count, &str, UINT64_T);
+
+    return str;
+}
+
 int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status)
 {
     int ret = 0;
     struct status *st = NULL;
+    char *status_str = NULL;
 
     if (driver == NULL || status == NULL) {
         return -1;
@@ -404,12 +479,21 @@ int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdr
     st = device_set_status();
     if (st == NULL) {
         ERROR("Failed to get device set status");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     status->driver_name = util_strdup_s(driver->name);
-    // TODO
+    status->backing_fs = util_strdup_s(driver->backing_fs);
+    status_str = status_to_str(st);
+    status->status = util_strdup_s(status_str);
+    if (status->status == NULL) {
+        ret = -1;
+        goto out;
+    }
 
+out:
     free_devmapper_status(st);
+    free(status_str);
     return ret;
 }
