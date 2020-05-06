@@ -2046,6 +2046,33 @@ char *image_store_top_layer(const char *id)
     return top_layer;
 }
 
+int image_store_set_image_size(const char *id, uint64_t size)
+{
+    int ret = 0;
+    image_t *image = NULL;
+
+    if (!is_read_write()) {
+        ERROR("called a write method on a read-only store, "
+              "not allowed to modify image metadata at %s",
+              g_image_store->dir);
+        return -1;
+    }
+
+    image = lookup(id);
+    if (image == NULL) {
+        ERROR("image not known");
+        ret = -1;
+        goto out;
+    }
+
+    image->simage->size = size;
+    save_image(g_image_store, image);
+
+out:
+    return ret;
+}
+
+
 /*typedef struct {
     char *id;
 
@@ -2327,13 +2354,6 @@ out:
     return ret;
 }
 
-static int pack_size_info_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
-{
-    // TODO: get image size
-    // func (s *storageImageSource) getSize() (int64, error)
-    return 0;
-}
-
 static int pack_image_summary_item(const char *filename, imagetool_image *info)
 {
     int ret = 0;
@@ -2355,12 +2375,6 @@ static int pack_image_summary_item(const char *filename, imagetool_image *info)
 
     if (pack_user_info_from_image(config_v2, info) != 0) {
         ERROR("Failed to pack health check config");
-        ret = -1;
-        goto out;
-    }
-
-    if (pack_size_info_from_image(config_v2, info) != 0) {
-        ERROR("Failed to pack size infomation");
         ret = -1;
         goto out;
     }
@@ -2424,6 +2438,7 @@ static imagetool_image *get_image_info(const image_t *image)
     info->id = util_strdup_s(img->id);
     info->created = util_strdup_s(img->created);
     info->loaded = util_strdup_s(img->loaded);
+    info->size = img->size;
 
     if (pack_image_tags_and_repo_digest(img, info) != 0) {
         ERROR("Failed to pack image tags and repo digest");

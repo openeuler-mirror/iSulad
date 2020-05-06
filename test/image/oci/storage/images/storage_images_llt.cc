@@ -13,9 +13,6 @@
  * Description: provide oci storage images unit test
  ******************************************************************************/
 #include "image_store.h"
-#include "imagetool_images_list.h"
-#include "read_file.h"
-#include "utils.h"
 #include <cstring>
 #include <iostream>
 #include <algorithm>
@@ -29,9 +26,11 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <gtest/gtest.h>
-#include "read_file.h"
+#include "utils.h"
 #include "path.h"
+#include "read_file.h"
 #include "storage.h"
+#include "imagetool_images_list.h"
 
 std::string GetDirectory()
 {
@@ -285,6 +284,14 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_NE(image->repo_tags, nullptr);
     ASSERT_EQ(image->repo_tags_len, 1);
     ASSERT_STREQ(image->repo_tags[0], "docker.io/library/health_check:latest");
+    ASSERT_EQ(image->healthcheck, nullptr);
+    ASSERT_EQ(image->username, nullptr);
+    ASSERT_EQ(image->size, 0);
+    ASSERT_EQ(image->spec->config->env_len, 1);
+    ASSERT_STREQ(image->spec->config->env[0],
+                 "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+    ASSERT_EQ(image->spec->config->cmd_len, 4);
+    ASSERT_STREQ(image->spec->config->cmd[0], "/bin/bash");
 
     ASSERT_EQ(image_store_delete(id.c_str()), 0);
     ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);

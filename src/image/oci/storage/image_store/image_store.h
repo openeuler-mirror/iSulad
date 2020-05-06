@@ -91,6 +91,9 @@ char *image_store_metadata(const char *id);
 // Reads top layer associated with an item with the specified ID.
 char *image_store_top_layer(const char *id);
 
+// Updates the image size associated with the item with the specified ID.
+int image_store_set_image_size(const char *id, uint64_t size);
+
 // Return a slice enumerating the known images.
 int image_store_get_all_images(imagetool_images_list *images_list);
 
