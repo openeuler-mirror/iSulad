@@ -244,37 +244,6 @@ int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, 
     return get_user(basefs, hc, userstr, puser);
 }
 
-#if 0
-static int dup_oci_image_info(const imagetool_image *src, imagetool_image **dest)
-{
-    int ret = -1;
-    char *json = NULL;
-    parser_error err = NULL;
-
-    if (src == NULL) {
-        *dest = NULL;
-        return 0;
-    }
-
-    json = imagetool_image_generate_json(src, NULL, &err);
-    if (json == NULL) {
-        ERROR("Failed to generate json: %s", err);
-        goto out;
-    }
-    *dest = imagetool_image_parse_data(json, NULL, &err);
-    if (*dest == NULL) {
-        ERROR("Failed to parse json: %s", err);
-        goto out;
-    }
-    ret = 0;
-
-out:
-    free(err);
-    free(json);
-    return ret;
-}
-#endif
-
 static int oci_list_all_images(imagetool_images_list *images_list)
 {
     return storage_get_all_images(images_list);
