@@ -339,7 +339,7 @@ static int check_parent_valid(const char *parent, const struct graphdriver *driv
     int ret = 0;
     char *parent_dir = NULL;
 
-    if (strcmp(parent, "") != 0) {
+    if (parent != NULL) {
         parent_dir = util_path_join(driver->home, parent);
         if (parent_dir == NULL) {
             ERROR("Failed to join layer dir:%s", parent);
@@ -677,7 +677,7 @@ static int mk_sub_directorys(const char *id, const char *parent, const char *lay
         goto out;
     }
 
-    if (strcmp(parent, "") == 0) {
+    if (parent == NULL) {
         if (mk_empty_directory(layer_dir) != 0) {
             ret = -1;
             goto out;
@@ -822,7 +822,7 @@ int overlay2_create_rw(const char *id, const char *parent, const struct graphdri
 {
     int ret = 0;
 
-    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
+    if (id == NULL || driver == NULL || create_opts == NULL) {
         return -1;
     }
 
@@ -848,7 +848,7 @@ int overlay2_create_ro(const char *id, const char *parent, const struct graphdri
 {
     int ret = 0;
 
-    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
+    if (id == NULL || driver == NULL || create_opts == NULL) {
         return -1;
     }
 
@@ -1783,7 +1783,7 @@ int overlay2_repair_lowers(const char *id, const char *parent, const struct grap
     char **lowers_arr = NULL;
     size_t lowers_size = 0;
 
-    if (id == NULL || driver == NULL || parent == NULL) {
+    if (id == NULL || driver == NULL) {
         return -1;
     }
 
@@ -1810,7 +1810,7 @@ int overlay2_repair_lowers(const char *id, const char *parent, const struct grap
         }
     }
 
-    if (strcmp(parent, "") == 0) {
+    if (parent == NULL) {
         if (mk_empty_directory(layer_dir) != 0) {
             ret = -1;
             goto out;

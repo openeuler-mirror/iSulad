@@ -96,7 +96,7 @@ int storage_layer_create(const char *layer_id, const char *parent_id, bool write
     struct io_read_wrapper reader = { 0 };
     struct layer_opts *opts = NULL;
 
-    if (layer_id == NULL || parent_id == NULL || layer_data_path == NULL) {
+    if (layer_id == NULL || layer_data_path == NULL) {
         ERROR("Invalid arguments for put ro layer");
         ret = -1;
         goto out;
@@ -197,7 +197,7 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
     int ret = 0;
     char *image_id = NULL;
 
-    if (id == NULL || parent_id == NULL || metadata == NULL || opts == NULL) {
+    if (id == NULL || metadata == NULL || opts == NULL) {
         ERROR("Invalid arguments for image create");
         ret = -1;
         goto out;

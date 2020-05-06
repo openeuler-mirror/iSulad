@@ -110,7 +110,7 @@ int graphdriver_create_rw(const char *id, const char *parent, struct driver_crea
         return -1;
     }
 
-    if (id == NULL || parent == NULL || create_opts == NULL) {
+    if (id == NULL || create_opts == NULL) {
         ERROR("Invalid input arguments for driver create");
         return -1;
     }
@@ -125,7 +125,7 @@ int graphdriver_create_ro(const char *id, const char *parent, const struct drive
         return -1;
     }
 
-    if (id == NULL || parent == NULL || create_opts == NULL) {
+    if (id == NULL || create_opts == NULL) {
         ERROR("Invalid input arguments for driver create");
         return -1;
     }
@@ -296,7 +296,7 @@ int graphdriver_try_repair_lowers(const char *id, const char *parent)
         return -1;
     }
 
-    if (id == NULL || parent == NULL) {
+    if (id == NULL) {
         ERROR("Invalid input arguments for driver repair lower");
         return -1;
     }

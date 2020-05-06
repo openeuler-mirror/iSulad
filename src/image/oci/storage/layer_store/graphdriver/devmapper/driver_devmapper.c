@@ -48,7 +48,7 @@ static int do_create(const char *id, const char *parent, const struct driver_cre
 int devmapper_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
                         const struct driver_create_opts *create_opts)
 {
-    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
+    if (id == NULL || driver == NULL || create_opts == NULL) {
         return -1;
     }
 
@@ -59,7 +59,7 @@ int devmapper_create_rw(const char *id, const char *parent, const struct graphdr
 int devmapper_create_ro(const char *id, const char *parent, const struct graphdriver *driver,
                         const struct driver_create_opts *create_opts)
 {
-    if (id == NULL || parent == NULL || driver == NULL || create_opts == NULL) {
+    if (id == NULL || driver == NULL || create_opts == NULL) {
         return -1;
     }
 
