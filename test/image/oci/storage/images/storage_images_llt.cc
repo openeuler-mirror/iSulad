@@ -248,7 +248,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
         GetDirectory() +
         "/data/resources/ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689/"
         "=c2hhMjU2OmZmYzhlZjc5NjhhMmFjYjc1NDUwMDZiZWQwMjIwMDFhZGRhYTI2MmMwZjc2MDg4MzE0NmM0YTRmYWU1NGU2ODk=";
-    ASSERT_STRNE(cleanpath(config_file.c_str(), real_path, sizeof(real_path)), nullptr);
+    ASSERT_STRNE(cleanpath(config_file.c_str(), real_path, sizeof(real_path)), "manifest");
 
     std::ifstream t(real_path);
     std::string buffer((std::istreambuf_iterator<char>(t)),
@@ -277,21 +277,27 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     auto image = image_store_get_image(id.c_str());
     ASSERT_NE(image, nullptr);
-    // ASSERT_STREQ(image->created, "2020-03-30T08:02:50.586247435Z");
-    // ASSERT_STREQ(image->loaded, "2020-04-29T09:06:29.385966253Z");
     ASSERT_NE(image->created, nullptr);
     ASSERT_NE(image->loaded, nullptr);
     ASSERT_NE(image->repo_tags, nullptr);
     ASSERT_EQ(image->repo_tags_len, 1);
     ASSERT_STREQ(image->repo_tags[0], "docker.io/library/health_check:latest");
-    ASSERT_EQ(image->healthcheck, nullptr);
     ASSERT_EQ(image->username, nullptr);
     ASSERT_EQ(image->size, 0);
     ASSERT_EQ(image->spec->config->env_len, 1);
     ASSERT_STREQ(image->spec->config->env[0],
                  "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
-    ASSERT_EQ(image->spec->config->cmd_len, 4);
-    ASSERT_STREQ(image->spec->config->cmd[0], "/bin/bash");
+    ASSERT_EQ(image->spec->config->cmd_len, 1);
+    ASSERT_STREQ(image->spec->config->cmd[0], "sh");
+    ASSERT_NE(image->healthcheck, nullptr);
+    ASSERT_EQ(image->healthcheck->test_len, 2);
+    ASSERT_STREQ(image->healthcheck->test[0], "CMD-SHELL");
+    ASSERT_STREQ(image->healthcheck->test[1], "date >> /tmp/health_check || exit 1");
+    ASSERT_EQ(image->healthcheck->interval, 3000000000);
+    ASSERT_EQ(image->healthcheck->retries, 3);
+    ASSERT_EQ(image->healthcheck->start_period, 1000000000);
+    ASSERT_EQ(image->healthcheck->timeout, 3000000000);
+    ASSERT_TRUE(image->healthcheck->exit_on_unhealthy);
 
     ASSERT_EQ(image_store_delete(id.c_str()), 0);
     ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);

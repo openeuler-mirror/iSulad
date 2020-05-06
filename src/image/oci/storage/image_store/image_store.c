@@ -1455,10 +1455,12 @@ static int append_big_data_name(storage_image *image, const char *name)
 
 static int update_image_with_big_data(image_t *image, const char *key, const char *data, bool *should_save)
 {
+    int ret = 0;
     bool size_found = false;
     int64_t old_size;
     const char *old_digest = NULL;
     char *new_digest = NULL;
+    char *full_digest = NULL;
     bool add_name = true;
     size_t i;
     digest_image_t *digest_filter_images = NULL;
@@ -1489,10 +1491,11 @@ static int update_image_with_big_data(image_t *image, const char *key, const cha
 
     old_digest = get_value_from_json_map_string_string(im->big_data_digests, key);
     new_digest = sha256_digest_str(data);
+    full_digest = util_full_digest(new_digest);
     if (old_digest != NULL) {
-        update_json_map_string_string(im->big_data_digests, key, new_digest);
+        update_json_map_string_string(im->big_data_digests, key, full_digest);
     } else {
-        append_json_map_string_string(im->big_data_digests, key, new_digest);
+        append_json_map_string_string(im->big_data_digests, key, full_digest);
     }
 
     if (!size_found || old_size != (int64_t)strlen(data) || old_digest == NULL || strcmp(old_digest, new_digest) != 0) {
@@ -1509,7 +1512,8 @@ static int update_image_with_big_data(image_t *image, const char *key, const cha
     if (add_name) {
         if (append_big_data_name(im, key) != 0) {
             ERROR("Failed to append big data name");
-            return -1;
+            ret = -1;
+            goto out;
         }
         *should_save = true;
     }
@@ -1519,7 +1523,8 @@ static int update_image_with_big_data(image_t *image, const char *key, const cha
             if (remove_image_from_digest_index(g_image_store, image, old_digest) != 0) {
                 ERROR("Failed to remove the image from the list of images in the digest-based "
                       "index which corresponds to the old digest for this item, unless it's also the hard-coded digest");
-                return -1;
+                ret = -1;
+                goto out;
             }
         }
 
@@ -1530,12 +1535,16 @@ static int update_image_with_big_data(image_t *image, const char *key, const cha
             digest_image_slice_without_value(digest_filter_images, image);
             if (append_image_to_digest_images(digest_filter_images, image) != 0) {
                 ERROR("Failed to append image to digest images");
-                return -1;
+                ret = -1;
+                goto out;
             }
         }
     }
 
-    return 0;
+out:
+    free(new_digest);
+    free(full_digest);
+    return ret;
 }
 
 int image_store_set_big_data(const char *id, const char *key, const char *data)
@@ -2072,33 +2081,6 @@ out:
     return ret;
 }
 
-
-/*typedef struct {
-    char *id;
-
-    char **repo_tags;
-    size_t repo_tags_len;
-
-    char **repo_digests;
-    size_t repo_digests_len;
-
-    uint64_t size;
-
-    char *created;
-
-    char *loaded;
-
-    imagetool_image_uid *uid;
-
-    char *username;
-
-    oci_image_spec *spec;
-
-    defs_health_check *healthcheck;
-
-}
-imagetool_image;*/
-
 static int resort_image_names(const char **names, size_t names_len, char **first_name, char ***image_tags,
                               char ***image_digests)
 {
@@ -2402,7 +2384,6 @@ static imagetool_image *get_image_info(const image_t *image)
     }
 
     nret = asprintf(&sha256_key, "sha256:%s", img->id);
-    // if (nret < 0 || (size_t)nret > strlen("sha256:") + strlen(img->id) + 1) {
     if (nret < 0) {
         ERROR("Failed to get sha256 key");
         ret = -1;
@@ -2430,7 +2411,7 @@ static imagetool_image *get_image_info(const image_t *image)
     }
 
     if (pack_image_summary_item(config_file, info) != 0) {
-        ERROR("Failed to pack health check config from image config");
+        ERROR("Failed to pack image summary item from image config");
         ret = -1;
         goto out;
     }
@@ -2445,8 +2426,6 @@ static imagetool_image *get_image_info(const image_t *image)
         ret = -1;
         goto out;
     }
-
-    // info->size = img->names_len;
 
 out:
     if (ret != 0) {
