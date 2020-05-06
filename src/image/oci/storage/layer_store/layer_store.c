@@ -1198,23 +1198,29 @@ struct layer** layer_store_by_uncompress_digest(const char *digest, size_t *laye
     return layers_by_digest_map(g_metadata.by_uncompress_digest, digest, layers_len);
 }
 
-char *layer_store_lookup(const char *name)
+struct layer *layer_store_lookup(const char *name)
 {
-    char *result = NULL;
+    struct layer *ret = NULL;
     layer_t *l = NULL;
 
     if (name == NULL) {
-        return result;
+        return ret;
     }
+    ret = util_common_calloc_s(sizeof(struct layer));
+    if (ret == NULL) {
+        ERROR("Out of memory");
+        return ret;
+    }
+
     l = lookup_with_lock(name);
     if (l == NULL) {
-        return result;
+        return ret;
     }
     layer_lock(l);
-    result = util_strdup_s(l->slayer->id);
+    copy_json_to_layer(l, ret);
     layer_unlock(l);
     layer_ref_dec(l);
-    return result;
+    return ret;
 }
 
 static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)

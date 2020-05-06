@@ -179,10 +179,19 @@ TEST_F(StorageImagesUnitTest, test_layer_store_lookup)
     std::string id { "ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1" };
     std::string name { "689feccc14f14112b43b1fbf7dc14c3426e4fdd6e2bff462ec70b9f6ee4b3fae-layer" };
     std::string incorrectId { "4db68de4ff27" };
+    struct layer *l = NULL;
 
-    ASSERT_STREQ(layer_store_lookup(name.c_str()), id.c_str());
-    ASSERT_STREQ(layer_store_lookup(id.c_str()), id.c_str());
-    ASSERT_EQ(layer_store_lookup(incorrectId.c_str()), nullptr);
+    l = layer_store_lookup(name.c_str());
+    ASSERT_NE(l, nullptr);
+    ASSERT_STREQ(l->id, id.c_str());
+    free_layer(l);
+    l = layer_store_lookup(id.c_str());
+    ASSERT_NE(l, nullptr);
+    ASSERT_STREQ(l->id, id.c_str());
+    free_layer(l);
+    l = layer_store_lookup(incorrectId.c_str());
+    ASSERT_EQ(l->id, nullptr);
+    free_layer(l);
 }
 
 TEST_F(StorageImagesUnitTest, test_layer_store_exists)
