@@ -347,6 +347,96 @@ out:
     return ret;
 }
 
+static int64_t storage_img_cal_image_size(const char *image_id)
+{
+    size_t i = 0;
+    int64_t total_size = -1;
+    char *layer_id = NULL;
+    char **big_data_names = NULL;
+    size_t big_data_len = 0;
+    struct layer *layer_info = NULL;
+
+    if (image_id == NULL) {
+        ERROR("Invalid arguments");
+        total_size = -1;
+        goto out;
+    }
+
+    if (image_store_big_data_names(image_id, &big_data_names, &big_data_len) != 0) {
+        ERROR("Failed to read image %s big datas", image_id);
+        total_size = -1;
+        goto out;
+    }
+
+    for (i = 0; i < big_data_len; i++) {
+        int64_t tmp = image_store_big_data_size(image_id, big_data_names[i]);
+        if (tmp == -1) {
+            ERROR("Failed to read big data %s for image %s", big_data_names[i], image_id);
+            total_size = -1;
+            goto out;
+        }
+        total_size += tmp;
+    }
+
+    layer_id = image_store_top_layer(image_id);
+    if (layer_id == NULL) {
+        ERROR("Failed to get top layer of image %s", image_id);
+        total_size = -1;
+        goto out;
+    }
+
+    while (layer_id != NULL) {
+        layer_info = layer_store_lookup(layer_id);
+        if (layer_info == NULL) {
+            ERROR("Failed to get layer info for layer %s", layer_id);
+            total_size = -1;
+            goto out;
+        }
+
+        if (layer_info->uncompress_size < 0 || layer_info->uncompressed_digest == NULL) {
+            ERROR("size for layer %s unknown", layer_id);
+            total_size = -1;
+            goto out;
+        }
+
+        total_size += layer_info->uncompress_size;
+
+        free(layer_id);
+        layer_id = util_strdup_s(layer_info->parent);
+        free_layer(layer_info);
+        layer_info = NULL;
+    }
+
+out:
+    free(layer_id);
+    free_layer(layer_info);
+    util_free_array_by_len(big_data_names, big_data_len);
+    return total_size;
+}
+
+int storage_img_set_image_size(const char *image_id)
+{
+    int ret = 0;
+    int64_t image_size = 0;
+
+    image_size = storage_img_cal_image_size(image_id);
+    if (image_size < 0) {
+        ERROR("Failed to get image %s size", image_id);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_set_image_size(image_id, (uint64_t)image_size) != 0) {
+        ERROR("Failed to set image %s size %llu", image_id, (uint64_t)image_size);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+
 int storage_get_all_images(imagetool_images_list *images)
 {
     int ret = 0;

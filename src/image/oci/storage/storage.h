@@ -89,6 +89,8 @@ int storage_get_images_fs_usage(imagetool_fs_info *fs_info);
 
 bool storage_image_exist(const char *image_or_id);
 
+int storage_img_set_image_size(const char *image_id);
+
 /* layer operations */
 int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);
 
