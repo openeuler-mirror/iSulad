@@ -18,7 +18,10 @@
 #include <semaphore.h>
 
 #include "isula_libutils/log.h"
-#include "isula_image_pull.h"
+#include "log.h"
+#include "oci_pull.h"
+#include "oci_login.h"
+#include "oci_logout.h"
 #include "registry.h"
 
 #include "containers_store.h"
@@ -76,18 +79,16 @@ out:
 
 int oci_init(const struct service_arguments *args)
 {
-    int ret = -1;
-    registry_init_options options;
+    int ret = 0;
 
     if (args == NULL) {
         ERROR("Invalid image config");
         return ret;
     }
 
-    options.use_decrypted_key = conf_get_use_decrypted_key_flag();
-    options.skip_tls_verify = conf_get_skip_insecure_verify_flag();
-    ret = registry_init(&options);
+    ret = registry_init();
     if (ret != 0) {
+        ret = -1;
         goto out;
     }
 
@@ -97,12 +98,13 @@ int oci_init(const struct service_arguments *args)
     }
 
 out:
+
     return ret;
 }
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response **response)
 {
-    return isula_pull_image(request, response);
+    return oci_do_pull_image(request, response);
 }
 
 int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
@@ -460,8 +462,7 @@ int oci_login(const im_login_request *request)
         return -1;
     }
 
-    // TODO call storage login load interface
-    //ret = isula_do_login(request->server, request->username, request->password);
+    ret = oci_do_login(request->server, request->username, request->password);
     if (ret != 0) {
         ERROR("Login failed");
     }
@@ -478,8 +479,7 @@ int oci_logout(const im_logout_request *request)
         return -1;
     }
 
-    // TODO call storage logout load interface
-    //ret = isula_do_logout(request->server);
+    ret = oci_do_logout(request->server);
     if (ret != 0) {
         ERROR("Logout failed");
     }

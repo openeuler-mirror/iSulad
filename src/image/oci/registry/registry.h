@@ -20,27 +20,24 @@ extern "C" {
 #endif
 
 typedef struct {
-    bool use_decrypted_key;
-    bool skip_tls_verify;
-} registry_init_options;
-
-typedef struct {
     char *username;
     char *password;
 } registry_auth;
 
 typedef struct {
-    registry_auth auth;
     char *image_name;
     char *dest_image_name;
+    registry_auth auth;
+    bool skip_tls_verify;
 } registry_pull_options;
 
 typedef struct {
-    registry_auth auth;
     char *host;
+    registry_auth auth;
+    bool skip_tls_verify;
 } registry_login_options;
 
-int registry_init(registry_init_options *options);
+int registry_init();
 int registry_pull(registry_pull_options *options);
 int registry_login(registry_login_options *options);
 int registry_logout(char *host);

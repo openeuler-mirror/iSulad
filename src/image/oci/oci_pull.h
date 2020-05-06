@@ -12,8 +12,8 @@
 * Create: 2019-07-15
 * Description: isula image pull operator implement
 *******************************************************************************/
-#ifndef __IMAGE_ISULA_PULL_H
-#define __IMAGE_ISULA_PULL_H
+#ifndef __IMAGE_OCI_PULL_H
+#define __IMAGE_OCI_PULL_H
 
 #include "image.h"
 
@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-int isula_pull_image(const im_pull_request *request, im_pull_response **response);
+int oci_do_pull_image(const im_pull_request *request, im_pull_response **response);
 
 #ifdef __cplusplus
 }

@@ -37,6 +37,7 @@
 #include "map.h"
 #include "linked_list.h"
 #include "pthread.h"
+#include "isulad_config.h"
 
 #define MAX_LAYER_NUM 125
 #define MANIFEST_BIG_DATA_KEY "manifest"
@@ -60,12 +61,8 @@ typedef struct {
     size_t file_list_len;
 } cached_layer;
 
+// Share infomation of downloading layers to avoid downloading the same layer.
 typedef struct {
-    // options
-    bool use_decrypted_key;
-    bool skip_tls_verify;
-
-    // Share infomation of downloading layers to avoid downloading the same layer.
     pthread_mutex_t mutex;
     bool mutex_inited;
     pthread_cond_t cond;
@@ -1465,6 +1462,7 @@ out:
 static int registry_fetch(pull_descriptor *desc)
 {
     int ret = 0;
+    imagetool_image *image = NULL;
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -1474,6 +1472,13 @@ static int registry_fetch(pull_descriptor *desc)
     ret = fetch_and_parse_manifest(desc);
     if (ret != 0) {
         ERROR("fetch and parse manifest failed");
+        goto out;
+    }
+
+    // If the image already exist, do not pull it again.
+    image = storage_img_get(desc->dest_image_name);
+    if (image != NULL && desc->config.digest != NULL && !strcmp(image->id, desc->config.digest)) {
+        DEBUG("image %s with id %s already exist, ignore pulling", desc->dest_image_name, image->id);
         goto out;
     }
 
@@ -1505,6 +1510,8 @@ static int registry_fetch(pull_descriptor *desc)
     }
 
 out:
+    free_imagetool_image(image);
+    image = NULL;
 
     return ret;
 }
@@ -1563,8 +1570,8 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
     desc->blobpath = util_strdup_s(blobpath);
-    desc->use_decrypted_key = g_shared->use_decrypted_key;
-    desc->skip_tls_verify = g_shared->skip_tls_verify;
+    desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
+    desc->skip_tls_verify = options->skip_tls_verify;
 
     if (options->auth.username != NULL && options->auth.password != NULL) {
         desc->username = util_strdup_s(options->auth.username);
@@ -1599,8 +1606,7 @@ int registry_pull(registry_pull_options *options)
     desc = util_common_calloc_s(sizeof(pull_descriptor));
     if (desc == NULL) {
         ERROR("Out of memory");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = prepare_pull_desc(desc, options);
@@ -1632,7 +1638,6 @@ out:
             WARN("failed to remove directory %s", desc->blobpath);
         }
     }
-
     free_pull_desc(desc);
 
     return ret;
@@ -1662,14 +1667,9 @@ static void cached_layers_kvfree(void *key, void *value)
     return;
 }
 
-int registry_init(registry_init_options *options)
+int registry_init()
 {
     int ret = 0;
-
-    if (options == NULL) {
-        ERROR("Invalid NULL param when init registry module");
-        return -1;
-    }
 
     g_shared = util_common_calloc_s(sizeof(registry_global));
     if (g_shared == NULL) {
@@ -1691,9 +1691,6 @@ int registry_init(registry_init_options *options)
     }
     g_shared->cond_inited = true;
 
-    g_shared->use_decrypted_key = options->use_decrypted_key;
-    g_shared->skip_tls_verify = options->skip_tls_verify;
-
     g_shared->cached_layers = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, cached_layers_kvfree);
     if (g_shared->cached_layers == NULL) {
         ERROR("out of memory");
@@ -1712,6 +1709,8 @@ out:
         }
         map_free(g_shared->cached_layers);
         g_shared->cached_layers = NULL;
+        free(g_shared);
+        g_shared = NULL;
     }
 
     return ret;
@@ -1737,8 +1736,8 @@ int registry_login(registry_login_options *options)
     }
 
     desc->host = util_strdup_s(options->host);
-    desc->use_decrypted_key = g_shared->use_decrypted_key;
-    desc->skip_tls_verify = g_shared->skip_tls_verify;
+    desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
+    desc->skip_tls_verify = options->skip_tls_verify;
     desc->username = util_strdup_s(options->auth.username);
     desc->password = util_strdup_s(options->auth.password);
 
@@ -1775,6 +1774,9 @@ static void free_registry_auth(registry_auth *auth)
 
 void free_registry_pull_options(registry_pull_options *options)
 {
+    if (options == NULL) {
+        return;
+    }
     free_registry_auth(&options->auth);
     free(options->image_name);
     options->image_name = NULL;
@@ -1784,6 +1786,9 @@ void free_registry_pull_options(registry_pull_options *options)
 
 void free_registry_login_options(registry_login_options *options)
 {
+    if (options == NULL) {
+        return;
+    }
     free_registry_auth(&options->auth);
     free(options->host);
     options->host = NULL;

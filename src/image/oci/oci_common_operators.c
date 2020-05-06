@@ -53,6 +53,105 @@ char *get_last_part(char **parts)
     return last_part;
 }
 
+char *oci_get_host(const char *name)
+{
+    char **parts = NULL;
+    char *host = NULL;
+
+    if (name == NULL) {
+        ERROR("Invalid NULL param");
+        return NULL;
+    }
+
+    parts = util_string_split(name, '/');
+    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") &&
+         strcmp(*parts, "localhost")) || (strstr(name, "/") == NULL)) {
+        util_free_array(parts);
+        return NULL;
+    }
+
+    if (parts != NULL) {
+        host = util_strdup_s(parts[0]);
+        util_free_array(parts);
+    }
+
+    return host;
+}
+
+char *oci_default_tag(const char *name)
+{
+    char temp[PATH_MAX] = { 0 };
+    char **parts = NULL;
+    char *last_part = NULL;
+    char *add_default_tag = "";
+
+    if (name == NULL) {
+        ERROR("Invalid NULL param");
+        return NULL;
+    }
+
+    parts = util_string_split(name, '/');
+    if (parts == NULL) {
+        ERROR("split %s by '/' failed", name);
+        return NULL;
+    }
+
+    last_part = get_last_part(parts);
+    if (last_part != NULL && strrchr(last_part, ':') == NULL) {
+        add_default_tag = DEFAULT_TAG;
+    }
+
+    util_free_array(parts);
+
+    // Add image's default tag
+    int nret = snprintf(temp, sizeof(temp), "%s%s", name, add_default_tag);
+    if (nret < 0 || (size_t)nret >= sizeof(temp)) {
+        ERROR("sprint temp image name failed");
+        return NULL;
+    }
+
+    return util_strdup_s(temp);
+}
+
+char *oci_host_from_mirror(const char *mirror)
+{
+    const char *host = mirror;
+
+    if (mirror == NULL) {
+        ERROR("Invalid NULL param");
+        return NULL;
+    }
+
+    if (util_has_prefix(mirror, HTTPS_PREFIX)) {
+        host = mirror + strlen(HTTPS_PREFIX);
+    } else if (util_has_prefix(mirror, HTTPS_PREFIX)) {
+        host = mirror + strlen(HTTP_PREFIX);
+    }
+
+    return util_strdup_s(host);
+}
+
+char *oci_add_host(const char *host, const char *name)
+{
+    char *with_host = NULL;
+
+    if (host == NULL || name == NULL) {
+        ERROR("Invalid NULL param");
+        return NULL;
+    }
+
+    with_host = util_common_calloc_s(strlen(host) + strlen("/") + strlen(name) + 1);
+    if (with_host == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+    (void)strcat(with_host, host);
+    (void)strcat(with_host, "/");
+    (void)strcat(with_host, name);
+
+    return with_host;
+}
+
 // normalize the unqualified image to be domain/repo/image...
 char *oci_normalize_image_name(const char *name)
 {

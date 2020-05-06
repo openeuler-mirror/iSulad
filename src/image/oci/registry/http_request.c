@@ -594,7 +594,7 @@ static char *build_get_token_url(challenge *c, char *username, char *scope)
         url_len += strlen("service=") + strlen(c->service) + strlen("&");
     }
     if (scope != NULL) {
-        url_len += strlen("scope") + strlen(scope) + strlen("&");
+        url_len += strlen("scope=") + strlen(scope) + strlen("&");
     }
 
     url = util_common_calloc_s(url_len);
