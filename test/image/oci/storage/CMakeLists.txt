@@ -1,4 +1,4 @@
 project(iSulad_LLT)
 
-# add_subdirectory(images)
-add_subdirectory(layers)
+add_subdirectory(images)
+# add_subdirectory(layers)

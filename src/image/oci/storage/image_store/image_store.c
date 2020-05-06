@@ -100,7 +100,7 @@ static void free_image_store(image_store_t *image_store)
     (void)map_free(image_store->bydigest);
     image_store->bydigest = NULL;
 
-    linked_list_for_each_safe (item, &(image_store->images_list), next) {
+    linked_list_for_each_safe(item, &(image_store->images_list), next) {
         linked_list_del(item);
         image_ref_dec((image_t *)item->elem);
         free(item);
@@ -125,7 +125,7 @@ static void image_store_digest_field_kvfree(void *key, void *value)
 
     free(key);
     if (val != NULL) {
-        linked_list_for_each_safe (item, &(val->images_list), next) {
+        linked_list_for_each_safe(item, &(val->images_list), next) {
             linked_list_del(item);
             image_ref_dec((image_t *)item->elem);
             free(item);
@@ -423,7 +423,7 @@ static void free_digest_image(digest_image_t *ptr)
         return;
     }
 
-    linked_list_for_each_safe (item, &(ptr->images_list), next) {
+    linked_list_for_each_safe(item, &(ptr->images_list), next) {
         linked_list_del(item);
         image_ref_dec((image_t *)item->elem);
         free(item);
@@ -620,7 +620,7 @@ static int image_store_load(image_store_t *store)
         return -1;
     }
 
-    linked_list_for_each_safe (item, &(store->images_list), next) {
+    linked_list_for_each_safe(item, &(store->images_list), next) {
         if (load_image_to_image_store_field(store, (image_t *)item->elem) != 0) {
             ERROR("Failed to load image to image store");
             return -1;
@@ -1161,7 +1161,7 @@ static void digest_image_slice_without_value(digest_image_t *digest_filter_image
         return;
     }
 
-    linked_list_for_each_safe (item, &(digest_filter_images->images_list), next) {
+    linked_list_for_each_safe(item, &(digest_filter_images->images_list), next) {
         tmp = (image_t *)item->elem;
         if (strcmp(tmp->simage->id, image->simage->id) == 0) {
             linked_list_del(item);
@@ -1248,7 +1248,7 @@ int image_store_delete(const char *id)
         return -1;
     }
 
-    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
         image_t *tmp = (image_t *)item->elem;
         if (strcmp(tmp->simage->id, id) != 0) {
             continue;
@@ -2013,14 +2013,37 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
 char *image_store_metadata(const char *id)
 {
     image_t *image = NULL;
+    char *metadata = NULL;
 
+    //TODO: lock image
     image = lookup(id);
     if (image == NULL) {
         ERROR("Image not known");
         return NULL;
     }
 
-    return util_strdup_s(image->simage->metadata);
+    metadata = util_strdup_s(image->simage->metadata);
+    //TODO: unlock image
+
+    return metadata;
+}
+
+char *image_store_top_layer(const char *id)
+{
+    image_t *image = NULL;
+    char *top_layer = NULL;
+
+    //TODO: lock image
+    image = lookup(id);
+    if (image == NULL) {
+        ERROR("Image not known");
+        return NULL;
+    }
+
+    top_layer = util_strdup_s(image->simage->layer);
+    //TODO: unlock image
+
+    return top_layer;
 }
 
 /*typedef struct {
@@ -2422,7 +2445,7 @@ out:
     return info;
 }
 
-/*const storage_image *image_store_get_image(const char *id)
+/* const storage_image *image_store_get_image(const char *id)
 {
     image_t *image = NULL;
     storage_image *dup_image = NULL;
@@ -2481,6 +2504,10 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         return -1;
     }
 
+    if (g_image_store->images_list_len == 0) {
+        return 0;
+    }
+
     images_list->images = util_common_calloc_s(g_image_store->images_list_len * sizeof(imagetool_image));
     if (images_list->images == NULL) {
         ERROR("Out of memory");
@@ -2488,7 +2515,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         goto out;
     }
 
-    linked_list_for_each_safe (item, &(g_image_store->images_list), next) {
+    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
         imagetool_image *imginfo = get_image_info((image_t *)item->elem);
         if (imginfo == NULL) {
             ERROR("Failed to get image info");

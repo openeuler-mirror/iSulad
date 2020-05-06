@@ -88,6 +88,9 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
 // Reads metadata associated with an item with the specified ID.
 char *image_store_metadata(const char *id);
 
+// Reads top layer associated with an item with the specified ID.
+char *image_store_top_layer(const char *id);
+
 // Return a slice enumerating the known images.
 int image_store_get_all_images(imagetool_images_list *images_list);
 
