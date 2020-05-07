@@ -117,7 +117,8 @@ static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
         // schema == NULL means this challenge have not be used.
         if (desc->challenges[i].schema == NULL) {
             desc->challenges[i] = c;
-            return 0;
+            ret = 0;
+            goto out;
         }
     }
 
@@ -133,7 +134,7 @@ out:
     util_free_array(kv);
     kv = NULL;
 
-    return -1;
+    return ret;
 }
 
 static int parse_auth(pull_descriptor *desc, char *auth)

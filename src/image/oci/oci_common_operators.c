@@ -234,6 +234,9 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
         }
     }
 
+    free(tmp_image_name);
+    tmp_image_name = NULL;
+
     return 0;
 }
 

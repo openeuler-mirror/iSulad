@@ -436,8 +436,12 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
                 return -1;
             }
 
-            desc->layers[i].diff_id = util_strdup_s(cache->diffid);
-            desc->layers[i].file = util_strdup_s(infos[i].file);
+            if (desc->layers[i].diff_id == NULL) {
+                desc->layers[i].diff_id = util_strdup_s(cache->diffid);
+            }
+            if (desc->layers[i].file == NULL) {
+                desc->layers[i].file = util_strdup_s(infos[i].file);
+            }
         }
     }
 
@@ -1639,6 +1643,7 @@ out:
         }
     }
     free_pull_desc(desc);
+    desc = NULL;
 
     return ret;
 }
@@ -1780,6 +1785,8 @@ void free_registry_pull_options(registry_pull_options *options)
     free_registry_auth(&options->auth);
     free(options->image_name);
     options->image_name = NULL;
+    free(options->dest_image_name);
+    options->dest_image_name = NULL;
     free(options);
     return;
 }
@@ -1908,5 +1915,8 @@ void free_pull_desc(pull_descriptor *desc)
     free(desc->layers);
     desc->layers = NULL;
     desc->layers_len = 0;
+
+    free(desc);
+
     return;
 }

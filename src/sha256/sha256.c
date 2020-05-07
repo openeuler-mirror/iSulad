@@ -368,6 +368,9 @@ out:
         fclose((FILE*)stream);
     }
 
+    free(buffer);
+    buffer = NULL;
+
     if (ret == 0) {
         return util_strdup_s(output_buffer);
     } else {
