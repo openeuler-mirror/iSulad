@@ -223,6 +223,87 @@ int graphdriver_get_layer_metadata(const char *id, json_map_string_string *map_i
     return g_graphdriver->ops->get_layer_metadata(id, g_graphdriver, map_info);
 }
 
+container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
+{
+    int ret = -1;
+    int i = 0;
+    container_inspect_graph_driver *inspect_driver = NULL;
+    json_map_string_string *metadata = NULL;
+
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return NULL;
+    }
+
+    if (id == NULL) {
+        ERROR("Invalid input arguments for get driver metadata");
+        goto free_out;
+    }
+
+    inspect_driver = util_common_calloc_s(sizeof(container_inspect_graph_driver));
+    if (inspect_driver == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+
+    inspect_driver->data = util_common_calloc_s(sizeof(container_inspect_graph_driver_data));
+    if (inspect_driver->data == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+
+    metadata = util_common_calloc_s(sizeof(json_map_string_string));
+    if (metadata == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+
+    ret = g_graphdriver->ops->get_layer_metadata(id, g_graphdriver, metadata);
+    if (ret != 0) {
+        ERROR("Failed to get metadata map info");
+        goto free_out;
+    }
+
+    inspect_driver->name = util_strdup_s(g_graphdriver->name);
+    
+    if (!strcmp(g_graphdriver->name, DRIVER_OVERLAY_NAME) || !strcmp(g_graphdriver->name, DRIVER_OVERLAY2_NAME)) {
+        for (i = 0; i < metadata->len; i++) {
+            if (!strcmp(metadata->keys[i], "LowerDir")) {
+                inspect_driver->data->lower_dir = util_strdup_s(metadata->values[i]);
+            } else if (!strcmp(metadata->keys[i], "MergedDir")) {
+                inspect_driver->data->merged_dir = util_strdup_s(metadata->values[i]);
+            } else if (!strcmp(metadata->keys[i], "UpperDir")) {
+                inspect_driver->data->upper_dir = util_strdup_s(metadata->values[i]);
+            } else if (!strcmp(metadata->keys[i], "WorkDir")) {
+                inspect_driver->data->work_dir = util_strdup_s(metadata->values[i]);
+            }
+        }
+    } else if (!strcmp(g_graphdriver->name, DRIVER_DEVMAPPER_NAME)) {
+        for (i = 0; i < metadata->len; i++) {
+            if (!strcmp(metadata->keys[i], "DeviceId")) {
+                inspect_driver->data->device_id = util_strdup_s(metadata->values[i]);
+            } else if (!strcmp(metadata->keys[i], "DeviceName")) {
+                inspect_driver->data->device_name = util_strdup_s(metadata->values[i]);
+            } else if (!strcmp(metadata->keys[i], "DeviceSize")) {
+                inspect_driver->data->device_size = util_strdup_s(metadata->values[i]);
+            }
+        }
+    } else {
+        ERROR("Unsupported driver %s", g_graphdriver->name);
+        ret = -1;
+        goto free_out;
+    }
+    ret = 0;
+
+free_out:
+    free_json_map_string_string(metadata);
+    if (ret != 0) {
+        free_container_inspect_graph_driver(inspect_driver);
+        return NULL;
+    }
+    return inspect_driver;
+}
+
 struct graphdriver_status *graphdriver_get_status(void)
 {
     int ret = -1;

@@ -44,6 +44,7 @@
 #include "utils.h"
 #include "error.h"
 #include "collector.h"
+#include "driver.h"
 
 static int container_version_cb(const container_version_request *request, container_version_response **response)
 {
@@ -1297,7 +1298,6 @@ out:
     return ret;
 }
 
-
 static int pack_inspect_data(const container_t *cont, container_inspect **out_inspect)
 {
     int ret = 0;
@@ -1337,8 +1337,6 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
     }
 
 #ifdef ENABLE_OCI_IMAGE
-#if 0
-    // todo replace functions with layer get metadata function
     if (!strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI)) {
         inspect->graph_driver = graphdriver_get_metadata(cont->common_config->id);
         if (inspect->graph_driver == NULL) {
@@ -1346,7 +1344,6 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
             goto out;
         }
     }
-#endif
 #endif
 
 out:
