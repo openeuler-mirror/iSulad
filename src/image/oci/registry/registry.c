@@ -323,7 +323,7 @@ static void del_cached_layer(char *blob_digest, char *file)
     }
     if (cache->file_list_len != 0) {
         linked_list_for_each_safe(item, &(cache->file_list), next) {
-            if (strcmp((char *)item->elem, file)) {
+            if (!strcmp((char *)item->elem, file)) {
                 linked_list_del(item);
                 free((char *)item->elem);
                 free(item);

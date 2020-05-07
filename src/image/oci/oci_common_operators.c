@@ -134,19 +134,27 @@ char *oci_host_from_mirror(const char *mirror)
 char *oci_add_host(const char *host, const char *name)
 {
     char *with_host = NULL;
+    bool need_repo_prefix = false;
 
     if (host == NULL || name == NULL) {
         ERROR("Invalid NULL param");
         return NULL;
     }
 
-    with_host = util_common_calloc_s(strlen(host) + strlen("/") + strlen(name) + 1);
+    if (strchr(name, '/') == NULL) {
+        need_repo_prefix = true;
+    }
+
+    with_host = util_common_calloc_s(strlen(host) + strlen("/") + strlen(DEFAULT_REPO_PREFIX) + strlen(name) + 1);
     if (with_host == NULL) {
         ERROR("out of memory");
         return NULL;
     }
     (void)strcat(with_host, host);
     (void)strcat(with_host, "/");
+    if (need_repo_prefix) {
+        (void)strcat(with_host, DEFAULT_REPO_PREFIX);
+    }
     (void)strcat(with_host, name);
 
     return with_host;
