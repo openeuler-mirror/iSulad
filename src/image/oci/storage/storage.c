@@ -493,6 +493,38 @@ out:
     return ret;
 }
 
+// recal size of images which do not have valid size
+static int restore_images_size()
+{
+    int ret = 0;
+    size_t i = 0;
+    imagetool_images_list *images = NULL;
+
+    images = util_common_calloc_s(sizeof(imagetool_images_list));
+    if (images == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_get_all_images(images) != 0) {
+        ERROR("Failed to list all images");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < images->images_len; i++) {
+        if (images->images[i]->size == 0) {
+            (void)storage_img_set_image_size(images->images[i]->id);
+        }
+    }
+
+out:
+    free_imagetool_images_list(images);
+    return ret;
+}
+
+
 int storage_module_init(struct storage_module_init_options *opts)
 {
     int ret = 0;
@@ -515,6 +547,12 @@ int storage_module_init(struct storage_module_init_options *opts)
 
     if (image_store_init(opts) != 0) {
         ERROR("Failed to init image store");
+        ret = -1;
+        goto out;
+    }
+
+    if (restore_images_size() != 0) {
+        ERROR("Failed to recal image size");
         ret = -1;
         goto out;
     }
