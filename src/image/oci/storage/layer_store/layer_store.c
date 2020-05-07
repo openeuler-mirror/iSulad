@@ -861,7 +861,7 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     char *lid = util_strdup_s(id);
     layer_t *l = NULL;
 
-    if (new_id == NULL || opts == NULL) {
+    if (opts == NULL) {
         ERROR("Invalid argument");
         return -1;
     }
@@ -912,8 +912,10 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     ret = save_layer(l);
     if (ret == 0) {
         DEBUG("create layer success");
-        *new_id = lid;
-        lid = NULL;
+        if (new_id != NULL) {
+            *new_id = lid;
+            lid = NULL;
+        }
         goto free_out;
     }
     ERROR("Save layer failed");
