@@ -46,7 +46,6 @@ static layer_store_metadata g_metadata;
 static char *g_root_dir;
 static char *g_run_dir;
 
-static inline char *layer_json_path(const char *id);
 static inline char *tar_split_path(const char *id);
 static inline char *mountpoint_json_path(const char *id);
 static inline char *layer_json_path(const char *id);
@@ -395,7 +394,6 @@ int layer_store_init(const struct storage_module_init_options *conf)
         goto free_out;
     }
 
-    // TODO: load layer json files
     if (load_layers_from_json_files() != 0) {
         goto free_out;
     }
@@ -523,10 +521,6 @@ static char *generate_random_layer_id()
         return NULL;
     }
 
-    if (!layer_store_lock(false)) {
-        goto err_out;
-    }
-
     for (; i < max_retry_cnt; i++) {
         if (util_generate_random_str(id, max_layer_id_len) != 0) {
             ERROR("Generate random str failed");
@@ -542,12 +536,11 @@ static char *generate_random_layer_id()
         goto err_out;
     }
 
-    goto unlock;
+    goto out;
 err_out:
     free(id);
     id = NULL;
-unlock:
-    layer_store_unlock();
+out:
     return id;
 }
 
@@ -635,8 +628,12 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
         slayer->names[i] = util_strdup_s(opts->names[i]);
         slayer->names_len++;
     }
-    l->slayer = slayer;
     l->layer_json_path = layer_json_path(id);
+    if (l->layer_json_path == NULL) {
+        ret = -1;
+        goto free_out;
+    }
+    l->slayer = slayer;
     l->incompelte = true;
 
 free_out:
@@ -685,11 +682,14 @@ static int update_digest_map(map_t *by_digest, const char *old_val, const char *
 
     if (old_val != NULL) {
         size_t idx = 0;
+        size_t new_len;
         old_list = (char **)map_search(by_digest, (void *)old_val);
         old_len = util_array_len((const char **)old_list);
+        new_len = old_len;
 
         for (; idx < old_len; idx++) {
             if (strcmp(old_list[idx], id) == 0) {
+                new_len--;
                 free(old_list[idx]);
                 old_list[idx] = NULL;
                 break;
@@ -700,7 +700,7 @@ static int update_digest_map(map_t *by_digest, const char *old_val, const char *
             old_list[idx] = NULL;
         }
 
-        if (idx == 0 && !map_remove(by_digest, (void *)old_val)) {
+        if (new_len == 0 && !map_remove(by_digest, (void *)old_val)) {
             WARN("Remove old failed");
         }
     }
@@ -717,21 +717,16 @@ static int remove_memory_stores(const char *id)
     size_t i = 0;
     int ret = 0;
 
-    if (!layer_store_lock(true)) {
-        return -1;
-    }
-
     l = lookup(id);
     if (l == NULL) {
         ERROR("layer not known");
-        ret = -1;
-        goto unlock;
+        return -1;
     }
 
     if (update_digest_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, NULL, l->slayer->id) != 0) {
         ERROR("Remove %s from compress digest failed", id);
         ret = -1;
-        goto unlock;
+        goto out;
     }
     if (update_digest_map(g_metadata.by_uncompress_digest, l->slayer->diff_digest, NULL, l->slayer->id) != 0) {
         // ignore this error, because only happen at out of memory;
@@ -758,8 +753,7 @@ static int remove_memory_stores(const char *id)
         break;
     }
 
-unlock:
-    layer_store_unlock();
+out:
     layer_ref_dec(l);
     return ret;
 }
@@ -768,10 +762,6 @@ static int insert_memory_stores(const char *id, const struct layer_opts *opts, l
 {
     int ret = 0;
     size_t i = 0;
-
-    if (!layer_store_lock(true)) {
-        return -1;
-    }
 
     if (!append_layer_into_list(l)) {
         ret = -1;
@@ -805,7 +795,6 @@ clear_by_name:
 clear_list:
     remove_layer_list_tail();
 out:
-    layer_store_unlock();
     return ret;
 }
 
@@ -825,16 +814,22 @@ static int apply_diff(const char *id, const struct io_read_wrapper *diff)
     return ret;
 }
 
-static int check_create_layer_used(const char *id, const struct layer_opts *opts)
+static int check_create_layer_used(char **id, const struct layer_opts *opts)
 {
     layer_t *l = NULL;
     int ret = 0;
     size_t i = 0;
+    char *lid = *id;
 
-    if (!layer_store_lock(false)) {
+    if (lid == NULL) {
+        lid = generate_random_layer_id();
+    }
+    if (lid == NULL) {
         return -1;
     }
-    l = map_search(g_metadata.by_id, (void *)id);
+    *id = lid;
+
+    l = map_search(g_metadata.by_id, (void *)lid);
     if (l != NULL) {
         ERROR("that ID is already in use");
         ret = -1;
@@ -850,7 +845,55 @@ static int check_create_layer_used(const char *id, const struct layer_opts *opts
     }
 
 out:
-    layer_store_unlock();
+    return ret;
+}
+
+static bool build_layer_dir(const char *id)
+{
+    char *result = NULL;
+    int nret = 0;
+    bool ret = true;
+
+    nret = asprintf(&result, "%s/%s", g_root_dir, id);
+    if (nret < 0 || nret > PATH_MAX) {
+        SYSERROR("Create layer json path failed");
+        return false;
+    }
+
+    if (util_mkdir_p(result, IMAGE_STORE_PATH_MODE) != 0) {
+        ret = false;
+    }
+
+    free(result);
+    return ret;
+}
+
+static int new_layer_by_opts(const char *id, const struct layer_opts *opts)
+{
+    int ret = 0;
+    layer_t *l = NULL;
+
+    l = create_empty_layer();
+    if (l == NULL) {
+        ret = -1;
+        goto out;
+    }
+    if (!build_layer_dir(id)) {
+        goto out;
+    }
+
+    ret = update_layer_datas(id, opts, l);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // update memory store
+    ret = insert_memory_stores(id, opts, l);
+
+out:
+    if (ret != 0) {
+        layer_ref_dec(l);
+    }
     return ret;
 }
 
@@ -866,14 +909,11 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
         return -1;
     }
 
-    if (lid == NULL) {
-        lid = generate_random_layer_id();
-    }
-    if (lid == NULL) {
+    if (!layer_store_lock(true)) {
         return -1;
     }
 
-    ret = check_create_layer_used(lid, opts);
+    ret = check_create_layer_used(&lid, opts);
     if (ret != 0) {
         goto free_out;
     }
@@ -883,27 +923,16 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     if (ret != 0) {
         goto free_out;
     }
+    ret = new_layer_by_opts(lid, opts);
+    if (ret != 0) {
+        goto driver_remove;
+    }
 
-    l = create_empty_layer();
+    l = lookup(lid);
     if (l == NULL) {
-        ret = -1;
         goto driver_remove;
     }
 
-    // lock this layer
-    layer_lock(l);
-
-    ret = update_layer_datas(lid, opts, l);
-    if (ret != 0) {
-        goto driver_remove;
-    }
-    // update memory store
-    ret = insert_memory_stores(lid, opts, l);
-    if (ret != 0) {
-        goto driver_remove;
-    }
-
-    // TODO: write diff data
     ret = apply_diff(lid, diff);
     if (ret != 0) {
         goto clear_memory;
@@ -920,16 +949,15 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     }
     ERROR("Save layer failed");
 clear_memory:
-    ret = remove_memory_stores(lid);
+    (void)remove_memory_stores(lid);
 driver_remove:
     if (ret != 0) {
         (void)graphdriver_rm_layer(lid);
+        (void)layer_store_remove_layer(lid);
     }
 free_out:
-    layer_unlock(l);
-    if (ret != 0) {
-        layer_ref_dec(l);
-    }
+    layer_store_unlock();
+    layer_ref_dec(l);
     free(lid);
     return ret;
 }
@@ -1002,13 +1030,15 @@ int layer_store_delete(const char *id)
     if (id == NULL) {
         return -1;
     }
+    if (!layer_store_lock(true)) {
+        return -1;
+    }
 
-    l = lookup_with_lock(id);
+    l = lookup(id);
     if (l == NULL) {
         ERROR("layer not known");
         return -1;
     }
-    layer_lock(l);
     if (l->smount_point != NULL) {
         for (; i < l->smount_point->count; i++) {
             if (umount_helper(l, false) != 0) {
@@ -1037,8 +1067,8 @@ int layer_store_delete(const char *id)
 
 free_out:
     free(tspath);
-    layer_unlock(l);
     layer_ref_dec(l);
+    layer_store_unlock();
     return ret;
 }
 
@@ -1187,7 +1217,6 @@ struct layer** layer_store_by_compress_digest(const char *digest, size_t *layers
     if (layers_len == NULL) {
         return NULL;
     }
-    // TODO: add lock
     return layers_by_digest_map(g_metadata.by_compress_digest, digest, layers_len);
 }
 
@@ -1196,7 +1225,6 @@ struct layer** layer_store_by_uncompress_digest(const char *digest, size_t *laye
     if (layers_len == NULL) {
         return NULL;
     }
-    // TODO: add lock
     return layers_by_digest_map(g_metadata.by_uncompress_digest, digest, layers_len);
 }
 
@@ -1218,9 +1246,7 @@ struct layer *layer_store_lookup(const char *name)
     if (l == NULL) {
         return ret;
     }
-    layer_lock(l);
     copy_json_to_layer(l, ret);
-    layer_unlock(l);
     layer_ref_dec(l);
     return ret;
 }
@@ -1521,8 +1547,17 @@ out:
 
 int layer_store_try_repair_lowers(const char *id)
 {
-    // TODO: driver need add this api
-    return 0;
+    layer_t *l = NULL;
+    int ret = 0;
+
+    l = lookup_with_lock(id);
+    if (l == NULL) {
+        return -1;
+    }
+    ret = graphdriver_try_repair_lowers(id, l->slayer->parent);
+    layer_ref_dec(l);
+
+    return ret;
 }
 
 void free_layer_opts(struct layer_opts *ptr)
