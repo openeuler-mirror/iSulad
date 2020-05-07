@@ -46,46 +46,46 @@ err_out:
 
 image_t *new_image(storage_image *simage)
 {
-    image_t *image = NULL;
+    image_t *img = NULL;
 
     if (simage == NULL) {
         ERROR("Empty storage image");
         return NULL;
     }
 
-    image = create_empty_image();
-    if (image == NULL) {
+    img = create_empty_image();
+    if (img == NULL) {
         return NULL;
     }
 
-    image->simage = simage;
+    img->simage = simage;
 
-    return image;
+    return img;
 
 }
 
-void image_ref_inc(image_t *image)
+void image_ref_inc(image_t *img)
 {
-    if (image == NULL) {
+    if (img == NULL) {
         return;
     }
-    atomic_int_inc(&image->refcnt);
+    atomic_int_inc(&img->refcnt);
 }
 
-void image_ref_dec(image_t *image)
+void image_ref_dec(image_t *img)
 {
     bool is_zero = false;
 
-    if (image == NULL) {
+    if (img == NULL) {
         return;
     }
 
-    is_zero = atomic_int_dec_test(&image->refcnt);
+    is_zero = atomic_int_dec_test(&img->refcnt);
     if (!is_zero) {
         return;
     }
 
-    free_image_t(image);
+    free_image_t(img);
 }
 
 void free_image_t(image_t *ptr)

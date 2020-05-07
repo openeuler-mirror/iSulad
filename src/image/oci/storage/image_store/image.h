@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include "storage_image.h"
+#include "log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,6 +39,28 @@ image_t *new_image(storage_image *simage);
 void image_ref_inc(image_t *image);
 void image_ref_dec(image_t *image);
 void free_image_t(image_t *ptr);
+
+static inline void image_lock(image_t *img)
+{
+    if (img == NULL || !(img->init_mutex)) {
+        return;
+    }
+
+    if (pthread_mutex_lock(&img->mutex)) {
+        ERROR("Failed to lock atomic mutex");
+    }
+}
+
+static inline void image_unlock(image_t *img)
+{
+    if (img == NULL || !(img->init_mutex)) {
+        return;
+    }
+
+    if (pthread_mutex_unlock(&img->mutex)) {
+        ERROR("Failed to lock atomic mutex");
+    }
+}
 
 #ifdef __cplusplus
 }

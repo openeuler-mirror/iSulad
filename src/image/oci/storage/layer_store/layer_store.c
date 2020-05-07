@@ -1431,13 +1431,14 @@ int layer_store_set_names(const char *id, const char * const* names, size_t name
         return -1;
     }
 
-    founds = util_smart_calloc_s(sizeof(bool), names_len);
-    if (founds == NULL) {
-        ERROR("Out of memory");
+    if (!layer_store_lock(true)) {
+        ERROR("Failed to lock layer store");
         return -1;
     }
 
-    if (!layer_store_lock(true)) {
+    founds = util_smart_calloc_s(sizeof(bool), names_len);
+    if (founds == NULL) {
+        ERROR("Out of memory");
         ret = -1;
         goto unlock;
     }
