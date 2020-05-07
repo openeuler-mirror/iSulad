@@ -13,6 +13,7 @@
  * Description: provide oci storage images unit test
  ******************************************************************************/
 #include "image_store.h"
+#include "utils_array.h"
 #include <cstring>
 #include <iostream>
 #include <algorithm>
@@ -141,30 +142,6 @@ TEST_F(StorageImagesUnitTest, test_images_load)
 {
     auto image = image_store_get_image(ids.at(0).c_str());
     ASSERT_NE(image, nullptr);
-    /*ASSERT_STREQ(image->digest, "sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586");
-    ASSERT_EQ(image->names_len, 1);
-    ASSERT_STREQ(image->names[0], "rnd-dockerhub.huawei.com/official/centos:latest");
-    ASSERT_STREQ(image->layer, "edd34c086208711c693a7b7a3ade23e24e6170ae24d8d2dab7c4f3efca61d509");
-    ASSERT_STREQ(image->metadata, "{}");
-    ASSERT_EQ(image->big_data_names_len, 2);
-    ASSERT_STREQ(image->big_data_names[0], "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
-    ASSERT_STREQ(image->big_data_names[1], "manifest");
-    ASSERT_EQ(image->big_data_sizes->len, 2);
-    ASSERT_STREQ(image->big_data_sizes->keys[0], "manifest");
-    ASSERT_EQ(image->big_data_sizes->values[0], 741);
-    ASSERT_STREQ(image->big_data_sizes->keys[1],
-                 "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
-    ASSERT_EQ(image->big_data_sizes->values[1], 2235);
-    ASSERT_EQ(image->big_data_digests->len, 2);
-    ASSERT_STREQ(image->big_data_digests->keys[0],
-                 "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
-    ASSERT_STREQ(image->big_data_digests->values[0],
-                 "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
-    ASSERT_STREQ(image->big_data_digests->keys[1], "manifest");
-    ASSERT_STREQ(image->big_data_digests->values[1],
-                 "sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586");
-    ASSERT_STREQ(image->created, "2017-07-10T12:46:57.770791248Z");
-    ASSERT_STREQ(image->loaded, "2020-03-16T03:46:12.172621513Z");*/
 
     ASSERT_STREQ(image->created, "2017-07-10T12:46:57.770791248Z");
     ASSERT_STREQ(image->loaded, "2020-03-16T03:46:12.172621513Z");
@@ -178,32 +155,20 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_EQ(image->spec->config->cmd_len, 1);
     ASSERT_STREQ(image->spec->config->cmd[0], "/bin/bash");
 
-    /*image = image_store_get_image(ids.at(1).c_str());
-    ASSERT_NE(image, nullptr);
-    ASSERT_STREQ(image->digest, "sha256:64da743694ece2ca88df34bf4c5378fdfc44a1a5b50478722e2ff98b82e4a5c9");
-    ASSERT_EQ(image->names_len, 1);
-    ASSERT_STREQ(image->names[0], "rnd-dockerhub.huawei.com/official/busybox:latest");
-    ASSERT_STREQ(image->layer, "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
-    ASSERT_STREQ(image->metadata, "{}");
-    ASSERT_EQ(image->big_data_names_len, 2);
-    ASSERT_STREQ(image->big_data_names[0], "sha256:e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b");
-    ASSERT_STREQ(image->big_data_names[1], "manifest");
-    ASSERT_EQ(image->big_data_sizes->len, 2);
-    ASSERT_STREQ(image->big_data_sizes->keys[0],
-                 "sha256:e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b");
-    ASSERT_EQ(image->big_data_sizes->values[0], 1497);
-    ASSERT_STREQ(image->big_data_sizes->keys[1], "manifest");
-    ASSERT_EQ(image->big_data_sizes->values[1], 527);
-    ASSERT_EQ(image->big_data_digests->len, 2);
-    ASSERT_STREQ(image->big_data_digests->keys[0],
-                 "sha256:e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b");
-    ASSERT_STREQ(image->big_data_digests->values[0],
-                 "sha256:e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b");
-    ASSERT_STREQ(image->big_data_digests->keys[1], "manifest");
-    ASSERT_STREQ(image->big_data_digests->values[1],
-                 "sha256:64da743694ece2ca88df34bf4c5378fdfc44a1a5b50478722e2ff98b82e4a5c9");
-    ASSERT_STREQ(image->created, "2019-06-15T00:19:54.402459069Z");
-    ASSERT_STREQ(image->loaded, "2020-03-16T03:46:17.439778957Z");*/
+    char **names { nullptr };
+    size_t names_len {0};
+    ASSERT_EQ(image_store_big_data_names(ids.at(0).c_str(), &names, &names_len), 0);
+    ASSERT_EQ(names_len, 2);
+    ASSERT_STREQ(names[0], "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
+    ASSERT_STREQ(names[1], "manifest");
+
+    ASSERT_EQ(image_store_big_data_size(ids.at(0).c_str(), names[0]), 2235);
+    ASSERT_EQ(image_store_big_data_size(ids.at(0).c_str(), names[1]), 741);
+    for (size_t i {}; i < names_len; ++i) {
+        free(names[i]);
+        names[i] = nullptr;
+    }
+    free(names);
 }
 
 /********************************test data *************************************************
@@ -299,6 +264,33 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_EQ(image->healthcheck->timeout, 3000000000);
     ASSERT_TRUE(image->healthcheck->exit_on_unhealthy);
 
+    ASSERT_STREQ(image_store_top_layer(id.c_str()), "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
+    ASSERT_EQ(image_store_set_image_size(id.c_str(), 1000), 0);
+    image = image_store_get_image(id.c_str());
+    ASSERT_EQ(image->size, 1000);
+
+    ASSERT_EQ(image_store_add_name(id.c_str(), "docker.io/library/test:latest"), 0);
+    image = image_store_get_image(id.c_str());
+    ASSERT_EQ(image->repo_tags_len, 2);
+    ASSERT_STREQ(image->repo_tags[0], "docker.io/library/health_check:latest");
+    ASSERT_STREQ(image->repo_tags[1], "docker.io/library/test:latest");
+
+    char **img_names = NULL;
+    img_names = (char **)util_common_calloc_s(2 * sizeof(char *));
+    img_names[0] = util_strdup_s("busybox:latest");
+    img_names[1] = util_strdup_s("centos:3.0");
+    ASSERT_EQ(image_store_set_names(id.c_str(), (const char **)img_names, 2), 0);
+    image = image_store_get_image(id.c_str());
+    ASSERT_EQ(image->repo_tags_len, 2);
+    ASSERT_STREQ(image->repo_tags[0], "busybox:latest");
+    ASSERT_STREQ(image->repo_tags[1], "centos:3.0");
+    util_free_array_by_len(img_names, 2);
+
+    ASSERT_EQ(image_store_set_metadata(id.c_str(), "{metadata}"), 0);
+    char *manifest_val = NULL;
+    ASSERT_STREQ((manifest_val = image_store_metadata(id.c_str())), "{metadata}");
+    free(manifest_val);
+
     ASSERT_EQ(image_store_delete(id.c_str()), 0);
     ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);
     ASSERT_FALSE(dirExists((std::string(store_real_path) + "/" + id).c_str()));
@@ -339,31 +331,6 @@ TEST_F(StorageImagesUnitTest, test_image_store_metadata)
     ASSERT_EQ(image_store_metadata(incorrectId.c_str()), nullptr);
 }
 
-/********************************test data 1: image.json**************************************
-  {
-  "id": "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
-  "digest": "sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586",
-  "names": [
-  "rnd-dockerhub.huawei.com/official/centos:latest"
-  ],
-  "layer": "edd34c086208711c693a7b7a3ade23e24e6170ae24d8d2dab7c4f3efca61d509",
-  "metadata": "{}",
-  "big-data-names": [
-  "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
-  "manifest"
-  ],
-  "big-data-sizes": {
-  "manifest": 741,
-  "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10": 2235
-  },
-  "big-data-digests": {
-  "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10": "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
-  "manifest": "sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586"
-  },
-  "created": "2017-07-10T12:46:57.770791248Z",
-  "Loaded": "2020-03-16T03:46:12.172621513Z"
-  }
- ******************************************************************************************/
 TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
 {
     imagetool_images_list *images_list = NULL;
@@ -381,7 +348,6 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
             ASSERT_STREQ(img->loaded, "2020-03-16T03:46:12.172621513Z");
             ASSERT_EQ(img->healthcheck, nullptr);
             ASSERT_EQ(img->username, nullptr);
-            // TODO : verfiy image size
             ASSERT_EQ(img->size, 0);
             ASSERT_EQ(img->spec->config->env_len, 1);
             ASSERT_STREQ(img->spec->config->env[0],
@@ -437,3 +403,4 @@ TEST_F(StorageImagesUnitTest, test_image_store_wipe)
     ASSERT_EQ(system(rm_command.c_str()), 0);
     ASSERT_EQ(system(undo_command.c_str()), 0);
 }
+

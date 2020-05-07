@@ -44,11 +44,11 @@ err_out:
     return NULL;
 }
 
-image_t *new_image(storage_image *simage)
+image_t *new_image(storage_image *simg)
 {
     image_t *img = NULL;
 
-    if (simage == NULL) {
+    if (simg == NULL) {
         ERROR("Empty storage image");
         return NULL;
     }
@@ -58,7 +58,7 @@ image_t *new_image(storage_image *simage)
         return NULL;
     }
 
-    img->simage = simage;
+    img->simage = simg;
 
     return img;
 

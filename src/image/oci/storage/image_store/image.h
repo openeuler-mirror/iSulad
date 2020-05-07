@@ -35,9 +35,9 @@ typedef struct _image_t_ {
 } image_t;
 
 // image_t *create_empty_image();
-image_t *new_image(storage_image *simage);
-void image_ref_inc(image_t *image);
-void image_ref_dec(image_t *image);
+image_t *new_image(storage_image *simg);
+void image_ref_inc(image_t *img);
+void image_ref_dec(image_t *img);
 void free_image_t(image_t *ptr);
 
 static inline void image_lock(image_t *img)
