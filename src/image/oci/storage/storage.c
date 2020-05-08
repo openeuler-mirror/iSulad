@@ -24,6 +24,35 @@
 #include "layer_store.h"
 #include "image_store.h"
 
+static pthread_rwlock_t g_storage_rwlock;
+
+static inline bool storage_lock(pthread_rwlock_t *store_lock, bool writable)
+{
+    int nret = 0;
+
+    if (writable) {
+        nret = pthread_rwlock_wrlock(store_lock);
+    } else {
+        nret = pthread_rwlock_rdlock(store_lock);
+    }
+    if (nret != 0) {
+        ERROR("Lock memory store failed: %s", strerror(nret));
+        return false;
+    }
+
+    return true;
+}
+
+static inline void storage_unlock(pthread_rwlock_t *store_lock)
+{
+    int nret = 0;
+
+    nret = pthread_rwlock_unlock(store_lock);
+    if (nret != 0) {
+        FATAL("Unlock memory store failed: %s", strerror(nret));
+    }
+}
+
 static ssize_t layer_archive_io_read(void *context, void *buf, size_t buf_len)
 {
     int *read_fd = (int *)context;
@@ -115,12 +144,21 @@ int storage_layer_create(const char *layer_id, const char *parent_id, bool write
         goto out;
     }
 
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock image store, not allowed to create new layer");
+        ret = -1;
+        goto out;
+    }
+
     ret = layer_store_create(layer_id, opts, &reader, NULL);
     if (ret != 0) {
         ERROR("Failed to call layer store create");
         ret = -1;
-        goto out;
+        goto unlock_out;
     }
+
+unlock_out:
+    storage_unlock(&g_storage_rwlock);
 
 out:
     if (reader.close != NULL) {
@@ -155,10 +193,7 @@ void free_layer(struct layer *ptr)
 
 int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer_id)
 {
-    // TODO layer_store_try_repair_lowers
-    int ret = 0;
-
-    return ret;
+    return layer_store_try_repair_lowers(layer_id);
 }
 
 int storage_layer_set_names(const char *layer_id, const char **names, size_t names_len)
@@ -202,13 +237,21 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
         goto out;
     }
 
-    image_id = image_store_create(id, NULL, 0, parent_id, metadata, opts->create_time, opts->digest);
-    if (image_id == NULL) {
-        ERROR("Failed to create img");
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock storage, not allowed to create new images");
         ret = -1;
         goto out;
     }
 
+    image_id = image_store_create(id, NULL, 0, parent_id, metadata, opts->create_time, opts->digest);
+    if (image_id == NULL) {
+        ERROR("Failed to create img");
+        ret = -1;
+        goto unlock_out;
+    }
+
+unlock_out:
+    storage_unlock(&g_storage_rwlock);
 out:
     free(image_id);
     return ret;
@@ -292,17 +335,174 @@ out:
     return ret;
 }
 
-int storage_img_delete(const char *img_id, bool commit)
+bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list *all_images, const char *layer_id)
+{
+    size_t i = 0;
+
+    for (i = 0; i < all_images->images_len; i++) {
+        if (strcmp(all_images->images[i]->top_layer, layer_id) == 0 && strcmp(all_images->images[i]->id, layer_id) != 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool is_parent_layer_of_other_layer(const char *layer_id, const char *last_deleted_layer_id, const struct layer_list *all_layers)
+{
+    size_t i = 0;
+
+    for (i = 0; i < all_layers->layers_len; i++) {
+        if (all_layers->layers[i]->parent != NULL && strcmp(all_layers->layers[i]->parent, layer_id) == 0) {
+            if (last_deleted_layer_id == NULL || strcmp(all_layers->layers[i]->id, last_deleted_layer_id) != 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+static int do_delete_related_layers(const char *img_id, const char *img_top_layer_id, const imagetool_images_list *all_images, const struct layer_list *all_layers)
 {
     int ret = 0;
+    char *layer_id = NULL;
+    char *last_deleted_layer_id = NULL;
+    struct layer *layer_info = NULL;
 
-    if (image_store_delete(img_id) != 0) {
-        ERROR("Failed to delete img %s", img_id);
+    layer_id = util_strdup_s(img_top_layer_id);
+    if (layer_id == NULL) {
+        ERROR("Memory out %s", img_id);
         ret = -1;
         goto out;
     }
 
+    while (layer_id != NULL) {
+        // if the layer is the top layer of other image, then break
+        if (is_top_layer_of_other_image(img_id, all_images, layer_id)) {
+            break;
+        }
+
+        if (is_parent_layer_of_other_layer(layer_id, last_deleted_layer_id, all_layers)) {
+            break;
+        }
+
+        layer_info = layer_store_lookup(layer_id);
+        if (layer_info == NULL) {
+            ERROR("Failed to get layer info for layer %s", layer_id);
+            ret = -1;
+            goto out;
+        }
+
+        if (layer_store_remove_layer(layer_id) != 0) {
+            ERROR("Failed to remove layer %s", layer_id);
+            ret = -1;
+            goto out;
+        }
+
+        free(last_deleted_layer_id);
+        last_deleted_layer_id = util_strdup_s(layer_id);
+        free(layer_id);
+        layer_id = util_strdup_s(layer_info->parent);
+        free_layer(layer_info);
+        layer_info = NULL;
+    }
 out:
+    free(last_deleted_layer_id);
+    free(layer_id);
+    free_layer(layer_info);
+    return ret;
+}
+
+static int delete_img_related_layers(const char *img_id, const char *img_top_layer_id)
+{
+    int ret = 0;
+    imagetool_images_list *all_images = NULL;
+    struct layer_list *all_layers = NULL;
+
+    all_images = util_common_calloc_s(sizeof(imagetool_images_list));
+    if (all_images == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    all_layers = util_common_calloc_s(sizeof(struct layer_list));
+    if (all_layers == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_get_all_images(all_images) != 0) {
+        ERROR("Failed to get all images info");
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_list(all_layers) != 0) {
+        ERROR("Failed to get all images info");
+        ret = -1;
+        goto out;
+    }
+
+    ret = do_delete_related_layers(img_id, img_top_layer_id, all_images, all_layers);
+
+out:
+    free_imagetool_images_list(all_images);
+    free_layer_list(all_layers);
+
+    return ret;
+}
+
+int storage_img_delete(const char *img_id, bool commit)
+{
+    int ret = 0;
+    imagetool_image *image_info = NULL;
+
+    if (img_id == NULL) {
+        ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock storage, not allowed to delete image");
+        ret = -1;
+        goto out;
+    }
+
+    if (!image_store_exists(img_id)) {
+        WARN("Image %s not exists");
+        ret = 0;
+        goto unlock_out;
+    }
+
+    image_info = image_store_get_image(img_id);
+    if (image_info == NULL) {
+        ERROR("Failed to get image %s info", img_id);
+        ret = -1;
+        goto unlock_out;
+    }
+
+    //TODO check image whether used by container
+
+    if (image_store_delete(image_info->id) != 0) {
+        ERROR("Failed to delete img %s", img_id);
+        ret = -1;
+        goto unlock_out;
+    }
+
+    if (delete_img_related_layers(image_info->id, image_info->top_layer) != 0) {
+        ERROR("Failed to delete img related layer %s", img_id);
+        ret = -1;
+        goto unlock_out;
+    }
+
+unlock_out:
+    storage_unlock(&g_storage_rwlock);
+out:
+    free_imagetool_image(image_info);
     return ret;
 }
 
@@ -560,6 +760,12 @@ int storage_module_init(struct storage_module_init_options *opts)
         goto out;
     }
 
+    if (pthread_rwlock_init(&g_storage_rwlock, NULL) != 0) {
+        ERROR("Failed to init storage rwlock");
+        ret = -1;
+        goto out;
+    }
+
 out:
     return ret;
 }
@@ -586,7 +792,7 @@ void free_storage_module_init_options(struct storage_module_init_options *opts)
     free(opts);
 }
 
-void free_layer_list_response(struct layer_list *ptr)
+void free_layer_list(struct layer_list *ptr)
 {
     size_t i = 0;
     if (ptr == NULL) {

@@ -109,7 +109,7 @@ int storage_layer_set_names(const char *layer_id, const char **names, size_t nam
 
 void free_layer(struct layer *l);
 
-void free_layer_list_response(struct layer_list *ptr);
+void free_layer_list(struct layer_list *ptr);
 
 #ifdef __cplusplus
 }
