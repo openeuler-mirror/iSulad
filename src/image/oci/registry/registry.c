@@ -571,7 +571,7 @@ static int create_image(pull_descriptor *desc, char *image_id)
     size_t top_layer_index = 0;
     struct storage_img_create_options opts = {0};
     char *top_layer_id = NULL;
-    storage_image *image = NULL;
+    char *pre_top_layer = NULL;
 
     if (desc == NULL || image_id == NULL) {
         ERROR("Invalid NULL pointer");
@@ -584,19 +584,21 @@ static int create_image(pull_descriptor *desc, char *image_id)
     top_layer_id = without_sha256_prefix(desc->layers[top_layer_index].chain_id);
     ret = storage_img_create(image_id, top_layer_id, NULL, &opts);
     if (ret != 0) {
-        image = (storage_image *)storage_img_get(image_id);
-        if (image == NULL || image->layer == NULL) {
+        pre_top_layer = storage_get_img_top_layer(image_id);
+        if (pre_top_layer == NULL) {
             ERROR("create image %s for %s failed", image_id, desc->dest_image_name);
-            goto out;
-        }
-
-        if (strcmp(image->layer, top_layer_id)) {
-            ERROR("error committing image, image id %s exist, but top layer doesn't match. local %s, download %s",
-                  image_id, image->layer, top_layer_id);
             ret = -1;
             goto out;
         }
 
+        if (strcmp(pre_top_layer, top_layer_id) != 0) {
+            ERROR("error committing image, image id %s exist, but top layer doesn't match. local %s, download %s",
+                  image_id, pre_top_layer, top_layer_id);
+            ret = -1;
+            goto out;
+        }
+
+        ret = 0;
         goto out;
     }
 
@@ -608,9 +610,7 @@ static int create_image(pull_descriptor *desc, char *image_id)
 
 out:
 
-    free_storage_image(image);
-    image = NULL;
-
+    free(pre_top_layer);
     return ret;
 }
 

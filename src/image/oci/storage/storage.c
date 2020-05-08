@@ -132,8 +132,7 @@ out:
 
 struct layer *storage_layer_get(const char *layer_id)
 {
-    // TODO call layer_store functions to get layer info
-    return NULL;
+    return layer_store_lookup(layer_id);
 }
 
 void free_layer(struct layer *ptr)
@@ -436,6 +435,10 @@ out:
     return ret;
 }
 
+char *storage_get_img_top_layer(const char *id)
+{
+    return image_store_top_layer(id);
+}
 
 int storage_get_all_images(imagetool_images_list *images)
 {
