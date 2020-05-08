@@ -741,6 +741,12 @@ static int register_image(pull_descriptor *desc)
         goto out;
     }
 
+    ret = storage_img_set_image_size(image_id);
+    if (ret != 0) {
+        ERROR("set image size failed for %s failed", image_id);
+	goto out;
+    }
+
 out:
 
     if (ret != 0 && image_created) {
