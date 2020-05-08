@@ -891,6 +891,7 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
 out:
     if (ret != 0) {
         free(dst_id);
+        dst_id = NULL;
         free_image_t(image);
         image = NULL;
     }

@@ -197,7 +197,7 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
     int ret = 0;
     char *image_id = NULL;
 
-    if (id == NULL || metadata == NULL || opts == NULL) {
+    if (id == NULL || opts == NULL) {
         ERROR("Invalid arguments for image create");
         ret = -1;
         goto out;

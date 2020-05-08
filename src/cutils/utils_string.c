@@ -828,6 +828,10 @@ int util_string_array_unique(const char **elements, size_t length, char ***uniqu
     char **tmp_elements = NULL;
     size_t tmp_elements_len = 0;
 
+    if (elements == NULL || length == 0) {
+        return 0;
+    }
+
     map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     if (map == NULL) {
         ERROR("Out of memory");
