@@ -12,6 +12,7 @@
  * Create: 2020-03-13
  * Description: provide image store functions
  ******************************************************************************/
+#include "utils_regex.h"
 #define _GNU_SOURCE
 #include "image_store.h"
 #include <sys/stat.h>
@@ -1163,8 +1164,6 @@ int image_store_delete(const char *id)
         return -1;
     }
 
-    image_lock(img);
-
     if (!image_store_lock(g_image_store, true)) {
         ERROR("Failed to lock image store");
         ret = -1;
@@ -1184,7 +1183,6 @@ int image_store_delete(const char *id)
     }
 
 out:
-    image_unlock(img);
     image_ref_dec(img);
     image_store_unlock(g_image_store);
     return ret;
@@ -1206,8 +1204,6 @@ static int delete_image_from_store_without_lock(const char *id)
         return -1;
     }
 
-    image_lock(img);
-
     if (remove_image_from_memory(img->simage->id) != 0) {
         ERROR("Failed to remove image from memory");
         ret = -1;
@@ -1221,7 +1217,6 @@ static int delete_image_from_store_without_lock(const char *id)
     }
 
 out:
-    image_unlock(img);
     image_ref_dec(img);
     return ret;
 }
@@ -2169,17 +2164,200 @@ out:
     return ret;
 }
 
+// Validate checks that the contents is a valid digest
+static bool validate_digest(const char *digest)
+{
+    bool ret = true;
+    const char *digest_patten = "^[a-z0-9]+(?:[.+_-][a-z0-9]+)*:[a-zA-Z0-9=_-]+$";
+    const char *sha256_encode_patten = "^[a-f0-9]{64}$";
+    char *value = util_strdup_s(digest);
+    char *index = strchr(value, ':');
+    char *alg = NULL;
+    char *encode = NULL;
+
+    // contains ':' and is not the last character
+    if (index == NULL && index - value + 1 == strlen(value)) {
+        ERROR("invalid checksum digest format");
+        ret = false;
+        goto out;
+    }
+
+    *index++ = '\0';
+
+    alg = value;
+    encode = index;
+    // Currently only support SHA256 algorithm
+    if (strcmp(alg, "sha256") != 0) {
+        if (util_reg_match(digest_patten, digest) != 0) {
+            ERROR("invalid checksum digest format");
+            ret = false;
+            goto out;
+        }
+        ERROR("unsupported digest algorithm");
+        ret = false;
+        goto out;
+    }
+
+    ret = util_reg_match(sha256_encode_patten, encode) == 0;
+
+out:
+    free(value);
+    return ret;
+}
+
+#define DEFAULT_TAG ":latest"
+#define DEFAULT_HOSTNAME "docker.io/"
+#define DEFAULT_REPO_PREFIX "library/"
+
+static char *get_last_part(char **parts)
+{
+    char *last_part = NULL;
+    char **p;
+
+    for (p = parts; p != NULL && *p != NULL; p++) {
+        last_part = *p;
+    }
+
+    return last_part;
+}
+
+// normalize the unqualified image to be domain/repo/image...
+static char *normalize_image_name(const char *name)
+{
+    char temp[PATH_MAX] = { 0 };
+    char **parts = NULL;
+    char *last_part = NULL;
+    char *add_dockerio = "";
+    char *add_library = "";
+    char *add_default_tag = "";
+
+    // Add prefix docker.io if necessary
+    parts = util_string_split(name, '/');
+    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") &&
+         strcmp(*parts, "localhost")) || (strstr(name, "/") == NULL)) {
+        add_dockerio = DEFAULT_HOSTNAME;
+    }
+
+    // Add library if necessary
+    if (strlen(add_dockerio) != 0 && strstr(name, "/") == NULL) {
+        add_library = DEFAULT_REPO_PREFIX;
+    }
+
+    // Add default tag if necessary
+    last_part = get_last_part(parts);
+    if (last_part != NULL && strrchr(last_part, ':') == NULL) {
+        add_default_tag = DEFAULT_TAG;
+    }
+
+    util_free_array(parts);
+
+    // Normalize image name
+    int nret = snprintf(temp, sizeof(temp), "%s%s%s%s", add_dockerio, add_library, name, add_default_tag);
+    if (nret < 0 || (size_t)nret >= sizeof(temp)) {
+        ERROR("sprint temp image name failed");
+        return NULL;
+    }
+
+    return util_strdup_s(temp);
+}
+
+// Parsing a reference string as a possible identifier, full digest, or familiar name.
+static char *parse_digest_reference(const char *ref)
+{
+    char *indentfier_patten = "^[a-f0-9]{64}$";
+
+    if (util_reg_match(indentfier_patten, ref) == 0) {
+        return util_string_append(ref, "sha256:");
+    }
+
+    if (validate_digest(ref)) {
+        return util_strdup_s(ref);
+    }
+
+    return normalize_image_name(ref);
+}
+
+static int pack_repo_digest(char ***old_repo_digests, const char **image_tags, const char *digest, char ***repo_digests)
+{
+    int ret = 0;
+    map_t *digest_map = NULL;
+    char *tag_pos = NULL;
+    char *ref = NULL;
+    char *tmp_repo_digests = NULL;
+    bool value = true;
+    size_t i;
+
+    *repo_digests = *old_repo_digests;
+    *old_repo_digests = NULL;
+
+    digest_map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (digest_map == NULL) {
+        ERROR("Failed to create empty digest map");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < util_array_len((const char **)*repo_digests); i++) {
+        bool value = true;
+        if (!map_replace(digest_map, (void *)(*repo_digests)[i], &value)) {
+            ERROR("Failed to insert pair to digest map: %s", (*repo_digests)[i]);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    for (i = 0; i < util_array_len((const char **)image_tags); i++) {
+        int nret = 0;
+
+        ref = parse_digest_reference(image_tags[i]);
+        if (ref == NULL) {
+            continue;
+        }
+        tag_pos = util_tag_pos(ref);
+        *tag_pos = '\0';
+
+        nret = asprintf(&tmp_repo_digests, "%s@%s", ref, digest);
+        if (nret < 0) {
+            ERROR("Failed to receive repo digest");
+            ret = -1;
+            goto out;
+        }
+        if (map_search(digest_map, (void *)tmp_repo_digests) == NULL) {
+            if (!map_replace(digest_map, (void *)tmp_repo_digests, (void *)&value)) {
+                ERROR("Failed to insert repo digests");
+                ret = -1;
+                goto out;
+            }
+
+            if (util_array_append(repo_digests, tmp_repo_digests) != 0) {
+                ERROR("Failed to append repo digest: %s", tmp_repo_digests);
+                ret = -1;
+                goto out;
+            }
+        }
+        free(ref);
+        ref = NULL;
+        free(tmp_repo_digests);
+        tmp_repo_digests = NULL;
+    }
+
+out:
+    free(ref);
+    free(tmp_repo_digests);
+    map_free(digest_map);
+    return ret;
+}
+
 static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, image_t *img, char **image_digest,
                                   char ***repo_digests)
 {
     int ret = 0;
     char *img_digest = NULL;
     char *digest = NULL;
-    // map_t *digest_map = NULL;
-    // size_t i;
+    map_t *digest_map = NULL;
 
-    digest = img->simage->digest;
-    if (img->simage->digest == NULL) {
+    digest = util_strdup_s(img->simage->digest);
+    if (digest == NULL || strlen(digest) == 0) {
         image_unlock(img);
         img_digest = image_store_big_data_digest(img->simage->id, IMAGE_DIGEST_BIG_DATA_KEY);
         image_lock(img);
@@ -2187,42 +2365,31 @@ static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, i
         if (img_digest == NULL) {
             *repo_digests = *old_repo_digests;
             *old_repo_digests = NULL;
-            return 0;
+            ret = 0;
+            goto out;
         }
+        free(digest);
         digest = img_digest;
+        img_digest = NULL;
     }
 
     if (util_array_len((const char **)image_tags) == 0) {
         *image_digest = util_strdup_s(digest);
         *repo_digests = *old_repo_digests;
         *old_repo_digests = NULL;
-        return 0;
+        ret = 0;
+        goto out;
     }
 
-    // TODO free and set repo_digests
-    *repo_digests = *old_repo_digests;
-
-    /*digest_map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
-    if (digest_map == NULL) {
-        ERROR("Failed to create empty digest map");
+    if (pack_repo_digest(old_repo_digests, (const char **)image_tags, digest, repo_digests) != 0) {
+        ERROR("Failed to pack repo digest");
         ret = -1;
         goto out;
     }
 
-    for (i = 0; i < util_array_len((const char **)*old_repo_digests); i++) {
-        bool value = true;
-        if (!map_replace(digest_map, (void *)(*old_repo_digests)[i], &value)) {
-            ERROR("Failed to insert pair to digest map: %s", (*old_repo_digests)[i]);
-            ret = -1;
-            goto out;
-        }
-    }
-
-    for (i = 0; i < util_array_len((const char **)image_tags); i++) {
-
-    }*/
-
-    // out:
+out:
+    free(digest);
+    map_free(digest_map);
     return ret;
 }
 
@@ -2250,10 +2417,14 @@ static int pack_image_tags_and_repo_digest(image_t *img, imagetool_image *info)
     info->repo_tags_len = util_array_len((const char **)tags);
     tags = NULL;
     info->repo_digests = repo_digests;
-    repo_digests = NULL;
     info->repo_digests_len = util_array_len((const char **)repo_digests);
-    // TODO : free & update
+    repo_digests = NULL;
+
 out:
+    free(name);
+    free(image_digest);
+    util_free_array(tags);
+    util_free_array(digests);
     return ret;
 }
 
@@ -2485,6 +2656,7 @@ out:
     return info;
 }
 
+// TODO: add toplayer field to imagetool_image
 imagetool_image *image_store_get_image(const char *id)
 {
     image_t *img = NULL;
@@ -2634,3 +2806,4 @@ out:
     free_imagetool_fs_info_image_filesystems_element(fs_usage_tmp);
     return ret;
 }
+

@@ -34,7 +34,6 @@ typedef struct _image_t_ {
     uint64_t refcnt;
 } image_t;
 
-// image_t *create_empty_image();
 image_t *new_image(storage_image *simg);
 void image_ref_inc(image_t *img);
 void image_ref_dec(image_t *img);
@@ -66,4 +65,4 @@ static inline void image_unlock(image_t *img)
 }
 #endif
 
-#endif
+#endif // __OCI_STORAGE_IMAGE_H

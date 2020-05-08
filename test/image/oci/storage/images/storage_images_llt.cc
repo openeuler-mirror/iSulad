@@ -148,6 +148,12 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_EQ(image->healthcheck, nullptr);
     ASSERT_EQ(image->username, nullptr);
     ASSERT_EQ(image->size, 0);
+    ASSERT_EQ(image->repo_tags_len, 1);
+    ASSERT_STREQ(image->repo_tags[0], "rnd-dockerhub.huawei.com/official/centos:latest");
+    ASSERT_EQ(image->repo_digests_len, 1);
+    ASSERT_STREQ(
+        image->repo_digests[0],
+        "rnd-dockerhub.huawei.com/official/centos@sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586");
     ASSERT_NE(image->spec, nullptr);
     ASSERT_NE(image->spec->config, nullptr);
     ASSERT_EQ(image->spec->config->env_len, 1);
@@ -156,7 +162,7 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_STREQ(image->spec->config->cmd[0], "/bin/bash");
 
     char **names { nullptr };
-    size_t names_len {0};
+    size_t names_len { 0 };
     ASSERT_EQ(image_store_big_data_names(ids.at(0).c_str(), &names, &names_len), 0);
     ASSERT_EQ(names_len, 2);
     ASSERT_STREQ(names[0], "sha256:39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10");
@@ -216,8 +222,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_STRNE(cleanpath(config_file.c_str(), real_path, sizeof(real_path)), "manifest");
 
     std::ifstream t(real_path);
-    std::string buffer((std::istreambuf_iterator<char>(t)),
-                       std::istreambuf_iterator<char>());
+    std::string buffer((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 
     std::cout << "config v2 :" << std::endl;
     std::cout << buffer << std::endl;
@@ -225,16 +230,13 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     std::string key = "sha256:" + std::string(created_image);
     ASSERT_EQ(image_store_set_big_data(created_image, key.c_str(), buffer.c_str()), 0);
 
-
-    std::string manifest_file =
-        GetDirectory() +
-        "/data/resources/ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689/" +
-        "manifest";
+    std::string manifest_file = GetDirectory() +
+                                "/data/resources/ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689/" +
+                                "manifest";
     ASSERT_STRNE(cleanpath(manifest_file.c_str(), real_path, sizeof(real_path)), nullptr);
 
     std::ifstream manifest_stream(real_path);
-    std::string manifest_content((std::istreambuf_iterator<char>(manifest_stream)),
-                                 std::istreambuf_iterator<char>());
+    std::string manifest_content((std::istreambuf_iterator<char>(manifest_stream)), std::istreambuf_iterator<char>());
 
     std::cout << "manifest :" << std::endl;
     std::cout << manifest_content << std::endl;
@@ -250,8 +252,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_EQ(image->username, nullptr);
     ASSERT_EQ(image->size, 0);
     ASSERT_EQ(image->spec->config->env_len, 1);
-    ASSERT_STREQ(image->spec->config->env[0],
-                 "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+    ASSERT_STREQ(image->spec->config->env[0], "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
     ASSERT_EQ(image->spec->config->cmd_len, 1);
     ASSERT_STREQ(image->spec->config->cmd[0], "sh");
     ASSERT_NE(image->healthcheck, nullptr);
@@ -263,6 +264,11 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_EQ(image->healthcheck->start_period, 1000000000);
     ASSERT_EQ(image->healthcheck->timeout, 3000000000);
     ASSERT_TRUE(image->healthcheck->exit_on_unhealthy);
+
+    ASSERT_EQ(image->repo_digests_len, 1);
+
+    ASSERT_STREQ(image->repo_digests[0],
+                 "docker.io/library/health_check@sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
 
     ASSERT_STREQ(image_store_top_layer(id.c_str()), "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
     ASSERT_EQ(image_store_set_image_size(id.c_str(), 1000), 0);
@@ -403,4 +409,3 @@ TEST_F(StorageImagesUnitTest, test_image_store_wipe)
     ASSERT_EQ(system(rm_command.c_str()), 0);
     ASSERT_EQ(system(undo_command.c_str()), 0);
 }
-
