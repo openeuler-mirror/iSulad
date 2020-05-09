@@ -272,7 +272,7 @@ static int dup_health_check_from_image(const defs_health_check *image_health_che
     health_check->retries = image_health_check->retries;
     health_check->exit_on_unhealthy = image_health_check->exit_on_unhealthy;
 
-    container_spec->health_check = health_check;
+    container_spec->healthcheck = health_check;
 
     health_check = NULL;
 
@@ -283,34 +283,34 @@ out:
 
 static int update_health_check_from_image(const defs_health_check *image_health_check, container_config *container_spec)
 {
-    if (container_spec->health_check->test_len == 0) {
+    if (container_spec->healthcheck->test_len == 0) {
         size_t i;
 
         if (image_health_check->test_len > SIZE_MAX / sizeof(char *)) {
             ERROR("invalid health check commands!");
             return -1;
         }
-        container_spec->health_check->test = util_common_calloc_s(sizeof(char *) * image_health_check->test_len);
-        if (container_spec->health_check->test == NULL) {
+        container_spec->healthcheck->test = util_common_calloc_s(sizeof(char *) * image_health_check->test_len);
+        if (container_spec->healthcheck->test == NULL) {
             ERROR("Out of memory");
             return -1;
         }
         for (i = 0; i < image_health_check->test_len; i++) {
-            container_spec->health_check->test[i] = util_strdup_s(image_health_check->test[i]);
-            container_spec->health_check->test_len++;
+            container_spec->healthcheck->test[i] = util_strdup_s(image_health_check->test[i]);
+            container_spec->healthcheck->test_len++;
         }
     }
-    if (container_spec->health_check->interval == 0) {
-        container_spec->health_check->interval = image_health_check->interval;
+    if (container_spec->healthcheck->interval == 0) {
+        container_spec->healthcheck->interval = image_health_check->interval;
     }
-    if (container_spec->health_check->timeout == 0) {
-        container_spec->health_check->timeout = image_health_check->timeout;
+    if (container_spec->healthcheck->timeout == 0) {
+        container_spec->healthcheck->timeout = image_health_check->timeout;
     }
-    if (container_spec->health_check->start_period == 0) {
-        container_spec->health_check->start_period = image_health_check->start_period;
+    if (container_spec->healthcheck->start_period == 0) {
+        container_spec->healthcheck->start_period = image_health_check->start_period;
     }
-    if (container_spec->health_check->retries == 0) {
-        container_spec->health_check->retries = image_health_check->retries;
+    if (container_spec->healthcheck->retries == 0) {
+        container_spec->healthcheck->retries = image_health_check->retries;
     }
 
     return 0;
@@ -324,7 +324,7 @@ static int oci_image_merge_health_check(const defs_health_check *image_health_ch
         return 0;
     }
 
-    if (container_spec->health_check == NULL) {
+    if (container_spec->healthcheck == NULL) {
         if (dup_health_check_from_image(image_health_check, container_spec) != 0) {
             ret = -1;
             goto out;

@@ -2432,7 +2432,7 @@ static int pack_health_check_from_image(const docker_image_config_v2 *config_v2,
     size_t i;
     defs_health_check *healthcheck = NULL;
 
-    if (config_v2->config->health_check == NULL || config_v2->config->health_check->test_len == 0) {
+    if (config_v2->config->healthcheck == NULL || config_v2->config->healthcheck->test_len == 0) {
         return 0;
     }
 
@@ -2443,21 +2443,21 @@ static int pack_health_check_from_image(const docker_image_config_v2 *config_v2,
         goto out;
     }
 
-    healthcheck->test = util_common_calloc_s(sizeof(char *) * config_v2->config->health_check->test_len);
+    healthcheck->test = util_common_calloc_s(sizeof(char *) * config_v2->config->healthcheck->test_len);
     if (healthcheck->test == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
-    for (i = 0; i < config_v2->config->health_check->test_len; i++) {
-        healthcheck->test[i] = util_strdup_s(config_v2->config->health_check->test[i]);
+    for (i = 0; i < config_v2->config->healthcheck->test_len; i++) {
+        healthcheck->test[i] = util_strdup_s(config_v2->config->healthcheck->test[i]);
     }
-    healthcheck->test_len = config_v2->config->health_check->test_len;
-    healthcheck->interval = config_v2->config->health_check->interval;
-    healthcheck->retries = config_v2->config->health_check->retries;
-    healthcheck->start_period = config_v2->config->health_check->start_period;
-    healthcheck->timeout = config_v2->config->health_check->timeout;
-    healthcheck->exit_on_unhealthy = config_v2->config->health_check->exit_on_unhealthy;
+    healthcheck->test_len = config_v2->config->healthcheck->test_len;
+    healthcheck->interval = config_v2->config->healthcheck->interval;
+    healthcheck->retries = config_v2->config->healthcheck->retries;
+    healthcheck->start_period = config_v2->config->healthcheck->start_period;
+    healthcheck->timeout = config_v2->config->healthcheck->timeout;
+    healthcheck->exit_on_unhealthy = config_v2->config->healthcheck->exit_on_unhealthy;
 
     info->healthcheck = healthcheck;
     healthcheck = NULL;
@@ -2581,6 +2581,7 @@ static imagetool_image *get_image_info(image_t *img)
     info->created = util_strdup_s(img->simage->created);
     info->loaded = util_strdup_s(img->simage->loaded);
     info->size = img->simage->size;
+    info->top_layer = util_strdup_s(img->simage->layer);
 
     if (pack_image_tags_and_repo_digest(img, info) != 0) {
         ERROR("Failed to pack image tags and repo digest");
@@ -2600,7 +2601,6 @@ out:
     return info;
 }
 
-// TODO: add toplayer field to imagetool_image
 imagetool_image *image_store_get_image(const char *id)
 {
     image_t *img = NULL;

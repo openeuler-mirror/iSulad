@@ -243,11 +243,11 @@ static char **health_check_cmds(const container_config *config)
     }
 
     shell_len = util_array_len((const char **)shell);
-    if (shell_len > (SIZE_MAX / sizeof(char *)) - config->health_check->test_len) {
+    if (shell_len > (SIZE_MAX / sizeof(char *)) - config->healthcheck->test_len) {
         ERROR("Invalid shell length");
         goto out;
     }
-    cmd_slice = util_common_calloc_s((shell_len + config->health_check->test_len) * sizeof(char *));
+    cmd_slice = util_common_calloc_s((shell_len + config->healthcheck->test_len) * sizeof(char *));
     if (cmd_slice == NULL) {
         ERROR("out of memory");
         goto out;
@@ -256,8 +256,8 @@ static char **health_check_cmds(const container_config *config)
         cmd_slice[i] = util_strdup_s(shell[i]);
     }
 
-    for (i = shell_len; i < (shell_len + config->health_check->test_len) - 1; i++) {
-        cmd_slice[i] = util_strdup_s(config->health_check->test[(i - shell_len) + 1]);
+    for (i = shell_len; i < (shell_len + config->healthcheck->test_len) - 1; i++) {
+        cmd_slice[i] = util_strdup_s(config->healthcheck->test[(i - shell_len) + 1]);
     }
 
 out:
@@ -338,7 +338,7 @@ static int handle_increment_streak(container_t *cont, int retries)
     health->failing_streak++;
     if (health->failing_streak >= retries) {
         set_health_status(cont->state, UNHEALTHY);
-        if (cont->common_config->config->health_check->exit_on_unhealthy) {
+        if (cont->common_config->config->healthcheck->exit_on_unhealthy) {
             // kill container when exit on unhealthy flag is set
             ret = stop_container(cont, 3, true, false);
             if (ret != 0) {
@@ -362,7 +362,7 @@ static int handle_unhealthy_case(container_t *cont, const defs_health_log_elemen
     health_status = get_health_status(cont->state);
 
     if (strcmp(health_status, HEALTH_STARTING) == 0) {
-        int64_t start_period = timeout_with_default(cont->common_config->config->health_check->start_period,
+        int64_t start_period = timeout_with_default(cont->common_config->config->healthcheck->start_period,
                                                     DEFAULT_START_PERIOD);
         int64_t first, last;
         if (to_unix_nanos_from_str(cont->state->state->started_at, &first)) {
@@ -437,7 +437,7 @@ static int handle_probe_result(const char *container_id, const defs_health_log_e
     if (get_health_check_monitor_state(cont->health_check) == MONITOR_STOP) {
         goto out;
     }
-    retries = cont->common_config->config->health_check->retries;
+    retries = cont->common_config->config->healthcheck->retries;
     if (retries <= 0) {
         retries = DEFAULT_PROBE_RETRIES;
     }
@@ -563,7 +563,7 @@ void *health_check_run(void *arg)
     container_req->attach_stdin = false;
     container_req->attach_stdout = true;
     container_req->attach_stderr = true;
-    container_req->timeout = timeout_with_default(config->health_check->timeout, DEFAULT_PROBE_TIMEOUT) / Time_Second;
+    container_req->timeout = timeout_with_default(config->healthcheck->timeout, DEFAULT_PROBE_TIMEOUT) / Time_Second;
     container_req->container_id = util_strdup_s(cont->common_config->id);
     container_req->argv = cmd_slice;
     container_req->argv_len = util_array_len((const char **)cmd_slice);
@@ -613,7 +613,7 @@ out:
 // Nil will be returned if no healthcheck was configured or NONE was set.
 static health_probe_t get_probe(const container_t *cont)
 {
-    defs_health_check *config = cont->common_config->config->health_check;
+    defs_health_check *config = cont->common_config->config->healthcheck;
 
     if (config == NULL || config->test_len == 0) {
         return HEALTH_NONE;
@@ -713,7 +713,7 @@ static void *health_check_monitor(void *arg)
         ERROR("Failed to monitor start time stamp");
         goto out;
     }
-    probe_interval = timeout_with_default(cont->common_config->config->health_check->interval,
+    probe_interval = timeout_with_default(cont->common_config->config->healthcheck->interval,
                                           DEFAULT_PROBE_INTERVAL);
     set_monitor_idle_status(cont->health_check);
     while (true) {
@@ -804,8 +804,8 @@ void init_health_monitor(const char *id)
         return;
     }
 
-    if (cont->common_config->config->health_check == NULL ||
-        cont->common_config->config->health_check->test == NULL) {
+    if (cont->common_config->config->healthcheck == NULL ||
+        cont->common_config->config->healthcheck->test == NULL) {
         goto out;
     }
 

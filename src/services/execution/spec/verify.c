@@ -2009,29 +2009,29 @@ int verify_health_check_parameter(const container_config *container_spec)
 {
     int ret = 0;
 
-    if (container_spec == NULL || container_spec->health_check == NULL) {
+    if (container_spec == NULL || container_spec->healthcheck == NULL) {
         return ret;
     }
 
-    if (is_less_than_one_second(container_spec->health_check->interval)) {
+    if (is_less_than_one_second(container_spec->healthcheck->interval)) {
         ERROR("Interval in Healthcheck cannot be less than one second");
         isulad_set_error_message("Interval in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
-    if (is_less_than_one_second(container_spec->health_check->timeout)) {
+    if (is_less_than_one_second(container_spec->healthcheck->timeout)) {
         ERROR("Timeout in Healthcheck cannot be less than one second");
         isulad_set_error_message("Timeout in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
-    if (is_less_than_one_second(container_spec->health_check->start_period)) {
+    if (is_less_than_one_second(container_spec->healthcheck->start_period)) {
         ERROR("StartPeriod in Healthcheck cannot be less than one second");
         isulad_set_error_message("StartPeriod in Healthcheck cannot be less than one second");
         ret = -1;
         goto out;
     }
-    if (container_spec->health_check->retries < 0) {
+    if (container_spec->healthcheck->retries < 0) {
         ERROR("--health-retries cannot be negative");
         isulad_set_error_message("--health-retries cannot be negative");
         ret = -1;

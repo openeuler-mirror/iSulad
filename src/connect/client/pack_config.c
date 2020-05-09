@@ -2005,7 +2005,7 @@ static int pack_custom_no_health_check(container_config *container_spec, bool ha
         goto out;
     }
     health_config->test[health_config->test_len++] = util_strdup_s("NONE");
-    container_spec->health_check = health_config;
+    container_spec->healthcheck = health_config;
 
 out:
     return ret;
@@ -2035,10 +2035,10 @@ static int pack_custom_with_health_check(container_config *container_spec,
     health_config->start_period = custom_conf->health_start_period;
     health_config->retries = custom_conf->health_retries;
     health_config->exit_on_unhealthy = custom_conf->exit_on_unhealthy;
-    if (container_spec->health_check != NULL) {
-        free_defs_health_check(container_spec->health_check);
+    if (container_spec->healthcheck != NULL) {
+        free_defs_health_check(container_spec->healthcheck);
     }
-    container_spec->health_check = health_config;
+    container_spec->healthcheck = health_config;
 
 out:
     return ret;

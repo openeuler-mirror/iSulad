@@ -905,7 +905,7 @@ static int dup_health_check_config(const container_config *src, container_inspec
     int ret = 0;
     size_t i = 0;
 
-    if (src == NULL || src->health_check == NULL || dest == NULL) {
+    if (src == NULL || src->healthcheck == NULL || dest == NULL) {
         return 0;
     }
     dest->health_check = util_common_calloc_s(sizeof(defs_health_check));
@@ -914,34 +914,34 @@ static int dup_health_check_config(const container_config *src, container_inspec
         ret = -1;
         goto out;
     }
-    if (src->health_check->test != NULL && src->health_check->test_len != 0) {
-        if (src->health_check->test_len > SIZE_MAX / sizeof(char *)) {
+    if (src->healthcheck->test != NULL && src->healthcheck->test_len != 0) {
+        if (src->healthcheck->test_len > SIZE_MAX / sizeof(char *)) {
             ERROR("health check test is too much!");
             ret = -1;
             goto out;
         }
-        dest->health_check->test = util_common_calloc_s(src->health_check->test_len * sizeof(char *));
+        dest->health_check->test = util_common_calloc_s(src->healthcheck->test_len * sizeof(char *));
         if (dest->health_check->test == NULL) {
             ERROR("Out of memory");
             ret = -1;
             goto out;
         }
-        for (i = 0; i < src->health_check->test_len; i++) {
-            if (src->health_check->test[i] == NULL) {
+        for (i = 0; i < src->healthcheck->test_len; i++) {
+            if (src->healthcheck->test[i] == NULL) {
                 ERROR("Input value of src health check test is null");
                 ret = -1;
                 goto out;
             }
-            dest->health_check->test[i] = util_strdup_s(src->health_check->test[i]);
+            dest->health_check->test[i] = util_strdup_s(src->healthcheck->test[i]);
             dest->health_check->test_len++;
         }
-        dest->health_check->interval = timeout_with_default(src->health_check->interval, DEFAULT_PROBE_INTERVAL);
-        dest->health_check->start_period = timeout_with_default(src->health_check->start_period, DEFAULT_START_PERIOD);
-        dest->health_check->timeout = timeout_with_default(src->health_check->timeout, DEFAULT_PROBE_TIMEOUT);
-        dest->health_check->retries = src->health_check->retries != 0 ? src->health_check->retries
+        dest->health_check->interval = timeout_with_default(src->healthcheck->interval, DEFAULT_PROBE_INTERVAL);
+        dest->health_check->start_period = timeout_with_default(src->healthcheck->start_period, DEFAULT_START_PERIOD);
+        dest->health_check->timeout = timeout_with_default(src->healthcheck->timeout, DEFAULT_PROBE_TIMEOUT);
+        dest->health_check->retries = src->healthcheck->retries != 0 ? src->healthcheck->retries
                                       : DEFAULT_PROBE_RETRIES;
 
-        dest->health_check->exit_on_unhealthy = src->health_check->exit_on_unhealthy;
+        dest->health_check->exit_on_unhealthy = src->healthcheck->exit_on_unhealthy;
     }
 out:
     return ret;
