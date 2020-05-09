@@ -42,6 +42,11 @@ typedef struct __layer_store_metadata_t {
     size_t layers_list_len;
 } layer_store_metadata;
 
+typedef struct digest_layer {
+    struct linked_list layer_list;
+    size_t layer_list_len;
+} digest_layer_t;
+
 static layer_store_metadata g_metadata;
 static char *g_root_dir;
 static char *g_run_dir;
@@ -50,9 +55,11 @@ static inline char *tar_split_path(const char *id);
 static inline char *mountpoint_json_path(const char *id);
 static inline char *layer_json_path(const char *id);
 
+static int insert_digest_into_map(map_t *by_digest, const char *digest, const char *id);
+static int delete_digest_from_map(map_t *by_digest, const char *digest, const char *id);
+
 static bool remove_name(const char *name);
 static void recover_name(const char *name);
-static int update_digest_map(map_t *by_digest, const char *old_val, const char *new_val, const char *id);
 
 static inline bool layer_store_lock(bool writable)
 {
@@ -87,18 +94,28 @@ void layer_store_cleanup()
     struct linked_list *next = NULL;
 
     map_free(g_metadata.by_id);
+    g_metadata.by_id = NULL;
     map_free(g_metadata.by_name);
+    g_metadata.by_name = NULL;
     map_free(g_metadata.by_compress_digest);
+    g_metadata.by_compress_digest = NULL;
     map_free(g_metadata.by_uncompress_digest);
+    g_metadata.by_uncompress_digest = NULL;
 
     linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         linked_list_del(item);
         layer_ref_dec((layer_t *)item->elem);
         free(item);
+        item = NULL;
     }
     g_metadata.layers_list_len = 0;
 
     pthread_rwlock_destroy(&(g_metadata.rwlock));
+
+    free(g_run_dir);
+    g_run_dir = NULL;
+    free(g_root_dir);
+    g_root_dir = NULL;
 }
 
 /* layers map kvfree */
@@ -107,11 +124,33 @@ static void layer_map_kvfree(void *key, void *value)
     free(key);
 }
 
+static void free_digest_layer_t(digest_layer_t *ptr)
+{
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+
+    if (ptr == NULL) {
+        return;
+    }
+
+    linked_list_for_each_safe(item, &(ptr->layer_list), next) {
+        linked_list_del(item);
+        free(item->elem);
+        item->elem = NULL;
+        free(item);
+        item = NULL;
+    }
+
+    ptr->layer_list_len = 0;
+    free(ptr);
+}
+
 static void digest_map_kvfree(void *key, void *value)
 {
-    free(key);
+    digest_layer_t *val = (digest_layer_t *)value;
 
-    util_free_array((char **)value);
+    free(key);
+    free_digest_layer_t(val);
 }
 
 static inline void insert_g_layer_list_item(struct linked_list *item)
@@ -302,43 +341,39 @@ static int load_layers_from_json_files()
             }
             if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
                 ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
-                goto err_out;
+                goto unlock_out;
             }
         }
 
-        ret = update_digest_map(g_metadata.by_compress_digest, NULL, tl->slayer->compressed_diff_digest, tl->slayer->id);
+        ret = insert_digest_into_map(g_metadata.by_compress_digest, tl->slayer->compressed_diff_digest, tl->slayer->id);
         if (ret != 0) {
             ERROR("update layer: %s compress failed", tl->slayer->id);
-            goto err_out;
+            goto unlock_out;
         }
 
-        ret = update_digest_map(g_metadata.by_uncompress_digest, NULL, tl->slayer->diff_digest, tl->slayer->id);
+        ret = insert_digest_into_map(g_metadata.by_uncompress_digest, tl->slayer->diff_digest, tl->slayer->id);
         if (ret != 0) {
             ERROR("update layer: %s uncompress failed", tl->slayer->id);
-            goto err_out;
+            goto unlock_out;
         }
 
         // check complete
         if (tl->incompelte) {
             if (layer_store_delete(tl->slayer->id) != 0) {
                 ERROR("delete layer: %s failed", tl->slayer->id);
-                goto err_out;
+                goto unlock_out;
             }
             should_save = true;
         }
 
         if (should_save && save_layer(tl) != 0) {
             ERROR("save layer: %s failed", tl->slayer->id);
-            goto err_out;
+            goto unlock_out;
         }
     }
 
     ret = 0;
     goto unlock_out;
-err_out:
-    // clear memory store
-    layer_store_cleanup();
-    ret = -1;
 unlock_out:
     layer_store_unlock();
     return ret;
@@ -643,70 +678,78 @@ free_out:
     return ret;
 }
 
-static int update_digest_map(map_t *by_digest, const char *old_val, const char *new_val, const char *id)
+static int delete_digest_from_map(map_t *by_digest, const char *digest, const char *id)
 {
-    char **old_list = NULL;
-    size_t old_len = 0;
-    int ret = 0;
-    size_t i = 0;
+    digest_layer_t *old_list = NULL;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
 
-    if (new_val != NULL) {
-        char **tmp_new_list = NULL;
-        char **new_list = (char **)map_search(by_digest, (void *)new_val);
-        size_t new_len = util_array_len((const char **)new_list);
+    if (digest == NULL) {
+        return 0;
+    }
 
-        tmp_new_list = util_smart_calloc_s(sizeof(char *), new_len + 2);
-        if (tmp_new_list == NULL) {
+    old_list = (digest_layer_t *)map_search(by_digest, (void *)digest);
+    if (old_list == NULL) {
+        return 0;
+    }
+
+    linked_list_for_each_safe(item, &(old_list->layer_list), next) {
+        char *t_id = (char *)item->elem;
+        if (strcmp(t_id, id) == 0) {
+            linked_list_del(item);
+            free(item->elem);
+            free(item);
+            item = NULL;
+            old_list->layer_list_len -= 1;
+            break;
+        }
+    }
+
+    if (old_list->layer_list_len == 0 && !map_remove(by_digest, (void *)digest)) {
+        WARN("Remove old failed");
+    }
+
+    return 0;
+}
+
+static int insert_digest_into_map(map_t *by_digest, const char *digest, const char *id)
+{
+    digest_layer_t *old_list = NULL;
+    struct linked_list *item = NULL;
+    digest_layer_t *new_list = NULL;
+
+    if (digest == NULL) {
+        INFO("Layer: %s with empty digest", id);
+        return 0;
+    }
+
+    old_list = (digest_layer_t *)map_search(by_digest, (void *)digest);
+    if (old_list == NULL) {
+        new_list = (digest_layer_t *)util_common_calloc_s(sizeof(digest_layer_t));
+        if (new_list == NULL) {
             ERROR("Out of memory");
-            ret = -1;
-            goto out;
+            return -1;
         }
-        for (i = 0; i < new_len; i++) {
-            tmp_new_list[new_len] = new_list[i];
-            new_list[i] = NULL;
-        }
-        tmp_new_list[new_len] = util_strdup_s(id);
-
-        if (!map_replace(by_digest, (void *)new_val, (void *)tmp_new_list)) {
-            ERROR("Insert new digest failed");
-            // recover new list
-            for (i = 0; i < new_len; i++) {
-                new_list[i] = tmp_new_list[i];
-            }
-            free(tmp_new_list[new_len]);
-            free(tmp_new_list);
-            ret = -1;
-            goto out;
-        }
+        old_list = new_list;
     }
 
-    if (old_val != NULL) {
-        size_t idx = 0;
-        size_t new_len;
-        old_list = (char **)map_search(by_digest, (void *)old_val);
-        old_len = util_array_len((const char **)old_list);
-        new_len = old_len;
-
-        for (; idx < old_len; idx++) {
-            if (strcmp(old_list[idx], id) == 0) {
-                new_len--;
-                free(old_list[idx]);
-                old_list[idx] = NULL;
-                break;
-            }
-        }
-        for (idx = idx + 1; idx < old_len; idx++) {
-            old_list[idx - 1] = old_list[idx];
-            old_list[idx] = NULL;
-        }
-
-        if (new_len == 0 && !map_remove(by_digest, (void *)old_val)) {
-            WARN("Remove old failed");
-        }
+    item = (struct linked_list *)util_common_calloc_s(sizeof(struct linked_list));
+    if (item == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
     }
 
-out:
-    return ret;
+    linked_list_add_elem(item, (void *)util_strdup_s(id));
+    linked_list_add_tail(&(old_list->layer_list), item);
+    old_list->layer_list_len += 1;
+    if (!map_replace(by_digest, (void *)digest, (void *)old_list)) {
+        goto free_out;
+    }
+
+    return 0;
+free_out:
+    free_digest_layer_t(new_list);
+    return -1;
 }
 
 static int remove_memory_stores(const char *id)
@@ -723,12 +766,12 @@ static int remove_memory_stores(const char *id)
         return -1;
     }
 
-    if (update_digest_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, NULL, l->slayer->id) != 0) {
+    if (delete_digest_from_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, l->slayer->id) != 0) {
         ERROR("Remove %s from compress digest failed", id);
         ret = -1;
         goto out;
     }
-    if (update_digest_map(g_metadata.by_uncompress_digest, l->slayer->diff_digest, NULL, l->slayer->id) != 0) {
+    if (delete_digest_from_map(g_metadata.by_uncompress_digest, l->slayer->diff_digest, l->slayer->id) != 0) {
         // ignore this error, because only happen at out of memory;
         // we cannot to recover before operator, so just go on.
         WARN("Remove %s from uncompress failed", id);
@@ -810,6 +853,8 @@ static int apply_diff(const char *id, const struct io_read_wrapper *diff)
     ret = graphdriver_apply_diff(id, diff, &size);
 
     INFO("Apply layer get size: %lld", size);
+
+    // TODO: save split tar
 
     return ret;
 }
@@ -901,19 +946,20 @@ static int layer_store_remove_layer(const char *id)
 {
     char *rpath = NULL;
     int ret = 0;
+    int nret = 0;
 
     if (id == NULL) {
         return 0;
     }
 
-    rpath = layer_json_path(id);
-    if (rpath == NULL) {
-        WARN("Generate rpath for layer %s failed, jsut ignore", id);
-        return 0;
+    nret = asprintf(&rpath, "%s/%s", g_root_dir, id);
+    if (nret < 0 || nret > PATH_MAX) {
+        SYSERROR("Create layer json path failed");
+        return -1;
     }
+
     ret = util_path_remove(rpath);
     free(rpath);
-
     return ret;
 }
 
