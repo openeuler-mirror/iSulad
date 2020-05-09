@@ -20,22 +20,12 @@
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/oci_image_spec.h"
 
-#define HTTPS_PREFIX "https://"
-#define HTTP_PREFIX "http://"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-char *oci_get_host(const char *name);
-char *oci_host_from_mirror(const char *mirror);
-char *oci_default_tag(const char *name);
-char *oci_add_host(const char *domain, const char *name);
-char *oci_normalize_image_name(const char *name);
-int oci_split_image_name(const char *image_name, char **host, char **name, char **tag);
-char *oci_full_image_name(const char *host, const char *name, const char *tag);
-bool oci_detect(const char *image_name);
 char *oci_resolve_image_name(const char *name);
+bool oci_detect(const char *image_name);
 int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser);
 int oci_list_images(const im_list_request *request, imagetool_images_list **images);
 int oci_status_image(im_status_request *request, im_status_response **response);

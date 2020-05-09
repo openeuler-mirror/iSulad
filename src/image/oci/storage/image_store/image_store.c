@@ -2205,62 +2205,6 @@ out:
     return ret;
 }
 
-#define DEFAULT_TAG ":latest"
-#define DEFAULT_HOSTNAME "docker.io/"
-#define DEFAULT_REPO_PREFIX "library/"
-
-static char *get_last_part(char **parts)
-{
-    char *last_part = NULL;
-    char **p;
-
-    for (p = parts; p != NULL && *p != NULL; p++) {
-        last_part = *p;
-    }
-
-    return last_part;
-}
-
-// normalize the unqualified image to be domain/repo/image...
-static char *normalize_image_name(const char *name)
-{
-    char temp[PATH_MAX] = { 0 };
-    char **parts = NULL;
-    char *last_part = NULL;
-    char *add_dockerio = "";
-    char *add_library = "";
-    char *add_default_tag = "";
-
-    // Add prefix docker.io if necessary
-    parts = util_string_split(name, '/');
-    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") &&
-         strcmp(*parts, "localhost")) || (strstr(name, "/") == NULL)) {
-        add_dockerio = DEFAULT_HOSTNAME;
-    }
-
-    // Add library if necessary
-    if (strlen(add_dockerio) != 0 && strstr(name, "/") == NULL) {
-        add_library = DEFAULT_REPO_PREFIX;
-    }
-
-    // Add default tag if necessary
-    last_part = get_last_part(parts);
-    if (last_part != NULL && strrchr(last_part, ':') == NULL) {
-        add_default_tag = DEFAULT_TAG;
-    }
-
-    util_free_array(parts);
-
-    // Normalize image name
-    int nret = snprintf(temp, sizeof(temp), "%s%s%s%s", add_dockerio, add_library, name, add_default_tag);
-    if (nret < 0 || (size_t)nret >= sizeof(temp)) {
-        ERROR("sprint temp image name failed");
-        return NULL;
-    }
-
-    return util_strdup_s(temp);
-}
-
 // Parsing a reference string as a possible identifier, full digest, or familiar name.
 static char *parse_digest_reference(const char *ref)
 {
@@ -2274,7 +2218,7 @@ static char *parse_digest_reference(const char *ref)
         return util_strdup_s(ref);
     }
 
-    return normalize_image_name(ref);
+    return oci_normalize_image_name(ref);
 }
 
 static int pack_repo_digest(char ***old_repo_digests, const char **image_tags, const char *digest, char ***repo_digests)

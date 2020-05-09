@@ -10,6 +10,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_convert.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_images.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/util_atomic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/log.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/sha256/sha256.c

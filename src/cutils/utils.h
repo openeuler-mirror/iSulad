@@ -37,6 +37,7 @@
 #include "utils_fs.h"
 #include "utils_base64.h"
 #include "utils_aes.h"
+#include "utils_images.h"
 
 #ifdef __cplusplus
 extern "C" {

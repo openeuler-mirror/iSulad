@@ -265,7 +265,7 @@ container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
     }
 
     inspect_driver->name = util_strdup_s(g_graphdriver->name);
-    
+
     if (!strcmp(g_graphdriver->name, DRIVER_OVERLAY_NAME) || !strcmp(g_graphdriver->name, DRIVER_OVERLAY2_NAME)) {
         for (i = 0; i < metadata->len; i++) {
             if (!strcmp(metadata->keys[i], "LowerDir")) {

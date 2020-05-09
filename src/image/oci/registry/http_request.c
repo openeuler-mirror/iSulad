@@ -30,8 +30,6 @@
 #include "auths.h"
 #include "registry_token.h"
 
-#define HTTPS_PREFIX "https://"
-#define HTTP_PREFIX "https://"
 #define MIN_TOKEN_EXPIRES_IN 60
 
 static int http_request_get_token(pull_descriptor *desc, challenge *c, char **output);
