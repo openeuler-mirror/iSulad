@@ -176,7 +176,7 @@ static void check_link_file_valid(const char *fname)
 
     nret = stat(fname, &fstat);
     if (nret != 0) {
-        if (errno == EEXIST) {
+        if (errno == ENOENT) {
             WARN("[overlay2]: remove invalid symlink: %s", fname);
             if (util_path_remove(fname) != 0) {
                 SYSERROR("Failed to remove link path %s", fname);
@@ -258,6 +258,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
 {
     int ret = 0;
     char *link_dir = NULL;
+    char *root_dir = NULL;
 
     if (driver == NULL || drvier_home == NULL) {
         return -1;
@@ -292,7 +293,14 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
 
     driver->home = util_strdup_s(drvier_home);
 
-    driver->backing_fs = util_get_fs_name(util_path_dir(drvier_home));
+    root_dir = util_path_dir(drvier_home);
+    if (root_dir == NULL) {
+        ERROR("Unable to get driver root home directory %s.", drvier_home);
+        ret = -1;
+        goto out;
+    }
+
+    driver->backing_fs = util_get_fs_name(root_dir);
     if (driver->backing_fs == NULL) {
         ERROR("Failed to get backing fs");
         ret = -1;
@@ -325,6 +333,8 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
     }
 
 out:
+    free(link_dir);
+    free(root_dir);
     return ret;
 }
 

@@ -897,6 +897,26 @@ out:
     return ret;
 }
 
+static int layer_store_remove_layer(const char *id)
+{
+    char *rpath = NULL;
+    int ret = 0;
+
+    if (id == NULL) {
+        return 0;
+    }
+
+    rpath = layer_json_path(id);
+    if (rpath == NULL) {
+        WARN("Generate rpath for layer %s failed, jsut ignore", id);
+        return 0;
+    }
+    ret = util_path_remove(rpath);
+    free(rpath);
+
+    return ret;
+}
+
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *diff,
                        char **new_id)
 {
@@ -997,26 +1017,6 @@ save_json:
     }
     free(save_path);
 err_out:
-    return ret;
-}
-
-int layer_store_remove_layer(const char *id)
-{
-    char *rpath = NULL;
-    int ret = 0;
-
-    if (id == NULL) {
-        return 0;
-    }
-
-    rpath = layer_json_path(id);
-    if (rpath == NULL) {
-        WARN("Generate rpath for layer %s failed, jsut ignore", id);
-        return 0;
-    }
-    ret = util_path_remove(rpath);
-    free(rpath);
-
     return ret;
 }
 

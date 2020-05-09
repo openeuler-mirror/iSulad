@@ -394,7 +394,7 @@ static int do_delete_related_layers(const char *img_id, const char *img_top_laye
             goto out;
         }
 
-        if (layer_store_remove_layer(layer_id) != 0) {
+        if (layer_store_delete(layer_id) != 0) {
             ERROR("Failed to remove layer %s", layer_id);
             ret = -1;
             goto out;
