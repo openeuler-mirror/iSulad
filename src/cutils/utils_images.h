@@ -14,7 +14,7 @@
  ********************************************************************************/
 
 #ifndef __UTILS_IMAGES_H
-#define __UTILS_IMAGE_H
+#define __UTILS_IMAGES_H
 
 #include <stdbool.h>
 #include <stdint.h>
