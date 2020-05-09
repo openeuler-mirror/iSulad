@@ -2787,7 +2787,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
     struct linked_list *next = NULL;
 
     if (images_list == NULL) {
-        ERROR("Invalid input paratemer");
+        ERROR("Invalid input paratemer, memory should be allocated first");
         return -1;
     }
 
@@ -2813,6 +2813,72 @@ int image_store_get_all_images(imagetool_images_list *images_list)
     }
 
     linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
+        imagetool_image *imginfo = NULL;
+        image_t *img = (image_t *)item->elem;
+
+        image_lock(img);
+        imginfo = get_image_info(img);
+        image_unlock(img);
+
+        if (imginfo == NULL) {
+            ERROR("Failed to get image info");
+            ret = -1;
+            goto out;
+        }
+        images_list->images[images_list->images_len++] = imginfo;
+        imginfo = NULL;
+    }
+
+out:
+    image_store_unlock();
+    return ret;
+}
+
+int image_store_get_images_by_digest(const char *digest, imagetool_images_list *images_list)
+{
+    int ret = 0;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+    digest_image_t *digest_imgs = NULL;
+
+    if (digest == NULL) {
+        return 0;
+    }
+
+    if (images_list == NULL) {
+        ERROR("Invalid input paratemer, memory should be allocated first");
+        return -1;
+    }
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not already!");
+        return -1;
+    }
+
+    if (!image_store_lock(false)) {
+        ERROR("Failed to lock image store");
+        return -1;
+    }
+
+    digest_imgs = (digest_image_t *)map_search(g_image_store->bydigest, (void *)digest);
+    if (digest_imgs == NULL) {
+        ERROR("Image not known");
+        return -1;
+    }
+
+    if (digest_imgs->images_list_len == 0) {
+        ERROR("No images found related to the digest");
+        goto out;
+    }
+
+    images_list->images = util_common_calloc_s(digest_imgs->images_list_len * sizeof(imagetool_image));
+    if (images_list->images == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    linked_list_for_each_safe(item, &(digest_imgs->images_list), next) {
         imagetool_image *imginfo = NULL;
         image_t *img = (image_t *)item->elem;
 

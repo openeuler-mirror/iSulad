@@ -348,7 +348,8 @@ bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list
     return false;
 }
 
-bool is_parent_layer_of_other_layer(const char *layer_id, const char *last_deleted_layer_id, const struct layer_list *all_layers)
+bool is_parent_layer_of_other_layer(const char *layer_id, const char *last_deleted_layer_id,
+                                    const struct layer_list *all_layers)
 {
     size_t i = 0;
 
@@ -363,7 +364,8 @@ bool is_parent_layer_of_other_layer(const char *layer_id, const char *last_delet
     return false;
 }
 
-static int do_delete_related_layers(const char *img_id, const char *img_top_layer_id, const imagetool_images_list *all_images, const struct layer_list *all_layers)
+static int do_delete_related_layers(const char *img_id, const char *img_top_layer_id,
+                                    const imagetool_images_list *all_images, const struct layer_list *all_layers)
 {
     int ret = 0;
     char *layer_id = NULL;

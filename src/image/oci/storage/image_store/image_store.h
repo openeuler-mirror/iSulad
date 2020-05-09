@@ -99,10 +99,12 @@ int image_store_get_all_images(imagetool_images_list *images_list);
 
 // Return a slice enumerating the images which have a big data
 // item with the name ImageDigestBigDataKey and the specified digest.
-// int image_store_get_images_by_digest(const char *digest, linked_list *images, size_t *len);
+int image_store_get_images_by_digest(const char *digest, imagetool_images_list *images_list);
 
+// Retrieves image file system info
 int image_store_get_fs_info(imagetool_fs_info *fs_info);
 
+// Free memory of image store, but will not delete the persisted files
 void image_store_free();
 
 #ifdef __cplusplus
