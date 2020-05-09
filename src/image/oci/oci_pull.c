@@ -86,7 +86,7 @@ static void update_option_skip_tls_verify(registry_pull_options *options, char *
     }
 }
 
-static int pull_image(const im_pull_request *request)
+static int pull_image(const im_pull_request *request, char **name)
 {
     int ret = -1;
     registry_pull_options *options = NULL;
@@ -145,6 +145,8 @@ static int pull_image(const im_pull_request *request)
         }
     }
 
+    *name = util_strdup_s(options->dest_image_name);
+
 out:
     free(host);
     host = NULL;
@@ -162,19 +164,20 @@ int oci_do_pull_image(const im_pull_request *request, im_pull_response **respons
 {
     int ret = 0;
     imagetool_image *image = NULL;
+    char *dest_image_name = NULL;
 
     if (request == NULL || request->image == NULL || response == NULL) {
         ERROR("Invalid NULL param");
         return -1;
     }
 
-    ret = pull_image(request);
+    ret = pull_image(request, &dest_image_name);
     if (ret != 0) {
         ERROR("pull image %s failed", request->image);
         goto err_out;
     }
 
-    image = storage_img_get(request->image);
+    image = storage_img_get(dest_image_name);
     if (image == NULL) {
         ERROR("get image %s failed after pulling", request->image);
         goto err_out;
@@ -195,5 +198,7 @@ err_out:
 out:
     free_imagetool_image(image);
     image = NULL;
+    free(dest_image_name);
+    dest_image_name = NULL;
     return ret;
 }

@@ -789,7 +789,7 @@ static bool is_variant_same(char *variant1, char *variant2)
     if (variant1 == NULL || variant2 == NULL) {
         return false;
     }
-    return !strcmp(variant1, variant2);
+    return !strcasecmp(variant1, variant2);
 }
 
 static int select_oci_manifest(oci_image_index *index, char **content_type, char **digest)
@@ -818,7 +818,7 @@ static int select_oci_manifest(oci_image_index *index, char **content_type, char
         if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
             continue;
         }
-        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os) &&
+        if (!strcasecmp(platform->architecture, host_arch) && !strcasecmp(platform->os, host_os) &&
             is_variant_same(host_variant, platform->variant)) {
             free(*content_type);
             *content_type = util_strdup_s(index->manifests[i]->media_type);
@@ -835,7 +835,7 @@ static int select_oci_manifest(oci_image_index *index, char **content_type, char
         if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
             continue;
         }
-        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os)) {
+        if (!strcasecmp(platform->architecture, host_arch) && !strcasecmp(platform->os, host_os)) {
             free(*content_type);
             *content_type = util_strdup_s(index->manifests[i]->media_type);
             free(*digest);
@@ -890,7 +890,7 @@ static int select_docker_manifest(registry_manifest_list *manifests, char **cont
         if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
             continue;
         }
-        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os) &&
+        if (!strcasecmp(platform->architecture, host_arch) && !strcasecmp(platform->os, host_os) &&
             is_variant_same(host_variant, platform->variant)) {
             free(*content_type);
             *content_type = util_strdup_s(manifests->manifests[i]->media_type);
@@ -907,7 +907,7 @@ static int select_docker_manifest(registry_manifest_list *manifests, char **cont
         if (platform == NULL || platform->architecture == NULL || platform->os == NULL) {
             continue;
         }
-        if (!strcmp(platform->architecture, host_arch) && !strcmp(platform->os, host_os)) {
+        if (!strcasecmp(platform->architecture, host_arch) && !strcasecmp(platform->os, host_os)) {
             free(*content_type);
             *content_type = util_strdup_s(manifests->manifests[i]->media_type);
             free(*digest);
