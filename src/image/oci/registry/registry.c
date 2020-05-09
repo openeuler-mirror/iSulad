@@ -1048,19 +1048,10 @@ static void set_cached_layers_info(char *blob_digest, char *diffid, int result, 
     return;
 }
 
-static void *fetch_layer_in_thread(void *arg)
+static int fetch_one_layer(thread_fetch_info *info)
 {
-    thread_fetch_info *info = (thread_fetch_info *)arg;
     int ret = 0;
     char *diffid = NULL;
-
-    ret = pthread_detach(pthread_self());
-    if (ret != 0) {
-        ERROR("Set thread detach fail");
-        goto out;
-    }
-
-    prctl(PR_SET_NAME, "fetch_layer");
 
     if (fetch_layer(info->desc, info->index) != 0) {
         ERROR("fetch layer %d failed", info->index);
@@ -1088,14 +1079,13 @@ out:
     free(diffid);
     diffid = NULL;
 
-    return NULL;
+    return ret;
 }
 
-static int add_fetch_task(thread_fetch_info *info)
+static int do_fetch(thread_fetch_info *info)
 {
     int ret = 0;
     int cond_ret = 0;
-    pthread_t tid = 0;
     bool cached_layers_added = true;
     cached_layer *cache = NULL;
 
@@ -1108,7 +1098,7 @@ static int add_fetch_task(thread_fetch_info *info)
             if (cond_ret != 0) {
                 ERROR("condition wait failed, ret %d", cond_ret);
                 ret = -1;
-                goto out;
+                goto unlock_out;
             }
         }
     }
@@ -1117,26 +1107,34 @@ static int add_fetch_task(thread_fetch_info *info)
     if (ret != 0) {
         ERROR("add fetch info failed, ret %d", cond_ret);
         ret = -1;
-        goto out;
+        goto unlock_out;
     }
     cached_layers_added = true;
 
     // First request to download this blob.
     if (cache == NULL) {
-        ret = pthread_create(&tid, NULL, fetch_layer_in_thread, info);
+        g_shared->count++;
+    }
+
+    mutex_unlock(&g_shared->mutex);
+
+    if (cache == NULL) {
+        ret = fetch_one_layer(info);
         if (ret != 0) {
             ERROR("failed to start thread to fetch layer %d", (int)info->index);
             goto out;
         }
-        g_shared->count++;
     }
 
+    goto out;
+unlock_out:
+    mutex_unlock(&g_shared->mutex);
 out:
     if (ret != 0 && cached_layers_added) {
+        mutex_lock(&g_shared->mutex);
         del_cached_layer(info->blob_digest, info->file);
+        mutex_unlock(&g_shared->mutex);
     }
-
-    mutex_unlock(&g_shared->mutex);
 
     return ret;
 }
@@ -1233,7 +1231,7 @@ static int fetch_layers(pull_descriptor *desc)
         infos[i].file = util_strdup_s(file);
         infos[i].blob_digest = util_strdup_s(desc->layers[i].digest);
 
-        ret = add_fetch_task(&infos[i]);
+        ret = do_fetch(&infos[i]);
         if (ret != 0) {
             goto out;
         }
@@ -1347,7 +1345,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
 
     config->rootfs = util_common_calloc_s(sizeof(docker_image_rootfs));
     config->history = util_common_calloc_s(sizeof(docker_image_history*)*desc->layers_len);
-    if (config->rootfs == NULL || config->history) {
+    if (config->rootfs == NULL || config->history == NULL) {
         ERROR("out of memory");
         return -1;
     }

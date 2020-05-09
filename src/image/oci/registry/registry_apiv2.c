@@ -268,9 +268,12 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
 
     version = get_header_value(message, "Docker-Distribution-Api-Version");
     if (version == NULL) {
-        ERROR("Docker-Distribution-Api-Version not found in header, registry can not support registry API V2");
-        ret = -1;
-        goto out;
+        version = get_header_value(message, "Docker-Distribution-API-Version");
+        if (version == NULL) {
+            ERROR("Docker-Distribution-Api-Version not found in header, registry may can not support registry API V2");
+            ret = -1;
+            goto out;
+        }
     }
 
     if (!strings_contains_word(version, "registry/2.0")) {
