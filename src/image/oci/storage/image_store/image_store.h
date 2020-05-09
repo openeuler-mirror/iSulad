@@ -103,6 +103,8 @@ int image_store_get_all_images(imagetool_images_list *images_list);
 
 int image_store_get_fs_info(imagetool_fs_info *fs_info);
 
+void image_store_free();
+
 #ifdef __cplusplus
 }
 #endif

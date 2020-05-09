@@ -131,6 +131,7 @@ protected:
 
     void TearDown() override
     {
+        image_store_free();
     }
 
     std::vector<std::string> ids { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
