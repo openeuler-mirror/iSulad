@@ -122,6 +122,7 @@ static void free_image_store(image_store_t *store)
         linked_list_del(item);
         image_ref_dec((image_t *)item->elem);
         free(item);
+        item = NULL;
     }
 
     store->images_list_len = 0;
@@ -311,6 +312,7 @@ static int remove_name(image_t *img, const char *name)
     free(img->simage->names);
     img->simage->names = tmp_names;
     img->simage->names_len = index;
+    tmp_names = NULL;
 
     return 0;
 }
@@ -908,6 +910,8 @@ out:
     if (ret != 0) {
         free(dst_id);
         dst_id = NULL;
+        free_storage_image(im);
+        im = NULL;
         free_image_t(img);
         img = NULL;
     }
@@ -1143,6 +1147,7 @@ static int remove_image_from_memory(const char *id)
         linked_list_del(item);
         image_ref_dec(tmp);
         free(item);
+        item = NULL;
         g_image_store->images_list_len--;
         break;
     }
@@ -1294,8 +1299,9 @@ int image_store_wipe()
     }
 
 out:
-    image_store_unlock();
     free(tmp_id);
+    map_itor_free(itor);
+    image_store_unlock();
     return ret;
 }
 
@@ -1361,10 +1367,15 @@ static int get_data_path(const char *id, const char *key, char *path, size_t len
     char data_dir[PATH_MAX] = { 0x00 };
 
     data_base_name = make_big_data_base_name(key);
+    if (data_base_name == NULL) {
+        ERROR("Failed to make big data base name");
+        return -1;
+    }
 
     if (get_data_dir(id, data_dir, sizeof(data_dir)) != 0) {
         ERROR("Failed to get image data dir: %s", id);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     nret = snprintf(path, len, "%s/%s", data_dir, data_base_name);
@@ -1866,9 +1877,10 @@ out:
 
 int image_store_set_load_time(const char *id, const types_timestamp_t *time)
 {
+#define MAX_TIMESTAMP_LEN 128
     int ret = 0;
     image_t *img = NULL;
-    char timebuffer[512] = { 0x00 };
+    char timebuffer[MAX_TIMESTAMP_LEN] = { 0x00 };
 
     if (id == NULL || time == NULL) {
         ERROR("Invalid input paratemers");
@@ -1876,7 +1888,7 @@ int image_store_set_load_time(const char *id, const types_timestamp_t *time)
     }
 
     if (g_image_store == NULL) {
-        ERROR("image store is not ready");
+        ERROR("Image store is not ready");
         return -1;
     }
 
@@ -2070,9 +2082,13 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
     }
 
     if (image_store_set_big_data(id, key, data) != 0) {
+        free(data);
         ERROR("Failed to set big data");
         return NULL;
     }
+
+    free(data);
+    data = NULL;
 
     img = lookup_with_lock(id);
     if (img == NULL) {
@@ -2083,7 +2099,7 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
     image_lock(img);
 
     value = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
-    digest = (value != NULL ? util_strdup_s(value) : NULL);
+    digest = util_strdup_s(value);
 
     image_unlock(img);
     image_ref_dec(img);
@@ -2116,7 +2132,7 @@ char *image_store_big_data_digest(const char *id, const char *key)
     image_lock(img);
 
     value = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
-    digest = (value != NULL ? util_strdup_s(value) : NULL);
+    digest = util_strdup_s(value);
 
     image_unlock(img);
     image_ref_dec(img);
@@ -2192,7 +2208,7 @@ char *image_store_metadata(const char *id)
     }
 
     image_lock(img);
-    metadata = (img->simage->metadata != NULL ? util_strdup_s(img->simage->metadata) : NULL);
+    metadata = util_strdup_s(img->simage->metadata);
     image_unlock(img);
     image_ref_dec(img);
 
@@ -2221,7 +2237,7 @@ char *image_store_top_layer(const char *id)
     }
 
     image_lock(img);
-    top_layer = (img->simage->layer != NULL ? util_strdup_s(img->simage->layer) : NULL);
+    top_layer = util_strdup_s(img->simage->layer);
     image_unlock(img);
     image_ref_dec(img);
 
@@ -2311,6 +2327,7 @@ out:
         util_free_array(*image_tags);
         free(*first_name);
     }
+    free(prefix);
     return ret;
 }
 
@@ -2482,6 +2499,7 @@ static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, i
     }
 
 out:
+    free(img_digest);
     free(digest);
     map_free(digest_map);
     return ret;
@@ -2519,6 +2537,7 @@ out:
     free(image_digest);
     util_free_array(tags);
     util_free_array(digests);
+    util_free_array(repo_digests);
     return ret;
 }
 
@@ -2867,7 +2886,7 @@ int image_store_get_images_by_digest(const char *digest, imagetool_images_list *
     }
 
     if (digest_imgs->images_list_len == 0) {
-        ERROR("No images found related to the digest");
+        DEBUG("No images found related to the digest: %s", digest);
         goto out;
     }
 
