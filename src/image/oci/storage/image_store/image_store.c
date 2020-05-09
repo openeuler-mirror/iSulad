@@ -383,11 +383,12 @@ static digest_image_t *create_empty_digest_images()
 {
     digest_image_t *digest_images = NULL;
 
-    digest_images = (digest_image_t *)util_common_calloc_s(sizeof(digest_image_t *));
+    digest_images = (digest_image_t *)util_common_calloc_s(sizeof(digest_image_t));
     if (digest_images == NULL) {
         ERROR("Out of memory");
         return NULL;
     }
+
     digest_images->images_list_len = 0;
     linked_list_init(&digest_images->images_list);
 
