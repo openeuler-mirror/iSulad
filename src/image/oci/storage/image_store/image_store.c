@@ -2130,8 +2130,11 @@ static int resort_image_names(const char **names, size_t names_len, char **first
 
     for (i = 0; i < names_len; i++) {
         size_t len = strlen(names[i]);
-        prefix = util_sub_string(names[i], len - MAX_IMAGE_NAME_LENGTH, MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGST_LENGTH);
-        if (strlen(names[i]) > MAX_IMAGE_NAME_LENGTH && strcmp(prefix, DIGIST_PREFIX) == 0) {
+        if (strlen(names[i]) > MAX_IMAGE_NAME_LENGTH) {
+            prefix = util_sub_string(names[i], len - MAX_IMAGE_NAME_LENGTH, MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGST_LENGTH);
+        }
+
+        if (prefix != NULL && strcmp(prefix, DIGIST_PREFIX) == 0) {
             if (util_array_append(image_digests, names[i]) != 0) {
                 ERROR("Failed to append image to digest: %s", names[i]);
                 ret = -1;
