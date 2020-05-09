@@ -1102,49 +1102,45 @@ static void copy_json_to_layer(const layer_t *jl, struct layer *l)
     }
 }
 
-struct layer** layer_store_list(size_t *layers_len)
+int layer_store_list(struct layer_list *resp)
 {
-    // TODO: add lock
     struct linked_list *item = NULL;
     struct linked_list *next = NULL;
-    struct layer **result = NULL;
     size_t i = 0;
+    int ret = 0;
 
-    result = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), g_metadata.layers_list_len + 1);
-    if (result == NULL) {
+    if (resp == NULL) {
+        ERROR("Invalid argument");
+        return -1;
+    }
+
+    resp->layers = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), g_metadata.layers_list_len);
+    if (resp->layers == NULL) {
         ERROR("Out of memory");
-        return NULL;
+        return -1;
     }
 
     if (!layer_store_lock(false)) {
-        goto err_out;
+        ret = -1;
+        goto unlock;
     }
 
     linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
         layer_t *l = (layer_t *)item->elem;
-        result[i] = util_common_calloc_s(sizeof(struct layer));
-        if (result[i] == NULL) {
+        resp->layers[i] = util_common_calloc_s(sizeof(struct layer));
+        if (resp->layers[i] == NULL) {
             ERROR("Out of memory");
-            goto err_out;
+            ret = -1;
+            goto unlock;
         }
-        layer_lock(l);
-        copy_json_to_layer(l, result[i]);
-        layer_unlock(l);
+        copy_json_to_layer(l, resp->layers[i]);
         i++;
+        resp->layers_len += 1;
     }
 
-    *layers_len = g_metadata.layers_list_len;
-    goto unlock;
-err_out:
-    while (i >= 0) {
-        free_layer(result[i]);
-        i--;
-    }
-    free(result);
-    result = NULL;
 unlock:
     layer_store_unlock();
-    return result;
+    return ret;
 }
 
 bool layer_store_is_used(const char *id)
@@ -1160,72 +1156,71 @@ bool layer_store_is_used(const char *id)
     return true;
 }
 
-static struct layer **layers_by_digest_map(map_t *m, const char *digest, size_t *layers_len)
+static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list *resp)
 {
     char **ids = NULL;
-    struct layer **result = NULL;
     size_t len = 0;
     size_t i = 0;
+    int ret = -1;
 
     if (!layer_store_lock(false)) {
-        return NULL;
+        return -1;
     }
+
     ids = map_search(m, (void *)digest);
     if (ids == NULL) {
-        goto unlock;
+        goto free_out;
     }
     len = util_array_len((const char **)ids);
-    if (len > 0) {
+    if (len == 0) {
+        ret = 0;
+        goto free_out;
+    }
+
+    resp->layers = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), len);
+    if (resp->layers == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+
+    for (; i < len; i++) {
         layer_t *l = NULL;
-
-        result = util_smart_calloc_s(sizeof(struct layer*), len + 1);
-        for (; i < len; i++) {
-            struct layer *t_layer = util_common_calloc_s(sizeof(struct layer));
-            if (t_layer == NULL) {
-                ERROR("Out of memory");
-                goto free_out;
-            }
-            l = lookup(ids[i]);
-            if (l == NULL) {
-                ERROR("layer not known");
-                free(t_layer);
-                goto free_out;
-            }
-            layer_lock(l);
-            copy_json_to_layer(l, t_layer);
-            result[i] = t_layer;
-            layer_unlock(l);
-            layer_ref_dec(l);
+        resp->layers[i] = util_common_calloc_s(sizeof(struct layer));
+        if (resp->layers[i] == NULL) {
+            ERROR("Out of memory");
+            goto free_out;
         }
+        l = lookup(ids[i]);
+        if (l == NULL) {
+            ERROR("layer not known");
+            goto free_out;
+        }
+        copy_json_to_layer(l, resp->layers[i]);
+        resp->layers_len += 1;
+        layer_ref_dec(l);
     }
 
-    *layers_len = len;
-    goto unlock;
+    ret = 0;
 free_out:
-    while (result != NULL && i >= 0) {
-        free_layer(result[i]);
-    }
-    free(result);
-    result = NULL;
-unlock:
+    util_free_array(ids);
     layer_store_unlock();
-    return result;
+    return ret;
 }
 
-struct layer** layer_store_by_compress_digest(const char *digest, size_t *layers_len)
+int layer_store_by_compress_digest(const char *digest, struct layer_list *resp)
 {
-    if (layers_len == NULL) {
-        return NULL;
+    if (resp == NULL) {
+        return -1;
     }
-    return layers_by_digest_map(g_metadata.by_compress_digest, digest, layers_len);
+    return layers_by_digest_map(g_metadata.by_compress_digest, digest, resp);
 }
 
-struct layer** layer_store_by_uncompress_digest(const char *digest, size_t *layers_len)
+int layer_store_by_uncompress_digest(const char *digest, struct layer_list *resp)
 {
-    if (layers_len == NULL) {
-        return NULL;
+    if (resp == NULL) {
+        return -1;
     }
-    return layers_by_digest_map(g_metadata.by_uncompress_digest, digest, layers_len);
+    return layers_by_digest_map(g_metadata.by_uncompress_digest, digest, resp);
 }
 
 struct layer *layer_store_lookup(const char *name)
@@ -1236,16 +1231,18 @@ struct layer *layer_store_lookup(const char *name)
     if (name == NULL) {
         return ret;
     }
+
+    l = lookup_with_lock(name);
+    if (l == NULL) {
+        return ret;
+    }
+
     ret = util_common_calloc_s(sizeof(struct layer));
     if (ret == NULL) {
         ERROR("Out of memory");
         return ret;
     }
 
-    l = lookup_with_lock(name);
-    if (l == NULL) {
-        return ret;
-    }
     copy_json_to_layer(l, ret);
     layer_ref_dec(l);
     return ret;

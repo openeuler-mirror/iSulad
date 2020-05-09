@@ -585,3 +585,20 @@ void free_storage_module_init_options(struct storage_module_init_options *opts)
 
     free(opts);
 }
+
+void free_layer_list_response(struct layer_list *ptr)
+{
+    size_t i = 0;
+    if (ptr == NULL) {
+        return;
+    }
+
+    for (; i < ptr->layers_len; i++) {
+        free_layer(ptr->layers[i]);
+        ptr->layers[i] = NULL;
+    }
+    free(ptr->layers);
+    ptr->layers = NULL;
+    free(ptr);
+}
+

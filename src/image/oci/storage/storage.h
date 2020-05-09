@@ -40,6 +40,11 @@ struct layer {
     int64_t uncompress_size;
 };
 
+struct layer_list {
+    struct layer** layers;
+    size_t layers_len;
+};
+
 struct storage_module_init_options {
     // storage_run_root is the filesystem path under which we can store run-time info
     // e.g. /var/run/isulad/storage
@@ -103,6 +108,8 @@ int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer
 int storage_layer_set_names(const char *layer_id, const char **names, size_t names_len);
 
 void free_layer(struct layer *l);
+
+void free_layer_list_response(struct layer_list *ptr);
 
 #ifdef __cplusplus
 }
