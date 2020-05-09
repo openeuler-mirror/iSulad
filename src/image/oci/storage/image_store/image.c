@@ -22,7 +22,6 @@
 static image_t *create_empty_image()
 {
     image_t *result = NULL;
-    int nret = 0;
 
     result = (image_t *)util_smart_calloc_s(sizeof(image_t), 1);
     if (result == NULL) {
@@ -31,14 +30,8 @@ static image_t *create_empty_image()
     }
     atomic_int_set(&result->refcnt, 1);
 
-    nret = pthread_mutex_init(&(result->mutex), NULL);
-    if (nret != 0) {
-        ERROR("Failed to init mutex of image");
-        goto err_out;
-    }
-    result->init_mutex = true;
-
     return result;
+
 err_out:
     free_image_t(result);
     return NULL;
@@ -95,9 +88,7 @@ void free_image_t(image_t *ptr)
     }
     free_storage_image(ptr->simage);
     ptr->simage = NULL;
-    if (ptr->init_mutex) {
-        pthread_mutex_destroy(&ptr->mutex);
-    }
+
     free(ptr);
 }
 

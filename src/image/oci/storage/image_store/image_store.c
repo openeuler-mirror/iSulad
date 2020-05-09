@@ -371,9 +371,7 @@ int image_store_save(image_t *img)
         return -1;
     }
 
-    image_lock(img);
     ret = save_image(img);
-    image_unlock(img);
 
     return ret;
 }
@@ -1024,9 +1022,7 @@ char *image_store_lookup(const char *id)
         return NULL;
     }
 
-    image_lock(image);
     image_id = util_strdup_s(image->simage->id);
-    image_unlock(image);
     image_ref_dec(image);
 
     return image_id;
@@ -1464,7 +1460,6 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
     digest_image_t *digest_filter_images = NULL;
     storage_image *im = NULL;
 
-    image_lock(img);
     im = img->simage;
     if (im->big_data_sizes == NULL) {
         im->big_data_sizes = (json_map_string_int64 *)util_common_calloc_s(sizeof(json_map_string_int64));
@@ -1544,7 +1539,6 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
 out:
     free(new_digest);
     free(full_digest);
-    image_unlock(img);
     return ret;
 }
 
@@ -1729,7 +1723,6 @@ int image_store_add_name(const char *id, const char *name)
         }
     }
 
-    image_lock(img);
     img->simage->names = unique_names;
     img->simage->names_len = unique_names_len;
 
@@ -1737,12 +1730,10 @@ int image_store_add_name(const char *id, const char *name)
     unique_names_len = 0;
 
     if (save_image(img) != 0) {
-        image_unlock(img);
         ERROR("Failed to update image");
         ret = -1;
         goto out;
     }
-    image_unlock(img);
 
 out:
     image_ref_dec(img);
@@ -1816,10 +1807,8 @@ int image_store_set_names(const char *id, const char **names, size_t names_len)
         }
     }
 
-    image_lock(img);
     img->simage->names = unique_names;
     img->simage->names_len = unique_names_len;
-    image_unlock(img);
     unique_names = NULL;
     unique_names_len = 0;
 
@@ -1863,11 +1852,9 @@ int image_store_set_metadata(const char *id, const char *metadata)
         goto out;
     }
 
-    image_lock(img);
     free(img->simage->metadata);
     img->simage->metadata = util_strdup_s(metadata);
     save_image(img);
-    image_unlock(img);
 
 out:
     image_ref_dec(img);
@@ -1910,14 +1897,12 @@ int image_store_set_load_time(const char *id, const types_timestamp_t *time)
         goto out;
     }
 
-    image_lock(img);
     free(img->simage->loaded);
     img->simage->loaded = util_strdup_s(timebuffer);
     if (save_image(img) != 0) {
         ERROR("Failed to save image");
         ret = -1;
     }
-    image_unlock(img);
 
 out:
     image_ref_dec(img);
@@ -1976,11 +1961,8 @@ char *image_store_big_data(const char *id, const char *key)
         return NULL;
     }
 
-    image_lock(img);
-
     ret = get_data_path(img->simage->id, key, filename, sizeof(filename));
 
-    image_unlock(img);
     image_ref_dec(img);
 
     if (ret != 0) {
@@ -2014,11 +1996,8 @@ static int get_size_with_update_big_data(const char *id, const char *key, int64_
         return -1;
     }
 
-    image_lock(img);
-
     (void)get_value_from_json_map_string_int64(img->simage->big_data_sizes, key, size);
 
-    image_unlock(img);
     image_ref_dec(img);
     return 0;
 }
@@ -2050,11 +2029,8 @@ int64_t image_store_big_data_size(const char *id, const char *key)
         return -1;
     }
 
-    image_lock(img);
-
     bret = get_value_from_json_map_string_int64(img->simage->big_data_sizes, key, &size);
 
-    image_unlock(img);
     image_ref_dec(img);
 
     if (bret) {
@@ -2096,12 +2072,9 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
         return NULL;
     }
 
-    image_lock(img);
-
     value = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
     digest = util_strdup_s(value);
 
-    image_unlock(img);
     image_ref_dec(img);
 
     return digest;
@@ -2129,12 +2102,9 @@ char *image_store_big_data_digest(const char *id, const char *key)
         return NULL;
     }
 
-    image_lock(img);
-
     value = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
     digest = util_strdup_s(value);
 
-    image_unlock(img);
     image_ref_dec(img);
 
     if (digest != NULL) {
@@ -2171,8 +2141,6 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
         return -1;
     }
 
-    image_lock(img);
-
     if (dup_array_of_strings((const char **)img->simage->big_data_names, img->simage->big_data_names_len, names,
                              names_len) != 0) {
         ERROR("Failed to dup image's names");
@@ -2181,7 +2149,6 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
     }
 
 out:
-    image_unlock(img);
     image_ref_dec(img);
     return ret;
 }
@@ -2207,9 +2174,7 @@ char *image_store_metadata(const char *id)
         return NULL;
     }
 
-    image_lock(img);
     metadata = util_strdup_s(img->simage->metadata);
-    image_unlock(img);
     image_ref_dec(img);
 
     return metadata;
@@ -2236,9 +2201,7 @@ char *image_store_top_layer(const char *id)
         return NULL;
     }
 
-    image_lock(img);
     top_layer = util_strdup_s(img->simage->layer);
-    image_unlock(img);
     image_ref_dec(img);
 
     return top_layer;
@@ -2271,10 +2234,8 @@ int image_store_set_image_size(const char *id, uint64_t size)
         goto out;
     }
 
-    image_lock(img);
     img->simage->size = size;
     save_image(img);
-    image_unlock(img);
     image_ref_dec(img);
 
 out:
@@ -2469,10 +2430,7 @@ static int get_image_repo_digests(char ***old_repo_digests, char **image_tags, i
 
     digest = util_strdup_s(img->simage->digest);
     if (digest == NULL || strlen(digest) == 0) {
-        image_unlock(img);
         img_digest = image_store_big_data_digest(img->simage->id, IMAGE_DIGEST_BIG_DATA_KEY);
-        image_lock(img);
-
         if (img_digest == NULL) {
             *repo_digests = *old_repo_digests;
             *old_repo_digests = NULL;
@@ -2791,9 +2749,7 @@ imagetool_image *image_store_get_image(const char *id)
         return NULL;
     }
 
-    image_lock(img);
     imginfo = get_image_info(img);
-    image_unlock(img);
     image_ref_dec(img);
 
     return imginfo;
@@ -2835,10 +2791,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         imagetool_image *imginfo = NULL;
         image_t *img = (image_t *)item->elem;
 
-        image_lock(img);
         imginfo = get_image_info(img);
-        image_unlock(img);
-
         if (imginfo == NULL) {
             ERROR("Failed to get image info");
             ret = -1;
@@ -2901,10 +2854,7 @@ int image_store_get_images_by_digest(const char *digest, imagetool_images_list *
         imagetool_image *imginfo = NULL;
         image_t *img = (image_t *)item->elem;
 
-        image_lock(img);
         imginfo = get_image_info(img);
-        image_unlock(img);
-
         if (imginfo == NULL) {
             ERROR("Failed to get image info");
             ret = -1;
