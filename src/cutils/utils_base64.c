@@ -33,7 +33,7 @@ size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t ou
     BUF_MEM *pmem = NULL;
 
     if (bytes == NULL || len == 0 || out == NULL || out_len < util_base64_encode_len(len)) {
-        ERROR("Invalid param for encoding base64, input length %d, out length %d", len, out_len);
+        ERROR("Invalid param for encoding base64, input length %zu, out length %zu", len, out_len);
         return -1;
     }
 
@@ -67,7 +67,7 @@ size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t ou
 
     (void)BIO_get_mem_ptr(io, &pmem);
     if (pmem->length > out_len) {
-        ERROR("result length larger than output length, result length %d, input length %d, output length %d",
+        ERROR("result length larger than output length, result length %zu, input length %zu, output length %zu",
               pmem->length, len, out_len);
         ret = -1;
         goto out;
@@ -128,8 +128,8 @@ size_t util_base64_decode(char *input, size_t len, unsigned char *out, size_t ou
     size_t size = 0;
 
     if (input == NULL || result_len < 0 || out == 0 || result_len > out_len) {
-        ERROR("Invalid param for base64 decode, input length %d, result length %d, output length %d",
-              result_len, out_len);
+        ERROR("Invalid param for base64 decode, input length %zu, result length %zu, output length %zu",
+              len, result_len, out_len);
         return -1;
     }
 
@@ -147,7 +147,7 @@ size_t util_base64_decode(char *input, size_t len, unsigned char *out, size_t ou
 
     size = BIO_read(io, out, out_len);
     if (size != result_len) {
-        ERROR("base64 decode failed, actual length not match calculated length, expected %d, got %d",
+        ERROR("base64 decode failed, actual length not match calculated length, expected %zu, got %zu",
               result_len, size);
     }
 

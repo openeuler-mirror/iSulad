@@ -59,7 +59,7 @@
 #include "containers_gc.h"
 #include "plugin.h"
 #include "selinux_label.h"
-
+#include "http.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "driver.h"
@@ -1480,6 +1480,8 @@ int main(int argc, char **argv)
     if (pre_init_daemon_log() != 0) {
         exit(ECOMMON);
     }
+
+    http_global_init();
 
     set_mallopt();
 

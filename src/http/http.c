@@ -78,7 +78,7 @@ void free_http_get_options(struct http_get_options *options)
 
 void http_global_init(void)
 {
-    curl_global_init(CURL_GLOBAL_NOTHING);
+    curl_global_init(CURL_GLOBAL_ALL);
 }
 
 void http_global_cleanup(void)
@@ -316,7 +316,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
         ERROR("reach the max redirect num");
         return -1;
     }
-    http_global_init();
+
     /* init the curl session */
     curl_handle = curl_easy_init();
     if (curl_handle == NULL) {
