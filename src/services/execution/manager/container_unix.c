@@ -157,6 +157,9 @@ void container_free(container_t *container)
     free(container->log_path);
     container->log_path = NULL;
 
+    free(container->log_driver);
+    container->log_driver = NULL;
+
     free_host_config(container->hostconfig);
 
     restart_manager_unref(container->rm);
