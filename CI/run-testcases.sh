@@ -83,7 +83,6 @@ function check_isulad_stopped() {
 }
 
 function check_valgrind_log() {
-    kret=0
     pid=`cat /var/run/isulad.pid`
     kill -15 $pid
     check_isulad_stopped $pid
@@ -93,13 +92,13 @@ function check_valgrind_log() {
         sleep 1
     fi
 
-    cat $valgrind_log | grep "are definitely lost" | grep $pid
+    cat $valgrind_log | grep "are definitely lost"
     if [ $? -eq 0 ];then
         echo "Memory leak may checked by valgrind, see valgrind log file: $valgrind_log"
         sed -n '/definitely lost/,// p' $valgrind_log
-        kret=1;
+        exit 1
     fi
-    return $kret
+    return 0
 }
 
 SRCDIR=`env | grep TOPDIR | awk -F = '{print $2}'`
@@ -126,4 +125,7 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 check_valgrind_log
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
 echo_success "====================RUN INTEGRATION END=========================="
