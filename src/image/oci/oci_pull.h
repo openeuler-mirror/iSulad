@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-int oci_do_pull_image(const im_pull_request *request, im_pull_response **response);
+int oci_do_pull_image(const im_pull_request *request, im_pull_response *response);
 
 #ifdef __cplusplus
 }

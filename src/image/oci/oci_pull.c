@@ -162,7 +162,7 @@ out:
     return ret;
 }
 
-int oci_do_pull_image(const im_pull_request *request, im_pull_response **response)
+int oci_do_pull_image(const im_pull_request *request, im_pull_response *response)
 {
     int ret = 0;
     imagetool_image *image = NULL;
@@ -176,31 +176,21 @@ int oci_do_pull_image(const im_pull_request *request, im_pull_response **respons
     ret = pull_image(request, &dest_image_name);
     if (ret != 0) {
         ERROR("pull image %s failed", request->image);
-        goto err_out;
+        ret = -1;
+        goto out;
     }
 
     image = storage_img_get(dest_image_name);
     if (image == NULL) {
         ERROR("get image %s failed after pulling", request->image);
-        goto err_out;
+        ret = -1;
+        goto out;
     }
 
-    *response = (im_pull_response *)util_common_calloc_s(sizeof(im_pull_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        goto err_out;
-    }
-    (*response)->image_ref = util_strdup_s(image->id);
+    response->image_ref = util_strdup_s(image->id);
 
-    goto out;
-err_out:
-    free_im_pull_response(*response);
-    *response = NULL;
-    ret = -1;
 out:
     free_imagetool_image(image);
-    image = NULL;
     free(dest_image_name);
-    dest_image_name = NULL;
     return ret;
 }

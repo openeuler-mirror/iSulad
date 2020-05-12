@@ -267,7 +267,7 @@ struct bim_ops {
     int (*load_image)(const im_load_request *request);
 
     /* pull image */
-    int (*pull_image)(const im_pull_request *request, im_pull_response **response);
+    int (*pull_image)(const im_pull_request *request, im_pull_response *response);
 
     /* login */
     int (*login)(const im_login_request *request);

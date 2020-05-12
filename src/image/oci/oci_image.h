@@ -25,7 +25,7 @@ extern "C" {
 
 int oci_init(const struct service_arguments *args);
 
-int oci_pull_rf(const im_pull_request *request, im_pull_response **response);
+int oci_pull_rf(const im_pull_request *request, im_pull_response *response);
 int oci_rmi(const im_remove_request *request);
 int oci_get_filesystem_info(im_fs_info_response **response);
 int oci_load_image(const im_load_request *request);

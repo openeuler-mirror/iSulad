@@ -102,7 +102,7 @@ out:
     return ret;
 }
 
-int oci_pull_rf(const im_pull_request *request, im_pull_response **response)
+int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
 {
     return oci_do_pull_image(request, response);
 }

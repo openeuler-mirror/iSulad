@@ -909,9 +909,18 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
 {
     int ret = -1;
     struct bim *bim = NULL;
+    im_pull_response *tmp_res = NULL;
+
+    DAEMON_CLEAR_ERRMSG();
 
     if (!check_im_pull_args(request, response)) {
         return ret;
+    }
+
+    tmp_res = (im_pull_response *)util_common_calloc_s(sizeof(im_pull_response));
+    if (tmp_res == NULL) {
+        ERROR("Out of memory");
+        goto out;
     }
 
     bim = bim_get(request->type, NULL, NULL, NULL);
@@ -926,7 +935,7 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
     }
 
     EVENT("Event: {Object: %s, Type: Pulling}", request->image);
-    ret = bim->ops->pull_image(request, response);
+    ret = bim->ops->pull_image(request, tmp_res);
     if (ret != 0) {
         ERROR("Pull image %s failed", request->image);
         ret = -1;
@@ -937,6 +946,11 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
 
 out:
     bim_put(bim);
+    if (ret != 0 && tmp_res != NULL && g_isulad_errmsg != NULL) {
+        tmp_res->errmsg = util_strdup_s(g_isulad_errmsg);
+    }
+    DAEMON_CLEAR_ERRMSG();
+    *response = tmp_res;
     return ret;
 }
 
