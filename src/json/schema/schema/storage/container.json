@@ -36,30 +36,36 @@
         "type": "string"
     },
     "uidmap": {
-        "type": "object",
-        "properties": {
-            "container_id": {
-                "type" : "integer"
-            },
-            "host_id": {
-                "type" : "integer"
-            },
-            "size": {
-                "type" : "integer"
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "container_id": {
+                    "type" : "integer"
+                },
+                "host_id": {
+                    "type" : "integer"
+                },
+                "size": {
+                    "type" : "integer"
+                }
             }
         }
     },
     "gidmap": {
-        "type": "object",
-        "properties": {
-            "container_id": {
-                "type" : "integer"
-            },
-            "host_id": {
-                "type" : "integer"
-            },
-            "size": {
-                "type" : "integer"
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "container_id": {
+                    "type" : "integer"
+                },
+                "host_id": {
+                    "type" : "integer"
+                },
+                "size": {
+                    "type" : "integer"
+                }
             }
         }
     }

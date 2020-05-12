@@ -462,7 +462,7 @@ int container_store_init(struct storage_module_init_options *opts)
     }
 
     g_container_store->bylayer = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, container_store_field_kvfree);
-    if (g_container_store->byname == NULL) {
+    if (g_container_store->bylayer == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
@@ -491,10 +491,298 @@ out:
     return ret;
 }
 
+static char *generate_random_container_id()
+{
+    char *id = NULL;
+    const size_t max_container_id_len = 64;
+    const size_t max_retry_cnt = 5;
+    size_t i = 0;
+
+    id = util_smart_calloc_s(sizeof(char), max_container_id_len + 1);
+    if (id == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    for (; i < max_retry_cnt; i++) {
+        if (util_generate_random_str(id, max_container_id_len) != 0) {
+            ERROR("Generate random str failed");
+            goto err_out;
+        }
+        cntr_t *cntr = map_search(g_container_store->byid, (void *)id);
+        if (cntr == NULL) {
+            break;
+        }
+    }
+    if (i >= max_retry_cnt) {
+        ERROR("Retry generate id too much");
+        goto err_out;
+    }
+
+    return id;
+
+err_out:
+    free(id);
+    return NULL;
+}
+
+static int copy_id_map(storage_container *c, const struct storage_container_options *container_opts)
+{
+    int ret = 0;
+    size_t i;
+    storage_container_uidmap_element **uid_map = NULL;
+    size_t uid_map_len = 0;
+    storage_container_gidmap_element **gid_map = NULL;
+    size_t gid_map_len = 0;
+
+    if (container_opts == NULL) {
+        return 0;
+    }
+
+    if (container_opts->id_mapping_opts.uid_map_len != 0) {
+        if (container_opts->id_mapping_opts.uid_map_len >= SIZE_MAX / sizeof(storage_container_uidmap_element *)) {
+            ERROR("Too many id map");
+            return -1;
+        }
+        uid_map = (storage_container_uidmap_element **)util_common_calloc_s(
+                      sizeof(storage_container_uidmap_element *) * container_opts->id_mapping_opts.uid_map_len);
+        if (uid_map == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        for (i = 0; i < container_opts->id_mapping_opts.uid_map_len; i++) {
+            uid_map[i] = (storage_container_uidmap_element *)util_common_calloc_s(
+                             sizeof(storage_container_uidmap_element));
+            if (uid_map[i] == NULL) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+            uid_map[i]->container_id = container_opts->id_mapping_opts.uid_map->container_id;
+            uid_map[i]->host_id = container_opts->id_mapping_opts.uid_map->host_id;
+            uid_map[i]->size = container_opts->id_mapping_opts.uid_map->size;
+            uid_map_len++;
+        }
+    }
+
+    if (container_opts->id_mapping_opts.gid_map_len != 0) {
+        if (container_opts->id_mapping_opts.gid_map_len >= SIZE_MAX / sizeof(storage_container_gidmap_element *)) {
+            ERROR("Too many id map");
+            return -1;
+        }
+        gid_map = (storage_container_gidmap_element **)util_common_calloc_s(
+                      sizeof(storage_container_gidmap_element *) * container_opts->id_mapping_opts.gid_map_len);
+        if (gid_map == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        for (i = 0; i < container_opts->id_mapping_opts.gid_map_len; i++) {
+            gid_map[i] = (storage_container_gidmap_element *)util_common_calloc_s(
+                             sizeof(storage_container_gidmap_element));
+            if (gid_map[i] == NULL) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+            gid_map[i]->container_id = container_opts->id_mapping_opts.gid_map->container_id;
+            gid_map[i]->host_id = container_opts->id_mapping_opts.gid_map->host_id;
+            gid_map[i]->size = container_opts->id_mapping_opts.gid_map->size;
+            gid_map_len++;
+        }
+    }
+
+    c->uidmap = uid_map;
+    c->uidmap_len = gid_map_len;
+    uid_map = NULL;
+
+    c->gidmap = gid_map;
+    c->gidmap_len = gid_map_len;
+    gid_map = NULL;
+
+    return 0;
+
+out:
+    for (i = 0; i < uid_map_len; i++) {
+        free(uid_map[i]);
+        uid_map[i] = NULL;
+    }
+    free(uid_map);
+
+    for (i = 0; i < gid_map_len; i++) {
+        free(gid_map[i]);
+        gid_map[i] = NULL;
+    }
+    free(gid_map);
+
+    return ret;
+}
+
+static storage_container *new_storage_container(const char *id, const char *image,
+                                                char **unique_names, size_t unique_names_len, const char *layer,
+                                                const char *metadata, struct storage_container_options *container_opts)
+{
+    int ret = 0;
+    char timebuffer[TIME_STR_SIZE] = { 0x00 };
+    storage_container *c = NULL;
+
+    c = (storage_container *)util_common_calloc_s(sizeof(storage_container));
+    if (c == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    c->id = util_strdup_s(id);
+
+    c->names = unique_names;
+    c->names_len = unique_names_len;
+
+    c->image = util_strdup_s(image);
+    c->layer = util_strdup_s(layer);
+    c->metadata = util_strdup_s(metadata);
+
+    if (!get_now_time_buffer(timebuffer, sizeof(timebuffer))) {
+        ERROR("Failed to get now time string");
+        ret = -1;
+        goto out;
+    }
+    c->created = util_strdup_s(timebuffer);
+
+    if (copy_id_map(c, container_opts) != 0) {
+        ERROR("Failed to copy UID&GID map");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free_storage_container(c);
+        c = NULL;
+    }
+    return c;
+}
+
+static int container_store_append_container(const char *id, const char *layer, const char **unique_names,
+                                            size_t unique_names_len, cntr_t *cntr)
+{
+    int ret = 0;
+    size_t i = 0;
+    struct linked_list *item = NULL;
+
+    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
+    if (item == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    linked_list_add_elem(item, cntr);
+    linked_list_add_tail(&g_container_store->containers_list, item);
+    g_container_store->containers_list_len++;
+
+    if (!map_insert(g_container_store->byid, (void *)id, (void *)cntr)) {
+        ERROR("Failed to insert image to container store");
+        ret = -1;
+        goto out;
+    }
+
+    if (!map_insert(g_container_store->byname, (void *)layer, (void *)cntr)) {
+        ERROR("Failed to insert image to container store");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < unique_names_len; i++) {
+        if (!map_insert(g_container_store->byname, (void *)unique_names[i], (void *)cntr)) {
+            ERROR("Failed to insert image to container store's byname");
+            ret = -1;
+            goto out;
+        }
+    }
+    container_ref_inc(cntr);
+
+out:
+    if (ret != 0) {
+        linked_list_del(item);
+        free(item);
+    }
+    return ret;
+}
+
 char *container_store_create(const char *id, const char **names, size_t names_len, const char *image, const char *layer,
                              const char *metadata, struct storage_container_options *container_opts)
 {
-    return NULL;
+    int ret = 0;
+    char *dst_id = NULL;
+    char **unique_names = NULL;
+    size_t unique_names_len = 0;
+    cntr_t *cntr = NULL;
+    storage_container *c = NULL;
+
+    if (g_container_store == NULL) {
+        ERROR("Container store is not ready");
+        return NULL;
+    }
+
+    if (!container_store_lock(true)) {
+        ERROR("Failed to lock container store, not allowed to create new containers");
+        return NULL;
+    }
+
+    if (id == NULL) {
+        dst_id = generate_random_container_id();
+    } else {
+        dst_id = util_strdup_s(id);
+    }
+
+    if (map_search(g_container_store->byid, (void *)dst_id) != NULL) {
+        ERROR("ID is already in use: %s", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+        ERROR("Failed to unique names");
+        ret = -1;
+        goto out;
+    }
+
+    c = new_storage_container(id, image, unique_names, unique_names_len, layer, metadata, container_opts);
+    if (c == NULL) {
+        ERROR("Failed to generate new storage container");
+        ret = -1;
+        goto out;
+    }
+
+    cntr = new_container(c);
+    if (cntr == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (container_store_append_container(id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
+        ERROR("Failed to append container to container store");
+        ret = -1;
+        goto out;
+    }
+
+    if (save_container(cntr) != 0) {
+        ERROR("Failed to save container");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free(dst_id);
+        dst_id = NULL;
+        free_storage_container(c);
+        c = NULL;
+        free_container_t(cntr);
+        cntr = NULL;
+    }
+    container_store_unlock();
+    return dst_id;
 }
 
 char *container_store_lookup(const char *id)
