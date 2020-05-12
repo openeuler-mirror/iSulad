@@ -31,6 +31,9 @@
 #include "utils.h"
 #include "sha256.h"
 #include "path.h"
+#include "map.h"
+
+static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode, map_t *map);
 
 bool util_dir_exists(const char *path)
 {
@@ -1215,6 +1218,134 @@ void util_calculate_dir_size(const char *dirpath, int recursive_depth, int64_t *
     }
 
 out:
+    return;
+}
+
+static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath, int recursive_depth, int64_t *total_size,
+                                          int64_t *total_inode, map_t *map)
+{
+    int nret = 0;
+    struct dirent *pdirent = NULL;
+    DIR *directory = NULL;
+    char fname[MAXPATHLEN];
+
+    directory = opendir(dirpath);
+    if (directory == NULL) {
+        ERROR("Failed to open %s", dirpath);
+        return;
+    }
+    pdirent = readdir(directory);
+    for (; pdirent != NULL; pdirent = readdir(directory)) {
+        struct stat fstat;
+        int pathname_len;
+
+        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+            continue;
+        }
+
+        (void)memset(fname, 0, sizeof(fname));
+
+        pathname_len = snprintf(fname, MAXPATHLEN, "%s/%s", dirpath, pdirent->d_name);
+        if (pathname_len < 0 || pathname_len >= MAXPATHLEN) {
+            ERROR("Pathname too long");
+            continue;
+        }
+
+        nret = lstat(fname, &fstat);
+        if (nret) {
+            ERROR("Failed to stat %s", fname);
+            continue;
+        }
+
+        if (S_ISDIR(fstat.st_mode)) {
+            int64_t subdir_size = 0;
+            int64_t subdir_inode = 0;
+            do_calculate_dir_size_without_hardlink(fname, (recursive_depth + 1), &subdir_size, &subdir_inode, map);
+            *total_size = *total_size + subdir_size;
+            *total_inode = *total_inode + subdir_inode;
+        } else {
+            if (map_search(map, (void *)&(fstat.st_ino)) != NULL) {
+                continue;
+            }
+            *total_size = *total_size + fstat.st_size;
+            *total_inode = *total_inode + 1;
+            bool val = true;
+            map_insert(map, (void *)&(fstat.st_ino), (void *)&val);
+        }
+    }
+
+    nret = closedir(directory);
+    if (nret) {
+        ERROR("Failed to close directory %s", dirpath);
+    }
+
+    return;
+}
+
+static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode, map_t *map)
+{
+    int64_t total_size_tmp = 0;
+    int64_t total_inode_tmp = 0;
+
+    if (dirpath == NULL) {
+        return;
+    }
+
+    if ((recursive_depth + 1) > MAX_PATH_DEPTH) {
+        ERROR("Reach max path depth: %s", dirpath);
+        goto out;
+    }
+
+    if (!util_dir_exists(dirpath)) {
+        ERROR("dir not exists: %s", dirpath);
+        goto out;
+    }
+
+    recursive_cal_dir_size__without_hardlink_helper(dirpath, recursive_depth, &total_size_tmp, &total_inode_tmp, map);
+
+    if (total_size != NULL) {
+        *total_size = total_size_tmp;
+    }
+    if (total_inode != NULL) {
+        *total_inode = total_inode_tmp;
+    }
+
+out:
+    return;
+}
+
+void utils_calculate_dir_size_without_hardlink(const char *dirpath, int64_t *total_size, int64_t *total_inode)
+{
+    int64_t total_size_tmp = 0;
+    int64_t total_inode_tmp = 0;
+    map_t *map = NULL;
+
+    if (dirpath == NULL) {
+        return;
+    }
+
+    map = map_new(MAP_INT_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (map == NULL) {
+        ERROR("Out of memory");
+        return;
+    }
+
+    if (!util_dir_exists(dirpath)) {
+        ERROR("dir not exists: %s", dirpath);
+        goto out;
+    }
+
+    do_calculate_dir_size_without_hardlink(dirpath, 0, &total_size_tmp, &total_inode_tmp, map);
+
+    if (total_size != NULL) {
+        *total_size = total_size_tmp;
+    }
+    if (total_inode != NULL) {
+        *total_inode = total_inode_tmp;
+    }
+
+out:
+    map_free(map);
     return;
 }
 

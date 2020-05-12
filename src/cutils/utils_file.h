@@ -90,6 +90,8 @@ char *isula_utils_read_file(const char *path);
 
 void util_calculate_dir_size(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode);
 
+void utils_calculate_dir_size_without_hardlink(const char *dirpath, int64_t *total_size, int64_t *total_inode);
+
 typedef bool (*subdir_callback_t)(const char *, const struct dirent *);
 
 int util_scan_subdirs(const char *directory, subdir_callback_t cb);

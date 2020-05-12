@@ -77,6 +77,7 @@ void *map_itor_value(map_itor *itor);
 
 typedef enum {
     MAP_INT_INT = 0,
+    MAP_INT_BOOL,
     MAP_INT_STR,
     MAP_INT_PTR,
     MAP_STR_BOOL,

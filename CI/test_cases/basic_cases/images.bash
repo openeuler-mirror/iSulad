@@ -6,7 +6,7 @@
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/../data)
-source ../../helpers.bash
+source ./helpers.bash
 
 INVALID_IMAGE="k~k"
 
@@ -32,7 +32,7 @@ do_test_t()
     TC_RET_T=$(($TC_RET_T+1))
   fi
 
-  isula inspect --format='{{json .image.Loaded}}' busybox
+  isula inspect --format='{{json .image.loaded}}' busybox
   if [ $? -ne 0 ]; then
     echo "Failed to inspect image busybox loaded time"
     TC_RET_T=$(($TC_RET_T+1))

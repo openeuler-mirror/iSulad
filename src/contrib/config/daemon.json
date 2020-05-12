@@ -5,7 +5,7 @@
     "state": "/var/run/isulad",
     "engine": "lcr",
     "log-level": "ERROR",
-    "pidfile": "/var/run/isulad_img.pid",
+    "pidfile": "/var/run/isulad.pid",
     "log-opts": {
         "log-file-mode": "0600",
         "log-path": "/var/lib/isulad",

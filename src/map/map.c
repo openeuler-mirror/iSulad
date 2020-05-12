@@ -148,7 +148,7 @@ size_t map_size(const map_t *map)
 /* is key int */
 static bool is_key_int(map_type_t type)
 {
-    return (type == MAP_INT_INT || type == MAP_INT_STR || type == MAP_INT_PTR);
+    return (type == MAP_INT_INT || type == MAP_INT_STR || type == MAP_INT_PTR || type == MAP_INT_BOOL);
 }
 
 /* is key str */
@@ -166,7 +166,7 @@ static bool is_key_ptr(map_type_t type)
 /* is val bool */
 static bool is_val_bool(map_type_t type)
 {
-    return (type == MAP_STR_BOOL);
+    return (type == MAP_STR_BOOL || type == MAP_INT_BOOL);
 }
 
 /* is val int */
