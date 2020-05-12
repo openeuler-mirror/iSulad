@@ -22,6 +22,7 @@ declare -a lines
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 LCR_ROOT_PATH="/var/lib/isulad/engines/lcr"
+ISUALD_LOG="/var/lib/isulad/isulad.log"
 
 function cut_output_lines() {
     message=`$@ 2>&1`

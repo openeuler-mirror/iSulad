@@ -31,6 +31,8 @@ size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t ou
     int ret = 0;
     int bio_ret = 0;
     BUF_MEM *pmem = NULL;
+    size_t i = 0;
+    size_t count = 0;
 
     if (bytes == NULL || len == 0 || out == NULL || out_len < util_base64_encode_len(len)) {
         ERROR("Invalid param for encoding base64, input length %zu, out length %zu", len, out_len);
@@ -66,16 +68,29 @@ size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t ou
     }
 
     (void)BIO_get_mem_ptr(io, &pmem);
-    if (pmem->length > out_len) {
-        ERROR("result length larger than output length, result length %zu, input length %zu, output length %zu",
-              pmem->length, len, out_len);
+    // BIO_write append '\n' if every 76 chars have be output, so we need to strip them.
+    for (i = 0; i < pmem->length; i++) {
+        if (pmem->data[i] == '\n') {
+            continue;
+        }
+        if (count + 1 == out_len) {
+            ERROR("result length larger than output length, result length %zu, input length %zu, output length %zu",
+                  pmem->length, len, out_len);
+            ret = -1;
+            goto out;
+        }
+        out[count] = pmem->data[i];
+        count++;
+    }
+
+    if (count == 0) {
+        ERROR("Base64 encode failed, result count is zero");
         ret = -1;
         goto out;
     }
 
-    (void)memcpy(out, pmem->data, pmem->length);
-    out[pmem->length - 1] = 0;
-    result_len = pmem->length;
+    out[count] = 0;
+    result_len = count + 1;
 
 out:
 

@@ -1192,7 +1192,7 @@ static int do_fetch(thread_fetch_info *info)
     if (cache == NULL) {
         ret = fetch_one_layer(info);
         if (ret != 0) {
-            ERROR("failed to start thread to fetch layer %d", (int)info->index);
+            ERROR("failed to to fetch layer %d", (int)info->index);
             goto out;
         }
     }
