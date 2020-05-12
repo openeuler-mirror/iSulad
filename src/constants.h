@@ -48,6 +48,8 @@
 
 #define NETWORK_MOUNT_FILE_MODE 0644
 
+#define ETC_FILE_MODE 0755
+
 #define ISULAD_CONFIG "/etc/isulad"
 
 #define ISULAD_DAEMON_JSON_CONF_FILE ISULAD_CONFIG "/daemon.json"

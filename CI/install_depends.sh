@@ -124,6 +124,27 @@ make install
 cd -
 ldconfig
 
+# install runc
+cd ~
+if [ -d ./runc ];then
+	rm -rf ./runc
+fi
+git clone https://gitee.com/src-openeuler/runc.git
+cd runc
+./apply-patch
+mkdir -p .gopath/src/github.com/opencontainers
+export GOPATH=`pwd`/.gopath
+if [ -L .gopath/src/github.com/opencontainers/runc ];then
+	echo "Link exist"
+else
+	ln -sf `pwd` .gopath/src/github.com/opencontainers/runc
+fi
+
+cd .gopath/src/github.com/opencontainers/runc
+make -j $(nproc)
+\cp -f ./runc ${builddir}/bin
+cd -
+
 # install clibcni
 cd ~
 git clone https://gitee.com/openeuler/clibcni.git
