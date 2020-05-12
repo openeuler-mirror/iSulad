@@ -733,6 +733,7 @@ static int insert_digest_into_map(map_t *by_digest, const char *digest, const ch
             ERROR("Out of memory");
             return -1;
         }
+        linked_list_init(&(new_list->layer_list));
         old_list = new_list;
     }
 
