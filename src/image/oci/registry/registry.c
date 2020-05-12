@@ -1641,6 +1641,11 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         return -1;
     }
 
+    if (!util_valid_image_name(options->image_name)) {
+        ERROR("Invalid image name %s", options->image_name);
+        return -1;
+    }
+
     ret = oci_split_image_name(options->image_name, &desc->host,
                                &desc->name, &desc->tag);
     if (ret != 0) {

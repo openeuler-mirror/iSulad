@@ -94,7 +94,7 @@ static int pull_image(const im_pull_request *request, char **name)
     char **registry_mirrors = NULL;
     char **mirror = NULL;
     char *host = NULL;
-    char *dest_image_name = NULL;
+    char *with_tag = NULL;
 
     options = (registry_pull_options *)util_common_calloc_s(sizeof(registry_pull_options));
     if (options == NULL) {
@@ -132,11 +132,13 @@ static int pull_image(const im_pull_request *request, char **name)
             }
             host = oci_host_from_mirror(*mirror);
             update_option_skip_tls_verify(options, insecure_registries, host);
-            dest_image_name = oci_default_tag(request->image);
-            options->image_name = oci_add_host(host, dest_image_name);
+            with_tag = oci_default_tag(request->image);
+            options->image_name = oci_add_host(host, with_tag);
+            free(with_tag);
+            with_tag = NULL;
             free(host);
             host = NULL;
-            options->dest_image_name = dest_image_name;
+            options->dest_image_name = oci_normalize_image_name(request->image);
             ret = registry_pull(options);
             if (ret != 0) {
                 continue;
