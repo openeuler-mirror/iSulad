@@ -119,8 +119,10 @@ static int parse_manifest_schema1(pull_descriptor *desc)
         }
 
         desc->layers[index].empty_layer = v1config->throwaway;
+        free_image_manifest_v1_compatibility(v1config);
+        v1config = NULL;
         // Cann't download an empty layer, skip related infomation.
-        if (v1config->throwaway) {
+        if (desc->layers[index].empty_layer) {
             continue;
         }
 
@@ -423,10 +425,61 @@ out:
     return ret;
 }
 
+static char *calc_chain_id(char *parent_chain_id, char *diff_id)
+{
+    int sret = 0;
+    char tmp_buffer[256] = {0};
+    char *digest = NULL;
+    char *full_digest = NULL;
+
+    if (parent_chain_id == NULL || diff_id == NULL) {
+        ERROR("Invalid NULL param");
+        return NULL;
+    }
+
+    if (strlen(diff_id) <= strlen(SHA256_PREFIX)) {
+        ERROR("Invalid diff id %s found when calc chain id", diff_id);
+        return NULL;
+    }
+
+    if (strlen(parent_chain_id) == 0) {
+        return util_strdup_s(diff_id);
+    }
+
+    if (strlen(parent_chain_id) <= strlen(SHA256_PREFIX)) {
+        ERROR("Invalid parent chain id %s found when calc chain id", parent_chain_id);
+        return NULL;
+    }
+
+    sret = snprintf(tmp_buffer, sizeof(tmp_buffer), "%s+%s", parent_chain_id + strlen(SHA256_PREFIX),
+                    diff_id + strlen(SHA256_PREFIX));
+    if (sret < 0 || (size_t)sret >= sizeof(tmp_buffer)) {
+        ERROR("Failed to sprintf chain id original string");
+        return NULL;
+    }
+
+    digest = sha256_digest_str(tmp_buffer);
+    if (digest == NULL) {
+        ERROR("Failed to calculate chain id");
+        goto out;
+    }
+
+    full_digest = util_full_digest(digest);
+
+out:
+
+    free(digest);
+    digest = NULL;
+
+    return full_digest;
+}
+
+
 static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, pull_descriptor *desc)
 {
     size_t i = 0;
     cached_layer *cache = NULL;
+    char *parent_chain_id = "";
 
     for (i = 0; i < infos_len; i++) {
         if (infos[i].use) {
@@ -439,10 +492,30 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
             if (desc->layers[i].diff_id == NULL) {
                 desc->layers[i].diff_id = util_strdup_s(cache->diffid);
             }
+
             if (desc->layers[i].file == NULL) {
                 desc->layers[i].file = util_strdup_s(infos[i].file);
             }
         }
+
+        if (desc->layers[i].empty_layer) {
+            continue;
+        }
+
+        if (desc->layers[i].diff_id == NULL) {
+            ERROR("layer %zu of image %s have invalid NULL diffid", i, desc->dest_image_name);
+            return -1;
+        }
+
+        if (desc->layers[i].chain_id == NULL) {
+            desc->layers[i].chain_id = calc_chain_id(parent_chain_id, desc->layers[i].diff_id);
+            if (desc->layers[i].chain_id == NULL) {
+                ERROR("calc chain id failed, diff id %s, parent chain id %s",
+                      desc->layers[i].diff_id, parent_chain_id);
+                return -1;
+            }
+        }
+        parent_chain_id = desc->layers[i].chain_id;
     }
 
     return 0;
@@ -487,6 +560,11 @@ out:
 
 static char *without_sha256_prefix(char *digest)
 {
+    if (digest == NULL) {
+        ERROR("Invalid digest NULL when strip sha256 prefix");
+        return NULL;
+    }
+
     return digest + strlen(SHA256_PREFIX);
 }
 
@@ -510,7 +588,17 @@ static int register_layers(pull_descriptor *desc)
     }
 
     for (i = 0; i < desc->layers_len; i++) {
+        if (desc->layers[i].empty_layer) {
+            continue;
+        }
+
         id = without_sha256_prefix(desc->layers[i].chain_id);
+        if (id == NULL) {
+            ERROR("layer %zu have NULL digest for image %s", i, desc->dest_image_name);
+            ret = -1;
+            goto out;
+        }
+
         if (desc->layers[i].already_exist) {
             l = storage_layer_get(id);
             if (l != NULL) {
@@ -565,6 +653,27 @@ out:
     return ret;
 }
 
+static int get_top_layer_index(pull_descriptor *desc, size_t *top_layer_index)
+{
+    size_t i = 0;
+
+    if (desc == NULL || top_layer_index == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    for (i = desc->layers_len - 1; i >= 0; i--) {
+        if (desc->layers[i].empty_layer) {
+            continue;
+        }
+        *top_layer_index = i;
+        return 0;
+    }
+
+    ERROR("No valid layer found for image %s", desc->dest_image_name);
+    return -1;
+}
+
 static int create_image(pull_descriptor *desc, char *image_id)
 {
     int ret = 0;
@@ -578,10 +687,21 @@ static int create_image(pull_descriptor *desc, char *image_id)
         return -1;
     }
 
-    top_layer_index = desc->layers_len - 1;
+    ret = get_top_layer_index(desc, &top_layer_index);
+    if (ret != 0) {
+        ERROR("get top layer index for image %s failed", desc->dest_image_name);
+        return -1;
+    }
+
     opts.create_time = &desc->config.create_time;
     opts.digest = desc->manifest.digest;
     top_layer_id = without_sha256_prefix(desc->layers[top_layer_index].chain_id);
+    if (top_layer_id == NULL) {
+        ERROR("NULL top layer id found for image %s", desc->dest_image_name);
+        ret = -1;
+        goto out;
+    }
+
     ret = storage_img_create(image_id, top_layer_id, NULL, &opts);
     if (ret != 0) {
         pre_top_layer = storage_get_img_top_layer(image_id);
@@ -756,55 +876,6 @@ out:
     }
 
     return ret;
-}
-
-static char *calc_chain_id(char *parent_chain_id, char *diff_id)
-{
-    int sret = 0;
-    char tmp_buffer[256] = {0};
-    char *digest = NULL;
-    char *full_digest = NULL;
-
-    if (parent_chain_id == NULL || diff_id == NULL) {
-        ERROR("Invalid NULL param");
-        return NULL;
-    }
-
-    if (strlen(diff_id) <= strlen(SHA256_PREFIX)) {
-        ERROR("Invalid diff id %s found when calc chain id", diff_id);
-        return NULL;
-    }
-
-    if (strlen(parent_chain_id) == 0) {
-        return util_strdup_s(diff_id);
-    }
-
-    if (strlen(parent_chain_id) <= strlen(SHA256_PREFIX)) {
-        ERROR("Invalid parent chain id %s found when calc chain id", parent_chain_id);
-        return NULL;
-    }
-
-    sret = snprintf(tmp_buffer, sizeof(tmp_buffer), "%s+%s", parent_chain_id + strlen(SHA256_PREFIX),
-                    diff_id + strlen(SHA256_PREFIX));
-    if (sret < 0 || (size_t)sret >= sizeof(tmp_buffer)) {
-        ERROR("Failed to sprintf chain id original string");
-        return NULL;
-    }
-
-    digest = sha256_digest_str(tmp_buffer);
-    if (digest == NULL) {
-        ERROR("Failed to calculate chain id");
-        goto out;
-    }
-
-    full_digest = util_full_digest(digest);
-
-out:
-
-    free(digest);
-    digest = NULL;
-
-    return full_digest;
 }
 
 static types_timestamp_t created_to_timestamp(char *created)
@@ -1297,7 +1368,7 @@ static void free_items_not_inherit(docker_image_config_v2 *config)
     return;
 }
 
-static char *convert_created_by(docker_image_config_v2 *config)
+static char *convert_created_by(image_manifest_v1_compatibility *config)
 {
     size_t i = 0;
     char *created_by = NULL;
@@ -1335,7 +1406,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
     int ret = 0;
     size_t history_index = 0;
     parser_error err = NULL;
-    docker_image_config_v2 *v1config = NULL;
+    image_manifest_v1_compatibility *v1config = NULL;
     docker_image_history *history = NULL;
 
     if (desc == NULL || config == NULL || manifest == NULL) {
@@ -1353,7 +1424,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
 
     history_index = manifest->history_len - 1;
     for (i = 0; i < desc->layers_len; i++) {
-        v1config = docker_image_config_v2_parse_data(manifest->history[history_index]->v1compatibility, NULL, &err);
+        v1config = image_manifest_v1_compatibility_parse_data(manifest->history[history_index]->v1compatibility, NULL, &err);
         if (v1config == NULL) {
             ERROR("parse v1 compatibility config failed, err: %s", err);
             ret = -1;
@@ -1381,7 +1452,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
         config->history[i] = history;
         config->history_len++;
 
-        free_docker_image_config_v2(v1config);
+        free_image_manifest_v1_compatibility(v1config);
         v1config = NULL;
         history_index--;
         if (desc->layers[i].empty_layer) {
@@ -1400,7 +1471,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
 out:
     free(err);
     err = NULL;
-    free_docker_image_config_v2(v1config);
+    free_image_manifest_v1_compatibility(v1config);
     v1config = NULL;
 
     return ret;
@@ -1412,6 +1483,9 @@ static int create_config_from_v1config(pull_descriptor *desc)
     parser_error err = NULL;
     docker_image_config_v2 *config = NULL;
     registry_manifest_schema1 *manifest = NULL;
+    char *json = NULL;
+    int sret = 0;
+    char file[PATH_MAX] = {0};
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -1456,7 +1530,33 @@ static int create_config_from_v1config(pull_descriptor *desc)
 
     desc->config.create_time = created_to_timestamp(config->created);
 
+    free(err);
+    err = NULL;
+    json = docker_image_config_v2_generate_json(config, NULL, &err);
+    if (json == NULL) {
+        ret = -1;
+        ERROR("generate json from config failed for image %s", desc->dest_image_name);
+        goto out;
+    }
+
+    sret = snprintf(file, sizeof(file), "%s/config", desc->blobpath);
+    if (sret < 0 || (size_t)sret >= sizeof(file)) {
+        ERROR("Failed to sprintf file for config");
+        ret = -1;
+        goto out;
+    }
+
+    desc->config.file = util_strdup_s(file);
+    ret = util_write_file(desc->config.file, json, strlen(json), CONFIG_FILE_MODE);
+    if (ret != 0) {
+        ERROR("Write config file failed");
+        goto out;
+    }
+    desc->config.digest = util_full_file_digest(desc->config.file);
+
 out:
+    free(json);
+    json = NULL;
     free_registry_manifest_schema1(manifest);
     manifest = NULL;
     free_docker_image_config_v2(config);
