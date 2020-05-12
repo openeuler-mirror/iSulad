@@ -35,6 +35,8 @@ struct layer_opts {
     size_t names_len;
     bool writable;
 
+    char *uncompressed_digest;
+
     // mount options
     struct layer_store_mount_opts *opts;
 };

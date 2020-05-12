@@ -663,11 +663,14 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
         slayer->names[i] = util_strdup_s(opts->names[i]);
         slayer->names_len++;
     }
+    slayer->diff_digest = util_strdup_s(opts->uncompressed_digest);
+
     l->layer_json_path = layer_json_path(id);
     if (l->layer_json_path == NULL) {
         ret = -1;
         goto free_out;
     }
+
     l->slayer = slayer;
     l->incompelte = true;
 
@@ -841,7 +844,7 @@ out:
     return ret;
 }
 
-static int apply_diff(const char *id, const struct io_read_wrapper *diff)
+static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
 {
     int64_t size = 0;
     int ret = 0;
@@ -850,9 +853,10 @@ static int apply_diff(const char *id, const struct io_read_wrapper *diff)
         return 0;
     }
 
-    ret = graphdriver_apply_diff(id, diff, &size);
+    ret = graphdriver_apply_diff(l->slayer->id, diff, &size);
 
     INFO("Apply layer get size: %lld", size);
+    l->slayer->diff_size = size;
 
     // TODO: save split tar
 
@@ -958,7 +962,7 @@ static int layer_store_remove_layer(const char *id)
         return -1;
     }
 
-    ret = util_path_remove(rpath);
+    ret = util_recursive_rmdir(rpath, 0);
     free(rpath);
     return ret;
 }
@@ -999,7 +1003,7 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
         goto driver_remove;
     }
 
-    ret = apply_diff(lid, diff);
+    ret = apply_diff(l, diff);
     if (ret != 0) {
         goto clear_memory;
     }
@@ -1613,6 +1617,8 @@ void free_layer_opts(struct layer_opts *ptr)
     util_free_array_by_len(ptr->names, ptr->names_len);
     ptr->names = NULL;
     ptr->names_len = 0;
+    free(ptr->uncompressed_digest);
+    ptr->uncompressed_digest = NULL;
 
     free_layer_store_mount_opts(ptr->opts);
     ptr->opts = NULL;

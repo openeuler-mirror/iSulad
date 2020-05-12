@@ -99,7 +99,8 @@ int storage_img_set_image_size(const char *image_id);
 char *storage_get_img_top_layer(const char *id);
 
 /* layer operations */
-int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path);
+int storage_layer_create(const char *layer_id, const char *parent_id, const char *diff_digest, bool writeable,
+                         const char *layer_data_path);
 
 struct layer *storage_layer_get(const char *layer_id);
 

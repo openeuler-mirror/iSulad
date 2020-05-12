@@ -102,7 +102,7 @@ out:
     return ret;
 }
 
-static struct layer_opts *fill_create_layer_opts(const char *parent_id, bool writeable)
+static struct layer_opts *fill_create_layer_opts(const char *parent_id, const char *diff_digest, bool writeable)
 {
     struct layer_opts *opts = NULL;
 
@@ -113,13 +113,15 @@ static struct layer_opts *fill_create_layer_opts(const char *parent_id, bool wri
     }
 
     opts->parent = util_strdup_s(parent_id);
+    opts->uncompressed_digest = util_strdup_s(diff_digest);
     opts->writable = writeable;
 
 out:
     return opts;
 }
 
-int storage_layer_create(const char *layer_id, const char *parent_id, bool writeable, const char *layer_data_path)
+int storage_layer_create(const char *layer_id, const char *parent_id, const char *diff_digest, bool writeable,
+                         const char *layer_data_path)
 {
     int ret = 0;
     struct io_read_wrapper reader = { 0 };
@@ -137,7 +139,7 @@ int storage_layer_create(const char *layer_id, const char *parent_id, bool write
         goto out;
     }
 
-    opts = fill_create_layer_opts(parent_id, writeable);
+    opts = fill_create_layer_opts(parent_id, diff_digest, writeable);
     if (opts == NULL) {
         ERROR("Failed to fill create ro layer options");
         ret = -1;

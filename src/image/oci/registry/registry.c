@@ -544,7 +544,7 @@ static int register_layers(pull_descriptor *desc)
             free_layer(l);
             l = NULL;
         } else {
-            ret = storage_layer_create(id, parent, false, desc->layers[i].file);
+            ret = storage_layer_create(id, parent, desc->layers[i].diff_id, false, desc->layers[i].file);
         }
         mutex_unlock(&cached->mutex);
         if (ret != 0) {
