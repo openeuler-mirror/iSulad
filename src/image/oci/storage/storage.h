@@ -66,6 +66,30 @@ struct storage_img_create_options {
     char *digest;
 };
 
+struct id_map {
+    int container_id;
+    int host_id;
+    int size;
+};
+
+struct id_mapping_options {
+    bool host_uid_mapping;
+    bool host_gid_mapping;
+
+    struct id_map *uid_map;
+    size_t uid_map_len;
+    struct id_map *gid_map;
+    size_t gid_map_len;
+};
+
+struct storage_container_options {
+    struct id_mapping_options id_mapping_opts;
+    char **label_opts;
+    size_t label_opts_len;
+    char **mount_opts;
+    size_t mount_opts_len;
+};
+
 int storage_module_init(struct storage_module_init_options *opts);
 
 void free_storage_module_init_options(struct storage_module_init_options *opts);

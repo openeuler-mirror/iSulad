@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+	"names": {
+		"type": "array",
+		"items": {
+			"type": "string"
+		}
+    },
+    "image": {
+      "type": "string"
+    },
+    "layer": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "string"
+    },
+    "big-data-names": {
+		"type": "array",
+		"items": {
+			"type": "string"
+		}
+    },
+    "big-data-sizes": {
+        "$ref": "../defs.json#/definitions/mapStringInt64"
+    },
+    "big-data-digests": {
+        "$ref": "../defs.json#/definitions/mapStringString"
+    },
+    "created": {
+        "type": "string"
+    },
+    "uidmap": {
+        "type": "object",
+        "properties": {
+            "container_id": {
+                "type" : "integer"
+            },
+            "host_id": {
+                "type" : "integer"
+            },
+            "size": {
+                "type" : "integer"
+            }
+        }
+    },
+    "gidmap": {
+        "type": "object",
+        "properties": {
+            "container_id": {
+                "type" : "integer"
+            },
+            "host_id": {
+                "type" : "integer"
+            },
+            "size": {
+                "type" : "integer"
+            }
+        }
+    }
+  }
+}
