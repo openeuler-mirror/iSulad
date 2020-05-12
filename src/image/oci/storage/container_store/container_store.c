@@ -306,7 +306,7 @@ static int save_container(cntr_t *cntr)
     }
 
     if (util_atomic_write_file(container_path, json_data, strlen(json_data), SECURE_CONFIG_FILE_MODE) != 0) {
-        ERROR("Failed to save image json file");
+        ERROR("Failed to save container json file");
         ret = -1;
         goto out;
     }
@@ -372,13 +372,13 @@ static int container_store_load()
     }
 
     if (get_containers_from_json() != 0) {
-        ERROR("Failed to get images from json");
+        ERROR("Failed to get containers from json");
         return -1;
     }
 
     linked_list_for_each_safe(item, &(g_container_store->containers_list), next) {
         if (load_container_to_store_field((cntr_t *)item->elem) != 0) {
-            ERROR("Failed to load image to container store");
+            ERROR("Failed to load container to container store");
             return -1;
         }
     }
@@ -680,20 +680,20 @@ static int container_store_append_container(const char *id, const char *layer, c
     g_container_store->containers_list_len++;
 
     if (!map_insert(g_container_store->byid, (void *)id, (void *)cntr)) {
-        ERROR("Failed to insert image to container store");
+        ERROR("Failed to insert container to container store");
         ret = -1;
         goto out;
     }
 
-    if (!map_insert(g_container_store->byname, (void *)layer, (void *)cntr)) {
-        ERROR("Failed to insert image to container store");
+    if (!map_insert(g_container_store->bylayer, (void *)layer, (void *)cntr)) {
+        ERROR("Failed to insert container to container store");
         ret = -1;
         goto out;
     }
 
     for (i = 0; i < unique_names_len; i++) {
         if (!map_insert(g_container_store->byname, (void *)unique_names[i], (void *)cntr)) {
-            ERROR("Failed to insert image to container store's byname");
+            ERROR("Failed to insert container to container store's name index");
             ret = -1;
             goto out;
         }
@@ -785,9 +785,115 @@ out:
     return dst_id;
 }
 
+static cntr_t *get_container_for_store_by_prefix(const char *id)
+{
+    bool ret = true;
+    cntr_t *value = NULL;
+    map_itor *itor = NULL;
+    const char *key = NULL;
+
+    itor = map_itor_new(g_container_store->byid);
+    if (itor == NULL) {
+        ERROR("Failed to get byid's iterator from container store");
+        return NULL;
+    }
+
+    for (; map_itor_valid(itor); map_itor_next(itor)) {
+        key = map_itor_key(itor);
+        if (key == NULL) {
+            ERROR("Out of memory");
+            ret = false;
+            goto out;
+        }
+        if (strncmp(key, id, strlen(id)) == 0) {
+            if (value != NULL) {
+                ERROR("Multiple IDs found with provided prefix: %s", id);
+                ret = false;
+                goto out;
+            } else {
+                value = map_itor_value(itor);
+            }
+        }
+    }
+
+out:
+    map_itor_free(itor);
+    if (!ret) {
+        value = NULL;
+    }
+
+    return value;
+}
+
+static cntr_t *lookup(const char *id)
+{
+    cntr_t *value = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid input parameter, id is NULL");
+        return NULL;
+    }
+
+    value = map_search(g_container_store->byid, (void *)id);
+    if (value != NULL) {
+        goto found;
+    }
+
+    value = map_search(g_container_store->bylayer, (void *)id);
+    if (value != NULL) {
+        goto found;
+    }
+
+    value = get_container_for_store_by_prefix(id);
+    if (value != NULL) {
+        goto found;
+    }
+
+    return NULL;
+
+found:
+    container_ref_inc(value);
+    return value;
+}
+
+static inline cntr_t *lookup_with_lock(const char *id)
+{
+    cntr_t *cntr = NULL;
+
+    if (!container_store_lock(false)) {
+        return NULL;
+    }
+
+    cntr = lookup(id);
+    container_store_unlock();
+    return cntr;
+}
+
 char *container_store_lookup(const char *id)
 {
-    return NULL;
+    char *container_id = NULL;
+    cntr_t *cntr = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid input parameter, id is NULL");
+        return NULL;
+    }
+
+    if (g_container_store == NULL) {
+        ERROR("Container store is not ready");
+        return NULL;
+    }
+
+    cntr = lookup_with_lock(id);
+    if (cntr == NULL) {
+        ERROR("Container not known");
+        return NULL;
+    }
+
+    container_id = util_strdup_s(cntr->scontainer->id);
+    container_ref_dec(cntr);
+
+    return container_id;
 }
 
 int container_store_delete(const char *id)
