@@ -13,6 +13,7 @@
  * Description: provide oci storage images unit test
  ******************************************************************************/
 #include "image_store.h"
+#include "imagetool_image.h"
 #include "utils_array.h"
 #include <cstring>
 #include <iostream>
@@ -162,6 +163,8 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_EQ(image->spec->config->cmd_len, 1);
     ASSERT_STREQ(image->spec->config->cmd[0], "/bin/bash");
 
+    free_imagetool_image(image);
+
     char **names { nullptr };
     size_t names_len { 0 };
     ASSERT_EQ(image_store_big_data_names(ids.at(0).c_str(), &names, &names_len), 0);
@@ -271,16 +274,24 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_STREQ(image->repo_digests[0],
                  "docker.io/library/health_check@sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
 
-    ASSERT_STREQ(image_store_top_layer(id.c_str()), "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
+    free_imagetool_image(image);
+
+    char *toplayer = NULL;
+    ASSERT_STREQ((toplayer = image_store_top_layer(id.c_str())), "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
+    free(toplayer);
+
     ASSERT_EQ(image_store_set_image_size(id.c_str(), 1000), 0);
+
     image = image_store_get_image(id.c_str());
     ASSERT_EQ(image->size, 1000);
+    free_imagetool_image(image);
 
     ASSERT_EQ(image_store_add_name(id.c_str(), "docker.io/library/test:latest"), 0);
     image = image_store_get_image(id.c_str());
     ASSERT_EQ(image->repo_tags_len, 2);
     ASSERT_STREQ(image->repo_tags[0], "docker.io/library/health_check:latest");
     ASSERT_STREQ(image->repo_tags[1], "docker.io/library/test:latest");
+    free_imagetool_image(image);
 
     char **img_names = NULL;
     img_names = (char **)util_common_calloc_s(2 * sizeof(char *));
@@ -292,11 +303,14 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_STREQ(image->repo_tags[0], "busybox:latest");
     ASSERT_STREQ(image->repo_tags[1], "centos:3.0");
     util_free_array_by_len(img_names, 2);
+    free_imagetool_image(image);
 
     ASSERT_EQ(image_store_set_metadata(id.c_str(), "{metadata}"), 0);
     char *manifest_val = NULL;
     ASSERT_STREQ((manifest_val = image_store_metadata(id.c_str())), "{metadata}");
     free(manifest_val);
+
+    free(created_image);
 
     ASSERT_EQ(image_store_delete(id.c_str()), 0);
     ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);
@@ -310,8 +324,11 @@ TEST_F(StorageImagesUnitTest, test_image_store_lookup)
     std::string truncatedId { "e4db68de4ff27" };
     std::string incorrectId { "4db68de4ff27" };
 
-    ASSERT_STREQ(image_store_lookup(name.c_str()), id.c_str());
-    ASSERT_STREQ(image_store_lookup(truncatedId.c_str()), id.c_str());
+    char *value = NULL;
+    ASSERT_STREQ((value = image_store_lookup(name.c_str())), id.c_str());
+    free(value);
+    ASSERT_STREQ((value = image_store_lookup(truncatedId.c_str())), id.c_str());
+    free(value);
     ASSERT_EQ(image_store_lookup(incorrectId.c_str()), nullptr);
 }
 
@@ -332,7 +349,9 @@ TEST_F(StorageImagesUnitTest, test_image_store_metadata)
     std::string incorrectId { "ff67da98ab8540d713209" };
 
     for (auto elem : ids) {
-        ASSERT_STREQ(image_store_metadata(elem.c_str()), "{}");
+        char *metadata = image_store_metadata(elem.c_str());
+        ASSERT_STREQ(metadata, "{}");
+        free(metadata);
     }
 
     ASSERT_EQ(image_store_metadata(incorrectId.c_str()), nullptr);

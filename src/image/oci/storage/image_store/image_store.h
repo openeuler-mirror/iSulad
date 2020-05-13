@@ -97,6 +97,9 @@ int image_store_set_image_size(const char *id, uint64_t size);
 // Return a slice enumerating the known images.
 int image_store_get_all_images(imagetool_images_list *images_list);
 
+// Return the number of the known images.
+int image_store_get_images_number();
+
 // Return a slice enumerating the images which have a big data
 // item with the name ImageDigestBigDataKey and the specified digest.
 int image_store_get_images_by_digest(const char *digest, imagetool_images_list *images_list);

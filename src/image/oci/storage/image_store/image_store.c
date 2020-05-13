@@ -371,7 +371,14 @@ int image_store_save(image_t *img)
         return -1;
     }
 
+    if (!image_store_lock(false)) {
+        ERROR("Failed to lock image store, not allowed to save image");
+        return -1;
+    }
+
     ret = save_image(img);
+
+    image_store_unlock();
 
     return ret;
 }
@@ -719,8 +726,7 @@ out:
     return ret;
 }
 
-static int image_store_append_image(const char *id, const char *searchable_digest, const char **unique_names,
-                                    size_t unique_names_len, image_t *img)
+static int image_store_append_image(const char *id, const char *searchable_digest, image_t *img)
 {
     int ret = 0;
     size_t i = 0;
@@ -747,14 +753,13 @@ static int image_store_append_image(const char *id, const char *searchable_diges
         goto out;
     }
 
-    for (i = 0; i < unique_names_len; i++) {
-        if (!map_insert(g_image_store->byname, (void *)unique_names[i], (void *)img)) {
+    for (i = 0; i < img->simage->names_len; i++) {
+        if (!map_insert(g_image_store->byname, (void *)img->simage->names[i], (void *)img)) {
             ERROR("Failed to insert image to image store's byname");
             ret = -1;
             goto out;
         }
     }
-    image_ref_inc(img);
 
 out:
     if (ret != 0) {
@@ -799,8 +804,8 @@ err_out:
     return NULL;
 }
 
-static storage_image *new_storage_image(const char *id, const char *searchable_digest, char **unique_names,
-                                        size_t unique_names_len, const types_timestamp_t *time, const char *layer,
+static storage_image *new_storage_image(const char *id, const char *searchable_digest, char ***unique_names,
+                                        size_t *unique_names_len, const types_timestamp_t *time, const char *layer,
                                         const char *metadata)
 {
     int ret = 0;
@@ -816,8 +821,10 @@ static storage_image *new_storage_image(const char *id, const char *searchable_d
     im->id = util_strdup_s(id);
     im->digest = util_strdup_s(searchable_digest);
 
-    im->names = unique_names;
-    im->names_len = unique_names_len;
+    im->names = *unique_names;
+    im->names_len = *unique_names_len;
+    *unique_names = NULL;
+    *unique_names_len = 0;
 
     im->layer = util_strdup_s(layer);
     im->metadata = util_strdup_s(metadata);
@@ -867,7 +874,7 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
     }
 
     if (map_search(g_image_store->byid, (void *)dst_id) != NULL) {
-        ERROR("ID is already in use: %s", id);
+        ERROR("ID is already in use: %s", dst_id);
         ret = -1;
         goto out;
     }
@@ -878,7 +885,7 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
         goto out;
     }
 
-    im = new_storage_image(id, searchable_digest, unique_names, unique_names_len, time, layer, metadata);
+    im = new_storage_image(dst_id, searchable_digest, &unique_names, &unique_names_len, time, layer, metadata);
     if (im == NULL) {
         ERROR("Failed to generate new storage image");
         ret = -1;
@@ -892,7 +899,7 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
         goto out;
     }
 
-    if (image_store_append_image(id, searchable_digest, (const char **)unique_names, unique_names_len, img) != 0) {
+    if (image_store_append_image(dst_id, searchable_digest, img) != 0) {
         ERROR("Failed to append image to image store");
         ret = -1;
         goto out;
@@ -913,6 +920,7 @@ out:
         free_image_t(img);
         img = NULL;
     }
+    util_free_array_by_len(unique_names, unique_names_len);
     image_store_unlock();
     return dst_id;
 }
@@ -997,14 +1005,13 @@ static inline image_t *lookup_with_lock(const char *id)
     }
 
     img = lookup(id);
-    image_store_unlock();
     return img;
 }
 
 char *image_store_lookup(const char *id)
 {
     char *image_id = NULL;
-    image_t *image = NULL;
+    image_t *img = NULL;
 
     if (id == NULL) {
         ERROR("Invalid input parameter, id is NULL");
@@ -1016,15 +1023,17 @@ char *image_store_lookup(const char *id)
         return NULL;
     }
 
-    image = lookup_with_lock(id);
-    if (image == NULL) {
+    img = lookup_with_lock(id);
+    if (img == NULL) {
         ERROR("Image not known");
-        return NULL;
+        goto out;
     }
 
-    image_id = util_strdup_s(image->simage->id);
-    image_ref_dec(image);
+    image_id = util_strdup_s(img->simage->id);
 
+out:
+    image_ref_dec(img);
+    image_store_unlock();
     return image_id;
 }
 
@@ -1035,6 +1044,7 @@ static char *get_value_from_json_map_string_string(json_map_string_string *map, 
     if (map == NULL) {
         return NULL;
     }
+
     for (i = 0; i < map->len; i++) {
         if (strcmp(key, map->keys[i]) == 0) {
             return util_strdup_s(map->values[i]);
@@ -1186,14 +1196,14 @@ int image_store_delete(const char *id)
         return -1;
     }
 
-    img = lookup_with_lock(id);
-    if (img == NULL) {
-        ERROR("Image not known");
+    if (!image_store_lock(true)) {
+        ERROR("Failed to lock image store");
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store");
+    img = lookup(id);
+    if (img == NULL) {
+        ERROR("Image not known");
         ret = -1;
         goto out;
     }
@@ -1257,8 +1267,9 @@ out:
 int image_store_wipe()
 {
     int ret = 0;
-    map_itor *itor = NULL;
-    char *tmp_id = NULL;
+    char *id = NULL;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
 
     if (g_image_store == NULL) {
         ERROR("Image store is not ready");
@@ -1267,37 +1278,22 @@ int image_store_wipe()
 
     if (!image_store_lock(true)) {
         ERROR("Failed to lock image store, not allowed to delete images");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-    itor = map_itor_new(g_image_store->byid);
-    if (itor == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    for (; map_itor_valid(itor); map_itor_next(itor)) {
-        const char *id = map_itor_key(itor);
-        if (id == NULL) {
-            ERROR("Failed to get key from map");
+    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
+        id = util_strdup_s(((image_t *)item->elem)->simage->id);
+        if (delete_image_from_store_without_lock(id) != 0) {
+            ERROR("Failed to delete image: %s", id);
             ret = -1;
             goto out;
         }
-        tmp_id = util_strdup_s(id);
-        if (delete_image_from_store_without_lock(tmp_id) != 0) {
-            ERROR("Failed to delete image: %s", tmp_id);
-            ret = -1;
-            goto out;
-        }
-        free(tmp_id);
-        tmp_id = NULL;
+        free(id);
+        id = NULL;
     }
 
 out:
-    free(tmp_id);
-    map_itor_free(itor);
+    free(id);
     image_store_unlock();
     return ret;
 }
@@ -1724,6 +1720,7 @@ int image_store_add_name(const char *id, const char *name)
         }
     }
 
+    util_free_array_by_len(img->simage->names, img->simage->names_len);
     img->simage->names = unique_names;
     img->simage->names_len = unique_names_len;
 
@@ -1737,9 +1734,9 @@ int image_store_add_name(const char *id, const char *name)
     }
 
 out:
-    image_ref_dec(img);
     util_free_array_by_len(names, names_len);
     util_free_array_by_len(unique_names, unique_names_len);
+    image_ref_dec(img);
     image_store_unlock();
     return ret;
 }
@@ -1808,6 +1805,7 @@ int image_store_set_names(const char *id, const char **names, size_t names_len)
         }
     }
 
+    util_free_array_by_len(img->simage->names, img->simage->names_len);
     img->simage->names = unique_names;
     img->simage->names_len = unique_names_len;
     unique_names = NULL;
@@ -1820,8 +1818,8 @@ int image_store_set_names(const char *id, const char **names, size_t names_len)
     }
 
 out:
-    image_ref_dec(img);
     util_free_array_by_len(unique_names, unique_names_len);
+    image_ref_dec(img);
     image_store_unlock();
     return ret;
 }
@@ -1927,10 +1925,12 @@ bool image_store_exists(const char *id)
 
     img = lookup_with_lock(id);
     if (img == NULL) {
+        image_store_unlock();
         return false;
     }
 
     image_ref_dec(img);
+    image_store_unlock();
     return true;
 }
 
@@ -1940,6 +1940,7 @@ char *image_store_big_data(const char *id, const char *key)
     image_t *img = NULL;
     size_t filesize;
     char filename[PATH_MAX] = { 0x00 };
+    char *content = NULL;
 
     if (id == NULL) {
         ERROR("Invalid parameter, id is NULL");
@@ -1959,23 +1960,27 @@ char *image_store_big_data(const char *id, const char *key)
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return NULL;
+        goto out;
     }
 
     ret = get_data_path(img->simage->id, key, filename, sizeof(filename));
 
-    image_ref_dec(img);
-
     if (ret != 0) {
         ERROR("Failed to get big data file path: %s.", key);
-        return NULL;
+        goto out;
     }
 
-    return read_file(filename, &filesize);
+    content = read_file(filename, &filesize);
+
+out:
+    image_ref_dec(img);
+    image_store_unlock();
+    return content;
 }
 
 static int get_size_with_update_big_data(const char *id, const char *key, int64_t *size)
 {
+    int ret = 0;
     image_t *img = NULL;
     char *data = NULL;
 
@@ -1994,13 +1999,16 @@ static int get_size_with_update_big_data(const char *id, const char *key, int64_
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     (void)get_value_from_json_map_string_int64(img->simage->big_data_sizes, key, size);
 
+out:
     image_ref_dec(img);
-    return 0;
+    image_store_unlock();
+    return ret;
 }
 
 int64_t image_store_big_data_size(const char *id, const char *key)
@@ -2027,22 +2035,21 @@ int64_t image_store_big_data_size(const char *id, const char *key)
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return -1;
+        goto out;
     }
 
     bret = get_value_from_json_map_string_int64(img->simage->big_data_sizes, key, &size);
 
     image_ref_dec(img);
 
-    if (bret) {
-        return size;
-    }
-
-    if (get_size_with_update_big_data(id, key, &size) == 0) {
-        return size;
+    if (bret || get_size_with_update_big_data(id, key, &size) == 0) {
+        goto out;
     }
 
     ERROR("Size is not known");
+
+out:
+    image_store_unlock();
     return size;
 }
 
@@ -2069,13 +2076,14 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return NULL;
+        goto out;
     }
 
     digest = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
 
+out:
     image_ref_dec(img);
-
+    image_store_unlock();
     return digest;
 }
 
@@ -2096,6 +2104,7 @@ char *image_store_big_data_digest(const char *id, const char *key)
 
     img = lookup_with_lock(id);
     if (img == NULL) {
+        image_store_unlock();
         ERROR("Image not known");
         return NULL;
     }
@@ -2103,6 +2112,7 @@ char *image_store_big_data_digest(const char *id, const char *key)
     digest = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
 
     image_ref_dec(img);
+    image_store_unlock();
 
     if (digest != NULL) {
         return digest;
@@ -2135,7 +2145,8 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     if (dup_array_of_strings((const char **)img->simage->big_data_names, img->simage->big_data_names_len, names,
@@ -2147,6 +2158,7 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
 
 out:
     image_ref_dec(img);
+    image_store_unlock();
     return ret;
 }
 
@@ -2168,12 +2180,14 @@ char *image_store_metadata(const char *id)
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return NULL;
+        goto out;
     }
 
     metadata = util_strdup_s(img->simage->metadata);
-    image_ref_dec(img);
 
+out:
+    image_ref_dec(img);
+    image_store_unlock();
     return metadata;
 }
 
@@ -2195,12 +2209,14 @@ char *image_store_top_layer(const char *id)
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return NULL;
+        goto out;
     }
 
     top_layer = util_strdup_s(img->simage->layer);
-    image_ref_dec(img);
 
+out:
+    image_ref_dec(img);
+    image_store_unlock();
     return top_layer;
 }
 
@@ -2233,9 +2249,9 @@ int image_store_set_image_size(const char *id, uint64_t size)
 
     img->simage->size = size;
     save_image(img);
-    image_ref_dec(img);
 
 out:
+    image_ref_dec(img);
     image_store_unlock();
     return ret;
 }
@@ -2743,12 +2759,14 @@ imagetool_image *image_store_get_image(const char *id)
     img = lookup_with_lock(id);
     if (img == NULL) {
         ERROR("Image not known");
-        return NULL;
+        goto out;
     }
 
     imginfo = get_image_info(img);
-    image_ref_dec(img);
 
+out:
+    image_ref_dec(img);
+    image_store_unlock();
     return imginfo;
 }
 
@@ -2803,6 +2821,26 @@ out:
     return ret;
 }
 
+int image_store_get_images_number()
+{
+    size_t number = 0;
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not already!");
+        return -1;
+    }
+
+    if (!image_store_lock(false)) {
+        ERROR("Failed to lock image store");
+        return -1;
+    }
+    
+    number = g_image_store->images_list_len;
+
+    image_store_unlock();
+    return number;
+}
+
 int image_store_get_images_by_digest(const char *digest, imagetool_images_list *images_list)
 {
     int ret = 0;
@@ -2832,7 +2870,8 @@ int image_store_get_images_by_digest(const char *digest, imagetool_images_list *
     digest_imgs = (digest_image_t *)map_search(g_image_store->bydigest, (void *)digest);
     if (digest_imgs == NULL) {
         ERROR("Image not known");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     if (digest_imgs->images_list_len == 0) {
