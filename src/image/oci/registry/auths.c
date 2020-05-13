@@ -100,6 +100,8 @@ static int decode_auth(char *encoded, char **username, char **password)
     (void)memset(auth_parts[1], 0, strlen(auth_parts[1]));
 
 out:
+    free_sensitive_string((char *)auth);
+    auth = NULL;
     free_sensitive_string((char *)decoded);
     decoded = NULL;
     util_free_array(auth_parts);
@@ -345,6 +347,8 @@ static int write_auth_file(char *content)
     }
 
 out:
+    free(auths_dir);
+    auths_dir = NULL;
 
     return ret;
 }
@@ -411,6 +415,8 @@ int auths_save(char *host, char *username, char *password)
     }
 
 out:
+    free(json);
+    json = NULL;
     free_registry_auths(auths);
     auths = NULL;
     free_defs_map_string_object_auths(element);
@@ -502,6 +508,8 @@ int auths_delete(char *host)
     }
 
 out:
+    free(json);
+    json = NULL;
     free_registry_auths(auths);
     auths = NULL;
     free(err);

@@ -255,7 +255,7 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
     // {"errors":[{"code":"UNAUTHORIZED","message":"authentication required","detail":null}]}
     message = get_parsed_message(http_head);
     if (message == NULL) {
-        ERROR("out of memory");
+        ERROR("Get parsed message failed. http response size %zu, response:%s", strlen(http_head), http_head);
         ret = -1;
         goto out;
     }
@@ -765,6 +765,8 @@ static int normalized_host_os_arch(char **host_os, char **host_arch, char **host
                 *host_variant = util_strdup_s("v7");
             } else if (!strcmp(tmp_variant, "8")) {
                 *host_variant = util_strdup_s("v8");
+            } else {
+                *host_variant = util_strdup_s(tmp_variant);
             }
             free(tmp_variant);
             tmp_variant = NULL;

@@ -132,6 +132,8 @@ static int parse_manifest_schema1(pull_descriptor *desc)
     desc->layers_len = manifest->fs_layers_len;
 
 out:
+    free_image_manifest_v1_compatibility(v1config);
+    v1config = NULL;
     free_registry_manifest_schema1(manifest);
     manifest = NULL;
     free(err);
@@ -185,10 +187,8 @@ static int parse_manifest_schema2(pull_descriptor *desc)
     desc->layers_len = manifest->layers_len;
 
 out:
-    if (manifest != NULL) {
-        free_registry_manifest_schema2(manifest);
-        manifest = NULL;
-    }
+    free_registry_manifest_schema2(manifest);
+    manifest = NULL;
     free(err);
     err = NULL;
 
@@ -239,10 +239,8 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
     desc->layers_len = manifest->layers_len;
 
 out:
-    if (manifest != NULL) {
-        free_oci_image_manifest(manifest);
-        manifest = NULL;
-    }
+    free_oci_image_manifest(manifest);
+    manifest = NULL;
     free(err);
     err = NULL;
 
@@ -941,10 +939,8 @@ static int parse_docker_config(pull_descriptor *desc)
 
 out:
 
-    if (config != NULL) {
-        free_docker_image_config_v2(config);
-        config = NULL;
-    }
+    free_docker_image_config_v2(config);
+    config = NULL;
     free(err);
     err = NULL;
 
@@ -993,10 +989,8 @@ static int parse_oci_config(pull_descriptor *desc)
     desc->config.create_time = created_to_timestamp(config->created);
 
 out:
-    if (config != NULL) {
-        free_oci_image_spec(config);
-        config = NULL;
-    }
+    free_oci_image_spec(config);
+    config = NULL;
     free(err);
     err = NULL;
 
@@ -1452,6 +1446,9 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
         config->history[i] = history;
         config->history_len++;
 
+        free_docker_image_history(history);
+        history = NULL;
+
         free_image_manifest_v1_compatibility(v1config);
         v1config = NULL;
         history_index--;
@@ -1471,6 +1468,8 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
 out:
     free(err);
     err = NULL;
+    free_docker_image_history(history);
+    history = NULL;
     free_image_manifest_v1_compatibility(v1config);
     v1config = NULL;
 
@@ -1624,6 +1623,23 @@ out:
     return ret;
 }
 
+static void update_host(pull_descriptor *desc)
+{
+    if (desc == NULL) {
+        ERROR("Invalid NULL param");
+        return;
+    }
+
+    // registry-1.docker.io is the real docker.io's registry. index.docker.io is V1 registry, we do not support
+    // V1 registry, try use registry-1.docker.io.
+    if (!strcmp(desc->host, DOCKER_HOSTNAME) || !strcmp(desc->host, DOCKER_V1HOSTNAME)) {
+        free(desc->host);
+        desc->host = util_strdup_s(DOCKER_REGISTRY);
+    }
+
+    return;
+}
+
 static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *options)
 {
     int ret = 0;
@@ -1660,12 +1676,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         goto out;
     }
 
-    // registry-1.docker.io is the real docker.io's registry. index.docker.io is V1 registry, we do not support
-    // V1 registry, try use registry-1.docker.io.
-    if (!strcmp(desc->host, DOCKER_HOSTNAME) || !strcmp(desc->host, DOCKER_V1HOSTNAME)) {
-        free(desc->host);
-        desc->host = util_strdup_s(DOCKER_REGISTRY);
-    }
+    update_host(desc);
 
     if (mkdtemp(blobpath) == NULL) {
         ERROR("make temporary direcory failed: %s", strerror(errno));
@@ -1850,6 +1861,7 @@ int registry_login(registry_login_options *options)
     }
 
     desc->host = util_strdup_s(options->host);
+    update_host(desc);
     desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->username = util_strdup_s(options->auth.username);

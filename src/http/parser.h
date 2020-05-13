@@ -47,7 +47,7 @@
 #undef FALSE
 #define FALSE 0
 
-#define MAX_HEADERS 13
+#define MAX_HEADERS 30
 #define MAX_ELEMENT_SIZE 2048
 #define MAX_CHUNKS 16
 
