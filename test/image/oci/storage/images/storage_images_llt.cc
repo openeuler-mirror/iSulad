@@ -277,7 +277,8 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     free_imagetool_image(image);
 
     char *toplayer = NULL;
-    ASSERT_STREQ((toplayer = image_store_top_layer(id.c_str())), "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
+    ASSERT_STREQ((toplayer = image_store_top_layer(id.c_str())),
+                 "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
     free(toplayer);
 
     ASSERT_EQ(image_store_set_image_size(id.c_str(), 1000), 0);

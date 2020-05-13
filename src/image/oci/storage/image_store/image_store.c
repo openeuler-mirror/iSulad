@@ -1315,10 +1315,10 @@ static bool should_use_origin_name(const char *name)
 // Convert a BigData key name into an acceptable file name.
 static char *make_big_data_base_name(const char *key)
 {
-#define MAX_BIG_DATA_BASE_NAME_LEN 100
     int ret = 0;
     int nret = 0;
-    char encode_name[MAX_BIG_DATA_BASE_NAME_LEN] = { 0x00 };
+    char *b64_encode_name = NULL;
+    size_t b64_encode_name_len = 0;
     char *base_name = NULL;
     size_t name_size;
 
@@ -1326,16 +1326,30 @@ static char *make_big_data_base_name(const char *key)
         return util_strdup_s(key);
     }
 
-    (void)lws_b64_encode_string(key, (int)strlen(key), encode_name, (int)sizeof(encode_name));
-    name_size = 1 + strlen(encode_name) + 1; // '=' + encode string + '\0'
+    b64_encode_name_len = util_base64_encode_len(strlen(key));
+    b64_encode_name = util_common_calloc_s(b64_encode_name_len + 1);
+    if (b64_encode_name == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    nret = util_base64_encode((unsigned char *)key, strlen(key), b64_encode_name, b64_encode_name_len);
+    if (nret < 0) {
+        ret = -1;
+        ERROR("Encode auth to base64 failed");
+        goto out;
+    }
+    name_size = 1 + strlen(b64_encode_name) + 1; // '=' + encode string + '\0'
 
     base_name = (char *)util_common_calloc_s(name_size * sizeof(char));
     if (base_name == NULL) {
         ERROR("Out of memory");
-        return NULL;
+        ret = -1;
+        goto out;
     }
 
-    nret = snprintf(base_name, name_size, "=%s", encode_name);
+    nret = snprintf(base_name, name_size, "=%s", b64_encode_name);
     if (nret < 0 || (size_t)nret >= name_size) {
         ERROR("Out of memory");
         ret = -1;
@@ -1348,6 +1362,7 @@ out:
         free(base_name);
         base_name = NULL;
     }
+    free(b64_encode_name);
 
     return base_name;
 }
@@ -2834,7 +2849,7 @@ int image_store_get_images_number()
         ERROR("Failed to lock image store");
         return -1;
     }
-    
+
     number = g_image_store->images_list_len;
 
     image_store_unlock();
