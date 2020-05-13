@@ -1028,7 +1028,7 @@ char *image_store_lookup(const char *id)
     return image_id;
 }
 
-static const char *get_value_from_json_map_string_string(json_map_string_string *map, const char *key)
+static char *get_value_from_json_map_string_string(json_map_string_string *map, const char *key)
 {
     size_t i;
 
@@ -1037,7 +1037,7 @@ static const char *get_value_from_json_map_string_string(json_map_string_string 
     }
     for (i = 0; i < map->len; i++) {
         if (strcmp(key, map->keys[i]) == 0) {
-            return map->values[i];
+            return util_strdup_s(map->values[i]);
         }
     }
 
@@ -1099,7 +1099,7 @@ static int remove_image_from_memory(const char *id)
     image_t *img = NULL;
     size_t i = 0;
     int ret = 0;
-    const char *digest = NULL;
+    char *digest = NULL;
 
     img = lookup(id);
     if (img == NULL) {
@@ -1149,6 +1149,7 @@ static int remove_image_from_memory(const char *id)
     }
 
 out:
+    free(digest);
     image_ref_dec(img);
     return ret;
 }
@@ -1452,60 +1453,59 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
     int ret = 0;
     bool size_found = false;
     int64_t old_size;
-    const char *old_digest = NULL;
+    char *old_digest = NULL;
     char *new_digest = NULL;
     char *full_digest = NULL;
     bool add_name = true;
     size_t i;
     digest_image_t *digest_filter_images = NULL;
-    storage_image *im = NULL;
 
-    im = img->simage;
-    if (im->big_data_sizes == NULL) {
-        im->big_data_sizes = (json_map_string_int64 *)util_common_calloc_s(sizeof(json_map_string_int64));
-        if (im->big_data_sizes == NULL) {
+    if (img->simage->big_data_sizes == NULL) {
+        img->simage->big_data_sizes = (json_map_string_int64 *)util_common_calloc_s(sizeof(json_map_string_int64));
+        if (img->simage->big_data_sizes == NULL) {
             ERROR("Out of memory");
             return -1;
         }
     }
 
-    size_found = get_value_from_json_map_string_int64(im->big_data_sizes, key, &old_size);
+    size_found = get_value_from_json_map_string_int64(img->simage->big_data_sizes, key, &old_size);
     if (size_found) {
-        update_json_map_string_int64(im->big_data_sizes, key, (int64_t)strlen(data));
+        update_json_map_string_int64(img->simage->big_data_sizes, key, (int64_t)strlen(data));
     } else {
-        append_json_map_string_int64(im->big_data_sizes, key, (int64_t)strlen(data));
+        append_json_map_string_int64(img->simage->big_data_sizes, key, (int64_t)strlen(data));
     }
 
-    if (im->big_data_digests == NULL) {
-        im->big_data_digests = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
-        if (im->big_data_digests == NULL) {
+    if (img->simage->big_data_digests == NULL) {
+        img->simage->big_data_digests = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+        if (img->simage->big_data_digests == NULL) {
             ERROR("Out of memory");
             return -1;
         }
     }
 
-    old_digest = get_value_from_json_map_string_string(im->big_data_digests, key);
+    old_digest = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
     new_digest = sha256_digest_str(data);
     full_digest = util_full_digest(new_digest);
     if (old_digest != NULL) {
-        update_json_map_string_string(im->big_data_digests, key, full_digest);
+        update_json_map_string_string(img->simage->big_data_digests, key, full_digest);
     } else {
-        append_json_map_string_string(im->big_data_digests, key, full_digest);
+        append_json_map_string_string(img->simage->big_data_digests, key, full_digest);
     }
 
-    if (!size_found || old_size != (int64_t)strlen(data) || old_digest == NULL || strcmp(old_digest, new_digest) != 0) {
+    if (!size_found || old_size != (int64_t)strlen(data) ||
+        old_digest == NULL || strcmp(old_digest, full_digest) != 0) {
         *should_save = true;
     }
 
-    for (i = 0; i < im->big_data_names_len; i++) {
-        if (strcmp(im->big_data_names[i], key) == 0) {
+    for (i = 0; i < img->simage->big_data_names_len; i++) {
+        if (strcmp(img->simage->big_data_names[i], key) == 0) {
             add_name = false;
             break;
         }
     }
 
     if (add_name) {
-        if (append_big_data_name(im, key) != 0) {
+        if (append_big_data_name(img->simage, key) != 0) {
             ERROR("Failed to append big data name");
             ret = -1;
             goto out;
@@ -1514,7 +1514,7 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
     }
 
     if (strcmp(key, IMAGE_DIGEST_BIG_DATA_KEY) == 0) {
-        if (old_digest != NULL && strcmp(old_digest, new_digest) != 0 && strcmp(old_digest, im->digest) != 0) {
+        if (old_digest != NULL && strcmp(old_digest, full_digest) != 0 && strcmp(old_digest, img->simage->digest) != 0) {
             if (remove_image_from_digest_index(img, old_digest) != 0) {
                 ERROR("Failed to remove the image from the list of images in the digest-based "
                       "index which corresponds to the old digest for this item, unless it's also the hard-coded digest");
@@ -1525,7 +1525,7 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
 
         // add the image to the list of images in the digest-based index which
         // corresponds to the new digest for this item, unless it's already there
-        digest_filter_images = (digest_image_t *)map_search(g_image_store->bydigest, (void *)new_digest);
+        digest_filter_images = (digest_image_t *)map_search(g_image_store->bydigest, (void *)full_digest);
         if (digest_filter_images != NULL) {
             digest_image_slice_without_value(digest_filter_images, img);
             if (append_image_to_digest_images(digest_filter_images, img) != 0) {
@@ -1537,6 +1537,7 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
     }
 
 out:
+    free(old_digest);
     free(new_digest);
     free(full_digest);
     return ret;
@@ -2049,7 +2050,6 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
 {
     image_t *img = NULL;
     char *data = NULL;
-    const char *value = NULL;
     char *digest = NULL;
 
     data = image_store_big_data(id, key);
@@ -2072,8 +2072,7 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
         return NULL;
     }
 
-    value = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
-    digest = util_strdup_s(value);
+    digest = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
 
     image_ref_dec(img);
 
@@ -2083,7 +2082,6 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
 char *image_store_big_data_digest(const char *id, const char *key)
 {
     image_t *img = NULL;
-    const char *value = NULL;
     char *digest = NULL;
 
     if (key == NULL || strlen(key) == 0) {
@@ -2102,8 +2100,7 @@ char *image_store_big_data_digest(const char *id, const char *key)
         return NULL;
     }
 
-    value = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
-    digest = util_strdup_s(value);
+    digest = get_value_from_json_map_string_string(img->simage->big_data_digests, key);
 
     image_ref_dec(img);
 
