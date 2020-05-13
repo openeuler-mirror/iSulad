@@ -24,23 +24,6 @@ void MockImage_SetMock(MockImage* mock)
     g_image_mock = mock;
 }
 
-int im_get_storage_status(const char *image_type, im_storage_status_response **response)
-{
-    if (g_image_mock != nullptr) {
-        return g_image_mock->ImGetStorageStatus(image_type, response);
-    }
-    return -1;
-}
-
-void free_im_storage_status_response(im_storage_status_response *ptr)
-{
-    if (g_image_mock != nullptr) {
-        g_image_mock->FreeImStorageStatusResponse(ptr);
-        return;
-    }
-    return;
-}
-
 int im_container_export(const im_export_request *request)
 {
     if (g_image_mock != nullptr) {

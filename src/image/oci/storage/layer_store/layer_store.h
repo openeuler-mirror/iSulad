@@ -41,12 +41,6 @@ struct layer_opts {
     struct layer_store_mount_opts *opts;
 };
 
-struct layer_store_status {
-    char *driver_name;
-    char *backing_fs;
-    char *status;
-};
-
 int layer_store_init(const struct storage_module_init_options *conf);
 
 bool layer_store_check(const char *id);
@@ -63,12 +57,10 @@ char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opt
 int layer_store_umount(const char *id, bool force);
 int layer_store_mounted(const char *id);
 int layer_store_set_names(const char *id, const char * const* names, size_t names_len);
-struct layer_store_status* layer_store_status();
 int layer_store_try_repair_lowers(const char *id);
 
 void free_layer_store_mount_opts(struct layer_store_mount_opts *ptr);
 void free_layer_opts(struct layer_opts *opts);
-void free_layer_store_status(struct layer_store_status *ptr);
 
 #ifdef __cplusplus
 }

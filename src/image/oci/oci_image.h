@@ -38,10 +38,6 @@ int oci_umount_rf(const im_umount_request *request);
 int oci_delete_rf(const im_delete_request *request);
 int oci_export_rf(const im_export_request *request);
 int oci_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
-
-int oci_get_storage_status(im_storage_status_response **response);
-int oci_get_storage_metadata(char *id, im_storage_metadata_response **response);
-
 int oci_login(const im_login_request *request);
 int oci_logout(const im_logout_request *request);
 

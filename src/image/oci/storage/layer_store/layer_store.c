@@ -1572,33 +1572,6 @@ unlock:
     return ret;
 }
 
-struct layer_store_status *layer_store_status()
-{
-    struct graphdriver_status *d_status = NULL;
-    struct layer_store_status *result = NULL;
-
-    d_status = graphdriver_get_status();
-
-    if (d_status == NULL) {
-        return NULL;
-    }
-    result = util_common_calloc_s(sizeof(struct layer_store_status));
-    if (result == NULL) {
-        ERROR("Out of memory");
-        goto out;
-    }
-    result->backing_fs = d_status->backing_fs;
-    d_status->backing_fs = NULL;
-    result->status = d_status->status;
-    d_status->status = NULL;
-    result->driver_name = d_status->driver_name;
-    d_status->driver_name = NULL;
-
-out:
-    free_graphdriver_status(d_status);
-    return result;
-}
-
 int layer_store_try_repair_lowers(const char *id)
 {
     layer_t *l = NULL;
@@ -1643,18 +1616,3 @@ void free_layer_store_mount_opts(struct layer_store_mount_opts *ptr)
     ptr->mount_opts = NULL;
     free(ptr);
 }
-
-void free_layer_store_status(struct layer_store_status *ptr)
-{
-    if (ptr == NULL) {
-        return;
-    }
-    free(ptr->backing_fs);
-    ptr->backing_fs = NULL;
-    free(ptr->driver_name);
-    ptr->driver_name = NULL;
-    free(ptr->status);
-    ptr->status = NULL;
-    free(ptr);
-}
-

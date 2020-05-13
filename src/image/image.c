@@ -60,8 +60,6 @@ static const struct bim_ops g_embedded_ops = {
     .resolve_image_name = embedded_resolve_image_name,
     .container_fs_usage = embedded_filesystem_usage,
     .get_filesystem_info = NULL,
-    .get_storage_status = NULL,
-    .get_storage_metadata = NULL,
     .image_status = NULL,
     .load_image = embedded_load_image,
     .pull_image = NULL,
@@ -95,8 +93,6 @@ static const struct bim_ops g_oci_ops = {
     .resolve_image_name = oci_resolve_image_name,
     .container_fs_usage = oci_container_filesystem_usage,
     .get_filesystem_info = oci_get_filesystem_info,
-    .get_storage_status = oci_get_storage_status,
-    .get_storage_metadata = oci_get_storage_metadata,
     .image_status = oci_status_image,
     .load_image = oci_load_image,
     .pull_image = oci_pull_rf,
@@ -130,8 +126,6 @@ static const struct bim_ops g_ext_ops = {
     .container_fs_usage = ext_filesystem_usage,
     .image_status = NULL,
     .get_filesystem_info = NULL,
-    .get_storage_status = NULL,
-    .get_storage_metadata = NULL,
     .load_image = ext_load_image,
     .pull_image = NULL,
     .login = ext_login,
@@ -289,66 +283,6 @@ int im_resolv_image_name(const char *image_type, const char *image_name, char **
     }
 
     ret = 0;
-out:
-    return ret;
-}
-
-int im_get_storage_status(const char *image_type, im_storage_status_response **response)
-{
-    int ret = -1;
-    const struct bim_type *q = NULL;
-
-    if (image_type == NULL) {
-        ERROR("Image type is required");
-        goto out;
-    }
-    q = get_bim_by_type(image_type);
-    if (q == NULL) {
-        goto out;
-    }
-    if (q->ops->get_storage_status == NULL) {
-        ERROR("Get storage status umimplements");
-        goto out;
-    }
-
-    ret = q->ops->get_storage_status(response);
-    if (ret != 0) {
-        ERROR("Get storage status failed");
-        free_im_storage_status_response(*response);
-        *response = NULL;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
-int im_get_storage_metadata(const char *image_type, char *id, im_storage_metadata_response **response)
-{
-    int ret = -1;
-    const struct bim_type *q = NULL;
-
-    if (image_type == NULL || response == NULL) {
-        ERROR("Image type or response is NULL");
-        goto out;
-    }
-    q = get_bim_by_type(image_type);
-    if (q == NULL) {
-        goto out;
-    }
-    if (q->ops->get_storage_metadata == NULL) {
-        ERROR("Get storage metadata umimplements");
-        goto out;
-    }
-
-    ret = q->ops->get_storage_metadata(id, response);
-    if (ret != 0) {
-        ERROR("Get storage metadata failed");
-        free_im_storage_metadata_response(*response);
-        *response = NULL;
-        goto out;
-    }
-
 out:
     return ret;
 }
@@ -1946,31 +1880,5 @@ void free_im_fs_info_response(im_fs_info_response *ptr)
     free(ptr->errmsg);
     ptr->errmsg = NULL;
 
-    free(ptr);
-}
-
-void free_im_storage_status_response(im_storage_status_response *ptr)
-{
-    if (ptr == NULL) {
-        return;
-    }
-    free(ptr->backing_fs);
-    ptr->backing_fs = NULL;
-    free(ptr->status);
-    ptr->status = NULL;
-    free(ptr);
-}
-
-void free_im_storage_metadata_response(im_storage_metadata_response *ptr)
-{
-    if (ptr == NULL) {
-        return;
-    }
-    free_json_map_string_string(ptr->metadata);
-    ptr->metadata = NULL;
-    free(ptr->name);
-    ptr->name = NULL;
-    free(ptr->errmsg);
-    ptr->errmsg = NULL;
     free(ptr);
 }

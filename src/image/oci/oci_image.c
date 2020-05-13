@@ -355,66 +355,6 @@ err_out:
     return -1;
 }
 
-int oci_get_storage_status(im_storage_status_response **response)
-{
-    int ret = -1;
-
-    if (response == NULL) {
-        ERROR("Invalid input arguments");
-        return ret;
-    }
-
-    *response = (im_storage_status_response *)util_common_calloc_s(sizeof(im_storage_status_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        return ret;
-    }
-
-    // TODO call storage image status interface
-    //ret = isula_do_storage_status(*response);
-    if (ret != 0) {
-        ERROR("Get get storage status failed");
-        ret = -1;
-        goto err_out;
-    }
-
-    return 0;
-err_out:
-    free_im_storage_status_response(*response);
-    *response = NULL;
-    return ret;
-}
-
-int oci_get_storage_metadata(char *id, im_storage_metadata_response **response)
-{
-    int ret = -1;
-
-    if (response == NULL || id == NULL) {
-        ERROR("Invalid input arguments");
-        return ret;
-    }
-
-    *response = (im_storage_metadata_response *)util_common_calloc_s(sizeof(im_storage_metadata_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        return ret;
-    }
-
-    // TODO call storage metadata status interface
-    //ret = isula_do_storage_metadata(id, *response);
-    if (ret != 0) {
-        ERROR("Get get storage metadata failed");
-        ret = -1;
-        goto err_out;
-    }
-
-    return 0;
-err_out:
-    free_im_storage_metadata_response(*response);
-    *response = NULL;
-    return ret;
-}
-
 int oci_load_image(const im_load_request *request)
 {
     int ret = 0;
