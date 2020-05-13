@@ -35,8 +35,8 @@
         "compression": {
             "type": "uint32"
         },
-        "flags": {
-            "$ref": "../defs.json#/definitions/mapStringString"
+        "incompelte": {
+            "type": "boolean"
         }
     }
 }

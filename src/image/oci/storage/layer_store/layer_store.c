@@ -358,7 +358,7 @@ static int load_layers_from_json_files()
         }
 
         // check complete
-        if (tl->incompelte) {
+        if (tl->slayer->incompelte) {
             if (layer_store_delete(tl->slayer->id) != 0) {
                 ERROR("delete layer: %s failed", tl->slayer->id);
                 goto unlock_out;
@@ -672,7 +672,6 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
     }
 
     l->slayer = slayer;
-    l->incompelte = true;
 
 free_out:
     if (ret != 0) {
@@ -1001,6 +1000,12 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
 
     l = lookup(lid);
     if (l == NULL) {
+        ret = -1;
+        goto driver_remove;
+    }
+    l->slayer->incompelte = true;
+    if (save_layer(l) != 0) {
+        ret = -1;
         goto driver_remove;
     }
 
@@ -1008,6 +1013,7 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     if (ret != 0) {
         goto clear_memory;
     }
+    l->slayer->incompelte = false;
 
     ret = save_layer(l);
     if (ret == 0) {

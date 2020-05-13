@@ -36,7 +36,6 @@ typedef struct _layer_t_ {
     char *mount_point_json_path;
     storage_mount_point *smount_point;
 
-    bool incompelte;
     uint64_t refcnt;
 } layer_t;
 
