@@ -66,10 +66,6 @@
 #include "clibcni/api.h"
 #endif
 
-#ifdef ENABLE_EMBEDDED_IMAGE
-#include "db_common.h"
-#endif
-
 sem_t g_daemon_shutdown_sem;
 
 static int create_client_run_path(const char *group)

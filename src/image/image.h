@@ -40,9 +40,7 @@ extern "C" {
 #endif
 
 #define IMAGE_TYPE_OCI "oci"
-#ifdef ENABLE_EMBEDDED_IMAGE
 #define IMAGE_TYPE_EMBEDDED "embedded"
-#endif
 #define IMAGE_TYPE_EXTERNAL "external"
 
 #ifndef ENABLE_OCI_IMAGE
