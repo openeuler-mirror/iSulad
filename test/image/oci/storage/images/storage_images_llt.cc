@@ -68,7 +68,7 @@ bool dirExists(const char *path)
   "id": "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
   "digest": "sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586",
   "names": [
-  "rnd-dockerhub.huawei.com/official/centos:latest"
+  "imagehub.isulad.com/official/centos:latest"
   ],
   "layer": "edd34c086208711c693a7b7a3ade23e24e6170ae24d8d2dab7c4f3efca61d509",
   "metadata": "{}",
@@ -94,7 +94,7 @@ bool dirExists(const char *path)
   "id": "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b",
   "digest": "sha256:64da743694ece2ca88df34bf4c5378fdfc44a1a5b50478722e2ff98b82e4a5c9",
   "names": [
-  "rnd-dockerhub.huawei.com/official/busybox:latest"
+  "imagehub.isulad.com/official/busybox:latest"
   ],
   "layer": "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
   "metadata": "{}",
@@ -151,11 +151,11 @@ TEST_F(StorageImagesUnitTest, test_images_load)
     ASSERT_EQ(image->username, nullptr);
     ASSERT_EQ(image->size, 0);
     ASSERT_EQ(image->repo_tags_len, 1);
-    ASSERT_STREQ(image->repo_tags[0], "rnd-dockerhub.huawei.com/official/centos:latest");
+    ASSERT_STREQ(image->repo_tags[0], "imagehub.isulad.com/official/centos:latest");
     ASSERT_EQ(image->repo_digests_len, 1);
     ASSERT_STREQ(
         image->repo_digests[0],
-        "rnd-dockerhub.huawei.com/official/centos@sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586");
+        "imagehub.isulad.com/official/centos@sha256:94192fe835d92cba5513297aad1cbcb32c9af455fb575e926ee5ec683a95e586");
     ASSERT_NE(image->spec, nullptr);
     ASSERT_NE(image->spec->config, nullptr);
     ASSERT_EQ(image->spec->config->env_len, 1);
@@ -321,7 +321,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 TEST_F(StorageImagesUnitTest, test_image_store_lookup)
 {
     std::string id { "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
-    std::string name { "rnd-dockerhub.huawei.com/official/busybox:latest" };
+    std::string name { "imagehub.isulad.com/official/busybox:latest" };
     std::string truncatedId { "e4db68de4ff27" };
     std::string incorrectId { "4db68de4ff27" };
 
@@ -336,7 +336,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_lookup)
 TEST_F(StorageImagesUnitTest, test_image_store_exists)
 {
     std::string id { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10" };
-    std::string name { "rnd-dockerhub.huawei.com/official/centos:latest" };
+    std::string name { "imagehub.isulad.com/official/centos:latest" };
     std::string truncatedId { "398" };
     std::string incorrectId { "ff67da98ab8540d713209" };
 
