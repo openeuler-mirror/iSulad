@@ -760,7 +760,7 @@ static bool is_valid_image(const char *val)
         ret = false;
         goto out;
     }
-    if (!storage_image_exist(resolved_name)) {
+    if (!im_storage_image_exist(resolved_name)) {
         ERROR("No such image: %s", val);
         ret = false;
         goto out;

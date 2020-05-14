@@ -27,6 +27,7 @@
 #include "oci_config_merge.h"
 
 #include "filters.h"
+#include "storage.h"
 
 bool oci_detect(const char *image_name)
 {

@@ -38,6 +38,8 @@
 #include "linked_list.h"
 #include "pthread.h"
 #include "isulad_config.h"
+#include "storage.h"
+#include "constants.h"
 
 #define MAX_LAYER_NUM 125
 #define MANIFEST_BIG_DATA_KEY "manifest"

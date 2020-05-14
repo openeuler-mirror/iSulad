@@ -29,6 +29,8 @@
 #include "ext_image.h"
 #include "filters.h"
 #include "collector.h"
+#include "driver.h"
+#include "storage.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image.h"
@@ -1881,4 +1883,29 @@ void free_im_fs_info_response(im_fs_info_response *ptr)
     ptr->errmsg = NULL;
 
     free(ptr);
+}
+
+container_inspect_graph_driver *im_graphdriver_get_metadata(const char *id)
+{
+    if (id == NULL) {
+        ERROR("Invalid input arguments for get driver metadata of container:%s", id);
+        return NULL;
+    }
+
+    return graphdriver_get_metadata(id);
+}
+
+struct graphdriver_status *im_graphdriver_get_status(void)
+{
+    return graphdriver_get_status();
+}
+
+bool im_storage_image_exist(const char *image_or_id)
+{
+    return storage_image_exist(image_or_id);
+}
+
+void im_free_graphdriver_status(struct graphdriver_status *status)
+{
+    free_graphdriver_status(status);
 }

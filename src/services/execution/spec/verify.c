@@ -34,6 +34,7 @@
 #include "verify.h"
 #include "isulad_config.h"
 #include "selinux_label.h"
+#include "image.h"
 
 /* verify hook timeout */
 static int verify_hook_timeout(int t)
@@ -838,7 +839,7 @@ static int verify_storage_opts(const host_config *hc)
         storage_opts = hc->storage_opt;
     }
 
-    driver_status = graphdriver_get_status();
+    driver_status = im_graphdriver_get_status();
     if (driver_status == NULL) {
         ERROR("Failed to get graph driver status info!");
         ret = -1;
@@ -861,7 +862,7 @@ static int verify_storage_opts(const host_config *hc)
     }
 
 cleanup:
-    free_graphdriver_status(driver_status);
+    im_free_graphdriver_status(driver_status);
     return ret;
 }
 #endif

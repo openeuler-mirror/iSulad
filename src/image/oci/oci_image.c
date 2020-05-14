@@ -28,6 +28,7 @@
 
 #include "isulad_config.h"
 #include "utils.h"
+#include "storage.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 

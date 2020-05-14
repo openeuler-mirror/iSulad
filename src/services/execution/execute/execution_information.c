@@ -44,7 +44,6 @@
 #include "utils.h"
 #include "error.h"
 #include "collector.h"
-#include "driver.h"
 
 static int container_version_cb(const container_version_request *request, container_version_response **response)
 {
@@ -233,7 +232,7 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     }
 #ifdef ENABLE_OCI_IMAGE
     im_request->type = util_strdup_s(IMAGE_TYPE_OCI);
-    driver_status = graphdriver_get_status();
+    driver_status = im_graphdriver_get_status();
     if (driver_status == NULL) {
         ERROR("Failed to get graph driver status info!");
         cc = ISULAD_ERR_EXEC;
@@ -331,7 +330,7 @@ pack_response:
     free(rootpath);
 #ifdef ENABLE_OCI_IMAGE
     free(graph_driver);
-    free_graphdriver_status(driver_status);
+    im_free_graphdriver_status(driver_status);
 #endif
     free(huge_page_size);
     free(operating_system);
@@ -1338,7 +1337,7 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
 
 #ifdef ENABLE_OCI_IMAGE
     if (!strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI)) {
-        inspect->graph_driver = graphdriver_get_metadata(cont->common_config->id);
+        inspect->graph_driver = im_graphdriver_get_metadata(cont->common_config->id);
         if (inspect->graph_driver == NULL) {
             ret = -1;
             goto out;

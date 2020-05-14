@@ -25,6 +25,7 @@
 #include "isula_libutils/container_config.h"
 #include "libisulad.h"
 #include "arguments.h"
+#include "container_inspect.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image_type.h"
@@ -203,6 +204,12 @@ typedef struct {
 typedef struct {
     char *name_id;
 } im_container_fs_usage_request;
+
+struct graphdriver_status {
+    char *driver_name;
+    char *backing_fs;
+    char *status;
+};
 
 struct bim_ops {
     int (*init)(const struct service_arguments *args);
@@ -387,6 +394,14 @@ int im_container_export(const im_export_request *request);
 void free_im_export_request(im_export_request *ptr);
 
 int im_resolv_image_name(const char *image_type, const char *image_name, char **resolved_name);
+
+container_inspect_graph_driver *im_graphdriver_get_metadata(const char *id);
+
+struct graphdriver_status *im_graphdriver_get_status(void);
+
+void im_free_graphdriver_status(struct graphdriver_status *status);
+
+bool im_storage_image_exist(const char *image_or_id);
 
 #ifdef __cplusplus
 }

@@ -23,6 +23,7 @@
 #include "console.h"
 #include "driver_overlay2_types.h"
 #include "storage.h"
+#include "image.h"
 #include "container_inspect.h"
 
 #ifdef __cplusplus
@@ -40,12 +41,6 @@ struct driver_mount_opts {
     char *mount_label;
     char **options;
     size_t options_len;
-};
-
-struct graphdriver_status {
-    char *driver_name;
-    char *backing_fs;
-    char *status;
 };
 
 struct graphdriver_ops {
@@ -108,8 +103,6 @@ int graphdriver_umount_layer(const char *id);
 bool graphdriver_layer_exists(const char *id);
 
 int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content, int64_t *layer_size);
-
-int graphdriver_get_layer_metadata(const char *id, json_map_string_string *map_info);
 
 struct graphdriver_status *graphdriver_get_status(void);
 

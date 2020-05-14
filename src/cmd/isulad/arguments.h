@@ -21,10 +21,6 @@
 #include "isula_libutils/oci_runtime_hooks.h"
 #include "commander.h"
 
-#ifdef ENABLE_OCI_IMAGE
-#include "driver.h"
-#endif
-
 typedef void(*service_arguments_help_t)(void);
 
 struct service_arguments {
