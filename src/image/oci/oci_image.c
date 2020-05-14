@@ -23,6 +23,8 @@
 #include "oci_login.h"
 #include "oci_logout.h"
 #include "registry.h"
+#include "storage.h"
+#include "image_store.h"
 
 #include "containers_store.h"
 
@@ -188,8 +190,14 @@ int oci_umount_rf(const im_umount_request *request)
 
 int oci_rmi(const im_rmi_request *request)
 {
-    int ret = -1;
+    int ret = 0;
+    char *image_ID = NULL;
     char *real_image_name = NULL;
+    char **image_names = NULL;
+    size_t image_names_len;
+    char **reduced_image_names = NULL;
+    size_t reduced_image_names_len = 0;
+    size_t i;
 
     if (request == NULL || request->image.image == NULL) {
         ERROR("Invalid input arguments");
@@ -199,17 +207,61 @@ int oci_rmi(const im_rmi_request *request)
     real_image_name = oci_resolve_image_name(request->image.image);
     if (real_image_name == NULL) {
         ERROR("Failed to resolve image name");
+        ret = -1;
+        goto out;
+    }
+    
+    if (storage_img_names(real_image_name, &image_names, &image_names_len) != 0) {
+        ERROR("Get image %s names failed", real_image_name);
+        ret = -1;
         goto out;
     }
 
-    ret = storage_img_delete(real_image_name, true);
+    image_ID = image_store_lookup(real_image_name);
+    if (image_ID == NULL) {
+        ERROR("Get id of image %s failed", real_image_name);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_names_len == 1 || util_has_prefix(image_ID, real_image_name)) {
+        ret = storage_img_delete(real_image_name, true);
+        if (ret != 0) {
+            ERROR("Failed to remove image '%s'", real_image_name);
+        }
+        goto out;
+    }
+
+    reduced_image_names = (char **)util_smart_calloc_s(sizeof(char *), image_names_len - 1);
+    if (reduced_image_names == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i<image_names_len; i++) {
+        if (strcmp(image_names[i], real_image_name) != 0) {
+            reduced_image_names[reduced_image_names_len] = util_strdup_s(image_names[i]);
+            if (reduced_image_names[reduced_image_names_len] == NULL) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+            reduced_image_names_len++;
+        }
+    }
+
+    ret = storage_img_set_names(real_image_name, (const char **)reduced_image_names, reduced_image_names_len);
     if (ret != 0) {
-        ERROR("Failed to remove image '%s'", real_image_name);
+        ERROR("Failed to set names of image '%d'", real_image_name);
         goto out;
     }
 
 out:
     free(real_image_name);
+    free(image_ID);
+    util_free_array_by_len(image_names, image_names_len);
+    util_free_array_by_len(reduced_image_names, image_names_len - 1);
     return ret;
 }
 
@@ -258,7 +310,7 @@ int oci_tag(const im_tag_request *request)
     int ret = -1;
     char *src_name = NULL;
     char *dest_name = NULL;
-    char *errmsg = NULL;
+    const char *errmsg = NULL;
 
     if (request == NULL || request->src_name.image == NULL || request->dest_name.image == NULL) {
         ERROR("Invalid input arguments");
@@ -278,9 +330,9 @@ int oci_tag(const im_tag_request *request)
         goto out;
     }
 
-    // TODO call storage rootfs tag interface
-    // ret = isula_image_tag(src_name, dest_name, &errmsg);
+    ret = storage_img_add_name(src_name, dest_name);
     if (ret != 0) {
+        errmsg = "add name failed when run isula tag";
         isulad_set_error_message("Failed to tag image with error: %s", errmsg);
         ERROR("Failed to tag image '%s' to '%s' with error: %s", src_name, dest_name, errmsg);
         goto out;
@@ -289,7 +341,6 @@ int oci_tag(const im_tag_request *request)
 out:
     free(src_name);
     free(dest_name);
-    free(errmsg);
     return ret;
 }
 

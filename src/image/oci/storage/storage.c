@@ -346,6 +346,26 @@ out:
     return ret;
 }
 
+int storage_img_names(const char *img_id, char ***names, size_t *names_len) 
+{
+    int ret = 0;
+
+    if (img_id == NULL || names == NULL || names_len == NULL) {
+        ERROR("Invalid arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_get_names(img_id, names, names_len) != 0) {
+        ERROR("Failed to get img %s names", img_id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 int storage_img_set_names(const char *img_id, const char **names, size_t names_len)
 {
     int ret = 0;
@@ -371,6 +391,7 @@ int storage_img_set_names(const char *img_id, const char **names, size_t names_l
     }
 
 out:
+    util_free_array_by_len(unique_names, unique_names_len);
     return ret;
 }
 

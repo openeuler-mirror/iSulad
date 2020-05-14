@@ -121,6 +121,8 @@ int storage_img_set_meta_data(const char *img_id, const char *meta);
 
 int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_time);
 
+int storage_img_names(const char *img_id, char ***names, size_t *names_len);
+
 int storage_img_set_names(const char *img_id, const char **names, size_t names_len);
 
 int storage_get_all_images(imagetool_images_list *images);

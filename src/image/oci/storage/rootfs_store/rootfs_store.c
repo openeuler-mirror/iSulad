@@ -896,14 +896,198 @@ char *rootfs_store_lookup(const char *id)
     return container_id;
 }
 
-int rootfs_store_delete(const char *id)
+static inline int get_data_dir(const char *id, char *path, size_t len)
 {
+    int nret = snprintf(path, len, "%s/%s", g_rootfs_store->dir, id);
+    return (nret < 0 || (size_t)nret >= len) ? -1 : 0;
+}
+
+static int remove_rootfs_from_memory(const char *id)
+{
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+    cntrootfs_t *cntr = NULL;
+    size_t i = 0;
+    int ret = 0;
+
+    cntr = lookup(id);
+    if (cntr == NULL) {
+        ERROR("Rootfs %s not known", id);
+        ret = -1;
+        goto out;
+    }
+    if (!map_remove(g_rootfs_store->byid, (void *)id)) {
+        ERROR("Failed to remove rootfs from ids map in rootfs store");
+        ret = -1;
+        goto out;
+    }
+
+    if (!map_remove(g_rootfs_store->bylayer, cntr->scontainer->layer)) {
+        ERROR("Failed to remove rootfs from layers map in rootfs store");
+        ret = -1;
+        goto out;
+    }
+
+    for (; i < cntr->scontainer->names_len; i++) {
+        if (!map_remove(g_rootfs_store->byname, (void *)cntr->scontainer->names[i])) {
+            ERROR("Failed to remove rootfs from names index in rootfs store");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    linked_list_for_each_safe(item, &(g_rootfs_store->rootfs_list), next) {
+        cntrootfs_t *tmp = (cntrootfs_t *)item->elem;
+        if (strcmp(tmp->scontainer->id, id) != 0) {
+            continue;
+        }
+        linked_list_del(item);
+        rootfs_ref_dec(tmp);
+        free(item);
+        item = NULL;
+        g_rootfs_store->rootfs_list_len--;
+        break;
+    }
+
+out:
+    rootfs_ref_dec(cntr);
+    return ret;
+}
+
+static int remove_rootfs_dir(const char *id)
+{
+    char rootfs_path[PATH_MAX] = { 0x00 };
+
+    if (get_data_dir(id, rootfs_path, sizeof(rootfs_path)) != 0) {
+        ERROR("Failed to get rootfs data dir: %s", id);
+        return -1;
+    }
+
+    if (util_recursive_rmdir(rootfs_path, 0) != 0) {
+        ERROR("Failed to delete rootfs directory : %s", rootfs_path);
+        return -1;
+    }
+
     return 0;
 }
 
+int rootfs_store_delete(const char *id)
+{
+    cntrootfs_t *cntr = NULL;
+    int ret = 0;
+
+    if (id == NULL) {
+        ERROR("Invalid input parameter, id is NULL");
+        return -1;
+    }
+
+    if (g_rootfs_store == NULL) {
+        ERROR("Rootfs store is not ready");
+        return -1;
+    }
+
+    if (!rootfs_store_lock(true)) {
+        ERROR("Failed to lock rootfs store");
+        ret = -1;
+        goto out;
+    }
+
+    cntr = lookup(id);
+    if (cntr == NULL) {
+        ERROR("Rootfs %s not known", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (remove_rootfs_from_memory(cntr->scontainer->id) != 0) {
+        ERROR("Failed to remove rootfs from memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (remove_rootfs_dir(cntr->scontainer->id) != 0) {
+        ERROR("Failed to delete rootfs directory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    rootfs_ref_dec(cntr);
+    rootfs_store_unlock();
+    return ret;
+}
+
+static int delete_rootfs_from_store_without_lock(const char *id)
+{
+    int ret = 0;
+    cntrootfs_t *cntr = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid input parameter: empty id");
+        return -1;
+    }
+
+    if (g_rootfs_store == NULL) {
+        ERROR("Rootfs store is not already");
+        return -1;
+    }
+
+    cntr = lookup(id);
+    if (cntr == NULL) {
+        ERROR("Rootfs %s not known", id);
+        return -1;
+    }
+
+    if (remove_rootfs_from_memory(cntr->scontainer->id) != 0) {
+        ERROR("Failed to remove rootfs from memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (remove_rootfs_dir(cntr->scontainer->id) != 0) {
+        ERROR("Failed to delete rootfs directory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    rootfs_ref_dec(cntr);
+    return ret;
+}
+
+
 int rootfs_store_wipe()
 {
-    return 0;
+    int ret = 0;
+    char *id = NULL;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+
+    if (g_rootfs_store == NULL) {
+        ERROR("Rootfs store is not ready");
+        return -1;
+    }
+
+    if (!rootfs_store_lock(true)) {
+        ERROR("Failed to lock rootfs store, not allowed to delete rootfs");
+        ret = -1;
+    }
+
+    linked_list_for_each_safe(item, &(g_rootfs_store->rootfs_list), next) {
+        id = util_strdup_s(((cntrootfs_t *)item->elem)->scontainer->id);
+        if (delete_rootfs_from_store_without_lock(id) != 0) {
+            ERROR("Failed to delete rootfs: %s", id);
+            ret = -1;
+            goto out;
+        }
+        free(id);
+        id = NULL;
+    }
+
+out:
+    free(id);
+    rootfs_store_unlock();
+    return ret;
 }
 
 int rootfs_store_set_big_data(const char *id, const char *key, const char *data)

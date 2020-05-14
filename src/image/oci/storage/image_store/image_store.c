@@ -1839,6 +1839,54 @@ out:
     return ret;
 }
 
+int image_store_get_names(const char *id, char ***names, size_t *names_len)
+{
+    int ret = 0;
+    image_t *img = NULL;
+    char **tmp_names = NULL;
+    size_t tmp_names_len = 0;
+
+    if (id == NULL || names == NULL || names_len == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return -1;
+    }
+
+    if (!image_store_lock(false)) {
+        ERROR("Failed to lock image store, not allowed to get image names assignments");
+        ret = -1;
+        goto out;
+    }
+
+    img = lookup(id);
+    if (img == NULL) {
+        ERROR("Image %s not known", id);
+        ret = -1;
+        goto out;
+    }
+
+    ret = dup_array_of_strings((const char **)img->simage->names, img->simage->names_len, &tmp_names, &tmp_names_len);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    *names = tmp_names;
+    *names_len = tmp_names_len;
+    tmp_names = NULL;
+    tmp_names_len = 0;
+
+out:
+    util_free_array_by_len(tmp_names, tmp_names_len);
+    image_ref_dec(img);
+    image_store_unlock();
+    return ret;
+}
+
 int image_store_set_metadata(const char *id, const char *metadata)
 {
     int ret = 0;
