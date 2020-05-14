@@ -82,7 +82,7 @@ struct id_mapping_options {
     size_t gid_map_len;
 };
 
-struct storage_container_options {
+struct storage_rootfs_options {
     struct id_mapping_options id_mapping_opts;
     char **label_opts;
     size_t label_opts_len;

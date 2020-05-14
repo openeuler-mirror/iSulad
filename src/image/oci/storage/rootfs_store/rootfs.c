@@ -12,18 +12,18 @@
  * Create: 2020-05-12
  * Description: provide container function definition
  ******************************************************************************/
-#include "container.h"
-#include "storage_container.h"
+#include "rootfs.h"
+#include "storage_rootfs.h"
 #include "constants.h"
 #include "util_atomic.h"
 #include "utils.h"
 #include "log.h"
 
-static cntr_t *create_empty_cntr()
+static cntrootfs_t *create_empty_cntr()
 {
-    cntr_t *result = NULL;
+    cntrootfs_t *result = NULL;
 
-    result = (cntr_t *)util_smart_calloc_s(sizeof(cntr_t), 1);
+    result = (cntrootfs_t *)util_smart_calloc_s(sizeof(cntrootfs_t), 1);
     if (result == NULL) {
         ERROR("Out of memory");
         goto err_out;
@@ -33,13 +33,13 @@ static cntr_t *create_empty_cntr()
     return result;
 
 err_out:
-    free_container_t(result);
+    free_rootfs_t(result);
     return NULL;
 }
 
-cntr_t *new_container(storage_container *scntr)
+cntrootfs_t *new_rootfs(storage_rootfs *scntr)
 {
-    cntr_t *c = NULL;
+    cntrootfs_t *c = NULL;
 
     if (scntr == NULL) {
         ERROR("Empty storage cntr");
@@ -57,7 +57,7 @@ cntr_t *new_container(storage_container *scntr)
 
 }
 
-void container_ref_inc(cntr_t *c)
+void rootfs_ref_inc(cntrootfs_t *c)
 {
     if (c == NULL) {
         return;
@@ -65,7 +65,7 @@ void container_ref_inc(cntr_t *c)
     atomic_int_inc(&c->refcnt);
 }
 
-void container_ref_dec(cntr_t *c)
+void rootfs_ref_dec(cntrootfs_t *c)
 {
     bool is_zero = false;
 
@@ -78,15 +78,15 @@ void container_ref_dec(cntr_t *c)
         return;
     }
 
-    free_container_t(c);
+    free_rootfs_t(c);
 }
 
-void free_container_t(cntr_t *ptr)
+void free_rootfs_t(cntrootfs_t *ptr)
 {
     if (ptr == NULL) {
         return;
     }
-    free_storage_container(ptr->scontainer);
+    free_storage_rootfs(ptr->scontainer);
     ptr->scontainer = NULL;
 
     free(ptr);

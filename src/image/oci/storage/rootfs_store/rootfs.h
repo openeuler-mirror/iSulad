@@ -12,31 +12,31 @@
  * Create: 2020-05-12
  * Description: provide containers function definition
  ******************************************************************************/
-#ifndef __OCI_STORAGE_CONTAINER_H
-#define __OCI_STORAGE_CONTAINER_H
+#ifndef __OCI_STORAGE_ROOTFS_H
+#define __OCI_STORAGE_ROOTFS_H
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <pthread.h>
-#include "storage_container.h"
+#include "storage_rootfs.h"
 #include "log.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct _cntr_t_ {
-    storage_container *scontainer;
+typedef struct _cntrootfs_t {
+    storage_rootfs *scontainer;
     uint64_t refcnt;
-} cntr_t;
+} cntrootfs_t;
 
-cntr_t *new_container(storage_container *scntr);
-void container_ref_inc(cntr_t *cntr);
-void container_ref_dec(cntr_t *cntr);
-void free_container_t(cntr_t *ptr);
+cntrootfs_t *new_rootfs(storage_rootfs *scntr);
+void rootfs_ref_inc(cntrootfs_t *cntr);
+void rootfs_ref_dec(cntrootfs_t *cntr);
+void free_rootfs_t(cntrootfs_t *ptr);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __OCI_STORAGE_CONTAINER_H
+#endif // __OCI_STORAGE_ROOTFS_H
