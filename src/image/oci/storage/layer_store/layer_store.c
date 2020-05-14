@@ -335,11 +335,18 @@ static int load_layers_from_json_files()
         layer_t *tl = (layer_t *)item->elem;
         size_t i = 0;
 
+        if (!map_insert(g_metadata.by_id, (void *)tl->slayer->id, (void *)tl)) {
+            ERROR("Insert id: %s for layer failed", tl->slayer->id);
+            ret = -1;
+            goto unlock_out;
+        }
+
         for (; i < tl->slayer->names_len; i++) {
             if (remove_name(tl->slayer->names[i])) {
                 should_save = true;
             }
             if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
+                ret = -1;
                 ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
                 goto unlock_out;
             }
@@ -361,6 +368,7 @@ static int load_layers_from_json_files()
         if (tl->slayer->incompelte) {
             if (layer_store_delete(tl->slayer->id) != 0) {
                 ERROR("delete layer: %s failed", tl->slayer->id);
+                ret = -1;
                 goto unlock_out;
             }
             should_save = true;
@@ -368,6 +376,7 @@ static int load_layers_from_json_files()
 
         if (should_save && save_layer(tl) != 0) {
             ERROR("save layer: %s failed", tl->slayer->id);
+            ret = -1;
             goto unlock_out;
         }
     }
