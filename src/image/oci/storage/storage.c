@@ -670,6 +670,11 @@ bool storage_image_exist(const char *image_or_id)
     return image_store_exists(image_or_id);
 }
 
+size_t storage_get_img_count()
+{
+    return image_store_get_images_number();
+}
+
 static int check_module_init_opt(struct storage_module_init_options *opts)
 {
     if (opts == NULL || opts->driver_name == NULL || opts->storage_root == NULL || opts->storage_run_root == NULL) {

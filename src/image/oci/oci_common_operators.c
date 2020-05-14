@@ -438,8 +438,7 @@ out:
 
 size_t oci_get_images_count(void)
 {
-    // TODO call storage get images count
-    return 0;
+    return storage_get_img_count();
 }
 
 int oci_status_image(im_status_request *request, im_status_response **response)

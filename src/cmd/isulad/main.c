@@ -33,6 +33,7 @@
 #include <execinfo.h>
 #include <sys/syscall.h>
 #include <semaphore.h>
+#include <locale.h>
 #ifdef SYSTEMD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
@@ -1466,6 +1467,21 @@ out:
     return ret;
 }
 
+static int set_locale()
+{
+    int ret = 0;
+
+    /* Change from the standard (C) to en_US.UTF-8 locale, so libarchive can handle filename conversions.*/
+    if (setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) {
+        COMMAND_ERROR("Could not set locale to en_US.UTF-8:%s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 /*
  * Takes socket path as argument
  */
@@ -1478,6 +1494,10 @@ int main(int argc, char **argv)
     prctl(PR_SET_NAME, "isulad");
 
     if (pre_init_daemon_log() != 0) {
+        exit(ECOMMON);
+    }
+
+    if (set_locale() != 0) {
         exit(ECOMMON);
     }
 

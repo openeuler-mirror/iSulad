@@ -33,7 +33,8 @@
 #include "path.h"
 #include "map.h"
 
-static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode, map_t *map);
+static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size,
+                                                   int64_t *total_inode, map_t *map);
 
 bool util_dir_exists(const char *path)
 {
@@ -1221,8 +1222,9 @@ out:
     return;
 }
 
-static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath, int recursive_depth, int64_t *total_size,
-                                          int64_t *total_inode, map_t *map)
+static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath, int recursive_depth,
+                                                            int64_t *total_size,
+                                                            int64_t *total_inode, map_t *map)
 {
     int nret = 0;
     struct dirent *pdirent = NULL;
@@ -1264,13 +1266,13 @@ static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath,
             *total_size = *total_size + subdir_size;
             *total_inode = *total_inode + subdir_inode;
         } else {
-            if (map_search(map, (void *)&(fstat.st_ino)) != NULL) {
+            if (map_search(map, (void *)(&(fstat.st_ino))) != NULL) {
                 continue;
             }
             *total_size = *total_size + fstat.st_size;
             *total_inode = *total_inode + 1;
             bool val = true;
-            map_insert(map, (void *)&(fstat.st_ino), (void *)&val);
+            map_insert(map, (void *)(&(fstat.st_ino)), (void *)&val);
         }
     }
 
@@ -1282,7 +1284,8 @@ static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath,
     return;
 }
 
-static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode, map_t *map)
+static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size,
+                                                   int64_t *total_inode, map_t *map)
 {
     int64_t total_size_tmp = 0;
     int64_t total_inode_tmp = 0;
