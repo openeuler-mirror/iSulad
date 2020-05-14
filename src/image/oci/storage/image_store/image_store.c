@@ -2693,17 +2693,10 @@ static imagetool_image *get_image_info(image_t *img)
     char *config_file = NULL;
     char *sha256_key = NULL;
 
-    info = util_common_calloc_s(sizeof(imagetool_image));
-    if (info == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    nret = asprintf(&sha256_key, "sha256:%s", img->simage->id);
-    if (nret < 0) {
+    sha256_key = util_full_digest(img->simage->id);
+    if (sha256_key == NULL) {
         ERROR("Failed to get sha256 key");
-        ret = -1;
-        goto out;
+        return NULL;
     }
 
     base_name = make_big_data_base_name(sha256_key);
@@ -2716,6 +2709,13 @@ static imagetool_image *get_image_info(image_t *img)
     nret = asprintf(&config_file, "%s/%s/%s", g_image_store->dir, img->simage->id, base_name);
     if (nret < 0 || nret > PATH_MAX) {
         ERROR("Failed to retrieve oci image spac file");
+        ret = -1;
+        goto out;
+    }
+
+    info = util_common_calloc_s(sizeof(imagetool_image));
+    if (info == NULL) {
+        ERROR("Out of memory");
         ret = -1;
         goto out;
     }

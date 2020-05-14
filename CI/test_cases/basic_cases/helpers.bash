@@ -24,6 +24,8 @@ INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 LCR_ROOT_PATH="/var/lib/isulad/engines/lcr"
 ISUALD_LOG="/var/lib/isulad/isulad.log"
 
+declare -r -i FAILURE=-1
+
 function cut_output_lines() {
     message=`$@ 2>&1`
     retval=$?
@@ -56,10 +58,22 @@ function testcontainer() {
     fi
 }
 
+function msg_ok()
+{
+    echo -e "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: \033[1;32m$@\033[0m"
+}
+
+function msg_err()
+{
+    echo -e "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: \033[1;31m$@\033[0m" >&2
+}
+
+function msg_info()
+{
+    echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@"
+}
+
 function show_result() {
-    if [ $1 -ne 0 ];then
-        echo "TESTSUIT: $2 FAILED"
-        return 1
-    fi
-    echo "TESTSUIT: $2 SUCCESS"
+    [[ ${1} -ne 0 ]] && msg_err "TESTSUIT: $2 FAILED" && return ${FAILURE}
+    msg_ok "TESTSUIT: $2 SUCCESS"
 }

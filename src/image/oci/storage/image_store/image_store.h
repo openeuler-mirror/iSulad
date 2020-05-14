@@ -97,7 +97,7 @@ int image_store_set_image_size(const char *id, uint64_t size);
 // Return a slice enumerating the known images.
 int image_store_get_all_images(imagetool_images_list *images_list);
 
-// Return the number of the known images.
+// On success, the number of the known images is returned. On failure, (size_t)-1 is returned
 size_t image_store_get_images_number();
 
 // Return a slice enumerating the images which have a big data
