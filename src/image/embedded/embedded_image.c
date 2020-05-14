@@ -375,4 +375,9 @@ int embedded_init(const struct service_arguments *args)
     return lim_init(args->json_confs->graph);
 }
 
+void embedded_exit()
+{
+    db_common_finish();
+}
+
 

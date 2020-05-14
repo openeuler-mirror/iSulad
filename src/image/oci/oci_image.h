@@ -24,6 +24,7 @@ extern "C" {
 #endif
 
 int oci_init(const struct service_arguments *args);
+void oci_exit();
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response);
 int oci_rmi(const im_remove_request *request);

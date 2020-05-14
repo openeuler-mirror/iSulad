@@ -71,8 +71,6 @@ int update_default_ulimit(struct service_arguments *args);
         "(default \"pause-${machine}:3.0\")", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "image-opt-timeout", 0, &(cmdargs)->json_confs->image_opt_timeout, \
         "Max timeout(default 5m) for image operation", NULL }, \
-    { CMD_OPT_TYPE_STRING_DUP, false, "image_server_sock_addr", 0, &(cmdargs)->json_confs->image_server_sock_addr, \
-        "Set isula image remote server socket address, Default: unix:///var/run/isulad/isula_image.sock", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "network-plugin", 0, &(cmdargs)->json_confs->network_plugin, \
         "Set network plugin, default is null, suppport null and cni", NULL }, \
     { CMD_OPT_TYPE_STRING_DUP, false, "cni-bin-dir", 0, &(cmdargs)->json_confs->cni_bin_dir, \

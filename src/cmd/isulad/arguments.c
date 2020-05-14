@@ -141,7 +141,6 @@ int service_arguments_init(struct service_arguments *args)
     args->json_confs->native_umask = util_strdup_s(UMASK_SECURE);
     args->json_confs->image_service = true;
     args->json_confs->image_layer_check = false;
-    args->json_confs->image_server_sock_addr = util_strdup_s(DEFAULT_IM_SERVER_SOCK_ADDR);
     args->json_confs->use_decrypted_key = (bool *)util_common_calloc_s(sizeof(bool));
     if (args->json_confs->use_decrypted_key == NULL) {
         goto free_out;

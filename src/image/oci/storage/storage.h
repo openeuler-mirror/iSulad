@@ -92,6 +92,8 @@ struct storage_container_options {
 
 int storage_module_init(struct storage_module_init_options *opts);
 
+void storage_module_exit();
+
 void free_storage_module_init_options(struct storage_module_init_options *opts);
 
 /* image operations */

@@ -42,6 +42,7 @@ struct layer_opts {
 };
 
 int layer_store_init(const struct storage_module_init_options *conf);
+void layer_store_exit();
 
 bool layer_store_check(const char *id);
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content,

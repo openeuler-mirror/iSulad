@@ -43,7 +43,7 @@
 /* embedded */
 static const struct bim_ops g_embedded_ops = {
     .init = embedded_init,
-    .clean_resource = NULL,
+    .clean_resource = embedded_exit,
     .detect = embedded_detect,
 
     .prepare_rf = embedded_prepare_rf,
@@ -76,7 +76,7 @@ static const struct bim_ops g_embedded_ops = {
 #ifdef ENABLE_OCI_IMAGE
 static const struct bim_ops g_oci_ops = {
     .init = oci_init,
-    .clean_resource = NULL,
+    .clean_resource = oci_exit,
     .detect = oci_detect,
 
     .prepare_rf = oci_prepare_rf,

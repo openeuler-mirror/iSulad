@@ -39,6 +39,12 @@ int lim_init(const char *rootpath)
         return -1;
     }
 
+    if (db_common_init(rootpath)) {
+        ERROR("Failed to init database");
+        ret = -1;
+        goto out;
+    }
+
     /* Param driver_type is reserved for later implement. */
     ret = snapshot_init(DRIVER_TYPE_INVALID);
     if (ret != 0) {

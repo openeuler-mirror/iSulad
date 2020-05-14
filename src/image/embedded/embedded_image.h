@@ -47,5 +47,7 @@ int embedded_load_image(const im_load_request *request);
 
 int embedded_init(const struct service_arguments *args);
 
+void embedded_exit();
+
 #endif
 

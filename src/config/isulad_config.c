@@ -1063,28 +1063,6 @@ out:
     return ret;
 }
 
-char *conf_get_im_server_sock_addr()
-{
-    struct service_arguments *conf = NULL;
-    char *result = NULL;
-
-    if (isulad_server_conf_rdlock() != 0) {
-        ERROR("BUG conf_rdlock failed");
-        return NULL;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs == NULL) {
-        goto out;
-    }
-
-    result = util_strdup_s(conf->json_confs->image_server_sock_addr);
-
-out:
-    (void)isulad_server_conf_unlock();
-    return result;
-}
-
 char *conf_get_default_runtime()
 {
     struct service_arguments *conf = NULL;
@@ -1101,34 +1079,6 @@ char *conf_get_default_runtime()
     }
 
     result = strings_to_lower(conf->json_confs->default_runtime);
-
-out:
-    (void)isulad_server_conf_unlock();
-    return result;
-}
-
-bool conf_update_im_server_sock_addr(const char *new_sock_addr)
-{
-    struct service_arguments *conf = NULL;
-    bool result = true;
-
-    if (new_sock_addr == NULL) {
-        return false;
-    }
-
-    if (isulad_server_conf_rdlock() != 0) {
-        ERROR("BUG conf_rdlock failed");
-        return false;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs == NULL) {
-        result = false;
-        goto out;
-    }
-
-    free(conf->json_confs->image_server_sock_addr);
-    conf->json_confs->image_server_sock_addr = util_strdup_s(new_sock_addr);
 
 out:
     (void)isulad_server_conf_unlock();
@@ -1686,7 +1636,6 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->rootfsmntdir, &tmp_json_confs->rootfsmntdir);
     override_string_value(&args->json_confs->start_timeout, &tmp_json_confs->start_timeout);
     override_string_value(&args->json_confs->image_opt_timeout, &tmp_json_confs->image_opt_timeout);
-    override_string_value(&args->json_confs->image_server_sock_addr, &tmp_json_confs->image_server_sock_addr);
     override_string_value(&args->json_confs->pod_sandbox_image, &tmp_json_confs->pod_sandbox_image);
     override_string_value(&args->json_confs->network_plugin, &tmp_json_confs->network_plugin);
     override_string_value(&args->json_confs->cni_bin_dir, &tmp_json_confs->cni_bin_dir);

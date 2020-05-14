@@ -449,6 +449,11 @@ free_out:
     return -1;
 }
 
+void layer_store_exit()
+{
+    graphdriver_cleanup();
+}
+
 static inline char *tar_split_path(const char *id)
 {
     char *result = NULL;

@@ -62,10 +62,6 @@
 #include "selinux_label.h"
 #include "http.h"
 
-#ifdef ENABLE_OCI_IMAGE
-#include "driver.h"
-#endif
-
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"
 #endif
@@ -148,7 +144,6 @@ out:
     return ret;
 }
 
-#ifdef ENABLE_OCI_IMAGE
 static int umount_rootfs_mnt_dir(const char *mntdir)
 {
     int ret = -1;
@@ -190,10 +185,7 @@ static void umount_daemon_mntpoint()
         free(mntdir);
         mntdir = NULL;
     }
-
-    graphdriver_cleanup();
 }
-#endif
 
 static inline bool unlink_ignore_enoent(const char *fname)
 {
@@ -222,24 +214,6 @@ static void clean_residual_files()
         WARN("Unlink file: %s error: %s", fname, strerror(errno));
     }
     free(fname);
-
-#ifdef ENABLE_OCI_IMAGE
-    /* remove image server socket file */
-    fname = conf_get_im_server_sock_addr();
-    if (fname != NULL && unlink_ignore_enoent(fname + strlen(UNIX_SOCKET_PREFIX))) {
-        WARN("Unlink file: %s error: %s", fname + strlen(UNIX_SOCKET_PREFIX), strerror(errno));
-    }
-    free(fname);
-
-#define ISULAD_KIT_PID_FILE "/var/run/isula_image.pid"
-#define ISULAD_KIT_INFO_FILE "/var/run/isula_image.info"
-    if (unlink_ignore_enoent(ISULAD_KIT_PID_FILE)) {
-        WARN("Unlink file: %s error: %s", ISULAD_KIT_PID_FILE, strerror(errno));
-    }
-    if (unlink_ignore_enoent(ISULAD_KIT_INFO_FILE)) {
-        WARN("Unlink file: %s error: %s", ISULAD_KIT_INFO_FILE, strerror(errno));
-    }
-#endif
 }
 
 static void daemon_shutdown()
@@ -247,17 +221,10 @@ static void daemon_shutdown()
     /* clean resource first, left time to wait finish */
     image_module_exit();
 
-#ifdef ENABLE_EMBEDDED_IMAGE
-    /* shutdown db */
-    db_common_finish();
-#endif
-
     /* shutdown server */
     server_common_shutdown();
 
-#ifdef ENABLE_OCI_IMAGE
     umount_daemon_mntpoint();
-#endif
 
     clean_residual_files();
 }
@@ -1073,14 +1040,6 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         ret = -1;
         goto out;
     }
-
-#ifdef ENABLE_EMBEDDED_IMAGE
-    if (db_common_init(args->json_confs->graph)) {
-        ERROR("Failed to init database");
-        ret = -1;
-        goto out;
-    }
-#endif
 
     if (service_callback_init()) {
         ERROR("Failed to init service callback");

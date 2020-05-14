@@ -23,10 +23,6 @@
 #include "path.h"
 #include "libisulad.h"
 
-#ifdef ENABLE_OCI_IMAGE
-#include "driver.h"
-#endif
-
 #include "utils.h"
 #include "constants.h"
 #include "isula_libutils/isulad_daemon_configs.h"
@@ -284,14 +280,6 @@ int check_args(struct service_arguments *args)
         ret = -1;
         goto out;
     }
-
-#ifdef ENABLE_OCI_IMAGE
-    if (!util_validate_unix_socket(args->json_confs->image_server_sock_addr)) {
-        COMMAND_ERROR("Invalid image server socket: %s", args->json_confs->image_server_sock_addr);
-        ret = -1;
-        goto out;
-    }
-#endif
 
     /* validate statepath format */
     if (check_args_state_path(args) != 0) {

@@ -801,6 +801,11 @@ void free_storage_module_init_options(struct storage_module_init_options *opts)
     free(opts);
 }
 
+void storage_module_exit()
+{
+    layer_store_exit();
+}
+
 void free_layer_list(struct layer_list *ptr)
 {
     size_t i = 0;

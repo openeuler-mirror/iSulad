@@ -83,11 +83,7 @@ char *conf_get_isulad_cgroup_parent();
 
 unsigned int conf_get_im_opt_timeout();
 
-char *conf_get_im_server_sock_addr();
-
 char *conf_get_default_runtime();
-
-bool conf_update_im_server_sock_addr(const char *new_sock_addr);
 
 char *conf_get_graph_check_flag_file();
 
