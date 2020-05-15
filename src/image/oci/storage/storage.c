@@ -216,6 +216,33 @@ out:
     return ret;
 }
 
+struct layer_list *storage_layers_get_by_uncompress_digest(const char *digest)
+{
+    int ret = 0;
+    struct layer_list *layers = NULL;
+
+    layers = util_common_calloc_s(sizeof(struct layer_list));
+    if (layers == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    ret = layer_store_by_compress_digest(digest, layers);
+    if (ret != 0) {
+        ERROR("get layers by compressed digest failed");
+        goto out;
+    }
+
+out:
+
+    if (ret != 0) {
+        free(layers);
+        layers = NULL;
+    }
+
+    return layers;
+}
+
 struct layer *storage_layer_get(const char *layer_id)
 {
     return layer_store_lookup(layer_id);

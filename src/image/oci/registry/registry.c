@@ -502,6 +502,11 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
             continue;
         }
 
+        if (desc->layers[i].already_exist) {
+            parent_chain_id = desc->layers[i].chain_id;
+            continue;
+        }
+
         if (desc->layers[i].diff_id == NULL) {
             ERROR("layer %zu of image %s have invalid NULL diffid", i, desc->dest_image_name);
             return -1;
@@ -611,7 +616,7 @@ static int register_layers(pull_descriptor *desc)
                 parent = id;
                 continue;
             }
-            ERROR("Pull image failed, because layer %s has be deleted when pulling image", id);
+            ERROR("Pull image failed, maybe layer %zu %s has be deleted when pulling image", i, id);
             ret = -1;
             goto out;
         }
@@ -1257,6 +1262,7 @@ static bool all_fetch_complete(thread_fetch_info *infos, size_t infos_len, int *
 static int fetch_layers(pull_descriptor *desc)
 {
     size_t i = 0;
+    size_t j = 0;
     int ret = 0;
     int sret = 0;
     struct layer *l = NULL;
@@ -1264,6 +1270,8 @@ static int fetch_layers(pull_descriptor *desc)
     char file[PATH_MAX] = { 0 };
     int cond_ret = 0;
     int result = 0;
+    char *parent_chain_id = NULL;
+    struct layer_list *list = NULL;
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -1287,11 +1295,39 @@ static int fetch_layers(pull_descriptor *desc)
             l = storage_layer_get(without_sha256_prefix(desc->layers[i].chain_id));
             if (l != NULL) {
                 desc->layers[i].already_exist = true;
+                parent_chain_id = desc->layers[i].chain_id;
                 free_layer(l);
                 l = NULL;
                 continue;
             }
         }
+
+        // Skip layer that already exist in local store for schema1
+        if (is_manifest_schemav1(desc->manifest.media_type)) {
+            list = storage_layers_get_by_uncompress_digest(desc->layers[i].digest);
+            if (list != NULL) {
+                for (j = 0; j < list->layers_len; j++) {
+                    if ((list->layers[j]->parent == NULL && i == 0) ||
+                        (parent_chain_id != NULL &&
+                         !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)))) {
+                        desc->layers[i].already_exist = true;
+                        desc->layers[i].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);
+                        desc->layers[i].chain_id = util_string_append(list->layers[j]->id, SHA256_PREFIX);
+                        parent_chain_id = desc->layers[i].chain_id;
+                        break;
+                    }
+                }
+                free_layer_list(list);
+                list = NULL;
+                if (desc->layers[i].already_exist) {
+                    continue;
+                }
+            }
+        }
+
+        // parent_chain_id = NULL means no parent chain match from now on, so no longer need
+        // to get layers by compressed digest to reuse layer.
+        parent_chain_id = NULL;
 
         sret = snprintf(file, sizeof(file), "%s/%d", desc->blobpath, (int)i);
         if (sret < 0 || (size_t)sret >= sizeof(file)) {
@@ -1333,6 +1369,8 @@ static int fetch_layers(pull_descriptor *desc)
     mutex_unlock(&g_shared->mutex);
 
 out:
+    free_layer_list(list);
+    list = NULL;
     for (i = 0; i < desc->layers_len; i++) {
         if (ret != 0 && infos[i].use) {
             mutex_lock(&g_shared->mutex);
@@ -1466,7 +1504,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
 
         ret = util_array_append(&config->rootfs->diff_ids, desc->layers[i].diff_id);
         if (ret != 0) {
-            ERROR("append diff id to rootfs failed");
+            ERROR("append diff id of layer %zu to rootfs failed, diff id is %s", i, desc->layers[i].diff_id);
             ret = -1;
             goto out;
         }
