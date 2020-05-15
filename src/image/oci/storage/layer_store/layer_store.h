@@ -64,6 +64,8 @@ int layer_store_try_repair_lowers(const char *id);
 void free_layer_store_mount_opts(struct layer_store_mount_opts *ptr);
 void free_layer_opts(struct layer_opts *opts);
 
+int layer_store_get_layer_fs_info(const char *layer_id, imagetool_fs_info *fs_info);
+
 #ifdef __cplusplus
 }
 #endif

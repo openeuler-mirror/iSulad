@@ -1025,3 +1025,32 @@ out:
     free_storage_rootfs(rootfs_info);
     return ret;
 }
+
+int storage_rootfs_fs_usgae(const char *container_id, imagetool_fs_info *fs_info)
+{
+    int ret = 0;
+    storage_rootfs *rootfs_info = NULL;
+
+    if (container_id == NULL || fs_info == NULL) {
+        ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    rootfs_info = rootfs_store_get_rootfs(container_id);
+    if (rootfs_info == NULL) {
+        ERROR("Failed to get rootfs %s info", container_id);
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_get_layer_fs_info(rootfs_info->layer, fs_info) != 0) {
+        ERROR("Failed to get layer %s fs usgae info", rootfs_info->layer);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_storage_rootfs(rootfs_info);
+    return ret;
+}

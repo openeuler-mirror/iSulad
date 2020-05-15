@@ -1634,3 +1634,8 @@ void free_layer_store_mount_opts(struct layer_store_mount_opts *ptr)
     ptr->mount_opts = NULL;
     free(ptr);
 }
+
+int layer_store_get_layer_fs_info(const char *layer_id, imagetool_fs_info *fs_info)
+{
+    return graphdriver_get_layer_fs_info(layer_id, fs_info);
+}

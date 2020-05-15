@@ -55,6 +55,8 @@ void free_driver_mount_opts(struct driver_mount_opts *opts);
 
 int overlay2_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver);
 
+int overlay2_get_layer_fs_info(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info);
+
 #ifdef __cplusplus
 }
 #endif

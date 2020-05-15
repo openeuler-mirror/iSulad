@@ -47,6 +47,7 @@ static const struct graphdriver_ops g_overlay2_ops = {
     .get_driver_status = overlay2_get_driver_status,
     .clean_up = overlay2_clean_up,
     .try_repair_lowers = overlay2_repair_lowers,
+    .get_layer_fs_info = overlay2_get_layer_fs_info,
 };
 
 /* devicemapper */
@@ -368,4 +369,19 @@ int graphdriver_try_repair_lowers(const char *id, const char *parent)
     }
 
     return g_graphdriver->ops->try_repair_lowers(id, parent, g_graphdriver);
+}
+
+int graphdriver_get_layer_fs_info(const char *id, imagetool_fs_info *fs_info)
+{
+    if (g_graphdriver == NULL) {
+        ERROR("Driver not inited yet");
+        return -1;
+    }
+
+    if (id == NULL || fs_info == NULL) {
+        ERROR("Invalid input arguments for driver get layer info");
+        return -1;
+    }
+
+    return g_graphdriver->ops->get_layer_fs_info(id, g_graphdriver, fs_info);
 }

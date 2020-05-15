@@ -1845,3 +1845,100 @@ out:
     free(lowers_repaired);
     return ret;
 }
+
+static int do_cal_layer_fs_info(const char *layer_diff, imagetool_fs_info *fs_info)
+{
+    int ret = 0;
+    imagetool_fs_info_image_filesystems_element *fs_usage_tmp = NULL;
+    int64_t total_size = 0;
+    int64_t total_inodes = 0;
+
+    fs_usage_tmp = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_element));
+    if (fs_usage_tmp == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    fs_usage_tmp->timestamp = get_now_time_nanos();
+
+    fs_usage_tmp->fs_id = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_fs_id));
+    if (fs_usage_tmp->fs_id == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_usage_tmp->fs_id->mountpoint = util_strdup_s(layer_diff);
+
+    util_calculate_dir_size(layer_diff, 0, &total_size, &total_inodes);
+
+    fs_usage_tmp->inodes_used = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_inodes_used));
+    if (fs_usage_tmp->inodes_used == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_usage_tmp->inodes_used->value = total_inodes;
+
+    fs_usage_tmp->used_bytes = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_used_bytes));
+    if (fs_usage_tmp->used_bytes == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_usage_tmp->used_bytes->value = total_size;
+
+    fs_info->image_filesystems = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_element *));
+    if (fs_info->image_filesystems == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    fs_info->image_filesystems[0] = fs_usage_tmp;
+    fs_usage_tmp = NULL;
+    fs_info->image_filesystems_len = 1;
+
+out:
+    free_imagetool_fs_info_image_filesystems_element(fs_usage_tmp);
+    return ret;
+}
+
+int overlay2_get_layer_fs_info(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info)
+{
+    int ret = 0;
+    char *layer_dir = NULL;
+    char *layer_diff = NULL;
+
+    if (id == NULL || fs_info == NULL) {
+        return -1;
+    }
+
+    layer_dir = util_path_join(driver->home, id);
+    if (layer_dir == NULL) {
+        ERROR("Failed to join layer dir:%s", id);
+        goto out;
+    }
+
+    if (!util_dir_exists(layer_dir)) {
+        SYSERROR("layer dir %s not exist", layer_dir);
+        goto out;
+    }
+
+    layer_diff = util_path_join(layer_dir, OVERLAY_LAYER_DIFF);
+    if (layer_diff == NULL) {
+        ERROR("Failed to join layer diff dir:%s", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (do_cal_layer_fs_info(layer_diff, fs_info) != 0) {
+        ERROR("Failed to cal layer diff :%s fs info", layer_diff);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(layer_dir);
+    free(layer_diff);
+    return ret;
+}

@@ -154,6 +154,8 @@ int storage_rootfs_create(const char *container_id, const char *image, json_map_
 
 int storage_rootfs_delete(const char *container_id);
 
+int storage_rootfs_fs_usgae(const char *container_id, imagetool_fs_info *fs_info);
+
 #ifdef __cplusplus
 }
 #endif

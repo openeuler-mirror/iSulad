@@ -367,10 +367,12 @@ int im_get_container_filesystem_usage(const char *image_type, const char *id, im
     }
 
     *fs_usage = filesystemusage;
+    filesystemusage = NULL;
     EVENT("Event: {Object: container \'%s\' filesystem info, Type: inspected}", id != NULL ? id : "");
 
 out:
     free_im_container_fs_usage_request(request);
+    free_imagetool_fs_info(filesystemusage);
     return ret;
 }
 

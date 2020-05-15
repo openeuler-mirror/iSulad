@@ -296,30 +296,32 @@ out:
 int oci_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage)
 {
     int ret = 0;
-    char *output = NULL;
-    parser_error err = NULL;
+    imagetool_fs_info *layer_fs_tmp = NULL;
 
     if (request == NULL || fs_usage == NULL) {
         ERROR("Invalid input arguments");
         return -1;
     }
 
-    // TODO call storage container fs interface
-    // ret = isula_container_fs_usage(request->name_id, &output);
-    if (ret != 0) {
-        ERROR("Failed to inspect container filesystem info");
+    layer_fs_tmp = util_common_calloc_s(sizeof(imagetool_fs_info));
+    if (layer_fs_tmp == NULL) {
+        ERROR("Memory out");
+        ret = -1;
         goto out;
     }
 
-    *fs_usage = imagetool_fs_info_parse_data(output, NULL, &err);
-    if (*fs_usage == NULL) {
-        ERROR("Failed to parse output json: %s", err);
-        isulad_set_error_message("Failed to parse output json:%s", err);
+    ret = storage_rootfs_fs_usgae(request->name_id, layer_fs_tmp);
+    if (ret != 0) {
+        ERROR("Failed to inspect container filesystem info");
         ret = -1;
+        goto out;
     }
 
+    *fs_usage = layer_fs_tmp;
+    layer_fs_tmp = NULL;
+
 out:
-    free(output);
+    free_imagetool_fs_info(layer_fs_tmp);
     return ret;
 }
 

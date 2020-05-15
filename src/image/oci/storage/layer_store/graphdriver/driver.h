@@ -71,6 +71,8 @@ struct graphdriver_ops {
     int (*clean_up)(const struct graphdriver *driver);
 
     int (*try_repair_lowers)(const char *id, const char *parent, const struct graphdriver *driver);
+
+    int (*get_layer_fs_info)(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info);
 };
 
 struct graphdriver {
@@ -115,6 +117,8 @@ int graphdriver_cleanup(void);
 int graphdriver_try_repair_lowers(const char *id, const char *parent);
 
 container_inspect_graph_driver *graphdriver_get_metadata(const char *id);
+
+int graphdriver_get_layer_fs_info(const char *id, imagetool_fs_info *fs_info);
 
 #ifdef __cplusplus
 }
