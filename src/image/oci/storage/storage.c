@@ -102,7 +102,7 @@ out:
     return ret;
 }
 
-static struct layer_opts *fill_create_layer_opts(const char *parent_id, const char *diff_digest, bool writeable)
+static struct layer_opts *fill_create_layer_opts(storage_layer_create_opts_t *copts)
 {
     struct layer_opts *opts = NULL;
 
@@ -112,34 +112,39 @@ static struct layer_opts *fill_create_layer_opts(const char *parent_id, const ch
         goto out;
     }
 
-    opts->parent = util_strdup_s(parent_id);
-    opts->uncompressed_digest = util_strdup_s(diff_digest);
-    opts->writable = writeable;
+    opts->parent = util_strdup_s(copts->parent);
+    opts->uncompressed_digest = util_strdup_s(copts->uncompress_digest);
+    opts->compressed_digest = util_strdup_s(copts->compressed_digest);
+    opts->writable = copts->compressed_digest;
 
 out:
     return opts;
 }
 
-int storage_layer_create(const char *layer_id, const char *parent_id, const char *diff_digest, bool writeable,
-                         const char *layer_data_path)
+int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *copts)
 {
     int ret = 0;
     struct io_read_wrapper reader = { 0 };
     struct layer_opts *opts = NULL;
 
-    if (layer_id == NULL || layer_data_path == NULL) {
+    if (copts == NULL) {
+        ERROR("Create opts is null");
+        return -1;
+    }
+
+    if (!copts->writeable && copts->layer_data_path == NULL) {
         ERROR("Invalid arguments for put ro layer");
         ret = -1;
         goto out;
     }
 
-    if (fill_read_wrapper(layer_data_path, &reader) != 0) {
+    if (fill_read_wrapper(copts->layer_data_path, &reader) != 0) {
         ERROR("Failed to fill layer read wrapper");
         ret = -1;
         goto out;
     }
 
-    opts = fill_create_layer_opts(parent_id, diff_digest, writeable);
+    opts = fill_create_layer_opts(copts);
     if (opts == NULL) {
         ERROR("Failed to fill create ro layer options");
         ret = -1;

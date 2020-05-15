@@ -678,6 +678,7 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
         slayer->names_len++;
     }
     slayer->diff_digest = util_strdup_s(opts->uncompressed_digest);
+    slayer->compressed_diff_digest = util_strdup_s(opts->compressed_digest);
 
     l->layer_json_path = layer_json_path(id);
     if (l->layer_json_path == NULL) {
@@ -871,6 +872,7 @@ static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
 
     INFO("Apply layer get size: %lld", size);
     l->slayer->diff_size = size;
+    // uncompress digest get from up caller
 
     // TODO: save split tar
 
@@ -1613,6 +1615,8 @@ void free_layer_opts(struct layer_opts *ptr)
     ptr->names_len = 0;
     free(ptr->uncompressed_digest);
     ptr->uncompressed_digest = NULL;
+    free(ptr->compressed_digest);
+    ptr->compressed_digest = NULL;
 
     free_layer_store_mount_opts(ptr->opts);
     ptr->opts = NULL;

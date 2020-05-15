@@ -90,6 +90,14 @@ struct storage_rootfs_options {
     size_t mount_opts_len;
 };
 
+typedef struct storage_layer_create_opts {
+    const char *parent;
+    const char *uncompress_digest;
+    const char *compressed_digest;
+    const char *layer_data_path;
+    bool writeable;
+} storage_layer_create_opts_t;
+
 int storage_module_init(struct storage_module_init_options *opts);
 
 void storage_module_exit();
@@ -127,8 +135,7 @@ char *storage_get_img_top_layer(const char *id);
 size_t storage_get_img_count();
 
 /* layer operations */
-int storage_layer_create(const char *layer_id, const char *parent_id, const char *diff_digest, bool writeable,
-                         const char *layer_data_path);
+int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *opts);
 
 struct layer *storage_layer_get(const char *layer_id);
 

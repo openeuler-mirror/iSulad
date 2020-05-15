@@ -632,7 +632,14 @@ static int register_layers(pull_descriptor *desc)
             free_layer(l);
             l = NULL;
         } else {
-            ret = storage_layer_create(id, parent, desc->layers[i].diff_id, false, desc->layers[i].file);
+            storage_layer_create_opts_t copts = {
+                .parent = parent,
+                .uncompress_digest = desc->layers[i].diff_id,
+                .compressed_digest = desc->layers[i].digest,
+                .writeable = false,
+                .layer_data_path = desc->layers[i].file,
+            };
+            ret = storage_layer_create(id, &copts);
         }
         mutex_unlock(&cached->mutex);
         if (ret != 0) {

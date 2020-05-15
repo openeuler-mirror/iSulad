@@ -36,6 +36,7 @@ struct layer_opts {
     bool writable;
 
     char *uncompressed_digest;
+    char *compressed_digest;
 
     // mount options
     struct layer_store_mount_opts *opts;
