@@ -96,6 +96,7 @@ typedef struct storage_layer_create_opts {
     const char *compressed_digest;
     const char *layer_data_path;
     bool writeable;
+    json_map_string_string *storage_opts;
 } storage_layer_create_opts_t;
 
 int storage_module_init(struct storage_module_init_options *opts);
@@ -146,6 +147,12 @@ int storage_layer_set_names(const char *layer_id, const char **names, size_t nam
 void free_layer(struct layer *l);
 
 void free_layer_list(struct layer_list *ptr);
+
+/* container rootfs operations */
+int storage_rootfs_create(const char *container_id, const char *image, json_map_string_string *storage_opts,
+                          char **mountpoint);
+
+int storage_rootfs_delete(const char *container_id);
 
 #ifdef __cplusplus
 }

@@ -27,16 +27,15 @@ int oci_init(const struct service_arguments *args);
 void oci_exit();
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response);
-int oci_rmi(const im_remove_request *request);
+int oci_rmi(const im_rmi_request *request);
 int oci_get_filesystem_info(im_fs_info_response **response);
 int oci_load_image(const im_load_request *request);
 
 int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs);
-int oci_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
-                      const im_prepare_request *request, char **real_rootfs);
+int oci_merge_conf_rf(const char *img_name, container_config *container_spec);
 int oci_mount_rf(const im_mount_request *request);
 int oci_umount_rf(const im_umount_request *request);
-int oci_delete_rf(const im_delete_request *request);
+int oci_delete_rf(const im_delete_rootfs_request *request);
 int oci_export_rf(const im_export_request *request);
 int oci_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
 int oci_login(const im_login_request *request);

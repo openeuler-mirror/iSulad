@@ -59,7 +59,7 @@ int rootfs_store_save(cntrootfs_t *c);
 bool rootfs_store_exists(const char *id);
 
 // Retrieve information about a container given an ID or name.
-cntrootfs_t *rootfs_store_get_rootfs(const char *id);
+storage_rootfs *rootfs_store_get_rootfs(const char *id);
 
 // Retrieves a (potentially large) piece of data associated with this ID, if it has previously been set.
 char *rootfs_store_big_data(const char *id, const char *key);
@@ -77,7 +77,7 @@ int rootfs_store_big_data_names(const char *id, char ***names, size_t *names_len
 char *rootfs_store_metadata(const char *id);
 
 // Return a slice enumerating the known containers.
-int rootfs_store_get_all_rootfs(cntrootfs_t *containers, size_t *len);
+int rootfs_store_get_all_rootfs(storage_rootfs **rootfs, size_t *len);
 
 // Free memory of container store, but will not delete the persisted files
 void rootfs_store_free();

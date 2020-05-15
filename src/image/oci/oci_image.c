@@ -116,56 +116,52 @@ int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
 
 int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
 {
-    if (request == NULL) {
-        ERROR("Bim is NULL");
-        return -1;
-    }
-
-    // TODO call storage rootfs prepare interface
-    //return isula_rootfs_prepare_and_get_image_conf(request->container_id, request->image_name, request->storage_opt,
-    //                                              real_rootfs, NULL);
-    return 0;
-}
-
-int oci_merge_conf_rf(const host_config *host_spec, container_config *container_spec,
-                      const im_prepare_request *request, char **real_rootfs)
-{
-    oci_image_spec *image = NULL;
-    int ret = -1;
+    int ret = 0;
 
     if (request == NULL) {
         ERROR("Bim is NULL");
         return -1;
     }
 
-    // TODO call storage rootfs prepare interface
-    //ret = isula_rootfs_prepare_and_get_image_conf(request->container_id, request->image_name, host_spec->storage_opt,
-    //                                              real_rootfs, &image);
-    if (ret != 0) {
-        ERROR("Get prepare rootfs failed of image: %s", request->image_name);
-        goto out;
-    }
-    ret = oci_image_conf_merge_into_spec(request->image_name, container_spec);
-    if (ret != 0) {
-        ERROR("Failed to merge oci config for image: %s", request->image_name);
+    if (storage_rootfs_create(request->container_id, request->image_name, request->storage_opt, real_rootfs) != 0) {
+        ERROR("Failed to create container rootfs:%s", request->container_id);
+        isulad_set_error_message("Failed to create container rootfs:%s", request->container_id);
+        ret = -1;
         goto out;
     }
 
 out:
-    free_oci_image_spec(image);
     return ret;
 }
 
-int oci_delete_rf(const im_delete_request *request)
+int oci_merge_conf_rf(const char *img_name, container_config *container_spec)
+{
+    int ret = 0;
+
+    if (img_name == NULL || container_spec == NULL) {
+        ERROR("Invalid input arguments for oci_merge_conf_rf");
+        return -1;
+    }
+
+    ret = oci_image_conf_merge_into_spec(img_name, container_spec);
+    if (ret != 0) {
+        ERROR("Failed to merge oci config for image: %s", img_name);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+int oci_delete_rf(const im_delete_rootfs_request *request)
 {
     if (request == NULL) {
         ERROR("Request is NULL");
         return -1;
     }
 
-    // TODO call storage rootfs remove interface
-    //return isula_rootfs_remove(request->name_id);
-    return 0;
+    return storage_rootfs_delete(request->name_id);
 }
 
 int oci_mount_rf(const im_mount_request *request)
@@ -190,7 +186,7 @@ int oci_umount_rf(const im_umount_request *request)
     return 0;
 }
 
-int oci_rmi(const im_remove_request *request)
+int oci_rmi(const im_rmi_request *request)
 {
     int ret = -1;
     char *real_image_name = NULL;

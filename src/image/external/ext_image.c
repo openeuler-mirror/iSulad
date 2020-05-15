@@ -91,7 +91,7 @@ int ext_umount_rf(const im_umount_request *request)
     return 0;
 }
 
-int ext_delete_rf(const im_delete_request *request)
+int ext_delete_rf(const im_delete_rootfs_request *request)
 {
     return 0;
 }
@@ -101,80 +101,30 @@ char *ext_resolve_image_name(const char *image_name)
     return util_strdup_s(image_name);
 }
 
-int ext_merge_conf(const host_config *host_spec, container_config *container_spec,
-                   const im_prepare_request *request, char **real_rootfs)
+int ext_merge_conf(const char *img_name, container_config *container_spec)
 #ifdef ENABLE_OCI_IMAGE
 {
     int ret = 0;
-    char *resolved_name = NULL;
-    im_umount_request umount_request = { 0 };
-    imagetool_image *image_info = NULL;
-
-    if (request == NULL) {
-        ERROR("Invalid arguments");
-        return -1;
-    }
-    // Ensure rootfs is valid.
-    ret = ext_prepare_rf(request, real_rootfs);
-    if (ret != 0) {
-        return ret;
-    }
-
-    umount_request.name_id = request->container_id;
-    umount_request.force = false;
-    ret = ext_umount_rf(&umount_request);
-    if (ret != 0) {
-        return ret;
-    }
 
     // No config neeed merge if NULL.
-    if (request->image_name == NULL) {
+    if (img_name == NULL) {
         ret = 0;
         goto out;
     }
 
-    // Get image's config and merge configs.
-    resolved_name = oci_resolve_image_name(request->image_name);
-    if (resolved_name == NULL) {
-        ERROR("Resolve external config image name failed, image name is %s", request->image_name);
+    ret = oci_image_conf_merge_into_spec(img_name, container_spec);
+    if (ret != 0) {
+        ERROR("Failed to merge oci config for image: %s", img_name);
         ret = -1;
         goto out;
     }
-
-    image_info = storage_img_get(resolved_name);
-    if (image_info == NULL) {
-        ERROR("Get image from image store failed, image name is %s", resolved_name);
-        ret = -1;
-        goto out;
-    }
-
-    ret = oci_image_merge_config(image_info, container_spec);
 
 out:
-    free(resolved_name);
-    free_imagetool_image(image_info);
-
     return ret;
 }
 #else
 {
-    int ret = 0;
-    im_umount_request umount_request = { 0 };
-
-    // Ensure rootfs is valid.
-    ret = ext_prepare_rf(request, real_rootfs);
-    if (ret != 0) {
-        return ret;
-    }
-
-    umount_request.name_id = request->container_id;
-    umount_request.force = false;
-    ret = ext_umount_rf(&umount_request);
-    if (ret != 0) {
-        return ret;
-    }
-
-    return ret;
+    return 0;
 }
 #endif
 
@@ -201,7 +151,7 @@ out:
     return ret;
 }
 
-int ext_remove_image(const im_remove_request *request)
+int ext_remove_image(const im_rmi_request *request)
 {
     return 0;
 }

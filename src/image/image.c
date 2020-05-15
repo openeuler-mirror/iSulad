@@ -377,7 +377,7 @@ out:
 int im_remove_container_rootfs(const char *image_type, const char *container_id)
 {
     int ret = 0;
-    im_delete_request *request = NULL;
+    im_delete_rootfs_request *request = NULL;
     struct bim *bim = NULL;
 
     if (container_id == NULL || image_type == NULL) {
@@ -397,7 +397,7 @@ int im_remove_container_rootfs(const char *image_type, const char *container_id)
         goto out;
     }
 
-    request = util_common_calloc_s(sizeof(im_delete_request));
+    request = util_common_calloc_s(sizeof(im_delete_rootfs_request));
     if (request == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -443,6 +443,8 @@ void free_im_prepare_request(im_prepare_request *request)
     request->container_id = NULL;
     free(request->rootfs);
     request->rootfs = NULL;
+    free(request->image_type);
+    request->image_type = NULL;
 
     free_json_map_string_string(request->storage_opt);
     request->storage_opt = NULL;
@@ -461,7 +463,7 @@ void free_im_mount_request(im_mount_request *request)
     free(request);
 }
 
-void free_im_delete_request(im_delete_request *request)
+void free_im_delete_request(im_delete_rootfs_request *request)
 {
     if (request == NULL) {
         return;
@@ -612,23 +614,20 @@ bool im_config_image_exist(const char *image_name)
     return true;
 }
 
-int im_merge_image_config(const char *id, const char *image_type, const char *image_name,
-                          const char *rootfs, host_config *host_spec, container_config *container_spec,
-                          char **real_rootfs)
+int im_merge_image_config(const char *image_type, const char *image_name, container_config *container_spec)
 {
     int ret = 0;
     struct bim *bim = NULL;
-    im_prepare_request *request = NULL;
 
-    if (real_rootfs == NULL || image_type == NULL) {
+    if (container_spec == NULL || image_type == NULL || image_name == NULL) {
         ERROR("Invalid input arguments");
         ret = -1;
         goto out;
     }
 
-    bim = bim_get(image_type, image_name, rootfs, id);
+    bim = bim_get(image_type, NULL, NULL, NULL);
     if (bim == NULL) {
-        ERROR("Failed to init bim of image %s", image_name);
+        ERROR("Failed to init bim of image %s", image_type);
         ret = -1;
         goto out;
     }
@@ -637,35 +636,15 @@ int im_merge_image_config(const char *id, const char *image_type, const char *im
         goto out;
     }
 
-    request = util_common_calloc_s(sizeof(im_prepare_request));
-    if (request == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-    request->container_id = util_strdup_s(id);
-    request->image_name = util_strdup_s(image_name);
-    request->rootfs = util_strdup_s(rootfs);
-    if (host_spec != NULL) {
-        request->storage_opt = host_spec->storage_opt;
-    }
-
-    EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", id, image_name);
-
-    ret = bim->ops->merge_conf(host_spec, container_spec, request, real_rootfs);
-    request->storage_opt = NULL;
+    ret = bim->ops->merge_conf(image_name, container_spec);
     if (ret != 0) {
         ERROR("Failed to merge image %s config", image_name);
         ret = -1;
         goto out;
     }
-    EVENT("Event: {Object: %s, Type: prepared rootfs with image %s}", id, image_name);
-
-    INFO("Use real rootfs: %s with type: %s", *real_rootfs, image_type);
 
 out:
     bim_put(bim);
-    free_im_prepare_request(request);
     return ret;
 }
 
@@ -1357,7 +1336,7 @@ pack_response:
     return ret;
 }
 
-int im_rm_image(const im_remove_request *request, im_remove_response **response)
+int im_rm_image(const im_rmi_request *request, im_remove_response **response)
 {
     int ret = -1;
     char *image_ref = NULL;
@@ -1483,7 +1462,7 @@ pack_response:
     return ret;
 }
 
-void free_im_remove_request(im_remove_request *ptr)
+void free_im_remove_request(im_rmi_request *ptr)
 {
     if (ptr == NULL) {
         return;
@@ -1908,4 +1887,55 @@ bool im_storage_image_exist(const char *image_or_id)
 void im_free_graphdriver_status(struct graphdriver_status *status)
 {
     free_graphdriver_status(status);
+}
+
+int im_prepare_container_rootfs(const im_prepare_request *request, char **real_rootfs)
+{
+    int ret = 0;
+    int nret = 0;
+    struct bim *bim = NULL;
+
+    if (request == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (request->container_id == NULL) {
+        ERROR("Container prepare need container id");
+        ret = -1;
+        goto out;
+    }
+
+    if (request->image_type == NULL) {
+        ERROR("Missing image type");
+        ret = -1;
+        goto out;
+    }
+
+    bim = bim_get(request->image_type, NULL, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim, image type:%s", request->image_type);
+        ret = -1;
+        goto out;
+    }
+    if (bim->ops->prepare_rf == NULL) {
+        ERROR("Unimplements container prepare in %s", bim->type);
+        ret = -1;
+        goto out;
+    }
+
+    EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", request->container_id, request->image_name);
+    nret = bim->ops->prepare_rf(request, real_rootfs);
+    if (nret != 0) {
+        ERROR("Failed to prepare container rootfs %s with image %s type %s",
+              request->container_id, request->image_name, request->image_type);
+        ret = -1;
+        goto out;
+    }
+
+    EVENT("Event: {Object: %s, Type: prepared rootfs with image %s}", request->container_id, request->image_name);
+
+out:
+    bim_put(bim);
+    return ret;
 }

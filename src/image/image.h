@@ -86,7 +86,7 @@ typedef struct {
     image_spec image;
 
     bool force;
-} im_remove_request;
+} im_rmi_request;
 
 typedef struct {
     char *errmsg;
@@ -190,12 +190,13 @@ typedef struct {
 
 typedef struct {
     char *name_id;
-} im_delete_request;
+} im_delete_rootfs_request;
 
 typedef struct {
+    char *image_type;
     char *image_name;
     char *container_id;
-    char *rootfs;
+    char *rootfs; // only used for external image type
     json_map_string_string *storage_opt;
 } im_prepare_request;
 
@@ -220,13 +221,12 @@ struct bim_ops {
     int (*prepare_rf)(const im_prepare_request *request, char **real_rootfs);
     int (*mount_rf)(const im_mount_request *request);
     int (*umount_rf)(const im_umount_request *request);
-    int (*delete_rf)(const im_delete_request *request);
+    int (*delete_rf)(const im_delete_rootfs_request *request);
     int (*export_rf)(const im_export_request *request);
     char *(*resolve_image_name)(const char *image_name);
 
     /* merge image config ops */
-    int (*merge_conf)(const host_config *host_spec, container_config *container_spec,
-                      const im_prepare_request *request, char **real_rootfs);
+    int (*merge_conf)(const char *img_name, container_config *container_spec);
 
     /* get user config ops */
     int (*get_user_conf)(const char *basefs, host_config *hc,
@@ -239,7 +239,7 @@ struct bim_ops {
     size_t (*get_image_count)(void);
 
     /* remove image */
-    int (*rm_image)(const im_remove_request *request);
+    int (*rm_image)(const im_rmi_request *request);
 
     /* inspect image */
     int (*inspect_image)(const im_inspect_request *request, char **inpected_json);
@@ -298,7 +298,9 @@ void free_im_mount_request(im_mount_request *request);
 
 void free_im_umount_request(im_umount_request *request);
 
-void free_im_delete_request(im_delete_request *request);
+void free_im_delete_request(im_delete_rootfs_request *request);
+
+int im_prepare_container_rootfs(const im_prepare_request *request, char **real_rootfs);
 
 int im_mount_container_rootfs(const char *image_type, const char *image_name, const char *container_id);
 
@@ -306,9 +308,7 @@ int im_umount_container_rootfs(const char *image_type, const char *image_name, c
 
 int im_remove_container_rootfs(const char *image_type, const char *container_id);
 
-int im_merge_image_config(const char *id, const char *image_type, const char *image_name,
-                          const char *rootfs, host_config *host_spec, container_config *container_spec,
-                          char **real_rootfs);
+int im_merge_image_config(const char *image_type, const char *image_name, container_config *container_spec);
 
 int im_get_user_conf(const char *image_type, const char *basefs, host_config *hc, const char *userstr,
                      defs_process_user *puser);
@@ -319,9 +319,9 @@ void free_im_list_request(im_list_request *ptr);
 
 void free_im_list_response(im_list_response *ptr);
 
-int im_rm_image(const im_remove_request *request, im_remove_response **response);
+int im_rm_image(const im_rmi_request *request, im_remove_response **response);
 
-void free_im_remove_request(im_remove_request *ptr);
+void free_im_remove_request(im_rmi_request *ptr);
 
 void free_im_remove_response(im_remove_response *ptr);
 

@@ -290,9 +290,9 @@ cleanup:
 }
 
 int CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
-                                                  im_remove_request **request, Errors &error)
+                                                  im_rmi_request **request, Errors &error)
 {
-    im_remove_request *tmpreq = (im_remove_request *)util_common_calloc_s(sizeof(im_remove_request));
+    im_rmi_request *tmpreq = (im_rmi_request *)util_common_calloc_s(sizeof(im_rmi_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         error.SetError("Out of memory");
@@ -311,7 +311,7 @@ int CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::Image
 void CRIImageServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error)
 {
     std::string out_str { "" };
-    im_remove_request *request { nullptr };
+    im_rmi_request *request { nullptr };
     im_remove_response *response { nullptr };
 
     if (remove_request_from_grpc(&image, &request, error)) {

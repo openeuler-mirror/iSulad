@@ -89,7 +89,7 @@ int embedded_umount_rf(const im_umount_request *request)
     return 0;
 }
 
-int embedded_delete_rf(const im_delete_request *request)
+int embedded_delete_rf(const im_delete_rootfs_request *request)
 {
     return 0;
 }
@@ -130,36 +130,22 @@ out:
 }
 
 
-int embedded_merge_conf(const host_config *host_spec, container_config *container_spec,
-                        const im_prepare_request *request, char **real_rootfs)
+int embedded_merge_conf(const char *img_name, container_config *container_spec)
 {
     int ret = 0;
-    int nret = 0;
-    im_umount_request iu_request = { 0 };
 
-    if (request == NULL) {
+    if (img_name == NULL || container_spec == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }
 
-    nret = embedded_prepare_rf(request, real_rootfs);
-    if (nret != 0) {
-        return nret;
+    ret = do_merge_embedded_image_conf(img_name, container_spec);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
     }
 
-    nret = do_merge_embedded_image_conf(request->image_name, container_spec);
-    if (nret != 0) {
-        ret = nret;
-        goto umount;
-    }
-
-umount:
-    iu_request.name_id = request->container_id;
-    iu_request.force = false;
-    nret = embedded_umount_rf(&iu_request);
-    if (nret != 0) {
-        ret = nret;
-    }
+out:
     return ret;
 }
 
@@ -299,7 +285,7 @@ out:
     return ret;
 }
 
-int embedded_remove_image(const im_remove_request *request)
+int embedded_remove_image(const im_rmi_request *request)
 {
     bool force = false;
     char *image_ref = NULL;

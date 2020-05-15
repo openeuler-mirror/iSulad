@@ -382,7 +382,7 @@ out:
 static int delete_image_info(const char *image_ref, bool force)
 {
     int ret = 0;
-    im_remove_request *im_request = NULL;
+    im_rmi_request *im_request = NULL;
     im_remove_response *im_response = NULL;
 
     if (image_ref == NULL) {
@@ -390,7 +390,7 @@ static int delete_image_info(const char *image_ref, bool force)
         return EINVALIDARGS;
     }
 
-    im_request = util_common_calloc_s(sizeof(im_remove_request));
+    im_request = util_common_calloc_s(sizeof(im_rmi_request));
     if (im_request == NULL) {
         ERROR("Out of memory");
         ret = -1;

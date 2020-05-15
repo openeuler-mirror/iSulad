@@ -931,7 +931,7 @@ bool rootfs_store_exists(const char *id)
     return false;
 }
 
-cntrootfs_t *rootfs_store_get_rootfs(const char *id)
+storage_rootfs *rootfs_store_get_rootfs(const char *id)
 {
     return NULL;
 }
@@ -961,7 +961,7 @@ char *rootfs_store_metadata(const char *id)
     return NULL;
 }
 
-int rootfs_store_get_all_rootfs(cntrootfs_t *containers, size_t *len)
+int rootfs_store_get_all_rootfs(storage_rootfs **rootfs, size_t *len)
 {
     return 0;
 }

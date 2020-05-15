@@ -28,18 +28,17 @@ int embedded_mount_rf(const im_mount_request *request);
 
 int embedded_umount_rf(const im_umount_request *request);
 
-int embedded_delete_rf(const im_delete_request *request);
+int embedded_delete_rf(const im_delete_rootfs_request *request);
 
 char *embedded_resolve_image_name(const char *image_name);
 
-int embedded_merge_conf(const host_config *host_spec, container_config *container_spec,
-                        const im_prepare_request *request, char **real_rootfs);
+int embedded_merge_conf(const char *img_name, container_config *container_spec);
 
 int embedded_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser);
 
 int embedded_list_images(const im_list_request *request, imagetool_images_list **list);
 
-int embedded_remove_image(const im_remove_request *request);
+int embedded_remove_image(const im_rmi_request *request);
 
 int embedded_inspect_image(const im_inspect_request *request, char **inspected_json);
 

@@ -705,6 +705,7 @@ static int mk_sub_directorys(const char *id, const char *parent, const char *lay
     }
 
 out:
+    free(lowers);
     return ret;
 }
 

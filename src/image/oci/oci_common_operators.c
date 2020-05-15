@@ -40,6 +40,10 @@ bool oci_detect(const char *image_name)
 
 char *oci_resolve_image_name(const char *name)
 {
+    if (name == NULL) {
+        return NULL;
+    }
+
     if (util_valid_short_sha256_id(name) && storage_image_exist(name)) {
         return util_strdup_s(name);
     }

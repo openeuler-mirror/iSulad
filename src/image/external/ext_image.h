@@ -24,14 +24,13 @@ int ext_filesystem_usage(const im_container_fs_usage_request *request, imagetool
 int ext_prepare_rf(const im_prepare_request *request, char **real_rootfs);
 int ext_mount_rf(const im_mount_request *request);
 int ext_umount_rf(const im_umount_request *request);
-int ext_delete_rf(const im_delete_request *request);
+int ext_delete_rf(const im_delete_rootfs_request *request);
 char *ext_resolve_image_name(const char *image_name);
 
-int ext_merge_conf(const host_config *host_spec, container_config *container_spec,
-                   const im_prepare_request *request, char **real_rootfs);
+int ext_merge_conf(const char *img_name, container_config *container_spec);
 int ext_get_user_conf(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser);
 int ext_list_images(const im_list_request *request, imagetool_images_list **list);
-int ext_remove_image(const im_remove_request *request);
+int ext_remove_image(const im_rmi_request *request);
 int ext_inspect_image(const im_inspect_request *request, char **inspected_json);
 int ext_load_image(const im_load_request *request);
 int ext_login(const im_login_request *request);

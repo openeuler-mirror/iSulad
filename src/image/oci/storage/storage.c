@@ -23,6 +23,7 @@
 #include "log.h"
 #include "layer_store.h"
 #include "image_store.h"
+#include "rootfs_store.h"
 
 static pthread_rwlock_t g_storage_rwlock;
 
@@ -71,10 +72,22 @@ static int layer_archive_io_close(void *context, char **err)
     return 0;
 }
 
-static int fill_read_wrapper(const char *layer_data_path, struct io_read_wrapper *reader)
+static int fill_read_wrapper(const char *layer_data_path, struct io_read_wrapper **reader)
 {
     int ret = 0;
     int *fd_ptr = NULL;
+    struct io_read_wrapper *reader_tmp = NULL;
+
+    if (layer_data_path == NULL) {
+        return 0;
+    }
+
+    reader_tmp = util_common_calloc_s(sizeof(struct io_read_wrapper));
+    if (reader_tmp == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
 
     fd_ptr = util_common_calloc_s(sizeof(int));
     if (fd_ptr == NULL) {
@@ -90,14 +103,16 @@ static int fill_read_wrapper(const char *layer_data_path, struct io_read_wrapper
         goto err_out;
     }
 
-    reader->context = fd_ptr;
-    reader->read = layer_archive_io_read;
-    reader->close = layer_archive_io_close;
+    reader_tmp->context = fd_ptr;
+    reader_tmp->read = layer_archive_io_read;
+    reader_tmp->close = layer_archive_io_close;
+    *reader = reader_tmp;
 
     goto out;
 
 err_out:
     free(fd_ptr);
+    free(reader_tmp);
 out:
     return ret;
 }
@@ -117,6 +132,29 @@ static struct layer_opts *fill_create_layer_opts(storage_layer_create_opts_t *co
     opts->compressed_digest = util_strdup_s(copts->compressed_digest);
     opts->writable = copts->compressed_digest;
 
+    if (copts->storage_opts != NULL) {
+        opts->opts = util_common_calloc_s(sizeof(struct layer_store_mount_opts));
+        if (opts->opts == NULL) {
+            ERROR("Memory out");
+            goto err_out;
+        }
+        opts->opts->mount_opts = util_common_calloc_s(sizeof(json_map_string_string));
+        if (opts->opts->mount_opts == NULL) {
+            ERROR("Memory out");
+            goto err_out;
+        }
+        if (dup_json_map_string_string(copts->storage_opts, opts->opts->mount_opts) != 0) {
+            ERROR("Failed to dup storage opts");
+            goto err_out;
+        }
+    }
+
+    goto out;
+
+err_out:
+    free_layer_opts(opts);
+    opts = NULL;
+
 out:
     return opts;
 }
@@ -124,7 +162,7 @@ out:
 int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *copts)
 {
     int ret = 0;
-    struct io_read_wrapper reader = { 0 };
+    struct io_read_wrapper *reader = NULL;
     struct layer_opts *opts = NULL;
 
     if (copts == NULL) {
@@ -157,7 +195,7 @@ int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *copt
         goto out;
     }
 
-    ret = layer_store_create(layer_id, opts, &reader, NULL);
+    ret = layer_store_create(layer_id, opts, reader, NULL);
     if (ret != 0) {
         ERROR("Failed to call layer store create");
         ret = -1;
@@ -168,8 +206,11 @@ unlock_out:
     storage_unlock(&g_storage_rwlock);
 
 out:
-    if (reader.close != NULL) {
-        reader.close(reader.context, NULL);
+    if (reader != NULL) {
+        if (reader->close != NULL) {
+            reader->close(reader->context, NULL);
+        }
+        free(reader);
     }
     free_layer_opts(opts);
     return ret;
@@ -266,12 +307,23 @@ out:
 
 imagetool_image *storage_img_get(const char *img_id)
 {
+    char *normalized_name = NULL;
+    imagetool_image *image_info = NULL;
+
     if (img_id == NULL) {
         ERROR("Invalid arguments for image get");
         return NULL;
     }
 
-    return image_store_get_image(img_id);
+    if (util_valid_short_sha256_id(img_id) && image_store_exists(img_id)) {
+        image_info = image_store_get_image(img_id);
+    } else {
+        normalized_name = oci_normalize_image_name(img_id);
+        image_info = image_store_get_image(normalized_name);
+    }
+
+    free(normalized_name);
+    return image_info;
 }
 
 int storage_img_set_big_data(const char *img_id, const char *key, const char *val)
@@ -827,3 +879,149 @@ void free_layer_list(struct layer_list *ptr)
     free(ptr);
 }
 
+static int do_create_container_rw_layer(const char *container_id, const char *image_top_layer,
+                                        json_map_string_string *storage_opts)
+{
+    int ret = 0;
+    struct layer_opts *opts = NULL;
+
+    storage_layer_create_opts_t copts = {
+        .parent = image_top_layer,
+        .writeable = true,
+        .storage_opts = storage_opts,
+    };
+
+    opts = fill_create_layer_opts(&copts);
+    if (opts == NULL) {
+        ERROR("Failed to fill create opts");
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_create(container_id, opts, NULL, NULL) != 0) {
+        ERROR("Failed to create container rootfs layer");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_layer_opts(opts);
+    return ret;
+}
+
+int storage_rootfs_create(const char *container_id, const char *image, json_map_string_string *storage_opts,
+                          char **mountpoint)
+{
+    int ret = 0;
+    char *rootfs_id = NULL;
+    imagetool_image *image_info = NULL;
+    struct layer *layer_info = NULL;
+
+    if (container_id == NULL || image == NULL) {
+        ERROR("Invalid arguments for rootfs create");
+        ret = -1;
+        goto out;
+    }
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock storage, not allowed to create new rootfs");
+        ret = -1;
+        goto out;
+    }
+
+    image_info = storage_img_get(image);
+    if (image_info == NULL) {
+        ERROR("No such image:%s", image);
+        ret = -1;
+        goto unlock_out;
+    }
+
+    // note: we use container id as the layer id of the container
+    if (do_create_container_rw_layer(container_id, image_info->top_layer, storage_opts) != 0) {
+        ERROR("Failed to do create rootfs layer");
+        ret = -1;
+        goto unlock_out;
+    }
+
+    rootfs_id = rootfs_store_create(container_id, NULL, 0, image_info->id, container_id, NULL, NULL);
+    if (rootfs_id == NULL) {
+        ERROR("Failed to create rootfs");
+        ret = -1;
+        goto remove_layer;
+    }
+
+    layer_info = layer_store_lookup(container_id);
+    if (layer_info == NULL) {
+        ERROR("Failed to get created rootfs layer info");
+        ret = -1;
+        goto remove_layer;
+    }
+
+    if (mountpoint != NULL) {
+        *mountpoint = util_strdup_s(layer_info->mount_point);
+    }
+
+    goto unlock_out;
+
+remove_layer:
+    if (layer_store_delete(container_id) != 0) {
+        ERROR("Failed to delete layer %s due rootfs create fail", container_id);
+    }
+
+unlock_out:
+    storage_unlock(&g_storage_rwlock);
+out:
+    free(rootfs_id);
+    free_imagetool_image(image_info);
+    free_layer(layer_info);
+    return ret;
+}
+
+int storage_rootfs_delete(const char *container_id)
+{
+    int ret = 0;
+    storage_rootfs *rootfs_info = NULL;
+
+    if (container_id == NULL) {
+        ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock storage, not allowed to delete image");
+        ret = -1;
+        goto out;
+    }
+
+    if (!rootfs_store_exists(container_id)) {
+        WARN("Container rootfs %s not exists", container_id);
+        ret = 0;
+        goto unlock_out;
+    }
+
+    rootfs_info = rootfs_store_get_rootfs(container_id);
+    if (rootfs_info == NULL) {
+        ERROR("Failed to get rootfs %s info", container_id);
+        ret = -1;
+        goto unlock_out;
+    }
+
+    if (layer_store_delete(rootfs_info->layer) != 0) {
+        ERROR("Failed to remove layer %s", rootfs_info->layer);
+        ret = -1;
+        goto unlock_out;
+    }
+
+    if (rootfs_store_delete(container_id) != 0) {
+        ERROR("Failed to remove rootfs %s", container_id);
+        ret = -1;
+        goto unlock_out;
+    }
+
+unlock_out:
+    storage_unlock(&g_storage_rwlock);
+out:
+    free_storage_rootfs(rootfs_info);
+    return ret;
+}

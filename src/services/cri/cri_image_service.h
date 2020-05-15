@@ -59,7 +59,7 @@ private:
     void fs_info_to_grpc(im_fs_info_response *response,
                          std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *fs_infos, Errors &error);
 
-    int remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_remove_request **request, Errors &error);
+    int remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_rmi_request **request, Errors &error);
 };
 
 #endif /* _CRI_IMAGE_SERVICES_IMPL_H_ */
