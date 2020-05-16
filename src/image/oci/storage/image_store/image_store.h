@@ -57,7 +57,7 @@ int image_store_add_name(const char *id, const char *name);
 // Replace the list of names associated with an image with the supplied values.
 int image_store_set_names(const char *id, const char **names, size_t names_len);
 
-// Get all the list of names associated with the given image ID. 
+// Get all the list of names associated with the given image ID.
 int image_store_get_names(const char *id, char ***names, size_t *names_len);
 
 // Updates the metadata associated with the item with the specified ID.

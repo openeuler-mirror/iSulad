@@ -68,16 +68,21 @@ typedef struct image_store {
     bool loaded;
 } image_store_t;
 
+enum lock_type {
+    SHARED = 0,
+    EXCLUSIVE
+};
+
 image_store_t *g_image_store = NULL;
 
-static inline bool image_store_lock(bool writable)
+static inline bool image_store_lock(enum lock_type type)
 {
     int nret = 0;
 
-    if (writable) {
-        nret = pthread_rwlock_wrlock(&g_image_store->rwlock);
-    } else {
+    if (type == SHARED) {
         nret = pthread_rwlock_rdlock(&g_image_store->rwlock);
+    } else {
+        nret = pthread_rwlock_wrlock(&g_image_store->rwlock);
     }
     if (nret != 0) {
         ERROR("Lock memory store failed: %s", strerror(nret));
@@ -192,7 +197,7 @@ static int do_append_image(storage_image *im)
     return 0;
 }
 
-static int append_image_by_image_directory(const char *image_dir)
+static int append_image_by_directory(const char *image_dir)
 {
     int ret = 0;
     int nret;
@@ -236,8 +241,8 @@ static int get_images_from_json()
     char *id_patten = "^[a-f0-9]{64}$";
     char image_path[PATH_MAX] = { 0x00 };
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to load images from json files");
         return -1;
     }
 
@@ -263,7 +268,7 @@ static int get_images_from_json()
             goto out;
         }
 
-        if (append_image_by_image_directory(image_path) != 0) {
+        if (append_image_by_directory(image_path) != 0) {
             ERROR("Found image path but load json failed: %s", image_dirs[i]);
             ret = -1;
             goto out;
@@ -371,8 +376,8 @@ int image_store_save(image_t *img)
         return -1;
     }
 
-    if (!image_store_lock(false)) {
-        ERROR("Failed to lock image store, not allowed to save image");
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to save image");
         return -1;
     }
 
@@ -546,7 +551,7 @@ static int explicit_digest(map_t *digests, image_t *img)
     return 0;
 }
 
-static int load_image_to_image_store_field(image_t *img)
+static int load_image_to_store_field(image_t *img)
 {
     int ret = 0;
     bool should_save = false;
@@ -612,7 +617,7 @@ static int image_store_load()
     }
 
     linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
-        if (load_image_to_image_store_field((image_t *)item->elem) != 0) {
+        if (load_image_to_store_field((image_t *)item->elem) != 0) {
             ERROR("Failed to load image to image store");
             return -1;
         }
@@ -862,8 +867,8 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
         return NULL;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store, not allowed to create new images");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to create new images");
         return NULL;
     }
 
@@ -996,18 +1001,6 @@ found:
     return value;
 }
 
-static inline image_t *lookup_with_lock(const char *id)
-{
-    image_t *img = NULL;
-
-    if (!image_store_lock(false)) {
-        return NULL;
-    }
-
-    img = lookup(id);
-    return img;
-}
-
 char *image_store_lookup(const char *id)
 {
     char *image_id = NULL;
@@ -1023,7 +1016,12 @@ char *image_store_lookup(const char *id)
         return NULL;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image id assignments");
+        return NULL;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         goto out;
@@ -1196,8 +1194,8 @@ int image_store_delete(const char *id)
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to delete image from store");
         return -1;
     }
 
@@ -1276,8 +1274,8 @@ int image_store_wipe()
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store, not allowed to delete images");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to delete images");
         return -1;
     }
 
@@ -1573,8 +1571,8 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to change image big data assignments");
         ret = -1;
         goto out;
     }
@@ -1675,8 +1673,8 @@ int image_store_add_name(const char *id, const char *name)
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store, not allowed to change image name assignments");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to change image name assignments");
         return -1;
     }
 
@@ -1780,8 +1778,8 @@ int image_store_set_names(const char *id, const char **names, size_t names_len)
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store, not allowed to change image name assignments");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to change image name assignments");
         return -1;
     }
 
@@ -1856,8 +1854,8 @@ int image_store_get_names(const char *id, char ***names, size_t *names_len)
         return -1;
     }
 
-    if (!image_store_lock(false)) {
-        ERROR("Failed to lock image store, not allowed to get image names assignments");
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image names assignments");
         ret = -1;
         goto out;
     }
@@ -1902,8 +1900,8 @@ int image_store_set_metadata(const char *id, const char *metadata)
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store, not allowed to modify image metadata");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to modify image metadata");
         return -1;
     }
 
@@ -1941,8 +1939,8 @@ int image_store_set_load_time(const char *id, const types_timestamp_t *time)
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store, not allowed to modify image metadata");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to modify image metadata");
         return -1;
     }
 
@@ -1974,6 +1972,7 @@ out:
 
 bool image_store_exists(const char *id)
 {
+    bool ret = true;
     image_t *img = NULL;
 
     if (id == NULL) {
@@ -1986,15 +1985,22 @@ bool image_store_exists(const char *id)
         return false;
     }
 
-    img = lookup_with_lock(id);
-    if (img == NULL) {
-        image_store_unlock();
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image exist info");
         return false;
     }
 
+    img = lookup(id);
+    if (img == NULL) {
+        ERROR("Image not known");
+        ret = false;
+        goto out;
+    }
+
+out:
     image_ref_dec(img);
     image_store_unlock();
-    return true;
+    return ret;
 }
 
 char *image_store_big_data(const char *id, const char *key)
@@ -2020,7 +2026,12 @@ char *image_store_big_data(const char *id, const char *key)
         return NULL;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image big data");
+        return NULL;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         goto out;
@@ -2059,7 +2070,12 @@ static int get_size_with_update_big_data(const char *id, const char *key, int64_
 
     free(data);
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image big data size assignments");
+        return -1;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         ret = -1;
@@ -2095,7 +2111,12 @@ int64_t image_store_big_data_size(const char *id, const char *key)
         return -1;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image big data size assignments");
+        return -1;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         goto out;
@@ -2136,7 +2157,12 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
     free(data);
     data = NULL;
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image digest assignments");
+        return NULL;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         goto out;
@@ -2165,10 +2191,15 @@ char *image_store_big_data_digest(const char *id, const char *key)
         return NULL;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image big data digest assignments");
+        return NULL;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
-        image_store_unlock();
         ERROR("Image not known");
+        image_store_unlock();
         return NULL;
     }
 
@@ -2205,7 +2236,12 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
         return -1;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image big data names assignments");
+        return -1;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         ret = -1;
@@ -2240,7 +2276,12 @@ char *image_store_metadata(const char *id)
         return NULL;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image metadata assignments");
+        return NULL;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         goto out;
@@ -2269,7 +2310,12 @@ char *image_store_top_layer(const char *id)
         return NULL;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image top layer assignments");
+        return NULL;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         goto out;
@@ -2298,8 +2344,8 @@ int image_store_set_image_size(const char *id, uint64_t size)
         return -1;
     }
 
-    if (!image_store_lock(true)) {
-        ERROR("Failed to lock image store, not allowed to modify image size");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to modify image size");
         return -1;
     }
 
@@ -2819,7 +2865,12 @@ imagetool_image *image_store_get_image(const char *id)
         return NULL;
     }
 
-    img = lookup_with_lock(id);
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get the known image");
+        return NULL;
+    }
+
+    img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
         goto out;
@@ -2849,8 +2900,8 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         return -1;
     }
 
-    if (!image_store_lock(false)) {
-        ERROR("Failed to lock image store");
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get all the known images");
         return -1;
     }
 
@@ -2893,8 +2944,8 @@ size_t image_store_get_images_number()
         return -1;
     }
 
-    if (!image_store_lock(false)) {
-        ERROR("Failed to lock image store");
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get the number of then known images");
         return -1;
     }
 
@@ -2925,8 +2976,8 @@ int image_store_get_images_by_digest(const char *digest, imagetool_images_list *
         return -1;
     }
 
-    if (!image_store_lock(false)) {
-        ERROR("Failed to lock image store");
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get images by digest");
         return -1;
     }
 

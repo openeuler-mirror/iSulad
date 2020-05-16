@@ -239,7 +239,7 @@ int oci_rmi(const im_rmi_request *request)
         goto out;
     }
 
-    for (i = 0; i<image_names_len; i++) {
+    for (i = 0; i < image_names_len; i++) {
         if (strcmp(image_names[i], real_image_name) != 0) {
             reduced_image_names[reduced_image_names_len] = util_strdup_s(image_names[i]);
             if (reduced_image_names[reduced_image_names_len] == NULL) {
