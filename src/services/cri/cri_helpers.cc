@@ -567,7 +567,7 @@ std::vector<iSuladOpt> GetSeccompiSuladOpts(const std::string &seccompProfile, E
     if (seccompProfile.empty() || seccompProfile == "unconfined") {
         return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
     }
-    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default") {
+    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default" || seccompProfile == "runtime/default") {
         // return nil so docker will load the default seccomp profile
         return std::vector<iSuladOpt> {};
     }
