@@ -77,7 +77,7 @@ int rootfs_store_big_data_names(const char *id, char ***names, size_t *names_len
 char *rootfs_store_metadata(const char *id);
 
 // Return a slice enumerating the known containers.
-int rootfs_store_get_all_rootfs(storage_rootfs **rootfs, size_t *len);
+int rootfs_store_get_all_rootfs(struct rootfs_list *all_rootfs);
 
 // Free memory of container store, but will not delete the persisted files
 void rootfs_store_free();

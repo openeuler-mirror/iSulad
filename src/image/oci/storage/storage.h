@@ -41,8 +41,13 @@ struct layer {
 };
 
 struct layer_list {
-    struct layer** layers;
+    struct layer **layers;
     size_t layers_len;
+};
+
+struct rootfs_list {
+    struct storage_rootfs **rootfs;
+    size_t rootfs_len;
 };
 
 struct storage_module_init_options {

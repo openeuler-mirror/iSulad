@@ -1145,7 +1145,7 @@ char *rootfs_store_metadata(const char *id)
     return NULL;
 }
 
-int rootfs_store_get_all_rootfs(storage_rootfs **rootfs, size_t *len)
+int rootfs_store_get_all_rootfs(struct rootfs_list *all_rootfs)
 {
     return 0;
 }
