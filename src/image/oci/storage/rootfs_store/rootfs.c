@@ -51,7 +51,7 @@ cntrootfs_t *new_rootfs(storage_rootfs *scntr)
         return NULL;
     }
 
-    c->scontainer = scntr;
+    c->srootfs = scntr;
 
     return c;
 
@@ -86,8 +86,8 @@ void free_rootfs_t(cntrootfs_t *ptr)
     if (ptr == NULL) {
         return;
     }
-    free_storage_rootfs(ptr->scontainer);
-    ptr->scontainer = NULL;
+    free_storage_rootfs(ptr->srootfs);
+    ptr->srootfs = NULL;
 
     free(ptr);
 }

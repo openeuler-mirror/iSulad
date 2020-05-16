@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
 typedef struct _cntrootfs_t {
-    storage_rootfs *scontainer;
+    storage_rootfs *srootfs;
     uint64_t refcnt;
 } cntrootfs_t;
 

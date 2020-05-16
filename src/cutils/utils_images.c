@@ -290,3 +290,72 @@ char *oci_strip_dockerio_prefix(const char *name)
     return util_strdup_s(name);
 }
 
+static bool should_use_origin_name(const char *name)
+{
+    size_t i;
+
+    for (i = 0; i < strlen(name); i++) {
+        char ch = name[i];
+        if (ch != '.' && !(ch >= '0' && ch <= '9') && !(ch >= 'a' && ch <= 'z')) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Convert a BigData key name into an acceptable file name.
+char *make_big_data_base_name(const char *key)
+{
+    int ret = 0;
+    int nret = 0;
+    char *b64_encode_name = NULL;
+    size_t b64_encode_name_len = 0;
+    char *base_name = NULL;
+    size_t name_size;
+
+    if (should_use_origin_name(key)) {
+        return util_strdup_s(key);
+    }
+
+    b64_encode_name_len = util_base64_encode_len(strlen(key));
+    b64_encode_name = util_common_calloc_s(b64_encode_name_len + 1);
+    if (b64_encode_name == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    nret = util_base64_encode((unsigned char *)key, strlen(key), b64_encode_name, b64_encode_name_len);
+    if (nret < 0) {
+        ret = -1;
+        ERROR("Encode auth to base64 failed");
+        goto out;
+    }
+    name_size = 1 + strlen(b64_encode_name) + 1; // '=' + encode string + '\0'
+
+    base_name = (char *)util_common_calloc_s(name_size * sizeof(char));
+    if (base_name == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    nret = snprintf(base_name, name_size, "=%s", b64_encode_name);
+    if (nret < 0 || (size_t)nret >= name_size) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    DEBUG("big data file name : %s", base_name);
+
+out:
+    if (ret != 0) {
+        free(base_name);
+        base_name = NULL;
+    }
+    free(b64_encode_name);
+
+    return base_name;
+}
+

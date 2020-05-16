@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include "types_def.h"
 #include "storage_image.h"
+#include "storage_rootfs.h"
 #include "imagetool_images_list.h"
 #include "imagetool_fs_info.h"
 
@@ -46,7 +47,7 @@ struct layer_list {
 };
 
 struct rootfs_list {
-    struct storage_rootfs **rootfs;
+    storage_rootfs **rootfs;
     size_t rootfs_len;
 };
 
