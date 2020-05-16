@@ -121,7 +121,7 @@ int storage_img_set_meta_data(const char *img_id, const char *meta);
 
 int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_time);
 
-int storage_img_names(const char *img_id, char ***names, size_t *names_len);
+int storage_img_get_names(const char *img_id, char ***names, size_t *names_len);
 
 int storage_img_set_names(const char *img_id, const char **names, size_t names_len);
 
@@ -136,6 +136,8 @@ int storage_img_set_image_size(const char *image_id);
 char *storage_get_img_top_layer(const char *id);
 
 size_t storage_get_img_count();
+
+char *storage_img_get_image_id(const char *img_name);
 
 /* layer operations */
 int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *opts);

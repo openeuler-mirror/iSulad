@@ -46,7 +46,6 @@
 #include "engine.h"
 #include "utils.h"
 #include "isulad_config.h"
-#include "storage.h"
 #include "image.h"
 #include "sysinfo.h"
 #include "verify.h"

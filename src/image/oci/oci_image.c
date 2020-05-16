@@ -23,12 +23,6 @@
 #include "oci_login.h"
 #include "oci_logout.h"
 #include "registry.h"
-#include "storage.h"
-#include "image_store.h"
-
-#include "containers_store.h"
-
-#include "isulad_config.h"
 #include "utils.h"
 #include "storage.h"
 
@@ -210,14 +204,14 @@ int oci_rmi(const im_rmi_request *request)
         ret = -1;
         goto out;
     }
-    
-    if (storage_img_names(real_image_name, &image_names, &image_names_len) != 0) {
+
+    if (storage_img_get_names(real_image_name, &image_names, &image_names_len) != 0) {
         ERROR("Get image %s names failed", real_image_name);
         ret = -1;
         goto out;
     }
 
-    image_ID = image_store_lookup(real_image_name);
+    image_ID = storage_img_get_image_id(real_image_name);
     if (image_ID == NULL) {
         ERROR("Get id of image %s failed", real_image_name);
         ret = -1;
@@ -481,17 +475,4 @@ int oci_logout(const im_logout_request *request)
     }
 
     return ret;
-}
-
-static inline void cleanup_container_rootfs(const char *name_id, bool mounted)
-{
-    // TODO call storage umount interface
-    //if (mounted && isula_rootfs_umount(name_id, true) != 0) {
-    //    WARN("Remove rootfs: %s failed", name_id);
-    //}
-
-    // TODO call storage rootfs rm interface
-    //if (isula_rootfs_remove(name_id) != 0) {
-    //    WARN("Remove rootfs: %s failed", name_id);
-    //}
 }

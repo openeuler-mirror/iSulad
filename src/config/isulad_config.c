@@ -30,7 +30,6 @@
 #include "isulad_config.h"
 #include "sysinfo.h"
 #include "libisulad.h"
-#include "storage.h"
 
 #define ENGINE_ROOTPATH_NAME "engines"
 #define GRAPH_ROOTPATH_CHECKED_FLAG "NEED_CHECK"
@@ -218,6 +217,9 @@ free_out:
 /* conf get graph checked flag file path */
 char *conf_get_graph_check_flag_file()
 {
+    return NULL;
+#if 0
+    TODO implement image check in image module, get image check flag file path from image module
     char *epath = NULL;
     char *rootpath = NULL;
     size_t len;
@@ -252,6 +254,7 @@ char *conf_get_graph_check_flag_file()
 free_out:
     free(rootpath);
     return epath;
+#endif
 }
 
 /* conf get routine rootdir */

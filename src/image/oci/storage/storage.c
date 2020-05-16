@@ -346,7 +346,7 @@ out:
     return ret;
 }
 
-int storage_img_names(const char *img_id, char ***names, size_t *names_len) 
+int storage_img_get_names(const char *img_id, char ***names, size_t *names_len)
 {
     int ret = 0;
 
@@ -413,6 +413,16 @@ int storage_img_add_name(const char *img_id, const char *img_name)
 
 out:
     return ret;
+}
+
+char *storage_img_get_image_id(const char *img_name)
+{
+    if (img_name == NULL) {
+        ERROR("Invalid arguments");
+        return NULL;
+    }
+
+    return image_store_lookup(img_name);
 }
 
 bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list *all_images, const char *layer_id)
