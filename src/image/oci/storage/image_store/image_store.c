@@ -28,7 +28,6 @@
 #include "log.h"
 #include "constants.h"
 #include "read_file.h"
-#include "image.h"
 #include "imagetool_image.h"
 #include "docker_image_config_v2.h"
 #include "utils_array.h"

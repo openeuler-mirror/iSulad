@@ -22,7 +22,7 @@
 #include "types_def.h"
 #include "map.h"
 #include "linked_list.h"
-#include "image.h"
+#include "image_type.h"
 #include "imagetool_image.h"
 #include "imagetool_images_list.h"
 

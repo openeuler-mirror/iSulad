@@ -12,7 +12,7 @@
  * Create: 2020-04-26
  * Description: provide image function definition
  ******************************************************************************/
-#include "image.h"
+#include "image_type.h"
 #include "storage_image.h"
 #include "constants.h"
 #include "util_atomic.h"
