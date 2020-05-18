@@ -1692,8 +1692,85 @@ out:
     return size;
 }
 
+static char *get_digest_with_update_big_data(const char *id, const char *key)
+{
+    cntrootfs_t *cntr = NULL;
+    char *data = NULL;
+    char *digest = NULL;
+
+    data = rootfs_store_big_data(id, key);
+    if (data == NULL) {
+        return NULL;
+    }
+
+    if (rootfs_store_set_big_data(id, key, data) != 0) {
+        ERROR("Failed to set big data");
+        goto out;
+    }
+
+    if (!rootfs_store_lock(SHARED)) {
+        ERROR("Failed to lock rootfs store with shared lock, not allowed to get container digest assignments");
+        goto out_unlock;
+    }
+
+    cntr = lookup(id);
+    if (cntr == NULL) {
+        ERROR("Rootfs %s not known", id);
+        goto out_unlock;
+    }
+
+    digest = get_value_from_json_map_string_string(cntr->srootfs->big_data_digests, key);
+
+out_unlock:
+    rootfs_ref_dec(cntr);
+    rootfs_store_unlock();
+out:
+    free(data);
+    return digest;
+}
+
 char *rootfs_store_big_data_digest(const char *id, const char *key)
 {
+    cntrootfs_t *cntr = NULL;
+    char *digest = NULL;
+
+    if (key == NULL || strlen(key) == 0) {
+        ERROR("Not a valid name for a big data item, can't retrieve rootfs big data value for empty name");
+        return NULL;
+    }
+
+    if (g_rootfs_store == NULL) {
+        ERROR("Rootfs store is not ready");
+        return NULL;
+    }
+
+    if (!rootfs_store_lock(SHARED)) {
+        ERROR("Failed to lock rootfs store with shared lock, not allowed to get rootfs big data digest assignments");
+        return NULL;
+    }
+
+    cntr = lookup(id);
+    if (cntr == NULL) {
+        ERROR("Rootfs not known");
+        rootfs_store_unlock();
+        return NULL;
+    }
+
+    digest = get_value_from_json_map_string_string(cntr->srootfs->big_data_digests, key);
+
+    rootfs_ref_dec(cntr);
+    rootfs_store_unlock();
+
+    if (digest != NULL) {
+        return digest;
+    }
+
+    digest = get_digest_with_update_big_data(id, key);
+    if (digest != NULL) {
+        return digest;
+    }
+
+    ERROR("Could not compute digest of item");
     return NULL;
 }
 
