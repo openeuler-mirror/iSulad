@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance version
 # concurrent: YES
-# spend time: 1
+# spend time: 20
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -21,7 +21,7 @@
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/../data)
-source ./helpers.bash
+source ./basic_helpers.bash
 
 function isula_pull()
 {

@@ -2,7 +2,7 @@
 #
 # attributes: isulad basic image list ps inspect
 # concurrent: NA
-# spend time: 2
+# spend time: 20
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -20,7 +20,7 @@
 #######################################################################
 
 declare -r curr_path=$(dirname $(readlink -f "$0"))
-source ${curr_path}/helpers.bash
+source ${curr_path}/basic_helpers.bash
 
 function test_image_info()
 {

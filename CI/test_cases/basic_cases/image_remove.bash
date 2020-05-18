@@ -2,11 +2,11 @@
 #
 # attributes: isulad basic image
 # concurrent: NA
-# spend time: 2
+# spend time: 20
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/../data)
-source ./helpers.bash
+source ./basic_helpers.bash
 
 do_test_t()
 {

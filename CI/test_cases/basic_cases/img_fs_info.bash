@@ -22,28 +22,24 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ${curr_path}/basic_helpers.bash
 
-function test_image_list()
+function test_crictl_image()
 {
   local ret=0
   local image="busybox"
-  local INVALID_IMAGE="k~k"
-  local test="list images info test => (${FUNCNAME[@]})"
+  local test="crictl image operation test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
 
-  isula pull ${image}
+  crictl pull ${image}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
 
-  isula pull $INVALID_IMAGE
-  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - sueccess to pull image: ${INVALID_IMAGE}, expect fail" && return ${FAILURE}
+  crictl inspecti busybox | grep busybox
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing inspecti image: ${image}" && ((ret++))
 
-  isula images | grep busybox
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
+  crictl imagefsinfo
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to get image fs info: ${image}" && ((ret++))
 
-  count=`isula images --filter "reference=*busybox*" | grep busybox | wc -l`
-  [[ $count -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image} with filter" && ((ret++))
-
-  isula rmi ${image}
+  crictl rmi ${image}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image ${image}" && ((ret++))
 
   msg_info "${test} finished with return ${ret}..."
@@ -52,6 +48,6 @@ function test_image_list()
 
 declare -i ans=0
 
-test_image_list || ((ans++))
+test_crictl_image || ((ans++))
 
 show_result ${ans} "${curr_path}/${0}"

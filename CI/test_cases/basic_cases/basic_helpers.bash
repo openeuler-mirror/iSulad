@@ -58,6 +58,11 @@ function testcontainer() {
     fi
 }
 
+function crictl() {
+    CRICTL=$(which crictl)
+    "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock "$@"
+}
+
 function msg_ok()
 {
     echo -e "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: \033[1;32m$@\033[0m"
