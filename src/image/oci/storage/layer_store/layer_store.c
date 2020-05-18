@@ -622,7 +622,7 @@ static int driver_create_layer(const char *id, const char *parent, bool writable
     if (writable) {
         ret = graphdriver_create_rw(id, parent, &c_opts);
     } else {
-        ret = graphdriver_create_rw(id, parent, &c_opts);
+        ret = graphdriver_create_ro(id, parent, &c_opts);
     }
     if (ret != 0) {
         if (id != NULL) {
@@ -843,7 +843,25 @@ static int insert_memory_stores(const char *id, const struct layer_opts *opts, l
         }
     }
 
+    if (l->slayer->compressed_diff_digest != NULL) {
+        ret = insert_digest_into_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, id);
+        if (ret != 0) {
+            goto clear_by_name;
+        }
+    }
+
+    if (l->slayer->diff_digest != NULL) {
+        ret = insert_digest_into_map(g_metadata.by_uncompress_digest, l->slayer->diff_digest, id);
+        if (ret != 0) {
+            goto clear_compress_digest;
+        }
+    }
+
     goto out;
+clear_compress_digest:
+    if (l->slayer->compressed_diff_digest != NULL) {
+        (void)delete_digest_from_map(g_metadata.by_compress_digest, l->slayer->compressed_diff_digest, id);
+    }
 clear_by_name:
     for (i = i - 1; i >= 0; i--) {
         if (!map_remove(g_metadata.by_name, (void *)opts->names[i])) {
@@ -944,6 +962,7 @@ static int new_layer_by_opts(const char *id, const struct layer_opts *opts)
         goto out;
     }
     if (!build_layer_dir(id)) {
+        ret = -1;
         goto out;
     }
 
@@ -1231,51 +1250,53 @@ bool layer_store_is_used(const char *id)
 
 static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list *resp)
 {
-    char **ids = NULL;
-    size_t len = 0;
-    size_t i = 0;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
     int ret = -1;
+    digest_layer_t *id_list = NULL;
+    size_t i = 0;
 
     if (!layer_store_lock(false)) {
         return -1;
     }
 
-    ids = map_search(m, (void *)digest);
-    if (ids == NULL) {
+    id_list = (digest_layer_t *)map_search(m, (void *)digest);
+    if (id_list == NULL) {
+        ERROR("Not found digest: %s", digest);
         goto free_out;
     }
-    len = util_array_len((const char **)ids);
-    if (len == 0) {
+
+    if (id_list->layer_list_len == 0) {
         ret = 0;
         goto free_out;
     }
 
-    resp->layers = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), len);
+    resp->layers = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), id_list->layer_list_len);
     if (resp->layers == NULL) {
         ERROR("Out of memory");
         goto free_out;
     }
 
-    for (; i < len; i++) {
+    linked_list_for_each_safe(item, &(id_list->layer_list), next) {
         layer_t *l = NULL;
         resp->layers[i] = util_common_calloc_s(sizeof(struct layer));
         if (resp->layers[i] == NULL) {
             ERROR("Out of memory");
             goto free_out;
         }
-        l = lookup(ids[i]);
+        l = lookup((char *)item->elem);
         if (l == NULL) {
             ERROR("layer not known");
             goto free_out;
         }
         copy_json_to_layer(l, resp->layers[i]);
-        resp->layers_len += 1;
         layer_ref_dec(l);
+        resp->layers_len += 1;
+        i++;
     }
 
     ret = 0;
 free_out:
-    util_free_array(ids);
     layer_store_unlock();
     return ret;
 }
