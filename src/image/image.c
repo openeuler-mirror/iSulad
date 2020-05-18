@@ -1783,52 +1783,6 @@ void image_module_exit()
     }
 }
 
-int map_to_key_value_string(const json_map_string_string *map, char ***array, size_t *array_len)
-{
-    char **strings = NULL;
-    size_t strings_len = 0;
-    size_t i;
-    int ret;
-
-    if (map == NULL) {
-        return 0;
-    }
-    for (i = 0; i < map->len; i++) {
-        char *str = NULL;
-        size_t len;
-        if (strlen(map->keys[i]) > (SIZE_MAX - strlen(map->values[i])) - 2) {
-            ERROR("Invalid keys/values");
-            goto cleanup;
-        }
-        len = strlen(map->keys[i]) + strlen(map->values[i]) + 2;
-        str = util_common_calloc_s(len);
-        if (str == NULL) {
-            ERROR("Out of memory");
-            goto cleanup;
-        }
-        ret = snprintf(str, len, "%s=%s", map->keys[i], map->values[i]);
-        if (ret < 0 || (size_t)ret >= len) {
-            ERROR("Failed to print string");
-            free(str);
-            goto cleanup;
-        }
-        ret = util_array_append(&strings, str);
-        free(str);
-        if (ret != 0) {
-            ERROR("Failed to append array");
-            goto cleanup;
-        }
-        strings_len++;
-    }
-    *array = strings;
-    *array_len = strings_len;
-    return 0;
-
-cleanup:
-    util_free_array(strings);
-    return -1;
-}
-
 void free_im_status_request(im_status_request *req)
 {
     if (req == NULL) {
