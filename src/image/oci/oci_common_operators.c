@@ -93,7 +93,6 @@ static int oci_list_all_images(imagetool_images_list *images_list)
     return storage_get_all_images(images_list);
 }
 
-
 static bool image_meet_dangling_filter(const imagetool_image *src, const struct filters_args *filters)
 {
     bool ret = false;
