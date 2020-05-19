@@ -877,6 +877,34 @@ out:
     return ret;
 }
 
+static int update_mount_point(layer_t *l)
+{
+    container_inspect_graph_driver *d_meta = NULL;
+    int ret = 0;
+
+    if (l->smount_point == NULL) {
+        l->smount_point = util_common_calloc_s(sizeof(storage_mount_point));
+    }
+    if (l->smount_point == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    d_meta = graphdriver_get_metadata(l->slayer->id);
+    if (d_meta == NULL) {
+        ERROR("Get metadata of driver failed");
+        ret = -1;
+        goto out;
+    }
+    if (d_meta->data != NULL) {
+        l->smount_point->path = util_strdup_s(d_meta->data->merged_dir);
+    }
+
+out:
+    free_container_inspect_graph_driver(d_meta);
+    return ret;
+}
+
 static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
 {
     int64_t size = 0;
@@ -1048,6 +1076,11 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     if (ret != 0) {
         goto clear_memory;
     }
+    ret = update_mount_point(l);
+    if (ret != 0) {
+        goto clear_memory;
+    }
+
     l->slayer->incompelte = false;
 
     ret = save_layer(l);
@@ -1334,6 +1367,7 @@ struct layer *layer_store_lookup(const char *name)
     ret = util_common_calloc_s(sizeof(struct layer));
     if (ret == NULL) {
         ERROR("Out of memory");
+        layer_ref_dec(l);
         return ret;
     }
 
