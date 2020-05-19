@@ -1191,7 +1191,7 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
         goto error_out;
     }
 
-    if (mount_opts->options_len != 0) {
+    if (mount_opts != NULL && mount_opts->options_len != 0) {
         tmp = get_mount_opt_data_with_custom_option(data_size, mount_data, mount_opts);
         if (tmp == NULL) {
             goto error_out;
@@ -1257,7 +1257,7 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
         goto error_out;
     }
 
-    if (mount_opts->options_len != 0) {
+    if (mount_opts != NULL && mount_opts->options_len != 0) {
         tmp = get_mount_opt_data_with_custom_option(data_size, mount_data, mount_opts);
         if (tmp == NULL) {
             goto error_out;
@@ -1412,7 +1412,7 @@ char *overlay2_mount_layer(const char *id, const struct graphdriver *driver, con
     char *merged_dir = NULL;
     char *layer_dir = NULL;
 
-    if (id == NULL || driver == NULL || mount_opts == NULL) {
+    if (id == NULL || driver == NULL) {
         return NULL;
     }
 

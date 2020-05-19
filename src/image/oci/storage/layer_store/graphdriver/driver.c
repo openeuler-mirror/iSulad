@@ -156,7 +156,7 @@ char *graphdriver_mount_layer(const char *id, const struct driver_mount_opts *mo
         return NULL;
     }
 
-    if (id == NULL || mount_opts == NULL) {
+    if (id == NULL) {
         ERROR("Invalid input arguments for driver mount layer");
         return NULL;
     }

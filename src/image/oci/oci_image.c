@@ -166,9 +166,8 @@ int oci_mount_rf(const im_mount_request *request)
         ERROR("Invalid arguments");
         return -1;
     }
-    // TODO call storage rootfs mount interface
-    //return isula_rootfs_mount(request->name_id);
-    return 0;
+
+    return storage_rootfs_mount(request->name_id);
 }
 
 int oci_umount_rf(const im_umount_request *request)
@@ -177,9 +176,8 @@ int oci_umount_rf(const im_umount_request *request)
         ERROR("Invalid arguments");
         return -1;
     }
-    // TODO call storage rootfs umount interface
-    //return isula_rootfs_umount(request->name_id, request->force);
-    return 0;
+
+    return storage_rootfs_umount(request->name_id);
 }
 
 int oci_rmi(const im_rmi_request *request)

@@ -884,6 +884,12 @@ int storage_module_init(struct storage_module_init_options *opts)
         goto out;
     }
 
+    if (rootfs_store_init(opts) != 0) {
+        ERROR("Failed to init rootfs store");
+        ret = -1;
+        goto out;
+    }
+
     if (pthread_rwlock_init(&g_storage_rwlock, NULL) != 0) {
         ERROR("Failed to init storage rwlock");
         ret = -1;
@@ -1104,6 +1110,64 @@ int storage_rootfs_fs_usgae(const char *container_id, imagetool_fs_info *fs_info
 
     if (layer_store_get_layer_fs_info(rootfs_info->layer, fs_info) != 0) {
         ERROR("Failed to get layer %s fs usgae info", rootfs_info->layer);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_storage_rootfs(rootfs_info);
+    return ret;
+}
+
+int storage_rootfs_mount(const char *container_id)
+{
+    int ret = 0;
+    storage_rootfs *rootfs_info = NULL;
+
+    if (container_id == NULL) {
+        ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    rootfs_info = rootfs_store_get_rootfs(container_id);
+    if (rootfs_info == NULL) {
+        ERROR("Failed to get rootfs %s info", container_id);
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_mount(rootfs_info->layer, NULL) != 0) {
+        ERROR("Failed to mount %s", rootfs_info->layer);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_storage_rootfs(rootfs_info);
+    return ret;
+}
+
+int storage_rootfs_umount(const char *container_id)
+{
+    int ret = 0;
+    storage_rootfs *rootfs_info = NULL;
+
+    if (container_id == NULL) {
+        ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    rootfs_info = rootfs_store_get_rootfs(container_id);
+    if (rootfs_info == NULL) {
+        ERROR("Failed to get rootfs %s info", container_id);
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_umount(rootfs_info->layer, true) != 0) {
+        ERROR("Failed to umount layer %s", rootfs_info->layer);
         ret = -1;
         goto out;
     }

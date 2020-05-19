@@ -1376,6 +1376,42 @@ struct layer *layer_store_lookup(const char *name)
     return ret;
 }
 
+static struct driver_mount_opts *fill_driver_mount_opts(const struct layer_store_mount_opts *opts, const layer_t *l)
+{
+    size_t i = 0;
+    struct driver_mount_opts *d_opts = NULL;
+
+    d_opts = util_common_calloc_s(sizeof(struct driver_mount_opts));
+    if (d_opts == NULL) {
+        ERROR("Out of meoroy");
+        goto err_out;
+    }
+
+    if (opts == NULL || opts->mount_label == NULL) {
+        d_opts->mount_label = util_strdup_s(l->slayer->mountlabel);
+    } else {
+        d_opts->mount_label = util_strdup_s(opts->mount_label);
+    }
+
+    if (opts != NULL && opts->mount_opts->len > 0) {
+        d_opts->options = util_smart_calloc_s(sizeof(char *), opts->mount_opts->len);
+        for (; i < opts->mount_opts->len; i++) {
+            char *tmp_opt = NULL;
+            if (asprintf(&tmp_opt, "%s=%s", opts->mount_opts->keys[i], opts->mount_opts->values[i]) != 0) {
+                ERROR("Out of memory");
+                goto err_out;
+            }
+            d_opts->options_len += 1;
+        }
+    }
+
+    return d_opts;
+
+err_out:
+    free_graphdriver_mount_opts(d_opts);
+    return NULL;
+}
+
 static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
 {
     char *mount_point = NULL;
@@ -1383,7 +1419,6 @@ static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
     int32_t save_cnt = 0;
     char *save_path = NULL;
     struct driver_mount_opts *d_opts = NULL;
-    size_t i = 0;
 
     if (l->smount_point == NULL) {
         l->smount_point = util_common_calloc_s(sizeof(storage_mount_point));
@@ -1395,6 +1430,7 @@ static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
     if (l->mount_point_json_path == NULL) {
         l->mount_point_json_path = mountpoint_json_path(l->slayer->id);
         if (l->mount_point_json_path == NULL) {
+            ERROR("Failed to get layer %s mount point json");
             return NULL;
         }
     }
@@ -1405,29 +1441,14 @@ static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
     if (l->smount_point->count > 0) {
         l->smount_point->count += 1;
         mount_point = util_strdup_s(save_path);
+        ERROR("layer %s mount count %d", l->slayer->id, l->smount_point->count);
         goto save_json;
     }
 
-    d_opts = util_common_calloc_s(sizeof(struct driver_mount_opts));
+    d_opts = fill_driver_mount_opts(opts, l);
     if (d_opts == NULL) {
-        ERROR("Out of meoroy");
+        ERROR("Failed to fill layer %s driver mount opts", l->slayer->id);
         goto err_out;
-    }
-    if (opts->mount_label == NULL) {
-        d_opts->mount_label = util_strdup_s(l->slayer->mountlabel);
-    } else {
-        d_opts->mount_label = util_strdup_s(opts->mount_label);
-    }
-    if (opts->mount_opts->len > 0) {
-        d_opts->options = util_smart_calloc_s(sizeof(char *), opts->mount_opts->len);
-        for (; i < opts->mount_opts->len; i++) {
-            char *tmp_opt = NULL;
-            if (asprintf(&tmp_opt, "%s=%s", opts->mount_opts->keys[i], opts->mount_opts->values[i]) != 0) {
-                ERROR("Out of memory");
-                goto err_out;
-            }
-            d_opts->options_len += 1;
-        }
     }
 
     mount_point = graphdriver_mount_layer(l->slayer->id, d_opts);
@@ -1457,27 +1478,34 @@ err_out:
     return NULL;
 }
 
-char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opts)
+int layer_store_mount(const char *id, const struct layer_store_mount_opts *opts)
 {
+    int ret = 0;
     layer_t *l = NULL;
     char *result = NULL;
 
     if (id == NULL) {
         ERROR("Invalid arguments");
-        return NULL;
+        return -1;
     }
 
     l = lookup_with_lock(id);
     if (l == NULL) {
         ERROR("layer not known");
-        return NULL;
+        return -1;
     }
     layer_lock(l);
     result = mount_helper(l, opts);
+    if (result == NULL) {
+        ERROR("Failed to mount layer %s", id);
+        ret = -1;
+    }
     layer_unlock(l);
 
     layer_ref_dec(l);
-    return result;
+    free(result);
+
+    return ret;
 }
 
 int layer_store_umount(const char *id, bool force)
