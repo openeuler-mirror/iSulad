@@ -14,6 +14,7 @@
  ******************************************************************************/
 #include "storage.h"
 
+#include "libisulad.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -574,9 +575,67 @@ out:
     return ret;
 }
 
+static void free_rootfs_list(struct rootfs_list *list)
+{
+    size_t i;
+
+    for (i = 0; i < list->rootfs_len; i++) {
+        free_storage_rootfs(list->rootfs[i]);
+        list->rootfs[i] = NULL;
+    }
+
+    free(list->rootfs);
+    list->rootfs = NULL;
+    list->rootfs_len = 0;
+
+    free(list);
+}
+
+static int check_image_occupancy_status(const char *img_id, bool *in_using)
+{
+    bool ret = 0;
+    size_t i;
+    struct rootfs_list *all_rootfs = NULL;
+    char *img_long_id = NULL;
+
+    img_long_id = image_store_lookup(img_id);
+    if (img_long_id == NULL) {
+        ERROR("Image not known");
+        return -1;
+    }
+
+    all_rootfs = util_common_calloc_s(sizeof(struct rootfs_list));
+    if (all_rootfs == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (rootfs_store_get_all_rootfs(all_rootfs) != 0) {
+        ERROR("Failed to get all container rootfs information");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < all_rootfs->rootfs_len; i++) {
+        if (strcmp(all_rootfs->rootfs[i]->image, img_long_id) == 0) {
+            isulad_set_error_message("Image used by %s", all_rootfs->rootfs[i]->id);
+            ERROR("Image used by %s", all_rootfs->rootfs[i]->id);
+            *in_using = true;
+            goto out;
+        }
+    }
+
+out:
+    free(img_long_id);
+    free_rootfs_list(all_rootfs);
+    return ret;
+}
+
 int storage_img_delete(const char *img_id, bool commit)
 {
     int ret = 0;
+    bool in_using = false;
     imagetool_image *image_info = NULL;
 
     if (img_id == NULL) {
@@ -604,7 +663,17 @@ int storage_img_delete(const char *img_id, bool commit)
         goto unlock_out;
     }
 
-    //TODO check image whether used by container
+    if (check_image_occupancy_status(img_id, &in_using) != 0) {
+        ERROR("Failed to check image occupancy status");
+        ret = -1;
+        goto unlock_out;
+    }
+
+    if (in_using) {
+        ERROR("Image is in use by a container");
+        ret = -1;
+        goto unlock_out;
+    }
 
     if (image_store_delete(image_info->id) != 0) {
         ERROR("Failed to delete img %s", img_id);
