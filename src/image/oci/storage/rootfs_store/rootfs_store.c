@@ -22,7 +22,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stddef.h>
-#include <libwebsockets.h>
 #include <sha256.h>
 #include "utils.h"
 #include "log.h"
@@ -1058,7 +1057,7 @@ static int delete_rootfs_from_store_without_lock(const char *id)
     }
 
     if (g_rootfs_store == NULL) {
-        ERROR("Rootfs store is not already");
+        ERROR("Rootfs store is not ready");
         return -1;
     }
 
@@ -1236,6 +1235,7 @@ out:
     free(full_digest);
     return ret;
 }
+
 int rootfs_store_set_big_data(const char *id, const char *key, const char *data)
 {
     int ret = 0;
@@ -1859,7 +1859,7 @@ int rootfs_store_get_all_rootfs(struct rootfs_list *all_rootfs)
     }
 
     if (g_rootfs_store == NULL) {
-        ERROR("Rootfs store is not already!");
+        ERROR("Rootfs store is not ready!");
         return -1;
     }
 

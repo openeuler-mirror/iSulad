@@ -1188,7 +1188,7 @@ int image_store_delete(const char *id)
     }
 
     if (g_image_store == NULL) {
-        ERROR("Image store is not already");
+        ERROR("Image store is not ready");
         return -1;
     }
 
@@ -1233,7 +1233,7 @@ static int delete_image_from_store_without_lock(const char *id)
     }
 
     if (g_image_store == NULL) {
-        ERROR("Image store is not already");
+        ERROR("Image store is not ready");
         return -1;
     }
 
@@ -2798,7 +2798,7 @@ imagetool_image *image_store_get_image(const char *id)
     }
 
     if (g_image_store == NULL) {
-        ERROR("Image store is not already");
+        ERROR("Image store is not ready");
         return NULL;
     }
 
@@ -2833,7 +2833,7 @@ int image_store_get_all_images(imagetool_images_list *images_list)
     }
 
     if (g_image_store == NULL) {
-        ERROR("Image store is not already!");
+        ERROR("Image store is not ready!");
         return -1;
     }
 
@@ -2877,7 +2877,7 @@ size_t image_store_get_images_number()
     size_t number = 0;
 
     if (g_image_store == NULL) {
-        ERROR("Image store is not already!");
+        ERROR("Image store is not ready!");
         return -1;
     }
 
@@ -2909,7 +2909,7 @@ int image_store_get_images_by_digest(const char *digest, imagetool_images_list *
     }
 
     if (g_image_store == NULL) {
-        ERROR("Image store is not already!");
+        ERROR("Image store is not ready!");
         return -1;
     }
 
