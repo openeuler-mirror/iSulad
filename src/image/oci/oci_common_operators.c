@@ -579,6 +579,7 @@ int oci_image_conf_merge_into_spec(const char *image_name, container_config *con
 
 out:
     free(resolved_name);
+    free_imagetool_image(image_info);
     return ret;
 }
 

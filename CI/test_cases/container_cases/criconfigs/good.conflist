@@ -1,0 +1,20 @@
+{
+	"cniVersion": "0.3.1",
+	"name": "good",
+	"plugins": [
+		{
+			"name": "good",
+			"type": "ptp",
+			"ipam": {
+				"type": "host-local",
+				"subnet": "10.1.0.0/16"
+			}
+		},
+		{
+			"type": "portmap",
+			"capabilities": {
+				"portMappings": true
+			}
+		}
+	]
+}
