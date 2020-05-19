@@ -579,6 +579,10 @@ static void free_rootfs_list(struct rootfs_list *list)
 {
     size_t i;
 
+    if (list == NULL) {
+        return;
+    }
+
     for (i = 0; i < list->rootfs_len; i++) {
         free_storage_rootfs(list->rootfs[i]);
         list->rootfs[i] = NULL;
