@@ -40,6 +40,7 @@
 #include "isulad_config.h"
 #include "storage.h"
 #include "constants.h"
+#include "utils_images.h"
 
 #define MAX_LAYER_NUM 125
 #define MANIFEST_BIG_DATA_KEY "manifest"
@@ -428,7 +429,7 @@ out:
 static char *calc_chain_id(char *parent_chain_id, char *diff_id)
 {
     int sret = 0;
-    char tmp_buffer[256] = {0};
+    char tmp_buffer[MAX_ID_BUF_LEN] = {0};
     char *digest = NULL;
     char *full_digest = NULL;
 
@@ -524,43 +525,6 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
     }
 
     return 0;
-}
-
-static char *calc_diffid(char *file)
-{
-    int ret = 0;
-    char *diff_id = NULL;
-    bool gzip = false;
-
-    if (file == NULL) {
-        ERROR("Invalid NULL param");
-        return NULL;
-    }
-
-    ret = util_gzip_compressed(file, &gzip);
-    if (ret != 0) {
-        // consider it as gziped just like media type indicated if we cann't determined if it's gziped.
-        gzip = true;
-    }
-
-    if (gzip) {
-        diff_id = util_full_gzip_digest(file);
-    } else {
-        diff_id = util_full_file_digest(file);
-    }
-    if (diff_id == NULL) {
-        ERROR("calculate digest failed for file %s", file);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    if (ret != 0) {
-        free(diff_id);
-        diff_id = NULL;
-    }
-
-    return diff_id;
 }
 
 static char *without_sha256_prefix(char *digest)
@@ -1138,7 +1102,7 @@ static int fetch_one_layer(thread_fetch_info *info)
         goto out;
     }
 
-    diffid = calc_diffid(info->file);
+    diffid = oci_calc_diffid(info->file);
     if (diffid == NULL) {
         ERROR("calc diffid for layer %d failed", info->index);
         ret = -1;

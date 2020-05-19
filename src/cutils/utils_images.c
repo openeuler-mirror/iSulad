@@ -359,3 +359,36 @@ out:
     return base_name;
 }
 
+char *oci_calc_diffid(const char *file)
+{
+    int ret = 0;
+    char *diff_id = NULL;
+    bool gzip = false;
+
+    if (file == NULL) {
+        ERROR("Invalid NULL param");
+        return NULL;
+    }
+
+    ret = util_gzip_compressed(file, &gzip);
+    if (ret != 0) {
+        ERROR("Get layer file %s gzip attribute failed", file);
+        goto out;
+    }
+
+    if (gzip) {
+        diff_id = util_full_gzip_digest(file);
+    } else {
+        diff_id = util_full_file_digest(file);
+    }
+    if (diff_id == NULL) {
+        ERROR("calculate digest failed for file %s", file);
+        ret = -1;
+    }
+
+out:
+    if (ret != 0) {
+        UTIL_FREE_AND_SET_NULL(diff_id);
+    }
+    return diff_id;
+}

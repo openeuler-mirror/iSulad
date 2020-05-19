@@ -25,9 +25,9 @@
 #include "registry.h"
 #include "utils.h"
 #include "storage.h"
+#include "oci_load.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
-
 
 static int storage_module_init_helper(const struct service_arguments *args)
 {
@@ -412,8 +412,7 @@ int oci_load_image(const im_load_request *request)
         return -1;
     }
 
-    // TODO call storage metadata load interface
-    //ret = isula_image_load(request->file, request->tag, &refs);
+    ret = oci_do_load(request);
     if (ret != 0) {
         ERROR("Failed to load image");
         goto out;

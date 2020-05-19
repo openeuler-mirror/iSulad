@@ -30,6 +30,7 @@ extern "C" {
 #define DEFAULT_TAG ":latest"
 #define DEFAULT_HOSTNAME "docker.io/"
 #define DEFAULT_REPO_PREFIX "library/"
+#define MAX_ID_BUF_LEN 256
 
 char *oci_get_host(const char *name);
 char *oci_host_from_mirror(const char *mirror);
@@ -40,6 +41,7 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
 char *oci_full_image_name(const char *host, const char *name, const char *tag);
 char *oci_strip_dockerio_prefix(const char *name);
 char *make_big_data_base_name(const char *key);
+char *oci_calc_diffid(const char *file);
 
 #ifdef __cplusplus
 }
