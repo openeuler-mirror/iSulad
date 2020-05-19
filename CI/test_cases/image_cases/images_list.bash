@@ -20,7 +20,7 @@
 #######################################################################
 
 declare -r curr_path=$(dirname $(readlink -f "$0"))
-source ${curr_path}/basic_helpers.bash
+source ../helpers.bash
 
 function test_image_list()
 {

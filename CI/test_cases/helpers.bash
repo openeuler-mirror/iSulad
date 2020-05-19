@@ -1,98 +1,86 @@
 #!/bin/bash
 
-set -x
-
-CRICTL=$(which crictl)
+#######################################################################
+##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
+# - iSulad licensed under the Mulan PSL v2.
+# - You can use this software according to the terms and conditions of the Mulan PSL v2.
+# - You may obtain a copy of Mulan PSL v2 at:
+# -     http://license.coscl.org.cn/MulanPSL2
+# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+# - PURPOSE.
+# - See the Mulan PSL v2 for more details.
+##- @Description:CI
+##- @Author: lifeng
+##- @Create: 2020-03-30
+#######################################################################
 
 # testcase result
 TC_RET_T=0
+declare -a lines
 
-# image to pull and run container
-BUSYBOX_IMAGE="busybox:latest"
+# Root directory of integration tests.
+LCR_ROOT_PATH="/var/lib/isulad/engines/lcr"
 valgrind_log="/tmp/valgrind.log"
 ISUALD_LOG="/var/lib/isulad/isulad.log"
-ISULAD_ROOT_DIR="/var/lib/isulad"
-ISULAD_LCR_ENGINE_DIR="$ISULAD_ROOT_DIR/engines/lcr"
-kubeAPIVersion="0.1.0"
-iSulaRuntimeName="iSulad"
-RuntimeVersion="2.0"
-RuntimeAPIVersion="1.0"
-Logging_Driver="json-file"
-Cgroup_Driver="cgroupfs"
 
-# ===================================================
-function echo_text()
-{
-    local TXT=$1
-    local COLOR=$2
+declare -r -i FAILURE=-1
 
-    if [ "${COLOR}" = "red" ];then
-        echo -e "\e[1;31m${TXT} \e[0m"
-    elif [ "${COLOR}" = "green" ];then
-        echo -e "\e[1;32m${TXT} \e[0m"
-    elif [ "${COLOR}" = "yellow" ];then
-        echo -e "\e[1;33m${TXT} \e[0m"
-    else
-        echo ${TXT}
+function cut_output_lines() {
+    message=`$@ 2>&1`
+    retval=$?
+    oldifs=${IFS}
+    IFS=$'\n'
+    lines=(${message})
+    IFS="${oldifs}"
+    return $retval
+}
+
+function fn_check_eq() {
+    if [[ "$1" -ne "$2" ]];then
+        echo "$3"
+        TC_RET_T=$(($TC_RET_T+1))
     fi
 }
 
-function ERROR()
-{
-    txt_str=$1
-    echo_text "$txt_str" red
-}
-
-function INFO()
-{
-    txt_str=$1
-    echo_text "$txt_str" green
-}
-
-function DEBUG()
-{
-    txt_str=$1
-    echo_text "$txt_str" yellow
-}
-# ===============================================
-
-function is_new_oci_image() {
-    ps aux | grep "isulad_kit" | grep "isula_image\.sock" > /dev/null 2>&1
-    if [ $? -ne 0 ];then
-        DEBUG "Current use old oci image mechanism, Skip this testcase......"
-        exit 0
+function fn_check_ne() {
+    if [[ "$1" -eq "$2" ]];then
+        echo "$3"
+        TC_RET_T=$(($TC_RET_T+1))
     fi
 }
 
-function check_fn_return() {
-    if [[ "$1" != "$2" ]];then
-        ERROR "[`date`] Expect '$1' but got '$2': FAILED ($3)"
-        ((TC_RET_T++))
-    else
-        INFO "[`date`] Expect '$1' and got '$2': SUCCESS ($3)"
+function testcontainer() {
+    st=`isula inspect -f '{{json .State.Status}}' "$1"`
+    if ! [[ "${st}" =~ "$2" ]];then
+        echo "expect status $2, but get ${st}"
+        TC_RET_T=$(($TC_RET_T+1))
     fi
 }
 
-function check_fn_return_noskip() {
-    if [[ "$1" != "$2" ]];then
-        ERROR "[`date`] Expect '$1' but got '$2': FAILED ($3)"
-        exit 1
-    else
-        INFO "[`date`] Expect '$1' and got '$2': SUCCESS ($3)"
-    fi
+function crictl() {
+    CRICTL=$(which crictl)
+    "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock "$@"
 }
 
-function isulad_is_running() {
-    local ret=1
-    for i in `seq 3`;do
-        isula version
-        if [ $? -eq 0 ];then
-            ret=0
-            break
-        fi
-        sleep 1
-    done
-    return ${ret}
+function msg_ok()
+{
+    echo -e "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: \033[1;32m$@\033[0m"
+}
+
+function msg_err()
+{
+    echo -e "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: \033[1;31m$@\033[0m" >&2
+}
+
+function msg_info()
+{
+    echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@"
+}
+
+function show_result() {
+    [[ ${1} -ne 0 ]] && msg_err "TESTSUIT: $2 FAILED" && return ${FAILURE}
+    msg_ok "TESTSUIT: $2 SUCCESS"
 }
 
 function wait_isulad_running() {
@@ -156,57 +144,6 @@ function check_valgrind_log() {
     return 0
 }
 
-# Wrapper for crictl
-function crictl() {
-    "$CRICTL" -i unix:///var/run/isulad.sock -r unix:///var/run/isulad.sock "$@"
-}
-
-function get_cgroup_real_path()
-{
-    cat /proc/1/cgroup | head -n 1 | awk -F ':' '{print $3}'
-}
-
-function get_container_interface_ip_by_pid() {
-    if [ $# -ne 2 ];then
-        return ""
-    fi
-    nsenter -t $1 -n ifconfig $2 | grep 'inet ' | sed 's/netmask.*//g' | grep -Eoe "(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])"
-}
-
-function set_ip_for_cni_bridge() {
-    if [ $# -ne 2 ];then
-        echo "set_ip_for_cni_bridge: invalid arguments, usage: set_ip_for_cni_bridge cni0 10.1.0.1"
-        return 1
-    fi
-    ifconfig $1 $2
-}
-
-function show_result() {
-    if [ $1 -ne 0 ];then
-        echo "TESTSUIT: $2 FAILED"
-        return 1
-    fi
-    echo "TESTSUIT: $2 SUCCESS"
-}
-
-function msleep() {
-    if [ $# -ne 1 ];then
-        echo "use default sleep"
-        sleep $@
-        return
-    fi
-    sec=$1
-    env | grep GCOV
-    if [ $? -eq 0 ];then
-        ((sec=$sec+2))
-    fi
-    sleep $sec
-}
-
-function err() {
-    echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
-}
-
 function init_cni_conf()
 {
     dtpath="$1"
@@ -230,16 +167,3 @@ function init_cni_conf()
 
     return $TC_RET_T
 }
-
-function wait_container_state()
-{
-    while true
-    do
-        isula inspect -f '{{json .State.Status}}' "$1" | grep "$2"
-        if [ $? -eq 0 ];then
-            return;
-        fi
-        sleep 1
-    done
-}
-

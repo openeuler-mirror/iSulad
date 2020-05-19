@@ -22,7 +22,7 @@
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/../data)
 driver="overlay2"
-source ./basic_helpers.bash
+source ../helpers.bash
 
 function pre_test()
 {
