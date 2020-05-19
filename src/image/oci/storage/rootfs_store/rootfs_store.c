@@ -742,7 +742,6 @@ static int rootfs_store_append_container_rootfs(const char *id, const char *laye
             goto out;
         }
     }
-    rootfs_ref_inc(cntr);
 
 out:
     if (ret != 0) {
