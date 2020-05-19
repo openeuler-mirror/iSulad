@@ -59,7 +59,7 @@ int oci_do_login(const char *server, const char *username, const char *password)
     insecure_registries = conf_get_insecure_registry_list();
     for (registry = insecure_registries; (registry != NULL) && (*registry != NULL); registry++) {
         if (!strcmp(*registry, host)) {
-            options.skip_tls_verify = true;
+            options.insecure_registry = true;
         }
     }
 

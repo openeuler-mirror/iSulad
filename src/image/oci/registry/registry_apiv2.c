@@ -369,12 +369,16 @@ static int registry_ping(pull_descriptor *desc)
         goto out;
     }
 
-    ERROR("ping %s with https failed, try http", desc->host);
+    if (desc->insecure_registry) {
+        ERROR("ping %s with https failed, try http", desc->host);
 
-    ret = registry_pingv2(desc, "http");
-    if (ret != 0) {
-        ERROR("ping %s failed", desc->host);
-        goto out;
+        ret = registry_pingv2(desc, "http");
+        if (ret != 0) {
+            ERROR("ping %s with http failed", desc->host);
+            goto out;
+        }
+    } else {
+        ERROR("ping %s with https failed", desc->host);
     }
 
 out:
@@ -585,7 +589,7 @@ static int fetch_manifests_info(pull_descriptor *desc, char **content_type, char
     char **custom_headers = NULL;
     char path[PATH_MAX] = { 0 };
 
-    if (desc == NULL || path == NULL || content_type == NULL || digest == NULL) {
+    if (desc == NULL || content_type == NULL || digest == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
     }
@@ -1009,7 +1013,7 @@ static int fetch_manifests_data(pull_descriptor *desc, char *file, char **conten
     char path[PATH_MAX] = { 0 };
     char *manifest_text = NULL;
 
-    if (desc == NULL || path == NULL || file == NULL || content_type == NULL || *content_type == NULL ||
+    if (desc == NULL || file == NULL || content_type == NULL || *content_type == NULL ||
         digest == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;

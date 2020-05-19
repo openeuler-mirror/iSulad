@@ -1690,7 +1690,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
 {
     int ret = 0;
     int sret = 0;
-    char blobpath[32] = "/var/tmp/isulad-registry-XXXXXX";
+    char blobpath[REGISTRY_TMP_DIR_LEN] = REGISTRY_TMP_DIR;
     char scope[PATH_MAX] = {0};
 
     if (desc == NULL || options == NULL) {
@@ -1742,6 +1742,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->blobpath = util_strdup_s(blobpath);
     desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
     desc->skip_tls_verify = options->skip_tls_verify;
+    desc->insecure_registry = options->insecure_registry;
 
     if (options->auth.username != NULL && options->auth.password != NULL) {
         desc->username = util_strdup_s(options->auth.username);
@@ -1838,9 +1839,31 @@ static void cached_layers_kvfree(void *key, void *value)
     return;
 }
 
+static void remove_temporary_dirs()
+{
+    int ret = 0;
+    int sret = 0;
+    char cmd[PATH_MAX] = {0};
+
+    sret = snprintf(cmd, sizeof(cmd), "/usr/bin/rm -rf %s", REGISTRY_TMP_DIR_ALL);
+    if (sret < 0 || (size_t)sret >= sizeof(cmd)) {
+        ERROR("Failed to sprintf cmd to remove temporary directory");
+        return;
+    }
+
+    ret = system(cmd);
+    if (ret != 0) {
+        ERROR("execute \"%s\" got result %d", cmd, ret);
+    }
+
+    return;
+}
+
 int registry_init()
 {
     int ret = 0;
+
+    remove_temporary_dirs();
 
     g_shared = util_common_calloc_s(sizeof(registry_global));
     if (g_shared == NULL) {
@@ -1910,6 +1933,7 @@ int registry_login(registry_login_options *options)
     update_host(desc);
     desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
     desc->skip_tls_verify = options->skip_tls_verify;
+    desc->insecure_registry = options->insecure_registry;
     desc->username = util_strdup_s(options->auth.username);
     desc->password = util_strdup_s(options->auth.password);
 

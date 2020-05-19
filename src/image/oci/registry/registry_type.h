@@ -24,6 +24,11 @@
 // 8 is enough for challenge, usually only one challenge is provided.
 #define CHALLENGE_MAX 8
 
+#define REGISTRY_TMP_DIR_COMMON "/var/tmp/isulad-registry-"
+#define REGISTRY_TMP_DIR_LEN    32
+#define REGISTRY_TMP_DIR        REGISTRY_TMP_DIR_COMMON"XXXXXX"
+#define REGISTRY_TMP_DIR_ALL    REGISTRY_TMP_DIR_COMMON"*"
+
 typedef struct {
     char *schema;
     char *realm;
@@ -84,6 +89,7 @@ typedef struct {
     char *blobpath;
     char *protocol;
     bool skip_tls_verify;
+    bool insecure_registry;
     bool already_ping;
     char *scope;
     challenge challenges[CHALLENGE_MAX];

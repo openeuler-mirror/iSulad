@@ -72,7 +72,7 @@ out:
     return ret;
 }
 
-static void update_option_skip_tls_verify(registry_pull_options *options, char **insecure_registries, char *host)
+static void update_option_insecure_registry(registry_pull_options *options, char **insecure_registries, char *host)
 {
     char **registry = NULL;
 
@@ -82,7 +82,7 @@ static void update_option_skip_tls_verify(registry_pull_options *options, char *
 
     for (registry = insecure_registries; (registry != NULL) && (*registry != NULL); registry++) {
         if (!strcmp(*registry, host)) {
-            options->skip_tls_verify = true;
+            options->insecure_registry = true;
         }
     }
 }
@@ -119,7 +119,7 @@ static int pull_image(const im_pull_request *request, char **name)
     if (host != NULL) {
         options->image_name = oci_default_tag(request->image);
         options->dest_image_name = util_strdup_s(options->image_name);
-        update_option_skip_tls_verify(options, insecure_registries, host);
+        update_option_insecure_registry(options, insecure_registries, host);
         ret = registry_pull(options);
         if (ret != 0) {
             ERROR("pull image failed");
@@ -129,10 +129,10 @@ static int pull_image(const im_pull_request *request, char **name)
         registry_mirrors = conf_get_registry_list();
         for (mirror = registry_mirrors; (mirror != NULL) && (*mirror != NULL); mirror++) {
             if (util_has_prefix(*mirror, HTTPS_PREFIX)) {
-                options->skip_tls_verify = true;
+                options->insecure_registry = true;
             }
             host = oci_host_from_mirror(*mirror);
-            update_option_skip_tls_verify(options, insecure_registries, host);
+            update_option_insecure_registry(options, insecure_registries, host);
             with_tag = oci_default_tag(request->image);
             options->image_name = oci_add_host(host, with_tag);
             free(with_tag);

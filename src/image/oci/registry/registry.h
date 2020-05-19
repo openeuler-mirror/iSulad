@@ -31,12 +31,14 @@ typedef struct {
     char *dest_image_name;
     registry_auth auth;
     bool skip_tls_verify;
+    bool insecure_registry;
 } registry_pull_options;
 
 typedef struct {
     char *host;
     registry_auth auth;
     bool skip_tls_verify;
+    bool insecure_registry;
 } registry_login_options;
 
 int registry_init();
