@@ -664,26 +664,17 @@ void isula_exec_request_free(struct isula_exec_request *request)
     free(request->stderr);
     request->stderr = NULL;
 
-    if (request->argc && request->argv != NULL) {
-        int i;
-        for (i = 0; i < request->argc; i++) {
-            free(request->argv[i]);
-            request->argv[i] = NULL;
-        }
-        free(request->argv);
-        request->argv = NULL;
-        request->argc = 0;
-    }
-    if (request->env_len && request->env != NULL) {
-        size_t j;
-        for (j = 0; j < request->env_len; j++) {
-            free(request->env[j]);
-            request->env[j] = NULL;
-        }
-        free(request->env);
-        request->env = NULL;
-        request->env_len = 0;
-    }
+    free(request->user);
+    request->user = NULL;
+
+    util_free_array_by_len(request->argv, request->argc);
+    request->argv = NULL;
+    request->argc = 0;
+
+    util_free_array_by_len(request->env, request->env_len);
+    request->env = NULL;
+    request->env_len = 0;
+
     free(request);
 }
 

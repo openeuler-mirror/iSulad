@@ -229,18 +229,27 @@ static int request_pack_custom_env(struct client_arguments *args, isula_containe
 {
     int ret = 0;
     char *pe = NULL;
+    char *new_env = NULL;
 
     if (args->custom_conf.env != NULL) {
         size_t i;
         for (i = 0; i < util_array_len((const char **)(args->custom_conf.env)); i++) {
-            if (util_array_append(&conf->env, args->custom_conf.env[i]) != 0) {
-                COMMAND_ERROR("Failed to append custom config env list");
+            if (util_validate_env(args->custom_conf.env[i], &new_env) != 0) {
+                COMMAND_ERROR("Invalid environment %s", args->custom_conf.env[i]);
                 ret = -1;
                 goto out;
             }
+            if (new_env == NULL) {
+                continue;
+            }
+            if (util_array_append(&conf->env, new_env) != 0) {
+                COMMAND_ERROR("Failed to append custom config env list %s", new_env);
+                ret = -1;
+                goto out;
+            }
+            free(new_env);
+            new_env = NULL;
         }
-        util_free_array(args->custom_conf.env);
-        args->custom_conf.env = conf->env; /* make sure args->custom_conf.env point to valid memory. */
         conf->env_len = util_array_len((const char **)(conf->env));
     }
 
@@ -253,9 +262,7 @@ static int request_pack_custom_env(struct client_arguments *args, isula_containe
                 goto out;
             }
         }
-        args->custom_conf.env = conf->env; /* make sure args->custom_conf.env point to valid memory. */
         conf->env_len = util_array_len((const char **)(conf->env));
-
         conf->accel = args->custom_conf.accel;
         conf->accel_len = util_array_len((const char **)(args->custom_conf.accel));
         if (util_env_set_isulad_enable_plugins(&conf->env, &conf->env_len, ISULAD_ISULA_ADAPTER)) {
@@ -267,52 +274,7 @@ static int request_pack_custom_env(struct client_arguments *args, isula_containe
 
 out:
     free(pe);
-    return ret;
-}
-
-static int validate_env(const char *env, char **dst)
-{
-    int ret = 0;
-    char *value = NULL;
-    char **arr = util_string_split_multi(env, '=');
-    if (arr == NULL) {
-        ERROR("Failed to split env string");
-        return -1;
-    }
-    if (strlen(arr[0]) == 0) {
-        ERROR("Invalid environment variable: %s", env);
-        ret = -1;
-        goto out;
-    }
-
-    if (util_array_len((const char **)arr) > 1) {
-        *dst = util_strdup_s(env);
-        goto out;
-    }
-
-    value = getenv(env);
-    if (value == NULL) {
-        *dst = util_strdup_s(env);
-        goto out;
-    } else {
-        int sret;
-        size_t len = strlen(env) + 1 + strlen(value) + 1;
-        *dst = (char *)util_common_calloc_s(len);
-        if (*dst == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        sret = snprintf(*dst, len, "%s=%s", env, value);
-        if (sret < 0 || (size_t)sret >= len) {
-            ERROR("Failed to compose env string");
-            ret = -1;
-            goto out;
-        }
-    }
-
-out:
-    util_free_array(arr);
+    free(new_env);
     return ret;
 }
 
@@ -343,7 +305,7 @@ static int read_env_from_file(const char *path, size_t file_size, isula_containe
             continue;
         }
         buf[len - 1] = '\0';
-        if (validate_env(buf, &new_env) != 0) {
+        if (util_validate_env(buf, &new_env) != 0) {
             ret = -1;
             goto out;
         }
