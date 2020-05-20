@@ -431,6 +431,8 @@ void add_array_kv(char **array, size_t total, size_t *pos, const char *k, const 
 typedef int (*mount_info_call_back_t)(const char *, const char *);
 bool util_deal_with_mount_info(mount_info_call_back_t cb, const char *);
 
+int util_validate_env(const char *env, char **dst);
+
 #ifdef __cplusplus
 }
 #endif
