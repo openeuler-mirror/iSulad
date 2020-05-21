@@ -715,8 +715,8 @@ static int delete_digest_from_map(map_t *by_digest, const char *digest, const ch
         if (strcmp(t_id, id) == 0) {
             linked_list_del(item);
             free(item->elem);
+            item->elem = NULL;
             free(item);
-            item = NULL;
             old_list->layer_list_len -= 1;
             break;
         }
@@ -729,44 +729,62 @@ static int delete_digest_from_map(map_t *by_digest, const char *digest, const ch
     return 0;
 }
 
-static int insert_digest_into_map(map_t *by_digest, const char *digest, const char *id)
+static int insert_new_digest_list(map_t *by_digest, const char *digest, struct linked_list *item)
 {
-    digest_layer_t *old_list = NULL;
-    struct linked_list *item = NULL;
     digest_layer_t *new_list = NULL;
 
-    if (digest == NULL) {
-        INFO("Layer: %s with empty digest", id);
-        return 0;
-    }
-
-    old_list = (digest_layer_t *)map_search(by_digest, (void *)digest);
-    if (old_list == NULL) {
-        new_list = (digest_layer_t *)util_common_calloc_s(sizeof(digest_layer_t));
-        if (new_list == NULL) {
-            ERROR("Out of memory");
-            return -1;
-        }
-        linked_list_init(&(new_list->layer_list));
-        old_list = new_list;
-    }
-
-    item = (struct linked_list *)util_common_calloc_s(sizeof(struct linked_list));
-    if (item == NULL) {
+    new_list = (digest_layer_t *)util_common_calloc_s(sizeof(digest_layer_t));
+    if (new_list == NULL) {
         ERROR("Out of memory");
-        goto free_out;
+        return -1;
     }
 
-    linked_list_add_elem(item, (void *)util_strdup_s(id));
-    linked_list_add_tail(&(old_list->layer_list), item);
-    old_list->layer_list_len += 1;
-    if (!map_replace(by_digest, (void *)digest, (void *)old_list)) {
+    linked_list_init(&(new_list->layer_list));
+    linked_list_add_tail(&(new_list->layer_list), item);
+    new_list->layer_list_len += 1;
+    if (!map_insert(by_digest, (void *)digest, (void *)new_list)) {
+        linked_list_del(item);
         goto free_out;
     }
 
     return 0;
 free_out:
     free_digest_layer_t(new_list);
+    return -1;
+}
+
+static int insert_digest_into_map(map_t *by_digest, const char *digest, const char *id)
+{
+    digest_layer_t *old_list = NULL;
+    struct linked_list *item = NULL;
+
+    if (digest == NULL) {
+        INFO("Layer: %s with empty digest", id);
+        return 0;
+    }
+
+    item = (struct linked_list *)util_common_calloc_s(sizeof(struct linked_list));
+    if (item == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    linked_list_add_elem(item, (void *)util_strdup_s(id));
+
+    old_list = (digest_layer_t *)map_search(by_digest, (void *)digest);
+    if (old_list == NULL) {
+        if (insert_new_digest_list(by_digest, digest, item) != 0) {
+            ERROR("Insert new digest: %s failed", digest);
+            goto free_out;
+        }
+    } else {
+        linked_list_add_tail(&(old_list->layer_list), item);
+        old_list->layer_list_len += 1;
+    }
+
+    return 0;
+free_out:
+    free(item->elem);
+    free(item);
     return -1;
 }
 
