@@ -22,8 +22,7 @@
 #include "error.h"
 #include "libisulad.h"
 #include "sysinfo.h"
-#include "log.h"
-#include "read_file.h"
+#include "isula_libutils/log.h"
 
 // Cgroup Item Definition
 #define CGROUP_BLKIO_WEIGHT "blkio.weight"
@@ -780,7 +779,6 @@ static void check_cgroup_blkio_info(struct layer **layers, bool quiet, cgroup_bl
 /* check cgroup cpuset info */
 static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_cpuset_info_t *cpusetinfo)
 {
-    size_t file_size = 0;
     char *mountpoint = NULL;
     char cpuset_cpus_path[PATH_MAX] = { 0 };
     char cpuset_mems_path[PATH_MAX] = { 0 };
@@ -797,7 +795,7 @@ static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_c
         goto error;
     }
 
-    cpusetinfo->cpus = read_file(cpuset_cpus_path, &file_size);
+    cpusetinfo->cpus = isula_utils_read_file(cpuset_cpus_path);
     if (cpusetinfo->cpus == NULL) {
         ERROR("Failed to read the file: %s", cpuset_cpus_path);
         goto error;
@@ -809,7 +807,7 @@ static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_c
         goto error;
     }
 
-    cpusetinfo->mems = read_file(cpuset_mems_path, &file_size);
+    cpusetinfo->mems = isula_utils_read_file(cpuset_mems_path);
     if (cpusetinfo->mems == NULL) {
         ERROR("Failed to read the file: %s", cpuset_mems_path);
         goto error;

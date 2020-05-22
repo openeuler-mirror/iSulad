@@ -18,7 +18,7 @@
 #include "grpc_service.h"
 #else
 #include "rest_service.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #endif
 
 /* server common init */

@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static int generate_isula_list_request(const im_list_request *req, struct isula_list_request **ireq)
 {

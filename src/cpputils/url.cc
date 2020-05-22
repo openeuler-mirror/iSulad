@@ -15,7 +15,7 @@
 #include "url.h"
 #include <new>
 #include "cxxutils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 namespace url {
 bool IsHex(char c)
 {

@@ -16,7 +16,7 @@
 #define __ISULAD_HEALTH_CHECK_H_
 
 #include "types_def.h"
-#include "container_config_v2.h"
+#include "isula_libutils/container_config_v2.h"
 
 #ifdef __cplusplus
 extern "C" {

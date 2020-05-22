@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "rest_service_common.h"
 
@@ -37,7 +37,7 @@ int get_body(const evhtp_request_t *req, size_t *size_out, char **record_out)
     content_len = (size_t)evbuffer_get_length(buf);
 
     if (content_len >= MAX_BODY_SIZE) {
-        ERROR("too big request,size: %u", content_len);
+        ERROR("too big request,size: %zu", content_len);
         ret = -1;
         goto empty;
     } else if (content_len == 0) {

@@ -29,7 +29,7 @@
 #include <dirent.h>
 
 #include "constants.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "sha256.h"
 #include "path.h"
@@ -1106,4 +1106,100 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
 free_out:
     free(tmp_file);
     return ret;
+}
+
+static char *isula_utils_fread_file(FILE *stream, size_t *length)
+{
+#define JSON_MAX_SIZE (10LL * 1024LL * 1024LL)
+    char *buf = NULL;
+    char *tmpbuf = NULL;
+    size_t off = 0;
+
+    while (1) {
+        size_t ret, newsize, sizejudge;
+        sizejudge = (JSON_MAX_SIZE - BUFSIZ) - 1;
+        if (sizejudge < off) {
+            goto out;
+        }
+        newsize = off + BUFSIZ + 1;
+
+        tmpbuf = (char *)calloc(1, newsize);
+        if (tmpbuf == NULL) {
+            goto out;
+        }
+
+        if (buf != NULL) {
+            (void)memcpy(tmpbuf, buf, off);
+
+            (void)memset(buf, 0, off);
+
+            free(buf);
+        }
+
+        buf = tmpbuf;
+        tmpbuf = NULL;
+
+        ret = fread(buf + off, 1, BUFSIZ, stream);
+        if (ret == 0 && ferror(stream)) {
+            goto out;
+        }
+        if (ret < BUFSIZ || feof(stream)) {
+            *length = off + ret + 1;
+            buf[*length - 1] = '\0';
+            return buf;
+        }
+
+        off += BUFSIZ;
+    }
+out:
+    free(buf);
+    free(tmpbuf);
+    return NULL;
+}
+
+static int do_check_args(const char *path)
+{
+    if (path == NULL) {
+        return -1;
+    }
+    if (strlen(path) > PATH_MAX) {
+        return -1;
+    }
+    return 0;
+}
+
+char *isula_utils_read_file(const char *path)
+{
+#define FILE_MODE 0640
+    char *buf = NULL;
+    char rpath[PATH_MAX + 1] = { 0 };
+    int fd = -1;
+    int tmperrno = -1;
+    FILE *fp = NULL;
+    size_t length = 0;
+
+    if (do_check_args(path) != 0) {
+        return NULL;
+    }
+
+    if (realpath(path, rpath) == NULL) {
+        return NULL;
+    }
+
+    fd = open(rpath, O_RDONLY | O_CLOEXEC, FILE_MODE);
+    if (fd < 0) {
+        return NULL;
+    }
+
+    fp = fdopen(fd, "r");
+    tmperrno = errno;
+    if (fp == NULL) {
+        (void)close(fd);
+        errno = tmperrno;
+        return NULL;
+    }
+
+    buf = isula_utils_fread_file(fp, &length);
+    (void)fclose(fp);
+    return buf;
 }

@@ -17,8 +17,8 @@
 
 #include <stdint.h>
 #include "image.h"
-#include "imagetool_image.h"
-#include "oci_image_spec.h"
+#include "isula_libutils/imagetool_image.h"
+#include "isula_libutils/oci_image_spec.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -23,7 +23,7 @@
 #include <sys/capability.h>
 #endif
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_regex.h"
 

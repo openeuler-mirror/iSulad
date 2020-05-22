@@ -26,7 +26,7 @@
 #include <errno.h>
 
 #include "error.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include <lcr/lcrcontainer.h>
 #include "collector.h"
 #include "isulad_config.h"

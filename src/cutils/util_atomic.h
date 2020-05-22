@@ -19,7 +19,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 
 #ifdef __cplusplus
 extern "C" {

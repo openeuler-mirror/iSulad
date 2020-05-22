@@ -22,7 +22,7 @@
 #include "utils.h"
 #include "arguments.h"
 #include "isula_connect.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 #ifdef ENABLE_EMBEDDED_IMAGE
 const char g_cmd_load_desc[] = "load an image from a manifest or a tar archive";
@@ -114,7 +114,7 @@ int cmd_load_main(int argc, const char **argv)
 {
     int ret = 0;
     char file[PATH_MAX] = { 0 };
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     int exit_code = ECOMMON;
     command_t cmd;
     struct command_option options[] = {
@@ -126,7 +126,7 @@ int cmd_load_main(int argc, const char **argv)
 #endif
     };
 
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_load_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
@@ -137,7 +137,7 @@ int cmd_load_main(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_load_args.argc, &g_cmd_load_args.argv)) {
         exit(exit_code);
     }
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Load: log init failed");
         exit(exit_code);
     }

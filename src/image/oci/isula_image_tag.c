@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static int generate_isula_tag_request(const char *src_name, const char *dest_name, struct isula_tag_request **ireq)
 {

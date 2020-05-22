@@ -19,7 +19,7 @@
 #include "connect.h"
 #include "utils.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static int generate_isula_logout_request(const char *server, struct isula_logout_request **ireq)
 {

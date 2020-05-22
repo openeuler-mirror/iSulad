@@ -25,7 +25,7 @@
 #include <libgen.h>
 
 #include "constants.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "isulad_config.h"
 #include "sysinfo.h"

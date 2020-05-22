@@ -18,7 +18,7 @@
 #include <linux/limits.h>
 
 #include "oci_image_unix.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 

@@ -19,7 +19,7 @@
 #include <vector>
 #include "cri_helpers.h"
 
-#include "log.h"
+#include "isula_libutils/log.h"
 
 grpc::Status RuntimeImageServiceImpl::PullImage(grpc::ServerContext *context,
                                                 const runtime::v1alpha2::PullImageRequest *request,

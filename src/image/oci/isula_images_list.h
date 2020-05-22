@@ -15,7 +15,7 @@
 #ifndef __OCI_REMOTE_IMAGES_LIST_H
 #define __OCI_REMOTE_IMAGES_LIST_H
 
-#include "imagetool_images_list.h"
+#include "isula_libutils/imagetool_images_list.h"
 #include "image.h"
 
 #ifdef __cplusplus

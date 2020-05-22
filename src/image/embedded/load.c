@@ -20,7 +20,7 @@
 #include "embedded_image.h"
 #include "lim.h"
 #include "limits.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "image.h"
 
 #define RAW_DIGEST_LEN 64

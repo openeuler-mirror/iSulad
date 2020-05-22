@@ -16,7 +16,7 @@
 
 #include "embedded.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 struct snapshot_drivers {
     struct snapshot_plugin plugins[DRIVER_TYPE_NUM];

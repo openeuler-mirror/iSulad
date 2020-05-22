@@ -25,9 +25,9 @@
 #include "api.pb.h"
 #include "cri_security_context.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "path.h"
-#include "parse_common.h"
+#include "isula_libutils/parse_common.h"
 #include "cxxutils.h"
 
 namespace CRIHelpers {

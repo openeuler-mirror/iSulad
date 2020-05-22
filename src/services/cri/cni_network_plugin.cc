@@ -22,7 +22,7 @@
 #include <chrono>
 
 #include "cxxutils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "cri_helpers.h"
 
@@ -651,7 +651,7 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName,
     if (iter != annotations.end()) {
         jsonCheckpoint = iter->second;
     }
-    DEBUG("add checkpoint: ", jsonCheckpoint.c_str());
+    DEBUG("add checkpoint: %s", jsonCheckpoint.c_str());
 
     std::vector<cri::PortMapping> portMappings;
     INFO("Got netns path %s", podNetnsPath.c_str());

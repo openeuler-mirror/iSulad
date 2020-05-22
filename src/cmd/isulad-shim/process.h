@@ -19,7 +19,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdbool.h>
-#include "shim_client_process_state.h"
+#include "isula_libutils/shim_client_process_state.h"
 #include "terminal.h"
 
 #ifdef __cplusplus

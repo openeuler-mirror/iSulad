@@ -15,7 +15,7 @@
 #include "error.h"
 #include "arguments.h"
 #include "kill.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 const char g_cmd_kill_desc[] = "Kill one or more  running containers";
@@ -75,9 +75,8 @@ int cmd_kill_main(int argc, const char **argv)
     int i = 0;
     int status = 0;
     command_t cmd;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
-    set_default_command_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_kill_args)) {
         COMMAND_ERROR("client arguments init failed\n");
         exit(ECOMMON);
@@ -93,7 +92,8 @@ int cmd_kill_main(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_kill_args.argc, &g_cmd_kill_args.argv)) {
         exit(ECOMMON);
     }
-    if (log_init(&lconf)) {
+    isula_libutils_default_log_config(argv[0], &lconf);
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed\n");
         exit(ECOMMON);
     }

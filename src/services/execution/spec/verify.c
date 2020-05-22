@@ -28,7 +28,7 @@
 #include "constants.h"
 #include "error.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "sysinfo.h"
 #include "specs.h"
 #include "verify.h"
@@ -958,7 +958,7 @@ static bool check_hugetlbs_repeated(size_t newlen, const char *pagesize,
 
     for (j = 0; j < newlen; j++) {
         if (newtlb[j] != NULL && newtlb[j]->page_size != NULL && !strcmp(newtlb[j]->page_size, pagesize)) {
-            WARN("hugetlb-limit setting of %s is repeated, former setting %llu will be replaced with %llu",
+            WARN("hugetlb-limit setting of %s is repeated, former setting %lu will be replaced with %lu",
                  pagesize, newtlb[j]->limit, hugetlb->limit);
             newtlb[j]->limit = hugetlb->limit;
             repeated = true;
@@ -1654,7 +1654,7 @@ static int add_hugetbl_element(host_config_hugetlbs_element ***hugetlb, size_t *
     for (j = 0; j < *len; j++) {
         if (strcmp((*hugetlb)[j]->page_size, pagesize) == 0) {
             WARN("Hostconfig: hugetlb-limit setting of %s is repeated, "
-                 "former setting % llu will be replaced with % llu",
+                 "former setting %lu will be replaced with %lu",
                  pagesize, (*hugetlb)[j]->limit, element->limit);
             (*hugetlb)[j]->limit = element->limit;
             goto out;

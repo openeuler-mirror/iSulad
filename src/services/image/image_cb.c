@@ -28,7 +28,7 @@
 #include "utils.h"
 #include "error.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "image.h"
 #include "engine.h"
 #include "isulad_config.h"
@@ -958,7 +958,7 @@ static int image_inspect_cb(const image_inspect_request *request, image_inspect_
         goto pack_response;
     }
 
-    set_log_prefix(name);
+    isula_libutils_set_log_prefix(name);
 
     INFO("Inspect :%s", name);
 
@@ -976,7 +976,7 @@ pack_response:
         (*response)->image_json = image_json;
     }
 
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     malloc_trim(0);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }

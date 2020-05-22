@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <clibcni/types.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "sysctl_tools.h"
 #include "cri_runtime_service.h"

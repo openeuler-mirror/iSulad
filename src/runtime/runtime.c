@@ -22,7 +22,7 @@
 #include <ctype.h>
 
 #include "runtime.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "lcr_rt_ops.h"
 #include "isula_rt_ops.h"

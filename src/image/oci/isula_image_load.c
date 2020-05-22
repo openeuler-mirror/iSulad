@@ -20,7 +20,7 @@
 #include "utils.h"
 #include "libisulad.h"
 #include "utils_verify.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 const int g_output_max_size = 10 * SIZE_MB; /* 10M */
 

@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 int rbtree_ptr_cmp(const void *first, const void *last)

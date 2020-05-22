@@ -19,7 +19,7 @@
 
 #include "constants.h"
 #include "container_unix.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 static int parse_container_log_configs(container_t *cont);

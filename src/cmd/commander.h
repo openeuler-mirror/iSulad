@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "host_config.h"
+#include "isula_libutils/host_config.h"
 
 #ifdef __cplusplus
 extern "C" {

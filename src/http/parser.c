@@ -43,7 +43,7 @@
 
 #include "parser.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 size_t strlncat(char *dststr, size_t size, const char *srcstr, size_t nsize)
 {

@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 
 #ifdef __cplusplus
 extern "C" {

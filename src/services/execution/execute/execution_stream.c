@@ -29,7 +29,7 @@
 #include <sys/inotify.h>
 #include <libgen.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "engine.h"
 #include "console.h"
 #include "isulad_config.h"
@@ -37,12 +37,12 @@
 #include "image.h"
 #include "path.h"
 #include "libtar.h"
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 #include "containers_store.h"
 #include "container_state.h"
 #include "containers_gc.h"
 #include "error.h"
-#include "logger_json_file.h"
+#include "isula_libutils/logger_json_file.h"
 #include "constants.h"
 #include "runtime.h"
 #include "collector.h"
@@ -266,7 +266,7 @@ static int do_append_process_exec_env(const char **default_env, defs_process *sp
     }
 
     if (default_env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
@@ -362,7 +362,7 @@ static int merge_exec_from_container_env(defs_process *spec, const container_con
     size_t i = 0;
 
     if (container_spec->env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
@@ -387,7 +387,7 @@ static int merge_envs_from_request_env(defs_process *spec, const char **envs, si
     size_t i = 0;
 
     if (env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
@@ -754,7 +754,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     }
     id = cont->common_config->id;
 
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: execing}", id);
 
     get_exec_command(cont->common_config->config, request, exec_command, sizeof(exec_command));
@@ -826,7 +826,7 @@ pack_response:
     free_defs_process_user(puser);
     container_unref(cont);
 
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -956,7 +956,7 @@ static int container_attach_cb(const container_attach_request *request, containe
         goto pack_response;
     }
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     if (attach_check_container_state(cont)) {
         close_io_writer(stdout_handler, stderr_handler);
@@ -998,7 +998,7 @@ pack_response:
     free(fifos[2]);
     free(fifopath);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -2304,7 +2304,7 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
         goto out;
     }
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     status = state_get_status(cont->state);
     if (status == CONTAINER_STATUS_CREATED) {
@@ -2364,7 +2364,7 @@ out:
 
     container_unref(cont);
     container_log_config_free(log_config);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 

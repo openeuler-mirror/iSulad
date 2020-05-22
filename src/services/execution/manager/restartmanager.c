@@ -22,7 +22,7 @@
 #include <pthread.h>
 
 #include "error.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isulad_config.h"
 #include "restartmanager.h"
 #include "utils.h"

@@ -17,7 +17,7 @@
 #include "arguments.h"
 #include "update.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 const char g_cmd_update_desc[] = "Update configuration of one or more containers";
@@ -105,7 +105,7 @@ int cmd_update_main(int argc, const char **argv)
 {
     int ret = 0;
     int i = 0;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
     struct command_option options[] = {
         LOG_OPTIONS(lconf),
@@ -113,7 +113,7 @@ int cmd_update_main(int argc, const char **argv)
         COMMON_OPTIONS(g_cmd_update_args)
     };
 
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_update_args)) {
         COMMAND_ERROR("client arguments init failed\n");
         exit(ECOMMON);
@@ -129,7 +129,7 @@ int cmd_update_main(int argc, const char **argv)
         COMMAND_ERROR("You must provide one or more udpate flags when using this command\n");
         exit(ECOMMON);
     }
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Update: log init failed");
         exit(ECOMMON);
     }

@@ -14,9 +14,9 @@
  ******************************************************************************/
 
 #include "utils.h"
-#include "log.h"
-#include "oci_runtime_spec.h"
-#include "oci_runtime_pspec.h"
+#include "isula_libutils/log.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/oci_runtime_pspec.h"
 #include "plugin.h"
 #include "pspec.h"
 

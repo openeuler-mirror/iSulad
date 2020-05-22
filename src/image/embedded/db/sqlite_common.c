@@ -14,12 +14,13 @@
  ******************************************************************************/
 #include "sqlite_common.h"
 #include <limits.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
 #include "utils.h"
 #include "constants.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "db_common.h"
 
 // Waiting at most (10 * 1000ms) when database is busy

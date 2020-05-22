@@ -16,7 +16,7 @@
 #define __ISULAD_LOG_GATHER_H_
 
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 #define LOG_FIFO_SIZE (1024 * 1024)
 

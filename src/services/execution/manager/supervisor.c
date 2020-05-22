@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "supervisor.h"
 #include "mainloop.h"

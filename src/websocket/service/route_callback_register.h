@@ -21,7 +21,7 @@
 #include <utility>
 #include <map>
 #include <unistd.h>
-#include "log.h"
+#include "isula_libutils/log.h"
 class StreamingServeInterface {
 public:
     StreamingServeInterface() = default;

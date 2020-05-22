@@ -29,7 +29,7 @@
 #include "arguments.h"
 #include "stats.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 #define ESC "\033"
@@ -222,7 +222,7 @@ static int client_stats(const struct client_arguments *args)
 
 int cmd_stats_main(int argc, const char **argv)
 {
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
     struct command_option options[] = {
         LOG_OPTIONS(lconf),
@@ -237,11 +237,11 @@ int cmd_stats_main(int argc, const char **argv)
     g_cmd_stats_args.progname = argv[0];
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_stats_desc,
                  g_cmd_stats_usage);
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (command_parse_args(&cmd, &g_cmd_stats_args.argc, &g_cmd_stats_args.argv)) {
         exit(EINVALIDARGS);
     }
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Stats: log init failed");
         exit(ECOMMON);
     }

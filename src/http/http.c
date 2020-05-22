@@ -18,7 +18,7 @@
 
 #include "http.h"
 #include "buffer.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 size_t fwrite_buffer(const char *ptr, size_t eltsize, size_t nmemb, void *buffer_)
@@ -236,7 +236,7 @@ static int ensure_path_file(char **rpath, const struct http_get_options *options
     }
     *pagefile = util_fopen(*rpath, "w+");
     if (*pagefile == NULL) {
-        ERROR("Failed to open file %s\n", options->output);
+        ERROR("Failed to open file %s\n", (const char *)options->output);
         return -1;
     }
     return 0;

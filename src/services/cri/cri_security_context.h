@@ -18,8 +18,8 @@
 #include <string>
 #include "api.pb.h"
 #include "errors.h"
-#include "host_config.h"
-#include "container_config.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/container_config.h"
 
 namespace CRISecurity {
 void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_config *config,

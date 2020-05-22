@@ -15,7 +15,7 @@
 #include "error.h"
 #include "wait.h"
 #include "arguments.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 const char g_cmd_wait_desc[] = "Block until one or more containers stop, then print their exit codes";
@@ -76,14 +76,14 @@ out:
 
 int cmd_wait_main(int argc, const char **argv)
 {
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     unsigned int exit_code = 0;
     int i = 0;
     int status = 0;
     command_t cmd;
     struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_wait_args) };
 
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_wait_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
@@ -94,7 +94,7 @@ int cmd_wait_main(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_wait_args.argc, &g_cmd_wait_args.argv)) {
         exit(EINVALIDARGS);
     }
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Wait: log init failed");
         exit(ECOMMON);
     }

@@ -32,11 +32,10 @@
 #include <sys/statvfs.h>
 #include <sys/syscall.h>
 #include "map.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "namespace.h"
 #include "libisulad.h"
-#include "read_file.h"
 
 #define SELINUXFS_MOUNT "/sys/fs/selinux"
 #define SELINUXFS_MAGIC 0xf97cff8c
@@ -212,7 +211,6 @@ static int get_selinux_mount_point(char **fs)
 static int read_con(const char *fpath, char **content)
 {
     int ret = 0;
-    size_t file_size = 0;
     char *tmp = NULL;
     char *trim_str = NULL;
 
@@ -221,7 +219,7 @@ static int read_con(const char *fpath, char **content)
         return -1;
     }
 
-    tmp = read_file(fpath, &file_size);
+    tmp = isula_utils_read_file(fpath);
     if (tmp == NULL) {
         ERROR("Failed to read file: %s", fpath);
         ret = -1;
@@ -794,7 +792,7 @@ int init_label(const char **label_opts, size_t label_opts_len, char **dst_proces
             }
         }
         if (release_label(process_label) != 0) {
-            ERROR("Failed to release process label", process_label);
+            ERROR("Failed to release process label: %s", process_label);
             ret = -1;
             goto out;
         }
@@ -803,7 +801,7 @@ int init_label(const char **label_opts, size_t label_opts_len, char **dst_proces
         free(mount_label);
         mount_label = util_strdup_s(context_str(mcon));
         if (reserve_label(process_label) != 0) {
-            ERROR("Failed to release process label", process_label);
+            ERROR("Failed to release process label: %s", process_label);
             ret = -1;
             goto out;
         }

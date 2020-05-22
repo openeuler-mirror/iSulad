@@ -17,7 +17,7 @@
 #include <openssl/pem.h>
 #include <string.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 int get_common_name_from_tls_cert(const char *cert_path, char *value, size_t len)

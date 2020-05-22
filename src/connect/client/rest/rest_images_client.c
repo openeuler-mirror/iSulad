@@ -16,7 +16,7 @@
 #include "error.h"
 #include <limits.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "image.rest.h"
 #include "rest_common.h"

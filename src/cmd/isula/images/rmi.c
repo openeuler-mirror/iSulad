@@ -21,7 +21,7 @@
 #include "utils.h"
 #include "arguments.h"
 #include "isula_connect.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 const char g_cmd_rmi_desc[] = "Remove one or more images";
 const char g_cmd_rmi_usage[] = "rmi [OPTIONS] IMAGE [IMAGE...]";
@@ -77,7 +77,7 @@ int cmd_rmi_main(int argc, const char **argv)
 {
     int i = 0;
     int err = 0;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1; /* exit 1 if remove failed because docker return 1 */
     command_t cmd;
     struct command_option options[] = {
@@ -86,7 +86,7 @@ int cmd_rmi_main(int argc, const char **argv)
         RMI_OPTIONS(g_cmd_rmi_args)
     };
 
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_rmi_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
@@ -97,7 +97,7 @@ int cmd_rmi_main(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_rmi_args.argc, &g_cmd_rmi_args.argv)) {
         exit(exit_code);
     }
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("RMI: log init failed");
         exit(exit_code);
     }

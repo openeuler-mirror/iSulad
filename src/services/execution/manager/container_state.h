@@ -18,7 +18,7 @@
 #include <pthread.h>
 
 #include "libisulad.h"
-#include "container_config_v2.h"
+#include "isula_libutils/container_config_v2.h"
 #include "engine.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)

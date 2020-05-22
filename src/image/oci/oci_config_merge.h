@@ -16,9 +16,9 @@
 #ifndef __OCI_IMAGE_MERGE_CONFIG_H_
 #define __OCI_IMAGE_MERGE_CONFIG_H_
 
-#include "imagetool_image.h"
-#include "oci_runtime_spec.h"
-#include "container_config.h"
+#include "isula_libutils/imagetool_image.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/container_config.h"
 
 #ifdef __cplusplus
 extern "C" {

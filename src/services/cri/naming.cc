@@ -20,7 +20,7 @@
 #include <string>
 #include <errno.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 namespace CRINaming {

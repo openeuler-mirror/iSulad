@@ -22,10 +22,10 @@
 #include "api.pb.h"
 #include "errors.h"
 #include "container_def.h"
-#include "host_config.h"
+#include "isula_libutils/host_config.h"
 #include "callback.h"
-#include "docker_seccomp.h"
-#include "cri_pod_network.h"
+#include "isula_libutils/docker_seccomp.h"
+#include "isula_libutils/cri_pod_network.h"
 #include "checkpoint_handler.h"
 #include "image.h"
 

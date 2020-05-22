@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include "engine.h"
-#include "host_config.h"
+#include "isula_libutils/host_config.h"
 
 struct restart_policy {
     char *name;

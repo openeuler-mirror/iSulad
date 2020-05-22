@@ -16,7 +16,7 @@
 #include <string.h>
 
 #include "map.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 static void map_free_key_value(void *key, void *val)

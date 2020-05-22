@@ -23,12 +23,12 @@
 
 #include "arguments.h"
 #include "exec.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
 #include "commands.h"
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 
 const char g_cmd_exec_desc[] = "Run a command in a running container";
 const char g_cmd_exec_usage[] = "exec [OPTIONS] CONTAINER COMMAND [ARG...]";
@@ -146,7 +146,7 @@ out:
 static int exec_cmd_init(int argc, const char **argv)
 {
     command_t cmd;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
     struct command_option options[] = {
         LOG_OPTIONS(lconf),
@@ -154,7 +154,7 @@ static int exec_cmd_init(int argc, const char **argv)
         EXEC_OPTIONS(g_cmd_exec_args)
     };
 
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_exec_args)) {
         COMMAND_ERROR("client arguments init failed\n");
         exit(ECOMMON);
@@ -166,7 +166,7 @@ static int exec_cmd_init(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_exec_args.argc, &g_cmd_exec_args.argv)) {
         return EINVALIDARGS;
     }
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Exec: log init failed");
         return ECOMMON;
     }

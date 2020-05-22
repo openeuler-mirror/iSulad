@@ -20,14 +20,14 @@
 
 #include <limits.h>
 #include "isula_rt_ops.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "error.h"
 #include "runtime.h"
 #include "engine.h"
 #include "constants.h"
-#include "shim_client_process_state.h"
-#include "shim_client_runtime_stats.h"
-#include "oci_runtime_state.h"
+#include "isula_libutils/shim_client_process_state.h"
+#include "isula_libutils/shim_client_runtime_stats.h"
+#include "isula_libutils/oci_runtime_state.h"
 #include "isulad_config.h"
 #include "utils_string.h"
 #include "libisulad.h"
@@ -1040,7 +1040,7 @@ int rt_isula_exec(const char *id, const char *runtime,
 
     ret = create_process_json_file(workdir, &p);
     if (ret != 0) {
-        ERROR("%s: failed create exec json file");
+        ERROR("%s: failed create exec json file", id);
         goto out;
     }
 

@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 int isula_do_health_check()
 {

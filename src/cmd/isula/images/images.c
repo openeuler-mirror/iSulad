@@ -22,7 +22,7 @@
 #include "utils.h"
 #include "arguments.h"
 #include "isula_connect.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 #define IMAGES_OPTIONS(cmdargs)                                                                          \
     { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display image names", NULL }, \
@@ -301,11 +301,10 @@ out:
 /* cmd images main */
 int cmd_images_main(int argc, const char **argv)
 {
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     int exit_code = ECOMMON;
     command_t cmd;
 
-    set_default_command_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_images_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
@@ -322,7 +321,8 @@ int cmd_images_main(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_images_args.argc, &g_cmd_images_args.argv)) {
         exit(exit_code);
     }
-    if (log_init(&lconf)) {
+    isula_libutils_default_log_config(argv[0], &lconf);
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Images: log init failed");
         exit(exit_code);
     }

@@ -19,8 +19,8 @@
 #include <stdint.h>
 
 #include "container_def.h"
-#include "container_path_stat.h"
-#include "json_common.h"
+#include "isula_libutils/container_path_stat.h"
+#include "isula_libutils/json_common.h"
 #include "console.h"
 
 #ifdef __cplusplus

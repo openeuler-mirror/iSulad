@@ -23,7 +23,7 @@
 
 #include "containers_store.h"
 #include "specs_extend.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "embedded_image.h"
 #include "lim.h"
 #include "embedded_config_merge.h"
@@ -51,9 +51,9 @@ out:
 
 bool embedded_detect(const char *image_name)
 {
-    if (image_name == NULL && !util_valid_embedded_image_name(image_name)) {
-        WARN("invalid image name %s", image_name);
-        isulad_set_error_message("Invalid image name '%s'", image_name);
+    if (image_name == NULL || !util_valid_embedded_image_name(image_name)) {
+        WARN("invalid image name: %s", image_name != NULL ? image_name : "");
+        isulad_set_error_message("Invalid image name '%s'", image_name != NULL ? image_name : "");
         return false;
     }
 

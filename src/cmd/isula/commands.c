@@ -22,7 +22,7 @@
 
 #include "arguments.h"
 #include "config.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "console.h"
 #include "constants.h"

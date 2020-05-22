@@ -16,7 +16,7 @@
 #include <limits.h>
 #include "utils.h"
 #include "arguments.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 const char g_cmd_export_desc[] = "export container";
@@ -66,14 +66,14 @@ int cmd_export_main(int argc, const char **argv)
 {
     int i = 0;
     char file[PATH_MAX] = { 0 };
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
     lconf.name = argv[0];
     lconf.quiet = true;
     lconf.driver = "stdout";
     lconf.file = NULL;
     lconf.priority = "ERROR";
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Export: log init failed");
         exit(ECOMMON);
     }

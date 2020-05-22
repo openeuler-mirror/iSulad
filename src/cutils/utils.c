@@ -41,8 +41,8 @@
 #include <termios.h>
 
 #include "utils.h"
-#include "log.h"
-#include "json_common.h"
+#include "isula_libutils/log.h"
+#include "isula_libutils/json_common.h"
 
 int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
 {

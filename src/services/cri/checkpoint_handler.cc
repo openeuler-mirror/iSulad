@@ -23,9 +23,9 @@
 
 #include "constants.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "cri_helpers.h"
-#include "cri_checkpoint.h"
+#include "isula_libutils/cri_checkpoint.h"
 
 namespace cri {
 PortMapping &PortMapping::operator=(const PortMapping &obj)

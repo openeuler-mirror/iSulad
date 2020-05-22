@@ -17,7 +17,7 @@
 #include <stddef.h>
 
 #include "isulad_config.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #ifdef ENABLE_OCI_IMAGE
 #include "driver.h"
 

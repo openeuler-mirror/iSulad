@@ -17,21 +17,21 @@
 
 #include <stdint.h>
 
-#include "oci_image_manifest.h"
-#include "oci_image_index.h"
-#include "oci_image_spec.h"
-#include "oci_runtime_spec.h"
-#include "host_config.h"
-#include "container_config.h"
+#include "isula_libutils/oci_image_manifest.h"
+#include "isula_libutils/oci_image_index.h"
+#include "isula_libutils/oci_image_spec.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/container_config.h"
 #include "libisulad.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image_type.h"
 #endif
 
-#include "imagetool_images_list.h"
-#include "imagetool_fs_info.h"
-#include "imagetool_image_status.h"
+#include "isula_libutils/imagetool_images_list.h"
+#include "isula_libutils/imagetool_fs_info.h"
+#include "isula_libutils/imagetool_image_status.h"
 
 #ifdef __cplusplus
 extern "C" {
