@@ -26,18 +26,17 @@
 #include <malloc.h>
 #include <sys/sysinfo.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "engine.h"
 #include "console.h"
 #include "isulad_config.h"
 #include "config.h"
 #include "image.h"
 #include "execution.h"
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 #include "containers_store.h"
 #include "execution_information.h"
 #include "sysinfo.h"
-#include "read_file.h"
 
 #include "container_state.h"
 #include "runtime.h"
@@ -84,7 +83,7 @@ pack_response:
 
     free(rootpath);
 
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
@@ -343,7 +342,7 @@ pack_response:
     free(huge_page_size);
     free(operating_system);
     free_im_image_count_request(im_request);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
@@ -786,7 +785,7 @@ static int container_top_cb(container_top_request *request, container_top_respon
     id = cont->common_config->id;
     rootpath = cont->root_path;
     runtime = cont->runtime;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     if (get_pids(id, runtime, rootpath, &pids, &pids_len, &pid_args) != 0) {
         ERROR("failed to get all pids");
@@ -838,7 +837,7 @@ pack_response:
     free(pid_args);
     free(titles);
     util_free_array_by_len(processes, process_len);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
@@ -1447,7 +1446,7 @@ static int container_inspect_cb(const container_inspect_request *request, contai
         goto pack_response;
     }
 
-    set_log_prefix(name);
+    isula_libutils_set_log_prefix(name);
 
     INFO("Inspect :%s", name);
 
@@ -1465,7 +1464,7 @@ pack_response:
         (*response)->container_json = container_json;
     }
 
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     malloc_trim(0);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
@@ -1529,7 +1528,7 @@ static int container_wait_cb(const container_wait_request *request, container_wa
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     if (request->condition == WAIT_CONDITION_STOPPED) {
         (void)container_wait_stop_locking(cont, -1);
@@ -1544,7 +1543,7 @@ static int container_wait_cb(const container_wait_request *request, container_wa
 pack_response:
     pack_wait_response(*response, cc, exit_code);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -1695,7 +1694,7 @@ static int container_rename_cb(const struct isulad_container_rename_request *req
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: Renaming}", id);
 
@@ -1717,7 +1716,7 @@ static int container_rename_cb(const struct isulad_container_rename_request *req
 pack_response:
     pack_rename_response(*response, id, cc);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 

@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "isulad_config.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static int generate_isula_prepare_request(const char *container_id, const char *image_name,
                                           const json_map_string_string *storage_opt,

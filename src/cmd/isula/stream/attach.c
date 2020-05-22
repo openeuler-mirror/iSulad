@@ -21,7 +21,7 @@
 
 #include "arguments.h"
 #include "exec.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
@@ -154,9 +154,8 @@ out:
 static int attach_cmd_init(int argc, const char **argv)
 {
     command_t cmd;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
-    set_default_command_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_attach_args)) {
         COMMAND_ERROR("client arguments init failed\n");
         exit(ECOMMON);
@@ -169,7 +168,8 @@ static int attach_cmd_init(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_attach_args.argc, &g_cmd_attach_args.argv)) {
         return EINVALIDARGS;
     }
-    if (log_init(&lconf)) {
+    isula_libutils_default_log_config(argv[0], &lconf);
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed");
         return ECOMMON;
     }

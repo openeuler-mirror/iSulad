@@ -17,7 +17,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 bool unix_nanos_to_timestamp(int64_t nanos, types_timestamp_t *timestamp)

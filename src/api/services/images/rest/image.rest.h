@@ -15,14 +15,14 @@
 #ifndef IMAGE_REST_H_
 #define IMAGE_REST_H_
 
-#include "image_load_image_request.h"
-#include "image_load_image_response.h"
-#include "image_list_images_request.h"
-#include "image_list_images_response.h"
-#include "image_delete_image_request.h"
-#include "image_delete_image_response.h"
-#include "image_inspect_request.h"
-#include "image_inspect_response.h"
+#include "isula_libutils/image_load_image_request.h"
+#include "isula_libutils/image_load_image_response.h"
+#include "isula_libutils/image_list_images_request.h"
+#include "isula_libutils/image_list_images_response.h"
+#include "isula_libutils/image_delete_image_request.h"
+#include "isula_libutils/image_delete_image_response.h"
+#include "isula_libutils/image_inspect_request.h"
+#include "isula_libutils/image_inspect_response.h"
 
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"

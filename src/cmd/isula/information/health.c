@@ -15,7 +15,7 @@
 #include "health.h"
 #include "utils.h"
 #include "arguments.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 const char g_cmd_health_check_desc[] = "iSulad health check";
@@ -63,14 +63,14 @@ out:
 
 int cmd_health_check_main(int argc, const char **argv)
 {
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
     lconf.name = argv[0];
     lconf.priority = "ERROR";
     lconf.file = NULL;
     lconf.quiet = true;
     lconf.driver = "stdout";
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Health: log init failed");
         exit(ECOMMON);
     }

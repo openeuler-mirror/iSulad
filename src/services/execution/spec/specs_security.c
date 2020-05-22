@@ -33,14 +33,14 @@
 #endif
 
 #include "error.h"
-#include "log.h"
-#include "oci_runtime_spec.h"
-#include "docker_seccomp.h"
-#include "host_config.h"
+#include "isula_libutils/log.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/docker_seccomp.h"
+#include "isula_libutils/host_config.h"
 #include "utils.h"
 #include "config.h"
 #include "isulad_config.h"
-#include "parse_common.h"
+#include "isula_libutils/parse_common.h"
 #include "container_def.h"
 #include "libisulad.h"
 #include "specs_extend.h"
@@ -794,7 +794,7 @@ int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, c
     }
 
     if (adds_len > LIST_SIZE_MAX || drops_len > LIST_SIZE_MAX) {
-        ERROR("Too many capabilities to add or drop, the limit is %d", LIST_SIZE_MAX);
+        ERROR("Too many capabilities to add or drop, the limit is %lld", LIST_SIZE_MAX);
         isulad_set_error_message("Too many capabilities to add or drop, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
@@ -845,7 +845,7 @@ int merge_sysctls(oci_runtime_spec *oci_spec, const json_map_string_string *sysc
     }
 
     if (sysctls->len > LIST_SIZE_MAX) {
-        ERROR("Too many sysctls to add, the limit is %d", LIST_SIZE_MAX);
+        ERROR("Too many sysctls to add, the limit is %lld", LIST_SIZE_MAX);
         isulad_set_error_message("Too many sysctls to add, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;

@@ -15,7 +15,7 @@
 #ifndef __OCI_REMOTE_CONTAINERS_LIST_H
 #define __OCI_REMOTE_CONTAINERS_LIST_H
 
-#include "json_common.h"
+#include "isula_libutils/json_common.h"
 
 #ifdef __cplusplus
 extern "C" {

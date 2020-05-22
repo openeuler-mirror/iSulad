@@ -23,7 +23,7 @@
 #include "driver_devmapper.h"
 #include "utils.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isulad_config.h"
 #include "image.h"
 

@@ -19,10 +19,10 @@
 
 #include "libisulad.h"
 #include "util_atomic.h"
-#include "container_config_v2.h"
-#include "host_config.h"
+#include "isula_libutils/container_config_v2.h"
+#include "isula_libutils/host_config.h"
 #include "container_state.h"
-#include "oci_runtime_spec.h"
+#include "isula_libutils/oci_runtime_spec.h"
 #include "restartmanager.h"
 #include "events_handler.h"
 #include "health_check.h"

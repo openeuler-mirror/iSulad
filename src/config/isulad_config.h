@@ -17,8 +17,8 @@
 
 #include <stdint.h>
 #include "isulad/arguments.h"
-#include "oci_runtime_spec.h"
-#include "isulad_daemon_configs.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/isulad_daemon_configs.h"
 
 #ifdef __cplusplus
 extern "C" {

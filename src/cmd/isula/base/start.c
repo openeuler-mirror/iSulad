@@ -22,7 +22,7 @@
 #include "arguments.h"
 #include "commander.h"
 #include "start.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
@@ -194,14 +194,14 @@ int cmd_start_main(int argc, const char **argv)
 {
     int ret = 0;
     int i = 0;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
     struct command_option options[] = {
         LOG_OPTIONS(lconf),
         COMMON_OPTIONS(g_cmd_start_args)
     };
 
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_start_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
@@ -213,7 +213,7 @@ int cmd_start_main(int argc, const char **argv)
         exit(EINVALIDARGS);
     }
 
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Start: log init failed");
         exit(ECOMMON);
     }

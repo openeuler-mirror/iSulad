@@ -25,11 +25,11 @@
 #include "network_plugin.h"
 #include "cri_services.h"
 #include "callback.h"
-#include "container_inspect.h"
-#include "host_config.h"
+#include "isula_libutils/container_inspect.h"
+#include "isula_libutils/host_config.h"
 #include "errors.h"
 #include "cri_image_service.h"
-#include "cri_pod_network.h"
+#include "isula_libutils/cri_pod_network.h"
 
 namespace CRIRuntimeService {
 class Constants {

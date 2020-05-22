@@ -19,7 +19,7 @@
 
 #include "libisulad.h"
 #include "util_atomic.h"
-#include "imagetool_image_status.h"
+#include "isula_libutils/imagetool_image_status.h"
 
 
 #if defined(__cplusplus) || defined(c_plusplus)

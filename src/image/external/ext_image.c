@@ -21,7 +21,7 @@
 #include <sys/utsname.h>
 #include <ctype.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "specs_extend.h"
 #include "ext_image.h"

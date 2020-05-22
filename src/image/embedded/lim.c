@@ -17,13 +17,13 @@
 #include <limits.h>
 
 #include "error.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "lim.h"
 #include "libisulad.h"
 #include "mediatype.h"
 #include "snapshot.h"
 #include "snapshot_def.h"
-#include "embedded_manifest.h"
+#include "isula_libutils/embedded_manifest.h"
 #include "db_all.h"
 #include "path.h"
 #include "image.h"
@@ -193,7 +193,7 @@ static bool validate_layer_path_in_host_real(size_t layer_index,
     }
 
     if (!util_valid_file(real_path, fmod)) {
-        ERROR("invalid path in host %s, real path is %s, layer %u",
+        ERROR("invalid path in host %s, real path is %s, layer %ld",
               path_in_host, real_path, layer_index);
         if (fmod == (uint32_t)S_IFREG) {
             isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a regular file");
@@ -215,14 +215,14 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
     if (layer_index == 0) {
         /* layer 0 is absolute path of rootfs device  or host / */
         if (!valid_absolute_path(path_in_host)) {
-            ERROR("path in host %s not a absolute path, layer %u", path_in_host,
+            ERROR("path in host %s not a absolute path, layer %lu", path_in_host,
                   layer_index);
             isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be absolute path");
             return false;
         }
 
         if ((int)fmod == S_IFDIR && strcmp(path_in_host, "/") != 0) {
-            ERROR("expected / as root, got %s, layer %u", path_in_host,
+            ERROR("expected / as root, got %s, layer %lu", path_in_host,
                   layer_index);
             isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be /");
             return false;
@@ -234,7 +234,7 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
         char parent_location[PATH_MAX] = { 0 };
         int sret = 0;
         if (!valid_relative_path(path_in_host)) {
-            ERROR("path in host %s not a relative path, layer %u", path_in_host, layer_index);
+            ERROR("path in host %s not a relative path, layer %lu", path_in_host, layer_index);
             isulad_try_set_error_message("Invalid content in manifest:"
                                          " layer path in host(except first layer) must be relative path");
             return false;
@@ -413,7 +413,7 @@ static bool validate_image_name(char *image_name)
 static bool validate_image_layers_number(size_t layers_len)
 {
     if (layers_len > LAYER_NUM_MAX || layers_len < 1) {
-        ERROR("invalid layers number %d maxium is %d", layers_len, LAYER_NUM_MAX);
+        ERROR("invalid layers number %ld maxium is %d", layers_len, LAYER_NUM_MAX);
         isulad_try_set_error_message("Invalid content in mainfest: layer empty or max depth exceeded");
         return false;
     }
@@ -624,7 +624,7 @@ int lim_create_image_end(struct image_creator *ic)
     }
 
     if (strcmp(ic->type, IMAGE_TYPE_EMBEDDED) != 0) {
-        ERROR("invalid image type %u", ic->type);
+        ERROR("invalid image type %s", ic->type);
         return -1;
     }
 

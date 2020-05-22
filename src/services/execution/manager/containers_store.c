@@ -16,7 +16,7 @@
 #include <pthread.h>
 
 #include "containers_store.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 typedef struct memory_store_t {

@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static int generate_isula_remove_request(const char *name_id, struct isula_remove_request **ireq)
 {

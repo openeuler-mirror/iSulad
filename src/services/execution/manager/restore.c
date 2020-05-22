@@ -20,7 +20,7 @@
 #include <pthread.h>
 
 #include "isulad_config.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "restore.h"
 #include "containers_store.h"
 #include "supervisor.h"

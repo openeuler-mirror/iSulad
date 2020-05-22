@@ -15,7 +15,7 @@
 #include "rest_common.h"
 #include <dlfcn.h>
 #include <string.h>
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 typedef size_t (*buffer_strlen_t)(Buffer *buf);

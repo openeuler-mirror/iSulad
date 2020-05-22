@@ -15,7 +15,7 @@
 #include "resume.h"
 #include "utils.h"
 #include "arguments.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 const char g_cmd_resume_desc[] = "Unpause all processes within one or more containers";
@@ -62,14 +62,14 @@ int cmd_resume_main(int argc, const char **argv)
 {
     int i = 0;
     int status = 0;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
     lconf.name = argv[0];
     lconf.quiet = true;
     lconf.driver = "stdout";
     lconf.file = NULL;
     lconf.priority = "ERROR";
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("Resume: log init failed");
         exit(ECOMMON);
     }

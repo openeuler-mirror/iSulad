@@ -16,7 +16,7 @@
 #include <memory>
 #include "cri_runtime_service.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 namespace CRISecurity {
 static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,

@@ -17,10 +17,10 @@
 
 #include <stdint.h>
 #include "libisulad.h"
-#include "host_config.h"
-#include "container_config_v2.h"
-#include "oci_runtime_hooks.h"
-#include "oci_runtime_spec.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/container_config_v2.h"
+#include "isula_libutils/oci_runtime_hooks.h"
+#include "isula_libutils/oci_runtime_spec.h"
 
 int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_config *container_spec);
 

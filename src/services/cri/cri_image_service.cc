@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <grpc++/grpc++.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "cri_helpers.h"
 

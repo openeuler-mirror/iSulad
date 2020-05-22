@@ -17,9 +17,9 @@
 
 #include <stdint.h>
 #include "libisulad.h"
-#include "host_config.h"
-#include "container_config_v2.h"
-#include "oci_runtime_spec.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/container_config_v2.h"
+#include "isula_libutils/oci_runtime_spec.h"
 int merge_default_seccomp_spec(oci_runtime_spec *oci_spec,
                                const defs_process_capabilities *capabilites);
 int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, const char **drops,

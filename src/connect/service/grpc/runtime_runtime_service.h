@@ -20,7 +20,7 @@
 #include "callback.h"
 #include "cri_runtime_service.h"
 #include "network_plugin.h"
-#include "isulad_daemon_configs.h"
+#include "isula_libutils/isulad_daemon_configs.h"
 #include "errors.h"
 
 // Implement of runtime RuntimeService

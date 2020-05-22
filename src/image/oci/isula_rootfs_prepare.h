@@ -16,7 +16,7 @@
 #define __IMAGE_ISULA_PREPARE_H
 
 #include "image.h"
-#include "oci_image_spec.h"
+#include "isula_libutils/oci_image_spec.h"
 
 #ifdef __cplusplus
 extern "C" {

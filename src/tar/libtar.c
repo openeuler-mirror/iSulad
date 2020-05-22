@@ -29,9 +29,9 @@
 #include "libtar.h"
 #include "utils.h"
 #include "path.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "error.h"
-#include "json_common.h"
+#include "isula_libutils/json_common.h"
 
 #define TAR_MAX_OPTS 50
 #define TAR_CMD "tar"

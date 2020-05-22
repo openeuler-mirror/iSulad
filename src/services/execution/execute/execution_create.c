@@ -28,7 +28,7 @@
 #include <sys/eventfd.h>
 #include <malloc.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "engine.h"
 #include "console.h"
 #include "isulad_config.h"
@@ -534,7 +534,7 @@ static int maintain_container_id(const container_create_request *request, char *
         goto out;
     }
 
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     if (request->id != NULL) {
         name = util_strdup_s(request->id);
@@ -980,7 +980,7 @@ int container_create_cb(const container_create_request *request,
 
     host_channel = dup_host_channel(host_spec->host_channel);
     if (prepare_host_channel(host_channel, host_spec->user_remap)) {
-        ERROR("Failed to prepare host channel with '%s'", host_spec->host_channel);
+        ERROR("Failed to prepare host channel");
         sleep(111);
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
@@ -1042,7 +1042,7 @@ pack_response:
     free_host_config(host_spec);
     free_container_config_v2_common_config(v2_spec);
     free_host_config_host_channel(host_channel);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     malloc_trim(0);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }

@@ -31,16 +31,16 @@
 #include <ctype.h>
 
 #include "error.h"
-#include "log.h"
-#include "oci_runtime_spec.h"
-#include "oci_runtime_hooks.h"
-#include "host_config.h"
+#include "isula_libutils/log.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/oci_runtime_hooks.h"
+#include "isula_libutils/host_config.h"
 #include "utils.h"
 #include "config.h"
 #include "path.h"
 #include "isulad_config.h"
 #include "namespace.h"
-#include "parse_common.h"
+#include "isula_libutils/parse_common.h"
 #include "specs_mount.h"
 #include "specs_extend.h"
 #include "containers_store.h"
@@ -1097,7 +1097,7 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
 
     /* malloc for linux->device */
     if (devices_len > LIST_DEVICE_SIZE_MAX - oci_spec->linux->devices_len) {
-        ERROR("Too many linux devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
+        ERROR("Too many linux devices to merge, the limit is %lld", LIST_DEVICE_SIZE_MAX);
         isulad_set_error_message("Too many linux devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
         ret = -1;
         goto out;
@@ -1423,7 +1423,7 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
         goto out;
     }
     if (volumes_len > LIST_SIZE_MAX - oci_spec->mounts_len) {
-        ERROR("Too many volumes to merge, the limit is %d", LIST_SIZE_MAX);
+        ERROR("Too many volumes to merge, the limit is %lld", LIST_SIZE_MAX);
         isulad_set_error_message("Too many volumes to merge, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
@@ -1616,7 +1616,7 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
     }
 
     if (oci_spec->linux->resources->block_io->weight_device_len > LIST_DEVICE_SIZE_MAX - blkio_weight_device_len) {
-        ERROR("Too many weight devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
+        ERROR("Too many weight devices to merge, the limit is %lld", LIST_DEVICE_SIZE_MAX);
         isulad_set_error_message("Too many weight devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
         ret = -1;
         goto out;
@@ -1669,7 +1669,7 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
 
     if (oci_spec->linux->resources->block_io->throttle_read_bps_device_len >
         LIST_DEVICE_SIZE_MAX - throttle_read_bps_device_len) {
-        ERROR("Too many throttle read bps devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
+        ERROR("Too many throttle read bps devices to merge, the limit is %lld", LIST_DEVICE_SIZE_MAX);
         isulad_set_error_message("Too many throttle read bps devices devices to merge, the limit is %d",
                                  LIST_DEVICE_SIZE_MAX);
         ret = -1;
@@ -1722,7 +1722,7 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
 
     if (oci_spec->linux->resources->block_io->throttle_write_bps_device_len >
         LIST_DEVICE_SIZE_MAX - throttle_write_bps_device_len) {
-        ERROR("Too many throttle write bps devices to merge, the limit is %d", LIST_DEVICE_SIZE_MAX);
+        ERROR("Too many throttle write bps devices to merge, the limit is %lld", LIST_DEVICE_SIZE_MAX);
         isulad_set_error_message("Too many throttle write bps devices devices to merge, the limit is %d",
                                  LIST_DEVICE_SIZE_MAX);
         ret = -1;
@@ -2021,7 +2021,7 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
     }
 
     if (!util_file_exists(v2_spec->hosts_path)) {
-        WARN("HostsPath set to %s, but can't stat this filename (err = %v); skipping", v2_spec->resolv_conf_path);
+        WARN("HostsPath set to %s, but can't stat this filename; skipping", v2_spec->resolv_conf_path);
     } else {
         /* add network config files */
         if (!has_hosts_mount) {
@@ -2038,7 +2038,7 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
         }
     }
     if (!util_file_exists(v2_spec->resolv_conf_path)) {
-        WARN("ResolvConfPath set to %s, but can't stat this filename (err = %v); skipping", v2_spec->resolv_conf_path);
+        WARN("ResolvConfPath set to %s, but can't stat this filename skipping", v2_spec->resolv_conf_path);
     } else {
         if (!has_resolv_mount) {
             if (relabel(v2_spec->resolv_conf_path, v2_spec->mount_label, share) != 0) {
@@ -2055,7 +2055,7 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
     }
 
     if (!util_file_exists(v2_spec->hostname_path)) {
-        WARN("HostnamePath set to %s, but can't stat this filename (err = %v); skipping", v2_spec->resolv_conf_path);
+        WARN("HostnamePath set to %s, but can't stat this filename; skipping", v2_spec->resolv_conf_path);
     } else {
         if (!has_hostname_mount) {
             if (relabel(v2_spec->hostname_path, v2_spec->mount_label, share) != 0) {

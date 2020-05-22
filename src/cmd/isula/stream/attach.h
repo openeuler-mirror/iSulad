@@ -16,7 +16,7 @@
 #define __CMD_ATTACH_H
 
 #include "arguments.h"
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 #include "wait.h"
 
 extern const char g_cmd_attach_desc[];

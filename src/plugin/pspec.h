@@ -16,8 +16,8 @@
 #ifndef PSPEC_H
 #define PSPEC_H /* PSPEC_H */
 
-#include "oci_runtime_spec.h"
-#include "oci_runtime_pspec.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/oci_runtime_pspec.h"
 
 /*
  * extract pspec from oci.

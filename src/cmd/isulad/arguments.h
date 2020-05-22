@@ -17,8 +17,8 @@
 
 #include <stdbool.h>
 #include <stdio.h>
-#include "isulad_daemon_configs.h"
-#include "oci_runtime_hooks.h"
+#include "isula_libutils/isulad_daemon_configs.h"
+#include "isula_libutils/oci_runtime_hooks.h"
 #include "commander.h"
 
 #ifdef ENABLE_OCI_IMAGE

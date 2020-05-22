@@ -29,7 +29,7 @@
 #include "isula_health_check.h"
 #include "global_config.h"
 #include "isulad_config.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils_file.h"
 #include "utils.h"
 

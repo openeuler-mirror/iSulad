@@ -25,7 +25,7 @@
 #include <sys/wait.h>
 
 #include "sha256.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 #define BLKSIZE 32768

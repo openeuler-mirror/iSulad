@@ -15,11 +15,11 @@
 #include "error.h"
 #include "inspect.h"
 #include "arguments.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
-#include "json_common.h"
+#include "isula_libutils/json_common.h"
 #include <regex.h>
 
 const char g_cmd_inspect_desc[] = "Return low-level information on a container or image";
@@ -727,7 +727,7 @@ int cmd_inspect_main(int argc, const char **argv)
 {
     int i = 0;
     int status = 0;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     int success_counts = 0;
     char *filter_string = NULL;
     container_tree_t *tree_array = NULL;
@@ -735,7 +735,6 @@ int cmd_inspect_main(int argc, const char **argv)
     command_t cmd;
     bool json_format = true;
 
-    set_default_command_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_inspect_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
@@ -752,7 +751,8 @@ int cmd_inspect_main(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_inspect_args.argc, &g_cmd_inspect_args.argv)) {
         exit(EINVALIDARGS);
     }
-    if (log_init(&lconf)) {
+    isula_libutils_default_log_config(argv[0], &lconf);
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed");
         exit(ECOMMON);
     }

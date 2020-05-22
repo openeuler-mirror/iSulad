@@ -29,9 +29,9 @@
 #include <ctype.h>
 
 #include "error.h"
-#include "log.h"
-#include "oci_runtime_spec.h"
-#include "host_config.h"
+#include "isula_libutils/log.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/host_config.h"
 #include "utils.h"
 #include "config.h"
 #include "path.h"
@@ -223,7 +223,7 @@ static int generate_env_map_from_file(FILE *fp, json_map_string_string *env_map)
             key = util_trim_space(key);
             value = util_trim_space(value);
             if ((size_t)(MAX_BUFFER_SIZE - 1) - strlen(key) < strlen(value)) {
-                ERROR("env length exceed %lld bytes", MAX_BUFFER_SIZE);
+                ERROR("env length exceed %d bytes", MAX_BUFFER_SIZE);
                 ret = -1;
                 goto out;
             }
@@ -446,7 +446,7 @@ int merge_env(oci_runtime_spec *oci_spec, const char **env, size_t env_len)
     }
 
     if (env_len > LIST_ENV_SIZE_MAX - oci_spec->process->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
@@ -541,7 +541,7 @@ static void parse_user_group(const char *username, char **user, char **group, ch
 
 static void uids_gids_range_err_log()
 {
-    ERROR("uids and gids must be in range 0-%d", MAXUID);
+    ERROR("uids and gids must be in range 0-%lld", MAXUID);
     isulad_set_error_message("uids and gids must be in range 0-%d", MAXUID);
     return;
 }
@@ -979,7 +979,7 @@ int get_user(const char *basefs, const host_config *hc, const char *userstr, def
 
     if (hc->group_add != NULL && hc->group_add_len > 0) {
         if (hc->group_add_len > LIST_SIZE_MAX) {
-            ERROR("Too many groups to add, the limit is %d", LIST_SIZE_MAX);
+            ERROR("Too many groups to add, the limit is %lld", LIST_SIZE_MAX);
             isulad_set_error_message("Too many groups to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto cleanup;

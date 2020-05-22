@@ -24,7 +24,7 @@
 #include "grpc_images_service.h"
 #include "runtime_runtime_service.h"
 #include "runtime_image_service.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "network_plugin.h"
 #include "errors.h"
 #include "grpc_server_tls_auth.h"

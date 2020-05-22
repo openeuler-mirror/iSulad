@@ -23,7 +23,7 @@
 
 #include "image.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 #include "ext_image.h"

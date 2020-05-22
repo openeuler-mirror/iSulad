@@ -20,10 +20,10 @@
 #include <linux/limits.h>
 
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "libisulad.h"
-#include "oci_runtime_spec.h"
-#include "embedded_manifest.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/embedded_manifest.h"
 #include "specs_extend.h"
 #include "specs_mount.h"
 #include "lim.h"
@@ -60,8 +60,8 @@ static int embedded_merge_env(const embedded_config *config, container_config *c
     }
 
     if (config->env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
-        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -181,8 +181,8 @@ static int embedded_append_mounts(char **volumes, size_t volumes_len, container_
         return 0;
     }
     if (volumes_len > LIST_ENV_SIZE_MAX - container_spec->mounts_len) {
-        ERROR("The length of mounts is too long, the limit is %d", LIST_ENV_SIZE_MAX);
-        isulad_set_error_message("The length of mounts is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ERROR("The length of mounts is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of mounts is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
     }

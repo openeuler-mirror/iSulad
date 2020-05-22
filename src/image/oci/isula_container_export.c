@@ -19,7 +19,7 @@
 #include "connect.h"
 #include "utils.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static struct isula_export_request *generate_isula_export_request(const char *name_id, const char *out_file,
                                                                   uint32_t uid, uint32_t gid,

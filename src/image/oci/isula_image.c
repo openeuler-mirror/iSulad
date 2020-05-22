@@ -17,7 +17,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "run_image_server.h"
 #include "isula_image_connect.h"
 #include "isula_image_pull.h"

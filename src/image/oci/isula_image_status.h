@@ -15,7 +15,7 @@
 #ifndef __OCI_REMOTE_ISULA_IMAGE_STATUS_H
 #define __OCI_REMOTE_ISULA_IMAGE_STATUS_H
 
-#include "imagetool_image.h"
+#include "isula_libutils/imagetool_image.h"
 
 #ifdef __cplusplus
 extern "C" {

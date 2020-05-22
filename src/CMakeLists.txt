@@ -1,15 +1,3 @@
-# generate .c and .h to analyse json file
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/json)
-# get json generate source files
-aux_source_directory(${CMAKE_BINARY_DIR}/json generatesrcs)
-message("--  Get generate srcs: " ${generatesrcs})
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/json/schema/src commonjsonsrcs)
-message("--  Get common json srcs: " ${commonjsonsrcs})
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/json topjsonsrcs)
-message("--  Get top json srcs: " ${topjsonsrcs})
-list(APPEND JSON_FILES ${generatesrcs} ${commonjsonsrcs} ${topjsonsrcs})
-list(REMOVE_DUPLICATES JSON_FILES)
-
 set(CHECKED_INCLUDE_DIRS
     ${STD_HEADER_CTYPE}
     ${STD_HEADER_SYS_PARAM}
@@ -18,7 +6,9 @@ set(CHECKED_INCLUDE_DIRS
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIR}
     ${SYSTEMD_INCLUDE_DIR}
+    ${ISULA_LIBUTILS_INCLUDE_DIR}
     )
+
 if (GRPC_CONNECTOR)
     list(APPEND CHECKED_INCLUDE_DIRS
         ${GRPC_INCLUDE_DIR}
@@ -40,9 +30,6 @@ set(SHARED_INCS
     ${CMAKE_CURRENT_SOURCE_DIR}/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/tar
     ${CMAKE_CURRENT_SOURCE_DIR}/console
-    ${CMAKE_CURRENT_SOURCE_DIR}/json
-    ${CMAKE_CURRENT_SOURCE_DIR}/json/schema/src
-    ${CMAKE_BINARY_DIR}/json
     ${CMAKE_BINARY_DIR}/conf
     ${CHECKED_INCLUDE_DIRS}
     )
@@ -53,7 +40,6 @@ add_subdirectory(cutils)
 add_subdirectory(console)
 
 set(SHARED_SRCS
-    ${JSON_FILES}
     ${TAR_SRCS}
     ${SHA256_SRCS}
     ${CUTILS_SRCS}
@@ -62,7 +48,6 @@ set(SHARED_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/types_def.c
     ${CMAKE_CURRENT_SOURCE_DIR}/error.c
     ${CMAKE_CURRENT_SOURCE_DIR}/path.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/log.c
     ${CMAKE_CURRENT_SOURCE_DIR}/mainloop.c
     )
 
@@ -122,7 +107,7 @@ target_include_directories(libisula PUBLIC
 
 # set libisula FLAGS
 set_target_properties(libisula PROPERTIES PREFIX "")
-target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY})
+target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY})
 
 if (GRPC_CONNECTOR)
     target_link_libraries(libisula -Wl,--as-needed -lstdc++ -lcrypto)
@@ -145,13 +130,9 @@ target_link_libraries(isula libisula -lpthread)
 # ------ build isulad-shim -------
 add_executable(isulad-shim
     ${ISULAD_SHIM_SRCS}
-    ${CMAKE_BINARY_DIR}/json/shim_client_process_state.c
-    ${CMAKE_BINARY_DIR}/json/json_common.c
-    ${CMAKE_BINARY_DIR}/json/logger_json_file.c
-    ${commonjsonsrcs}
     )
 target_include_directories(isulad-shim PUBLIC ${ISULAD_SHIM_INCS} ${SHARED_INCS})
-target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} -lpthread)
+target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread)
 
 # ------ build isula-shim finish -------
 
@@ -214,7 +195,7 @@ target_include_directories(isulad PUBLIC
     )
 
 target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY})
-target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} -lpthread libhttpclient)
+target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread libhttpclient)
 if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(isulad ${SQLITE3_LIBRARY})
 endif()

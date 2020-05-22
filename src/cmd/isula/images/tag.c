@@ -21,7 +21,7 @@
 #include "utils.h"
 #include "arguments.h"
 #include "isula_connect.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 const char g_cmd_tag_desc[] = "Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE";
 const char g_cmd_tag_usage[] = "tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]";
@@ -70,7 +70,7 @@ out:
 
 int cmd_tag_main(int argc, const char **argv)
 {
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1;
     command_t cmd;
     struct command_option options[] = {
@@ -78,7 +78,7 @@ int cmd_tag_main(int argc, const char **argv)
         COMMON_OPTIONS(g_cmd_tag_args),
     };
 
-    set_default_command_log_config(argv[0], &lconf);
+    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_tag_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
@@ -89,7 +89,7 @@ int cmd_tag_main(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_tag_args.argc, &g_cmd_tag_args.argv)) {
         exit(exit_code);
     }
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("RMI: log init failed");
         exit(exit_code);
     }

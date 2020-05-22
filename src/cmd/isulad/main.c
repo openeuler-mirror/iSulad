@@ -41,7 +41,7 @@
 #include "libisulad.h"
 #include "collector.h"
 #include "commands.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "engine.h"
 #include "utils.h"
 #include "isulad_config.h"
@@ -966,7 +966,7 @@ out:
     return ret;
 }
 
-static int init_log_gather_thread(const char *log_full_path, struct log_config *plconf,
+static int init_log_gather_thread(const char *log_full_path, struct isula_libutils_log_config *plconf,
                                   const struct service_arguments *args)
 {
     pthread_t log_thread = { 0 };
@@ -1017,13 +1017,13 @@ static int isulad_server_init_log(const struct service_arguments *args, const ch
 {
 #define FIFO_DRIVER "fifo"
     int ret = -1;
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
     lconf.name = args->progname;
     lconf.file = fifo_full_path;
     lconf.driver = FIFO_DRIVER;
     lconf.priority = args->json_confs->log_level;
-    if (log_init(&lconf) != 0) {
+    if (isula_libutils_log_enable(&lconf) != 0) {
         ERROR("Failed to init log");
         goto out;
     }
@@ -1437,14 +1437,13 @@ out:
 
 static int pre_init_daemon_log()
 {
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
     lconf.name = "isulad";
-    lconf.quiet = true;
     lconf.file = NULL;
     lconf.priority = "ERROR";
     lconf.driver = "stdout";
-    if (log_init(&lconf)) {
+    if (isula_libutils_log_enable(&lconf)) {
         fprintf(stderr, "log init failed\n");
         return -1;
     }

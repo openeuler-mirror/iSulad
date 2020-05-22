@@ -26,7 +26,7 @@
 #include <pthread.h>
 #include <sys/sysinfo.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "engine.h"
 #include "collector.h"
 #include "console.h"
@@ -35,7 +35,7 @@
 #include "restartmanager.h"
 #include "image.h"
 #include "verify.h"
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 #include "containers_store.h"
 #include "containers_gc.h"
 #include "execution_extend.h"
@@ -653,7 +653,7 @@ static int container_resume_cb(const container_resume_request *request, containe
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: Resuming}", id);
 
     if (gc_is_gc_progress(id)) {
@@ -676,7 +676,7 @@ static int container_resume_cb(const container_resume_request *request, containe
 pack_response:
     pack_resume_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -793,7 +793,7 @@ static int container_pause_cb(const container_pause_request *request,
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: Pausing}", id);
 
@@ -817,7 +817,7 @@ static int container_pause_cb(const container_pause_request *request,
 pack_response:
     pack_pause_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -1167,7 +1167,7 @@ static int container_update_cb(const container_update_request *request, containe
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: updating}", id);
 
     if (do_update_resources(request, cont) != 0) {
@@ -1183,7 +1183,7 @@ pack_response:
 
     container_unref(cont);
 
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -1249,7 +1249,7 @@ static int container_export_cb(const container_export_request *request, containe
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     if (gc_is_gc_progress(id)) {
         isulad_set_error_message("You cannot export container %s in garbage collector progress.", id);
@@ -1268,7 +1268,7 @@ static int container_export_cb(const container_export_request *request, containe
 pack_response:
     pack_export_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -1426,7 +1426,7 @@ static int container_resize_cb(const struct isulad_container_resize_request *req
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: Resizing}", id);
 
     ret = resize_container(cont, request->suffix, request->height, request->width);
@@ -1442,7 +1442,7 @@ static int container_resize_cb(const struct isulad_container_resize_request *req
 pack_response:
     pack_resize_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 

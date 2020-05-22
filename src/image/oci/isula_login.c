@@ -19,7 +19,7 @@
 #include "connect.h"
 #include "utils.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static int is_valid_arguments(const char *server, const char *username, const char *password)
 {

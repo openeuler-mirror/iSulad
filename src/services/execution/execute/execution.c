@@ -29,7 +29,7 @@
 #include <malloc.h>
 
 #include "constants.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "engine.h"
 #include "console.h"
 #include "isulad_config.h"
@@ -37,7 +37,7 @@
 #include "image.h"
 #include "execution.h"
 #include "verify.h"
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 #include "containers_store.h"
 #include "supervisor.h"
 #include "containers_gc.h"
@@ -1214,7 +1214,7 @@ static int container_start_cb(const container_start_request *request, container_
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: Starting}", id);
 
@@ -1249,7 +1249,7 @@ pack_response:
         state_reset_starting(cont->state);
         container_unref(cont);
     }
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     malloc_trim(0);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
@@ -1300,7 +1300,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
 
     nret = snprintf(annotations, sizeof(annotations), "signal=%d", signal);
     if (nret < 0 || (size_t)nret >= sizeof(annotations)) {
-        ERROR("Failed to get signal string", id);
+        ERROR("Failed to get signal string");
         ret = -1;
         goto out;
     }
@@ -1544,7 +1544,7 @@ static int container_restart_cb(const container_restart_request *request,
 
     id = cont->common_config->id;
 
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: restarting}", id);
 
@@ -1566,7 +1566,7 @@ static int container_restart_cb(const container_restart_request *request,
 pack_response:
     pack_restart_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -1634,7 +1634,7 @@ static int container_stop_cb(const container_stop_request *request,
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: Stopping}", id);
 
@@ -1657,7 +1657,7 @@ static int container_stop_cb(const container_stop_request *request,
 pack_response:
     pack_stop_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -1764,7 +1764,7 @@ static int container_kill_cb(const container_kill_request *request,
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: Killing, Signal:%u}", id, signal);
 
@@ -1788,7 +1788,7 @@ static int container_kill_cb(const container_kill_request *request,
 pack_response:
     pack_kill_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
@@ -2062,7 +2062,7 @@ static int container_delete_cb(const container_delete_request *request,
     }
 
     id = cont->common_config->id;
-    set_log_prefix(id);
+    isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: Deleting}", id);
 
@@ -2085,7 +2085,7 @@ static int container_delete_cb(const container_delete_request *request,
 pack_response:
     pack_delete_response(*response, cc, id);
     container_unref(cont);
-    free_log_prefix();
+    isula_libutils_free_log_prefix();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 

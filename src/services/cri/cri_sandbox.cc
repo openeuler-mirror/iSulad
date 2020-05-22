@@ -27,11 +27,11 @@
 #include <grpc++/grpc++.h>
 
 #include "cxxutils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "errors.h"
 #include "naming.h"
-#include "host_config.h"
+#include "isula_libutils/host_config.h"
 #include "cri_helpers.h"
 #include "checkpoint_handler.h"
 #include "cri_security_context.h"

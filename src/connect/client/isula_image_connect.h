@@ -18,8 +18,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "json_common.h"
-#include "defs.h"
+#include "isula_libutils/json_common.h"
+#include "isula_libutils/defs.h"
 
 #ifdef __cplusplus
 extern "C" {

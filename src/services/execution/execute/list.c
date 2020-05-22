@@ -16,9 +16,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "containers_store.h"
-#include "timestamp.h"
+#include "isula_libutils/timestamp.h"
 #include "list.h"
 #include "filters.h"
 #include "utils.h"
@@ -631,7 +631,7 @@ static int pack_list_containers(char **idsarray, const struct list_context *ctx,
     }
 
     if (container_nums > (SIZE_MAX / sizeof(container_container *))) {
-        ERROR("Get too many containers:%d", container_nums);
+        ERROR("Get too many containers:%ld", container_nums);
         ret = -1;
         goto out;
     }

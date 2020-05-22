@@ -15,7 +15,7 @@
 #include "isula_helper.h"
 
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isulad_config.h"
 
 int get_isula_image_connect_config(client_connect_config_t *conf)

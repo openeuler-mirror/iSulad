@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "libisulad.h"
 #include "specs_mount.h"
 #include "specs_extend.h"
@@ -50,7 +50,7 @@ static int oci_image_merge_env(const oci_image_spec_config *config, container_co
     }
 
     if (config->env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
+        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
         isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;

@@ -26,7 +26,7 @@
 
 #include "logs.h"
 #include "arguments.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "isula_connect.h"
 
 const char g_cmd_logs_desc[] = "Fetch the logs of a container";
@@ -99,10 +99,9 @@ int callback_tail(command_option_t *option, const char *arg)
 
 static int cmd_logs_init(int argc, const char **argv)
 {
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
 
-    set_default_command_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_logs_args)) {
         COMMAND_ERROR("client arguments init failed\n");
         return ECOMMON;
@@ -119,7 +118,8 @@ static int cmd_logs_init(int argc, const char **argv)
     if (command_parse_args(&cmd, &g_cmd_logs_args.argc, &g_cmd_logs_args.argv)) {
         return EINVALIDARGS;
     }
-    if (log_init(&lconf)) {
+    isula_libutils_default_log_config(argv[0], &lconf);
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed\n");
         g_cmd_logs_args.name = g_cmd_logs_args.argv[0];
         return ECOMMON;

@@ -22,7 +22,7 @@
 #include <poll.h>
 #include <malloc.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "monitord.h"
 #include "mainloop.h"
 #include "isulad_config.h"

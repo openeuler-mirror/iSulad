@@ -20,9 +20,9 @@
 #include <string.h>
 
 #include "utils.h"
-#include "log.h"
-#include "imagetool_auth_input.h"
-#include "json_common.h"
+#include "isula_libutils/log.h"
+#include "isula_libutils/imagetool_auth_input.h"
+#include "isula_libutils/json_common.h"
 #include "oci_auth.h"
 
 char *pack_input_auth_string(auth_config *auth)

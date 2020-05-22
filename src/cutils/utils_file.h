@@ -79,6 +79,8 @@ char *util_path_base(const char *path);
 
 int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode);
 
+char *isula_utils_read_file(const char *path);
+
 #ifdef __cplusplus
 }
 #endif

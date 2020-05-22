@@ -19,7 +19,7 @@
 #include <memory>
 
 #include "errors.h"
-#include "cri_checkpoint.h"
+#include "isula_libutils/cri_checkpoint.h"
 
 namespace cri {
 const std::string SANDBOX_CHECKPOINT_DIR { "sandbox" };

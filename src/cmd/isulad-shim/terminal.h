@@ -18,7 +18,7 @@
 
 #include <pthread.h>
 #include <unistd.h>
-#include "logger_json_file.h"
+#include "isula_libutils/logger_json_file.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -24,7 +24,7 @@
 #include "namespace.h"
 #include "error.h"
 #include "arguments.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "console.h"
 #include "create.h"
@@ -1444,7 +1444,7 @@ int cmd_create_main(int argc, const char **argv)
     int nret = 0;
     int ret = 0;
     command_t cmd = { 0 };
-    struct log_config lconf = { 0 };
+    struct isula_libutils_log_config lconf = { 0 };
 
     if (client_arguments_init(&g_cmd_create_args)) {
         COMMAND_ERROR("client arguments init failed");
@@ -1452,7 +1452,6 @@ int cmd_create_main(int argc, const char **argv)
     }
     g_cmd_create_args.progname = argv[0];
     g_cmd_create_args.subcommand = argv[1];
-    set_default_command_log_config(argv[0], &lconf);
     struct command_option options[] = {
         LOG_OPTIONS(lconf),
         CREATE_OPTIONS(g_cmd_create_args),
@@ -1467,7 +1466,8 @@ int cmd_create_main(int argc, const char **argv)
         nret = EINVALIDARGS;
         goto out;
     }
-    if (log_init(&lconf)) {
+    isula_libutils_default_log_config(argv[0], &lconf);
+    if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed");
         exit(ECOMMON);
     }
@@ -2178,14 +2178,14 @@ static int create_check_nschangeopt(const struct client_arguments *args)
     }
     array_str_len = util_array_len((const char **)array_str);
     if (array_str_len != 1 && array_str_len != 2) {
-        ERROR("invalid ns-change-opt pararm:%s\n", args->custom_conf.ns_change_opt);
+        COMMAND_ERROR("invalid ns-change-opt pararm:%s\n", args->custom_conf.ns_change_opt);
         util_free_array(array_str);
         return EINVALIDARGS;
     }
 
     for (i = 0; i < array_str_len; i++) {
         if ((strcmp(array_str[i], "net") != 0) && (strcmp(array_str[i], "ipc") != 0)) {
-            ERROR("invalid ns-change-opt pararm:%s\n", args->custom_conf.ns_change_opt);
+            COMMAND_ERROR("invalid ns-change-opt pararm:%s\n", args->custom_conf.ns_change_opt);
             util_free_array(array_str);
             return EINVALIDARGS;
         }

@@ -18,7 +18,7 @@
 #include "isula_helper.h"
 #include "connect.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static int generate_isula_rmi_request(const char *image, bool force, struct isula_rmi_request **ireq)
 {

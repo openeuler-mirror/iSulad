@@ -18,7 +18,7 @@
 #include <vector>
 #include "stream_server.h"
 #include "route_callback_register.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 void RuntimeRuntimeServiceImpl::Init(Network::NetworkPluginConf mConf, isulad_daemon_configs *config, Errors &err)
 {

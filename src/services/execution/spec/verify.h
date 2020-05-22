@@ -15,9 +15,9 @@
 #ifndef __VERIFY_H
 #define __VERIFY_H
 
-#include "oci_runtime_spec.h"
-#include "host_config.h"
-#include "container_config.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/container_config.h"
 
 #ifdef __cplusplus
 extern "C" {

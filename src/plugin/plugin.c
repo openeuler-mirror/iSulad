@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "plugin.h"
 #include "pspec.h"
 #include "utils.h"
@@ -34,18 +34,18 @@
 #include "containers_store.h"
 #include "constants.h"
 
-#include "plugin_activate_plugin_request.h"
-#include "plugin_activate_plugin_response.h"
-#include "plugin_init_plugin_request.h"
-#include "plugin_init_plugin_response.h"
-#include "plugin_event_pre_create_request.h"
-#include "plugin_event_pre_create_response.h"
-#include "plugin_event_pre_start_request.h"
-#include "plugin_event_pre_start_response.h"
-#include "plugin_event_post_stop_request.h"
-#include "plugin_event_post_stop_response.h"
-#include "plugin_event_post_remove_request.h"
-#include "plugin_event_post_remove_response.h"
+#include "isula_libutils/plugin_activate_plugin_request.h"
+#include "isula_libutils/plugin_activate_plugin_response.h"
+#include "isula_libutils/plugin_init_plugin_request.h"
+#include "isula_libutils/plugin_init_plugin_response.h"
+#include "isula_libutils/plugin_event_pre_create_request.h"
+#include "isula_libutils/plugin_event_pre_create_response.h"
+#include "isula_libutils/plugin_event_pre_start_request.h"
+#include "isula_libutils/plugin_event_pre_start_response.h"
+#include "isula_libutils/plugin_event_post_stop_request.h"
+#include "isula_libutils/plugin_event_post_stop_response.h"
+#include "isula_libutils/plugin_event_post_remove_request.h"
+#include "isula_libutils/plugin_event_post_remove_response.h"
 
 #define plugin_socket_path "/run/isulad/plugins"
 #define plugin_socket_file_regex ".*.sock$"
@@ -58,7 +58,7 @@
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
 #endif
-#define PluginServiceActivate "/PluginService/Activate"
+#define PluginServiceActivate "/Plugin.Activate"
 #define PluginServiceInit "/PluginService/Init"
 #define PluginServicePreCreate "/PluginService/PreCreate"
 #define PluginServicePreStart "/PluginService/PreStart"
@@ -75,12 +75,12 @@ static int plugin_event_post_remove_handle(const plugin_t *plugin, const char *c
 
 enum plugin_action { ACTIVE_PLUGIN, DEACTIVE_PLUGIN };
 
-static int check_err(int err, const char *msg)
+static inline int check_err(int err, const char *msg)
 {
     if (err) {
         return -1;
     }
-    if (msg != NULL && strlen(msg)) {
+    if (msg != NULL && strlen(msg) > 0) {
         return -1;
     }
     return 0;
@@ -449,6 +449,7 @@ static int do_get_plugin(const char *name, plugin_t **rplugin)
 
     pm_rdlock();
     plugin = map_search(g_plugin_manager->np, (void *)name);
+    plugin_get(plugin);
     pm_unlock();
 
     *rplugin = plugin;
@@ -457,7 +458,6 @@ static int do_get_plugin(const char *name, plugin_t **rplugin)
         return -1;
     }
 
-    plugin_get(plugin);
     return 0;
 }
 
@@ -502,7 +502,7 @@ static int pm_register_plugin(const char *name, const char *addr)
         goto failed;
     }
 
-    INFO("add activated plugin %s 0x%x", plugin->name, plugin->manifest->watch_event);
+    INFO("add activated plugin %s 0x%lx", plugin->name, plugin->manifest->watch_event);
     return 0;
 
 failed:
@@ -837,7 +837,7 @@ bool plugin_is_watching(plugin_t *plugin, uint64_t pe)
     }
     plugin_unlock(plugin);
 
-    INFO("plugin %s watching=%s for event 0x%x", plugin->name, (ok ? "true" : "false"), pe);
+    INFO("plugin %s watching=%s for event 0x%lx", plugin->name, (ok ? "true" : "false"), pe);
 
     return ok;
 }
@@ -857,18 +857,18 @@ static int unpack_activate_response(const struct parsed_http_message *message, v
 
     resp = plugin_activate_plugin_response_parse_data(message->body, NULL, &err);
     if (resp == NULL) {
-        ERROR("parse activate response failed");
+        ERROR("parse activate response failed: %s", err);
         ret = -1;
         goto out;
     }
 
-    if (resp->err_message != NULL) {
-        ERROR("activate response error massge %s", resp->err_message);
+    if (check_err(resp->err_code, resp->err_message) != 0) {
+        ERROR("activate response error: code = %d, message = %s", resp->err_code, resp->err_message);
         ret = -1;
         goto out;
     }
 
-    INFO("get resp 0x%x", resp->watch_event);
+    INFO("get resp 0x%lx", resp->watch_event);
     manifest->init_type = resp->init_type;
     manifest->watch_event = resp->watch_event;
 
@@ -1332,7 +1332,6 @@ static int plugin_event_handle_dispath_impl(const char *cid, const char *plugins
         goto out;
     }
 
-    pm_rdlock();
     for (i = 0; i < util_array_len((const char **)pnames); i++) {
         if (pm_get_plugin(pnames[i], &plugin)) { /* plugin not found */
             ERROR("plugin %s not registered.", pnames[i]);
@@ -1355,18 +1354,18 @@ static int plugin_event_handle_dispath_impl(const char *cid, const char *plugins
                 ret = plugin_event_post_remove_handle(plugin, cid);
                 break;
             default:
-                ERROR("plugin event %d not support.", pe);
+                ERROR("plugin event %ld not support.", pe);
                 ret = -1;
                 break;
         }
 
         pm_put_plugin(plugin);
+        plugin = NULL;
         if (ret != 0) {
             ret = -1;
             continue;
         }
     }
-    pm_unlock();
 
 out:
     util_free_array(pnames);
@@ -1550,7 +1549,6 @@ int plugin_event_container_pre_create(const char *cid, oci_runtime_spec *ocic)
         ERROR("failed generate json for pspec");
         goto out;
     }
-    pm_rdlock();
     for (i = 0; i < util_array_len((const char **)pnames); i++) {
         if (pm_get_plugin(pnames[i], &plugin)) { /* plugin not found */
             ERROR("plugin %s not registered.", pnames[i]);
@@ -1563,12 +1561,12 @@ int plugin_event_container_pre_create(const char *cid, oci_runtime_spec *ocic)
         }
         ret = plugin_event_pre_create_handle(plugin, cid, &pspec);
         pm_put_plugin(plugin);
+        plugin = NULL;
         if (ret != 0) {
             ret = -1;
             break;
         }
     }
-    pm_unlock();
 
     if (ret == 0) { /* all plugins works fine */
         ret = set_pspec(ocic, pspec);

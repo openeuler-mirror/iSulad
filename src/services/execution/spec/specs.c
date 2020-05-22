@@ -29,12 +29,12 @@
 #include <ctype.h>
 
 #include "error.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "specs.h"
-#include "oci_runtime_spec.h"
-#include "oci_runtime_hooks.h"
-#include "docker_seccomp.h"
-#include "host_config.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/oci_runtime_hooks.h"
+#include "isula_libutils/docker_seccomp.h"
+#include "isula_libutils/host_config.h"
 #include "utils.h"
 #include "config.h"
 #include "isulad_config.h"
@@ -98,7 +98,7 @@ static int merge_annotations(oci_runtime_spec *oci_spec, const container_config 
 
     if (container_spec->annotations != NULL && container_spec->annotations->len) {
         if (oci_spec->annotations->len > LIST_SIZE_MAX - container_spec->annotations->len) {
-            ERROR("Too many annotations to add, the limit is %d", LIST_SIZE_MAX);
+            ERROR("Too many annotations to add, the limit is %lld", LIST_SIZE_MAX);
             isulad_set_error_message("Too many annotations to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
@@ -1158,7 +1158,7 @@ static int merge_conf_ulimits(oci_runtime_spec *oci_spec, const host_config *hos
     /* rlimits */
     if (host_spec->ulimits != NULL && host_spec->ulimits_len != 0) {
         if (host_spec->ulimits_len > LIST_SIZE_MAX) {
-            ERROR("Too many ulimits to add, the limit is %d", LIST_SIZE_MAX);
+            ERROR("Too many ulimits to add, the limit is %lld", LIST_SIZE_MAX);
             isulad_set_error_message("Too many ulimits to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
@@ -1181,7 +1181,7 @@ static int merge_conf_hugetlbs(oci_runtime_spec *oci_spec, const host_config *ho
     /* hugepage limits */
     if (host_spec->hugetlbs_len != 0 && host_spec->hugetlbs != NULL) {
         if (host_spec->hugetlbs_len > LIST_SIZE_MAX) {
-            ERROR("Too many hugetlbs to add, the limit is %d", LIST_SIZE_MAX);
+            ERROR("Too many hugetlbs to add, the limit is %lld", LIST_SIZE_MAX);
             isulad_set_error_message("Too many hugetlbs to add, the limit is %d", LIST_SIZE_MAX);
             ret = -1;
             goto out;
@@ -1320,7 +1320,7 @@ static int merge_conf_args(oci_runtime_spec *oci_spec, container_config *contain
     }
 
     if (argslen > LIST_SIZE_MAX) {
-        ERROR("Too many commands to add, the limit is %d", LIST_SIZE_MAX);
+        ERROR("Too many commands to add, the limit is %lld", LIST_SIZE_MAX);
         isulad_set_error_message("Too many commands to add, the limit is %d", LIST_SIZE_MAX);
         return -1;
     }
@@ -1699,7 +1699,7 @@ int parse_security_opt(const host_config *host_spec, bool *no_new_privileges,
         return 0;
     }
     if (host_spec->security_opt_len > LIST_SIZE_MAX) {
-        ERROR("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
+        ERROR("Too many security option to add, the limit is %lld", LIST_SIZE_MAX);
         isulad_set_error_message("Too many security option to add, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
