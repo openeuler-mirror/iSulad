@@ -116,6 +116,7 @@ static char *encode_auth(char *username, char *password)
     int nret = 0;
     int sret = 0;
     size_t plain_text_base64_len = 0;
+    size_t plain_text_base64_encode_len = 0;
     char *plain_text_base64 = NULL;
     char plain_text[PATH_MAX] = { 0 };
     unsigned char *aes = NULL;
@@ -132,7 +133,7 @@ static char *encode_auth(char *username, char *password)
     }
 
     plain_text_base64_len = util_base64_encode_len(strlen(plain_text));
-    plain_text_base64 = util_common_calloc_s(plain_text_base64_len + 1);
+    plain_text_base64 = util_common_calloc_s(plain_text_base64_len);
     if (plain_text_base64 == NULL) {
         ERROR("out of memory");
         ret = -1;
@@ -147,15 +148,17 @@ static char *encode_auth(char *username, char *password)
         goto out;
     }
 
-    aes_buf_len = util_aes_encode_buf_len(plain_text_base64_len);
-    aes_len = AES_256_CFB_IV_LEN + plain_text_base64_len;
+    // Do not encode char '\0'
+    plain_text_base64_encode_len = plain_text_base64_len - 1;
+    aes_buf_len = util_aes_encode_buf_len(plain_text_base64_encode_len);
+    aes_len = AES_256_CFB_IV_LEN + plain_text_base64_encode_len;
     aes = util_common_calloc_s(aes_buf_len);
     if (aes == NULL) {
         ERROR("out of memory");
         ret = -1;
         goto out;
     }
-    ret = aes_encode((unsigned char *)plain_text_base64, plain_text_base64_len, aes, aes_buf_len);
+    ret = aes_encode((unsigned char *)plain_text_base64, plain_text_base64_encode_len, aes, aes_buf_len);
     if (ret < 0) {
         ERROR("encode aes failed");
         ret = -1;
