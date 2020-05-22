@@ -21,7 +21,6 @@
 #include "utils.h"
 #include "utils_images.h"
 
-
 char *get_last_part(char **parts)
 {
     char *last_part = NULL;
@@ -45,8 +44,8 @@ char *oci_get_host(const char *name)
     }
 
     parts = util_string_split(name, '/');
-    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") &&
-         strcmp(*parts, "localhost")) || (strstr(name, "/") == NULL)) {
+    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") && strcmp(*parts, "localhost")) ||
+        (strstr(name, "/") == NULL)) {
         util_free_array(parts);
         return NULL;
     }
@@ -153,8 +152,8 @@ char *oci_normalize_image_name(const char *name)
 
     // Add prefix docker.io if necessary
     parts = util_string_split(name, '/');
-    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") &&
-         strcmp(*parts, "localhost")) || (strstr(name, "/") == NULL)) {
+    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") && strcmp(*parts, "localhost")) ||
+        (strstr(name, "/") == NULL)) {
         add_dockerio = DEFAULT_HOSTNAME;
     }
 
