@@ -272,6 +272,8 @@ container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
                 inspect_driver->data->device_name = util_strdup_s(metadata->values[i]);
             } else if (!strcmp(metadata->keys[i], "DeviceSize")) {
                 inspect_driver->data->device_size = util_strdup_s(metadata->values[i]);
+            } else if (!strcmp(metadata->keys[i], "MergedDir")) {
+                inspect_driver->data->merged_dir = util_strdup_s(metadata->values[i]);
             }
         }
     } else {
