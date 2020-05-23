@@ -68,7 +68,6 @@ static int runtime_check(const char *name, bool *runtime_res)
         runtimes = args->json_confs->runtimes;
     }
     if (runtimes == NULL) {
-        EVENT("isulad runtimes param is null");
         goto unlock_out;
     }
 
@@ -285,8 +284,7 @@ error_out:
     return NULL;
 }
 
-static oci_runtime_spec *generate_oci_config(host_config *host_spec,
-                                             const char *real_rootfs,
+static oci_runtime_spec *generate_oci_config(host_config *host_spec, const char *real_rootfs,
                                              container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
@@ -344,7 +342,6 @@ static int merge_config_for_syscontainer(const container_create_request *request
 out:
     return ret;
 }
-
 
 static char *try_generate_id()
 {
@@ -736,8 +733,8 @@ static host_config_host_channel *dup_host_channel(const host_config_host_channel
     }
 
     dup_channel->path_on_host = channel->path_on_host != NULL ? util_strdup_s(channel->path_on_host) : NULL;
-    dup_channel->path_in_container = channel->path_in_container != NULL ?
-                                     util_strdup_s(channel->path_in_container) : NULL;
+    dup_channel->path_in_container = channel->path_in_container != NULL ? util_strdup_s(channel->path_in_container) :
+                                                                          NULL;
     dup_channel->permissions = channel->permissions != NULL ? util_strdup_s(channel->permissions) : NULL;
     dup_channel->size = channel->size;
 
@@ -798,8 +795,8 @@ static int get_request_image_info(const container_create_request *request, char 
     return 0;
 }
 
-static int preparate_runtime_environment(const container_create_request *request, const char *id,
-                                         char **runtime, char **runtime_root, uint32_t *cc)
+static int preparate_runtime_environment(const container_create_request *request, const char *id, char **runtime,
+                                         char **runtime_root, uint32_t *cc)
 {
     bool runtime_res = false;
 
@@ -821,8 +818,7 @@ static int preparate_runtime_environment(const container_create_request *request
 
     if (!runtime_res) {
         ERROR("Invalid runtime name:%s", *runtime);
-        isulad_set_error_message("Invalid runtime name (%s).",
-                                 *runtime);
+        isulad_set_error_message("Invalid runtime name (%s).", *runtime);
         *cc = ISULAD_ERR_EXEC;
         return -1;
     }
@@ -864,8 +860,7 @@ static int get_basic_spec(const container_create_request *request, const char *i
  * verify oci_spec
  * register container(save v2_spec\host_spec\oci_spec)
  */
-int container_create_cb(const container_create_request *request,
-                        container_create_response **response)
+int container_create_cb(const container_create_request *request, container_create_response **response)
 {
     uint32_t cc = ISULAD_SUCCESS;
     char *real_rootfs = NULL;
@@ -934,8 +929,7 @@ int container_create_cb(const container_create_request *request,
         goto clean_container_root_dir;
     }
 
-    ret = im_merge_image_config(id, image_type, image_name, request->rootfs, host_spec,
-                                v2_spec->config, &real_rootfs);
+    ret = im_merge_image_config(id, image_type, image_name, request->rootfs, host_spec, v2_spec->config, &real_rootfs);
     if (ret != 0) {
         ERROR("Can not merge container_spec with image config");
         cc = ISULAD_ERR_EXEC;
@@ -1046,4 +1040,3 @@ pack_response:
     malloc_trim(0);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
-
