@@ -94,13 +94,7 @@ cleanup:
     return NULL;
 }
 
-static const char *accepted_ps_filter_tags[] = {
-    "id",
-    "label",
-    "name",
-    "status",
-    NULL
-};
+static const char *accepted_ps_filter_tags[] = { "id", "label", "name", "status", NULL };
 
 static int filter_by_name(const struct list_context *ctx, const map_t *map_id_name, const map_t *matches, bool idsearch)
 {
@@ -138,7 +132,6 @@ static int filter_by_name(const struct list_context *ctx, const map_t *map_id_na
 out:
     return ret;
 }
-
 
 static int append_ids(const map_t *matches, char ***filtered_ids)
 {
@@ -218,7 +211,6 @@ static char **filter_by_name_id_matches(const struct list_context *ctx, const ma
         goto cleanup;
     }
 
-
     if (insert_matched_id(ids, matches, &default_value, ids_len) != 0) {
         goto cleanup;
     }
@@ -241,44 +233,6 @@ cleanup:
     util_free_array(names);
     map_free(matches);
     return filtered_ids;
-}
-
-
-int dup_json_map_string_string(const json_map_string_string *src, json_map_string_string *dest)
-{
-    int ret = 0;
-    size_t i;
-
-    if (src->len == 0) {
-        return 0;
-    }
-
-    if (src->len > SIZE_MAX / sizeof(char *)) {
-        ERROR("Container inspect container config is too much!");
-        ret = -1;
-        goto out;
-    }
-    dest->keys = util_common_calloc_s(src->len * sizeof(char *));
-    if (dest->keys == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-    dest->values = util_common_calloc_s(src->len * sizeof(char *));
-    if (dest->values == NULL) {
-        ERROR("Out of memory");
-        free(dest->keys);
-        dest->keys = NULL;
-        ret = -1;
-        goto out;
-    }
-    for (i = 0; i < src->len; i++) {
-        dest->keys[i] = util_strdup_s(src->keys[i] ? src->keys[i] : "");
-        dest->values[i] = util_strdup_s(src->values[i] ? src->values[i] : "");
-        dest->len++;
-    }
-out:
-    return ret;
 }
 
 char *container_get_health_state(const container_config_v2_state *cont_state)
@@ -317,19 +271,16 @@ static int replace_labels(container_container *isuladinfo, json_map_string_strin
     return 0;
 }
 
-static int replace_annotations(const container_config_v2_common_config *common_config,
-                               container_container *isuladinfo)
+static int replace_annotations(const container_config_v2_common_config *common_config, container_container *isuladinfo)
 {
-    if (common_config->config->annotations != NULL &&
-        common_config->config->annotations->len != 0) {
+    if (common_config->config->annotations != NULL && common_config->config->annotations->len != 0) {
         isuladinfo->annotations = util_common_calloc_s(sizeof(json_map_string_string));
         if (isuladinfo->annotations == NULL) {
             ERROR("Out of memory");
             return -1;
         }
 
-        if (dup_json_map_string_string(common_config->config->annotations,
-                                       isuladinfo->annotations) != 0) {
+        if (dup_json_map_string_string(common_config->config->annotations, isuladinfo->annotations) != 0) {
             ERROR("Failed to dup annotations");
             return -1;
         }
@@ -410,7 +361,7 @@ static int container_info_match(const struct list_context *ctx, const map_t *map
 
     cs = state_judge_status(cont_state);
     if (cs == CONTAINER_STATUS_CREATED) {
-        if (!filters_args_match(ctx->ps_filters, "status", "created") && \
+        if (!filters_args_match(ctx->ps_filters, "status", "created") &&
             !filters_args_match(ctx->ps_filters, "status", "inited")) {
             ret = -1;
             goto out;
@@ -430,8 +381,7 @@ out:
     return ret;
 }
 
-static int get_cnt_state(const struct list_context *ctx, const container_config_v2_state *cont_state,
-                         const char *name)
+static int get_cnt_state(const struct list_context *ctx, const container_config_v2_state *cont_state, const char *name)
 {
     if (cont_state == NULL) {
         ERROR("Failed to read %s state", name);
@@ -568,8 +518,7 @@ static int do_add_filters(const char *filter_key, const json_map_string_bool *fi
         if (strcmp(filter_key, "status") == 0) {
             if (!is_valid_state_string(filter_value->keys[j])) {
                 ERROR("Unrecognised filter value for status: %s", filter_value->keys[j]);
-                isulad_set_error_message("Unrecognised filter value for status: %s",
-                                         filter_value->keys[j]);
+                isulad_set_error_message("Unrecognised filter value for status: %s", filter_value->keys[j]);
                 ret = -1;
                 goto out;
             }
@@ -715,4 +664,3 @@ pack_response:
 
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
-

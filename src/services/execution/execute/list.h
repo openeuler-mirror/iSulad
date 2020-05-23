@@ -22,8 +22,6 @@
 extern "C" {
 #endif
 
-int dup_json_map_string_string(const json_map_string_string *src, json_map_string_string *dest);
-
 int container_list_cb(const container_list_request *request, container_list_response **response);
 
 #ifdef __cplusplus
@@ -31,4 +29,3 @@ int container_list_cb(const container_list_request *request, container_list_resp
 #endif
 
 #endif
-

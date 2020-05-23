@@ -1286,7 +1286,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
 
     ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, signal);
     if (ret != 0) {
-        ERROR("Failed to send signal to container %s with signal %d", id, signal);
+        ERROR("Failed to send signal to container %s with signal %u", id, signal);
     }
     if (signal == SIGKILL && need_unpause) {
         params.rootpath = cont->root_path;
@@ -1298,7 +1298,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
         }
     }
 
-    nret = snprintf(annotations, sizeof(annotations), "signal=%d", signal);
+    nret = snprintf(annotations, sizeof(annotations), "signal=%u", signal);
     if (nret < 0 || (size_t)nret >= sizeof(annotations)) {
         ERROR("Failed to get signal string");
         ret = -1;
