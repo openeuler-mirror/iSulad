@@ -45,7 +45,6 @@
 #define MAX_LAYER_NUM 125
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define ROOTFS_TYPE "layers"
-#define MAX_CONCURRENT_DOWNLOAD_NUM 5
 
 typedef struct {
     pull_descriptor *desc;
@@ -71,7 +70,6 @@ typedef struct {
     pthread_cond_t cond;
     bool cond_inited;
     map_t *cached_layers;
-    size_t count;
 } registry_global;
 
 static registry_global *g_shared;
@@ -1110,7 +1108,6 @@ static int fetch_one_layer(thread_fetch_info *info)
 out:
     // notify to continue downloading
     mutex_lock(&g_shared->mutex);
-    g_shared->count--;
     set_cached_layers_info(info->blob_digest, diffid, ret, info->file);
     if (pthread_cond_broadcast(&g_shared->cond)) {
         ERROR("Failed to broadcast");
@@ -1132,17 +1129,6 @@ static int do_fetch(thread_fetch_info *info)
 
     mutex_lock(&g_shared->mutex);
     cache = get_cached_layer(info->blob_digest);
-    if (cache == NULL) {
-        // If there are too many download threads, wait until anyone completed.
-        while (g_shared->count >= MAX_CONCURRENT_DOWNLOAD_NUM) {
-            cond_ret = pthread_cond_wait(&g_shared->cond, &g_shared->mutex);
-            if (cond_ret != 0) {
-                ERROR("condition wait failed, ret %d", cond_ret);
-                ret = -1;
-                goto unlock_out;
-            }
-        }
-    }
 
     ret = add_cached_layer(info->blob_digest, info->file);
     if (ret != 0) {
@@ -1151,11 +1137,6 @@ static int do_fetch(thread_fetch_info *info)
         goto unlock_out;
     }
     cached_layers_added = true;
-
-    // First request to download this blob.
-    if (cache == NULL) {
-        g_shared->count++;
-    }
 
     mutex_unlock(&g_shared->mutex);
 
