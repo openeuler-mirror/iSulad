@@ -2031,7 +2031,6 @@ void free_pull_desc(pull_descriptor *desc)
     free(desc->protocol);
     desc->protocol = NULL;
     desc->skip_tls_verify = false;
-    desc->already_ping = false;
     free(desc->scope);
     desc->scope = NULL;
 

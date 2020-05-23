@@ -90,7 +90,6 @@ typedef struct {
     char *protocol;
     bool skip_tls_verify;
     bool insecure_registry;
-    bool already_ping;
     char *scope;
     challenge challenges[CHALLENGE_MAX];
     // This is temporary field. Once http request is performed, it is cleared

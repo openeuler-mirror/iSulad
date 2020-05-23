@@ -34,7 +34,7 @@
 #include "isula_libutils/registry_manifest_list.h"
 #include "auths.h"
 
-#define DOCKER_API_VERSION_HEADER "Docker-Distribution-API-Version: registry/2.0"
+#define DOCKER_API_VERSION_HEADER "Docker-Distribution-Api-Version: registry/2.0"
 #define MAX_ACCEPT_LEN 128
 
 static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http_message *message)
@@ -361,12 +361,13 @@ static int registry_ping(pull_descriptor *desc)
         return -1;
     }
 
-    if (desc->already_ping && desc->protocol != NULL) {
+    if (desc->protocol != NULL) {
         return 0;
     }
 
     ret = registry_pingv2(desc, "https");
     if (ret == 0) {
+        desc->protocol = util_strdup_s("https");
         goto out;
     }
 
@@ -378,16 +379,12 @@ static int registry_ping(pull_descriptor *desc)
             ERROR("ping %s with http failed", desc->host);
             goto out;
         }
+        desc->protocol = util_strdup_s("http");
     } else {
         ERROR("ping %s with https failed", desc->host);
     }
 
 out:
-
-    if (ret == 0) {
-        desc->protocol = util_strdup_s("http");
-        desc->already_ping = true;
-    }
 
     return ret;
 }
