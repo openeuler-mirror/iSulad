@@ -38,18 +38,3 @@ void free_im_export_request(im_export_request *ptr)
         return g_image_mock->FreeImExportRequest(ptr);
     }
 }
-
-int im_get_storage_metadata(const char *image_type, char *id, im_storage_metadata_response **response)
-{
-    if (g_image_mock != nullptr) {
-        return g_image_mock->ImGetStorageMetadata(image_type, id, response);
-    }
-    return 0;
-}
-
-void free_im_storage_metadata_response(im_storage_metadata_response *ptr)
-{
-    if (g_image_mock != nullptr) {
-        return g_image_mock->FreeImStorageMetadataResponse(ptr);
-    }
-}

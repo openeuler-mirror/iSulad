@@ -152,4 +152,3 @@ int cmd_top_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

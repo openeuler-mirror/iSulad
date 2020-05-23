@@ -21,7 +21,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_aes.h"
 #include "openssl/aes.h"
@@ -60,7 +60,7 @@ int util_aes_key(char *key_file, bool create, unsigned char *aeskey)
             goto out;
         }
 
-        ret = util_write_file(key_file, (char*)aeskey, AES_256_CFB_KEY_LEN, 0600);
+        ret = util_write_file(key_file, (char *)aeskey, AES_256_CFB_KEY_LEN, 0600);
         if (ret != 0) {
             ERROR("write aeskey to file failed");
             goto out;

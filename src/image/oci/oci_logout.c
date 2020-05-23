@@ -15,7 +15,7 @@
 #include "oci_logout.h"
 #include "utils.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "registry.h"
 
 static inline int is_valid_arguments(const char *server)

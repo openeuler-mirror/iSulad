@@ -23,3 +23,19 @@ void MockStorage_SetMock(MockStorage *mock)
 {
     g_storage_mock = mock;
 }
+
+struct layer_list *storage_layers_get_by_uncompress_digest(const char *digest)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageLayersGetByUncompressDigest(digest);
+    }
+
+    return NULL;
+}
+
+void free_layer_list(struct layer_list *ptr)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->FreeLayerList(ptr);
+    }
+}

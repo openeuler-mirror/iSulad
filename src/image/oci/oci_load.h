@@ -16,10 +16,10 @@
 #define __IMAGE_OCI_LOAD_H
 
 #include "image.h"
-#include "image_manifest_items.h"
-#include "oci_image_manifest.h"
-#include "oci_image_spec.h"
-#include "json_common.h"
+#include "isula_libutils/image_manifest_items.h"
+#include "isula_libutils/oci_image_manifest.h"
+#include "isula_libutils/oci_image_spec.h"
+#include "isula_libutils/json_common.h"
 
 #ifdef __cplusplus
 extern "C" {

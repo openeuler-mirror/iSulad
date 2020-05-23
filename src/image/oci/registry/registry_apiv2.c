@@ -13,8 +13,8 @@
  * Description: provide registry api v2 functions
  ******************************************************************************/
 
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -22,7 +22,7 @@
 #include <sys/utsname.h>
 
 #include "registry_type.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "buffer.h"
 #include "http.h"
 #include "registry_apiv2.h"
@@ -30,8 +30,8 @@
 #include "utils.h"
 #include "parser.h"
 #include "mediatype.h"
-#include "oci_image_index.h"
-#include "registry_manifest_list.h"
+#include "isula_libutils/oci_image_index.h"
+#include "isula_libutils/registry_manifest_list.h"
 #include "auths.h"
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-API-Version: registry/2.0"
@@ -70,7 +70,7 @@ out:
 
 static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
 {
-    challenge c = {0};
+    challenge c = { 0 };
     char **kv_strs = NULL;
     char **kv = NULL;
     size_t len = 0;
@@ -88,7 +88,7 @@ static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
         for (i = 0; i < len; i++) {
             kv = util_string_split(kv_strs[i], '=');
             if (util_array_len((const char **)kv) != 2) {
-                ERROR("Split key/value %s failed, origin string is %s", kv, kv_strs[i]);
+                ERROR("Split key/value failed, origin string is %s", kv_strs[i]);
                 ret = -1;
                 goto out;
             }
@@ -122,7 +122,7 @@ static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
         }
     }
 
-    WARN("Too many challenges found, keep %s only", CHALLENGE_MAX);
+    WARN("Too many challenges found, keep %d only", CHALLENGE_MAX);
     ret = -1;
 
 out:
@@ -204,7 +204,7 @@ static void free_parsed_http_message(struct parsed_http_message **message)
     return;
 }
 
-static struct parsed_http_message * get_parsed_message(char *http_head)
+static struct parsed_http_message *get_parsed_message(char *http_head)
 {
     int ret = 0;
     struct parsed_http_message *message = NULL;
@@ -278,7 +278,8 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
 
     if (!strings_contains_word(version, "registry/2.0")) {
         ERROR("Docker-Distribution-Api-Version does not contain registry/2.0, it's value is %s."
-              "Registry can not support registry API V2", version);
+              "Registry can not support registry API V2",
+              version);
         ret = -1;
         goto out;
     }
@@ -463,10 +464,8 @@ static int check_content_type(const char *content_type)
 
     if (!strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_JSON) ||
         !strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) ||
-        !strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_JSON) ||
-        !strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_LIST) ||
-        !strcmp(content_type, OCI_MANIFEST_V1_JSON) ||
-        !strcmp(content_type, MEDIA_TYPE_APPLICATION_JSON) ||
+        !strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_JSON) || !strcmp(content_type, DOCKER_MANIFEST_SCHEMA2_LIST) ||
+        !strcmp(content_type, OCI_MANIFEST_V1_JSON) || !strcmp(content_type, MEDIA_TYPE_APPLICATION_JSON) ||
         !strcmp(content_type, OCI_INDEX_V1_JSON)) {
         return 0;
     }
@@ -550,16 +549,15 @@ static int append_manifests_accepts(char ***custom_headers)
     int i = 0;
     int ret = 0;
     int sret = 0;
-    char accept[MAX_ACCEPT_LEN] = {0};
-    const char *mediatypes[] = {
-        DOCKER_MANIFEST_SCHEMA2_JSON,
-        DOCKER_MANIFEST_SCHEMA1_PRETTYJWS,
-        DOCKER_MANIFEST_SCHEMA1_JSON,
-        DOCKER_MANIFEST_SCHEMA2_LIST,
-        MEDIA_TYPE_APPLICATION_JSON,
-        OCI_MANIFEST_V1_JSON,
-        OCI_INDEX_V1_JSON
-    };
+    char accept[MAX_ACCEPT_LEN] = { 0 };
+    const char *mediatypes[] = { DOCKER_MANIFEST_SCHEMA2_JSON,
+                                 DOCKER_MANIFEST_SCHEMA1_PRETTYJWS,
+                                 DOCKER_MANIFEST_SCHEMA1_JSON,
+                                 DOCKER_MANIFEST_SCHEMA2_LIST,
+                                 MEDIA_TYPE_APPLICATION_JSON,
+                                 OCI_MANIFEST_V1_JSON,
+                                 OCI_INDEX_V1_JSON
+                               };
 
     for (i = 0; i < sizeof(mediatypes) / sizeof(mediatypes[0]); i++) {
         sret = snprintf(accept, MAX_ACCEPT_LEN, "Accept: %s", mediatypes[i]);
@@ -629,12 +627,11 @@ out:
     return ret;
 }
 
-static int fetch_data(pull_descriptor *desc, char *path, char *file, char *content_type,
-                      char *digest)
+static int fetch_data(pull_descriptor *desc, char *path, char *file, char *content_type, char *digest)
 {
     int ret = 0;
     int sret = 0;
-    char accept[MAX_ELEMENT_SIZE] = {0};
+    char accept[MAX_ELEMENT_SIZE] = { 0 };
     char **custom_headers = NULL;
 
     // digest can be NULL
@@ -737,13 +734,11 @@ static int normalized_host_os_arch(char **host_os, char **host_arch, char **host
 
     if (strcasecmp("i386", uts.machine) == 0) {
         *host_arch = util_strdup_s("386");
-    } else if ((strcasecmp("x86_64", uts.machine) == 0)
-               || (strcasecmp("x86-64", uts.machine) == 0)) {
+    } else if ((strcasecmp("x86_64", uts.machine) == 0) || (strcasecmp("x86-64", uts.machine) == 0)) {
         *host_arch = util_strdup_s("amd64");
     } else if (strcasecmp("aarch64", uts.machine) == 0) {
         *host_arch = strdup("arm64");
-    } else if ((strcasecmp("armhf", uts.machine) == 0)
-               || (strcasecmp("armel", uts.machine) == 0)) {
+    } else if ((strcasecmp("armhf", uts.machine) == 0) || (strcasecmp("armel", uts.machine) == 0)) {
         *host_arch = strdup("arm");
     } else {
         *host_arch = strdup(uts.machine);
@@ -865,8 +860,8 @@ out:
     host_variant = NULL;
 
     if (found && (*digest == NULL || *content_type == NULL)) {
-        ERROR("Matched manifest have NULL digest or mediatype in manifest, mediatype %s, digest %s",
-              *content_type, *digest);
+        ERROR("Matched manifest have NULL digest or mediatype in manifest, mediatype %s, digest %s", *content_type,
+              *digest);
         ret = -1;
     }
 
@@ -937,8 +932,8 @@ out:
     host_variant = NULL;
 
     if (found && (*digest == NULL || *content_type == NULL)) {
-        ERROR("Matched manifest have NULL digest or mediatype in manifest, mediatype %s, digest %s",
-              *content_type, *digest);
+        ERROR("Matched manifest have NULL digest or mediatype in manifest, mediatype %s, digest %s", *content_type,
+              *digest);
         ret = -1;
     }
 
@@ -1013,8 +1008,7 @@ static int fetch_manifests_data(pull_descriptor *desc, char *file, char **conten
     char path[PATH_MAX] = { 0 };
     char *manifest_text = NULL;
 
-    if (desc == NULL || file == NULL || content_type == NULL || *content_type == NULL ||
-        digest == NULL) {
+    if (desc == NULL || file == NULL || content_type == NULL || *content_type == NULL || digest == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
     }
@@ -1162,7 +1156,7 @@ int fetch_layer(pull_descriptor *desc, size_t index)
     }
 
     if (index >= desc->layers_len) {
-        ERROR("Invalid layer index %d, total layer number %d", index, desc->layers_len);
+        ERROR("Invalid layer index %ld, total layer number %ld", index, desc->layers_len);
         return -1;
     }
 
@@ -1175,7 +1169,7 @@ int fetch_layer(pull_descriptor *desc, size_t index)
     layer = &desc->layers[index];
     sret = snprintf(path, sizeof(path), "/v2/%s/blobs/%s", desc->name, layer->digest);
     if (sret < 0 || (size_t)sret >= sizeof(path)) {
-        ERROR("Failed to sprintf path for layer %d, name %s, digest %s", index, desc->name, layer->digest);
+        ERROR("Failed to sprintf path for layer %ld, name %s, digest %s", index, desc->name, layer->digest);
         ret = -1;
         goto out;
     }

@@ -24,14 +24,14 @@
 #include <sys/sysmacros.h>
 #include <sys/mount.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "libisulad.h"
 #include "utils.h"
 #include "wrapper_devmapper.h"
 #include "devices_constants.h"
 #include "device_setup.h"
 #include "deviceset.h"
-#include "json_common.h"
+#include "isula_libutils/json_common.h"
 #include "util_archive.h"
 
 int devmapper_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
@@ -311,7 +311,6 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
     struct device_metadata dev_metadata;
     char *device_id_str = NULL;
     char *device_size_str = NULL;
-
 
     if (id == NULL || driver == NULL || map_info == NULL) {
         ERROR("invalid argument");

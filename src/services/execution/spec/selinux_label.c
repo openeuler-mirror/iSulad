@@ -234,10 +234,9 @@ out:
 static int get_current_label(char **content)
 {
     int nret = 0;
-    char path[PATH_MAX] = {0};
+    char path[PATH_MAX] = { 0 };
 
-    nret = snprintf(path, sizeof(path), "/proc/self/task/%ld/attr/current",
-                    (long int)syscall(__NR_gettid));
+    nret = snprintf(path, sizeof(path), "/proc/self/task/%ld/attr/current", (long int)syscall(__NR_gettid));
     if (nret < 0 || nret >= sizeof(path)) {
         ERROR("Humanize sprintf failed!");
         return -1;
@@ -853,7 +852,7 @@ static int recurse_set_file_label(const char *basePath, const char *label)
     int ret = 0;
     DIR *dir = NULL;
     struct dirent *ptr = NULL;
-    char base[PATH_MAX] = {0};
+    char base[PATH_MAX] = { 0 };
 
     if ((dir = opendir(basePath)) == NULL) {
         ERROR("Failed to Open dir: %s", basePath);

@@ -17,7 +17,7 @@
 #include <stdio.h>
 
 #include "wrapper_devmapper.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils_verify.h"
 #include "utils.h"
 
@@ -27,8 +27,7 @@ static bool dm_saw_enxio = false; // no such device or address
 // static bool dm_saw_eno_data = false; // no data available
 static int64_t dm_udev_wait_timeout = 0;
 
-
-struct dm_task* task_create(int type)
+struct dm_task *task_create(int type)
 {
     struct dm_task *dmt = NULL;
 
@@ -128,7 +127,7 @@ int set_dev_dir(const char *dir)
     return 0;
 }
 
-struct dm_task* task_create_named(int type, const char *dm_name)
+struct dm_task *task_create_named(int type, const char *dm_name)
 {
     int ret;
     struct dm_task *dmt = NULL;
@@ -230,7 +229,6 @@ cleanup:
     free(dmt);
     return version;
 }
-
 
 // GetStatus is the programmatic example of "dmsetup status".
 // It outputs status information for the specified device name.
@@ -465,7 +463,6 @@ int dev_remove_device_deferred(const char *pool_fname)
         goto out;
     }
 
-
     // TODO: udev_wait(cookie)
     // 单开一个线程wait device删除成功
 
@@ -484,7 +481,6 @@ out:
     free(dmt);
     return ret;
 }
-
 
 // from devmapper_wrapper.go
 // FIXME: how to use dm_task_get_names directly
@@ -508,7 +504,7 @@ static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size)
     ns1 = ns;
     *size = 0;
     do {
-        ns1 = (struct dm_names *)((char *) ns1 + next);
+        ns1 = (struct dm_names *)((char *)ns1 + next);
         (*size)++;
         next = ns1->next;
     } while (next);
@@ -520,7 +516,7 @@ static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size)
 
     next = 0;
     do {
-        ns = (struct dm_names *)((char *) ns + next);
+        ns = (struct dm_names *)((char *)ns + next);
         result[i++] = strdup(ns->name);
         next = ns->next;
     } while (next);
@@ -550,7 +546,6 @@ int dev_get_device_list(char ***list, size_t *length)
         goto cleanup;
     }
 
-
     *list = local_dm_task_get_names(dmt, length);
     if (*list == NULL) {
         *length = 0;
@@ -569,7 +564,7 @@ cleanup:
 
 bool udev_sync_supported()
 {
-    return  dm_udev_get_sync_support() != 0;
+    return dm_udev_get_sync_support() != 0;
 }
 
 bool udev_set_sync_support(bool enable)
@@ -625,7 +620,6 @@ int dev_create_device(const char *pool_fname, int device_id)
         ret = -1;
         goto cleanup;
     }
-
 
     ret = dm_task_run(dmt);
     if (ret != 1) {
@@ -721,7 +715,6 @@ int dev_get_info_with_deferred(const char *dm_name, struct dm_info *dmi)
 cleanup:
     free(dmt);
     return ret;
-
 }
 
 // SuspendDevice is the programmatic example of "dmsetup suspend".
@@ -903,7 +896,6 @@ static void dm_log(int level, char *file, int line, int dm_errno_or_class, char 
         default:
             INFO("libdevmapper(%d): %s:%d (%d) %s", level, file, line, dm_errno_or_class, message);
     }
-
 }
 
 void storage_devmapper_log_callback(int level, char *file, int line, int dm_errno_or_class, char *message)
@@ -923,7 +915,7 @@ void storage_devmapper_log_callback(int level, char *file, int line, int dm_errn
     dm_log(level, file, line, dm_errno_or_class, message);
 }
 
-static void	log_cb(int level, const char *file, int line, int dm_errno_or_class, const char *f, ...)
+static void log_cb(int level, const char *file, int line, int dm_errno_or_class, const char *f, ...)
 {
     char *buffer = NULL;
     va_list ap;

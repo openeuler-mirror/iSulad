@@ -23,25 +23,25 @@
 #include <sys/mount.h>
 
 #include "constants.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "libisulad.h"
 #include "path.h"
 #include "utils.h"
 #include "util_archive.h"
 #include "project_quota.h"
 
-#define OVERLAY_LINK_DIR        "l"
-#define OVERLAY_LAYER_DIFF      "diff"
-#define OVERLAY_LAYER_MERGED    "merged"
-#define OVERLAY_LAYER_WORK      "work"
-#define OVERLAY_LAYER_LOWER     "lower"
-#define OVERLAY_LAYER_LINK      "link"
-#define OVERLAY_LAYER_EMPTY     "empty"
+#define OVERLAY_LINK_DIR "l"
+#define OVERLAY_LAYER_DIFF "diff"
+#define OVERLAY_LAYER_MERGED "merged"
+#define OVERLAY_LAYER_WORK "work"
+#define OVERLAY_LAYER_LOWER "lower"
+#define OVERLAY_LAYER_LINK "link"
+#define OVERLAY_LAYER_EMPTY "empty"
 
 #define OVERLAY_LAYER_MAX_DEPTH 128
 
-#define QUOTA_SIZE_OPTION       "overlay2.size"
-#define QUOTA_BASESIZE_OPTIONS  "overlay2.basesize"
+#define QUOTA_SIZE_OPTION "overlay2.size"
+#define QUOTA_BASESIZE_OPTIONS "overlay2.basesize"
 // MAX_LAYER_ID_LENGTH represents the number of random characters which can be used to create the unique link identifer
 // for every layer. If this value is too long then the page size limit for the mount command may be exceeded.
 // The idLength should be selected such that following equation is true (512 is a buffer for label metadata).
@@ -135,7 +135,7 @@ static int overlay2_parse_options(struct graphdriver *driver, const char **optio
                 goto out;
             }
             overlay_opts->override_kernelcheck = converted_bool;
-        }  else if (strcasecmp(dup, "overlay2.skip_mount_home") == 0) {
+        } else if (strcasecmp(dup, "overlay2.skip_mount_home") == 0) {
             bool converted_bool = 0;
             ret = util_str_to_bool(val, &converted_bool);
             if (ret != 0) {
@@ -162,8 +162,8 @@ out:
 
 static bool check_bk_fs_support_overlay(const char *backing_fs)
 {
-    if (strcmp(backing_fs, "aufs") == 0 || strcmp(backing_fs, "zfs") == 0 ||
-        strcmp(backing_fs, "overlayfs") == 0 || strcmp(backing_fs, "ecryptfs") == 0) {
+    if (strcmp(backing_fs, "aufs") == 0 || strcmp(backing_fs, "zfs") == 0 || strcmp(backing_fs, "overlayfs") == 0 ||
+        strcmp(backing_fs, "ecryptfs") == 0) {
         return false;
     }
     return true;
@@ -521,7 +521,7 @@ static int mk_empty_directory(const char *layer_dir)
 
     empty_dir = util_path_join(layer_dir, OVERLAY_LAYER_EMPTY);
     if (empty_dir == NULL) {
-        ERROR("Failed to join layer empty dir:%s", empty_dir);
+        ERROR("Failed to join layer empty dir:%s", layer_dir);
         ret = -1;
         goto out;
     }
@@ -792,7 +792,7 @@ static int apply_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota)
 {
     int ret = 0;
     size_t i = 0;
-    char tmp[50] = { 0 };//tmp to hold unit64
+    char tmp[50] = { 0 }; //tmp to hold unit64
 
     ret = snprintf(tmp, sizeof(tmp), "%llu", (unsigned long long)quota);
     if (ret < 0 || ret >= sizeof(tmp)) {
@@ -953,7 +953,6 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
         ret = -1;
         goto out;
     }
-
 
 out:
     free(layer_dir);
@@ -1175,13 +1174,13 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
         goto error_out;
     }
 
-    if (strlen(abs_lower_dir) >= (INT_MAX - strlen("lowerdir=") - strlen(",upperdir=") - strlen(
-                                      upper_dir) - strlen(",workdir=") - strlen(work_dir) - 1)) {
+    if (strlen(abs_lower_dir) >= (INT_MAX - strlen("lowerdir=") - strlen(",upperdir=") - strlen(upper_dir) -
+                                  strlen(",workdir=") - strlen(work_dir) - 1)) {
         ERROR("abs lower dir too large");
         goto error_out;
     }
-    data_size = strlen("lowerdir=") + strlen(abs_lower_dir) +  strlen(",upperdir=") + strlen(
-                    upper_dir) + strlen(",workdir=") + strlen(work_dir) + 1;
+    data_size = strlen("lowerdir=") + strlen(abs_lower_dir) + strlen(",upperdir=") + strlen(upper_dir) +
+                strlen(",workdir=") + strlen(work_dir) + 1;
 
     mount_data = util_common_calloc_s(data_size);
 
@@ -1241,13 +1240,13 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
         goto error_out;
     }
 
-    if (strlen(rel_lower_dir) >= (INT_MAX - strlen("lowerdir=") - strlen(",upperdir=") - strlen(
-                                      upper_dir) - strlen(",workdir=") - strlen(work_dir) - 1)) {
+    if (strlen(rel_lower_dir) >= (INT_MAX - strlen("lowerdir=") - strlen(",upperdir=") - strlen(upper_dir) -
+                                  strlen(",workdir=") - strlen(work_dir) - 1)) {
         ERROR("rel lower dir too large");
         goto error_out;
     }
-    data_size = strlen("lowerdir=") + strlen(rel_lower_dir) +  strlen(",upperdir=") + strlen(
-                    upper_dir) + strlen(",workdir=") + strlen(work_dir) + 1;
+    data_size = strlen("lowerdir=") + strlen(rel_lower_dir) + strlen(",upperdir=") + strlen(upper_dir) +
+                strlen(",workdir=") + strlen(work_dir) + 1;
 
     mount_data = util_common_calloc_s(data_size);
 
@@ -1317,7 +1316,7 @@ static char *generate_mount_opt_data(const char *id, const char *layer_dir, cons
             ERROR("cannot mount layer, mount label too large %s", mount_data);
             free(mount_data);
             mount_data = NULL;
-            goto  out;
+            goto out;
         }
     }
 
@@ -1728,8 +1727,8 @@ out:
 int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status)
 {
 #define MAX_INFO_LENGTH 100
-#define BACK_FS         "Backing Filesystem"
-#define SUPPORT_DTYPE   "Supports d_type: true\n"
+#define BACK_FS "Backing Filesystem"
+#define SUPPORT_DTYPE "Supports d_type: true\n"
     int ret = 0;
     int nret = 0;
     char tmp[MAX_INFO_LENGTH] = { 0 };

@@ -25,7 +25,7 @@
 #include <sys/mount.h>
 #include <sys/vfs.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "libisulad.h"
 #include "utils.h"
 #include "wrapper_devmapper.h"
@@ -37,14 +37,12 @@
 #define DM_LOG_FATAL 2
 #define DM_LOG_DEBUG 7
 
-
 static bool user_base_size = false;
 static bool enable_deferred_removal = false;
 static bool driver_deferred_removal_support = false;
 static bool enable_deferred_deletion = false;
 static bool driver_deferred_remove_support = false;
 static bool lvm_setup_config_force = false;
-
 
 // static int64_t default_udev_wait_timeout = 185;
 static uint64_t default_base_fs_size = 10L * 1024L * 1024L * 1204L;
@@ -87,7 +85,6 @@ int devmapper_conf_unlock()
 struct device_set *devmapper_driver_devices_get()
 {
     return g_devmapper_conf.devset;
-
 }
 
 static char *util_trim_prefice_string(char *str, const char *prefix)
@@ -98,7 +95,8 @@ static char *util_trim_prefice_string(char *str, const char *prefix)
 
     char *begin = str + strlen(prefix);
     char *tmp = str;
-    while ((*tmp++ = *begin++)) {}
+    while ((*tmp++ = *begin++)) {
+    }
     return str;
 }
 
@@ -137,7 +135,7 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
                 ret = -1;
             }
         } else if (strcasecmp(dup, "dm.thinpooldev") == 0) {
-            if (!util_valid_str(val))  {
+            if (!util_valid_str(val)) {
                 ERROR("Invalid thinpool device, it must not be empty");
                 ret = -1;
                 goto out;
@@ -475,7 +473,6 @@ static int deactivate_device_mode(struct device_set *devset, image_devmapper_dev
         ret = dev_remove_device(dm_name);
     }
 
-
 free_out:
     UTIL_FREE_AND_SET_NULL(dm_name);
     return ret;
@@ -486,7 +483,7 @@ static int deactivate_device(struct device_set *devset, image_devmapper_device_i
     return deactivate_device_mode(devset, dev_info, devset->deferred_remove);
 }
 
-static int pool_status(struct device_set *devset, uint64_t *total_size_in_sectors, uint64_t *transaction_id, \
+static int pool_status(struct device_set *devset, uint64_t *total_size_in_sectors, uint64_t *transaction_id,
                        uint64_t *data_used, uint64_t *data_total, uint64_t *metadata_used, uint64_t *metadata_total)
 {
     uint64_t start;
@@ -512,7 +509,8 @@ static int pool_status(struct device_set *devset, uint64_t *total_size_in_sector
     }
 
     *total_size_in_sectors = length;
-    if (sscanf(params, "%lu %lu/%lu %lu/%lu", transaction_id, metadata_used, metadata_total, data_used, data_total) != 5) {
+    if (sscanf(params, "%lu %lu/%lu %lu/%lu", transaction_id, metadata_used, metadata_total, data_used, data_total) !=
+        5) {
         ERROR("devmapper: sscanf device status params failed");
         ret = -1;
     }
@@ -666,7 +664,7 @@ static void run_grow_rootfs(void *args)
     char **tmp_args = (char **)args;
     size_t CMD_ARGS_NUM = 2;
 
-    if (util_array_len((const char**)tmp_args) != CMD_ARGS_NUM) {
+    if (util_array_len((const char **)tmp_args) != CMD_ARGS_NUM) {
         COMMAND_ERROR("grow rootfs need three args");
         exit(1);
     }
@@ -752,8 +750,6 @@ static int device_file_walk(struct device_set *devset)
     struct dirent *entry;
     struct stat st;
     image_devmapper_device_info *info = NULL;
-    char *hash = NULL;
-
 
     dp = opendir(DEVICE_FILE_DIR);
     if (dp == NULL) {
@@ -787,12 +783,11 @@ static int device_file_walk(struct device_set *devset)
             continue;
         }
 
-
         info = lookup_device(devset, entry->d_name); // entry->d_name 取值base  hash值等
         if (info != NULL) {
             free_image_devmapper_device_info(info);
         } else {
-            ERROR("devmapper: Error looking up device $s", hash);
+            ERROR("devmapper: Error looking up device %s", entry->d_name);
             ret = -1;
             goto out;
         }
@@ -803,14 +798,12 @@ out:
     return ret;
 }
 
-
 static void construct_device_id_map(struct device_set *devset)
 {
     // TODO:遍历g_metadata_store中全部device
     // for info in devices {
     //     mark_device_id_used(info->device_id);
     // }
-
 }
 
 static void count_deleted_devices(struct device_set *devset)
@@ -826,7 +819,6 @@ static void count_deleted_devices(struct device_set *devset)
 static int rollback_transaction(struct device_set *devset)
 {
     return 0;
-
 }
 
 static int process_pending_transaction(struct device_set *devset)
@@ -847,7 +839,7 @@ static int process_pending_transaction(struct device_set *devset)
     // If open transaction ID is less than pool transaction ID, something
     // is wrong. Bail out.
     if (devset->transaction_id > devset->metadata_trans->open_transaction_id) {
-        ERROR("devmapper: Open Transaction id %d is less than pool transaction id %d",
+        ERROR("devmapper: Open Transaction id %ld is less than pool transaction id %ld",
               devset->metadata_trans->open_transaction_id, devset->transaction_id);
         return -1;
     }
@@ -858,7 +850,6 @@ static int process_pending_transaction(struct device_set *devset)
     if (ret != 0) {
         ERROR("devmapper: Rolling back open transaction failed");
         return -1;
-
     }
 
     devset->metadata_trans->open_transaction_id = devset->transaction_id;
@@ -1104,7 +1095,7 @@ static int pool_has_free_space(struct device_set *devset)
     if (data_free < min_free_data) {
         ret = -1;
         ERROR("devmapper: Thin Pool has %lu free data blocks which is less than minimum required\
-        %lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior", \
+        %lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
               data_total - data_used, min_free_data);
         goto out;
     }
@@ -1118,7 +1109,7 @@ static int pool_has_free_space(struct device_set *devset)
     if (metadata_free < min_free_metadata) {
         ret = -1;
         ERROR("devmapper: Thin Pool has %lu free metadata blocks which is less than minimum required %lu free metadata blocks. \
-        Create more free metadata space in thin pool or use dm.min_free_space option to change behavior", \
+        Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
               metadata_total - metadata_used, min_free_metadata);
         goto out;
     }
@@ -1200,7 +1191,7 @@ static int save_transaction_metadata(struct device_set *devset)
     parser_error err = NULL;
     int ret = 0;
 
-    if (snprintf(fname, sizeof(fname), "%s/metadata/%s", devset->root,  TRANSACTION_METADATA) < 0) {
+    if (snprintf(fname, sizeof(fname), "%s/metadata/%s", devset->root, TRANSACTION_METADATA) < 0) {
         ERROR("devmapper: failed make transaction-metadata full path");
         return -1;
     }
@@ -1362,7 +1353,6 @@ static int remove_metadata(struct device_set *devset, const char *hash)
     return ret;
 }
 
-
 static int unregister_device(struct device_set *devset, const char *hash)
 {
     int ret;
@@ -1461,7 +1451,7 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
                 }
                 ret = refresh_transaction(devset, device_id);
                 if (ret != 0) {
-                    ERROR("devmapper: Error refres open transaction deviceID = %d", hash, device_id);
+                    ERROR("devmapper: Error refres open transaction deviceID %s = %d", hash, device_id);
                     return NULL;
                 }
                 continue;
@@ -1532,7 +1522,7 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
                 }
                 ret = refresh_transaction(devset, device_id);
                 if (ret != 0) {
-                    ERROR("devmapper: Error refresh open transaction deviceID = %d", hash, device_id);
+                    ERROR("devmapper: Error refresh open transaction deviceID %s = %d", hash, device_id);
                     goto out;
                 }
                 continue;
@@ -1719,7 +1709,7 @@ static int activate_device_if_needed(struct device_set *devset, image_devmapper_
     char *pool_dev_name = NULL;
 
     if (info->deleted && !ignore_deleted) {
-        ERROR("devmapper: Can't activate device %v as it is marked for deletion", info->hash);
+        ERROR("devmapper: Can't activate device %s as it is marked for deletion", info->hash);
         return -1;
     }
 
@@ -1759,7 +1749,6 @@ out:
     UTIL_FREE_AND_SET_NULL(pool_dev_name);
     return ret;
 }
-
 
 static int save_base_device_uuid(struct device_set *devset, image_devmapper_device_info *info)
 {
@@ -1844,7 +1833,7 @@ static int create_file_system(struct device_set *devset, image_devmapper_device_
         devset->filesystem = util_strdup_s("ext4");
     }
 
-    ret =  save_base_device_filesystem(devset, devset->filesystem);
+    ret = save_base_device_filesystem(devset, devset->filesystem);
     if (ret != 0) {
         goto out;
     }
@@ -1943,15 +1932,15 @@ static int check_thin_pool(struct device_set *devset)
     }
 
     if (transaction_id != 0) {
-        ERROR("devmapper: Unable to take ownership of thin-pool (%s) with non-zero transaction ID", devset->thin_pool_device);
+        ERROR("devmapper: Unable to take ownership of thin-pool (%s) with non-zero transaction ID",
+              devset->thin_pool_device);
         return -1;
     }
 
-    DEBUG("devmapper:total_size_in_sectors:%u, data_total:%u, metadata_used:%u, metadata_total:%u", total_size_in_sectors,
-          data_total, metadata_used, metadata_total);
+    DEBUG("devmapper:total_size_in_sectors:%lu, data_total:%lu, metadata_used:%lu, metadata_total:%lu",
+          total_size_in_sectors, data_total, metadata_used, metadata_total);
 
     return ret;
-
 }
 
 static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_device_info *base_info)
@@ -1984,7 +1973,8 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
 
     if (strcmp(devset->base_device_uuid, uuid) != 0) {
         ERROR("devmapper: Current Base Device UUID:%s does not match with stored UUID:%s. \
-        Possibly using a different thin pool than last invocation", uuid, devset->base_device_uuid);
+        Possibly using a different thin pool than last invocation",
+              uuid, devset->base_device_uuid);
         goto free_out;
     }
 
@@ -2002,7 +1992,7 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
 
     if (devset->filesystem == NULL || strcmp(devset->base_device_filesystem, devset->filesystem) != 0) {
         WARN("devmapper: Base device already exists and has filesystem %s on it. User specified filesystem %s will be ignored.",
-             \
+
              devset->base_device_filesystem, devset->filesystem);
         devset->filesystem = util_strdup_s(devset->base_device_filesystem);
     }
@@ -2116,7 +2106,7 @@ static int check_grow_base_device_fs(struct device_set *devset, image_devmapper_
     base_dev_size = get_base_device_size(devset);
 
     if (devset->base_fs_size < base_dev_size) {
-        ERROR("devmapper: Base fs size cannot be smaller than %d", base_dev_size);
+        ERROR("devmapper: Base fs size cannot be smaller than %ld", base_dev_size);
         return -1;
     }
 
@@ -2328,7 +2318,6 @@ out:
     free_image_devmapper_device_info(old_info);
     return ret;
 }
-
 
 static int do_devmapper_init(struct device_set *devset)
 {
@@ -2797,7 +2786,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
     char *dev_fname = NULL;
     char *options = NULL;
 
-    if (hash == NULL || path  == NULL || mount_opts == NULL) {
+    if (hash == NULL || path == NULL || mount_opts == NULL) {
         ERROR("devmapper: failed to mount device");
         return -1;
     }
@@ -2814,7 +2803,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
 
     info = lookup_device(devset, hash);
     if (info == NULL) {
-        ERROR("devmapper: lookup device %s failed", info);
+        ERROR("devmapper: lookup device %s failed", hash);
         ret = -1;
         goto free_out;
     }
@@ -2825,7 +2814,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
         goto free_out;
     }
     dev_fname = dev_name(devset, info);
-    if (dev_fname) {
+    if (dev_fname == NULL) {
         ERROR("devmapper: failed to get device full name");
         goto free_out;
     }
@@ -2862,7 +2851,7 @@ int unmount_device(const char *hash, const char *mount_path)
     image_devmapper_device_info *info = NULL;
     struct device_set *devset = NULL;
 
-    if (hash == NULL || mount_path  == NULL) {
+    if (hash == NULL || mount_path == NULL) {
         ERROR("devmapper: failed to unmount device");
         return -1;
     }
@@ -2879,7 +2868,7 @@ int unmount_device(const char *hash, const char *mount_path)
 
     info = lookup_device(devset, hash);
     if (info == NULL) {
-        ERROR("devmapper: lookup device %s failed", info);
+        ERROR("devmapper: lookup device %s failed", hash);
         ret = -1;
         goto free_out;
     }
@@ -3046,7 +3035,7 @@ void free_devmapper_status(struct status *st)
     free(st->data_file);
     st->data_file = NULL;
     free(st->data_loopback);
-    st->data_loopback =  NULL;
+    st->data_loopback = NULL;
     free(st->metadata_file);
     st->metadata_file = NULL;
     free(st->metadata_loopback);

@@ -13,7 +13,7 @@
  * Description: provide oci storage images unit test
  ******************************************************************************/
 #include "image_store.h"
-#include "imagetool_image.h"
+#include "isula_libutils/imagetool_image.h"
 #include "utils_array.h"
 #include <cstring>
 #include <iostream>
@@ -30,9 +30,9 @@
 #include <gtest/gtest.h>
 #include "utils.h"
 #include "path.h"
-#include "read_file.h"
+
 #include "storage.h"
-#include "imagetool_images_list.h"
+#include "isula_libutils/imagetool_images_list.h"
 
 std::string GetDirectory()
 {
@@ -234,6 +234,15 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     std::string key = "sha256:" + std::string(created_image);
     ASSERT_EQ(image_store_set_big_data(created_image, key.c_str(), buffer.c_str()), 0);
 
+    std::string img_store_path = std::string(store_real_path) + "/overlay-images/";
+    ASSERT_TRUE(dirExists((img_store_path + id).c_str()));
+    std::string cp_command = "cp " + std::string(store_real_path) + "/resources/" + id + "/manifest "
+                             + img_store_path + id + "/";
+    std::cout << cp_command << std::endl;
+
+    ASSERT_EQ(system(cp_command.c_str()), 0);
+    ASSERT_EQ(image_store_big_data_size(id.c_str(), "manifest"), 428);
+
     std::string manifest_file = GetDirectory() +
                                 "/data/resources/ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689/" +
                                 "manifest";
@@ -244,7 +253,10 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     std::cout << "manifest :" << std::endl;
     std::cout << manifest_content << std::endl;
-    ASSERT_EQ(image_store_set_big_data(created_image, "manifest", manifest_content.c_str()), 0);
+
+    char *data = image_store_big_data(id.c_str(), "manifest");
+    ASSERT_STREQ(data, manifest_content.c_str());
+    free(data);
 
     auto image = image_store_get_image(id.c_str());
     ASSERT_NE(image, nullptr);
@@ -253,7 +265,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_NE(image->repo_tags, nullptr);
     ASSERT_EQ(image->repo_tags_len, 1);
     ASSERT_STREQ(image->repo_tags[0], "docker.io/library/health_check:latest");
-    ASSERT_EQ(image->username, nullptr);
+    ASSERT_NE(image->username, nullptr);
     ASSERT_EQ(image->size, 0);
     ASSERT_EQ(image->spec->config->env_len, 1);
     ASSERT_STREQ(image->spec->config->env[0], "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
@@ -271,8 +283,9 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     ASSERT_EQ(image->repo_digests_len, 1);
 
-    ASSERT_STREQ(image->repo_digests[0],
-                 "docker.io/library/health_check@sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
+    ASSERT_STREQ(
+        image->repo_digests[0],
+        "docker.io/library/health_check@sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
 
     free_imagetool_image(image);
 
@@ -315,7 +328,28 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     ASSERT_EQ(image_store_delete(id.c_str()), 0);
     ASSERT_EQ(image_store_get_image(id.c_str()), nullptr);
-    ASSERT_FALSE(dirExists((std::string(store_real_path) + "/" + id).c_str()));
+    ASSERT_FALSE(dirExists((img_store_path + id).c_str()));
+
+    char *random_id = image_store_create(nullptr, names, sizeof(names) / sizeof(names[0]), layer.c_str(),
+                                         metadata.c_str(), &time, nullptr);
+    std::cout << random_id << std::endl;
+    ASSERT_STRNE(random_id, nullptr);
+    ASSERT_STREQ(image_store_lookup(random_id), random_id);
+    ASSERT_TRUE(dirExists((img_store_path + std::string(random_id)).c_str()));
+
+    cp_command = "cp " + std::string(store_real_path) + "/resources/" + id + "/manifest "
+                 + img_store_path + std::string(random_id) +  "/";
+    std::cout << cp_command << std::endl;
+    ASSERT_EQ(system(cp_command.c_str()), 0);
+
+    char *digest = image_store_big_data_digest(random_id, "manifest");
+    ASSERT_STREQ(digest, "sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
+    free(digest);
+
+    ASSERT_EQ(image_store_delete(random_id), 0);
+    ASSERT_STRNE(image_store_lookup(random_id), random_id);
+    ASSERT_FALSE(dirExists((img_store_path + std::string(random_id)).c_str()));
+    free(random_id);
 }
 
 TEST_F(StorageImagesUnitTest, test_image_store_lookup)

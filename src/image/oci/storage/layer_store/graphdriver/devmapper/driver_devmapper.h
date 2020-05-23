@@ -20,8 +20,8 @@
 #include "metadata_store.h"
 #include "device_setup.h"
 #include "map.h"
-#include "image_devmapper_transaction.h"
-#include "image_devmapper_deviceset_metadata.h"
+#include "isula_libutils/image_devmapper_transaction.h"
+#include "isula_libutils/image_devmapper_deviceset_metadata.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,7 +57,6 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
 int devmapper_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
 
 int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status);
-
 
 #ifdef __cplusplus
 }

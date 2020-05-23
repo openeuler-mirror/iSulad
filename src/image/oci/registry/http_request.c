@@ -13,14 +13,14 @@
  * Description: provide http request functions
  ******************************************************************************/
 
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <limits.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "buffer.h"
 #include "http.h"
 #include "http_request.h"
@@ -28,7 +28,7 @@
 #include "parser.h"
 #include "certs.h"
 #include "auths.h"
-#include "registry_token.h"
+#include "isula_libutils/registry_token.h"
 
 #define MIN_TOKEN_EXPIRES_IN 60
 
@@ -96,8 +96,7 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
     if (!strcmp(host, desc->host)) {
         options->ssl_verify_host = !desc->skip_tls_verify;
         if (!desc->cert_loaded) {
-            ret = certs_load(host, desc->use_decrypted_key, &desc->ca_file, &desc->cert_file,
-                             &desc->key_file);
+            ret = certs_load(host, desc->use_decrypted_key, &desc->ca_file, &desc->cert_file, &desc->key_file);
             if (ret != 0) {
                 ret = -1;
                 goto out;
@@ -108,8 +107,7 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
         options->cert_file = util_strdup_s(desc->cert_file);
         options->key_file = util_strdup_s(desc->key_file);
     } else {
-        ret = certs_load(host, desc->use_decrypted_key, &options->ca_file, &options->cert_file,
-                         &options->key_file);
+        ret = certs_load(host, desc->use_decrypted_key, &options->ca_file, &options->cert_file, &options->key_file);
         if (ret != 0) {
             ret = -1;
             goto out;
@@ -535,7 +533,7 @@ int http_request_buf(pull_descriptor *desc, const char *url, const char **custom
         return -1;
     }
 
-    options = (struct http_get_options *) util_common_calloc_s(sizeof(struct http_get_options));
+    options = (struct http_get_options *)util_common_calloc_s(sizeof(struct http_get_options));
     if (options == NULL) {
         ERROR("Failed to malloc http_get_options");
         ret = -1;

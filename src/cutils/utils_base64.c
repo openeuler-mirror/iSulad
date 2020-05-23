@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_base64.h"
 #include "openssl/pem.h"
@@ -120,7 +120,7 @@ size_t util_base64_decode_len(char *input, size_t len)
     size_t padding_count = 0;
 
     if (input == NULL || len < 4 || len % 4 != 0) {
-        ERROR("Invalid param for base64 decode length, length is %d", len);
+        ERROR("Invalid param for base64 decode length, length is %ld", len);
         return -1;
     }
 
@@ -143,8 +143,8 @@ size_t util_base64_decode(char *input, size_t len, unsigned char *out, size_t ou
     size_t size = 0;
 
     if (input == NULL || result_len < 0 || out == 0 || result_len > out_len) {
-        ERROR("Invalid param for base64 decode, input length %zu, result length %zu, output length %zu",
-              len, result_len, out_len);
+        ERROR("Invalid param for base64 decode, input length %zu, result length %zu, output length %zu", len,
+              result_len, out_len);
         return -1;
     }
 
@@ -162,8 +162,8 @@ size_t util_base64_decode(char *input, size_t len, unsigned char *out, size_t ou
 
     size = BIO_read(io, out, out_len);
     if (size != result_len) {
-        ERROR("base64 decode failed, actual length not match calculated length, expected %zu, got %zu",
-              result_len, size);
+        ERROR("base64 decode failed, actual length not match calculated length, expected %zu, got %zu", result_len,
+              size);
     }
 
 out:

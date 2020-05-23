@@ -12,8 +12,8 @@
  * Create: 2018-11-1
  * Description: provide tar functions
  ********************************************************************************/
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,9 +32,9 @@
 #include "util_archive.h"
 #include "utils.h"
 #include "path.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "error.h"
-#include "json_common.h"
+#include "isula_libutils/json_common.h"
 
 #define ARCHIVE_READ_BUFFER_SIZE (10 * 1024)
 
@@ -242,21 +242,20 @@ out:
     return ret;
 }
 
-int archive_unpack(const struct io_read_wrapper *content, const char *dstdir,
-                   const struct archive_options *options)
+int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options)
 {
     int ret = 0;
     pid_t pid = -1;
-    int keepfds[] = {-1, -1};
+    int keepfds[] = { -1, -1 };
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork: %s", strerror(errno));
         goto cleanup;
     }
 
     if (pid == (pid_t)0) {
-        keepfds[0] = log_get_log_fd();
+        keepfds[0] = isula_libutils_get_log_fd();
         keepfds[1] = *(int *)(content->context);
         ret = util_check_inherited_exclude_fds(true, keepfds, 2);
         if (ret != 0) {
@@ -309,8 +308,8 @@ int test_archive()
     int ret = 0;
     int fd = open("/home/lifeng/test/layer.tar", O_RDONLY);
 
-    struct io_read_wrapper  content = { 0 };
-    struct archive_options  options = { 0 };
+    struct io_read_wrapper content = { 0 };
+    struct archive_options options = { 0 };
     options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
 
     content.context = &fd;

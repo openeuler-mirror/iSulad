@@ -20,8 +20,12 @@
 #include "storage.h"
 
 class MockStorage {
+public:
+    virtual ~MockStorage() = default;
+    MOCK_METHOD1(StorageLayersGetByUncompressDigest, struct layer_list * (const char *digest));
+    MOCK_METHOD1(FreeLayerList, void(struct layer_list *ptr));
 };
 
-void MockDriver_SetMock(MockStorage* mock);
+void MockStorage_SetMock(MockStorage* mock);
 
-#endif
+#endif // STORAGE_MOCK_H_

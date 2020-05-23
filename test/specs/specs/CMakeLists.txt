@@ -13,16 +13,16 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/util_atomic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/path.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs_mount.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs_extend.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs_security.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/libisulad.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/sysinfo.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/commander.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad/arguments.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs_mount.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs_extend.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs_security.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/libisulad.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//sysinfo.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/command_parser.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_ut_common.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/namespace_mock.cc
@@ -35,34 +35,38 @@ add_executable(${EXE}
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/image/oci
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/image
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/image/oci
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/image
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/manager
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/events
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/execute
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/map
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container/restart_manager
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container/health_check
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution/manager
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/events
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution/execute
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/tar
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/plugin
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/http
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/engines
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime/engines
     ${ENGINES_INCS}
-    #${EXECUTION_INCS}
     ${RUNTIME_INCS}
     ${IMAGE_INCS}
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/graphdriver
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/graphdriver
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/console
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks
     )
 
-#set_target_properties(${EXE} PROPERTIES LINK_FLAGS)
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)

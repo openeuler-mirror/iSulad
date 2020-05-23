@@ -13,8 +13,8 @@
  * Description: provide container sha256 functions
  *******************************************************************************/
 
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <unistd.h>
 #include <stdalign.h>
 #include <stdint.h>
@@ -171,8 +171,7 @@ static int sha256sum_calculate_parent_handle(pid_t pid, int pipe_for_read[], int
     return 0;
 }
 
-int sha256sum_calculate(void *stream, char *buffer_out, size_t len, bool isfile,
-                        bool isgzip)
+int sha256sum_calculate(void *stream, char *buffer_out, size_t len, bool isfile, bool isgzip)
 {
     int ret = 0;
     pid_t pid;
@@ -197,7 +196,7 @@ int sha256sum_calculate(void *stream, char *buffer_out, size_t len, bool isfile,
     }
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork()");
         ret = -1;
         close(pipe_for_read[0]);
@@ -231,8 +230,8 @@ int sha256sum_calculate(void *stream, char *buffer_out, size_t len, bool isfile,
         exit(EXIT_FAILURE);
     }
 
-    ret = sha256sum_calculate_parent_handle(pid, pipe_for_read, pipe_for_write,
-                                            isfile, isgzip, stream, buffer_out, len);
+    ret = sha256sum_calculate_parent_handle(pid, pipe_for_read, pipe_for_write, isfile, isgzip, stream, buffer_out,
+                                            len);
 
 out:
     return ret;
@@ -310,9 +309,9 @@ char *sha256_digest_file(const char *filename, bool isgzip)
     }
 
     if (isgzip) {
-        stream = (void*)gzopen(filename, "r");
+        stream = (void *)gzopen(filename, "r");
     } else {
-        stream = (void*)fopen(filename, "r");
+        stream = (void *)fopen(filename, "r");
     }
     if (stream == NULL) {
         ERROR("open file %s failed: %s", filename, strerror(errno));
@@ -355,7 +354,7 @@ char *sha256_digest_file(const char *filename, bool isgzip)
     for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         int sret = snprintf(output_buffer + (i * 2), 3, "%02x", (unsigned int)hash[i]);
         if (sret >= 3 || sret < 0) {
-            ERROR("snprintf failed when calc sha256 from file %s, result is %s", filename, sret);
+            ERROR("snprintf failed when calc sha256 from file %s, result is %d", filename, sret);
             return NULL;
         }
     }
@@ -365,7 +364,7 @@ out:
     if (isgzip) {
         gzclose((gzFile)stream);
     } else {
-        fclose((FILE*)stream);
+        fclose((FILE *)stream);
     }
 
     free(buffer);

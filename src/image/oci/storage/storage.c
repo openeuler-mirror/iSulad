@@ -21,7 +21,7 @@
 
 #include "console.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "layer_store.h"
 #include "image_store.h"
 #include "rootfs_store.h"
@@ -300,7 +300,6 @@ out:
     return ret;
 }
 
-
 int storage_img_create(const char *id, const char *parent_id, const char *metadata,
                        struct storage_img_create_options *opts)
 {
@@ -458,7 +457,8 @@ bool is_top_layer_of_other_image(const char *img_id, const imagetool_images_list
     size_t i = 0;
 
     for (i = 0; i < all_images->images_len; i++) {
-        if (strcmp(all_images->images[i]->top_layer, layer_id) == 0 && strcmp(all_images->images[i]->id, layer_id) != 0) {
+        if (strcmp(all_images->images[i]->top_layer, layer_id) == 0 &&
+            strcmp(all_images->images[i]->id, layer_id) != 0) {
             return true;
         }
     }
@@ -655,7 +655,7 @@ int storage_img_delete(const char *img_id, bool commit)
     }
 
     if (!image_store_exists(img_id)) {
-        WARN("Image %s not exists");
+        WARN("Image %s not exists", img_id);
         ret = 0;
         goto unlock_out;
     }
@@ -818,7 +818,7 @@ int storage_img_set_image_size(const char *image_id)
     }
 
     if (image_store_set_image_size(image_id, (uint64_t)image_size) != 0) {
-        ERROR("Failed to set image %s size %llu", image_id, (uint64_t)image_size);
+        ERROR("Failed to set image %s size %lu", image_id, (uint64_t)image_size);
         ret = -1;
         goto out;
     }
@@ -923,7 +923,6 @@ out:
     free_imagetool_images_list(images);
     return ret;
 }
-
 
 int storage_module_init(struct storage_module_init_options *opts)
 {

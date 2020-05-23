@@ -1714,8 +1714,8 @@ int im_container_export(const im_export_request *request)
 
     nret = bim->ops->export_rf(request);
     if (nret != 0) {
-        ERROR("Failed to export container from %s into file %s and type %s",
-              request->name_id, request->file, request->type);
+        ERROR("Failed to export container from %s into file %s and type %s", request->name_id, request->file,
+              request->type);
         ret = -1;
         goto out;
     }
@@ -1823,7 +1823,7 @@ void free_im_fs_info_response(im_fs_info_response *ptr)
 container_inspect_graph_driver *im_graphdriver_get_metadata(const char *id)
 {
     if (id == NULL) {
-        ERROR("Invalid input arguments for get driver metadata of container:%s", id);
+        ERROR("Invalid input arguments for get driver metadata of container");
         return NULL;
     }
 
@@ -1883,8 +1883,8 @@ int im_prepare_container_rootfs(const im_prepare_request *request, char **real_r
     EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", request->container_id, request->image_name);
     nret = bim->ops->prepare_rf(request, real_rootfs);
     if (nret != 0) {
-        ERROR("Failed to prepare container rootfs %s with image %s type %s",
-              request->container_id, request->image_name, request->image_type);
+        ERROR("Failed to prepare container rootfs %s with image %s type %s", request->container_id, request->image_name,
+              request->image_type);
         ret = -1;
         goto out;
     }

@@ -15,7 +15,7 @@
 #include "oci_login.h"
 #include "utils.h"
 #include "libisulad.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "registry.h"
 #include "isulad_config.h"
 
@@ -64,8 +64,8 @@ int oci_do_login(const char *server, const char *username, const char *password)
     }
 
     options.host = host;
-    options.auth.username = (char *) username;
-    options.auth.password = (char *) password;
+    options.auth.username = (char *)username;
+    options.auth.password = (char *)password;
     ret = registry_login(&options);
     if (ret != 0) {
         ERROR("registry login failed");

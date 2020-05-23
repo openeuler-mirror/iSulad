@@ -16,7 +16,6 @@
 ##- @Create: 2019-04-25
 #######################################################################
 
-
 function usage()
 {
     echo  "Usage: sh test.sh [OPTIONS]"
@@ -279,7 +278,7 @@ function ut_coverage()
             done
         fi
 
-        #lcov -c ${LCOV_CMD} -o coverage/coverage.info --exclude '*_ut.cpp' --include '*.c' --include '*.cpp' --include '*.cc' --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
+        #lcov -c ${LCOV_CMD} -o coverage/coverage.info --exclude '*_ut.c' --include '*.c' --include '*.cpp' --include '*.cc' --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
         lcov --help | grep "\-\-exclude"
         if [[ $? -eq 0 ]]; then
             lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external --exclude '*_ut.cpp' -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph

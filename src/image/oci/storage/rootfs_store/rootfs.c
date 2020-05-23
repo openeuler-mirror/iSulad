@@ -13,11 +13,11 @@
  * Description: provide container function definition
  ******************************************************************************/
 #include "rootfs.h"
-#include "storage_rootfs.h"
+#include "isula_libutils/storage_rootfs.h"
 #include "constants.h"
 #include "util_atomic.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static cntrootfs_t *create_empty_cntr()
 {
@@ -54,7 +54,6 @@ cntrootfs_t *new_rootfs(storage_rootfs *scntr)
     c->srootfs = scntr;
 
     return c;
-
 }
 
 void rootfs_ref_inc(cntrootfs_t *c)
@@ -91,4 +90,3 @@ void free_rootfs_t(cntrootfs_t *ptr)
 
     free(ptr);
 }
-

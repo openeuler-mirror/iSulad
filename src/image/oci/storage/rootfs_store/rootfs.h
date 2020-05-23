@@ -18,8 +18,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <pthread.h>
-#include "storage_rootfs.h"
-#include "log.h"
+#include "isula_libutils/storage_rootfs.h"
+#include "isula_libutils/log.h"
 
 #ifdef __cplusplus
 extern "C" {

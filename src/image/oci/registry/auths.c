@@ -13,18 +13,18 @@
  * Description: provide auths file process functions
  ******************************************************************************/
 
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <limits.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "auths.h"
 #include "aes.h"
-#include "registry_auths.h"
+#include "isula_libutils/registry_auths.h"
 
 static int decode_auth(char *encoded, char **username, char **password)
 {
@@ -117,7 +117,7 @@ static char *encode_auth(char *username, char *password)
     int sret = 0;
     size_t plain_text_base64_len = 0;
     char *plain_text_base64 = NULL;
-    char plain_text[PATH_MAX] = {0};
+    char plain_text[PATH_MAX] = { 0 };
     unsigned char *aes = NULL;
     size_t aes_buf_len = 0;
     size_t aes_len = 0;

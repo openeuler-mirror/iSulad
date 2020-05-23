@@ -2,10 +2,10 @@
 #include <pthread.h>
 #include "metadata_store.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 typedef struct {
-    map_t *map;  // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
+    map_t *map; // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
     pthread_rwlock_t rwlock;
 } metadata_store_t;
 
@@ -89,7 +89,6 @@ bool metadata_store_add(const char *hash, image_devmapper_device_info *device)
 
 image_devmapper_device_info *metadata_store_get(const char *hash)
 {
-
     image_devmapper_device_info *device = NULL;
 
     if (hash == NULL) {

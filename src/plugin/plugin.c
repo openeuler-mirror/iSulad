@@ -75,8 +75,6 @@ static int plugin_event_post_remove_handle(const plugin_t *plugin, const char *c
 
 enum plugin_action { ACTIVE_PLUGIN, DEACTIVE_PLUGIN };
 
-plugin_manager_t *g_plugin_manager;
-
 static inline int check_err(int err, const char *msg)
 {
     if (err) {
@@ -227,8 +225,8 @@ static int set_env_enable_plugins(oci_runtime_spec *oci)
         goto failed;
     }
 
-    if (util_env_insert(&oci->process->env, &oci->process->env_len, ISULAD_ENABLE_PLUGINS, strlen(ISULAD_ENABLE_PLUGINS),
-                        uniq)) {
+    if (util_env_insert(&oci->process->env, &oci->process->env_len, ISULAD_ENABLE_PLUGINS,
+                        strlen(ISULAD_ENABLE_PLUGINS), uniq)) {
         WARN("set env %s failed", uniq);
     }
 
@@ -1917,4 +1915,3 @@ out:
     free(plugins);
     return ret;
 }
-

@@ -14,7 +14,7 @@
 *******************************************************************************/
 #include "oci_pull.h"
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "oci_common_operators.h"
 #include "registry.h"

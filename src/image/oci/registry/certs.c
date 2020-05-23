@@ -13,8 +13,8 @@
  * Description: provide auths file process functions
  ******************************************************************************/
 
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -23,7 +23,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 #include "certs.h"
 
@@ -31,7 +31,7 @@
 #define CLIENT_CERT_SUFFIX ".cert"
 #define CA_SUFFIX ".crt"
 
-static char * corresponding_key_name(const char *cert_name)
+static char *corresponding_key_name(const char *cert_name)
 {
     char *key_name = NULL;
     char *pos = NULL;
@@ -46,7 +46,7 @@ static char * corresponding_key_name(const char *cert_name)
         return NULL;
     }
 
-    key_name  = util_strdup_s(cert_name);
+    key_name = util_strdup_s(cert_name);
 
     // Replace ".cert" to ".key"
     pos = key_name + strlen(key_name) - strlen(CLIENT_CERT_SUFFIX);

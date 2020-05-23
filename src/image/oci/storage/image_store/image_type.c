@@ -13,11 +13,11 @@
  * Description: provide image function definition
  ******************************************************************************/
 #include "image_type.h"
-#include "storage_image.h"
+#include "isula_libutils/storage_image.h"
 #include "constants.h"
 #include "util_atomic.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 static image_t *create_empty_image()
 {
@@ -54,7 +54,6 @@ image_t *new_image(storage_image *simg)
     img->simage = simg;
 
     return img;
-
 }
 
 void image_ref_inc(image_t *img)
@@ -91,4 +90,3 @@ void free_image_t(image_t *ptr)
 
     free(ptr);
 }
-

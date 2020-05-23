@@ -1,11 +1,9 @@
 
 #include "device_setup.h"
 #include "utils_file.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils_string.h"
 #include "utils.h"
-
-
 
 #define LVM_DISK_SCAN "lvmdiskscan"
 #define PVDISPLAY "pvdisplay"
@@ -24,7 +22,8 @@ int validate_lvm_config(image_devmapper_direct_lvm_config *cfg)
         return ret;
     }
 
-    if ((cfg->thinp_percent > 0 && cfg->thinp_meta_percent == 0) || (cfg->thinp_meta_percent > 0 && cfg->thinp_percent)) {
+    if ((cfg->thinp_percent > 0 && cfg->thinp_meta_percent == 0) ||
+        (cfg->thinp_meta_percent > 0 && cfg->thinp_percent)) {
         ERROR("must set both `dm.thinp_percent` and `dm.thinp_metapercent` if either is specified");
         return ret;
     }

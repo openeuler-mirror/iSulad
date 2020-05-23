@@ -17,7 +17,7 @@
 
 #include "utils.h"
 #include "utils_string.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 // define for quotactl commands
 #define PDQ_ACCT_BIT 4 // 4 means project quota accounting ops
@@ -100,13 +100,12 @@ out:
 static int ext4_set_project_quota(const char *backing_fs_blockdev, uint32_t project_id, uint64_t size)
 {
     int ret;
-    struct dqblk d = {0};
+    struct dqblk d = { 0 };
     d.dqb_bhardlimit = size / SIZE_KB;
     d.dqb_bsoftlimit = d.dqb_bhardlimit;
     d.dqb_valid = QIF_LIMITS;
 
-    ret = quotactl(QCMD(Q_SETQUOTA, FS_PROJ_QUOTA), backing_fs_blockdev,
-                   project_id, (caddr_t)&d);
+    ret = quotactl(QCMD(Q_SETQUOTA, FS_PROJ_QUOTA), backing_fs_blockdev, project_id, (caddr_t)&d);
     if (ret != 0) {
         SYSERROR("Failed to set quota limit for projid %d on %s", project_id, backing_fs_blockdev);
     }
@@ -136,7 +135,7 @@ static int ext4_set_quota(const char *target, struct pquota_control *ctrl, uint6
     }
     ctrl->next_project_id++;
 
-    EVENT("Set directory %s project ID:%u quota size: %llu", target, project_id, size);
+    EVENT("Set directory %s project ID:%u quota size: %lu", target, project_id, size);
 
     if (ext4_set_project_quota(ctrl->backing_fs_device, project_id, size) != 0) {
         ERROR("Failed to set project id %d to %s.", project_id, target);
@@ -153,7 +152,7 @@ out:
 static int xfs_set_project_quota(const char *backing_fs_blockdev, uint32_t project_id, uint64_t size)
 {
     int ret;
-    fs_disk_quota_t d = {0};
+    fs_disk_quota_t d = { 0 };
     d.d_version = FS_DQUOT_VERSION;
     d.d_id = project_id;
     d.d_flags = FS_PROJ_QUOTA;
@@ -161,8 +160,7 @@ static int xfs_set_project_quota(const char *backing_fs_blockdev, uint32_t proje
     d.d_blk_hardlimit = (size / 512);
     d.d_blk_softlimit = d.d_blk_hardlimit;
 
-    ret = quotactl(QCMD(Q_XSETQLIM, FS_PROJ_QUOTA), backing_fs_blockdev,
-                   project_id, (caddr_t)&d);
+    ret = quotactl(QCMD(Q_XSETQLIM, FS_PROJ_QUOTA), backing_fs_blockdev, project_id, (caddr_t)&d);
     if (ret != 0) {
         SYSERROR("Failed to set quota limit for projid %d on %s", project_id, backing_fs_blockdev);
     }
@@ -192,7 +190,7 @@ static int xfs_set_quota(const char *target, struct pquota_control *ctrl, uint64
     }
     ctrl->next_project_id++;
 
-    EVENT("Set directory %s project ID:%u quota size: %llu", target, project_id, size);
+    EVENT("Set directory %s project ID:%u quota size: %lu", target, project_id, size);
 
     if (xfs_set_project_quota(ctrl->backing_fs_device, project_id, size) != 0) {
         ERROR("Failed to set project id %d to %s.", project_id, target);
@@ -211,7 +209,7 @@ static int get_project_quota_id(const char *path, uint32_t *project_id)
     int ret = 0;
     DIR *dir = NULL;
     int fd = -1;
-    struct fsxattr fsxattr = {0};
+    struct fsxattr fsxattr = { 0 };
 
     dir = opendir(path);
     if (dir == NULL) {
@@ -318,10 +316,9 @@ static int get_quota_stat(const char *backing_fs_blockdev)
 {
     int ret = 0;
     int nret = 0;
-    fs_quota_stat_t fs_quota_stat_info = {0};
+    fs_quota_stat_t fs_quota_stat_info = { 0 };
 
-    ret = quotactl(QCMD(Q_XGETQSTAT, FS_PROJ_QUOTA), backing_fs_blockdev,
-                   0, (caddr_t)&fs_quota_stat_info);
+    ret = quotactl(QCMD(Q_XGETQSTAT, FS_PROJ_QUOTA), backing_fs_blockdev, 0, (caddr_t)&fs_quota_stat_info);
     if (ret != 0) {
         SYSERROR("Failed to get quota stat on %s", backing_fs_blockdev);
         return ret;

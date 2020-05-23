@@ -27,8 +27,8 @@
 #include "isulad_config_mock.h"
 #include "containers_gc_mock.h"
 #include "engine_mock.h"
-#include "driver_mock.h"
 #include "restartmanager_mock.h"
+#include "container_operator_mock.h"
 #include "verify_mock.h"
 #include "specs_mock.h"
 #include "callback.h"
@@ -55,13 +55,13 @@ public:
         MockContainersStore_SetMock(&m_containersStore);
         MockCollector_SetMock(&m_collector);
         MockContainersGc_SetMock(&m_containersGc);
+        MockContainersOperator_SetMock(&m_containersOperator);
         MockContainerUnix_SetMock(&m_containerUnix);
         MockHealthCheck_SetMock(&m_healthCheck);
         MockIsuladConf_SetMock(&m_isuladConf);
         MockImage_SetMock(&m_image);
         MockSysinfo_SetMock(&m_sysinfo);
         MockEngine_SetMock(&m_engine);
-        MockDriver_SetMock(&m_driver);
         MockVerify_SetMock(&m_verify);
         MockRestartmanager_SetMock(&m_restartmanager);
         MockContainerState_SetMock(&m_containerState);
@@ -70,13 +70,13 @@ public:
         ::testing::Mock::AllowLeak(&m_containersStore);
         ::testing::Mock::AllowLeak(&m_collector);
         ::testing::Mock::AllowLeak(&m_containersGc);
+        ::testing::Mock::AllowLeak(&m_containersOperator);
         ::testing::Mock::AllowLeak(&m_containerUnix);
         ::testing::Mock::AllowLeak(&m_healthCheck);
         ::testing::Mock::AllowLeak(&m_image);
         ::testing::Mock::AllowLeak(&m_isuladConf);
         ::testing::Mock::AllowLeak(&m_sysinfo);
         ::testing::Mock::AllowLeak(&m_engine);
-        ::testing::Mock::AllowLeak(&m_driver);
         ::testing::Mock::AllowLeak(&m_restartmanager);
         ::testing::Mock::AllowLeak(&m_containerState);
         ::testing::Mock::AllowLeak(&m_verify);
@@ -94,7 +94,6 @@ public:
         MockIsuladConf_SetMock(nullptr);
         MockSysinfo_SetMock(nullptr);
         MockEngine_SetMock(nullptr);
-        MockDriver_SetMock(nullptr);
         MockRestartmanager_SetMock(nullptr);
         MockContainerState_SetMock(nullptr);
         MockVerify_SetMock(nullptr);
@@ -105,13 +104,13 @@ public:
     NiceMock<MockContainersStore> m_containersStore;
     NiceMock<MockCollector> m_collector;
     NiceMock<MockContainersGc> m_containersGc;
+    NiceMock<MockContainersOperator> m_containersOperator;
     NiceMock<MockContainerUnix> m_containerUnix;
     NiceMock<MockHealthCheck> m_healthCheck;
     NiceMock<MockImage> m_image;
     NiceMock<MockIsuladConf> m_isuladConf;
     NiceMock<MockSysinfo> m_sysinfo;
     NiceMock<MockEngine> m_engine;
-    NiceMock<MockDriver> m_driver;
     NiceMock<MockRestartmanager> m_restartmanager;
     NiceMock<MockContainerState> m_containerState;
     NiceMock<MockVerify> m_verify;
@@ -134,8 +133,8 @@ container_t *invokeContainersStoreGet(const char *id_or_name)
         return nullptr;
     }
     container_t *cont = (container_t *)util_common_calloc_s(sizeof(container_t));
-    cont->common_config = (container_config_v2_common_config *)util_common_calloc_s(sizeof(
-                                                                                        container_config_v2_common_config));
+    cont->common_config =
+            (container_config_v2_common_config *)util_common_calloc_s(sizeof(container_config_v2_common_config));
     return cont;
 }
 
@@ -202,14 +201,15 @@ void invokeStateSetPaused(container_state_t *s)
 TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_pause)
 {
     service_container_callback_t cb;
-    container_pause_request *request = (container_pause_request*)util_common_calloc_s(sizeof(container_pause_request));
-    container_pause_response *response = (container_pause_response*)util_common_calloc_s(sizeof(container_pause_response));
+    container_pause_request *request = (container_pause_request *)util_common_calloc_s(sizeof(container_pause_request));
+    container_pause_response *response =
+            (container_pause_response *)util_common_calloc_s(sizeof(container_pause_response));
     request->id = util_strdup_s("64ff21ebf4e4");
 
     EXPECT_CALL(m_runtime, RuntimePause(_, _, _)).WillRepeatedly(Invoke(invokeRuntimePause));
     EXPECT_CALL(m_containersStore, ContainersStoreGet(_)).WillRepeatedly(Invoke(invokeContainersStoreGet));
     EXPECT_CALL(m_containerState, IsRunning(_)).WillRepeatedly(Invoke(invokeIsRunning));
-    EXPECT_CALL(m_containersGc, GcIsGcProgress(_)).WillRepeatedly(Invoke(invokeGcIsGcProgress));
+    EXPECT_CALL(m_containersOperator, IsGcProgress(_)).WillRepeatedly(Invoke(invokeGcIsGcProgress));
     EXPECT_CALL(m_containerState, IsPaused(_)).WillRepeatedly(Invoke(invokeIsPaused));
     EXPECT_CALL(m_containerState, IsRestarting(_)).WillRepeatedly(Invoke(invokeIsRestarting));
     EXPECT_CALL(m_containerUnix, ContainerToDisk(_)).WillRepeatedly(Invoke(invokeContainerToDisk));
@@ -219,21 +219,23 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_pause)
     testing::Mock::VerifyAndClearExpectations(&m_containersStore);
     testing::Mock::VerifyAndClearExpectations(&m_containerState);
     testing::Mock::VerifyAndClearExpectations(&m_containersGc);
+    testing::Mock::VerifyAndClearExpectations(&m_containersOperator);
     testing::Mock::VerifyAndClearExpectations(&m_containerUnix);
 }
 
 TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_resume)
 {
     service_container_callback_t cb;
-    container_resume_request *request = (container_resume_request*)util_common_calloc_s(sizeof(container_resume_request));
-    container_resume_response *response = (container_resume_response*)util_common_calloc_s(sizeof(
-                                                                                               container_resume_response));
+    container_resume_request *request =
+            (container_resume_request *)util_common_calloc_s(sizeof(container_resume_request));
+    container_resume_response *response =
+            (container_resume_response *)util_common_calloc_s(sizeof(container_resume_response));
     request->id = util_strdup_s("64ff21ebf4e4");
 
     EXPECT_CALL(m_runtime, RuntimeResume(_, _, _)).WillRepeatedly(Invoke(invokeRuntimeResume));
     EXPECT_CALL(m_containersStore, ContainersStoreGet(_)).WillRepeatedly(Invoke(invokeContainersStoreGet));
     EXPECT_CALL(m_containerState, IsRunning(_)).WillRepeatedly(Invoke(invokeIsRunning));
-    EXPECT_CALL(m_containersGc, GcIsGcProgress(_)).WillRepeatedly(Invoke(invokeGcIsGcProgress));
+    EXPECT_CALL(m_containersOperator, IsGcProgress(_)).WillRepeatedly(Invoke(invokeGcIsGcProgress));
     EXPECT_CALL(m_containerState, IsPaused(_)).WillOnce(Return(true));
     EXPECT_CALL(m_containerUnix, ContainerToDisk(_)).WillRepeatedly(Invoke(invokeContainerToDisk));
     container_extend_callback_init(&cb);
@@ -242,5 +244,6 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_resume)
     testing::Mock::VerifyAndClearExpectations(&m_containersStore);
     testing::Mock::VerifyAndClearExpectations(&m_containerState);
     testing::Mock::VerifyAndClearExpectations(&m_containersGc);
+    testing::Mock::VerifyAndClearExpectations(&m_containersOperator);
     testing::Mock::VerifyAndClearExpectations(&m_containerUnix);
 }

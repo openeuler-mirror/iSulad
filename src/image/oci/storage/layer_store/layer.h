@@ -18,9 +18,9 @@
 #include <stdint.h>
 #include <pthread.h>
 
-#include "storage_layer.h"
-#include "storage_mount_point.h"
-#include "log.h"
+#include "isula_libutils/storage_layer.h"
+#include "isula_libutils/storage_mount_point.h"
+#include "isula_libutils/log.h"
 
 #ifdef __cplusplus
 extern "C" {

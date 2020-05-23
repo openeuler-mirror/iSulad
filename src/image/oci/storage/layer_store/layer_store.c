@@ -20,7 +20,7 @@
 #include <limits.h>
 
 #include "storage.h"
-#include "json_common.h"
+#include "isula_libutils/json_common.h"
 #include "layer.h"
 #include "driver.h"
 #include "linked_list.h"
@@ -30,7 +30,7 @@
 #include "util_atomic.h"
 #include "utils_array.h"
 #include "utils_file.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 
 typedef struct __layer_store_metadata_t {
     pthread_rwlock_t rwlock;
@@ -295,8 +295,7 @@ static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_d
         WARN("load layer: %s failed", sub_dir->d_name);
         goto free_out;
     }
-    if (l->slayer->diff_digest == NULL &&
-        (!util_file_exists(rpath) || !graphdriver_layer_exists(sub_dir->d_name))) {
+    if (l->slayer->diff_digest == NULL && (!util_file_exists(rpath) || !graphdriver_layer_exists(sub_dir->d_name))) {
         ERROR("Invalid data of layer: %s, remove it", sub_dir->d_name);
         if (util_path_remove(rpath) != 0) {
             ERROR("Remove layer: %s failed", rpath);
@@ -610,7 +609,8 @@ static int driver_create_layer(const char *id, const char *parent, bool writable
                 goto free_out;
             }
             for (i = 0; i < opt->mount_opts->len; i++) {
-                ret = append_json_map_string_string(c_opts.storage_opt, opt->mount_opts->keys[i], opt->mount_opts->values[i]);
+                ret = append_json_map_string_string(c_opts.storage_opt, opt->mount_opts->keys[i],
+                                                    opt->mount_opts->values[i]);
                 if (ret != 0) {
                     ERROR("Out of memory");
                     goto free_out;
@@ -934,7 +934,7 @@ static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
 
     ret = graphdriver_apply_diff(l->slayer->id, diff, &size);
 
-    INFO("Apply layer get size: %lld", size);
+    INFO("Apply layer get size: %ld", size);
     l->slayer->diff_size = size;
     // uncompress digest get from up caller
 
@@ -1048,8 +1048,7 @@ static int layer_store_remove_layer(const char *id)
     return ret;
 }
 
-int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *diff,
-                       char **new_id)
+int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *diff, char **new_id)
 {
     int ret = 0;
     char *lid = util_strdup_s(id);
@@ -1229,7 +1228,6 @@ bool layer_store_exists(const char *id)
 
 static void copy_json_to_layer(const layer_t *jl, struct layer *l)
 {
-
     if (jl->slayer == NULL) {
         return;
     }
@@ -1257,7 +1255,7 @@ int layer_store_list(struct layer_list *resp)
         return -1;
     }
 
-    resp->layers = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), g_metadata.layers_list_len);
+    resp->layers = (struct layer **)util_smart_calloc_s(sizeof(struct layer *), g_metadata.layers_list_len);
     if (resp->layers == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -1322,7 +1320,7 @@ static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list 
         goto free_out;
     }
 
-    resp->layers = (struct layer**)util_smart_calloc_s(sizeof(struct layer*), id_list->layer_list_len);
+    resp->layers = (struct layer **)util_smart_calloc_s(sizeof(struct layer *), id_list->layer_list_len);
     if (resp->layers == NULL) {
         ERROR("Out of memory");
         goto free_out;
@@ -1448,7 +1446,7 @@ static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
     if (l->mount_point_json_path == NULL) {
         l->mount_point_json_path = mountpoint_json_path(l->slayer->id);
         if (l->mount_point_json_path == NULL) {
-            ERROR("Failed to get layer %s mount point json");
+            ERROR("Failed to get layer %s mount point json", l->slayer->id);
             return NULL;
         }
     }
@@ -1616,7 +1614,7 @@ static void recover_name(const char *name)
     layer_unlock(l);
 }
 
-int layer_store_set_names(const char *id, const char * const* names, size_t names_len)
+int layer_store_set_names(const char *id, const char * const *names, size_t names_len)
 {
     layer_t *l = NULL;
     int ret = 0;

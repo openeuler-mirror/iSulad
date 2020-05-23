@@ -24,10 +24,10 @@
 #include <stddef.h>
 #include <sha256.h>
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "constants.h"
-#include "read_file.h"
-#include "defs.h"
+
+#include "isula_libutils/defs.h"
 #include "map.h"
 #include "linked_list.h"
 #include "rootfs.h"
@@ -46,10 +46,7 @@ typedef struct rootfs_store {
     bool loaded;
 } rootfs_store_t;
 
-enum lock_type {
-    SHARED = 0,
-    EXCLUSIVE
-};
+enum lock_type { SHARED = 0, EXCLUSIVE };
 
 rootfs_store_t *g_rootfs_store = NULL;
 
@@ -131,7 +128,6 @@ static inline int get_data_dir(const char *id, char *path, size_t len)
     int nret = snprintf(path, len, "%s/%s", g_rootfs_store->dir, id);
     return (nret < 0 || (size_t)nret >= len) ? -1 : 0;
 }
-
 
 static int get_data_path(const char *id, const char *key, char *path, size_t len)
 {
@@ -378,7 +374,8 @@ static int load_container_to_store_field(cntrootfs_t *cntr)
     }
 
     for (i = 0; i < cntr->srootfs->names_len; i++) {
-        cntrootfs_t *conflict_container = (cntrootfs_t *)map_search(g_rootfs_store->byname, (void *)cntr->srootfs->names[i]);
+        cntrootfs_t *conflict_container =
+            (cntrootfs_t *)map_search(g_rootfs_store->byname, (void *)cntr->srootfs->names[i]);
         if (conflict_container != NULL) {
             if (remove_name(conflict_container, cntr->srootfs->names[i]) != 0) {
                 ERROR("Failed to remove name from conflict container");
@@ -587,16 +584,15 @@ static int copy_id_map(storage_rootfs *c, const struct storage_rootfs_options *r
             ERROR("Too many id map");
             return -1;
         }
-        uid_map = (storage_rootfs_uidmap_element **)util_common_calloc_s(
-                      sizeof(storage_rootfs_uidmap_element *) * rootfs_opts->id_mapping_opts.uid_map_len);
+        uid_map = (storage_rootfs_uidmap_element **)util_common_calloc_s(sizeof(storage_rootfs_uidmap_element *) *
+                                                                         rootfs_opts->id_mapping_opts.uid_map_len);
         if (uid_map == NULL) {
             ERROR("Out of memory");
             return -1;
         }
 
         for (i = 0; i < rootfs_opts->id_mapping_opts.uid_map_len; i++) {
-            uid_map[i] = (storage_rootfs_uidmap_element *)util_common_calloc_s(
-                             sizeof(storage_rootfs_uidmap_element));
+            uid_map[i] = (storage_rootfs_uidmap_element *)util_common_calloc_s(sizeof(storage_rootfs_uidmap_element));
             if (uid_map[i] == NULL) {
                 ERROR("Out of memory");
                 ret = -1;
@@ -614,16 +610,15 @@ static int copy_id_map(storage_rootfs *c, const struct storage_rootfs_options *r
             ERROR("Too many id map");
             return -1;
         }
-        gid_map = (storage_rootfs_gidmap_element **)util_common_calloc_s(
-                      sizeof(storage_rootfs_gidmap_element *) * rootfs_opts->id_mapping_opts.gid_map_len);
+        gid_map = (storage_rootfs_gidmap_element **)util_common_calloc_s(sizeof(storage_rootfs_gidmap_element *) *
+                                                                         rootfs_opts->id_mapping_opts.gid_map_len);
         if (gid_map == NULL) {
             ERROR("Out of memory");
             return -1;
         }
 
         for (i = 0; i < rootfs_opts->id_mapping_opts.gid_map_len; i++) {
-            gid_map[i] = (storage_rootfs_gidmap_element *)util_common_calloc_s(
-                             sizeof(storage_rootfs_gidmap_element));
+            gid_map[i] = (storage_rootfs_gidmap_element *)util_common_calloc_s(sizeof(storage_rootfs_gidmap_element));
             if (gid_map[i] == NULL) {
                 ERROR("Out of memory");
                 ret = -1;
@@ -662,9 +657,9 @@ out:
     return ret;
 }
 
-static storage_rootfs *new_storage_rootfs(const char *id, const char *image,
-                                          char **unique_names, size_t unique_names_len, const char *layer,
-                                          const char *metadata, struct storage_rootfs_options *rootfs_opts)
+static storage_rootfs *new_storage_rootfs(const char *id, const char *image, char **unique_names,
+                                          size_t unique_names_len, const char *layer, const char *metadata,
+                                          struct storage_rootfs_options *rootfs_opts)
 {
     int ret = 0;
     char timebuffer[TIME_STR_SIZE] = { 0x00 };
@@ -1084,7 +1079,6 @@ out:
     return ret;
 }
 
-
 int rootfs_store_wipe()
 {
     int ret = 0;
@@ -1208,8 +1202,8 @@ static int update_rootfs_with_big_data(cntrootfs_t *img, const char *key, const 
     full_digest = util_full_digest(new_digest);
     append_json_map_string_string(img->srootfs->big_data_digests, key, full_digest);
 
-    if (!size_found || old_size != (int64_t)strlen(data) ||
-        old_digest == NULL || strcmp(old_digest, full_digest) != 0) {
+    if (!size_found || old_size != (int64_t)strlen(data) || old_digest == NULL ||
+        strcmp(old_digest, full_digest) != 0) {
         *should_save = true;
     }
 
@@ -1310,7 +1304,6 @@ out:
     rootfs_ref_dec(cntr);
     rootfs_store_unlock();
     return ret;
-
 }
 
 int rootfs_store_set_names(const char *id, const char **names, size_t names_len)
@@ -1561,7 +1554,6 @@ char *rootfs_store_big_data(const char *id, const char *key)
 {
     int ret = 0;
     cntrootfs_t *cntr = NULL;
-    size_t filesize;
     char filename[PATH_MAX] = { 0x00 };
     char *content = NULL;
 
@@ -1598,7 +1590,7 @@ char *rootfs_store_big_data(const char *id, const char *key)
         goto out;
     }
 
-    content = read_file(filename, &filesize);
+    content = isula_utils_read_file(filename);
 
 out:
     rootfs_ref_dec(cntr);
@@ -1897,4 +1889,3 @@ out:
     rootfs_store_unlock();
     return ret;
 }
-

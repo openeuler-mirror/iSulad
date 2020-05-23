@@ -24,6 +24,6 @@ public:
     MOCK_METHOD1(GcIsGcProgress, bool(const char *id));
 };
 
-void MockContainersGc_SetMock(MockContainersGc* mock);
+void MockContainersGc_SetMock(MockContainersGc *mock);
 
 #endif

@@ -23,8 +23,8 @@
 #include "map.h"
 #include "linked_list.h"
 #include "image_type.h"
-#include "imagetool_image.h"
-#include "imagetool_images_list.h"
+#include "isula_libutils/imagetool_image.h"
+#include "isula_libutils/imagetool_images_list.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,8 +35,7 @@ int image_store_init(struct storage_module_init_options *opts);
 
 // Create an image that has a specified ID (or a random one) and optional names, using the specified layer as
 // its topmost (hopefully read-only) layer.  That layer can be referenced by multiple images, return a new id.
-char *image_store_create(const char *id, const char **names, size_t names_len,
-                         const char *layer, const char *metadata,
+char *image_store_create(const char *id, const char **names, size_t names_len, const char *layer, const char *metadata,
                          const types_timestamp_t *time, const char *searchable_digest);
 
 // Attempt to translate a name to an ID.  Most methods do this implicitly.
@@ -64,7 +63,7 @@ int image_store_get_names(const char *id, char ***names, size_t *names_len);
 int image_store_set_metadata(const char *id, const char *metadata);
 
 // Set the image pulled time
-int image_store_set_load_time(const char *id,  const types_timestamp_t *time);
+int image_store_set_load_time(const char *id, const types_timestamp_t *time);
 
 // Saves the contents of the store to disk.
 int image_store_save(image_t *img);
@@ -118,4 +117,3 @@ void image_store_free();
 #endif
 
 #endif /* __OCI_STORAGE_IMAGE_STORE_H */
-

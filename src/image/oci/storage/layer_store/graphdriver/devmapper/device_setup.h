@@ -3,8 +3,7 @@
 #define __DEVMAPPER_DEVICE_SETUP_H
 
 #include <stdint.h>
-#include "image_devmapper_direct_lvm_config.h"
-
+#include "isula_libutils/image_devmapper_direct_lvm_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +31,5 @@ void append_mount_options(char **dest, const char *suffix);
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif

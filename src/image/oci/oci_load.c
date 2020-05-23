@@ -15,7 +15,7 @@
 #include "oci_load.h"
 
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "util_archive.h"
 #include "storage.h"
 #include "sha256.h"
@@ -203,7 +203,7 @@ static char **str_array_copy(char **arr, size_t len)
 static types_timestamp_t oci_load_get_timestamp(char *created)
 {
     int64_t nanos = 0;
-    types_timestamp_t timestamp = {0};
+    types_timestamp_t timestamp = { 0 };
 
     if (to_unix_nanos_from_str(created, &nanos) != 0) {
         ERROR("Failed to get created time from image config");
@@ -222,7 +222,7 @@ out:
 static char *oci_load_calc_chain_id(char *parent_chain_id, char *diff_id)
 {
     int sret = 0;
-    char tmp_buffer[MAX_ID_BUF_LEN] = {0};
+    char tmp_buffer[MAX_ID_BUF_LEN] = { 0 };
     char *digest = NULL;
     char *full_digest = NULL;
 
@@ -354,11 +354,11 @@ static int oci_load_create_image(load_image_t *desc)
     int ret = 0;
     size_t i = 0;
     size_t top_layer_index = 0;
-    struct storage_img_create_options opts = {0};
+    struct storage_img_create_options opts = { 0 };
     char *top_layer_id = NULL;
     char *pre_top_layer = NULL;
     oci_image_spec *conf = NULL;
-    types_timestamp_t timestamp = {0};
+    types_timestamp_t timestamp = { 0 };
 
     if (desc == NULL || desc->im_id == NULL) {
         ERROR("Invalid NULL pointer");
@@ -387,14 +387,14 @@ static int oci_load_create_image(load_image_t *desc)
     if (ret != 0) {
         pre_top_layer = storage_get_img_top_layer(desc->im_id);
         if (pre_top_layer == NULL) {
-            ERROR("create image %s for %s failed", desc->im_id);
+            ERROR("create image %s failed", desc->im_id);
             ret = -1;
             goto out;
         }
 
         if (strcmp(pre_top_layer, top_layer_id) != 0) {
-            ERROR("error load image, image id %s exist, but top layer doesn't match. local %s, load %s",
-                  desc->im_id, pre_top_layer, top_layer_id);
+            ERROR("error load image, image id %s exist, but top layer doesn't match. local %s, load %s", desc->im_id,
+                  pre_top_layer, top_layer_id);
             ret = -1;
             goto out;
         }
@@ -414,7 +414,6 @@ out:
     free(pre_top_layer);
     return ret;
 }
-
 
 static int oci_load_set_manifest(const oci_image_manifest *m, char *image_id)
 {
@@ -478,7 +477,7 @@ out:
 static int oci_load_set_loaded_time(char *image_id)
 {
     int ret = 0;
-    types_timestamp_t now = {0};
+    types_timestamp_t now = { 0 };
 
     if (!get_now_time_stamp(&now)) {
         ret = -1;
@@ -500,7 +499,6 @@ static int oci_load_register_image(load_image_t *desc)
 {
     int ret = 0;
     bool image_created = false;
-
 
     if (desc == NULL || desc->im_id == NULL) {
         ERROR("Invalid NULL pointer");
@@ -547,7 +545,7 @@ static int oci_load_register_image(load_image_t *desc)
 out:
     if (ret != 0 && image_created) {
         if (storage_img_delete(desc->im_id, true)) {
-            ERROR("delete image %d failed", desc->im_id);
+            ERROR("delete image %s failed", desc->im_id);
         }
     }
     return ret;
@@ -566,7 +564,7 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
     }
 
     im->layers_len = manifest->layers_len;
-    im->layers = util_common_calloc_s(sizeof(load_layer_blob_t*) * manifest->layers_len);
+    im->layers = util_common_calloc_s(sizeof(load_layer_blob_t *) * manifest->layers_len);
     if (im->layers == NULL) {
         ret = -1;
         ERROR("Calloc memory failed");
@@ -601,7 +599,8 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
             goto out;
         }
 
-        im->layers[i]->compressed_digest = gzip ? util_full_file_digest(layer_fpath) : util_strdup_s(im->layers[i]->diff_id);
+        im->layers[i]->compressed_digest = gzip ? util_full_file_digest(layer_fpath) :
+                                           util_strdup_s(im->layers[i]->diff_id);
         if (im->layers[i]->compressed_digest == NULL) {
             ret = -1;
             ERROR("Calc layer %s compressed digest failed", manifest->layers[i]);
@@ -706,7 +705,7 @@ static int oci_load_set_manifest_info(load_image_t *im)
     }
 
     im->manifest->schema_version = OCI_SCHEMA_VERSION;
-    im->manifest->layers = util_common_calloc_s(sizeof(oci_image_content_descriptor*) * im->layers_len);
+    im->manifest->layers = util_common_calloc_s(sizeof(oci_image_content_descriptor *) * im->layers_len);
     if (im->manifest->layers == NULL) {
         ERROR("Out of memory");
         ret = -1;

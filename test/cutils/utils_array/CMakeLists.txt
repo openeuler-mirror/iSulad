@@ -11,8 +11,8 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_verify.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_regex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256/sha256.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/map/rb_tree.c    
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/path.c
     utils_array_ut.cpp)
 
@@ -20,7 +20,7 @@ target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils
     )

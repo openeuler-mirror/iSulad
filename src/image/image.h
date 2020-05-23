@@ -25,7 +25,7 @@
 #include "isula_libutils/container_config.h"
 #include "libisulad.h"
 #include "arguments.h"
-#include "container_inspect.h"
+#include "isula_libutils/container_inspect.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_image_type.h"
@@ -229,8 +229,7 @@ struct bim_ops {
     int (*merge_conf)(const char *img_name, container_config *container_spec);
 
     /* get user config ops */
-    int (*get_user_conf)(const char *basefs, host_config *hc,
-                         const char *userstr, defs_process_user *puser);
+    int (*get_user_conf)(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser);
 
     /* list images */
     int (*list_ims)(const im_list_request *request, imagetool_images_list **images);

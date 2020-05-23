@@ -16,10 +16,10 @@
 #include "layer.h"
 
 #include "constants.h"
-#include "storage_mount_point.h"
+#include "isula_libutils/storage_mount_point.h"
 #include "util_atomic.h"
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils_file.h"
 
 static void free_layer_t(layer_t *ptr)
@@ -199,4 +199,3 @@ out:
     free(jerr);
     return ret;
 }
-

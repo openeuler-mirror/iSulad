@@ -27,15 +27,15 @@
 #include <dirent.h>
 #include <stdint.h>
 #include <sys/mount.h>
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "utils.h"
 
 #ifndef JFS_SUPER_MAGIC
-#define JFS_SUPER_MAGIC  0x3153464a
+#define JFS_SUPER_MAGIC 0x3153464a
 #endif
 
 #ifndef VXFS_SUPER_MAGIC
-#define VXFS_SUPER_MAGIC  0xa501fcf5
+#define VXFS_SUPER_MAGIC 0xa501fcf5
 #endif
 
 #ifndef OVERLAY_SUPER_MAGIC
@@ -51,19 +51,19 @@
 #endif
 
 #ifndef GPFS_SUPER_MAGIC
-#define GPFS_SUPER_MAGIC  0x47504653
+#define GPFS_SUPER_MAGIC 0x47504653
 #endif
 
 #ifndef UNSUPPORTED_MAGIC
-#define UNSUPPORTED_MAGIC  0x00000000
+#define UNSUPPORTED_MAGIC 0x00000000
 #endif
 
 #ifndef XFS_SUPER_MAGIC
-#define XFS_SUPER_MAGIC  0x58465342
+#define XFS_SUPER_MAGIC 0x58465342
 #endif
 
 #ifndef ZFS_SUPER_MAGIC
-#define ZFS_SUPER_MAGIC  0x2fc12fc1
+#define ZFS_SUPER_MAGIC 0x2fc12fc1
 #endif
 
 // PROPAGATION_TYPES is the set propagation types.
@@ -81,26 +81,26 @@ struct fs_element {
 };
 
 static struct fs_element const g_fs_names[] = {
-    {"aufs",            AUFS_SUPER_MAGIC},
-    {"btrfs",           BTRFS_SUPER_MAGIC},
-    {"cramfs",          CRAMFS_MAGIC},
-    {"ecryptfs",        ECRYPTFS_SUPER_MAGIC},
-    {"extfs",           EXT2_SUPER_MAGIC},
-    {"f2fs",            F2FS_SUPER_MAGIC},
-    {"gpfs",            GPFS_SUPER_MAGIC},
-    {"jffs2",           JFFS2_SUPER_MAGIC},
-    {"jfs",             JFS_SUPER_MAGIC},
-    {"nfs",             NFS_SUPER_MAGIC},
-    {"overlayfs",       OVERLAYFS_SUPER_MAGIC},
-    {"ramfs",           RAMFS_MAGIC},
-    {"reiserfs",        REISERFS_SUPER_MAGIC},
-    {"smb",             SMB_SUPER_MAGIC},
-    {"squashfs",        SQUASHFS_MAGIC},
-    {"tmpfs",           TMPFS_MAGIC},
-    {"unsupported",     UNSUPPORTED_MAGIC},
-    {"vxfs",            VXFS_SUPER_MAGIC},
-    {"xfs",             XFS_SUPER_MAGIC},
-    {"zfs",             ZFS_SUPER_MAGIC},
+    { "aufs", AUFS_SUPER_MAGIC },
+    { "btrfs", BTRFS_SUPER_MAGIC },
+    { "cramfs", CRAMFS_MAGIC },
+    { "ecryptfs", ECRYPTFS_SUPER_MAGIC },
+    { "extfs", EXT2_SUPER_MAGIC },
+    { "f2fs", F2FS_SUPER_MAGIC },
+    { "gpfs", GPFS_SUPER_MAGIC },
+    { "jffs2", JFFS2_SUPER_MAGIC },
+    { "jfs", JFS_SUPER_MAGIC },
+    { "nfs", NFS_SUPER_MAGIC },
+    { "overlayfs", OVERLAYFS_SUPER_MAGIC },
+    { "ramfs", RAMFS_MAGIC },
+    { "reiserfs", REISERFS_SUPER_MAGIC },
+    { "smb", SMB_SUPER_MAGIC },
+    { "squashfs", SQUASHFS_MAGIC },
+    { "tmpfs", TMPFS_MAGIC },
+    { "unsupported", UNSUPPORTED_MAGIC },
+    { "vxfs", VXFS_SUPER_MAGIC },
+    { "xfs", XFS_SUPER_MAGIC },
+    { "zfs", ZFS_SUPER_MAGIC },
 };
 
 struct mount_option_element {
@@ -110,38 +110,38 @@ struct mount_option_element {
 };
 
 static struct mount_option_element const g_mount_options[] = {
-    { "defaults",      false, 0              },
-    { "ro",            false, MS_RDONLY      },
-    { "rw",            true, MS_RDONLY      },
-    { "suid",          true, MS_NOSUID      },
-    { "nosuid",        false, MS_NOSUID      },
-    { "dev",           true, MS_NODEV       },
-    { "nodev",         false, MS_NODEV       },
-    { "exec",          true, MS_NOEXEC      },
-    { "noexec",        false, MS_NOEXEC      },
-    { "sync",          false, MS_SYNCHRONOUS },
-    { "async",         true, MS_SYNCHRONOUS },
-    { "dirsync",       false, MS_DIRSYNC     },
-    { "remount",       false, MS_REMOUNT     },
-    { "mand",          false, MS_MANDLOCK    },
-    { "nomand",        true, MS_MANDLOCK    },
-    { "atime",         true, MS_NOATIME     },
-    { "noatime",       false, MS_NOATIME     },
-    { "diratime",      true, MS_NODIRATIME  },
-    { "nodiratime",    false, MS_NODIRATIME  },
-    { "bind",          false, MS_BIND        },
-    { "rbind",         false, MS_BIND | MS_REC },
-    { "unbindable",  false, MS_UNBINDABLE        },
+    { "defaults", false, 0 },
+    { "ro", false, MS_RDONLY },
+    { "rw", true, MS_RDONLY },
+    { "suid", true, MS_NOSUID },
+    { "nosuid", false, MS_NOSUID },
+    { "dev", true, MS_NODEV },
+    { "nodev", false, MS_NODEV },
+    { "exec", true, MS_NOEXEC },
+    { "noexec", false, MS_NOEXEC },
+    { "sync", false, MS_SYNCHRONOUS },
+    { "async", true, MS_SYNCHRONOUS },
+    { "dirsync", false, MS_DIRSYNC },
+    { "remount", false, MS_REMOUNT },
+    { "mand", false, MS_MANDLOCK },
+    { "nomand", true, MS_MANDLOCK },
+    { "atime", true, MS_NOATIME },
+    { "noatime", false, MS_NOATIME },
+    { "diratime", true, MS_NODIRATIME },
+    { "nodiratime", false, MS_NODIRATIME },
+    { "bind", false, MS_BIND },
+    { "rbind", false, MS_BIND | MS_REC },
+    { "unbindable", false, MS_UNBINDABLE },
     { "runbindable", false, MS_UNBINDABLE | MS_REC },
-    { "private",     false, MS_PRIVATE           },
-    { "rprivate",    false, MS_PRIVATE | MS_REC    },
-    { "shared",      false, MS_SHARED            },
-    { "rshared",     false, MS_SHARED | MS_REC     },
-    { "slave",       false, MS_SLAVE             },
-    { "rslave",      false, MS_SLAVE | MS_REC      },
-    { "relatime",      false, MS_RELATIME    },
-    { "norelatime",    true, MS_RELATIME    },
-    { "strictatime",   false, MS_STRICTATIME },
+    { "private", false, MS_PRIVATE },
+    { "rprivate", false, MS_PRIVATE | MS_REC },
+    { "shared", false, MS_SHARED },
+    { "rshared", false, MS_SHARED | MS_REC },
+    { "slave", false, MS_SLAVE },
+    { "rslave", false, MS_SLAVE | MS_REC },
+    { "relatime", false, MS_RELATIME },
+    { "norelatime", true, MS_RELATIME },
+    { "strictatime", false, MS_STRICTATIME },
     { "nostrictatime", true, MS_STRICTATIME },
 };
 
@@ -519,16 +519,16 @@ int util_mount_from(const char *base, const char *src, const char *dst, const ch
 {
     int ret = 0;
     pid_t pid = -1;
-    int keepfds[] = {-1};
+    int keepfds[] = { -1 };
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork: %s", strerror(errno));
         goto cleanup;
     }
 
     if (pid == (pid_t)0) {
-        keepfds[0] = log_get_log_fd();
+        keepfds[0] = isula_libutils_get_log_fd();
         ret = util_check_inherited_exclude_fds(true, keepfds, 1);
         if (ret != 0) {
             ERROR("Failed to close fds.");

@@ -25,61 +25,59 @@
 extern "C" {
 #endif
 
-#define DECLARE_OCI_UT_COMMON_WRAPPER \
-    extern "C" {\
-        DECLARE_WRAPPER_V(conf_get_graph_rootpath, char *, ());\
-        DEFINE_WRAPPER_V(conf_get_graph_rootpath, char *, (), ());\
+#define DECLARE_OCI_UT_COMMON_WRAPPER                                                   \
+    extern "C" {                                                                         \
+        DECLARE_WRAPPER_V(conf_get_graph_rootpath, char *, ());                              \
+        DEFINE_WRAPPER_V(conf_get_graph_rootpath, char *, (), ());                           \
         \
-        DECLARE_WRAPPER_V(conf_get_graph_run_path, char *, ());\
-        DEFINE_WRAPPER_V(conf_get_graph_run_path, char *, (), ());\
+        DECLARE_WRAPPER_V(conf_get_graph_run_path, char *, ());                              \
+        DEFINE_WRAPPER_V(conf_get_graph_run_path, char *, (), ());                           \
         \
-        DECLARE_WRAPPER_V(conf_get_isulad_storage_driver, char *, ());\
-        DEFINE_WRAPPER_V(conf_get_isulad_storage_driver, char *, (), ());\
+        DECLARE_WRAPPER_V(conf_get_isulad_storage_driver, char *, ());                       \
+        DEFINE_WRAPPER_V(conf_get_isulad_storage_driver, char *, (), ());                    \
         \
-        DECLARE_WRAPPER_V(conf_get_storage_opts, char **, ());\
-        DEFINE_WRAPPER_V(conf_get_storage_opts, char **, (), ());\
+        DECLARE_WRAPPER_V(conf_get_registry_list, char **, ());                              \
+        DEFINE_WRAPPER_V(conf_get_registry_list, char **, (), ());                           \
         \
-        DECLARE_WRAPPER_V(conf_get_registry_list, char **, ());\
-        DEFINE_WRAPPER_V(conf_get_registry_list, char **, (), ());\
+        DECLARE_WRAPPER_V(conf_get_insecure_registry_list, char **, ());                     \
+        DEFINE_WRAPPER_V(conf_get_insecure_registry_list, char **, (), ());                  \
         \
-        DECLARE_WRAPPER_V(conf_get_insecure_registry_list, char **, ());\
-        DEFINE_WRAPPER_V(conf_get_insecure_registry_list, char **, (), ());\
+        DECLARE_WRAPPER(conf_get_im_opt_timeout, unsigned int, ());                          \
+        DEFINE_WRAPPER(conf_get_im_opt_timeout, unsigned int, (), ());                       \
         \
-        DECLARE_WRAPPER(conf_get_im_opt_timeout, unsigned int, ());\
-        DEFINE_WRAPPER(conf_get_im_opt_timeout, unsigned int, (), ());\
-        \
-        DECLARE_WRAPPER_V(execvp, int, (const char *file, char * const argv[]));\
-        DEFINE_WRAPPER_V(execvp, int, (const char *file, char * const argv[]), (file, argv));\
+        DECLARE_WRAPPER_V(execvp, int, (const char *file, char * const argv[]));              \
+        DEFINE_WRAPPER_V(execvp, int, (const char *file, char * const argv[]), (file, argv)); \
     }
 
-#define MOCK_SET_DEFAULT_ISULAD_KIT_OPTS \
-    {\
-        MOCK_SET_V(conf_get_graph_rootpath, conf_get_graph_rootpath_success);\
-        MOCK_SET_V(conf_get_graph_run_path, conf_get_graph_run_path_success);\
-        MOCK_SET_V(conf_get_isulad_storage_driver, conf_get_isulad_storage_driver_success);\
-        MOCK_SET_V(conf_get_storage_opts, conf_get_storage_opts_success);\
-        MOCK_SET_V(conf_get_registry_list, conf_get_registry_list_success);\
-        MOCK_SET_V(conf_get_insecure_registry_list, conf_get_insecure_registry_list_success);\
-        MOCK_SET(conf_get_im_opt_timeout, 300);\
-    }while(0);
+#define MOCK_SET_DEFAULT_ISULAD_KIT_OPTS                                                      \
+    {                                                                                         \
+        MOCK_SET_V(conf_get_graph_rootpath, conf_get_graph_rootpath_success);                 \
+        MOCK_SET_V(conf_get_graph_run_path, conf_get_graph_run_path_success);                 \
+        MOCK_SET_V(conf_get_isulad_storage_driver, conf_get_isulad_storage_driver_success);   \
+        MOCK_SET_V(conf_get_registry_list, conf_get_registry_list_success);                   \
+        MOCK_SET_V(conf_get_insecure_registry_list, conf_get_insecure_registry_list_success); \
+        MOCK_SET(conf_get_im_opt_timeout, 300);                                               \
+    }                                                                                         \
+    while (0)                                                                                 \
+        ;
 
-#define MOCK_CLEAR_DEFAULT_ISULAD_KIT_OPTS \
-    {\
-        MOCK_CLEAR(conf_get_graph_rootpath);\
-        MOCK_CLEAR(conf_get_graph_run_path);\
-        MOCK_CLEAR(conf_get_isulad_storage_driver);\
-        MOCK_CLEAR(conf_get_storage_opts);\
-        MOCK_CLEAR(conf_get_registry_list);\
-        MOCK_CLEAR(conf_get_insecure_registry_list);\
-        MOCK_CLEAR(conf_get_im_opt_timeout);\
-    }while(0);
+#define MOCK_CLEAR_DEFAULT_ISULAD_KIT_OPTS           \
+    {                                                \
+        MOCK_CLEAR(conf_get_graph_rootpath);         \
+        MOCK_CLEAR(conf_get_graph_run_path);         \
+        MOCK_CLEAR(conf_get_isulad_storage_driver);  \
+        MOCK_CLEAR(conf_get_registry_list);          \
+        MOCK_CLEAR(conf_get_insecure_registry_list); \
+        MOCK_CLEAR(conf_get_im_opt_timeout);         \
+    }                                                \
+    while (0)                                        \
+        ;
 
 char *json_path(const char *file);
 int execvp_success(const char *file, char * const argv[]);
 char *conf_get_graph_rootpath_success();
 char *conf_get_graph_run_path_success();
 char *conf_get_isulad_storage_driver_success();
-char **conf_get_storage_opts_success();
 char **conf_get_registry_list_success();
 char **conf_get_insecure_registry_list_success();
 char **single_array_from_string(const char *value);

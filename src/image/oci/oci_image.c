@@ -18,7 +18,7 @@
 #include <semaphore.h>
 
 #include "isula_libutils/log.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "oci_pull.h"
 #include "oci_login.h"
 #include "oci_logout.h"
@@ -56,8 +56,8 @@ static int storage_module_init_helper(const struct service_arguments *args)
         goto out;
     }
 
-    if (dup_array_of_strings((const char **)args->json_confs->storage_opts,
-                             args->json_confs->storage_opts_len, &storage_opts->driver_opts, &storage_opts->driver_opts_len) != 0) {
+    if (dup_array_of_strings((const char **)args->json_confs->storage_opts, args->json_confs->storage_opts_len,
+                             &storage_opts->driver_opts, &storage_opts->driver_opts_len) != 0) {
         ERROR("Failed to get storage storage opts");
         ret = -1;
         goto out;
@@ -103,7 +103,6 @@ void oci_exit()
 {
     storage_module_exit();
 }
-
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response)
 {
@@ -245,7 +244,7 @@ int oci_rmi(const im_rmi_request *request)
 
     ret = storage_img_set_names(real_image_name, (const char **)reduced_image_names, reduced_image_names_len);
     if (ret != 0) {
-        ERROR("Failed to set names of image '%d'", real_image_name);
+        ERROR("Failed to set names of image '%s'", real_image_name);
         goto out;
     }
 

@@ -19,10 +19,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "types_def.h"
-#include "storage_image.h"
-#include "storage_rootfs.h"
-#include "imagetool_images_list.h"
-#include "imagetool_fs_info.h"
+#include "isula_libutils/storage_image.h"
+#include "isula_libutils/storage_rootfs.h"
+#include "isula_libutils/imagetool_images_list.h"
+#include "isula_libutils/imagetool_fs_info.h"
 
 #ifdef __cplusplus
 extern "C" {

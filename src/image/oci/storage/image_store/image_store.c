@@ -25,19 +25,19 @@
 #include <stddef.h>
 #include <sha256.h>
 #include "utils.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "constants.h"
-#include "read_file.h"
-#include "imagetool_image.h"
-#include "docker_image_config_v2.h"
+
+#include "isula_libutils/imagetool_image.h"
+#include "isula_libutils/docker_image_config_v2.h"
 #include "utils_array.h"
 #include "utils_string.h"
 #include "utils_regex.h"
-#include "oci_image_spec.h"
-#include "defs.h"
+#include "isula_libutils/oci_image_spec.h"
+#include "isula_libutils/defs.h"
 #include "map.h"
 #include "utils_convert.h"
-#include "oci_image_spec.h"
+#include "isula_libutils/oci_image_spec.h"
 
 // the name of the big data item whose contents we consider useful for computing a "digest" of the
 // image, by which we can locate the image later.
@@ -66,10 +66,7 @@ typedef struct image_store {
     bool loaded;
 } image_store_t;
 
-enum lock_type {
-    SHARED = 0,
-    EXCLUSIVE
-};
+enum lock_type { SHARED = 0, EXCLUSIVE };
 
 image_store_t *g_image_store = NULL;
 
@@ -1430,8 +1427,8 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
         append_json_map_string_string(img->simage->big_data_digests, key, full_digest);
     }
 
-    if (!size_found || old_size != (int64_t)strlen(data) ||
-        old_digest == NULL || strcmp(old_digest, full_digest) != 0) {
+    if (!size_found || old_size != (int64_t)strlen(data) || old_digest == NULL ||
+        strcmp(old_digest, full_digest) != 0) {
         *should_save = true;
     }
 
@@ -1452,7 +1449,8 @@ static int update_image_with_big_data(image_t *img, const char *key, const char 
     }
 
     if (strcmp(key, IMAGE_DIGEST_BIG_DATA_KEY) == 0) {
-        if (old_digest != NULL && strcmp(old_digest, full_digest) != 0 && strcmp(old_digest, img->simage->digest) != 0) {
+        if (old_digest != NULL && strcmp(old_digest, full_digest) != 0 &&
+            strcmp(old_digest, img->simage->digest) != 0) {
             if (remove_image_from_digest_index(img, old_digest) != 0) {
                 ERROR("Failed to remove the image from the list of images in the digest-based "
                       "index which corresponds to the old digest for this item, unless it's also the hard-coded digest");
@@ -1940,7 +1938,6 @@ char *image_store_big_data(const char *id, const char *key)
 {
     int ret = 0;
     image_t *img = NULL;
-    size_t filesize;
     char filename[PATH_MAX] = { 0x00 };
     char *content = NULL;
 
@@ -1977,7 +1974,7 @@ char *image_store_big_data(const char *id, const char *key)
         goto out;
     }
 
-    content = read_file(filename, &filesize);
+    content = isula_utils_read_file(filename);
 
 out:
     image_ref_dec(img);
@@ -3022,4 +3019,3 @@ out:
     free_imagetool_fs_info_image_filesystems_element(fs_usage_tmp);
     return ret;
 }
-

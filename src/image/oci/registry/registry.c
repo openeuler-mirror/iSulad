@@ -13,15 +13,15 @@
  * Description: provide registry functions
  ******************************************************************************/
 
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <limits.h>
 
 #include "mediatype.h"
-#include "log.h"
+#include "isula_libutils/log.h"
 #include "registry_type.h"
 #include "registry.h"
 #include "utils.h"
@@ -29,10 +29,10 @@
 #include "registry_apiv2.h"
 #include "auths.h"
 #include "certs.h"
-#include "registry_manifest_schema2.h"
-#include "registry_manifest_schema1.h"
-#include "docker_image_config_v2.h"
-#include "image_manifest_v1_compatibility.h"
+#include "isula_libutils/registry_manifest_schema2.h"
+#include "isula_libutils/registry_manifest_schema1.h"
+#include "isula_libutils/docker_image_config_v2.h"
+#include "isula_libutils/image_manifest_v1_compatibility.h"
 #include "sha256.h"
 #include "map.h"
 #include "linked_list.h"
@@ -93,13 +93,14 @@ static int parse_manifest_schema1(pull_descriptor *desc)
     }
 
     if (manifest->fs_layers_len > MAX_LAYER_NUM || manifest->fs_layers_len == 0) {
-        ERROR("Invalid layer number %d, maxium is %d and it can't be 0", manifest->fs_layers_len, MAX_LAYER_NUM);
+        ERROR("Invalid layer number %ld, maxium is %d and it can't be 0", manifest->fs_layers_len, MAX_LAYER_NUM);
         ret = -1;
         goto out;
     }
 
     if (manifest->fs_layers_len != manifest->history_len) {
-        ERROR("Invalid layer number %d do not match history number %d", manifest->fs_layers_len, manifest->history_len);
+        ERROR("Invalid layer number %ld do not match history number %ld", manifest->fs_layers_len,
+              manifest->history_len);
         ret = -1;
         goto out;
     }
@@ -164,7 +165,7 @@ static int parse_manifest_schema2(pull_descriptor *desc)
     desc->config.size = manifest->config->size;
 
     if (manifest->layers_len > MAX_LAYER_NUM) {
-        ERROR("Invalid layer number %d, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
+        ERROR("Invalid layer number %ld, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
         ret = -1;
         goto out;
     }
@@ -179,7 +180,7 @@ static int parse_manifest_schema2(pull_descriptor *desc)
     for (i = 0; i < manifest->layers_len; i++) {
         if (strcmp(manifest->layers[i]->media_type, DOCKER_IMAGE_LAYER_TAR_GZIP) &&
             strcmp(manifest->layers[i]->media_type, DOCKER_IMAGE_LAYER_FOREIGN_TAR_GZIP)) {
-            ERROR("Unsupported layer's media type %s, layer index %d", manifest->layers[i]->media_type, i);
+            ERROR("Unsupported layer's media type %s, layer index %ld", manifest->layers[i]->media_type, i);
             ret = -1;
             goto out;
         }
@@ -217,7 +218,7 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
     desc->config.size = manifest->config->size;
 
     if (manifest->layers_len > MAX_LAYER_NUM) {
-        ERROR("Invalid layer number %d, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
+        ERROR("Invalid layer number %ld, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
         ret = -1;
         goto out;
     }
@@ -231,7 +232,7 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
 
     for (i = 0; i < manifest->layers_len; i++) {
         if (strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_TAR_GZIP)) {
-            ERROR("Unsupported layer's media type %s, layer index %d", manifest->layers[i]->media_type, i);
+            ERROR("Unsupported layer's media type %s, layer index %ld", manifest->layers[i]->media_type, i);
             ret = -1;
             goto out;
         }
@@ -256,8 +257,7 @@ static bool is_manifest_schemav1(char *media_type)
         return false;
     }
 
-    if (!strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_JSON) ||
-        !strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) ||
+    if (!strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_JSON) || !strcmp(media_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) ||
         !strcmp(media_type, MEDIA_TYPE_APPLICATION_JSON)) {
         return true;
     }
@@ -429,7 +429,7 @@ out:
 static char *calc_chain_id(char *parent_chain_id, char *diff_id)
 {
     int sret = 0;
-    char tmp_buffer[MAX_ID_BUF_LEN] = {0};
+    char tmp_buffer[MAX_ID_BUF_LEN] = { 0 };
     char *digest = NULL;
     char *full_digest = NULL;
 
@@ -475,7 +475,6 @@ out:
     return full_digest;
 }
 
-
 static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, pull_descriptor *desc)
 {
     size_t i = 0;
@@ -516,8 +515,7 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
         if (desc->layers[i].chain_id == NULL) {
             desc->layers[i].chain_id = calc_chain_id(parent_chain_id, desc->layers[i].diff_id);
             if (desc->layers[i].chain_id == NULL) {
-                ERROR("calc chain id failed, diff id %s, parent chain id %s",
-                      desc->layers[i].diff_id, parent_chain_id);
+                ERROR("calc chain id failed, diff id %s, parent chain id %s", desc->layers[i].diff_id, parent_chain_id);
                 return -1;
             }
         }
@@ -589,7 +587,7 @@ static int register_layers(pull_descriptor *desc)
         cached = get_cached_layer(desc->layers[i].digest);
         mutex_unlock(&g_shared->mutex);
         if (cached == NULL) {
-            ERROR("get cached layer %s failed, this should never happen");
+            ERROR("get cached layer %s failed, this should never happen", desc->layers[i].digest);
             ret = -1;
             goto out;
         }
@@ -654,7 +652,7 @@ static int create_image(pull_descriptor *desc, char *image_id)
 {
     int ret = 0;
     size_t top_layer_index = 0;
-    struct storage_img_create_options opts = {0};
+    struct storage_img_create_options opts = { 0 };
     char *top_layer_id = NULL;
     char *pre_top_layer = NULL;
 
@@ -775,7 +773,7 @@ out:
 static int set_loaded_time(pull_descriptor *desc, char *image_id)
 {
     int ret = 0;
-    types_timestamp_t now = {0};
+    types_timestamp_t now = { 0 };
 
     if (!get_now_time_stamp(&now)) {
         ret = -1;
@@ -847,7 +845,7 @@ out:
 
     if (ret != 0 && image_created) {
         if (storage_img_delete(image_id, true)) {
-            ERROR("delete image %d failed", image_id);
+            ERROR("delete image %s failed", image_id);
         }
     }
 
@@ -857,7 +855,7 @@ out:
 static types_timestamp_t created_to_timestamp(char *created)
 {
     int64_t nanos = 0;
-    types_timestamp_t timestamp = {0};
+    types_timestamp_t timestamp = { 0 };
 
     if (to_unix_nanos_from_str(created, &nanos) != 0) {
         ERROR("Failed to get created time from image config");
@@ -1097,14 +1095,14 @@ static int fetch_one_layer(thread_fetch_info *info)
     char *diffid = NULL;
 
     if (fetch_layer(info->desc, info->index) != 0) {
-        ERROR("fetch layer %d failed", info->index);
+        ERROR("fetch layer %ld failed", info->index);
         ret = -1;
         goto out;
     }
 
     diffid = oci_calc_diffid(info->file);
     if (diffid == NULL) {
-        ERROR("calc diffid for layer %d failed", info->index);
+        ERROR("calc diffid for layer %ld failed", info->index);
         ret = -1;
         goto out;
     }
@@ -1421,7 +1419,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
     }
 
     config->rootfs = util_common_calloc_s(sizeof(docker_image_rootfs));
-    config->history = util_common_calloc_s(sizeof(docker_image_history*)*desc->layers_len);
+    config->history = util_common_calloc_s(sizeof(docker_image_history *) * desc->layers_len);
     if (config->rootfs == NULL || config->history == NULL) {
         ERROR("out of memory");
         return -1;
@@ -1430,7 +1428,8 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
 
     history_index = manifest->history_len - 1;
     for (i = 0; i < desc->layers_len; i++) {
-        v1config = image_manifest_v1_compatibility_parse_data(manifest->history[history_index]->v1compatibility, NULL, &err);
+        v1config = image_manifest_v1_compatibility_parse_data(manifest->history[history_index]->v1compatibility, NULL,
+                                                              &err);
         if (v1config == NULL) {
             ERROR("parse v1 compatibility config failed, err: %s", err);
             ret = -1;
@@ -1468,7 +1467,7 @@ static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 
 
         ret = util_array_append(&config->rootfs->diff_ids, desc->layers[i].diff_id);
         if (ret != 0) {
-            ERROR("append diff id of layer %zu to rootfs failed, diff id is %s", i, desc->layers[i].diff_id);
+            ERROR("append diff id of layer %u to rootfs failed, diff id is %s", i, desc->layers[i].diff_id);
             ret = -1;
             goto out;
         }
@@ -1494,7 +1493,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
     registry_manifest_schema1 *manifest = NULL;
     char *json = NULL;
     int sret = 0;
-    char file[PATH_MAX] = {0};
+    char file[PATH_MAX] = { 0 };
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -1510,7 +1509,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
 
     if (manifest->fs_layers_len != desc->layers_len || manifest->fs_layers_len != manifest->history_len ||
         manifest->history_len == 0) {
-        ERROR("Invalid length manifest, fs layers length %d, histroy length %d, layers length %d",
+        ERROR("Invalid length manifest, fs layers length %ld, histroy length %ld, layers length %ld",
               manifest->fs_layers_len, manifest->history_len, desc->layers_len);
         ret = -1;
         goto out;
@@ -1655,7 +1654,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     int ret = 0;
     int sret = 0;
     char blobpath[REGISTRY_TMP_DIR_LEN] = REGISTRY_TMP_DIR;
-    char scope[PATH_MAX] = {0};
+    char scope[PATH_MAX] = { 0 };
 
     if (desc == NULL || options == NULL) {
         ERROR("Invalid NULL param");
@@ -1672,8 +1671,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         return -1;
     }
 
-    ret = oci_split_image_name(options->image_name, &desc->host,
-                               &desc->name, &desc->tag);
+    ret = oci_split_image_name(options->image_name, &desc->host, &desc->name, &desc->tag);
     if (ret != 0) {
         ERROR("split image name %s failed", options->image_name);
         ret = -1;
@@ -1807,7 +1805,7 @@ static void remove_temporary_dirs()
 {
     int ret = 0;
     int sret = 0;
-    char cmd[PATH_MAX] = {0};
+    char cmd[PATH_MAX] = { 0 };
 
     sret = snprintf(cmd, sizeof(cmd), "/usr/bin/rm -rf %s", REGISTRY_TMP_DIR_ALL);
     if (sret < 0 || (size_t)sret >= sizeof(cmd)) {
@@ -1879,9 +1877,8 @@ int registry_login(registry_login_options *options)
     int ret = 0;
     pull_descriptor *desc = NULL;
 
-    if (options == NULL || options->host == NULL || options->auth.username == NULL ||
-        options->auth.password == NULL || strlen(options->auth.username) == 0 ||
-        strlen(options->auth.password) == 0) {
+    if (options == NULL || options->host == NULL || options->auth.username == NULL || options->auth.password == NULL ||
+        strlen(options->auth.username) == 0 || strlen(options->auth.password) == 0) {
         ERROR("Invalid NULL param");
         return -1;
     }
