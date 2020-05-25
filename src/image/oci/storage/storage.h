@@ -101,7 +101,7 @@ typedef struct storage_layer_create_opts {
     const char *uncompress_digest;
     const char *compressed_digest;
     const char *layer_data_path;
-    bool writeable;
+    bool writable;
     json_map_string_string *storage_opts;
 } storage_layer_create_opts_t;
 

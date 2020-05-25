@@ -791,11 +791,12 @@ out:
 static int apply_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota)
 {
     int ret = 0;
+    int nret = 0;
     size_t i = 0;
     char tmp[50] = { 0 }; //tmp to hold unit64
 
-    ret = snprintf(tmp, sizeof(tmp), "%llu", (unsigned long long)quota);
-    if (ret < 0 || ret >= sizeof(tmp)) {
+    nret = snprintf(tmp, sizeof(tmp), "%llu", (unsigned long long)quota);
+    if (nret < 0 || (size_t)nret >= sizeof(tmp)) {
         ERROR("Failed to make quota string");
         ret = -1;
         goto out;

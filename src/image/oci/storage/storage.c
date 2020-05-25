@@ -131,7 +131,7 @@ static struct layer_opts *fill_create_layer_opts(storage_layer_create_opts_t *co
     opts->parent = util_strdup_s(copts->parent);
     opts->uncompressed_digest = util_strdup_s(copts->uncompress_digest);
     opts->compressed_digest = util_strdup_s(copts->compressed_digest);
-    opts->writable = copts->compressed_digest;
+    opts->writable = copts->writable;
 
     if (copts->storage_opts != NULL) {
         opts->opts = util_common_calloc_s(sizeof(struct layer_store_mount_opts));
@@ -171,7 +171,7 @@ int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *copt
         return -1;
     }
 
-    if (!copts->writeable && copts->layer_data_path == NULL) {
+    if (!copts->writable && copts->layer_data_path == NULL) {
         ERROR("Invalid arguments for put ro layer");
         ret = -1;
         goto out;
@@ -1023,7 +1023,7 @@ static int do_create_container_rw_layer(const char *container_id, const char *im
 
     storage_layer_create_opts_t copts = {
         .parent = image_top_layer,
-        .writeable = true,
+        .writable = true,
         .storage_opts = storage_opts,
     };
 

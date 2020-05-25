@@ -331,7 +331,7 @@ static int oci_load_register_layers(load_image_t *desc)
                 .parent = parent,
                 .uncompress_digest = desc->layers[i]->diff_id,
                 .compressed_digest = desc->layers[i]->compressed_digest,
-                .writeable = false,
+                .writable = false,
                 .layer_data_path = desc->layers[i]->fpath,
             };
             ret = storage_layer_create(id, &copts);

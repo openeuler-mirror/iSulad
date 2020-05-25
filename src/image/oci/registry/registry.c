@@ -601,7 +601,7 @@ static int register_layers(pull_descriptor *desc)
                 .parent = parent,
                 .uncompress_digest = desc->layers[i].diff_id,
                 .compressed_digest = desc->layers[i].digest,
-                .writeable = false,
+                .writable = false,
                 .layer_data_path = desc->layers[i].file,
             };
             ret = storage_layer_create(id, &copts);
