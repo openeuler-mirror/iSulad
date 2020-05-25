@@ -104,7 +104,7 @@ char *oci_host_from_mirror(const char *mirror)
 
     if (util_has_prefix(mirror, HTTPS_PREFIX)) {
         host = mirror + strlen(HTTPS_PREFIX);
-    } else if (util_has_prefix(mirror, HTTPS_PREFIX)) {
+    } else if (util_has_prefix(mirror, HTTP_PREFIX)) {
         host = mirror + strlen(HTTP_PREFIX);
     }
 

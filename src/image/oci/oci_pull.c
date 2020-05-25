@@ -128,7 +128,7 @@ static int pull_image(const im_pull_request *request, char **name)
     } else {
         registry_mirrors = conf_get_registry_list();
         for (mirror = registry_mirrors; (mirror != NULL) && (*mirror != NULL); mirror++) {
-            if (util_has_prefix(*mirror, HTTPS_PREFIX)) {
+            if (util_has_prefix(*mirror, HTTP_PREFIX)) {
                 options->insecure_registry = true;
             }
             host = oci_host_from_mirror(*mirror);
