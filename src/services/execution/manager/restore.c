@@ -371,6 +371,13 @@ static int remove_invalid_container(const container_t *cont, const char *runtime
         goto out;
     }
 
+    ret = cleanup_mounts_by_id(id, root);
+    if (ret != 0) {
+        ERROR("Failed to clean container's mounts");
+        ret = -1;
+        goto out;
+    }
+
     ret = snprintf(container_root, sizeof(container_root), "%s/%s", root, id);
     if (ret < 0 || (size_t)ret >= sizeof(container_root)) {
         ERROR("Failed to sprintf invalid root directory %s/%s", root, id);

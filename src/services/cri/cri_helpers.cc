@@ -49,6 +49,8 @@ const std::string Constants::CONTAINER_TYPE_ANNOTATION_KEY { "io.kubernetes.cri.
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_CONTAINER { "container" };
 const std::string Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX { "sandbox" };
 const std::string Constants::SANDBOX_ID_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-id" };
+const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE { "pod-cidr-change" };
+const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod-cidr" };
 
 const char *InternalLabelKeys[] = {
     CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
@@ -565,7 +567,7 @@ std::vector<iSuladOpt> GetSeccompiSuladOpts(const std::string &seccompProfile, E
     if (seccompProfile.empty() || seccompProfile == "unconfined") {
         return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
     }
-    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default") {
+    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default" || seccompProfile == "runtime/default") {
         // return nil so docker will load the default seccomp profile
         return std::vector<iSuladOpt> {};
     }

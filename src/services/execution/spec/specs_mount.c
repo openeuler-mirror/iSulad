@@ -2125,8 +2125,8 @@ static char *get_prepare_share_shm_path(const char *truntime, const char *cid)
         goto err_out;
     }
 
-    nret = sprintf(spath, "%s/%s/mounts/shm/", c_root_path, cid);
-    if (nret < 0) {
+    nret = snprintf(spath, slen, "%s/%s/mounts/shm/", c_root_path, cid);
+    if (nret < 0 || nret >= slen) {
         ERROR("Sprintf failed");
         goto err_out;
     }
@@ -2187,8 +2187,8 @@ static int prepare_share_shm(oci_runtime_spec *oci_spec, host_config *host_spec,
         ERROR("Build shm dir failed");
         goto out;
     }
-    nret = sprintf(shmproperty, "mode=1777,size=%"PRId64, host_spec->shm_size);
-    if (nret < 0) {
+    nret = snprintf(shmproperty, MAX_PROPERTY_LEN, "mode=1777,size=%"PRId64, host_spec->shm_size);
+    if (nret < 0 || nret >= MAX_PROPERTY_LEN) {
         ERROR("Sprintf failed");
         goto out;
     }

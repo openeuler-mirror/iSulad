@@ -53,7 +53,11 @@ public:
     static const std::string CONTAINER_TYPE_ANNOTATION_CONTAINER;
     static const std::string CONTAINER_TYPE_ANNOTATION_SANDBOX;
     static const std::string SANDBOX_ID_ANNOTATION_KEY;
+
+    static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE;
+    static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR;
 };
+
 std::string GetDefaultSandboxImage(Errors &err);
 
 json_map_string_string *MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels, Errors &error);

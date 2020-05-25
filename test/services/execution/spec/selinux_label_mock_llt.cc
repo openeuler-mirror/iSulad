@@ -56,7 +56,7 @@ TEST_F(SELinuxGetEnableUnitTest, test_selinux_get_enable_normal)
     const uint32_t selinuxfsMagic = 0xf97cff8c;
     struct statfs sfbuf {
         .f_type = selinuxfsMagic,
-         .f_flags = 0
+        .f_flags = 0
     };
 
     EXPECT_CALL(m_syscall, Statfs(_, _))

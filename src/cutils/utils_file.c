@@ -23,6 +23,8 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
 #include <regex.h>
 #include <dirent.h>
 
@@ -182,6 +184,39 @@ static bool check_dir_valid(const char *dirpath, int recursive_depth, int *failu
     return true;
 }
 
+static int mark_file_mutable(const char *fname)
+{
+    int ret = 0;
+    int fd = -EBADF;
+    int attributes = 0;
+
+    fd = open(fname, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
+    if (fd < 0) {
+        ERROR("Failed to open file to modify flags:%s, %s", fname, strerror(errno));
+        return -1;
+    }
+
+    if (ioctl(fd, FS_IOC_GETFLAGS, &attributes) < 0) {
+        ERROR("Failed to retrieve file flags");
+        ret = -1;
+        goto out;
+    }
+
+    attributes &= ~FS_IMMUTABLE_FL;
+
+    if (ioctl(fd, FS_IOC_SETFLAGS, &attributes) < 0) {
+        ERROR("Failed to set file flags");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (fd >= 0) {
+        close(fd);
+    }
+    return ret;
+}
+
 static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int recursive_depth, int *saved_errno,
                                       int failure)
 {
@@ -191,11 +226,19 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
         }
     } else {
         if (unlink(fname) < 0) {
-            ERROR("Failed to delete %s: %s", fname, strerror(errno));
+            ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
             if (*saved_errno == 0) {
                 *saved_errno = errno;
             }
-            failure = 1;
+
+            if (mark_file_mutable(fname) != 0) {
+                ERROR("Failed to mark file mutable");
+            }
+
+            if (unlink(fname) < 0) {
+                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+                failure = 1;
+            }
         }
     }
 
@@ -934,3 +977,133 @@ free_out:
     return ret;
 }
 
+char *util_path_base(const char *path)
+{
+    char *dir = NULL;
+    int len = 0;
+    int i = 0;
+
+    if (path == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    len = (int)strlen(path);
+    if (len == 0) {
+        return util_strdup_s(".");
+    }
+
+    dir = util_strdup_s(path);
+
+    // strip last slashes
+    for (i = len - 1; i >= 0; i--) {
+        if (dir[i] != '/') {
+            break;
+        }
+        dir[i] = '\0';
+    }
+
+    len = (int)strlen(dir);
+    if (len == 0) {
+        free(dir);
+        return util_strdup_s("/");
+    }
+
+    for (i = len - 1; i >= 0; i--) {
+        if (dir[i] == '/') {
+            break;
+        }
+    }
+
+    if (i < 0) {
+        return dir;
+    }
+
+    char *result = util_strdup_s(&dir[i + 1]);
+    free(dir);
+    return result;
+}
+
+static char *get_random_tmp_file(const char *fname)
+{
+#define RANDOM_TMP_PATH 10
+    int nret = 0;
+    char *result = NULL;
+    char *base = NULL;
+    char *dir = NULL;
+    char rpath[PATH_MAX] = { 0x00 };
+    char random_tmp[RANDOM_TMP_PATH + 1] = { 0x00 };
+
+    base = util_path_base(fname);
+    if (base == NULL) {
+        ERROR("Failed to get base of %s", fname);
+        goto out;
+    }
+
+    dir = util_path_dir(fname);
+    if (dir == NULL) {
+        ERROR("Failed to get dir of %s", fname);
+        goto out;
+    }
+
+    if (util_generate_random_str(random_tmp, (size_t)RANDOM_TMP_PATH)) {
+        ERROR("Failed to generate random str for random path");
+        goto out;
+    }
+
+    nret = snprintf(rpath, PATH_MAX, ".tmp-%s-%s", base, random_tmp);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Failed to generate tmp base file");
+        goto out;
+    }
+
+    result = util_path_join(dir, rpath);
+
+out:
+    free(base);
+    free(dir);
+    return result;
+}
+
+int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode)
+{
+    int ret = 0;
+    char *tmp_file = NULL;
+    char rpath[PATH_MAX] = { 0x00 };
+
+    if (fname == NULL) {
+        return -1;
+    }
+    if (content == NULL || content_len == 0) {
+        return 0;
+    }
+
+    if (cleanpath(fname, rpath, sizeof(rpath)) == NULL) {
+        return -1;
+    }
+
+    tmp_file = get_random_tmp_file(fname);
+    if (tmp_file == NULL) {
+        ERROR("Failed to get tmp file for %s", fname);
+        ret = -1;
+        goto free_out;
+    }
+
+    ret = util_write_file(tmp_file, content, content_len, mode);
+    if (ret != 0) {
+        ERROR("Failed to write content to tmp file for %s", tmp_file);
+        ret = -1;
+        goto free_out;
+    }
+
+    ret = rename(tmp_file, rpath);
+    if (ret != 0) {
+        ERROR("Failed to rename old file %s to target %s", tmp_file, rpath);
+        ret = -1;
+        goto free_out;
+    }
+
+free_out:
+    free(tmp_file);
+    return ret;
+}

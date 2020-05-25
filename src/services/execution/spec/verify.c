@@ -1482,6 +1482,29 @@ out:
     return ret;
 }
 
+/* verify oci linux */
+static int verify_process_env(const defs_process *process)
+{
+    int ret = 0;
+    size_t i = 0;
+    char *new_env = NULL;
+
+    for (i = 0; i < process->env_len; i++) {
+        if (util_validate_env(process->env[i], &new_env) != 0) {
+            ERROR("Invalid environment %s", process->env[i]);
+            isulad_set_error_message("Invalid environment %s", process->env[i]);
+            ret = -1;
+            goto out;
+        }
+        free(new_env);
+        new_env = NULL;
+    }
+
+out:
+    free(new_env);
+    return ret;
+}
+
 static int verify_container_linux(const oci_runtime_spec *container, const sysinfo_t *sysinfo)
 {
     int ret = 0;
@@ -1493,6 +1516,14 @@ static int verify_container_linux(const oci_runtime_spec *container, const sysin
             goto out;
         }
         ret = adapt_oci_linux(sysinfo, container->linux);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+
+    /* verify oci spec process settings */
+    if (container->process != NULL) {
+        ret = verify_process_env(container->process);
         if (ret != 0) {
             goto out;
         }
