@@ -35,6 +35,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart);
 
 int set_container_to_removal(const container_t *cont);
 
+int cleanup_mounts_by_id(const char *id, const char *engine_root_path);
 
 #ifdef __cplusplus
 }

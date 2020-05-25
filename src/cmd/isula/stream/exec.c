@@ -38,11 +38,64 @@ sem_t g_command_waitexit_sem;
 
 struct client_arguments g_cmd_exec_args = {};
 
+static int fill_exec_request(const struct client_arguments *args, const struct command_fifo_config *fifos,
+                             struct isula_exec_request *request)
+{
+    int ret = 0;
+    size_t i = 0;
+    char *new_env = NULL;
+
+    request->name = util_strdup_s(args->name);
+    request->suffix = util_strdup_s(args->exec_suffix);
+    request->tty = args->custom_conf.tty;
+    request->open_stdin = args->custom_conf.open_stdin;
+    request->attach_stdin = args->custom_conf.attach_stdin;
+    request->attach_stdout = args->custom_conf.attach_stdout;
+    request->attach_stderr = args->custom_conf.attach_stderr;
+    if (fifos != NULL) {
+        request->stdin = util_strdup_s(fifos->stdin_name);
+        request->stdout = util_strdup_s(fifos->stdout_name);
+        request->stderr = util_strdup_s(fifos->stderr_name);
+    }
+
+    request->user = util_strdup_s(args->custom_conf.user);
+
+    if (dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), (size_t *) & (request->argc)) != 0) {
+        ERROR("Failed to dup args");
+        ret = -1;
+        goto out;
+    }
+
+    /* environment variables */
+    for (i = 0; i < util_array_len((const char **)(args->extra_env)); i++) {
+        if (util_validate_env(args->extra_env[i], &new_env) != 0) {
+            ERROR("Invalid environment %s", args->extra_env[i]);
+            ret = -1;
+            goto out;
+        }
+        if (new_env == NULL) {
+            continue;
+        }
+        if (util_array_append(&request->env, new_env) != 0) {
+            ERROR("Failed to append custom config env list %s", new_env);
+            ret = -1;
+            goto out;
+        }
+        request->env_len++;
+        free(new_env);
+        new_env = NULL;
+    }
+
+out:
+    free(new_env);
+    return ret;
+}
+
 static int client_exec(const struct client_arguments *args, const struct command_fifo_config *fifos,
                        uint32_t *exit_code)
 {
     isula_connect_ops *ops = NULL;
-    struct isula_exec_request request = { 0 };
+    struct isula_exec_request *request = NULL;
     struct isula_exec_response *response = NULL;
     client_connect_config_t config = { 0 };
     int ret = 0;
@@ -53,26 +106,18 @@ static int client_exec(const struct client_arguments *args, const struct command
         return ECOMMON;
     }
 
-    request.name = args->name;
-    request.suffix =  args->exec_suffix;
-    request.tty = args->custom_conf.tty;
-    request.open_stdin = args->custom_conf.open_stdin;
-    request.attach_stdin = args->custom_conf.attach_stdin;
-    request.attach_stdout = args->custom_conf.attach_stdout;
-    request.attach_stderr = args->custom_conf.attach_stderr;
-    if (fifos != NULL) {
-        request.stdin = fifos->stdin_name;
-        request.stdout = fifos->stdout_name;
-        request.stderr = fifos->stderr_name;
+    request = util_common_calloc_s(sizeof(struct isula_exec_request));
+    if (request == NULL) {
+        ERROR("Out of memory");
+        ret = ECOMMON;
+        goto out;
     }
 
-    request.user = args->custom_conf.user;
-    request.argc = args->argc;
-    request.argv = (char **)args->argv;
-
-    /* environment variables */
-    request.env_len = util_array_len((const char **)(args->extra_env));
-    request.env = args->extra_env;
+    if (fill_exec_request(args, fifos, request) != 0) {
+        ERROR("Failed to fill exec request");
+        ret = ECOMMON;
+        goto out;
+    }
 
     ops = get_connect_client_ops();
     if (ops == NULL || !ops->container.exec) {
@@ -82,7 +127,7 @@ static int client_exec(const struct client_arguments *args, const struct command
     }
 
     config = get_connect_config(args);
-    ret = ops->container.exec(&request, response, &config);
+    ret = ops->container.exec(request, response, &config);
     if (ret) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         ret = ECOMMON;
@@ -94,6 +139,7 @@ out:
     }
 
     isula_exec_response_free(response);
+    isula_exec_request_free(request);
     return ret;
 }
 

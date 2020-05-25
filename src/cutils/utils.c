@@ -1294,6 +1294,41 @@ out:
     return bret;
 }
 
+bool util_deal_with_mount_info(mount_info_call_back_t cb, const char *pattern)
+{
+    FILE *fp = NULL;
+    char *line = NULL;
+    char *mountpoint = NULL;
+    size_t length = 0;
+    bool bret = true;
+    int nret = 0;
+
+    fp = util_fopen("/proc/self/mountinfo", "r");
+    if (fp == NULL) {
+        ERROR("Failed opening /proc/self/mountinfo");
+        return false;
+    }
+
+    while (getline(&line, &length, fp) != -1) {
+        mountpoint = get_mtpoint(line);
+        if (mountpoint == NULL) {
+            INFO("Error reading mountinfo: bad line '%s'", line);
+            continue;
+        }
+        nret = cb(mountpoint, pattern);
+        free(mountpoint);
+        if (nret != 0) {
+            bret = false;
+            goto out;
+        }
+    }
+
+out:
+    fclose(fp);
+    free(line);
+    return bret;
+}
+
 static int set_echo_back(bool echo_back)
 {
     struct termios old, new;
@@ -1474,3 +1509,49 @@ void add_array_kv(char **array, size_t total, size_t *pos, const char *k, const 
     add_array_elem(array, total, pos, v);
 }
 
+int util_validate_env(const char *env, char **dst)
+{
+    int ret = 0;
+    char *value = NULL;
+
+    char **arr = util_string_split_multi(env, '=');
+    if (arr == NULL) {
+        ERROR("Failed to split env string");
+        return -1;
+    }
+    if (strlen(arr[0]) == 0) {
+        ERROR("Invalid environment variable: %s", env);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_array_len((const char **)arr) > 1) {
+        *dst = util_strdup_s(env);
+        goto out;
+    }
+
+    value = getenv(env);
+    if (value == NULL) {
+        *dst = NULL;
+        goto out;
+    } else {
+        int sret;
+        size_t len = strlen(env) + 1 + strlen(value) + 1;
+        *dst = (char *)util_common_calloc_s(len);
+        if (*dst == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        sret = snprintf(*dst, len, "%s=%s", env, value);
+        if (sret < 0 || (size_t)sret >= len) {
+            ERROR("Failed to compose env string");
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    util_free_array(arr);
+    return ret;
+}

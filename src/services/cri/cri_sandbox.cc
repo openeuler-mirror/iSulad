@@ -469,7 +469,8 @@ void CRIRuntimeServiceImpl::StartSandboxContainer(const std::string &response_id
 void CRIRuntimeServiceImpl::SetupUserDefinedNetworkPlane(const runtime::v1alpha2::PodSandboxConfig &config,
                                                          const std::string &response_id,
                                                          container_inspect *inspect_data,
-                                                         std::map<std::string, std::string> &stdAnnos, Errors &error)
+                                                         std::map<std::string, std::string> &stdAnnos,
+                                                         std::map<std::string, std::string> &options, Errors &error)
 {
     google::protobuf::Map<std::string, std::string> annotations;
     CRIHelpers::ExtractAnnotations(inspect_data->config->annotations, annotations);
@@ -485,8 +486,8 @@ void CRIRuntimeServiceImpl::SetupUserDefinedNetworkPlane(const runtime::v1alpha2
         if (networks[i] && networks[i]->name && networks[i]->interface &&
             strcmp(networks[i]->name, Network::DEFAULT_NETWORK_PLANE_NAME.c_str()) != 0) {
             INFO("SetupPod net: %s", networks[i]->name);
-            m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(), networks[i]->name,
-                                      networks[i]->interface, response_id, stdAnnos, error);
+            m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(), networks[i]->interface, response_id,
+                                      stdAnnos, options, error);
             if (error.Empty()) {
                 continue;
             }
@@ -508,6 +509,8 @@ void CRIRuntimeServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::PodSand
                                                 Errors &error)
 {
     std::map<std::string, std::string> stdAnnos;
+    std::map<std::string, std::string> networkOptions;
+
     container_inspect *inspect_data = InspectContainer(response_id, error);
     if (error.NotEmpty()) {
         return;
@@ -530,22 +533,16 @@ void CRIRuntimeServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::PodSand
     // Setup networking for the sandbox.
     CRIHelpers::ProtobufAnnoMapToStd(config.annotations(), stdAnnos);
     stdAnnos[CRIHelpers::Constants::POD_CHECKPOINT_KEY] = jsonCheckpoint;
+    networkOptions["UID"] = config.metadata().uid();
+
     m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(),
-                              Network::DEFAULT_NETWORK_PLANE_NAME, Network::DEFAULT_NETWORK_INTERFACE_NAME, response_id,
-                              stdAnnos, error);
+                              Network::DEFAULT_NETWORK_INTERFACE_NAME, response_id, stdAnnos, networkOptions, error);
     if (error.NotEmpty()) {
         ERROR("SetupPod failed: %s", error.GetCMessage());
         StopContainerHelper(response_id, error);
         goto cleanup;
     }
 
-    // Multi network plane featrue
-    // Set up user defined network plane
-    SetupUserDefinedNetworkPlane(config, response_id, inspect_data, stdAnnos, error);
-    if (error.NotEmpty()) {
-        ERROR("failed to user defined network plane");
-        goto cleanup;
-    }
 cleanup:
     free_container_inspect(inspect_data);
 }
@@ -723,8 +720,7 @@ int CRIRuntimeServiceImpl::TearDownPodCniNetwork(const std::string &realSandboxI
         if (networks[i] && networks[i]->name && networks[i]->interface &&
             strcmp(networks[i]->name, Network::DEFAULT_NETWORK_PLANE_NAME.c_str()) != 0) {
             Errors tmpErr;
-            m_pluginManager->TearDownPod(ns, name, networks[i]->name, networks[i]->interface, inspect_data->id,
-                                         stdAnnos, tmpErr);
+            m_pluginManager->TearDownPod(ns, name, networks[i]->interface, inspect_data->id, stdAnnos, tmpErr);
             if (tmpErr.NotEmpty()) {
                 WARN("TearDownPod cni network failed: %s", tmpErr.GetCMessage());
                 errlist.push_back(tmpErr.GetMessage());
@@ -746,21 +742,16 @@ int CRIRuntimeServiceImpl::ClearCniNetwork(const std::string &realSandboxID, boo
     bool ready = GetNetworkReady(realSandboxID, networkErr);
     if (!hostNetwork && (ready || networkErr.NotEmpty())) {
         Errors pluginErr;
-        m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_PLANE_NAME,
-                                     Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos, pluginErr);
+        m_pluginManager->TearDownPod(ns, name, Network::DEFAULT_NETWORK_INTERFACE_NAME, realSandboxID, stdAnnos, pluginErr);
         if (pluginErr.NotEmpty()) {
-            WARN("TearDownPod cni network: %s failed: %s", Network::DEFAULT_NETWORK_PLANE_NAME.c_str(),
-                 pluginErr.GetCMessage());
+            WARN("TearDownPod cni network failed: %s", pluginErr.GetCMessage());
             errlist.push_back(pluginErr.GetMessage());
         } else {
-            INFO("TearDownPod cni network: %s success", Network::DEFAULT_NETWORK_PLANE_NAME.c_str());
+            INFO("TearDownPod cni network: success");
             SetNetworkReady(realSandboxID, false, pluginErr);
             if (pluginErr.NotEmpty()) {
                 WARN("set network ready: %s", pluginErr.GetCMessage());
             }
-        }
-        if (TearDownPodCniNetwork(realSandboxID, errlist, stdAnnos, ns, name, error)) {
-            return -1;
         }
     }
     return 0;

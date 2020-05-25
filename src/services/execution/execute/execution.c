@@ -792,6 +792,63 @@ out:
     return ret;
 }
 
+static int create_mtab_link(const oci_runtime_spec *oci_spec)
+{
+    char *pathname = "/proc/mounts";
+    char *slink = NULL;
+    char *dir = NULL;
+    int ret = 0;
+
+    if (oci_spec->root == NULL || oci_spec->root->path == NULL) {
+        ERROR("Root path is NULL, can not create link /etc/mtab for target /proc/mounts");
+        return -1;
+    }
+
+    slink = util_path_join(oci_spec->root->path, "/etc/mtab");
+    if (slink == NULL) {
+        ERROR("Failed to join path:%s with /etc/mtab", oci_spec->root->path);
+        ret = -1;
+        goto out;
+    }
+
+    dir = util_path_dir(slink);
+    if (dir == NULL) {
+        ERROR("Failed to get dir %s", slink);
+        ret = -1;
+        goto out;
+    }
+
+    if (!util_dir_exists(dir)) {
+        ret = util_mkdir_p(dir, ETC_FILE_MODE);
+        if (ret != 0) {
+            ERROR("Unable to create mtab directory %s.", dir);
+            goto out;
+        }
+    }
+
+    if (util_file_exists(slink)) {
+        goto out;
+    }
+
+    ret = symlink(pathname, slink);
+    if (ret < 0 && errno != EEXIST) {
+        if (errno == EROFS) {
+            WARN("Failed to create link %s for target %s. Read-only filesystem", slink, pathname);
+        } else {
+            SYSERROR("Failed to create \"%s\"", slink);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    ret = 0;
+
+out:
+    free(slink);
+    free(dir);
+    return ret;
+}
+
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm,
                               container_pid_t *pid_info)
 {
@@ -863,6 +920,13 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image, id);
     if (nret != 0) {
         ERROR("Failed to mount rootfs for container %s", id);
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    nret = create_mtab_link(oci_spec);
+    if (nret != 0) {
+        ERROR("Failed to create link /etc/mtab for target /proc/mounts");
         ret = -1;
         goto close_exit_fd;
     }
@@ -1745,6 +1809,39 @@ out:
     return ret;
 }
 
+int umount_residual_shm(const char *mount_info, const char *target)
+{
+    if (strncmp(mount_info, target, strlen(target)) != 0) {
+        return 0;
+    }
+
+    DEBUG("Try to umount: %s", mount_info);
+    if (umount2(mount_info, MNT_DETACH)) {
+        SYSERROR("Failed to umount residual mount: %s", mount_info);
+    }
+
+    return 0;
+}
+
+int cleanup_mounts_by_id(const char *id, const char *engine_root_path)
+{
+    char target[PATH_MAX] = {0};
+    int nret = 0;
+
+    nret = snprintf(target, PATH_MAX, "%s/%s", engine_root_path, id);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Sprintf failed");
+        return -1;
+    }
+
+    if (!util_deal_with_mount_info(umount_residual_shm, target)) {
+        ERROR("Cleanup mounts failed");
+        return -1;
+    }
+
+    return 0;
+}
+
 static int do_cleanup_container_resources(container_t *cont)
 {
     int ret = 0;
@@ -1803,6 +1900,9 @@ static int do_cleanup_container_resources(container_t *cont)
     umount_share_shm(cont);
 
     umount_host_channel(cont->hostconfig->host_channel);
+
+    // clean residual mount points
+    cleanup_mounts_by_id(id, rootpath);
 
     if (do_runtime_rm_helper(id, runtime, rootpath) != 0) {
         ret = -1;
