@@ -20,17 +20,6 @@
 extern "C" {
 #endif
 
-#ifdef ENABLE_OCI_IMAGE
-/*
- * ImageSpec is an internal representation of an image.  Currently, it wraps the
- * value of a Container's Image field (e.g. imageID or imageDigest), but in the
- * future it will include more detailed information about the different image types.
- */
-typedef struct {
-    char *image;
-} image_spec;
-#endif
-
 /* AuthConfig contains authorization information for connecting to a registry */
 typedef struct {
     char *username;
@@ -46,16 +35,8 @@ typedef struct {
     char *registry_token;
 } auth_config;
 
-#ifdef ENABLE_OCI_IMAGE
-typedef struct {
-    image_spec image;
-} image_filter;
-#endif
-
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

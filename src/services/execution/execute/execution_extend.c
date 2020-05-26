@@ -53,8 +53,7 @@ struct stats_context {
     container_stats_request *stats_config;
 };
 
-static int service_events_handler(const struct isulad_events_request *request,
-                                  const stream_func_wrapper *stream)
+static int service_events_handler(const struct isulad_events_request *request, const stream_func_wrapper *stream)
 {
     int ret = 0;
     char *name = NULL;
@@ -184,12 +183,7 @@ cleanup:
     free_stats_context(ctx);
     return NULL;
 }
-static const char *accepted_stats_filter_tags[] = {
-    "id",
-    "label",
-    "name",
-    NULL
-};
+static const char *accepted_stats_filter_tags[] = { "id", "label", "name", NULL };
 
 static int copy_map_labels(const container_config *config, map_t **map_labels)
 {
@@ -342,8 +336,7 @@ static int service_stats_make_memory(container_info ***stats_arr, size_t num)
     return 0;
 }
 
-static void pack_stats_response(container_stats_response *response, uint32_t cc, size_t info_len,
-                                container_info **info)
+static void pack_stats_response(container_stats_response *response, uint32_t cc, size_t info_len, container_info **info)
 {
     if (response == NULL) {
         return;
@@ -394,8 +387,8 @@ cleanup:
     return ret;
 }
 
-static int get_containers_stats(char **idsarray, size_t ids_len, const struct stats_context *ctx,
-                                bool check_exists, container_info ***info, size_t *info_len)
+static int get_containers_stats(char **idsarray, size_t ids_len, const struct stats_context *ctx, bool check_exists,
+                                container_info ***info, size_t *info_len)
 {
     int ret = 0;
     int nret;
@@ -449,8 +442,7 @@ cleanup:
     return ret;
 }
 
-static int container_stats_cb(const container_stats_request *request,
-                              container_stats_response **response)
+static int container_stats_cb(const container_stats_request *request, container_stats_response **response)
 {
     bool check_exists = false;
     size_t ids_len = 0;
@@ -544,7 +536,6 @@ out:
     return ret;
 }
 
-#ifdef ENABLE_OCI_IMAGE
 static int oci_image_export_rootfs(const char *id, const char *file)
 {
     int ret = 0;
@@ -576,7 +567,6 @@ out:
     free_im_export_request(request);
     return ret;
 }
-#endif
 
 static int export_container(container_t *cont, const char *file)
 {
@@ -584,11 +574,9 @@ static int export_container(container_t *cont, const char *file)
 
     container_lock(cont);
 
-#ifdef ENABLE_OCI_IMAGE
     if (oci_image_export_rootfs(cont->common_config->id, file)) {
         ret = -1;
     }
-#endif
 
     container_unlock(cont);
     return ret;
@@ -746,8 +734,7 @@ static void pack_pause_response(container_pause_response *response, uint32_t cc,
     }
 }
 
-static int container_pause_cb(const container_pause_request *request,
-                              container_pause_response **response)
+static int container_pause_cb(const container_pause_request *request, container_pause_response **response)
 {
     int ret = 0;
     uint32_t cc = ISULAD_SUCCESS;
@@ -858,8 +845,7 @@ static int update_container_memory(const char *id, const host_config *hostconfig
     if (hostconfig->memory != 0) {
         // if memory limit smaller than already set memoryswap limit and doesn't
         // update the memoryswap limit, then error out.
-        if (chostconfig->memory_swap > 0 &&
-            hostconfig->memory > chostconfig->memory_swap &&
+        if (chostconfig->memory_swap > 0 && hostconfig->memory > chostconfig->memory_swap &&
             hostconfig->memory_swap == 0) {
             ERROR("Memory limit should be smaller than already set memoryswap limit,"
                   " update the memoryswap at the same time");
@@ -980,8 +966,8 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
 
     if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be \"update\".");
-        isulad_set_error_message("Cannot update container %s: Container is marked for removal and cannot be \"update\".",
-                                 id);
+        isulad_set_error_message(
+            "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
         ret = -1;
         goto out;
     }
@@ -989,7 +975,8 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
     if (is_running(cont->state) && hostconfig->kernel_memory) {
         ERROR("Can not update kernel memory to a running container, please stop it first.");
         isulad_set_error_message("Cannot update container %s: Can not update kernel memory to a running container,"
-                                 " please stop it first.", id);
+                                 " please stop it first.",
+                                 id);
         ret = -1;
         goto out;
     }
@@ -1292,8 +1279,7 @@ static int runtime_resize_helper(const char *id, const char *runtime, const char
 }
 
 static int runtime_exec_resize_helper(const char *id, const char *runtime, const char *rootpath, const char *suffix,
-                                      unsigned int height,
-                                      unsigned int width)
+                                      unsigned int height, unsigned int width)
 {
     int ret = 0;
     rt_exec_resize_params_t params = { 0 };
@@ -1457,4 +1443,3 @@ void container_extend_callback_init(service_container_callback_t *cb)
     cb->export_rootfs = container_export_cb;
     cb->resize = container_resize_cb;
 }
-

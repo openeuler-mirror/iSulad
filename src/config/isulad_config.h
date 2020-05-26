@@ -72,8 +72,6 @@ unsigned int conf_get_start_timeout();
 
 int init_cgroups_path(const char *path, int recursive_depth);
 
-char **conf_get_storage_opts();
-
 char **conf_get_insecure_registry_list();
 
 char **conf_get_registry_list();
@@ -100,4 +98,3 @@ int parse_log_opts(struct service_arguments *args, const char *key, const char *
 #endif
 
 #endif /* __ISULAD_CONF_H */
-

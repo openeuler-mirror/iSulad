@@ -101,7 +101,6 @@ out:
     return ret;
 }
 
-#ifdef ENABLE_OCI_IMAGE
 static void post_nonexist_image_containers(const container_t *cont, Container_Status status,
                                            const struct engine_container_status_info *info)
 {
@@ -109,13 +108,13 @@ static void post_nonexist_image_containers(const container_t *cont, Container_St
     const char *id = cont->common_config->id;
 
     if (info->status == ENGINE_CONTAINER_STATUS_STOPPED) {
-        if (status != CONTAINER_STATUS_STOPPED && \
-            status != CONTAINER_STATUS_CREATED) {
+        if (status != CONTAINER_STATUS_STOPPED && status != CONTAINER_STATUS_CREATED) {
             nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
             if (nret != 0) {
                 ERROR("Failed to post container %s to garbage"
                       "collector, that may lost some resources"
-                      "used with container!", id);
+                      "used with container!",
+                      id);
             }
             state_set_stopped(cont->state, 255);
         }
@@ -124,7 +123,8 @@ static void post_nonexist_image_containers(const container_t *cont, Container_St
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
-                  "used with container!", id);
+                  "used with container!",
+                  id);
         }
         state_set_stopped(cont->state, 255);
     } else {
@@ -167,12 +167,10 @@ out:
     free(tmp);
     return ret;
 }
-#endif
 
 static bool is_same_process(const container_t *cont, const container_pid_t *pid_info)
 {
-    if (pid_info->pid == cont->state->state->pid &&
-        pid_info->ppid == cont->state->state->p_pid &&
+    if (pid_info->pid == cont->state->state->pid && pid_info->ppid == cont->state->state->p_pid &&
         pid_info->start_time == cont->state->state->start_time &&
         pid_info->pstart_time == cont->state->state->p_start_time) {
         return true;
@@ -188,8 +186,7 @@ static void try_to_set_paused_container_pid(Container_Status status, const conta
     }
 }
 
-static void try_to_set_container_running(Container_Status status, container_t *cont,
-                                         const container_pid_t *pid_info)
+static void try_to_set_container_running(Container_Status status, container_t *cont, const container_pid_t *pid_info)
 {
     if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
         state_set_running(cont->state, pid_info, true);
@@ -201,8 +198,7 @@ static int restore_stopped_container(Container_Status status, const container_t 
     const char *id = cont->common_config->id;
     pid_t pid = 0;
 
-    if (status != CONTAINER_STATUS_STOPPED && \
-        status != CONTAINER_STATUS_CREATED) {
+    if (status != CONTAINER_STATUS_STOPPED && status != CONTAINER_STATUS_CREATED) {
         if (util_process_alive(cont->state->state->pid, cont->state->state->start_time)) {
             pid = cont->state->state->pid;
         }
@@ -210,7 +206,8 @@ static int restore_stopped_container(Container_Status status, const container_t 
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
-                  "used with container!", id);
+                  "used with container!",
+                  id);
         }
         state_set_stopped(cont->state, 255);
         *need_save = true;
@@ -236,7 +233,8 @@ static int restore_running_container(Container_Status status, container_t *cont,
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
-                  "used with container!", id);
+                  "used with container!",
+                  id);
         }
         ret = -1;
         goto out;
@@ -267,7 +265,8 @@ static int restore_paused_container(Container_Status status, container_t *cont,
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
                   "collector, that may lost some resources"
-                  "used with container!", id);
+                  "used with container!",
+                  id);
         }
         ret = -1;
         goto out;
@@ -293,21 +292,19 @@ static int restore_state(container_t *cont)
 
     (void)container_exit_on_next(cont); /* cancel restart policy */
 
-#ifdef ENABLE_OCI_IMAGE
     if (check_container_image_exist(cont) != 0) {
         ERROR("Failed to restore container:%s due to image not exist", id);
         post_nonexist_image_containers(cont, status, &real_status);
         ret = -1;
         goto out;
     }
-#endif
 
     params.rootpath = cont->root_path;
     params.state = cont->state_path;
     nret = runtime_status(id, runtime, &params, &real_status);
     if (nret != 0) {
-        ERROR("Failed to restore container %s, make real status to STOPPED. Due to can not load container with status %d", id,
-              status);
+        ERROR("Failed to restore container %s, make real status to STOPPED. Due to can not load container with status %d",
+              id, status);
         real_status.status = ENGINE_CONTAINER_STATUS_STOPPED;
     }
 
@@ -405,8 +402,7 @@ static void restored_restart_container(container_t *cont)
 
     started_at = state_get_started_at(cont->state);
     if (restart_manager_should_restart(id, state_get_exitcode(cont->state),
-                                       cont->common_config->has_been_manually_stopped,
-                                       time_seconds_since(started_at),
+                                       cont->common_config->has_been_manually_stopped, time_seconds_since(started_at),
                                        &timeout)) {
         cont->common_config->restart_count++;
         INFO("Restart container %s after 5 second", id);
@@ -590,4 +586,3 @@ out:
     util_free_array(subdir);
     return;
 }
-

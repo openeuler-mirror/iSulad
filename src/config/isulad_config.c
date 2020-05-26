@@ -375,49 +375,6 @@ out:
     return path;
 }
 
-#ifdef ENABLE_OCI_IMAGE
-
-/* conf get graph driver opts */
-char **conf_get_storage_opts()
-{
-    int nret = 0;
-    size_t i;
-    char **opts = NULL;
-    char *p = NULL;
-    struct service_arguments *conf = NULL;
-
-    if (isulad_server_conf_rdlock() != 0) {
-        return NULL;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL || conf->json_confs->storage_opts == NULL) {
-        goto out;
-    }
-
-    for (i = 0; i < conf->json_confs->storage_opts_len; i++) {
-        p = conf->json_confs->storage_opts[i];
-        if (p == NULL) {
-            goto out;
-        }
-        nret = util_array_append(&opts, p);
-        if (nret != 0) {
-            ERROR("Out of memory");
-            goto out_free;
-        }
-    }
-
-out_free:
-    if (nret != 0) {
-        util_free_array(opts);
-        opts = NULL;
-    }
-out:
-    (void)isulad_server_conf_unlock();
-    return opts;
-}
-#endif
-
 /* conf get registry */
 char **conf_get_registry_list()
 {
@@ -868,26 +825,26 @@ out:
     return check_flag;
 }
 
-#define OCI_STR_ARRAY_DUP(src, dest, srclen, destlen, ret)              \
-    do {                                                                \
-        if ((src) != NULL) {                                            \
+#define OCI_STR_ARRAY_DUP(src, dest, srclen, destlen, ret)          \
+    do {                                                            \
+        if ((src) != NULL) {                                        \
             (dest) = str_array_dup((const char **)(src), (srclen)); \
-            if ((dest) == NULL) {                                       \
-                (ret) = -1;                                             \
-                goto out;                                               \
-            }                                                           \
-            (destlen) = (srclen);                                       \
-        }                                                               \
+            if ((dest) == NULL) {                                   \
+                (ret) = -1;                                         \
+                goto out;                                           \
+            }                                                       \
+            (destlen) = (srclen);                                   \
+        }                                                           \
     } while (0)
 
 #define HOOKS_ELEM_DUP_DEF(item)                                                      \
-    defs_hook *hooks_##item##_elem_dup(const defs_hook *src)                                \
+    defs_hook *hooks_##item##_elem_dup(const defs_hook *src)                          \
     {                                                                                 \
         int ret = 0;                                                                  \
         defs_hook *dest = NULL;                                                       \
         if (src == NULL)                                                              \
             return NULL;                                                              \
-        dest = util_common_calloc_s(sizeof(defs_hook));                                       \
+        dest = util_common_calloc_s(sizeof(defs_hook));                               \
         if (dest == NULL)                                                             \
             return NULL;                                                              \
         dest->path = util_strdup_s(src->path);                                        \
@@ -916,7 +873,7 @@ HOOKS_ELEM_DUP_DEF(poststop)
         if (src->item##_len > SIZE_MAX / sizeof(defs_hook *) - 1) {                         \
             return -1;                                                                      \
         }                                                                                   \
-        dest->item = util_common_calloc_s(sizeof(defs_hook *) * (src->item##_len + 1));             \
+        dest->item = util_common_calloc_s(sizeof(defs_hook *) * (src->item##_len + 1));     \
         if (dest->item == NULL)                                                             \
             return -1;                                                                      \
         dest->item##_len = src->item##_len;                                                 \
@@ -1486,8 +1443,7 @@ static inline void override_bool_pointer_value(bool **dst, bool **src)
     *src = NULL;
 }
 
-static int merge_hosts_conf_into_global(struct service_arguments *args,
-                                        const isulad_daemon_configs *tmp_json_confs)
+static int merge_hosts_conf_into_global(struct service_arguments *args, const isulad_daemon_configs *tmp_json_confs)
 {
     size_t i, j;
 
@@ -1585,8 +1541,7 @@ static int merge_registry_conf_into_global(struct service_arguments *args, isula
     return 0;
 }
 
-static int merge_default_ulimits_conf_into_global(struct service_arguments *args,
-                                                  isulad_daemon_configs *tmp_json_confs)
+static int merge_default_ulimits_conf_into_global(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
 {
     if (tmp_json_confs == NULL) {
         return -1;
@@ -1700,4 +1655,3 @@ out:
     free_isulad_daemon_configs(tmp_json_confs);
     return ret;
 }
-

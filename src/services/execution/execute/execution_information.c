@@ -196,10 +196,9 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
     char *operating_system = NULL;
     char *huge_page_size = NULL;
     struct utsname u;
-    im_image_count_request *im_request = NULL;
     char *rootpath = NULL;
 #ifdef ENABLE_OCI_IMAGE
-    char *graph_driver = NULL;
+    im_image_count_request *im_request = NULL;
     struct graphdriver_status *driver_status = NULL;
 #endif
 
@@ -224,22 +223,22 @@ static int isulad_info_cb(const host_info_request *request, host_info_response *
         goto pack_response;
     }
 
-    im_request = util_common_calloc_s(sizeof(im_image_count_request));
-    if (im_request == NULL) {
-        ERROR("Out of memory");
-        cc = ISULAD_ERR_MEMOUT;
-        goto pack_response;
-    }
 #ifdef ENABLE_OCI_IMAGE
-    im_request->type = util_strdup_s(IMAGE_TYPE_OCI);
     driver_status = im_graphdriver_get_status();
     if (driver_status == NULL) {
         ERROR("Failed to get graph driver status info!");
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
-#endif
+    im_request = util_common_calloc_s(sizeof(im_image_count_request));
+    if (im_request == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto pack_response;
+    }
+    im_request->type = util_strdup_s(IMAGE_TYPE_OCI);
     images_num = im_get_image_count(im_request);
+#endif
 
     operating_system = get_operating_system();
     if (operating_system == NULL) {
@@ -329,12 +328,11 @@ pack_response:
     }
     free(rootpath);
 #ifdef ENABLE_OCI_IMAGE
-    free(graph_driver);
     im_free_graphdriver_status(driver_status);
+    free_im_image_count_request(im_request);
 #endif
     free(huge_page_size);
     free(operating_system);
-    free_im_image_count_request(im_request);
     isula_libutils_free_log_prefix();
     DAEMON_CLEAR_ERRMSG();
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
@@ -584,7 +582,6 @@ static int get_pids(const char *name, const char *runtime, const char *rootpath,
         goto out;
     }
 
-
     if (out->pids_len > SIZE_MAX / sizeof(pid_t)) {
         ERROR("list too many pids");
         ret = -1;
@@ -757,7 +754,6 @@ static int container_top_cb(container_top_request *request, container_top_respon
     pid_t *pids = NULL;
     size_t pids_len = 0;
     container_t *cont = NULL;
-
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -937,8 +933,8 @@ static int dup_health_check_config(const container_config *src, container_inspec
         dest->health_check->interval = timeout_with_default(src->healthcheck->interval, DEFAULT_PROBE_INTERVAL);
         dest->health_check->start_period = timeout_with_default(src->healthcheck->start_period, DEFAULT_START_PERIOD);
         dest->health_check->timeout = timeout_with_default(src->healthcheck->timeout, DEFAULT_PROBE_TIMEOUT);
-        dest->health_check->retries = src->healthcheck->retries != 0 ? src->healthcheck->retries
-                                      : DEFAULT_PROBE_RETRIES;
+        dest->health_check->retries = src->healthcheck->retries != 0 ? src->healthcheck->retries :
+                                      DEFAULT_PROBE_RETRIES;
 
         dest->health_check->exit_on_unhealthy = src->healthcheck->exit_on_unhealthy;
     }
@@ -1146,10 +1142,10 @@ static int pack_inspect_container_state(const container_t *cont, container_inspe
     inspect->state->pid = cont_state->pid;
 
     inspect->state->exit_code = cont_state->exit_code;
-    inspect->state->started_at = cont_state->started_at ? util_strdup_s(cont_state->started_at)
-                                 : util_strdup_s(defaultContainerTime);
-    inspect->state->finished_at = cont_state->finished_at ? util_strdup_s(cont_state->finished_at)
-                                  : util_strdup_s(defaultContainerTime);
+    inspect->state->started_at = cont_state->started_at ? util_strdup_s(cont_state->started_at) :
+                                 util_strdup_s(defaultContainerTime);
+    inspect->state->finished_at = cont_state->finished_at ? util_strdup_s(cont_state->finished_at) :
+                                  util_strdup_s(defaultContainerTime);
     inspect->state->error = cont->state->state->error ? util_strdup_s(cont->state->state->error) : NULL;
     inspect->restart_count = cont->common_config->restart_count;
 
@@ -1335,7 +1331,6 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
         goto out;
     }
 
-#ifdef ENABLE_OCI_IMAGE
     if (!strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI)) {
         inspect->graph_driver = im_graphdriver_get_metadata(cont->common_config->id);
         if (inspect->graph_driver == NULL) {
@@ -1343,7 +1338,6 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
             goto out;
         }
     }
-#endif
 
 out:
     *out_inspect = inspect;
@@ -1655,7 +1649,7 @@ static int container_rename_cb(const struct isulad_container_rename_request *req
     char *old_name = NULL;
     char *new_name = NULL;
     container_t *cont = NULL;
-    char annotations[EXTRA_ANNOTATION_MAX] = {0};
+    char annotations[EXTRA_ANNOTATION_MAX] = { 0 };
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -1722,4 +1716,3 @@ void container_information_callback_init(service_container_callback_t *cb)
     cb->top = container_top_cb;
     cb->rename = container_rename_cb;
 }
-

@@ -43,7 +43,6 @@ extern "C" {
 #define IMAGE_TYPE_EMBEDDED "embedded"
 #define IMAGE_TYPE_EXTERNAL "external"
 
-#ifndef ENABLE_OCI_IMAGE
 typedef struct {
     char *image;
 } image_spec;
@@ -51,7 +50,6 @@ typedef struct {
 typedef struct {
     image_spec image;
 } image_filter;
-#endif
 
 typedef struct {
     imagetool_fs_info *fs_info;
