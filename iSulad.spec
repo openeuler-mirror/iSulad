@@ -1,5 +1,5 @@
 %global _version 2.0.1
-%global _release 20200523.160610.git9c1e5cbd
+%global _release 20200526.144537.gitcd4ac2f2
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -29,14 +29,14 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl-devel clibcni-devel iSula-libutils-devel
+BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
-Requires:      iSulad-img lcr lxc clibcni iSula-libutils
+Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
