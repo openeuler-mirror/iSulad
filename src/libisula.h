@@ -623,6 +623,20 @@ struct isula_pull_response {
     char *errmsg;
 };
 
+struct isula_import_request {
+    char *socketname;
+    char *file;
+    char *type;
+    char *tag;
+};
+
+struct isula_import_response {
+    char *id;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
 struct isula_load_request {
     char *socketname;
     char *file;
@@ -822,6 +836,10 @@ void isula_rmi_response_free(struct isula_rmi_response *response);
 void isula_tag_request_free(struct isula_tag_request *request);
 
 void isula_tag_response_free(struct isula_tag_response *response);
+
+void isula_import_request_free(struct isula_import_request *request);
+
+void isula_import_response_free(struct isula_import_response *response);
 
 void isula_load_request_free(struct isula_load_request *request);
 

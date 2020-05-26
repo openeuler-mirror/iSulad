@@ -103,7 +103,7 @@ typedef enum {
 } runtime_state_t;
 
 typedef enum {
-    IM_LOAD, IM_REMOVE, IM_PULL, IM_LOGIN, IM_LOGOUT
+    IM_LOAD, IM_REMOVE, IM_PULL, IM_LOGIN, IM_LOGOUT, IM_IMPORT
 } image_state_t;
 
 

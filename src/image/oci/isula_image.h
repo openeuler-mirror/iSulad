@@ -31,6 +31,7 @@ int isula_rmi(const im_remove_request *request);
 int isula_tag(const im_tag_request *request);
 int isula_get_filesystem_info(im_fs_info_response **response);
 int isual_load_image(const im_load_request *request);
+int isula_import(const im_import_request *request, char **id);
 
 int isula_prepare_rf(const im_prepare_request *request, char **real_rootfs);
 int isula_merge_conf_rf(const host_config *host_spec, container_config *container_spec,

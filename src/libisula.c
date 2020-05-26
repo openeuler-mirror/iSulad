@@ -1232,6 +1232,40 @@ void isula_pull_response_free(struct isula_pull_response *response)
     return;
 }
 
+/* isula import request free */
+void isula_import_request_free(struct isula_import_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->file);
+    request->file = NULL;
+
+    free(request->tag);
+    request->tag = NULL;
+
+    free(request);
+    return;
+}
+
+/* isula import response free */
+void isula_import_response_free(struct isula_import_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->id);
+    response->id = NULL;
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+    return;
+}
+
 /* isula load request free */
 void isula_load_request_free(struct isula_load_request *request)
 {

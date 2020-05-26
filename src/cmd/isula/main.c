@@ -29,6 +29,7 @@
 #include "images.h"
 #include "rmi.h"
 #include "tag.h"
+#include "import.h"
 #include "wait.h"
 #include "restart.h"
 #include "pause.h"
@@ -194,6 +195,10 @@ struct command g_commands[] = {
     {
         // `tag` sub-command
         "tag", cmd_tag_main, g_cmd_tag_desc, NULL, &g_cmd_tag_args
+    },
+    {
+        // `import` sub-command
+        "import", cmd_import_main, g_cmd_import_desc, NULL, &g_cmd_import_args
     },
 #endif
     { NULL, NULL, NULL, NULL, NULL } // End of the list

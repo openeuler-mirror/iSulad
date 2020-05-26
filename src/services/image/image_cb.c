@@ -40,6 +40,97 @@
 #include "oci_images_store.h"
 #include "oci_common_operators.h"
 #endif
+
+static int isula_import_image(const char *file, const char *tag, char **id)
+{
+    int ret = 0;
+    im_import_request *request = NULL;
+
+    if (file == NULL || tag == NULL || id == NULL) {
+        ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+
+    request = util_common_calloc_s(sizeof(im_import_request));
+    if (request == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+
+    request->tag = util_strdup_s(tag);
+    request->file = util_strdup_s(file);
+
+    ret = im_import_image(request, id);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_im_import_request(request);
+    return ret;
+}
+
+/* import cb */
+static int import_cb(const image_import_request *request,
+                     image_import_response **response)
+{
+    int ret = -1;
+    uint32_t cc = ISULAD_SUCCESS;
+    char *id = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = util_common_calloc_s(sizeof(image_import_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_MEMOUT;
+        goto out;
+    }
+
+    if (request->file == NULL || request->tag == NULL) {
+        ERROR("input arguments error");
+        cc = ISULAD_ERR_INPUT;
+        goto out;
+    }
+
+    EVENT("Image Event: {Object: %s, Type: Importing}",
+          request->file);
+
+    ret = isula_import_image(request->file, request->tag, &id);
+    if (ret != 0) {
+        ERROR("Failed to import docker image %s with tag %s",
+              request->file, request->tag);
+        cc = EINVALIDARGS;
+        goto out;
+    }
+
+    (*response)->id = id;
+    id = NULL;
+
+    EVENT("Image Event: {Object: %s, Type: Imported}",
+          request->file);
+
+    (void)isulad_monitor_send_image_event(request->file, IM_IMPORT);
+out:
+
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
+
+    return (ret < 0) ? ECOMMON : ret;
+}
+
 static int docker_load_image(const char *file, const char *tag, const char *type)
 {
     int ret = 0;
@@ -993,6 +1084,7 @@ void image_callback_init(service_image_callback_t *cb)
     cb->remove = image_remove_cb;
     cb->list = image_list_cb;
     cb->inspect = image_inspect_cb;
+    cb->import = import_cb;
     cb->login = login_cb;
     cb->logout = logout_cb;
     cb->tag = image_tag_cb;

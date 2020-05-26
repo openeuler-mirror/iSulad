@@ -172,6 +172,27 @@ int ImagesServiceImpl::image_tag_request_from_grpc(const TagImageRequest *greque
     return 0;
 }
 
+int ImagesServiceImpl::image_import_request_from_grpc(
+    const ImportRequest *grequest, image_import_request **request)
+{
+    image_import_request *tmpreq = (image_import_request *)util_common_calloc_s(
+                                       sizeof(image_import_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->file().empty()) {
+        tmpreq->file = util_strdup_s(grequest->file().c_str());
+    }
+    if (!grequest->tag().empty()) {
+        tmpreq->tag = util_strdup_s(grequest->tag().c_str());
+    }
+    *request = tmpreq;
+
+    return 0;
+}
+
 int ImagesServiceImpl::image_load_request_from_grpc(
     const LoadImageRequest *grequest, image_load_image_request **request)
 {
@@ -330,6 +351,58 @@ Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *req
         reply->set_cc(ISULAD_ERR_INPUT);
         ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
     }
+    return Status::OK;
+}
+
+int ImagesServiceImpl::import_response_to_grpc(const image_import_response *response,
+                                               ImportResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_MEMOUT);
+        return 0;
+    }
+
+    gresponse->set_cc(response->cc);
+    if (response->id != nullptr) {
+        gresponse->set_id(response->id);
+    }
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+    return 0;
+}
+
+Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply)
+{
+    auto status = GrpcServerTlsAuth::auth(context, "image_import");
+    if (!status.ok()) {
+        return status;
+    }
+    service_callback_t *cb = get_service_callback();
+    if (cb == nullptr || cb->image.import == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    image_import_request *image_req = nullptr;
+    int tret = image_import_request_from_grpc(request, &image_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(ISULAD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    image_import_response *image_res = nullptr;
+    int ret = cb->image.import(image_req, &image_res);
+    tret = import_response_to_grpc(image_res, reply);
+
+    free_image_import_request(image_req);
+    free_image_import_response(image_res);
+    if (tret != 0) {
+        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+        reply->set_cc(ISULAD_ERR_INPUT);
+        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+    }
+
     return Status::OK;
 }
 

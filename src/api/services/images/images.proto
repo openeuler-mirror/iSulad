@@ -73,6 +73,9 @@ service ImagesService {
 
 	// Add a tag to the image
 	rpc Tag(TagImageRequest) returns (TagImageResponse);
+
+	// Import rootfs to be image
+	rpc Import(ImportRequest) returns (ImportResponse);
 }
 
 message Image {
@@ -148,6 +151,17 @@ message LoadImageRequest {
 message LoadImageResponse {
 	uint32 cc = 1;
 	string errmsg = 2;
+}
+
+message ImportRequest {
+	string file = 1;
+	string tag = 2;
+}
+
+message ImportResponse {
+	string id = 1;
+	uint32 cc = 2;
+	string errmsg = 3;
 }
 
 message InspectImageRequest {
