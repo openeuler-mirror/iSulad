@@ -111,18 +111,6 @@ mkdir -p ${builddir}/rpm
 cp lxc-*.rpm ${builddir}/rpm
 ldconfig
 
-#install iSula-tools
-cd ~
-git clone https://gitee.com/openeuler/iSula-libutils.git
-cd iSula-libutils
-mkdir -p build
-cd build
-cmake  -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} ../
-make -j $(nproc)
-make install
-cd -
-ldconfig
-
 # install lcr
 cd ~
 git clone https://gitee.com/openeuler/lcr.git
