@@ -58,7 +58,7 @@
 #define DEFAULT_KEY_FILE "key.pem"
 #define DEFAULT_CERT_FILE "cert.pem"
 #define OCI_CONFIG_JSON "config.json"
-
+#define OCI_CONFIG_JSON_V1 "ociconfig.json"
 
 #define LOG_MAX_RETRIES 10
 
@@ -76,4 +76,3 @@
 #define CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY "log.console.facility"
 
 #endif
-
