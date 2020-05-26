@@ -48,6 +48,19 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
+    echo AA > /tmp/test_run_env
+
+    isula run --name $containername -itd -e AAA=BB -e BAA --env-file /tmp/test_run_env busybox
+    fn_check_eq "$?" "0" "run failed"
+    testcontainer $containername running
+
+    isula stop -t 0 $containername
+    fn_check_eq "$?" "0" "stop failed"
+    testcontainer $containername exited
+
+    isula rm $containername
+    fn_check_eq "$?" "0" "rm failed"
+
     return $TC_RET_T
 }
 
