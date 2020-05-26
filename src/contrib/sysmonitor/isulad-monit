@@ -1,4 +1,0 @@
-NAME=isulad
-RECOVER_COMMAND=systemctl restart isulad
-MONITOR_COMMAND=/etc/default/isulad/isulad-check.sh
-STOP_COMMAND=systemctl stop isulad

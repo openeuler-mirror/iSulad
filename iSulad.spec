@@ -1,5 +1,5 @@
-%global _version 2.0.0
-%global _release 20200406.224614.gitd03048c0
+%global _version 2.0.2
+%global _release 20200526.193459.gitf045485f
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -9,7 +9,7 @@ Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
 URL:       isulad
-Source:    iSulad-2.0.tar.gz
+Source:    iSulad-2.0.2.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
@@ -29,15 +29,15 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
+BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
-BuildRequires: systemd-devel git python3
+BuildRequires: systemd-devel git
 
 Requires:      iSulad-img lcr lxc clibcni
-Requires:      grpc protobuf yajl
+Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
 Requires:      libcap libselinux libwebsockets
@@ -48,7 +48,7 @@ This is a umbrella project for gRPC-services based Lightweight Container
 Runtime Daemon, written by C.
 
 %prep
-%autosetup -c -n iSulad-%{version}
+%autosetup -n %{name} -Sgit -p1
 
 %build
 mkdir -p build
