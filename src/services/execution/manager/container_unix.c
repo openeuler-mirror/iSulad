@@ -106,8 +106,7 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
         goto error_out;
     }
 
-    cont->rm = restart_manager_new(tmp_host_config->restart_policy,
-                                   tmp_common_config->restart_count);
+    cont->rm = restart_manager_new(tmp_host_config->restart_policy, tmp_common_config->restart_count);
     if (cont->rm == NULL) {
         ERROR("Out of memory");
         goto error_out;
@@ -244,7 +243,6 @@ int container_timedlock(container_t *cont, int timeout)
         return pthread_mutex_timedlock(&cont->mutex, &ts);
     }
 }
-
 
 /* container unlock */
 void container_unlock(container_t *cont)
@@ -458,8 +456,7 @@ out:
 }
 
 /* save json config file */
-static int save_json_config_file(const char *id, const char *rootpath,
-                                 const char *json_data, const char *fname)
+static int save_json_config_file(const char *id, const char *rootpath, const char *json_data, const char *fname)
 {
     int ret = 0;
     int nret;
@@ -711,6 +708,36 @@ out:
     return ret;
 }
 
+// cp old container config file "ociconfig.json" to "config.json"
+static int update_v1_config_to_v2(const char *rootpath, const char *id)
+{
+    int ret = 0;
+    int nret = 0;
+    char v1_filename[PATH_MAX] = { 0x00 };
+    char v2_filename[PATH_MAX] = { 0x00 };
+
+    nret = snprintf(v1_filename, sizeof(v1_filename), "%s/%s/%s", rootpath, id, OCI_CONFIG_JSON_V1);
+    if (nret < 0 || (size_t)nret >= sizeof(v1_filename)) {
+        ERROR("Failed to print string");
+        ret = -1;
+        goto out;
+    }
+
+    nret = snprintf(v2_filename, sizeof(v2_filename), "%s/%s/%s", rootpath, id, OCI_CONFIG_JSON);
+    if (nret < 0 || (size_t)nret >= sizeof(v2_filename)) {
+        ERROR("Failed to print string");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_file_exists(v1_filename) && !util_file_exists(v2_filename)) {
+        ret = util_copy_file(v1_filename, v2_filename, CONFIG_FILE_MODE);
+    }
+
+out:
+    return ret;
+}
+
 /* container load */
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id)
 {
@@ -733,6 +760,11 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     hostconfig = read_host_config(rootpath, id);
     if (hostconfig == NULL) {
         ERROR("Failed to host config file for container: %s", id);
+        goto error_out;
+    }
+
+    if (update_v1_config_to_v2(rootpath, id) != 0) {
+        ERROR("Failed to update config to v2 for container: %s", id);
         goto error_out;
     }
 
@@ -1100,4 +1132,3 @@ bool has_mount_for(container_t *cont, const char *mpath)
 
     return false;
 }
-
