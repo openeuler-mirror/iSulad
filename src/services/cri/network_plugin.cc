@@ -29,7 +29,7 @@
 namespace Network {
 static void run_modprobe(void *args)
 {
-    execlp("modprobe", "br-netfilter", nullptr);
+    execlp("modprobe", "modprobe", "br-netfilter", nullptr);
 }
 
 static void runGetIP(void *cmdArgs)
@@ -401,9 +401,8 @@ void PluginManager::GetPodNetworkStatus(const std::string &ns, const std::string
     Unlock(fullName, error);
 }
 
-void PluginManager::SetUpPod(const std::string &ns, const std::string &name,
-                             const std::string &interfaceName, const std::string &podSandboxID,
-                             std::map<std::string, std::string> &annotations,
+void PluginManager::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
+                             const std::string &podSandboxID, std::map<std::string, std::string> &annotations,
                              const std::map<std::string, std::string> &options, Errors &error)
 {
     if (m_plugin == nullptr) {
@@ -427,8 +426,8 @@ void PluginManager::SetUpPod(const std::string &ns, const std::string &name,
 }
 
 void PluginManager::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
-                                const std::string &podSandboxID,
-                                std::map<std::string, std::string> &annotations, Errors &error)
+                                const std::string &podSandboxID, std::map<std::string, std::string> &annotations,
+                                Errors &error)
 {
     Errors tmpErr;
     std::string fullName = name + "_" + ns;
@@ -458,7 +457,7 @@ void NoopNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &
     int ret;
     char *err { nullptr };
 
-    if (util_exec_cmd(run_modprobe, nullptr, nullptr, &stdout_str, &stderr_str) != 0) {
+    if (!util_exec_cmd(run_modprobe, nullptr, nullptr, &stdout_str, &stderr_str)) {
         WARN("exec failed: [%s], [%s]", stdout_str, stderr_str);
     }
 
@@ -500,9 +499,8 @@ std::map<int, bool> *NoopNetworkPlugin::Capabilities()
     return ret;
 }
 
-void NoopNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name,
-                                 const std::string &interfaceName, const std::string &podSandboxID,
-                                 const std::map<std::string, std::string> &annotations,
+void NoopNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
+                                 const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
                                  const std::map<std::string, std::string> &options, Errors &error)
 {
     return;

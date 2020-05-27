@@ -44,7 +44,7 @@
 #include "isula_libutils/log.h"
 #include "isula_libutils/json_common.h"
 
-#define MAX_NUM_STR_LEN  21
+#define MAX_NUM_STR_LEN 21
 
 int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
 {
@@ -446,9 +446,9 @@ proc_t *util_stat2proc(const char *s, size_t len)
                  "%Lu %Lu %Lu %Lu " /* utime stime cutime cstime */
                  "%ld %ld %ld %ld "
                  "%Lu ", /* start_time */
-                 &p->state, &p->ppid, &p->pgrp, &p->session, &p->tty, &p->tpgid, &p->flags, &p->min_flt,
-                 &p->cmin_flt, &p->maj_flt, &p->cmaj_flt, &p->utime, &p->stime, &p->cutime, &p->cstime, &p->priority,
-                 &p->nice, &p->timeout, &p->it_real_value, &p->start_time);
+                 &p->state, &p->ppid, &p->pgrp, &p->session, &p->tty, &p->tpgid, &p->flags, &p->min_flt, &p->cmin_flt,
+                 &p->maj_flt, &p->cmaj_flt, &p->utime, &p->stime, &p->cutime, &p->cstime, &p->priority, &p->nice,
+                 &p->timeout, &p->it_real_value, &p->start_time);
     if (num != 20) { // max arg to read
         ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
         free(p);
@@ -658,7 +658,7 @@ bool util_exec_top_cmd(exec_top_func_t cb_func, char **args, const char *pid_arg
     }
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork()");
         set_stderr_buf(&stderr_buffer, "Failed to fork()");
         close(err_fd[0]);
@@ -747,7 +747,7 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
     int stderr_close_flag = 0;
     int err_fd[2] = { -1, -1 };
     int out_fd[2] = { -1, -1 };
-    int in_fd[2] = {-1, -1};
+    int in_fd[2] = { -1, -1 };
     pid_t pid = 0;
     int status = 0;
 
@@ -772,7 +772,7 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
     }
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork()");
         set_stderr_buf(&stderr_buffer, "Failed to fork()");
         close_pipes_fd(in_fd, 2);
@@ -1063,8 +1063,7 @@ char *util_env_get_val(char **env, size_t env_len, const char *key, size_t key_l
     return NULL;
 }
 
-int util_parse_user_remap(const char *user_remap, unsigned int *host_uid, unsigned int *host_gid,
-                          unsigned int *size)
+int util_parse_user_remap(const char *user_remap, unsigned int *host_uid, unsigned int *host_gid, unsigned int *size)
 {
     int ret = 0;
     size_t args_len = 0;
@@ -1177,10 +1176,9 @@ bool check_sysctl_valid(const char *sysctl_key)
     size_t i = 0;
     size_t full_keys_len = 0;
     size_t key_prefixes_len = 0;
-    const char *sysctl_full_keys[] = {
-        "kernel.msgmax", "kernel.msgmnb", "kernel.msgmni", "kernel.sem",
-        "kernel.shmall", "kernel.shmmax", "kernel.shmmni", "kernel.shm_rmid_forced"
-    };
+    const char *sysctl_full_keys[] = { "kernel.msgmax", "kernel.msgmnb", "kernel.msgmni", "kernel.sem",
+                                       "kernel.shmall", "kernel.shmmax", "kernel.shmmni", "kernel.shm_rmid_forced"
+                                     };
     const char *sysctl_key_prefixes[] = { "net.", "fs.mqueue." };
 
     if (sysctl_key == NULL) {
@@ -1370,7 +1368,7 @@ int util_input_notty(char *buf, size_t maxlen)
             ret = -1;
             break;
         }
-        buf[i] = (char) c;
+        buf[i] = (char)c;
     }
 
     return ret ? ret : (int)i;
@@ -1394,18 +1392,18 @@ int util_input_readall(char *buf, size_t maxlen)
         if (i + 1 >= maxlen) {
             continue;
         }
-        buf[i] = (char) c;
+        buf[i] = (char)c;
         i++;
     }
     buf[i] = 0;
 
     // Strip last '\n'
-    if (i > 0  && buf[i - 1] == '\n') {
+    if (i > 0 && buf[i - 1] == '\n') {
         buf[i - 1] = 0;
         i--;
     }
     // Strip last '\r'
-    if (i > 0  && buf[i - 1] == '\r') {
+    if (i > 0 && buf[i - 1] == '\r') {
         buf[i - 1] = 0;
         i--;
     }

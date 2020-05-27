@@ -169,12 +169,32 @@ char *util_get_fs_name(const char *path)
     return NULL;
 }
 
+static void run_modprobe_overlay(void *args)
+{
+    execlp("modprobe", "modprobe", "overlay", NULL);
+}
+
+static void try_probe_overlay_module()
+{
+    char *stdout_str = NULL;
+    char *stderr_str = NULL;
+
+    if (!util_exec_cmd(run_modprobe_overlay, NULL, NULL, &stdout_str, &stderr_str)) {
+        ERROR("modprobe overlay exec failed: [%s], [%s]", stdout_str, stderr_str);
+    }
+
+    free(stdout_str);
+    free(stderr_str);
+}
+
 bool util_support_overlay(void)
 {
     bool is_support = false;
     FILE *f = NULL;
     char *line = NULL;
     size_t len = 0;
+
+    try_probe_overlay_module();
 
     f = util_fopen("/proc/filesystems", "r");
     if (f == NULL) {
