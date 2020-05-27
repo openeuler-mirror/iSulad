@@ -1,44 +1,63 @@
 #!/bin/bash
 #
-# attributes: isulad basic image
+# attributes: isulad basic remove image
 # concurrent: NA
 # spend time: 20
 
-curr_path=$(dirname $(readlink -f "$0"))
-data_path=$(realpath $curr_path/../data)
+#######################################################################
+##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
+# - iSulad licensed under the Mulan PSL v2.
+# - You can use this software according to the terms and conditions of the Mulan PSL v2.
+# - You may obtain a copy of Mulan PSL v2 at:
+# -     http://license.coscl.org.cn/MulanPSL2
+# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+# - PURPOSE.
+# - See the Mulan PSL v2 for more details.
+##- @Description:CI
+##- @Author: lifeng
+##- @Create: 2020-05-14
+#######################################################################
+
+declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.bash
 
-do_test_t()
+function test_image_remove()
 {
-  echo "test begin"
+  local ret=0
+  local image="busybox"
+  local test="remove image test => (${FUNCNAME[@]})"
 
-  isula pull busybox
-  if [ $? -ne 0 ]; then
-    echo "failed pull image"
-    TC_RET_T=$(($TC_RET_T+1))
-  fi
+  msg_info "${test} starting..."
+
+  isula pull ${image}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
 
   isula images | grep busybox
-  if [ $? -ne 0 ]; then
-    echo "missing list image busybox"
-    TC_RET_T=$(($TC_RET_T+1))
-  fi
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-  isula rmi busybox
-  if [ $? -ne 0 ]; then
-    echo "Failed to remove image busybox"
-    TC_RET_T=$(($TC_RET_T+1))
-  fi
+  CONT=`isula run -itd busybox`
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-  echo "test end"
-  return $TC_RET_T
+  local image_remove_log=/tmp/image_remove.log
+  isula rmi ${image} > ${image_remove_log} 2>&1
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check image ${image} used by container" && ((ret++))
+
+  cat ${image_remove_log} | grep "Error response from daemon: Image used by" | grep "${CONT}"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check image ${image} used by container error info" && ((ret++))
+
+  isula rm -f ${CONT}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove ${CONT}" && ((ret++))
+
+  isula rmi ${image}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rmi image ${image}" && ((ret++))
+
+  msg_info "${test} finished with return ${ret}..."
+  return ${ret}
 }
 
-ret=0
+declare -i ans=0
 
-do_test_t
-if [ $? -ne 0 ];then
-  let "ret=$ret + 1"
-fi
+test_image_remove || ((ans++))
 
-show_result $ret "images_remove.bash"
+show_result ${ans} "${curr_path}/${0}"
