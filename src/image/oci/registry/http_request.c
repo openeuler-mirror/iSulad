@@ -29,6 +29,7 @@
 #include "certs.h"
 #include "auths.h"
 #include "isula_libutils/registry_token.h"
+#include "libisulad.h"
 
 #define MIN_TOKEN_EXPIRES_IN 60
 
@@ -382,6 +383,7 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
             ret = get_bearer_token(desc, &desc->challenges[i]);
             if (ret != 0) {
                 ERROR("get bearer token failed");
+                isulad_try_set_error_message("authentication failed");
                 goto out;
             }
 
@@ -430,6 +432,7 @@ static int setup_common_options(pull_descriptor *desc, struct http_get_options *
     ret = setup_ssl_config(desc, options, url);
     if (ret != 0) {
         ERROR("Failed setup ssl config");
+        isulad_try_set_error_message("setup ssl config failed");
         ret = -1;
         goto out;
     }
@@ -446,11 +449,12 @@ static int setup_common_options(pull_descriptor *desc, struct http_get_options *
     ret = setup_auth_challenges(desc, &options->custom_headers);
     if (ret != 0) {
         ERROR("setup auth challenges failed");
+        isulad_try_set_error_message("setup auth challenges failed");
         ret = -1;
         goto out;
     }
 
-    options->debug = true;
+    options->debug = false;
 
 out:
 
@@ -481,7 +485,7 @@ static int setup_get_token_options(pull_descriptor *desc, struct http_get_option
         goto out;
     }
 
-    options->debug = true;
+    options->debug = false;
 
 out:
 

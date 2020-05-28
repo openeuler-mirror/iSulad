@@ -37,7 +37,7 @@ static int is_valid_arguments(const char *server, const char *username, const ch
 int oci_do_login(const char *server, const char *username, const char *password)
 {
     int ret = -1;
-    registry_login_options options;
+    registry_login_options options = {0};
     char **insecure_registries = NULL;
     char **registry = NULL;
     char *host = NULL;

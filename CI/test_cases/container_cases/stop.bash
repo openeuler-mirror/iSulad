@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance stop
 # concurrent: YES
-# spend time: 24
+# spend time: 23
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.

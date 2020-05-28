@@ -2,7 +2,7 @@
 #
 # attributes: isulad share namepaces
 # concurrent: NO
-# spend time: 6
+# spend time: 45
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.

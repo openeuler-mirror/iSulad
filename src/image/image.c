@@ -29,10 +29,10 @@
 #include "ext_image.h"
 #include "filters.h"
 #include "collector.h"
-#include "driver.h"
-#include "storage.h"
 
 #ifdef ENABLE_OCI_IMAGE
+#include "driver.h"
+#include "storage.h"
 #include "oci_image.h"
 #endif
 
@@ -1834,22 +1834,36 @@ container_inspect_graph_driver *im_graphdriver_get_metadata(const char *id)
         return NULL;
     }
 
+#ifdef ENABLE_OCI_IMAGE
     return graphdriver_get_metadata(id);
+#else
+    return NULL;
+#endif
 }
 
 struct graphdriver_status *im_graphdriver_get_status(void)
 {
+#ifdef ENABLE_OCI_IMAGE
     return graphdriver_get_status();
+#else
+    return NULL;
+#endif
 }
 
-bool im_storage_image_exist(const char *image_or_id)
+bool im_oci_image_exist(const char *image_or_id)
 {
+#ifdef ENABLE_OCI_IMAGE
     return storage_image_exist(image_or_id);
+#else
+    return false;
+#endif
 }
 
 void im_free_graphdriver_status(struct graphdriver_status *status)
 {
+#ifdef ENABLE_OCI_IMAGE
     free_graphdriver_status(status);
+#endif
 }
 
 int im_prepare_container_rootfs(const im_prepare_request *request, char **real_rootfs)

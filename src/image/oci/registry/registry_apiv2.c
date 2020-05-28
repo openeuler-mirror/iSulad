@@ -33,6 +33,7 @@
 #include "isula_libutils/oci_image_index.h"
 #include "isula_libutils/registry_manifest_list.h"
 #include "auths.h"
+#include "libisulad.h"
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-Api-Version: registry/2.0"
 #define MAX_ACCEPT_LEN 128
@@ -374,6 +375,7 @@ static int registry_ping(pull_descriptor *desc)
     if (desc->insecure_registry) {
         ERROR("ping %s with https failed, try http", desc->host);
 
+        DAEMON_CLEAR_ERRMSG();
         ret = registry_pingv2(desc, "http");
         if (ret != 0) {
             ERROR("ping %s with http failed", desc->host);
@@ -500,6 +502,11 @@ static int parse_manifests_info(char *http_head, char **content_type, char **dig
 
     if (message->status_code != StatusOK) {
         ERROR("registry response invalid status code %d\nresponse:%s", message->status_code, http_head);
+        if (message->status_code == StatusNotFound) {
+            isulad_try_set_error_message("Image not found in registry");
+        } else {
+            isulad_try_set_error_message("registry response invalid status code %d", message->status_code);
+        }
         ret = -1;
         goto out;
     }
@@ -1204,12 +1211,14 @@ int login_to_registry(pull_descriptor *desc)
     ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY);
     if (ret != 0) {
         ERROR("registry: Get %s failed, resp: %s", path, resp_buffer);
+        isulad_try_set_error_message("login to registry for %s failed", desc->host);
         goto out;
     }
 
     ret = auths_save(desc->host, desc->username, desc->password);
     if (ret != 0) {
         ERROR("failed to save auth of host %s, use decrypted key %d", desc->host, desc->use_decrypted_key);
+        isulad_try_set_error_message("save login result for %s failed", desc->host);
         goto out;
     }
 out:

@@ -25,9 +25,9 @@
 #include "utils.h"
 #include "specs_extend.h"
 #include "ext_image.h"
-#include "storage.h"
 
 #ifdef ENABLE_OCI_IMAGE
+#include "storage.h"
 #include "oci_common_operators.h"
 #include "oci_config_merge.h"
 #endif

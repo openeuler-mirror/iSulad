@@ -394,7 +394,7 @@ struct graphdriver_status *im_graphdriver_get_status(void);
 
 void im_free_graphdriver_status(struct graphdriver_status *status);
 
-bool im_storage_image_exist(const char *image_or_id);
+bool im_oci_image_exist(const char *image_or_id);
 
 #ifdef __cplusplus
 }

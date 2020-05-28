@@ -127,6 +127,12 @@ static int pull_image(const im_pull_request *request, char **name)
         }
     } else {
         registry_mirrors = conf_get_registry_list();
+        if (registry_mirrors == NULL) {
+            ERROR("Invalid image name %s, no host found", request->image);
+            isulad_try_set_error_message("Invalid image name, no host found");
+            goto out;
+        }
+
         for (mirror = registry_mirrors; (mirror != NULL) && (*mirror != NULL); mirror++) {
             if (util_has_prefix(*mirror, HTTP_PREFIX)) {
                 options->insecure_registry = true;

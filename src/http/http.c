@@ -20,6 +20,7 @@
 #include "buffer.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "libisulad.h"
 
 size_t fwrite_buffer(const char *ptr, size_t eltsize, size_t nmemb, void *buffer_)
 {
@@ -242,13 +243,21 @@ static void free_rpath(char *rpath)
     free(rpath);
 }
 
-static void check_buf_len(const char *errbuf)
+static void check_buf_len(char *errbuf, CURLcode curl_result)
 {
+    int nret = 0;
     size_t len = 0;
     len = strlen(errbuf);
     if (len > 0) {
         fprintf(stderr, "%s%s", errbuf, ((errbuf[len - 1] != '\n') ? "\n" : ""));
+    } else {
+        nret = snprintf(errbuf, CURL_ERROR_SIZE, "curl response error code %d", curl_result);
+        if (nret < 0 || (size_t)nret >= CURL_ERROR_SIZE) {
+            ERROR("Failed to print string for error buffer, errcode %d", curl_result);
+            return;
+        }
     }
+    isulad_try_set_error_message("%s", errbuf);
 }
 
 static void buffer_empty_on_condition(struct http_get_options *options)
@@ -358,7 +367,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     curl_result = curl_easy_perform(curl_handle);
 
     if (curl_result != CURLE_OK) {
-        check_buf_len(errbuf);
+        check_buf_len(errbuf, curl_result);
         ret = -1;
     } else {
         curl_getinfo_on_condition(response_code, curl_handle, &tmp);

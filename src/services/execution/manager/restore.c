@@ -156,7 +156,7 @@ static int check_container_image_exist(const container_t *cont)
             goto out;
         }
 
-        if (!im_storage_image_exist(tmp)) {
+        if (!im_oci_image_exist(tmp)) {
             WARN("Image %s not exist", tmp);
             ret = -1;
             goto out;

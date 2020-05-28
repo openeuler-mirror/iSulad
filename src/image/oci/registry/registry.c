@@ -803,39 +803,45 @@ static int register_image(pull_descriptor *desc)
 
     ret = register_layers(desc);
     if (ret != 0) {
-        ERROR("registry layers failed");
+        ERROR("register layers for image %s failed", desc->dest_image_name);
+        isulad_try_set_error_message("register layers failed");
         goto out;
     }
 
     image_id = without_sha256_prefix(desc->config.digest);
     ret = create_image(desc, image_id);
     if (ret != 0) {
-        ERROR("create image failed");
+        ERROR("create image %s failed", desc->dest_image_name);
+        isulad_try_set_error_message("create image failed");
         goto out;
     }
     image_created = true;
 
     ret = set_config(desc, image_id);
     if (ret != 0) {
-        ERROR("set image config failed");
+        ERROR("set image config for image %s failed", desc->dest_image_name);
+        isulad_try_set_error_message("set image config failed");
         goto out;
     }
 
     ret = set_manifest(desc, image_id);
     if (ret != 0) {
-        ERROR("set manifest failed");
+        ERROR("set manifest for image %s failed", desc->dest_image_name);
+        isulad_try_set_error_message("set manifest failed");
         goto out;
     }
 
     ret = set_loaded_time(desc, image_id);
     if (ret != 0) {
-        ERROR("set loaded time failed");
+        ERROR("set loaded time for image %s failed", desc->dest_image_name);
+        isulad_try_set_error_message("set loaded time failed");
         goto out;
     }
 
     ret = storage_img_set_image_size(image_id);
     if (ret != 0) {
-        ERROR("set image size failed for %s failed", image_id);
+        ERROR("set image size failed for %s failed", desc->dest_image_name);
+        isulad_try_set_error_message("set image size failed");
         goto out;
     }
 
@@ -1568,7 +1574,8 @@ static int registry_fetch(pull_descriptor *desc)
 
     ret = fetch_and_parse_manifest(desc);
     if (ret != 0) {
-        ERROR("fetch and parse manifest failed");
+        ERROR("fetch and parse manifest failed for image %s", desc->dest_image_name);
+        isulad_try_set_error_message("fetch and parse manifest failed");
         goto out;
     }
 
@@ -1584,14 +1591,16 @@ static int registry_fetch(pull_descriptor *desc)
     if (!is_manifest_schemav1(desc->manifest.media_type)) {
         ret = fetch_and_parse_config(desc);
         if (ret != 0) {
-            ERROR("fetch and parse config failed");
+            ERROR("fetch and parse config failed for image %s", desc->dest_image_name);
+            isulad_try_set_error_message("fetch and parse config failed");
             goto out;
         }
     }
 
     ret = fetch_layers(desc);
     if (ret != 0) {
-        ERROR("fetch layers failed");
+        ERROR("fetch layers failed for image %s", desc->dest_image_name);
+        isulad_try_set_error_message("fetch layers failed");
         goto out;
     }
 
@@ -1601,7 +1610,8 @@ static int registry_fetch(pull_descriptor *desc)
     if (is_manifest_schemav1(desc->manifest.media_type)) {
         ret = create_config_from_v1config(desc);
         if (ret != 0) {
-            ERROR("create config from v1 config failed");
+            ERROR("create config from v1 config failed for image %s", desc->dest_image_name);
+            isulad_try_set_error_message("create config from v1 config failed");
             goto out;
         }
     }
@@ -1644,11 +1654,13 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
 
     if (!util_valid_image_name(options->dest_image_name)) {
         ERROR("Invalid dest image name %s", options->dest_image_name);
+        isulad_try_set_error_message("Invalid image name");
         return -1;
     }
 
     if (!util_valid_image_name(options->image_name)) {
         ERROR("Invalid image name %s", options->image_name);
+        isulad_try_set_error_message("Invalid image name");
         return -1;
     }
 
@@ -1697,7 +1709,8 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         desc->password = NULL;
         ret = auths_load(desc->host, &desc->username, &desc->password);
         if (ret != 0) {
-            ERROR("Failed to load auths");
+            ERROR("Failed to load auths for host %s", desc->host);
+            isulad_try_set_error_message("Failed to load auths for host %s", desc->host);
             goto out;
         }
     }
@@ -1726,6 +1739,7 @@ int registry_pull(registry_pull_options *options)
     ret = prepare_pull_desc(desc, options);
     if (ret != 0) {
         ERROR("registry prepare failed");
+        isulad_try_set_error_message("registry prepare failed");
         ret = -1;
         goto out;
     }
@@ -1733,6 +1747,7 @@ int registry_pull(registry_pull_options *options)
     ret = registry_fetch(desc);
     if (ret != 0) {
         ERROR("error fetching %s", options->image_name);
+        isulad_try_set_error_message("error fetching %s", options->image_name);
         ret = -1;
         goto out;
     }
@@ -1740,6 +1755,7 @@ int registry_pull(registry_pull_options *options)
     ret = register_image(desc);
     if (ret != 0) {
         ERROR("error register image %s to store", options->image_name);
+        isulad_try_set_error_message("error register image %s to store", options->image_name);
         ret = -1;
         goto out;
     }

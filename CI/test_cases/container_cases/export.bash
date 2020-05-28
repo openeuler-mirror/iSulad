@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# attributes: isulad basic remove image
+# attributes: isulad basic export container
 # concurrent: NA
-# spend time: 12
+# spend time: 5
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -15,18 +15,18 @@
 # - PURPOSE.
 # - See the Mulan PSL v2 for more details.
 ##- @Description:CI
-##- @Author: lifeng
-##- @Create: 2020-05-14
+##- @Author: wangfengtu
+##- @Create: 2020-06-03
 #######################################################################
 
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.bash
 
-function test_image_remove()
+function test_image_export()
 {
   local ret=0
   local image="busybox"
-  local test="remove image test => (${FUNCNAME[@]})"
+  local test="export container test => (${FUNCNAME[@]})"
 
   msg_info "${test} starting..."
 
@@ -39,18 +39,13 @@ function test_image_remove()
   CONT=`isula run -itd busybox`
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-  local image_remove_log=/tmp/image_remove.log
-  isula rmi ${image} > ${image_remove_log} 2>&1
-  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check image ${image} used by container" && ((ret++))
+  isula export -o export.tar ${CONT}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to export ${CONT}" && ((ret++))
 
-  cat ${image_remove_log} | grep "Error response from daemon: Image used by" | grep "${CONT}"
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check image ${image} used by container error info" && ((ret++))
+  rm -f export.tar
 
-  isula rm -f ${CONT}
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove ${CONT}" && ((ret++))
-
-  isula rmi ${image}
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rmi image ${image}" && ((ret++))
+  isula export -o nonexistdir/export.tar ${CONT}
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - export to nonexist directory success" && ((ret++))
 
   msg_info "${test} finished with return ${ret}..."
   return ${ret}
@@ -58,6 +53,6 @@ function test_image_remove()
 
 declare -i ans=0
 
-test_image_remove || ((ans++))
+test_image_export || ((ans++))
 
 show_result ${ans} "${curr_path}/${0}"
