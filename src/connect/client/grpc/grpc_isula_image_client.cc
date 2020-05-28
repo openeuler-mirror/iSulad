@@ -733,6 +733,64 @@ public:
     }
 };
 
+class ISulaImport : public ClientBase<isula::ImageService, isula::ImageService::Stub, isula_import_request,
+    isula::ImportRequest, isula_import_response, isula::ImportResponose> {
+public:
+    explicit ISulaImport(void *args) : ClientBase(args)
+    {
+    }
+    ~ISulaImport() = default;
+
+    int request_to_grpc(const isula_import_request *req, isula::ImportRequest *grequest) override
+    {
+        if (req == nullptr) {
+            return -1;
+        }
+        if (req->file != nullptr) {
+            grequest->set_file(req->file);
+        }
+        if (req->tag != nullptr) {
+            grequest->set_tag(req->tag);
+        }
+        return 0;
+    }
+
+    int response_from_grpc(isula::ImportResponose *gresp, isula_import_response *resp) override
+    {
+        if (!gresp->errmsg().empty()) {
+            resp->errmsg = util_strdup_s(gresp->errmsg().c_str());
+        }
+        resp->server_errono = gresp->cc();
+        if (!gresp->id().empty()) {
+            resp->id = util_strdup_s(gresp->id().c_str());
+        }
+        return 0;
+    }
+
+    int check_parameter(const isula::ImportRequest &req) override
+    {
+        if (req.file().empty()) {
+            ERROR("Import image requires input file path");
+            isulad_set_error_message("Import image requires input file path");
+            return -1;
+        }
+        if (!req.tag().empty()) {
+            if (util_valid_image_name(req.tag().c_str()) != true) {
+                ERROR("Invalid tag %s", req.tag().c_str());
+                isulad_try_set_error_message("Invalid tag:%s", req.tag().c_str());
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+    Status grpc_call(ClientContext *context, const isula::ImportRequest &req,
+                     isula::ImportResponose *reply) override
+    {
+        return stub_->Import(context, req, reply);
+    }
+};
+
 class ISulaLoad : public ClientBase<isula::ImageService, isula::ImageService::Stub, isula_load_request,
     isula::LoadImageRequest, isula_load_response, isula::LoadImageResponose> {
 public:
@@ -1198,6 +1256,7 @@ int grpc_isula_image_client_ops_init(isula_image_ops *ops)
     ops->pull = container_func<isula_pull_request, isula_pull_response, ISulaImagePull>;
     ops->rmi = container_func<isula_rmi_request, isula_rmi_response, ISulaRmi>;
     ops->tag = container_func<isula_tag_request, isula_tag_response, ISulaTag>;
+    ops->import = container_func<isula_import_request, isula_import_response, ISulaImport>;
     ops->load = container_func<isula_load_request, isula_load_response, ISulaLoad>;
     ops->login = container_func<isula_login_request, isula_login_response, ISulaLogin>;
     ops->logout = container_func<isula_logout_request, isula_logout_response, ISulaLogout>;

@@ -324,6 +324,30 @@ void free_isula_tag_response(struct isula_tag_response *ptr)
     free(ptr);
 }
 
+void free_isula_import_request(struct isula_import_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->file);
+    ptr->file = NULL;
+    free(ptr->tag);
+    ptr->tag = NULL;
+    free(ptr);
+}
+
+void free_isula_import_response(struct isula_import_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->id);
+    ptr->id = NULL;
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+    free(ptr);
+}
+
 void free_isula_load_request(struct isula_load_request *ptr)
 {
     if (ptr == NULL) {

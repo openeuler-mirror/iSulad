@@ -72,6 +72,7 @@ static const struct bim_ops g_embedded_ops = {
 
     .health_check = NULL,
     .tag_image = NULL,
+    .import = NULL,
 };
 #endif
 
@@ -108,6 +109,7 @@ static const struct bim_ops g_isula_ops = {
 
     .health_check = isula_health_check,
     .tag_image = isula_tag,
+    .import = isula_import,
 };
 #endif
 
@@ -143,6 +145,7 @@ static const struct bim_ops g_ext_ops = {
 
     .health_check = NULL,
     .tag_image = NULL,
+    .import = NULL,
 };
 
 static const struct bim_type g_bims[] = {
@@ -1006,6 +1009,80 @@ void free_im_pull_response(im_pull_response *resp)
     free(resp->errmsg);
     resp->errmsg = NULL;
     free(resp);
+}
+
+int im_import_image(const im_import_request *request, char **id)
+{
+    int ret = -1;
+    struct bim *bim = NULL;
+
+    if (request == NULL || id == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (request->file == NULL) {
+        ERROR("Import image requires image tarball file path");
+        isulad_set_error_message("Import image requires image tarball file path");
+        goto pack_response;
+    }
+
+    // Support image type oci only currently.
+    bim = bim_get(IMAGE_TYPE_OCI, NULL, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim, image type:%s", IMAGE_TYPE_OCI);
+        goto pack_response;
+    }
+    if (bim->ops->import == NULL) {
+        ERROR("Unimplements import in %s", IMAGE_TYPE_OCI);
+        goto pack_response;
+    }
+
+    EVENT("Event: {Object: %s, Type: importing}", request->file);
+
+    ret = bim->ops->import(request, id);
+    if (ret != 0) {
+        ERROR("Failed to import from %s with tag %s", request->file, request->tag);
+        ret = -1;
+        goto pack_response;
+    }
+
+    EVENT("Event: {Object: %s, Type: imported}", request->file);
+
+pack_response:
+
+    bim_put(bim);
+    return ret;
+}
+
+void free_im_import_request(im_import_request *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+
+    free(ptr->file);
+    ptr->file = NULL;
+
+    free(ptr->tag);
+    ptr->file = NULL;
+
+    free(ptr);
+}
+
+void free_im_import_response(im_import_response *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+
+    free(ptr->id);
+    ptr->id = NULL;
+
+    free(ptr->errmsg);
+    ptr->errmsg = NULL;
+
+    free(ptr);
 }
 
 int im_load_image(const im_load_request *request, im_load_response **response)

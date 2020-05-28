@@ -171,6 +171,18 @@ struct isula_tag_response {
     uint32_t server_errono;
 };
 
+struct isula_import_request {
+    char *file;
+    char *tag;
+};
+
+struct isula_import_response {
+    char *id;
+    char *errmsg;
+    uint32_t cc;
+    uint32_t server_errono;
+};
+
 struct isula_load_request {
     char *file;
     char *tag;
@@ -311,6 +323,7 @@ typedef struct {
     int (*prepare)(const struct isula_prepare_request *req, struct isula_prepare_response *resp, void *arg);
     int (*remove)(const struct isula_remove_request *req, struct isula_remove_response *resp, void *arg);
     int (*tag)(const struct isula_tag_request *req, struct isula_tag_response *resp, void *arg);
+    int (*import)(const struct isula_import_request *req, struct isula_import_response *resp, void *arg);
     int (*mount)(const struct isula_mount_request *req, struct isula_mount_response *resp, void *arg);
     int (*umount)(const struct isula_umount_request *req, struct isula_umount_response *resp, void *arg);
     int (*containers_list)(const struct isula_containers_list_request *req, struct isula_containers_list_response *resp,
@@ -350,6 +363,8 @@ void free_isula_remove_request(struct isula_remove_request *req);
 void free_isula_remove_response(struct isula_remove_response *resp);
 void free_isula_tag_request(struct isula_tag_request *req);
 void free_isula_tag_response(struct isula_tag_response *resp);
+void free_isula_import_request(struct isula_import_request *req);
+void free_isula_import_response(struct isula_import_response *resp);
 void free_isula_mount_request(struct isula_mount_request *req);
 void free_isula_mount_response(struct isula_mount_response *resp);
 void free_isula_umount_request(struct isula_umount_request *req);

@@ -27,6 +27,7 @@
 #include "isula_rootfs_umount.h"
 #include "isula_image_rmi.h"
 #include "isula_image_tag.h"
+#include "isula_import.h"
 #include "isula_container_fs_usage.h"
 #include "isula_image_fs_info.h"
 #include "isula_storage_status.h"
@@ -261,6 +262,46 @@ unlock:
 out:
     oci_image_unref(image_info);
     free(real_image_name);
+    free(errmsg);
+    return ret;
+}
+
+int isula_import(const im_import_request *request, char **id)
+{
+    int ret = -1;
+    char *dest_name = NULL;
+    char *errmsg = NULL;
+
+    if (request == NULL || request->file == NULL || request->tag == NULL || id == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    dest_name = oci_normalize_image_name(request->tag);
+    if (dest_name == NULL) {
+        ret = -1;
+        ERROR("Failed to resolve image name");
+        goto err_out;
+    }
+
+    ret = isula_do_import(request->file, dest_name, id);
+    if (ret != 0) {
+        goto err_out;
+    }
+
+    ret = register_new_oci_image_into_memory(dest_name);
+    if (ret != 0) {
+        ERROR("Register image %s into store failed", dest_name);
+        goto err_out;
+    }
+
+    goto out;
+
+err_out:
+    free(*id);
+    *id = NULL;
+out:
+    free(dest_name);
     free(errmsg);
     return ret;
 }

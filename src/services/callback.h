@@ -60,6 +60,8 @@
 #include "isula_libutils/host_info_response.h"
 #include "isula_libutils/image_delete_image_request.h"
 #include "isula_libutils/image_delete_image_response.h"
+#include "isula_libutils/image_import_request.h"
+#include "isula_libutils/image_import_response.h"
 #include "isula_libutils/image_tag_image_request.h"
 #include "isula_libutils/image_tag_image_response.h"
 #include "isula_libutils/image_load_image_request.h"
@@ -151,6 +153,8 @@ typedef struct {
     int(*list)(const image_list_images_request *request, image_list_images_response **response);
 
     int(*remove)(const image_delete_image_request *request, image_delete_image_response **response);
+
+    int(*import)(const image_import_request *request, image_import_response **response);
 
     int(*load)(const image_load_image_request *request, image_load_image_response **response);
 

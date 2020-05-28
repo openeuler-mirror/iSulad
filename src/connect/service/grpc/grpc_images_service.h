@@ -49,6 +49,8 @@ public:
 
     Status Tag(ServerContext *context, const TagImageRequest *request, TagImageResponse *reply) override;
 
+    Status Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply) override;
+
     Status Load(ServerContext *context, const LoadImageRequest *request, LoadImageResponse *reply) override;
 
     Status Inspect(ServerContext *context, const InspectImageRequest *request, InspectImageResponse *reply) override;
@@ -80,6 +82,10 @@ private:
     int image_remove_request_from_grpc(const DeleteImageRequest *grequest, image_delete_image_request **request);
 
     int image_tag_request_from_grpc(const TagImageRequest *grequest, image_tag_image_request **request);
+
+    int image_import_request_from_grpc(const ImportRequest *grequest, image_import_request **request);
+
+    int import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse);
 
     int image_load_request_from_grpc(const LoadImageRequest *grequest, image_load_image_request **request);
 

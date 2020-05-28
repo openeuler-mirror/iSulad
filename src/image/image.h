@@ -125,6 +125,16 @@ typedef struct {
 typedef struct {
     char *file;
     char *tag;
+} im_import_request;
+
+typedef struct {
+    char *id;
+    char *errmsg;
+} im_import_response;
+
+typedef struct {
+    char *file;
+    char *tag;
     char *type;
 } im_load_request;
 
@@ -255,6 +265,9 @@ struct bim_ops {
 
     int (*get_storage_metadata)(char *id, im_storage_metadata_response **response);
 
+    /* import */
+    int (*import)(const im_import_request *request, char **id);
+
     /* load image */
     int (*load_image)(const im_load_request *request);
 
@@ -269,6 +282,7 @@ struct bim_ops {
 
     /* health check */
     int (*health_check)(void);
+
     /* Add a tag to the image */
     int (*tag_image)(const im_tag_request *request);
 };
@@ -342,6 +356,12 @@ void free_im_inspect_request(im_inspect_request *ptr);
 void free_im_inspect_response(im_inspect_response *ptr);
 
 int map_to_key_value_string(const json_map_string_string *map, char ***array, size_t *array_len);
+
+int im_import_image(const im_import_request *request, char **id);
+
+void free_im_import_request(im_import_request *ptr);
+
+void free_im_import_response(im_import_response *ptr);
 
 int im_load_image(const im_load_request *request, im_load_response **response);
 

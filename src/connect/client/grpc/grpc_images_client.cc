@@ -282,6 +282,65 @@ public:
     }
 };
 
+class Import : public ClientBase<ImagesService, ImagesService::Stub, isula_import_request, ImportRequest,
+    isula_import_response, ImportResponse> {
+public:
+    explicit Import(void *args)
+        : ClientBase(args)
+    {
+    }
+    ~Import() = default;
+
+    int request_to_grpc(const isula_import_request *request, ImportRequest *grequest) override
+    {
+        if (request == nullptr) {
+            return -1;
+        }
+
+        if (request->file != nullptr) {
+            grequest->set_file(request->file);
+        }
+        if (request->tag != nullptr) {
+            grequest->set_tag(request->tag);
+        }
+
+        return 0;
+    }
+
+    int response_from_grpc(ImportResponse *gresponse, isula_import_response *response) override
+    {
+        response->server_errono = (uint32_t)gresponse->cc();
+
+        if (!gresponse->errmsg().empty()) {
+            response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+        }
+        if (!gresponse->id().empty()) {
+            response->id = util_strdup_s(gresponse->id().c_str());
+        }
+
+        return 0;
+    }
+
+    int check_parameter(const ImportRequest &req) override
+    {
+        if (req.file().empty()) {
+            ERROR("Missing tallball file name in the request");
+            return -1;
+        }
+        if (req.tag().empty()) {
+            ERROR("Missing image name in the request");
+            return -1;
+        }
+
+        return 0;
+    }
+
+    Status grpc_call(ClientContext *context, const ImportRequest &req, ImportResponse *reply) override
+    {
+        return stub_->Import(context, req, reply);
+    }
+};
+
 class ImagesPull : public
     ClientBase<runtime::v1alpha2::ImageService, runtime::v1alpha2::ImageService::Stub, isula_pull_request,
     runtime::v1alpha2::PullImageRequest, isula_pull_response, runtime::v1alpha2::PullImageResponse> {
@@ -525,6 +584,7 @@ int grpc_images_client_ops_init(isula_connect_ops *ops)
     ops->image.login = container_func<isula_login_request, isula_login_response, Login>;
     ops->image.logout = container_func<isula_logout_request, isula_logout_response, Logout>;
     ops->image.tag = container_func<isula_tag_request, isula_tag_response, ImageTag>;
+    ops->image.import = container_func<isula_import_request, isula_import_response, Import>;
 
     return 0;
 }
