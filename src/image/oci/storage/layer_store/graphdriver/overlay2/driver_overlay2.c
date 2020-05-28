@@ -1561,6 +1561,8 @@ bool overlay2_layer_exists(const char *id, const struct graphdriver *driver)
     exists = true;
 
 out:
+    free(layer_dir);
+    free(link_id);
     return exists;
 }
 

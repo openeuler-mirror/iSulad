@@ -23,7 +23,7 @@ function do_pre()
 
     isula load -i ${pause_img_path}/pause.tar
     if [ $? -ne 0 ]; then
-        ERROR "Failed to load pause image"
+        msg_err "Failed to load pause image"
         TC_RET_T=$(($TC_RET_T+1))
         return $TC_RET_T
     fi
