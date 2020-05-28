@@ -26,6 +26,7 @@
 #include "utils.h"
 #include "storage.h"
 #include "oci_load.h"
+#include "oci_import.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 
@@ -256,7 +257,7 @@ out:
     return ret;
 }
 
-int isula_import(const im_import_request *request, char **id)
+int oci_import(const im_import_request *request, char **id)
 {
     int ret = -1;
     char *dest_name = NULL;
@@ -274,14 +275,8 @@ int isula_import(const im_import_request *request, char **id)
         goto err_out;
     }
 
-    ret = isula_do_import(request->file, dest_name, id);
+    ret = oci_do_import(request->file, dest_name, id);
     if (ret != 0) {
-        goto err_out;
-    }
-
-    ret = register_new_oci_image_into_memory(dest_name);
-    if (ret != 0) {
-        ERROR("Register image %s into store failed", dest_name);
         goto err_out;
     }
 

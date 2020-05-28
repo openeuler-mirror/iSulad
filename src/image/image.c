@@ -101,7 +101,7 @@ static const struct bim_ops g_oci_ops = {
     .login = oci_login,
     .logout = oci_logout,
     .tag_image = oci_tag,
-    .import = isula_import,
+    .import = oci_import,
 };
 #endif
 

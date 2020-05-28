@@ -40,7 +40,7 @@ int oci_export_rf(const im_export_request *request);
 int oci_container_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
 int oci_login(const im_login_request *request);
 int oci_logout(const im_logout_request *request);
-
+int oci_import(const im_import_request *request, char **id);
 int oci_tag(const im_tag_request *request);
 #ifdef __cplusplus
 }

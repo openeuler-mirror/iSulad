@@ -12,17 +12,11 @@
 * Create: 2020-05-26
 * Description: isula image import operator implement
 *******************************************************************************/
-#ifndef __IMAGE_ISULA_IMPORT_H
-#define __IMAGE_ISULA_IMPORT_H
+#include "oci_import.h"
+#include "isula_libutils/log.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int isula_do_import(const char *file, const char *tag, char **id);
-
-#ifdef __cplusplus
+int oci_do_import(const char *file, const char *tag, char **id)
+{
+    //TODO implement import function by storage API
+    return 0;
 }
-#endif
-
-#endif
