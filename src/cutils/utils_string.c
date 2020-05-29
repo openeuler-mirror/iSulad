@@ -28,29 +28,14 @@ struct unit_map_def {
 };
 
 static struct unit_map_def const g_unit_map[] = {
-    {.mltpl = 1, .name = "I"},
-    {.mltpl = 1, .name = "B"},
-    {.mltpl = 1, .name = "IB"},
-    {.mltpl = SIZE_KB, .name = "K"},
-    {.mltpl = SIZE_KB, .name = "KI"},
-    {.mltpl = SIZE_KB, .name = "KB"},
-    {.mltpl = SIZE_KB, .name = "KIB"},
-    {.mltpl = SIZE_MB, .name = "M"},
-    {.mltpl = SIZE_MB, .name = "MI"},
-    {.mltpl = SIZE_MB, .name = "MB"},
-    {.mltpl = SIZE_MB, .name = "MIB"},
-    {.mltpl = SIZE_GB, .name = "G"},
-    {.mltpl = SIZE_GB, .name = "GI"},
-    {.mltpl = SIZE_GB, .name = "GB"},
-    {.mltpl = SIZE_GB, .name = "GIB"},
-    {.mltpl = SIZE_TB, .name = "T"},
-    {.mltpl = SIZE_TB, .name = "TI"},
-    {.mltpl = SIZE_TB, .name = "TB"},
-    {.mltpl = SIZE_TB, .name = "TIB"},
-    {.mltpl = SIZE_PB, .name = "P"},
-    {.mltpl = SIZE_PB, .name = "PI"},
-    {.mltpl = SIZE_PB, .name = "PB"},
-    {.mltpl = SIZE_PB, .name = "PIB"}
+    { .mltpl = 1, .name = "I" },         { .mltpl = 1, .name = "B" },         { .mltpl = 1, .name = "IB" },
+    { .mltpl = SIZE_KB, .name = "K" },   { .mltpl = SIZE_KB, .name = "KI" },  { .mltpl = SIZE_KB, .name = "KB" },
+    { .mltpl = SIZE_KB, .name = "KIB" }, { .mltpl = SIZE_MB, .name = "M" },   { .mltpl = SIZE_MB, .name = "MI" },
+    { .mltpl = SIZE_MB, .name = "MB" },  { .mltpl = SIZE_MB, .name = "MIB" }, { .mltpl = SIZE_GB, .name = "G" },
+    { .mltpl = SIZE_GB, .name = "GI" },  { .mltpl = SIZE_GB, .name = "GB" },  { .mltpl = SIZE_GB, .name = "GIB" },
+    { .mltpl = SIZE_TB, .name = "T" },   { .mltpl = SIZE_TB, .name = "TI" },  { .mltpl = SIZE_TB, .name = "TB" },
+    { .mltpl = SIZE_TB, .name = "TIB" }, { .mltpl = SIZE_PB, .name = "P" },   { .mltpl = SIZE_PB, .name = "PI" },
+    { .mltpl = SIZE_PB, .name = "PB" },  { .mltpl = SIZE_PB, .name = "PIB" }
 };
 
 static size_t const g_unit_map_len = sizeof(g_unit_map) / sizeof(g_unit_map[0]);
@@ -190,7 +175,6 @@ static int parse_unit_multiple(const char *unit, int64_t *mltpl)
     return -EINVAL;
 }
 
-
 static int util_parse_size_int_and_float(const char *numstr, int64_t mlt, int64_t *converted)
 {
     long long int_size = 0;
@@ -294,8 +278,8 @@ int util_parse_percent_string(const char *s, long *converted)
     dup[strlen(dup) - 1] = 0;
 
     *converted = strtol(dup, NULL, 10);
-    if ((errno == ERANGE && (*converted == LONG_MAX || *converted == LONG_MIN)) ||
-        (errno != 0 && *converted == 0) || *converted < 0 || *converted > 100) {
+    if ((errno == ERANGE && (*converted == LONG_MAX || *converted == LONG_MIN)) || (errno != 0 && *converted == 0) ||
+        *converted < 0 || *converted > 100) {
         free(dup);
         return -EINVAL;
     }
@@ -476,7 +460,7 @@ const char *str_skip_str(const char *str, const char *skip)
         return NULL;
     }
 
-    for (; ; str++, skip++) {
+    for (;; str++, skip++) {
         if (*skip == 0) {
             return str;
         } else if (*str != *skip) {
@@ -484,7 +468,6 @@ const char *str_skip_str(const char *str, const char *skip)
         }
     }
 }
-
 
 static char *util_string_delchar_inplace(char *s, unsigned char c)
 {
@@ -548,7 +531,8 @@ static char *util_left_trim_space(char *str)
     while (isspace(*begin)) {
         begin++;
     }
-    while ((*tmp++ = *begin++)) {}
+    while ((*tmp++ = *begin++)) {
+    }
     return str;
 }
 
@@ -590,7 +574,8 @@ static char *util_left_trim_quotation(char *str)
     while ((*begin) == '\"') {
         begin++;
     }
-    while ((*tmp++ = *begin++)) {}
+    while ((*tmp++ = *begin++)) {
+    }
     return str;
 }
 
@@ -759,6 +744,11 @@ char *util_sub_string(const char *source, size_t offset, size_t length)
     }
 
     total_len = strlen(source);
+
+    if (offset > total_len) {
+        return NULL;
+    }
+
     substr_len = ((total_len - offset) >= length ? length : (total_len - offset)) + 1;
     substring = (char *)util_common_calloc_s(substr_len * sizeof(char));
     if (substring == NULL) {
@@ -787,4 +777,3 @@ bool util_is_space_string(const char *str)
 
     return true;
 }
-
