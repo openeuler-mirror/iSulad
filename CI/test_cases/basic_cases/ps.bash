@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance ps list
 # concurrent: NO
-# spend time: 14
+# spend time: 13
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.

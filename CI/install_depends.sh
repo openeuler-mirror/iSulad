@@ -102,6 +102,7 @@ do
 done
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
 sed -i '/unmount-namespace/d' ./lxc.spec.in
+sed -i '/bridge-utils/d' ./lxc.spec.in
 ./autogen.sh
 ./configure --sysconfdir=/etc
 make rpm

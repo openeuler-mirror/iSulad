@@ -9,7 +9,6 @@ TC_RET_T=0
 
 # image to pull and run container
 BUSYBOX_IMAGE="busybox:latest"
-PAUSE_IMAGE="rancher/pause-amd64:3.0"
 valgrind_log="/tmp/valgrind.log"
 ISUALD_LOG="/var/lib/isulad/isulad.log"
 ISULAD_ROOT_DIR="/var/lib/isulad"
@@ -121,11 +120,6 @@ function start_isulad_with_valgrind() {
     wait_isulad_running
 }
 
-function start_isulad_without_valgrind() {
-    isulad $@ -l DEBUG >/dev/null 2>&1 &
-    wait_isulad_running
-}
-
 function check_isulad_stopped() {
     maxtimes=15
     curcnt=0
@@ -141,17 +135,6 @@ function check_isulad_stopped() {
         sleep 1
     done
     return 1
-}
-
-function stop_isulad_without_valgrind() {
-    pid=`cat /var/run/isulad.pid`
-    kill -15 $pid
-    check_isulad_stopped $pid
-    if [ $? -ne 0 ];then
-        echo "iSulad process is still alive"
-        return 1
-    fi
-    return 0
 }
 
 function check_valgrind_log() {
@@ -233,13 +216,13 @@ function init_cni_conf()
     cp $dtpath/bins/isulad-cni /opt/cni/bin
     cp $dtpath/good.conflist /etc/cni/net.d/
 
-    stop_isulad_without_valgrind
+    check_valgrind_log
     if [ $? -ne 0 ]; then
         echo "stop isulad failed"
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    start_isulad_without_valgrind --network-plugin cni
+    start_isulad_with_valgrind --network-plugin cni
     if [ $? -ne 0 ]; then
         echo "start failed"
         TC_RET_T=$(($TC_RET_T+1))
@@ -259,26 +242,4 @@ function wait_container_state()
         sleep 1
     done
 }
-
-function pull_images() {
-    isula inspect $BUSYBOX_IMAGE > /dev/null
-    if [ $? -ne 0 ]; then
-        isula pull $BUSYBOX_IMAGE
-        if [ $? -ne 0 ]; then
-            echo "failed pull busybox image"
-            TC_RET_T=$(($TC_RET_T+1))
-        fi
-    fi
-
-    isula inspect $PAUSE_IMAGE > /dev/null
-    if [ $? -ne 0 ]; then
-        isula pull $PAUSE_IMAGE
-        if [ $? -ne 0 ]; then
-            echo "failed pull pause image"
-            TC_RET_T=$(($TC_RET_T+1))
-        fi
-    fi
-    return $TC_RET_T
-}
-pull_images
 
