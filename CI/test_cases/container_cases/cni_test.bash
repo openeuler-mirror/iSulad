@@ -6,12 +6,13 @@
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/criconfigs)
+pause_img_path=$(realpath $curr_path/test_data)
 source ../helpers.bash
 
 function do_pre()
 {
     cp /etc/isulad/daemon.json /etc/isulad/daemon.bak
-    sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"rancher/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
+    sed -i "s#\"pod-sandbox-image\": \"\"#\"pod-sandbox-image\": \"mirrorgooglecontainers/pause-amd64:3.0\"#g" /etc/isulad/daemon.json
 
     init_cni_conf $data_path
     if [ $? -ne 0 ]; then
@@ -19,13 +20,21 @@ function do_pre()
         TC_RET_T=$(($TC_RET_T+1))
         return $TC_RET_T
     fi
+
+    isula load -i ${pause_img_path}/pause.tar
+    if [ $? -ne 0 ]; then
+        ERROR "Failed to load pause image"
+        TC_RET_T=$(($TC_RET_T+1))
+        return $TC_RET_T
+    fi
+
 }
 
 function do_post()
 {
     cp -f /etc/isulad/daemon.bak /etc/isulad/daemon.json
-    stop_isulad_without_valgrind
-    start_isulad_without_valgrind
+    check_valgrind_log
+    start_isulad_with_valgrind
 }
 
 function do_test_help()
