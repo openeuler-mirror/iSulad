@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance import
 # concurrent: YES
-# spend time: 14
+# spend time: 3
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
