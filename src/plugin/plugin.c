@@ -58,7 +58,7 @@
 #ifndef RestHttpHead
 #define RestHttpHead "http://localhost"
 #endif
-#define PluginServiceActivate "/Plugin.Activate"
+#define PluginServiceActivate "/PluginService/Activate"
 #define PluginServiceInit "/PluginService/Init"
 #define PluginServicePreCreate "/PluginService/PreCreate"
 #define PluginServicePreStart "/PluginService/PreStart"
