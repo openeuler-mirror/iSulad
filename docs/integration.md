@@ -1,4 +1,4 @@
-# Integrate kubenetes
+# Integrate kubernetes
 
 ## Configuration
 

@@ -60,7 +60,7 @@ $ sudo isula rm test
 Build requirements for developers are listed in [build_guide](./docs/build_guide.md)
 
 ### Integration
-Integrate with `kubenetes` are listed in [integration.md](./docs/integration.md)
+Integrate with `kubernetes` are listed in [integration.md](./docs/integration.md)
 
 ## How to Contribute
 
