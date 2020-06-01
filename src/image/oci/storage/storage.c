@@ -928,6 +928,12 @@ int storage_module_init(struct storage_module_init_options *opts)
 {
     int ret = 0;
 
+    ret = util_recursive_rmdir(OCI_LOAD_TMP_WORK_DIR, 0);
+    if (ret != 0) {
+        ERROR("failed to remove dir %s", OCI_LOAD_TMP_WORK_DIR);
+        goto out;
+    }
+
     if (check_module_init_opt(opts) != 0) {
         ret = -1;
         goto out;

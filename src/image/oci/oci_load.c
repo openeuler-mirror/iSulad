@@ -24,6 +24,7 @@
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define OCI_SCHEMA_VERSION 2
+#define OCI_LOAD_TMP_DIR         OCI_LOAD_TMP_WORK_DIR"/oci-image-load-XXXXXX"
 
 static image_manifest_items_element **load_manifest(const char *fname, size_t *length)
 {
@@ -802,7 +803,13 @@ int oci_do_load(const im_load_request *request)
     size_t manifest_len = 0;
     load_image_t *im = NULL;
     char *digest = NULL;
-    char dstdir[] = "/var/tmp/isulad-load-XXXXXX";
+    char dstdir[] = OCI_LOAD_TMP_DIR;
+
+    ret = util_mkdir_p(OCI_LOAD_TMP_WORK_DIR, TEMP_DIRECTORY_MODE);
+    if (ret != 0) {
+        ERROR("Unable to create oci image load tmp work dir:%s", OCI_LOAD_TMP_WORK_DIR);
+        goto out;
+    }
 
     if (mkdtemp(dstdir) == NULL) {
         ERROR("make temporary direcory failed: %s", strerror(errno));
@@ -889,5 +896,10 @@ out:
     if (reader.close != NULL) {
         reader.close(reader.context, NULL);
     }
+
+    if (util_recursive_rmdir(dstdir, 0)) {
+        WARN("failed to remove directory %s", dstdir);
+    }
+
     return ret;
 }

@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #define GRAPH_ROOTPATH_NAME "storage"
+#define OCI_LOAD_TMP_WORK_DIR  "/var/tmp/isulad-oci-load"
 
 struct layer {
     char *id;
