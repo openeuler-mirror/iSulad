@@ -1494,34 +1494,31 @@ err_out:
     return NULL;
 }
 
-int layer_store_mount(const char *id, const struct layer_store_mount_opts *opts)
+char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opts)
 {
-    int ret = 0;
     layer_t *l = NULL;
     char *result = NULL;
 
     if (id == NULL) {
         ERROR("Invalid arguments");
-        return -1;
+        return NULL;
     }
 
     l = lookup_with_lock(id);
     if (l == NULL) {
         ERROR("layer not known");
-        return -1;
+        return NULL;
     }
     layer_lock(l);
     result = mount_helper(l, opts);
     if (result == NULL) {
         ERROR("Failed to mount layer %s", id);
-        ret = -1;
     }
     layer_unlock(l);
 
     layer_ref_dec(l);
-    free(result);
 
-    return ret;
+    return result;
 }
 
 int layer_store_umount(const char *id, bool force)

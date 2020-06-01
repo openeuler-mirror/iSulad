@@ -162,12 +162,21 @@ int oci_delete_rf(const im_delete_rootfs_request *request)
 
 int oci_mount_rf(const im_mount_request *request)
 {
+    char *mount_point = NULL;
+
     if (request == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }
 
-    return storage_rootfs_mount(request->name_id);
+    mount_point = storage_rootfs_mount(request->name_id);
+    if (mount_point == NULL) {
+        ERROR("Failed to mount rootfs %s", request->name_id);
+        return -1;
+    }
+
+    free(mount_point);
+    return 0;
 }
 
 int oci_umount_rf(const im_umount_request *request)

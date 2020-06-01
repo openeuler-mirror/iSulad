@@ -1197,33 +1197,31 @@ out:
     return ret;
 }
 
-int storage_rootfs_mount(const char *container_id)
+char *storage_rootfs_mount(const char *container_id)
 {
-    int ret = 0;
+    char *mount_point = NULL;
     storage_rootfs *rootfs_info = NULL;
 
     if (container_id == NULL) {
         ERROR("Invalid input arguments");
-        ret = -1;
         goto out;
     }
 
     rootfs_info = rootfs_store_get_rootfs(container_id);
     if (rootfs_info == NULL) {
         ERROR("Failed to get rootfs %s info", container_id);
-        ret = -1;
         goto out;
     }
 
-    if (layer_store_mount(rootfs_info->layer, NULL) != 0) {
+    mount_point = layer_store_mount(rootfs_info->layer, NULL);
+    if (mount_point == NULL) {
         ERROR("Failed to mount %s", rootfs_info->layer);
-        ret = -1;
         goto out;
     }
 
 out:
     free_storage_rootfs(rootfs_info);
-    return ret;
+    return mount_point;
 }
 
 int storage_rootfs_umount(const char *container_id)
