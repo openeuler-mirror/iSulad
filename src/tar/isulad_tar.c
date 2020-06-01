@@ -25,8 +25,9 @@
 #include <limits.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include <libtar.h>
 
-#include "libtar.h"
+#include "isulad_tar.h"
 #include "utils.h"
 #include "path.h"
 #include "isula_libutils/log.h"
@@ -40,6 +41,8 @@
 #define TAR_EXACT_OPT "-x"
 #define TAR_CHDIR_OPT "-C"
 #define TAR_GZIP_OPT "-z"
+#define TAR_DEFAULT_MODE 0600
+#define TAR_DEFAULT_FLAG (O_WRONLY | O_CREAT)
 
 static void set_char_to_separator(char *p)
 {
@@ -888,3 +891,124 @@ int tar_resource(const struct archive_copy_info *info, struct io_read_wrapper *a
     return tar_resource_rebase(info->path, info->rebase_name, archive_reader, err);
 }
 
+static int tar_all(char *path, int fd)
+{
+    TAR *tar = NULL;
+    int ret = 0;
+
+    ret = tar_fdopen(&tar, fd, NULL, NULL, TAR_DEFAULT_FLAG, TAR_DEFAULT_MODE, TAR_GNU);
+    if (ret != 0) {
+        ERROR("open file for exporting container rootfs failed: %s", strerror(errno));
+        fprintf(stderr, "open file for exporting container rootfs failed: %s", strerror(errno));
+        return -1;
+    }
+
+    ret = tar_append_tree(tar, path, ".");
+    if (ret != 0) {
+        ERROR("append files tree for exporting container rootfs failed: %s", strerror(errno));
+        fprintf(stderr, "append files tree for exporting container rootfs failed: %s", strerror(errno));
+        goto out;
+    }
+
+out:
+
+    tar_close(tar);
+    tar = NULL;
+
+    return ret;
+}
+
+int chroot_tar(char *path, char *file, char **errmsg)
+{
+    int ret = 0;
+    pid_t pid;
+    int pipe_for_read[2] = { -1, -1 };
+    int keepfds[] = { -1, -1 };
+    char errbuf[BUFSIZ] = {0};
+    int fd = 0;
+
+    if (pipe2(pipe_for_read, O_CLOEXEC) != 0) {
+        ERROR("Failed to create pipe");
+        ret = -1;
+        goto cleanup;
+    }
+
+    pid = fork();
+    if (pid == (pid_t) -1) {
+        ERROR("Failed to fork()");
+        ret = -1;
+        close(pipe_for_read[0]);
+        close(pipe_for_read[1]);
+        goto cleanup;
+    }
+
+    if (pid == (pid_t)0) {
+        keepfds[0] = isula_libutils_get_log_fd();
+        keepfds[1] = pipe_for_read[1];
+        ret = util_check_inherited_exclude_fds(true, keepfds, 2);
+        if (ret != 0) {
+            ERROR("Failed to close fds.");
+            ret = -1;
+            goto child_out;
+        }
+
+        // child process, dup2 pipe_for_read[1] to stderr,
+        if (dup2(pipe_for_read[1], 2) < 0) {
+            ERROR("Dup fd error: %s", strerror(errno));
+            ret = -1;
+            goto child_out;
+        }
+
+        fd = open(file, TAR_DEFAULT_FLAG, TAR_DEFAULT_MODE);
+        if (fd < 0) {
+            ERROR("Failed to open file %s for export: %s", file, strerror(errno));
+            fprintf(stderr, "Failed to open file %s for export: %s", file, strerror(errno));
+            ret = -1;
+            goto child_out;
+        }
+
+        if (chroot(path) != 0) {
+            ERROR("Failed to chroot to %s", path);
+            fprintf(stderr, "Failed to chroot to %s", path);
+            ret = -1;
+            goto child_out;
+        }
+
+        if (chdir("/") != 0) {
+            ERROR("Failed to chroot to /");
+            fprintf(stderr, "Failed to chroot to /");
+            ret = -1;
+            goto child_out;
+        }
+
+        ret = tar_all("/", fd);
+
+child_out:
+
+        if (ret != 0) {
+            exit(EXIT_FAILURE);
+        } else {
+            exit(EXIT_SUCCESS);
+        }
+    }
+
+    ret = wait_for_pid(pid);
+    if (ret != 0) {
+        ERROR("tar failed");
+        if (read(pipe_for_read[0], errbuf, BUFSIZ) < 0) {
+            ERROR("read error message from child failed");
+        }
+        close(pipe_for_read[0]);
+        pipe_for_read[0] = -1;
+    }
+
+    close(pipe_for_read[1]);
+    pipe_for_read[1] = -1;
+
+cleanup:
+    if (errmsg != NULL && strlen(errbuf) != 0) {
+        *errmsg = util_strdup_s(errbuf);
+    }
+
+    return ret;
+}

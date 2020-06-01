@@ -27,6 +27,7 @@
 #include "storage.h"
 #include "oci_load.h"
 #include "oci_import.h"
+#include "oci_export.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 
@@ -434,8 +435,7 @@ int oci_export_rf(const im_export_request *request)
         return -1;
     }
 
-    // TODO call storage export load interface
-    //ret = isula_container_export(request->name_id, request->file, 0, 0, 0);
+    ret = oci_do_export(request->name_id, request->file);
     if (ret != 0) {
         ERROR("Failed to export container: %s", request->name_id);
     }

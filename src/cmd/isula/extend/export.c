@@ -120,7 +120,7 @@ int cmd_export_main(int argc, const char **argv)
 
     g_cmd_export_args.name = g_cmd_export_args.argv[i];
     if (client_export(&g_cmd_export_args)) {
-        ERROR("Container \"%s\" export failed", g_cmd_export_args.name);
+        COMMAND_ERROR("Container \"%s\" export failed", g_cmd_export_args.name);
         exit(ECOMMON);
     }
 

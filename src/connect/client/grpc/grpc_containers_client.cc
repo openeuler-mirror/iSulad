@@ -21,7 +21,7 @@
 #include "isula_libutils/container_copy_to_request.h"
 #include "isula_libutils/container_exec_request.h"
 #include "utils.h"
-#include "libtar.h"
+#include "isulad_tar.h"
 #include "stoppable_thread.h"
 #include "container.grpc.pb.h"
 #include "client_base.h"

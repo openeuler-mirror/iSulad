@@ -36,7 +36,7 @@
 #include "config.h"
 #include "image.h"
 #include "path.h"
-#include "libtar.h"
+#include "isulad_tar.h"
 #include "isula_libutils/container_inspect.h"
 #include "containers_store.h"
 #include "container_state.h"

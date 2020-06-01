@@ -68,6 +68,8 @@ int archive_copy_to(const struct io_read_wrapper *content, bool compression, con
 int archive_path(const char *srcdir, const char *srcbase, const char *rebase_name,
                  bool compression, struct io_read_wrapper *archive_reader);
 
+int chroot_tar(char *path, char *file, char **errmsg);
+
 #ifdef __cplusplus
 }
 #endif

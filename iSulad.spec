@@ -40,7 +40,7 @@ Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
-Requires:      libcap libselinux libwebsockets
+Requires:      libcap libselinux libwebsockets libtar
 Requires:      systemd
 
 %description

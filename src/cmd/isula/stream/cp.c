@@ -23,7 +23,7 @@
 #include "isula_libutils/log.h"
 #include "path.h"
 #include "isula_connect.h"
-#include "libtar.h"
+#include "isulad_tar.h"
 
 #define FromContainer 0x01u
 #define ToContainer 0x10u
