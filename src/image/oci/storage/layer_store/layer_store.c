@@ -902,10 +902,10 @@ static int update_mount_point(layer_t *l)
 
     if (l->smount_point == NULL) {
         l->smount_point = util_common_calloc_s(sizeof(storage_mount_point));
-    }
-    if (l->smount_point == NULL) {
-        ERROR("Out of memory");
-        return -1;
+        if (l->smount_point == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
     }
 
     d_meta = graphdriver_get_metadata(l->slayer->id);
@@ -915,7 +915,17 @@ static int update_mount_point(layer_t *l)
         goto out;
     }
     if (d_meta->data != NULL) {
+        free(l->smount_point->path);
         l->smount_point->path = util_strdup_s(d_meta->data->merged_dir);
+    }
+
+    if (l->mount_point_json_path == NULL) {
+        l->mount_point_json_path = mountpoint_json_path(l->slayer->id);
+        if (l->mount_point_json_path == NULL) {
+            ERROR("Failed to get layer %s mount point json", l->slayer->id);
+            ret = -1;
+            goto out;
+        }
     }
 
 out:
@@ -1127,14 +1137,10 @@ free_out:
 static int umount_helper(layer_t *l, bool force)
 {
     int ret = 0;
-    int32_t save_cnt = 0;
-    char *save_path = NULL;
 
     if (l->smount_point == NULL) {
         return 0;
     }
-    save_cnt = l->smount_point->count;
-    save_path = l->smount_point->path;
 
     if (!force && l->smount_point->count > 1) {
         l->smount_point->count -= 1;
@@ -1145,27 +1151,23 @@ static int umount_helper(layer_t *l, bool force)
     ret = graphdriver_umount_layer(l->slayer->id);
     if (ret != 0) {
         ERROR("Call driver umount failed");
-        goto err_out;
+        ret = -1;
+        goto out;
     }
     l->smount_point->count = 0;
-    l->smount_point->path = NULL;
 
 save_json:
     ret = save_mount_point(l);
     if (ret != 0) {
-        l->smount_point->count = save_cnt;
-        l->smount_point->path = save_path;
-        save_path = NULL;
+        l->smount_point->count += 1;
     }
-    free(save_path);
-err_out:
+out:
     return ret;
 }
 
 int layer_store_delete(const char *id)
 {
     layer_t *l = NULL;
-    size_t i = 0;
     int ret = 0;
     char *tspath = NULL;
 
@@ -1181,14 +1183,17 @@ int layer_store_delete(const char *id)
         ERROR("layer not known");
         return -1;
     }
-    if (l->smount_point != NULL) {
-        for (; i < l->smount_point->count; i++) {
-            if (umount_helper(l, false) != 0) {
-                ret = -1;
-                goto free_out;
-            }
-        }
+
+    if (umount_helper(l, true) != 0) {
+        ret = -1;
+        ERROR("Failed to umount layer %s", l->slayer->id);
+        goto free_out;
     }
+
+    if (l->mount_point_json_path != NULL && util_path_remove(l->mount_point_json_path) != 0) {
+        SYSERROR("Can not remove mount point file of layer %s, just ignore.", l->mount_point_json_path);
+    }
+
     tspath = tar_split_path(l->slayer->id);
     if (tspath != NULL && util_path_remove(tspath) != 0) {
         SYSERROR("Can not remove layer files, just ignore.");
@@ -1432,66 +1437,43 @@ static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
 {
     char *mount_point = NULL;
     int nret = 0;
-    int32_t save_cnt = 0;
-    char *save_path = NULL;
     struct driver_mount_opts *d_opts = NULL;
 
-    if (l->smount_point == NULL) {
-        l->smount_point = util_common_calloc_s(sizeof(storage_mount_point));
-        if (l->smount_point == NULL) {
-            ERROR("Out of memory");
-            return NULL;
-        }
+    nret = update_mount_point(l);
+    if (nret != 0) {
+        ERROR("Failed to update mount point");
+        return NULL;
     }
-    if (l->mount_point_json_path == NULL) {
-        l->mount_point_json_path = mountpoint_json_path(l->slayer->id);
-        if (l->mount_point_json_path == NULL) {
-            ERROR("Failed to get layer %s mount point json", l->slayer->id);
-            return NULL;
-        }
-    }
-
-    save_cnt = l->smount_point->count;
-    save_path = l->smount_point->path;
 
     if (l->smount_point->count > 0) {
         l->smount_point->count += 1;
-        mount_point = util_strdup_s(save_path);
-        ERROR("layer %s mount count %d", l->slayer->id, l->smount_point->count);
+        mount_point = util_strdup_s(l->smount_point->path);
         goto save_json;
     }
 
     d_opts = fill_driver_mount_opts(opts, l);
     if (d_opts == NULL) {
         ERROR("Failed to fill layer %s driver mount opts", l->slayer->id);
-        goto err_out;
+        goto out;
     }
 
     mount_point = graphdriver_mount_layer(l->slayer->id, d_opts);
     if (mount_point == NULL) {
         ERROR("Call driver mount: %s failed", l->slayer->id);
-        goto err_out;
+        goto out;
     }
+
     l->smount_point->count += 1;
-    l->smount_point->path = util_strdup_s(mount_point);
 
 save_json:
     nret = save_mount_point(l);
     if (nret != 0) {
-        l->smount_point->count = save_cnt;
-        free(l->smount_point->path);
-        l->smount_point->path = save_path;
-        save_path = NULL;
-        goto err_out;
+        l->smount_point->count -= 1;
     }
+
+out:
     free_graphdriver_mount_opts(d_opts);
-    free(save_path);
     return mount_point;
-err_out:
-    free_graphdriver_mount_opts(d_opts);
-    free(mount_point);
-    free(save_path);
-    return NULL;
 }
 
 char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opts)

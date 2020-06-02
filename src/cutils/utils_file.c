@@ -96,11 +96,11 @@ int util_path_remove(const char *path)
         return -1;
     }
 
-    if (unlink(path) == 0) {
+    if (unlink(path) == 0 || errno == ENOENT) {
         return 0;
     }
     saved_errno = errno;
-    if (rmdir(path) == 0) {
+    if (rmdir(path) == 0 || errno == ENOENT) {
         return 0;
     }
     if (errno == ENOTDIR) {
