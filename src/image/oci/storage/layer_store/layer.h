@@ -41,6 +41,7 @@ typedef struct _layer_t_ {
 
 layer_t *create_empty_layer();
 
+void free_layer_t(layer_t *ptr);
 void layer_ref_inc(layer_t *layer);
 void layer_ref_dec(layer_t *layer);
 layer_t *load_layer(const char *fname, const char *mountpoint_fname);

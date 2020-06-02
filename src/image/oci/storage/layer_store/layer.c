@@ -22,7 +22,7 @@
 #include "isula_libutils/log.h"
 #include "utils_file.h"
 
-static void free_layer_t(layer_t *ptr)
+void free_layer_t(layer_t *ptr)
 {
     if (ptr == NULL) {
         return;
