@@ -17,15 +17,15 @@
 #include <stdio.h>
 #include <gtest/gtest.h>
 #include "mock.h"
-#include "oci_runtime_spec.h"
+#include "isula_libutils/oci_runtime_spec.h"
 #include "specs.h"
-#include "host_config.h"
-#include "container_config.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/container_config.h"
 #include "oci_llt_common.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "isulad_config_mock.h"
-#include "oci_runtime_hooks.h"
+#include "isula_libutils/oci_runtime_hooks.h"
 #include "utils.h"
 #include "specs_extend.h"
 

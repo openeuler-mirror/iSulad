@@ -17,10 +17,10 @@
 #include <stdio.h>
 #include <gtest/gtest.h>
 #include "mock.h"
-#include "oci_runtime_spec.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/imagetool_image.h"
+#include "isula_libutils/container_config.h"
 #include "oci_config_merge.h"
-#include "imagetool_image.h"
-#include "container_config.h"
 #include "oci_llt_common.h"
 
 #define IMAGETOOL_IMAGE_FILE "image/oci/oci_config_merge/imagetool_image.json"

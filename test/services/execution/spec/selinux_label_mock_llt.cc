@@ -50,19 +50,3 @@ TEST_F(SELinuxGetEnableUnitTest, test_selinux_get_enable_abnormal)
     EXPECT_CALL(m_selinux, SelinuxfsExists()).WillOnce(Return(-1));
     ASSERT_EQ(selinux_get_enable(), false);
 }
-
-TEST_F(SELinuxGetEnableUnitTest, test_selinux_get_enable_normal)
-{
-    const uint32_t selinuxfsMagic = 0xf97cff8c;
-    struct statfs sfbuf {
-        .f_type = selinuxfsMagic,
-        .f_flags = 0
-    };
-
-    EXPECT_CALL(m_syscall, Statfs(_, _))
-    .WillOnce(Return(EPERM))
-    .WillOnce(DoAll(SetArgPointee<1>(ByRef(sfbuf)), Return(0)));
-    EXPECT_CALL(m_selinux, SelinuxfsExists()).WillOnce(Return(-1));
-    ASSERT_EQ(selinux_get_enable(), true);
-}
-

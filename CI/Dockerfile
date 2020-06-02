@@ -59,10 +59,6 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			unzip \
 			tar \
 			wget \
-			gtest \
-			gtest-devel \
-			gmock \
-			gmock-devel \
 			cppcheck \
 			python3 \
 			python3-pip \
@@ -221,6 +217,25 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	make -j $(nproc) && \
 	make install && \
 	ldconfig
+
+# install gtest/gmock
+RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
+    set -x && \
+    cd ~ && \
+    git clone https://gitee.com/src-openeuler/gtest.git && \
+    cd gtest && \
+    tar xf release-1.8.1.tar.gz && \
+    cd googletest-release-1.8.1 && \
+    patch -p1 -F1 -s < ../gtest-1.8.1-null-pointer.patch && \
+    patch -p1 -F1 -s < ../gtest-PR1839-Fix-Python3-support.patch && \
+    patch -p1 -F1 -s < ../gtest-1.8.1-libversion.patch && \
+    patch -p1 -F1 -s < ../gtest-1.8.1-add-missing-pkgconfig-requires.patch && \
+    mkdir -p build && \
+    cd build && \
+    cmake -DBUILD_SHARED_LIBS=ON ../ && \
+    make -j $(nproc) && \
+    make install && \
+    ldconfig
 
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]

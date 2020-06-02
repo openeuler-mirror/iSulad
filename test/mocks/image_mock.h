@@ -26,6 +26,8 @@ public:
     MOCK_METHOD1(FreeImStorageStatusResponse, void(im_storage_status_response *));
     MOCK_METHOD1(ImContainerExport, int(const im_export_request *request));
     MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
+    MOCK_METHOD3(ImGetStorageMetadata, int(const char *image_type, char *id, im_storage_metadata_response **response));
+    MOCK_METHOD1(FreeImStorageMetadataResponse, void(im_storage_metadata_response *ptr));
 };
 
 void MockImage_SetMock(MockImage* mock);
