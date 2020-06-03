@@ -71,12 +71,19 @@ echo_success "===================RUN DT-LLT TESTCASES START=====================
 cd $ISULAD_COPY_PATH
 rm -rf build
 cd ./test
-./test.sh -mcoverage -c -r -t
-if [[ $? -ne 0 ]]; then
-    exit 1
+if [[ "x${GCOV}" == "xON" ]]; then
+  ./test.sh -mcoverage -c -r -t
+  if [[ $? -ne 0 ]]; then
+      exit 1
+  fi
+  ISULAD_SRC_PATH=$(env | grep TOPDIR | awk -F = '{print $2}')
+  tar -zcf $ISULAD_SRC_PATH/isulad-llt-gcov.tar.gz ./coverage
+else
+  ./test.sh -m -c -r
+  if [[ $? -ne 0 ]]; then
+      exit 1
+  fi
 fi
-ISULAD_SRC_PATH=$(env | grep TOPDIR | awk -F = '{print $2}')
-tar -zcf $ISULAD_SRC_PATH/isulad-llt-gcov.tar.gz ./coverage
 ./test.sh -e
 echo_success "===================RUN DT-LLT TESTCASES END========================="
 
