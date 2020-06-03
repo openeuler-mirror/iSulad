@@ -32,12 +32,12 @@ char *connected_container(const char *mode)
     return nullptr;
 }
 
-char *get_share_namespace_path(const char *type, const char *src_path)
+int get_share_namespace_path(const char *type, const char *src_path, char **dest_path)
 {
     if (g_namespace_mock != nullptr) {
-        return g_namespace_mock->GetShareNamespacePath(type, src_path);
+        return g_namespace_mock->GetShareNamespacePath(type, src_path, dest_path);
     }
-    return nullptr;
+    return 0;
 }
 
 char *get_container_process_label(const char *path)

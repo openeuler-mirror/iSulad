@@ -146,7 +146,7 @@ function llt_compile()
 {
     ret=0
     echo ---------------------- llt compile begin ----------------------
-    make -j
+    make -j ${nproc}
     ret=$?
     echo ---------------------- llt compile end ------------------------
     echo

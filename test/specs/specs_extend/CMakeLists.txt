@@ -11,27 +11,17 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_convert.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/util_atomic.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/log.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256/sha256.c
-    ${CMAKE_BINARY_DIR}/json/json_common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs_mount.c
-    ${CMAKE_BINARY_DIR}/json/host_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs_extend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/specs_security.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/libisulad.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/json/oci_runtime_hooks.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/json/parse_common.c
-    ${CMAKE_BINARY_DIR}/json/defs.c
-    ${CMAKE_BINARY_DIR}/json/container_config_v2.c
-    ${CMAKE_BINARY_DIR}/json/container_config.c
-    ${CMAKE_BINARY_DIR}/json/oci_runtime_spec.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/sysinfo.c
-    ${CMAKE_BINARY_DIR}/json/oci_runtime_config_linux.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/commander.c
-    ${CMAKE_BINARY_DIR}/json/isulad_daemon_configs.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/json/schema/src/read_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad/arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_llt_common.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/containers_store_mock.cc
@@ -40,9 +30,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/engine_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/selinux_label_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
-    ${CMAKE_BINARY_DIR}/json/imagetool_image.c
-    ${CMAKE_BINARY_DIR}/json/oci_image_spec.c
-    ${CMAKE_BINARY_DIR}/json/docker_seccomp.c
     specs_extend_llt.cc)
 
 target_include_directories(${EXE} PUBLIC
@@ -52,7 +39,6 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/image
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/json
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution
@@ -67,16 +53,14 @@ target_include_directories(${EXE} PUBLIC
     ${ENGINES_INCS}
     ${RUNTIME_INCS}
     ${IMAGE_INCS}
-    ${CMAKE_BINARY_DIR}/json
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/graphdriver
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/json/schema/src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/console
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks
     )
 
-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
