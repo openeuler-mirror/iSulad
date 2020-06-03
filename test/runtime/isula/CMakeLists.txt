@@ -10,6 +10,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_convert.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/util_atomic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/libisulad.c
@@ -47,4 +48,4 @@ target_include_directories(${EXE} PUBLIC
     )
 
 #set_target_properties(${EXE} PROPERTIES LINK_FLAGS)
-target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lpthread -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)

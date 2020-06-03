@@ -17,12 +17,14 @@
 set +e
 set -x
 
+enable_gcov=OFF
 ignore_ci=false
 basepath=$(cd `dirname $0`; pwd)
 source $basepath/helper.sh
 TOPDIR=`pwd`
 src_code_dir="$TOPDIR"
 make_script="${TOPDIR}/CI/make-and-install.sh"
+gcov_script="${TOPDIR}/CI/generate_gcov.sh"
 CIDIR="$TOPDIR/CI"
 testcase_script="${src_code_dir}/CI/run-testcases.sh"
 testcase_test="${src_code_dir}/CI/test.sh"
@@ -58,7 +60,7 @@ function err() {
     echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
 }
 
-args=`getopt -o m:n:g:i:h --long module:,container-num:,ignore-ci:,help -- "$@"`
+args=`getopt -o m:n:g:i:h --long module:,container-num:,enable-gcov:,ignore-ci:,help -- "$@"`
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$args"
 
@@ -66,12 +68,17 @@ while true; do
     case "$1" in
         -m|--module)        modules=${2} ; modules=(${modules// / }) ; shift 2 ;;
         -n|--container-num) container_nums=${2} ; shift 2 ;;
+        -g|--enable-gcov)   enable_gcov=${2} ; shift 2 ;;
         -i|--ignore-ci)     ignore_ci=${2} ; shift 2 ;;
         -h|--help)          usage ; exit 0 ;;
         --)                 shift ; break ;;
         *)                  err "invalid parameter" ; exit -1 ;;
     esac
 done
+
+if [[ "x${enable_gcov}" == "xON" ]]; then
+  container_nums=1
+fi
 
 declare -A scripts
 pwd
@@ -173,7 +180,7 @@ function do_testcase_auto_assignment() {
         fi
 
         acc_time=$((acc_time + spend_time))
-        if [[ ${acc_time} -ge 600  ]]; then
+        if [[ ${acc_time} -ge 200  ]]; then
             acc_time=0
             CONTAINER_INDEX=$((CONTAINER_INDEX + 1))
         fi
@@ -286,6 +293,11 @@ fi
 
 RES_CODE=0
 mkdir -p $LXC_LOCK_DIR_HOST
+env_gcov=""
+if [[ "x${enable_gcov}" == "xON" ]]; then
+    env_gcov="--env GCOV=ON"
+fi
+
 env_ignore_ci=""
 if [ "x$ignore_ci" == "xON" ];then
     env_ignore_ci="--env IGNORE_CI=ON"
@@ -377,6 +389,25 @@ tailpid=$!
 trap "kill -9 $tailpid; exit 0" 15 2
 wait $pids
 kill -9 $tailpid
+
+if [[ "x${enable_gcov}" == "xON" ]]; then
+  rm -rf ${tmpdir}/build
+  docker cp ${containers[1]}:/root/iSulad/build ${tmpdir}
+  docker cp ${tmpdir}/build ${containers[0]}:/root
+  docker exec -e TOPDIR=${src_code_dir} ${containers[0]} ${gcov_script}
+  echo "iSulad GCOV html generated"
+  tar xf ./isulad-gcov.tar.gz
+  rm -rf /var/www/html/isulad-gcov
+  rm -rf /var/www/html/isulad-gcov.tar.gz
+  mv ./tmp/isulad-gcov /var/www/html
+  cp isulad-gcov.tar.gz /var/www/html
+
+  tar xf ./isulad-llt-gcov.tar.gz
+  rm -rf /var/www/html/isulad-llt-gcov
+  rm -rf /var/www/html/isulad-llt-gcov.tar.gz
+  mv ./coverage /var/www/html
+  cp isulad-llt-gcov.tar.gz /var/www/html
+fi
 
 if [[ -e $CIDIR/${CONTAINER_NAME}.runflag ]]; then
     echo_success "All \"${#scripts[@]}\" testcases passed!"
