@@ -2,75 +2,140 @@
 
 If you intend to contribute on iSulad. Thanks for your effort. Every contribution is very appreciated for us.
 
-## Build iSulad based on openEuler distribution
+## Install basic dependencies on different distribution
 
-If you use the openEuler distribution, you can easily install various dependent packages via yum.
+These dependencies are required for build:
 
-### Install Dependencies
-
+### install basic dependencies based on Centos distribution
 ```sh
-$ sudo yum install -y cmake gcc-c++ systemd-devel yajl-devel libcurl libcurl-devel clibcni clibcni-devel protobuf-devel grpc-devel grpc-plugins http-parser-devel libwebsockets-devel libevhtp-devel libevent-devel lcr lxc-devel
+$ sudo yum --enablerepo='*' install -y automake autoconf libtool cmake make libcap libcap-devel libselinux libselinux-devel libseccomp libseccomp-devel yajl-devel git libcgroup tar python3 python3-pip device-mapper-devel libarchive libarchive-devel libcurl-devel zlib-devel glibc-headers openssl-devel gcc gcc-c++ systemd-devel systemd-libs golang libtar libtar-devel
 ```
 
-### Build steps:
-
-Run the cmds under the iSulad source directory
+### install basic dependencies based on Ubuntu distribution
 ```sh
-$ sudo mkdir build
-$ sudo cd build
-$ sudo cmake ..
-$ sudo make
+$ sudo apt install -y libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux libselinux-devel libseccomp libseccomp-dev libcap-dev libsystemd-dev git libcurl4-gnutls-dev openssl libdevmapper-dev golang python3 libtar libtar-dev
+```
+
+## Build and install other dependencies from source
+These dependencies may not be provided by your package manager. So you need to build them from source.
+
+### build and install protobuf
+```
+$ git clone https://gitee.com/src-openeuler/protobuf.git
+$ cd protobuf
+$ tar -xzvf protobuf-all-3.9.0.tar.gz
+$ cd protobuf-3.9.0
+$ sudo ./autogen.sh
+$ sudo ./configure
+$ sudo make -j $(nproc)
+$ sudo make install
+$ sudo ldconfig
+```
+
+### build and install c-ares
+```
+$ sudo export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+$ git clone https://gitee.com/src-openeuler/c-ares.git
+$ cd c-ares
+$ tar -xzvf c-ares-1.15.0.tar.gz
+$ cd c-ares-1.15.0
+$ sudo autoreconf -if
+$ sudo ./configure --enable-shared --disable-dependency-tracking
+$ sudo make -j $(nproc)
+$ sudo make install
+$ sudo ldconfig
+```
+
+### build and install grpc
+```
+$ git clone https://gitee.com/src-openeuler/grpc.git
+$ cd grpc
+$ tar -xzvf grpc-1.22.0.tar.gz
+$ cd grpc-1.22.0
+$ sudo make -j $(nproc)
+$ sudo make install
+$ sudo ldconfig
+```
+
+### build and install http-parser
+```
+$ git clone https://gitee.com/src-openeuler/http-parser.git
+$ cd http-parser
+$ tar -xzvf http-parser-2.9.2.tar.gz
+$ cd http-parser-2.9.2
+$ sudo make -j CFLAGS="-Wno-error"
+$ sudo make CFLAGS="-Wno-error" install
+$ sudo ldconfig
+```
+
+### build and install libwebsockets
+```
+$ git clone https://gitee.com/src-openeuler/libwebsockets.git
+$ cd libwebsockets
+$ tar -xzvf libwebsockets-2.4.2.tar.gz
+$ cd libwebsockets-2.4.2
+$ patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch
+$ mkdir build
+$ cd build
+$ sudo cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../
+$ sudo make -j $(nproc)
+$ sudo make install
+$ sudo ldconfig
+```
+
+## Build and install specific versions dependencies from source 
+iSulad depend on some specific versions dependencies.
+
+### build and install lxc
+```
+$ git clone https://gitee.com/src-openeuler/lxc.git
+$ cd lxc
+$ tar -zxf lxc-4.0.1.tar.gz
+$ ./apply-patches
+$ cd lxc-4.0.1
+$ ./autogen.sh
+$ ./configure
+$ make -j
 $ sudo make install
 ```
 
-## Trial iSulad Via Docker container
-
-You can try to use iSulad via Docker container. The following steps guide you how to create a Docker container which can run iSulad inside.
-
-#### Build image
-
-You can build `iSulad` via a Linux-based Docker container. You can build an image from the`Dockerfile` in the source directory. From the iSulad source root directory you can run the following command to make your image.
-
-```sh
-$ sudo docker build --build-arg http_proxy=YOUR_HTTP_PROXY_IF_NEED
-		--build-arg https_proxy=YOUR_HTTPS_PROXY_IF_NEED \
-		-t YOUR_IMAGE_NAME -f ./Dockerfile .
+### build and install lcr
+```
+$ git clone https://gitee.com/openeuler/lcr.git
+$ cd lcr
+$ mkdir build
+$ cd build
+$ sudo cmake ..
+$ sudo make -j
+$ sudo make install
 ```
 
-#### Prepare root directory for the iSulad
-
-Let's prepare a root directory on host, and we will mount this directory into the container. This  directory be used by `iSulad` in container. 
-
-```sh
-$ sudo mkdir -p /var/lib/isulad
+### build and install clibcni
+```
+$ git clone https://gitee.com/openeuler/clibcni.git
+$ cd clibcni
+$ mkdir build
+$ cd build
+$ sudo cmake ..
+$ sudo make -j
+$ sudo make install
 ```
 
-#### Build iSulad in container
-
-Let's suppose that you built an image called `isulad:dev`.
-
-Then from the iSulad source root directory you can run the following command:
-
-```sh
-$ sudo docker run -tid --name YOUR_CONTAINER_NAME -v /var/lib/isulad:/var/lib/isulad -v `pwd`:/src/isulad --privileged isulad:dev
+### build and install iSulad-img
+```
+$ git clone https://gitee.com/openeuler/iSulad-img.git
+$ cd iSulad-img
+$ ./apply-patch
+$ make
+$ sudo make install
 ```
 
-Let's suppose that you run an container named `iSulad_build`. Then you can use the following commands to build iSulad in your container `iSulad_build`:
-
-```bash
-// enter the container
-$ sudo docker exec -it iSulad_build bash
-// Now you enter the container, so build iSulad in the container by following commands
-# cd /src/isulad
-# mkdir build
-# cd build
-# cmake ..
-# make
-# make install
-```
-
-Now You can use direct command to start `iSulad` server in the container：
-
+### build and install iSulad
 ```sh
-$ sudo isulad # run the server with default socket name and default log level and images manage function
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ mkdir build
+$ cd build
+$ sudo cmake ..
+$ sudo make
+$ sudo make install
 ```
