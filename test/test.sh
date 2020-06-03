@@ -25,7 +25,7 @@ function usage()
     echo  "  -h, --help                      Print this help, then exit"
     echo
     echo  "Compile Options:"
-    echo  "  -m, --cmake <option>            use cmake genenate Makefile, eg: -m(default), -mcoverage, --cmake, --cmake=coverage"
+    echo  "  -m, --cmake <option>            use cmake genenate Makefile, eg: -m(default), -mcoverage, -masan, --cmake, --cmake=coverage"
     echo  "  -c, --compile                   Enable compile"
     echo  "  -e, --empty                     Enable compile empty(make clean)"
     echo
@@ -146,7 +146,7 @@ function llt_compile()
 {
     ret=0
     echo ---------------------- llt compile begin ----------------------
-    make -j ${nproc}
+    make -j
     ret=$?
     echo ---------------------- llt compile end ------------------------
     echo
@@ -279,7 +279,13 @@ function llt_coverage()
         fi
 
         #lcov -c ${LCOV_CMD} -o coverage/coverage.info --exclude '*_llt.c' --include '*.c' --include '*.cpp' --include '*.cc' --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
-        lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external --exclude '*_llt*.cc' -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
+        lcov --help | grep "\-\-exclude"
+        if [[ $? -eq 0 ]]; then
+            lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external --exclude '*_llt*.cc' -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
+        else
+            lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
+        fi
+
         if [ $? != 0 ]; then
             echo "lcov generate coverage.info fail."
             exit 1

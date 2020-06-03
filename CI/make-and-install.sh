@@ -38,7 +38,7 @@ export C_INCLUDE_PATH=/usr/local/include:${builddir}/include:$C_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=/usr/local/include:${builddir}/include:$CPLUS_INCLUDE_PATH
 export PATH=${builddir}/bin:$PATH
 
-ISULAD_SRC_PATH=`env | grep TOPDIR | awk -F = '{print $2}'`
+ISULAD_SRC_PATH=`env | grep TOPDIR | awk -F '=' '{print $2}'`
 export ISULAD_COPY_PATH=~/iSulad
 export LCR_SRC_PATH=~/lcr/
 
@@ -47,6 +47,13 @@ export PATH=$PATH:/usr/local/go/bin
 
 umask 0022
 cp -r $ISULAD_SRC_PATH $ISULAD_COPY_PATH
+
+#Init GCOV configs
+set +e
+if [[ "x${GCOV}" == "xON" ]]; then
+  export enable_gcov=1
+fi
+set -e
 
 function echo_success()
 {
@@ -60,6 +67,19 @@ function echo_error()
 
 source $basepath/install_depends.sh
 
+echo_success "===================RUN DT-LLT TESTCASES START========================="
+cd $ISULAD_COPY_PATH
+rm -rf build
+cd ./test
+./test.sh -mcoverage -c -r -t
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+ISULAD_SRC_PATH=$(env | grep TOPDIR | awk -F = '{print $2}')
+tar -zcf $ISULAD_SRC_PATH/isulad-llt-gcov.tar.gz ./coverage
+./test.sh -e
+echo_success "===================RUN DT-LLT TESTCASES END========================="
+
 cd $ISULAD_COPY_PATH
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/cutils/utils.c
 
@@ -67,29 +87,27 @@ sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd ==
 rm -rf build
 mkdir build
 cd build
-cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON ..
+if [[ ${enable_gcov} -ne 1 ]]; then
+  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=debug -DGCOV=ON -DENABLE_EMBEDDED=ON ..
+else
+  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON ..
+fi
 make -j $(nproc)
 make install
 sed -i 's/"log-driver": "stdout"/"log-driver": "file"/g' ${builddir}/etc/isulad/daemon.json
 sed -i "/registry-mirrors/a\        \"https://hub-mirror.c.163.com\"" ${builddir}/etc/isulad/daemon.json
-
-echo_success "===================RUN DT-LLT TESTCASES START========================="
-cd $ISULAD_COPY_PATH
-rm -rf build
-cd ./test
-./test.sh -m -c -r
-if [[ $? -ne 0 ]]; then
-    exit 1
-fi
-./test.sh -e
-echo_success "===================RUN DT-LLT TESTCASES END========================="
 
 # build rest version
 cd $ISULAD_COPY_PATH
 rm -rf build
 mkdir build
 cd build
-cmake -DLIB_INSTALL_DIR=${restbuilddir}/lib -DCMAKE_INSTALL_PREFIX=${restbuilddir} -DCMAKE_INSTALL_SYSCONFDIR=${restbuilddir}/etc -DENABLE_EMBEDDED=ON -DENABLE_GRPC=OFF ..
+
+if [[ ${enable_gcov} -ne 0 ]]; then
+  cmake -DLIB_INSTALL_DIR=${restbuilddir}/lib -DCMAKE_INSTALL_PREFIX=${restbuilddir} -DCMAKE_INSTALL_SYSCONFDIR=${restbuilddir}/etc -DCMAKE_BUILD_TYPE=debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_GRPC=OFF -DDISABLE_OCI=ON ..
+else
+  cmake -DLIB_INSTALL_DIR=${restbuilddir}/lib -DCMAKE_INSTALL_PREFIX=${restbuilddir} -DCMAKE_INSTALL_SYSCONFDIR=${restbuilddir}/etc -DENABLE_EMBEDDED=ON -DENABLE_GRPC=OFF -DDISABLE_OCI=ON ..
+fi
 make -j $(nproc)
 make install
 sed -i 's/"log-driver": "stdout"/"log-driver": "file"/g' ${restbuilddir}/etc/isulad/daemon.json

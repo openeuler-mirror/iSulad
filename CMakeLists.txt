@@ -57,7 +57,7 @@ include(cmake/protoc.cmake)
 SET(CMAKE_VERBOSE_MAKEFILE OFF)
 IF(ENABLE_COVERAGE)
     MESSAGE(STATUS "Enable coverage compile option")
-    SET(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-inline-functions -fkeep-static-functions")
+    SET(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-inline-functions")
     SET(COVERAGE_CXX_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage")
 ENDIF(ENABLE_COVERAGE)
 
