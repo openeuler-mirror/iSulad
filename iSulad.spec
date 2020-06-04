@@ -31,7 +31,7 @@ Requires(preun): initscripts
 
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
-BuildRequires: libcurl libcurl-devel sqlite-devel
+BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel libtar-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
@@ -40,7 +40,7 @@ Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
-Requires:      libcap libselinux libwebsockets libtar
+Requires:      libcap libselinux libwebsockets libarchive libtar device-mapper
 Requires:      systemd
 
 %description
