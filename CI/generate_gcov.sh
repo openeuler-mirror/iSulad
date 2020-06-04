@@ -13,8 +13,8 @@ echo "*****************Get iSulad GCOV data**************************"
 cp -r ~/build $ISULAD_COPY_PATH
 cd $ISULAD_COPY_PATH/build/src/CMakeFiles
 lcov -c -o isulad.info -d isulad.dir
-lcov -c -o isula.info -d isula.dir/src
-lcov -c -o isulad-shim.info -d isulad-shim.dir/src
+lcov -c -o isula.info -d isula.dir
+lcov -c -o isulad-shim.info -d isulad-shim.dir
 lcov -c -o libisula.info -d libisula.dir
 
 # Remove std files
