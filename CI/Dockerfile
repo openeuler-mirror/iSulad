@@ -65,6 +65,8 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			device-mapper-devel \
 			libarchive \
 			libarchive-devel \
+			libtar \
+			libtar-devel \
 			libcurl-devel \
 			zlib-devel \
 			glibc-headers \
