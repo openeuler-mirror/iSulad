@@ -129,9 +129,9 @@ extern "C" {
 #define defaultContainerTime "0001-01-01T00:00:00Z"
 #define TIME_STR_SIZE 512
 
-#define HOST_NAME_REGEXP                                                   \
-    "^(([[:alnum:]]|[[:alnum:]][[:alnum:]\\-]{0,63}[[:alnum:]])\\.){0,63}" \
-    "([[:alnum:]]|[[:alnum:]][[:alnum:]\\-]{0,63}[[:alnum:]])$"
+#define HOST_NAME_REGEXP                                         \
+    "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*" \
+    "([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
 #define __TagPattern "^:([A-Za-z_0-9][A-Za-z_0-9.-]{0,127})$"
 #define __NamePattern                                                                 \
     "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])"                             \
