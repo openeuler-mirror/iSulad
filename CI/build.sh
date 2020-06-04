@@ -399,14 +399,16 @@ if [[ "x${enable_gcov}" == "xON" ]]; then
   tar xf ./isulad-gcov.tar.gz
   rm -rf /var/www/html/isulad-gcov
   rm -rf /var/www/html/isulad-gcov.tar.gz
-  mv ./tmp/isulad-gcov /var/www/html
+  mv ./tmp/isulad-gcov /var/www/html/isulad-gcov
   cp isulad-gcov.tar.gz /var/www/html
+  rm -rf ./tmp
 
   tar xf ./isulad-llt-gcov.tar.gz
   rm -rf /var/www/html/isulad-llt-gcov
   rm -rf /var/www/html/isulad-llt-gcov.tar.gz
-  mv ./coverage /var/www/html
+  mv ./coverage /var/www/html/isulad-llt-gcov
   cp isulad-llt-gcov.tar.gz /var/www/html
+  rm -rf ./coverage
 fi
 
 if [[ -e $CIDIR/${CONTAINER_NAME}.runflag ]]; then
@@ -415,13 +417,17 @@ if [[ -e $CIDIR/${CONTAINER_NAME}.runflag ]]; then
     for container in ${containers[@]}
     do
         docker rm -f $container
+        rm -rf /var/lib/isulad/$container
     done
+    rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
     exit 0;
 else
     for container in ${containers[@]}
     do
         docker rm -f $container
+        rm -rf /var/lib/isulad/$container
     done
+    rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
     echo_error "Test failed!"
     exit -1;
 fi
