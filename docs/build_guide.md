@@ -13,37 +13,42 @@ $ sudo yum --enablerepo='*' install -y automake autoconf libtool cmake make libc
 
 ### install basic dependencies based on Ubuntu distribution
 ```sh
-$ sudo apt install -y libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux libselinux-devel libseccomp libseccomp-dev libcap-dev libsystemd-dev git libcurl4-gnutls-dev openssl libdevmapper-dev golang python3 libtar libtar-dev
+$ sudo apt install -y libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux-dev libseccomp-dev libcap-dev libsystemd-dev git libcurl4-gnutls-dev openssl libdevmapper-dev golang python3 libtar libtar-dev
 ```
 
 ## Build and install other dependencies from source
 These dependencies may not be provided by your package manager. So you need to build them from source.
 
+### set ldconfig and pkgconfig
+```
+$ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+$ export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH
+$ sudo -E echo "/usr/local/lib" >> /etc/ld.so.conf
+```
 ### build and install protobuf
 ```
 $ git clone https://gitee.com/src-openeuler/protobuf.git
 $ cd protobuf
 $ tar -xzvf protobuf-all-3.9.0.tar.gz
 $ cd protobuf-3.9.0
-$ sudo ./autogen.sh
-$ sudo ./configure
-$ sudo make -j $(nproc)
-$ sudo make install
-$ sudo ldconfig
+$ sudo -E ./autogen.sh
+$ sudo -E ./configure
+$ sudo -E make -j $(nproc)
+$ sudo -E make install
+$ sudo -E ldconfig
 ```
 
 ### build and install c-ares
 ```
-$ sudo export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 $ git clone https://gitee.com/src-openeuler/c-ares.git
 $ cd c-ares
 $ tar -xzvf c-ares-1.15.0.tar.gz
 $ cd c-ares-1.15.0
-$ sudo autoreconf -if
-$ sudo ./configure --enable-shared --disable-dependency-tracking
-$ sudo make -j $(nproc)
-$ sudo make install
-$ sudo ldconfig
+$ sudo -E autoreconf -if
+$ sudo -E ./configure --enable-shared --disable-dependency-tracking
+$ sudo -E make -j $(nproc)
+$ sudo -E make install
+$ sudo -E ldconfig
 ```
 
 ### build and install grpc
@@ -52,9 +57,9 @@ $ git clone https://gitee.com/src-openeuler/grpc.git
 $ cd grpc
 $ tar -xzvf grpc-1.22.0.tar.gz
 $ cd grpc-1.22.0
-$ sudo make -j $(nproc)
-$ sudo make install
-$ sudo ldconfig
+$ sudo -E make -j $(nproc)
+$ sudo -E make install
+$ sudo -E ldconfig
 ```
 
 ### build and install http-parser
@@ -63,9 +68,9 @@ $ git clone https://gitee.com/src-openeuler/http-parser.git
 $ cd http-parser
 $ tar -xzvf http-parser-2.9.2.tar.gz
 $ cd http-parser-2.9.2
-$ sudo make -j CFLAGS="-Wno-error"
-$ sudo make CFLAGS="-Wno-error" install
-$ sudo ldconfig
+$ sudo -E make -j CFLAGS="-Wno-error"
+$ sudo -E make CFLAGS="-Wno-error" install
+$ sudo -E ldconfig
 ```
 
 ### build and install libwebsockets
@@ -77,10 +82,10 @@ $ cd libwebsockets-2.4.2
 $ patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch
 $ mkdir build
 $ cd build
-$ sudo cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../
-$ sudo make -j $(nproc)
-$ sudo make install
-$ sudo ldconfig
+$ sudo -E cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../
+$ sudo -E make -j $(nproc)
+$ sudo -E make install
+$ sudo -E ldconfig
 ```
 
 ## Build and install specific versions dependencies from source 
@@ -93,10 +98,10 @@ $ cd lxc
 $ tar -zxf lxc-4.0.1.tar.gz
 $ ./apply-patches
 $ cd lxc-4.0.1
-$ ./autogen.sh
-$ ./configure
-$ make -j
-$ sudo make install
+$ sudo -E ./autogen.sh
+$ sudo -E ./configure
+$ sudo -E make -j
+$ sudo -E make install
 ```
 
 ### build and install lcr
@@ -105,9 +110,9 @@ $ git clone https://gitee.com/openeuler/lcr.git
 $ cd lcr
 $ mkdir build
 $ cd build
-$ sudo cmake ..
-$ sudo make -j
-$ sudo make install
+$ sudo -E cmake ..
+$ sudo -E make -j
+$ sudo -E make install
 ```
 
 ### build and install clibcni
@@ -116,9 +121,9 @@ $ git clone https://gitee.com/openeuler/clibcni.git
 $ cd clibcni
 $ mkdir build
 $ cd build
-$ sudo cmake ..
-$ sudo make -j
-$ sudo make install
+$ sudo -E cmake ..
+$ sudo -E make -j
+$ sudo -E make install
 ```
 
 ### build and install iSulad-img
@@ -126,8 +131,8 @@ $ sudo make install
 $ git clone https://gitee.com/openeuler/iSulad-img.git
 $ cd iSulad-img
 $ ./apply-patch
-$ make
-$ sudo make install
+$ sudo -E make
+$ sudo -E make install
 ```
 
 ### build and install iSulad
@@ -135,7 +140,7 @@ $ sudo make install
 $ git clone https://gitee.com/openeuler/iSulad.git
 $ mkdir build
 $ cd build
-$ sudo cmake ..
-$ sudo make
-$ sudo make install
+$ sudo -E cmake ..
+$ sudo -E make
+$ sudo -E make install
 ```
