@@ -136,7 +136,7 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     }
     size = tmp_out_len;
 
-    evp_ret = EVP_DecryptFinal(ctx, out + AES_256_CFB_IV_LEN + tmp_out_len, &tmp_out_len);
+    evp_ret = EVP_EncryptFinal(ctx, out + AES_256_CFB_IV_LEN + tmp_out_len, &tmp_out_len);
     if (evp_ret != 1) {
         ERROR("evp encrypt final failed, result %d: %s", evp_ret, strerror(errno));
         ret = -1;
