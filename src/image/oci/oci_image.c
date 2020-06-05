@@ -31,6 +31,20 @@
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 
+// only use overlay as the driver name if specify overlay2 or overlay
+static char *format_driver_name(const char *driver)
+{
+    if (driver == NULL) {
+        return NULL;
+    }
+
+    if (strcmp(driver, "overlay") == 0 || strcmp(driver, "overlay2") == 0) {
+        return util_strdup_s("overlay");
+    } else {
+        return util_strdup_s(driver);
+    }
+}
+
 static int storage_module_init_helper(const struct service_arguments *args)
 {
     int ret = 0;
@@ -43,7 +57,13 @@ static int storage_module_init_helper(const struct service_arguments *args)
         goto out;
     }
 
-    storage_opts->driver_name = util_strdup_s(args->json_confs->storage_driver);
+    storage_opts->driver_name = format_driver_name(args->json_confs->storage_driver);
+    if (storage_opts->driver_name == NULL) {
+        ERROR("Failed to get storage driver name");
+        ret = -1;
+        goto out;
+    }
+
     storage_opts->storage_root = util_path_join(args->json_confs->graph, GRAPH_ROOTPATH_NAME);
     if (storage_opts->storage_root == NULL) {
         ERROR("Failed to get storage root dir");
