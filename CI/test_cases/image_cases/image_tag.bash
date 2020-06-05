@@ -86,6 +86,17 @@ function test_tag_image()
     isula rmi "ddd"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_ubuntu}" && ((ret++))
 
+    local ID_image_busybox=${ID_first:1:10}
+
+    isula tag $image_ubuntu $image_busybox
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image ${image_ubuntu} with tag ${image_busybox}" && ((ret++))
+
+    isula inspect -f '{{json .image.repo_tags}}' $image_ubuntu|grep $image_busybox
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_ubuntu}" && ((ret++))
+
+    isula rmi $ID_image_busybox
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${ID_image_busybox}" && ((ret++))
+
     isula rmi ${image_busybox}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_busybox}" && ((ret++))
 

@@ -294,6 +294,18 @@ static int remove_name(image_t *img, const char *name)
         }
     }
 
+    if (img->simage->names_len == count) {
+        for (i = 0; i < img->simage->names_len; i++) {
+            free(img->simage->names[i]);
+            img->simage->names[i] = NULL;
+        }
+        free(img->simage->names);
+        img->simage->names = NULL;
+        img->simage->names_len = 0;
+
+        return 0;
+    }
+
     new_size = (img->simage->names_len - count) * sizeof(char *);
     tmp_names = (char **)util_common_calloc_s(new_size);
     if (tmp_names == NULL) {
