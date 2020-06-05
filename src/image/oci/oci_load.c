@@ -24,7 +24,7 @@
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define OCI_SCHEMA_VERSION 2
-#define OCI_LOAD_TMP_DIR         OCI_LOAD_TMP_WORK_DIR"/oci-image-load-XXXXXX"
+#define OCI_LOAD_TMP_DIR OCI_LOAD_TMP_WORK_DIR "/oci-image-load-XXXXXX"
 
 static image_manifest_items_element **load_manifest(const char *fname, size_t *length)
 {
@@ -358,6 +358,7 @@ static int oci_load_create_image(load_image_t *desc)
     struct storage_img_create_options opts = { 0 };
     char *top_layer_id = NULL;
     char *pre_top_layer = NULL;
+    char *normalized_name = NULL;
     oci_image_spec *conf = NULL;
     types_timestamp_t timestamp = { 0 };
 
@@ -403,16 +404,25 @@ static int oci_load_create_image(load_image_t *desc)
     }
 
     for (; i < desc->repo_tags_len; i++) {
-        ret = storage_img_add_name(desc->im_id, desc->repo_tags[i]);
+        normalized_name = oci_normalize_image_name(desc->repo_tags[i]);
+        if (normalized_name == NULL) {
+            ret = -1;
+            ERROR("Failed to normalized name %s", desc->repo_tags[i]);
+            goto out;
+        }
+        ret = storage_img_add_name(desc->im_id, normalized_name);
         if (ret != 0) {
             ERROR("add image name failed");
             goto out;
         }
+        free(normalized_name);
+        normalized_name = NULL;
     }
 
 out:
     free_oci_image_spec(conf);
     free(pre_top_layer);
+    free(normalized_name);
     return ret;
 }
 

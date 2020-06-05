@@ -2,7 +2,7 @@
 #
 # attributes: isulad cri cni
 # concurrent: NA
-# spend time: 45
+# spend time: 43
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/criconfigs)
@@ -41,9 +41,15 @@ function do_test_help()
 {
     msg_info "this is $0 do_test"
 
-    crictl images | grep busybox
+    crictl pull busybox
     if [ $? -ne 0 ]; then
-        msg_err "Failed to find busybox image"
+        msg_err "Failed to pull busybox image"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl images | grep "mirrorgooglecontainers/pause-amd64"
+    if [ $? -ne 0 ]; then
+        msg_err "Failed to find mirrorgooglecontainers/pause-amd64 image"
         TC_RET_T=$(($TC_RET_T+1))
     fi
 

@@ -2,7 +2,7 @@
 #
 # attributes: isulad share namepaces
 # concurrent: NO
-# spend time: 45
+# spend time: 25
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -36,14 +36,13 @@ function do_test_t()
 	    cid[$i]=`isula create -ti busybox /bin/sh`
 	    fn_check_eq "$?" "0" "create ${cid[$i]}"
 
-	    msg=`isula run -tid ${arr_ns_type[$i]}="container:${cid[$i]}" busybox /bin/sh 2>&1`
+	    msg=`isula run --name test1 -tid ${arr_ns_type[$i]}="container:${cid[$i]}" busybox /bin/sh 2>&1`
 	    echo $msg | grep "Can not join namespace of a non running container"
 	    fn_check_eq "$?" "0" "share ipc fail test"
 
-	    isula rm -f ${cid[$i]}
+	    isula rm -f test1
 
-	    rid[$i]=`isula run -tid busybox /bin/sh`
-	    fn_check_eq "$?" "0" "run ${rid[$i]}"
+	    isula rm -f ${cid[$i]}
 
 	    id=`isula run -tid busybox /bin/sh`
 	    fn_check_eq "$?" "0" "run $id"

@@ -49,31 +49,31 @@
 #include "selinux_label.h"
 
 #ifndef CLONE_NEWUTS
-#define CLONE_NEWUTS            0x04000000
+#define CLONE_NEWUTS 0x04000000
 #endif
 
 #ifndef CLONE_NEWUSER
-#define CLONE_NEWUSER           0x10000000
+#define CLONE_NEWUSER 0x10000000
 #endif
 
 #ifndef CLONE_NEWNET
-#define CLONE_NEWNET            0x40000000
+#define CLONE_NEWNET 0x40000000
 #endif
 
 #ifndef CLONE_NEWNS
-#define CLONE_NEWNS             0x00020000
+#define CLONE_NEWNS 0x00020000
 #endif
 
 #ifndef CLONE_NEWPID
-#define CLONE_NEWPID            0x20000000
+#define CLONE_NEWPID 0x20000000
 #endif
 
 #ifndef CLONE_NEWIPC
-#define CLONE_NEWIPC            0x08000000
+#define CLONE_NEWIPC 0x08000000
 #endif
 
 #ifndef CLONE_NEWCGROUP
-#define CLONE_NEWCGROUP         0x02000000
+#define CLONE_NEWCGROUP 0x02000000
 #endif
 
 static int make_sure_oci_spec_annotations(oci_runtime_spec *oci_spec)
@@ -274,7 +274,8 @@ static int add_native_umask(const container_config *container_spec)
         if (strcmp(container_spec->annotations->keys[i], ANNOTATION_UMAKE_KEY) == 0) {
             if (!is_valid_umask_value(container_spec->annotations->values[i])) {
                 ERROR("native.umask option %s not supported", container_spec->annotations->values[i]);
-                isulad_set_error_message("native.umask option %s not supported", container_spec->annotations->values[i]);
+                isulad_set_error_message("native.umask option %s not supported",
+                                         container_spec->annotations->values[i]);
                 ret = -1;
             }
             goto out;
@@ -668,18 +669,16 @@ static int merge_hugetlbs(oci_runtime_spec *oci_spec, host_config_hugetlbs_eleme
         goto out;
     }
 
-    if (hugetlbs_len > SIZE_MAX / sizeof(defs_resources_hugepage_limits_element *) -
-        oci_spec->linux->resources->hugepage_limits_len) {
+    if (hugetlbs_len >
+        SIZE_MAX / sizeof(defs_resources_hugepage_limits_element *) - oci_spec->linux->resources->hugepage_limits_len) {
         ERROR("Too many hugetlbs to merge!");
         ret = -1;
         goto out;
     }
-    old_size = oci_spec->linux->resources->hugepage_limits_len *
+    old_size = oci_spec->linux->resources->hugepage_limits_len * sizeof(defs_resources_hugepage_limits_element *);
+    new_size = (oci_spec->linux->resources->hugepage_limits_len + hugetlbs_len) *
                sizeof(defs_resources_hugepage_limits_element *);
-    new_size = (oci_spec->linux->resources->hugepage_limits_len + hugetlbs_len)
-               * sizeof(defs_resources_hugepage_limits_element *);
-    ret = mem_realloc((void **)&hugepage_limits_temp, new_size,
-                      oci_spec->linux->resources->hugepage_limits,  old_size);
+    ret = mem_realloc((void **)&hugepage_limits_temp, new_size, oci_spec->linux->resources->hugepage_limits, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for hugepage limits");
         ret = -1;
@@ -689,17 +688,17 @@ static int merge_hugetlbs(oci_runtime_spec *oci_spec, host_config_hugetlbs_eleme
     oci_spec->linux->resources->hugepage_limits = hugepage_limits_temp;
 
     for (i = 0; i < hugetlbs_len; i++) {
-        oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]
-            = util_common_calloc_s(sizeof(defs_resources_hugepage_limits_element));
+        oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len] =
+            util_common_calloc_s(sizeof(defs_resources_hugepage_limits_element));
         if (oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len] == NULL) {
             ERROR("Failed to malloc memory for hugepage limits");
             ret = -1;
             goto out;
         }
-        oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]->limit
-            = hugetlbs[i]->limit;
-        oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]->page_size
-            = util_strdup_s(hugetlbs[i]->page_size);
+        oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]->limit =
+            hugetlbs[i]->limit;
+        oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]->page_size =
+            util_strdup_s(hugetlbs[i]->page_size);
         oci_spec->linux->resources->hugepage_limits_len++;
     }
 out:
@@ -896,8 +895,7 @@ out:
     return ret;
 }
 
-static int merge_hostname(oci_runtime_spec *oci_spec, const host_config *host_spec,
-                          container_config *container_spec)
+static int merge_hostname(oci_runtime_spec *oci_spec, const host_config *host_spec, container_config *container_spec)
 {
     free(oci_spec->hostname);
     oci_spec->hostname = util_strdup_s(container_spec->hostname);
@@ -1086,8 +1084,7 @@ out:
     return ret;
 }
 
-static int do_merge_one_ulimit_override(const oci_runtime_spec *oci_spec,
-                                        defs_process_rlimits_element *rlimit)
+static int do_merge_one_ulimit_override(const oci_runtime_spec *oci_spec, defs_process_rlimits_element *rlimit)
 {
     size_t j;
     bool exists = false;
@@ -1386,8 +1383,8 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
             goto out;
         }
 
-        ret = mem_realloc((void **)&work_ns, (len + 1) * sizeof(defs_namespace_reference *),
-                          (void *)work_ns, len * sizeof(defs_namespace_reference *));
+        ret = mem_realloc((void **)&work_ns, (len + 1) * sizeof(defs_namespace_reference *), (void *)work_ns,
+                          len * sizeof(defs_namespace_reference *));
         if (ret != 0) {
             ERROR("Out of memory");
             goto out;
@@ -1480,7 +1477,7 @@ static int merge_working_dir(oci_runtime_spec *oci_spec, const char *working_dir
 {
     int ret = 0;
 
-    if (working_dir == NULL) {
+    if (!util_valid_str(working_dir)) {
         return 0;
     }
 
@@ -1519,8 +1516,8 @@ static int change_tmpfs_mount_size(const oci_runtime_spec *oci_spec, int64_t mem
         if (strcmp("tmpfs", oci_spec->mounts[i]->type) != 0) {
             continue;
         }
-        if (strcmp("/run", oci_spec->mounts[i]->destination)  == 0 || \
-            strcmp("/run/lock", oci_spec->mounts[i]->destination)  == 0 || \
+        if (strcmp("/run", oci_spec->mounts[i]->destination) == 0 ||
+            strcmp("/run/lock", oci_spec->mounts[i]->destination) == 0 ||
             strcmp("/tmp", oci_spec->mounts[i]->destination) == 0) {
             ret = util_array_append(&oci_spec->mounts[i]->options, size_opt);
             if (ret != 0) {
@@ -1687,9 +1684,8 @@ out:
     return ret;
 }
 
-int parse_security_opt(const host_config *host_spec, bool *no_new_privileges,
-                       char ***label_opts, size_t *label_opts_len,
-                       char **seccomp_profile)
+int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, char ***label_opts,
+                       size_t *label_opts_len, char **seccomp_profile)
 {
     int ret = 0;
     size_t i;
@@ -1794,8 +1790,8 @@ static int handle_host_or_privileged_mode(host_config *hc)
         goto out;
     }
 
-    if (to_host_config_selinux_labels((const char **)labels, labels_len,
-                                      &hc->security_opt, &hc->security_opt_len) != 0) {
+    if (to_host_config_selinux_labels((const char **)labels, labels_len, &hc->security_opt, &hc->security_opt_len) !=
+        0) {
         ret = -1;
         goto out;
     }
@@ -1805,8 +1801,8 @@ out:
     return ret;
 }
 
-static int handle_ipc_pid_label(host_config *hc, const char **ipc_label, size_t ipc_label_len,
-                                const char **pid_label, size_t pid_label_len)
+static int handle_ipc_pid_label(host_config *hc, const char **ipc_label, size_t ipc_label_len, const char **pid_label,
+                                size_t pid_label_len)
 {
     int ret = 0;
     size_t i;
@@ -1824,8 +1820,8 @@ static int handle_ipc_pid_label(host_config *hc, const char **ipc_label, size_t 
                 goto out;
             }
         }
-        if (to_host_config_selinux_labels((const char **)pid_label, pid_label_len,
-                                          &hc->security_opt, &hc->security_opt_len) != 0) {
+        if (to_host_config_selinux_labels((const char **)pid_label, pid_label_len, &hc->security_opt,
+                                          &hc->security_opt_len) != 0) {
             ret = -1;
             goto out;
         }
@@ -1882,8 +1878,8 @@ static int handle_connected_container_mode(host_config *hc)
         free(pid_process_label);
     }
 
-    if (handle_ipc_pid_label(hc, (const char **)ipc_label, ipc_label_len,
-                             (const char **)pid_label, pid_label_len) != 0) {
+    if (handle_ipc_pid_label(hc, (const char **)ipc_label, ipc_label_len, (const char **)pid_label, pid_label_len) !=
+        0) {
         ret = -1;
         goto out;
     }
@@ -1921,7 +1917,6 @@ static int generate_security_opt(host_config *hc)
     return handle_connected_container_mode(hc);
 }
 
-
 static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
                                container_config_v2_common_config *v2_spec)
 {
@@ -1950,8 +1945,7 @@ static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spe
         goto out;
     }
 
-    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts,
-                             &label_opts_len, &seccomp_profile);
+    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts, &label_opts_len, &seccomp_profile);
     if (ret != 0) {
         ERROR("Failed to parse security opt");
         goto out;
@@ -1984,9 +1978,8 @@ out:
     return ret;
 }
 
-
-int merge_all_specs(host_config *host_spec, const char *real_rootfs,
-                    container_config_v2_common_config *v2_spec, oci_runtime_spec *oci_spec)
+int merge_all_specs(host_config *host_spec, const char *real_rootfs, container_config_v2_common_config *v2_spec,
+                    oci_runtime_spec *oci_spec)
 {
     int ret = 0;
 
@@ -2174,5 +2167,3 @@ out_free:
     free(json_container);
     return ret;
 }
-
-

@@ -2,7 +2,7 @@
 #
 # attributes: isulad basic export container
 # concurrent: NA
-# spend time: 5
+# spend time: 6
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -46,6 +46,8 @@ function test_image_export()
 
   isula export -o nonexistdir/export.tar ${CONT}
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - export to nonexist directory success" && ((ret++))
+
+  isula rm -f ${CONT}
 
   msg_info "${test} finished with return ${ret}..."
   return ${ret}

@@ -667,6 +667,7 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
     if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
         if (!util_valid_digest_file(file, digest)) {
             ERROR("data from %s does not have digest %s", path, digest);
+            ret = -1;
             goto out;
         }
     }

@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance restart
 # concurrent: YES
-# spend time: 38
+# spend time: 32
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.

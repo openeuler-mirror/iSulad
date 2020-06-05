@@ -487,7 +487,7 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
     }
 
     spec->terminal = request->tty;
-    spec->cwd = util_strdup_s(container_spec->working_dir ? container_spec->working_dir : "/");
+    spec->cwd = util_strdup_s(util_valid_str(container_spec->working_dir) ? container_spec->working_dir : "/");
 
     return spec;
 

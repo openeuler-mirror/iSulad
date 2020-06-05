@@ -24,7 +24,7 @@ LCR_ROOT_PATH="/var/lib/isulad/engines/lcr"
 valgrind_log="/tmp/valgrind.log"
 ISUALD_LOG="/var/lib/isulad/isulad.log"
 
-declare -r -i FAILURE=-1
+declare -r -i FAILURE=1
 
 function cut_output_lines() {
     message=`$@ 2>&1`
