@@ -34,10 +34,8 @@ typedef enum {
 
 int devmapper_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
-bool devmapper_is_quota_options(struct graphdriver *driver, const char *option);
-
 int devmapper_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
-                        const struct driver_create_opts *create_opts);
+                        struct driver_create_opts *create_opts);
 
 int devmapper_create_ro(const char *id, const char *parent, const struct graphdriver *driver,
                         const struct driver_create_opts *create_opts);
@@ -57,6 +55,8 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
 int devmapper_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
 
 int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status);
+
+int devmapper_clean_up(const struct graphdriver *driver);
 
 #ifdef __cplusplus
 }

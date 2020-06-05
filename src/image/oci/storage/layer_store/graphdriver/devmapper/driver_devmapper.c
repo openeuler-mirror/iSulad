@@ -46,7 +46,7 @@ static int do_create(const char *id, const char *parent, const struct driver_cre
 
 // devmapper_create_rw creates a layer that is writable for use as a container file system
 int devmapper_create_rw(const char *id, const char *parent, const struct graphdriver *driver,
-                        const struct driver_create_opts *create_opts)
+                        struct driver_create_opts *create_opts)
 {
     if (id == NULL || driver == NULL || create_opts == NULL) {
         return -1;
@@ -495,4 +495,12 @@ out:
     free_devmapper_status(st);
     free(status_str);
     return ret;
+}
+
+int devmapper_clean_up(const struct graphdriver *driver)
+{
+    if (driver == NULL) {
+        return -1;
+    }
+    return umount(driver->home);
 }

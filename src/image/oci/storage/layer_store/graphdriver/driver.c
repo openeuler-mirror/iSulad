@@ -55,6 +55,16 @@ static const struct graphdriver_ops g_overlay2_ops = {
 
 static const struct graphdriver_ops g_devmapper_ops = {
     .init = devmapper_init,
+    .create_rw = devmapper_create_rw,
+    .create_ro = devmapper_create_ro,
+    .rm_layer = devmapper_rm_layer,
+    .mount_layer = devmapper_mount_layer,
+    .umount_layer = devmapper_umount_layer,
+    .exists = devmapper_layer_exists,
+    .apply_diff = devmapper_apply_diff,
+    .get_layer_metadata = devmapper_get_layer_metadata,
+    .get_driver_status = devmapper_get_driver_status,
+    .clean_up = devmapper_clean_up,
 };
 
 static struct graphdriver g_drivers[] = {

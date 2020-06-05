@@ -42,7 +42,6 @@ static bool enable_deferred_removal = false;
 static bool driver_deferred_removal_support = false;
 static bool enable_deferred_deletion = false;
 static bool driver_deferred_remove_support = false;
-static bool lvm_setup_config_force = false;
 
 // static int64_t default_udev_wait_timeout = 185;
 static uint64_t default_base_fs_size = 10L * 1024L * 1024L * 1204L;
@@ -116,12 +115,12 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
 
         dup = util_strdup_s(options[i]);
         if (dup == NULL) {
-            ERROR("Out of memory");
+            isulad_set_error_message("Out of memory");
             return -1;
         }
-        p = strchr(dup, '='); // ght 未找到=返回NULL
+        p = strchr(dup, '=');
         if (!p) {
-            ERROR("Unable to parse key/value option: '%s'", dup);
+            isulad_set_error_message("Unable to parse key/value option: '%s'", dup);
             free(dup);
             return -1;
         }
@@ -131,12 +130,12 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
             if (strcmp(val, "ext4") == 0) {
                 devset->filesystem = util_strdup_s(val);
             } else {
-                ERROR("Invalid filesystem: '%s': not supported", val);
+                isulad_set_error_message("Invalid filesystem: '%s': not supported", val);
                 ret = -1;
             }
         } else if (strcasecmp(dup, "dm.thinpooldev") == 0) {
             if (!util_valid_str(val)) {
-                ERROR("Invalid thinpool device, it must not be empty");
+                isulad_set_error_message("Invalid thinpool device, it must not be empty");
                 ret = -1;
                 goto out;
             }
@@ -145,152 +144,28 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
             long converted = 0;
             ret = util_parse_percent_string(val, &converted);
             if (ret != 0 || converted == 100) {
-                ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
+                isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
                 ret = -1;
             }
             devset->min_free_space_percent = (uint32_t)converted;
-        } else if (strcasecmp(dup, "dm.metadatadev") == 0) {
-            devset->metadata_device = util_strdup_s(val);
-        } else if (strcasecmp(dup, "dm.datadev") == 0) {
-            devset->data_device = util_strdup_s(val);
-        } else if (strcasecmp(dup, "dm.blocksize") == 0) {
-            int64_t converted = 0;
-            ret = util_parse_byte_size_string(val, &converted);
-            if (ret != 0) {
-                ERROR("Invalid blocksize %s:%s", val, strerror(-ret));
-                goto out;
-            }
-            if (converted <= 0) {
-                ERROR("dm.blocksize is lower than zero");
-                ret = -1;
-                goto out;
-            }
-            // convert to 512b sectors
-            devset->thinp_block_size = (uint64_t)converted >> 9;
-        } else if (strcasecmp(dup, "dm.override_udev_sync_check") == 0) {
-            bool converted;
-            ret = util_parse_bool_string(val, &converted);
-            if (ret != 0) {
-                ERROR("Invalid dm.override_udev_sync_check '%s': %s", val, strerror(-ret));
-                goto out;
-            }
-            devset->override_udev_sync_check = converted;
-        } else if (strcasecmp(dup, "dm.use_deferred_removal") == 0) {
-            bool converted;
-            ret = util_parse_bool_string(val, &converted);
-            if (ret != 0) {
-                ERROR("Invalid dm.use_deferred_removal '%s': %s", val, strerror(-ret));
-                goto out;
-            }
-            enable_deferred_removal = converted;
-        } else if (strcasecmp(dup, "dm.use_deferred_deletion") == 0) {
-            bool converted;
-            ret = util_parse_bool_string(val, &converted);
-            if (ret != 0) {
-                ERROR("Invalid dm.use_deferred_deletion '%s': %s", val, strerror(-ret));
-                goto out;
-            }
-            enable_deferred_deletion = converted;
         } else if (strcasecmp(dup, "dm.basesize") == 0) {
             int64_t converted = 0;
             ret = util_parse_byte_size_string(val, &converted);
             if (ret != 0) {
-                ERROR("Invalid size: '%s': %s", val, strerror(-ret));
+                isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
                 goto out;
             }
             if (converted <= 0) {
-                ERROR("dm.basesize is lower than zero");
+                isulad_set_error_message("dm.basesize is lower than zero");
                 ret = -1;
                 goto out;
             }
             user_base_size = true;
             devset->base_fs_size = (uint64_t)converted;
-        } else if (strcasecmp(dup, "dm.directlvm_device") == 0) {
-            devset->lvm_setup_config->device = util_strdup_s(val);
-
-        } else if (strcasecmp(dup, "dm.directlvm_device_force") == 0) {
-            bool converted;
-            ret = util_parse_bool_string(val, &converted);
-            if (ret != 0) {
-                ERROR("Invalid dm.directlvm_device_force '%s': %s", val, strerror(-ret));
-                goto out;
-            }
-            lvm_setup_config_force = converted;
-
-        } else if (strcasecmp(dup, "dm.thinp_percent") == 0) {
-            long converted = 0;
-            ret = util_parse_percent_string(val, &converted);
-            if (ret != 0 || converted == 100) {
-                ERROR("Invalid dm.thinp_percent: '%s': %s", val, strerror(-ret));
-                ret = -1;
-                goto out;
-            }
-            if (converted >= 100 || converted <= 0) {
-                ERROR("dm.thinp_percent must be greater than 0 and less than 100");
-                ret = -1;
-                goto out;
-            }
-            devset->lvm_setup_config->thinp_percent = (uint64_t)converted;
-        } else if (strcasecmp(dup, "dm.thinp_metapercent") == 0) {
-            long converted = 0;
-            ret = util_parse_percent_string(val, &converted);
-            if (ret != 0 || converted == 100) {
-                ERROR("Invalid dm.thinp_metapercent: '%s': %s", val, strerror(-ret));
-                ret = -1;
-                goto out;
-            }
-            if (converted >= 100 || converted <= 0) {
-                ERROR("dm.thinp_metapercent must be greater than 0 and less than 100");
-                ret = -1;
-                goto out;
-            }
-            devset->lvm_setup_config->thinp_meta_percent = (uint64_t)converted;
-        } else if (strcasecmp(dup, "dm.thinp_autoextend_percent") == 0) {
-            long converted = 0;
-            ret = util_parse_percent_string(val, &converted);
-            if (ret != 0 || converted == 100) {
-                ERROR("Invalid dm.thinp_autoextend_percent: '%s': %s", val, strerror(-ret));
-                ret = -1;
-                goto out;
-            }
-            if (converted > 100 || converted <= 0) {
-                ERROR("dm.thinp_autoextend_percent must be greater than 0 and less than 100");
-                ret = -1;
-                goto out;
-            }
-            devset->lvm_setup_config->auto_extend_percent = (uint64_t)converted;
-        } else if (strcasecmp(dup, "dm.thinp_autoextend_threshold") == 0) {
-            long converted = 0;
-            ret = util_parse_percent_string(val, &converted);
-            if (ret != 0 || converted == 100) {
-                ERROR("Invalid dm.thinp_autoextend_threshold: '%s': %s", val, strerror(-ret));
-                ret = -1;
-                goto out;
-            }
-            if (converted > 100 || converted <= 0) {
-                ERROR("dm.thinp_autoextend_threshold must be greater than 0 and less than 100");
-                ret = -1;
-                goto out;
-            }
-            devset->lvm_setup_config->auto_extend_threshold = (uint64_t)converted;
-        } else if (strcasecmp(dup, "dm.udev_wait_timeout") == 0) {
-            int64_t converted = 0;
-            ret = util_parse_byte_size_string(val, &converted);
-            if (ret != 0) {
-                ERROR("Invalid udev_wait_timeout %s:%s", val, strerror(-ret));
-                goto out;
-            }
-            if (converted < 0) {
-                ERROR("dm.udev_wait_timeout is lower than zero");
-                ret = -1;
-                goto out;
-            }
-
-            devset->udev_wait_timeout = converted;
         } else if (strcasecmp(dup, "dm.mkfsarg") == 0 || strcasecmp(dup, "dm.mountopt") == 0) {
             /* We have no way to check validation here, validation is checked when using them. */
         } else {
-            ERROR("devicemapper: unknown option: '%s'", dup);
+            isulad_set_error_message("devicemapper: unknown option: '%s'", dup);
             ret = -1;
         }
 out:
@@ -448,7 +323,7 @@ static char *get_pool_dev_name(struct device_set *devset)
 static int deactivate_device_mode(struct device_set *devset, image_devmapper_device_info *dev_info,
                                   bool deferred_remove)
 {
-    int ret;
+    int ret = 0;
     char *dm_name = NULL;
     struct dm_info dinfo;
 
@@ -524,7 +399,7 @@ out:
 
 static bool thin_pool_exists(struct device_set *devset, const char *pool_name)
 {
-    int ret;
+    int ret = 0;
     bool exist = true;
     struct dm_info *dinfo = NULL;
     uint64_t start, length;
@@ -564,7 +439,7 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
     image_devmapper_device_info *info = NULL;
     char metadata_file[PATH_MAX] = { 0 };
     char *metadata_path = NULL;
-    int ret;
+    int ret = 0;
     parser_error err = NULL;
 
     if (hash == NULL) {
@@ -909,7 +784,7 @@ static void *start_device_deletion_thread(void *arg)
 
 static int init_metadata(struct device_set *devset, const char *pool_name)
 {
-    int ret;
+    int ret = 0;
     uint64_t total_size_in_sectors, transaction_id, data_used;
     uint64_t data_total, metadata_used, metadata_total;
     pthread_t device_delete_thread;
@@ -1003,7 +878,7 @@ static void mark_device_id_used(struct device_set *devset, int device_id)
 
 static void mark_device_id_free(struct device_set *devset, int device_id)
 {
-    int mask;
+    int mask = 0;
     int value = 0;
     int *value_ptr = NULL;
     int key = device_id / 8;
@@ -1031,7 +906,7 @@ static void mark_device_id_free(struct device_set *devset, int device_id)
 
 static bool is_device_id_free(struct device_set *devset, int device_id)
 {
-    int mask;
+    int mask = 0;
     int value = 0;
     int *value_ptr = NULL;
     int key = device_id / 8;
@@ -1108,7 +983,8 @@ static int pool_has_free_space(struct device_set *devset)
     metadata_free = metadata_total - metadata_used;
     if (metadata_free < min_free_metadata) {
         ret = -1;
-        ERROR("devmapper: Thin Pool has %lu free metadata blocks which is less than minimum required %lu free metadata blocks. \
+        ERROR("devmapper: Thin Pool has %lu free metadata blocks \
+        which is less than minimum required %lu free metadata blocks. \
         Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
               metadata_total - metadata_used, min_free_metadata);
         goto out;
@@ -1303,7 +1179,7 @@ static int refresh_transaction(struct device_set *devset, int id)
 
 static int update_pool_transaction_id(struct device_set *devset)
 {
-    int ret;
+    int ret = 0;
     char *pool_name = NULL;
 
     pool_name = get_pool_dev_name(devset);
@@ -1336,7 +1212,7 @@ static int close_transaction(struct device_set *devset)
 
 static int remove_metadata(struct device_set *devset, const char *hash)
 {
-    int ret;
+    int ret = 0;
     char *fname = NULL;
 
     fname = metadata_file(devset, hash);
@@ -1355,7 +1231,7 @@ static int remove_metadata(struct device_set *devset, const char *hash)
 
 static int unregister_device(struct device_set *devset, const char *hash)
 {
-    int ret;
+    int ret = 0;
 
     ret = metadata_store_remove(hash);
     if (ret != 0) {
@@ -1375,7 +1251,7 @@ static int unregister_device(struct device_set *devset, const char *hash)
 static image_devmapper_device_info *register_device(struct device_set *devset, int id, const char *hash, uint64_t size,
                                                     uint64_t transaction_id)
 {
-    int ret;
+    int ret = 0;
     bool store_res = false;
     image_devmapper_device_info *info = NULL;
 
@@ -1412,8 +1288,8 @@ out:
 
 static image_devmapper_device_info *create_register_device(struct device_set *devset, const char *hash)
 {
-    int ret;
-    int device_id;
+    int ret = 0;
+    int device_id = 0;
     char *pool_dev = NULL;
     image_devmapper_device_info *info = NULL;
 
@@ -1484,7 +1360,7 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
                                        const char *hash, uint64_t size)
 {
     int ret = 0;
-    int device_id;
+    int device_id = 0;
     char *pool_dev = NULL;
     image_devmapper_device_info *info = NULL;
 
@@ -1559,7 +1435,7 @@ out:
 static int cancel_deferred_removal(struct device_set *devset, const char *hash)
 {
     int i = 0;
-    int ret;
+    int ret = 0;
     int retries = 100;
     char *dm_name = NULL;
 
@@ -1587,7 +1463,7 @@ static int cancel_deferred_removal(struct device_set *devset, const char *hash)
 static int take_snapshot(struct device_set *devset, const char *hash, image_devmapper_device_info *base_info,
                          uint64_t size)
 {
-    int ret;
+    int ret = 0;
     struct dm_info *dmi = NULL;
     char *dm_name = NULL;
     bool resume_dev = false;
@@ -1871,7 +1747,7 @@ out:
 
 static int create_base_image(struct device_set *devset)
 {
-    int ret;
+    int ret = 0;
     image_devmapper_device_info *info = NULL;
 
     // create initial device
@@ -1991,8 +1867,8 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
     }
 
     if (devset->filesystem == NULL || strcmp(devset->base_device_filesystem, devset->filesystem) != 0) {
-        WARN("devmapper: Base device already exists and has filesystem %s on it. User specified filesystem %s will be ignored.",
-
+        WARN("devmapper: Base device already exists and has filesystem %s on it. \
+        User specified filesystem %s will be ignored.",
              devset->base_device_filesystem, devset->filesystem);
         devset->filesystem = util_strdup_s(devset->base_device_filesystem);
     }
@@ -2149,7 +2025,7 @@ static int mark_for_deferred_deletion(struct device_set *devset, image_devmapper
 
 static int delete_transaction(struct device_set *devset, image_devmapper_device_info *info, bool sync_delete)
 {
-    int ret;
+    int ret = 0;
     char *pool_fname = NULL;
 
     ret = open_transaction(devset, info->hash, info->device_id);
@@ -2193,7 +2069,7 @@ out:
 // Issue discard only if device open count is zero.
 static void issue_discard(struct device_set *devset, image_devmapper_device_info *info)
 {
-    int ret;
+    int ret = 0;
     struct dm_info dinfo;
     char *dm_name = NULL;
     char *dev_fname = NULL;
@@ -2233,7 +2109,7 @@ free_out:
 
 static int do_delete_device(struct device_set *devset, const char *hash, bool sync_delete)
 {
-    int ret;
+    int ret = 0;
     bool deferred_remove;
     image_devmapper_device_info *info = NULL;
 
@@ -2269,7 +2145,7 @@ free_out:
 
 static int setup_base_image(struct device_set *devset)
 {
-    int ret;
+    int ret = 0;
     image_devmapper_device_info *old_info = NULL;
 
     old_info = lookup_device(devset, "base");
@@ -2332,7 +2208,7 @@ static int do_devmapper_init(struct device_set *devset)
     uint64_t start, length;
     char *target_type = NULL;
     char *params = NULL;
-    bool pool_exist;
+    bool pool_exist = false;
     char *pool_name = NULL;
     size_t i = 0;
 
@@ -2352,17 +2228,17 @@ static int do_devmapper_init(struct device_set *devset)
 
     ret = util_mkdir_p(devset->root, DEFAULT_DEVICE_SET_MODE);
     if (ret != 0) {
-        //ERROR();
+        ERROR("mkdir path %s failed", devset->root);
         return -1;
     }
+
     metadata_path = metadata_dir(devset);
     ret = util_mkdir_p(metadata_path, DEFAULT_DEVICE_SET_MODE);
     if (ret != 0) {
-        //ERROR();
+        ERROR("mkdir path %s failed", metadata_path);
         goto out;
     }
 
-    // cfg = read_lvm_config(devset->root); // lvm自动配置暂不支持
     ret = stat(devset->root, &st);
     if (ret < 0) {
         ERROR("devmapper: Error looking up dir %s", devset->root);
@@ -2508,14 +2384,14 @@ out:
     return ret;
 }
 
-int device_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
+int device_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len)
 {
     int ret = 0;
     struct device_set *devset = NULL;
     image_devmapper_direct_lvm_config *lvm_setup_config = NULL;
     char *version = NULL;
 
-    if (driver == NULL || drvier_home == NULL || options == NULL) {
+    if (driver == NULL || driver_home == NULL || options == NULL) {
         return -1;
     }
     // init devmapper log
@@ -2534,7 +2410,7 @@ int device_init(struct graphdriver *driver, const char *drvier_home, const char 
         ret = -1;
         goto out;
     }
-    devset->root = util_strdup_s(driver->home);
+    devset->root = util_strdup_s(driver_home);
     devset->base_fs_size = default_base_fs_size;
     devset->override_udev_sync_check = DEFAULT_UDEV_SYNC_OVERRIDE;
     devset->do_blk_discard = false;
@@ -2583,8 +2459,8 @@ int device_init(struct graphdriver *driver, const char *drvier_home, const char 
         goto out;
     }
 
-    if (util_mkdir_p(drvier_home, 0700) != 0) {
-        ERROR("Unable to create driver home directory %s.", drvier_home);
+    if (util_mkdir_p(driver_home, DEFAULT_DEVICE_SET_MODE) != 0) {
+        ERROR("Unable to create driver home directory %s.", driver_home);
         ret = -1;
         goto out;
     }
@@ -2597,13 +2473,9 @@ int device_init(struct graphdriver *driver, const char *drvier_home, const char 
 
     set_udev_wait_timeout(devset->udev_wait_timeout);
 
-    ret = validate_lvm_config(devset->lvm_setup_config);
-    if (ret != 0) {
-        goto out;
-    }
-
     ret = do_devmapper_init(devset);
     if (ret != 0) {
+        ERROR("Fail to do devmapper init");
         ret = -1;
         goto out;
     }
@@ -2630,12 +2502,11 @@ int device_init(struct graphdriver *driver, const char *drvier_home, const char 
         ret = -1;
         goto out;
     }
-
+    INFO("Devicemapper init success");
     return 0;
 
 out:
-    free_device_set(devset); // 递归free
-    free_image_devmapper_direct_lvm_config(lvm_setup_config);
+    free_device_set(devset);
     return ret;
 }
 
@@ -3049,7 +2920,7 @@ void free_devmapper_status(struct status *st)
 static bool is_real_file(const char *f)
 {
     struct stat st;
-    int nret;
+    int nret = 0;
 
     if (f == NULL) {
         return false;
@@ -3066,7 +2937,7 @@ static bool is_real_file(const char *f)
 static int get_underlying_available_space(const char *loop_file, uint64_t *available)
 {
     struct statfs buf;
-    int ret;
+    int ret = 0;
 
     if (loop_file == NULL) {
         return -1;

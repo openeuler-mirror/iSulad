@@ -571,7 +571,6 @@ bool udev_set_sync_support(bool enable)
 {
     int enable_sync = 1;
     int unenable_sync = 0;
-    int ret;
 
     if (enable) {
         dm_udev_set_sync_support(enable_sync);
@@ -579,12 +578,7 @@ bool udev_set_sync_support(bool enable)
         dm_udev_set_sync_support(unenable_sync);
     }
 
-    ret = dm_udev_get_sync_support();
-    if (ret != 0) {
-        return true;
-    }
-
-    return false;
+    return udev_sync_supported();
 }
 
 // poolName : /dev/mapper/thin-pool

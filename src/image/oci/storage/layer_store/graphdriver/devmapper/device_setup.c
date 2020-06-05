@@ -17,7 +17,7 @@ int validate_lvm_config(image_devmapper_direct_lvm_config *cfg)
         return -1;
     }
 
-    if (strlen(cfg->device) == 0) {
+    if (!util_valid_str(cfg->device)) {
         ERROR("must provide device path in `dm.directlvm_device` in order to configure direct-lvm");
         return ret;
     }
