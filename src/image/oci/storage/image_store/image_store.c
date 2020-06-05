@@ -295,11 +295,7 @@ static int remove_name(image_t *img, const char *name)
     }
 
     if (img->simage->names_len == count) {
-        for (i = 0; i < img->simage->names_len; i++) {
-            free(img->simage->names[i]);
-            img->simage->names[i] = NULL;
-        }
-        free(img->simage->names);
+        util_free_array_by_len(img->simage->names, img->simage->names_len);
         img->simage->names = NULL;
         img->simage->names_len = 0;
 
