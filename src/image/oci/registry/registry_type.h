@@ -20,14 +20,12 @@
 #include <time.h>
 
 #include "types_def.h"
+#include "utils_images.h"
 
 // 8 is enough for challenge, usually only one challenge is provided.
 #define CHALLENGE_MAX 8
 
-#define REGISTRY_TMP_DIR_COMMON "/var/tmp/isulad-registry-"
-#define REGISTRY_TMP_DIR_LEN    32
-#define REGISTRY_TMP_DIR        REGISTRY_TMP_DIR_COMMON"XXXXXX"
-#define REGISTRY_TMP_DIR_ALL    REGISTRY_TMP_DIR_COMMON"*"
+#define REGISTRY_TMP_DIR        IMAGE_TMP_PATH"registry-XXXXXX"
 
 #define MAX_LAYER_NUM 125
 #define ROOTFS_TYPE "layers"

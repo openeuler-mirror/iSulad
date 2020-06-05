@@ -50,6 +50,10 @@ char *sha256_full_file_digest(const char *filename);
 
 bool sha256_valid_digest_file(const char *path, const char *digest);
 
+char *sha256_full_digest_str(char *str);
+
+char *without_sha256_prefix(char *digest);
+
 #ifdef __cplusplus
 }
 #endif

@@ -97,6 +97,19 @@ out:
     return ret;
 }
 
+static void cleanup_image_tmpdir()
+{
+    if (util_recursive_rmdir(IMAGE_TMP_PATH, 0)) {
+        ERROR("failed to remove directory %s", IMAGE_TMP_PATH);
+    }
+
+    if (util_mkdir_p(IMAGE_TMP_PATH, 0600)) {
+        ERROR("failed to create directory %s", IMAGE_TMP_PATH);
+    }
+
+    return;
+}
+
 int oci_init(const struct service_arguments *args)
 {
     int ret = 0;
@@ -105,6 +118,8 @@ int oci_init(const struct service_arguments *args)
         ERROR("Invalid image config");
         return ret;
     }
+
+    cleanup_image_tmpdir();
 
     ret = registry_init();
     if (ret != 0) {

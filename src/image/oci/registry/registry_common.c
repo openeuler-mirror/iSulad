@@ -159,16 +159,6 @@ out:
     return ret;
 }
 
-char *without_sha256_prefix(char *digest)
-{
-    if (digest == NULL) {
-        ERROR("Invalid digest NULL when strip sha256 prefix");
-        return NULL;
-    }
-
-    return digest + strlen(SHA256_PREFIX);
-}
-
 types_timestamp_t created_to_timestamp(char *created)
 {
     int64_t nanos = 0;

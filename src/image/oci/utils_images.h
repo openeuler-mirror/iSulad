@@ -32,6 +32,8 @@ extern "C" {
 #define DEFAULT_REPO_PREFIX "library/"
 #define MAX_ID_BUF_LEN 256
 
+#define IMAGE_TMP_PATH "/var/tmp/isula-image/"
+
 char *oci_get_host(const char *name);
 char *oci_host_from_mirror(const char *mirror);
 char *oci_default_tag(const char *name);

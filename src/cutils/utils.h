@@ -397,6 +397,12 @@ char *util_uint_to_string(long long unsigned int data);
 
 char *util_int_to_string(long long int data);
 
+char *without_sha256_prefix(char *digest);
+
+int normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant);
+
+char *util_full_digest_str(char *str);
+
 #ifdef __cplusplus
 }
 #endif

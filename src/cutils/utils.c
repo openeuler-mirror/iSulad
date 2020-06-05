@@ -39,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <termios.h>
+#include <sys/utsname.h>
 
 #include "utils.h"
 #include "isula_libutils/log.h"
@@ -1646,4 +1647,115 @@ char *util_int_to_string(long long int data)
     }
 
     return util_strdup_s(numstr);
+}
+
+static char *get_cpu_variant()
+{
+    char *variant = NULL;
+    char *cpuinfo = NULL;
+    char *start_pos = NULL;
+    char *end_pos = NULL;
+
+    cpuinfo = util_read_text_file("/proc/cpuinfo");
+    if (cpuinfo == NULL) {
+        ERROR("read /proc/cpuinfo failed");
+        return NULL;
+    }
+
+    start_pos = strstr(cpuinfo, "CPU architecture");
+    if (start_pos == NULL) {
+        ERROR("can not found the key \"CPU architecture\" when try to get cpu variant");
+        goto out;
+    }
+    end_pos = strchr(start_pos, '\n');
+    if (end_pos != NULL) {
+        *end_pos = 0;
+    }
+    start_pos = strchr(start_pos, ':');
+    if (start_pos == NULL) {
+        ERROR("can not found delimiter \":\" when try to get cpu variant");
+        goto out;
+    }
+    util_trim_newline(start_pos);
+    start_pos = util_trim_space(start_pos);
+
+    variant = strings_to_lower(start_pos);
+
+out:
+    free(cpuinfo);
+    cpuinfo = NULL;
+
+    return variant;
+}
+
+int normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
+{
+    int ret = 0;
+    struct utsname uts;
+    char *tmp_variant = NULL;
+
+    if (host_os == NULL || host_arch == NULL || host_variant == NULL) {
+        ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    if (uname(&uts) < 0) {
+        ERROR("Failed to read host arch and os: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    *host_os = strings_to_lower(uts.sysname);
+
+    if (strcasecmp("i386", uts.machine) == 0) {
+        *host_arch = util_strdup_s("386");
+    } else if ((strcasecmp("x86_64", uts.machine) == 0) || (strcasecmp("x86-64", uts.machine) == 0)) {
+        *host_arch = util_strdup_s("amd64");
+    } else if (strcasecmp("aarch64", uts.machine) == 0) {
+        *host_arch = util_strdup_s("arm64");
+    } else if ((strcasecmp("armhf", uts.machine) == 0) || (strcasecmp("armel", uts.machine) == 0)) {
+        *host_arch = util_strdup_s("arm");
+    } else {
+        *host_arch = util_strdup_s(uts.machine);
+    }
+
+    if (!strcmp(*host_arch, "arm") || !strcmp(*host_arch, "arm64")) {
+        *host_variant = get_cpu_variant();
+        if (!strcmp(*host_arch, "arm64") && *host_variant != NULL &&
+            (!strcmp(*host_variant, "8") || !strcmp(*host_variant, "v8"))) {
+            free(*host_variant);
+            *host_variant = NULL;
+        }
+        if (!strcmp(*host_arch, "arm") && *host_variant == NULL) {
+            *host_variant = util_strdup_s("v7");
+        } else if (!strcmp(*host_arch, "arm") && *host_variant != NULL) {
+            tmp_variant = *host_variant;
+            *host_variant = NULL;
+            if (!strcmp(tmp_variant, "5")) {
+                *host_variant = util_strdup_s("v5");
+            } else if (!strcmp(tmp_variant, "6")) {
+                *host_variant = util_strdup_s("v6");
+            } else if (!strcmp(tmp_variant, "7")) {
+                *host_variant = util_strdup_s("v7");
+            } else if (!strcmp(tmp_variant, "8")) {
+                *host_variant = util_strdup_s("v8");
+            } else {
+                *host_variant = util_strdup_s(tmp_variant);
+            }
+            free(tmp_variant);
+            tmp_variant = NULL;
+        }
+    }
+
+out:
+    if (ret != 0) {
+        free(*host_os);
+        *host_os = NULL;
+        free(*host_arch);
+        *host_arch = NULL;
+        free(*host_variant);
+        *host_variant = NULL;
+    }
+
+    return ret;
 }

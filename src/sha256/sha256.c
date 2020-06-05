@@ -496,3 +496,31 @@ bool sha256_valid_digest_file(const char *path, const char *digest)
 
     return true;
 }
+
+char *sha256_full_digest_str(char *str)
+{
+    char *digest = NULL;
+    char *full_digest = NULL;
+
+    digest = sha256_digest_str(str);
+    if (digest == NULL) {
+        ERROR("Failed to calculate chain id");
+        return NULL;
+    }
+
+    full_digest = util_full_digest(digest);
+    free(digest);
+
+    return full_digest;
+}
+
+char *without_sha256_prefix(char *digest)
+{
+    if (digest == NULL || !util_has_prefix(digest, SHA256_PREFIX)) {
+        ERROR("Invalid digest when strip sha256 prefix");
+        return NULL;
+    }
+
+    return digest + strlen(SHA256_PREFIX);
+}
+
