@@ -243,7 +243,7 @@ static void* task_io_copy(void *data)
     for (;;) {
         memset(buf, 0, DEFAULT_IO_COPY_BUF);
         sem_wait(&(io_thd->sem_thd));
-        if (io_thd->shutdown) {
+        if (io_thd->is_stdin && io_thd->shutdown) {
             break;
         }
 
@@ -271,6 +271,10 @@ static void* task_io_copy(void *data)
                     }
                 }
             }
+        }
+
+        if (io_thd->shutdown) {
+            break;
         }
     }
     struct epoll_event ev;
@@ -328,6 +332,7 @@ static int process_io_start(process_t *p, int std_id)
     io_thd->epfd = p->io_loop_fd;
     io_thd->ioc = ioc;
     io_thd->shutdown = false;
+    io_thd->is_stdin = std_id == stdid_in ? true : false;
     io_thd->terminal = std_id != stdid_in ? p->terminal : NULL;
 
     p->io_threads[std_id] = io_thd;
