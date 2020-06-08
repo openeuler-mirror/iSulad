@@ -365,32 +365,6 @@ out:
     return ret;
 }
 
-int image_store_save(image_t *img)
-{
-    int ret = 0;
-
-    if (img == NULL) {
-        ERROR("Invalid parameter, image is NULL");
-        return -1;
-    }
-
-    if (g_image_store == NULL) {
-        ERROR("Image store is not ready");
-        return -1;
-    }
-
-    if (!image_store_lock(SHARED)) {
-        ERROR("Failed to lock image store with shared lock, not allowed to save image");
-        return -1;
-    }
-
-    ret = save_image(img);
-
-    image_store_unlock();
-
-    return ret;
-}
-
 static bool get_index_by_key(const char **items, size_t len, const char *target, size_t *index)
 {
     size_t i;

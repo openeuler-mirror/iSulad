@@ -65,9 +65,6 @@ int image_store_set_metadata(const char *id, const char *metadata);
 // Set the image pulled time
 int image_store_set_load_time(const char *id, const types_timestamp_t *time);
 
-// Saves the contents of the store to disk.
-int image_store_save(image_t *img);
-
 // Check if there is an image with the given ID or name.
 bool image_store_exists(const char *id);
 

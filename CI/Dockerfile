@@ -116,7 +116,7 @@ RUN set -x && \
 	git checkout origin/openEuler-20.03-LTS && \
 	tar -xzvf cmake-3.12.1.tar.gz && \
 	cd cmake-3.12.1 && \
-	./bootstrap && make -j && make install && \
+	./bootstrap && make && make install && \
 	ldconfig
 
 # Centos has no protobuf, protobuf-devel, grpc, grpc-devel, grpc-plugin

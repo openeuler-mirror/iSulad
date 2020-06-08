@@ -59,7 +59,6 @@ static int insert_digest_into_map(map_t *by_digest, const char *digest, const ch
 static int delete_digest_from_map(map_t *by_digest, const char *digest, const char *id);
 
 static bool remove_name(const char *name);
-static void recover_name(const char *name);
 
 static inline bool layer_store_lock(bool writable)
 {
@@ -1427,19 +1426,6 @@ unlock:
     return ret;
 }
 
-bool layer_store_is_used(const char *id)
-{
-    layer_t *l = NULL;
-
-    l = lookup_with_lock(id);
-    if (l == NULL) {
-        return false;
-    }
-
-    layer_ref_dec(l);
-    return true;
-}
-
 static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list *resp)
 {
     struct linked_list *item = NULL;
@@ -1635,93 +1621,6 @@ static bool remove_name(const char *name)
     }
     layer_unlock(l);
 
-    return ret;
-}
-
-// only use to recover name which remove by remove_name
-static void recover_name(const char *name)
-{
-    layer_t *l = map_search(g_metadata.by_name, (void *)name);
-    if (l == NULL) {
-        return;
-    }
-
-    layer_lock(l);
-    l->slayer->names[l->slayer->names_len] = util_strdup_s(name);
-    l->slayer->names_len += 1;
-    layer_unlock(l);
-}
-
-int layer_store_set_names(const char *id, const char * const *names, size_t names_len)
-{
-    layer_t *l = NULL;
-    int ret = 0;
-    size_t i = 0;
-    size_t j = 0;
-    bool *founds = NULL;
-
-    if (id == NULL) {
-        return -1;
-    }
-
-    if (!layer_store_lock(true)) {
-        ERROR("Failed to lock layer store");
-        return -1;
-    }
-
-    founds = util_smart_calloc_s(sizeof(bool), names_len);
-    if (founds == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto unlock;
-    }
-
-    l = lookup(id);
-    if (l == NULL) {
-        ERROR("layer not known");
-        ret = -1;
-        goto unlock;
-    }
-    // remove old names relation
-    for (; i < l->slayer->names_len; i++) {
-        if (!map_remove(g_metadata.by_name, (void *)l->slayer->names[i])) {
-            ERROR("Remove name %s failed", l->slayer->names[i]);
-            ret = -1;
-            goto recover_out;
-        }
-    }
-
-    // replace new names
-    for (; j < names_len; j++) {
-        founds[j] = remove_name(names[j]);
-        if (!map_replace(g_metadata.by_name, (void *)names[j], (void *)l)) {
-            ERROR("Replace new name %s failed", names[j]);
-            ret = -1;
-            goto recover_out;
-        }
-    }
-
-    goto unlock;
-recover_out:
-    while (i > 0) {
-        i--;
-        if (!map_insert(g_metadata.by_name, (void *)l->slayer->names[i], (void *)l)) {
-            NOTICE("Recover name: %s failed", l->slayer->names[i]);
-        }
-    }
-    while (j > 0) {
-        j--;
-        if (!map_remove(g_metadata.by_name, (void *)names[j])) {
-            NOTICE("Recover new name %s failed", names[j]);
-        }
-        if (names[j]) {
-            recover_name(names[j]);
-        }
-    }
-unlock:
-    layer_ref_dec(l);
-    free(founds);
-    layer_store_unlock();
     return ret;
 }
 

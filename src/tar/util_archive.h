@@ -36,13 +36,10 @@ struct archive_options {
     whiteout_format_type whiteout_format;
 };
 
-int archive_unpack(const struct io_read_wrapper *content, const char *dstdir,
-                   const struct archive_options *options);
-int test_archive();
+int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

@@ -294,35 +294,3 @@ child_out:
 cleanup:
     return ret;
 }
-
-// just a example for use  archive_unpack
-static ssize_t test_archive_io_read(void *context, void *buf, size_t buf_len)
-{
-    int *read_fd = (int *)context;
-
-    return util_read_nointr(*read_fd, buf, buf_len);
-}
-
-int test_archive()
-{
-    int ret = 0;
-    int fd = open("/home/lifeng/test/layer.tar", O_RDONLY);
-
-    struct io_read_wrapper content = { 0 };
-    struct archive_options options = { 0 };
-    options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
-
-    content.context = &fd;
-    content.read = test_archive_io_read;
-
-    ret = archive_unpack(&content, "/tmp/test_archive", &options);
-    if (ret != 0) {
-        ERROR("Failed to test_archive");
-        goto out;
-    }
-
-out:
-    close(fd);
-    return ret;
-}
-//end

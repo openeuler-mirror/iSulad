@@ -51,14 +51,12 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
 int layer_store_delete(const char *id);
 bool layer_store_exists(const char *id);
 int layer_store_list(struct layer_list *resp);
-bool layer_store_is_used(const char *id);
 int layer_store_by_compress_digest(const char *digest, struct layer_list *resp);
 int layer_store_by_uncompress_digest(const char *digest, struct layer_list *resp);
 struct layer *layer_store_lookup(const char *name);
 char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opts);
 int layer_store_umount(const char *id, bool force);
 int layer_store_mounted(const char *id);
-int layer_store_set_names(const char *id, const char * const *names, size_t names_len);
 int layer_store_try_repair_lowers(const char *id);
 
 void free_layer_store_mount_opts(struct layer_store_mount_opts *ptr);

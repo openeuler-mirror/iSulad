@@ -155,8 +155,6 @@ struct layer *storage_layer_get(const char *layer_id);
 
 int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer_id);
 
-int storage_layer_set_names(const char *layer_id, const char **names, size_t names_len);
-
 void free_layer(struct layer *l);
 
 void free_layer_list(struct layer_list *ptr);
