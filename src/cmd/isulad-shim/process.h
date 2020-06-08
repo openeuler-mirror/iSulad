@@ -58,6 +58,7 @@ typedef struct {
     sem_t sem_thd;
     io_copy_t *ioc;
     bool shutdown;
+    bool is_stdin;
     log_terminal *terminal;
 } io_thread_t;
 
