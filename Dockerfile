@@ -24,15 +24,17 @@
 FROM	centos:7.6.1810
 MAINTAINER LiFeng <lifeng68@huawei.com>
 
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
+    echo "nameserver 8.8.4.4" >> /etc/resolv.conf && \
+    echo "search localdomain" >> /etc/resolv.conf
+
 # Install dependency package
-RUN yum clean all && yum swap -y fakesystemd systemd && \
-	yum install -y epel-release \
+RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y fakesystemd systemd && \
 	yum update -y && \
 	yum install -y  automake \
 			autoconf \
 			libtool \
 			make \
-			cmake \
 			which \
 			gdb \
 			strace \
@@ -68,6 +70,10 @@ RUN yum clean all && yum swap -y fakesystemd systemd && \
 			python \
 			python-pip \
 			device-mapper-devel \
+			libarchive \
+			libarchive-devel \
+			libtar \
+			libtar-devel \
 			libcurl-devel \
 			zlib-devel \
 			glibc-headers \
@@ -86,8 +92,6 @@ RUN yum clean all && yum swap -y fakesystemd systemd && \
 			CUnit-devel \
 			valgrind \
 			e2fsprogs
-
-RUN pip install xlrd
 
 RUN yum clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; \
@@ -108,6 +112,17 @@ RUN echo "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> /
 	
 # disalbe sslverify
 RUN git config --global http.sslverify false
+
+# install cmake
+RUN set -x && \
+	cd ~ && \
+	git clone https://gitee.com/src-openeuler/cmake.git && \
+	cd cmake && \
+	git checkout origin/openEuler-20.03-LTS && \
+	tar -xzvf cmake-3.12.1.tar.gz && \
+	cd cmake-3.12.1 && \
+	./bootstrap && make && make install && \
+	ldconfig
 
 # Centos has no protobuf, protobuf-devel, grpc, grpc-devel, grpc-plugin
 # and we should install them manually.
@@ -170,10 +185,12 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libevhtp.git && \
 	cd libevhtp && \
-	tar -xzvf libevhtp-1.2.16.tar.gz && \
-	cd libevhtp-1.2.16 && \
-	patch -p1 -F1 -s < ../0001-support-dynamic-threads.patch && \
-	patch -p1 -F1 -s < ../0002-close-openssl.patch && \
+	tar -xzvf libevhtp-1.2.18.tar.gz && \
+	cd libevhtp-1.2.18 && \
+	patch -p1 -F1 -s < ../0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch && \
+	patch -p1 -F1 -s < ../0002-evhtp-enable-dynamic-thread-pool.patch && \
+	patch -p1 -F1 -s < ../0003-close-open-ssl.-we-do-NOT-use-it-in-lcrd.patch && \
+	patch -p1 -F1 -s < ../0004-Use-shared-library-instead-static-one.patch && \
 	rm -rf build && \
 	mkdir build && \
 	cd build && \
