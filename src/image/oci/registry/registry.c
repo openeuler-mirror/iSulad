@@ -980,6 +980,7 @@ static int parse_config(pull_descriptor *desc)
 {
     int ret = 0;
     char *media_type = NULL;
+    char *manifest_media_type = NULL;
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -987,16 +988,17 @@ static int parse_config(pull_descriptor *desc)
     }
 
     media_type = desc->config.media_type;
-    if (!strcmp(media_type, DOCKER_IMAGE_V1)) {
+    manifest_media_type = desc->manifest.media_type;
+    if (!strcmp(media_type, DOCKER_IMAGE_V1) || !strcmp(manifest_media_type, DOCKER_MANIFEST_SCHEMA2_JSON)) {
         ret = parse_docker_config(desc);
-    } else if (!strcmp(media_type, OCI_IMAGE_V1)) {
+    } else if (!strcmp(media_type, OCI_IMAGE_V1) || !strcmp(manifest_media_type, OCI_MANIFEST_V1_JSON)) {
         ret = parse_oci_config(desc);
     } else {
-        ERROR("Unsupported config media type %s", media_type);
+        ERROR("Unsupported config media type %s %s", media_type, manifest_media_type);
         return -1;
     }
     if (ret != 0) {
-        ERROR("parse config failed, media type %s", media_type);
+        ERROR("parse config failed, media type %s %s", media_type, manifest_media_type);
         return ret;
     }
 
