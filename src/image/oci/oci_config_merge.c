@@ -243,6 +243,7 @@ static int dup_health_check_from_image(const defs_health_check *image_health_che
 {
     int ret = 0;
     size_t i;
+
     defs_health_check *health_check = (defs_health_check *)util_common_calloc_s(sizeof(defs_health_check));
     if (health_check == NULL) {
         ERROR("Invalid input arguments");
