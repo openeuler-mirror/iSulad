@@ -404,7 +404,7 @@ TEST(oci_config_merge_llt, test_oci_image_merge_config)
     custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
-    ASSERT_NE(oci_image_merge_config(tool_image, custom_config), 0);
+    ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);
 
     free_imagetool_image(tool_image);
     tool_image = NULL;
