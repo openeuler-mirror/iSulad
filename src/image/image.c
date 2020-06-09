@@ -621,7 +621,7 @@ int im_merge_image_config(const char *image_type, const char *image_name, contai
     int ret = 0;
     struct bim *bim = NULL;
 
-    if (container_spec == NULL || image_type == NULL || image_name == NULL) {
+    if (container_spec == NULL || image_type == NULL) {
         ERROR("Invalid input arguments");
         ret = -1;
         goto out;
@@ -1901,16 +1901,18 @@ int im_prepare_container_rootfs(const im_prepare_request *request, char **real_r
         goto out;
     }
 
-    EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", request->container_id, request->image_name);
+    EVENT("Event: {Object: %s, Type: preparing rootfs with image %s}", request->container_id,
+          request->image_name ? request->image_name : "none");
     nret = bim->ops->prepare_rf(request, real_rootfs);
     if (nret != 0) {
-        ERROR("Failed to prepare container rootfs %s with image %s type %s", request->container_id, request->image_name,
-              request->image_type);
+        ERROR("Failed to prepare container rootfs %s with image %s type %s", request->container_id,
+              request->image_name ? request->image_name : "none", request->image_type);
         ret = -1;
         goto out;
     }
 
-    EVENT("Event: {Object: %s, Type: prepared rootfs with image %s}", request->container_id, request->image_name);
+    EVENT("Event: {Object: %s, Type: prepared rootfs with image %s}", request->container_id,
+          request->image_name ? request->image_name : "none");
 
 out:
     bim_put(bim);

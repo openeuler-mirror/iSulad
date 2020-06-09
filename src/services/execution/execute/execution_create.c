@@ -886,8 +886,8 @@ static int get_basic_spec(const container_create_request *request, const char *i
 }
 
 static int do_image_create_container_roofs_layer(const char *container_id, const char *image_type,
-                                                 const char *image_name, const char *rootfs, json_map_string_string *storage_opt,
-                                                 char **real_rootfs)
+                                                 const char *image_name, const char *rootfs,
+                                                 json_map_string_string *storage_opt, char **real_rootfs)
 {
     int ret = 0;
     im_prepare_request *request = NULL;
