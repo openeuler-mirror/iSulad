@@ -69,7 +69,7 @@ static int copy_image_health_check_config(const isula::Image &gimage, struct ima
     int ret = 0;
     defs_health_check *health_check = nullptr;
 
-    if (!gimage.has_healthcheck()) {
+    if (!gimage.has_healthcheck() || gimage.healthcheck().test_size() == 0) {
         return 0;
     }
 
