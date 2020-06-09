@@ -691,7 +691,6 @@ static int create_image(pull_descriptor *desc, char *image_id)
         }
 
         ret = 0;
-        goto out;
     }
 
     ret = storage_img_add_name(image_id, desc->dest_image_name);

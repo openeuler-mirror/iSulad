@@ -23,7 +23,7 @@ declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.bash
 
 image_busybox="busybox"
-image_ubuntu="ubuntu"
+image_hello="hello-world"
 
 function test_tag_image()
 {
@@ -35,8 +35,8 @@ function test_tag_image()
     isula pull $image_busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_busybox}" && ((ret++))
 
-    isula pull $image_ubuntu
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_ubuntu}" && ((ret++))
+    isula pull $image_hello
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_hello}" && ((ret++))
 
     isula tag $image_busybox "aaa"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image: ${image_busybox}" && ((ret++))
@@ -56,8 +56,8 @@ function test_tag_image()
     local ID_first=`isula inspect -f '{{json .image.id}}' $image_busybox`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_busybox}" && ((ret++))
 
-    local ID_second=`isula inspect -f '{{json .image.id}}' $image_ubuntu`
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_ubuntu}" && ((ret++))
+    local ID_second=`isula inspect -f '{{json .image.id}}' $image_hello`
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_hello}" && ((ret++))
 
     isula tag $image_busybox "ccc"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image: ${image_busybox}" && ((ret++))
@@ -65,14 +65,14 @@ function test_tag_image()
     local ID_before=`isula inspect -f '{{json .image.id}}' "ccc"`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_busybox}" && ((ret++))
 
-    isula tag $image_ubuntu "ddd"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image: ${image_ubuntu}" && ((ret++))
+    isula tag $image_hello "ddd"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image: ${image_hello}" && ((ret++))
 
     local ID_after=`isula inspect -f '{{json .image.id}}' "ddd"`
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_ubuntu}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_hello}" && ((ret++))
 
     [[ $ID_first != $ID_before ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to change ID: ${image_busybox}" && ((ret++))
-    [[ $ID_second != $ID_after ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to change ID: ${image_ubuntu}" && ((ret++))
+    [[ $ID_second != $ID_after ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to change ID: ${image_hello}" && ((ret++))
 
     isula rmi  "aaa"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_busybox}" && ((ret++))
@@ -84,15 +84,15 @@ function test_tag_image()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_busybox}" && ((ret++))
 
     isula rmi "ddd"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_ubuntu}" && ((ret++))
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_hello}" && ((ret++))
 
     local ID_image_busybox=${ID_first:1:10}
 
-    isula tag $image_ubuntu $image_busybox
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image ${image_ubuntu} with tag ${image_busybox}" && ((ret++))
+    isula tag $image_hello $image_busybox
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image ${image_hello} with tag ${image_busybox}" && ((ret++))
 
-    isula inspect -f '{{json .image.repo_tags}}' $image_ubuntu|grep $image_busybox
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_ubuntu}" && ((ret++))
+    isula inspect -f '{{json .image.repo_tags}}' $image_hello|grep $image_busybox
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_hello}" && ((ret++))
 
     isula rmi $ID_image_busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${ID_image_busybox}" && ((ret++))
@@ -100,8 +100,8 @@ function test_tag_image()
     isula rmi ${image_busybox}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_busybox}" && ((ret++))
 
-    isula rmi ${image_ubuntu}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_ubuntu}" && ((ret++))
+    isula rmi ${image_hello}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_hello}" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
