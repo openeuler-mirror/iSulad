@@ -124,8 +124,6 @@ int storage_img_add_name(const char *img_id, const char *img_name);
 
 int storage_img_delete(const char *img_id, bool commit);
 
-int storage_img_set_meta_data(const char *img_id, const char *meta);
-
 int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_time);
 
 int storage_img_get_names(const char *img_id, char ***names, size_t *names_len);

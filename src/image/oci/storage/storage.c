@@ -670,26 +670,6 @@ out:
     return ret;
 }
 
-int storage_img_set_meta_data(const char *img_id, const char *meta)
-{
-    int ret = 0;
-
-    if (img_id == NULL || meta == NULL) {
-        ERROR("Invalid arguments");
-        ret = -1;
-        goto out;
-    }
-
-    if (image_store_set_metadata(img_id, meta) != 0) {
-        ERROR("Failed to set img %s meta data", img_id);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
 int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_time)
 {
     int ret = 0;
