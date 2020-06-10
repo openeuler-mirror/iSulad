@@ -2,7 +2,7 @@
 #
 # attributes: isulad basic image list ps inspect
 # concurrent: NA
-# spend time: 4
+# spend time: 5
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.

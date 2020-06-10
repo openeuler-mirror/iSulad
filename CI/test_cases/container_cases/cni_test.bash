@@ -2,7 +2,7 @@
 #
 # attributes: isulad cri cni
 # concurrent: NA
-# spend time: 43
+# spend time: 46
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/criconfigs)
@@ -75,6 +75,12 @@ function do_test_help()
     crictl start $cid
     if [ $? -ne 0 ];then
         msg_err "start container failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl stats
+    if [ $? -ne 0 ];then
+        msg_err "stats container failed"
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
