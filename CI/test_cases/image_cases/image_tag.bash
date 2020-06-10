@@ -94,8 +94,8 @@ function test_tag_image()
     isula inspect -f '{{json .image.repo_tags}}' $image_hello|grep $image_busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect image: ${image_hello}" && ((ret++))
 
-    isula rmi $ID_image_busybox
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${ID_image_busybox}" && ((ret++))
+    isula tag $ID_image_busybox $image_busybox
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to tag image ${ID_image_busybox} with tag ${image_busybox}" && ((ret++))
 
     isula rmi ${image_busybox}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove image: ${image_busybox}" && ((ret++))
