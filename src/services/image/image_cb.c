@@ -191,6 +191,13 @@ static int image_load_cb(const image_load_image_request *request,
         goto out;
     }
 
+    if (request->tag != NULL && !util_valid_image_name(request->tag)) {
+        ERROR("Invalid image name %s", request->tag);
+        cc = ISULAD_ERR_INPUT;
+        isulad_try_set_error_message("Invalid image name:%s", request->tag);
+        goto out;
+    }
+
     EVENT("Image Event: {Object: %s, Type: Loading}",
           request->file);
 

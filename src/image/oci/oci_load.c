@@ -350,7 +350,34 @@ out:
     return ret;
 }
 
-static int oci_load_create_image(load_image_t *desc)
+static int oci_load_set_image_name(const char *img_id, const char *img_name)
+{
+    int ret = 0;
+    char *normalized_name = NULL;
+
+    if (img_id == NULL || img_name == NULL) {
+        ERROR("Invalid input arguments, image id or name is null, cannot set image name");
+        return -1;
+    }
+
+    normalized_name = oci_normalize_image_name(img_name);
+    if (normalized_name == NULL) {
+        ret = -1;
+        ERROR("Failed to normalized name %s", img_name);
+        goto out;
+    }
+
+    ret = storage_img_add_name(img_id, normalized_name);
+    if (ret != 0) {
+        ERROR("add image name failed");
+    }
+
+out:
+    UTIL_FREE_AND_SET_NULL(normalized_name);
+    return ret;
+}
+
+static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
 {
     int ret = 0;
     size_t i = 0;
@@ -358,7 +385,6 @@ static int oci_load_create_image(load_image_t *desc)
     struct storage_img_create_options opts = { 0 };
     char *top_layer_id = NULL;
     char *pre_top_layer = NULL;
-    char *normalized_name = NULL;
     oci_image_spec *conf = NULL;
     types_timestamp_t timestamp = { 0 };
 
@@ -403,26 +429,25 @@ static int oci_load_create_image(load_image_t *desc)
         ret = 0;
     }
 
-    for (; i < desc->repo_tags_len; i++) {
-        normalized_name = oci_normalize_image_name(desc->repo_tags[i]);
-        if (normalized_name == NULL) {
-            ret = -1;
-            ERROR("Failed to normalized name %s", desc->repo_tags[i]);
-            goto out;
-        }
-        ret = storage_img_add_name(desc->im_id, normalized_name);
+    if (dst_tag != NULL) {
+        ret = oci_load_set_image_name(desc->im_id, dst_tag);
         if (ret != 0) {
-            ERROR("add image name failed");
+            ERROR("Failed to set image:%s name by using tag:%s", desc->im_id, dst_tag);
             goto out;
         }
-        free(normalized_name);
-        normalized_name = NULL;
+    } else {
+        for (; i < desc->repo_tags_len; i++) {
+            ret = oci_load_set_image_name(desc->im_id, desc->repo_tags[i]);
+            if (ret != 0) {
+                ERROR("Failed to set image:%s name by using tag:%s", desc->im_id, desc->repo_tags[i]);
+                break;
+            }
+        }
     }
 
 out:
     free_oci_image_spec(conf);
     free(pre_top_layer);
-    free(normalized_name);
     return ret;
 }
 
@@ -506,7 +531,7 @@ out:
     return ret;
 }
 
-static int oci_load_register_image(load_image_t *desc)
+static int oci_load_register_image(load_image_t *desc, const char *dst_tag)
 {
     int ret = 0;
     bool image_created = false;
@@ -522,7 +547,7 @@ static int oci_load_register_image(load_image_t *desc)
         goto out;
     }
 
-    ret = oci_load_create_image(desc);
+    ret = oci_load_create_image(desc, dst_tag);
     if (ret != 0) {
         ERROR("create image failed");
         goto out;
@@ -674,7 +699,7 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
     im->im_digest = util_strdup_s(image_digest);
     im->config_fpath = util_strdup_s(config_fpath);
     im->repo_tags_len = manifest->repo_tags_len;
-    im->repo_tags = str_array_copy(manifest->repo_tags, manifest->repo_tags_len);
+    im->repo_tags = manifest->repo_tags_len == 0 ? NULL : str_array_copy(manifest->repo_tags, manifest->repo_tags_len);
 
     ret = oci_load_set_layers_info(im, manifest, dstdir);
     if (ret != 0) {
@@ -802,6 +827,69 @@ out:
     return ret;
 }
 
+static size_t oci_tag_count(image_manifest_items_element **manifest, size_t manifest_len)
+{
+    size_t cnt_tags = 0;
+    size_t i = 0;
+
+    for (; i < manifest_len; i++) {
+        cnt_tags += manifest[i]->repo_tags_len;
+    }
+
+    return cnt_tags;
+}
+
+static bool oci_valid_repo_tags(image_manifest_items_element **manifest, size_t manifest_len)
+{
+    size_t i = 0;
+    size_t j = 0;
+    bool res = true;
+
+    for (i = 0; i < manifest_len; i++) {
+        for (j = 0; j < manifest[i]->repo_tags_len; j++) {
+            if (!util_valid_image_name(manifest[i]->repo_tags[j])) {
+                ERROR("Invalid image name %s", manifest[i]->repo_tags[j]);
+                res = false;
+                goto out;
+            }
+        }
+    }
+
+out:
+    return res;
+}
+
+static bool oci_check_load_tags(image_manifest_items_element **manifest, size_t manifest_len, const char *dst_tag)
+{
+    size_t repo_tag_cnt = 0;
+    bool res = true;
+
+    repo_tag_cnt = oci_tag_count(manifest, manifest_len);
+    if (dst_tag != NULL) {
+        if (repo_tag_cnt > 1 || manifest_len > 1) {
+            res = false;
+            ERROR("Can not use --tag option because more than one image found in tar archive");
+            isulad_try_set_error_message("Can not use --tag option because more than one image found in tar archive");
+            goto out;
+        }
+
+        if (!util_valid_image_name(dst_tag)) {
+            res = false;
+            ERROR("Invalid image name %s", dst_tag);
+            isulad_try_set_error_message("Invalid image name:%s", dst_tag);
+            goto out;
+        }
+    } else if (!oci_valid_repo_tags(manifest, manifest_len)) {
+        // Valid manifest RepoTags value
+        res = false;
+        ERROR("Contain invalid image name in tar archive");
+        isulad_try_set_error_message("Contain invalid image name in tar archive");
+    }
+
+out:
+    return res;
+}
+
 int oci_do_load(const im_load_request *request)
 {
     int ret = 0;
@@ -814,6 +902,11 @@ int oci_do_load(const im_load_request *request)
     load_image_t *im = NULL;
     char *digest = NULL;
     char dstdir[] = OCI_LOAD_TMP_DIR;
+
+    if (request == NULL || request->file == NULL) {
+        ERROR("Invalid input arguments, cannot load image");
+        return -1;
+    }
 
     ret = util_mkdir_p(OCI_LOAD_TMP_WORK_DIR, TEMP_DIRECTORY_MODE);
     if (ret != 0) {
@@ -854,6 +947,12 @@ int oci_do_load(const im_load_request *request)
         goto out;
     }
 
+    if (!oci_check_load_tags(manifest, manifest_len, request->tag)) {
+        ERROR("Value of --tags or repo tags invalid");
+        ret = -1;
+        goto out;
+    }
+
     digest = util_full_file_digest(manifest_fpath);
     if (digest == NULL) {
         ret = -1;
@@ -881,8 +980,7 @@ int oci_do_load(const im_load_request *request)
         }
 
         im->manifest_digest = util_strdup_s(digest);
-
-        ret = oci_load_register_image(im);
+        ret = oci_load_register_image(im, request->tag);
         if (ret != 0) {
             ERROR("error register image %s to store", im->im_id);
             goto out;
@@ -910,6 +1008,5 @@ out:
     if (util_recursive_rmdir(dstdir, 0)) {
         WARN("failed to remove directory %s", dstdir);
     }
-
     return ret;
 }
