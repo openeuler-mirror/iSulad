@@ -38,10 +38,9 @@
 #define DM_LOG_DEBUG 7
 
 static bool user_base_size = false;
-static bool enable_deferred_removal = false;
 static bool driver_deferred_removal_support = false;
+static bool enable_deferred_removal = false;
 static bool enable_deferred_deletion = false;
-static bool driver_deferred_remove_support = false;
 
 // static int64_t default_udev_wait_timeout = 185;
 static uint64_t default_base_fs_size = 10L * 1024L * 1024L * 1204L;
@@ -139,7 +138,8 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
                 ret = -1;
                 goto out;
             }
-            devset->thin_pool_device = util_trim_prefice_string(val, "/dev/mapper/");
+            char *tmp_val = util_trim_prefice_string(val, "/dev/mapper/");
+            devset->thin_pool_device = util_strdup_s(tmp_val);
         } else if (strcasecmp(dup, "dm.min_free_space") == 0) {
             long converted = 0;
             ret = util_parse_percent_string(val, &converted);
@@ -189,8 +189,9 @@ static void free_device_set(struct device_set *ptr)
     ptr->device_prefix = NULL;
     // TODO
 
-    free_image_devmapper_direct_lvm_config(ptr->lvm_setup_config);
-    ptr->lvm_setup_config = NULL;
+    free_image_devmapper_transaction(ptr->metadata_trans);
+    ptr->metadata_trans = NULL;
+
     free(ptr);
 }
 
@@ -227,7 +228,7 @@ static char *metadata_dir(struct device_set *devset)
     return dir;
 }
 
-static char *deviceset_mata_file(struct device_set *devset)
+static char *deviceset_meta_file(struct device_set *devset)
 {
     char *dir = NULL;
     char *file = NULL;
@@ -295,7 +296,8 @@ static char *get_pool_name(struct device_set *devset)
 
     if (devset->thin_pool_device == NULL) {
         ret = snprintf(thinp_name, sizeof(thinp_name), "%s-pool", devset->device_prefix);
-        if (ret < 0) {
+        if (ret < 0 || (size_t)ret >= sizeof(thinp_name)) {
+            ERROR("Print thinpool name %s-pool error", devset->device_prefix);
             return NULL;
         }
         return util_strdup_s(thinp_name);
@@ -455,7 +457,7 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
     } else {
         ret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, hash);
     }
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(metadata_file)) {
         goto out;
     }
     info = image_devmapper_device_info_parse_file(metadata_file, NULL, &err);
@@ -625,6 +627,7 @@ static int device_file_walk(struct device_set *devset)
     struct dirent *entry;
     struct stat st;
     image_devmapper_device_info *info = NULL;
+    char fname[PATH_MAX] = { 0 };
 
     dp = opendir(DEVICE_FILE_DIR);
     if (dp == NULL) {
@@ -634,18 +637,27 @@ static int device_file_walk(struct device_set *devset)
 
     // 路径权限导致stat为非regular文件，误判为dir，此处需优化
     while ((entry = readdir(dp)) != NULL) {
+        int pathname_len;
+
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
+            continue;
+        }
+
+        (void)memset(fname, 0, sizeof(fname));
+        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", DEVICE_FILE_DIR, entry->d_name);
+        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+            ERROR("Pathname too long");
+            continue;
+        }
+
         ret = stat(entry->d_name, &st);
         if (ret != 0) {
+            ERROR("devmapper: get %s stat error:%s", fname, strerror(errno));
             goto out;
         }
 
         if (S_ISDIR(st.st_mode)) {
             DEBUG("devmapper: skipping dir");
-            continue;
-        }
-
-        if (util_has_prefix(entry->d_name, ".")) {
-            DEBUG("devmapper: skipping file %s", entry->d_name);
             continue;
         }
 
@@ -659,9 +671,7 @@ static int device_file_walk(struct device_set *devset)
         }
 
         info = lookup_device(devset, entry->d_name); // entry->d_name 取值base  hash值等
-        if (info != NULL) {
-            free_image_devmapper_device_info(info);
-        } else {
+        if (info == NULL) {
             ERROR("devmapper: Error looking up device %s", entry->d_name);
             ret = -1;
             goto out;
@@ -673,24 +683,106 @@ out:
     return ret;
 }
 
+static void mark_device_id_used(struct device_set *devset, int device_id)
+{
+    int mask;
+    int value = 0;
+    int *value_ptr = NULL;
+    int key = device_id / 8;
+    bool res;
+
+    mask = 1 << (device_id % 8);
+
+    value_ptr = map_search(devset->device_id_map, &key);
+    if (value_ptr == NULL) {
+        value = value | mask;
+        res = map_insert(devset->device_id_map, &key, &value);
+        if (!res) {
+            ERROR("devmapper: map insert failed");
+            return;
+        }
+    } else {
+        value = *value_ptr | mask;
+        res = map_replace(devset->device_id_map, &key, &value);
+        if (!res) {
+            ERROR("devmapper: map replace failed");
+        }
+    }
+}
+
+static void mark_device_id_free(struct device_set *devset, int device_id)
+{
+    int mask = 0;
+    int value = 0;
+    int *value_ptr = NULL;
+    int key = device_id / 8;
+    bool res;
+
+    mask = ~(1 << (device_id % 8));
+
+    value_ptr = map_search(devset->device_id_map, &key);
+    if (value_ptr == NULL) {
+        value = value & mask;
+        res = map_insert(devset->device_id_map, &key, &value);
+        if (!res) {
+            ERROR("devmapper: map insert failed");
+            return;
+        }
+    } else {
+        value = *value_ptr % mask;
+        res = map_replace(devset->device_id_map, &key, &value);
+        if (!res) {
+            ERROR("devmapper: map replace failed");
+        }
+    }
+    return;
+}
+
 static void construct_device_id_map(struct device_set *devset)
 {
-    // TODO:遍历g_metadata_store中全部device
-    // for info in devices {
-    //     mark_device_id_used(info->device_id);
-    // }
+    char **dev_arr = NULL;
+    size_t dev_arr_len = 0;
+    size_t i = 0;
+    image_devmapper_device_info *info = NULL;
+
+    dev_arr = metadata_store_list_hashes();
+    dev_arr_len = util_array_len((const char **)dev_arr);
+
+    for (i = 0; i < dev_arr_len; i++) {
+        info = metadata_store_get(dev_arr[i]);
+        if (info == NULL) {
+            ERROR("devmapper: get device %s from store failed", dev_arr[i]);
+            continue;
+        }
+        mark_device_id_used(devset, info->device_id);
+    }
+
 }
 
 static void count_deleted_devices(struct device_set *devset)
 {
-    // TODO:遍历g_metadata_store中全部device
-    // for info in devices {
-    //     if !info->deleted {
-    //      continue
-    //    }
-    // devset->nr_deleted_devices++;
-    // }
+    char **dev_arr = NULL;
+    size_t dev_arr_len = 0;
+    size_t i = 0;
+    image_devmapper_device_info *info = NULL;
+
+    dev_arr = metadata_store_list_hashes();
+    dev_arr_len = util_array_len((const char **)dev_arr);
+
+    for (i = 0; i < dev_arr_len; i++) {
+        info = metadata_store_get(dev_arr[i]);
+        if (info == NULL) {
+            ERROR("devmapper: get device %s from store failed", dev_arr[i]);
+            continue;
+        }
+        if (!info->deleted) {
+            continue;
+        }
+        devset->nr_deleted_devices++;
+    }
+
 }
+
 static int rollback_transaction(struct device_set *devset)
 {
     return 0;
@@ -701,7 +793,7 @@ static int process_pending_transaction(struct device_set *devset)
     int ret = 0;
 
     if (devset == NULL || devset->metadata_trans == NULL) {
-        // DEBUG("devmapper: device set or tansaction is NULL");
+        ERROR("devmapper: device set or tansaction is NULL");
         return -1;
     }
 
@@ -714,9 +806,9 @@ static int process_pending_transaction(struct device_set *devset)
     // If open transaction ID is less than pool transaction ID, something
     // is wrong. Bail out.
     if (devset->transaction_id > devset->metadata_trans->open_transaction_id) {
-        ERROR("devmapper: Open Transaction id %ld is less than pool transaction id %ld",
-              devset->metadata_trans->open_transaction_id, devset->transaction_id);
-        return -1;
+        WARN("devmapper: Open Transaction id %ld is less than pool transaction id %ld",
+             devset->metadata_trans->open_transaction_id, devset->transaction_id);
+        return 0;
     }
 
     // TODO: Pool transaction ID is not same as open transaction. There is
@@ -792,6 +884,7 @@ static int init_metadata(struct device_set *devset, const char *pool_name)
     ret = pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
                       &metadata_total);
     if (ret != 0) {
+        ERROR("devmapper: get pool %s status failed", pool_name);
         goto out;
     }
 
@@ -807,13 +900,14 @@ static int init_metadata(struct device_set *devset, const char *pool_name)
     count_deleted_devices(devset);
     ret = process_pending_transaction(devset);
     if (ret != 0) {
+        ERROR("devmapper: process pending transaction failed");
         goto out;
     }
 
     // start a thread to cleanup deleted devices
     ret = pthread_create(&device_delete_thread, NULL, start_device_deletion_thread, (void *)devset);
     if (ret != 0) {
-        CRIT("Thread creation failed");
+        ERROR("Thread creation failed");
     }
 
 out:
@@ -823,13 +917,19 @@ out:
 static int load_deviceset_metadata(struct device_set *devset)
 {
     image_devmapper_deviceset_metadata *deviceset_meta = NULL;
-    parser_error err;
+    parser_error err = NULL;
     char *meta_file = NULL;
     int ret = 0;
 
-    meta_file = deviceset_mata_file(devset);
+    meta_file = deviceset_meta_file(devset);
     if (meta_file == NULL) {
+        ERROR("Get device metadata file %s full path failed", DEVICE_SET_METAFILE);
         return -1;
+    }
+
+    if (!util_file_exists(meta_file)) {
+        DEBUG("devmapper: device metadata file %s not exist", DEVICE_SET_METAFILE);
+        goto out;
     }
 
     deviceset_meta = image_devmapper_deviceset_metadata_parse_file(meta_file, NULL, &err);
@@ -847,61 +947,6 @@ out:
     free_image_devmapper_deviceset_metadata(deviceset_meta);
     free(meta_file);
     return ret;
-}
-
-static void mark_device_id_used(struct device_set *devset, int device_id)
-{
-    int mask;
-    int value = 0;
-    int *value_ptr = NULL;
-    int key = device_id / 8;
-    bool res;
-
-    mask = 1 << (device_id % 8);
-
-    value_ptr = map_search(devset->device_id_map, &key);
-    if (value_ptr == NULL) {
-        value = value | mask;
-        res = map_insert(devset->device_id_map, &key, &value);
-        if (!res) {
-            ERROR("devmapper: map insert failed");
-            return;
-        }
-    } else {
-        value = *value_ptr | mask;
-        res = map_replace(devset->device_id_map, &key, &value);
-        if (!res) {
-            ERROR("devmapper: map replace failed");
-        }
-    }
-}
-
-static void mark_device_id_free(struct device_set *devset, int device_id)
-{
-    int mask = 0;
-    int value = 0;
-    int *value_ptr = NULL;
-    int key = device_id / 8;
-    bool res;
-
-    mask = ~(1 << (device_id % 8));
-
-    value_ptr = map_search(devset->device_id_map, &key);
-    if (value_ptr == NULL) {
-        value = value & mask;
-        res = map_insert(devset->device_id_map, &key, &value);
-        if (!res) {
-            ERROR("devmapper: map insert failed");
-            return;
-        }
-    } else {
-        value = *value_ptr % mask;
-        res = map_replace(devset->device_id_map, &key, &value);
-        if (!res) {
-            ERROR("devmapper: map replace failed");
-        }
-    }
-    return;
 }
 
 static bool is_device_id_free(struct device_set *devset, int device_id)
@@ -1001,15 +1046,17 @@ static char *metadata_file(struct device_set *devset, const char *hash)
     char *dir = NULL;
 
     if (hash == NULL) {
+        ERROR("devmapper: get metadata file param is null");
         return NULL;
     }
 
     dir = metadata_dir(devset);
     if (dir == NULL) {
+        ERROR("devmapper: get metadata dir of device %s failed", hash);
         return NULL;
     }
 
-    file = strcmp(hash, "") == 0 ? util_strdup_s("base") : util_strdup_s(hash);
+    file =  util_strdup_s(hash);
     if (file == NULL) {
         goto out;
     }
@@ -1030,13 +1077,15 @@ static int save_metadata(struct device_set *devset, image_devmapper_device_info 
     parser_error err = NULL;
 
     if (info == NULL) {
+        ERROR("devmapper: input param is null");
         return -1;
     }
 
     fname = metadata_file(devset, info->hash);
     if (fname == NULL) {
-        ERROR("devmapper: get metadata file full path failed");
-        return -1;
+        ret = -1;
+        ERROR("devmapper: get device %s metadata file full path failed", info->hash);
+        goto out;
     }
 
     metadata_json = image_devmapper_device_info_generate_json(info, NULL, &err);
@@ -1067,7 +1116,8 @@ static int save_transaction_metadata(struct device_set *devset)
     parser_error err = NULL;
     int ret = 0;
 
-    if (snprintf(fname, sizeof(fname), "%s/metadata/%s", devset->root, TRANSACTION_METADATA) < 0) {
+    ret = snprintf(fname, sizeof(fname), "%s/metadata/%s", devset->root, TRANSACTION_METADATA);
+    if (ret < 0 || (size_t)ret >= sizeof(fname)) {
         ERROR("devmapper: failed make transaction-metadata full path");
         return -1;
     }
@@ -1085,7 +1135,7 @@ static int save_transaction_metadata(struct device_set *devset)
         ERROR("failed write process.json");
         goto out;
     }
-
+    ret = 0;
 out:
     UTIL_FREE_AND_SET_NULL(err);
     UTIL_FREE_AND_SET_NULL(trans_json);
@@ -1100,7 +1150,7 @@ static int save_deviceset_matadata(struct device_set *devset)
     char *fname = NULL;
     parser_error err = NULL;
 
-    fname = deviceset_mata_file(devset);
+    fname = deviceset_meta_file(devset);
     if (fname == NULL) {
         ret = -1;
         ERROR("devmapper: get deviceset metadata file full path failed");
@@ -1144,6 +1194,7 @@ static int open_transaction(struct device_set *devset, const char *hash, int id)
     int ret = 0;
 
     if (devset->metadata_trans == NULL || hash == NULL) {
+        ERROR("devmapper: open transaction params null");
         return -1;
     }
     devset->metadata_trans->open_transaction_id = devset->transaction_id + 1;
@@ -1164,6 +1215,7 @@ static int refresh_transaction(struct device_set *devset, int id)
     int ret = 0;
 
     if (devset->metadata_trans == NULL) {
+        ERROR("devmapper: refresh transaction params null");
         return -1;
     }
 
@@ -1265,15 +1317,19 @@ static image_devmapper_device_info *register_device(struct device_set *devset, i
     info->size = size;
     info->transaction_id = transaction_id;
     info->initialized = false;
+    info->hash = util_strdup_s(hash);
+    info->deleted = false;
 
     store_res = metadata_store_add(hash, info);
     if (!store_res) {
         ERROR("devmapper: metadata store add failed hash %s", hash);
+        free_image_devmapper_device_info(info);
         goto out;
     }
 
     ret = save_metadata(devset, info);
     if (ret != 0) {
+        ERROR("devmapper: save metadata of device %s failed", hash);
         if (!metadata_store_remove(hash)) {
             ERROR("devmapper: metadata file %s store remove failed", hash);
         }
@@ -1282,7 +1338,6 @@ static image_devmapper_device_info *register_device(struct device_set *devset, i
 
     return info;
 out:
-    free_image_devmapper_device_info(info);
     return NULL;
 }
 
@@ -1294,16 +1349,16 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
     image_devmapper_device_info *info = NULL;
 
     ret = get_next_free_device_id(devset, &device_id);
-    if (ret == 0) {
-        // ERROR();
+    if (ret != 0) {
+        ERROR("devmapper: cannot get next free device id");
         return NULL;
     }
 
     ret = open_transaction(devset, hash, device_id);
     if (ret != 0) {
-        DEBUG("devmapper: Error opening transaction hash = %s deviceID = %d", hash, device_id);
+        ERROR("devmapper: Error opening transaction hash = %s deviceID = %d", hash, device_id);
         mark_device_id_free(devset, device_id);
-        return NULL;
+        goto out;
     }
     pool_dev = get_pool_dev_name(devset);
     if (pool_dev == NULL) {
@@ -1319,36 +1374,47 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
             // happen. Now we have a mechanism to find
             // a free device ID. So something is not right.
             // Give a warning and continue.
-            if (true) {
+            if (ret == ERR_DEVICE_ID_EXISTS) {
+                ERROR("devmapper: device id %d exists in pool but it is supposed to be unused", device_id);
                 ret = get_next_free_device_id(devset, &device_id);
-                if (ret == 0) {
-                    // ERROR();
-                    return NULL;
+                if (ret != 0) {
+                    ERROR("devmapper: cannot get next free device id");
+                    goto out;
                 }
                 ret = refresh_transaction(devset, device_id);
                 if (ret != 0) {
                     ERROR("devmapper: Error refres open transaction deviceID %s = %d", hash, device_id);
-                    return NULL;
                 }
                 continue;
             }
             mark_device_id_free(devset, device_id);
-            return NULL;
+            goto out;
         }
         break;
     } while (true);
 
     info = register_device(devset, device_id, hash, devset->base_fs_size, devset->metadata_trans->open_transaction_id);
     if (info == NULL) {
+        ERROR("devmapper: register device %d failed, start to delete device", device_id);
+        ret = dev_delete_device(pool_dev, device_id);
+        mark_device_id_free(devset, device_id);
+    }
+
+    ret = close_transaction(devset);
+    if (ret != 0) {
         ret = unregister_device(devset, hash);
         if (ret != 0) {
-            // ERROR();
+            ERROR("devmapper: unregister device %s failed", hash);
         }
+
         ret = dev_delete_device(pool_dev, device_id);
         if (ret != 0) {
-            // ERROR()
+            ERROR("devmapper: delete device with hash:%s, device id:%d failed", hash, device_id);
         }
+
         mark_device_id_free(devset, device_id);
+        // free_image_devmapper_device_info(info);
+        // info = NULL;
     }
 
 out:
@@ -1366,13 +1432,13 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
 
     ret = get_next_free_device_id(devset, &device_id);
     if (ret != 0) {
-        // ERROR();
+        ERROR("devmapper: cannot get next free device id");
         return ret;
     }
 
     ret = open_transaction(devset, hash, device_id);
     if (ret != 0) {
-        DEBUG("devmapper: Error opening transaction hash = %s deviceID = %d", hash, device_id);
+        ERROR("devmapper: Error opening transaction hash = %s deviceID = %d", hash, device_id);
         mark_device_id_free(devset, device_id);
         return ret;
     }
@@ -1393,7 +1459,7 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
             if (ret == ERR_DEVICE_ID_EXISTS) {
                 ret = get_next_free_device_id(devset, &device_id);
                 if (ret != 0) {
-                    // ERROR();
+                    ERROR("devmapper: cannot get next free device id");
                     goto out;
                 }
                 ret = refresh_transaction(devset, device_id);
@@ -1403,7 +1469,7 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
                 }
                 continue;
             }
-            DEBUG("devmapper: Error creating snap device");
+            DEBUG("devmapper: error creating snap device");
             mark_device_id_free(devset, device_id);
             goto out;
         }
@@ -1428,7 +1494,6 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
 
 out:
     UTIL_FREE_AND_SET_NULL(pool_dev);
-    free_image_devmapper_device_info(info);
     return ret;
 }
 
@@ -1521,7 +1586,7 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
 
     ret = create_register_snap_device(devset, base_info, hash, size);
     if (ret != 0) {
-        // ERROR();
+        ERROR("devmapper: creat snap device from device %s failed", hash);
     }
 
 out:
@@ -1543,6 +1608,7 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
     struct dm_info dmi = { 0 };
 
     if (!devset->deferred_remove == 0) {
+        ERROR("devmapper: cancel deferred remove input param null");
         return ret;
     }
 
@@ -1556,7 +1622,7 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
 
     ret = dev_get_info_with_deferred(dm_name, &dmi);
     if (ret != 0) {
-        // ERROR();
+        ERROR("devmapper: can not get info from dm %s", dm_name);
         goto out;
     }
 
@@ -1614,11 +1680,15 @@ static int activate_device_if_needed(struct device_set *devset, image_devmapper_
 
     pool_dev_name = get_pool_dev_name(devset);
     if (pool_dev_name == NULL) {
+        ERROR("devmapper: get pool dev name failed");
         ret = -1;
         goto out;
     }
 
     ret = dev_active_device(pool_dev_name, dm_name, info->device_id, info->size);
+    if (ret != 0) {
+        ERROR("devmapper: active device with hash:%d, id:%s, failed", info->device_id, info->hash);
+    }
 
 out:
     UTIL_FREE_AND_SET_NULL(dm_name);
@@ -1635,7 +1705,7 @@ static int save_base_device_uuid(struct device_set *devset, image_devmapper_devi
 
     ret = activate_device_if_needed(devset, info, false);
     if (ret != 0) {
-        // ERROR();
+        ERROR("devmapper: activate device %s failed", info->hash);
         return ret;
     }
 
@@ -1650,7 +1720,7 @@ static int save_base_device_uuid(struct device_set *devset, image_devmapper_devi
     base_dev_uuid = get_device_uuid(dev_fname);
     if (base_dev_uuid == NULL) {
         ret = -1;
-        // ERROR();
+        ERROR("devmapper: get base dev %s uuid failed", dev_fname);
         goto free_out;
     }
 
@@ -1753,6 +1823,7 @@ static int create_base_image(struct device_set *devset)
     // create initial device
     info = create_register_device(devset, "base");
     if (info == NULL) {
+        ERROR("devmapper: create and register base device failed");
         return -1;
     }
 
@@ -1760,12 +1831,14 @@ static int create_base_image(struct device_set *devset)
 
     ret = activate_device_if_needed(devset, info, false);
     if (ret != 0) {
+        ERROR("devmapper: activate device %s failed", info->hash);
         ret = -1;
         goto out;
     }
 
     ret = create_file_system(devset, info);
     if (ret != 0) {
+        ERROR("devmapper: create file system for base dev failed");
         goto out;
     }
 
@@ -1773,7 +1846,7 @@ static int create_base_image(struct device_set *devset)
 
     ret = save_metadata(devset, info);
     if (ret != 0) {
-        // ERROR();
+        ERROR("devmapper: save metadata for device %s failed", info->hash);
         info->initialized = false;
         goto out;
     }
@@ -1784,7 +1857,6 @@ static int create_base_image(struct device_set *devset)
     }
 
 out:
-    free_image_devmapper_device_info(info);
     return ret;
 }
 
@@ -1797,25 +1869,28 @@ static int check_thin_pool(struct device_set *devset)
     ret = pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
                       &metadata_total);
     if (ret != 0) {
-        //ERROR()
-        return -1;
+        ERROR("devmapper: get pool status failed");
+        goto out;
     }
 
     if (data_used != 0) {
         ERROR("devmapper: Unable to take ownership of thin-pool (%s) that already has used data blocks",
               devset->thin_pool_device);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     if (transaction_id != 0) {
         ERROR("devmapper: Unable to take ownership of thin-pool (%s) with non-zero transaction ID",
               devset->thin_pool_device);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     DEBUG("devmapper:total_size_in_sectors:%lu, data_total:%lu, metadata_used:%lu, metadata_total:%lu",
           total_size_in_sectors, data_total, metadata_used, metadata_total);
 
+out:
     return ret;
 }
 
@@ -1829,6 +1904,7 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
 
     ret = activate_device_if_needed(devset, base_info, false);
     if (ret != 0) {
+        ERROR("devmapper: activate device %s failed", base_info->hash);
         return ret;
     }
 
@@ -1843,7 +1919,7 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
     uuid = get_device_uuid(dev_fname);
     if (uuid == NULL) {
         ret = -1;
-        // ERROR();
+        ERROR("devmapper: get uuid err from device %s", dev_fname);
         goto free_out;
     }
 
@@ -1916,7 +1992,7 @@ static int grow_fs(struct device_set *devset, image_devmapper_device_info *info)
     char *dev_fname = NULL;
 
     if (activate_device_if_needed(devset, info, false) != 0) {
-        ERROR("Error activating devmapper device");
+        ERROR("devmapper:error activating devmapper device %s", info->hash);
         return -1;
     }
 
@@ -2076,7 +2152,7 @@ static void issue_discard(struct device_set *devset, image_devmapper_device_info
 
     ret = activate_device_if_needed(devset, info, true);
     if (ret != 0) {
-        // ERROR();
+        ERROR("devmapper: activate device %s failed", info->hash);
         goto free_out;
     }
 
@@ -2139,7 +2215,6 @@ static int do_delete_device(struct device_set *devset, const char *hash, bool sy
     }
 
 free_out:
-    free_image_devmapper_device_info(info);
     return ret;
 }
 
@@ -2149,10 +2224,6 @@ static int setup_base_image(struct device_set *devset)
     image_devmapper_device_info *old_info = NULL;
 
     old_info = lookup_device(devset, "base");
-    if (old_info == NULL) {
-        ERROR("devmapper: lookup device failed");
-        return -1;
-    }
 
     // base image already exists. If it is initialized properly, do UUID
     // verification and return. Otherwise remove image and set it up
@@ -2161,20 +2232,20 @@ static int setup_base_image(struct device_set *devset)
         if (old_info->initialized && !old_info->deleted) {
             ret = setup_verify_baseimages_uuidfs(devset, old_info);
             if (ret != 0) {
-                // ERROR();
+                ERROR("devmapper: do base image uuid verification failed");
                 goto out;
             }
 
             ret = check_grow_base_device_fs(devset, old_info);
             if (ret != 0) {
-                // ERROR();
+                ERROR("devmapper: grow base device fs failed");
             }
             goto out;
         }
 
-        DEBUG("devmapper: Removing uninitialized base image");
         ret = do_delete_device(devset, "base", true);
         if (ret != 0) {
+            ERROR("devmapper: remove uninitialized base image failed");
             goto out;
         }
     }
@@ -2184,14 +2255,17 @@ static int setup_base_image(struct device_set *devset)
     if (util_valid_str(devset->thin_pool_device) && old_info == NULL) {
         ret = check_thin_pool(devset);
         if (ret != 0) {
+            ERROR("devmapper: check thin pool failed");
             goto out;
         }
     }
 
     ret = create_base_image(devset);
+    if (ret != 0) {
+        ERROR("devmapper: create base image failed");
+    }
 
 out:
-    free_image_devmapper_device_info(old_info);
     return ret;
 }
 
@@ -2214,6 +2288,7 @@ static int do_devmapper_init(struct device_set *devset)
 
     ret = enable_deferred_removal_deletion(devset);
     if (ret != 0) {
+        ERROR("devmapper: enable deferred remove failed");
         return -1;
     }
 
@@ -2221,7 +2296,7 @@ static int do_devmapper_init(struct device_set *devset)
     if (!support) {
         ERROR("devmapper: Udev sync is not supported. This will lead to data loss and unexpected behavior.");
         if (!devset->override_udev_sync_check) {
-            ERROR("driver not supported");
+            ERROR("devmapper: driver do not support udev sync");
             return -1;
         }
     }
@@ -2250,11 +2325,13 @@ static int do_devmapper_init(struct device_set *devset)
         ERROR("Failed to sprintf device prefix");
         goto out;
     }
+    devset->device_prefix = util_strdup_s(prefix);
 
     ret = dev_get_device_list(&devices_list, &devices_len);
     if (ret != 0) {
         DEBUG("devicemapper: failed to get device list");
     }
+
     for (i = 0; i < devices_len; i++) {
         if (!util_has_prefix(*(devices_list + i), devset->device_prefix)) {
             continue;
@@ -2272,6 +2349,7 @@ static int do_devmapper_init(struct device_set *devset)
             }
             DEBUG("devmapper: remove broken device: %s", *(devices_list + i));
         }
+        (void)memset(device_path, 0, sizeof(device_path));
         (void)snprintf(device_path, sizeof(device_path), "/dev/mapper/%s", *(devices_list + i));
         if (stat(device_path, &st)) {
             ret = dev_remove_device(*(devices_list + i));
@@ -2285,7 +2363,7 @@ static int do_devmapper_init(struct device_set *devset)
     // Check for the existence of the thin-pool device
     pool_name = get_pool_name(devset);
     if (pool_name == NULL) {
-        //error
+        ERROR("devmapper: pool name is null");
         goto out;
     }
     pool_exist = thin_pool_exists(devset, pool_name);
@@ -2297,7 +2375,7 @@ static int do_devmapper_init(struct device_set *devset)
 
     ret = init_metadata(devset, pool_name);
     if (ret != 0) {
-        // ERROR();
+        ERROR("devmapper: init metadata failed");
         goto out;
     }
 
@@ -2356,15 +2434,15 @@ static int determine_driver_capabilities(const char *version)
     }
 
     if (major > 4) {
-        driver_deferred_remove_support = true;
+        driver_deferred_removal_support = true;
         goto out;
     }
 
-    if (major > 4) {
+    if (major < 4) {
         goto out;
     }
 
-    ret = util_parse_byte_size_string(tmp_str[0], &minor);
+    ret = util_parse_byte_size_string(tmp_str[1], &minor);
     if (ret != 0) {
         ERROR("devmapper: invalid size: '%s': %s", tmp_str[1], strerror(-ret));
         goto out;
@@ -2375,7 +2453,7 @@ static int determine_driver_capabilities(const char *version)
      * check for patch level as it can not be less than 0.
      */
     if (minor >= 27) {
-        driver_deferred_remove_support = true;
+        driver_deferred_removal_support = true;
         goto out;
     }
 
@@ -2388,7 +2466,7 @@ int device_init(struct graphdriver *driver, const char *driver_home, const char 
 {
     int ret = 0;
     struct device_set *devset = NULL;
-    image_devmapper_direct_lvm_config *lvm_setup_config = NULL;
+    image_devmapper_transaction *metadata_trans = NULL;
     char *version = NULL;
 
     if (driver == NULL || driver_home == NULL || options == NULL) {
@@ -2397,8 +2475,8 @@ int device_init(struct graphdriver *driver, const char *driver_home, const char 
     // init devmapper log
     log_with_errno_init();
 
-    lvm_setup_config = util_common_calloc_s(sizeof(image_devmapper_direct_lvm_config));
-    if (lvm_setup_config == NULL) {
+    metadata_trans = util_common_calloc_s(sizeof(image_devmapper_transaction));
+    if (metadata_trans == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
@@ -2418,9 +2496,7 @@ int device_init(struct graphdriver *driver, const char *driver_home, const char 
     devset->min_free_space_percent = DEFAULT_MIN_FREE_SPACE_PERCENT;
     devset->device_id_map = map_new(MAP_INT_INT, NULL, device_id_map_kvfree);
     devset->udev_wait_timeout = DEFAULT_UDEV_WAITTIMEOUT;
-
-    free(devset->lvm_setup_config);
-    devset->lvm_setup_config = lvm_setup_config;
+    devset->metadata_trans = metadata_trans;
 
     version = dev_get_driver_version();
     if (version == NULL) {

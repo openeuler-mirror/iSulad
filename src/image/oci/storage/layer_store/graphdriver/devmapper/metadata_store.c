@@ -68,7 +68,6 @@ int metadata_store_init(void)
     return 0;
 }
 
-// 需要malloc，然后存入map，顶层调用已被释放
 bool metadata_store_add(const char *hash, image_devmapper_device_info *device)
 {
     bool ret = false;
@@ -78,7 +77,6 @@ bool metadata_store_add(const char *hash, image_devmapper_device_info *device)
         return false;
     }
 
-    // 如果key不存在则insert
     ret = map_replace(g_metadata_store->map, (void *)hash, (void *)device);
     if (pthread_rwlock_unlock(&g_metadata_store->rwlock)) {
         ERROR("devmapper: unlock metadata store failed");

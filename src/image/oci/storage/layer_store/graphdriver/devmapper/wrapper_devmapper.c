@@ -104,6 +104,7 @@ static int add_target(struct dm_task *dmt, uint64_t start, uint64_t size, const 
 
     ret = dm_task_add_target(dmt, start, size, ttype, params);
     if (ret != 1) {
+        ERROR("devmapper:dm task add target failed, params is %s", params);
         ret = ERR_TASK_ADD_TARGET;
     }
 
@@ -603,9 +604,11 @@ int dev_create_device(const char *pool_fname, int device_id)
         goto cleanup;
     }
 
-    if (snprintf(message, sizeof(message), "create_thin %d", device_id) < 0) {
+    ret = snprintf(message, sizeof(message), "create_thin %d", device_id);
+
+    if (ret < 0 || (size_t)ret >= sizeof(message)) {
         ret = -1;
-        // ERROR()
+        ERROR("Print message create_thin %d failed", device_id);
         goto cleanup;
     }
 
@@ -615,15 +618,19 @@ int dev_create_device(const char *pool_fname, int device_id)
         goto cleanup;
     }
 
+    dm_saw_exist = false;
     ret = dm_task_run(dmt);
     if (ret != 1) {
-        ret = -1;
-        ERROR("devicemapper: task run failed");
+        if (dm_saw_exist) {
+            ret = ERR_DEVICE_ID_EXISTS;
+        } else {
+            ret = -1;
+        }
+        ERROR("devicemapper: task run failed to create device");
         goto cleanup;
     }
 
     ret = 0;
-
 cleanup:
     free(dmt);
     return ret;
@@ -775,7 +782,7 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
 {
     int ret = 0;
     uint64_t start = 0;
-    uint32_t cookie;
+    uint32_t cookie = 0;
     uint16_t flags = 0;
     char params[PATH_MAX] = { 0 };
     struct dm_task *dmt = NULL;
@@ -788,8 +795,8 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
     }
 
     ret = snprintf(params, sizeof(params), "%s %d", pool_name, device_id);
-    if (ret < 0) {
-        // ERROR();
+    if (ret < 0 || (size_t)ret >= sizeof(params)) {
+        ERROR("Print params with pool name:%s, device_id:%d failed", pool_name, device_id);
         goto out;
     }
 
@@ -813,11 +820,11 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
 
     ret = dm_task_run(dmt);
     if (ret != 1) {
-        ERROR("devicemapper: Error running deviceCreate (ActivateDevice) %d", ret);
+        ERROR("devicemapper: error running deviceCreate (ActivateDevice) %d", ret);
     }
 
     dev_udev_wait(cookie);
-
+    ret = 0;
 out:
     free(dmt);
     return ret;
