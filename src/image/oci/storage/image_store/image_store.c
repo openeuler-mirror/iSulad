@@ -2031,12 +2031,15 @@ int64_t image_store_big_data_size(const char *id, const char *key)
     img = lookup(id);
     if (img == NULL) {
         ERROR("Image not known");
+        image_store_unlock();
         goto out;
     }
 
     bret = get_value_from_json_map_string_int64(img->simage->big_data_sizes, key, &size);
 
     image_ref_dec(img);
+
+    image_store_unlock();
 
     if (bret || get_size_with_update_big_data(id, key, &size) == 0) {
         goto out;
@@ -2045,7 +2048,6 @@ int64_t image_store_big_data_size(const char *id, const char *key)
     ERROR("Size is not known");
 
 out:
-    image_store_unlock();
     return size;
 }
 
@@ -2343,7 +2345,7 @@ static bool validate_digest(const char *digest)
 
     // contains ':' and is not the last character
     if (index == NULL && index - value + 1 == strlen(value)) {
-        ERROR("Invalid checksum digest format");
+        INFO("Invalid checksum digest format");
         ret = false;
         goto out;
     }
@@ -2355,7 +2357,7 @@ static bool validate_digest(const char *digest)
     // Currently only support SHA256 algorithm
     if (strcmp(alg, "sha256") != 0) {
         if (util_reg_match(digest_patten, digest) != 0) {
-            ERROR("Invalid checksum digest format");
+            INFO("Invalid checksum digest format");
             ret = false;
             goto out;
         }
