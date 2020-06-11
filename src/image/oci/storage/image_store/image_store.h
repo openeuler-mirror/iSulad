@@ -99,10 +99,6 @@ int image_store_get_all_images(imagetool_images_list *images_list);
 // On success, the number of the known images is returned. On failure, (size_t)-1 is returned
 size_t image_store_get_images_number();
 
-// Return a slice enumerating the images which have a big data
-// item with the name ImageDigestBigDataKey and the specified digest.
-int image_store_get_images_by_digest(const char *digest, imagetool_images_list *images_list);
-
 // Retrieves image file system info
 int image_store_get_fs_info(imagetool_fs_info *fs_info);
 
