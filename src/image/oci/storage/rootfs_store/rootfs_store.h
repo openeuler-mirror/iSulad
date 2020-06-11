@@ -46,9 +46,6 @@ int rootfs_store_wipe();
 // Stores a (potentially large) piece of data associated with this ID.
 int rootfs_store_set_big_data(const char *id, const char *key, const char *data);
 
-// Replace the list of names associated with a container with the supplied values.
-int rootfs_store_set_names(const char *id, const char **names, size_t names_len);
-
 // Updates the metadata associated with the item with the specified ID.
 int rootfs_store_set_metadata(const char *id, const char *metadata);
 

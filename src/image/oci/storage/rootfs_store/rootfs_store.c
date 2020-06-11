@@ -287,6 +287,13 @@ static int remove_name(cntrootfs_t *cntr, const char *name)
         }
     }
 
+    if (cntr->srootfs->names_len == count) {
+        util_free_array_by_len(cntr->srootfs->names, cntr->srootfs->names_len);
+        cntr->srootfs->names = NULL;
+        cntr->srootfs->names_len = 0;
+        return 0;
+    }
+
     new_size = (cntr->srootfs->names_len - count) * sizeof(char *);
     tmp_names = (char **)util_common_calloc_s(new_size);
     if (tmp_names == NULL) {
@@ -1301,89 +1308,6 @@ int rootfs_store_set_big_data(const char *id, const char *key, const char *data)
     }
 
 out:
-    rootfs_ref_dec(cntr);
-    rootfs_store_unlock();
-    return ret;
-}
-
-int rootfs_store_set_names(const char *id, const char **names, size_t names_len)
-{
-    int ret = 0;
-    cntrootfs_t *cntr = NULL;
-    cntrootfs_t *other_cntr = NULL;
-    char **unique_names = NULL;
-    size_t unique_names_len = 0;
-    size_t i;
-
-    if (id == NULL) {
-        ERROR("Invalid paratemer, id is NULL");
-        return -1;
-    }
-
-    if (names == NULL || names_len == 0) {
-        ERROR("Cannot leave the rootfs name empty");
-        return -1;
-    }
-
-    if (g_rootfs_store == NULL) {
-        ERROR("Container store is not ready");
-        return -1;
-    }
-
-    if (!rootfs_store_lock(EXCLUSIVE)) {
-        ERROR("Failed to lock rootfs store with exclusive lock, not allowed to change rootfs names assignments");
-        return -1;
-    }
-
-    cntr = lookup(id);
-    if (cntr == NULL) {
-        ERROR("Rootfs not known");
-        ret = -1;
-        goto out;
-    }
-
-    if (util_string_array_unique((const char **)names, names_len, &unique_names, &unique_names_len) != 0) {
-        ERROR("Failed to unique names");
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < cntr->srootfs->names_len; i++) {
-        if (!map_remove(g_rootfs_store->byname, (void *)cntr->srootfs->names[i])) {
-            ERROR("Failed to remove rootfs from ids map in rootfs store : %s", cntr->srootfs->names[i]);
-            ret = -1;
-            goto out;
-        }
-    }
-
-    for (i = 0; i < unique_names_len; i++) {
-        other_cntr = (cntrootfs_t *)map_search(g_rootfs_store->byname, (void *)unique_names[i]);
-        if (other_cntr != NULL && remove_name(other_cntr, unique_names[i]) != 0) {
-            ERROR("Failed to remove name from other container rootfs");
-            ret = -1;
-            goto out;
-        }
-        if (!map_replace(g_rootfs_store->byname, unique_names[i], (void *)cntr)) {
-            ERROR("Failed to update byname map in rootfs store");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    util_free_array_by_len(cntr->srootfs->names, cntr->srootfs->names_len);
-    cntr->srootfs->names = unique_names;
-    cntr->srootfs->names_len = unique_names_len;
-    unique_names = NULL;
-    unique_names_len = 0;
-
-    if (save_rootfs(cntr) != 0) {
-        ERROR("Failed to update container");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    util_free_array_by_len(unique_names, unique_names_len);
     rootfs_ref_dec(cntr);
     rootfs_store_unlock();
     return ret;
