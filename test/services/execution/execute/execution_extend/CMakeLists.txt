@@ -13,12 +13,12 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/util_atomic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_regex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/sha256/sha256.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/error.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/error.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/mainloop.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/filters.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/mainloop.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/filters.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/libisulad.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/console/console.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils.c

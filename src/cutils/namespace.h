@@ -35,7 +35,6 @@ extern "C" {
 #define SHARE_NAMESPACE_USER_HOST_PATH "/proc/1/ns/user"
 #define SHARE_NAMESPACE_CGROUP_HOST_PATH "/proc/1/ns/cgroup"
 
-
 #define TYPE_NAMESPACE_PID "pid"
 #define TYPE_NAMESPACE_NETWORK "network"
 #define TYPE_NAMESPACE_IPC "ipc"
@@ -66,8 +65,7 @@ static inline bool is_none(const char *mode)
 
 static inline bool is_container(const char *mode)
 {
-    if (mode != NULL &&
-        strncmp(mode, SHARE_NAMESPACE_PREFIX, strlen(SHARE_NAMESPACE_PREFIX)) == 0) {
+    if (mode != NULL && strncmp(mode, SHARE_NAMESPACE_PREFIX, strlen(SHARE_NAMESPACE_PREFIX)) == 0) {
         return true;
     }
     return false;
@@ -82,12 +80,10 @@ static inline bool is_shareable(const char *mode)
 }
 
 char *connected_container(const char *mode);
-int get_share_namespace_path(const char *type, const char *src_path, char **dest_path);
-char *get_container_process_label(const char *path);
+char *get_host_namespace_path(const char *type);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

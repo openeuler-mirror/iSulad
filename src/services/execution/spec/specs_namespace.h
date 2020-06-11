@@ -8,26 +8,25 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: wujing
- * Create: 2020-02-14
- * Description: provide namespace mock
+ * Author: lifeng
+ * Create: 2020-06-11
+ * Description: provide namespace spec definition
  ******************************************************************************/
+#ifndef __SPECS_NAMESPACE_H
+#define __SPECS_NAMESPACE_H
 
-#ifndef NAMESPACE_MOCK_H_
-#define NAMESPACE_MOCK_H_
+#include <stdbool.h>
+#include <string.h>
 
-#include <gmock/gmock.h>
-#include "namespace.h"
-#include "specs_namespace.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-class MockNamespace {
-public:
-    virtual ~MockNamespace() = default;
-    MOCK_METHOD1(ConnectedContainer, char *(const char *mode));
-    MOCK_METHOD3(GetShareNamespacePath, int(const char *type, const char *src_path, char **dest_path));
-    MOCK_METHOD1(GetContainerProcessLabel, char *(const char *path));
-};
+int get_share_namespace_path(const char *type, const char *src_path, char **dest_path);
+char *get_container_process_label(const char *path);
 
-void MockNamespace_SetMock(MockNamespace *mock);
+#ifdef __cplusplus
+}
+#endif
 
-#endif // NAMESPACE_MOCK_H_
+#endif

@@ -61,8 +61,7 @@ out:
 }
 
 static void command_init_isulad(command_t *self, command_option_t *options, int options_len, int argc,
-                                const char **argv,
-                                const char *description, const char *usage)
+                                const char **argv, const char *description, const char *usage)
 {
     self->name = argv[0];
     self->argc = argc - 1;
@@ -237,11 +236,9 @@ static int check_websocket_server_listening_port(const struct service_arguments 
     if (args->json_confs->websocket_server_listening_port < MIN_REGISTER_PORT ||
         args->json_confs->websocket_server_listening_port > MAX_REGISTER_PORT) {
         COMMAND_ERROR("Invalid websocket server listening port: '%d' (range: %d-%d)",
-                      args->json_confs->websocket_server_listening_port,
-                      MIN_REGISTER_PORT, MAX_REGISTER_PORT);
+                      args->json_confs->websocket_server_listening_port, MIN_REGISTER_PORT, MAX_REGISTER_PORT);
         ERROR("Invalid websocket server listening port: '%d' (range: %d-%d)",
-              args->json_confs->websocket_server_listening_port,
-              MIN_REGISTER_PORT, MAX_REGISTER_PORT);
+              args->json_confs->websocket_server_listening_port, MIN_REGISTER_PORT, MAX_REGISTER_PORT);
         ret = -1;
         goto out;
     }
@@ -404,8 +401,8 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
             args->default_ulimit[j]->hard = ptr->hard;
             continue;
         }
-        if (ulimit_array_append(&args->default_ulimit, (host_config_ulimits_element *)ptr,
-                                args->default_ulimit_len) != 0) {
+        if (ulimit_array_append(&args->default_ulimit, (host_config_ulimits_element *)ptr, args->default_ulimit_len) !=
+            0) {
             ERROR("merge json confs default ulimit config failed");
             return -1;
         }
@@ -416,7 +413,7 @@ static int do_merge_conf_default_ulimit_into_global(struct service_arguments *ar
     return 0;
 }
 
-static int ulimit_flag_join(char* out_msg, const size_t msg_len, const size_t default_ulimit_len,
+static int ulimit_flag_join(char *out_msg, const size_t msg_len, const size_t default_ulimit_len,
                             host_config_ulimits_element **default_ulimit)
 {
     int ret = -1;
@@ -431,9 +428,8 @@ static int ulimit_flag_join(char* out_msg, const size_t msg_len, const size_t de
 
     for (i = 0; i < default_ulimit_len; i++) {
         tmp = util_strdup_s(out_msg);
-        nret = snprintf(out_msg, msg_len, "%s %s=%lld:%lld", tmp,
-                        default_ulimit[i]->name, (long long int)default_ulimit[i]->soft,
-                        (long long int)default_ulimit[i]->hard);
+        nret = snprintf(out_msg, msg_len, "%s %s=%lld:%lld", tmp, default_ulimit[i]->name,
+                        (long long int)default_ulimit[i]->soft, (long long int)default_ulimit[i]->hard);
         if (nret < 0 || nret >= msg_len) {
             ERROR("Failed to print string");
             goto out;
@@ -456,9 +452,8 @@ out:
     return ret;
 }
 
-static int ulimit_file_join(char* out_msg, const size_t msg_len,
-                            isulad_daemon_configs_default_ulimits_element **default_ulimits,
-                            size_t default_ulimits_len)
+static int ulimit_file_join(char *out_msg, const size_t msg_len,
+                            isulad_daemon_configs_default_ulimits_element **default_ulimits, size_t default_ulimits_len)
 {
     int ret = -1;
     size_t i;
@@ -473,8 +468,8 @@ static int ulimit_file_join(char* out_msg, const size_t msg_len,
     for (i = 0; i < default_ulimits_len; i++) {
         ptr = default_ulimits[i];
         tmp = util_strdup_s(out_msg);
-        nret = snprintf(out_msg, msg_len, "%s %s=%lld:%lld", tmp, ptr->name,
-                        (long long int)(ptr->soft), (long long int)(ptr->hard));
+        nret = snprintf(out_msg, msg_len, "%s %s=%lld:%lld", tmp, ptr->name, (long long int)(ptr->soft),
+                        (long long int)(ptr->hard));
         if (nret < 0 || nret >= msg_len) {
             ERROR("Failed to print string");
             goto out;
@@ -495,7 +490,6 @@ out:
     free(tmp);
     return ret;
 }
-
 
 static int check_conf_default_ulimit(const struct service_arguments *args)
 {
@@ -538,8 +532,7 @@ static int check_conf_default_ulimit(const struct service_arguments *args)
         char flag_def_ulimit[ULIMIT_MSG_MAX] = { 0 };
         char file_def_ulimit[ULIMIT_MSG_MAX] = { 0 };
 
-        if (ulimit_flag_join(flag_def_ulimit, ULIMIT_MSG_MAX, args->default_ulimit_len,
-                             args->default_ulimit) != 0) {
+        if (ulimit_flag_join(flag_def_ulimit, ULIMIT_MSG_MAX, args->default_ulimit_len, args->default_ulimit) != 0) {
             ret = -1;
             goto out;
         }
@@ -582,5 +575,3 @@ int update_default_ulimit(struct service_arguments *args)
 
     return do_merge_conf_default_ulimit_into_global(args);
 }
-
-

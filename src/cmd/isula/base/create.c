@@ -737,29 +737,15 @@ static int request_pack_host_ns_change_files(const struct client_arguments *args
     size_t files_len = 0;
     char **files = NULL;
     char *net_files[] = { "/proc/sys/net" };
-    char *ipc_files[] = {
-        "/proc/sys/kernel/shmmax",
-        "/proc/sys/kernel/shmmni",
-        "/proc/sys/kernel/shmall",
-        "/proc/sys/kernel/shm_rmid_forced",
-        "/proc/sys/kernel/msgmax",
-        "/proc/sys/kernel/msgmni",
-        "/proc/sys/kernel/msgmnb",
-        "/proc/sys/kernel/sem",
-        "/proc/sys/fs/mqueue"
-    };
-    char *net_ipc_files[] = {
-        "/proc/sys/net",
-        "/proc/sys/kernel/shmmax",
-        "/proc/sys/kernel/shmmni",
-        "/proc/sys/kernel/shmall",
-        "/proc/sys/kernel/shm_rmid_forced",
-        "/proc/sys/kernel/msgmax",
-        "/proc/sys/kernel/msgmni",
-        "/proc/sys/kernel/msgmnb",
-        "/proc/sys/kernel/sem",
-        "/proc/sys/fs/mqueue"
-    };
+    char *ipc_files[] = { "/proc/sys/kernel/shmmax",          "/proc/sys/kernel/shmmni", "/proc/sys/kernel/shmall",
+                          "/proc/sys/kernel/shm_rmid_forced", "/proc/sys/kernel/msgmax", "/proc/sys/kernel/msgmni",
+                          "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",    "/proc/sys/fs/mqueue"
+                        };
+    char *net_ipc_files[] = { "/proc/sys/net",           "/proc/sys/kernel/shmmax",          "/proc/sys/kernel/shmmni",
+                              "/proc/sys/kernel/shmall", "/proc/sys/kernel/shm_rmid_forced", "/proc/sys/kernel/msgmax",
+                              "/proc/sys/kernel/msgmni", "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",
+                              "/proc/sys/fs/mqueue"
+                            };
 
     if (args->custom_conf.ns_change_opt == NULL) {
         return 0;
@@ -1247,11 +1233,11 @@ static int log_opt_max_file_cb(const char *key, const char *value, struct client
 static int log_opt_syslog_facility(const char *key, const char *value, struct client_arguments *args)
 {
 #define FACILITIES_LEN 20
-    const char *facility_keys[FACILITIES_LEN] = {
-        "kern", "user", "mail", "daemon", "auth",
-        "syslog", "lpr", "news", "uucp", "cron", "authpriv", "ftp",
-        "local0", "local1", "local2", "local3", "local4", "local5", "local6", "local7"
-    };
+    const char *facility_keys[FACILITIES_LEN] = { "kern",     "user",   "mail",   "daemon", "auth",
+                                                  "syslog",   "lpr",    "news",   "uucp",   "cron",
+                                                  "authpriv", "ftp",    "local0", "local1", "local2",
+                                                  "local3",   "local4", "local5", "local6", "local7"
+                                                };
     int i;
 
     for (i = 0; i < FACILITIES_LEN; i++) {
@@ -1286,14 +1272,34 @@ static int log_opt_parse_options(struct client_arguments *args, const char *optk
 {
 #define OPTIONS_MAX 5
     log_opt_parse_t log_opts[OPTIONS_MAX] = {
-        { .key = "max-size", .anno_key = CONTAINER_LOG_CONFIG_KEY_SIZE, .cb = &log_opt_common_cb, },
-        { .key = "max-file", .anno_key = CONTAINER_LOG_CONFIG_KEY_ROTATE, .cb = &log_opt_max_file_cb, },
-        { .key = "disable-log", .anno_key = CONTAINER_LOG_CONFIG_KEY_FILE, .cb = &log_opt_disable_log_cb, },
-        { .key = "syslog-tag", .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG, .cb = &log_opt_common_cb, },
-        { .key = "syslog-facility", .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY, .cb = &log_opt_syslog_facility, },
+        {
+            .key = "max-size",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_SIZE,
+            .cb = &log_opt_common_cb,
+        },
+        {
+            .key = "max-file",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_ROTATE,
+            .cb = &log_opt_max_file_cb,
+        },
+        {
+            .key = "disable-log",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_FILE,
+            .cb = &log_opt_disable_log_cb,
+        },
+        {
+            .key = "syslog-tag",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG,
+            .cb = &log_opt_common_cb,
+        },
+        {
+            .key = "syslog-facility",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY,
+            .cb = &log_opt_syslog_facility,
+        },
     };
     int ret = -1;
-    int i ;
+    int i;
 
     for (i = 0; i < OPTIONS_MAX; i++) {
         if (strcmp(optkey, log_opts[i].key) == 0) {
@@ -1371,7 +1377,7 @@ int callback_log_opt(command_option_t *option, const char *value)
 int callback_log_driver(command_option_t *option, const char *value)
 {
 #define DRIVER_MAX 2
-    const char *drivers[] = {CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER, CONTAINER_LOG_CONFIG_SYSLOG_DRIVER};
+    const char *drivers[] = { CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER, CONTAINER_LOG_CONFIG_SYSLOG_DRIVER };
     int i = 0;
     struct client_arguments *args = (struct client_arguments *)option->data;
 
@@ -1452,11 +1458,8 @@ int cmd_create_main(int argc, const char **argv)
     }
     g_cmd_create_args.progname = argv[0];
     g_cmd_create_args.subcommand = argv[1];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        CREATE_OPTIONS(g_cmd_create_args),
-        CREATE_EXTEND_OPTIONS(g_cmd_create_args),
-        COMMON_OPTIONS(g_cmd_create_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf), CREATE_OPTIONS(g_cmd_create_args),
+               CREATE_EXTEND_OPTIONS(g_cmd_create_args), COMMON_OPTIONS(g_cmd_create_args)
     };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_create_desc,
@@ -2198,7 +2201,7 @@ static int create_check_nschangeopt(const struct client_arguments *args)
 static int create_check_oomkilldisable(const struct client_arguments *args)
 {
     if (args->custom_conf.oom_kill_disable && args->cr.memory_limit == 0) {
-        COMMAND_ERROR("WARNING: Disabling the OOM killer on containers without " \
+        COMMAND_ERROR("WARNING: Disabling the OOM killer on containers without "
                       "setting a '-m/--memory' limit may be dangerous.");
     }
 

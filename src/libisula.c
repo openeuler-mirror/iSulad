@@ -19,7 +19,6 @@
 
 #include "libisula.h"
 #include "isula_libutils/log.h"
-#include "pack_config.h"
 #include "utils.h"
 
 /* isula filters free */

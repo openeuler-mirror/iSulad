@@ -1,5 +1,6 @@
 set(client_srcs
     ${CMAKE_CURRENT_SOURCE_DIR}/isula_connect.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/pack_config.c
     )
 
 set(incs ${CMAKE_CURRENT_SOURCE_DIR})

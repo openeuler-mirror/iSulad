@@ -42,6 +42,7 @@
 #include "specs_security.h"
 #include "specs_mount.h"
 #include "specs_extend.h"
+#include "specs_namespace.h"
 #include "image.h"
 #include "path.h"
 #include "constants.h"
