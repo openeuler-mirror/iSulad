@@ -75,8 +75,8 @@ install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/libisula.h                        %{buildroot}/%{_includedir}/isulad/libisula.h
 install -m 0644 ../src/connect/client/isula_connect.h    %{buildroot}/%{_includedir}/isulad/isula_connect.h
 install -m 0644 ../src/container_def.h                  %{buildroot}/%{_includedir}/isulad/container_def.h
-install -m 0644 ../src/types_def.h                      %{buildroot}/%{_includedir}/isulad/types_def.h
-install -m 0644 ../src/error.h                          %{buildroot}/%{_includedir}/isulad/error.h
+install -m 0644 ../src/cutils/types_def.h               %{buildroot}/%{_includedir}/isulad/types_def.h
+install -m 0644 ../src/cutils/error.h                   %{buildroot}/%{_includedir}/isulad/error.h
 install -m 0644 ../src/engines/engine.h                 %{buildroot}/%{_includedir}/isulad/engine.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
