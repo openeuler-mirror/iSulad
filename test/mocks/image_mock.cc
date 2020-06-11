@@ -64,7 +64,8 @@ int im_get_storage_metadata(const char *image_type, char *id, im_storage_metadat
     return 0;
 }
 
-void free_im_storage_metadata_response(im_storage_metadata_response *ptr) {
+void free_im_storage_metadata_response(im_storage_metadata_response *ptr)
+{
     if (g_image_mock != nullptr) {
         return g_image_mock->FreeImStorageMetadataResponse(ptr);
     }

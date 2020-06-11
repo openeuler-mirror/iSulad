@@ -4,7 +4,7 @@ SET(EXE path_llt)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/cutils/utils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/cutils/utils_string.c

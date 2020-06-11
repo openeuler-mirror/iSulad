@@ -27,127 +27,28 @@ extern "C" {
 /* record the isulad errmsg */
 extern __thread char *g_isulad_errmsg;
 
-#define BLOBS_PATH "blobs/sha256"
-#define DIFF_LAYERS_PATH "snapshots/diff"
 #define DEFAULT_TCP_HOST "tcp://localhost:2375"
 #define DEFAULT_TLS_HOST "tcp://localhost:2376"
 
 #define AUTH_PLUGIN "authz-broker"
 
-#define ISULAD_ISULA_ADAPTER                      "isula-adapter"
-#define ISULAD_ISULA_ACCEL_ARGS                   "isulad.accel.args"
-#define ISULAD_ISULA_ACCEL_ARGS_SEPERATOR         ";"
-#define ISULAD_ENABLE_PLUGINS                     "ISULAD_ENABLE_PLUGINS"
-#define ISULAD_ENABLE_PLUGINS_SEPERATOR           ","
-#define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR      ','
+#define ISULAD_ISULA_ADAPTER "isula-adapter"
+#define ISULAD_ISULA_ACCEL_ARGS "isulad.accel.args"
+#define ISULAD_ISULA_ACCEL_ARGS_SEPERATOR ";"
+#define ISULAD_ENABLE_PLUGINS "ISULAD_ENABLE_PLUGINS"
+#define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
+#define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
 
 #define MAX_HOSTS 10
 
 /* clear the g_isulad_errmsg */
-#define DAEMON_CLEAR_ERRMSG() do { \
+#define DAEMON_CLEAR_ERRMSG()          \
+    do {                               \
         if (g_isulad_errmsg != NULL) { \
-            free(g_isulad_errmsg); \
-            g_isulad_errmsg = NULL; \
-        } \
+            free(g_isulad_errmsg);     \
+            g_isulad_errmsg = NULL;    \
+        }                              \
     } while (0)
-
-typedef enum {
-    NO_CLIENT_CERT = 0,
-    REQUEST_CLIENT_CERT,
-    REQUIRE_ANY_CLIENT_CERT,
-    VERIFY_CLIENT_CERT_IF_GIVEN,
-    REQUIRE_AND_VERIFY_CLIENT_CERT
-} client_auth_type_t;
-
-struct isulad_client_cgroup_resources {
-    uint16_t blkio_weight;
-    int64_t cpu_shares;
-    int64_t cpu_period;
-    int64_t cpu_quota;
-    int64_t cpu_rt_period;
-    int64_t cpu_rt_runtime;
-    char *cpuset_cpus;
-    char *cpuset_mems;
-    int64_t memory_limit;
-    int64_t memory_swap;
-    int64_t memory_reservation;
-    int64_t kernel_memory_limit;
-    char **ulimits;
-    size_t ulimits_len;
-};
-
-struct create_custom_config {
-    /* environment variables */
-    int env_len;
-    char **env;
-
-    /* cgroup resources */
-    struct isulad_client_cgroup_resources cr;
-
-    /* hugepage limits */
-    int hugepage_limits_len;
-    char **hugepage_limits;
-
-    /* hook-spec file */
-    char *hook_spec;
-
-    /* pids limit */
-    char *pids_limit;
-
-    /* files limit */
-    char *files_limit;
-
-    /* user and group */
-    char *user;
-
-    /* hostname */
-    char *hostname;
-
-    /* privileged */
-    bool privileged;
-
-    /* readonly rootfs */
-    bool readonly;
-
-    /* alldevices */
-    bool all_devices;
-
-    /* system container */
-    bool  system_container;
-
-    /* cap add */
-    int cap_adds_len;
-    char **cap_adds;
-
-    /* cap drop */
-    int cap_drops_len;
-    char **cap_drops;
-
-    /* volumes to mount */
-    int volumes_len;
-    char **volumes;
-
-    /* mounts to mount filesystem */
-    int mounts_len;
-    char **mounts;
-
-    /* devices to populate in container */
-    int devices_len;
-    char **devices;
-
-    /* blkio weight devices */
-    int weight_dev_len;
-    char **weight_devices;
-
-    /* entrypoint */
-    char *entrypoint;
-
-    /* init command args */
-    int command_len;
-    char * const *commands;
-
-    char *share_ns[NAMESPACE_MAX];
-};
 
 struct isulad_events_format {
     types_timestamp_t timestamp;
@@ -163,7 +64,7 @@ struct isulad_events_format {
     uint32_t exit_status;
 };
 
-typedef void (handle_events_callback_t)(struct isulad_events_format *event);
+typedef void(handle_events_callback_t)(struct isulad_events_format *event);
 
 typedef bool (*stream_check_call_cancelled)(void *context);
 typedef bool (*stream_write_fun_t)(void *writer, void *data);
@@ -261,7 +162,6 @@ struct isulad_container_resize_response {
     char *errmsg;
 };
 
-
 struct isulad_image_info {
     char *imageref;
     char *type;
@@ -321,4 +221,3 @@ void isulad_events_format_free(struct isulad_events_format *value);
 #endif
 
 #endif
-
