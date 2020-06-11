@@ -129,10 +129,10 @@ static container_events_type_t lcrsta2Evetype(int value)
 }
 
 static const char * const g_isulad_event_strtype[] = {
-    "exit", "die", "starting", "running", "stopping", "aborting", "freezing", "frozen", "thawed",
-    "oom", "create", "start", "restart", "stop", "exec_create", "exec_start", "exec_die", "attach",
-    "kill", "top", "reanme", "archive-path", "extract-to-dir", "update", "pause", "unpause", "export",
-    "resize", "paused1",
+    "exit",     "die",     "starting", "running", "stopping", "aborting",     "freezing",       "frozen",
+    "thawed",   "oom",     "create",   "start",   "restart",  "stop",         "exec_create",    "exec_start",
+    "exec_die", "attach",  "kill",     "top",     "reanme",   "archive-path", "extract-to-dir", "update",
+    "pause",    "unpause", "export",   "resize",  "paused1",
 };
 
 /* isulad event sta2str */
@@ -145,9 +145,7 @@ static const char *isulad_event_sta2str(container_events_type_t sta)
     return g_isulad_event_strtype[sta];
 }
 
-static const char * const g_isulad_image_event_strtype[] = {
-    "load", "remove", "pull", "login", "logout"
-};
+static const char * const g_isulad_image_event_strtype[] = { "load", "remove", "pull", "login", "logout" };
 
 static const char *isulad_image_event_sta2str(image_events_type_t sta)
 {
@@ -182,7 +180,7 @@ static int supplement_operator_for_container_msg(const struct monitord_msg *msg,
 {
 #define CONTAINER_OPERATOR_MAX_LEN 300
     int nret = 0;
-    char opt[CONTAINER_OPERATOR_MAX_LEN] = {0x00};
+    char opt[CONTAINER_OPERATOR_MAX_LEN] = { 0x00 };
 
     if (strlen(msg->args) != 0) {
         nret = snprintf(opt, sizeof(opt), "container %s: %s", isulad_event_sta2str(msg->value), msg->args);
@@ -203,9 +201,9 @@ static int supplement_pid_for_container_msg(const container_t *cont, const struc
                                             struct isulad_events_format *format_msg)
 {
     int nret = 0;
-    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
 
-    if (cont->state == NULL || cont->state->state == NULL ||  cont->state->state->pid <= 0) {
+    if (cont->state == NULL || cont->state->state == NULL || cont->state->state->pid <= 0) {
         return 0;
     }
 
@@ -227,7 +225,7 @@ static int supplement_exitcode_for_container_msg(const container_t *cont, const 
 {
     int nret = 0;
     int exit_code = 0;
-    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
 
     if (format_msg->exit_status != 0) {
         exit_code = format_msg->exit_status;
@@ -256,7 +254,7 @@ static int supplement_image_for_container_msg(const container_t *cont, const str
                                               struct isulad_events_format *format_msg)
 {
     int nret = 0;
-    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
 
     if (cont->common_config == NULL || cont->common_config->image == NULL) {
         return 0;
@@ -279,7 +277,7 @@ static int supplement_name_for_container_msg(const container_t *cont, const stru
                                              struct isulad_events_format *format_msg)
 {
     int nret = 0;
-    char info[EXTRA_ANNOTATION_MAX] = {0x00};
+    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
 
     if (cont->common_config == NULL || cont->common_config->name == NULL) {
         return 0;
@@ -303,14 +301,13 @@ static int supplement_labels_for_container_msg(const container_t *cont, const st
 {
     size_t i;
 
-    if (cont->common_config == NULL ||
-        cont->common_config->config->labels == NULL ||
+    if (cont->common_config == NULL || cont->common_config->config->labels == NULL ||
         cont->common_config->config->labels->len == 0) {
         return 0;
     }
 
     for (i = 0; i < cont->common_config->config->labels->len; i++) {
-        char info[EXTRA_ANNOTATION_MAX] = {0x00};
+        char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
         int nret = snprintf(info, sizeof(info), "%s=%s", cont->common_config->config->labels->keys[i],
                             cont->common_config->config->labels->values[i]);
         if (nret < 0 || nret >= sizeof(info)) {
@@ -329,7 +326,6 @@ static int supplement_labels_for_container_msg(const container_t *cont, const st
 static int supplement_annotations_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
                                                     struct isulad_events_format *format_msg)
 {
-
     if (supplement_pid_for_container_msg(cont, msg, format_msg) != 0) {
         ERROR("Failed to supplement pid info");
         return -1;
@@ -406,7 +402,7 @@ static int supplement_msg_for_image(struct monitord_msg *msg, struct isulad_even
 #define IMAGE_OPERATOR_MAX_LEN 50
     int ret = 0;
     int nret = 0;
-    char opt[IMAGE_OPERATOR_MAX_LEN] = {0x00};
+    char opt[IMAGE_OPERATOR_MAX_LEN] = { 0x00 };
 
     format_msg->id = util_strdup_s(msg->name);
 
@@ -490,11 +486,12 @@ static void isulad_monitor_fifo_send(const struct monitord_msg *msg, const char 
         goto out;
     }
 
-    ret = write(fd, msg, sizeof(struct monitord_msg));
-    if (ret < 0 || (size_t)ret != sizeof(struct monitord_msg)) {
-        ERROR("Failed to write to monitor fifo \"%s\": %s.", fifo_path, strerror(errno));
-        goto out;
-    }
+    do {
+        ret = util_write_nointr(fd, msg, sizeof(struct monitord_msg));
+        if (ret != sizeof(struct monitord_msg)) {
+            usleep_nointerupt(1000);
+        }
+    } while (ret != sizeof(struct monitord_msg));
 
 out:
     free(fifo_path);
@@ -509,14 +506,13 @@ int isulad_monitor_send_container_event(const char *name, runtime_state_t state,
 {
     int ret = 0;
     char *statedir = NULL;
-    struct monitord_msg msg = {
-        .type = MONITORD_MSG_STATE,
-        .event_type = CONTAINER_EVENT,
-        .value = state,
-        .pid = -1,
-        .exit_code = -1,
-        .args = {0x00},
-        .extra_annations = {0x00}
+    struct monitord_msg msg = { .type = MONITORD_MSG_STATE,
+               .event_type = CONTAINER_EVENT,
+               .value = state,
+               .pid = -1,
+               .exit_code = -1,
+               .args = { 0x00 },
+               .extra_annations = { 0x00 }
     };
 
     if (name == NULL) {
@@ -565,12 +561,11 @@ int isulad_monitor_send_image_event(const char *name, image_state_t state)
     int ret = 0;
     char *statedir = NULL;
 
-    struct monitord_msg msg = {
-        .type = MONITORD_MSG_STATE,
-        .event_type = IMAGE_EVENT,
-        .value = state,
-        .args = {0x00},
-        .extra_annations = {0x00}
+    struct monitord_msg msg = { .type = MONITORD_MSG_STATE,
+               .event_type = IMAGE_EVENT,
+               .value = state,
+               .args = { 0x00 },
+               .extra_annations = { 0x00 }
     };
 
     if (name == NULL) {
@@ -1089,7 +1084,6 @@ struct isulad_events_format *dup_event(const struct isulad_events_format *event)
 
     return out;
 }
-
 
 /* add monitor client */
 int add_monitor_client(char *name, const types_timestamp_t *since, const types_timestamp_t *until,
