@@ -13,9 +13,9 @@
  * Description: provide oci config merge functions
  ******************************************************************************/
 
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
 #include "oci_config_merge.h"
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -186,25 +186,48 @@ static int make_sure_container_config_labels(container_config *container_spec)
 
 static int oci_image_merge_labels(const oci_image_spec_config *config, container_config *container_spec)
 {
+    int ret = 0;
     size_t i;
+    json_map_string_string *tmp = NULL;
 
     if (config->labels == NULL || config->labels->len == 0) {
         return 0;
     }
 
-    if (make_sure_container_config_labels(container_spec) != 0) {
+    tmp = util_common_calloc_s(sizeof(json_map_string_string));
+    if (tmp == NULL) {
+        ERROR("Out of memory");
         return -1;
     }
 
+    if (make_sure_container_config_labels(container_spec) != 0) {
+        ret = -1;
+        goto out;
+    }
+
     for (i = 0; i < config->labels->len; i++) {
-        int ret = append_json_map_string_string(container_spec->labels,
-                                                config->labels->keys[i], config->labels->values[i]);
-        if (ret < 0) {
-            return -1;
+        ret = append_json_map_string_string(tmp, config->labels->keys[i], config->labels->values[i]);
+        if (ret != 0) {
+            ret = -1;
+            goto out;
         }
     }
 
-    return 0;
+    for (i = 0; i < container_spec->labels->len; i++) {
+        ret = append_json_map_string_string(tmp, container_spec->labels->keys[i], container_spec->labels->values[i]);
+        if (ret != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+
+    free_json_map_string_string(container_spec->labels);
+    container_spec->labels = tmp;
+    tmp = NULL;
+
+out:
+    free_json_map_string_string(tmp);
+    return ret;
 }
 
 static void oci_image_merge_user(const char *user, container_config *container_spec)
@@ -216,8 +239,7 @@ static void oci_image_merge_user(const char *user, container_config *container_s
     container_spec->user = util_strdup_s(user);
 }
 
-static int dup_health_check_from_image(const defs_health_check *image_health_check,
-                                       container_config *container_spec)
+static int dup_health_check_from_image(const defs_health_check *image_health_check, container_config *container_spec)
 {
     int ret = 0;
     size_t i;
@@ -259,8 +281,7 @@ out:
     return ret;
 }
 
-static int update_health_check_from_image(const defs_health_check *image_health_check,
-                                          container_config *container_spec)
+static int update_health_check_from_image(const defs_health_check *image_health_check, container_config *container_spec)
 {
     if (container_spec->health_check->test_len == 0) {
         size_t i;
@@ -295,8 +316,7 @@ static int update_health_check_from_image(const defs_health_check *image_health_
     return 0;
 }
 
-static int oci_image_merge_health_check(const defs_health_check *image_health_check,
-                                        container_config *container_spec)
+static int oci_image_merge_health_check(const defs_health_check *image_health_check, container_config *container_spec)
 {
     int ret = 0;
 
@@ -360,4 +380,3 @@ int oci_image_merge_config(imagetool_image *image_conf, container_config *contai
 out:
     return ret;
 }
-
