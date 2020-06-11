@@ -19,20 +19,17 @@
 #include <limits.h>
 #include "engine.h"
 #include "libisulad.h"
+#include "utils.h"
 
-#define ARGS_MAX                255	 /* # args chars in a monitord msg */
-#define EXTRA_ANNOTATION_MAX    1024 /* # annotation chars in a monitord msg */
+#define ARGS_MAX 255 /* # args chars in a monitord msg */
+#define EXTRA_ANNOTATION_MAX 255 /* # annotation chars in a monitord msg */
 
-typedef enum {
-    MONITORD_MSG_STATE,
-    MONITORD_MSG_PRIORITY,
-    MONITORD_MSG_EXIT_CODE
-} msg_type_t;
+typedef enum { MONITORD_MSG_STATE, MONITORD_MSG_PRIORITY, MONITORD_MSG_EXIT_CODE } msg_type_t;
 
 struct monitord_msg {
     msg_type_t type;
     msg_event_type_t event_type;
-    char name[NAME_MAX + 1];
+    char name[CONTAINER_ID_MAX_LEN + 1];
     char args[ARGS_MAX];
     char extra_annations[EXTRA_ANNOTATION_MAX];
     int value;
@@ -54,4 +51,3 @@ int read_monitord_message_timeout(int fd, struct monitord_msg *msg, int timeout)
 int new_monitord(struct monitord_sync_data *msync);
 
 #endif
-
