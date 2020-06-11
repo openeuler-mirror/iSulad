@@ -778,8 +778,14 @@ char *rootfs_store_create(const char *id, const char **names, size_t names_len, 
         dst_id = util_strdup_s(id);
     }
 
+    if (dst_id == NULL) {
+        ERROR("Out of memory or generate random container id failed");
+        ret = -1;
+        goto out;
+    }
+
     if (map_search(g_rootfs_store->byid, (void *)dst_id) != NULL) {
-        ERROR("ID is already in use: %s", id);
+        ERROR("ID is already in use: %s", dst_id);
         ret = -1;
         goto out;
     }
@@ -790,7 +796,7 @@ char *rootfs_store_create(const char *id, const char **names, size_t names_len, 
         goto out;
     }
 
-    c = new_storage_rootfs(id, image, unique_names, unique_names_len, layer, metadata, rootfs_opts);
+    c = new_storage_rootfs(dst_id, image, unique_names, unique_names_len, layer, metadata, rootfs_opts);
     if (c == NULL) {
         ERROR("Failed to generate new storage container");
         ret = -1;
@@ -804,7 +810,7 @@ char *rootfs_store_create(const char *id, const char **names, size_t names_len, 
         goto out;
     }
 
-    if (rootfs_store_append_container_rootfs(id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
+    if (rootfs_store_append_container_rootfs(dst_id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
         ERROR("Failed to append container to container store");
         ret = -1;
         goto out;

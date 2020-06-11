@@ -855,6 +855,12 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
         dst_id = util_strdup_s(id);
     }
 
+    if (dst_id == NULL) {
+        ERROR("Out of memory or generate random image id failed");
+        ret = -1;
+        goto out;
+    }
+
     if (map_search(g_image_store->byid, (void *)dst_id) != NULL) {
         ERROR("ID is already in use: %s", dst_id);
         ret = -1;
