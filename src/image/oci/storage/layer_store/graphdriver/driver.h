@@ -22,6 +22,7 @@
 #include "isula_libutils/json_common.h"
 #include "console.h"
 #include "driver_overlay2_types.h"
+#include "devices_constants.h"
 #include "storage.h"
 #include "image.h"
 #include "isula_libutils/container_inspect.h"
@@ -87,6 +88,9 @@ struct graphdriver {
 
     // options for overlay2
     struct overlay_options *overlay_opts;
+
+    // options for device mapper
+    struct devmapper_conf *devmapper_opts;
 };
 
 int graphdriver_init(const struct storage_module_init_options *opts);

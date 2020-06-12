@@ -39,9 +39,10 @@ int devmapper_init(struct graphdriver *driver, const char *drvier_home, const ch
     return device_init(driver, drvier_home, options, len);
 }
 
-static int do_create(const char *id, const char *parent, const struct driver_create_opts *create_opts)
+static int do_create(const char *id, const char *parent, const struct graphdriver *driver,
+                     const struct driver_create_opts *create_opts)
 {
-    return add_device(id, parent, create_opts->storage_opt);
+    return add_device(id, parent, driver, create_opts->storage_opt);
 }
 
 // devmapper_create_rw creates a layer that is writable for use as a container file system
@@ -52,7 +53,7 @@ int devmapper_create_rw(const char *id, const char *parent, const struct graphdr
         return -1;
     }
 
-    return do_create(id, parent, create_opts);
+    return do_create(id, parent, driver, create_opts);
 }
 
 // Create adds a device with a given id and the parent.
@@ -63,7 +64,7 @@ int devmapper_create_ro(const char *id, const char *parent, const struct graphdr
         return -1;
     }
 
-    return do_create(id, parent, create_opts);
+    return do_create(id, parent, driver, create_opts);
 }
 
 // Remove removes a device with a given id, unmounts the filesystem.
@@ -77,11 +78,11 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
         return -1;
     }
 
-    if (!has_device(id)) {
+    if (!has_device(id, driver)) {
         return 0;
     }
 
-    ret = delete_device(id, false);
+    ret = delete_device(id, false, driver);
     if (ret != 0) {
         ERROR("failed to remove device %s", id);
         return ret;
@@ -161,7 +162,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     }
 
     DEBUG("devmapper: start to mount container device");
-    ret = mount_device(id, mnt_point_dir, mount_opts);
+    ret = mount_device(id, mnt_point_dir, mount_opts, driver);
     if (ret != 0) {
         goto out;
     }
@@ -175,7 +176,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     if (util_mkdir_p(rootfs, 0755) != 0 || !util_dir_exists(rootfs)) {
         ERROR("Unable to create devmapper rootfs directory %s.", rootfs);
         ret = -1;
-        if (unmount_device(id, mnt_point_dir) != 0) {
+        if (unmount_device(id, mnt_point_dir, driver) != 0) {
             DEBUG("devmapper: unmount %s failed", mnt_point_dir);
         }
         goto out;
@@ -187,7 +188,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
         // of later problems
         ret = write_file(id_file, id);
         if (ret != 0) {
-            if (unmount_device(id, mnt_point_dir) != 0) {
+            if (unmount_device(id, mnt_point_dir, driver) != 0) {
                 DEBUG("devmapper: unmount %s failed", mnt_point_dir);
             }
         }
@@ -228,7 +229,7 @@ int devmapper_umount_layer(const char *id, const struct graphdriver *driver)
         goto out;
     }
 
-    ret = unmount_device(id, mp);
+    ret = unmount_device(id, mp, driver);
     if (ret != 0) {
         DEBUG("devmapper: unmount %s failed", mp);
     }
@@ -255,7 +256,7 @@ static void free_driver_mount_opts(struct driver_mount_opts *opts)
 
 bool devmapper_layer_exists(const char *id, const struct graphdriver *driver)
 {
-    return has_device(id);
+    return has_device(id, driver);
 }
 
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
@@ -318,7 +319,7 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
         goto out;
     }
 
-    ret = export_device_metadata(&dev_metadata, id);
+    ret = export_device_metadata(&dev_metadata, id, driver);
     if (ret != 0) {
         ERROR("Failed to export device metadata of device %s", id);
         goto out;
@@ -475,7 +476,7 @@ int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdr
         return -1;
     }
 
-    st = device_set_status();
+    st = device_set_status(driver);
     if (st == NULL) {
         ERROR("Failed to get device set status");
         ret = -1;

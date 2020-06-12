@@ -16,6 +16,11 @@
 #ifndef __DEVICES_CONSTANTS_
 #define __DEVICES_CONSTANTS_
 
+#include "map.h"
+#include "isula_libutils/image_devmapper_transaction.h"
+#include "isula_libutils/image_devmapper_deviceset_metadata.h"
+#include "isula_libutils/image_devmapper_direct_lvm_config.h"
+
 #define DEVICE_FILE_DIR "/var/lib/isulad/storage/devicemapper/metadata"
 #define DEVICE_SET_METAFILE "deviceset-metadata"
 #define TRANSACTION_METADATA "transaction-metadata"
@@ -31,5 +36,58 @@
 #define DEFAULT_MIN_FREE_SPACE_PERCENT 10
 
 #define DEFAULT_DEVICE_SET_MODE 0700
+
+struct device_set {
+    char *root;
+    char *device_prefix;
+    uint64_t transaction_id;
+    int next_device_id; // deviceset-metadata
+    map_t *device_id_map;
+
+    // options
+    int64_t data_loop_back_size;
+    int64_t meta_data_loop_back_size;
+    uint64_t base_fs_size;
+    char *filesystem;
+    char *mount_options;
+    char **mkfs_args; // []string类型数组切片
+    size_t mkfs_args_len;
+    char *data_device;
+    char *data_loop_file;
+    char *metadata_device;
+    char *metadata_loop_file;
+    uint64_t thinp_block_size;
+    bool do_blk_discard;
+    char *thin_pool_device;
+
+    image_devmapper_transaction *metadata_trans;
+
+    bool override_udev_sync_check;
+    bool deferred_remove;
+    bool deferred_delete;
+    char *base_device_uuid;
+    char *base_device_filesystem;
+    uint nr_deleted_devices; // number of deleted devices
+    uint32_t min_free_space_percent;
+    char *xfs_nospace_retries; // max retries when xfs receives ENOSPC
+    int64_t udev_wait_timeout;
+
+    image_devmapper_direct_lvm_config *lvm_setup_config;
+    bool driver_deferred_removal_support;
+    bool enable_deferred_removal;
+    bool enable_deferred_deletion;
+    bool user_base_size;
+};
+
+typedef struct {
+    map_t *map; // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
+    pthread_rwlock_t rwlock;
+} metadata_store_t;
+
+struct devmapper_conf {
+    pthread_rwlock_t devmapper_driver_rwlock;
+    struct device_set *devset;
+    metadata_store_t *meta_store;
+};
 
 #endif

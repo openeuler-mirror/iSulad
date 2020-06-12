@@ -23,14 +23,6 @@
 extern "C" {
 #endif
 
-// struct image_devmapper_direct_lvm_config {
-//     char *device;
-//     uint64_t thinp_percent;
-//     uint64_t thinp_meta_percent;
-//     uint64_t auto_extend_percent;
-//     uint64_t auto_extend_threshold;
-// };
-
 int validate_lvm_config(image_devmapper_direct_lvm_config *cfg);
 int check_dev_available(const char *dev);
 int check_dev_invg(const char *dev);

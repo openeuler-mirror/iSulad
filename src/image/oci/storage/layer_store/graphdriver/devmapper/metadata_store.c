@@ -18,13 +18,6 @@
 #include "utils.h"
 #include "isula_libutils/log.h"
 
-typedef struct {
-    map_t *map; // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
-    pthread_rwlock_t rwlock;
-} metadata_store_t;
-
-static metadata_store_t *g_metadata_store = NULL;
-
 /* metadata store map kvfree */
 static void metadata_store_map_kvfree(void *key, void *value)
 {
@@ -46,7 +39,7 @@ static void metadata_store_free(metadata_store_t *store)
 }
 
 /* metadata store new */
-static metadata_store_t *metadata_store_new(void)
+metadata_store_t *metadata_store_new(void)
 {
     int ret;
     metadata_store_t *store = NULL;
@@ -73,62 +66,53 @@ error_out:
     return NULL;
 }
 
-int metadata_store_init(void)
-{
-    g_metadata_store = metadata_store_new();
-    if (g_metadata_store == NULL) {
-        return -1;
-    }
-    return 0;
-}
-
-bool metadata_store_add(const char *hash, image_devmapper_device_info *device)
+bool metadata_store_add(const char *hash, image_devmapper_device_info *device, metadata_store_t *meta_store)
 {
     bool ret = false;
 
-    if (pthread_rwlock_wrlock(&g_metadata_store->rwlock)) {
+    if (pthread_rwlock_wrlock(&meta_store->rwlock)) {
         ERROR("devmapper: lock metadata store failed");
         return false;
     }
 
-    ret = map_replace(g_metadata_store->map, (void *)hash, (void *)device);
-    if (pthread_rwlock_unlock(&g_metadata_store->rwlock)) {
+    ret = map_replace(meta_store->map, (void *)hash, (void *)device);
+    if (pthread_rwlock_unlock(&meta_store->rwlock)) {
         ERROR("devmapper: unlock metadata store failed");
         return false;
     }
     return ret;
 }
 
-image_devmapper_device_info *metadata_store_get(const char *hash)
+image_devmapper_device_info *metadata_store_get(const char *hash, metadata_store_t *meta_store)
 {
     image_devmapper_device_info *device = NULL;
 
     if (hash == NULL) {
         return NULL;
     }
-    if (pthread_rwlock_rdlock(&g_metadata_store->rwlock) != 0) {
+    if (pthread_rwlock_rdlock(&meta_store->rwlock) != 0) {
         ERROR("devmapper:lock memory store failed");
         return device;
     }
-    device = map_search(g_metadata_store->map, (void *)hash);
-    if (pthread_rwlock_unlock(&g_metadata_store->rwlock) != 0) {
+    device = map_search(meta_store->map, (void *)hash);
+    if (pthread_rwlock_unlock(&meta_store->rwlock) != 0) {
         ERROR("devmapper:unlock memory store failed");
     }
 
     return device;
 }
 
-bool metadata_store_remove(const char *hash)
+bool metadata_store_remove(const char *hash, metadata_store_t *meta_store)
 {
     bool ret = false;
 
-    if (pthread_rwlock_wrlock(&g_metadata_store->rwlock) != 0) {
+    if (pthread_rwlock_wrlock(&meta_store->rwlock) != 0) {
         ERROR("devmapper:lock memory store failed");
         return false;
     }
 
-    ret = map_remove(g_metadata_store->map, (void *)hash);
-    if (pthread_rwlock_unlock(&g_metadata_store->rwlock) != 0) {
+    ret = map_remove(meta_store->map, (void *)hash);
+    if (pthread_rwlock_unlock(&meta_store->rwlock) != 0) {
         ERROR("devmapper:unlock memory store failed");
         return false;
     }
@@ -136,23 +120,23 @@ bool metadata_store_remove(const char *hash)
 }
 
 /* metadata store list hashes */
-char **metadata_store_list_hashes(void)
+char **metadata_store_list_hashes(metadata_store_t *meta_store)
 {
     bool ret = false;
     char **hashes_array = NULL;
     map_itor *itor = NULL;
 
-    if (pthread_rwlock_rdlock(&g_metadata_store->rwlock) != 0) {
+    if (pthread_rwlock_rdlock(&meta_store->rwlock) != 0) {
         ERROR("devmapper:lock memory store failed");
         return NULL;
     }
 
-    if (map_size(g_metadata_store->map) == 0) {
+    if (map_size(meta_store->map) == 0) {
         ret = true;
         goto unlock;
     }
 
-    itor = map_itor_new(g_metadata_store->map);
+    itor = map_itor_new(meta_store->map);
     if (itor == NULL) {
         ERROR("Out of memory");
         goto unlock;
@@ -167,7 +151,7 @@ char **metadata_store_list_hashes(void)
     }
     ret = true;
 unlock:
-    if (pthread_rwlock_unlock(&g_metadata_store->rwlock)) {
+    if (pthread_rwlock_unlock(&meta_store->rwlock)) {
         ERROR("unlock metadata store failed");
     }
     map_itor_free(itor);
