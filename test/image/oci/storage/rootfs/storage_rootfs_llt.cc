@@ -31,6 +31,9 @@
 #include "path.h"
 #include "storage.h"
 
+std::string BIG_DATA_CONTENT = "big data test";
+std::string META_DATA_CONTENT = "metadata test";
+
 std::string GetDirectory()
 {
     char abs_path[PATH_MAX];
@@ -116,6 +119,9 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_load)
     ASSERT_STRNE(cntr->metadata, nullptr);
     ASSERT_EQ(cntr->names_len, 1);
     ASSERT_STREQ(cntr->names[0], "0e025f44cdca20966a5e5f11e1d9d8eb726aef2d38ed20f89ea986987c2010a9");
+    ASSERT_EQ(rootfs_store_set_big_data(ids.at(0).c_str(), "userdata", BIG_DATA_CONTENT.c_str()), 0);
+    ASSERT_STREQ(rootfs_store_big_data(ids.at(0).c_str(), "userdata"), BIG_DATA_CONTENT.c_str());
+    ASSERT_EQ(rootfs_store_set_metadata(ids.at(0).c_str(), META_DATA_CONTENT.c_str()), 0);
 
     free_storage_rootfs(cntr);
 }
@@ -123,16 +129,24 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_load)
 TEST_F(StorageRootfsUnitTest, test_rootfs_store_create)
 {
     std::string id { "5aca18b065db4741a9e24ff898cec48307ee12cb9ecec5dcb83e8210230f766f" };
-    const char *names[] = { "5aca18b065db4741a9e24ff898cec48307ee12cb9ecec5dcb83e8210230f766f" };
+    const char *names_with_id[] = { "5aca18b065db4741a9e24ff898cec48307ee12cb9ecec5dcb83e8210230f766f" };
+    const char *names_without_id[] = { "jkha18b065db4741a9e24ff898cec48307ee12cb9ecec5dcbhje8210230f766f" };
     std::string image { "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
-    std::string layer { "f32ca140c6716a68d7bba0fe6529334e98de529bd8fb7a203a21f08e772629a9" };
+    std::string layer_with_id { "f32ca140c6716a68d7bba0fe6529334e98de529bd8fb7a203a21f08e772629a9" };
+    std::string layer_without_id { "h88ca140c6716a68d7bba0fe6529334e98de529bd8fb7agf3a21f08e772629a9" };
     std::string metadata { "{}" };
-    char *created_container = rootfs_store_create(id.c_str(), names, sizeof(names) / sizeof(names[0]), image.c_str(),
-                                                  layer.c_str(), metadata.c_str(), nullptr);
+    char *created_container = rootfs_store_create(id.c_str(), names_with_id,
+                                                  sizeof(names_with_id) / sizeof(names_with_id[0]), image.c_str(), layer_with_id.c_str(),
+                                                  metadata.c_str(), nullptr);
+    char *container_without_id = rootfs_store_create(nullptr, names_without_id,
+                                                     sizeof(names_without_id) / sizeof(names_without_id[0]), image.c_str(),
+                                                     layer_without_id.c_str(), metadata.c_str(), nullptr);
 
     ASSERT_STREQ(created_container, id.c_str());
+    ASSERT_NE(container_without_id, nullptr);
     ASSERT_EQ(rootfs_store_delete(id.c_str()), 0);
     ASSERT_EQ(rootfs_store_get_rootfs(id.c_str()), nullptr);
+    ASSERT_EQ(rootfs_store_delete(container_without_id), 0);
     ASSERT_FALSE(dirExists((std::string(store_real_path) + "/" + id).c_str()));
 }
 
@@ -166,12 +180,17 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_exists)
 TEST_F(StorageRootfsUnitTest, test_rootfs_store_metadata)
 {
     std::string incorrectId { "ff67da98ab8540d713209" };
+    char *metadata = NULL;
 
-    for (auto elem : ids) {
-        char *metadata = rootfs_store_metadata(elem.c_str());
-        ASSERT_STREQ(metadata, "{}");
-        free(metadata);
-    }
+    metadata = rootfs_store_metadata(ids.at(0).c_str());
+    ASSERT_STREQ(metadata, META_DATA_CONTENT.c_str());
+    free(metadata);
+    metadata = NULL;
+
+    metadata = rootfs_store_metadata(ids.at(1).c_str());
+    ASSERT_STREQ(metadata, "{}");
+    free(metadata);
+    metadata = NULL;
 
     ASSERT_EQ(rootfs_store_metadata(incorrectId.c_str()), nullptr);
 }
@@ -194,8 +213,8 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_get_all_rootfs)
             ASSERT_STREQ(cntr->layer, "253836aa199405a39b6262b1e55a0d946b80988bc2f82d8f2b802fc175e4874e");
             ASSERT_STREQ(cntr->names[0], "0e025f44cdca20966a5e5f11e1d9d8eb726aef2d38ed20f89ea986987c2010a9");
             ASSERT_EQ(cntr->names_len, 1);
-            ASSERT_STREQ((char *)cntr->big_data_names, nullptr);
-            ASSERT_EQ(cntr->big_data_sizes, nullptr);
+            ASSERT_STREQ(cntr->big_data_names[0], "userdata");
+            ASSERT_EQ(*(cntr->big_data_sizes->values), BIG_DATA_CONTENT.size());
         }
     }
 
