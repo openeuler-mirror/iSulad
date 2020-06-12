@@ -32,8 +32,4 @@
 
 #define DEFAULT_DEVICE_SET_MODE 0700
 
-
-
-
-
 #endif
