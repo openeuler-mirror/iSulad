@@ -34,15 +34,52 @@
 #include "isula_libutils/json_common.h"
 #include "util_archive.h"
 
-int devmapper_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len)
+int devmapper_init(struct graphdriver *driver, const char *driver_home, const char **options, size_t len)
 {
-    return device_init(driver, drvier_home, options, len);
+    int ret = 0;
+    char *root_dir = NULL;
+
+    if (driver == NULL || driver_home == NULL) {
+        return -1;
+    }
+
+    driver->home = util_strdup_s(driver_home);
+
+    root_dir = util_path_dir(driver_home);
+    if (root_dir == NULL) {
+        ERROR("Unable to get driver root home directory %s.", driver_home);
+        ret = -1;
+        goto out;
+    }
+
+    driver->backing_fs = util_get_fs_name(root_dir);
+    if (driver->backing_fs == NULL) {
+        ERROR("Failed to get backing fs");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_mkdir_p(driver_home, DEFAULT_DEVICE_SET_MODE) != 0) {
+        ERROR("Unable to create driver home directory %s.", driver_home);
+        ret = -1;
+        goto out;
+    }
+
+    if (device_set_init(driver, driver_home, options, len) != 0) {
+        ERROR("Unable to init device mapper.");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(root_dir);
+    return ret;
 }
 
 static int do_create(const char *id, const char *parent, const struct graphdriver *driver,
                      const struct driver_create_opts *create_opts)
 {
-    return add_device(id, parent, driver, create_opts->storage_opt);
+    return add_device(id, parent, driver->devset, create_opts->storage_opt);
 }
 
 // devmapper_create_rw creates a layer that is writable for use as a container file system
@@ -78,11 +115,11 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
         return -1;
     }
 
-    if (!has_device(id, driver)) {
+    if (!has_device(id, driver->devset)) {
         return 0;
     }
 
-    ret = delete_device(id, false, driver);
+    ret = delete_device(id, false, driver->devset);
     if (ret != 0) {
         ERROR("failed to remove device %s", id);
         return ret;
@@ -162,7 +199,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     }
 
     DEBUG("devmapper: start to mount container device");
-    ret = mount_device(id, mnt_point_dir, mount_opts, driver);
+    ret = mount_device(id, mnt_point_dir, mount_opts, driver->devset);
     if (ret != 0) {
         goto out;
     }
@@ -176,7 +213,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     if (util_mkdir_p(rootfs, 0755) != 0 || !util_dir_exists(rootfs)) {
         ERROR("Unable to create devmapper rootfs directory %s.", rootfs);
         ret = -1;
-        if (unmount_device(id, mnt_point_dir, driver) != 0) {
+        if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {
             DEBUG("devmapper: unmount %s failed", mnt_point_dir);
         }
         goto out;
@@ -188,7 +225,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
         // of later problems
         ret = write_file(id_file, id);
         if (ret != 0) {
-            if (unmount_device(id, mnt_point_dir, driver) != 0) {
+            if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {
                 DEBUG("devmapper: unmount %s failed", mnt_point_dir);
             }
         }
@@ -229,7 +266,7 @@ int devmapper_umount_layer(const char *id, const struct graphdriver *driver)
         goto out;
     }
 
-    ret = unmount_device(id, mp, driver);
+    ret = unmount_device(id, mp, driver->devset);
     if (ret != 0) {
         DEBUG("devmapper: unmount %s failed", mp);
     }
@@ -256,7 +293,7 @@ static void free_driver_mount_opts(struct driver_mount_opts *opts)
 
 bool devmapper_layer_exists(const char *id, const struct graphdriver *driver)
 {
-    return has_device(id, driver);
+    return has_device(id, driver->devset);
 }
 
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
@@ -319,7 +356,7 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
         goto out;
     }
 
-    ret = export_device_metadata(&dev_metadata, id, driver);
+    ret = export_device_metadata(&dev_metadata, id, driver->devset);
     if (ret != 0) {
         ERROR("Failed to export device metadata of device %s", id);
         goto out;

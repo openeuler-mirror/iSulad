@@ -306,6 +306,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
         ret = -1;
         goto out;
     }
+
     if (!check_bk_fs_support_overlay(driver->backing_fs)) {
         ERROR("'overlay' is not supported over backing file system %s", driver->backing_fs);
         ret = -1;

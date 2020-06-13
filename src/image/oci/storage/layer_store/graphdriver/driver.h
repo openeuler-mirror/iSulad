@@ -90,7 +90,7 @@ struct graphdriver {
     struct overlay_options *overlay_opts;
 
     // options for device mapper
-    struct devmapper_conf *devmapper_opts;
+    struct device_set *devset;
 };
 
 int graphdriver_init(const struct storage_module_init_options *opts);

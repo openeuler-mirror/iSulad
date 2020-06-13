@@ -37,12 +37,20 @@
 
 #define DEFAULT_DEVICE_SET_MODE 0700
 
+typedef struct {
+    map_t *map; // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
+    pthread_rwlock_t rwlock;
+} metadata_store_t;
+
 struct device_set {
     char *root;
     char *device_prefix;
     uint64_t transaction_id;
     int next_device_id; // deviceset-metadata
     map_t *device_id_map;
+
+    metadata_store_t *meta_store; // store all devices infos
+    pthread_rwlock_t devmapper_driver_rwlock; //protect all fields of DeviceSet
 
     // options
     int64_t data_loop_back_size;
@@ -77,17 +85,6 @@ struct device_set {
     bool enable_deferred_removal;
     bool enable_deferred_deletion;
     bool user_base_size;
-};
-
-typedef struct {
-    map_t *map; // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
-    pthread_rwlock_t rwlock;
-} metadata_store_t;
-
-struct devmapper_conf {
-    pthread_rwlock_t devmapper_driver_rwlock;
-    struct device_set *devset;
-    metadata_store_t *meta_store;
 };
 
 #endif
