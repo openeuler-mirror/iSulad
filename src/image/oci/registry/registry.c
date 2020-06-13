@@ -41,10 +41,9 @@
 #include "storage.h"
 #include "constants.h"
 #include "utils_images.h"
+#include "registry_common.h"
 
-#define MAX_LAYER_NUM 125
 #define MANIFEST_BIG_DATA_KEY "manifest"
-#define ROOTFS_TYPE "layers"
 
 typedef struct {
     pull_descriptor *desc;
@@ -523,16 +522,6 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
     return 0;
 }
 
-static char *without_sha256_prefix(char *digest)
-{
-    if (digest == NULL) {
-        ERROR("Invalid digest NULL when strip sha256 prefix");
-        return NULL;
-    }
-
-    return digest + strlen(SHA256_PREFIX);
-}
-
 static int register_layers(pull_descriptor *desc)
 {
     int ret = 0;
@@ -853,26 +842,6 @@ out:
     }
 
     return ret;
-}
-
-static types_timestamp_t created_to_timestamp(char *created)
-{
-    int64_t nanos = 0;
-    types_timestamp_t timestamp = { 0 };
-
-    if (to_unix_nanos_from_str(created, &nanos) != 0) {
-        ERROR("Failed to get created time from image config");
-        goto out;
-    }
-
-    timestamp.has_seconds = true;
-    timestamp.seconds = nanos / Time_Second;
-    timestamp.has_nanos = true;
-    timestamp.nanos = nanos % Time_Second;
-
-out:
-
-    return timestamp;
 }
 
 static int parse_docker_config(pull_descriptor *desc)
@@ -1335,144 +1304,6 @@ out:
     return ret;
 }
 
-static void free_items_not_inherit(docker_image_config_v2 *config)
-{
-    size_t i = 0;
-
-    if (config == NULL) {
-        return;
-    }
-    free(config->id);
-    config->id = NULL;
-    free(config->parent);
-    config->parent = NULL;
-    config->size = 0;
-    free_docker_image_rootfs(config->rootfs);
-    config->rootfs = NULL;
-
-    for (i = 0; i < config->history_len; i++) {
-        free_docker_image_history(config->history[i]);
-        config->history[i] = NULL;
-    }
-    config->history = NULL;
-    config->history_len = 0;
-
-    return;
-}
-
-static char *convert_created_by(image_manifest_v1_compatibility *config)
-{
-    size_t i = 0;
-    char *created_by = NULL;
-    size_t size = 0;
-
-    if (config == NULL || config->container_config == NULL || config->container_config->cmd == NULL ||
-        config->container_config->cmd_len == 0) {
-        return NULL;
-    }
-
-    for (i = 0; i < config->container_config->cmd_len; i++) {
-        size += strlen(config->container_config->cmd[i]) + 1; // +1 for ' ' or '\0'
-    }
-
-    created_by = util_common_calloc_s(size);
-    if (created_by == NULL) {
-        ERROR("out of memory");
-        return NULL;
-    }
-
-    for (i = 0; i < config->container_config->cmd_len; i++) {
-        if (i != 0) {
-            (void)strcat(created_by, " ");
-        }
-        (void)strcat(created_by, config->container_config->cmd[i]);
-    }
-
-    return created_by;
-}
-
-static int add_rootfs_and_history(pull_descriptor *desc, docker_image_config_v2 *config,
-                                  registry_manifest_schema1 *manifest)
-{
-    int i = 0;
-    int ret = 0;
-    size_t history_index = 0;
-    parser_error err = NULL;
-    image_manifest_v1_compatibility *v1config = NULL;
-    docker_image_history *history = NULL;
-
-    if (desc == NULL || config == NULL || manifest == NULL) {
-        ERROR("Invalid NULL param");
-        return -1;
-    }
-
-    config->rootfs = util_common_calloc_s(sizeof(docker_image_rootfs));
-    config->history = util_common_calloc_s(sizeof(docker_image_history *) * desc->layers_len);
-    if (config->rootfs == NULL || config->history == NULL) {
-        ERROR("out of memory");
-        return -1;
-    }
-    config->rootfs->type = util_strdup_s(ROOTFS_TYPE);
-
-    history_index = manifest->history_len - 1;
-    for (i = 0; i < desc->layers_len; i++) {
-        v1config = image_manifest_v1_compatibility_parse_data(manifest->history[history_index]->v1compatibility, NULL,
-                                                              &err);
-        if (v1config == NULL) {
-            ERROR("parse v1 compatibility config failed, err: %s", err);
-            ret = -1;
-            goto out;
-        }
-        free(err);
-        err = NULL;
-
-        history = util_common_calloc_s(sizeof(docker_image_history));
-        if (history == NULL) {
-            ERROR("out of memory");
-            ret = -1;
-            goto out;
-        }
-
-        history->created = v1config->created;
-        v1config->created = NULL;
-        history->author = v1config->author;
-        v1config->author = NULL;
-        history->created_by = convert_created_by(v1config);
-        history->comment = v1config->comment;
-        v1config->comment = NULL;
-        history->empty_layer = desc->layers[i].empty_layer;
-
-        config->history[i] = history;
-        history = NULL;
-        config->history_len++;
-
-        free_image_manifest_v1_compatibility(v1config);
-        v1config = NULL;
-        history_index--;
-        if (desc->layers[i].empty_layer) {
-            continue;
-        }
-
-        ret = util_array_append(&config->rootfs->diff_ids, desc->layers[i].diff_id);
-        if (ret != 0) {
-            ERROR("append diff id of layer %u to rootfs failed, diff id is %s", i, desc->layers[i].diff_id);
-            ret = -1;
-            goto out;
-        }
-        config->rootfs->diff_ids_len++;
-    }
-
-out:
-    free(err);
-    err = NULL;
-    free_docker_image_history(history);
-    history = NULL;
-    free_image_manifest_v1_compatibility(v1config);
-    v1config = NULL;
-
-    return ret;
-}
-
 static int create_config_from_v1config(pull_descriptor *desc)
 {
     int ret = 0;
@@ -1518,7 +1349,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
     free_items_not_inherit(config);
 
     // Add rootfs and history
-    ret = add_rootfs_and_history(desc, config, manifest);
+    ret = add_rootfs_and_history(desc->layers, desc->layers_len, manifest, config);
     if (ret != 0) {
         ERROR("Add rootfs and history to config failed");
         goto out;
@@ -1950,122 +1781,5 @@ void free_registry_login_options(registry_login_options *options)
     free(options->host);
     options->host = NULL;
     free(options);
-    return;
-}
-
-void free_challenge(challenge *c)
-{
-    if (c == NULL) {
-        return;
-    }
-
-    free(c->schema);
-    c->schema = NULL;
-    free(c->realm);
-    c->realm = NULL;
-    free(c->service);
-    c->service = NULL;
-    free(c->cached_token);
-    c->cached_token = NULL;
-    c->expires_time = 0;
-
-    return;
-}
-
-void free_layer_blob(layer_blob *layer)
-{
-    if (layer == NULL) {
-        return;
-    }
-    layer->empty_layer = false;
-    free(layer->media_type);
-    layer->media_type = NULL;
-    layer->size = 0;
-    free(layer->digest);
-    layer->digest = NULL;
-    free(layer->diff_id);
-    layer->diff_id = NULL;
-    free(layer->chain_id);
-    layer->chain_id = NULL;
-    free(layer->file);
-    layer->file = NULL;
-    layer->already_exist = false;
-    return;
-}
-
-void free_pull_desc(pull_descriptor *desc)
-{
-    int i = 0;
-
-    if (desc == NULL) {
-        return;
-    }
-
-    free(desc->dest_image_name);
-    desc->dest_image_name = NULL;
-    free(desc->host);
-    desc->host = NULL;
-    free(desc->name);
-    desc->name = NULL;
-    free(desc->tag);
-    desc->tag = NULL;
-
-    free_sensitive_string(desc->username);
-    desc->username = NULL;
-    free_sensitive_string(desc->password);
-    desc->password = NULL;
-
-    desc->use_decrypted_key = false;
-    desc->cert_loaded = false;
-    free(desc->ca_file);
-    desc->ca_file = NULL;
-    free(desc->cert_file);
-    desc->cert_file = NULL;
-    free(desc->key_file);
-    desc->key_file = NULL;
-
-    free(desc->blobpath);
-    desc->blobpath = NULL;
-    free(desc->protocol);
-    desc->protocol = NULL;
-    desc->skip_tls_verify = false;
-    free(desc->scope);
-    desc->scope = NULL;
-
-    for (i = 0; i < CHALLENGE_MAX; i++) {
-        free_challenge(&desc->challenges[i]);
-    }
-    util_free_array(desc->headers);
-    desc->headers = NULL;
-
-    free(desc->manifest.media_type);
-    desc->manifest.media_type = NULL;
-    desc->manifest.size = 0;
-    free(desc->manifest.digest);
-    desc->manifest.digest = NULL;
-    free(desc->manifest.file);
-    desc->manifest.file = NULL;
-
-    free(desc->config.media_type);
-    desc->config.media_type = NULL;
-    desc->config.size = 0;
-    free(desc->config.digest);
-    desc->config.digest = NULL;
-    free(desc->config.file);
-    desc->config.file = NULL;
-    desc->config.create_time.has_seconds = 0;
-    desc->config.create_time.seconds = 0;
-    desc->config.create_time.has_nanos = 0;
-    desc->config.create_time.nanos = 0;
-
-    for (i = 0; i < desc->layers_len; i++) {
-        free_layer_blob(&desc->layers[i]);
-    }
-    free(desc->layers);
-    desc->layers = NULL;
-    desc->layers_len = 0;
-
-    free(desc);
-
     return;
 }

@@ -29,6 +29,9 @@
 #define REGISTRY_TMP_DIR        REGISTRY_TMP_DIR_COMMON"XXXXXX"
 #define REGISTRY_TMP_DIR_ALL    REGISTRY_TMP_DIR_COMMON"*"
 
+#define MAX_LAYER_NUM 125
+#define ROOTFS_TYPE "layers"
+
 typedef struct {
     char *schema;
     char *realm;
@@ -103,6 +106,7 @@ typedef struct {
 } pull_descriptor;
 
 void free_challenge(challenge *c);
+void free_layer_blob(layer_blob *layer);
 void free_pull_desc(pull_descriptor *desc);
 
 #endif
