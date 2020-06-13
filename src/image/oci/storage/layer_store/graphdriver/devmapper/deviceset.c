@@ -30,7 +30,6 @@
 #include "utils.h"
 #include "wrapper_devmapper.h"
 #include "devices_constants.h"
-#include "device_setup.h"
 #include "libdevmapper.h"
 #include "driver.h"
 

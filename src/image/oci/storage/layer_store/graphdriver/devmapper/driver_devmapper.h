@@ -17,8 +17,6 @@
 
 #include <pthread.h>
 #include "driver.h"
-#include "metadata_store.h"
-#include "device_setup.h"
 #include "map.h"
 #include "isula_libutils/image_devmapper_transaction.h"
 #include "isula_libutils/image_devmapper_deviceset_metadata.h"

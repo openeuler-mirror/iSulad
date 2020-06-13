@@ -59,8 +59,6 @@ struct status {
 
 int device_set_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
 
-struct device_set *devmapper_driver_devices_get();
-
 int add_device(const char *hash, const char *base_hash, struct device_set *devset,
                const json_map_string_string *storage_opts);
 int mount_device(const char *hash, const char *path, const struct driver_mount_opts *mount_opts,
@@ -71,7 +69,7 @@ bool has_device(const char *hash, struct device_set *devset);
 int delete_device(const char *hash, bool sync_delete, struct device_set *devset);
 
 int export_device_metadata(struct device_metadata *dev_metadata, const char *hash, struct device_set *devset);
-struct status *device_set_status();
+struct status *device_set_status(struct device_set *devset);
 void free_devmapper_status(struct status *st);
 
 #ifdef __cplusplus

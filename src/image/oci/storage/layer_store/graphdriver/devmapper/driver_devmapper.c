@@ -487,7 +487,7 @@ int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdr
         return -1;
     }
 
-    st = device_set_status(driver);
+    st = device_set_status(driver->devset);
     if (st == NULL) {
         ERROR("Failed to get device set status");
         ret = -1;

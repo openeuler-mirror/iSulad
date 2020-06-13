@@ -38,7 +38,6 @@
 
 typedef struct {
     map_t *map; // map string image_devmapper_device_info*   key string will be strdup  value ptr will not
-    pthread_rwlock_t rwlock;
 } metadata_store_t;
 
 struct device_set {
