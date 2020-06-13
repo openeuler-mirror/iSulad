@@ -147,31 +147,6 @@ out:
     return ret;
 }
 
-static int write_file(const char *fpath, const char *buf)
-{
-    int fd = 0;
-    ssize_t nwrite;
-
-    if (fpath == NULL || buf == NULL) {
-        return 0;
-    }
-
-    fd = util_open(fpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0600);
-    if (fd < 0) {
-        ERROR("Failed to open file: %s: %s", fpath, strerror(errno));
-        return -1;
-    }
-    nwrite = util_write_nointr(fd, buf, strlen(buf));
-    if (nwrite < 0) {
-        ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
-        close(fd);
-        return -1;
-    }
-    close(fd);
-
-    return 0;
-}
-
 // devmapper_mount_layer mounts a device with given id into the root filesystem
 char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
                             const struct driver_mount_opts *mount_opts)
@@ -223,8 +198,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     if (!util_file_exists(id_file)) {
         // Create an "id" file with the container/image id in it to help reconstruct this in case
         // of later problems
-        ret = write_file(id_file, id);
-        if (ret != 0) {
+        if (util_atomic_write_file(id_file, id, strlen(id), SECURE_CONFIG_FILE_MODE) != 0) {
             if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {
                 DEBUG("devmapper: unmount %s failed", mnt_point_dir);
             }
