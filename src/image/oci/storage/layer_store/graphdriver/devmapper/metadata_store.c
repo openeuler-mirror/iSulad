@@ -17,13 +17,50 @@
 #include "metadata_store.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
+#include "util_atomic.h"
+
+void devmapper_device_info_ref_inc(devmapper_device_info_t *device_info)
+{
+    if (device_info == NULL) {
+        return;
+    }
+    atomic_int_inc(&device_info->refcnt);
+}
+
+static void free_devmapper_device_info_t(devmapper_device_info_t *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+
+    free_image_devmapper_device_info(ptr->info);
+    ptr->info = NULL;
+
+    free(ptr);
+}
+
+void devmapper_device_info_ref_dec(devmapper_device_info_t *device_info)
+{
+    bool is_zero = false;
+
+    if (device_info == NULL) {
+        return;
+    }
+
+    is_zero = atomic_int_dec_test(&device_info->refcnt);
+    if (!is_zero) {
+        return;
+    }
+
+    free_devmapper_device_info_t(device_info);
+}
 
 /* metadata store map kvfree */
 static void metadata_store_map_kvfree(void *key, void *value)
 {
     free(key);
 
-    free_image_devmapper_device_info((image_devmapper_device_info *)value);
+    devmapper_device_info_ref_dec((devmapper_device_info_t *)value);
 }
 
 /* metadata store free */
@@ -59,18 +96,99 @@ error_out:
     return NULL;
 }
 
-bool metadata_store_add(const char *hash, image_devmapper_device_info *device, metadata_store_t *meta_store)
+static devmapper_device_info_t *create_empty_device_info()
 {
-    return map_replace(meta_store->map, (void *)hash, (void *)device);
+    devmapper_device_info_t *result = NULL;
+
+    result = (devmapper_device_info_t *)util_common_calloc_s(sizeof(devmapper_device_info_t));
+    if (result == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+    atomic_int_set(&result->refcnt, 1);
+
+    return result;
+
+err_out:
+    free_devmapper_device_info_t(result);
+    return NULL;
 }
 
-image_devmapper_device_info *metadata_store_get(const char *hash, metadata_store_t *meta_store)
+devmapper_device_info_t *new_device_info(image_devmapper_device_info *device)
 {
-    return map_search(meta_store->map, (void *)hash);
+    devmapper_device_info_t *device_info = NULL;
+
+    if (device == NULL) {
+        ERROR("Empty device info");
+        return NULL;
+    }
+
+    device_info = create_empty_device_info();
+    if (device_info == NULL) {
+        return NULL;
+    }
+
+    device_info->info = device;
+
+    return device_info;
+}
+
+bool metadata_store_add(const char *hash, image_devmapper_device_info *device, metadata_store_t *meta_store)
+{
+    bool ret = false;
+    devmapper_device_info_t *device_info = NULL;
+
+    if (hash == NULL || device == NULL || meta_store == NULL) {
+        return false;
+    }
+
+    device_info = new_device_info(device);
+    if (device_info == NULL) {
+        ERROR("Failed to get new device info");
+        goto out;
+    }
+
+    if (!map_replace(meta_store->map, (void *)hash, (void *)device_info)) {
+        ERROR("Failed to insert device %s to meta store", hash);
+        goto out;
+    }
+
+    ret = true;
+out:
+    if (!ret) {
+        free_devmapper_device_info_t(device_info);
+    }
+    return ret;
+}
+
+devmapper_device_info_t *metadata_store_get(const char *hash, metadata_store_t *meta_store)
+{
+    devmapper_device_info_t *value = NULL;
+
+    if (hash == NULL || meta_store == NULL) {
+        ERROR("Invalid input parameter, id is NULL");
+        return NULL;
+    }
+
+    value = map_search(meta_store->map, (void *)hash);
+    if (value != NULL) {
+        goto found;
+    }
+
+    return NULL;
+
+found:
+    devmapper_device_info_ref_inc(value);
+    return value;
 }
 
 bool metadata_store_remove(const char *hash, metadata_store_t *meta_store)
 {
+    if (hash == NULL || meta_store == NULL) {
+        ERROR("Invalid input parameter, id is NULL");
+        return false;
+    }
+
     return map_remove(meta_store->map, (void *)hash);
 }
 

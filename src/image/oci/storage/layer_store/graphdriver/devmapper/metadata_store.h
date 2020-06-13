@@ -22,11 +22,19 @@
 extern "C" {
 #endif
 
+typedef struct _devmapper_device_info_t_ {
+    image_devmapper_device_info *info;
+    uint64_t refcnt;
+} devmapper_device_info_t;
+
+void devmapper_device_info_ref_inc(devmapper_device_info_t *device_info);
+void devmapper_device_info_ref_dec(devmapper_device_info_t *device_info);
+
 metadata_store_t *metadata_store_new(void);
 
 bool metadata_store_add(const char *hash, image_devmapper_device_info *device, metadata_store_t *meta_store);
 
-image_devmapper_device_info *metadata_store_get(const char *hash, metadata_store_t *meta_store);
+devmapper_device_info_t *metadata_store_get(const char *hash, metadata_store_t *meta_store);
 
 bool metadata_store_remove(const char *hash, metadata_store_t *meta_store);
 

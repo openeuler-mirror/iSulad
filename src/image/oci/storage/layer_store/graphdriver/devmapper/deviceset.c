@@ -520,13 +520,14 @@ free_out:
     return ret;
 }
 
-static image_devmapper_device_info *lookup_device(struct device_set *devset, const char *hash)
+static devmapper_device_info_t *lookup_device(struct device_set *devset, const char *hash)
 {
-    image_devmapper_device_info *info = NULL;
-    bool res;
+    devmapper_device_info_t *device_info = NULL;
+    bool res = false;
 
-    info = metadata_store_get(hash, devset->meta_store);
-    if (info == NULL) {
+    device_info = metadata_store_get(hash, devset->meta_store);
+    if (device_info == NULL) {
+        image_devmapper_device_info *info = NULL;
         info = load_metadata(devset, hash);
         if (info == NULL) {
             ERROR("devmapper: Unknown device %s", hash);
@@ -536,25 +537,29 @@ static image_devmapper_device_info *lookup_device(struct device_set *devset, con
         if (!res) {
             ERROR("devmapper: store device %s failed", hash);
             free_image_devmapper_device_info(info);
-            info = NULL;
+            goto out;
         }
+        device_info = metadata_store_get(hash, devset->meta_store);
     }
 
 out:
-    return info;
+    return device_info;
 }
 
 static uint64_t get_base_device_size(struct device_set *devset)
 {
-    uint64_t res;
-    image_devmapper_device_info *info = NULL;
+    uint64_t res = 0;
+    devmapper_device_info_t *device_info = NULL;
 
-    info = lookup_device(devset, "");
-    if (info == NULL) {
+    device_info = lookup_device(devset, "");
+    if (device_info == NULL) {
         return 0;
     }
-    res = info->size;
-    free_image_devmapper_device_info(info);
+
+    res = device_info->info->size;
+
+    devmapper_device_info_ref_dec(device_info);
+
     return res;
 }
 
@@ -564,7 +569,7 @@ static int device_file_walk(struct device_set *devset)
     DIR *dp = NULL;
     struct dirent *entry = NULL;
     struct stat st;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
     char fname[PATH_MAX] = { 0 };
     char *metadir = NULL;
 
@@ -616,12 +621,13 @@ static int device_file_walk(struct device_set *devset)
             continue;
         }
 
-        info = lookup_device(devset, entry->d_name); // entry->d_name 取值base  hash值等
-        if (info == NULL) {
+        device_info = lookup_device(devset, entry->d_name); // entry->d_name 取值base  hash值等
+        if (device_info == NULL) {
             ERROR("devmapper: Error looking up device %s", entry->d_name);
             ret = -1;
             goto out;
         }
+        devmapper_device_info_ref_dec(device_info);
     }
 
 out:
@@ -692,18 +698,19 @@ static void construct_device_id_map(struct device_set *devset)
     char **dev_arr = NULL;
     size_t dev_arr_len = 0;
     size_t i = 0;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
     dev_arr = metadata_store_list_hashes(devset->meta_store);
     dev_arr_len = util_array_len((const char **)dev_arr);
 
     for (i = 0; i < dev_arr_len; i++) {
-        info = metadata_store_get(dev_arr[i], devset->meta_store);
-        if (info == NULL) {
+        device_info = lookup_device(devset, dev_arr[i]);
+        if (device_info == NULL) {
             ERROR("devmapper: get device %s from store failed", dev_arr[i]);
             continue;
         }
-        mark_device_id_used(devset, info->device_id);
+        mark_device_id_used(devset, device_info->info->device_id);
+        devmapper_device_info_ref_dec(device_info);
     }
 }
 
@@ -712,21 +719,21 @@ static void count_deleted_devices(struct device_set *devset)
     char **dev_arr = NULL;
     size_t dev_arr_len = 0;
     size_t i = 0;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
     dev_arr = metadata_store_list_hashes(devset->meta_store);
     dev_arr_len = util_array_len((const char **)dev_arr);
 
     for (i = 0; i < dev_arr_len; i++) {
-        info = metadata_store_get(dev_arr[i], devset->meta_store);
-        if (info == NULL) {
+        device_info = lookup_device(devset, dev_arr[i]);
+        if (device_info == NULL) {
             ERROR("devmapper: get device %s from store failed", dev_arr[i]);
             continue;
         }
-        if (!info->deleted) {
-            continue;
+        if (device_info->info->deleted) {
+            devset->nr_deleted_devices++;
         }
-        devset->nr_deleted_devices++;
+        devmapper_device_info_ref_dec(device_info);
     }
 }
 
@@ -2107,15 +2114,15 @@ static int do_delete_device(struct device_set *devset, const char *hash, bool sy
 {
     int ret = 0;
     bool deferred_remove;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
-    info = lookup_device(devset, hash);
-    if (info == NULL) {
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
         ERROR("devmapper: lookup device failed");
         return -1;
     }
     if (devset->do_blk_discard) {
-        issue_discard(devset, info);
+        issue_discard(devset, device_info->info);
     }
 
     deferred_remove = devset->deferred_remove;
@@ -2123,40 +2130,41 @@ static int do_delete_device(struct device_set *devset, const char *hash, bool sy
         deferred_remove = false;
     }
 
-    ret = deactivate_device_mode(devset, info, deferred_remove);
+    ret = deactivate_device_mode(devset, device_info->info, deferred_remove);
     if (ret != 0) {
         ERROR("devmapper: Error deactivating device");
         goto free_out;
     }
 
-    ret = delete_transaction(devset, info, sync_delete);
+    ret = delete_transaction(devset, device_info->info, sync_delete);
     if (ret != 0) {
         goto free_out;
     }
 
 free_out:
+    devmapper_device_info_ref_dec(device_info);
     return ret;
 }
 
 static int setup_base_image(struct device_set *devset)
 {
     int ret = 0;
-    image_devmapper_device_info *old_info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
-    old_info = lookup_device(devset, "base");
+    device_info = lookup_device(devset, "base");
 
     // base image already exists. If it is initialized properly, do UUID
     // verification and return. Otherwise remove image and set it up
     // fresh.
-    if (old_info != NULL) {
-        if (old_info->initialized && !old_info->deleted) {
-            ret = setup_verify_baseimages_uuidfs(devset, old_info);
+    if (device_info != NULL) {
+        if (device_info->info->initialized && !device_info->info->deleted) {
+            ret = setup_verify_baseimages_uuidfs(devset, device_info->info);
             if (ret != 0) {
                 ERROR("devmapper: do base image uuid verification failed");
                 goto out;
             }
 
-            ret = check_grow_base_device_fs(devset, old_info);
+            ret = check_grow_base_device_fs(devset, device_info->info);
             if (ret != 0) {
                 ERROR("devmapper: grow base device fs failed");
             }
@@ -2172,7 +2180,7 @@ static int setup_base_image(struct device_set *devset)
 
     // If we are setting up base image for the first time, make sure
     // thin pool is empty.
-    if (util_valid_str(devset->thin_pool_device) && old_info == NULL) {
+    if (util_valid_str(devset->thin_pool_device) && device_info == NULL) {
         ret = check_thin_pool(devset);
         if (ret != 0) {
             ERROR("devmapper: check thin pool failed");
@@ -2186,6 +2194,7 @@ static int setup_base_image(struct device_set *devset)
     }
 
 out:
+    devmapper_device_info_ref_dec(device_info);
     return ret;
 }
 
@@ -2545,8 +2554,8 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
                const json_map_string_string *storage_opts)
 {
     int ret = 0;
-    image_devmapper_device_info *base_info = NULL;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *base_device_info = NULL;
+    devmapper_device_info_t *device_info = NULL;
     uint64_t size = 0;
 
     if (pthread_rwlock_wrlock(&(devset->devmapper_driver_rwlock)) != 0) {
@@ -2554,21 +2563,21 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
         return -1;
     }
 
-    base_info = lookup_device(devset, base_hash);
-    if (base_info == NULL) {
+    base_device_info = lookup_device(devset, base_hash);
+    if (base_device_info == NULL) {
         ERROR("devmapper: lookup device %s failed", base_hash);
         ret = -1;
         goto free_out;
     }
 
-    if (base_info->deleted) {
+    if (base_device_info->info->deleted) {
         ret = -1;
-        ERROR("devmapper: Base device %s has been marked for deferred deletion", base_info->hash);
+        ERROR("devmapper: Base device %s has been marked for deferred deletion", base_device_info->info->hash);
         goto free_out;
     }
 
-    info = lookup_device(devset, hash);
-    if (info == NULL) {
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
         // ERROR();
         ret = -1;
         goto free_out;
@@ -2580,43 +2589,34 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
     }
 
     if (size == 0) {
-        size = base_info->size;
+        size = base_device_info->info->size;
     }
 
-    if (size < base_info->size) {
-        ERROR("devmapper: Container size cannot be smaller than %lu", base_info->size);
+    if (size < base_device_info->info->size) {
+        ERROR("devmapper: Container size cannot be smaller than %lu", base_device_info->info->size);
         goto free_out;
     }
 
-    ret = take_snapshot(devset, hash, base_info, size);
+    ret = take_snapshot(devset, hash, base_device_info->info, size);
     if (ret != 0) {
         goto free_out;
     }
 
     // Grow the container rootfs.
-    if (size > base_info->size) {
-        free_image_devmapper_device_info(info);
-        info = NULL;
-        info = lookup_device(devset, hash);
-        if (info == NULL) {
-            ERROR("devmapper: lookup device %s failed", hash);
-            ret = -1;
-            goto free_out;
-        }
-
-        ret = grow_fs(devset, info);
+    if (size > base_device_info->info->size) {
+        ret = grow_fs(devset, device_info->info);
         if (ret != 0) {
             goto free_out;
         }
     }
     ret = 0;
 free_out:
+    devmapper_device_info_ref_dec(base_device_info);
+    devmapper_device_info_ref_dec(device_info);
     if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("unlock devmapper conf failed");
         return -1;
     }
-    free_image_devmapper_device_info(base_info);
-    free_image_devmapper_device_info(info);
     return ret;
 }
 
@@ -2647,7 +2647,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
                  struct device_set *devset)
 {
     int ret = 0;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
     char *dev_fname = NULL;
     char *options = NULL;
 
@@ -2661,25 +2661,25 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
         return -1;
     }
 
-    info = lookup_device(devset, hash);
-    if (info == NULL) {
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
         ERROR("devmapper: lookup device %s failed", hash);
         ret = -1;
         goto free_out;
     }
 
-    if (info->deleted) {
+    if (device_info->info->deleted) {
         ret = -1;
-        ERROR("devmapper: Base device %s has been marked for deferred deletion", info->hash);
+        ERROR("devmapper: Base device %s has been marked for deferred deletion", device_info->info->hash);
         goto free_out;
     }
-    dev_fname = dev_name(devset, info);
+    dev_fname = dev_name(devset, device_info->info);
     if (dev_fname == NULL) {
         ERROR("devmapper: failed to get device full name");
         goto free_out;
     }
 
-    ret = activate_device_if_needed(devset, info, false);
+    ret = activate_device_if_needed(devset, device_info->info, false);
     if (ret != 0) {
         ERROR("devmapper: Error activating devmapper device for %s", hash);
         goto free_out;
@@ -2694,11 +2694,11 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
     }
 
 free_out:
+    devmapper_device_info_ref_dec(device_info);
     if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("unlock devmapper conf failed");
         ret = -1;
     }
-    free_image_devmapper_device_info(info);
     free(dev_fname);
     free(options);
     return ret;
@@ -2708,7 +2708,7 @@ free_out:
 int unmount_device(const char *hash, const char *mount_path, struct device_set *devset)
 {
     int ret = 0;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
     if (hash == NULL || mount_path == NULL) {
         ERROR("devmapper: failed to unmount device");
@@ -2720,8 +2720,8 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
         return -1;
     }
 
-    info = lookup_device(devset, hash);
-    if (info == NULL) {
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
         ERROR("devmapper: lookup device %s failed", hash);
         ret = -1;
         goto free_out;
@@ -2740,24 +2740,24 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
         DEBUG("devmapper: doing remove on a unmounted device %s failed", mount_path);
     }
 
-    ret = deactivate_device(devset, info);
+    ret = deactivate_device(devset, device_info->info);
     if (ret != 0) {
         ERROR("devmapper: Error deactivating device");
     }
 
 free_out:
+    devmapper_device_info_ref_dec(device_info);
     if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("unlock devmapper conf failed");
         ret = -1;
     }
-    free_image_devmapper_device_info(info);
     return ret;
 }
 
 bool has_device(const char *hash, struct device_set *devset)
 {
     bool res = false;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
     if (hash == NULL) {
         ERROR("devmapper: failed to judge device metadata exists");
@@ -2769,25 +2769,28 @@ bool has_device(const char *hash, struct device_set *devset)
         return -1;
     }
 
-    info = lookup_device(devset, hash);
-    if (info == NULL) {
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
         ERROR("devmapper: lookup device %s failed", hash);
         goto free_out;
     }
 
     res = true;
+
 free_out:
+    devmapper_device_info_ref_dec(device_info);
+
     if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("unlock devmapper conf failed");
     }
-    free_image_devmapper_device_info(info);
+
     return res;
 }
 
 int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
 {
     int ret = 0;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
     if (hash == NULL) {
         return -1;
@@ -2798,8 +2801,8 @@ int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
         return -1;
     }
 
-    info = lookup_device(devset, hash);
-    if (info == NULL) {
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
         ret = -1;
         ERROR("devmapper: lookup device %s failed", hash);
         goto free_out;
@@ -2808,11 +2811,13 @@ int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
     ret = do_delete_device(devset, hash, sync_delete);
 
 free_out:
+    devmapper_device_info_ref_dec(device_info);
+
     if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ret = -1;
         ERROR("unlock devmapper conf failed");
     }
-    free_image_devmapper_device_info(info);
+
     return ret;
 }
 
@@ -2820,7 +2825,7 @@ int export_device_metadata(struct device_metadata *dev_metadata, const char *has
 {
     int ret = 0;
     char *dm_name = NULL;
-    image_devmapper_device_info *info = NULL;
+    devmapper_device_info_t *device_info = NULL;
 
     if (hash == NULL || dev_metadata == NULL) {
         return -1;
@@ -2838,15 +2843,15 @@ int export_device_metadata(struct device_metadata *dev_metadata, const char *has
         goto free_out;
     }
 
-    info = lookup_device(devset, hash);
-    if (info == NULL) {
+    device_info = lookup_device(devset, hash);
+    if (device_info == NULL) {
         ret = -1;
         ERROR("devmapper: lookup device %s failed", hash);
         goto free_out;
     }
 
-    dev_metadata->device_id = info->device_id;
-    dev_metadata->device_size = info->size;
+    dev_metadata->device_id = device_info->info->device_id;
+    dev_metadata->device_size = device_info->info->size;
     dev_metadata->device_name = util_strdup_s(dm_name);
 
 free_out:
@@ -2854,8 +2859,8 @@ free_out:
         ret = -1;
         ERROR("unlock devmapper conf failed");
     }
-    free_image_devmapper_device_info(info);
     free(dm_name);
+    devmapper_device_info_ref_dec(device_info);
     return ret;
 }
 
