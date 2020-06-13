@@ -562,16 +562,24 @@ static uint64_t get_base_device_size(struct device_set *devset)
 static int device_file_walk(struct device_set *devset)
 {
     int ret = 0;
-    DIR *dp;
-    struct dirent *entry;
+    DIR *dp = NULL;
+    struct dirent *entry = NULL;
     struct stat st;
     image_devmapper_device_info *info = NULL;
     char fname[PATH_MAX] = { 0 };
+    char *metadir = NULL;
 
-    dp = opendir(DEVICE_FILE_DIR);
-    if (dp == NULL) {
-        ERROR("devmapper: open dir %s failed", DEVICE_FILE_DIR);
+    metadir = metadata_dir(devset);
+    if (metadir == NULL) {
+        ERROR("Failed to get meta data directory");
         return -1;
+    }
+
+    dp = opendir(metadir);
+    if (dp == NULL) {
+        ERROR("devmapper: open dir %s failed", metadir);
+        ret = -1;
+        goto out;
     }
 
     // 路径权限导致stat为非regular文件，误判为dir，此处需优化
@@ -583,7 +591,7 @@ static int device_file_walk(struct device_set *devset)
         }
 
         (void)memset(fname, 0, sizeof(fname));
-        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", DEVICE_FILE_DIR, entry->d_name);
+        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", metadir, entry->d_name);
         if (pathname_len < 0 || pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
@@ -618,7 +626,10 @@ static int device_file_walk(struct device_set *devset)
     }
 
 out:
-    closedir(dp);
+    if (dp != NULL) {
+        closedir(dp);
+    }
+    free(metadir);
     return ret;
 }
 
@@ -2433,8 +2444,7 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
         goto out;
     }
 
-    ret = devmapper_parse_options(devset, options, len);
-    if (ret != 0) {
+    if (devmapper_parse_options(devset, options, len) != 0) {
         ERROR("devmapper: parse options failed");
         ret = -1;
         goto out;
@@ -2453,8 +2463,7 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
         goto out;
     }
 
-    ret = pthread_rwlock_init(&devset->devmapper_driver_rwlock, NULL);
-    if (ret != 0) {
+    if (pthread_rwlock_init(&devset->devmapper_driver_rwlock, NULL) != 0) {
         ERROR("Failed to init devmapper conf rwlock");
         ret = -1;
         goto out;

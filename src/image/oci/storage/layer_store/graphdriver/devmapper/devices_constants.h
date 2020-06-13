@@ -21,7 +21,6 @@
 #include "isula_libutils/image_devmapper_deviceset_metadata.h"
 #include "isula_libutils/image_devmapper_direct_lvm_config.h"
 
-#define DEVICE_FILE_DIR "/var/lib/isulad/storage/devicemapper/metadata"
 #define DEVICE_SET_METAFILE "deviceset-metadata"
 #define TRANSACTION_METADATA "transaction-metadata"
 #define DEVICE_DIRECTORY "/dev"
