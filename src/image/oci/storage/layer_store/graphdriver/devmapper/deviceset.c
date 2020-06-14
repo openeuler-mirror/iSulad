@@ -266,6 +266,11 @@ static int deactivate_device_mode(struct device_set *devset, image_devmapper_dev
     char *dm_name = NULL;
     struct dm_info dinfo;
 
+    if (devset == NULL || dev_info == NULL) {
+        ERROR("Invalid input params to deactivate device");
+        return -1;
+    }
+
     dm_name = get_dm_name(devset, dev_info->hash);
     if (dm_name == NULL) {
         ERROR("devmapper: get dm device name failed");
@@ -399,7 +404,7 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
     }
     info = image_devmapper_device_info_parse_file(metadata_file, NULL, &err);
     if (info == NULL) {
-        ERROR("load metadata file %s failed %s", metadata_file, err != NULL ? err : "");
+        DEBUG("load metadata file %s failed %s", metadata_file, err != NULL ? err : "");
         goto out;
     }
 
@@ -601,7 +606,7 @@ static int device_file_walk(struct device_set *devset)
             continue;
         }
 
-        ret = stat(entry->d_name, &st);
+        ret = stat(fname, &st);
         if (ret != 0) {
             ERROR("devmapper: get %s stat error:%s", fname, strerror(errno));
             goto out;
@@ -1340,8 +1345,6 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
         }
 
         mark_device_id_free(devset, device_id);
-        // free_image_devmapper_device_info(info);
-        // info = NULL;
     }
 
 out:
@@ -1534,7 +1537,7 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
     char *dm_name = NULL;
     struct dm_info dmi = { 0 };
 
-    if (!devset->deferred_remove == 0) {
+    if (!devset->deferred_remove) {
         ERROR("devmapper: cancel deferred remove input param null");
         return ret;
     }
@@ -2523,9 +2526,13 @@ static int parse_storage_opt(const json_map_string_string *opts, uint64_t *size)
     int ret = 0;
     size_t i = 0;
 
-    if (size == NULL || opts == NULL) {
-        ret = -1;
-        goto out;
+    if (size == NULL) {
+        ERROR("Invalid param, size is null");
+        return -1;
+    }
+
+    if (opts == NULL || opts->len == 0) {
+        return 0;
     }
 
     for (i = 0; i < opts->len; i++) {
@@ -2563,9 +2570,9 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
         return -1;
     }
 
-    base_device_info = lookup_device(devset, base_hash);
+    base_device_info = lookup_device(devset, util_valid_str(base_hash) ? base_hash : "base");
     if (base_device_info == NULL) {
-        ERROR("devmapper: lookup device %s failed", base_hash);
+        ERROR("devmapper: lookup device %s failed", util_valid_str(base_hash) ? base_hash : "base");
         ret = -1;
         goto free_out;
     }
@@ -2577,14 +2584,15 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
     }
 
     device_info = lookup_device(devset, hash);
-    if (device_info == NULL) {
-        // ERROR();
+    if (device_info != NULL) {
+        ERROR("devmapper: device %s already exists", hash);
         ret = -1;
         goto free_out;
     }
 
     ret = parse_storage_opt(storage_opts, &size);
     if (ret != 0) {
+        ERROR("devmapper: parse storage opts for adding device failed");
         goto free_out;
     }
 
@@ -2992,4 +3000,134 @@ free_out:
         ERROR("unlock devmapper conf failed");
     }
     return st;
+}
+
+static int umount_dev_file_recursive(struct device_set *devset)
+{
+    int ret = 0;
+    DIR *dp = NULL;
+    struct dirent *entry;
+    struct stat st;
+    char fname[PATH_MAX] = { 0 };
+    devmapper_device_info_t *device_info = NULL;
+    char *mnt_root = NULL;
+
+    mnt_root = util_path_join(devset->root, "mnt");
+    if (mnt_root == NULL) {
+        ret = -1;
+        ERROR("devmapper:join path %s/mnt failed", devset->root);
+        goto out;
+    }
+
+    dp = opendir(mnt_root);
+    if (dp == NULL) {
+        ret = -1;
+        ERROR("devmapper: open dir %s failed", mnt_root);
+        goto out;
+    }
+
+    // Do my best to umount all of the device that has been mounted
+    while ((entry = readdir(dp)) != NULL) {
+        int pathname_len;
+
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
+            continue;
+        }
+
+        (void)memset(fname, 0, sizeof(fname));
+        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", mnt_root, entry->d_name);
+        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+            ERROR("Pathname too long");
+            continue;
+        }
+
+        ret = stat(fname, &st);
+        if (ret != 0) {
+            ERROR("devmapper: get %s stat error:%s", fname, strerror(errno));
+            goto out;
+        }
+
+        if (!S_ISDIR(st.st_mode)) {
+            DEBUG("devmapper: skipping regular file just to process dir");
+            continue;
+        }
+
+        if (util_detect_mounted(fname)) {
+            ret = umount2(fname, MNT_DETACH);
+            if (ret < 0 && errno != EINVAL) {
+                ERROR("Failed to umount directory %s:%s", fname, strerror(errno));
+                ret = -1;
+                goto out;
+            }
+        }
+
+        device_info = lookup_device(devset, entry->d_name);
+        if (device_info == NULL) {
+            DEBUG("devmapper: shutdown lookup device %s err", entry->d_name);
+        } else if (deactivate_device(devset, device_info->info) != 0) {
+            DEBUG("devmapper: shutdown deactivate device %s err", entry->d_name);
+            goto out;
+        }
+        devmapper_device_info_ref_dec(device_info);
+    }
+
+    device_info = lookup_device(devset, "base");
+    if (device_info != NULL) {
+        ret = deactivate_device(devset, device_info->info);
+        if (ret != 0) {
+            DEBUG("devmapper: shutdown deactivate base device err");
+        }
+        devmapper_device_info_ref_dec(device_info);
+    }
+    
+    ret = 0;
+
+out:
+    closedir(dp);
+    free(mnt_root);
+    return ret;
+}
+
+int device_set_shutdown(struct device_set *devset, const char *home)
+{
+    int ret = 0;
+    devmapper_device_info_t *device_info = NULL;
+
+    if (devset == NULL || home == NULL) {
+        ERROR("Invalid input params to shutdown device set");
+        return -1;
+    }
+
+    if (pthread_rwlock_wrlock(&(devset->devmapper_driver_rwlock)) != 0) {
+        ERROR("lock devmapper conf failed");
+        return -1;
+    }
+
+    if (save_deviceset_matadata(devset)) {
+        DEBUG("devmapper: save deviceset metadata failed");
+    }
+
+    ret = umount_dev_file_recursive(devset);
+    if (ret != 0) {
+        ERROR("devmapper: Shutdown umount device failed");
+        goto free_out;
+    }
+
+    device_info = lookup_device(devset, "base");
+    if (device_info != NULL) {
+        if (deactivate_device(devset, device_info->info) != 0) {
+            DEBUG("devmapper: Shutdown deactivate base error");
+        }
+    }
+
+    ret = 0;
+
+free_out:
+    devmapper_device_info_ref_dec(device_info);
+    if (pthread_rwlock_unlock(&(devset->devmapper_driver_rwlock)) != 0) {
+        ERROR("unlock devmapper conf failed");
+        return -1;
+    }
+
+    return ret;
 }

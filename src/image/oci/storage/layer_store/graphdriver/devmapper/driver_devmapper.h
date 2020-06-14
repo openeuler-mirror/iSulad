@@ -56,6 +56,11 @@ int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdr
 
 int devmapper_clean_up(const struct graphdriver *driver);
 
+int devmapper_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver);
+
+int devmapper_get_layer_fs_info(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info);
+
+
 #ifdef __cplusplus
 }
 #endif

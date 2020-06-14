@@ -105,10 +105,10 @@ static int add_target(struct dm_task *dmt, uint64_t start, uint64_t size, const 
     ret = dm_task_add_target(dmt, start, size, ttype, params);
     if (ret != 1) {
         ERROR("devmapper:dm task add target failed, params is %s", params);
-        ret = ERR_TASK_ADD_TARGET;
+        return ERR_TASK_ADD_TARGET;
     }
 
-    return ret;
+    return 0;
 }
 
 void set_udev_wait_timeout(int64_t t)
@@ -170,12 +170,14 @@ int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **
 
     ret = dm_task_run(dmt);
     if (ret != 1) {
+        ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
-    // int dm_task_get_info(struct dm_task *dmt, struct dm_info *dmi);
+
     ret = dm_task_get_info(dmt, &info);
     if (ret != 1) {
+        ret = -1;
         ERROR("devicemapper: get info err");
         goto cleanup;
     }
@@ -185,10 +187,9 @@ int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **
         ret = -1;
         goto cleanup;
     }
-    // void *dm_get_next_target(struct dm_task *dmt,
-    //                      void *next, uint64_t *start, uint64_t *length,
-    //                      char **target_type, char **params);
+
     (void)dm_get_next_target(dmt, NULL, start, length, target_type, params);
+    ret = 0;
 
 cleanup:
     free(dmt);
@@ -270,6 +271,36 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
 cleanup:
     free(dmt);
     return ret;
+}
+
+struct dm_deps *dev_get_deps(const char *name)
+{
+    int ret = 0;
+    struct dm_task *dmt = NULL;
+    struct dm_deps *deps = NULL;
+
+    dmt = task_create_named(DM_DEVICE_DEPS, name);
+    if (dmt == NULL) {
+        ERROR("devicemapper: create named task for get deps failed");
+        return NULL;
+    }
+
+    ret = dm_task_run(dmt);
+    if (ret != 1) {
+        ERROR("devicemapper: task run failed");
+        goto cleanup;
+    }
+
+    deps = dm_task_get_deps(dmt);
+    if (deps == NULL) {
+        ERROR("devicemapper: get deps for device:%s err", name);
+        goto cleanup;
+    }
+
+cleanup:
+    free(dmt);
+    return deps;
+
 }
 
 int dev_get_info(struct dm_info *info, const char *name)
@@ -738,6 +769,8 @@ int dev_suspend_device(const char *dm_name)
         ERROR("devicemapper: Error running deviceCreate (ActivateDevice) %d", ret);
     }
 
+    ret = 0;
+
 out:
     free(dmt);
     return ret;
@@ -969,15 +1002,15 @@ int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_de
         goto cleanup;
     }
 
-    if (snprintf(message, sizeof(message), "create_snap %d %d", device_id, base_device_id) < 0) {
+    ret = snprintf(message, sizeof(message), "create_snap %d %d", device_id, base_device_id);
+    if (ret < 0 || (size_t)ret >= sizeof(message)) {
         ret = -1;
-        // ERROR()
+        ERROR("devicemapper: print create_snap message failed");
         goto cleanup;
     }
 
     ret = set_message(dmt, message);
     if (ret != 0) {
-        ret = -1;
         ERROR("devicemapper: Can't set message %s", message);
         goto cleanup;
     }
@@ -1016,26 +1049,26 @@ int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_
 
     dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_name);
     if (dmt == NULL) {
+        ret = -1;
         ERROR("devicemapper:create named task %s failed", pool_name);
-        return -1;
+        goto cleanup;
     }
 
     ret = set_sector(dmt, sector);
     if (ret != 0) {
-        ret = -1;
         ERROR("devicemapper: Can't set sector");
         goto cleanup;
     }
 
-    if (snprintf(message, sizeof(message), "set_transaction_id %lu %lu", old_id, new_id) < 0) {
+    ret = snprintf(message, sizeof(message), "set_transaction_id %lu %lu", old_id, new_id);
+    if (ret < 0 || (size_t)ret >= sizeof(message)) {
         ret = -1;
-        // ERROR()
+        ERROR("devicemapper:print set_transaction_id message failed");
         goto cleanup;
     }
 
     ret = set_message(dmt, message);
     if (ret != 0) {
-        ret = -1;
         goto cleanup;
     }
 

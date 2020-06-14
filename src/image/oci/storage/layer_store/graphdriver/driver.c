@@ -65,6 +65,8 @@ static const struct graphdriver_ops g_devmapper_ops = {
     .get_layer_metadata = devmapper_get_layer_metadata,
     .get_driver_status = devmapper_get_driver_status,
     .clean_up = devmapper_clean_up,
+    .try_repair_lowers = devmapper_repair_lowers,
+    .get_layer_fs_info = devmapper_get_layer_fs_info,
 };
 
 static struct graphdriver g_drivers[] = {

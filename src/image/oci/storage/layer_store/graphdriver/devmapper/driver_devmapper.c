@@ -173,9 +173,16 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
         goto out;
     }
 
+    ret = util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE);
+    if (ret != 0) {
+        ERROR("Failed to mkdir path:%s", mnt_point_dir);
+        goto out;
+    }
+
     DEBUG("devmapper: start to mount container device");
     ret = mount_device(id, mnt_point_dir, mount_opts, driver->devset);
     if (ret != 0) {
+        ERROR("Mount device:%s to path:%s failed", id, mnt_parent_dir);
         goto out;
     }
 
@@ -511,8 +518,31 @@ out:
 
 int devmapper_clean_up(const struct graphdriver *driver)
 {
+    int ret = 0;
+
     if (driver == NULL) {
+        ERROR("Invalid input param to cleanup devicemapper");
         return -1;
     }
+
+    ret = device_set_shutdown(driver->devset, driver->home);
+    if (ret != 0) {
+        ERROR("devmapper: shutdown device set failed root is %s", driver->home);
+        return -1;
+    }
+
+
+    // Is it necessary to execute recursiveUmount()
     return umount(driver->home);
 }
+
+int devmapper_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver)
+{
+    return 0;
+}
+
+int devmapper_get_layer_fs_info(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info)
+{
+    return 0;
+}
+
