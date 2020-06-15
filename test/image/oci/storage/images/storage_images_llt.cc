@@ -13,8 +13,6 @@
  * Description: provide oci storage images unit test
  ******************************************************************************/
 #include "image_store.h"
-#include "isula_libutils/imagetool_image.h"
-#include "utils_array.h"
 #include <cstring>
 #include <iostream>
 #include <algorithm>
@@ -28,11 +26,24 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include "utils.h"
+#include "utils_array.h"
 #include "path.h"
-
-#include "storage.h"
 #include "isula_libutils/imagetool_images_list.h"
+#include "isula_libutils/imagetool_image.h"
+#include "storage_mock.h"
+
+using ::testing::Args;
+using ::testing::ByRef;
+using ::testing::SetArgPointee;
+using ::testing::DoAll;
+using ::testing::NiceMock;
+using ::testing::Return;
+using ::testing::NotNull;
+using ::testing::AtLeast;
+using ::testing::Invoke;
+using ::testing::_;
 
 std::string GetDirectory()
 {
@@ -114,6 +125,157 @@ bool dirExists(const char *path)
   "Loaded": "2020-03-16T03:46:17.439778957Z"
   }
  ******************************************************************************************/
+
+class StorageImagesCompatibilityUnitTest : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        MockStorage_SetMock(&m_storage_mock);
+        std::string v1_images_dir = GetDirectory() + "/data/v1_images/*";
+        std::string overlay_images_dir = GetDirectory() + "/data/overlay-images";
+        std::string prepare_command = "cp -rf " + v1_images_dir + " " + overlay_images_dir;
+        ASSERT_EQ(system(prepare_command.c_str()), 0);
+    }
+
+    void TearDown() override
+    {
+        image_store_free();
+        MockStorage_SetMock(nullptr);
+    }
+
+    std::vector<std::string> ids { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
+        "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
+    char store_real_path[PATH_MAX] = { 0x00 };
+    NiceMock<MockStorage> m_storage_mock;
+};
+
+struct layer_list *new_layer_list(const char *parent, const char *id, const char *uncompressed_digest)
+{
+    struct layer_list *list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
+    if (list == nullptr) {
+        std::cerr << "Out of memory" << std::endl;
+        return nullptr;
+    }
+    list->layers = (struct layer **)util_common_calloc_s(sizeof(struct layer *) * 1);
+    if (list->layers == nullptr) {
+        std::cerr << "Out of memory" << std::endl;
+        free(list);
+        return nullptr;
+    }
+
+    list->layers[0] = (struct layer *)util_common_calloc_s(sizeof(struct layer));
+    if (list->layers[0] == nullptr) {
+        std::cerr << "Out of memory" << std::endl;
+        free(list->layers);
+        free(list);
+        return nullptr;
+    }
+
+    list->layers[0]->parent = util_strdup_s(parent);
+    list->layers[0]->id = util_strdup_s(id);
+    list->layers[0]->uncompressed_digest = util_strdup_s(uncompressed_digest);
+
+    list->layers_len = 1;
+
+    return list;
+}
+
+struct layer_list *invokeStorageLayersGetByUncompressDigest(const char *digest)
+{
+    if (strcmp(digest, "sha256:270b8855c17de6980aff6cb060c7d95c35e018cfb30c85e5a0b7810ad5620761") == 0) {
+        return new_layer_list(nullptr, "777a4eeaaf3deda1634b11faa1f3b205899bfeaef1b35793011b0cc498f2f569",
+                              "sha256:777a4eeaaf3deda1634b11faa1f3b205899bfeaef1b35793011b0cc498f2f569");
+    } else if (strcmp(digest, "sha256:3bab9736f67fd5add499c55afd6f652b096c999a887e5541fb3728bc267ea4df") == 0) {
+        return new_layer_list("777a4eeaaf3deda1634b11faa1f3b205899bfeaef1b35793011b0cc498f2f569",
+                              "3632f9a018f118849134ff162fb66916d264a43cc385a518d8866e65c520e57c",
+                              "sha256:9781777d8e795a272e9b8f536eea8086092bc0e9cfacaaae2f300f9eb5ca90b3");
+    } else if (strcmp(digest, "sha256:036e18d91b38771191e73ff9df2cc49d2161e1f52951323b3807b35c4c4a0955") == 0) {
+        return new_layer_list("3632f9a018f118849134ff162fb66916d264a43cc385a518d8866e65c520e57c",
+                              "aa0de2f7914a7604dd656497ba339849c2675bfde5aaa2875b411523aa0c2027",
+                              "sha256:7078c7b35daf7c4beac7f970b7fd05936ea8f00948c8cea95131471572fa8d00");
+    } else if (strcmp(digest, "sha256:0d50334e42c821bc3cba70d4ea10be0c6c9af46179fd95a363c4923f75dc4432") == 0) {
+        return new_layer_list("aa0de2f7914a7604dd656497ba339849c2675bfde5aaa2875b411523aa0c2027",
+                              "abd1f94592bb2ece4ade4bbfdfd7031946353b713ae3e0ae7d815175adaec65b",
+                              "sha256:2e5ed01d3447d011b29f0dda77dcba2e959f5918bb28a8866b02d369d36f7fea");
+    } else if (strcmp(digest, "sha256:2d7e11a39e1443dbb0549c610a2c074090448f06dd74bb5c71afbeacd3728836") == 0) {
+        return new_layer_list("abd1f94592bb2ece4ade4bbfdfd7031946353b713ae3e0ae7d815175adaec65b",
+                              "389650cd5546680883f34e9c05c6ae9cecbd6e8304a3fe1863fa64f9b0810b1f",
+                              "sha256:2838fcdb5fb32271e54128f0b66659df7168f0fcaf9b1cb9be1603971c80ab70");
+    } else if (strcmp(digest, "sha256:315db447e923063b48b8637d90cd06d62f25dfebf835ae86a745060a5aa69f49") == 0) {
+        return new_layer_list("389650cd5546680883f34e9c05c6ae9cecbd6e8304a3fe1863fa64f9b0810b1f",
+                              "af2232f19de66e200ef58db111ddcc70643ece428062e84365631504cfd55d49",
+                              "sha256:6abc744fb856526f5724493233540630019cc0ae6fdcb7800dbe369c5b71b3d5");
+    } else if (strcmp(digest, "sha256:ec0fd8a33d0939a0865c77999b673412c7173bdc1edea407875d67450f77688b") == 0) {
+        return new_layer_list("af2232f19de66e200ef58db111ddcc70643ece428062e84365631504cfd55d49",
+                              "aab2a0562c75577e45581cb5a541d886bfd9aa85a46e441dc196caee383b9f88",
+                              "sha256:87312bae2171c00611fe2150ea126a5d1b1b5d499c5ea5855011ac4457bfbf86");
+    } else if (strcmp(digest, "sha256:e206e39b1faf8c8a7ee64087194fc6bb041c427ff61918c867e63e3043e3e373") == 0) {
+        return new_layer_list("aab2a0562c75577e45581cb5a541d886bfd9aa85a46e441dc196caee383b9f88",
+                              "1208d142e094f51786e5f3a0f4b82b1d03b7ceddd7d306706b21014851aa347e",
+                              "sha256:3eab8256ce5f58e9f0020682497c37e0f0f7efc9b499be6206cfe3e0c4bae26b");
+    } else if (strcmp(digest, "sha256:fca276b00973f1a1cc7a9ae86a35f430e968bdd5eb7f1001226e84b466df0ab3") == 0) {
+        return new_layer_list("1208d142e094f51786e5f3a0f4b82b1d03b7ceddd7d306706b21014851aa347e",
+                              "143a2c8cdc3656ecdb94b35081362dfe55d9c6c5685f3c526bc72a34c9426c9b",
+                              "sha256:5684d75beec31d1f3ca972611e2bd9c0beb50748269ec901f80204e2cc4663e3");
+    }
+
+    return nullptr;
+}
+
+void free_layer(struct layer *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->id);
+    ptr->id = NULL;
+    free(ptr->parent);
+    ptr->parent = NULL;
+    free(ptr->mount_point);
+    ptr->mount_point = NULL;
+    free(ptr->compressed_digest);
+    ptr->compressed_digest = NULL;
+    free(ptr->uncompressed_digest);
+    ptr->uncompressed_digest = NULL;
+    free(ptr);
+}
+
+void invokeFreeLayerList(struct layer_list *ptr)
+{
+    size_t i = 0;
+    if (ptr == NULL) {
+        return;
+    }
+
+    for (; i < ptr->layers_len; i++) {
+        free_layer(ptr->layers[i]);
+        ptr->layers[i] = NULL;
+    }
+    free(ptr->layers);
+    ptr->layers = NULL;
+    free(ptr);
+}
+
+TEST_F(StorageImagesCompatibilityUnitTest, test_load_v1_image)
+{
+    char store_real_path[PATH_MAX] = { 0x00 };
+    struct storage_module_init_options opts;
+    std::string dir = GetDirectory() + "/data";
+    ASSERT_STRNE(cleanpath(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
+
+    EXPECT_CALL(m_storage_mock, StorageLayersGetByUncompressDigest(_))
+    .WillRepeatedly(Invoke(invokeStorageLayersGetByUncompressDigest));
+    EXPECT_CALL(m_storage_mock, FreeLayerList(_))
+    .WillRepeatedly(Invoke(invokeFreeLayerList));
+    opts.storage_root = strdup(store_real_path);
+    opts.driver_name = strdup("overlay");
+    ASSERT_EQ(image_store_init(&opts), 0);
+    free(opts.storage_root);
+    free(opts.driver_name);
+    std::string converted_image_id { "597fa49c3dbc5dd1e84120dd1906b65223afd479a7e094c085b580060c0fccec" };
+    ASSERT_TRUE(image_store_exists(converted_image_id.c_str()));
+    ASSERT_EQ(image_store_delete(converted_image_id.c_str()), 0);
+}
 
 class StorageImagesUnitTest : public testing::Test {
 protected:
@@ -236,8 +398,8 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     std::string img_store_path = std::string(store_real_path) + "/overlay-images/";
     ASSERT_TRUE(dirExists((img_store_path + id).c_str()));
-    std::string cp_command = "cp " + std::string(store_real_path) + "/resources/" + id + "/manifest "
-                             + img_store_path + id + "/";
+    std::string cp_command =
+        "cp " + std::string(store_real_path) + "/resources/" + id + "/manifest " + img_store_path + id + "/";
     std::cout << cp_command << std::endl;
 
     ASSERT_EQ(system(cp_command.c_str()), 0);
@@ -334,11 +496,13 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
                                          metadata.c_str(), &time, nullptr);
     std::cout << random_id << std::endl;
     ASSERT_STRNE(random_id, nullptr);
-    ASSERT_STREQ(image_store_lookup(random_id), random_id);
+    char *look_up_id = image_store_lookup(random_id);
+    ASSERT_STREQ(look_up_id, random_id);
+    free(look_up_id);
     ASSERT_TRUE(dirExists((img_store_path + std::string(random_id)).c_str()));
 
-    cp_command = "cp " + std::string(store_real_path) + "/resources/" + id + "/manifest "
-                 + img_store_path + std::string(random_id) +  "/";
+    cp_command = "cp " + std::string(store_real_path) + "/resources/" + id + "/manifest " + img_store_path +
+                 std::string(random_id) + "/";
     std::cout << cp_command << std::endl;
     ASSERT_EQ(system(cp_command.c_str()), 0);
 
