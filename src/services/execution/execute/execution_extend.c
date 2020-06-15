@@ -863,8 +863,9 @@ static int update_container_memory(const char *id, const host_config *hostconfig
             hostconfig->memory_swap == 0) {
             ERROR("Memory limit should be smaller than already set memoryswap limit,"
                   " update the memoryswap at the same time");
-            isulad_set_error_message("Cannot update container %s: Memory limit should be smaller than"
-                                     "already set memoryswap limit, update the memoryswap at the same time.", id);
+            isulad_set_error_message("Cannot update container %s: Memory limit should be smaller than "
+                                     "already set memoryswap limit, update the memoryswap at the same time.",
+                                     id);
             ret = -1;
             goto out;
         }
