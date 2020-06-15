@@ -133,11 +133,16 @@ struct dm_task *task_create_named(int type, const char *dm_name)
     int ret;
     struct dm_task *dmt = NULL;
 
+    if (dm_name == NULL) {
+        ERROR("devicemapper: invalid input");
+        return NULL;
+    }
+
     // struct dm_task *dm_task_create(int type);
     dmt = dm_task_create(type);
     if (dmt == NULL) {
         ERROR("devicemapper: Can't create task of type %d", type);
-        return dmt;
+        return NULL;
     }
 
     ret = dm_task_set_name(dmt, dm_name);
@@ -149,8 +154,7 @@ struct dm_task *task_create_named(int type, const char *dm_name)
     return dmt;
 
 cleanup:
-    free(dmt);
-    dmt = NULL;
+    dm_task_destroy(dmt);
     return NULL;
 }
 
@@ -161,6 +165,15 @@ int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **
     int ret = 0;
     struct dm_task *dmt = NULL;
     struct dm_info info;
+    uint64_t dm_length = 0;
+    uint64_t dm_start = 0;
+    char *dm_target_type = NULL;
+    char *dm_params = NULL;
+
+    if (start == NULL || length == NULL || target_type == NULL || params == NULL || name == NULL) {
+        ERROR("devicemapper: invalid input params to get table");
+        return -1;
+    }
 
     dmt = task_create_named(DM_DEVICE_TABLE, name);
     if (dmt == NULL) {
@@ -188,11 +201,15 @@ int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **
         goto cleanup;
     }
 
-    (void)dm_get_next_target(dmt, NULL, start, length, target_type, params);
+    (void)dm_get_next_target(dmt, NULL, &dm_start, &dm_length, &dm_target_type, &dm_params);
+    *start = dm_start;
+    *length = dm_length;
+    *target_type = util_strdup_s(dm_target_type);
+    *params = util_strdup_s(dm_params);
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -203,32 +220,32 @@ char *dev_get_driver_version()
     char *version = NULL;
     size_t size = 128;
 
+    dmt = task_create(DM_DEVICE_VERSION);
+    if (dmt == NULL) {
+        goto cleanup;
+    }
+
     version = util_common_calloc_s(size);
     if (version == NULL) {
         ERROR("devmapper: out of memory");
         goto cleanup;
     }
 
-    dmt = task_create(DM_DEVICE_VERSION);
-    if (dmt == NULL) {
-        goto cleanup;
-    }
-
     ret = dm_task_run(dmt);
     if (ret != 1) {
+        UTIL_FREE_AND_SET_NULL(version);
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
     ret = dm_task_get_driver_version(dmt, version, size);
     if (ret == 0) {
-        free(version);
-        version = NULL;
+        UTIL_FREE_AND_SET_NULL(version);
         goto cleanup;
     }
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return version;
 }
 
@@ -239,6 +256,15 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
     int ret = 0;
     struct dm_task *dmt = NULL;
     struct dm_info info;
+    uint64_t dm_length = 0;
+    uint64_t dm_start = 0;
+    char *dm_target_type = NULL;
+    char *dm_params = NULL;
+
+    if (start == NULL || length == NULL || target_type == NULL || params == NULL || name == NULL) {
+        ERROR("devicemapper: invalid input params to get table");
+        return -1;
+    }
 
     dmt = task_create_named(DM_DEVICE_STATUS, name);
     if (dmt == NULL) {
@@ -265,11 +291,15 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
         goto cleanup;
     }
 
-    (void)dm_get_next_target(dmt, NULL, start, length, target_type, params);
+    (void)dm_get_next_target(dmt, NULL, &dm_start, &dm_length, &dm_target_type, &dm_params);
+    *start = dm_start;
+    *length = dm_length;
+    *target_type = util_strdup_s(dm_target_type);
+    *params = util_strdup_s(dm_params);
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -298,7 +328,7 @@ struct dm_deps *dev_get_deps(const char *name)
     }
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return deps;
 
 }
@@ -330,7 +360,7 @@ int dev_get_info(struct dm_info *info, const char *name)
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -338,7 +368,7 @@ cleanup:
 int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags)
 {
     // int dm_task_set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags);
-    int ret;
+    int ret = 0;
 
     if (cookie == NULL) {
         ERROR("cookie ptr can't be nil");
@@ -357,7 +387,7 @@ int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags)
 static void *udev_wait_process(void *data)
 {
     udev_wait_pth_t *uwait = (udev_wait_pth_t *)data;
-    int ret;
+    int ret = 0;
 
     ret = dm_udev_wait(uwait->cookie);
     if (ret != 1) {
@@ -443,7 +473,7 @@ int dev_remove_device(const char *pool_fname)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
-    uint32_t cookie;
+    uint32_t cookie = 0;
 
     dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
     if (dmt == NULL) {
@@ -452,7 +482,6 @@ int dev_remove_device(const char *pool_fname)
 
     ret = set_cookie(dmt, &cookie, 0);
     if (ret != 0) {
-        ret = -1;
         goto out;
     }
 
@@ -462,12 +491,13 @@ int dev_remove_device(const char *pool_fname)
         goto out;
     }
 
-    // TODO: udev_wait(cookie)
-    // 单开一个线程wait device删除成功
-
     ret = 0;
 out:
-    free(dmt);
+    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
+        dev_udev_wait(cookie);
+    }
+
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -475,7 +505,7 @@ int dev_remove_device_deferred(const char *pool_fname)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
-    uint32_t cookie;
+    uint32_t cookie = 0;
     uint16_t flags = DM_UDEV_DISABLE_LIBRARY_FALLBACK;
 
     dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
@@ -485,18 +515,14 @@ int dev_remove_device_deferred(const char *pool_fname)
 
     ret = dm_task_deferred_remove(dmt);
     if (ret != 1) {
-        // ERROR();
-        return ERR_TASK_DEFERRED_REMOVE;
+        ret = ERR_TASK_DEFERRED_REMOVE;
+        goto out;
     }
 
     ret = set_cookie(dmt, &cookie, flags);
     if (ret != 0) {
-        ret = -1;
         goto out;
     }
-
-    // TODO: udev_wait(cookie)
-    // 单开一个线程wait device删除成功
 
     dm_saw_enxio = false;
     ret = dm_task_run(dmt);
@@ -506,11 +532,15 @@ int dev_remove_device_deferred(const char *pool_fname)
             ret = ERR_ENXIO;
         }
         ERROR("devicemapper: Error running RemoveDeviceDeferred %d", ret);
+        goto out;
     }
 
     ret = 0;
 out:
-    free(dmt);
+    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
+        dev_udev_wait(cookie);
+    }
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -585,12 +615,10 @@ int dev_get_device_list(char ***list, size_t *length)
         ERROR("devicemapper: get device list failed");
         goto cleanup;
     }
-
-    free(dmt);
-    return 0;
+    ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -663,7 +691,7 @@ int dev_create_device(const char *pool_fname, int device_id)
 
     ret = 0;
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -692,9 +720,9 @@ int dev_delete_device(const char *pool_fname, int device_id)
         goto cleanup;
     }
 
-    if (snprintf(message, sizeof(message), "delete %d", device_id) < 0) {
+    ret = snprintf(message, sizeof(message), "delete %d", device_id);
+    if (ret < 0 || (size_t)ret >= sizeof(message)) {
         ret = -1;
-        // ERROR()
         goto cleanup;
     }
 
@@ -714,7 +742,7 @@ int dev_delete_device(const char *pool_fname, int device_id)
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -745,7 +773,7 @@ int dev_get_info_with_deferred(const char *dm_name, struct dm_info *dmi)
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -772,7 +800,7 @@ int dev_suspend_device(const char *dm_name)
     ret = 0;
 
 out:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -781,15 +809,14 @@ out:
 int dev_resume_device(const char *dm_name)
 {
     int ret = 0;
-    uint32_t cookie;
+    uint32_t cookie = 0;
     uint16_t flags = 0;
     struct dm_task *dmt = NULL;
 
     dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
     if (dmt == NULL) {
-        ret = -1;
         ERROR("devicemapper:create named task failed");
-        goto out;
+        return -1;
     }
 
     ret = set_cookie(dmt, &cookie, flags);
@@ -802,12 +829,16 @@ int dev_resume_device(const char *dm_name)
     if (ret != 1) {
         ret = -1;
         ERROR("devicemapper: Error running deviceResume %d", ret);
+        goto out;
     }
 
-    dev_udev_wait(cookie);
+    ret = 0;
 
 out:
-    free(dmt);
+    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
+        dev_udev_wait(cookie);
+    }
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -824,7 +855,7 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
     dmt = task_create_named(DM_DEVICE_CREATE, name);
     if (dmt == NULL) {
         ERROR("devicemapper:create named task failed");
-        goto out;
+        return -1;
     }
 
     ret = snprintf(params, sizeof(params), "%s %d", pool_name, device_id);
@@ -853,13 +884,19 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
 
     ret = dm_task_run(dmt);
     if (ret != 1) {
+        ret = -1;
         ERROR("devicemapper: error running deviceCreate (ActivateDevice) %d", ret);
+        goto udev_wait;
     }
 
-    dev_udev_wait(cookie);
     ret = 0;
+udev_wait:
+    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
+        dev_udev_wait(cookie);
+    }
+
 out:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -905,7 +942,7 @@ int dev_cancel_deferred_remove(const char *dm_name)
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -972,15 +1009,6 @@ void log_with_errno_init()
     dm_log_with_errno_init(log_cb);
 }
 
-// BlockDeviceDiscard runs discard for the given path.
-// This is used as a workaround for the kernel not discarding block so
-// on the thin pool when we remove a thinp device, so we do it
-// manually
-int dev_block_device_discard(const char *path)
-{
-    return 0;
-}
-
 // CreateSnapDeviceRaw creates a snapshot device. Caller needs to suspend and resume the origin device if it is active.
 int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_device_id)
 {
@@ -1030,7 +1058,7 @@ int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_de
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -1082,6 +1110,6 @@ int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_
     ret = 0;
 
 cleanup:
-    free(dmt);
+    dm_task_destroy(dmt);
     return ret;
 }

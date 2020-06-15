@@ -78,7 +78,6 @@ struct device_set {
     char *xfs_nospace_retries; // max retries when xfs receives ENOSPC
     int64_t udev_wait_timeout;
 
-    image_devmapper_direct_lvm_config *lvm_setup_config;
     bool driver_deferred_removal_support;
     bool enable_deferred_removal;
     bool enable_deferred_deletion;

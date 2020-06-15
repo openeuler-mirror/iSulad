@@ -18,7 +18,6 @@
 #include <pthread.h>
 #include "driver.h"
 #include "metadata_store.h"
-#include "device_setup.h"
 
 #ifdef __cplusplus
 extern "C" {

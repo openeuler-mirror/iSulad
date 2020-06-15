@@ -126,8 +126,6 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
 
 void dev_udev_wait(uint32_t cookie);
 
-int dev_block_device_discard(const char *path);
-
 int dev_cancel_deferred_remove(const char *dm_name);
 
 int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_device_id);

@@ -165,6 +165,22 @@ static char *metadata_dir(struct device_set *devset)
     return dir;
 }
 
+static char *transaction_meta_file(struct device_set *devset)
+{
+    char *dir = NULL;
+    char *file = NULL;
+
+    dir = metadata_dir(devset);
+    if (dir == NULL) {
+        return NULL;
+    }
+
+    file = util_path_join(dir, TRANSACTION_METADATA);
+    free(dir);
+
+    return file;
+}
+
 static char *deviceset_meta_file(struct device_set *devset)
 {
     char *dir = NULL;
@@ -177,7 +193,7 @@ static char *deviceset_meta_file(struct device_set *devset)
 
     file = util_path_join(dir, DEVICE_SET_METAFILE);
 
-    UTIL_FREE_AND_SET_NULL(dir);
+    free(dir);
     return file;
 }
 
@@ -324,6 +340,7 @@ static int pool_status(struct device_set *devset, uint64_t *total_size_in_sector
 
     ret = dev_get_status(&start, &length, &target_type, &params, name);
     if (ret != 0) {
+        ERROR("devmapper: get dev status for pool name is %s", name);
         goto out;
     }
 
@@ -742,8 +759,108 @@ static void count_deleted_devices(struct device_set *devset)
     }
 }
 
+static int remove_transaction_metadata(struct device_set *devset)
+{
+    int ret = 0;
+    char *fname = NULL;
+
+    fname = transaction_meta_file(devset);
+    if (fname == NULL) {
+        return -1;
+    }
+
+    ret = util_path_remove(fname);
+    if (ret != 0) {
+        ERROR("devmapper: remove transaction metadata file %s failed", fname);
+    }
+
+    free(fname);
+    return ret;
+}
+
+static char *metadata_file(struct device_set *devset, const char *hash)
+{
+    char *file = NULL;
+    char *full_path = NULL;
+    char *dir = NULL;
+
+    if (hash == NULL) {
+        ERROR("devmapper: get metadata file param is null");
+        return NULL;
+    }
+
+    dir = metadata_dir(devset);
+    if (dir == NULL) {
+        ERROR("devmapper: get metadata dir of device %s failed", hash);
+        return NULL;
+    }
+
+    file = util_strdup_s(hash);
+    if (file == NULL) {
+        goto out;
+    }
+
+    full_path = util_path_join(dir, file);
+
+out:
+    free(dir);
+    free(file);
+    return full_path;
+}
+
+
+static int remove_metadata(struct device_set *devset, const char *hash)
+{
+    int ret = 0;
+    char *fname = NULL;
+
+    fname = metadata_file(devset, hash);
+    if (fname == NULL) {
+        return -1;
+    }
+
+    ret = util_path_remove(fname);
+    if (ret != 0) {
+        ERROR("devmapper: remove metadata file %s failed", hash);
+    }
+
+    free(fname);
+    return ret;
+}
+
 static int rollback_transaction(struct device_set *devset)
 {
+    int ret = 0;
+    char *pool_dev = NULL;
+
+    pool_dev = get_pool_dev_name(devset);
+    if (pool_dev == NULL) {
+        ERROR("devmapper: get pool device name failed");
+    }
+
+    ret = dev_delete_device(pool_dev, devset->metadata_trans->device_id);
+    if (ret != 0) {
+        ERROR("devmapper: unable to delete device:%s", pool_dev);
+    }
+
+    ret = remove_metadata(devset, devset->metadata_trans->device_hash);
+    if (ret != 0) {
+        ERROR("devmapper: unable to remove metadata");
+    } else {
+        mark_device_id_free(devset, devset->metadata_trans->device_id);
+    }
+
+    ret = metadata_store_remove(devset->metadata_trans->device_hash, devset->meta_store);
+    if (ret != 0) {
+        ERROR("devmapper: remove unused device from store failed");
+    }
+
+    ret = remove_transaction_metadata(devset);
+    if (ret != 0) {
+        ERROR("devmapper: unable to remove transaction meta file");
+    }
+
+    free(pool_dev);
     return 0;
 }
 
@@ -770,8 +887,6 @@ static int process_pending_transaction(struct device_set *devset)
         return 0;
     }
 
-    // TODO: Pool transaction ID is not same as open transaction. There is
-    // a transaction which was not completed.
     ret = rollback_transaction(devset);
     if (ret != 0) {
         ERROR("devmapper: Rolling back open transaction failed");
@@ -971,35 +1086,6 @@ out:
     return ret;
 }
 
-static char *metadata_file(struct device_set *devset, const char *hash)
-{
-    char *file = NULL;
-    char *full_path = NULL;
-    char *dir = NULL;
-
-    if (hash == NULL) {
-        ERROR("devmapper: get metadata file param is null");
-        return NULL;
-    }
-
-    dir = metadata_dir(devset);
-    if (dir == NULL) {
-        ERROR("devmapper: get metadata dir of device %s failed", hash);
-        return NULL;
-    }
-
-    file = util_strdup_s(hash);
-    if (file == NULL) {
-        goto out;
-    }
-
-    full_path = util_path_join(dir, file);
-
-out:
-    free(dir);
-    free(file);
-    return full_path;
-}
 
 static int save_metadata(struct device_set *devset, image_devmapper_device_info *info)
 {
@@ -1194,25 +1280,6 @@ static int close_transaction(struct device_set *devset)
     return ret;
 }
 
-static int remove_metadata(struct device_set *devset, const char *hash)
-{
-    int ret = 0;
-    char *fname = NULL;
-
-    fname = metadata_file(devset, hash);
-    if (fname == NULL) {
-        // ERROR();
-        return -1;
-    }
-
-    ret = util_path_remove(fname);
-    if (ret != 0) {
-        ERROR("devmapper: remove metadata file %s failed", hash);
-    }
-
-    return ret;
-}
-
 static int unregister_device(struct device_set *devset, const char *hash)
 {
     int ret = 0;
@@ -1301,7 +1368,6 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
     do {
         ret = dev_create_device(pool_dev, device_id);
         if (ret != 0) {
-            // TODO: 如果错误类型为device id exists
             // Device ID already exists. This should not
             // happen. Now we have a mechanism to find
             // a free device ID. So something is not right.
@@ -1381,7 +1447,6 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
     do {
         ret = dev_create_snap_device_raw(pool_dev, device_id, base_info->device_id);
         if (ret != 0) {
-            // TODO: 如果错误类型为device id exists
             // Device ID already exists. This should not
             // happen. Now we have a mechanism to find
             // a free device ID. So something is not right.
@@ -1861,7 +1926,8 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
     }
 
     if (devset->base_device_filesystem == NULL) {
-        fs_type = probe_fs_type(dev_fname);
+        // Now only support ext4, xfs and btrfs not support
+        fs_type = util_strdup_s("ext4");
         if (fs_type == NULL) {
             goto free_out;
         }
@@ -1910,6 +1976,42 @@ static int setup_verify_baseimages_uuidfs(struct device_set *devset, image_devma
         ERROR("devmapper: Base Device UUID and Filesystem verification failed");
     }
     return ret;
+}
+
+void static append_mount_options(char **dest, const char *suffix)
+{
+    char *res_string = NULL;
+    size_t length;
+
+    if (dest == NULL) {
+        return;
+    }
+
+    if (*dest == NULL) {
+        *dest = util_strdup_s(suffix);
+    }
+
+    if (suffix == NULL) {
+        return;
+    }
+
+    if (strlen(suffix) > ((SIZE_MAX - strlen(*dest) - strlen(",")) - 1)) {
+        ERROR("String is too long to be appended");
+        return;
+    }
+
+    length = strlen(*dest) + strlen(",") + strlen(suffix) + 1;
+    res_string = util_common_calloc_s(length);
+    if (res_string == NULL) {
+        ERROR("Out of memory");
+        return;
+    }
+    (void)strcat(res_string, *dest);
+    (void)strcat(res_string, ",");
+    (void)strcat(res_string, suffix);
+
+    free(*dest);
+    *dest = res_string;
 }
 
 // 对未挂载的文件系统扩容或者在线扩容，需要内核支持此功能
@@ -2072,47 +2174,6 @@ out:
     return 0;
 }
 
-// Issue discard only if device open count is zero.
-static void issue_discard(struct device_set *devset, image_devmapper_device_info *info)
-{
-    int ret = 0;
-    struct dm_info dinfo;
-    char *dm_name = NULL;
-    char *dev_fname = NULL;
-
-    ret = activate_device_if_needed(devset, info, true);
-    if (ret != 0) {
-        ERROR("devmapper: activate device %s failed", info->hash);
-        goto free_out;
-    }
-
-    dm_name = get_dm_name(devset, info->hash);
-    if (dm_name == NULL) {
-        goto free_out;
-    }
-
-    ret = dev_get_info(&dinfo, dm_name);
-    if (ret != 0) {
-        goto free_out;
-    }
-
-    if (dinfo.open_count != 0) {
-        DEBUG("devmapper: Device: %s is in use. OpenCount=%d. Not issuing discards.", info->hash, dinfo.open_count);
-        goto free_out;
-    }
-
-    dev_fname = get_dev_name(dm_name);
-    if (dev_fname == NULL) {
-        goto free_out;
-    }
-
-    ret = dev_block_device_discard(dev_fname);
-
-free_out:
-    UTIL_FREE_AND_SET_NULL(dm_name);
-    UTIL_FREE_AND_SET_NULL(dev_fname);
-}
-
 static int do_delete_device(struct device_set *devset, const char *hash, bool sync_delete)
 {
     int ret = 0;
@@ -2123,9 +2184,6 @@ static int do_delete_device(struct device_set *devset, const char *hash, bool sy
     if (device_info == NULL) {
         ERROR("devmapper: lookup device failed");
         return -1;
-    }
-    if (devset->do_blk_discard) {
-        issue_discard(devset, device_info->info);
     }
 
     deferred_remove = devset->deferred_remove;
@@ -2299,7 +2357,6 @@ static int do_devmapper_init(struct device_set *devset)
         goto out;
     }
     pool_exist = thin_pool_exists(devset, pool_name);
-
     if (!pool_exist || !util_valid_str(devset->thin_pool_device)) {
         ERROR("devmapper: thin pool is not exist or caller did not pass us a pool, please create it firstly");
         goto out;
@@ -2418,6 +2475,7 @@ static int devmapper_init_cap_by_version(struct device_set *devset)
     }
 
 out:
+    free(version);
     return ret;
 }
 
@@ -3079,7 +3137,7 @@ static int umount_dev_file_recursive(struct device_set *devset)
         }
         devmapper_device_info_ref_dec(device_info);
     }
-    
+
     ret = 0;
 
 out:

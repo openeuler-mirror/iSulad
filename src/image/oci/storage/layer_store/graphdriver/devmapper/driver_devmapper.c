@@ -29,7 +29,6 @@
 #include "utils.h"
 #include "wrapper_devmapper.h"
 #include "devices_constants.h"
-#include "device_setup.h"
 #include "deviceset.h"
 #include "isula_libutils/json_common.h"
 #include "util_archive.h"
