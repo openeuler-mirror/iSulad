@@ -26,7 +26,7 @@ source ../helpers.bash
 function do_test_t()
 {
     containername=test_update
-    containerid=`isula create -t --name $containername busybox`
+    containerid=`isula create -t --memory 50M --name $containername busybox`
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
@@ -117,11 +117,41 @@ function do_test_t()
     return $TC_RET_T
 }
 
+function do_test_t1()
+{
+    containername=test_update1
+    containerid=`isula run -itd --memory 500M --name $containername busybox`
+    fn_check_eq "$?" "0" "run failed"
+
+    isula inspect $containerid | grep "MemorySwap" | grep "1048576000"
+    fn_check_eq "$?" "0" "inspect memory swap failed"
+
+    isula update --memory 2G $containername > /tmp/test_update1.log 2>&1
+    fn_check_eq "$?" "1" "Success update memory with 2G, expect fail"
+
+    cat /tmp/test_update1.log | grep "Memory limit should be smaller than already set memoryswap limit, update the memoryswap at the same time."
+    fn_check_eq "$?" "0" "Failed to check error message"
+
+    rm -rf /tmp/test_update1.log
+
+    isula rm -f $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    return $TC_RET_T
+}
+
 ret=0
 
 do_test_t
 if [ $? -ne 0 ];then
     let "ret=$ret + 1"
+fi
+
+if [ -f "/sys/fs/cgroup/memory/memory.memsw.usage_in_bytes" ];then
+    do_test_t1
+    if [ $? -ne 0 ];then
+	let "ret=$ret + 1"
+    fi
 fi
 
 show_result $ret "basic update"
