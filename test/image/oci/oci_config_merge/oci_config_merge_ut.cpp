@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: oci_config_merge llt
+ * Description: oci_config_merge unit test
  * Author: wangfengtu
  * Create: 2019-08-20
  */
@@ -21,7 +21,7 @@
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/container_config.h"
 #include "oci_config_merge.h"
-#include "oci_llt_common.h"
+#include "oci_ut_common.h"
 
 #define IMAGETOOL_IMAGE_FILE "image/oci/oci_config_merge/imagetool_image.json"
 #define OCI_RUNTIME_SPEC_FILE "image/oci/oci_config_merge/oci_runtime_spec.json"
@@ -68,7 +68,7 @@ void *util_smart_calloc_s_fail(size_t size, size_t len)
     }
 }
 
-TEST(oci_config_merge_llt, test_oci_image_merge_config)
+TEST(oci_config_merge_ut, test_oci_image_merge_config)
 {
     char *imagetool_image_file = NULL;
     imagetool_image *tool_image = NULL;

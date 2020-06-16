@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: specs llt
+ * Description: specs unit test
  * Author: lifeng
  * Create: 2020-02-18
  */
@@ -21,7 +21,7 @@
 #include "specs.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
-#include "oci_llt_common.h"
+#include "oci_ut_common.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "isulad_config_mock.h"
@@ -58,13 +58,13 @@ public:
 #define HOST_CONFIG_FILE "specs/specs/hostconfig.json"
 #define OCI_RUNTIME_SPEC_FILE "specs/specs/oci_runtime_spec.json"
 
-TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_1)
+TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_1)
 {
     // All parameter NULL
     ASSERT_NE(merge_conf_cgroup(NULL, NULL), 0);
 }
 
-TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_2)
+TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_2)
 {
     oci_runtime_spec *oci_spec = NULL;
 
@@ -76,7 +76,7 @@ TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_2)
     oci_spec = NULL;
 }
 
-TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_3)
+TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_3)
 {
     char *host_config_file = NULL;
     host_config *host_spec = NULL;
@@ -96,7 +96,7 @@ TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_3)
     host_spec = NULL;
 }
 
-TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup)
+TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup)
 {
     char *host_config_file = NULL;
     host_config *host_spec = NULL;
@@ -124,7 +124,7 @@ TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup)
     oci_spec = NULL;
 }
 
-TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_cpu)
+TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_cpu)
 {
     char *host_config_file = NULL;
     host_config *host_spec = NULL;
@@ -177,7 +177,7 @@ TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_cpu)
     oci_spec = NULL;
 }
 
-TEST(merge_conf_cgroup_llt, test_merge_conf_cgroup_mem)
+TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_mem)
 {
     char *host_config_file = NULL;
     host_config *host_spec = NULL;

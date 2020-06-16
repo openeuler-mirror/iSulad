@@ -19,8 +19,8 @@
 
 function usage()
 {
-    echo  "Usage: sh llt.sh [OPTIONS]"
-    echo  "Use llt.sh to control llt operation"
+    echo  "Usage: sh test.sh [OPTIONS]"
+    echo  "Use test.sh to control unit test operation"
     echo  ""
     echo  "Misc:"
     echo  "  -h, --help                      Print this help, then exit"
@@ -31,8 +31,8 @@ function usage()
     echo  "  -e, --empty                     Enable compile empty(make clean)"
     echo
     echo  "TestRun Options"
-    echo  "  -r, --run-llt <option>          Run all llt, eg: -r, -rscreen(default), -rxml, --run-llt, --run-llt=screen, --run-llt=xml"
-    echo  "  -s, --specify-llt FILE          Only Run specify llt executable FILE, eg: -smain_llt, --specify-llt=main_llt"
+    echo  "  -r, --run-ut <option>          Run all unit test, eg: -r, -rscreen(default), -rxml, --run-ut, --run-ut=screen, --run-ut=xml"
+    echo  "  -s, --specify-ut FILE          Only Run specify unit test executable FILE, eg: -smain_ut, --specify-ut=main_ut"
     echo
     echo  "Coverage Options"
     echo  "  -t, --cover-report <option>     Enable coverage report. eg: -t, -thtml(default), -ttxt, --cover-report, --cover-report=html, --cover-report=txt"
@@ -40,7 +40,7 @@ function usage()
     echo
 }
 
-ARGS=`getopt -o "hcer::m::t::s:f:" -l "help,cmake::,empty,cover-report::,run-llt::,specify-llt:,cover-file:" -n "run_llt.sh" -- "$@"`
+ARGS=`getopt -o "hcer::m::t::s:f:" -l "help,cmake::,empty,cover-report::,run-ut::,specify-ut:,cover-file:" -n "run_test.sh" -- "$@"`
 if [ $? != 0 ]; then
     usage
     exit
@@ -53,7 +53,7 @@ if [ x"$ARGS" = x" --" ]; then
     COMPILE_ENABLE=no
     COVERAGE_ENABLE=no
     EMPTY_ENABLE=no
-    RUN_LLT=yes
+    RUN_UT=yes
     RUN_MODE=screen #value: screen or xml
     COVER_REPORT_ENABLE=no
 fi
@@ -76,8 +76,8 @@ while true; do
         -e|--empty)
             EMPTY_ENABLE=yes
             shift ;;
-        -r|--run-llt)
-            RUN_LLT=yes
+        -r|--run-ut)
+            RUN_UT=yes
             case "$2" in
                 "") RUN_MODE=screen;shift 2 ;;
                 screen) RUN_MODE=screen;shift 2 ;;
@@ -92,8 +92,8 @@ while true; do
                 txt) COVER_STYLE=txt;shift 2 ;;
                 *)echo "Error param: $2";exit 1 ;;
             esac ;;
-        -s|--specify-llt)
-            SPECIFY_LLT=$2
+        -s|--specify-ut)
+            SPECIFY_UT=$2
             shift 2 ;;
         -f|--cover-file)
             COVER_FILE=$2
@@ -103,9 +103,9 @@ while true; do
     esac
 done
 
-function llt_empty()
+function ut_empty()
 {
-    echo ---------------------- llt empty begin ----------------------
+    echo ---------------------- unit test empty begin ----------------------
     set -x
     make clean
     find -name "*.gcda" |xargs rm -f
@@ -121,13 +121,13 @@ function llt_empty()
     rm coverage -rf
     rm test_result.log -f
     set +x
-    echo ---------------------- llt empty end ------------------------
+    echo ---------------------- unit test empty end ------------------------
 }
-function llt_cmake()
+function ut_cmake()
 {
     ret=0
-    local CMAKE_OPTION="-DCMAKE_BUILD_TYPE=Debug -DENABLE_LLT=ON"
-    echo ---------------------- llt cmake begin ----------------------
+    local CMAKE_OPTION="-DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON"
+    echo ---------------------- unit test cmake begin ----------------------
     cd ..
     if [ x"${COVERAGE_ENABLE}" = x"yes" ]; then
         CMAKE_OPTION="${CMAKE_OPTION} -DENABLE_COVERAGE=1"
@@ -138,18 +138,18 @@ function llt_cmake()
     cmake . ${CMAKE_OPTION}
     ret=$?
     cd -
-    echo ---------------------- llt cmake end ------------------------
+    echo ---------------------- unit test cmake end ------------------------
     echo
     return $ret
 }
 
-function llt_compile()
+function ut_compile()
 {
     ret=0
-    echo ---------------------- llt compile begin ----------------------
-    make -j
+    echo ---------------------- unit test compile begin ----------------------
+    make -j $(nproc)
     ret=$?
-    echo ---------------------- llt compile end ------------------------
+    echo ---------------------- unit test compile end ------------------------
     echo
     return $ret
 }
@@ -180,9 +180,9 @@ function xml_add_succeed()
     done < ${xmlfile}
 }
 
-function llt_run_all_test()
+function ut_run_all_test()
 {
-    echo ---------------------- llt run begin --------------------------
+    echo ---------------------- unit test run begin --------------------------
     if [ x"${RUN_MODE}" = x"screen" ]; then
         RUN_MODE=0
     elif [ x"${RUN_MODE}" = x"xml" ]; then
@@ -195,23 +195,23 @@ function llt_run_all_test()
         exit 1
     fi
 
-    if [ x"${SPECIFY_LLT}" = x"" ]; then
-        SPECIFY_LLT=`find -name "*_llt"` # run all test
+    if [ x"${SPECIFY_UT}" = x"" ]; then
+        SPECIFY_UT=`find -name "*_ut"` # run all test
     else
-        SPECIFY_LLT=`find -name "${SPECIFY_LLT}"`
+        SPECIFY_UT=`find -name "${SPECIFY_UT}"`
     fi
 
     TEST_LOG=test_result.log
     >$TEST_LOG
 
     ret=0
-    for TEST in $SPECIFY_LLT
+    for TEST in $SPECIFY_UT
     do
         echo $TEST
         tret=0
         if [ $RUN_MODE -eq 1 ];then
             xmlfile=${TEST##*/}
-            xmlfile=${xmlfile%_llt}-Results.xml
+            xmlfile=${xmlfile%_ut}-Results.xml
             $TEST --gtest_output=xml:${xmlfile}
             tret=$?
             xml_add_succeed ${xmlfile}
@@ -227,18 +227,18 @@ function llt_run_all_test()
         fi
     done
     echo ""
-    echo '######################test result begin######################'
+    echo '######################unit test result begin######################'
     cat $TEST_LOG
-    echo '#######################test result end#######################'
+    echo '#######################unit test result end#######################'
     echo ""
-    echo ---------------------- llt run end --------------------------
+    echo ---------------------- unit test run end --------------------------
     echo
     return $ret
 }
 
-function llt_coverage()
+function ut_coverage()
 {
-    echo ------------------ llt generate coverage begin --------------
+    echo ------------------ unit test generate coverage begin --------------
     if [ x"${COVER_STYLE}" = x"txt" ]; then
         GCDAS=`find -name "${COVER_FILE}.gcda"`
         if [ x"$GCDAS" = x"" ]; then
@@ -279,10 +279,10 @@ function llt_coverage()
             done
         fi
 
-        #lcov -c ${LCOV_CMD} -o coverage/coverage.info --exclude '*_llt.c' --include '*.c' --include '*.cpp' --include '*.cc' --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
+        #lcov -c ${LCOV_CMD} -o coverage/coverage.info --exclude '*_ut.cpp' --include '*.c' --include '*.cpp' --include '*.cc' --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
         lcov --help | grep "\-\-exclude"
         if [[ $? -eq 0 ]]; then
-            lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external --exclude '*_llt*.cc' -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
+            lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external --exclude '*_ut.cpp' -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
         else
             lcov -c ${LCOV_CMD} -b $(dirname $(pwd)) --no-external -o coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov --ignore-errors source --ignore-errors graph
         fi
@@ -299,36 +299,36 @@ function llt_coverage()
         fi
         chmod 755 -R coverage
     fi
-    echo ------------------ llt generate coverage end ----------------
+    echo ------------------ unit test generate coverage end ----------------
 }
 
 if [ x"${CMAKE_ENABLE}" = x"yes" ]; then
-    llt_cmake
+    ut_cmake
     if [[ $? -ne 0 ]];then
         exit 1
     fi
 fi
 
 if [ x"${EMPTY_ENABLE}" = x"yes" ]; then
-    llt_empty
+    ut_empty
 fi
 
 if [ x"${COMPILE_ENABLE}" = x"yes" ]; then
-    llt_compile
+    ut_compile
     if [[ $? -ne 0 ]];then
         exit 1
     fi
 fi
 
-if [ x"${RUN_LLT}" = x"yes" ]; then
-    llt_run_all_test
+if [ x"${RUN_UT}" = x"yes" ]; then
+    ut_run_all_test
     if [[ $? -ne 0 ]];then
         exit 1
     fi
 fi
 
 if [ x"${COVER_REPORT_ENABLE}" = x"yes" ]; then
-    llt_coverage
+    ut_coverage
     if [[ $? -ne 0 ]];then
         exit 1
     fi

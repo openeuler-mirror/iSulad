@@ -1,6 +1,6 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
-SET(EXE utils_string_llt)
+SET(EXE utils_string_ut)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils_string.c
@@ -14,7 +14,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/path.c
-    utils_string_llt.cc)
+    utils_string_ut.cpp)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

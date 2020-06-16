@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: path llt
+ * Description: path unit test
  * Author: jikui
  * Create: 2019-08-22
  */
@@ -87,7 +87,7 @@ static ssize_t readlink_specify(const char *path, char *buf, size_t bufsize)
     return linkpath_length;
 }
 
-TEST(path_llt, test_cleanpath)
+TEST(path_ut, test_cleanpath)
 {
     char *result = nullptr;
     std::string str;
@@ -123,7 +123,7 @@ TEST(path_llt, test_cleanpath)
     ASSERT_STREQ(result, nullptr);
 }
 
-TEST(path_llt, test_specify_current_dir)
+TEST(path_ut, test_specify_current_dir)
 {
     ASSERT_FALSE(specify_current_dir(nullptr));
     ASSERT_TRUE(specify_current_dir(""));
@@ -135,7 +135,7 @@ TEST(path_llt, test_specify_current_dir)
     ASSERT_FALSE(specify_current_dir("home"));
 }
 
-TEST(path_llt, test_follow_symlink_in_scope)
+TEST(path_ut, test_follow_symlink_in_scope)
 {
     std::string fullpath, rootpath;
     char *res = nullptr;
@@ -173,22 +173,22 @@ TEST(path_llt, test_follow_symlink_in_scope)
     free(res);
     res = nullptr;
 
-    fullpath = "/tmp/just_for_llt/link";
+    fullpath = "/tmp/just_for_ut/link";
     rootpath = "/tmp";
-    const char *path = "/tmp/just_for_llt";
+    const char *path = "/tmp/just_for_ut";
     const char *path_file = "./testdir/test/../file";
-    const char *path_link = "/tmp/just_for_llt/link";
+    const char *path_link = "/tmp/just_for_ut/link";
     ASSERT_EQ(create_tmp_symbolic_link(path, path_file, path_link), 0);
     MOCK_SET_V(readlink, readlink_specify);
     res = follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
-    ASSERT_STREQ(res, "/tmp/just_for_llt/dir/file");
+    ASSERT_STREQ(res, "/tmp/just_for_ut/dir/file");
     MOCK_CLEAR(readlink);
-    ASSERT_EQ(util_recursive_rmdir("/tmp/just_for_llt", 0), 0);
+    ASSERT_EQ(util_recursive_rmdir("/tmp/just_for_ut", 0), 0);
     free(res);
     res = nullptr;
 }
 
-TEST(path_llt, test_split_dir_and_base_name)
+TEST(path_ut, test_split_dir_and_base_name)
 {
     char *dir = nullptr;
     char *base = nullptr;
@@ -226,7 +226,7 @@ TEST(path_llt, test_split_dir_and_base_name)
     base = nullptr;
 }
 
-TEST(path_llt, test_filepath_split)
+TEST(path_ut, test_filepath_split)
 {
     char *dir = nullptr;
     char *base = nullptr;
@@ -272,7 +272,7 @@ TEST(path_llt, test_filepath_split)
     base = nullptr;
 }
 
-TEST(path_llt, test_get_resource_path)
+TEST(path_ut, test_get_resource_path)
 {
     char *res = nullptr;
 
@@ -307,7 +307,7 @@ TEST(path_llt, test_get_resource_path)
     res = nullptr;
 }
 
-TEST(path_llt, test_resolve_path)
+TEST(path_ut, test_resolve_path)
 {
     std::string rootpath, path;
     char *resolvedpath = nullptr;
@@ -336,7 +336,7 @@ TEST(path_llt, test_resolve_path)
     abspath = nullptr;
 }
 
-TEST(path_llt, test_has_trailing_path_separator)
+TEST(path_ut, test_has_trailing_path_separator)
 {
     ASSERT_FALSE(has_trailing_path_separator(nullptr));
     ASSERT_FALSE(has_trailing_path_separator(""));
@@ -344,7 +344,7 @@ TEST(path_llt, test_has_trailing_path_separator)
     ASSERT_FALSE(has_trailing_path_separator("/home"));
 }
 
-TEST(path_llt, test_preserve_trailing_dot_or_separator)
+TEST(path_ut, test_preserve_trailing_dot_or_separator)
 {
     std::string cleanedpath, originalpath;
     char *res = nullptr;

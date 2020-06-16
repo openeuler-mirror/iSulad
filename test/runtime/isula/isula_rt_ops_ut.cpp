@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: isula runtime ops llt
+ * Description: isula runtime ops unit test
  * Author: jingrui
  * Create: 2020-02-15
  */
@@ -57,7 +57,7 @@ public:
     NiceMock<MockIsuladConf> m_isulad_conf;
 };
 
-TEST(isula_rt_ops_llt, test_rt_isula_detect)
+TEST(isula_rt_ops_ut, test_rt_isula_detect)
 {
     // All parameter NULL
     ASSERT_FALSE(rt_isula_detect(NULL));

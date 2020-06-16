@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: driver llt
+ * Description: driver unit test
  * Author: wangfengtu
  * Create: 2020-02-19
  */
@@ -63,13 +63,13 @@ public:
 };
 
 // All parameter NULL
-TEST(graphdriver_init_llt, test_graphdriver_init_1)
+TEST(graphdriver_init_ut, test_graphdriver_init_1)
 {
     ASSERT_TRUE(graphdriver_init(NULL, NULL, 0) == NULL);
 }
 
 // All parameter correct
-TEST(graphdriver_init_llt, test_graphdriver_init_2)
+TEST(graphdriver_init_ut, test_graphdriver_init_2)
 {
     struct graphdriver *driver = NULL;
     char **options = NULL;
@@ -86,7 +86,7 @@ TEST(graphdriver_init_llt, test_graphdriver_init_2)
 }
 
 // Parameter dm.fs invalid
-TEST(graphdriver_init_llt, test_graphdriver_init_3)
+TEST(graphdriver_init_ut, test_graphdriver_init_3)
 {
     struct graphdriver *driver = NULL;
     char **options = NULL;
@@ -100,7 +100,7 @@ TEST(graphdriver_init_llt, test_graphdriver_init_3)
 }
 
 // Parameter dm.thinpooldev invalid
-TEST(graphdriver_init_llt, test_graphdriver_init_4)
+TEST(graphdriver_init_ut, test_graphdriver_init_4)
 {
     struct graphdriver *driver = NULL;
     char **options = NULL;
@@ -114,7 +114,7 @@ TEST(graphdriver_init_llt, test_graphdriver_init_4)
 }
 
 // Parameter dm.min_free_space invalid
-TEST(graphdriver_init_llt, test_graphdriver_init_5)
+TEST(graphdriver_init_ut, test_graphdriver_init_5)
 {
     struct graphdriver *driver = NULL;
     char **options = NULL;
@@ -134,7 +134,7 @@ TEST(graphdriver_init_llt, test_graphdriver_init_5)
 }
 
 // Parameter dm.basesize invalid
-TEST(graphdriver_init_llt, test_graphdriver_init_6)
+TEST(graphdriver_init_ut, test_graphdriver_init_6)
 {
     struct graphdriver *driver = NULL;
     char **options = NULL;
@@ -148,7 +148,7 @@ TEST(graphdriver_init_llt, test_graphdriver_init_6)
 }
 
 // None exist parameter
-TEST(graphdriver_init_llt, test_graphdriver_init_7)
+TEST(graphdriver_init_ut, test_graphdriver_init_7)
 {
     struct graphdriver *driver = NULL;
     char **options = NULL;

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2019-2020. All rights reserved.
- * Description: ps llt
+ * Description: ps unit test
  * Author: wujing
  * Create: 2019-12-19
  */

@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: specs extend llt
+ * Description: specs extend unit test
  * Author: lifeng
  * Create: 2020-02-18
  */
@@ -21,7 +21,7 @@
 #include "specs.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
-#include "oci_llt_common.h"
+#include "oci_ut_common.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "isulad_config_mock.h"
@@ -44,7 +44,7 @@ using namespace std;
 
 #define HOOKS_CONFIG_FILE "specs/specs_extend/hooks.json"
 
-TEST(make_sure_oci_spec_linux_llt, test_make_sure_oci_spec_linux)
+TEST(make_sure_oci_spec_linux_ut, test_make_sure_oci_spec_linux)
 {
     oci_runtime_spec *oci_spec = NULL;
     oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
@@ -55,7 +55,7 @@ TEST(make_sure_oci_spec_linux_llt, test_make_sure_oci_spec_linux)
     oci_spec = NULL;
 }
 
-TEST(make_sure_oci_spec_process_llt, test_make_sure_oci_spec_process)
+TEST(make_sure_oci_spec_process_ut, test_make_sure_oci_spec_process)
 {
     oci_runtime_spec *oci_spec = NULL;
     oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
@@ -66,7 +66,7 @@ TEST(make_sure_oci_spec_process_llt, test_make_sure_oci_spec_process)
     oci_spec = NULL;
 }
 
-TEST(make_sure_oci_spec_linux_resources_llt, test_make_sure_oci_spec_linux_resources)
+TEST(make_sure_oci_spec_linux_resources_ut, test_make_sure_oci_spec_linux_resources)
 {
     oci_runtime_spec *oci_spec = NULL;
     oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
@@ -78,7 +78,7 @@ TEST(make_sure_oci_spec_linux_resources_llt, test_make_sure_oci_spec_linux_resou
     oci_spec = NULL;
 }
 
-TEST(make_sure_oci_spec_linux_resources_blkio_llt, test_make_sure_oci_spec_linux_resources_blkio)
+TEST(make_sure_oci_spec_linux_resources_blkio_ut, test_make_sure_oci_spec_linux_resources_blkio)
 {
     oci_runtime_spec *oci_spec = NULL;
     oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
@@ -91,12 +91,12 @@ TEST(make_sure_oci_spec_linux_resources_blkio_llt, test_make_sure_oci_spec_linux
     oci_spec = NULL;
 }
 
-TEST(merge_hooks_llt, test_merge_hooks_invalid)
+TEST(merge_hooks_ut, test_merge_hooks_invalid)
 {
     ASSERT_NE(merge_hooks(nullptr, nullptr), 0);
 }
 
-TEST(merge_hooks_llt, test_merge_hooks_llt_2)
+TEST(merge_hooks_ut, test_merge_hooks_ut_2)
 {
     oci_runtime_spec *oci_spec = NULL;
 
@@ -108,7 +108,7 @@ TEST(merge_hooks_llt, test_merge_hooks_llt_2)
     oci_spec = NULL;
 }
 
-TEST(merge_hooks_llt, test_merge_hooks_llt_3)
+TEST(merge_hooks_ut, test_merge_hooks_ut_3)
 {
     char *hooks_config_file = NULL;
     oci_runtime_spec_hooks *hooks_spec = NULL;
@@ -127,7 +127,7 @@ TEST(merge_hooks_llt, test_merge_hooks_llt_3)
     hooks_spec = NULL;
 }
 
-TEST(merge_hooks_llt, test_merge_hooks_llt_4)
+TEST(merge_hooks_ut, test_merge_hooks_ut_4)
 {
     char *hooks_config_file = NULL;
     oci_runtime_spec_hooks *hooks_spec = NULL;
@@ -155,7 +155,7 @@ TEST(merge_hooks_llt, test_merge_hooks_llt_4)
     free_oci_runtime_spec(oci_spec);
     oci_spec = NULL;
 }
-TEST(merge_hooks_llt, test_merge_hooks_llt_prestart)
+TEST(merge_hooks_ut, test_merge_hooks_ut_prestart)
 {
     char *hooks_config_file = NULL;
     oci_runtime_spec_hooks *hooks_spec = NULL;
@@ -193,7 +193,7 @@ TEST(merge_hooks_llt, test_merge_hooks_llt_prestart)
     oci_spec = NULL;
 }
 
-TEST(merge_hooks_llt, test_merge_hooks_llt_poststart)
+TEST(merge_hooks_ut, test_merge_hooks_ut_poststart)
 {
     char *hooks_config_file = NULL;
     oci_runtime_spec_hooks *hooks_spec = NULL;
@@ -240,7 +240,7 @@ TEST(merge_hooks_llt, test_merge_hooks_llt_poststart)
     oci_spec = NULL;
 }
 
-TEST(merge_hooks_llt, test_merge_hooks_llt_poststop)
+TEST(merge_hooks_ut, test_merge_hooks_ut_poststop)
 {
     char *hooks_config_file = NULL;
     oci_runtime_spec_hooks *hooks_spec = NULL;

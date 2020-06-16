@@ -1,4 +1,4 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
 add_subdirectory(utils_string)
 add_subdirectory(utils_convert)
