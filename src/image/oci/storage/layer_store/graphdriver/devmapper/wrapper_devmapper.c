@@ -220,29 +220,33 @@ char *dev_get_driver_version()
     char *version = NULL;
     size_t size = 128;
 
-    dmt = task_create(DM_DEVICE_VERSION);
-    if (dmt == NULL) {
-        goto cleanup;
-    }
-
     version = util_common_calloc_s(size);
     if (version == NULL) {
         ERROR("devmapper: out of memory");
-        goto cleanup;
+        return NULL;
+    }
+
+    dmt = task_create(DM_DEVICE_VERSION);
+    if (dmt == NULL) {
+        goto err_out;
     }
 
     ret = dm_task_run(dmt);
     if (ret != 1) {
-        UTIL_FREE_AND_SET_NULL(version);
         ERROR("devicemapper: task run failed");
-        goto cleanup;
+        goto err_out;
     }
 
     ret = dm_task_get_driver_version(dmt, version, size);
     if (ret == 0) {
-        UTIL_FREE_AND_SET_NULL(version);
-        goto cleanup;
+        goto err_out;
     }
+
+    goto cleanup;
+
+err_out:
+    free(version);
+    version = NULL;
 
 cleanup:
     dm_task_destroy(dmt);
@@ -330,7 +334,6 @@ struct dm_deps *dev_get_deps(const char *name)
 cleanup:
     dm_task_destroy(dmt);
     return deps;
-
 }
 
 int dev_get_info(struct dm_info *info, const char *name)
@@ -466,7 +469,7 @@ void dev_udev_wait(uint32_t cookie)
 
 free_out:
     pthread_mutex_destroy(&uwait->udev_mutex);
-    UTIL_FREE_AND_SET_NULL(uwait);
+    free(uwait);
 }
 
 int dev_remove_device(const char *pool_fname)
