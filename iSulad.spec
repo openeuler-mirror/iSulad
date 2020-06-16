@@ -1,5 +1,5 @@
-%global _version 2.0.2
-%global _release 20200527.160101.git259d4126
+%global _version 2.0.3
+%global _release 20200616.185159.git19141100
 %global is_systemd 1
 %global debug_package %{nil}
 
