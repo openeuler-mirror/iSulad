@@ -1,5 +1,5 @@
-%global _version 2.0.2
-%global _release 20200526.193459.gitf045485f
+%global _version 2.0.3
+%global _release 20200616.162831.gitf2fda744
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -9,7 +9,7 @@ Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
 URL:       isulad
-Source:    iSulad-2.0.2.tar.gz
+Source:    iSulad-2.0.3.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
@@ -75,8 +75,8 @@ install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/libisula.h                        %{buildroot}/%{_includedir}/isulad/libisula.h
 install -m 0644 ../src/connect/client/isula_connect.h    %{buildroot}/%{_includedir}/isulad/isula_connect.h
 install -m 0644 ../src/container_def.h                  %{buildroot}/%{_includedir}/isulad/container_def.h
-install -m 0644 ../src/types_def.h                      %{buildroot}/%{_includedir}/isulad/types_def.h
-install -m 0644 ../src/error.h                          %{buildroot}/%{_includedir}/isulad/error.h
+install -m 0644 ../src/cutils/types_def.h               %{buildroot}/%{_includedir}/isulad/types_def.h
+install -m 0644 ../src/cutils/error.h                   %{buildroot}/%{_includedir}/isulad/error.h
 install -m 0644 ../src/engines/engine.h                 %{buildroot}/%{_includedir}/isulad/engine.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
