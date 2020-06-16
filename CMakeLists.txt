@@ -53,7 +53,7 @@ configure_file(
 # parse .proto files
 include(cmake/protoc.cmake)
 
-# llt and coverage
+# unit test and coverage
 SET(CMAKE_VERBOSE_MAKEFILE OFF)
 IF(ENABLE_COVERAGE)
     MESSAGE(STATUS "Enable coverage compile option")
@@ -72,11 +72,11 @@ IF(CMAKE_BUILD_TYPE STREQUAL Debug)
 ENDIF()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-OPTION(ENABLE_LLT "llt switch" OFF)
-IF(ENABLE_LLT)
+OPTION(ENABLE_UT "ut switch" OFF)
+IF(ENABLE_UT)
     enable_testing()
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
-ENDIF(ENABLE_LLT)
+ENDIF(ENABLE_UT)
 
 # install all files
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc

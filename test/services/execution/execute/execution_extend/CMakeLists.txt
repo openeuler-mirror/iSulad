@@ -1,6 +1,6 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
-SET(EXE execution_extend_llt)
+SET(EXE execution_extend_ut)
 
 add_executable(${EXE}
 
@@ -41,7 +41,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/driver_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/restartmanager_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/specs_mock.cc
-    execution_extend_llt.cc)
+    execution_extend_ut.cpp)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

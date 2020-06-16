@@ -1,4 +1,4 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
 function(gmock_find_library _name)
   find_library(${_name}

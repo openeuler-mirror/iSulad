@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  * Author: jikui
  * Create: 2020-02-25
- * Description: provide execution_extend llt test
+ * Description: provide execution_extend unit test
  ******************************************************************************/
 
 #include "execution_extend.h"

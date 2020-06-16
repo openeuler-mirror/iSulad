@@ -1,6 +1,6 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
-SET(EXE resume_llt)
+SET(EXE resume_ut)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_string.c
@@ -27,7 +27,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cmd/isula/extend/resume.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/LcrcConnectMock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/grpc_client_mock.cc
-    resume_llt.cc)
+    resume_ut.cpp)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

@@ -1,6 +1,6 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
-SET(EXE path_llt)
+SET(EXE path_ut)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/cutils/utils.c
@@ -14,7 +14,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/cutils/utils_regex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/cutils/utils_verify.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/sha256/sha256.c
-    path_llt.cc)
+    path_ut.cpp)
 
 target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../include

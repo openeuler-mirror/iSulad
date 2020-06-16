@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: utils_string llt
+ * Description: utils_string unit test
  * Author: tanyifeng
  * Create: 2019-07-08
  */
@@ -27,7 +27,7 @@ extern "C" {
     DEFINE_WRAPPER(calloc, void *, (size_t nmemb, size_t size), (nmemb, size));
 }
 
-TEST(utils_string_llt, test_strings_count)
+TEST(utils_string_ut, test_strings_count)
 {
     ASSERT_EQ(strings_count("aaaaaaaaaaaaaaaaaaaa", 'a'), 20);
     ASSERT_EQ(strings_count("a", 'a'), 1);
@@ -35,7 +35,7 @@ TEST(utils_string_llt, test_strings_count)
     ASSERT_EQ(strings_count(nullptr, 'c'), 0);
 }
 
-TEST(utils_string_llt, test_strings_contains_any)
+TEST(utils_string_ut, test_strings_contains_any)
 {
     ASSERT_EQ(strings_contains_any("1234567890abcdefgh!@", "ijklmnopq#123456789"), true);
     ASSERT_EQ(strings_contains_any("1234567890abcdefgh!@", "ijklmnopqrstuvw)(*x&-"), false);
@@ -47,7 +47,7 @@ TEST(utils_string_llt, test_strings_contains_any)
 }
 
 
-TEST(utils_string_llt, test_strings_to_lower)
+TEST(utils_string_ut, test_strings_to_lower)
 {
     char *result = nullptr;
 
@@ -86,7 +86,7 @@ TEST(utils_string_llt, test_strings_to_lower)
     MOCK_CLEAR(util_strdup_s);
 }
 
-TEST(utils_string_llt, test_strings_to_upper)
+TEST(utils_string_ut, test_strings_to_upper)
 {
     char *result = nullptr;
 
@@ -125,7 +125,7 @@ TEST(utils_string_llt, test_strings_to_upper)
 }
 
 
-TEST(utils_string_llt, test_strings_in_slice)
+TEST(utils_string_ut, test_strings_in_slice)
 {
     const char *array_long[] = { "abcd", "1234", nullptr, "", "&^%abc" };
     size_t array_long_len = sizeof(array_long) / sizeof(array_long[0]);
@@ -143,7 +143,7 @@ TEST(utils_string_llt, test_strings_in_slice)
     ASSERT_FALSE(strings_in_slice(nullptr, 0, nullptr));
 }
 
-TEST(utils_string_llt, test_util_parse_byte_size_string)
+TEST(utils_string_ut, test_util_parse_byte_size_string)
 {
     int64_t converted = 0;
     int ret;
@@ -279,7 +279,7 @@ TEST(utils_string_llt, test_util_parse_byte_size_string)
     MOCK_CLEAR(util_strdup_s);
 }
 
-TEST(utils_string_llt, test_util_string_split_multi)
+TEST(utils_string_ut, test_util_string_split_multi)
 {
     char **result = nullptr;
 
@@ -363,7 +363,7 @@ TEST(utils_string_llt, test_util_string_split_multi)
     MOCK_CLEAR(calloc);
 }
 
-TEST(utils_string_llt, test_util_string_split)
+TEST(utils_string_ut, test_util_string_split)
 {
     char **result = nullptr;
 
@@ -437,7 +437,7 @@ TEST(utils_string_llt, test_util_string_split)
     MOCK_CLEAR(calloc);
 }
 
-TEST(utils_string_llt, test_str_skip_str)
+TEST(utils_string_ut, test_str_skip_str)
 {
     const char *str = "abcdefghij1234567890";
     const char *substr = "abcdefgh";
@@ -465,7 +465,7 @@ TEST(utils_string_llt, test_str_skip_str)
     ASSERT_STREQ(result, nullptr);
 }
 
-TEST(utils_string_llt, test_util_string_delchar)
+TEST(utils_string_ut, test_util_string_delchar)
 {
     char *result = nullptr;
 
@@ -490,7 +490,7 @@ TEST(utils_string_llt, test_util_string_delchar)
     MOCK_CLEAR(util_strdup_s);
 }
 
-TEST(utils_string_llt, test_util_trim_newline)
+TEST(utils_string_ut, test_util_trim_newline)
 {
     char s_all[ ] = { '\n', '\n', '\n', '\n', '\0' };
     char s_tail[ ] = { '\n', 'a', '\n', 'b', '\n', '\0' };
@@ -514,7 +514,7 @@ TEST(utils_string_llt, test_util_trim_newline)
     ASSERT_STREQ(s_nullptr, nullptr);
 }
 
-TEST(utils_string_llt, test_util_trim_space)
+TEST(utils_string_ut, test_util_trim_space)
 {
     char s_all[ ] = { '\f', '\n', '\r', '\t', '\v', ' ', '\0' };
     char s_head[ ] = { '\f', '\n', '\r', 'a', 'b', 'c', '\0' };
@@ -551,7 +551,7 @@ TEST(utils_string_llt, test_util_trim_space)
     ASSERT_STREQ(result, nullptr);
 }
 
-TEST(utils_string_llt, test_util_trim_quotation)
+TEST(utils_string_ut, test_util_trim_quotation)
 {
     char s_all[ ] = { '"', '"', '"', '\n', '"', '\0' };
     char s_head[ ] = { '"', '"', 'a', 'b', 'c', '\0' };
@@ -592,7 +592,7 @@ TEST(utils_string_llt, test_util_trim_quotation)
     ASSERT_STREQ(result, nullptr);
 }
 
-TEST(utils_string_llt, test_str_array_dup)
+TEST(utils_string_ut, test_str_array_dup)
 {
     const char *array_long[] = { "abcd", "1234", nullptr, "", "&^%abc" };
     size_t array_long_len = sizeof(array_long) / sizeof(array_long[0]);
@@ -627,7 +627,7 @@ TEST(utils_string_llt, test_str_array_dup)
     ASSERT_EQ(result, nullptr);
 }
 
-TEST(utils_string_llt, test_util_string_join)
+TEST(utils_string_ut, test_util_string_join)
 {
     const char *array_long[] = { "abcd", "1234", "5678", "", "&^%abc" };
     size_t array_long_len = sizeof(array_long) / sizeof(array_long[0]);
@@ -662,7 +662,7 @@ TEST(utils_string_llt, test_util_string_join)
     ASSERT_STREQ(result, nullptr);
 }
 
-TEST(utils_string_llt, test_util_string_append)
+TEST(utils_string_ut, test_util_string_append)
 {
     char *result = nullptr;
 
@@ -707,7 +707,7 @@ TEST(utils_string_llt, test_util_string_append)
     MOCK_CLEAR(calloc);
 }
 
-TEST(utils_string_llt, test_dup_array_of_strings)
+TEST(utils_string_ut, test_dup_array_of_strings)
 {
     const char *array_long[] = { "abcd", "1234", nullptr, "", "&^%abc" };
     size_t array_long_len = sizeof(array_long) / sizeof(array_long[0]);
@@ -757,7 +757,7 @@ TEST(utils_string_llt, test_dup_array_of_strings)
     MOCK_CLEAR(calloc);
 }
 
-TEST(utils_string_llt, test_parse_percent_string)
+TEST(utils_string_ut, test_parse_percent_string)
 {
     long converted = 0;
     int ret = 0;

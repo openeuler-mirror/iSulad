@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
- * Description: isulad-shim llt
+ * Description: isulad-shim unit test
  * Author: leizhongkai
  * Create: 2020-02-25
  */

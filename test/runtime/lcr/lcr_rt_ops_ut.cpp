@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: lcr runtime ops llt
+ * Description: lcr runtime ops unit test
  * Author: lifeng
  * Create: 2020-02-15
  */
@@ -57,7 +57,7 @@ public:
     NiceMock<MockIsuladConf> m_isulad_conf;
 };
 
-TEST(lcr_rt_ops_llt, test_rt_lcr_detect)
+TEST(lcr_rt_ops_ut, test_rt_lcr_detect)
 {
     // All parameter NULL
     ASSERT_FALSE(rt_lcr_detect(NULL));

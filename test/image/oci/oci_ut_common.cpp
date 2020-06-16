@@ -8,7 +8,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Description: oci_rootfs_remove llt
+ * Description: oci_rootfs_remove unit test
  * Author: wangfengtu
  * Create: 2019-08-29
  */
@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include "utils.h"
-#include "oci_llt_common.h"
+#include "oci_ut_common.h"
 
 int execvp_success(const char *file, char * const argv[])
 {

@@ -1,6 +1,6 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
-SET(EXE specs_llt)
+SET(EXE specs_ut)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cutils/utils.c
@@ -23,14 +23,14 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/services/execution/spec/sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/commander.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad/arguments.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_llt_common.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_ut_common.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/container_unix_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/engine_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/selinux_label_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
-    specs_llt.cc)
+    specs_ut.cpp)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

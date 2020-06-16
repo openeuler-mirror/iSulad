@@ -1,6 +1,6 @@
-project(iSulad_LLT)
+project(iSulad_UT)
 
-SET(EXE driver_llt)
+SET(EXE driver_ut)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cutils/utils.c
@@ -20,7 +20,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/graphdriver/driver.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/services/graphdriver/devmapper/driver_devmapper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/libisulad.c
-    driver_llt.cc)
+    driver_ut.cpp)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
