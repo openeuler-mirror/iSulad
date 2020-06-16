@@ -1227,7 +1227,7 @@ static int fetch_layers(pull_descriptor *desc)
             if (list != NULL) {
                 for (j = 0; j < list->layers_len; j++) {
                     if ((list->layers[j]->parent == NULL && i == 0) ||
-                        (parent_chain_id != NULL &&
+                        (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
                          !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)))) {
                         desc->layers[i].already_exist = true;
                         desc->layers[i].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);

@@ -734,7 +734,8 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
         if (list != NULL) {
             for (j = 0; j < list->layers_len; j++) {
                 if ((list->layers[j]->parent == NULL && index == 0) ||
-                    (parent_chain_id != NULL && !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)))) {
+                    (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
+                     !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)))) {
                     layers[index].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);
                     layers[i].chain_id = util_string_append(list->layers[j]->id, SHA256_PREFIX);
                     parent_chain_id = layers[i].chain_id;
