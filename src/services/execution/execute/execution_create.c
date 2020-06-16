@@ -45,6 +45,7 @@
 #include "constants.h"
 #include "namespace.h"
 #include "collector.h"
+#include "sysinfo.h"
 
 static int runtime_check(const char *name, bool *runtime_res)
 {
@@ -837,11 +838,42 @@ static int preparate_runtime_environment(const container_create_request *request
     return 0;
 }
 
+static int adapt_host_spec(host_config *host_spec)
+{
+    int ret = 0;
+    sysinfo_t *sysinfo = NULL;
+
+    sysinfo = get_sys_info(true);
+    if (sysinfo == NULL) {
+        ERROR("Can not get system info");
+        ret = -1;
+        goto out;
+    }
+
+    if (host_spec->memory > 0 && host_spec->memory_swap == 0 && sysinfo->cgmeminfo.swap) {
+        if (host_spec->memory > (INT64_MAX / 2)) {
+            ERROR("Memory swap out of range!");
+            isulad_set_error_message("Memory swap out of range!");
+            ret = -1;
+            goto out;
+        }
+        host_spec->memory_swap = host_spec->memory * 2;
+    }
+
+out:
+    free_sysinfo(sysinfo);
+    return ret;
+}
+
 static int get_basic_spec(const container_create_request *request, const char *id, const char *runtime_root,
                           host_config **host_spec, container_config **container_spec)
 {
     *host_spec = get_host_spec(request);
     if (*host_spec == NULL) {
+        return -1;
+    }
+
+    if (adapt_host_spec(*host_spec) != 0) {
         return -1;
     }
 
