@@ -29,7 +29,6 @@
 #include "constants.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "sha256.h"
 #include "path.h"
 #include "map.h"
 
@@ -529,84 +528,6 @@ FILE *util_fopen(const char *filename, const char *mode)
     return fp;
 }
 
-char *util_file_digest(const char *filename)
-{
-    FILE *fp = NULL;
-    char *digest = NULL;
-
-    if (filename == NULL) {
-        ERROR("invalid NULL param");
-        return NULL;
-    }
-
-    fp = util_fopen(filename, "r");
-    if (fp == NULL) {
-        ERROR("failed to open file %s: %s", filename, strerror(errno));
-        return NULL;
-    }
-
-    digest = sha256_digest_file(filename, false);
-    if (digest == NULL) {
-        ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
-        goto err_out;
-    }
-
-err_out:
-    fclose(fp);
-
-    return digest;
-}
-
-char *util_gzip_digest(const char *filename)
-{
-    int ret = 0;
-    char *digest = NULL;
-    bool gzip = false;
-
-    if (filename == NULL) {
-        ERROR("invalid NULL param");
-        return NULL;
-    }
-
-    ret = util_gzip_compressed(filename, &gzip);
-    if (ret != 0) {
-        ERROR("Failed to check if it's gzip compressed");
-        return NULL;
-    }
-
-    if (!gzip) {
-        ERROR("File %s is not gziped", filename);
-        return NULL;
-    }
-
-    digest = sha256_digest_file(filename, true);
-    if (digest == NULL) {
-        ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
-        goto err_out;
-    }
-
-err_out:
-
-    return digest;
-}
-
-char *util_full_file_digest(const char *filename)
-{
-    char *digest = NULL;
-    char *full_digest = NULL;
-
-    if (filename == NULL) {
-        ERROR("invalid NULL param");
-        return NULL;
-    }
-
-    digest = util_file_digest(filename);
-    full_digest = util_full_digest(digest);
-    free(digest);
-
-    return full_digest;
-}
-
 int util_gzip_compressed(const char *filename, bool *gzip)
 {
 #define GZIPHEADERLEN 3
@@ -648,23 +569,6 @@ out:
     f = NULL;
 
     return ret;
-}
-
-char *util_full_gzip_digest(const char *filename)
-{
-    char *digest = NULL;
-    char *full_digest = NULL;
-
-    if (filename == NULL) {
-        ERROR("invalid NULL param");
-        return NULL;
-    }
-
-    digest = util_gzip_digest(filename);
-    full_digest = util_full_digest(digest);
-    free(digest);
-
-    return full_digest;
 }
 
 char *util_path_dir(const char *path)

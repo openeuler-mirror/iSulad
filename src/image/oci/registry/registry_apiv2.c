@@ -34,6 +34,7 @@
 #include "isula_libutils/registry_manifest_list.h"
 #include "auths.h"
 #include "libisulad.h"
+#include "sha256.h"
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-Api-Version: registry/2.0"
 #define MAX_ACCEPT_LEN 128
@@ -665,7 +666,7 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
 
     // If content is signatured, digest is for payload but not fetched data
     if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
-        if (!util_valid_digest_file(file, digest)) {
+        if (!sha256_valid_digest_file(file, digest)) {
             ERROR("data from %s does not have digest %s", path, digest);
             ret = -1;
             goto out;

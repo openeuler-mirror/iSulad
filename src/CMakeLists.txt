@@ -28,10 +28,10 @@ list(REMOVE_DUPLICATES CHECKED_INCLUDE_DIRS)
 set(SHARED_INCS
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/cutils 
+    ${CMAKE_CURRENT_SOURCE_DIR}/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/tar
     ${CMAKE_CURRENT_SOURCE_DIR}/console
-    ${CMAKE_CURRENT_SOURCE_DIR}/map
     ${CMAKE_BINARY_DIR}/conf
     ${CHECKED_INCLUDE_DIRS}
     )
@@ -40,14 +40,12 @@ add_subdirectory(tar)
 add_subdirectory(sha256)
 add_subdirectory(cutils)
 add_subdirectory(console)
-add_subdirectory(map)
 
 set(SHARED_SRCS
     ${TAR_SRCS}
     ${SHA256_SRCS}
     ${CUTILS_SRCS}
     ${CONSOLE_SRCS}
-    ${MAP_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/container_def.c
     )
 

@@ -76,7 +76,7 @@ const char *g_all_caps[] = {
     "CAP_BLOCK_SUSPEND",
 #endif
 #ifdef CAP_AUDIT_READ
-    "CAP_AUDIT_READ"
+    "CAP_AUDIT_READ",
 #endif
 };
 
@@ -453,32 +453,6 @@ bool util_valid_file(const char *path, uint32_t fmod)
     }
 
     return (s.st_mode & S_IFMT) == fmod;
-}
-
-bool util_valid_digest_file(const char *path, const char *digest)
-{
-    char *file_digest = NULL;
-
-    if (path == NULL || digest == NULL) {
-        ERROR("invalid NULL param");
-        return false;
-    }
-
-    file_digest = util_full_file_digest(path);
-    if (file_digest == NULL) {
-        ERROR("calc digest of file %s failed", path);
-        return false;
-    }
-
-    if (strcmp(file_digest, digest)) {
-        ERROR("file %s digest %s not match %s", path, file_digest, digest);
-        free(file_digest);
-        return false;
-    }
-
-    free(file_digest);
-
-    return true;
 }
 
 bool util_valid_key_type(const char *key)

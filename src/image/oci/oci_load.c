@@ -635,7 +635,7 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
             goto out;
         }
 
-        im->layers[i]->compressed_digest = gzip ? util_full_file_digest(layer_fpath) :
+        im->layers[i]->compressed_digest = gzip ? sha256_full_file_digest(layer_fpath) :
                                            util_strdup_s(im->layers[i]->diff_id);
         if (im->layers[i]->compressed_digest == NULL) {
             ret = -1;
@@ -681,7 +681,7 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
         goto out;
     }
 
-    image_digest = util_full_file_digest(config_fpath);
+    image_digest = sha256_full_file_digest(config_fpath);
     if (image_digest == NULL) {
         ret = -1;
         ERROR("Calc image config file %s digest err", manifest->config);
@@ -953,7 +953,7 @@ int oci_do_load(const im_load_request *request)
         goto out;
     }
 
-    digest = util_full_file_digest(manifest_fpath);
+    digest = sha256_full_file_digest(manifest_fpath);
     if (digest == NULL) {
         ret = -1;
         ERROR("calculate digest failed for manifest file %s", manifest_fpath);

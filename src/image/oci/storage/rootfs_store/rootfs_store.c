@@ -24,6 +24,7 @@
 #include <stddef.h>
 #include <sha256.h>
 #include "utils.h"
+#include "utils_images.h"
 #include "isula_libutils/log.h"
 #include "constants.h"
 

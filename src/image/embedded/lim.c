@@ -27,7 +27,7 @@
 #include "db_all.h"
 #include "path.h"
 #include "image.h"
-#include "utils_verify.h"
+#include "sha256.h"
 
 /* lim init */
 int lim_init(const char *rootpath)
@@ -96,7 +96,7 @@ int lim_create_image_start(char *name, char *type, struct image_creator **pic)
         return EINVALIDARGS;
     }
 
-    ic = (struct image_creator *) util_common_calloc_s(sizeof(struct image_creator));
+    ic = (struct image_creator *)util_common_calloc_s(sizeof(struct image_creator));
     if (ic == NULL) {
         ERROR("out of memory");
         ret = -1;
@@ -178,8 +178,7 @@ static bool validate_layer_path_in_container(size_t layer_index, char *path)
     }
 
     if (!valid_absolute_path(path)) {
-        ERROR("path in container %s should be absolute path, layer %llu", path,
-              (unsigned long long)layer_index);
+        ERROR("path in container %s should be absolute path, layer %llu", path, (unsigned long long)layer_index);
         isulad_try_set_error_message("Invalid content in manifest:"
                                      " layer path in container(except first layer) must be absolute path");
         return false;
@@ -188,21 +187,19 @@ static bool validate_layer_path_in_container(size_t layer_index, char *path)
 }
 
 /* validate layer path in host real */
-static bool validate_layer_path_in_host_real(size_t layer_index,
-                                             char *path_in_host, char *real_path, uint32_t fmod)
+static bool validate_layer_path_in_host_real(size_t layer_index, char *path_in_host, char *real_path, uint32_t fmod)
 {
     if (!util_file_exists(real_path)) {
-        ERROR("file not exist, path in host %s, real path is %s",
-              path_in_host, real_path);
+        ERROR("file not exist, path in host %s, real path is %s", path_in_host, real_path);
         isulad_try_set_error_message("Invalid content in manifest: layer not exists");
         return false;
     }
 
     if (!util_valid_file(real_path, fmod)) {
-        ERROR("invalid path in host %s, real path is %s, layer %ld",
-              path_in_host, real_path, layer_index);
+        ERROR("invalid path in host %s, real path is %s, layer %ld", path_in_host, real_path, layer_index);
         if (fmod == (uint32_t)S_IFREG) {
-            isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a regular file");
+            isulad_try_set_error_message(
+                "Invalid content in manifest: layer(except first layer) is not a regular file");
         } else if ((int)fmod == S_IFDIR) {
             isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a directory");
         } else if ((int)fmod == S_IFBLK) {
@@ -214,22 +211,20 @@ static bool validate_layer_path_in_host_real(size_t layer_index,
 }
 
 /* validate layer path in host */
-static bool validate_layer_path_in_host(size_t layer_index, const char *location,
-                                        char *path_in_host, char *real_path, uint32_t fmod)
+static bool validate_layer_path_in_host(size_t layer_index, const char *location, char *path_in_host, char *real_path,
+                                        uint32_t fmod)
 {
     char *abs_path = NULL;
     if (layer_index == 0) {
         /* layer 0 is absolute path of rootfs device  or host / */
         if (!valid_absolute_path(path_in_host)) {
-            ERROR("path in host %s not a absolute path, layer %lu", path_in_host,
-                  layer_index);
+            ERROR("path in host %s not a absolute path, layer %lu", path_in_host, layer_index);
             isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be absolute path");
             return false;
         }
 
         if ((int)fmod == S_IFDIR && strcmp(path_in_host, "/") != 0) {
-            ERROR("expected / as root, got %s, layer %lu", path_in_host,
-                  layer_index);
+            ERROR("expected / as root, got %s, layer %lu", path_in_host, layer_index);
             isulad_try_set_error_message("Invalid content in manifest: first layer path in host must be /");
             return false;
         }
@@ -276,8 +271,7 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
 }
 
 /* validate layer media type */
-static bool validate_layer_media_type(size_t layer_index, char *media_type,
-                                      uint32_t *fmod)
+static bool validate_layer_media_type(size_t layer_index, char *media_type, uint32_t *fmod)
 {
     if (media_type != NULL) {
         if (strcmp(media_type, MediaTypeEmbeddedLayerSquashfs) == 0) {
@@ -291,15 +285,15 @@ static bool validate_layer_media_type(size_t layer_index, char *media_type,
         }
     }
 
-    isulad_try_set_error_message("Invalid content in manifest: layer's media type must be"
-                                 " application/squashfs.image.rootfs.diff.img or application/bind.image.rootfs.diff.dir");
+    isulad_try_set_error_message(
+        "Invalid content in manifest: layer's media type must be"
+        " application/squashfs.image.rootfs.diff.img or application/bind.image.rootfs.diff.dir");
     ERROR("invalid layer media type %s", media_type);
     return false;
 }
 
 /* validate layer digest */
-static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
-                                  char *digest)
+static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod, char *digest)
 {
     /* If no digest, do not check digest. Digest is optinal. */
     if (digest == NULL) {
@@ -317,8 +311,7 @@ static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
 
     /* If layer is a directory, digest must be empty */
     if ((int)fmod == S_IFDIR) {
-        ERROR("Invalid digest %s, digest must be empty if media type is %s", digest,
-              MediaTypeEmbeddedLayerDir);
+        ERROR("Invalid digest %s, digest must be empty if media type is %s", digest, MediaTypeEmbeddedLayerDir);
         isulad_try_set_error_message("Invalid content in mainfest: layer digest must be empty if mediaType is %s",
                                      MediaTypeEmbeddedLayerDir);
         return false;
@@ -332,7 +325,7 @@ static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
     }
 
     /* calc and check digest */
-    if (!util_valid_digest_file(path, digest)) {
+    if (!sha256_valid_digest_file(path, digest)) {
         isulad_try_set_error_message("Invalid content in mainfest: layer(except first layer) has invalid digest");
         return false;
     }
@@ -341,8 +334,7 @@ static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
 }
 
 /* validate layer host files */
-static bool validate_layer_host_files(size_t layer_index, const char *location,
-                                      embedded_layers *layer)
+static bool validate_layer_host_files(size_t layer_index, const char *location, embedded_layers *layer)
 {
     uint32_t fmod;
     char real_path[PATH_MAX] = { 0 };
@@ -355,8 +347,7 @@ static bool validate_layer_host_files(size_t layer_index, const char *location,
         return false;
     }
 
-    if (!validate_layer_path_in_host(layer_index, location, layer->path_in_host,
-                                     real_path, fmod)) {
+    if (!validate_layer_path_in_host(layer_index, location, layer->path_in_host, real_path, fmod)) {
         return false;
     }
 
@@ -364,8 +355,7 @@ static bool validate_layer_host_files(size_t layer_index, const char *location,
 }
 
 /* validate layer size */
-static bool validate_layer_size(size_t layer_index,
-                                embedded_layers *layer)
+static bool validate_layer_size(size_t layer_index, embedded_layers *layer)
 {
     if (layer == NULL) {
         return false;
@@ -400,10 +390,10 @@ static bool validate_image_name(char *image_name)
         return false;
     }
 
-    if (strcmp(image_name, "none") == 0 ||
-        strcmp(image_name, "none:latest") == 0) {
+    if (strcmp(image_name, "none") == 0 || strcmp(image_name, "none:latest") == 0) {
         ERROR("image name %s must not be none or none:latest", image_name);
-        isulad_try_set_error_message("Image name 'none' or 'none:latest' in manifest is reserved, please use other name");
+        isulad_try_set_error_message(
+            "Image name 'none' or 'none:latest' in manifest is reserved, please use other name");
         return false;
     }
 
@@ -546,7 +536,7 @@ int lim_add_manifest(struct image_creator *ic, char *path, char *digest, bool mv
     }
 
     /* calc and check digest */
-    manifest_digest = util_full_file_digest(path);
+    manifest_digest = sha256_full_file_digest(path);
     if (manifest_digest == NULL) {
         ERROR("calc full digest of %s failed", path);
         isulad_try_set_error_message("Invalid manifest: invalid digest");
@@ -730,8 +720,7 @@ out:
 }
 
 /* lim create rw layer */
-int lim_create_rw_layer(char *name, const char *id, char **options,
-                        char **mount_string)
+int lim_create_rw_layer(char *name, const char *id, char **options, char **mount_string)
 {
     int ret = 0;
     struct db_image *imginfo = NULL;
@@ -781,8 +770,7 @@ static bool valid_param(const char *name, const char *type, char **data)
 }
 
 /* lim query image data */
-int lim_query_image_data(const char *name, const char *type,
-                         char **data, char **image_type)
+int lim_query_image_data(const char *name, const char *type, char **data, char **image_type)
 {
     struct db_image *imginfo = NULL;
     int ret = 0;
@@ -834,4 +822,3 @@ out:
 
     return ret;
 }
-

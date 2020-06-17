@@ -58,8 +58,6 @@ bool util_valid_digest(const char *digest);
 
 bool util_valid_tag(const char *tag);
 
-bool util_valid_digest_file(const char *path, const char *digest);
-
 bool util_valid_key_type(const char *key);
 
 bool util_valid_key_src(const char *key);
@@ -105,4 +103,3 @@ bool util_valid_exec_suffix(const char *suffix);
 #endif
 
 #endif /* __UTILS_H */
-

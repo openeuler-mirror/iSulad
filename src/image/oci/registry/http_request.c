@@ -25,6 +25,7 @@
 #include "http.h"
 #include "http_request.h"
 #include "utils.h"
+#include "utils_images.h"
 #include "parser.h"
 #include "certs.h"
 #include "auths.h"

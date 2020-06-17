@@ -23,6 +23,7 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "utils_images.h"
 #include "specs_extend.h"
 #include "oci_config_merge.h"
 
@@ -50,7 +51,6 @@ char *oci_resolve_image_name(const char *name)
 
     return oci_normalize_image_name(name);
 }
-
 
 static void oci_strip_dockerio(const imagetool_image *image)
 {
@@ -169,8 +169,7 @@ out:
     return ret;
 }
 
-static bool image_time_filter(const imagetool_image *src, const struct filters_args *filters,
-                              const char *field)
+static bool image_time_filter(const imagetool_image *src, const struct filters_args *filters, const char *field)
 {
     bool ret = false;
     map_t *field_values_map = NULL;
@@ -293,10 +292,8 @@ static bool image_meet_reference_filter(const imagetool_image *src, const struct
 
 static bool image_meet_filters(const imagetool_image *src, const struct filters_args *filters)
 {
-    return image_meet_dangling_filter(src, filters) &&
-           image_meet_before_filter(src, filters) &&
-           image_meet_since_filter(src, filters) &&
-           image_meet_label_filter(src, filters) &&
+    return image_meet_dangling_filter(src, filters) && image_meet_before_filter(src, filters) &&
+           image_meet_since_filter(src, filters) && image_meet_label_filter(src, filters) &&
            image_meet_reference_filter(src, filters);
 }
 
@@ -582,4 +579,3 @@ out:
     free_imagetool_image(image_info);
     return ret;
 }
-

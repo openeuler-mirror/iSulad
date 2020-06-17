@@ -20,6 +20,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_images.h"
+#include "sha256.h"
 
 char *get_last_part(char **parts)
 {
@@ -376,9 +377,9 @@ char *oci_calc_diffid(const char *file)
     }
 
     if (gzip) {
-        diff_id = util_full_gzip_digest(file);
+        diff_id = sha256_full_gzip_digest(file);
     } else {
-        diff_id = util_full_file_digest(file);
+        diff_id = sha256_full_file_digest(file);
     }
     if (diff_id == NULL) {
         ERROR("calculate digest failed for file %s", file);
@@ -391,4 +392,3 @@ out:
     }
     return diff_id;
 }
-

@@ -28,6 +28,7 @@
 
 #include "utils.h"
 #include "utils_file.h"
+#include "utils_images.h"
 #include "isula_libutils/log.h"
 #include "constants.h"
 
@@ -549,8 +550,8 @@ static int with_valid_converted_config(const char *path, bool *valid)
 {
     int ret = 0;
     int nret;
-    char image_path[PATH_MAX] = {0x00};
-    char config_path[PATH_MAX] = {0x00};
+    char image_path[PATH_MAX] = { 0x00 };
+    char config_path[PATH_MAX] = { 0x00 };
     char *base_name = NULL;
     char *sha256_key = NULL;
     storage_image *img = NULL;
@@ -627,7 +628,7 @@ static int validate_manifest_schema_version_1(const char *path, bool *valid)
     registry_manifest_schema2 *manifest_v2 = NULL;
     oci_image_manifest *manifest_oci = NULL;
     parser_error err = NULL;
-    char manifest_path[PATH_MAX] = {0x00};
+    char manifest_path[PATH_MAX] = { 0x00 };
     bool valid_v2_config = false;
 
     *valid = false;
@@ -688,7 +689,6 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
     struct layer_list *list = NULL;
     char *parent_chain_id = NULL;
     size_t j = 0;
-
 
     if (manifest->fs_layers_len > MAX_LAYER_NUM || manifest->fs_layers_len == 0) {
         ERROR("Invalid layer number %ld, maxium is %d and it can't be 0", manifest->fs_layers_len, MAX_LAYER_NUM);
@@ -766,8 +766,8 @@ out:
     return ret;
 }
 
-static int update_config_file(const layer_blob *layers, size_t layers_len,
-                              const registry_manifest_schema1 *manifest, docker_image_config_v2 *config)
+static int update_config_file(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
+                              docker_image_config_v2 *config)
 {
     // Delete items that do not want to inherit
     free_items_not_inherit(config);
@@ -822,8 +822,8 @@ static int append_converted_image_to_store(const storage_image *img)
     return 0;
 }
 
-static int set_big_data_for_converted_image(const char *id, const char *config_digest,
-                                            const char *path, const char *json)
+static int set_big_data_for_converted_image(const char *id, const char *config_digest, const char *path,
+                                            const char *json)
 {
     int ret = 0;
     int nret;
@@ -888,7 +888,7 @@ static int convert_to_v2_image_and_load(const char *path)
     size_t layers_len = 0;
     char *config_json = NULL;
     char image_file[PATH_MAX] = { 0x00 };
-    char manifest_path[PATH_MAX] = {0x00};
+    char manifest_path[PATH_MAX] = { 0x00 };
     char *config_digest = NULL;
     storage_image *img = NULL;
     size_t i;
@@ -1057,7 +1057,6 @@ static int get_images_from_json()
                 continue;
             }
         }
-
     }
 
 out:

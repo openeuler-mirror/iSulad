@@ -24,6 +24,7 @@
 #include "oci_logout.h"
 #include "registry.h"
 #include "utils.h"
+#include "utils_images.h"
 #include "storage.h"
 #include "oci_load.h"
 #include "oci_import.h"

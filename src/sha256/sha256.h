@@ -35,9 +35,7 @@ extern int fstream_read(FILE *stream, int fd);
 /* read gzfile stream buffer.  */
 extern int gzstream_read(gzFile gzstream, int fd);
 
-extern int sha256sum_calculate(void *stream, char *buffer_out, size_t len,
-                               bool isfile,
-                               bool isgzip);
+extern int sha256sum_calculate(void *stream, char *buffer_out, size_t len, bool isfile, bool isgzip);
 /* Compute SHA256 (SHA224) message digest for bytes read from STREAM.
    The result is a 64 characters string without prefix "sha256:"  */
 char *sha256_digest(void *stream, bool isgzip);
@@ -46,9 +44,14 @@ char *sha256_digest_file(const char *filename, bool isgzip);
 
 char *sha256_digest_str(const char *val);
 
-# ifdef __cplusplus
-}
-# endif
+char *sha256_full_gzip_digest(const char *filename);
 
+char *sha256_full_file_digest(const char *filename);
+
+bool sha256_valid_digest_file(const char *path, const char *digest);
+
+#ifdef __cplusplus
+}
 #endif
 
+#endif

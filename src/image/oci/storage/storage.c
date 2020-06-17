@@ -21,6 +21,7 @@
 
 #include "console.h"
 #include "utils.h"
+#include "utils_images.h"
 #include "isula_libutils/log.h"
 #include "layer_store.h"
 #include "image_store.h"

@@ -375,3 +375,124 @@ out:
         return NULL;
     }
 }
+
+static char *cal_file_digest(const char *filename)
+{
+    FILE *fp = NULL;
+    char *digest = NULL;
+
+    if (filename == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    fp = util_fopen(filename, "r");
+    if (fp == NULL) {
+        ERROR("failed to open file %s: %s", filename, strerror(errno));
+        return NULL;
+    }
+
+    digest = sha256_digest_file(filename, false);
+    if (digest == NULL) {
+        ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
+        goto err_out;
+    }
+
+err_out:
+    fclose(fp);
+
+    return digest;
+}
+
+static char *cal_gzip_digest(const char *filename)
+{
+    int ret = 0;
+    char *digest = NULL;
+    bool gzip = false;
+
+    if (filename == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    ret = util_gzip_compressed(filename, &gzip);
+    if (ret != 0) {
+        ERROR("Failed to check if it's gzip compressed");
+        return NULL;
+    }
+
+    if (!gzip) {
+        ERROR("File %s is not gziped", filename);
+        return NULL;
+    }
+
+    digest = sha256_digest_file(filename, true);
+    if (digest == NULL) {
+        ERROR("calc digest for file %s failed: %s", filename, strerror(errno));
+        goto err_out;
+    }
+
+err_out:
+
+    return digest;
+}
+
+char *sha256_full_gzip_digest(const char *filename)
+{
+    char *digest = NULL;
+    char *full_digest = NULL;
+
+    if (filename == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    digest = cal_gzip_digest(filename);
+    full_digest = util_full_digest(digest);
+    free(digest);
+
+    return full_digest;
+}
+
+char *sha256_full_file_digest(const char *filename)
+{
+    char *digest = NULL;
+    char *full_digest = NULL;
+
+    if (filename == NULL) {
+        ERROR("invalid NULL param");
+        return NULL;
+    }
+
+    digest = cal_file_digest(filename);
+    full_digest = util_full_digest(digest);
+    free(digest);
+
+    return full_digest;
+}
+
+bool sha256_valid_digest_file(const char *path, const char *digest)
+{
+    char *file_digest = NULL;
+
+    if (path == NULL || digest == NULL) {
+        ERROR("invalid NULL param");
+        return false;
+    }
+
+    file_digest = sha256_full_file_digest(path);
+    if (file_digest == NULL) {
+        ERROR("calc digest of file %s failed", path);
+        return false;
+    }
+
+    if (strcmp(file_digest, digest)) {
+        ERROR("file %s digest %s not match %s", path, file_digest, digest);
+        free(file_digest);
+        return false;
+    }
+
+    free(file_digest);
+
+    return true;
+}

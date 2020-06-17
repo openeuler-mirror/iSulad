@@ -37,7 +37,7 @@
 #include "utils_fs.h"
 #include "utils_base64.h"
 #include "utils_aes.h"
-#include "utils_images.h"
+//#include "utils_images.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -232,77 +232,27 @@ extern "C" {
 #define SIGRTMAX 64
 #endif
 
-#define SIGNAL_MAP_DEFAULT                  \
-    {                                       \
-        { SIGHUP,    "HUP" },               \
-        { SIGINT,    "INT" },               \
-        { SIGQUIT,   "QUIT" },              \
-        { SIGILL,    "ILL" },               \
-        { SIGABRT,   "ABRT" },              \
-        { SIGFPE,    "FPE" },               \
-        { SIGKILL,   "KILL" },              \
-        { SIGSEGV,   "SEGV" },              \
-        { SIGPIPE,   "PIPE" },              \
-        { SIGALRM,   "ALRM" },              \
-        { SIGTERM,   "TERM" },              \
-        { SIGUSR1,   "USR1" },              \
-        { SIGUSR2,   "USR2" },              \
-        { SIGCHLD,   "CHLD" },              \
-        { SIGCONT,   "CONT" },              \
-        { SIGSTOP,   "STOP" },              \
-        { SIGTSTP,   "TSTP" },              \
-        { SIGTTIN,   "TTIN" },              \
-        { SIGTTOU,   "TTOU" },              \
-        { SIGTRAP,   "TRAP" },              \
-        { SIGIOT,    "IOT" },               \
-        { SIGEMT,    "EMT" },               \
-        { SIGBUS,    "BUS" },               \
-        { SIGSTKFLT, "STKFLT" },            \
-        { SIGCLD,    "CLD" },               \
-        { SIGURG,    "URG" },               \
-        { SIGXCPU,   "XCPU" },              \
-        { SIGXFSZ,   "XFSZ" },              \
-        { SIGVTALRM, "VTALRM" },            \
-        { SIGPROF,   "PROF" },              \
-        { SIGWINCH,  "WINCH" },             \
-        { SIGIO,     "IO" },                \
-        { SIGPOLL,   "POLL" },              \
-        { SIGINFO,   "INFO" },              \
-        { SIGLOST,   "LOST" },              \
-        { SIGPWR,    "PWR" },               \
-        { SIGUNUSED, "UNUSED" },            \
-        { SIGSYS,    "SYS" },               \
-        { SIGRTMIN,  "RTMIN" },             \
-        { SIGRTMIN + 1,  "RTMIN+1" },       \
-        { SIGRTMIN + 2,  "RTMIN+2" },       \
-        { SIGRTMIN + 3,  "RTMIN+3" },       \
-        { SIGRTMIN + 4,  "RTMIN+4" },       \
-        { SIGRTMIN + 5,  "RTMIN+5" },       \
-        { SIGRTMIN + 6,  "RTMIN+6" },       \
-        { SIGRTMIN + 7,  "RTMIN+7" },       \
-        { SIGRTMIN + 8,  "RTMIN+8" },       \
-        { SIGRTMIN + 9,  "RTMIN+9" },       \
-        { SIGRTMIN + 10,  "RTMIN+10" },     \
-        { SIGRTMIN + 11,  "RTMIN+11" },     \
-        { SIGRTMIN + 12,  "RTMIN+12" },     \
-        { SIGRTMIN + 13,  "RTMIN+13" },     \
-        { SIGRTMIN + 14,  "RTMIN+14" },     \
-        { SIGRTMIN + 15,  "RTMIN+15" },     \
-        { SIGRTMAX - 14,  "RTMAX-14" },     \
-        { SIGRTMAX - 13,  "RTMAX-13" },     \
-        { SIGRTMAX - 12,  "RTMAX-12" },     \
-        { SIGRTMAX - 11,  "RTMAX-11" },     \
-        { SIGRTMAX - 10,  "RTMAX-10" },     \
-        { SIGRTMAX - 9,  "RTMAX-9" },       \
-        { SIGRTMAX - 8,  "RTMAX-8" },       \
-        { SIGRTMAX - 7,  "RTMAX-7" },       \
-        { SIGRTMAX - 6,  "RTMAX-6" },       \
-        { SIGRTMAX - 5,  "RTMAX-5" },       \
-        { SIGRTMAX - 4,  "RTMAX-4" },       \
-        { SIGRTMAX - 3,  "RTMAX-3" },       \
-        { SIGRTMAX - 2,  "RTMAX-2" },       \
-        { SIGRTMAX - 1,  "RTMAX-1" },       \
-        { SIGRTMAX,  "RTMAX" }              \
+#define SIGNAL_MAP_DEFAULT                                                                                             \
+    {                                                                                                                  \
+        { SIGHUP, "HUP" }, { SIGINT, "INT" }, { SIGQUIT, "QUIT" }, { SIGILL, "ILL" }, { SIGABRT, "ABRT" },             \
+        { SIGFPE, "FPE" }, { SIGKILL, "KILL" }, { SIGSEGV, "SEGV" }, { SIGPIPE, "PIPE" }, { SIGALRM, "ALRM" }, \
+        { SIGTERM, "TERM" }, { SIGUSR1, "USR1" }, { SIGUSR2, "USR2" }, { SIGCHLD, "CHLD" },                    \
+        { SIGCONT, "CONT" }, { SIGSTOP, "STOP" }, { SIGTSTP, "TSTP" }, { SIGTTIN, "TTIN" },                    \
+        { SIGTTOU, "TTOU" }, { SIGTRAP, "TRAP" }, { SIGIOT, "IOT" }, { SIGEMT, "EMT" }, { SIGBUS, "BUS" },     \
+        { SIGSTKFLT, "STKFLT" }, { SIGCLD, "CLD" }, { SIGURG, "URG" }, { SIGXCPU, "XCPU" },                    \
+        { SIGXFSZ, "XFSZ" }, { SIGVTALRM, "VTALRM" }, { SIGPROF, "PROF" }, { SIGWINCH, "WINCH" },              \
+        { SIGIO, "IO" }, { SIGPOLL, "POLL" }, { SIGINFO, "INFO" }, { SIGLOST, "LOST" }, { SIGPWR, "PWR" },     \
+        { SIGUNUSED, "UNUSED" }, { SIGSYS, "SYS" }, { SIGRTMIN, "RTMIN" }, { SIGRTMIN + 1, "RTMIN+1" },        \
+        { SIGRTMIN + 2, "RTMIN+2" }, { SIGRTMIN + 3, "RTMIN+3" }, { SIGRTMIN + 4, "RTMIN+4" },                 \
+        { SIGRTMIN + 5, "RTMIN+5" }, { SIGRTMIN + 6, "RTMIN+6" }, { SIGRTMIN + 7, "RTMIN+7" },                 \
+        { SIGRTMIN + 8, "RTMIN+8" }, { SIGRTMIN + 9, "RTMIN+9" }, { SIGRTMIN + 10, "RTMIN+10" },               \
+        { SIGRTMIN + 11, "RTMIN+11" }, { SIGRTMIN + 12, "RTMIN+12" }, { SIGRTMIN + 13, "RTMIN+13" },           \
+        { SIGRTMIN + 14, "RTMIN+14" }, { SIGRTMIN + 15, "RTMIN+15" }, { SIGRTMAX - 14, "RTMAX-14" },           \
+        { SIGRTMAX - 13, "RTMAX-13" }, { SIGRTMAX - 12, "RTMAX-12" }, { SIGRTMAX - 11, "RTMAX-11" },           \
+        { SIGRTMAX - 10, "RTMAX-10" }, { SIGRTMAX - 9, "RTMAX-9" }, { SIGRTMAX - 8, "RTMAX-8" },               \
+        { SIGRTMAX - 7, "RTMAX-7" }, { SIGRTMAX - 6, "RTMAX-6" }, { SIGRTMAX - 5, "RTMAX-5" },                 \
+        { SIGRTMAX - 4, "RTMAX-4" }, { SIGRTMAX - 3, "RTMAX-3" }, { SIGRTMAX - 2, "RTMAX-2" },                 \
+        { SIGRTMAX - 1, "RTMAX-1" }, { SIGRTMAX, "RTMAX" },                                                    \
     }
 
 /* Basic data structure which holds all information we can get about a process.
@@ -361,12 +311,12 @@ struct signame {
     const char *name;
 };
 
-#define UTIL_FREE_AND_SET_NULL(p)  \
-    do {                           \
-        if ((p) != NULL) {         \
-            free((void *)(p));     \
-            (p) = NULL;            \
-        }                          \
+#define UTIL_FREE_AND_SET_NULL(p) \
+    do {                          \
+        if ((p) != NULL) {        \
+            free((void *)(p));    \
+            (p) = NULL;           \
+        }                         \
     } while (0)
 
 int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize);
@@ -452,4 +402,3 @@ char *util_int_to_string(long long int data);
 #endif
 
 #endif /* __UTILS_H */
-

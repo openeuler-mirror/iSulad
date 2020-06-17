@@ -1379,7 +1379,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
         ERROR("Write config file failed");
         goto out;
     }
-    desc->config.digest = util_full_file_digest(desc->config.file);
+    desc->config.digest = sha256_full_file_digest(desc->config.file);
 
 out:
     free(json);
