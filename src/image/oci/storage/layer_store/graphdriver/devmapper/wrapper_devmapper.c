@@ -37,73 +37,88 @@ struct dm_task *task_create(int type)
 
 int set_name(struct dm_task *dmt, const char *name)
 {
-    int ret;
+    int ret = 0;
 
-    ret = dm_task_set_name(dmt, name);
-    if (ret != 1) {
+    if (dmt == NULL || name == NULL) {
         return -1;
     }
 
-    return 0;
+    if (dm_task_set_name(dmt, name) != 1) {
+        ret = -1;
+    }
+
+    return ret;
 }
 
 int set_message(struct dm_task *dmt, const char *message)
 {
-    int ret;
-
-    ret = dm_task_set_message(dmt, message);
-    if (ret != 1) {
+    if (dmt == NULL || message == NULL) {
         return -1;
     }
 
-    return 0;
+    return dm_task_set_message(dmt, message) != 1 ? -1 : 0;
 }
 
 int set_sector(struct dm_task *dmt, uint64_t sector)
 {
-    int ret;
+    int ret = 0;
 
-    ret = dm_task_set_sector(dmt, sector);
-    if (ret != 1) {
+    if (dmt == NULL) {
         return -1;
     }
 
-    return 0;
+    if (dm_task_set_sector(dmt, sector) != 1) {
+        ret = -1;
+    }
+
+    return ret;
 }
 
 int set_add_node(struct dm_task *dmt, dm_add_node_t add_node)
 {
-    int ret;
+    int ret = 0;
+
+    if (dmt == NULL) {
+        return -1;
+    }
 
     if (add_node != DM_ADD_NODE_ON_RESUME && add_node != DM_ADD_NODE_ON_CREATE) {
-        return ERR_INVALID_ADD_NODE;
+        ret = ERR_INVALID_ADD_NODE;
+        goto out;
     }
 
-    ret = dm_task_set_add_node(dmt, add_node);
-    if (ret != 1) {
-        return ERR_TASK_SET_ADD_NODE;
+    if (dm_task_set_add_node(dmt, add_node) != 1) {
+        ret = ERR_TASK_SET_ADD_NODE;
+        goto out;
     }
 
-    return 0;
+out:
+    return ret;
 }
 
 int set_ro(struct dm_task *dmt)
 {
-    int ret;
+    int ret = 0;
 
-    ret = dm_task_set_ro(dmt);
-    if (ret != 1) {
+    if (dmt == NULL) {
         return -1;
     }
 
-    return 0;
+    if (dm_task_set_ro(dmt) != 1) {
+        ret = -1;
+    }
+
+    return ret;
 }
+
 static int add_target(struct dm_task *dmt, uint64_t start, uint64_t size, const char *ttype, const char *params)
 {
-    int ret = 0;
+    if (dmt == NULL || ttype == NULL || params == NULL) {
+        ERROR("devicemapper: invalid input params to add target");
+        return -1;
+    }
 
-    ret = dm_task_add_target(dmt, start, size, ttype, params);
-    if (ret != 1) {
+    if (dm_task_add_target(dmt, start, size, ttype, params) != 1) {
         ERROR("devmapper:dm task add target failed, params is %s", params);
         return ERR_TASK_ADD_TARGET;
     }
@@ -118,19 +133,21 @@ void set_udev_wait_timeout(int64_t t)
 
 int set_dev_dir(const char *dir)
 {
-    int ret;
+    int ret = 0;
 
-    ret = dm_set_dev_dir(dir);
-    if (ret != 1) {
+    if (dir == NULL) {
         return -1;
     }
 
-    return 0;
+    if (dm_set_dev_dir(dir) != 1) {
+        ret = -1;
+    }
+
+    return ret;
 }
 
 struct dm_task *task_create_named(int type, const char *dm_name)
 {
-    int ret;
     struct dm_task *dmt = NULL;
 
     if (dm_name == NULL) {
@@ -145,8 +162,7 @@ struct dm_task *task_create_named(int type, const char *dm_name)
         return NULL;
     }
 
-    ret = dm_task_set_name(dmt, dm_name);
-    if (ret != 1) {
+    if (dm_task_set_name(dmt, dm_name) != 1) {
         ERROR("devicemapper: Can't set task name %s", dm_name);
         goto cleanup;
     }
@@ -177,19 +193,18 @@ int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **
 
     dmt = task_create_named(DM_DEVICE_TABLE, name);
     if (dmt == NULL) {
+        ret = -1;
         ERROR("devicemapper:create named task failed");
-        return -1;
+        goto cleanup;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
-    ret = dm_task_get_info(dmt, &info);
-    if (ret != 1) {
+    if (dm_task_get_info(dmt, &info) != 1) {
         ret = -1;
         ERROR("devicemapper: get info err");
         goto cleanup;
@@ -206,16 +221,16 @@ int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **
     *length = dm_length;
     *target_type = util_strdup_s(dm_target_type);
     *params = util_strdup_s(dm_params);
-    ret = 0;
 
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
 char *dev_get_driver_version()
 {
-    int ret;
     struct dm_task *dmt = NULL;
     char *version = NULL;
     size_t size = 128;
@@ -231,14 +246,12 @@ char *dev_get_driver_version()
         goto err_out;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ERROR("devicemapper: task run failed");
         goto err_out;
     }
 
-    ret = dm_task_get_driver_version(dmt, version, size);
-    if (ret == 0) {
+    if (dm_task_get_driver_version(dmt, version, size) == 0) {
         goto err_out;
     }
 
@@ -249,7 +262,9 @@ err_out:
     version = NULL;
 
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return version;
 }
 
@@ -272,18 +287,17 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
 
     dmt = task_create_named(DM_DEVICE_STATUS, name);
     if (dmt == NULL) {
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
-    ret = dm_task_get_info(dmt, &info);
-    if (ret != 1) {
+    if (dm_task_get_info(dmt, &info) != 1) {
         ret = -1;
         ERROR("devicemapper: get info err");
         goto cleanup;
@@ -300,27 +314,30 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
     *length = dm_length;
     *target_type = util_strdup_s(dm_target_type);
     *params = util_strdup_s(dm_params);
-    ret = 0;
 
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
 struct dm_deps *dev_get_deps(const char *name)
 {
-    int ret = 0;
     struct dm_task *dmt = NULL;
     struct dm_deps *deps = NULL;
+
+    if (name == NULL) {
+        return NULL;
+    }
 
     dmt = task_create_named(DM_DEVICE_DEPS, name);
     if (dmt == NULL) {
         ERROR("devicemapper: create named task for get deps failed");
-        return NULL;
+        goto cleanup;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
@@ -332,7 +349,9 @@ struct dm_deps *dev_get_deps(const char *name)
     }
 
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return deps;
 }
 
@@ -341,59 +360,63 @@ int dev_get_info(struct dm_info *info, const char *name)
     int ret = 0;
     struct dm_task *dmt = NULL;
 
-    dmt = task_create_named(DM_DEVICE_INFO, name);
-    if (dmt == NULL) {
+    if (info == NULL || name == NULL) {
+        ERROR("devicemapper: invalid input params to get info");
         return -1;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    dmt = task_create_named(DM_DEVICE_INFO, name);
+    if (dmt == NULL) {
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
-    ret = dm_task_get_info(dmt, info);
-    if (ret != 1) {
+    if (dm_task_get_info(dmt, info) != 1) {
         ret = -1;
         ERROR("devicemapper: get info err");
         goto cleanup;
     }
 
-    ret = 0;
-
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
 // cookie值为获取到的
-int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags)
+static int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags)
 {
     // int dm_task_set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags);
     int ret = 0;
 
     if (cookie == NULL) {
         ERROR("cookie ptr can't be nil");
-        return ERR_NIL_COOKIE;
+        ret = ERR_NIL_COOKIE;
+        goto out;
     }
 
-    ret = dm_task_set_cookie(dmt, cookie, flags);
-    if (ret != 1) {
+    if (dm_task_set_cookie(dmt, cookie, flags) != 1) {
         ERROR("dm_task_set_cookie failed");
-        return ERR_TASK_SET_COOKIE;
+        ret = ERR_TASK_SET_COOKIE;
+        goto out;
     }
 
-    return 0;
+out:
+    return ret;
 }
 
 static void *udev_wait_process(void *data)
 {
     udev_wait_pth_t *uwait = (udev_wait_pth_t *)data;
-    int ret = 0;
 
-    ret = dm_udev_wait(uwait->cookie);
-    if (ret != 1) {
+    if (dm_udev_wait(uwait->cookie) != 1) {
         pthread_mutex_lock(&uwait->udev_mutex);
         uwait->state = ERR_UDEV_WAIT;
         pthread_mutex_unlock(&uwait->udev_mutex);
@@ -412,12 +435,10 @@ void dev_udev_wait(uint32_t cookie)
     pthread_t tid;
     int thread_result;
     udev_wait_pth_t *uwait = NULL;
-    int ret = 0;
     float timeout = 0;
     struct timeval start, end;
 
-    ret = gettimeofday(&start, NULL);
-    if (ret != 0) {
+    if (gettimeofday(&start, NULL) != 0) {
         ERROR("devmapper: get time failed");
         goto free_out;
     }
@@ -430,14 +451,12 @@ void dev_udev_wait(uint32_t cookie)
     uwait->cookie = cookie;
     uwait->state = DEV_INIT;
 
-    ret = pthread_mutex_init(&uwait->udev_mutex, NULL);
-    if (ret != 0) {
+    if (pthread_mutex_init(&uwait->udev_mutex, NULL) != 0) {
         ERROR("Udev mutex initialized failed");
         goto free_out;
     }
 
-    ret = pthread_create(&tid, NULL, udev_wait_process, uwait);
-    if (ret != 0) {
+    if (pthread_create(&tid, NULL, udev_wait_process, uwait) != 0) {
         ERROR("devmapper: create udev wait process thread failed");
         goto free_out;
     }
@@ -449,15 +468,13 @@ void dev_udev_wait(uint32_t cookie)
         }
         pthread_mutex_unlock(&uwait->udev_mutex);
 
-        ret = gettimeofday(&end, NULL);
-        if (ret != 0) {
+        if (gettimeofday(&end, NULL) != 0) {
             ERROR("devmapper: get time failed");
             goto free_out;
         }
         timeout = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000; // seconds
         if (timeout >= (float)dm_udev_wait_timeout) {
-            ret = dm_udev_complete(cookie);
-            if (ret != 1) {
+            if (dm_udev_complete(cookie) != 1) {
                 goto free_out;
             }
             INFO("devmapper: udev wait join thread start...");
@@ -478,29 +495,47 @@ int dev_remove_device(const char *pool_fname)
     struct dm_task *dmt = NULL;
     uint32_t cookie = 0;
 
-    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
-    if (dmt == NULL) {
-        return -1;
-    }
-
-    ret = set_cookie(dmt, &cookie, 0);
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (pool_fname == NULL) {
         ret = -1;
         goto out;
     }
 
-    ret = 0;
-out:
-    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
-        dev_udev_wait(cookie);
+    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
+    if (dmt == NULL) {
+        ERROR("devicemapper: create task with name:DM_DEVICE_REMOVE failed");
+        ret = -1;
+        goto out;
     }
 
-    dm_task_destroy(dmt);
+    if (set_cookie(dmt, &cookie, 0) != 0) {
+        ERROR("devicemapper: set cookie failed");
+        ret = -1;
+        goto out;
+    }
+
+    dm_saw_busy = false;
+    dm_saw_enxio = false;
+    if (dm_task_run(dmt) != 1) {
+        if (dm_saw_busy) {
+            ret = ERR_BUSY;
+            goto udev;
+        }
+
+        if (dm_saw_enxio) {
+            ret = ERR_ENXIO;
+            goto udev;
+        }
+        ret = -1;
+        goto udev;
+    }
+
+udev:
+    dev_udev_wait(cookie);
+
+out:
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -511,39 +546,45 @@ int dev_remove_device_deferred(const char *pool_fname)
     uint32_t cookie = 0;
     uint16_t flags = DM_UDEV_DISABLE_LIBRARY_FALLBACK;
 
-    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
-    if (dmt == NULL) {
-        return -1;
+    if (pool_fname == NULL) {
+        ret = -1;
+        goto out;
     }
 
-    ret = dm_task_deferred_remove(dmt);
-    if (ret != 1) {
+    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
+    if (dmt == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dm_task_deferred_remove(dmt) != 1) {
         ret = ERR_TASK_DEFERRED_REMOVE;
         goto out;
     }
 
-    ret = set_cookie(dmt, &cookie, flags);
-    if (ret != 0) {
+    if (set_cookie(dmt, &cookie, flags) != 0) {
+        ERROR("devicemapper: set cookie failed");
+        ret = -1;
         goto out;
     }
 
     dm_saw_enxio = false;
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
-        ret = ERR_TASK_RUN;
+    if (dm_task_run(dmt) != 1) {
         if (dm_saw_enxio) {
             ret = ERR_ENXIO;
+            goto udev;
         }
         ERROR("devicemapper: Error running RemoveDeviceDeferred %d", ret);
-        goto out;
+        ret = ERR_TASK_RUN;
+        goto udev;
     }
 
-    ret = 0;
+udev:
+    dev_udev_wait(cookie);
 out:
-    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
-        dev_udev_wait(cookie);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
     }
-    dm_task_destroy(dmt);
     return ret;
 }
 
@@ -601,11 +642,11 @@ int dev_get_device_list(char ***list, size_t *length)
     dmt = task_create(DM_DEVICE_LIST);
     if (dmt == NULL) {
         ERROR("devicemapper:create named task status failed");
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
@@ -618,10 +659,11 @@ int dev_get_device_list(char ***list, size_t *length)
         ERROR("devicemapper: get device list failed");
         goto cleanup;
     }
-    ret = 0;
 
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -649,40 +691,42 @@ bool udev_set_sync_support(bool enable)
 int dev_create_device(const char *pool_fname, int device_id)
 {
     int ret = 0;
+    int nret = 0;
     uint64_t sector = 0;
     char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
     struct dm_task *dmt = NULL;
 
-    dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_fname);
-    if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+    if (pool_fname == NULL) {
         return -1;
     }
 
-    ret = set_sector(dmt, sector);
-    if (ret != 0) {
+    dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_fname);
+    if (dmt == NULL) {
+        ERROR("devicemapper:create named task failed");
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (set_sector(dmt, sector) != 0) {
         ret = -1;
         ERROR("devicemapper: Can't set sector");
         goto cleanup;
     }
 
-    ret = snprintf(message, sizeof(message), "create_thin %d", device_id);
-
-    if (ret < 0 || (size_t)ret >= sizeof(message)) {
+    nret = snprintf(message, sizeof(message), "create_thin %d", device_id);
+    if (nret < 0 || (size_t)nret >= sizeof(message)) {
         ret = -1;
         ERROR("Print message create_thin %d failed", device_id);
         goto cleanup;
     }
 
-    ret = set_message(dmt, message);
-    if (ret != 0) {
+    if (set_message(dmt, message) != 0) {
         ret = -1;
         goto cleanup;
     }
 
     dm_saw_exist = false;
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         if (dm_saw_exist) {
             ret = ERR_DEVICE_ID_EXISTS;
         } else {
@@ -692,15 +736,17 @@ int dev_create_device(const char *pool_fname, int device_id)
         goto cleanup;
     }
 
-    ret = 0;
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
 int dev_delete_device(const char *pool_fname, int device_id)
 {
     int ret = 0;
+    int nret = 0;
     uint64_t sector = 0;
     char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
     struct dm_task *dmt = NULL;
@@ -713,39 +759,37 @@ int dev_delete_device(const char *pool_fname, int device_id)
     dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_fname);
     if (dmt == NULL) {
         ERROR("devicemapper:create named task %s failed", pool_fname);
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
-    ret = set_sector(dmt, sector);
-    if (ret != 0) {
+    if (set_sector(dmt, sector) != 0) {
         ret = -1;
         ERROR("devicemapper: Can't set sector");
         goto cleanup;
     }
 
-    ret = snprintf(message, sizeof(message), "delete %d", device_id);
-    if (ret < 0 || (size_t)ret >= sizeof(message)) {
+    nret = snprintf(message, sizeof(message), "delete %d", device_id);
+    if (nret < 0 || (size_t)nret >= sizeof(message)) {
         ret = -1;
         goto cleanup;
     }
 
-    ret = set_message(dmt, message);
-    if (ret != 0) {
+    if (set_message(dmt, message) != 0) {
         ret = -1;
         goto cleanup;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
-    ret = 0;
-
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -754,29 +798,33 @@ int dev_get_info_with_deferred(const char *dm_name, struct dm_info *dmi)
     int ret = 0;
     struct dm_task *dmt = NULL;
 
-    dmt = task_create_named(DM_DEVICE_INFO, dm_name);
-    if (dmt == NULL) {
+    if (dm_name == NULL || dmi == NULL) {
+        ERROR("devicemapper: invalid input params to get info with deferred");
         return -1;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    dmt = task_create_named(DM_DEVICE_INFO, dm_name);
+    if (dmt == NULL) {
+        ret = -1;
+        goto cleanup;
+    }
+
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
-    ret = dm_task_get_info(dmt, dmi);
-    if (ret != 1) {
+    if (dm_task_get_info(dmt, dmi) != 1) {
         ret = -1;
         ERROR("devicemapper: get info err");
         goto cleanup;
     }
 
-    ret = 0;
-
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -787,6 +835,11 @@ int dev_suspend_device(const char *dm_name)
     int ret = 0;
     struct dm_task *dmt = NULL;
 
+    if (dm_name == NULL) {
+        ERROR("devicemapper: invalid input param to suspend device");
+        return -1;
+    }
+
     dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
     if (dmt == NULL) {
         ret = -1;
@@ -794,16 +847,16 @@ int dev_suspend_device(const char *dm_name)
         goto out;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: Error running deviceCreate (ActivateDevice) %d", ret);
+        goto out;
     }
 
-    ret = 0;
-
 out:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -816,38 +869,42 @@ int dev_resume_device(const char *dm_name)
     uint16_t flags = 0;
     struct dm_task *dmt = NULL;
 
-    dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
-    if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+    if (dm_name == NULL) {
+        ERROR("devicemapper: invalid input params to resume device");
         return -1;
     }
 
-    ret = set_cookie(dmt, &cookie, flags);
-    if (ret != 0) {
+    dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
+    if (dmt == NULL) {
+        ERROR("devicemapper:create named task failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (set_cookie(dmt, &cookie, flags) != 0) {
+        ret = -1;
         ERROR("devicemapper: Can't set cookie %d", ret);
         goto out;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: Error running deviceResume %d", ret);
-        goto out;
     }
 
-    ret = 0;
+    dev_udev_wait(cookie);
 
 out:
-    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
-        dev_udev_wait(cookie);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
     }
-    dm_task_destroy(dmt);
     return ret;
 }
 
 int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size)
 {
     int ret = 0;
+    int nret = 0;
     uint64_t start = 0;
     uint32_t cookie = 0;
     uint16_t flags = 0;
@@ -855,51 +912,53 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
     struct dm_task *dmt = NULL;
     dm_add_node_t add_node_type = DM_ADD_NODE_ON_CREATE;
 
-    dmt = task_create_named(DM_DEVICE_CREATE, name);
-    if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+    if (pool_name == NULL || name == NULL) {
+        ERROR("devicemapper: invalid input params to active device");
         return -1;
     }
 
-    ret = snprintf(params, sizeof(params), "%s %d", pool_name, device_id);
-    if (ret < 0 || (size_t)ret >= sizeof(params)) {
+    dmt = task_create_named(DM_DEVICE_CREATE, name);
+    if (dmt == NULL) {
+        ret = -1;
+        ERROR("devicemapper:create named task failed");
+        goto out;
+    }
+
+    nret = snprintf(params, sizeof(params), "%s %d", pool_name, device_id);
+    if (nret < 0 || (size_t)nret >= sizeof(params)) {
+        ret = -1;
         ERROR("Print params with pool name:%s, device_id:%d failed", pool_name, device_id);
         goto out;
     }
 
-    ret = add_target(dmt, start, size / 512, "thin", params);
-    if (ret != 0) {
+    if (add_target(dmt, start, size / 512, "thin", params) != 0) {
+        ret = -1;
         ERROR("devicemapper: Can't add target");
         goto out;
     }
 
-    ret = set_add_node(dmt, add_node_type);
-    if (ret != 0) {
+    if (set_add_node(dmt, add_node_type) != 0) {
+        ret = -1;
         ERROR("devicemapper: Can't add node");
         goto out;
     }
 
-    ret = set_cookie(dmt, &cookie, flags);
-    if (ret != 0) {
-        ERROR("devicemapper: Can't set cookie %d", ret);
+    if (set_cookie(dmt, &cookie, flags) != 0) {
+        ret = -1;
+        ERROR("devicemapper: Can't set cookie");
         goto out;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: error running deviceCreate (ActivateDevice) %d", ret);
-        goto udev_wait;
     }
 
-    ret = 0;
-udev_wait:
-    if (ret != ERR_NIL_COOKIE && ret != ERR_TASK_SET_COOKIE) {
-        dev_udev_wait(cookie);
-    }
-
+    dev_udev_wait(cookie);
 out:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -909,43 +968,49 @@ int dev_cancel_deferred_remove(const char *dm_name)
     uint64_t sector = 0;
     struct dm_task *dmt = NULL;
 
-    dmt = task_create_named(DM_DEVICE_TARGET_MSG, dm_name);
-    if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+    if (dm_name == NULL) {
+        ERROR("devicemapper: invalid dm name to cancel deferred remove");
         return -1;
     }
 
-    ret = set_sector(dmt, sector);
-    if (ret != 0) {
+    dmt = task_create_named(DM_DEVICE_TARGET_MSG, dm_name);
+    if (dmt == NULL) {
+        ret = -1;
+        ERROR("devicemapper:create named task failed");
+        goto cleanup;
+    }
+
+    if (set_sector(dmt, sector) != 0) {
         ret = -1;
         ERROR("devicemapper: Can't set sector");
         goto cleanup;
     }
 
-    ret = set_message(dmt, "@cancel_deferred_remove");
-    if (ret != 0) {
+    if (set_message(dmt, "@cancel_deferred_remove") != 0) {
         ret = -1;
         goto cleanup;
     }
 
     dm_saw_busy = false;
     dm_saw_enxio = false;
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         if (dm_saw_busy) {
-            return ERR_BUSY;
-        } else if (dm_saw_enxio) {
-            return ERR_ENXIO;
+            ret = ERR_BUSY;
+            goto cleanup;
+        }
+        if (dm_saw_enxio) {
+            ret = ERR_ENXIO;
+            goto cleanup;
         }
         ret = -1;
         ERROR("devicemapper: Error running CancelDeferredRemove");
         goto cleanup;
     }
 
-    ret = 0;
-
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -993,12 +1058,12 @@ static void log_cb(int level, const char *file, int line, int dm_errno_or_class,
 {
     char *buffer = NULL;
     va_list ap;
-    int ret;
+    int nret = 0;
 
     va_start(ap, f);
-    ret = vasprintf(&buffer, f, ap);
+    nret = vasprintf(&buffer, f, ap);
     va_end(ap);
-    if (ret < 0) {
+    if (nret < 0) {
         // memory allocation failed -- should never happen?
         return;
     }
@@ -1016,52 +1081,57 @@ void log_with_errno_init()
 int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_device_id)
 {
     int ret = 0;
+    int nret = 0;
     uint64_t sector = 0;
     char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
     struct dm_task *dmt = NULL;
 
-    dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_name);
-    if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+    if (pool_name == NULL) {
+        ERROR("devicemapper: invalid input param to create snap device");
         return -1;
     }
 
-    ret = set_sector(dmt, sector);
-    if (ret != 0) {
+    dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_name);
+    if (dmt == NULL) {
+        ret = -1;
+        ERROR("devicemapper:create named task failed");
+        goto cleanup;
+    }
+
+    if (set_sector(dmt, sector) != 0) {
         ret = -1;
         ERROR("devicemapper: Can't set sector");
         goto cleanup;
     }
 
-    ret = snprintf(message, sizeof(message), "create_snap %d %d", device_id, base_device_id);
-    if (ret < 0 || (size_t)ret >= sizeof(message)) {
+    nret = snprintf(message, sizeof(message), "create_snap %d %d", device_id, base_device_id);
+    if (nret < 0 || (size_t)nret >= sizeof(message)) {
         ret = -1;
         ERROR("devicemapper: print create_snap message failed");
         goto cleanup;
     }
 
-    ret = set_message(dmt, message);
-    if (ret != 0) {
+    if (set_message(dmt, message) != 0) {
+        ret = -1;
         ERROR("devicemapper: Can't set message %s", message);
         goto cleanup;
     }
 
     dm_saw_exist = false;
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         if (dm_saw_exist) {
             ret = ERR_DEVICE_ID_EXISTS;
-        } else {
-            ret = -1;
+            goto cleanup;
         }
+        ret = -1;
         ERROR("devicemapper: Error running deviceCreate (CreateSnapDeviceRaw)");
         goto cleanup;
     }
 
-    ret = 0;
-
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }
 
@@ -1069,6 +1139,7 @@ cleanup:
 int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_id)
 {
     int ret = 0;
+    int nret = 0;
     uint64_t sector = 0;
     char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
     struct dm_task *dmt = NULL;
@@ -1085,34 +1156,33 @@ int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_
         goto cleanup;
     }
 
-    ret = set_sector(dmt, sector);
-    if (ret != 0) {
+    if (set_sector(dmt, sector) != 0) {
+        ret = -1;
         ERROR("devicemapper: Can't set sector");
         goto cleanup;
     }
 
-    ret = snprintf(message, sizeof(message), "set_transaction_id %lu %lu", old_id, new_id);
-    if (ret < 0 || (size_t)ret >= sizeof(message)) {
+    nret = snprintf(message, sizeof(message), "set_transaction_id %lu %lu", old_id, new_id);
+    if (nret < 0 || (size_t)nret >= sizeof(message)) {
         ret = -1;
         ERROR("devicemapper:print set_transaction_id message failed");
         goto cleanup;
     }
 
-    ret = set_message(dmt, message);
-    if (ret != 0) {
+    if (set_message(dmt, message) != 0) {
+        ret = -1;
         goto cleanup;
     }
 
-    ret = dm_task_run(dmt);
-    if (ret != 1) {
+    if (dm_task_run(dmt) != 1) {
         ret = -1;
         ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
-    ret = 0;
-
 cleanup:
-    dm_task_destroy(dmt);
+    if (dmt != NULL) {
+        dm_task_destroy(dmt);
+    }
     return ret;
 }

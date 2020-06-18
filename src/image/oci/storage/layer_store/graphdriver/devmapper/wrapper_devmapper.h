@@ -82,8 +82,6 @@ int set_message(struct dm_task *dmt, const char *message);
 
 int set_sector(struct dm_task *dmt, uint64_t sector);
 
-int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags);
-
 int set_add_node(struct dm_task *dmt, dm_add_node_t add_node);
 
 int set_ro(struct dm_task *dmt);

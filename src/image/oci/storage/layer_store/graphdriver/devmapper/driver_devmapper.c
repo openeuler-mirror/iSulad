@@ -115,13 +115,14 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
     }
 
     if (!has_device(id, driver->devset)) {
-        return 0;
+        DEBUG("Device with id:%s is not exist", id);
+        goto out;
     }
 
-    ret = delete_device(id, false, driver->devset);
-    if (ret != 0) {
+    if (delete_device(id, false, driver->devset) != 0) {
+        ret = -1;
         ERROR("failed to remove device %s", id);
-        return ret;
+        goto out;
     }
 
     mnt_parent_dir = util_path_join(driver->home, "mnt");
@@ -138,7 +139,11 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
         goto out;
     }
 
-    ret = util_path_remove(mnt_point_dir);
+    if (util_path_remove(mnt_point_dir) != 0) {
+        ret = -1;
+        ERROR("Remove path:%s failed", mnt_point_dir);
+        goto out;
+    }
 
 out:
     free(mnt_parent_dir);
@@ -172,21 +177,22 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
         goto out;
     }
 
-    ret = util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE);
-    if (ret != 0) {
+    if (util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
+        ret = -1;
         ERROR("Failed to mkdir path:%s", mnt_point_dir);
         goto out;
     }
 
     DEBUG("devmapper: start to mount container device");
-    ret = mount_device(id, mnt_point_dir, mount_opts, driver->devset);
-    if (ret != 0) {
+    if (mount_device(id, mnt_point_dir, mount_opts, driver->devset) != 0) {
+        ret = -1;
         ERROR("Mount device:%s to path:%s failed", id, mnt_parent_dir);
         goto out;
     }
 
     rootfs = util_path_join(mnt_point_dir, "rootfs");
     if (rootfs == NULL) {
+        ret = -1;
         ERROR("Failed to join devmapper rootfs %s", mnt_point_dir);
         goto out;
     }
@@ -246,9 +252,10 @@ int devmapper_umount_layer(const char *id, const struct graphdriver *driver)
         goto out;
     }
 
-    ret = unmount_device(id, mp, driver->devset);
-    if (ret != 0) {
-        DEBUG("devmapper: unmount %s failed", mp);
+    if (unmount_device(id, mp, driver->devset) != 0) {
+        ret = -1;
+        ERROR("devmapper: unmount %s failed", mp);
+        goto out;
     }
 
 out:
@@ -291,8 +298,9 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
 
     mount_opts = util_common_calloc_s(sizeof(struct driver_mount_opts));
     if (mount_opts == NULL) {
+        ret = -1;
         ERROR("devmapper: out of memory");
-        return -1;
+        goto out;
     }
 
     layer_fs = devmapper_mount_layer(id, driver, mount_opts);
@@ -303,15 +311,16 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
     }
 
     options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
-
-    ret = archive_unpack(content, layer_fs, &options);
-    if (ret != 0) {
+    if (archive_unpack(content, layer_fs, &options) != 0) {
+        ret = -1;
         ERROR("devmapper: failed to unpack to :%s", layer_fs);
+        goto out;
     }
 
-    if (devmapper_umount_layer(id, driver)) {
+    if (devmapper_umount_layer(id, driver) != 0) {
         ERROR("devmapper: failed to umount layer %s", id);
         ret = -1;
+        goto out;
     }
 
 out:
@@ -336,8 +345,8 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
         goto out;
     }
 
-    ret = export_device_metadata(&dev_metadata, id, driver->devset);
-    if (ret != 0) {
+    if (export_device_metadata(&dev_metadata, id, driver->devset) != 0) {
+        ret = -1;
         ERROR("Failed to export device metadata of device %s", id);
         goto out;
     }
@@ -517,21 +526,17 @@ out:
 
 int devmapper_clean_up(const struct graphdriver *driver)
 {
-    int ret = 0;
-
     if (driver == NULL) {
         ERROR("Invalid input param to cleanup devicemapper");
         return -1;
     }
 
-    ret = device_set_shutdown(driver->devset, driver->home);
-    if (ret != 0) {
+    if (device_set_shutdown(driver->devset, driver->home) != 0) {
         ERROR("devmapper: shutdown device set failed root is %s", driver->home);
         return -1;
     }
 
-
-    // Is it necessary to execute recursiveUmount()
+    // Is it necessary to execute recursiveUmount()?
     return umount(driver->home);
 }
 
