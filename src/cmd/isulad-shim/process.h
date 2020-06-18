@@ -75,6 +75,7 @@ typedef struct process {
     stdio_t *shim_io;
     io_thread_t *io_threads[3];// stdin,stdout,stderr
     shim_client_process_state *state;
+    sem_t sem_mainloop;
 } process_t;
 
 typedef struct {
