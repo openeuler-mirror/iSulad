@@ -242,7 +242,7 @@ static void* task_io_copy(void *data)
 
     for (;;) {
         memset(buf, 0, DEFAULT_IO_COPY_BUF);
-        sem_wait(&(io_thd->sem_thd));
+        (void)sem_wait(&(io_thd->sem_thd));
         if (io_thd->is_stdin && io_thd->shutdown) {
             break;
         }
@@ -295,10 +295,10 @@ static void do_io_copy(int fd, uint32_t event, void *data)
     }
 
     if (event & EPOLLIN) {
-        sem_post(&thd->sem_thd);
+        (void)sem_post(&thd->sem_thd);
     } else if (event & EPOLLHUP) {
         thd->shutdown = true;
-        sem_post(&thd->sem_thd);
+        (void)sem_post(&thd->sem_thd);
     }
 
     return;
@@ -325,7 +325,7 @@ static int process_io_start(process_t *p, int std_id)
     if (io_thd == NULL) {
         goto failure;
     }
-    if (sem_init(&io_thd->sem_thd, 0, 0) == -1) {
+    if (sem_init(&io_thd->sem_thd, 0, 0) != 0) {
         write_message(g_log_fd, ERR_MSG, "sem init failed:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
@@ -373,7 +373,7 @@ static int start_io_copy_threads(process_t *p)
     return SHIM_OK;
 }
 
-static void destory_io_thread(process_t *p, int std_id)
+static void destroy_io_thread(process_t *p, int std_id)
 {
     io_thread_t *io_thd = p->io_threads[std_id];
     if (io_thd ==  NULL) {
@@ -381,7 +381,7 @@ static void destory_io_thread(process_t *p, int std_id)
     }
 
     io_thd->shutdown = true;
-    sem_post(&io_thd->sem_thd);
+    (void)sem_post(&io_thd->sem_thd);
     pthread_join(io_thd->tid, NULL);
     if (io_thd->ioc != NULL) {
         free(io_thd->ioc);
@@ -422,7 +422,7 @@ static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio,
     }
 
     // if no I/O source is available, the I/O thread nead to be destroyed
-    destory_io_thread(p, std_id);
+    destroy_io_thread(p, std_id);
 
     return SHIM_OK;
 }
@@ -461,7 +461,7 @@ static void* task_console_accept(void *data)
     }
 
     // if the terminal is used, we do not need to active the io copy of stderr pipe
-    destory_io_thread(ac->p, stdid_err);
+    destroy_io_thread(ac->p, stdid_err);
 
 out:
     // release listen socket
@@ -491,6 +491,7 @@ static void* task_io_loop(void *data)
         write_message(g_log_fd, ERR_MSG, "epoll create failed:%d", SHIM_SYS_ERR(errno));
         exit(EXIT_FAILURE);
     }
+    (void)sem_post(&p->sem_mainloop);
 
     // begin wait
     while (1) {
@@ -762,11 +763,15 @@ process_t* new_process(char *id, char *bundle, char *runtime)
     if (p == NULL) {
         return NULL;
     }
+
+    ret = sem_init(&p->sem_mainloop, 0, 0);
+    if (ret != 0) {
+        goto failure;
+    }
+
     ret = terminal_init(&(p->terminal), p_state);
     if (ret != SHIM_OK) {
-        free(p);
-        p = NULL;
-        return p;
+        goto failure;
     }
 
     p->id = id;
@@ -786,6 +791,11 @@ process_t* new_process(char *id, char *bundle, char *runtime)
     }
 
     return p;
+
+failure:
+    free(p);
+    p = NULL;
+    return NULL;
 }
 
 int open_io(process_t *p)
@@ -813,6 +823,8 @@ int process_io_init(process_t *p)
     if (ret != SHIM_OK) {
         return SHIM_SYS_ERR(errno);
     }
+    (void)sem_wait(&p->sem_mainloop);
+    (void)sem_destroy(&p->sem_mainloop);
 
     return SHIM_OK;
 }
@@ -1087,7 +1099,7 @@ int process_signal_handle_routine(process_t *p)
                 (void)write_nointr(p->exit_fd, &status, sizeof(int));
             }
             for (i = 0; i < 3; i ++) {
-                destory_io_thread(p, i);
+                destroy_io_thread(p, i);
             }
             return status;
         }
