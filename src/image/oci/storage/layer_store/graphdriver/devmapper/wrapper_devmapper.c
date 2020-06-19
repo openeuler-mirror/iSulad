@@ -27,6 +27,43 @@ static bool dm_saw_enxio = false; // no such device or address
 // static bool dm_saw_eno_data = false; // no data available
 static int64_t dm_udev_wait_timeout = 0;
 
+char *dev_strerror(int errnum)
+{
+    char *errmsg = NULL;
+
+    switch (errnum) {
+        case ERR_TASK_RUN:
+            errmsg = "Task run error";
+            break;
+        case ERR_TASK_SET_COOKIE:
+            errmsg = "Task set cookie error";
+            break;
+        case ERR_TASK_SET_ADD_NODE:
+            errmsg = "Task add dm node failed";
+            break;
+        case ERR_BUSY:
+            errmsg = "Device busy";
+            break;
+        case ERR_DEVICE_ID_EXISTS:
+            errmsg = "Device exists already";
+            break;
+        case ERR_ENXIO:
+            errmsg = "No such device of address";
+            break;
+        case ERR_TASK_ADD_TARGET:
+            errmsg = "Task add target device error";
+            break;
+        case ERR_TASK_DEFERRED_REMOVE:
+            errmsg = "dm_task_deferred_remove failed";
+            break;
+        default:
+            errmsg = "Unknown error";
+            break;
+    }
+    return errmsg;
+
+}
+
 struct dm_task *task_create(int type)
 {
     struct dm_task *dmt = NULL;
@@ -489,18 +526,18 @@ free_out:
     free(uwait);
 }
 
-int dev_remove_device(const char *pool_fname)
+int dev_remove_device(const char *name)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
     uint32_t cookie = 0;
 
-    if (pool_fname == NULL) {
+    if (name == NULL) {
         ret = -1;
         goto out;
     }
 
-    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
+    dmt = task_create_named(DM_DEVICE_REMOVE, name);
     if (dmt == NULL) {
         ERROR("devicemapper: create task with name:DM_DEVICE_REMOVE failed");
         ret = -1;
@@ -539,19 +576,19 @@ out:
     return ret;
 }
 
-int dev_remove_device_deferred(const char *pool_fname)
+int dev_remove_device_deferred(const char *name)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
     uint32_t cookie = 0;
     uint16_t flags = DM_UDEV_DISABLE_LIBRARY_FALLBACK;
 
-    if (pool_fname == NULL) {
+    if (name == NULL) {
         ret = -1;
         goto out;
     }
 
-    dmt = task_create_named(DM_DEVICE_REMOVE, pool_fname);
+    dmt = task_create_named(DM_DEVICE_REMOVE, name);
     if (dmt == NULL) {
         ret = -1;
         goto out;

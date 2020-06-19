@@ -60,15 +60,20 @@ int device_set_init(struct graphdriver *driver, const char *drvier_home, const c
 
 int add_device(const char *hash, const char *base_hash, struct device_set *devset,
                const json_map_string_string *storage_opts);
+
 int mount_device(const char *hash, const char *path, const struct driver_mount_opts *mount_opts,
                  struct device_set *devset);
+
 int unmount_device(const char *hash, const char *mount_path, struct device_set *devset);
+
 bool has_device(const char *hash, struct device_set *devset);
 
 int delete_device(const char *hash, bool sync_delete, struct device_set *devset);
 
 int export_device_metadata(struct device_metadata *dev_metadata, const char *hash, struct device_set *devset);
+
 struct status *device_set_status(struct device_set *devset);
+
 void free_devmapper_status(struct status *st);
 
 int device_set_shutdown(struct device_set *devset, const char *home);

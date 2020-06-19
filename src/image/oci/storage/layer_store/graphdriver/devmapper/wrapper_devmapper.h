@@ -73,6 +73,7 @@ typedef struct {
     int state; // 0: ok 1:err_udev_wait  2: err_udev_wait_timeout
 } udev_wait_pth_t;
 
+char *dev_strerror(int errnum);
 
 struct dm_task* task_create(int type);
 
@@ -103,6 +104,8 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
 int dev_get_info(struct dm_info *info, const char *name);
 
 int dev_remove_device(const char *name);
+
+int dev_remove_device_deferred(const char *name);
 
 int dev_get_device_list(char ***list, size_t *length);
 

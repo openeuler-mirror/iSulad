@@ -51,8 +51,6 @@ struct device_set {
     pthread_rwlock_t devmapper_driver_rwlock; //protect all fields of DeviceSet
 
     // options
-    int64_t data_loop_back_size;
-    int64_t meta_data_loop_back_size;
     uint64_t base_fs_size;
     char *filesystem;
     char *mount_options;

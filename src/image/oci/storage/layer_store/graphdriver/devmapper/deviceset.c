@@ -282,10 +282,41 @@ out:
     return dev_name;
 }
 
+static int remove_device(const char *name)
+{
+    int i = 0;
+    int max_retry = 200;
+    int ret = 0;
+
+    if (name == NULL) {
+        ERROR("Invalid input");
+        return -1;
+    }
+
+    for (; i < max_retry; i++) {
+        ret = dev_remove_device(name);
+        if (ret == 0) {
+            DEBUG("devmapper: remove device:%s success", name);
+            goto out;
+        }
+
+        if (ret != ERR_BUSY) {
+            ERROR("devmapper: remove device err,cause is not busy,stop retry");
+            goto out;
+        }
+        INFO("devmapper: device is busy so we cannot remove, after 0.1s to retry");
+        sleep(0.1);
+    }
+
+out:
+    return ret;
+}
+
 static int deactivate_device_mode(struct device_set *devset, image_devmapper_device_info *dev_info,
                                   bool deferred_remove)
 {
     int ret = 0;
+    int nret = 0;
     char *dm_name = NULL;
     struct dm_info dinfo;
 
@@ -296,8 +327,9 @@ static int deactivate_device_mode(struct device_set *devset, image_devmapper_dev
 
     dm_name = get_dm_name(devset, dev_info->hash);
     if (dm_name == NULL) {
+        ret = -1;
         ERROR("devmapper: get dm device name failed");
-        return -1;
+        goto free_out;
     }
 
     if (dev_get_info(&dinfo, dm_name) != 0) {
@@ -307,12 +339,32 @@ static int deactivate_device_mode(struct device_set *devset, image_devmapper_dev
     }
 
     if (dinfo.exists == 0) {
-        ret = 0;
+        DEBUG("devmapper: device has exited, no need to remove again");
         goto free_out;
     }
 
     if (deferred_remove) {
-        ret = dev_remove_device(dm_name);
+        nret = dev_remove_device_deferred(dm_name);
+        if (nret != 0) {
+            if (nret == ERR_ENXIO) {
+                WARN("devmapper: device %s has gone", dm_name);
+                goto free_out;
+            }
+            ret = -1;
+            ERROR("devmapper: remove device:%s failed, err:%s", dm_name, dev_strerror(nret));
+            goto free_out;
+        }
+    } else {
+        nret = remove_device(dm_name);
+        if (nret != 0) {
+            if (nret == ERR_ENXIO) {
+                WARN("devmapper: device %s has gone", dm_name);
+                goto free_out;
+            }
+            ret = -1;
+            ERROR("devmapper: remove device:%s without deferred failed, err:%s", dm_name, dev_strerror(nret));
+            goto free_out;
+        }
     }
 
 free_out:
@@ -579,7 +631,7 @@ static uint64_t get_base_device_size(struct device_set *devset)
     uint64_t res = 0;
     devmapper_device_info_t *device_info = NULL;
 
-    device_info = lookup_device(devset, "");
+    device_info = lookup_device(devset, "base");
     if (device_info == NULL) {
         return 0;
     }
@@ -907,7 +959,7 @@ static void cleanup_deleted_devices(struct device_set *devset)
 
     for (; i < ids_len; i++) {
         if (delete_device(idsarray[i], false, devset) != 0) {
-            WARN("devmapper:Deletion of device %s failed", idsarray[i]);
+            WARN("devmapper:Deletion of device: \"%s\" failed", idsarray[i]);
         }
     }
 
@@ -2188,8 +2240,12 @@ out:
 static int do_delete_device(struct device_set *devset, const char *hash, bool sync_delete)
 {
     int ret = 0;
-    bool deferred_remove;
+    bool deferred_remove = false;
     devmapper_device_info_t *device_info = NULL;
+
+    if (devset == NULL || hash == NULL) {
+        return -1;
+    }
 
     device_info = lookup_device(devset, hash);
     if (device_info == NULL) {
@@ -2242,6 +2298,8 @@ static int setup_base_image(struct device_set *devset)
             }
             goto out;
         }
+
+        DEBUG("devmapper: removing uninitialized base image");
 
         if (do_delete_device(devset, "base", true) != 0) {
             ret = -1;
@@ -2326,8 +2384,9 @@ static int do_check_all_devices(struct device_set *devset)
         }
         // remove broken device
         if (length == 0) {
-            if (dev_remove_device(devices_list[i]) != 0) {
-                WARN("devmapper: remove broken device %s failed", devices_list[i]);
+            nret = dev_remove_device(devices_list[i]);
+            if (nret != 0) {
+                WARN("devmapper: remove broken device %s failed, err:%s", devices_list[i], dev_strerror(nret));
             }
             DEBUG("devmapper: remove broken device: %s", devices_list[i]);
         }
@@ -2338,8 +2397,9 @@ static int do_check_all_devices(struct device_set *devset)
             continue;
         }
         if (stat(device_path, &st)) {
-            if (dev_remove_device(devices_list[i]) != 0) {
-                WARN("devmapper: remove incompelete device %s", devices_list[i]);
+            nret = dev_remove_device(devices_list[i]);
+            if (nret != 0) {
+                WARN("devmapper: remove incompelete device %s, err:%s", devices_list[i], dev_strerror(nret));
             }
             DEBUG("devmapper: remove incompelete device: %s", devices_list[i]);
         }
@@ -2680,6 +2740,11 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
     devmapper_device_info_t *device_info = NULL;
     uint64_t size = 0;
 
+    if (devset == NULL || hash == NULL || base_hash == NULL) {
+        ERROR("devmapper: invalid input params to add device");
+        return -1;
+    }
+
     if (pthread_rwlock_wrlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("lock devmapper conf failed");
         return -1;
@@ -2776,7 +2841,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
     char *options = NULL;
 
     if (hash == NULL || path == NULL || mount_opts == NULL) {
-        ERROR("devmapper: failed to mount device");
+        ERROR("devmapper: invalid input params to mount device");
         return -1;
     }
 
@@ -2785,9 +2850,9 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
         return -1;
     }
 
-    device_info = lookup_device(devset, hash);
+    device_info = lookup_device(devset, strcmp(hash, "") == 0 ? "base" : hash);
     if (device_info == NULL) {
-        ERROR("devmapper: lookup device %s failed", hash);
+        ERROR("devmapper: lookup device:\"%s\" failed", strcmp(hash, "") == 0 ? "base" : hash);
         ret = -1;
         goto free_out;
     }
@@ -2806,7 +2871,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
 
     if (activate_device_if_needed(devset, device_info->info, false) != 0) {
         ret = -1;
-        ERROR("devmapper: Error activating devmapper device for %s", hash);
+        ERROR("devmapper: Error activating devmapper device for \"%s\"", strcmp(hash, "") == 0 ? "base" : hash);
         goto free_out;
     }
 
@@ -2835,7 +2900,7 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
     devmapper_device_info_t *device_info = NULL;
 
     if (hash == NULL || mount_path == NULL) {
-        ERROR("devmapper: failed to unmount device");
+        ERROR("devmapper: invalid input params to unmount device");
         return -1;
     }
 
@@ -2844,9 +2909,9 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
         return -1;
     }
 
-    device_info = lookup_device(devset, hash);
+    device_info = lookup_device(devset, strcmp(hash, "") == 0 ? "base" : hash);
     if (device_info == NULL) {
-        ERROR("devmapper: lookup device %s failed", hash);
+        ERROR("devmapper: lookup device: \"%s\" failed", strcmp(hash, "") == 0 ? "base" : hash);
         ret = -1;
         goto free_out;
     }
@@ -2884,8 +2949,8 @@ bool has_device(const char *hash, struct device_set *devset)
     bool res = false;
     devmapper_device_info_t *device_info = NULL;
 
-    if (hash == NULL) {
-        ERROR("devmapper: failed to judge device metadata exists");
+    if (hash == NULL || devset == NULL) {
+        ERROR("devmapper: invalid input params to judge device metadata exists");
         return false;
     }
 
@@ -2894,9 +2959,9 @@ bool has_device(const char *hash, struct device_set *devset)
         return -1;
     }
 
-    device_info = lookup_device(devset, hash);
+    device_info = lookup_device(devset, strcmp(hash, "") == 0 ? "base" : hash);
     if (device_info == NULL) {
-        ERROR("devmapper: lookup device %s failed", hash);
+        ERROR("devmapper: lookup device: \"%s\" failed", strcmp(hash, "") == 0 ? "base" : hash);
         goto free_out;
     }
 
@@ -2917,7 +2982,8 @@ int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
     int ret = 0;
     devmapper_device_info_t *device_info = NULL;
 
-    if (hash == NULL) {
+    if (devset == NULL || hash == NULL) {
+        ERROR("Invalid input params");
         return -1;
     }
 
@@ -2926,16 +2992,16 @@ int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
         return -1;
     }
 
-    device_info = lookup_device(devset, hash);
+    device_info = lookup_device(devset, strcmp(hash, "") == 0 ? "base" : hash);
     if (device_info == NULL) {
         ret = -1;
-        ERROR("devmapper: lookup device %s failed", hash);
+        ERROR("devmapper: lookup device \"%s\" failed", strcmp(hash, "") == 0 ? "base" : hash);
         goto free_out;
     }
 
-    if (do_delete_device(devset, hash, sync_delete) != 0) {
+    if (do_delete_device(devset, strcmp(hash, "") == 0 ? "base" : hash, sync_delete) != 0) {
         ret = -1;
-        ERROR("devmapper: do delete device:%s failed", hash);
+        ERROR("devmapper: do delete device: \"%s\" failed", strcmp(hash, "") == 0 ? "base" : hash);
         goto free_out;
     }
 
@@ -2957,6 +3023,7 @@ int export_device_metadata(struct device_metadata *dev_metadata, const char *has
     devmapper_device_info_t *device_info = NULL;
 
     if (hash == NULL || dev_metadata == NULL) {
+        ERROR("Invalid input params");
         return -1;
     }
 
@@ -2965,17 +3032,17 @@ int export_device_metadata(struct device_metadata *dev_metadata, const char *has
         return -1;
     }
 
-    dm_name = get_dm_name(devset, hash);
+    dm_name = get_dm_name(devset, strcmp(hash, "") == 0 ? "base" : hash);
     if (dm_name == NULL) {
         ret = -1;
-        ERROR("devmapper: failed to get dm %s name", hash);
+        ERROR("devmapper: failed to get device: \"%s\" dm name", strcmp(hash, "") == 0 ? "base" : hash);
         goto free_out;
     }
 
-    device_info = lookup_device(devset, hash);
+    device_info = lookup_device(devset, strcmp(hash, "") == 0 ? "base" : hash);
     if (device_info == NULL) {
         ret = -1;
-        ERROR("devmapper: lookup device %s failed", hash);
+        ERROR("devmapper: lookup device: \"%s\" failed", strcmp(hash, "") == 0 ? "base" : hash);
         goto free_out;
     }
 
