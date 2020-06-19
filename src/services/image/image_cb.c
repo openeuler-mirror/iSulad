@@ -72,8 +72,7 @@ out:
 }
 
 /* import cb */
-static int import_cb(const image_import_request *request,
-                     image_import_response **response)
+static int import_cb(const image_import_request *request, image_import_response **response)
 {
     int ret = -1;
     uint32_t cc = ISULAD_SUCCESS;
@@ -98,13 +97,11 @@ static int import_cb(const image_import_request *request,
         goto out;
     }
 
-    EVENT("Image Event: {Object: %s, Type: Importing}",
-          request->file);
+    EVENT("Image Event: {Object: %s, Type: Importing}", request->file);
 
     ret = isula_import_image(request->file, request->tag, &id);
     if (ret != 0) {
-        ERROR("Failed to import docker image %s with tag %s",
-              request->file, request->tag);
+        ERROR("Failed to import docker image %s with tag %s", request->file, request->tag);
         cc = EINVALIDARGS;
         goto out;
     }
@@ -112,8 +109,7 @@ static int import_cb(const image_import_request *request,
     (*response)->id = id;
     id = NULL;
 
-    EVENT("Image Event: {Object: %s, Type: Imported}",
-          request->file);
+    EVENT("Image Event: {Object: %s, Type: Imported}", request->file);
 
     (void)isulad_monitor_send_image_event(request->file, IM_IMPORT);
 out:
@@ -166,8 +162,7 @@ out:
 }
 
 /* image load cb */
-static int image_load_cb(const image_load_image_request *request,
-                         image_load_image_response **response)
+static int image_load_cb(const image_load_image_request *request, image_load_image_response **response)
 {
     int ret = -1;
     uint32_t cc = ISULAD_SUCCESS;
@@ -198,19 +193,16 @@ static int image_load_cb(const image_load_image_request *request,
         goto out;
     }
 
-    EVENT("Image Event: {Object: %s, Type: Loading}",
-          request->file);
+    EVENT("Image Event: {Object: %s, Type: Loading}", request->file);
 
     ret = docker_load_image(request->file, request->tag, request->type);
     if (ret != 0) {
-        ERROR("Failed to load docker image %s with tag %s and type %s",
-              request->file, request->tag, request->type);
+        ERROR("Failed to load docker image %s with tag %s and type %s", request->file, request->tag, request->type);
         cc = EINVALIDARGS;
         goto out;
     }
 
-    EVENT("Image Event: {Object: %s, Type: Loaded}",
-          request->file);
+    EVENT("Image Event: {Object: %s, Type: Loaded}", request->file);
 
     (void)isulad_monitor_send_image_event(request->file, IM_LOAD);
 out:
@@ -256,8 +248,7 @@ out:
 }
 
 /* login cb */
-static int login_cb(const image_login_request *request,
-                    image_login_response **response)
+static int login_cb(const image_login_request *request, image_login_response **response)
 {
     int ret = -1;
     uint32_t cc = ISULAD_SUCCESS;
@@ -276,8 +267,7 @@ static int login_cb(const image_login_request *request,
         goto out;
     }
 
-    if (request->username == NULL || request->password == NULL ||
-        request->type == NULL || request->server == NULL) {
+    if (request->username == NULL || request->password == NULL || request->type == NULL || request->server == NULL) {
         ERROR("input arguments error");
         cc = ISULAD_ERR_INPUT;
         goto out;
@@ -335,8 +325,7 @@ out:
 }
 
 /* logout cb */
-static int logout_cb(const image_logout_request *request,
-                     image_logout_response **response)
+static int logout_cb(const image_logout_request *request, image_logout_response **response)
 {
     int ret = -1;
     uint32_t cc = ISULAD_SUCCESS;
@@ -419,6 +408,7 @@ static int delete_image_info(const char *image_ref, bool force)
         ret = -1;
         goto out;
     }
+    (void)isulad_monitor_send_image_event(im_request->image.image, IM_REMOVE);
 
 out:
     free_im_remove_request(im_request);
@@ -428,8 +418,7 @@ out:
 }
 
 /* image remove cb */
-static int image_remove_cb(const image_delete_image_request *request,
-                           image_delete_image_response **response)
+static int image_remove_cb(const image_delete_image_request *request, image_delete_image_response **response)
 {
     int ret = -1;
     char *image_ref = NULL;
@@ -523,8 +512,7 @@ out:
 }
 
 /* image tag cb */
-static int image_tag_cb(const image_tag_image_request *request,
-                        image_tag_image_response **response)
+static int image_tag_cb(const image_tag_image_request *request, image_tag_image_response **response)
 {
     int ret = -1;
     char *src_name = NULL;
@@ -533,8 +521,7 @@ static int image_tag_cb(const image_tag_image_request *request,
 
     DAEMON_CLEAR_ERRMSG();
 
-    if (request == NULL || request->src_name == NULL || response == NULL ||
-        request->dest_name == NULL) {
+    if (request == NULL || request->src_name == NULL || response == NULL || request->dest_name == NULL) {
         ERROR("Invalid input arguments");
         return EINVALIDARGS;
     }
@@ -594,8 +581,8 @@ static bool valid_repo_tags(char * const * const repo_tags, size_t repo_index)
     return false;
 }
 
-static int trans_one_image(image_list_images_response *response, size_t image_index,
-                           const imagetool_image *im_image, size_t repo_index)
+static int trans_one_image(image_list_images_response *response, size_t image_index, const imagetool_image *im_image,
+                           size_t repo_index)
 {
     int ret = 0;
     image_image *out_image = NULL;
@@ -743,14 +730,7 @@ struct image_list_context {
     struct filters_args *image_filters;
 };
 
-static const char *g_accepted_image_filter_tags[] = {
-    "dangling",
-    "label",
-    "before",
-    "since",
-    "reference",
-    NULL
-};
+static const char *g_accepted_image_filter_tags[] = { "dangling", "label", "before", "since", "reference", NULL };
 
 static bool is_valid_dangling_string(const char *val)
 {
@@ -851,8 +831,7 @@ static im_list_request *fold_filter(const image_list_images_request *request)
     }
 
     for (i = 0; i < request->filters->len; i++) {
-        if (!filters_args_valid_key(g_accepted_image_filter_tags,
-                                    sizeof(g_accepted_image_filter_tags) / sizeof(char *),
+        if (!filters_args_valid_key(g_accepted_image_filter_tags, sizeof(g_accepted_image_filter_tags) / sizeof(char *),
                                     request->filters->keys[i])) {
             ERROR("Invalid filter '%s'", request->filters->keys[i]);
             isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
@@ -872,8 +851,7 @@ error_out:
 }
 
 /* image list cb */
-int image_list_cb(const image_list_images_request *request,
-                  image_list_images_response **response)
+int image_list_cb(const image_list_images_request *request, image_list_images_response **response)
 {
     int ret = -1;
     uint32_t cc = ISULAD_SUCCESS;
@@ -1091,4 +1069,3 @@ void image_callback_init(service_image_callback_t *cb)
     cb->logout = logout_cb;
     cb->tag = image_tag_cb;
 }
-

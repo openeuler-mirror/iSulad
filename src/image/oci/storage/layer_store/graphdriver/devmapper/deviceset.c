@@ -207,7 +207,7 @@ static char *get_dm_name(struct device_set *devset, const char *hash)
     if (hash == NULL) {
         return NULL;
     }
-    
+
     nret = snprintf(buff, sizeof(buff), "%s-%s", devset->device_prefix, strcmp(hash, "") == 0 ? "base" : hash);
     if (nret < 0 || (size_t)nret >= sizeof(buff)) {
         return NULL;
@@ -1562,7 +1562,7 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
             goto out;
         }
         if (dmi->deferred_remove != 0) {
-            nret = cancel_deferred_removal(devset, base_info->hash);        
+            nret = cancel_deferred_removal(devset, base_info->hash);
             if (nret != 0) {
                 if (nret != ERR_ENXIO) {
                     ret = -1;
@@ -1574,8 +1574,8 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
             }
         }
     } else if (dev_get_info(dmi, dm_name) != 0) {
-            ret = -1;
-            goto out;
+        ret = -1;
+        goto out;
     }
 
     if (dmi != NULL && dmi->exists != 0) {
@@ -1866,9 +1866,9 @@ static int check_thin_pool(struct device_set *devset)
     uint64_t total_size_in_sectors, transaction_id, data_used;
     uint64_t data_total, metadata_used, metadata_total;
     int ret = 0;
- 
+
     if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
-                      &metadata_total) != 0) {
+                    &metadata_total) != 0) {
         ret = -1;
         ERROR("devmapper: get pool status failed");
         goto out;
@@ -3095,14 +3095,16 @@ struct status *device_set_status(struct device_set *devset)
 
         if (is_real_file(devset->data_loop_file)) {
             uint64_t actual_space;
-            if (get_underlying_available_space(devset->data_loop_file, &actual_space) == 0 && actual_space < st->metadata.available) {
+            if (get_underlying_available_space(devset->data_loop_file, &actual_space) == 0 &&
+                actual_space < st->metadata.available) {
                 st->data.available = actual_space;
             }
         }
 
         if (is_real_file(devset->metadata_loop_file)) {
             uint64_t actual_space;
-            if (get_underlying_available_space(devset->data_loop_file, &actual_space) == 0 && actual_space < st->metadata.available) {
+            if (get_underlying_available_space(devset->data_loop_file, &actual_space) == 0 &&
+                actual_space < st->metadata.available) {
                 st->metadata.available = actual_space;
             }
         }

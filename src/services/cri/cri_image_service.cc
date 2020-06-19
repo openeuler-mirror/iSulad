@@ -26,6 +26,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "cri_helpers.h"
+#include "collector.h"
 
 static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {
@@ -185,8 +186,7 @@ cleanup:
 int CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
                                                   im_status_request **request, Errors &error)
 {
-    im_status_request *tmpreq =
-        (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
+    im_status_request *tmpreq = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         error.SetError("Out of memory");
@@ -281,6 +281,7 @@ std::string CRIImageServiceImpl::PullImage(const runtime::v1alpha2::ImageSpec &i
     if (response->image_ref != nullptr) {
         out_str = response->image_ref;
     }
+    (void)isulad_monitor_send_image_event(request->image, IM_PULL);
 
 cleanup:
     DAEMON_CLEAR_ERRMSG();
@@ -289,8 +290,8 @@ cleanup:
     return out_str;
 }
 
-int CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
-                                                  im_rmi_request **request, Errors &error)
+int CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_rmi_request **request,
+                                                  Errors &error)
 {
     im_rmi_request *tmpreq = (im_rmi_request *)util_common_calloc_s(sizeof(im_rmi_request));
     if (tmpreq == nullptr) {
@@ -318,12 +319,14 @@ void CRIImageServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image,
         goto cleanup;
     }
 
-    if (im_rm_image(request, &response)) {
+    if (im_rm_image(request, &response) != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
         } else {
             error.SetError("Failed to call remove image");
         }
+    } else {
+        (void)isulad_monitor_send_image_event(request->image.image, IM_REMOVE);
     }
 
 cleanup:
@@ -355,8 +358,7 @@ void CRIImageServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
         fs_info->set_timestamp(element->timestamp);
 
         if (element->fs_id != nullptr && element->fs_id->mountpoint != nullptr) {
-            runtime::v1alpha2::FilesystemIdentifier *fs_id =
-                new (std::nothrow)runtime::v1alpha2::FilesystemIdentifier;
+            runtime::v1alpha2::FilesystemIdentifier *fs_id = new (std::nothrow) runtime::v1alpha2::FilesystemIdentifier;
             if (fs_id == nullptr) {
                 ERROR("Out of memory");
                 return;

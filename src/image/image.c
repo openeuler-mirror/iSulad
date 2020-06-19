@@ -28,7 +28,6 @@
 
 #include "ext_image.h"
 #include "filters.h"
-#include "collector.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "driver.h"
@@ -859,7 +858,6 @@ int im_pull_image(const im_pull_request *request, im_pull_response **response)
         goto out;
     }
     EVENT("Event: {Object: %s, Type: Pulled}", request->image);
-    (void)isulad_monitor_send_image_event(request->image, IM_PULL);
 
 out:
     bim_put(bim);
@@ -1391,7 +1389,6 @@ int im_rm_image(const im_rmi_request *request, im_remove_response **response)
     }
 
     EVENT("Event: {Object: %s, Type: image removed}", image_ref);
-    (void)isulad_monitor_send_image_event(image_ref, IM_REMOVE);
 
 pack_response:
     if (g_isulad_errmsg != NULL) {
