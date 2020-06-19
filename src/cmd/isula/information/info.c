@@ -16,7 +16,7 @@
 #include <stdio.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "config.h"
 #include "isula_connect.h"
@@ -177,4 +177,3 @@ int cmd_info_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

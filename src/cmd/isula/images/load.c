@@ -20,7 +20,7 @@
 #include <errno.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
 
@@ -83,10 +83,8 @@ static bool valid_param()
     }
 
     if (g_cmd_load_args.type != NULL) {
-        if ((strcmp(g_cmd_load_args.type, "docker") != 0) &&
-            (strcmp(g_cmd_load_args.type, "embedded") != 0)) {
-            COMMAND_ERROR("Invalid image type: image type must be embedded or docker, got %s",
-                          g_cmd_load_args.type);
+        if ((strcmp(g_cmd_load_args.type, "docker") != 0) && (strcmp(g_cmd_load_args.type, "embedded") != 0)) {
+            COMMAND_ERROR("Invalid image type: image type must be embedded or docker, got %s", g_cmd_load_args.type);
             return false;
         }
     }
@@ -172,4 +170,3 @@ int cmd_load_main(int argc, const char **argv)
     printf("Load image from \"%s\" success\n", g_cmd_load_args.file);
     exit(EXIT_SUCCESS);
 }
-

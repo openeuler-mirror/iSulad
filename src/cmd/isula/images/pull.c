@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
 
@@ -110,4 +110,3 @@ int cmd_pull_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

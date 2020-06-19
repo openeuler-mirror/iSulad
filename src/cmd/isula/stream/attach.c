@@ -19,14 +19,14 @@
 #include <limits.h>
 #include <pthread.h>
 
-#include "arguments.h"
+#include "client_arguments.h"
 #include "exec.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
 #include "attach.h"
-#include "commands.h"
+#include "isula_commands.h"
 
 const char g_cmd_attach_desc[] = "Attach to a running container";
 const char g_cmd_attach_usage[] = "attach [OPTIONS] CONTAINER";
@@ -386,4 +386,3 @@ int cmd_attach_main(int argc, const char **argv)
 out:
     exit((exit_code != 0) ? (int)exit_code : ret);
 }
-

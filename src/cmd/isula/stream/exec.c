@@ -21,13 +21,13 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 
-#include "arguments.h"
+#include "client_arguments.h"
 #include "exec.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
-#include "commands.h"
+#include "isula_commands.h"
 #include "isula_libutils/container_inspect.h"
 
 const char g_cmd_exec_desc[] = "Run a command in a running container";
@@ -60,7 +60,8 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
 
     request->user = util_strdup_s(args->custom_conf.user);
 
-    if (dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), (size_t *) & (request->argc)) != 0) {
+    if (dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), (size_t *)&(request->argc)) !=
+        0) {
         ERROR("Failed to dup args");
         ret = -1;
         goto out;
@@ -148,11 +149,8 @@ static int exec_cmd_init(int argc, const char **argv)
     command_t cmd;
     struct isula_libutils_log_config lconf = { 0 };
 
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_exec_args),
-        EXEC_OPTIONS(g_cmd_exec_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_exec_args),
+                                        EXEC_OPTIONS(g_cmd_exec_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_exec_args)) {
@@ -234,8 +232,7 @@ out:
     return ret;
 }
 
-static int remote_cmd_exec_setup_tty(const struct client_arguments *args, bool *reset_tty,
-                                     struct termios *oldtios)
+static int remote_cmd_exec_setup_tty(const struct client_arguments *args, bool *reset_tty, struct termios *oldtios)
 {
     int istty = 0;
 
@@ -496,8 +493,8 @@ int cmd_exec_main(int argc, const char **argv)
         g_cmd_exec_args.name = util_strdup_s(inspect_data->id);
     }
 
-    if (custom_cfg->tty && isatty(STDIN_FILENO) && (custom_cfg->attach_stdin || custom_cfg->attach_stdout ||
-                                                    custom_cfg->attach_stderr)) {
+    if (custom_cfg->tty && isatty(STDIN_FILENO) &&
+        (custom_cfg->attach_stdin || custom_cfg->attach_stdout || custom_cfg->attach_stderr)) {
         (void)exec_client_console_resize_thread(&g_cmd_exec_args);
     }
 
@@ -519,4 +516,3 @@ out:
     free_container_inspect(inspect_data);
     exit(exit_code ? (int)exit_code : ret);
 }
-

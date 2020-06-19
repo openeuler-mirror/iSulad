@@ -15,8 +15,8 @@
 #ifndef __CMD_START_H
 #define __CMD_START_H
 
-#include "arguments.h"
-#include "commands.h"
+#include "client_arguments.h"
+#include "isula_commands.h"
 #include <termios.h>
 
 #ifdef __cplusplus
@@ -38,4 +38,3 @@ int cmd_start_main(int argc, const char **argv);
 #endif
 
 #endif /* __CMD_START_H */
-

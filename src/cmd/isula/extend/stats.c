@@ -26,7 +26,7 @@
 #include <sys/ioctl.h>
 
 #include "error.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "stats.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
@@ -74,8 +74,8 @@ static void isula_size_humanize(unsigned long long val, char *buf, size_t bufsz)
 static void stats_print_header(void)
 {
     printf(TERMRVRS TERMBOLD);
-    printf("%-16s %-10s %-26s %-10s %-26s %-10s", "CONTAINER", "CPU %", "MEM USAGE / LIMIT", "MEM %",
-           "BLOCK I / O", "PIDS");
+    printf("%-16s %-10s %-26s %-10s %-26s %-10s", "CONTAINER", "CPU %", "MEM USAGE / LIMIT", "MEM %", "BLOCK I / O",
+           "PIDS");
     printf("\n");
     printf(TERMNORM);
 }
@@ -224,11 +224,8 @@ int cmd_stats_main(int argc, const char **argv)
 {
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        STATUS_OPTIONS(g_cmd_stats_args),
-        COMMON_OPTIONS(g_cmd_stats_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), STATUS_OPTIONS(g_cmd_stats_args),
+                                        COMMON_OPTIONS(g_cmd_stats_args) };
 
     if (client_arguments_init(&g_cmd_stats_args)) {
         COMMAND_ERROR("client arguments init failed");
@@ -253,4 +250,3 @@ int cmd_stats_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

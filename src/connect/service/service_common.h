@@ -15,7 +15,7 @@
 #ifndef __SERVICE_COMMON_H
 #define __SERVICE_COMMON_H
 
-#include "arguments.h"
+#include "daemon_arguments.h"
 #include "libisulad.h"
 
 #ifdef __cplusplus
@@ -35,4 +35,3 @@ void event_monitor_exit_callback(void *arg);
 #endif
 
 #endif
-

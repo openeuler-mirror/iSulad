@@ -13,14 +13,13 @@
  * Description: provide container stop functions
  ******************************************************************************/
 #include "rename.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "isula_connect.h"
 
 const char g_cmd_rename_desc[] = "Rename a container";
-const char g_cmd_rename_usage[] =
-    "rename [OPTIONS] OLD_NAME NEW_NAME";
+const char g_cmd_rename_usage[] = "rename [OPTIONS] OLD_NAME NEW_NAME";
 
 struct client_arguments g_cmd_rename_args = { 0 };
 
@@ -59,12 +58,9 @@ out:
 
 int cmd_rename_main(int argc, const char **argv)
 {
-    struct isula_libutils_log_config lconf = {0};
+    struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_rename_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_rename_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_rename_args)) {
@@ -72,9 +68,8 @@ int cmd_rename_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_rename_args.progname = argv[0];
-    command_init(&cmd, options, sizeof(options) / sizeof(options[0]),
-                 argc,
-                 (const char **)argv, g_cmd_rename_desc, g_cmd_rename_usage);
+    command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_rename_desc,
+                 g_cmd_rename_usage);
     if (command_parse_args(&cmd, &g_cmd_rename_args.argc, &g_cmd_rename_args.argv)) {
         exit(EINVALIDARGS);
     }
@@ -95,4 +90,3 @@ int cmd_rename_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

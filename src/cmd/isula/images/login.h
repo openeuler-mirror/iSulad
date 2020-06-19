@@ -14,18 +14,22 @@
 #ifndef __CMD_LOGIN_H
 #define __CMD_LOGIN_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define LOGIN_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING, false, "username", 'u', &(cmdargs).username, "Username", NULL }, \
-    { CMD_OPT_TYPE_STRING, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
-    { CMD_OPT_TYPE_BOOL, false, "password-stdin", 0, &(cmdargs).password_stdin, \
-      "Take the password from stdin", NULL }, \
-
+#define LOGIN_OPTIONS(cmdargs)                                                                      \
+    { CMD_OPT_TYPE_STRING, false, "username", 'u', &(cmdargs).username, "Username", NULL },         \
+            { CMD_OPT_TYPE_STRING, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
+            { CMD_OPT_TYPE_BOOL,                                                                    \
+              false,                                                                                \
+              "password-stdin",                                                                     \
+              0,                                                                                    \
+              &(cmdargs).password_stdin,                                                            \
+              "Take the password from stdin",                                                       \
+              NULL },
 
 extern const char g_cmd_login_desc[];
 extern const char g_cmd_login_usage[];
@@ -37,4 +41,3 @@ int cmd_login_main(int argc, const char **argv);
 #endif
 
 #endif /* __CMD_LOGIN_H */
-

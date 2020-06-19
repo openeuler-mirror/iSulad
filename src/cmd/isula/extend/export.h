@@ -15,14 +15,16 @@
 #ifndef __CMD_EXPORT_H
 #define __CMD_EXPORT_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define EXPORT_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING, false, "output", 'o', &(cmdargs).file, "Write to a file", NULL }
+#define EXPORT_OPTIONS(cmdargs)                                                             \
+    {                                                                                       \
+        CMD_OPT_TYPE_STRING, false, "output", 'o', &(cmdargs).file, "Write to a file", NULL \
+    }
 
 extern const char g_cmd_export_desc[];
 extern const char g_cmd_export_usage[];
@@ -34,4 +36,3 @@ int cmd_export_main(int argc, const char **argv);
 #endif
 
 #endif
-

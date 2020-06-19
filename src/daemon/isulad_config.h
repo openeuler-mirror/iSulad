@@ -16,7 +16,7 @@
 #define __ISULAD_CONF_H
 
 #include <stdint.h>
-#include "isulad/arguments.h"
+#include "daemon_arguments.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/isulad_daemon_configs.h"
 

@@ -13,7 +13,7 @@
  * Description: provide container kill functions
  ******************************************************************************/
 #include "error.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "kill.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
@@ -82,11 +82,8 @@ int cmd_kill_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_kill_args.progname = argv[0];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_kill_args),
-        KILL_OPTIONS(g_cmd_kill_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_kill_args),
+                                        KILL_OPTIONS(g_cmd_kill_args) };
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_kill_desc,
                  g_cmd_kill_usage);
     if (command_parse_args(&cmd, &g_cmd_kill_args.argc, &g_cmd_kill_args.argv)) {
@@ -136,4 +133,3 @@ int cmd_kill_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

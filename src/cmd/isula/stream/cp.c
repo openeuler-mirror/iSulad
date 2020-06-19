@@ -19,7 +19,7 @@
 
 #include "error.h"
 #include "cp.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "path.h"
 #include "isula_connect.h"
@@ -345,4 +345,3 @@ int cmd_cp_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

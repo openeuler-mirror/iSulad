@@ -41,7 +41,7 @@
 #include "constants.h"
 #include "libisulad.h"
 #include "collector.h"
-#include "commands.h"
+#include "isulad_commands.h"
 #include "isula_libutils/log.h"
 #include "engine.h"
 #include "utils.h"
@@ -386,7 +386,8 @@ int check_and_save_pid(const char *fn)
     if (fcntl(fd, F_SETLK, &lk) != 0) {
         /* another daemonize instance is already running, don't start up */
         COMMAND_ERROR("Pid file found, ensure isulad is not running or delete pid file %s"
-                      " or please specify another pid file", fn);
+                      " or please specify another pid file",
+                      fn);
         ret = -1;
         goto out;
     }
@@ -1323,7 +1324,6 @@ out:
     return ret;
 }
 
-
 static int start_daemon_threads(char **msg)
 {
     int ret = -1;
@@ -1524,4 +1524,3 @@ failure:
     DAEMON_CLEAR_ERRMSG();
     exit(1);
 }
-

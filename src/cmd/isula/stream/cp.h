@@ -15,7 +15,7 @@
 #ifndef __CMD_COPY_H
 #define __CMD_COPY_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 extern const char g_cmd_cp_desc[];
 extern const char g_cmd_cp_usage[];
@@ -23,4 +23,3 @@ extern struct client_arguments g_cmd_cp_args;
 int cmd_cp_main(int argc, const char **argv);
 
 #endif /* __CMD_COPY_H */
-

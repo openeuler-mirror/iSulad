@@ -24,7 +24,7 @@
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
 #include "libisulad.h"
-#include "arguments.h"
+#include "daemon_arguments.h"
 #include "isula_libutils/container_inspect.h"
 
 #ifdef ENABLE_OCI_IMAGE

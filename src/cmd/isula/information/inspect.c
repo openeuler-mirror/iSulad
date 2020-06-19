@@ -14,7 +14,7 @@
  ******************************************************************************/
 #include "error.h"
 #include "inspect.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
@@ -192,8 +192,8 @@ static bool inspect_filter_done(yajl_val root, const char *filter, container_tre
  * CONTAINER_NOT_FOUND: no such container
 */
 static int client_inspect_container(const struct isula_inspect_request *request,
-                                    struct isula_inspect_response *response,
-                                    client_connect_config_t *config, const isula_connect_ops *ops)
+                                    struct isula_inspect_response *response, client_connect_config_t *config,
+                                    const isula_connect_ops *ops)
 {
     int ret = 0;
 
@@ -741,11 +741,8 @@ int cmd_inspect_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_inspect_args.progname = argv[0];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        INSPECT_OPTIONS(g_cmd_inspect_args),
-        COMMON_OPTIONS(g_cmd_inspect_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), INSPECT_OPTIONS(g_cmd_inspect_args),
+                                        COMMON_OPTIONS(g_cmd_inspect_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_inspect_desc,
                  g_cmd_inspect_usage);
@@ -820,4 +817,3 @@ int cmd_inspect_main(int argc, const char **argv)
     }
     exit(EXIT_SUCCESS);
 }
-

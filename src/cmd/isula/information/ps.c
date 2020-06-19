@@ -19,7 +19,7 @@
 #include <ctype.h>
 #include <regex.h>
 #include <errno.h>
-#include "arguments.h"
+#include "client_arguments.h"
 #include "ps.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
@@ -58,9 +58,8 @@ struct lengths {
     unsigned int runtime_length;
 };
 
-const char * const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
-                                              "exited",  "paused", "restarting"
-                                            };
+const char *const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
+                                             "exited",  "paused", "restarting" };
 
 struct filter_field {
     char *name;
@@ -169,8 +168,8 @@ static int mix_container_state(const struct isula_container_summary_info *in, ch
     return ret;
 }
 
-static int handle_running_status(const char *start_at, const struct isula_container_summary_info *in,
-                                 char *status, size_t len)
+static int handle_running_status(const char *start_at, const struct isula_container_summary_info *in, char *status,
+                                 size_t len)
 {
     int ret = 0;
     int nret;
@@ -183,7 +182,7 @@ static int handle_running_status(const char *start_at, const struct isula_contai
             goto out;
         }
     } else {
-        nret = snprintf(status, len, "Up %s",  start_at);
+        nret = snprintf(status, len, "Up %s", start_at);
         if (nret < 0 || nret >= len) {
             ERROR("Failed to compose string");
             ret = -1;
@@ -390,7 +389,6 @@ static void print_basic_container_info_item(const struct isula_container_summary
     }
 }
 
-
 static void print_extern_container_info_item(const struct isula_container_summary_info *in, const char *state,
                                              const char *name, const struct lengths *length)
 {
@@ -436,8 +434,8 @@ static void ps_print_container_info(const struct isula_container_summary_info *i
     printf("\n");
 }
 
-static void list_print_table(struct isula_container_summary_info **info, const size_t size,
-                             struct lengths *length, const struct filters *ff)
+static void list_print_table(struct isula_container_summary_info **info, const size_t size, struct lengths *length,
+                             const struct filters *ff)
 {
 #define MAX_STATE_LEN 32
 #define MAX_STATUS_LEN 100
@@ -644,8 +642,8 @@ static int client_list(const struct client_arguments *args, const struct filters
     }
 
     if (args->filters != NULL) {
-        request.filters = isula_filters_parse_args((const char **)args->filters,
-                                                   util_array_len((const char **)(args->filters)));
+        request.filters =
+                isula_filters_parse_args((const char **)args->filters, util_array_len((const char **)(args->filters)));
         if (request.filters == NULL) {
             ERROR("Failed to parse filters args");
             ret = -1;
@@ -822,7 +820,7 @@ static bool valid_format_field(const char *field)
 {
     size_t i;
     const char *support_field[] = {
-        "ID", "Image", "Command", "Created", "Status", "Ports", "Names", // basic info
+        "ID",  "Image",    "Command",      "Created", "Status",   "Ports",   "Names", // basic info
         "Pid", "ExitCode", "RestartCount", "StartAt", "FinishAt", "Runtime", "State" // external info
     };
 
@@ -921,7 +919,8 @@ out:
 static int get_filter_field(const char *patten, struct filters *ff)
 {
 #define SINGLE_PATTEN "\\{\\{\\s*\\.\\w+\\s*\\}\\}"
-#define DEFAULT_CONTAINER_TABLE_FORMAT "table {{.ID}}\t{{.Image}}\t{{.Command}}\t" \
+#define DEFAULT_CONTAINER_TABLE_FORMAT          \
+    "table {{.ID}}\t{{.Image}}\t{{.Command}}\t" \
     "{{.Created}}\t{{.Status}}\t{{.Ports}}\t{{.Names}}"
     const char *prefix = NULL;
     const char *suffix = NULL;
@@ -977,11 +976,8 @@ int cmd_list_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_list_args.progname = argv[0];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        LIST_OPTIONS(g_cmd_list_args),
-        COMMON_OPTIONS(g_cmd_list_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), LIST_OPTIONS(g_cmd_list_args),
+                                        COMMON_OPTIONS(g_cmd_list_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_list_desc,
                  g_cmd_list_usage);
@@ -1020,4 +1016,3 @@ int cmd_list_main(int argc, const char **argv)
     free_filters(ff);
     exit(EXIT_SUCCESS);
 }
-

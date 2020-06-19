@@ -15,7 +15,7 @@
 #ifndef __CMD_TOP_H
 #define __CMD_TOP_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,4 +31,3 @@ int cmd_top_main(int argc, const char **argv);
 #endif
 
 #endif /* __CMD_TOP_H */
-

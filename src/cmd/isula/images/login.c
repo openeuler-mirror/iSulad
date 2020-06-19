@@ -21,7 +21,7 @@
 #include <errno.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
 
@@ -114,7 +114,7 @@ static int get_auth_from_terminal(struct client_arguments *args)
     int n;
 
     if (args->username == NULL) {
-        char username[LOGIN_USERNAME_LEN + 1] = {0};
+        char username[LOGIN_USERNAME_LEN + 1] = { 0 };
         printf("Username: ");
         n = util_input_echo(username, sizeof(username));
         if (n == 0) {
@@ -133,7 +133,7 @@ static int get_auth_from_terminal(struct client_arguments *args)
     }
 
     if (args->password == NULL) {
-        char password[LOGIN_PASSWORD_LEN + 1] = {0};
+        char password[LOGIN_PASSWORD_LEN + 1] = { 0 };
         printf("Password: ");
         n = util_input_noecho(password, sizeof(password));
         if (n == 0) {
@@ -182,10 +182,7 @@ int cmd_login_main(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1; /* exit 1 if failed to login */
     command_t cmd;
-    struct command_option options[] = {
-        COMMON_OPTIONS(g_cmd_login_args),
-        LOGIN_OPTIONS(g_cmd_login_args)
-    };
+    struct command_option options[] = { COMMON_OPTIONS(g_cmd_login_args), LOGIN_OPTIONS(g_cmd_login_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_login_args)) {
@@ -224,4 +221,3 @@ int cmd_login_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

@@ -16,7 +16,7 @@
 #ifndef __CMD_PULL_IMAGE_H
 #define __CMD_PULL_IMAGE_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,4 +34,3 @@ int cmd_pull_main(int argc, const char **argv);
 #endif
 
 #endif /* __CMD_PULL_IMAGE_H */
-

@@ -133,37 +133,21 @@ target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -
 # ------ build isula-shim finish -------
 
 # ------ build isulad -------
-add_subdirectory(services)
-add_subdirectory(image)
-add_subdirectory(runtime)
-
-add_subdirectory(engines)
-
-add_subdirectory(plugin)
-add_subdirectory(config)
+add_subdirectory(daemon)
 
 add_executable(isulad
+    ${DAEMON_SRCS}
     ${CONNECT_SOCKET} ${SHARED_SRCS}
-    ${ISULAD_SRCS} ${SERVICES_SRCS}
+    ${ISULAD_SRCS}
     ${HTTP_SRCS}
-    ${ENGINES_SRCS}
-    ${IMAGE_SRCS}
-    ${RUNTIME_SRCS}
-    ${PLUGIN_SRCS}
-    ${CONFIG_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/libisulad.c
     )
 
 target_include_directories(isulad PUBLIC
+    ${DAEMON_INCS}
     ${SHARED_INCS}
     ${CONNECT_SOCKET_INCS}
-    ${SERVICES_INCS}
-    ${IMAGE_INCS}
-    ${RUNTIME_INCS}
-    ${ENGINES_INCS}
     ${ISULAD_INCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/plugin
-    ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/http
     )
 

@@ -14,10 +14,10 @@
  ******************************************************************************/
 #include <limits.h>
 #include "rm.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
-#include "commands.h"
+#include "isula_commands.h"
 #include "console.h"
 #include "utils.h"
 
@@ -76,8 +76,8 @@ static void do_delete_console_fifo(const char *name, const char *stdflag)
     char fifo_dir[PATH_MAX] = { 0 };
     char fifo_name[PATH_MAX] = { 0 };
 
-    ret = console_fifo_name(CLIENT_RUNDIR, name, stdflag, fifo_name, sizeof(fifo_name), fifo_dir,
-                            sizeof(fifo_dir), false);
+    ret = console_fifo_name(CLIENT_RUNDIR, name, stdflag, fifo_name, sizeof(fifo_name), fifo_dir, sizeof(fifo_dir),
+                            false);
     if (ret != 0) {
         ERROR("Failed to get console fifo name.");
         goto out;
@@ -108,11 +108,8 @@ int cmd_delete_main(int argc, const char **argv)
     bool status = false;
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_delete_args),
-        DELETE_OPTIONS(g_cmd_delete_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_delete_args),
+                                        DELETE_OPTIONS(g_cmd_delete_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_delete_args)) {
@@ -158,4 +155,3 @@ int cmd_delete_main(int argc, const char **argv)
     }
     exit(EXIT_SUCCESS);
 }
-

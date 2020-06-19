@@ -12,7 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container command functions
  ******************************************************************************/
-#include "commands.h"
+#include "isula_commands.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +20,7 @@
 #include <pthread.h>
 #include <syslog.h>
 
-#include "arguments.h"
+#include "client_arguments.h"
 #include "config.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -95,7 +95,7 @@ int compare_commands(const void *s1, const void *s2)
     return strcmp((*(const struct command *)s1).name, (*(const struct command *)s2).name);
 }
 
-const struct command *command_by_name(const struct command *cmds, const char * const name)
+const struct command *command_by_name(const struct command *cmds, const char *const name)
 {
     size_t i = 0;
 
@@ -117,7 +117,7 @@ const struct command *command_by_name(const struct command *cmds, const char * c
 }
 
 // Default help command if implementation doesn't provide one
-int command_default_help(const char * const program_name, struct command *commands, int argc, const char **argv)
+int command_default_help(const char *const program_name, struct command *commands, int argc, const char **argv)
 {
     const struct command *command = NULL;
 
@@ -270,8 +270,8 @@ static int do_create_console_fifo(const char *subpath, const char *stdflag, char
     char fifo_dir[PATH_MAX] = { 0 };
     char fifo_name[PATH_MAX] = { 0 };
 
-    ret = console_fifo_name(CLIENT_RUNDIR, subpath, stdflag, fifo_name, sizeof(fifo_name), fifo_dir,
-                            sizeof(fifo_dir), true);
+    ret = console_fifo_name(CLIENT_RUNDIR, subpath, stdflag, fifo_name, sizeof(fifo_name), fifo_dir, sizeof(fifo_dir),
+                            true);
     if (ret != 0) {
         ERROR("Failed to get console fifo name.");
         ret = -1;
@@ -430,4 +430,3 @@ int start_client_console_thread(struct command_fifo_config *console_fifos, bool 
 
     return 0;
 }
-

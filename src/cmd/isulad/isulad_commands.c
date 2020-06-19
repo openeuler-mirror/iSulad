@@ -17,7 +17,7 @@
 #include <string.h>
 #include <limits.h>
 
-#include "commands.h"
+#include "isulad_commands.h"
 #include "config.h"
 #include "isula_libutils/log.h"
 #include "path.h"

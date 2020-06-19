@@ -19,9 +19,9 @@
 #include <stdio.h>
 #include "isula_libutils/isulad_daemon_configs.h"
 #include "isula_libutils/oci_runtime_hooks.h"
-#include "commander.h"
+#include "command_parser.h"
 
-typedef void(*service_arguments_help_t)(void);
+typedef void (*service_arguments_help_t)(void);
 
 struct service_arguments {
     char *progname;
@@ -54,7 +54,7 @@ struct service_arguments {
     unsigned int websocket_server_listening_port;
 
     // remaining arguments
-    char * const *argv;
+    char *const *argv;
 
     int argc;
 };
@@ -64,4 +64,3 @@ void service_arguments_free(struct service_arguments *args);
 int server_log_opt_parser(struct service_arguments *args, const char *option);
 
 #endif /* __ISULAD_ARGUMENTS_H */
-

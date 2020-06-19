@@ -15,7 +15,7 @@
 #ifndef __CMD_ATTACH_H
 #define __CMD_ATTACH_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/container_inspect.h"
 #include "wait.h"
 
@@ -25,4 +25,3 @@ extern struct client_arguments g_cmd_attach_args;
 int inspect_container(const struct client_arguments *args, container_inspect **inspect_data);
 int cmd_attach_main(int argc, const char **argv);
 #endif /* __CMD_ATTACH_H */
-

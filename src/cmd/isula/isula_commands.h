@@ -15,7 +15,7 @@
 #ifndef __COMMAND_H
 #define __COMMAND_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 #include <semaphore.h>
 
 #ifdef __cplusplus
@@ -32,10 +32,10 @@ extern "C" {
 // @description: Brief description, will show in help messages
 // @longdesc: Long descripton to show when you run `help <command>`
 struct command {
-    const char * const name;
-    int(*executor)(int, const char **);
-    const char * const description;
-    const char * const longdesc;
+    const char *const name;
+    int (*executor)(int, const char **);
+    const char *const description;
+    const char *const longdesc;
     struct client_arguments *args;
 };
 
@@ -50,8 +50,8 @@ struct command_fifo_config {
     sem_t *wait_exit;
 };
 
-int create_console_fifos(bool attach_stdin, bool attach_stdout, bool attach_stderr, const char *name,
-                         const char *type, struct command_fifo_config **pconsole_fifos);
+int create_console_fifos(bool attach_stdin, bool attach_stdout, bool attach_stderr, const char *name, const char *type,
+                         struct command_fifo_config **pconsole_fifos);
 
 int start_client_console_thread(struct command_fifo_config *console_fifos, bool tty);
 
@@ -63,14 +63,10 @@ void delete_command_fifo(struct command_fifo_config *fifos);
 // returns null if not found.
 //
 // NOTE: Command arrays must end in a command with all member is NULL
-const struct command *command_by_name(const struct command *cmds,
-                                      const char * const name);
+const struct command *command_by_name(const struct command *cmds, const char *const name);
 
 // Default help command if implementation doesn't prvide one
-int commmand_default_help(const char * const program_name,
-                          struct command *commands,
-                          int argc,
-                          const char **argv);
+int commmand_default_help(const char *const program_name, struct command *commands, int argc, const char **argv);
 
 int run_command(struct command *commands, int argc, const char **argv);
 
@@ -79,4 +75,3 @@ int run_command(struct command *commands, int argc, const char **argv);
 #endif
 
 #endif /* __COMMAND_H */
-

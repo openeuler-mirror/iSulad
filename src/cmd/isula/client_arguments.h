@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "commander.h"
+#include "command_parser.h"
 #include "container_def.h"
 #include "isula_libutils/json_common.h"
 #include "isula_connect.h"
@@ -309,7 +309,7 @@ struct client_arguments {
     char **extra_env;
 
     // remaining arguments
-    char * const *argv;
+    char *const *argv;
     int argc;
 
     // top
@@ -325,26 +325,45 @@ struct client_arguments {
     char *key_file;
 };
 
-#define LOG_OPTIONS(log) \
-    { CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL }
+#define LOG_OPTIONS(log)                                                                      \
+    {                                                                                         \
+        CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL \
+    }
 
-#define COMMON_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING_DUP, false, "host", 'H', &(cmdargs).socket, \
-        "Daemon socket(s) to connect to", command_valid_socket }, \
-    { CMD_OPT_TYPE_BOOL, false, "tls", 0, &(cmdargs).tls, \
-      "Use TLS; implied by --tlsverify", NULL}, \
-    { CMD_OPT_TYPE_BOOL, false, "tlsverify", 0, &(cmdargs).tls_verify, \
-      "Use TLS and verify the remote", NULL}, \
-    { CMD_OPT_TYPE_STRING_DUP, false, "tlscacert", 0, &(cmdargs).ca_file, \
-      "Trust certs signed only by this CA (default \"/root/.iSulad/ca.pem\")", NULL }, \
-    { CMD_OPT_TYPE_STRING_DUP, false, "tlscert", 0, &(cmdargs).cert_file, \
-      "Path to TLS certificate file (default \"/root/.iSulad/cert.pem\")", NULL }, \
-    { CMD_OPT_TYPE_STRING_DUP, false, "tlskey", 0, &(cmdargs).key_file, \
-      "Path to TLS key file (default \"/root/.iSulad/key.pem\")", NULL }, \
-    { CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL }
+#define COMMON_OPTIONS(cmdargs)                                                                                         \
+    { CMD_OPT_TYPE_STRING_DUP, false, "host", 'H', &(cmdargs).socket, "Daemon socket(s) to connect to",                 \
+      command_valid_socket },                                                                                           \
+            { CMD_OPT_TYPE_BOOL, false, "tls", 0, &(cmdargs).tls, "Use TLS; implied by --tlsverify", NULL },            \
+            { CMD_OPT_TYPE_BOOL, false, "tlsverify", 0, &(cmdargs).tls_verify, "Use TLS and verify the remote", NULL }, \
+            { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
+              false,                                                                                                    \
+              "tlscacert",                                                                                              \
+              0,                                                                                                        \
+              &(cmdargs).ca_file,                                                                                       \
+              "Trust certs signed only by this CA (default \"/root/.iSulad/ca.pem\")",                                  \
+              NULL },                                                                                                   \
+            { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
+              false,                                                                                                    \
+              "tlscert",                                                                                                \
+              0,                                                                                                        \
+              &(cmdargs).cert_file,                                                                                     \
+              "Path to TLS certificate file (default \"/root/.iSulad/cert.pem\")",                                      \
+              NULL },                                                                                                   \
+            { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
+              false,                                                                                                    \
+              "tlskey",                                                                                                 \
+              0,                                                                                                        \
+              &(cmdargs).key_file,                                                                                      \
+              "Path to TLS key file (default \"/root/.iSulad/key.pem\")",                                               \
+              NULL },                                                                                                   \
+    {                                                                                                                   \
+        CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL                                                \
+    }
 
-#define VERSION_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_BOOL, false, "version", 0, NULL, "Print version information and quit", NULL }
+#define VERSION_OPTIONS(cmdargs)                                                                 \
+    {                                                                                            \
+        CMD_OPT_TYPE_BOOL, false, "version", 0, NULL, "Print version information and quit", NULL \
+    }
 
 extern void print_common_help();
 
@@ -352,9 +371,7 @@ extern int client_arguments_init(struct client_arguments *args);
 
 extern void client_arguments_free(struct client_arguments *args);
 
-extern void isulad_screen_print(uint32_t cc, uint32_t server_errono,
-                                struct client_arguments *args);
-
+extern void isulad_screen_print(uint32_t cc, uint32_t server_errono, struct client_arguments *args);
 
 extern void client_print_error(uint32_t cc, uint32_t server_errono, const char *errmsg);
 
@@ -365,4 +382,3 @@ extern client_connect_config_t get_connect_config(const struct client_arguments 
 #endif
 
 #endif /* __ISULA_ARGUMENTS_H */
-

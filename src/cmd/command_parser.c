@@ -14,7 +14,7 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE
-#include "commander.h"
+#include "command_parser.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -347,7 +347,7 @@ static int command_parse_long_arg(command_t *self, const char *arg)
     exit(EINVALIDARGS);
 }
 
-int command_parse_args(command_t *self, int *argc, char * const **argv)
+int command_parse_args(command_t *self, int *argc, char *const **argv)
 {
     int ret = 0;
 
@@ -384,7 +384,7 @@ int command_parse_args(command_t *self, int *argc, char * const **argv)
     }
     if (self->argc > 0) {
         *argc = self->argc;
-        *argv = (char * const *)self->argv;
+        *argv = (char *const *)self->argv;
     }
     return ret;
 }
@@ -435,7 +435,8 @@ static int check_default_ulimit_input(const char *val)
 
     if (val[0] == '=' || val[strlen(val) - 1] == '=') {
         COMMAND_ERROR("Invalid ulimit argument: \"%s\", delimiter '=' can't"
-                      " be the first or the last character", val);
+                      " be the first or the last character",
+                      val);
         ret = -1;
     }
 
@@ -481,7 +482,7 @@ static int parse_soft_hard_default_ulimit(const char *val, char **limitvals, siz
             goto out;
         }
     } else {
-        *hard = *soft;  // default to soft in case no hard was set
+        *hard = *soft; // default to soft in case no hard was set
     }
 out:
     return ret;
@@ -544,7 +545,8 @@ static host_config_ulimits_element *parse_default_ulimit(const char *val)
 
     if (parts[1][0] == ':' || parts[1][strlen(parts[1]) - 1] == ':') {
         COMMAND_ERROR("Invalid ulimit value: \"%s\", delimiter ':' can't be the first"
-                      " or the last character", val);
+                      " or the last character",
+                      val);
         ret = -1;
         goto out;
     }
@@ -557,8 +559,7 @@ static host_config_ulimits_element *parse_default_ulimit(const char *val)
     }
 
     if (limitvals_len > 2) {
-        COMMAND_ERROR("Too many limit value arguments - %s, can only have up to two, `soft[:hard]`",
-                      parts[1]);
+        COMMAND_ERROR("Too many limit value arguments - %s, can only have up to two, `soft[:hard]`", parts[1]);
         ret = -1;
         goto out;
     }
@@ -628,7 +629,6 @@ out:
     free_host_config_ulimits_element(tmp);
     return ret;
 }
-
 
 int command_append_array(command_option_t *option, const char *arg)
 {
@@ -774,7 +774,6 @@ int ulimit_array_append(host_config_ulimits_element ***ulimit_array, const host_
     host_config_ulimits_element *new_element = NULL;
     host_config_ulimits_element **new_ulimit_array = NULL;
 
-
     if (ulimit_array == NULL || element == NULL) {
         return -1;
     }
@@ -820,5 +819,3 @@ void free_default_ulimit(host_config_ulimits_element **default_ulimit)
     }
     free(default_ulimit);
 }
-
-

@@ -15,7 +15,7 @@
 #ifndef __CMD_WAIT_H
 #define __CMD_WAIT_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,4 +32,3 @@ int client_wait(const struct client_arguments *args, unsigned int *exit_code);
 #endif
 
 #endif /* __CMD_WAIT_H */
-

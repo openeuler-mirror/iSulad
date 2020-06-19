@@ -15,7 +15,7 @@
 #ifndef __CMD_RESUME_H
 #define __CMD_RESUME_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,4 +31,3 @@ int cmd_resume_main(int argc, const char **argv);
 #endif
 
 #endif
-

@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #include "restart.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "isula_connect.h"
@@ -67,11 +67,8 @@ int cmd_restart_main(int argc, const char **argv)
     int status = 0;
     command_t cmd;
     struct isula_libutils_log_config lconf = { 0 };
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_restart_args),
-        RESTART_OPTIONS(g_cmd_restart_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_restart_args),
+                                        RESTART_OPTIONS(g_cmd_restart_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_restart_args)) {
@@ -116,4 +113,3 @@ int cmd_restart_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

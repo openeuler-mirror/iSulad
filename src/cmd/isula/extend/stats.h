@@ -15,17 +15,26 @@
 #ifndef __CMD_STATS_H
 #define __CMD_STATS_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define STATUS_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_BOOL, false, "all", 'a', &(cmdargs).showall, \
-        "Show all containers (default shows just running)", NULL }, \
-    { CMD_OPT_TYPE_BOOL, false, "no-stream", 0, &(cmdargs).nostream, \
-      "Disable streaming stats and only pull the first result", NULL }
+#define STATUS_OPTIONS(cmdargs)                                                \
+    {                                                                          \
+        CMD_OPT_TYPE_BOOL,                                                     \
+        false,                                                                 \
+        "all",                                                                 \
+        'a',                                                                   \
+        &(cmdargs).showall,                                                    \
+        "Show all containers (default shows just running)",                    \
+        NULL                                                                   \
+    },                                                                         \
+    {                                                                          \
+        CMD_OPT_TYPE_BOOL, false, "no-stream", 0, &(cmdargs).nostream,         \
+                "Disable streaming stats and only pull the first result", NULL \
+    }
 
 extern const char g_cmd_stats_desc[];
 extern const char g_cmd_stats_usage[];
@@ -37,4 +46,3 @@ int cmd_stats_main(int argc, const char **argv);
 #endif
 
 #endif /* __CMD_STATS_H */
-
