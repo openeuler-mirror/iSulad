@@ -16,7 +16,7 @@
 #ifndef __WEBSOCKET_SERVER_H_
 #define __WEBSOCKET_SERVER_H_
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <mutex>
 #include <atomic>
@@ -71,7 +71,7 @@ public:
     void Shutdown();
     void RegisterCallback(const std::string &path, std::shared_ptr<StreamingServeInterface> callback);
     url::URLDatum GetWebsocketUrl();
-    std::map<struct lws *, session_data> &GetWsisData();
+    std::unordered_map<struct lws *, session_data> &GetWsisData();
     void SetLwsSendedFlag(struct lws *wsi, bool sended);
     void LockAllWsSession();
     void UnlockAllWsSession();
@@ -104,7 +104,7 @@ private:
         { NULL, NULL, 0, 0 }
     };
     RouteCallbackRegister m_handler;
-    static std::map<struct lws *, session_data> m_wsis;
+    static std::unordered_map<struct lws *, session_data> m_wsis;
     url::URLDatum m_url;
     int m_listenPort;
 };

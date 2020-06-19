@@ -29,7 +29,7 @@
 struct lws_context *WebsocketServer::m_context = nullptr;
 std::atomic<WebsocketServer *> WebsocketServer::m_instance;
 std::mutex WebsocketServer::m_mutex;
-std::map<struct lws *, session_data> WebsocketServer::m_wsis;
+std::unordered_map<struct lws *, session_data> WebsocketServer::m_wsis;
 WebsocketServer *WebsocketServer::GetInstance() noexcept
 {
     WebsocketServer *server = m_instance.load(std::memory_order_relaxed);
@@ -62,7 +62,7 @@ url::URLDatum WebsocketServer::GetWebsocketUrl()
     return m_url;
 }
 
-std::map<struct lws *, session_data> &WebsocketServer::GetWsisData()
+std::unordered_map<struct lws *, session_data> &WebsocketServer::GetWsisData()
 {
     return m_wsis;
 }

@@ -69,7 +69,6 @@ if (GRPC_CONNECTOR)
         )
 
     add_subdirectory(cpputils)
-    add_subdirectory(websocket)
 
     list(APPEND SHARED_SRCS ${CPPUTILS_SRCS})
 else()
@@ -153,7 +152,6 @@ add_executable(isulad
     ${PLUGIN_SRCS}
     ${CONFIG_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/libisulad.c
-    ${WEBSOCKET_SERVICE_SRCS}
     )
 
 target_include_directories(isulad PUBLIC
@@ -167,7 +165,6 @@ target_include_directories(isulad PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin
     ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/http
-    ${WEBSOCKET_SERVICE_INCS}
     )
 
 target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
