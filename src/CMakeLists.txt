@@ -25,9 +25,14 @@ else()
 endif()
 list(REMOVE_DUPLICATES CHECKED_INCLUDE_DIRS)
 
+add_subdirectory(tar)
+add_subdirectory(sha256)
+add_subdirectory(cutils)
+add_subdirectory(console)
+
 set(SHARED_INCS
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/cutils 
+    ${CMAKE_CURRENT_SOURCE_DIR}/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/tar
@@ -35,11 +40,6 @@ set(SHARED_INCS
     ${CMAKE_BINARY_DIR}/conf
     ${CHECKED_INCLUDE_DIRS}
     )
-
-add_subdirectory(tar)
-add_subdirectory(sha256)
-add_subdirectory(cutils)
-add_subdirectory(console)
 
 set(SHARED_SRCS
     ${TAR_SRCS}
@@ -49,55 +49,38 @@ set(SHARED_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/container_def.c
     )
 
-# get all c and header files
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/connect)
-
 if (GRPC_CONNECTOR)
-    # GRPC
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/types CONNECT_API_TYPES)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/containers CONNECT_API_CONTAINERS)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/images CONNECT_API_IMAGES)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri CONNECT_API_CRI)
-    set(CONNECT_API ${CONNECT_API_TYPES} ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI})
-
-    list(APPEND SHARED_INCS
-        ${CMAKE_BINARY_DIR}/grpc/src/api/types
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/containers
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/images
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
-        ${CMAKE_CURRENT_SOURCE_DIR}/cpputils
-        )
-
-    add_subdirectory(cpputils)
-
-    list(APPEND SHARED_SRCS ${CPPUTILS_SRCS})
+	add_subdirectory(cpputils)
+	list(APPEND SHARED_SRCS ${CPPUTILS_SRCS})
+	list(APPEND SHARED_INCS ${CPPUTILS_INCS})
 else()
-    list(APPEND SHARED_INCS
-         ${CMAKE_CURRENT_SOURCE_DIR}/api/services/containers/rest
-         ${CMAKE_CURRENT_SOURCE_DIR}/api/services/images/rest
-         )
+        list(APPEND SHARED_INCS ${CMAKE_CURRENT_SOURCE_DIR}/api/services/containers/rest
+                ${CMAKE_CURRENT_SOURCE_DIR}/api/services/images/rest)
+
 endif()
 
-list(APPEND SHARED_SRCS ${CONNECT_API} ${CPPUTILS_SRCS})
+# get all c and header files
 list(REMOVE_DUPLICATES SHARED_INCS)
 list(REMOVE_DUPLICATES SHARED_SRCS)
 
 add_subdirectory(http)
 
 # ------ build libisula ------
+
+add_subdirectory(client)
 if (OPENSSL_VERIFY)
-    list(APPEND CONNECTOR ${CMAKE_CURRENT_SOURCE_DIR}/http/certificate.c)
+    list(APPEND CLIENT_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/http/certificate.c)
 endif()
 
 add_library(libisula ${LIBTYPE}
     ${CMAKE_CURRENT_SOURCE_DIR}/libisula.c
-    ${CONNECTOR}
+    ${CLIENT_SRCS}
     ${SHARED_SRCS}
     )
 
 target_include_directories(libisula PUBLIC
     ${SHARED_INCS}
-    ${CONNECTOR_INCS}
+    ${CLIENT_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/http
     )
 
@@ -137,7 +120,7 @@ add_subdirectory(daemon)
 
 add_executable(isulad
     ${DAEMON_SRCS}
-    ${CONNECT_SOCKET} ${SHARED_SRCS}
+    ${SHARED_SRCS}
     ${ISULAD_SRCS}
     ${HTTP_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/libisulad.c

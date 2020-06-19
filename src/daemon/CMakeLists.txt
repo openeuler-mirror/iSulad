@@ -6,6 +6,7 @@ add_subdirectory(runtime)
 add_subdirectory(image)
 add_subdirectory(plugin)
 add_subdirectory(services)
+add_subdirectory(connect)
 
 set(local_daemon_srcs
     ${daemon_top_srcs}
@@ -14,6 +15,7 @@ set(local_daemon_srcs
     ${IMAGE_SRCS}
     ${PLUGIN_SRCS}
     ${SERVICES_SRCS}
+    ${SERVER_CONNECT_SRCS}
     )
 
 set(local_daemon_incs
@@ -23,6 +25,7 @@ set(local_daemon_incs
     ${IMAGE_INCS}
     ${PLUGIN_INCS}
     ${SERVICES_INCS}
+    ${SERVER_CONNECT_INCS}
     )
 
 set(DAEMON_SRCS

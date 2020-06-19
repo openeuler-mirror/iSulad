@@ -1,8 +1,0 @@
-# get current directory sources files
-add_subdirectory(client)
-set(CONNECTOR ${CONNECT_CLIENT_SRCS} PARENT_SCOPE)
-set(CONNECTOR_INCS ${CONNECT_CLIENT_INCS} PARENT_SCOPE)
-
-add_subdirectory(service)
-set(CONNECT_SOCKET ${CONNECT_SERVICE_SRCS} PARENT_SCOPE)
-set(CONNECT_SOCKET_INCS ${CONNECT_SERVICE_INCS} PARENT_SCOPE)
