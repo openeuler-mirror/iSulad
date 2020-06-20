@@ -39,7 +39,6 @@
 #endif
 
 #include "constants.h"
-#include "libisulad.h"
 #include "collector.h"
 #include "isulad_commands.h"
 #include "isula_libutils/log.h"

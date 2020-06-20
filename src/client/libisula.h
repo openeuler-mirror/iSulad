@@ -22,6 +22,7 @@
 #include "isula_libutils/container_path_stat.h"
 #include "isula_libutils/json_common.h"
 #include "console.h"
+#include "types_def.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,6 +93,25 @@ typedef struct isula_container_config {
     char **accel;
     size_t accel_len;
 } isula_container_config_t;
+
+typedef struct container_cgroup_resources {
+    uint16_t blkio_weight;
+    int64_t cpu_shares;
+    int64_t cpu_period;
+    int64_t cpu_quota;
+    int64_t cpu_realtime_period;
+    int64_t cpu_realtime_runtime;
+    char *cpuset_cpus;
+    char *cpuset_mems;
+    int64_t memory;
+    int64_t memory_swap;
+    int64_t memory_reservation;
+    int64_t kernel_memory;
+    int64_t pids_limit;
+    int64_t files_limit;
+    int64_t oom_score_adj;
+    int64_t swappiness;
+} container_cgroup_resources_t;
 
 typedef struct isula_host_config {
     char **devices;
@@ -368,6 +388,15 @@ struct isula_stats_response {
     char *errmsg;
 };
 
+typedef struct container_events_format {
+    types_timestamp_t timestamp;
+    char *opt;
+    char *id;
+    char **annotations;
+    char annotations_len;
+} container_events_format_t;
+
+typedef void (*container_events_callback_t)(const container_events_format_t *event);
 struct isula_events_request {
     container_events_callback_t cb;
     bool storeonly;
@@ -711,6 +740,10 @@ struct isula_resize_response {
     char *errmsg;
 };
 
+void container_cgroup_resources_free(container_cgroup_resources_t *cr);
+
+void container_events_format_free(container_events_format_t *value);
+
 Container_Status isulastastr2sta(const char *state);
 
 struct isula_filters *isula_filters_parse_args(const char **array, size_t len);
@@ -872,4 +905,3 @@ void isula_logs_response_free(struct isula_logs_response *response);
 #endif
 
 #endif
-

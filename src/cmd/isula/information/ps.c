@@ -58,8 +58,9 @@ struct lengths {
     unsigned int runtime_length;
 };
 
-const char *const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
-                                             "exited",  "paused", "restarting" };
+const char * const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
+                                             "exited",  "paused", "restarting"
+                                           };
 
 struct filter_field {
     char *name;
@@ -643,7 +644,7 @@ static int client_list(const struct client_arguments *args, const struct filters
 
     if (args->filters != NULL) {
         request.filters =
-                isula_filters_parse_args((const char **)args->filters, util_array_len((const char **)(args->filters)));
+            isula_filters_parse_args((const char **)args->filters, util_array_len((const char **)(args->filters)));
         if (request.filters == NULL) {
             ERROR("Failed to parse filters args");
             ret = -1;
@@ -977,7 +978,8 @@ int cmd_list_main(int argc, const char **argv)
     }
     g_cmd_list_args.progname = argv[0];
     struct command_option options[] = { LOG_OPTIONS(lconf), LIST_OPTIONS(g_cmd_list_args),
-                                        COMMON_OPTIONS(g_cmd_list_args) };
+               COMMON_OPTIONS(g_cmd_list_args)
+    };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_list_desc,
                  g_cmd_list_usage);

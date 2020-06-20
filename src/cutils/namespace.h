@@ -22,6 +22,17 @@
 extern "C" {
 #endif
 
+typedef enum {
+    NAMESPACE_USER = 0,
+    NAMESPACE_MNT,
+    NAMESPACE_PID,
+    NAMESPACE_UTS,
+    NAMESPACE_IPC,
+    NAMESPACE_NET,
+    NAMESPACE_CGROUP,
+    NAMESPACE_MAX
+} Namespace_Type_t;
+
 #define SHARE_NAMESPACE_PREFIX "container:"
 #define SHARE_NAMESPACE_HOST "host"
 #define SHARE_NAMESPACE_NONE "none"

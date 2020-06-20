@@ -22,14 +22,14 @@ extern "C" {
 
 #define LOGIN_OPTIONS(cmdargs)                                                                      \
     { CMD_OPT_TYPE_STRING, false, "username", 'u', &(cmdargs).username, "Username", NULL },         \
-            { CMD_OPT_TYPE_STRING, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
-            { CMD_OPT_TYPE_BOOL,                                                                    \
-              false,                                                                                \
-              "password-stdin",                                                                     \
-              0,                                                                                    \
-              &(cmdargs).password_stdin,                                                            \
-              "Take the password from stdin",                                                       \
-              NULL },
+    { CMD_OPT_TYPE_STRING, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
+    { CMD_OPT_TYPE_BOOL,                                                                    \
+      false,                                                                                \
+      "password-stdin",                                                                     \
+      0,                                                                                    \
+      &(cmdargs).password_stdin,                                                            \
+      "Take the password from stdin",                                                       \
+      NULL },
 
 extern const char g_cmd_login_desc[];
 extern const char g_cmd_login_usage[];

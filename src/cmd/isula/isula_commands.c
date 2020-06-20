@@ -95,7 +95,7 @@ int compare_commands(const void *s1, const void *s2)
     return strcmp((*(const struct command *)s1).name, (*(const struct command *)s2).name);
 }
 
-const struct command *command_by_name(const struct command *cmds, const char *const name)
+const struct command *command_by_name(const struct command *cmds, const char * const name)
 {
     size_t i = 0;
 
@@ -117,7 +117,7 @@ const struct command *command_by_name(const struct command *cmds, const char *co
 }
 
 // Default help command if implementation doesn't provide one
-int command_default_help(const char *const program_name, struct command *commands, int argc, const char **argv)
+int command_default_help(const char * const program_name, struct command *commands, int argc, const char **argv)
 {
     const struct command *command = NULL;
 

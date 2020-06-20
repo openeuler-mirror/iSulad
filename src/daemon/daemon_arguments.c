@@ -53,7 +53,7 @@ static int set_daemon_default_tls_options(struct service_arguments *args)
     tmp_path = NULL;
 
     args->json_confs->tls_config =
-            (isulad_daemon_configs_tls_config *)util_common_calloc_s(sizeof(isulad_daemon_configs_tls_config));
+        (isulad_daemon_configs_tls_config *)util_common_calloc_s(sizeof(isulad_daemon_configs_tls_config));
     if (args->json_confs->tls_config == NULL) {
         goto out;
     }

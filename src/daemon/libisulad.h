@@ -17,7 +17,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
+#include "types_def.h"
 #include "container_def.h"
 
 #ifdef __cplusplus
@@ -27,20 +27,6 @@ extern "C" {
 /* record the isulad errmsg */
 extern __thread char *g_isulad_errmsg;
 
-#define DEFAULT_TCP_HOST "tcp://localhost:2375"
-#define DEFAULT_TLS_HOST "tcp://localhost:2376"
-
-#define AUTH_PLUGIN "authz-broker"
-
-#define ISULAD_ISULA_ADAPTER "isula-adapter"
-#define ISULAD_ISULA_ACCEL_ARGS "isulad.accel.args"
-#define ISULAD_ISULA_ACCEL_ARGS_SEPERATOR ";"
-#define ISULAD_ENABLE_PLUGINS "ISULAD_ENABLE_PLUGINS"
-#define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
-#define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
-
-#define MAX_HOSTS 10
-
 /* clear the g_isulad_errmsg */
 #define DAEMON_CLEAR_ERRMSG()          \
     do {                               \
@@ -49,6 +35,48 @@ extern __thread char *g_isulad_errmsg;
             g_isulad_errmsg = NULL;    \
         }                              \
     } while (0)
+
+typedef enum {
+    EVENTS_TYPE_EXIT = 0,
+    EVENTS_TYPE_STOPPED1 = 1,
+    EVENTS_TYPE_STARTING = 2,
+    EVENTS_TYPE_RUNNING1 = 3,
+    EVENTS_TYPE_STOPPING = 4,
+    EVENTS_TYPE_ABORTING = 5,
+    EVENTS_TYPE_FREEZING = 6,
+    EVENTS_TYPE_FROZEN = 7,
+    EVENTS_TYPE_THAWED = 8,
+    EVENTS_TYPE_OOM = 9,
+    EVENTS_TYPE_CREATE = 10,
+    EVENTS_TYPE_START,
+    EVENTS_TYPE_RESTART,
+    EVENTS_TYPE_STOP,
+    EVENTS_TYPE_EXEC_CREATE,
+    EVENTS_TYPE_EXEC_START,
+    EVENTS_TYPE_EXEC_DIE,
+    EVENTS_TYPE_ATTACH,
+    EVENTS_TYPE_KILL,
+    EVENTS_TYPE_TOP,
+    EVENTS_TYPE_RENAME,
+    EVENTS_TYPE_ARCHIVE_PATH,
+    EVENTS_TYPE_EXTRACT_TO_DIR,
+    EVENTS_TYPE_UPDATE,
+    EVENTS_TYPE_PAUSE,
+    EVENTS_TYPE_UNPAUSE,
+    EVENTS_TYPE_EXPORT,
+    EVENTS_TYPE_RESIZE,
+    EVENTS_TYPE_PAUSED1,
+    EVENTS_TYPE_MAX_STATE
+} container_events_type_t;
+
+typedef enum {
+    EVENTS_TYPE_IMAGE_LOAD = 0,
+    EVENTS_TYPE_IMAGE_REMOVE,
+    EVENTS_TYPE_IMAGE_PULL,
+    EVENTS_TYPE_IMAGE_LOGIN,
+    EVENTS_TYPE_IMAGE_LOGOUT,
+    EVENTS_TYPE_IMAGE_MAX_STATE
+} image_events_type_t;
 
 struct isulad_events_format {
     types_timestamp_t timestamp;

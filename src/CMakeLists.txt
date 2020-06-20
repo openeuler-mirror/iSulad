@@ -46,7 +46,6 @@ set(SHARED_SRCS
     ${SHA256_SRCS}
     ${CUTILS_SRCS}
     ${CONSOLE_SRCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/container_def.c
     )
 
 if (GRPC_CONNECTOR)
@@ -73,7 +72,6 @@ if (OPENSSL_VERIFY)
 endif()
 
 add_library(libisula ${LIBTYPE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/libisula.c
     ${CLIENT_SRCS}
     ${SHARED_SRCS}
     )
@@ -123,7 +121,6 @@ add_executable(isulad
     ${SHARED_SRCS}
     ${ISULAD_SRCS}
     ${HTTP_SRCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/libisulad.c
     )
 
 target_include_directories(isulad PUBLIC

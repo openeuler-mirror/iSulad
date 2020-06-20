@@ -20,7 +20,6 @@
 #include "buffer.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "libisulad.h"
 
 size_t fwrite_buffer(const char *ptr, size_t eltsize, size_t nmemb, void *buffer_)
 {
@@ -472,4 +471,3 @@ out:
     }
     return ret;
 }
-

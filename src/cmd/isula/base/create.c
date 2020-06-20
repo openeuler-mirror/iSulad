@@ -33,7 +33,7 @@
 #include "isula_connect.h"
 #include "path.h"
 #include "pull.h"
-#include "libisulad.h"
+#include "constants.h"
 
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
@@ -734,11 +734,13 @@ static int request_pack_host_ns_change_files(const struct client_arguments *args
     char *net_files[] = { "/proc/sys/net" };
     char *ipc_files[] = { "/proc/sys/kernel/shmmax",          "/proc/sys/kernel/shmmni", "/proc/sys/kernel/shmall",
                           "/proc/sys/kernel/shm_rmid_forced", "/proc/sys/kernel/msgmax", "/proc/sys/kernel/msgmni",
-                          "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",    "/proc/sys/fs/mqueue" };
+                          "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",    "/proc/sys/fs/mqueue"
+                        };
     char *net_ipc_files[] = { "/proc/sys/net",           "/proc/sys/kernel/shmmax",          "/proc/sys/kernel/shmmni",
                               "/proc/sys/kernel/shmall", "/proc/sys/kernel/shm_rmid_forced", "/proc/sys/kernel/msgmax",
                               "/proc/sys/kernel/msgmni", "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",
-                              "/proc/sys/fs/mqueue" };
+                              "/proc/sys/fs/mqueue"
+                            };
 
     if (args->custom_conf.ns_change_opt == NULL) {
         return 0;
@@ -850,7 +852,7 @@ static void request_pack_host_device_read_bps(const struct client_arguments *arg
 {
     if (args->custom_conf.blkio_throttle_read_bps_device != NULL) {
         hostconfig->blkio_throttle_read_bps_device_len =
-                util_array_len((const char **)(args->custom_conf.blkio_throttle_read_bps_device));
+            util_array_len((const char **)(args->custom_conf.blkio_throttle_read_bps_device));
         hostconfig->blkio_throttle_read_bps_device = args->custom_conf.blkio_throttle_read_bps_device;
     }
 }
@@ -859,7 +861,7 @@ static void request_pack_host_device_write_bps(const struct client_arguments *ar
 {
     if (args->custom_conf.blkio_throttle_write_bps_device != NULL) {
         hostconfig->blkio_throttle_write_bps_device_len =
-                util_array_len((const char **)(args->custom_conf.blkio_throttle_write_bps_device));
+            util_array_len((const char **)(args->custom_conf.blkio_throttle_write_bps_device));
         hostconfig->blkio_throttle_write_bps_device = args->custom_conf.blkio_throttle_write_bps_device;
     }
 }
@@ -1229,7 +1231,8 @@ static int log_opt_syslog_facility(const char *key, const char *value, struct cl
     const char *facility_keys[FACILITIES_LEN] = { "kern",     "user",   "mail",   "daemon", "auth",
                                                   "syslog",   "lpr",    "news",   "uucp",   "cron",
                                                   "authpriv", "ftp",    "local0", "local1", "local2",
-                                                  "local3",   "local4", "local5", "local6", "local7" };
+                                                  "local3",   "local4", "local5", "local6", "local7"
+                                                };
     int i;
 
     for (i = 0; i < FACILITIES_LEN; i++) {
@@ -1265,29 +1268,29 @@ static int log_opt_parse_options(struct client_arguments *args, const char *optk
 #define OPTIONS_MAX 5
     log_opt_parse_t log_opts[OPTIONS_MAX] = {
         {
-                .key = "max-size",
-                .anno_key = CONTAINER_LOG_CONFIG_KEY_SIZE,
-                .cb = &log_opt_common_cb,
+            .key = "max-size",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_SIZE,
+            .cb = &log_opt_common_cb,
         },
         {
-                .key = "max-file",
-                .anno_key = CONTAINER_LOG_CONFIG_KEY_ROTATE,
-                .cb = &log_opt_max_file_cb,
+            .key = "max-file",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_ROTATE,
+            .cb = &log_opt_max_file_cb,
         },
         {
-                .key = "disable-log",
-                .anno_key = CONTAINER_LOG_CONFIG_KEY_FILE,
-                .cb = &log_opt_disable_log_cb,
+            .key = "disable-log",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_FILE,
+            .cb = &log_opt_disable_log_cb,
         },
         {
-                .key = "syslog-tag",
-                .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG,
-                .cb = &log_opt_common_cb,
+            .key = "syslog-tag",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG,
+            .cb = &log_opt_common_cb,
         },
         {
-                .key = "syslog-facility",
-                .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY,
-                .cb = &log_opt_syslog_facility,
+            .key = "syslog-facility",
+            .anno_key = CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY,
+            .cb = &log_opt_syslog_facility,
         },
     };
     int ret = -1;
@@ -1451,7 +1454,8 @@ int cmd_create_main(int argc, const char **argv)
     g_cmd_create_args.progname = argv[0];
     g_cmd_create_args.subcommand = argv[1];
     struct command_option options[] = { LOG_OPTIONS(lconf), CREATE_OPTIONS(g_cmd_create_args),
-                                        CREATE_EXTEND_OPTIONS(g_cmd_create_args), COMMON_OPTIONS(g_cmd_create_args) };
+               CREATE_EXTEND_OPTIONS(g_cmd_create_args), COMMON_OPTIONS(g_cmd_create_args)
+    };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_create_desc,
                  g_cmd_create_usage);

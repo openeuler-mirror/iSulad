@@ -21,7 +21,6 @@
 
 #include "api.pb.h"
 #include "errors.h"
-#include "container_def.h"
 #include "isula_libutils/host_config.h"
 #include "callback.h"
 #include "isula_libutils/docker_seccomp.h"

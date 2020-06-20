@@ -24,8 +24,8 @@ extern "C" {
 #define LOGS_OPTIONS(cmdargs)                                                                                         \
     { CMD_OPT_TYPE_BOOL, false, "follow", 'f', &(cmdargs).follow, "Follow log output", NULL },                        \
     {                                                                                                                 \
-        CMD_OPT_TYPE_CALLBACK, false, "tail", 0, &(cmdargs).tail, "Number of lines to show from the end of the logs", \
-                callback_tail                                                                                         \
+                                                                                                                      CMD_OPT_TYPE_CALLBACK, false, "tail", 0, &(cmdargs).tail, "Number of lines to show from the end of the logs", \
+                                                                                                                      callback_tail                                                                                         \
     }
 
 extern const char g_cmd_logs_desc[];

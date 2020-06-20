@@ -24,6 +24,7 @@
 #define ARGS_MAX 255 /* # args chars in a monitord msg */
 #define EXTRA_ANNOTATION_MAX 255 /* # annotation chars in a monitord msg */
 
+typedef enum { CONTAINER_EVENT, IMAGE_EVENT } msg_event_type_t;
 typedef enum { MONITORD_MSG_STATE, MONITORD_MSG_PRIORITY, MONITORD_MSG_EXIT_CODE } msg_type_t;
 
 struct monitord_msg {

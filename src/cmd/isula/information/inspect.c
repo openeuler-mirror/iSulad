@@ -742,7 +742,8 @@ int cmd_inspect_main(int argc, const char **argv)
     }
     g_cmd_inspect_args.progname = argv[0];
     struct command_option options[] = { LOG_OPTIONS(lconf), INSPECT_OPTIONS(g_cmd_inspect_args),
-                                        COMMON_OPTIONS(g_cmd_inspect_args) };
+               COMMON_OPTIONS(g_cmd_inspect_args)
+    };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_inspect_desc,
                  g_cmd_inspect_usage);

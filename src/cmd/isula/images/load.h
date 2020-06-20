@@ -24,8 +24,8 @@ extern "C" {
 #define LOAD_OPTIONS(cmdargs)                                                                                  \
     { CMD_OPT_TYPE_STRING, false, "input", 'i', &(cmdargs).file, "Read from a manifest or an archive", NULL }, \
     {                                                                                                          \
-        CMD_OPT_TYPE_STRING, false, "tag", 0, &(cmdargs).tag,                                                  \
-                "Name and optionally a tag in the 'name:tag' format, valid if type is docker", NULL            \
+                                                                                                               CMD_OPT_TYPE_STRING, false, "tag", 0, &(cmdargs).tag,                                                  \
+                                                                                                               "Name and optionally a tag in the 'name:tag' format, valid if type is docker", NULL            \
     }
 
 #define EMBEDDED_OPTIONS(cmdargs)                                                                                 \

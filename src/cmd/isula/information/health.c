@@ -82,7 +82,8 @@ int cmd_health_check_main(int argc, const char **argv)
     }
     g_cmd_health_check_args.progname = argv[0];
     struct command_option options[] = { HEALTH_OPTIONS(g_cmd_health_check_args),
-                                        COMMON_OPTIONS(g_cmd_health_check_args) };
+               COMMON_OPTIONS(g_cmd_health_check_args)
+    };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
                  g_cmd_health_check_desc, g_cmd_health_check_usage);

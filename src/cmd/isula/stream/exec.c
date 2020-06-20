@@ -60,7 +60,7 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
 
     request->user = util_strdup_s(args->custom_conf.user);
 
-    if (dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), (size_t *)&(request->argc)) !=
+    if (dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), (size_t *) & (request->argc)) !=
         0) {
         ERROR("Failed to dup args");
         ret = -1;
@@ -150,7 +150,8 @@ static int exec_cmd_init(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
 
     struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_exec_args),
-                                        EXEC_OPTIONS(g_cmd_exec_args) };
+               EXEC_OPTIONS(g_cmd_exec_args)
+    };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_exec_args)) {

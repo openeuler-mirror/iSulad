@@ -54,7 +54,7 @@ struct service_arguments {
     unsigned int websocket_server_listening_port;
 
     // remaining arguments
-    char *const *argv;
+    char * const *argv;
 
     int argc;
 };

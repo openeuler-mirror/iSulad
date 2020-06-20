@@ -41,33 +41,21 @@
 #include "config.h"
 #include "isulad_config.h"
 #include "isula_libutils/parse_common.h"
-#include "container_def.h"
 #include "libisulad.h"
 #include "specs_extend.h"
 #include "selinux_label.h"
 #include "specs.h"
+#include "constants.h"
 
 #define MAX_CAP_LEN 32
 
-static const char * const g_system_caps[] = {
-    "SYS_BOOT",
-    "SETPCAP",
-    "NET_RAW",
-    "NET_BIND_SERVICE",
+static const char * const g_system_caps[] = { "SYS_BOOT",     "SETPCAP", "NET_RAW", "NET_BIND_SERVICE",
 #ifdef CAP_AUDIT_WRITE
-    "AUDIT_WRITE",
+                                             "AUDIT_WRITE",
 #endif
-    "DAC_OVERRIDE",
-    "SETFCAP",
-    "SETGID",
-    "SETUID",
-    "MKNOD",
-    "CHOWN",
-    "FOWNER",
-    "FSETID",
-    "KILL",
-    "SYS_CHROOT"
-};
+                                             "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
+                                             "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
+                                           };
 
 static int append_capability(char ***dstcaps, size_t *dstcaps_len, const char *cap)
 {
@@ -286,8 +274,7 @@ free_out:
     return ret;
 }
 
-int refill_oci_process_capabilities(defs_process_capabilities **caps, const char **src_caps,
-                                    size_t src_caps_len)
+int refill_oci_process_capabilities(defs_process_capabilities **caps, const char **src_caps, size_t src_caps_len)
 {
     int ret = 0;
     size_t i = 0;
@@ -323,8 +310,7 @@ out:
 static char *seccomp_trans_arch_for_docker(const char *arch)
 {
     size_t i = 0;
-    char *arch_map[][2] = {
-        { "SCMP_ARCH_X86", "x86" },
+    char *arch_map[][2] = { { "SCMP_ARCH_X86", "x86" },
         { "SCMP_ARCH_X86_64", "amd64" },
         { "SCMP_ARCH_X32", "x32" },
         { "SCMP_ARCH_ARM", "arm" },
@@ -401,8 +387,7 @@ static bool is_cap_in_seccomp(const defs_process_capabilities *capabilites, cons
 }
 
 static void meet_include(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                         const defs_process_capabilities *capabilites, bool *meet_include_arch,
-                         bool *meet_include_cap)
+                         const defs_process_capabilities *capabilites, bool *meet_include_arch, bool *meet_include_cap)
 {
     size_t i;
 
@@ -434,8 +419,7 @@ static void meet_include(const docker_seccomp *seccomp, const docker_seccomp_sys
 }
 
 static void meet_exclude(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                         const defs_process_capabilities *capabilites, bool *meet_exclude_arch,
-                         bool *meet_exclude_cap)
+                         const defs_process_capabilities *capabilites, bool *meet_exclude_arch, bool *meet_exclude_cap)
 {
     size_t i;
 
@@ -570,8 +554,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
         return -1;
     }
 
-    oci_seccomp_spec->syscalls =
-        util_common_calloc_s(docker_seccomp_spec->syscalls_len * sizeof(defs_syscall *));
+    oci_seccomp_spec->syscalls = util_common_calloc_s(docker_seccomp_spec->syscalls_len * sizeof(defs_syscall *));
     if (oci_seccomp_spec->syscalls == NULL) {
         return -1;
     }
@@ -617,8 +600,9 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
     return 0;
 }
 
-static oci_runtime_config_linux_seccomp *trans_docker_seccomp_to_oci_format(
-    const docker_seccomp *docker_seccomp_spec, const defs_process_capabilities *capabilites)
+static oci_runtime_config_linux_seccomp *
+trans_docker_seccomp_to_oci_format(const docker_seccomp *docker_seccomp_spec,
+                                   const defs_process_capabilities *capabilites)
 {
     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
 
@@ -679,8 +663,7 @@ int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_ca
     return 0;
 }
 
-static int append_systemcall_to_seccomp(oci_runtime_config_linux_seccomp *seccomp,
-                                        defs_syscall *element)
+static int append_systemcall_to_seccomp(oci_runtime_config_linux_seccomp *seccomp, defs_syscall *element)
 {
     int nret = 0;
     size_t old_size, new_size;
@@ -706,9 +689,8 @@ static int append_systemcall_to_seccomp(oci_runtime_config_linux_seccomp *seccom
     return 0;
 }
 
-static defs_syscall *make_seccomp_syscalls_element(const char **names, size_t names_len,
-                                                   const char *action, size_t args_len,
-                                                   defs_syscall_arg **args)
+static defs_syscall *make_seccomp_syscalls_element(const char **names, size_t names_len, const char *action,
+                                                   size_t args_len, defs_syscall_arg **args)
 {
     size_t i = 0;
     defs_syscall *ret = NULL;
@@ -876,9 +858,8 @@ out:
     return ret;
 }
 
-
-int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec,
-                  const char **label_opts, size_t label_opts_len)
+int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec, const char **label_opts,
+                  size_t label_opts_len)
 {
     char *process_label = NULL;
     char *mount_label = NULL;
@@ -976,7 +957,6 @@ static int make_sure_oci_spec_linux_seccomp(oci_runtime_spec *oci_spec)
     return 0;
 }
 
-
 int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
@@ -1004,8 +984,7 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
         goto out;
     }
 
-    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts,
-                             &label_opts_len, &seccomp_profile);
+    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts, &label_opts_len, &seccomp_profile);
     if (ret != 0) {
         ERROR("Failed to parse security opt");
         goto out;
@@ -1082,4 +1061,3 @@ out:
     free_docker_seccomp(docker_seccomp);
     return ret;
 }
-

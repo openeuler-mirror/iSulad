@@ -30,6 +30,41 @@ struct context_lists {
     struct linked_list context_list;
 };
 
+typedef enum {
+    EXIT,
+    STOPPED,
+    STARTING,
+    RUNNING,
+    STOPPING,
+    ABORTING,
+    FREEZING,
+    FROZEN,
+    THAWED,
+    OOM,
+    CREATE,
+    START,
+    RESTART,
+    STOP,
+    EXEC_CREATE,
+    EXEC_START,
+    EXEC_DIE,
+    ATTACH,
+    KILL,
+    TOP,
+    RENAME,
+    ARCHIVE_PATH,
+    EXTRACT_TO_DIR,
+    UPDATE,
+    PAUSE,
+    UNPAUSE,
+    EXPORT,
+    RESIZE,
+    PAUSED1,
+    MAX_STATE,
+} runtime_state_t;
+
+typedef enum { IM_LOAD, IM_REMOVE, IM_PULL, IM_LOGIN, IM_LOGOUT, IM_IMPORT } image_state_t;
+
 int newcollector();
 
 void events_handler(struct monitord_msg *msg);
@@ -52,4 +87,3 @@ int isulad_monitor_send_image_event(const char *name, image_state_t state);
 #endif
 
 #endif /* __COLLECTOR_H */
-

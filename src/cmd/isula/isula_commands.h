@@ -32,10 +32,10 @@ extern "C" {
 // @description: Brief description, will show in help messages
 // @longdesc: Long descripton to show when you run `help <command>`
 struct command {
-    const char *const name;
+    const char * const name;
     int (*executor)(int, const char **);
-    const char *const description;
-    const char *const longdesc;
+    const char * const description;
+    const char * const longdesc;
     struct client_arguments *args;
 };
 
@@ -63,10 +63,10 @@ void delete_command_fifo(struct command_fifo_config *fifos);
 // returns null if not found.
 //
 // NOTE: Command arrays must end in a command with all member is NULL
-const struct command *command_by_name(const struct command *cmds, const char *const name);
+const struct command *command_by_name(const struct command *cmds, const char * const name);
 
 // Default help command if implementation doesn't prvide one
-int commmand_default_help(const char *const program_name, struct command *commands, int argc, const char **argv);
+int commmand_default_help(const char * const program_name, struct command *commands, int argc, const char **argv);
 
 int run_command(struct command *commands, int argc, const char **argv);
 

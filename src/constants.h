@@ -16,6 +16,10 @@
 #ifndef _ISULAD_CONSTANTS_H
 #define _ISULAD_CONSTANTS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* mode of file and directory */
 
 #define DEFAULT_SECURE_FILE_MODE 0640
@@ -80,5 +84,42 @@
 #define CONTAINER_LOG_CONFIG_KEY_SIZE "log.console.filesize"
 #define CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG "log.console.tag"
 #define CONTAINER_LOG_CONFIG_KEY_SYSLOG_FACILITY "log.console.facility"
+
+#ifndef DEFAULT_UNIX_SOCKET
+#define DEFAULT_UNIX_SOCKET "unix:///var/run/isulad.sock"
+#endif
+#ifndef DEFAULT_ROOTFS_PATH
+#define DEFAULT_ROOTFS_PATH "/dev/ram0"
+#endif
+#ifndef OCICONFIG_PATH
+#define OCICONFIG_PATH "/etc/default/isulad/config.json"
+#endif
+#ifndef OCI_SYSTEM_CONTAINER_CONFIG_PATH
+#define OCI_SYSTEM_CONTAINER_CONFIG_PATH "/etc/default/isulad/systemcontainer_config.json"
+#endif
+#ifndef SECCOMP_DEFAULT_PATH
+#define SECCOMP_DEFAULT_PATH "/etc/isulad/seccomp_default.json"
+#endif
+#ifndef OCI_VERSION
+#define OCI_VERSION "1.0.1"
+#endif
+
+#define DEFAULT_TCP_HOST "tcp://localhost:2375"
+#define DEFAULT_TLS_HOST "tcp://localhost:2376"
+
+#define AUTH_PLUGIN "authz-broker"
+
+#define ISULAD_ISULA_ADAPTER "isula-adapter"
+#define ISULAD_ISULA_ACCEL_ARGS "isulad.accel.args"
+#define ISULAD_ISULA_ACCEL_ARGS_SEPERATOR ";"
+#define ISULAD_ENABLE_PLUGINS "ISULAD_ENABLE_PLUGINS"
+#define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
+#define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
+
+#define MAX_HOSTS 10
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

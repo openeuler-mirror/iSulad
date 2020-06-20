@@ -22,9 +22,9 @@
 #include <stdint.h>
 
 #include "command_parser.h"
-#include "container_def.h"
 #include "isula_libutils/json_common.h"
 #include "isula_connect.h"
+#include "namespace.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -309,7 +309,7 @@ struct client_arguments {
     char **extra_env;
 
     // remaining arguments
-    char *const *argv;
+    char * const *argv;
     int argc;
 
     // top
@@ -332,32 +332,32 @@ struct client_arguments {
 
 #define COMMON_OPTIONS(cmdargs)                                                                                         \
     { CMD_OPT_TYPE_STRING_DUP, false, "host", 'H', &(cmdargs).socket, "Daemon socket(s) to connect to",                 \
-      command_valid_socket },                                                                                           \
-            { CMD_OPT_TYPE_BOOL, false, "tls", 0, &(cmdargs).tls, "Use TLS; implied by --tlsverify", NULL },            \
-            { CMD_OPT_TYPE_BOOL, false, "tlsverify", 0, &(cmdargs).tls_verify, "Use TLS and verify the remote", NULL }, \
-            { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
-              false,                                                                                                    \
-              "tlscacert",                                                                                              \
-              0,                                                                                                        \
-              &(cmdargs).ca_file,                                                                                       \
-              "Trust certs signed only by this CA (default \"/root/.iSulad/ca.pem\")",                                  \
-              NULL },                                                                                                   \
-            { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
-              false,                                                                                                    \
-              "tlscert",                                                                                                \
-              0,                                                                                                        \
-              &(cmdargs).cert_file,                                                                                     \
-              "Path to TLS certificate file (default \"/root/.iSulad/cert.pem\")",                                      \
-              NULL },                                                                                                   \
-            { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
-              false,                                                                                                    \
-              "tlskey",                                                                                                 \
-              0,                                                                                                        \
-              &(cmdargs).key_file,                                                                                      \
-              "Path to TLS key file (default \"/root/.iSulad/key.pem\")",                                               \
-              NULL },                                                                                                   \
+        command_valid_socket },                                                                                           \
+    { CMD_OPT_TYPE_BOOL, false, "tls", 0, &(cmdargs).tls, "Use TLS; implied by --tlsverify", NULL },            \
+    { CMD_OPT_TYPE_BOOL, false, "tlsverify", 0, &(cmdargs).tls_verify, "Use TLS and verify the remote", NULL }, \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
+      false,                                                                                                    \
+      "tlscacert",                                                                                              \
+      0,                                                                                                        \
+      &(cmdargs).ca_file,                                                                                       \
+      "Trust certs signed only by this CA (default \"/root/.iSulad/ca.pem\")",                                  \
+      NULL },                                                                                                   \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
+      false,                                                                                                    \
+      "tlscert",                                                                                                \
+      0,                                                                                                        \
+      &(cmdargs).cert_file,                                                                                     \
+      "Path to TLS certificate file (default \"/root/.iSulad/cert.pem\")",                                      \
+      NULL },                                                                                                   \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                  \
+      false,                                                                                                    \
+      "tlskey",                                                                                                 \
+      0,                                                                                                        \
+      &(cmdargs).key_file,                                                                                      \
+      "Path to TLS key file (default \"/root/.iSulad/key.pem\")",                                               \
+      NULL },                                                                                                   \
     {                                                                                                                   \
-        CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL                                                \
+                                                                                                                        CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL                                                \
     }
 
 #define VERSION_OPTIONS(cmdargs)                                                                 \

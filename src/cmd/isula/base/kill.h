@@ -25,7 +25,7 @@ extern "C" {
 #define KILL_OPTIONS(cmdargs)                                                 \
     {                                                                         \
         CMD_OPT_TYPE_STRING, false, "signal", 's', &(cmdargs).signal,         \
-                "Signal to send to the container (default \"SIGKILL\")", NULL \
+        "Signal to send to the container (default \"SIGKILL\")", NULL \
     }
 
 extern const char g_cmd_kill_desc[];

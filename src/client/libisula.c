@@ -1414,7 +1414,6 @@ void isula_resize_response_free(struct isula_resize_response *response)
     free(response);
 }
 
-
 /* isula logs request free */
 void isula_logs_request_free(struct isula_logs_request *request)
 {
@@ -1447,3 +1446,42 @@ void isula_logs_response_free(struct isula_logs_response *response)
     free(response);
 }
 
+/* container cgroup resources free */
+void container_cgroup_resources_free(container_cgroup_resources_t *cr)
+{
+    if (cr == NULL) {
+        return;
+    }
+    free(cr->cpuset_cpus);
+    cr->cpuset_cpus = NULL;
+
+    free(cr->cpuset_mems);
+    cr->cpuset_mems = NULL;
+
+    free(cr);
+}
+
+void container_events_format_free(container_events_format_t *value)
+{
+    size_t i;
+
+    if (value == NULL) {
+        return;
+    }
+
+    free(value->opt);
+    value->opt = NULL;
+
+    free(value->id);
+    value->id = NULL;
+
+    for (i = 0; i < value->annotations_len; i++) {
+        free(value->annotations[i]);
+        value->annotations[i] = NULL;
+    }
+
+    free(value->annotations);
+    value->annotations = NULL;
+
+    free(value);
+}

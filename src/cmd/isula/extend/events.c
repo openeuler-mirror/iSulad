@@ -203,7 +203,8 @@ int cmd_events_main(int argc, const char **argv)
     }
     g_cmd_events_args.progname = argv[0];
     struct command_option options[] = { LOG_OPTIONS(lconf), EVENTS_OPTIONS(g_cmd_events_args),
-                                        COMMON_OPTIONS(g_cmd_events_args) };
+               COMMON_OPTIONS(g_cmd_events_args)
+    };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_events_desc,
                  g_cmd_events_usage);

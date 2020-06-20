@@ -28,7 +28,7 @@
     { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display image names", NULL },               \
     {                                                                                                                  \
         CMD_OPT_TYPE_CALLBACK, false, "filter", 'f', &(cmdargs).filters, "Filter output based on conditions provided", \
-                command_append_array                                                                                   \
+        command_append_array                                                                                   \
     }
 
 #define CREATED_DISPLAY_FORMAT "YYYY-MM-DD HH:MM:SS"
@@ -268,7 +268,7 @@ static int list_images(const struct client_arguments *args)
     }
     if (args->filters != NULL) {
         request.filters =
-                isula_filters_parse_args((const char **)args->filters, util_array_len((const char **)(args->filters)));
+            isula_filters_parse_args((const char **)args->filters, util_array_len((const char **)(args->filters)));
         if (request.filters == NULL) {
             ERROR("Failed to parse filters args");
             ret = -1;
@@ -312,7 +312,8 @@ int cmd_images_main(int argc, const char **argv)
     }
     g_cmd_images_args.progname = argv[0];
     struct command_option options[] = { LOG_OPTIONS(lconf), IMAGES_OPTIONS(g_cmd_images_args),
-                                        COMMON_OPTIONS(g_cmd_images_args) };
+               COMMON_OPTIONS(g_cmd_images_args)
+    };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_images_desc,
                  g_cmd_images_usage);
