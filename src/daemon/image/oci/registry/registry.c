@@ -488,6 +488,12 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
 
             if (desc->layers[i].diff_id == NULL) {
                 desc->layers[i].diff_id = util_strdup_s(cache->diffid);
+            } else if (cache->diffid == NULL) {
+                ERROR("unexpected NULL diff id");
+                return -1;
+            } else if (strcmp(desc->layers[i].diff_id, cache->diffid)) {
+                ERROR("invalid diff id, expect %s, got %s", desc->layers[i].diff_id, cache->diffid);
+                return -1;
             }
 
             if (desc->layers[i].file == NULL) {
@@ -635,7 +641,7 @@ static int get_top_layer_index(pull_descriptor *desc, size_t *top_layer_index)
     return -1;
 }
 
-static int create_image(pull_descriptor *desc, char *image_id)
+static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
 {
     int ret = 0;
     size_t top_layer_index = 0;
@@ -643,7 +649,7 @@ static int create_image(pull_descriptor *desc, char *image_id)
     char *top_layer_id = NULL;
     char *pre_top_layer = NULL;
 
-    if (desc == NULL || image_id == NULL) {
+    if (desc == NULL || image_id == NULL || reuse == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
     }
@@ -680,17 +686,25 @@ static int create_image(pull_descriptor *desc, char *image_id)
         }
 
         ret = 0;
+        *reuse = true;
+    } else {
+        *reuse = false;
     }
 
     ret = storage_img_add_name(image_id, desc->dest_image_name);
     if (ret != 0) {
         ERROR("add image name failed");
+        if (!(*reuse)) {
+            if (storage_img_delete(image_id, true)) {
+                ERROR("delete image %s failed", image_id);
+            }
+        }
         goto out;
     }
 
 out:
-
     free(pre_top_layer);
+
     return ret;
 }
 
@@ -783,6 +797,7 @@ static int register_image(pull_descriptor *desc)
     int ret = 0;
     char *image_id = NULL;
     bool image_created = false;
+    bool reuse = false;
 
     if (desc == NULL) {
         ERROR("Invalid NULL pointer");
@@ -797,12 +812,18 @@ static int register_image(pull_descriptor *desc)
     }
 
     image_id = without_sha256_prefix(desc->config.digest);
-    ret = create_image(desc, image_id);
+    ret = create_image(desc, image_id, &reuse);
     if (ret != 0) {
         ERROR("create image %s failed", desc->dest_image_name);
         isulad_try_set_error_message("create image failed");
         goto out;
     }
+
+    // If image is reused, no need to set file and infos.
+    if (reuse) {
+        goto out;
+    }
+
     image_created = true;
 
     ret = set_config(desc, image_id);
@@ -1251,6 +1272,7 @@ static int fetch_layers(pull_descriptor *desc)
         sret = snprintf(file, sizeof(file), "%s/%d", desc->blobpath, (int)i);
         if (sret < 0 || (size_t)sret >= sizeof(file)) {
             ERROR("Failed to sprintf file for layer %d", (int)i);
+            ret = -1;
             goto out;
         }
 
@@ -1280,9 +1302,10 @@ static int fetch_layers(pull_descriptor *desc)
         ret = result;
     }
 
-    ret = set_cached_info_to_desc(infos, desc->layers_len, desc);
-    if (ret != 0) {
-        ERROR("set cached infos to desc failed");
+    if (ret == 0) {
+        if (set_cached_info_to_desc(infos, desc->layers_len, desc) != 0) {
+            ERROR("set cached infos to desc failed");
+        }
     }
 
     mutex_unlock(&g_shared->mutex);
@@ -1394,12 +1417,40 @@ out:
     return ret;
 }
 
-static int registry_fetch(pull_descriptor *desc)
+static bool reuse_image(pull_descriptor *desc)
+{
+    imagetool_image *image = NULL;
+    bool reuse = false;
+    char *id = NULL;
+
+    // If the image already exist, do not pull it again.
+    image = storage_img_get(desc->dest_image_name);
+    if (image == NULL || desc->config.digest == NULL || image->id == NULL) {
+        goto out;
+    }
+
+    id = without_sha256_prefix(desc->config.digest);
+    if (id == NULL) {
+        goto out;
+    }
+
+    if (!strcmp(id, image->id)) {
+        DEBUG("image %s with id %s already exist, ignore pulling", desc->dest_image_name, image->id);
+        reuse = true;
+    }
+
+out:
+    free_imagetool_image(image);
+    image = NULL;
+
+    return reuse;
+}
+
+static int registry_fetch(pull_descriptor *desc, bool *reuse)
 {
     int ret = 0;
-    imagetool_image *image = NULL;
 
-    if (desc == NULL) {
+    if (desc == NULL || reuse == NULL) {
         ERROR("Invalid NULL param");
         return -1;
     }
@@ -1411,10 +1462,8 @@ static int registry_fetch(pull_descriptor *desc)
         goto out;
     }
 
-    // If the image already exist, do not pull it again.
-    image = storage_img_get(desc->dest_image_name);
-    if (image != NULL && desc->config.digest != NULL && !strcmp(image->id, desc->config.digest)) {
-        DEBUG("image %s with id %s already exist, ignore pulling", desc->dest_image_name, image->id);
+    *reuse = reuse_image(desc);
+    if (*reuse) {
         goto out;
     }
 
@@ -1449,8 +1498,6 @@ static int registry_fetch(pull_descriptor *desc)
     }
 
 out:
-    free_imagetool_image(image);
-    image = NULL;
 
     return ret;
 }
@@ -1556,6 +1603,7 @@ int registry_pull(registry_pull_options *options)
 {
     int ret = 0;
     pull_descriptor *desc = NULL;
+    bool reuse = false;
 
     if (options == NULL || options->image_name == NULL) {
         ERROR("Invalid NULL param");
@@ -1576,7 +1624,7 @@ int registry_pull(registry_pull_options *options)
         goto out;
     }
 
-    ret = registry_fetch(desc);
+    ret = registry_fetch(desc, &reuse);
     if (ret != 0) {
         ERROR("error fetching %s", options->image_name);
         isulad_try_set_error_message("error fetching %s", options->image_name);
@@ -1584,12 +1632,14 @@ int registry_pull(registry_pull_options *options)
         goto out;
     }
 
-    ret = register_image(desc);
-    if (ret != 0) {
-        ERROR("error register image %s to store", options->image_name);
-        isulad_try_set_error_message("error register image %s to store", options->image_name);
-        ret = -1;
-        goto out;
+    if (!reuse) {
+        ret = register_image(desc);
+        if (ret != 0) {
+            ERROR("error register image %s to store", options->image_name);
+            isulad_try_set_error_message("error register image %s to store", options->image_name);
+            ret = -1;
+            goto out;
+        }
     }
 
     INFO("Pull images %s success", options->image_name);
