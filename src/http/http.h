@@ -68,6 +68,8 @@ struct http_get_options {
     char *cert_file;
     char *key_file;
 
+    char *errmsg;
+
     void *progressinfo;
     progress_info_func progress_info_op;
 };

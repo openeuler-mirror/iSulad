@@ -72,6 +72,9 @@ void free_http_get_options(struct http_get_options *options)
     free(options->key_file);
     options->key_file = NULL;
 
+    free(options->errmsg);
+    options->errmsg = NULL;
+
     /* The options->output is a FILE pointer, we should not free it here */
     free(options);
     return;
@@ -243,21 +246,26 @@ static void free_rpath(char *rpath)
     free(rpath);
 }
 
-static void check_buf_len(char *errbuf, CURLcode curl_result)
+static void check_buf_len(struct http_get_options *options, char *errbuf, CURLcode curl_result)
 {
     int nret = 0;
     size_t len = 0;
+
+    if (options == NULL || options->errmsg != NULL) {
+        return;
+    }
+
     len = strlen(errbuf);
-    if (len > 0) {
-        fprintf(stderr, "%s%s", errbuf, ((errbuf[len - 1] != '\n') ? "\n" : ""));
-    } else {
+    if (len == 0) {
         nret = snprintf(errbuf, CURL_ERROR_SIZE, "curl response error code %d", curl_result);
         if (nret < 0 || (size_t)nret >= CURL_ERROR_SIZE) {
             ERROR("Failed to print string for error buffer, errcode %d", curl_result);
             return;
         }
     }
-    isulad_try_set_error_message("%s", errbuf);
+    options->errmsg = util_strdup_s(errbuf);
+
+    return;
 }
 
 static void buffer_empty_on_condition(struct http_get_options *options)
@@ -367,7 +375,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     curl_result = curl_easy_perform(curl_handle);
 
     if (curl_result != CURLE_OK) {
-        check_buf_len(errbuf, curl_result);
+        check_buf_len(options, errbuf, curl_result);
         ret = -1;
     } else {
         curl_getinfo_on_condition(response_code, curl_handle, &tmp);

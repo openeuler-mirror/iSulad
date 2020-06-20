@@ -514,7 +514,8 @@ static int http_request_buf_options(pull_descriptor *desc, struct http_get_optio
     options->output = output_buffer;
     ret = http_request(url, options, NULL, 0);
     if (ret) {
-        ERROR("Failed to get http request");
+        ERROR("Failed to get http request: %s", options->errmsg);
+        isulad_try_set_error_message("%s", options->errmsg);
         ret = -1;
         goto out;
     }
@@ -715,7 +716,8 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
 
     ret = http_request(url, options, NULL, 0);
     if (ret) {
-        ERROR("Failed to get http request");
+        ERROR("Failed to get http request: %s", options->errmsg);
+        isulad_try_set_error_message("%s", options->errmsg);
         ret = -1;
         goto out;
     }
