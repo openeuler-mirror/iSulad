@@ -12,7 +12,7 @@
  * Create: 2018-11-1
  * Description: provide typedef  functions
  ********************************************************************************/
-#include "types_def.h"
+#include "utils_timestamp.h"
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
@@ -154,8 +154,7 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
     }
 
     if (local_utc) {
-        nret = snprintf(timebuffer + strlen(timebuffer),
-                        maxsize - strlen(timebuffer), ".%09dZ", nanos);
+        nret = snprintf(timebuffer + strlen(timebuffer), maxsize - strlen(timebuffer), ".%09dZ", nanos);
         goto out;
     }
 
@@ -168,11 +167,10 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
     }
 
     if (tm_zone >= 0) {
-        nret = snprintf(timebuffer + strlen(timebuffer),
-                        maxsize - strlen(timebuffer), ".%09d+%02d:00", nanos, tm_zone);
+        nret = snprintf(timebuffer + strlen(timebuffer), maxsize - strlen(timebuffer), ".%09d+%02d:00", nanos, tm_zone);
     } else {
-        nret = snprintf(timebuffer + strlen(timebuffer),
-                        maxsize - strlen(timebuffer), ".%09d-%02d:00", nanos, -tm_zone);
+        nret = snprintf(timebuffer + strlen(timebuffer), maxsize - strlen(timebuffer), ".%09d-%02d:00", nanos,
+                        -tm_zone);
     }
 
 out:
@@ -964,4 +962,3 @@ int to_unix_nanos_from_str(const char *str, int64_t *nanos)
     *nanos = mktime(&tm) * Time_Second + nano;
     return 0;
 }
-

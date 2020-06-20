@@ -15,38 +15,29 @@
 #ifndef __ISULAD_HEALTH_CHECK_H_
 #define __ISULAD_HEALTH_CHECK_H_
 
-#include "types_def.h"
+#include "utils_timestamp.h"
 #include "isula_libutils/container_config_v2.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define MAX_OUTPUT_LEN  4096
+#define MAX_OUTPUT_LEN 4096
 #define DEFAULT_PROBE_INTERVAL (30 * Time_Second)
-#define DEFAULT_PROBE_TIMEOUT  (30 * Time_Second)
-#define DEFAULT_START_PERIOD   (0 * Time_Second)
-#define DEFAULT_PROBE_RETRIES  3
-#define MAX_LOG_ENTRIES        5
-#define EXIT_STATUS_HEALTHY    0
+#define DEFAULT_PROBE_TIMEOUT (30 * Time_Second)
+#define DEFAULT_START_PERIOD (0 * Time_Second)
+#define DEFAULT_PROBE_RETRIES 3
+#define MAX_LOG_ENTRIES 5
+#define EXIT_STATUS_HEALTHY 0
 
 #define NO_HEALTH_CHECK "none"
 #define HEALTH_STARTING "starting"
-#define HEALTHY          "healthy"
-#define UNHEALTHY        "unhealthy"
+#define HEALTHY "healthy"
+#define UNHEALTHY "unhealthy"
 
-typedef enum  {
-    CMD,
-    CMD_SHELL,
-    HEALTH_NONE,
-    HEALTH_UNKNOWN
-} health_probe_t;
+typedef enum { CMD, CMD_SHELL, HEALTH_NONE, HEALTH_UNKNOWN } health_probe_t;
 
-typedef enum {
-    MONITOR_IDLE = 0,
-    MONITOR_INTERVAL = 1,
-    MONITOR_STOP = 2
-} health_check_monitor_status_t;
+typedef enum { MONITOR_IDLE = 0, MONITOR_INTERVAL = 1, MONITOR_STOP = 2 } health_check_monitor_status_t;
 
 typedef struct health_check_manager {
     pthread_mutex_t mutex;
@@ -65,5 +56,3 @@ int64_t timeout_with_default(int64_t configured_value, int64_t default_value);
 #endif
 
 #endif /* __ISULAD_HEALTH_CHECK_H_ */
-
-

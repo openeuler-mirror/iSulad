@@ -23,15 +23,15 @@
 #include "isula_libutils/registry_manifest_schema1.h"
 #include "isula_libutils/image_manifest_v1_compatibility.h"
 #include "registry_type.h"
-#include "types_def.h"
+#include "utils_timestamp.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void free_items_not_inherit(docker_image_config_v2 *config);
-int add_rootfs_and_history(const layer_blob *layers, size_t layers_len,
-                           const registry_manifest_schema1 *manifest, docker_image_config_v2 *config);
+int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
+                           docker_image_config_v2 *config);
 types_timestamp_t created_to_timestamp(char *created);
 
 #ifdef __cplusplus
@@ -39,4 +39,3 @@ types_timestamp_t created_to_timestamp(char *created);
 #endif
 
 #endif /* __OCI_REGISTRY_COMMON_H */
-

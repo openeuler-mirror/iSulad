@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "types_def.h"
+#include "utils_timestamp.h"
 #include "isula_libutils/storage_image.h"
 #include "isula_libutils/storage_rootfs.h"
 #include "isula_libutils/imagetool_images_list.h"

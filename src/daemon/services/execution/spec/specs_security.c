@@ -51,11 +51,11 @@
 
 static const char * const g_system_caps[] = { "SYS_BOOT",     "SETPCAP", "NET_RAW", "NET_BIND_SERVICE",
 #ifdef CAP_AUDIT_WRITE
-                                             "AUDIT_WRITE",
+                                              "AUDIT_WRITE",
 #endif
-                                             "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
-                                             "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
-                                           };
+                                              "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
+                                              "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
+                                            };
 
 static int append_capability(char ***dstcaps, size_t *dstcaps_len, const char *cap)
 {

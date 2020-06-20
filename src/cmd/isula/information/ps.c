@@ -59,8 +59,8 @@ struct lengths {
 };
 
 const char * const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
-                                             "exited",  "paused", "restarting"
-                                           };
+                                              "exited",  "paused", "restarting"
+                                            };
 
 struct filter_field {
     char *name;
