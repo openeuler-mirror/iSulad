@@ -2,6 +2,11 @@
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} local_spec_srcs)
 
 set(SPEC_SRCS
-    ${local_spec_srcs}
-    PARENT_SCOPE
-    )
+    	${local_spec_srcs}
+	PARENT_SCOPE
+	)
+
+set(SPEC_INCS
+	${CMAKE_CURRENT_SOURCE_DIR}
+    	PARENT_SCOPE
+	)

@@ -5,7 +5,9 @@ add_subdirectory(engines)
 add_subdirectory(runtime)
 add_subdirectory(image)
 add_subdirectory(plugin)
-add_subdirectory(services)
+add_subdirectory(callback)
+add_subdirectory(spec)
+add_subdirectory(container)
 add_subdirectory(connect)
 
 set(local_daemon_srcs
@@ -14,7 +16,9 @@ set(local_daemon_srcs
     ${RUNTIME_SRCS}
     ${IMAGE_SRCS}
     ${PLUGIN_SRCS}
-    ${SERVICES_SRCS}
+    ${CALLBACK_SRCS}
+    ${SPEC_SRCS}
+    ${MANAGER_SRCS}
     ${SERVER_CONNECT_SRCS}
     )
 
@@ -24,9 +28,17 @@ set(local_daemon_incs
     ${RUNTIME_INCS}
     ${IMAGE_INCS}
     ${PLUGIN_INCS}
-    ${SERVICES_INCS}
+    ${CALLBACK_INCS}
+    ${SPEC_INCS}
+    ${MANAGER_INCS}
     ${SERVER_CONNECT_INCS}
     )
+
+if (GRPC_CONNECTOR)
+        add_subdirectory(cri)
+        list(APPEND local_daemon_srcs ${CRI_SRCS})
+        list(APPEND local_daemon_incs ${CRI_INCS})
+endif()
 
 set(DAEMON_SRCS
     ${local_daemon_srcs}

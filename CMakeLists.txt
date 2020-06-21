@@ -85,8 +85,6 @@ install(FILES src/client/libisula.h
 	DESTINATION include/isulad)
 install(FILES src/client/connect/isula_connect.h
 	DESTINATION include/isulad)
-install(FILES src/container_def.h
-	DESTINATION include/isulad)
 install(FILES src/cutils/utils_timestamp.h
 	DESTINATION include/isulad)
 install(FILES src/cutils/error.h
