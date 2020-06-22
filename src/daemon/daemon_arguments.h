@@ -19,7 +19,11 @@
 #include <stdio.h>
 #include "isula_libutils/isulad_daemon_configs.h"
 #include "isula_libutils/oci_runtime_hooks.h"
-#include "command_parser.h"
+#include "isula_libutils/host_config.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef void (*service_arguments_help_t)(void);
 
@@ -62,5 +66,16 @@ struct service_arguments {
 int service_arguments_init(struct service_arguments *args);
 void service_arguments_free(struct service_arguments *args);
 int server_log_opt_parser(struct service_arguments *args, const char *option);
+
+size_t ulimit_array_len(host_config_ulimits_element **default_ulimit);
+
+int ulimit_array_append(host_config_ulimits_element ***default_ulimit, const host_config_ulimits_element *element,
+                        const size_t len);
+
+void free_default_ulimit(host_config_ulimits_element **default_ulimit);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ISULAD_ARGUMENTS_H */

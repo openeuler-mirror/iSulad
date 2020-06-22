@@ -19,8 +19,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "isula_libutils/host_config.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,12 +37,11 @@ typedef enum {
     CMD_OPT_TYPE_CALLBACK
 } command_option_type_t;
 
-
 struct _command;
 
 struct command_option;
 
-typedef int(*command_callback_t)(struct command_option *options, const char *arg);
+typedef int (*command_callback_t)(struct command_option *options, const char *arg);
 
 typedef struct command_option {
     command_option_type_t type;
@@ -79,8 +76,8 @@ void print_options(int options_len, const command_option_t *options);
 
 void command_help(command_t *self);
 
-void command_option(command_t *self, command_option_type_t type, void *data,
-                    int small, const char *large, const char *desc, command_callback_t cb);
+void command_option(command_t *self, command_option_type_t type, void *data, int small, const char *large,
+                    const char *desc, command_callback_t cb);
 
 int command_parse_args(command_t *self, int *argc, char * const **argv);
 
@@ -104,17 +101,7 @@ int command_convert_membytes(command_option_t *option, const char *arg);
 
 int command_convert_memswapbytes(command_option_t *option, const char *arg);
 
-int command_default_ulimit_append(command_option_t *option, const char *arg);
-
-size_t ulimit_array_len(host_config_ulimits_element **default_ulimit);
-
-int ulimit_array_append(host_config_ulimits_element ***default_ulimit,
-                        const host_config_ulimits_element *element,
-                        const size_t len);
-
 int check_default_ulimit_type(const char *type);
-
-void free_default_ulimit(host_config_ulimits_element **default_ulimit);
 
 int command_convert_swappiness(command_option_t *option, const char *arg);
 
@@ -123,4 +110,3 @@ int command_convert_swappiness(command_option_t *option, const char *arg);
 #endif
 
 #endif /* COMMANDER_H */
-

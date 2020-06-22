@@ -21,6 +21,7 @@
 #include <sys/epoll.h>
 #include <poll.h>
 #include <malloc.h>
+#include <unistd.h>
 
 #include "isula_libutils/log.h"
 #include "monitord.h"
@@ -59,7 +60,7 @@ err:
 /* monitor event cb */
 static int monitor_event_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
-    ssize_t  len;
+    ssize_t len;
     struct monitord_msg mmsg = { 0 };
 
     /* first, read message from container monitor. */
@@ -226,4 +227,3 @@ out:
     free(statedir);
     return ret;
 }
-

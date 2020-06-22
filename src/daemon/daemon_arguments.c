@@ -24,6 +24,7 @@
 #include "libisulad.h"
 #include "constants.h"
 #include "isulad_config.h"
+#include "isula_libutils/log.h"
 
 static int set_daemon_default_tls_options(struct service_arguments *args)
 {
@@ -242,4 +243,70 @@ int server_log_opt_parser(struct service_arguments *args, const char *option)
 out:
     free(tmp);
     return ret;
+}
+
+size_t ulimit_array_len(host_config_ulimits_element **default_ulimit)
+{
+    size_t len = 0;
+    host_config_ulimits_element **pos = NULL;
+
+    for (pos = default_ulimit; pos != NULL && *pos != NULL; pos++) {
+        len++;
+    }
+
+    return len;
+}
+
+int ulimit_array_append(host_config_ulimits_element ***ulimit_array, const host_config_ulimits_element *element,
+                        const size_t len)
+{
+    int ret;
+    size_t old_size, new_size;
+    host_config_ulimits_element *new_element = NULL;
+    host_config_ulimits_element **new_ulimit_array = NULL;
+
+    if (ulimit_array == NULL || element == NULL) {
+        return -1;
+    }
+
+    // let new len to len + 2 for element and null
+    if (len > SIZE_MAX / sizeof(host_config_ulimits_element *) - 2) {
+        ERROR("Too many ulimit elements!");
+        return -1;
+    }
+
+    new_size = (len + 2) * sizeof(host_config_ulimits_element *);
+    old_size = len * sizeof(host_config_ulimits_element *);
+
+    ret = mem_realloc((void **)(&new_ulimit_array), new_size, (void *)*ulimit_array, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for append ulimit");
+        return -1;
+    }
+    *ulimit_array = new_ulimit_array;
+
+    new_element = util_common_calloc_s(sizeof(host_config_ulimits_element));
+    if (new_element == NULL) {
+        ERROR("Out of memory");
+        free_default_ulimit(*ulimit_array);
+        *ulimit_array = NULL;
+        return -1;
+    }
+
+    new_element->name = util_strdup_s(element->name);
+    new_element->hard = element->hard;
+    new_element->soft = element->soft;
+    new_ulimit_array[len] = new_element;
+
+    return 0;
+}
+
+void free_default_ulimit(host_config_ulimits_element **default_ulimit)
+{
+    host_config_ulimits_element **p = NULL;
+
+    for (p = default_ulimit; p != NULL && *p != NULL; p++) {
+        free_host_config_ulimits_element(*p);
+    }
+    free(default_ulimit);
 }
