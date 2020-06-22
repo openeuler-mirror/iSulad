@@ -1,7 +1,6 @@
 # get current directory sources files
 
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} daemon_top_srcs)
-add_subdirectory(engines)
 add_subdirectory(runtime)
 add_subdirectory(image)
 add_subdirectory(plugin)
@@ -11,10 +10,10 @@ add_subdirectory(container)
 add_subdirectory(connect)
 add_subdirectory(log)
 add_subdirectory(events)
+add_subdirectory(engines)
 
 set(local_daemon_srcs
     ${daemon_top_srcs}
-    ${ENGINES_SRCS}
     ${RUNTIME_SRCS}
     ${IMAGE_SRCS}
     ${PLUGIN_SRCS}
@@ -24,11 +23,11 @@ set(local_daemon_srcs
     ${SERVER_CONNECT_SRCS}
     ${LOG_GATHER_SRCS}
     ${EVENTS_SRCS}
+    ${ENGINES_SRCS}
     )
 
 set(local_daemon_incs
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${ENGINES_INCS}
     ${RUNTIME_INCS}
     ${IMAGE_INCS}
     ${PLUGIN_INCS}
@@ -38,6 +37,7 @@ set(local_daemon_incs
     ${SERVER_CONNECT_INCS}
     ${LOG_GATHER_INCS}
     ${EVENTS_INCS}
+    ${ENGINES_INCS}
     )
 
 if (GRPC_CONNECTOR)

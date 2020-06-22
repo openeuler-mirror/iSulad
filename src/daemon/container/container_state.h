@@ -19,7 +19,7 @@
 
 #include "libisulad.h"
 #include "isula_libutils/container_config_v2.h"
-#include "engine.h"
+#include "runtime.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -29,7 +29,6 @@ typedef struct _container_state_t_ {
     pthread_mutex_t mutex;
     container_config_v2_state *state;
 } container_state_t;
-
 
 container_state_t *container_state_new(void);
 
@@ -97,4 +96,3 @@ int dup_health_check_status(defs_health **dst, const defs_health *src);
 #endif
 
 #endif /* __ISULAD_CONTAINER_STATE_H__ */
-

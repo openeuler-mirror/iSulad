@@ -12,7 +12,7 @@ set(local_runtime_srcs
 
 set(local_runtime_incs
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/lcr
+    ${LCR_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/isula
     )
 

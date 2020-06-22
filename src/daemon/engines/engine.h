@@ -23,19 +23,6 @@
 extern "C" {
 #endif
 
-struct engine_cgroup_resources {
-    uint64_t blkio_weight;
-    uint64_t cpu_shares;
-    uint64_t cpu_period;
-    uint64_t cpu_quota;
-    char *cpuset_cpus;
-    char *cpuset_mems;
-    uint64_t memory_limit;
-    uint64_t memory_swap;
-    uint64_t memory_reservation;
-    uint64_t kernel_memory_limit;
-};
-
 typedef enum {
     ENGINE_CONTAINER_STATUS_UNKNOWN = 0,
     ENGINE_CONTAINER_STATUS_CREATED = 1,
@@ -46,19 +33,6 @@ typedef enum {
     ENGINE_CONTAINER_STATUS_RESTARTING = 6,
     ENGINE_CONTAINER_STATUS_MAX_STATE = 7
 } Engine_Container_Status;
-
-struct engine_container_summary_info {
-    char *id;
-    uint32_t has_pid;
-    uint32_t pid;
-    Engine_Container_Status status;
-    char *image;
-    char *command;
-    uint32_t exit_code;
-    uint32_t restart_count;
-    char *startat;
-    char *finishat;
-};
 
 struct engine_container_status_info {
     bool has_pid;
@@ -82,12 +56,31 @@ struct engine_container_resources_stats_info {
     uint64_t kmem_limit;
 };
 
-typedef struct _container_pid_t {
-    int pid; /* process id */
-    int ppid; /* pid of parent process */
-    unsigned long long start_time, /* start time of process -- seconds since 1-1-70 */
-             pstart_time; /* start time of parent process -- seconds since 1-1-70 */
-} container_pid_t;
+struct engine_cgroup_resources {
+    uint64_t blkio_weight;
+    uint64_t cpu_shares;
+    uint64_t cpu_period;
+    uint64_t cpu_quota;
+    char *cpuset_cpus;
+    char *cpuset_mems;
+    uint64_t memory_limit;
+    uint64_t memory_swap;
+    uint64_t memory_reservation;
+    uint64_t kernel_memory_limit;
+};
+
+struct engine_container_summary_info {
+    char *id;
+    uint32_t has_pid;
+    uint32_t pid;
+    Engine_Container_Status status;
+    char *image;
+    char *command;
+    uint32_t exit_code;
+    uint32_t restart_count;
+    char *startat;
+    char *finishat;
+};
 
 typedef struct _engine_start_request_t {
     const char *name;
@@ -128,7 +121,6 @@ typedef struct _engine_exec_request_t {
     bool tty;
     bool open_stdin;
 } engine_exec_request_t;
-
 
 typedef bool (*engine_create_t)(const char *, const char *, void *);
 
@@ -208,4 +200,3 @@ extern struct engine_operation *engines_get_handler(const char *name);
 #endif
 
 #endif
-

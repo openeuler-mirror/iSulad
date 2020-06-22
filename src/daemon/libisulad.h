@@ -36,6 +36,13 @@ extern __thread char *g_isulad_errmsg;
         }                              \
     } while (0)
 
+typedef struct _container_pid_t {
+    int pid; /* process id */
+    int ppid; /* pid of parent process */
+    unsigned long long start_time, /* start time of process -- seconds since 1-1-70 */
+             pstart_time; /* start time of parent process -- seconds since 1-1-70 */
+} container_pid_t;
+
 typedef enum {
     EVENTS_TYPE_EXIT = 0,
     EVENTS_TYPE_STOPPED1 = 1,
@@ -244,6 +251,7 @@ void isulad_logs_response_free(struct isulad_logs_response *response);
 
 void isulad_events_format_free(struct isulad_events_format *value);
 
+int container_read_proc(uint32_t pid, container_pid_t *pid_info);
 #ifdef __cplusplus
 }
 #endif

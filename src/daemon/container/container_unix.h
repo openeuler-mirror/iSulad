@@ -107,8 +107,6 @@ int container_wait_rm_locking(container_t *cont, int timeout);
 int save_host_config(const char *id, const char *rootpath, const char *hostconfigstr);
 int save_config_v2_json(const char *id, const char *rootpath, const char *v2configstr);
 
-int container_read_proc(uint32_t pid, container_pid_t *pid_info);
-
 bool has_mount_for(container_t *cont, const char *mpath);
 
 #if defined(__cplusplus) || defined(c_plusplus)
@@ -116,4 +114,3 @@ bool has_mount_for(container_t *cont, const char *mpath);
 #endif
 
 #endif /* __ISULAD_CONTAINER_UNIX_H__ */
-

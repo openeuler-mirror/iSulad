@@ -1056,40 +1056,6 @@ char *container_get_env_nolock(const container_t *cont, const char *key)
     return val;
 }
 
-int container_read_proc(uint32_t pid, container_pid_t *pid_info)
-{
-    int ret = 0;
-    proc_t *proc = NULL;
-    proc_t *p_proc = NULL;
-
-    if (pid == 0) {
-        ret = -1;
-        goto out;
-    }
-
-    proc = util_get_process_proc_info((pid_t)pid);
-    if (proc == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    p_proc = util_get_process_proc_info((pid_t)proc->ppid);
-    if (p_proc == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    pid_info->pid = proc->pid;
-    pid_info->start_time = proc->start_time;
-    pid_info->ppid = proc->ppid;
-    pid_info->pstart_time = p_proc->start_time;
-
-out:
-    free(proc);
-    free(p_proc);
-    return ret;
-}
-
 /*
  * @cont: check container
  * @mpath: target mount path

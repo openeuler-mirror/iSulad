@@ -17,7 +17,6 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <limits.h>
-#include "engine.h"
 #include "libisulad.h"
 #include "utils.h"
 

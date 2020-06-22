@@ -17,7 +17,6 @@
 
 #include <stdint.h>
 #include <pthread.h>
-#include "engine.h"
 #include "isula_libutils/host_config.h"
 
 struct restart_policy {
@@ -59,6 +58,4 @@ int restart_manager_wait_cancel(restart_manager_t *rm, uint64_t timeout);
 
 int container_restart_in_thread(const char *id, uint64_t timeout, int exit_code);
 
-
 #endif /* __RESTARTMANAGER_H */
-

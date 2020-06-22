@@ -42,7 +42,6 @@
 #include "collector.h"
 #include "isulad_commands.h"
 #include "isula_libutils/log.h"
-#include "engine.h"
 #include "utils.h"
 #include "isulad_config.h"
 #include "image.h"
@@ -59,6 +58,7 @@
 #include "plugin.h"
 #include "selinux_label.h"
 #include "http.h"
+#include "engine.h"
 
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"

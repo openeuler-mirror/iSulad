@@ -27,7 +27,6 @@
 #include <sys/sysinfo.h>
 
 #include "isula_libutils/log.h"
-#include "engine.h"
 #include "console.h"
 #include "isulad_config.h"
 #include "config.h"

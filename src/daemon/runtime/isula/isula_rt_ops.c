@@ -23,7 +23,6 @@
 #include "isula_libutils/log.h"
 #include "error.h"
 #include "runtime.h"
-#include "engine.h"
 #include "constants.h"
 #include "isula_libutils/shim_client_process_state.h"
 #include "isula_libutils/shim_client_runtime_stats.h"
@@ -33,9 +32,8 @@
 #include "libisulad.h"
 
 #define SHIM_BINARY "isulad-shim"
-#define SHIM_LOG_SIZE ((BUFSIZ-100)/2)
+#define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)
 #define PID_WAIT_TIME 120
-
 
 static void copy_process(shim_client_process_state *p, defs_process *dp)
 {
@@ -83,7 +81,7 @@ static void copy_annotations(shim_client_process_state *p, json_map_string_strin
 
 static int file_write_int(const char *fname, int val)
 {
-    char sint[UINT_LEN] = {0};
+    char sint[UINT_LEN] = { 0 };
 
     if (snprintf(sint, sizeof(sint), "%d", val) < 0) {
         return -1;
@@ -121,10 +119,10 @@ static void file_read_int(const char *fname, int *val)
 
 static void get_err_message(char *buf, int buf_size, const char *workdir, const char *file)
 {
-    char fname[PATH_MAX] = {0};
+    char fname[PATH_MAX] = { 0 };
     FILE *fp = NULL;
     char *pline = NULL;
-    char *lines[3] = {0};
+    char *lines[3] = { 0 };
     size_t length = 0;
 
     if (snprintf(fname, sizeof(fname), "%s/%s", workdir, file) < 0) {
@@ -177,9 +175,9 @@ static void get_err_message(char *buf, int buf_size, const char *workdir, const 
 
 static void show_shim_runtime_errlog(const char *workdir)
 {
-    char buf[BUFSIZ] = {0};
-    char buf1[SHIM_LOG_SIZE] = {0};
-    char buf2[SHIM_LOG_SIZE] = {0};
+    char buf[BUFSIZ] = { 0 };
+    char buf1[SHIM_LOG_SIZE] = { 0 };
+    char buf2[SHIM_LOG_SIZE] = { 0 };
 
     get_err_message(buf1, sizeof(buf1), workdir, "shim-log.json");
     get_err_message(buf2, sizeof(buf2), workdir, "log.json");
@@ -200,10 +198,10 @@ bool rt_isula_detect(const char *runtime)
 
 static int create_process_json_file(const char *workdir, const shim_client_process_state *p)
 {
-    struct parser_context ctx = {OPT_GEN_SIMPLIFY, 0};
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perr = NULL;
     char *data = NULL;
-    char fname[PATH_MAX] = {0};
+    char fname[PATH_MAX] = { 0 };
     int retcode = 0;
 
     if (snprintf(fname, sizeof(fname), "%s/process.json", workdir) < 0) {
@@ -328,7 +326,7 @@ out:
 static bool shim_alive(const char *workdir)
 {
     int pid = 0;
-    char fpid[PATH_MAX] = {0};
+    char fpid[PATH_MAX] = { 0 };
     int ret = 0;
 
     if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
@@ -403,10 +401,8 @@ static void runtime_exec_param_init(runtime_exec_info *rei)
     }
 }
 
-static void runtime_exec_info_init(runtime_exec_info *rei,
-                                   const char *workdir, const char *runtime,
-                                   const char *subcmd, const char **opts, size_t opts_len, const char *id,
-                                   char **params, size_t params_num)
+static void runtime_exec_info_init(runtime_exec_info *rei, const char *workdir, const char *runtime, const char *subcmd,
+                                   const char **opts, size_t opts_len, const char *id, char **params, size_t params_num)
 {
     rei->workdir = workdir;
     rei->runtime = runtime;
@@ -423,10 +419,9 @@ static void runtime_exec_info_init(runtime_exec_info *rei,
     runtime_exec_param_dump((const char **)rei->params);
 }
 
-
 static void runtime_exec_func(void *arg)
 {
-    runtime_exec_info *rei = (runtime_exec_info *) arg;
+    runtime_exec_info *rei = (runtime_exec_info *)arg;
 
     if (rei == NULL) {
         dprintf(STDERR_FILENO, "missing runtime exec info");
@@ -457,17 +452,17 @@ static int status_string_to_int(const char *status)
     return ENGINE_CONTAINER_STATUS_UNKNOWN;
 }
 
-static int runtime_call_status(const char *workdir, const char *runtime,
-                               const char *id, struct engine_container_status_info *ecsi)
+static int runtime_call_status(const char *workdir, const char *runtime, const char *id,
+                               struct engine_container_status_info *ecsi)
 {
     char *stdout = NULL;
     char *stderr = NULL;
     oci_runtime_state *state = NULL;
-    struct parser_context ctx = {OPT_GEN_SIMPLIFY, 0};
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perr = NULL;
     runtime_exec_info rei = { 0 };
     int ret = 0;
-    char *params[PARAM_NUM] = {0};
+    char *params[PARAM_NUM] = { 0 };
 
     runtime_exec_info_init(&rei, workdir, runtime, "state", NULL, 0, id, params, PARAM_NUM);
 
@@ -506,18 +501,18 @@ out:
     return ret;
 }
 
-static int runtime_call_stats(const char *workdir, const char *runtime,
-                              const char *id, struct engine_container_resources_stats_info *info)
+static int runtime_call_stats(const char *workdir, const char *runtime, const char *id,
+                              struct engine_container_resources_stats_info *info)
 {
     char *stdout = NULL;
     char *stderr = NULL;
     shim_client_runtime_stats *stats = NULL;
-    struct parser_context ctx = {OPT_GEN_SIMPLIFY, 0};
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perr = NULL;
     runtime_exec_info rei = { 0 };
     int ret = 0;
-    char *params[PARAM_NUM] = {0};
-    const char *opts[1] = {"--stats"};
+    char *params[PARAM_NUM] = { 0 };
+    const char *opts[1] = { "--stats" };
 
     runtime_exec_info_init(&rei, workdir, runtime, "events", opts, 1, id, params, PARAM_NUM);
 
@@ -560,14 +555,14 @@ out:
     return ret;
 }
 
-static int runtime_call_simple(const char *workdir, const char *runtime,
-                               const char *subcmd, const char **opts, size_t opts_len, const char *id)
+static int runtime_call_simple(const char *workdir, const char *runtime, const char *subcmd, const char **opts,
+                               size_t opts_len, const char *id)
 {
-    runtime_exec_info rei = {0};
+    runtime_exec_info rei = { 0 };
     char *stdout = NULL;
     char *stderr = NULL;
     int ret = 0;
-    char *params[PARAM_NUM] = {0};
+    char *params[PARAM_NUM] = { 0 };
 
     runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
@@ -588,7 +583,7 @@ static int runtime_call_kill_force(const char *workdir, const char *runtime, con
 
 static int runtime_call_delete_force(const char *workdir, const char *runtime, const char *id)
 {
-    const char *opts[1] = {"--force"};
+    const char *opts[1] = { "--force" };
     return runtime_call_simple(workdir, runtime, "delete", opts, 1, id);
 }
 
@@ -611,8 +606,7 @@ static int status_to_exit_code(int status)
     return exit_code;
 }
 
-static int shim_create(bool fg, const char *id, const char *workdir,
-                       const char *bundle, const char *runtime_cmd,
+static int shim_create(bool fg, const char *id, const char *workdir, const char *bundle, const char *runtime_cmd,
                        int *exit_code)
 {
     pid_t pid = 0;
@@ -620,8 +614,8 @@ static int shim_create(bool fg, const char *id, const char *workdir,
     int num = 0;
     int ret = 0;
     char exec_buff[BUFSIZ + 1] = { 0 };
-    char fpid[PATH_MAX] = {0};
-    const char *params[PARAM_NUM] = {0};
+    char fpid[PATH_MAX] = { 0 };
+    const char *params[PARAM_NUM] = { 0 };
     int i = 0;
     int status = 0;
 
@@ -718,19 +712,18 @@ realexec:
 out:
     if (ret != 0) {
         show_shim_runtime_errlog(workdir);
-        kill(pid, SIGKILL);             /* can kill other process? */
+        kill(pid, SIGKILL); /* can kill other process? */
     }
 
     return ret;
 }
 
-
 static int get_container_process_pid(const char *workdir)
 {
-    char fname[PATH_MAX] = {0};
+    char fname[PATH_MAX] = { 0 };
     int pid = 0;
-    struct timespec beg = {0};
-    struct timespec end = {0};
+    struct timespec beg = { 0 };
+    struct timespec end = { 0 };
 
     if (snprintf(fname, sizeof(fname), "%s/pid", workdir) < 0) {
         ERROR("failed make pid full path");
@@ -760,7 +753,7 @@ static int get_container_process_pid(const char *workdir)
             ERROR("failed read pid from dead shim %s", workdir);
             return -1;
         }
-        return pid;                     /* success */
+        return pid; /* success */
     }
     return -1;
 }
@@ -768,7 +761,7 @@ static int get_container_process_pid(const char *workdir)
 static void shim_kill_force(const char *workdir)
 {
     int pid = 0;
-    char fpid[PATH_MAX] = {0};
+    char fpid[PATH_MAX] = { 0 };
 
     if (snprintf(fpid, sizeof(fpid), "%s/shim-pid", workdir) < 0) {
         INFO("shim-pid not exist");
@@ -787,16 +780,15 @@ out:
     INFO("kill shim force %s", workdir);
 }
 
-int rt_isula_create(const char *id, const char *runtime,
-                    const rt_create_params_t *params)
+int rt_isula_create(const char *id, const char *runtime, const rt_create_params_t *params)
 {
     oci_runtime_spec *config = NULL;
     const char *cmd = NULL;
     const char **runtime_args = NULL;
     size_t runtime_args_len = 0;
     int ret = 0;
-    char workdir[PATH_MAX] = {0};
-    shim_client_process_state p = {0};
+    char workdir[PATH_MAX] = { 0 };
+    shim_client_process_state p = { 0 };
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -840,11 +832,9 @@ out:
     return ret;
 }
 
-int rt_isula_start(const char *id, const char *runtime,
-                   const rt_start_params_t *params,
-                   container_pid_t *pid_info)
+int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info)
 {
-    char workdir[PATH_MAX] = {0};
+    char workdir[PATH_MAX] = { 0 };
     pid_t pid = 0;
     int ret = 0;
 
@@ -885,17 +875,15 @@ out:
     return ret;
 }
 
-int rt_isula_restart(const char *name, const char *runtime,
-                     const rt_restart_params_t *params)
+int rt_isula_restart(const char *name, const char *runtime, const rt_restart_params_t *params)
 {
     ERROR(">>> restart not implemented");
     return RUNTIME_NOT_IMPLEMENT_RESET;
 }
 
-int rt_isula_clean_resource(const char *id, const char *runtime,
-                            const rt_clean_params_t *params)
+int rt_isula_clean_resource(const char *id, const char *runtime, const rt_clean_params_t *params)
 {
-    char workdir[PATH_MAX] = {0};
+    char workdir[PATH_MAX] = { 0 };
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -930,7 +918,7 @@ int rt_isula_clean_resource(const char *id, const char *runtime,
 
 int rt_isula_rm(const char *id, const char *runtime, const rt_rm_params_t *params)
 {
-    char libdir[PATH_MAX] = {0};
+    char libdir[PATH_MAX] = { 0 };
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -978,26 +966,24 @@ err_out:
 
 static bool fg_exec(const rt_exec_params_t *params)
 {
-    if (params->console_fifos[0] != NULL || params->console_fifos[1] != NULL ||
-        params->console_fifos[2] != NULL) {
+    if (params->console_fifos[0] != NULL || params->console_fifos[1] != NULL || params->console_fifos[2] != NULL) {
         return true;
     }
     return false;
 }
 
-int rt_isula_exec(const char *id, const char *runtime,
-                  const rt_exec_params_t *params, int *exit_code)
+int rt_isula_exec(const char *id, const char *runtime, const rt_exec_params_t *params, int *exit_code)
 {
     char *exec_id = NULL;
     defs_process *process = NULL;
     const char **runtime_args = NULL;
     size_t runtime_args_len = 0;
-    char workdir[PATH_MAX] = {0};
+    char workdir[PATH_MAX] = { 0 };
     const char *cmd = NULL;
     int ret = 0;
-    char bundle[PATH_MAX] = {0};
+    char bundle[PATH_MAX] = { 0 };
     int pid = 0;
-    shim_client_process_state p = {0};
+    shim_client_process_state p = { 0 };
 
     if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1070,11 +1056,10 @@ out:
     return ret;
 }
 
-int rt_isula_status(const char *id, const char *runtime,
-                    const rt_status_params_t *params,
+int rt_isula_status(const char *id, const char *runtime, const rt_status_params_t *params,
                     struct engine_container_status_info *status)
 {
-    char workdir[PATH_MAX] = {0};
+    char workdir[PATH_MAX] = { 0 };
     int ret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL || status == NULL) {
@@ -1100,8 +1085,7 @@ out:
     return ret;
 }
 
-int rt_isula_attach(const char *id, const char *runtime,
-                    const rt_attach_params_t *params)
+int rt_isula_attach(const char *id, const char *runtime, const rt_attach_params_t *params)
 {
     ERROR("isula attach not support on isulad-shim");
     isulad_set_error_message("isula attach not support on isulad-shim");
@@ -1117,7 +1101,7 @@ int rt_isula_update(const char *id, const char *runtime, const rt_update_params_
 
 int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t *params)
 {
-    char workdir[PATH_MAX] = {0};
+    char workdir[PATH_MAX] = { 0 };
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1134,7 +1118,7 @@ int rt_isula_pause(const char *id, const char *runtime, const rt_pause_params_t 
 
 int rt_isula_resume(const char *id, const char *runtime, const rt_resume_params_t *params)
 {
-    char workdir[PATH_MAX] = {0};
+    char workdir[PATH_MAX] = { 0 };
 
     if (id == NULL || runtime == NULL || params == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -1156,11 +1140,10 @@ int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_p
     return -1;
 }
 
-int rt_isula_resources_stats(const char *id, const char *runtime,
-                             const rt_stats_params_t *params,
+int rt_isula_resources_stats(const char *id, const char *runtime, const rt_stats_params_t *params,
                              struct engine_container_resources_stats_info *rs_stats)
 {
-    char workdir[PATH_MAX] = {0};
+    char workdir[PATH_MAX] = { 0 };
     int ret = 0;
 
     if (id == NULL || runtime == NULL || params == NULL || rs_stats == NULL) {

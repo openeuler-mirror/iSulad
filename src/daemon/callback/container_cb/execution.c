@@ -30,7 +30,6 @@
 
 #include "constants.h"
 #include "isula_libutils/log.h"
-#include "engine.h"
 #include "console.h"
 #include "isulad_config.h"
 #include "config.h"
@@ -55,7 +54,6 @@
 #include "collector.h"
 #include "specs.h"
 
-
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
 {
     int ret = 0;
@@ -68,7 +66,7 @@ static int filter_by_label(const container_t *cont, const container_get_id_reque
         goto out;
     }
 
-    if (cont->common_config->config == NULL || cont->common_config->config->labels == NULL || \
+    if (cont->common_config->config == NULL || cont->common_config->config->labels == NULL ||
         cont->common_config->config->labels->len == 0) {
         ERROR("No such container: %s", request->id_or_name);
         isulad_set_error_message("No such container: %s", request->id_or_name);
@@ -86,7 +84,7 @@ static int filter_by_label(const container_t *cont, const container_get_id_reque
     len_val = (strlen(request->label) - len_key) - 1;
     labels = cont->common_config->config->labels;
     for (i = 0; i < labels->len; i++) {
-        if (strlen(labels->keys[i]) == len_key && strncmp(labels->keys[i], request->label, len_key) == 0 && \
+        if (strlen(labels->keys[i]) == len_key && strncmp(labels->keys[i], request->label, len_key) == 0 &&
             strlen(labels->values[i]) == len_val && strncmp(labels->values[i], p_equal + 1, len_val) == 0) {
             ret = 0;
             goto out;
@@ -479,15 +477,13 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
     if (util_detect_mounted(host_channel->path_on_host)) {
         return 0;
     }
-    int nret = snprintf(properties, sizeof(properties), "mode=1777,size=%llu",
-                        (long long unsigned int)host_channel->size);
+    int nret =
+        snprintf(properties, sizeof(properties), "mode=1777,size=%llu", (long long unsigned int)host_channel->size);
     if (nret < 0 || (size_t)nret >= sizeof(properties)) {
         ERROR("Failed to generate mount properties");
         return -1;
     }
-    if (mount("tmpfs", host_channel->path_on_host, "tmpfs",
-              MS_NOEXEC | MS_NOSUID | MS_NODEV,
-              (void *)properties)) {
+    if (mount("tmpfs", host_channel->path_on_host, "tmpfs", MS_NOEXEC | MS_NOSUID | MS_NODEV, (void *)properties)) {
         ERROR("Failed to mount host path '%s'", host_channel->path_on_host);
         return -1;
     }
@@ -712,15 +708,13 @@ static int write_env_to_target_file(const container_t *cont, const oci_runtime_s
         ERROR("Failed to get env target file path: %s", cont->hostconfig->env_target_file);
         return -1;
     }
-    ret = write_env_content(env_path,
-                            (const char **)oci_spec->process->env,
-                            oci_spec->process->env_len);
+    ret = write_env_content(env_path, (const char **)oci_spec->process->env, oci_spec->process->env_len);
     free(env_path);
     return ret;
 }
 
-static int do_post_start_on_success(const char *id, const char *runtime,
-                                    const char *pidfile, int exit_fifo_fd, const container_pid_t *pid_info)
+static int do_post_start_on_success(const char *id, const char *runtime, const char *pidfile, int exit_fifo_fd,
+                                    const container_pid_t *pid_info)
 {
     int ret = 0;
 
@@ -846,8 +840,7 @@ out:
     return ret;
 }
 
-static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm,
-                              container_pid_t *pid_info)
+static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, container_pid_t *pid_info)
 {
     int ret = 0;
     int nret = 0;
@@ -1071,7 +1064,8 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
     }
 
     if (gc_is_gc_progress(cont->common_config->id)) {
-        isulad_set_error_message("You cannot start container %s in garbage collector progress.", cont->common_config->id);
+        isulad_set_error_message("You cannot start container %s in garbage collector progress.",
+                                 cont->common_config->id);
         ERROR("You cannot start container %s in garbage collector progress.", cont->common_config->id);
         ret = -1;
         goto out;
@@ -1109,8 +1103,8 @@ out:
     return ret;
 }
 
-static int prepare_start_io(container_t *cont, const container_start_request *request,
-                            char **fifopath, char *fifos[], int stdinfd, struct io_write_wrapper *stdout_handler,
+static int prepare_start_io(container_t *cont, const container_start_request *request, char **fifopath, char *fifos[],
+                            int stdinfd, struct io_write_wrapper *stdout_handler,
                             struct io_write_wrapper *stderr_handler)
 {
     int ret = 0;
@@ -1126,8 +1120,8 @@ static int prepare_start_io(container_t *cont, const container_start_request *re
             goto out;
         }
 
-        if (ready_copy_io_data(-1, true, request->stdin, request->stdout, request->stderr,
-                               stdinfd, stdout_handler, stderr_handler, (const char **)fifos, &tid)) {
+        if (ready_copy_io_data(-1, true, request->stdin, request->stdout, request->stderr, stdinfd, stdout_handler,
+                               stderr_handler, (const char **)fifos, &tid)) {
             ret = -1;
             goto out;
         }
@@ -1153,9 +1147,8 @@ static void pack_start_response(container_start_response *response, uint32_t cc,
     }
 }
 
-static int container_start_prepare(container_t *cont, const container_start_request *request,
-                                   int stdinfd, struct io_write_wrapper *stdout_handler,
-                                   struct io_write_wrapper *stderr_handler,
+static int container_start_prepare(container_t *cont, const container_start_request *request, int stdinfd,
+                                   struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
                                    char **fifopath, char *fifos[])
 {
     const char *id = cont->common_config->id;
@@ -1173,9 +1166,8 @@ static int container_start_prepare(container_t *cont, const container_start_requ
     return 0;
 }
 
-static int container_start_cb(const container_start_request *request, container_start_response **response,
-                              int stdinfd, struct io_write_wrapper *stdout_handler,
-                              struct io_write_wrapper *stderr_handler)
+static int container_start_cb(const container_start_request *request, container_start_response **response, int stdinfd,
+                              struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler)
 {
     uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
@@ -1258,7 +1250,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
     const char *id = cont->common_config->id;
     bool need_unpause = is_paused(cont->state);
     rt_resume_params_t params = { 0 };
-    char annotations[EXTRA_ANNOTATION_MAX] = {0};
+    char annotations[EXTRA_ANNOTATION_MAX] = { 0 };
 
     if (container_exit_on_next(cont)) {
         ERROR("Failed to cancel restart manager");
@@ -1367,8 +1359,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
         }
         ret = container_wait_stop(cont, timeout);
         if (ret != 0) {
-            ERROR("Failed to wait Container(%s) 'STOPPED' for %d seconds, force killing",
-                  id, timeout);
+            ERROR("Failed to wait Container(%s) 'STOPPED' for %d seconds, force killing", id, timeout);
             ret = force_kill(cont);
             if (ret != 0) {
                 ERROR("Failed to force kill container %s", id);
@@ -1498,8 +1489,7 @@ static uint32_t do_restart_container(container_t *cont, int timeout)
     return ISULAD_SUCCESS;
 }
 
-static int container_restart_cb(const container_restart_request *request,
-                                container_restart_response **response)
+static int container_restart_cb(const container_restart_request *request, container_restart_response **response)
 {
     int timeout = 0;
     uint32_t cc = ISULAD_SUCCESS;
@@ -1582,8 +1572,7 @@ static void pack_stop_response(container_stop_response *response, uint32_t cc, c
     }
 }
 
-static int container_stop_cb(const container_stop_request *request,
-                             container_stop_response **response)
+static int container_stop_cb(const container_stop_request *request, container_stop_response **response)
 {
     int timeout = 0;
     bool force = false;
@@ -1705,8 +1694,7 @@ static void pack_kill_response(container_kill_response *response, uint32_t cc, c
     }
 }
 
-static int container_kill_cb(const container_kill_request *request,
-                             container_kill_response **response)
+static int container_kill_cb(const container_kill_request *request, container_kill_response **response)
 {
     int ret = 0;
     char *name = NULL;
@@ -1765,7 +1753,6 @@ static int container_kill_cb(const container_kill_request *request,
 
     EVENT("Event: {Object: %s, Type: Killing, Signal:%u}", id, signal);
 
-
     if (gc_is_gc_progress(id)) {
         isulad_set_error_message("You cannot kill container %s in garbage collector progress.", id);
         ERROR("You cannot kill container %s in garbage collector progress.", id);
@@ -1822,7 +1809,7 @@ int umount_residual_shm(const char *mount_info, const char *target)
 
 int cleanup_mounts_by_id(const char *id, const char *engine_root_path)
 {
-    char target[PATH_MAX] = {0};
+    char target[PATH_MAX] = { 0 };
     int nret = 0;
 
     nret = snprintf(target, PATH_MAX, "%s/%s", engine_root_path, id);
@@ -1967,14 +1954,18 @@ int cleanup_container(container_t *cont, bool force)
             if (is_paused(cont->state)) {
                 isulad_set_error_message("You cannot remove a paused container %s. "
                                          "Unpause and then stop the container before "
-                                         "attempting removal or force remove", id);
+                                         "attempting removal or force remove",
+                                         id);
                 ERROR("You cannot remove a paused container %s. Unpause and then stop the container before "
-                      "attempting removal or force remove", id);
+                      "attempting removal or force remove",
+                      id);
             } else {
                 isulad_set_error_message("You cannot remove a running container %s. "
-                                         "Stop the container before attempting removal or use -f", id);
+                                         "Stop the container before attempting removal or use -f",
+                                         id);
                 ERROR("You cannot remove a running container %s."
-                      " Stop the container before attempting removal or use -f", id);
+                      " Stop the container before attempting removal or use -f",
+                      id);
             }
             ret = -1;
             goto reset_removal_progress;
@@ -2018,8 +2009,7 @@ static void pack_delete_response(container_delete_response *response, uint32_t c
     }
 }
 
-static int container_delete_cb(const container_delete_request *request,
-                               container_delete_response **response)
+static int container_delete_cb(const container_delete_request *request, container_delete_response **response)
 {
     bool force = false;
     uint32_t cc = ISULAD_SUCCESS;
@@ -2101,4 +2091,3 @@ void container_callback_init(service_container_callback_t *cb)
     container_stream_callback_init(cb);
     container_extend_callback_init(cb);
 }
-

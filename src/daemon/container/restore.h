@@ -18,8 +18,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "engine.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -31,4 +29,3 @@ extern void containers_restore(void);
 #endif
 
 #endif
-
