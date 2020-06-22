@@ -24,7 +24,6 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_images.h"
-#include "specs_extend.h"
 #include "oci_config_merge.h"
 
 #include "filters.h"

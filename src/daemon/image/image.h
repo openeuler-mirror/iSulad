@@ -26,11 +26,6 @@
 #include "libisulad.h"
 #include "daemon_arguments.h"
 #include "isula_libutils/container_inspect.h"
-
-#ifdef ENABLE_OCI_IMAGE
-#include "oci_image_type.h"
-#endif
-
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_fs_info.h"
 #include "isula_libutils/imagetool_image_status.h"

@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include "utils_timestamp.h"
 #include "constants.h"
+#include "isula_libutils/oci_runtime_spec.h"
+#include "isula_libutils/host_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -252,6 +254,8 @@ void isulad_logs_response_free(struct isulad_logs_response *response);
 void isulad_events_format_free(struct isulad_events_format *value);
 
 int container_read_proc(uint32_t pid, container_pid_t *pid_info);
+
+int get_user(const char *basefs, const host_config *hc, const char *userstr, defs_process_user *puser);
 #ifdef __cplusplus
 }
 #endif

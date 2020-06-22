@@ -43,7 +43,6 @@
 #include "specs_mount.h"
 #include "specs_extend.h"
 #include "specs_namespace.h"
-#include "image.h"
 #include "path.h"
 #include "constants.h"
 #include "selinux_label.h"

@@ -23,7 +23,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "specs_extend.h"
 #include "ext_image.h"
 
 #ifdef ENABLE_OCI_IMAGE
@@ -180,4 +179,3 @@ int ext_init(const struct service_arguments *args)
 {
     return 0;
 }
-
