@@ -9,6 +9,7 @@ add_subdirectory(callback)
 add_subdirectory(spec)
 add_subdirectory(container)
 add_subdirectory(connect)
+add_subdirectory(log)
 
 set(local_daemon_srcs
     ${daemon_top_srcs}
@@ -20,6 +21,7 @@ set(local_daemon_srcs
     ${SPEC_SRCS}
     ${MANAGER_SRCS}
     ${SERVER_CONNECT_SRCS}
+    ${LOG_GATHER_SRCS}
     )
 
 set(local_daemon_incs
@@ -32,6 +34,7 @@ set(local_daemon_incs
     ${SPEC_INCS}
     ${MANAGER_INCS}
     ${SERVER_CONNECT_INCS}
+    ${LOG_GATHER_INCS}
     )
 
 if (GRPC_CONNECTOR)
