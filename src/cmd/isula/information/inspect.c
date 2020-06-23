@@ -813,7 +813,7 @@ int cmd_inspect_main(int argc, const char **argv)
     free(filter_string);
 
     if (status) {
-        COMMAND_ERROR("Inspec error: No such object:%s", g_cmd_inspect_args.name);
+        COMMAND_ERROR("Inspect error: No such object:%s", g_cmd_inspect_args.name);
         exit(ECOMMON);
     }
     exit(EXIT_SUCCESS);
