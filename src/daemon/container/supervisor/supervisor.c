@@ -23,8 +23,8 @@
 #include "mainloop.h"
 #include "libisulad.h"
 #include "event_sender.h"
-#include "execution.h"
 #include "containers_gc.h"
+#include "container_operator.h"
 
 pthread_mutex_t g_supervisor_lock = PTHREAD_MUTEX_INITIALIZER;
 struct epoll_descr g_supervisor_descr;

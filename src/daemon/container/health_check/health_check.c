@@ -26,12 +26,11 @@
 #include "utils.h"
 #include "health_check.h"
 #include "callback.h"
-#include "execution.h"
+#include "container_operator.h"
 #include "isula_libutils/container_exec_request.h"
 #include "isula_libutils/container_exec_response.h"
 #include "containers_store.h"
 #include "log_gather.h"
-
 
 /* container state lock */
 static void container_health_check_lock(health_check_manager_t *health)
@@ -213,7 +212,6 @@ static ssize_t write_to_string(void *context, const void *data, size_t len)
     return (ssize_t)len;
 }
 
-
 static char **get_shell()
 {
     char **shell = NULL;
@@ -265,8 +263,7 @@ out:
     return cmd_slice;
 }
 
-static int shift_and_store_log_result(defs_health *health,
-                                      const defs_health_log_element *result)
+static int shift_and_store_log_result(defs_health *health, const defs_health_log_element *result)
 {
     int ret = 0;
     size_t i = 0;
@@ -280,8 +277,8 @@ static int shift_and_store_log_result(defs_health *health,
             health->log[i]->start = util_strdup_s(health->log[i + 1]->start);
             health->log[i]->end = util_strdup_s(health->log[i + 1]->end);
             health->log[i]->exit_code = health->log[i + 1]->exit_code;
-            health->log[i]->output = health->log[i + 1]->output != NULL ?
-                                     util_strdup_s(health->log[i + 1]->output) : NULL;
+            health->log[i]->output = health->log[i + 1]->output != NULL ? util_strdup_s(health->log[i + 1]->output) :
+                                     NULL;
         } else {
             health->log[i]->start = util_strdup_s(result->start);
             health->log[i]->end = util_strdup_s(result->end);
@@ -294,8 +291,7 @@ static int shift_and_store_log_result(defs_health *health,
     return ret;
 }
 
-static int append_last_log_result(defs_health *health,
-                                  const defs_health_log_element *result)
+static int append_last_log_result(defs_health *health, const defs_health_log_element *result)
 {
     int ret = 0;
     defs_health_log_element **tmp_log = NULL;
@@ -306,8 +302,8 @@ static int append_last_log_result(defs_health *health,
         return -1;
     }
 
-    ret = mem_realloc((void **)(&tmp_log), (health->log_len + 1) * sizeof(defs_health_log_element *),
-                      health->log, health->log_len * sizeof(defs_health_log_element *));
+    ret = mem_realloc((void **)(&tmp_log), (health->log_len + 1) * sizeof(defs_health_log_element *), health->log,
+                      health->log_len * sizeof(defs_health_log_element *));
     if (ret != 0) {
         ERROR("failed to realloc memory");
         return -1;
@@ -352,18 +348,17 @@ static int handle_increment_streak(container_t *cont, int retries)
     return ret;
 }
 
-static int handle_unhealthy_case(container_t *cont, const defs_health_log_element *result,
-                                 int retries)
+static int handle_unhealthy_case(container_t *cont, const defs_health_log_element *result, int retries)
 {
-    int  ret = 0;
+    int ret = 0;
     bool should_increment_streak = true;
     char *health_status = NULL;
 
     health_status = get_health_status(cont->state);
 
     if (strcmp(health_status, HEALTH_STARTING) == 0) {
-        int64_t start_period = timeout_with_default(cont->common_config->config->healthcheck->start_period,
-                                                    DEFAULT_START_PERIOD);
+        int64_t start_period =
+            timeout_with_default(cont->common_config->config->healthcheck->start_period, DEFAULT_START_PERIOD);
         int64_t first, last;
         if (to_unix_nanos_from_str(cont->state->state->started_at, &first)) {
             ERROR("Parse container started time failed: %s", cont->state->state->started_at);
@@ -431,8 +426,8 @@ static int handle_probe_result(const char *container_id, const defs_health_log_e
         ERROR("Failed to get container info");
         return -1;
     }
-    DEBUG("health check result: \n   start: %s\n    end: %s\n    output: %s\n    exit_code: %d\n",
-          result->start, result->end, result->output, result->exit_code);
+    DEBUG("health check result: \n   start: %s\n    end: %s\n    output: %s\n    exit_code: %d\n", result->start,
+          result->end, result->output, result->exit_code);
     // probe may have been cancelled while waiting on lock. Ignore result then
     if (get_health_check_monitor_state(cont->health_check) == MONITOR_STOP) {
         goto out;
@@ -496,8 +491,7 @@ static void health_check_exec_failed_handle(const container_exec_response *conta
 }
 
 static void health_check_exec_success_handle(const container_exec_response *container_res,
-                                             defs_health_log_element *result,
-                                             const char *output)
+                                             defs_health_log_element *result, const char *output)
 {
     result->output = util_strdup_s(output);
     if (container_res != NULL) {
@@ -626,14 +620,13 @@ static health_probe_t get_probe(const container_t *cont)
     } else if (strcmp(config->test[0], "NONE") == 0) {
         return HEALTH_NONE;
     } else {
-        WARN("Unknown healthcheck type '%s' (expected 'CMD') in container %s",
-             config->test[0], cont->common_config->id);
+        WARN("Unknown healthcheck type '%s' (expected 'CMD') in container %s", config->test[0],
+             cont->common_config->id);
         return HEALTH_NONE;
     }
 }
 
-static int do_monitor_interval(const char *container_id,
-                               health_check_manager_t *health_check,
+static int do_monitor_interval(const char *container_id, health_check_manager_t *health_check,
                                types_timestamp_t *start_timestamp)
 {
     int ret = 0;
@@ -663,10 +656,8 @@ out:
     return ret;
 }
 
-static int do_monitor_default(int64_t probe_interval,
-                              health_check_manager_t *health_check,
-                              const types_timestamp_t *start_timestamp,
-                              types_timestamp_t *last_timestamp)
+static int do_monitor_default(int64_t probe_interval, health_check_manager_t *health_check,
+                              const types_timestamp_t *start_timestamp, types_timestamp_t *last_timestamp)
 {
     int64_t time_interval = 0;
 
@@ -713,14 +704,12 @@ static void *health_check_monitor(void *arg)
         ERROR("Failed to monitor start time stamp");
         goto out;
     }
-    probe_interval = timeout_with_default(cont->common_config->config->healthcheck->interval,
-                                          DEFAULT_PROBE_INTERVAL);
+    probe_interval = timeout_with_default(cont->common_config->config->healthcheck->interval, DEFAULT_PROBE_INTERVAL);
     set_monitor_idle_status(cont->health_check);
     while (true) {
         switch (get_health_check_monitor_state(cont->health_check)) {
             case MONITOR_STOP:
-                DEBUG("Stop healthcheck monitoring for container %s (received while idle)",
-                      cont->common_config->id);
+                DEBUG("Stop healthcheck monitoring for container %s (received while idle)", cont->common_config->id);
                 goto out;
             /* fall-through */
             case MONITOR_INTERVAL:
@@ -789,7 +778,6 @@ out:
     container_unref(cont);
 }
 
-
 // Reset the health state for a newly-started, restarted or restored container.
 // initHealthMonitor is called from monitor.go and we should never be running
 // two instances at once.
@@ -804,8 +792,7 @@ void init_health_monitor(const char *id)
         return;
     }
 
-    if (cont->common_config->config->healthcheck == NULL ||
-        cont->common_config->config->healthcheck->test == NULL) {
+    if (cont->common_config->config->healthcheck == NULL || cont->common_config->config->healthcheck->test == NULL) {
         goto out;
     }
 
@@ -850,5 +837,3 @@ out:
     container_unref(cont);
     return;
 }
-
-

@@ -247,6 +247,73 @@ void container_log_config_free(struct container_log_config *conf)
     free(conf);
 }
 
+/* events copy */
+int event_copy(const struct isulad_events_format *src, struct isulad_events_format *dest)
+{
+    size_t i;
+    if (src == NULL || dest == NULL) {
+        return 0;
+    }
+
+    dest->timestamp.has_seconds = src->timestamp.has_seconds;
+    dest->timestamp.seconds = src->timestamp.seconds;
+    dest->timestamp.has_nanos = src->timestamp.has_nanos;
+    dest->timestamp.nanos = src->timestamp.nanos;
+
+    if (src->id != NULL) {
+        free(dest->id);
+        dest->id = util_strdup_s(src->id);
+    }
+
+    if (src->opt != NULL) {
+        free(dest->opt);
+        dest->opt = util_strdup_s(src->opt);
+    }
+
+    if (src->annotations_len != 0) {
+        util_free_array_by_len(dest->annotations, dest->annotations_len);
+        dest->annotations = (char **)util_common_calloc_s(src->annotations_len * sizeof(char *));
+        if (dest->annotations == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        for (i = 0; i < src->annotations_len; i++) {
+            dest->annotations[i] = util_strdup_s(src->annotations[i]);
+        }
+
+        dest->annotations_len = src->annotations_len;
+    }
+
+    dest->has_type = src->has_type;
+    dest->type = src->type;
+
+    dest->has_pid = src->has_pid;
+    dest->pid = src->pid;
+    dest->has_exit_status = src->has_exit_status;
+    dest->exit_status = src->exit_status;
+
+    return 0;
+}
+
+struct isulad_events_format *dup_event(const struct isulad_events_format *event)
+{
+    struct isulad_events_format *out = NULL;
+
+    if (event == NULL || event->id == NULL) {
+        return NULL;
+    }
+
+    out = util_common_calloc_s(sizeof(struct isulad_events_format));
+    if (out == NULL) {
+        return NULL;
+    }
+
+    event_copy(event, out);
+
+    return out;
+}
+
 void isulad_events_format_free(struct isulad_events_format *value)
 {
     size_t i;

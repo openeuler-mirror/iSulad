@@ -24,7 +24,7 @@
 #include "container_state.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "restartmanager.h"
-#include "events_handler.h"
+#include "container_events_handler.h"
 #include "health_check.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)

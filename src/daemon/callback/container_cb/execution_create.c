@@ -45,6 +45,7 @@
 #include "namespace.h"
 #include "event_sender.h"
 #include "sysinfo.h"
+#include "container_operator.h"
 
 static int runtime_check(const char *name, bool *runtime_res)
 {
@@ -608,46 +609,6 @@ static int prepare_host_channel(const host_config_host_channel *host_channel, co
         }
     }
     return 0;
-}
-
-void umount_host_channel(const host_config_host_channel *host_channel)
-{
-    if (host_channel == NULL) {
-        return;
-    }
-
-    if (util_detect_mounted(host_channel->path_on_host)) {
-        if (umount2(host_channel->path_on_host, MNT_DETACH)) {
-            ERROR("Failed to umount the target: %s", host_channel->path_on_host);
-        }
-    }
-    if (util_recursive_rmdir(host_channel->path_on_host, 0)) {
-        ERROR("Failed to delete host path: %s", host_channel->path_on_host);
-    }
-}
-
-void umount_share_shm(container_t *cont)
-{
-    if (has_mount_for(cont, "/dev/shm")) {
-        return;
-    }
-    if (cont->hostconfig == NULL) {
-        return;
-    }
-    // ignore shm of system container
-    if (cont->hostconfig->system_container) {
-        return;
-    }
-    if (cont->hostconfig->ipc_mode == NULL || is_shareable(cont->hostconfig->ipc_mode)) {
-        if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
-            return;
-        }
-
-        INFO("Umounting share shm: %s", cont->common_config->shm_path);
-        if (umount2(cont->common_config->shm_path, MNT_DETACH)) {
-            SYSERROR("Failed to umount the target: %s", cont->common_config->shm_path);
-        }
-    }
 }
 
 static void umount_shm_by_configs(host_config *host_spec, container_config_v2_common_config *v2_spec)

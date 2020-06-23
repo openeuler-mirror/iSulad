@@ -17,7 +17,6 @@
 #define __EXECUTION_H_
 
 #include "callback.h"
-#include "container_unix.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,21 +24,8 @@ extern "C" {
 
 void container_callback_init(service_container_callback_t *cb);
 
-int start_container(container_t *cont, const char *console_fifos[], bool reset_rm);
-
-int clean_container_resource(const char *id, const char *runtime, pid_t pid);
-
-int cleanup_container(container_t *cont, bool force);
-
-int stop_container(container_t *cont, int timeout, bool force, bool restart);
-
-int set_container_to_removal(const container_t *cont);
-
-int cleanup_mounts_by_id(const char *id, const char *engine_root_path);
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

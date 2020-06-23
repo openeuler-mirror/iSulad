@@ -23,16 +23,10 @@
 extern "C" {
 #endif
 
-int container_create_cb(const container_create_request *request,
-                        container_create_response **response);
-
-void umount_host_channel(const host_config_host_channel *host_channel);
-
-void umount_share_shm(container_t *cont);
+int container_create_cb(const container_create_request *request, container_create_response **response);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

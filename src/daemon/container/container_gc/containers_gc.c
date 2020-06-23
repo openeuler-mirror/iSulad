@@ -23,7 +23,7 @@
 #include "isula_libutils/container_garbage_config.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "execution.h"
+#include "container_operator.h"
 #include "containers_store.h"
 #include "runtime.h"
 
@@ -149,7 +149,6 @@ static int gc_containers_to_disk()
 
     saves.gc_containers_len = size;
     saves.gc_containers = conts;
-
 
     ret = gc_save_containers_config(&saves);
 
@@ -574,4 +573,3 @@ int start_gchandler()
 out:
     return ret;
 }
-

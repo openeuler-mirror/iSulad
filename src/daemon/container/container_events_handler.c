@@ -24,11 +24,10 @@
 #include "error.h"
 #include "isula_libutils/log.h"
 #include "isulad_config.h"
-#include "collector.h"
-#include "events_handler.h"
+#include "container_events_handler.h"
 #include "utils.h"
 #include "containers_store.h"
-#include "execution.h"
+#include "container_operator.h"
 #include "plugin.h"
 
 /* events handler lock */
@@ -265,22 +264,31 @@ out:
 }
 
 /* events handler post events */
-int events_handler_post_events(events_handler_t *handler, const struct isulad_events_format *event)
+int events_handler_post_events(const struct isulad_events_format *event)
 {
     int ret = 0;
     char *name = NULL;
     pthread_t td;
     struct isulad_events_format *post_event = NULL;
     struct linked_list *it = NULL;
+    container_t *cont = NULL;
 
-    if (handler == NULL || event == NULL) {
+    if (event == NULL) {
         return -1;
+    }
+
+    cont = containers_store_get(event->id);
+    if (cont == NULL) {
+        ERROR("No such container:%s", event->id);
+        ret = -1;
+        goto out;
     }
 
     it = util_common_calloc_s(sizeof(struct linked_list));
     if (it == NULL) {
         ERROR("Failed to malloc for linked_list");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     linked_list_init(it);
@@ -288,17 +296,19 @@ int events_handler_post_events(events_handler_t *handler, const struct isulad_ev
     post_event = dup_event(event);
     if (post_event == NULL) {
         ERROR("Failed to dup event");
-        free(it);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     linked_list_add_elem(it, post_event);
+    post_event = NULL;
 
-    events_handler_lock(handler);
+    events_handler_lock(cont->handler);
 
-    linked_list_add_tail(&(handler->events_list), it);
+    linked_list_add_tail(&(cont->handler->events_list), it);
+    it = NULL;
 
-    if (handler->has_handler == false) {
+    if (cont->handler->has_handler == false) {
         name = util_strdup_s(event->id);
         ret = pthread_create(&td, NULL, events_handler_thread, name);
         if (ret) {
@@ -306,9 +316,12 @@ int events_handler_post_events(events_handler_t *handler, const struct isulad_ev
             free(name);
             goto out;
         }
-        handler->has_handler = true;
+        cont->handler->has_handler = true;
     }
 out:
-    events_handler_unlock(handler);
+    free(it);
+    isulad_events_format_free(post_event);
+    events_handler_unlock(cont->handler);
+    container_unref(cont);
     return ret;
 }

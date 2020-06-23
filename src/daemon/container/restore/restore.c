@@ -29,8 +29,7 @@
 #include "error.h"
 #include "image.h"
 #include "runtime.h"
-
-#include "execution.h"
+#include "container_operator.h"
 
 /* restore supervisor */
 static int restore_supervisor(const container_t *cont)

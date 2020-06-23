@@ -27,8 +27,7 @@
 #include "restartmanager.h"
 #include "utils.h"
 #include "containers_store.h"
-#include "execution.h"
-#include "containers_gc.h"
+#include "container_operator.h"
 
 #define backoffMultipulier 2U
 // unit nanos
@@ -76,7 +75,7 @@ static void *container_restart(void *args)
         goto out;
     }
 
-    if (gc_is_gc_progress(id)) {
+    if (container_in_gc_progress(id)) {
         ERROR("Cannot restart container %s in garbage collector progress.", id);
         goto set_stopped;
     }
@@ -380,8 +379,7 @@ static bool should_be_restart(const restart_manager_t *rm, uint32_t exit_code, b
         restart = true;
     } else if (strcmp(rm->policy->name, "on-failure") == 0) {
         // the default value of 0 for MaximumRetryCount means that we will not enforce a maximum count
-        if (rm->policy->maximum_retry_count == 0 ||
-            rm->failure_count <= rm->policy->maximum_retry_count) {
+        if (rm->policy->maximum_retry_count == 0 || rm->failure_count <= rm->policy->maximum_retry_count) {
             restart = (exit_code != 0);
         }
     } else if (strcmp(rm->policy->name, "on-reboot") == 0) {
@@ -461,4 +459,3 @@ int restart_manager_cancel(restart_manager_t *rm)
     restart_manager_unlock(rm);
     return 0;
 }
-

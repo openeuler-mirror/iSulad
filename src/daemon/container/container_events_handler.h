@@ -10,40 +10,28 @@
  * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
- * Description: provide container gc definition
+ * Description: provide container events handler definition
  ******************************************************************************/
-#ifndef __ISULAD_CONTAINER_GC_H__
-#define __ISULAD_CONTAINER_GC_H__
+#ifndef __EVENTS_HANDLER_H
+#define __EVENTS_HANDLER_H
 
+#include <stdint.h>
 #include <pthread.h>
+#include "linked_list.h"
 
 #include "libisulad.h"
-#include "linked_list.h"
-#include "container_unix.h"
 
-#if defined(__cplusplus) || defined(c_plusplus)
-extern "C" {
-#endif
-
-typedef struct _containers_gc_t_ {
+typedef struct _events_handler_t {
     pthread_mutex_t mutex;
-    struct linked_list containers_list;
-} containers_gc_t;
+    bool init_mutex;
+    struct linked_list events_list;
+    bool has_handler;
+} events_handler_t;
 
-int new_gchandler();
+events_handler_t *events_handler_new();
 
-int gc_add_container(const char *id, const char *runtime, const container_pid_t *pid_info);
+void events_handler_free(events_handler_t *handler);
 
-int gc_restore();
+int events_handler_post_events(const struct isulad_events_format *event);
 
-int start_gchandler();
-
-bool gc_is_gc_progress(const char *id);
-
-
-#if defined(__cplusplus) || defined(c_plusplus)
-}
-#endif
-
-#endif /* __ISULAD_CONTAINER_GC_H__ */
-
+#endif /* __EVENTS_HANDLER_H */

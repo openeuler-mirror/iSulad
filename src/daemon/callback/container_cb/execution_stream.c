@@ -39,12 +39,12 @@
 #include "isula_libutils/container_inspect.h"
 #include "containers_store.h"
 #include "container_state.h"
-#include "containers_gc.h"
 #include "error.h"
 #include "isula_libutils/logger_json_file.h"
 #include "constants.h"
 #include "runtime.h"
 #include "event_sender.h"
+#include "container_operator.h"
 
 static char *create_single_fifo(const char *statepath, const char *subpath, const char *stdflag)
 {
@@ -745,7 +745,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     get_exec_command(request, exec_command, sizeof(exec_command));
     (void)isulad_monitor_send_container_event(id, EXEC_CREATE, -1, 0, exec_command, NULL);
 
-    if (gc_is_gc_progress(id)) {
+    if (container_in_gc_progress(id)) {
         isulad_set_error_message("You cannot exec container %s in garbage collector progress.", id);
         ERROR("You cannot exec container %s in garbage collector progress.", id);
         cc = ISULAD_ERR_EXEC;
@@ -2293,7 +2293,7 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
     }
 
     /* check state of container */
-    if (gc_is_gc_progress(id)) {
+    if (container_in_gc_progress(id)) {
         isulad_set_error_message("can not get logs from container which is dead or marked for removal");
         cc = ISULAD_ERR_EXEC;
         ERROR("can not get logs from container which is dead or marked for removal");
