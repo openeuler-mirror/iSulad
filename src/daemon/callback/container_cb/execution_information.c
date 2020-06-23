@@ -42,7 +42,7 @@
 #include "list.h"
 #include "utils.h"
 #include "error.h"
-#include "collector.h"
+#include "event_sender.h"
 
 static int container_version_cb(const container_version_request *request, container_version_response **response)
 {
@@ -1648,7 +1648,7 @@ static int container_rename_cb(const struct isulad_container_rename_request *req
     char *old_name = NULL;
     char *new_name = NULL;
     container_t *cont = NULL;
-    char annotations[EXTRA_ANNOTATION_MAX] = { 0 };
+    char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };
 
     DAEMON_CLEAR_ERRMSG();
 

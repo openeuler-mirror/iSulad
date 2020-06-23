@@ -27,6 +27,7 @@
 #include <sys/sysinfo.h>
 
 #include "isula_libutils/log.h"
+#include "event_sender.h"
 #include "collector.h"
 #include "console.h"
 #include "isulad_config.h"

@@ -37,6 +37,7 @@
 #include "utils_fs.h"
 #include "utils_base64.h"
 #include "utils_aes.h"
+#include "constants.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,11 +95,6 @@ extern "C" {
 #define SHA256_PREFIX "sha256:"
 
 #define UINT_LEN 10
-
-/* container id max length */
-#define CONTAINER_ID_MAX_LEN 64
-
-#define CONTAINER_EXEC_ID_MAX_LEN 64
 
 #define LIST_SIZE_MAX 1000LL
 #define LIST_DEVICE_SIZE_MAX 10000LL

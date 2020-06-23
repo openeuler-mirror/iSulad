@@ -26,7 +26,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "cri_helpers.h"
-#include "collector.h"
+#include "event_sender.h"
 
 static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {

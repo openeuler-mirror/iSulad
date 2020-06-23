@@ -22,7 +22,7 @@
 #include "supervisor.h"
 #include "mainloop.h"
 #include "libisulad.h"
-#include "collector.h"
+#include "event_sender.h"
 #include "execution.h"
 #include "containers_gc.h"
 
@@ -211,8 +211,7 @@ int new_clean_resources_thread(struct supervisor_handler_data *data)
 }
 
 /* supervisor exit cb */
-static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata,
-                              struct epoll_descr *descr)
+static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
     ssize_t r = 0;
     int exit_code = 0;
@@ -334,4 +333,3 @@ int new_supervisor()
 out:
     return ret;
 }
-

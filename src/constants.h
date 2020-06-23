@@ -118,6 +118,14 @@ extern "C" {
 
 #define MAX_HOSTS 10
 
+#define EVENT_ARGS_MAX 255
+#define EVENT_EXTRA_ANNOTATION_MAX 255
+
+/* container id max length */
+#define CONTAINER_ID_MAX_LEN 64
+
+#define CONTAINER_EXEC_ID_MAX_LEN 64
+
 typedef enum {
     CONTAINER_STATUS_UNKNOWN = 0,
     CONTAINER_STATUS_CREATED = 1,

@@ -29,33 +29,13 @@
 #include "isulad_config.h"
 #include "collector.h"
 #include "utils.h"
+#include "event_sender.h"
 
 struct monitord_handler {
     struct epoll_descr *pdescr;
     int fifo_fd;
     char *fifo_path;
 };
-
-/* isulad monitor fifo name */
-char *isulad_monitor_fifo_name(const char *rootpath)
-{
-    int ret;
-    char fifo_file_path[PATH_MAX] = { 0 };
-
-    if (rootpath == NULL) {
-        ERROR("Invalid parameter");
-        goto err;
-    }
-    ret = snprintf(fifo_file_path, PATH_MAX, "%s/monitord_fifo", rootpath);
-    if (ret < 0 || (size_t)ret >= PATH_MAX) {
-        ERROR("Create monitord fifo path failed");
-        goto err;
-    }
-    return util_strdup_s(fifo_file_path);
-
-err:
-    return NULL;
-}
 
 /* monitor event cb */
 static int monitor_event_cb(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
@@ -102,7 +82,6 @@ static void free_monitord(struct monitord_handler *mhandler)
 static void *monitord(void *arg)
 {
     int ret = 0;
-    char *statedir = NULL;
     char *fifo_file_path = NULL;
     struct monitord_handler mhandler = { 0 };
     struct flock mlock;
@@ -125,14 +104,8 @@ static void *monitord(void *arg)
     }
     mhandler.pdescr = &descr;
 
-    statedir = conf_get_isulad_statedir();
-    if (statedir == NULL) {
-        CRIT("Can not get isulad root path");
-        goto err;
-    }
-
     /* 1. monitor fifo: to wait container monitor message */
-    fifo_file_path = isulad_monitor_fifo_name(statedir);
+    fifo_file_path = conf_get_isulad_monitor_fifo_path();
     if (fifo_file_path == NULL) {
         goto err;
     }
@@ -183,7 +156,6 @@ err:
     *(msync->exit_code) = -1;
     sem_post(msync->monitord_sem);
 err2:
-    free(statedir);
     free_monitord(&mhandler);
     epoll_loop_close(&descr);
 

@@ -43,7 +43,7 @@
 #include "error.h"
 #include "constants.h"
 #include "namespace.h"
-#include "collector.h"
+#include "event_sender.h"
 #include "sysinfo.h"
 
 static int runtime_check(const char *name, bool *runtime_res)

@@ -51,7 +51,7 @@
 #include "specs_extend.h"
 #include "utils.h"
 #include "error.h"
-#include "collector.h"
+#include "event_sender.h"
 #include "specs.h"
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
@@ -1250,7 +1250,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
     const char *id = cont->common_config->id;
     bool need_unpause = is_paused(cont->state);
     rt_resume_params_t params = { 0 };
-    char annotations[EXTRA_ANNOTATION_MAX] = { 0 };
+    char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };
 
     if (container_exit_on_next(cont)) {
         ERROR("Failed to cancel restart manager");

@@ -19,7 +19,7 @@
 #include <semaphore.h>
 #include "linked_list.h"
 #include "libisulad.h"
-#include "monitord.h"
+#include "event_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,41 +29,6 @@ struct context_lists {
     pthread_mutex_t context_mutex;
     struct linked_list context_list;
 };
-
-typedef enum {
-    EXIT,
-    STOPPED,
-    STARTING,
-    RUNNING,
-    STOPPING,
-    ABORTING,
-    FREEZING,
-    FROZEN,
-    THAWED,
-    OOM,
-    CREATE,
-    START,
-    RESTART,
-    STOP,
-    EXEC_CREATE,
-    EXEC_START,
-    EXEC_DIE,
-    ATTACH,
-    KILL,
-    TOP,
-    RENAME,
-    ARCHIVE_PATH,
-    EXTRACT_TO_DIR,
-    UPDATE,
-    PAUSE,
-    UNPAUSE,
-    EXPORT,
-    RESIZE,
-    PAUSED1,
-    MAX_STATE,
-} runtime_state_t;
-
-typedef enum { IM_LOAD, IM_REMOVE, IM_PULL, IM_LOGIN, IM_LOGOUT, IM_IMPORT } image_state_t;
 
 int newcollector();
 
@@ -76,11 +41,6 @@ int events_subscribe(const char *name, const types_timestamp_t *since, const typ
                      const stream_func_wrapper *stream);
 
 struct isulad_events_format *dup_event(const struct isulad_events_format *event);
-
-int isulad_monitor_send_container_event(const char *name, runtime_state_t state, int pid, int exit_code,
-                                        const char *args, const char *extra_annations);
-
-int isulad_monitor_send_image_event(const char *name, image_state_t state);
 
 #ifdef __cplusplus
 }

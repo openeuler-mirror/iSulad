@@ -33,6 +33,7 @@
 #include "libisulad.h"
 #include "containers_store.h"
 #include "container_unix.h"
+#include "event_sender.h"
 
 static struct context_lists g_context_lists;
 
@@ -200,7 +201,7 @@ static int supplement_pid_for_container_msg(const container_t *cont, const struc
                                             struct isulad_events_format *format_msg)
 {
     int nret = 0;
-    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
+    char info[EVENT_EXTRA_ANNOTATION_MAX] = { 0x00 };
 
     if (cont->state == NULL || cont->state->state == NULL || cont->state->state->pid <= 0) {
         return 0;
@@ -224,7 +225,7 @@ static int supplement_exitcode_for_container_msg(const container_t *cont, const 
 {
     int nret = 0;
     int exit_code = 0;
-    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
+    char info[EVENT_EXTRA_ANNOTATION_MAX] = { 0x00 };
 
     if (format_msg->exit_status != 0) {
         exit_code = format_msg->exit_status;
@@ -253,7 +254,7 @@ static int supplement_image_for_container_msg(const container_t *cont, const str
                                               struct isulad_events_format *format_msg)
 {
     int nret = 0;
-    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
+    char info[EVENT_EXTRA_ANNOTATION_MAX] = { 0x00 };
 
     if (cont->common_config == NULL || cont->common_config->image == NULL) {
         return 0;
@@ -276,7 +277,7 @@ static int supplement_name_for_container_msg(const container_t *cont, const stru
                                              struct isulad_events_format *format_msg)
 {
     int nret = 0;
-    char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
+    char info[EVENT_EXTRA_ANNOTATION_MAX] = { 0x00 };
 
     if (cont->common_config == NULL || cont->common_config->name == NULL) {
         return 0;
@@ -306,7 +307,7 @@ static int supplement_labels_for_container_msg(const container_t *cont, const st
     }
 
     for (i = 0; i < cont->common_config->config->labels->len; i++) {
-        char info[EXTRA_ANNOTATION_MAX] = { 0x00 };
+        char info[EVENT_EXTRA_ANNOTATION_MAX] = { 0x00 };
         int nret = snprintf(info, sizeof(info), "%s=%s", cont->common_config->config->labels->keys[i],
                             cont->common_config->config->labels->values[i]);
         if (nret < 0 || nret >= sizeof(info)) {
@@ -457,139 +458,6 @@ static bool format_msg(struct isulad_events_format *r, struct monitord_msg *msg)
     return ret;
 }
 
-/* isulad monitor fifo send */
-static void isulad_monitor_fifo_send(const struct monitord_msg *msg, const char *statedir)
-{
-    int fd = -1;
-    ssize_t ret = 0;
-    char *fifo_path = NULL;
-
-    fifo_path = isulad_monitor_fifo_name(statedir);
-    if (fifo_path == NULL) {
-        return;
-    }
-
-    /* Open the fifo nonblock in case the monitor is dead, we don't want the
-     * open to wait for a reader since it may never come.
-     */
-    fd = util_open(fifo_path, O_WRONLY | O_NONBLOCK, 0);
-    if (fd < 0) {
-        /* It is normal for this open() to fail with ENXIO when there is
-         * no monitor running, so we don't log it.
-         */
-        if (errno == ENXIO || errno == ENOENT) {
-            goto out;
-        }
-
-        ERROR("Failed to open fifo to send message: %s.", strerror(errno));
-        goto out;
-    }
-
-    do {
-        ret = util_write_nointr(fd, msg, sizeof(struct monitord_msg));
-        if (ret != sizeof(struct monitord_msg)) {
-            usleep_nointerupt(1000);
-        }
-    } while (ret != sizeof(struct monitord_msg));
-
-out:
-    free(fifo_path);
-    if (fd >= 0) {
-        close(fd);
-    }
-}
-
-/* isulad monitor send container event */
-int isulad_monitor_send_container_event(const char *name, runtime_state_t state, int pid, int exit_code,
-                                        const char *args, const char *extra_annations)
-{
-    int ret = 0;
-    char *statedir = NULL;
-    struct monitord_msg msg = { .type = MONITORD_MSG_STATE,
-               .event_type = CONTAINER_EVENT,
-               .value = state,
-               .pid = -1,
-               .exit_code = -1,
-               .args = { 0x00 },
-               .extra_annations = { 0x00 }
-    };
-
-    if (name == NULL) {
-        CRIT("Invalid input arguments");
-        ret = -1;
-        goto out;
-    }
-
-    statedir = conf_get_isulad_statedir();
-    if (statedir == NULL) {
-        CRIT("Can not get isulad root path");
-        ret = -1;
-        goto out;
-    }
-
-    (void)strncpy(msg.name, name, sizeof(msg.name) - 1);
-    msg.name[sizeof(msg.name) - 1] = '\0';
-
-    if (args != NULL) {
-        (void)strncpy(msg.args, args, sizeof(msg.args) - 1);
-        msg.args[sizeof(msg.args) - 1] = '\0';
-    }
-
-    if (extra_annations != NULL) {
-        (void)strncpy(msg.extra_annations, extra_annations, sizeof(msg.extra_annations) - 1);
-        msg.extra_annations[sizeof(msg.extra_annations) - 1] = '\0';
-    }
-
-    if (pid > 0) {
-        msg.pid = pid;
-    }
-    if (exit_code >= 0) {
-        msg.exit_code = exit_code;
-    }
-
-    isulad_monitor_fifo_send(&msg, statedir);
-
-out:
-    free(statedir);
-    return ret;
-}
-
-/* isulad monitor send image event */
-int isulad_monitor_send_image_event(const char *name, image_state_t state)
-{
-    int ret = 0;
-    char *statedir = NULL;
-
-    struct monitord_msg msg = { .type = MONITORD_MSG_STATE,
-               .event_type = IMAGE_EVENT,
-               .value = state,
-               .args = { 0x00 },
-               .extra_annations = { 0x00 }
-    };
-
-    if (name == NULL) {
-        CRIT("Invalid input arguments");
-        ret = -1;
-        goto out;
-    }
-
-    statedir = conf_get_isulad_statedir();
-    if (statedir == NULL) {
-        CRIT("Can not get isulad root path");
-        ret = -1;
-        goto out;
-    }
-
-    (void)strncpy(msg.name, name, sizeof(msg.name) - 1);
-    msg.name[sizeof(msg.name) - 1] = '\0';
-
-    isulad_monitor_fifo_send(&msg, statedir);
-
-out:
-    free(statedir);
-    return ret;
-}
-
 static int calculate_annaotation_info_len(const struct isulad_events_format *events)
 {
     size_t i;
@@ -689,6 +557,24 @@ static int event_copy(const struct isulad_events_format *src, struct isulad_even
     dest->exit_status = src->exit_status;
 
     return 0;
+}
+
+struct isulad_events_format *dup_event(const struct isulad_events_format *event)
+{
+    struct isulad_events_format *out = NULL;
+
+    if (event == NULL || event->id == NULL) {
+        return NULL;
+    }
+
+    out = util_common_calloc_s(sizeof(struct isulad_events_format));
+    if (out == NULL) {
+        return NULL;
+    }
+
+    event_copy(event, out);
+
+    return out;
 }
 
 /* events append */
@@ -1063,25 +949,6 @@ void events_handler(struct monitord_msg *msg)
 
 out:
     isulad_events_format_free(events);
-}
-
-/* dup event */
-struct isulad_events_format *dup_event(const struct isulad_events_format *event)
-{
-    struct isulad_events_format *out = NULL;
-
-    if (event == NULL || event->id == NULL) {
-        return NULL;
-    }
-
-    out = util_common_calloc_s(sizeof(struct isulad_events_format));
-    if (out == NULL) {
-        return NULL;
-    }
-
-    event_copy(event, out);
-
-    return out;
 }
 
 /* add monitor client */

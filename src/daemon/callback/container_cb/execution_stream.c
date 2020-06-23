@@ -44,7 +44,7 @@
 #include "isula_libutils/logger_json_file.h"
 #include "constants.h"
 #include "runtime.h"
-#include "collector.h"
+#include "event_sender.h"
 
 static char *create_single_fifo(const char *statepath, const char *subpath, const char *stdflag)
 {
@@ -495,8 +495,7 @@ err_out:
     return NULL;
 }
 
-static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[],
-                          defs_process_user *puser,
+static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[], defs_process_user *puser,
                           const container_exec_request *request, int *exit_code)
 {
     int ret = 0;
@@ -727,7 +726,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     pthread_t thread_id = 0;
     container_t *cont = NULL;
     defs_process_user *puser = NULL;
-    char exec_command[ARGS_MAX] = { 0x00 };
+    char exec_command[EVENT_ARGS_MAX] = { 0x00 };
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {

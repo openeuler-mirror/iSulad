@@ -129,8 +129,8 @@ static int container_state_changed(container_t *cont, const struct isulad_events
 
             pid = state_get_pid(cont->state);
             if (pid != (int)events->pid) {
-                DEBUG("Container's pid \'%d\' is not equal to event's pid \'%d\', ignore STOPPED event",
-                      pid, events->pid);
+                DEBUG("Container's pid \'%d\' is not equal to event's pid \'%d\', ignore STOPPED event", pid,
+                      events->pid);
                 container_unlock(cont);
                 ret = 0;
                 goto out;
@@ -254,7 +254,8 @@ static void *events_handler_thread(void *args)
         goto out;
     }
 
-    while (handle_one(cont, handler) == 0) {}
+    while (handle_one(cont, handler) == 0) {
+    }
 
 out:
     container_unref(cont);
@@ -264,8 +265,7 @@ out:
 }
 
 /* events handler post events */
-int events_handler_post_events(events_handler_t *handler,
-                               const struct isulad_events_format *event)
+int events_handler_post_events(events_handler_t *handler, const struct isulad_events_format *event)
 {
     int ret = 0;
     char *name = NULL;
@@ -312,4 +312,3 @@ out:
     events_handler_unlock(handler);
     return ret;
 }
-

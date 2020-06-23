@@ -93,6 +93,8 @@ bool conf_get_use_decrypted_key_flag();
 bool conf_get_skip_insecure_verify_flag();
 int parse_log_opts(struct service_arguments *args, const char *key, const char *value);
 
+char *conf_get_isulad_monitor_fifo_path();
+
 #ifdef __cplusplus
 }
 #endif
