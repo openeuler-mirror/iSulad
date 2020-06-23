@@ -22,6 +22,7 @@
 #include <ctype.h>
 
 #include "runtime.h"
+#include "isulad_config.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "lcr_rt_ops.h"
@@ -161,7 +162,6 @@ out:
     return ret;
 }
 
-
 int runtime_clean_resource(const char *name, const char *runtime, const rt_clean_params_t *params)
 {
     int ret = 0;
@@ -260,8 +260,7 @@ out:
     return ret;
 }
 
-int runtime_exec(const char *name, const char *runtime, const rt_exec_params_t *params,
-                 int *exit_code)
+int runtime_exec(const char *name, const char *runtime, const rt_exec_params_t *params, int *exit_code)
 {
     int ret = 0;
     const struct rt_ops *ops = NULL;
@@ -461,5 +460,33 @@ int runtime_exec_resize(const char *name, const char *runtime, const rt_exec_res
     ret = ops->rt_exec_resize(name, runtime, params);
 
 out:
+    return ret;
+}
+
+int runtime_init()
+{
+    int ret = 0;
+    char *engine = NULL;
+
+    engine = conf_get_isulad_engine();
+    if (engine == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (engines_global_init()) {
+        ERROR("Init engines global failed");
+        ret = -1;
+        goto out;
+    }
+
+    /* Init default engine, now is lcr */
+    if (engines_discovery(engine)) {
+        ERROR("Failed to discovery default engine:%s", engine);
+        ret = -1;
+    }
+
+out:
+    free(engine);
     return ret;
 }

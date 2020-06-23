@@ -58,7 +58,6 @@
 #include "plugin.h"
 #include "selinux_label.h"
 #include "http.h"
-#include "engine.h"
 
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"
@@ -1208,34 +1207,6 @@ out:
     return ret;
 }
 
-static int isulad_server_init_engines()
-{
-    int ret = 0;
-    char *engine = NULL;
-
-    engine = conf_get_isulad_engine();
-    if (engine == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    if (engines_global_init()) {
-        ERROR("Init engines global failed");
-        ret = -1;
-        goto out;
-    }
-
-    /* Init default engine, now is lcr */
-    if (engines_discovery(engine)) {
-        ERROR("Failed to discovery default engine:%s", engine);
-        ret = -1;
-    }
-
-out:
-    free(engine);
-    return ret;
-}
-
 static void set_mallopt()
 {
     if (mallopt(M_ARENA_TEST, 8) == 0) {
@@ -1402,8 +1373,8 @@ static int pre_init_daemon(int argc, char **argv, char **msg)
         goto out;
     }
 
-    if (isulad_server_init_engines()) {
-        *msg = "Failed to init engines";
+    if (runtime_init() != 0) {
+        *msg = "Failed to init runtime";
         goto out;
     }
 

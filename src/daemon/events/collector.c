@@ -33,7 +33,6 @@
 #include "libisulad.h"
 #include "containers_store.h"
 #include "container_unix.h"
-#include "image.h"
 
 static struct context_lists g_context_lists;
 
