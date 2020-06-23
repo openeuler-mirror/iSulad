@@ -818,30 +818,27 @@ static int create_mtab_link(const oci_runtime_spec *oci_spec)
         goto out;
     }
 
-    if (!util_dir_exists(dir)) {
-        ret = util_mkdir_p(dir, ETC_FILE_MODE);
-        if (ret != 0) {
-            ERROR("Unable to create mtab directory %s.", dir);
-            goto out;
-        }
+    if (unlink(dir) != 0) {
+        WARN("Failed to delete \"%s\": %s", dir, strerror(errno));
     }
 
     if (util_file_exists(slink)) {
         goto out;
     }
 
-    ret = symlink(pathname, slink);
-    if (ret < 0 && errno != EEXIST) {
-        if (errno == EROFS) {
-            WARN("Failed to create link %s for target %s. Read-only filesystem", slink, pathname);
-        } else {
-            SYSERROR("Failed to create \"%s\"", slink);
+    if (!util_dir_exists(dir)) {
+        if (util_mkdir_p(dir, ETC_FILE_MODE) != 0) {
             ret = -1;
+            ERROR("Unable to create mtab directory %s.", dir);
             goto out;
         }
     }
 
-    ret = 0;
+    if (symlink(pathname, slink) != 0) {
+        ret = -1;
+        SYSERROR("Failed to create \"%s\"", slink);
+        goto out;
+    }
 
 out:
     free(slink);
