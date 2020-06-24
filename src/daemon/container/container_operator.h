@@ -44,6 +44,8 @@ int force_kill(container_t *cont);
 
 bool container_in_gc_progress(const char *id);
 
+int container_module_init(char **msg);
+
 #ifdef __cplusplus
 }
 #endif

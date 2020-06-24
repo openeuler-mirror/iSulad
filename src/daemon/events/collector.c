@@ -28,6 +28,7 @@
 #include "error.h"
 #include "isula_libutils/log.h"
 #include "collector.h"
+#include "monitord.h"
 #include "isulad_config.h"
 #include "libisulad.h"
 #include "containers_store.h"
@@ -941,7 +942,7 @@ free_out:
 }
 
 /* newcollector */
-int newcollector()
+static int newcollector()
 {
     int ret = -1;
     pthread_t exit_thread;
@@ -973,6 +974,60 @@ int newcollector()
     }
 
     ret = 0;
+out:
+    return ret;
+}
+
+static int start_monitord()
+{
+    int ret = 0;
+    int monitord_exitcode = 0;
+    sem_t monitord_sem;
+    struct monitord_sync_data msync = { 0 };
+
+    msync.monitord_sem = &monitord_sem;
+    msync.exit_code = &monitord_exitcode;
+    if (sem_init(msync.monitord_sem, 0, 0)) {
+        isulad_set_error_message("Failed to init monitor sem");
+        ret = -1;
+        goto out;
+    }
+
+    if (new_monitord(&msync)) {
+        isulad_set_error_message("Create monitord thread failed");
+        ret = -1;
+        sem_destroy(msync.monitord_sem);
+        goto out;
+    }
+
+    sem_wait(msync.monitord_sem);
+    sem_destroy(msync.monitord_sem);
+    if (monitord_exitcode) {
+        isulad_set_error_message("Monitord start failed");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+int events_module_init(char **msg)
+{
+    int ret = 0;
+
+    if (newcollector()) {
+        *msg = "Create collector thread failed";
+        ret = -1;
+        goto out;
+    }
+
+    if (start_monitord()) {
+        *msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path";
+        ret = -1;
+        goto out;
+    }
+
 out:
     return ret;
 }

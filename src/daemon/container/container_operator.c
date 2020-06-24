@@ -34,6 +34,7 @@
 #include "plugin.h"
 #include "containers_store.h"
 #include "namespace.h"
+#include "restore.h"
 
 int set_container_to_removal(const container_t *cont)
 {
@@ -1299,4 +1300,32 @@ bool container_in_gc_progress(const char *id)
     }
 
     return gc_is_gc_progress(id);
+}
+
+int container_module_init(char **msg)
+{
+    int ret = 0;
+
+    if (new_gchandler()) {
+        *msg = "Create garbage handler thread failed";
+        ret = -1;
+        goto out;
+    }
+
+    if (new_supervisor()) {
+        *msg = "Create supervisor thread failed";
+        ret = -1;
+        goto out;
+    }
+
+    containers_restore();
+
+    if (start_gchandler()) {
+        *msg = "Failed to start garbage collecotor handler";
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
 }

@@ -47,14 +47,11 @@
 #include "image.h"
 #include "sysinfo.h"
 #include "verify.h"
-#include "monitord.h"
 #include "service_common.h"
 #include "callback.h"
 #include "log_gather.h"
 #include "containers_store.h"
-#include "restore.h"
-#include "supervisor.h"
-#include "containers_gc.h"
+#include "container_operator.h"
 #include "plugin.h"
 #include "selinux_label.h"
 #include "http.h"
@@ -1223,40 +1220,6 @@ static void set_mallopt()
     }
 }
 
-static int start_monitord()
-{
-    int ret = 0;
-    int monitord_exitcode = 0;
-    sem_t monitord_sem;
-    struct monitord_sync_data msync = { 0 };
-
-    msync.monitord_sem = &monitord_sem;
-    msync.exit_code = &monitord_exitcode;
-    if (sem_init(msync.monitord_sem, 0, 0)) {
-        isulad_set_error_message("Failed to init monitor sem");
-        ret = -1;
-        goto out;
-    }
-
-    if (new_monitord(&msync)) {
-        isulad_set_error_message("Create monitord thread failed");
-        ret = -1;
-        sem_destroy(msync.monitord_sem);
-        goto out;
-    }
-
-    sem_wait(msync.monitord_sem);
-    sem_destroy(msync.monitord_sem);
-    if (monitord_exitcode) {
-        isulad_set_error_message("Monitord start failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
 /* shutdown handler */
 static void *do_shutdown_handler(void *arg)
 {
@@ -1303,30 +1266,11 @@ static int start_daemon_threads(char **msg)
         goto out;
     }
 
-    if (newcollector()) {
-        *msg = "Create collector thread failed";
+    if (events_module_init(msg) != 0) {
         goto out;
     }
 
-    if (start_monitord()) {
-        *msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path";
-        goto out;
-    }
-
-    if (new_gchandler()) {
-        *msg = "Create garbage handler thread failed";
-        goto out;
-    }
-
-    if (new_supervisor()) {
-        *msg = "Create supervisor thread failed";
-        goto out;
-    }
-
-    containers_restore();
-
-    if (start_gchandler()) {
-        *msg = "Failed to start garbage collecotor handler";
+    if (container_module_init(msg) != 0) {
         goto out;
     }
 

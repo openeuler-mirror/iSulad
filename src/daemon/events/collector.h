@@ -30,8 +30,6 @@ struct context_lists {
     struct linked_list context_list;
 };
 
-int newcollector();
-
 void events_handler(struct monitord_msg *msg);
 
 int add_monitor_client(char *name, const types_timestamp_t *since, const types_timestamp_t *until,
@@ -41,6 +39,8 @@ int events_subscribe(const char *name, const types_timestamp_t *since, const typ
                      const stream_func_wrapper *stream);
 
 struct isulad_events_format *dup_event(const struct isulad_events_format *event);
+
+int events_module_init(char **msg);
 
 #ifdef __cplusplus
 }
