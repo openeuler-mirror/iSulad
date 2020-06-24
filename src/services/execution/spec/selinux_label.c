@@ -125,7 +125,6 @@ static void find_selinux_fs_among_mounts(char **fs)
     char *buf = NULL;
     char **fields = NULL;
     size_t len;
-    ssize_t num;
 
     fp = fopen("/proc/self/mountinfo", "re");
     if (fp == NULL) {
@@ -134,16 +133,13 @@ static void find_selinux_fs_among_mounts(char **fs)
     }
     __fsetlocking(fp, FSETLOCKING_BYCALLER);
 
-    num = getline(&buf, &len, fp);
-    while (num != -1) {
+    while (getline(&buf, &len, fp) != -1) {
         if (!strstr(buf, " - selinuxfs ")) {
-            num = getline(&buf, &len, fp);
             continue;
         }
         fields = util_string_split((const char *)buf, ' ');
         if (fields == NULL || util_array_len((const char **)fields) < MOUNT_POOINT_FIFTH_FIELD + 1) {
             util_free_array(fields);
-            num = getline(&buf, &len, fp);
             continue;
         }
         if (verify_selinuxfs_mount(fields[MOUNT_POOINT_FIFTH_FIELD - 1])) {
