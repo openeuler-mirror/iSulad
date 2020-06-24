@@ -50,8 +50,19 @@ function do_test_t()
 
     echo AA > /tmp/test_run_env
 
-    isula run --name $containername -itd -e AA=BB -e AA --env-file /tmp/test_run_env busybox
+    isula run --name $containername -itd -e AAA=BB -e BAA --env-file /tmp/test_run_env busybox
     fn_check_eq "$?" "0" "run failed"
+    testcontainer $containername running
+
+    isula stop -t 0 $containername
+    fn_check_eq "$?" "0" "stop failed"
+    testcontainer $containername exited
+
+    isula rm $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    isula run --name $containername -itd --external-rootfs / --read-only none sh
+    fn_check_eq "$?" "0" "run container with host rootfs failed"
     testcontainer $containername running
 
     isula stop -t 0 $containername
