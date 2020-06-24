@@ -48,7 +48,6 @@
 #include "isula_libutils/image_manifest_v1_compatibility.h"
 #include "registry_type.h"
 #include "mediatype.h"
-#include "registry_common.h"
 #include "storage.h"
 
 // the name of the big data item whose contents we consider useful for computing a "digest" of the

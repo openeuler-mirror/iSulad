@@ -20,7 +20,6 @@
 #include <time.h>
 
 #include "utils_timestamp.h"
-#include "utils_images.h"
 
 // 8 is enough for challenge, usually only one challenge is provided.
 #define CHALLENGE_MAX 8
@@ -107,4 +106,4 @@ void free_challenge(challenge *c);
 void free_layer_blob(layer_blob *layer);
 void free_pull_desc(pull_descriptor *desc);
 
-#endif
+#endif  /* _IMAGE_REGISTRY_TYPE_H */

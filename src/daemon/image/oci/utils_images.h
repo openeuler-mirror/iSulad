@@ -19,6 +19,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include "isula_libutils/docker_image_config_v2.h"
+#include "isula_libutils/registry_manifest_schema1.h"
+#include "isula_libutils/image_manifest_v1_compatibility.h"
+#include "registry_type.h"
+#include "utils_timestamp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +49,10 @@ char *oci_full_image_name(const char *host, const char *name, const char *tag);
 char *oci_strip_dockerio_prefix(const char *name);
 char *make_big_data_base_name(const char *key);
 char *oci_calc_diffid(const char *file);
+void free_items_not_inherit(docker_image_config_v2 *config);
+int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
+                           docker_image_config_v2 *config);
+types_timestamp_t created_to_timestamp(char *created);
 
 #ifdef __cplusplus
 }

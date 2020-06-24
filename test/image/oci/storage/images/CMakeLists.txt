@@ -19,8 +19,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/utils_images.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/image_store/image_type.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/registry/registry_common.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/registry/registry_type.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/registry_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/image_store/image_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/storage_mock.cc
     storage_images_ut.cpp)

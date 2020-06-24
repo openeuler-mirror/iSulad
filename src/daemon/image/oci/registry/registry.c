@@ -41,7 +41,6 @@
 #include "storage.h"
 #include "constants.h"
 #include "utils_images.h"
-#include "registry_common.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 
