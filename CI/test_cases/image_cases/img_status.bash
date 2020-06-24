@@ -35,50 +35,73 @@ function pre_test()
 		    driver="devicemapper"
 	    fi
     done
-
 }
 
 function overlay2_status()
 {
-    if [[ "${lines[6]}" != "Storage Driver:"* ]];then
-        echo "isula info error"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
-    if [[ "${lines[7]}" != " Backing Filesystem:"* ]];then
-        echo "isula info error"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
-    if [[ "${lines[8]}" != " Supports d_type:"* ]];then
-        echo "isula info error"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
+    local ret=0
+    local test="isula status overlay2 test => (${FUNCNAME[@]})"
+    
+    msg_info "${test} starting..."
+
+    [[ "${lines[6]}" != "Storage Driver:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Storage Driver failed" && ((ret++))
+    [[ "${lines[7]}" != " Backing Filesystem:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Backing Filesystem failed" && ((ret++))
+    [[ "${lines[8]}" != " Supports d_type:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Supports d_type failed" && ((ret++))
+
+    msg_info "${test} finished with return ${ret}..."
+    return ${ret}
 }
 
 function devicemapper_status()
 {
-	echo "TODO"
+    local ret=0
+    local test="isula status devicemapper test => (${FUNCNAME[@]})"
+    
+    msg_info "${test} starting..."
+
+    [[ "${lines[6]}" != "Storage Driver:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Storage Driver failed" && ((ret++))
+    [[ "${lines[7]}" != " Pool Name:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Pool Name failed" && ((ret++))
+    [[ "${lines[8]}" != " Pool Blocksize:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Pool Blocksize failed" && ((ret++))
+    [[ "${lines[9]}" != " Base Device Size:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Base Device Size failed" && ((ret++))
+    [[ "${lines[10]}" != " Backing Filesystem:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Backing Filesystem failed" && ((ret++))
+    [[ "${lines[11]}" != " Data file:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Data file failed" && ((ret++))
+    [[ "${lines[12]}" != " Metadata file:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Metadata file failed" && ((ret++))
+    [[ "${lines[13]}" != " Data Space Used:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Data Space Used failed" && ((ret++))
+    [[ "${lines[14]}" != " Data Space Total:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Data Space Total failed" && ((ret++))
+    [[ "${lines[15]}" != " Data Space Available:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Data Space Available failed" && ((ret++))
+    [[ "${lines[16]}" != " Metadata Space Used:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Metadata Space Used failed" && ((ret++))
+    [[ "${lines[17]}" != " Metadata Space Total:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Metadata Space Total failed" && ((ret++))
+    [[ "${lines[18]}" != " Metadata Space Available:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Metadata Space Available failed" && ((ret++))
+    [[ "${lines[19]}" != " Thin Pool Minimum Free Space:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Thin Pool Minimum Free Space failed" && ((ret++))
+    [[ "${lines[20]}" != " Udev Sync Supported:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Udev Sync Supported failed" && ((ret++))
+    [[ "${lines[21]}" != " Deferred Removal Enabled:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Deferred Removal Enabled failed" && ((ret++))
+    [[ "${lines[22]}" != " Deferred Deletion Enabled:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Deferred Deletion Enabled failed" && ((ret++))
+    [[ "${lines[23]}" != " Deferred Deleted Device Count:"* ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula info check Deferred Deleted Enabled failed" && ((ret++))
+
+    msg_info "${test} finished with return ${ret}..."
+    return ${ret}
 }
 
 function do_test_t()
 {
+    local ret=0
+
     pre_test
     if [[ "$driver"x = "overlay2"x ]];then
-	    overlay2_status
-    elif [[ "driver"x = "devicemapper"x ]];then
-	    devicemapper_status
+	    overlay2_status || ((ret++))
+    elif [[ "$driver"x = "devicemapper"x ]];then
+	    devicemapper_status || ((ret++))
     else
 	    echo "error: not support $driver"
-	    TC_RET_T=$(($TC_RET_T+1))
+	    ((ret++))
     fi
 
-    return $TC_RET_T
-
+    return $ret
 }
 
-ret=0
-do_test_t
-if [ $? -ne 0 ];then
-    let "ret=$ret + 1"
-fi
+declare -i ans=0
 
-show_result $ret "basic storage driver status"
+do_test_t || ((ans++))
+
+show_result ${ans} "${curr_path}/${0}"
+

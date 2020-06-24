@@ -42,7 +42,7 @@ do_test_t()
 	driver_name=`isula inspect --format='{{json .GraphDriver.Name}}' $id`
 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get container $id storage driver failed" && ((ret++))
 
-	if ! [[ "${driver_name}" =~ "overlay" ]] && ! [[ "${driver_name}" = "devicemapper" ]];then
+	if ! [[ "${driver_name}" =~ "overlay" ]] && ! [[ "${driver_name}" =~ "devicemapper" ]];then
 		echo "expect GraphDriver Name is overlay or devicemapper, not ${driver_name}"
 		((ret++))
 	fi
