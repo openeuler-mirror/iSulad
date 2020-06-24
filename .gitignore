@@ -2,7 +2,10 @@ build
 *.pyc
 .deps
 .dirstamp
+.clangd
 GPATH
 GRTAGS
 GTAGS
 iSula-libutils
+compile_commands.json
+tags
