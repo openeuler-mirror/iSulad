@@ -199,8 +199,9 @@ static int client_inspect_container(const struct isula_inspect_request *request,
 
     ret = ops->container.inspect(request, response, config);
     if (ret != 0) {
-        if ((strstr(response->errmsg, "Inspect invalid name") != NULL) ||
-            (strstr(response->errmsg, "No such image or container or accelerator") != NULL)) {
+        if ((response->errmsg != NULL) &&
+            (strstr(response->errmsg, "Inspect invalid name") != NULL ||
+            strstr(response->errmsg, "No such image or container or accelerator") != NULL)) {
             return CONTAINER_NOT_FOUND;
         }
 
@@ -814,6 +815,7 @@ int cmd_inspect_main(int argc, const char **argv)
     free(filter_string);
 
     if (status) {
+        COMMAND_ERROR("Inspec error: No such object:%s", g_cmd_inspect_args.name);
         exit(ECOMMON);
     }
     exit(EXIT_SUCCESS);
