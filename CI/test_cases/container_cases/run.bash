@@ -61,6 +61,17 @@ function do_test_t()
     isula rm $containername
     fn_check_eq "$?" "0" "rm failed"
 
+    isula run --name $containername -itd --external-rootfs / --read-only none sh
+    fn_check_eq "$?" "0" "run container with host rootfs failed"
+    testcontainer $containername running
+
+    isula stop -t 0 $containername
+    fn_check_eq "$?" "0" "stop failed"
+    testcontainer $containername exited
+
+    isula rm $containername
+    fn_check_eq "$?" "0" "rm failed"
+
     return $TC_RET_T
 }
 
