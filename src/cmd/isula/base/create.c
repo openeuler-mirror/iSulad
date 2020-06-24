@@ -26,6 +26,7 @@
 #include "arguments.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "utils_string.h"
 #include "console.h"
 #include "create.h"
 #include "commands.h"
@@ -433,7 +434,6 @@ static int read_label_from_file(const char *path, size_t file_size, isula_contai
     FILE *fp = NULL;
     char *buf = NULL;
     size_t len;
-    ssize_t num;
 
     if (file_size == 0) {
         return 0;
@@ -444,14 +444,10 @@ static int read_label_from_file(const char *path, size_t file_size, isula_contai
         return -1;
     }
     __fsetlocking(fp, FSETLOCKING_BYCALLER);
-    num = getline(&buf, &len, fp);
-    while (num != -1) {
-        size_t len = strlen(buf);
-        if (len == 1) {
-            num = getline(&buf, &len, fp);
+    while (getline(&buf, &len, fp) != -1) {
+        if (strlen(util_trim_space(buf)) == 0) {
             continue;
         }
-        buf[len - 1] = '\0';
         if (!validate_label(buf)) {
             COMMAND_ERROR("Invalid label '%s': empty name", buf);
             ret = -1;
@@ -462,7 +458,6 @@ static int read_label_from_file(const char *path, size_t file_size, isula_contai
             ret = -1;
             goto out;
         }
-        num = getline(&buf, &len, fp);
     }
 
 out:
