@@ -154,6 +154,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/grpc.git && \
 	cd grpc && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf grpc-1.22.0.tar.gz && \
 	cd grpc-1.22.0 && \
 	make -j $(nproc) && \
@@ -200,8 +201,8 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/http-parser.git && \
 	cd http-parser && \
-	tar -xzvf http-parser-2.9.2.tar.gz && \
-	cd http-parser-2.9.2 && \
+	tar -xzvf http-parser-2.9.4.tar.gz && \
+	cd http-parser-2.9.4 && \
 	make -j CFLAGS="-Wno-error" && \
 	make CFLAGS="-Wno-error" install && \
 	ldconfig
@@ -212,9 +213,8 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libwebsockets.git && \
 	cd libwebsockets && \
-	tar -xzvf libwebsockets-2.4.2.tar.gz && \
-	cd libwebsockets-2.4.2 && \
-	patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch && \
+	tar -xzvf libwebsockets-4.0.1.tar.gz && \
+	cd libwebsockets-4.0.1 && \
 	mkdir build && \
 	cd build && \
 	cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../ && \
