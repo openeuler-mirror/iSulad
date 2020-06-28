@@ -29,7 +29,7 @@
 #include "isula_libutils/log.h"
 #include "event_sender.h"
 #include "collector.h"
-#include "console.h"
+#include "io_wrapper.h"
 #include "isulad_config.h"
 #include "config.h"
 #include "image.h"

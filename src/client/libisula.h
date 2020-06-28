@@ -21,8 +21,8 @@
 #include "constants.h"
 #include "isula_libutils/container_path_stat.h"
 #include "isula_libutils/json_common.h"
-#include "console.h"
 #include "utils_timestamp.h"
+#include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {

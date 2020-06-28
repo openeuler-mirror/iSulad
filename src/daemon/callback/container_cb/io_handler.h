@@ -9,36 +9,28 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  * Author: lifeng
- * Create: 2020-03-14
- * Description: provide tar function definition
+ * Create: 2020-06-28
+ * Description: provide container io handler function definition
  *********************************************************************************/
-#ifndef __ISULAD_ARCHIVE_H_
-#define __ISULAD_ARCHIVE_H_
 
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
+#ifndef __IO_HANDLER_H_
+#define __IO_HANDLER_H_
 
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <pthread.h>
 #include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum {
-    NONE_WHITEOUT_FORMATE = 0,
-    OVERLAY_WHITEOUT_FORMATE = 1,
-} whiteout_format_type;
+int create_daemon_fifos(const char *id, const char *runtime, bool attach_stdin, bool attach_stdout, bool attach_stderr,
+                        const char *operation, char *fifos[], char **fifopath);
 
-struct archive_options {
-    whiteout_format_type whiteout_format;
-};
+void delete_daemon_fifos(const char *fifopath, const char *fifos[]);
 
-int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options);
-
-int archive_uncompress(const char *src, const char *dest, char **errmsg);
+int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char *fifoout, const char *fifoerr,
+                       int stdin_fd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
+                       const char *fifos[], pthread_t *tid);
 
 #ifdef __cplusplus
 }

@@ -19,7 +19,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "console.h"
+#include "io_wrapper.h"
 #include "utils.h"
 #include "utils_images.h"
 #include "isula_libutils/log.h"

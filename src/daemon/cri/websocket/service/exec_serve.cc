@@ -14,11 +14,10 @@
  ******************************************************************************/
 
 #include "exec_serve.h"
-#include "console.h"
+#include "io_wrapper.h"
 #include "utils.h"
 
-int ExecServe::Execute(struct lws *wsi, const std::string &token,
-                       int read_pipe_fd)
+int ExecServe::Execute(struct lws *wsi, const std::string &token, int read_pipe_fd)
 {
     RequestCache *cache = RequestCache::GetInstance();
     bool found = false;
@@ -51,8 +50,7 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
     struct io_write_wrapper StderrstringWriter = { 0 };
     StderrstringWriter.context = (void *)wsi;
     StderrstringWriter.write_func = WsWriteStderrToClient;
-    int ret = cb->container.exec(container_req, &container_res,
-                                 container_req->attach_stdin ? read_pipe_fd : -1,
+    int ret = cb->container.exec(container_req, &container_res, container_req->attach_stdin ? read_pipe_fd : -1,
                                  container_req->attach_stdout ? &StdoutstringWriter : nullptr,
                                  container_req->attach_stderr ? &StderrstringWriter : nullptr);
     if (ret != 0) {
@@ -80,8 +78,7 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token,
     return ret;
 }
 
-int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest *grequest,
-                              container_exec_request **request)
+int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest *grequest, container_exec_request **request)
 {
     container_exec_request *tmpreq = nullptr;
 
@@ -120,5 +117,3 @@ int ExecServe::RequestFromCri(const runtime::v1alpha2::ExecRequest *grequest,
     *request = tmpreq;
     return 0;
 }
-
-

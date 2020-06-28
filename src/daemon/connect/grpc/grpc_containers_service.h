@@ -17,6 +17,7 @@
 #include <string>
 #include <map>
 #include <grpc++/grpc++.h>
+#include <semaphore.h>
 #include "container.grpc.pb.h"
 #include "callback.h"
 #include "error.h"
@@ -81,7 +82,6 @@ public:
 
     Status Update(ServerContext *context, const UpdateRequest *request, UpdateResponse *reply) override;
 
-
     Status Stats(ServerContext *context, const StatsRequest *request, StatsResponse *reply) override;
 
     Status Wait(ServerContext *context, const WaitRequest *request, WaitResponse *reply) override;
@@ -91,7 +91,7 @@ public:
     Status Export(ServerContext *context, const ExportRequest *request, ExportResponse *reply) override;
 
     Status RemoteStart(ServerContext *context,
-                       ServerReaderWriter<RemoteStartResponse, RemoteStartRequest> *stream)  override;
+                       ServerReaderWriter<RemoteStartResponse, RemoteStartRequest> *stream) override;
 
     Status RemoteExec(ServerContext *context,
                       ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream) override;
@@ -99,14 +99,13 @@ public:
     Status CopyFromContainer(ServerContext *context, const CopyFromContainerRequest *request,
                              ServerWriter<CopyFromContainerResponse> *writer) override;
 
-    Status CopyToContainer(ServerContext *context, ServerReaderWriter<CopyToContainerResponse,
-                           CopyToContainerRequest> *stream) override;
+    Status CopyToContainer(ServerContext *context,
+                           ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream) override;
 
-    Status Logs(ServerContext *context, const LogsRequest* request,
-                ServerWriter<LogsResponse>* writer) override;
+    Status Logs(ServerContext *context, const LogsRequest *request, ServerWriter<LogsResponse> *writer) override;
 
 private:
-    template<class T1, class T2>
+    template <class T1, class T2>
     int response_to_grpc(const T1 *response, T2 *gresponse)
     {
         if (response == nullptr) {
@@ -193,17 +192,15 @@ private:
     int copy_from_container_request_from_grpc(const CopyFromContainerRequest *grequest,
                                               struct isulad_copy_from_container_request **request);
 
-    int remote_exec_request_from_stream(ServerContext *context,
-                                        container_exec_request **request, std::string &errmsg);
+    int remote_exec_request_from_stream(ServerContext *context, container_exec_request **request, std::string &errmsg);
 
     void add_exec_trailing_metadata(ServerContext *context, container_exec_response *response);
 
     int attach_request_from_stream(const std::multimap<grpc::string_ref, grpc::string_ref> &metadata,
                                    container_attach_request **request);
 
-    Status AttachInit(ServerContext *context, service_callback_t **cb,
-                      container_attach_request **req, container_attach_response **res,
-                      sem_t *sem_stderr, int pipefd[]);
+    Status AttachInit(ServerContext *context, service_callback_t **cb, container_attach_request **req,
+                      container_attach_response **res, sem_t *sem_stderr, int pipefd[]);
 
     void add_attach_trailing_metadata(ServerContext *context, container_attach_response *response);
 
@@ -224,4 +221,3 @@ private:
 };
 
 #endif /* _GRPC_CONTAINER_SERVICE_H_ */
-

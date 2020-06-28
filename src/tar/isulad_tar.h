@@ -13,7 +13,6 @@
  * Description: provide tar function definition
  *********************************************************************************/
 
-
 #ifndef __ISULAD_TAR_H_
 #define __ISULAD_TAR_H_
 
@@ -23,7 +22,7 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
-#include "console.h"
+#include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,14 +58,14 @@ char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct
 
 int tar_resource(const struct archive_copy_info *info, struct io_read_wrapper *archive_reader, char **err);
 
-int archive_untar(const struct io_read_wrapper *content, bool compression, const char *dstdir,
-                  const char *transform, char **err);
+int archive_untar(const struct io_read_wrapper *content, bool compression, const char *dstdir, const char *transform,
+                  char **err);
 
 int archive_copy_to(const struct io_read_wrapper *content, bool compression, const struct archive_copy_info *srcinfo,
                     const char *dstpath, char **err);
 
-int archive_path(const char *srcdir, const char *srcbase, const char *rebase_name,
-                 bool compression, struct io_read_wrapper *archive_reader);
+int archive_path(const char *srcdir, const char *srcbase, const char *rebase_name, bool compression,
+                 struct io_read_wrapper *archive_reader);
 
 int chroot_tar(char *path, char *file, char **errmsg);
 
@@ -75,4 +74,3 @@ int chroot_tar(char *path, char *file, char **errmsg);
 #endif
 
 #endif
-

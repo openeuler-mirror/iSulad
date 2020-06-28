@@ -394,7 +394,7 @@ static void *client_console_loop_thread(void *arg)
     }
 
     sem_post(wait_open);
-    client_console_loop(0, 1, 2, fifoinfd, fifooutfd, fifoerrfd, 1, tty);
+    console_loop_with_std_fd(0, 1, 2, fifoinfd, fifooutfd, fifoerrfd, 1, tty);
 
 err2:
     if (fifoinfd >= 0) {

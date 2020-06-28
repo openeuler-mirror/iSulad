@@ -18,7 +18,6 @@
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "isula_commands.h"
-#include "console.h"
 #include "utils.h"
 #include "isula_libutils/container_inspect.h"
 #include "attach.h"

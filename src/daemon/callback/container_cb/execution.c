@@ -30,7 +30,7 @@
 
 #include "constants.h"
 #include "isula_libutils/log.h"
-#include "console.h"
+#include "io_wrapper.h"
 #include "isulad_config.h"
 #include "config.h"
 #include "image.h"
@@ -42,6 +42,7 @@
 #include "execution_information.h"
 #include "execution_stream.h"
 #include "execution_create.h"
+#include "io_handler.h"
 #include "plugin.h"
 #include "execution_network.h"
 #include "runtime.h"

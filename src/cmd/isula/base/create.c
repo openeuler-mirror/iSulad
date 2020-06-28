@@ -27,7 +27,6 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_string.h"
-#include "console.h"
 #include "create.h"
 #include "isula_commands.h"
 #include "isula_connect.h"

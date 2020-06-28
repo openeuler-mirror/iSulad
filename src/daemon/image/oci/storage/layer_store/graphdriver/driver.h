@@ -20,7 +20,7 @@
 #include <stddef.h>
 #include "isula_libutils/container_inspect.h"
 #include "isula_libutils/json_common.h"
-#include "console.h"
+#include "io_wrapper.h"
 #include "driver_overlay2_types.h"
 #include "devices_constants.h"
 #include "storage.h"

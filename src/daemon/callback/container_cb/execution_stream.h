@@ -17,7 +17,6 @@
  *********************************************************************************/
 
 #include "callback.h"
-#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,18 +24,8 @@ extern "C" {
 
 void container_stream_callback_init(service_container_callback_t *cb);
 
-int create_daemon_fifos(const char *id, const char *runtime, bool attach_stdin, bool attach_stdout,
-                        bool attach_stderr, const char *operation, char *fifos[], char **fifopath);
-
-void delete_daemon_fifos(const char *fifopath, const char *fifos[]);
-
-int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char *fifoout, const char *fifoerr,
-                       int stdin_fd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
-                       const char *fifos[], pthread_t *tid);
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

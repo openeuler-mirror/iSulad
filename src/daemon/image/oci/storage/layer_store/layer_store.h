@@ -18,7 +18,7 @@
 #include <stdint.h>
 
 #include "storage.h"
-#include "console.h"
+#include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {

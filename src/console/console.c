@@ -28,25 +28,6 @@
 #include "utils.h"
 #include "constants.h"
 
-static ssize_t fifo_write_function(void *context, const void *data, size_t len)
-{
-    ssize_t ret;
-    int fd;
-
-    fd = *(int *)context;
-    ret = util_write_nointr(fd, data, len);
-    // Ignore EAGAIN to prevent hang, do not report error
-    if (errno == EAGAIN) {
-        return (ssize_t)len;
-    }
-
-    if ((ret <= 0) || (ret != (ssize_t)len)) {
-        ERROR("Failed to write %d: %s", fd, strerror(errno));
-        return -1;
-    }
-    return ret;
-}
-
 static ssize_t fd_write_function(void *context, const void *data, size_t len)
 {
     ssize_t ret;
@@ -59,8 +40,7 @@ static ssize_t fd_write_function(void *context, const void *data, size_t len)
 }
 
 /* console cb tty fifoin */
-static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdata,
-                                            struct epoll_descr *descr)
+static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
     struct tty_state *ts = cbdata;
     char c;
@@ -103,7 +83,6 @@ static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdat
 out:
     return ret;
 }
-
 
 static int console_writer_write_data(const struct io_write_wrapper *writer, const char *buf, ssize_t len)
 {
@@ -178,10 +157,8 @@ out:
 }
 
 /* console fifo name */
-int console_fifo_name(const char *rundir, const char *subpath,
-                      const char *stdflag,
-                      char *fifo_name, size_t fifo_name_sz,
-                      char *fifo_path, size_t fifo_path_sz, bool do_mkdirp)
+int console_fifo_name(const char *rundir, const char *subpath, const char *stdflag, char *fifo_name,
+                      size_t fifo_name_sz, char *fifo_path, size_t fifo_path_sz, bool do_mkdirp)
 {
     int ret = 0;
     int nret = 0;
@@ -264,8 +241,7 @@ int console_fifo_open(const char *fifo_path, int *fdout, int flags)
 
     fd = util_open(fifo_path, O_RDONLY | O_NONBLOCK, (mode_t)0);
     if (fd < 0) {
-        ERROR("Failed to open fifo %s to send message: %s.", fifo_path,
-              strerror(errno));
+        ERROR("Failed to open fifo %s to send message: %s.", fifo_path, strerror(errno));
         return -1;
     }
 
@@ -356,8 +332,8 @@ static void client_console_tty_state_close(struct epoll_descr *descr, const stru
 /* read stdinfd, write fifoinfd */
 /* read fifooutfd, write stdoutfd */
 /* read stderrfd, write stderrfd */
-int client_console_loop(int stdinfd, int stdoutfd, int stderrfd,
-                        int fifoinfd, int fifooutfd, int fifoerrfd, int tty_exit, bool tty)
+int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoinfd, int fifooutfd, int fifoerrfd,
+                             int tty_exit, bool tty)
 {
     int ret;
     struct epoll_descr descr;
@@ -430,7 +406,7 @@ err_out:
 }
 
 /* console loop copy */
-static int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper *writers, size_t len)
+int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper *writers, size_t len)
 {
     int ret = 0;
     size_t i = 0;
@@ -489,199 +465,3 @@ err_out:
     free(ts);
     return ret;
 }
-
-struct io_copy_thread_arg {
-    struct io_copy_arg *copy_arg;
-    bool detach;
-    size_t len;
-    int sync_fd;
-    sem_t wait_sem;
-};
-
-static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds, struct io_write_wrapper **writers)
-{
-    size_t i;
-
-    if (len > SIZE_MAX / sizeof(struct io_write_wrapper)) {
-        ERROR("Invalid arguments");
-        return -1;
-    }
-    *srcfds = util_common_calloc_s(sizeof(int) * len);
-    if (*srcfds == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    *infds = util_common_calloc_s(sizeof(int) * len);
-    if (*infds == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    for (i = 0; i < len; i++) {
-        (*infds)[i] = -1;
-    }
-    *outfds = util_common_calloc_s(sizeof(int) * len);
-    if (*outfds == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    for (i = 0; i < len; i++) {
-        (*outfds)[i] = -1;
-    }
-
-    *writers = util_common_calloc_s(sizeof(struct io_write_wrapper) * len);
-    if (*writers == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    return 0;
-}
-
-static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds, int *srcfds)
-{
-    size_t i;
-
-    for (i = 0; i < len; i++) {
-        if (copy_arg[i].srctype == IO_FIFO) {
-            if (console_fifo_open((const char *)copy_arg[i].src, &(infds[i]), O_RDONLY | O_NONBLOCK)) {
-                ERROR("failed to open console fifo.");
-                return -1;
-            }
-            srcfds[i] = infds[i];
-        } else if (copy_arg[i].srctype == IO_FD) {
-            srcfds[i] = *(int *)(copy_arg[i].src);
-        } else {
-            ERROR("Got invalid src fd type");
-            return -1;
-        }
-    }
-    return 0;
-}
-
-static int io_copy_make_dstfds(size_t len, struct io_copy_arg *copy_arg, int *outfds,
-                               struct io_write_wrapper *writers)
-{
-    size_t i;
-
-    for (i = 0; i < len; i++) {
-        if (copy_arg[i].dsttype == IO_FIFO) {
-            if (console_fifo_open_withlock((const char *)copy_arg[i].dst, &outfds[i], O_RDWR | O_NONBLOCK)) {
-                ERROR("Failed to open console fifo.");
-                return -1;
-            }
-            writers[i].context = &outfds[i];
-            writers[i].write_func = fifo_write_function;
-        } else if (copy_arg[i].dsttype == IO_FD) {
-            writers[i].context = copy_arg[i].dst;
-            writers[i].write_func = fd_write_function;
-        } else if (copy_arg[i].dsttype == IO_FUNC) {
-            struct io_write_wrapper *io_write = copy_arg[i].dst;
-            writers[i].context = io_write->context;
-            writers[i].write_func = io_write->write_func;
-            writers[i].close_func = io_write->close_func;
-        } else {
-            ERROR("Got invalid dst fd type");
-            return -1;
-        }
-    }
-    return 0;
-}
-
-static void io_copy_thread_cleanup(struct io_write_wrapper *writers, struct io_copy_thread_arg *thread_arg,
-                                   int *infds, int *outfds, int *srcfds, size_t len)
-{
-    size_t i = 0;
-    for (i = 0; i < len; i++) {
-        if (writers != NULL && writers[i].close_func != NULL) {
-            (void)writers[i].close_func(writers[i].context, NULL);
-        }
-    }
-    free(srcfds);
-    for (i = 0; i < len; i++) {
-        if ((infds != NULL) && (infds[i] >= 0)) {
-            console_fifo_close(infds[i]);
-        }
-        if ((outfds != NULL) && (outfds[i] >= 0)) {
-            console_fifo_close(outfds[i]);
-        }
-    }
-    free(infds);
-    free(outfds);
-    free(writers);
-}
-
-static void *io_copy_thread_main(void *arg)
-{
-    int ret = -1;
-    struct io_copy_thread_arg *thread_arg = (struct io_copy_thread_arg *)arg;
-    struct io_copy_arg *copy_arg = thread_arg->copy_arg;
-    size_t len = 0;
-    int *infds = NULL;
-    int *outfds = NULL; // recored fds to close
-    int *srcfds = NULL;
-    struct io_write_wrapper *writers = NULL;
-    int sync_fd = thread_arg->sync_fd;
-    bool posted = false;
-
-    if (thread_arg->detach) {
-        ret = pthread_detach(pthread_self());
-        if (ret != 0) {
-            CRIT("Set thread detach fail");
-            goto err;
-        }
-    }
-
-    (void)prctl(PR_SET_NAME, "IoCopy");
-
-    len = thread_arg->len;
-    if (io_copy_init_fds(len, &infds, &outfds, &srcfds, &writers) != 0) {
-        goto err;
-    }
-
-    if (io_copy_make_srcfds(len, copy_arg, infds, srcfds) != 0) {
-        goto err;
-    }
-
-    if (io_copy_make_dstfds(len, copy_arg, outfds, writers) != 0) {
-        goto err;
-    }
-
-    sem_post(&thread_arg->wait_sem);
-    posted = true;
-    (void)console_loop_io_copy(sync_fd, srcfds, writers, len);
-err:
-    if (!posted) {
-        sem_post(&thread_arg->wait_sem);
-    }
-    io_copy_thread_cleanup(writers, thread_arg, infds, outfds, srcfds, len);
-    return NULL;
-}
-
-int start_io_copy_thread(int sync_fd, bool detach, struct io_copy_arg *copy_arg, size_t len, pthread_t *tid)
-{
-    int res = 0;
-    struct io_copy_thread_arg thread_arg;
-
-    if (copy_arg == NULL || len == 0) {
-        return 0;
-    }
-
-    thread_arg.detach = detach;
-    thread_arg.copy_arg = copy_arg;
-    thread_arg.len = len;
-    thread_arg.sync_fd = sync_fd;
-    if (sem_init(&thread_arg.wait_sem, 0, 0)) {
-        ERROR("Failed to init start semaphore");
-        return -1;
-    }
-
-    res = pthread_create(tid, NULL, io_copy_thread_main, (void *)(&thread_arg));
-    if (res != 0) {
-        CRIT("Thread creation failed");
-        return -1;
-    }
-    sem_wait(&thread_arg.wait_sem);
-    sem_destroy(&thread_arg.wait_sem);
-    return 0;
-}
-

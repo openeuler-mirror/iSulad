@@ -9,36 +9,34 @@
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
  * Author: lifeng
- * Create: 2020-03-14
- * Description: provide tar function definition
- *********************************************************************************/
-#ifndef __ISULAD_ARCHIVE_H_
-#define __ISULAD_ARCHIVE_H_
+ * Create: 2020-06-28
+ * Description: provide console definition
+ ******************************************************************************/
+#ifndef _IO_WRAPPER_H
+#define _IO_WRAPPER_H
 
 #include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-
-#include <sys/types.h>
-#include <sys/wait.h>
-#include "io_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum {
-    NONE_WHITEOUT_FORMATE = 0,
-    OVERLAY_WHITEOUT_FORMATE = 1,
-} whiteout_format_type;
+typedef ssize_t (*io_write_func_t)(void *context, const void *data, size_t len);
+typedef int (*io_close_func_t)(void *context, char **err);
 
-struct archive_options {
-    whiteout_format_type whiteout_format;
+struct io_write_wrapper {
+    void *context;
+    io_write_func_t write_func;
+    io_close_func_t close_func;
 };
 
-int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options);
+typedef ssize_t (*io_read_func_t)(void *context, void *buf, size_t len);
 
-int archive_uncompress(const char *src, const char *dest, char **errmsg);
+struct io_read_wrapper {
+    void *context;
+    io_read_func_t read;
+    io_close_func_t close;
+};
 
 #ifdef __cplusplus
 }

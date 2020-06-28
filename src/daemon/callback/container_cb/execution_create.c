@@ -29,7 +29,7 @@
 #include <malloc.h>
 
 #include "isula_libutils/log.h"
-#include "console.h"
+#include "io_wrapper.h"
 #include "isulad_config.h"
 #include "config.h"
 #include "specs.h"
