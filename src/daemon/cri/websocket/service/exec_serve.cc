@@ -35,7 +35,7 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token, int read_pipe_
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
 
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
         return -1;
     }

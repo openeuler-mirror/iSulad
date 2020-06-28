@@ -42,7 +42,7 @@ std::string Constants::RESOLV_CONF_PATH { "/etc/resolv.conf" };
 } // namespace CRIRuntimeService
 CRIRuntimeServiceImpl::CRIRuntimeServiceImpl()
 {
-    m_cb = get_service_callback();
+    m_cb = get_service_executor();
     if (m_cb == nullptr) {
         ERROR("Get callback failed");
     }
@@ -112,7 +112,8 @@ void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::Runtime
     INFO("iSulad cri received runtime config: %s", config.network_config().pod_cidr().c_str());
     if (m_pluginManager != nullptr && config.has_network_config() && !(config.network_config().pod_cidr().empty())) {
         std::map<std::string, std::string> events;
-        events[CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR] = config.network_config().pod_cidr();
+        events[CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR] =
+            config.network_config().pod_cidr();
         m_pluginManager->Event(CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE, events);
     }
     return;
@@ -184,4 +185,3 @@ cleanup:
     free_container_inspect(inspect_data);
     return result;
 }
-

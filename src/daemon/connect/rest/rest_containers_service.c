@@ -418,7 +418,7 @@ out:
 static void rest_create_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_create_response *cresponse = NULL;
     container_create_request *crequest = NULL;
 
@@ -427,7 +427,7 @@ static void rest_create_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.create == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -453,7 +453,7 @@ out:
 static void rest_start_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_start_response *cresponse = NULL;
     container_start_request *crequest = NULL;
 
@@ -462,7 +462,7 @@ static void rest_start_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.start == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -488,7 +488,7 @@ out:
 static void rest_wait_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_wait_request *crequest = NULL;
     container_wait_response *cresponse = NULL;
 
@@ -497,7 +497,7 @@ static void rest_wait_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.wait == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -551,7 +551,7 @@ out:
 static void rest_stop_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_stop_request *crequest = NULL;
     container_stop_response *cresponse = NULL;
 
@@ -560,7 +560,7 @@ static void rest_stop_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.stop == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -613,7 +613,7 @@ out:
 static void rest_restart_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_restart_request *crequest = NULL;
     container_restart_response *cresponse = NULL;
 
@@ -622,7 +622,7 @@ static void rest_restart_cb(evhtp_request_t *req, void *arg)
         return;
     }
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.restart == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -670,7 +670,7 @@ out:
 static void rest_version_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_version_request *crequest = NULL;
     container_version_response *cresponse = NULL;
 
@@ -679,7 +679,7 @@ static void rest_version_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.version == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -733,7 +733,7 @@ out:
 static void rest_update_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_update_request *container_req = NULL;
     container_update_response *container_res = NULL;
 
@@ -742,7 +742,7 @@ static void rest_update_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.update == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -795,7 +795,7 @@ out:
 static void rest_kill_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_kill_request *crequest = NULL;
     container_kill_response *cresponse = NULL;
 
@@ -804,7 +804,7 @@ static void rest_kill_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.kill == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -859,7 +859,7 @@ out:
 static void rest_container_inspect_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_inspect_request *crequest = NULL;
     container_inspect_response *cresponse = NULL;
 
@@ -868,7 +868,7 @@ static void rest_container_inspect_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.inspect == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -922,7 +922,7 @@ out:
 static void rest_exec_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_exec_request *crequest = NULL;
     container_exec_response *cresponse = NULL;
 
@@ -931,7 +931,7 @@ static void rest_exec_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || !cb->container.exec) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -984,7 +984,7 @@ out:
 static void rest_remove_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_delete_request *crequest = NULL;
     container_delete_response *cresponse = NULL;
 
@@ -993,7 +993,7 @@ static void rest_remove_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.remove == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -1019,7 +1019,7 @@ out:
 static void rest_list_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_list_request *crequest = NULL;
     container_list_response *cresponse = NULL;
 
@@ -1028,7 +1028,7 @@ static void rest_list_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.list == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -1104,4 +1104,3 @@ int rest_register_containers_handler(evhtp_t *htp)
     }
     return 0;
 }
-

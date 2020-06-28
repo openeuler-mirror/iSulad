@@ -59,7 +59,7 @@ int event_to_grpc(const struct isulad_events_format *event, Event *gevent)
 
     if (event->annotations_len != 0 && event->annotations != nullptr) {
         google::protobuf::Map<std::string, std::string> *map = gevent->mutable_annotations();
-        for (size_t i {0}; i < event->annotations_len; i++) {
+        for (size_t i { 0 }; i < event->annotations_len; i++) {
             char **elems = util_string_split_n(event->annotations[i], '=', 2);
             if (util_array_len((const char **)elems) != 2) {
                 ERROR("Invalid annotation info");
@@ -117,8 +117,7 @@ bool grpc_copy_from_container_write_function(void *writer, void *data)
     return gwriter->Write(gcopy);
 }
 
-static bool copy_to_container_data_from_grpc(struct isulad_copy_to_container_data *copy,
-                                             CopyToContainerRequest *gcopy)
+static bool copy_to_container_data_from_grpc(struct isulad_copy_to_container_data *copy, CopyToContainerRequest *gcopy)
 {
     size_t len = (size_t)gcopy->data().length();
     if (len > 0) {
@@ -151,7 +150,7 @@ bool grpc_copy_to_container_read_function(void *reader, void *data)
 Status ContainerServiceImpl::Version(ServerContext *context, const VersionRequest *request, VersionResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_version_request *container_req = nullptr;
     container_version_response *container_res = nullptr;
 
@@ -159,7 +158,7 @@ Status ContainerServiceImpl::Version(ServerContext *context, const VersionReques
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.version == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -187,7 +186,7 @@ Status ContainerServiceImpl::Version(ServerContext *context, const VersionReques
 Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *request, InfoResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     host_info_request *container_req = nullptr;
     host_info_response *container_res = nullptr;
 
@@ -195,7 +194,7 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.info == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -223,7 +222,7 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
 Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest *request, CreateResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_create_response *container_res = nullptr;
     container_create_request *container_req = nullptr;
 
@@ -231,7 +230,7 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest 
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.create == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -259,7 +258,7 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest 
 Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *request, StartResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_start_request *req = nullptr;
     container_start_response *res = nullptr;
 
@@ -267,7 +266,7 @@ Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *r
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.start == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -340,12 +339,12 @@ int grpc_start_stream_close(void *context, char **err)
 Status ContainerServiceImpl::RemoteStart(ServerContext *context,
                                          ServerReaderWriter<RemoteStartResponse, RemoteStartRequest> *stream)
 {
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_start_request *container_req = nullptr;
     container_start_response *container_res = nullptr;
     sem_t sem;
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.start == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -356,7 +355,8 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
     }
 
     if (sem_init(&sem, 0, 0) != 0) {
-        return grpc::Status(grpc::StatusCode::UNKNOWN, "Semaphore initialization failed");;
+        return grpc::Status(grpc::StatusCode::UNKNOWN, "Semaphore initialization failed");
+        ;
     }
 
     int read_pipe_fd[2];
@@ -416,7 +416,7 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
 Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *request, TopResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_top_request *req = nullptr;
     container_top_response *res = nullptr;
 
@@ -424,7 +424,7 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.top == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -452,7 +452,7 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
 Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *request, StopResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_stop_request *container_req = nullptr;
     container_stop_response *container_res = nullptr;
 
@@ -460,7 +460,7 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.stop == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -488,7 +488,7 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
 Status ContainerServiceImpl::Restart(ServerContext *context, const RestartRequest *request, RestartResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_restart_request *container_req = nullptr;
     container_restart_response *container_res = nullptr;
 
@@ -496,7 +496,7 @@ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartReques
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.restart == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -524,7 +524,7 @@ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartReques
 Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *request, KillResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_kill_request *container_req = nullptr;
     container_kill_response *container_res = nullptr;
 
@@ -532,7 +532,7 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.kill == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -560,7 +560,7 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
 Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest *request, DeleteResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_delete_request *container_req = nullptr;
     container_delete_response *container_res = nullptr;
 
@@ -568,7 +568,7 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest 
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.remove == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -596,7 +596,7 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest 
 Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *request, ExecResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
 
@@ -604,7 +604,7 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -662,8 +662,11 @@ ssize_t WriteExecStderrResponseToRemoteClient(void *context, const void *data, s
 class RemoteExecReceiveFromClientTask : public StoppableThread {
 public:
     RemoteExecReceiveFromClientTask() = default;
-    RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream,
-                                    int read_pipe_fd) : m_stream(stream), m_read_pipe_fd(read_pipe_fd) {}
+    RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream, int read_pipe_fd)
+        : m_stream(stream)
+        , m_read_pipe_fd(read_pipe_fd)
+    {
+    }
     ~RemoteExecReceiveFromClientTask() = default;
     void SetStream(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream)
     {
@@ -700,7 +703,7 @@ private:
 Status ContainerServiceImpl::RemoteExec(ServerContext *context,
                                         ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream)
 {
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_exec_request *container_req = nullptr;
     container_exec_response *container_res = nullptr;
 
@@ -708,7 +711,7 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.exec == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -774,11 +777,11 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
                                      InspectContainerResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_inspect_request *container_req = nullptr;
     container_inspect_response *container_res = nullptr;
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.inspect == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -811,7 +814,7 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
 Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *request, ListResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_list_request *container_req = nullptr;
     container_list_response *container_res = nullptr;
 
@@ -819,7 +822,7 @@ Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *req
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.list == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -887,15 +890,14 @@ int grpc_attach_stream_close(void *context, char **err)
     return ret;
 }
 
-Status ContainerServiceImpl::AttachInit(ServerContext *context, service_callback_t **cb,
-                                        container_attach_request **req, container_attach_response **res,
-                                        sem_t *sem_stderr, int pipefd[])
+Status ContainerServiceImpl::AttachInit(ServerContext *context, service_executor_t **cb, container_attach_request **req,
+                                        container_attach_response **res, sem_t *sem_stderr, int pipefd[])
 {
     auto status = GrpcServerTlsAuth::auth(context, "container_attach");
     if (!status.ok()) {
         return status;
     }
-    *cb = get_service_callback();
+    *cb = get_service_executor();
     if (*cb == nullptr || (*cb)->container.attach == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -912,7 +914,8 @@ Status ContainerServiceImpl::AttachInit(ServerContext *context, service_callback
 
     if (sem_init(sem_stderr, 0, 0) != 0) {
         free_container_attach_request(*req);
-        return grpc::Status(grpc::StatusCode::UNKNOWN, "Semaphore initialization failed");;
+        return grpc::Status(grpc::StatusCode::UNKNOWN, "Semaphore initialization failed");
+        ;
     }
 
     if ((pipe2(pipefd, O_NONBLOCK | O_CLOEXEC)) < 0) {
@@ -926,7 +929,7 @@ Status ContainerServiceImpl::AttachInit(ServerContext *context, service_callback
 
 Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<AttachResponse, AttachRequest> *stream)
 {
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_attach_request *container_req = nullptr;
     container_attach_response *container_res = nullptr;
     sem_t sem_stderr;
@@ -988,7 +991,7 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
 Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *request, PauseResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_pause_request *container_req = nullptr;
     container_pause_response *container_res = nullptr;
 
@@ -996,7 +999,7 @@ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *r
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.pause == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1024,7 +1027,7 @@ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *r
 Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest *request, ResumeResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_resume_request *container_req = nullptr;
     container_resume_response *container_res = nullptr;
 
@@ -1032,7 +1035,7 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest 
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.resume == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1060,7 +1063,7 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest 
 Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest *request, ExportResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_export_request *container_req = nullptr;
     container_export_response *container_res = nullptr;
 
@@ -1068,7 +1071,7 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.export_rootfs == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1093,11 +1096,10 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest 
     return Status::OK;
 }
 
-Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest *request,
-                                    RenameResponse *reply)
+Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest *request, RenameResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     struct isulad_container_rename_request *isuladreq = nullptr;
     struct isulad_container_rename_response *isuladres = nullptr;
 
@@ -1106,7 +1108,7 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
         return status;
     }
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.rename == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1131,11 +1133,10 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest 
     return Status::OK;
 }
 
-Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest *request,
-                                    ResizeResponse *reply)
+Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest *request, ResizeResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     struct isulad_container_resize_request *isuladreq = nullptr;
     struct isulad_container_resize_response *isuladres = nullptr;
 
@@ -1144,7 +1145,7 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest 
         return status;
     }
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.resize == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1172,7 +1173,7 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest 
 Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest *request, UpdateResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_update_request *container_req = nullptr;
     container_update_response *container_res = nullptr;
 
@@ -1180,7 +1181,7 @@ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest 
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.update == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1208,7 +1209,7 @@ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest 
 Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *request, StatsResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_stats_request *container_req = nullptr;
     container_stats_response *container_res = nullptr;
 
@@ -1216,7 +1217,7 @@ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *r
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.stats == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1244,7 +1245,7 @@ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *r
 Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *request, WaitResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_wait_request *container_req = nullptr;
     container_wait_response *container_res = nullptr;
 
@@ -1252,11 +1253,10 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.wait == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
-
 
     tret = wait_request_from_grpc(request, &container_req);
     if (tret != 0) {
@@ -1281,7 +1281,7 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
 Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest *request, ServerWriter<Event> *writer)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     isulad_events_request *isuladreq = nullptr;
     stream_func_wrapper stream = { 0 };
 
@@ -1289,7 +1289,7 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest 
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.events == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1318,14 +1318,14 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
                                                ServerWriter<CopyFromContainerResponse> *writer)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     isulad_copy_from_container_request *isuladreq = nullptr;
 
     auto status = GrpcServerTlsAuth::auth(context, "container_archive");
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.copy_from_container == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1354,20 +1354,20 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
     return Status::OK;
 }
 
-Status ContainerServiceImpl::CopyToContainer(
-    ServerContext *context,
-    ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream)
+Status
+ContainerServiceImpl::CopyToContainer(ServerContext *context,
+                                      ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream)
 
 {
     int ret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     container_copy_to_request *isuladreq = nullptr;
 
     auto status = GrpcServerTlsAuth::auth(context, "container_archive");
     if (!status.ok()) {
         return status;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.copy_to_container == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1461,11 +1461,11 @@ bool grpc_logs_write_function(void *writer, void *data)
     return gwriter->Write(gresponse);
 }
 
-Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest* request,
-                                  ServerWriter<LogsResponse>* writer)
+Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest *request,
+                                  ServerWriter<LogsResponse> *writer)
 {
     int ret = 0;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     struct isulad_logs_request *isulad_request = nullptr;
     struct isulad_logs_response *isulad_response = nullptr;
     stream_func_wrapper stream = { 0 };
@@ -1475,7 +1475,7 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest* req
         return status;
     }
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->container.logs == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -1504,4 +1504,3 @@ Status ContainerServiceImpl::Logs(ServerContext *context, const LogsRequest* req
     }
     return Status::OK;
 }
-

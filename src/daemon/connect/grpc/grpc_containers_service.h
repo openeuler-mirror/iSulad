@@ -199,7 +199,7 @@ private:
     int attach_request_from_stream(const std::multimap<grpc::string_ref, grpc::string_ref> &metadata,
                                    container_attach_request **request);
 
-    Status AttachInit(ServerContext *context, service_callback_t **cb, container_attach_request **req,
+    Status AttachInit(ServerContext *context, service_executor_t **cb, container_attach_request **req,
                       container_attach_response **res, sem_t *sem_stderr, int pipefd[]);
 
     void add_attach_trailing_metadata(ServerContext *context, container_attach_response *response);

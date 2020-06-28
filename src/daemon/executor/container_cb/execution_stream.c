@@ -295,7 +295,8 @@ err_out:
     return NULL;
 }
 
-static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[], defs_process_user *puser,
+static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[],
+                          defs_process_user *puser,
                           const container_exec_request *request, int *exit_code)
 {
     int ret = 0;

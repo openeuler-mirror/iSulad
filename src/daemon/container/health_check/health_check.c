@@ -513,7 +513,7 @@ void *health_check_run(void *arg)
     struct io_write_wrapper Stdoutctx = { 0 };
     struct io_write_wrapper Stderrctx = { 0 };
     container_t *cont = NULL;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     container_exec_request *container_req = NULL;
     container_exec_response *container_res = NULL;
     defs_health_log_element *result = NULL;
@@ -540,7 +540,7 @@ void *health_check_run(void *arg)
         goto out;
     }
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->container.exec == NULL) {
         ERROR("Failed to get service callback function");
         goto out;

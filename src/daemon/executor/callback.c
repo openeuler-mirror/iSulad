@@ -17,19 +17,18 @@
 #include "image_cb.h"
 #include "execution.h"
 
-service_callback_t g_isulad_servicecallback;
+service_executor_t g_isulad_service_executor;
 
 /* service callback */
 int service_callback_init(void)
 {
-    container_callback_init(&g_isulad_servicecallback.container);
-    image_callback_init(&g_isulad_servicecallback.image);
+    container_callback_init(&g_isulad_service_executor.container);
+    image_callback_init(&g_isulad_service_executor.image);
     return 0;
 }
 
 /* get service callback */
-service_callback_t *get_service_callback(void)
+service_executor_t *get_service_executor(void)
 {
-    return &g_isulad_servicecallback;
+    return &g_isulad_service_executor;
 }
-

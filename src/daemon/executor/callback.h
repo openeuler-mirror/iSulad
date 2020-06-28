@@ -177,11 +177,11 @@ typedef struct {
     service_container_callback_t container;
     service_image_callback_t image;
     service_health_callback_t health;
-} service_callback_t;
+} service_executor_t;
 
 int service_callback_init(void);
 
-service_callback_t *get_service_callback(void);
+service_executor_t *get_service_executor(void);
 
 #ifdef __cplusplus
 }

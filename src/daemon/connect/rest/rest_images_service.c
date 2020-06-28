@@ -21,8 +21,7 @@
 #include "rest_images_service.h"
 
 /* image load request check */
-static int image_load_request_check(
-    image_load_image_request *req)
+static int image_load_request_check(image_load_image_request *req)
 {
     if (req->type == NULL) {
         DEBUG("recive NULL Request runtime");
@@ -38,8 +37,7 @@ static int image_load_request_check(
 }
 
 /* image load request from rest */
-static int image_load_request_from_rest(evhtp_request_t *req,
-                                        image_load_image_request **crequest)
+static int image_load_request_from_rest(evhtp_request_t *req, image_load_image_request **crequest)
 {
     size_t body_len;
     char *body = NULL;
@@ -69,8 +67,7 @@ out:
 }
 
 /* evhtp send image load repsponse */
-static void evhtp_send_image_load_repsponse(evhtp_request_t *req,
-                                            image_load_image_response *response, int rescode)
+static void evhtp_send_image_load_repsponse(evhtp_request_t *req, image_load_image_response *response, int rescode)
 {
     parser_error err = NULL;
     char *responsedata = NULL;
@@ -90,8 +87,7 @@ out:
 }
 
 /* image list request from rest */
-static int image_list_request_from_rest(evhtp_request_t *req,
-                                        image_list_images_request **crequest)
+static int image_list_request_from_rest(evhtp_request_t *req, image_list_images_request **crequest)
 {
     char *body = NULL;
     int ret = 0;
@@ -117,8 +113,7 @@ out:
 }
 
 /* evhtp send image list repsponse */
-static void evhtp_send_image_list_repsponse(evhtp_request_t *req,
-                                            image_list_images_response *response, int rescode)
+static void evhtp_send_image_list_repsponse(evhtp_request_t *req, image_list_images_response *response, int rescode)
 {
     parser_error err = NULL;
     char *responsedata = NULL;
@@ -138,8 +133,7 @@ out:
 }
 
 /* image delete request check */
-static int image_delete_request_check(
-    image_delete_image_request *req)
+static int image_delete_request_check(image_delete_image_request *req)
 {
     int ret = 0;
 
@@ -154,8 +148,7 @@ out:
 }
 
 /* image delete request from rest */
-static int image_delete_request_from_rest(evhtp_request_t *req,
-                                          image_delete_image_request **crequest)
+static int image_delete_request_from_rest(evhtp_request_t *req, image_delete_image_request **crequest)
 {
     parser_error err = NULL;
     int ret = 0;
@@ -185,8 +178,7 @@ out:
 }
 
 /* evhtp send image delete repsponse */
-static void evhtp_send_image_delete_repsponse(evhtp_request_t *req,
-                                              image_delete_image_response *response, int rescode)
+static void evhtp_send_image_delete_repsponse(evhtp_request_t *req, image_delete_image_response *response, int rescode)
 {
     parser_error err = NULL;
     char *responsedata = NULL;
@@ -219,8 +211,7 @@ static int image_inspect_request_check(void *req)
 }
 
 /* image inspect request from rest */
-static int image_inspect_request_from_rest(const evhtp_request_t *req,
-                                           image_inspect_request **crequest)
+static int image_inspect_request_from_rest(const evhtp_request_t *req, image_inspect_request **crequest)
 {
     parser_error err = NULL;
     int ret = 0;
@@ -250,8 +241,7 @@ out:
 }
 
 /* evhtp send image inspect repsponse */
-static void evhtp_send_image_inspect_repsponse(evhtp_request_t *req,
-                                               image_inspect_response *response, int rescode)
+static void evhtp_send_image_inspect_repsponse(evhtp_request_t *req, image_inspect_response *response, int rescode)
 {
     parser_error err = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
@@ -282,7 +272,7 @@ out:
 static void rest_image_load_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     image_load_image_request *crequest = NULL;
     image_load_image_response *cresponse = NULL;
 
@@ -291,7 +281,7 @@ static void rest_image_load_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->image.load == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -317,7 +307,7 @@ out:
 static void rest_image_list_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     image_list_images_request *crequest = NULL;
     image_list_images_response *cresponse = NULL;
 
@@ -326,7 +316,7 @@ static void rest_image_list_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->image.list == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -352,7 +342,7 @@ out:
 static void rest_image_delete_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     image_delete_image_request *crequest = NULL;
     image_delete_image_response *cresponse = NULL;
 
@@ -361,7 +351,7 @@ static void rest_image_delete_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->image.remove == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -387,7 +377,7 @@ out:
 static void rest_image_inspect_cb(evhtp_request_t *req, void *arg)
 {
     int tret;
-    service_callback_t *cb = NULL;
+    service_executor_t *cb = NULL;
     image_inspect_request *crequest = NULL;
     image_inspect_response *cresponse = NULL;
 
@@ -396,7 +386,7 @@ static void rest_image_inspect_cb(evhtp_request_t *req, void *arg)
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
         return;
     }
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == NULL || cb->image.inspect == NULL) {
         ERROR("Unimplemented callback");
         evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
@@ -423,17 +413,17 @@ int rest_register_images_handler(evhtp_t *htp)
 {
     if (evhtp_set_cb(htp, ImagesServiceLoad, rest_image_load_cb, NULL) == NULL) {
         ERROR("Failed to register image load callback");
-        return  -1;
+        return -1;
     }
 
     if (evhtp_set_cb(htp, ImagesServiceList, rest_image_list_cb, NULL) == NULL) {
         ERROR("Failed to register image list callback");
-        return  -1;
+        return -1;
     }
 
     if (evhtp_set_cb(htp, ImagesServiceDelete, rest_image_delete_cb, NULL) == NULL) {
         ERROR("Failed to register image list callback");
-        return  -1;
+        return -1;
     }
 
     if (evhtp_set_cb(htp, ImagesServiceInspect, rest_image_inspect_cb, NULL) == NULL) {
@@ -443,4 +433,3 @@ int rest_register_images_handler(evhtp_t *htp)
 
     return 0;
 }
-

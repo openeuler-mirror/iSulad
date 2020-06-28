@@ -13,12 +13,10 @@
  * Description: provide container attach functions
  ******************************************************************************/
 
-
 #include "attach_serve.h"
 #include "utils.h"
 
-int AttachServe::Execute(struct lws *wsi, const std::string &token,
-                         int read_pipe_fd)
+int AttachServe::Execute(struct lws *wsi, const std::string &token, int read_pipe_fd)
 {
     RequestCache *cache = RequestCache::GetInstance();
     bool found = false;
@@ -36,7 +34,7 @@ int AttachServe::Execute(struct lws *wsi, const std::string &token,
     container_attach_request *container_req = nullptr;
     container_attach_response *container_res = nullptr;
 
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->container.attach == nullptr) {
         return -1;
     }
@@ -51,8 +49,8 @@ int AttachServe::Execute(struct lws *wsi, const std::string &token,
     stringWriter.write_func = WsWriteStdoutToClient;
     stringWriter.close_func = closeWsConnect;
     container_req->attach_stderr = false;
-    int ret = cb->container.attach(container_req, &container_res,
-                                   container_req->attach_stdin ? read_pipe_fd : -1, &stringWriter, nullptr);
+    int ret = cb->container.attach(container_req, &container_res, container_req->attach_stdin ? read_pipe_fd : -1,
+                                   &stringWriter, nullptr);
     free_container_attach_request(container_req);
     free_container_attach_response(container_res);
 
@@ -67,8 +65,7 @@ int AttachServe::Execute(struct lws *wsi, const std::string &token,
     return ret;
 }
 
-int AttachServe::RequestFromCri(const runtime::v1alpha2::AttachRequest *grequest,
-                                container_attach_request **request)
+int AttachServe::RequestFromCri(const runtime::v1alpha2::AttachRequest *grequest, container_attach_request **request)
 {
     container_attach_request *tmpreq = nullptr;
 
@@ -89,5 +86,3 @@ int AttachServe::RequestFromCri(const runtime::v1alpha2::AttachRequest *grequest
 
     return 0;
 }
-
-

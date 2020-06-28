@@ -4,7 +4,7 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} daemon_top_srcs)
 add_subdirectory(runtime)
 add_subdirectory(image)
 add_subdirectory(plugin)
-add_subdirectory(callback)
+add_subdirectory(executor)
 add_subdirectory(spec)
 add_subdirectory(container)
 add_subdirectory(connect)
@@ -17,7 +17,7 @@ set(local_daemon_srcs
     ${RUNTIME_SRCS}
     ${IMAGE_SRCS}
     ${PLUGIN_SRCS}
-    ${CALLBACK_SRCS}
+    ${EXECUTOR_SRCS}
     ${SPEC_SRCS}
     ${MANAGER_SRCS}
     ${SERVER_CONNECT_SRCS}
@@ -31,7 +31,7 @@ set(local_daemon_incs
     ${RUNTIME_INCS}
     ${IMAGE_INCS}
     ${PLUGIN_INCS}
-    ${CALLBACK_INCS}
+    ${EXECUTOR_INCS}
     ${SPEC_INCS}
     ${MANAGER_INCS}
     ${SERVER_CONNECT_INCS}

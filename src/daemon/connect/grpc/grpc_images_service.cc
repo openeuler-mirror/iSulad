@@ -29,8 +29,8 @@ int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *gre
                                                     image_list_images_request **request)
 {
     size_t len = 0;
-    image_list_images_request *tmpreq = (image_list_images_request *)util_common_calloc_s(
-                                            sizeof(image_list_images_request));
+    image_list_images_request *tmpreq =
+        (image_list_images_request *)util_common_calloc_s(sizeof(image_list_images_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -64,8 +64,8 @@ int ImagesServiceImpl::image_list_request_from_grpc(const ListImagesRequest *gre
     }
 
     for (auto &iter : grequest->filters()) {
-        tmpreq->filters->values[tmpreq->filters->len] = (json_map_string_bool *)
-                                                        util_common_calloc_s(sizeof(json_map_string_bool));
+        tmpreq->filters->values[tmpreq->filters->len] =
+            (json_map_string_bool *)util_common_calloc_s(sizeof(json_map_string_bool));
         if (tmpreq->filters->values[tmpreq->filters->len] == nullptr) {
             ERROR("Out of memory");
             goto cleanup;
@@ -135,8 +135,8 @@ int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *r
 int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *grequest,
                                                       image_delete_image_request **request)
 {
-    image_delete_image_request *tmpreq = (image_delete_image_request *)util_common_calloc_s(
-                                             sizeof(image_delete_image_request));
+    image_delete_image_request *tmpreq =
+        (image_delete_image_request *)util_common_calloc_s(sizeof(image_delete_image_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -151,11 +151,9 @@ int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *
     return 0;
 }
 
-int ImagesServiceImpl::image_tag_request_from_grpc(const TagImageRequest *grequest,
-                                                   image_tag_image_request **request)
+int ImagesServiceImpl::image_tag_request_from_grpc(const TagImageRequest *grequest, image_tag_image_request **request)
 {
-    image_tag_image_request *tmpreq = (image_tag_image_request *)util_common_calloc_s(
-                                          sizeof(image_tag_image_request));
+    image_tag_image_request *tmpreq = (image_tag_image_request *)util_common_calloc_s(sizeof(image_tag_image_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -172,11 +170,9 @@ int ImagesServiceImpl::image_tag_request_from_grpc(const TagImageRequest *greque
     return 0;
 }
 
-int ImagesServiceImpl::image_import_request_from_grpc(
-    const ImportRequest *grequest, image_import_request **request)
+int ImagesServiceImpl::image_import_request_from_grpc(const ImportRequest *grequest, image_import_request **request)
 {
-    image_import_request *tmpreq = (image_import_request *)util_common_calloc_s(
-                                       sizeof(image_import_request));
+    image_import_request *tmpreq = (image_import_request *)util_common_calloc_s(sizeof(image_import_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -193,11 +189,11 @@ int ImagesServiceImpl::image_import_request_from_grpc(
     return 0;
 }
 
-int ImagesServiceImpl::image_load_request_from_grpc(
-    const LoadImageRequest *grequest, image_load_image_request **request)
+int ImagesServiceImpl::image_load_request_from_grpc(const LoadImageRequest *grequest,
+                                                    image_load_image_request **request)
 {
-    image_load_image_request *tmpreq = (image_load_image_request *)util_common_calloc_s(
-                                           sizeof(image_load_image_request));
+    image_load_image_request *tmpreq =
+        (image_load_image_request *)util_common_calloc_s(sizeof(image_load_image_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -219,8 +215,7 @@ int ImagesServiceImpl::image_load_request_from_grpc(
 
 int ImagesServiceImpl::inspect_request_from_grpc(const InspectImageRequest *grequest, image_inspect_request **request)
 {
-    image_inspect_request *tmpreq = (image_inspect_request *)util_common_calloc_s(
-                                        sizeof(image_inspect_request));
+    image_inspect_request *tmpreq = (image_inspect_request *)util_common_calloc_s(sizeof(image_inspect_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -237,8 +232,7 @@ int ImagesServiceImpl::inspect_request_from_grpc(const InspectImageRequest *greq
     return 0;
 }
 
-int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *response,
-                                                InspectImageResponse *gresponse)
+int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
@@ -261,7 +255,7 @@ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *
     if (!status.ok()) {
         return status;
     }
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->image.list == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -294,7 +288,7 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
     if (!status.ok()) {
         return status;
     }
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->image.remove == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -327,7 +321,7 @@ Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *req
     if (!status.ok()) {
         return status;
     }
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->image.tag == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -354,8 +348,7 @@ Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *req
     return Status::OK;
 }
 
-int ImagesServiceImpl::import_response_to_grpc(const image_import_response *response,
-                                               ImportResponse *gresponse)
+int ImagesServiceImpl::import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
@@ -378,7 +371,7 @@ Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *re
     if (!status.ok()) {
         return status;
     }
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->image.import == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -412,7 +405,7 @@ Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *r
     if (!status.ok()) {
         return status;
     }
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->image.load == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -444,7 +437,7 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
                                   InspectImageResponse *reply)
 {
     int ret, tret;
-    service_callback_t *cb = nullptr;
+    service_executor_t *cb = nullptr;
     image_inspect_request *image_req = nullptr;
     image_inspect_response *image_res = nullptr;
 
@@ -453,7 +446,7 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
         return status;
     }
 
-    cb = get_service_callback();
+    cb = get_service_executor();
     if (cb == nullptr || cb->image.inspect == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -478,11 +471,9 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
     return Status::OK;
 }
 
-int ImagesServiceImpl::image_login_request_from_grpc(
-    const LoginRequest *grequest, image_login_request **request)
+int ImagesServiceImpl::image_login_request_from_grpc(const LoginRequest *grequest, image_login_request **request)
 {
-    image_login_request *tmpreq = (image_login_request *)util_common_calloc_s(
-                                      sizeof(image_login_request));
+    image_login_request *tmpreq = (image_login_request *)util_common_calloc_s(sizeof(image_login_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -505,11 +496,9 @@ int ImagesServiceImpl::image_login_request_from_grpc(
     return 0;
 }
 
-int ImagesServiceImpl::image_logout_request_from_grpc(
-    const LogoutRequest *grequest, image_logout_request **request)
+int ImagesServiceImpl::image_logout_request_from_grpc(const LogoutRequest *grequest, image_logout_request **request)
 {
-    image_logout_request *tmpreq = (image_logout_request *)util_common_calloc_s(
-                                       sizeof(image_logout_request));
+    image_logout_request *tmpreq = (image_logout_request *)util_common_calloc_s(sizeof(image_logout_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -532,7 +521,7 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
     if (!status.ok()) {
         return status;
     }
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->image.login == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -566,7 +555,7 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
     if (!status.ok()) {
         return status;
     }
-    service_callback_t *cb = get_service_callback();
+    service_executor_t *cb = get_service_executor();
     if (cb == nullptr || cb->image.logout == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }
@@ -593,5 +582,3 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
 
     return Status::OK;
 }
-
-

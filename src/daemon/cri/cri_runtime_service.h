@@ -229,10 +229,10 @@ private:
                                                      host_config *hostconfig, Errors &error);
     int PackCreateContainerHostConfigDevices(const runtime::v1alpha2::ContainerConfig &containerConfig,
                                              host_config *hostconfig, Errors &error);
-    container_config *
-    GenerateCreateContainerCustomConfig(const std::string &realPodSandboxID,
-                                        const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                        const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error);
+    container_config *GenerateCreateContainerCustomConfig(const std::string &realPodSandboxID,
+                                                          const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                          const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                          Errors &error);
     int PackContainerImageToStatus(container_inspect *inspect,
                                    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error);
     void UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt, int64_t &startedAt,
@@ -252,7 +252,8 @@ private:
     std::string CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image,
                                        std::string &jsonCheckpoint, const std::string &runtimeHandler, Errors &error);
     container_create_request *GenerateSandboxCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                                    const std::string &image, std::string &jsonCheckpoint,
+                                                                    const std::string &image,
+                                                                    std::string &jsonCheckpoint,
                                                                     const std::string &runtimeHandler, Errors &error);
     container_create_request *PackCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
                                                          const std::string &image, host_config *hostconfig,
@@ -269,13 +270,12 @@ private:
                         std::map<std::string, std::string> &stdAnnos, Errors &error);
     int RemoveAllContainersInSandbox(const std::string &realSandboxID, std::vector<std::string> &errors);
     int DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors);
-    void MergeSecurityContextToHostConfig(const runtime::v1alpha2::PodSandboxConfig &c,
-                                          host_config *hc, Errors &error);
+    void MergeSecurityContextToHostConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc, Errors &error);
     int PackContainerStatsFilter(const runtime::v1alpha2::ContainerStatsFilter *filter,
                                  container_stats_request *request, Errors &error);
 
 private:
-    service_callback_t *m_cb { nullptr };
+    service_executor_t *m_cb { nullptr };
 
     std::shared_ptr<Network::PluginManager> m_pluginManager { nullptr };
 
