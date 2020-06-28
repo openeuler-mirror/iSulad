@@ -47,6 +47,13 @@
 #include "container_operator.h"
 #include "io_handler.h"
 
+struct container_log_config {
+    char *driver;
+    char *path;
+    int rotate;
+    int64_t size;
+};
+
 static int do_append_process_exec_env(const char **default_env, defs_process *spec)
 {
     int ret = 0;
@@ -295,8 +302,7 @@ err_out:
     return NULL;
 }
 
-static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[],
-                          defs_process_user *puser,
+static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[], defs_process_user *puser,
                           const container_exec_request *request, int *exit_code)
 {
     int ret = 0;
@@ -2053,6 +2059,20 @@ static bool support_logs(struct container_log_config *log_config)
     }
 
     return true;
+}
+
+static void container_log_config_free(struct container_log_config *conf)
+{
+    if (conf == NULL) {
+        return;
+    }
+    free(conf->path);
+    conf->path = NULL;
+    free(conf->driver);
+    conf->driver = NULL;
+    conf->rotate = 0;
+    conf->size = 0;
+    free(conf);
 }
 
 static int container_logs_cb(const struct isulad_logs_request *request, stream_func_wrapper *stream,

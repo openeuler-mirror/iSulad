@@ -233,20 +233,6 @@ void isulad_logs_response_free(struct isulad_logs_response *response)
     free(response);
 }
 
-void container_log_config_free(struct container_log_config *conf)
-{
-    if (conf == NULL) {
-        return;
-    }
-    free(conf->path);
-    conf->path = NULL;
-    free(conf->driver);
-    conf->driver = NULL;
-    conf->rotate = 0;
-    conf->size = 0;
-    free(conf);
-}
-
 /* events copy */
 int event_copy(const struct isulad_events_format *src, struct isulad_events_format *dest)
 {

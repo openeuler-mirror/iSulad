@@ -199,35 +199,6 @@ struct isulad_container_resize_response {
     char *errmsg;
 };
 
-struct isulad_image_info {
-    char *imageref;
-    char *type;
-    char *digest;
-    int64_t created; /* seconds */
-    int32_t created_nanos;
-    int64_t size; /* Bytes */
-};
-
-struct isulad_create_image_request {
-    struct isulad_image_info image_info;
-};
-
-struct isulad_create_image_response {
-    uint32_t cc;
-    uint32_t server_errono;
-    struct isulad_image_info image_info;
-    char *errmsg;
-};
-
-struct container_log_config {
-    char *driver;
-    char *path;
-    int rotate;
-    int64_t size;
-};
-
-void container_log_config_free(struct container_log_config *conf);
-
 void isulad_events_request_free(struct isulad_events_request *request);
 
 void isulad_copy_from_container_request_free(struct isulad_copy_from_container_request *request);
