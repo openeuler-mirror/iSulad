@@ -206,7 +206,7 @@ static int copy_map_labels(const container_config *config, map_t **map_labels)
 }
 
 static container_info *get_container_stats(const container_t *cont,
-                                           const struct engine_container_resources_stats_info *einfo,
+                                           const struct runtime_container_resources_stats_info *einfo,
                                            const struct stats_context *ctx)
 {
     int ret = 0;
@@ -398,7 +398,7 @@ static int get_containers_stats(char **idsarray, size_t ids_len, const struct st
     }
 
     for (i = 0; i < ids_len; i++) {
-        struct engine_container_resources_stats_info einfo = { 0 };
+        struct runtime_container_resources_stats_info einfo = { 0 };
         container_t *cont = NULL;
 
         cont = containers_store_get(idsarray[i]);

@@ -441,19 +441,19 @@ static void runtime_exec_func(void *arg)
 static int status_string_to_int(const char *status)
 {
     if (strcmp(status, "running") == 0) {
-        return ENGINE_CONTAINER_STATUS_RUNNING;
+        return RUNTIME_CONTAINER_STATUS_RUNNING;
     }
     if (strcmp(status, "stopped") == 0) {
-        return ENGINE_CONTAINER_STATUS_STOPPED;
+        return RUNTIME_CONTAINER_STATUS_STOPPED;
     }
     if (strcmp(status, "paused") == 0) {
-        return ENGINE_CONTAINER_STATUS_PAUSED;
+        return RUNTIME_CONTAINER_STATUS_PAUSED;
     }
-    return ENGINE_CONTAINER_STATUS_UNKNOWN;
+    return RUNTIME_CONTAINER_STATUS_UNKNOWN;
 }
 
 static int runtime_call_status(const char *workdir, const char *runtime, const char *id,
-                               struct engine_container_status_info *ecsi)
+                               struct runtime_container_status_info *ecsi)
 {
     char *stdout = NULL;
     char *stderr = NULL;
@@ -502,7 +502,7 @@ out:
 }
 
 static int runtime_call_stats(const char *workdir, const char *runtime, const char *id,
-                              struct engine_container_resources_stats_info *info)
+                              struct runtime_container_resources_stats_info *info)
 {
     char *stdout = NULL;
     char *stderr = NULL;
@@ -1057,7 +1057,7 @@ out:
 }
 
 int rt_isula_status(const char *id, const char *runtime, const rt_status_params_t *params,
-                    struct engine_container_status_info *status)
+                    struct runtime_container_status_info *status)
 {
     char workdir[PATH_MAX] = { 0 };
     int ret = 0;
@@ -1141,7 +1141,7 @@ int rt_isula_listpids(const char *name, const char *runtime, const rt_listpids_p
 }
 
 int rt_isula_resources_stats(const char *id, const char *runtime, const rt_stats_params_t *params,
-                             struct engine_container_resources_stats_info *rs_stats)
+                             struct runtime_container_resources_stats_info *rs_stats)
 {
     char workdir[PATH_MAX] = { 0 };
     int ret = 0;

@@ -29,7 +29,7 @@ int rt_lcr_restart(const char *name, const char *runtime, const rt_restart_param
 int rt_lcr_clean_resource(const char *name, const char *runtime, const rt_clean_params_t *params);
 int rt_lcr_rm(const char *name, const char *runtime, const rt_rm_params_t *params);
 int rt_lcr_status(const char *name, const char *runtime, const rt_status_params_t *params,
-                  struct engine_container_status_info *status);
+                  struct runtime_container_status_info *status);
 int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *params, int *exit_code);
 int rt_lcr_pause(const char *name, const char *runtime, const rt_pause_params_t *params);
 int rt_lcr_resume(const char *name, const char *runtime, const rt_resume_params_t *params);
@@ -40,7 +40,7 @@ int rt_lcr_update(const char *id, const char *runtime, const rt_update_params_t 
 
 int rt_lcr_listpids(const char *name, const char *runtime, const rt_listpids_params_t *params, rt_listpids_out_t *out);
 int rt_lcr_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
-                           struct engine_container_resources_stats_info *rs_stats);
+                           struct runtime_container_resources_stats_info *rs_stats);
 int rt_lcr_resize(const char *id, const char *runtime, const rt_resize_params_t *params);
 int rt_lcr_exec_resize(const char *id, const char *runtime, const rt_exec_resize_params_t *params);
 #ifdef __cplusplus
@@ -48,4 +48,3 @@ int rt_lcr_exec_resize(const char *id, const char *runtime, const rt_exec_resize
 #endif
 
 #endif
-

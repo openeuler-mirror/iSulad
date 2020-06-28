@@ -27,11 +27,11 @@
 #include "isula_libutils/log.h"
 #include "isulad_config.h"
 
-typedef bool(*lcr_state_op_t)(const char *name, const char *lcrpath, struct lcr_container_state *lcs);
-typedef void(*lcr_container_state_free_t)(struct lcr_container_state *lcs);
-typedef bool(*lcr_update_op_t)(const char *name, const char *lcrpath, struct lcr_cgroup_resources *cr);
-typedef bool(*lcr_start_op_t)(struct lcr_start_request *request);
-typedef bool(*lcr_exec_op_t)(const struct lcr_exec_request *request, int *exit_code);
+typedef bool (*lcr_state_op_t)(const char *name, const char *lcrpath, struct lcr_container_state *lcs);
+typedef void (*lcr_container_state_free_t)(struct lcr_container_state *lcs);
+typedef bool (*lcr_update_op_t)(const char *name, const char *lcrpath, struct lcr_cgroup_resources *cr);
+typedef bool (*lcr_start_op_t)(struct lcr_start_request *request);
+typedef bool (*lcr_exec_op_t)(const struct lcr_exec_request *request, int *exit_code);
 
 static lcr_state_op_t g_lcr_state_op = NULL;
 static lcr_container_state_free_t g_lcr_container_state_free_op = NULL;
@@ -41,9 +41,9 @@ static lcr_exec_op_t g_lcr_exec_op = NULL;
 /*
  * Trans the lcr_state_t to Status
  */
-static Engine_Container_Status lcrsta2sta(const char *state)
+static Runtime_Container_Status lcrsta2sta(const char *state)
 {
-    Engine_Container_Status status = ENGINE_CONTAINER_STATUS_UNKNOWN;
+    Runtime_Container_Status status = RUNTIME_CONTAINER_STATUS_UNKNOWN;
 
     if (state == NULL) {
         WARN("Empty string of state");
@@ -51,17 +51,17 @@ static Engine_Container_Status lcrsta2sta(const char *state)
     }
 
     if (strcmp("STOPPED", state) == 0) {
-        status = ENGINE_CONTAINER_STATUS_STOPPED;
+        status = RUNTIME_CONTAINER_STATUS_STOPPED;
     } else if ((strcmp("STARTING", state) == 0) || (strcmp("STOPPING", state) == 0)) {
-        status = ENGINE_CONTAINER_STATUS_CREATED;
+        status = RUNTIME_CONTAINER_STATUS_CREATED;
     } else if (strcmp("RUNNING", state) == 0) {
-        status = ENGINE_CONTAINER_STATUS_RUNNING;
-    } else if ((strcmp("ABORTING", state) == 0) || (strcmp("FREEZING", state) == 0) ||
-               (strcmp("FROZEN", state) == 0) || (strcmp("THAWED", state) == 0)) {
-        status = ENGINE_CONTAINER_STATUS_PAUSED;
+        status = RUNTIME_CONTAINER_STATUS_RUNNING;
+    } else if ((strcmp("ABORTING", state) == 0) || (strcmp("FREEZING", state) == 0) || (strcmp("FROZEN", state) == 0) ||
+               (strcmp("THAWED", state) == 0)) {
+        status = RUNTIME_CONTAINER_STATUS_PAUSED;
     } else {
         DEBUG("invalid state '%s'", state);
-        status = ENGINE_CONTAINER_STATUS_UNKNOWN;
+        status = RUNTIME_CONTAINER_STATUS_UNKNOWN;
     }
 
     return status;
@@ -115,9 +115,9 @@ static bool lcr_exec_container(const engine_exec_request_t *request, int *exit_c
 /*
  * Get the state of container from 'lcr_container_state'
  */
-static void copy_container_status(const struct lcr_container_state *lcs, struct engine_container_status_info *status)
+static void copy_container_status(const struct lcr_container_state *lcs, struct runtime_container_status_info *status)
 {
-    (void)memset(status, 0, sizeof(struct engine_container_status_info));
+    (void)memset(status, 0, sizeof(struct runtime_container_status_info));
 
     status->has_pid = (-1 == lcs->init) ? false : true;
     status->pid = (uint32_t)lcs->init;
@@ -126,7 +126,7 @@ static void copy_container_status(const struct lcr_container_state *lcs, struct 
 }
 
 /* get container status */
-static int get_container_status(const char *name, const char *enginepath, struct engine_container_status_info *status)
+static int get_container_status(const char *name, const char *enginepath, struct runtime_container_status_info *status)
 {
     struct lcr_container_state lcs = { 0 };
 
@@ -146,9 +146,9 @@ static int get_container_status(const char *name, const char *enginepath, struct
 }
 
 static void copy_container_resources_stats(const struct lcr_container_state *lcs,
-                                           struct engine_container_resources_stats_info *rs_stats)
+                                           struct runtime_container_resources_stats_info *rs_stats)
 {
-    (void)memset(rs_stats, 0, sizeof(struct engine_container_resources_stats_info));
+    (void)memset(rs_stats, 0, sizeof(struct runtime_container_resources_stats_info));
     rs_stats->pids_current = lcs->pids_current;
 
     rs_stats->cpu_use_nanos = lcs->cpu_use_nanos;
@@ -164,7 +164,7 @@ static void copy_container_resources_stats(const struct lcr_container_state *lcs
 
 /* get container cgroup resources */
 static int lcr_get_container_resources_stats(const char *name, const char *enginepath,
-                                             struct engine_container_resources_stats_info *rs_stats)
+                                             struct runtime_container_resources_stats_info *rs_stats)
 {
     struct lcr_container_state lcs = { 0 };
 
@@ -309,4 +309,3 @@ badcleanup:
 cleanup:
     return eop;
 }
-

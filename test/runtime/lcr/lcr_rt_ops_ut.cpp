@@ -71,7 +71,6 @@ TEST(lcr_rt_ops_ut, test_rt_lcr_detect)
 
 bool RuntimeCreateContainer(const char *id, const char *root, void *config)
 {
-
     if (id == nullptr || root == nullptr) {
         return false;
     }
@@ -81,7 +80,6 @@ bool RuntimeCreateContainer(const char *id, const char *root, void *config)
 
 bool RuntimeStartContainer(const engine_start_request_t *request)
 {
-
     if (request == nullptr) {
         return false;
     }
@@ -93,10 +91,8 @@ bool RuntimeStartContainer(const engine_start_request_t *request)
     return true;
 }
 
-bool RuntimeCleanContainer(const char *name, const char *lcrpath, const char *logpath, const char *loglevel,
-                           pid_t pid)
+bool RuntimeCleanContainer(const char *name, const char *lcrpath, const char *logpath, const char *loglevel, pid_t pid)
 {
-
     if (name == nullptr) {
         return false;
     }
@@ -106,7 +102,6 @@ bool RuntimeCleanContainer(const char *name, const char *lcrpath, const char *lo
 
 bool RuntimeRmContainer(const char *name, const char *enginepath)
 {
-
     if (name == nullptr || enginepath == nullptr) {
         return false;
     }
@@ -114,9 +109,8 @@ bool RuntimeRmContainer(const char *name, const char *enginepath)
     return true;
 }
 
-int RuntimeStatusContainer(const char *name, const char *enginepath, struct engine_container_status_info *status)
+int RuntimeStatusContainer(const char *name, const char *enginepath, struct runtime_container_status_info *status)
 {
-
     if (name == nullptr || enginepath == nullptr || status == nullptr) {
         return -1;
     }
@@ -125,9 +119,8 @@ int RuntimeStatusContainer(const char *name, const char *enginepath, struct engi
 }
 
 int RuntimeStatsContainer(const char *name, const char *enginepath,
-                          struct engine_container_resources_stats_info *rs_stats)
+                          struct runtime_container_resources_stats_info *rs_stats)
 {
-
     if (name == nullptr || enginepath == nullptr || rs_stats == nullptr) {
         return -1;
     }
@@ -137,7 +130,6 @@ int RuntimeStatsContainer(const char *name, const char *enginepath,
 
 bool RuntimeExecContainer(const engine_exec_request_t *request, int *exit_code)
 {
-
     if (request == nullptr || exit_code == nullptr || request->lcrpath == nullptr) {
         return false;
     }
@@ -147,7 +139,6 @@ bool RuntimeExecContainer(const engine_exec_request_t *request, int *exit_code)
 
 bool RuntimePauseContainer(const char *name, const char *enginepath)
 {
-
     if (name == nullptr || enginepath == nullptr) {
         return false;
     }
@@ -157,7 +148,6 @@ bool RuntimePauseContainer(const char *name, const char *enginepath)
 
 bool RuntimeResumeContainer(const char *name, const char *enginepath)
 {
-
     if (name == nullptr || enginepath == nullptr) {
         return false;
     }
@@ -165,10 +155,8 @@ bool RuntimeResumeContainer(const char *name, const char *enginepath)
     return true;
 }
 
-bool RuntimeAttachContainer(const char *name, const char *enginepath, char *in_fifo, char *out_fifo,
-                            char *err_fifo)
+bool RuntimeAttachContainer(const char *name, const char *enginepath, char *in_fifo, char *out_fifo, char *err_fifo)
 {
-
     if (name == nullptr || enginepath == nullptr) {
         return false;
     }
@@ -178,7 +166,6 @@ bool RuntimeAttachContainer(const char *name, const char *enginepath, char *in_f
 
 bool RuntimeUpdateContainer(const char *name, const char *enginepath, const struct engine_cgroup_resources *cr)
 {
-
     if (name == nullptr || enginepath == nullptr) {
         return false;
     }
@@ -188,7 +175,6 @@ bool RuntimeUpdateContainer(const char *name, const char *enginepath, const stru
 
 bool RuntimeResizeContainer(const char *name, const char *lcrpath, unsigned int height, unsigned int width)
 {
-
     if (name == nullptr || lcrpath == nullptr) {
         return false;
     }
@@ -199,7 +185,6 @@ bool RuntimeResizeContainer(const char *name, const char *lcrpath, unsigned int 
 bool RuntimeExecResizeContainer(const char *name, const char *lcrpath, const char *suffix, unsigned int height,
                                 unsigned int width)
 {
-
     if (name == nullptr || lcrpath == nullptr) {
         return false;
     }
@@ -209,7 +194,6 @@ bool RuntimeExecResizeContainer(const char *name, const char *lcrpath, const cha
 
 bool RuntimeListPidsContainer(const char *name, const char *rootpath, pid_t **pids, size_t *pids_len)
 {
-
     if (name == nullptr || rootpath == nullptr) {
         return false;
     }
@@ -273,7 +257,7 @@ TEST_F(LcrRtOpsUnitTest, test_rt_lcr_create)
 
 static char *get_absolute_path(const char *file)
 {
-    char base_path[PATH_MAX] = {0};
+    char base_path[PATH_MAX] = { 0 };
     char *json_file = NULL;
 
     if (getcwd(base_path, PATH_MAX) == NULL) {
@@ -365,7 +349,7 @@ TEST_F(LcrRtOpsUnitTest, test_rt_lcr_rm)
 TEST_F(LcrRtOpsUnitTest, test_rt_lcr_status)
 {
     rt_status_params_t params = {};
-    struct engine_container_status_info status = {};
+    struct runtime_container_status_info status = {};
 
     ASSERT_EQ(rt_lcr_status(nullptr, nullptr, nullptr, nullptr), -1);
 
@@ -390,7 +374,7 @@ TEST_F(LcrRtOpsUnitTest, test_rt_lcr_status)
 TEST_F(LcrRtOpsUnitTest, test_rt_lcr_resources_stats)
 {
     rt_stats_params_t params = {};
-    struct engine_container_resources_stats_info status = {};
+    struct runtime_container_resources_stats_info status = {};
 
     ASSERT_EQ(rt_lcr_resources_stats(nullptr, nullptr, nullptr, nullptr), -1);
 

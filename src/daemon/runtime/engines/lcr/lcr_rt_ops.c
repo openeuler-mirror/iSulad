@@ -253,7 +253,7 @@ out:
 }
 
 int rt_lcr_status(const char *name, const char *runtime, const rt_status_params_t *params,
-                  struct engine_container_status_info *status)
+                  struct runtime_container_status_info *status)
 {
     int ret = 0;
     int nret = 0;
@@ -280,7 +280,7 @@ out:
 }
 
 int rt_lcr_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
-                           struct engine_container_resources_stats_info *rs_stats)
+                           struct runtime_container_resources_stats_info *rs_stats)
 {
     int ret = 0;
     int nret = 0;

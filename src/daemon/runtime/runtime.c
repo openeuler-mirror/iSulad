@@ -22,6 +22,7 @@
 #include <ctype.h>
 
 #include "runtime.h"
+#include "engine.h"
 #include "isulad_config.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -211,7 +212,7 @@ out:
 }
 
 int runtime_status(const char *name, const char *runtime, const rt_status_params_t *params,
-                   struct engine_container_status_info *status)
+                   struct runtime_container_status_info *status)
 {
     int ret = 0;
     const struct rt_ops *ops = NULL;
@@ -236,7 +237,7 @@ out:
 }
 
 int runtime_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
-                            struct engine_container_resources_stats_info *rs_stats)
+                            struct runtime_container_resources_stats_info *rs_stats)
 {
     int ret = 0;
     const struct rt_ops *ops = NULL;

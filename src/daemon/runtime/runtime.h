@@ -20,13 +20,45 @@
 #include "libisulad.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/oci_runtime_spec.h"
-#include "engine.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define RUNTIME_NOT_IMPLEMENT_RESET -2
+
+typedef enum {
+    RUNTIME_CONTAINER_STATUS_UNKNOWN = 0,
+    RUNTIME_CONTAINER_STATUS_CREATED = 1,
+    RUNTIME_CONTAINER_STATUS_STARTING = 2,
+    RUNTIME_CONTAINER_STATUS_RUNNING = 3,
+    RUNTIME_CONTAINER_STATUS_STOPPED = 4,
+    RUNTIME_CONTAINER_STATUS_PAUSED = 5,
+    RUNTIME_CONTAINER_STATUS_RESTARTING = 6,
+    RUNTIME_CONTAINER_STATUS_MAX_STATE = 7
+} Runtime_Container_Status;
+
+struct runtime_container_status_info {
+    bool has_pid;
+    uint32_t pid;
+    Runtime_Container_Status status;
+};
+
+struct runtime_container_resources_stats_info {
+    uint64_t pids_current;
+    /* CPU usage */
+    uint64_t cpu_use_nanos;
+    uint64_t cpu_system_use;
+    /* BlkIO usage */
+    uint64_t blkio_read;
+    uint64_t blkio_write;
+    /* Memory usage */
+    uint64_t mem_used;
+    uint64_t mem_limit;
+    /* Kernel Memory usage */
+    uint64_t kmem_used;
+    uint64_t kmem_limit;
+};
 
 typedef struct _rt_create_params_t {
     const char *rootfs;
@@ -157,10 +189,10 @@ struct rt_ops {
     int (*rt_rm)(const char *name, const char *runtime, const rt_rm_params_t *params);
 
     int (*rt_status)(const char *name, const char *runtime, const rt_status_params_t *params,
-                     struct engine_container_status_info *status);
+                     struct runtime_container_status_info *status);
 
     int (*rt_resources_stats)(const char *name, const char *runtime, const rt_stats_params_t *params,
-                              struct engine_container_resources_stats_info *rs_stats);
+                              struct runtime_container_resources_stats_info *rs_stats);
 
     int (*rt_exec)(const char *name, const char *runtime, const rt_exec_params_t *params, int *exit_code);
 
@@ -183,9 +215,9 @@ int runtime_start(const char *name, const char *runtime, const rt_start_params_t
 int runtime_restart(const char *name, const char *runtime, const rt_restart_params_t *params);
 int runtime_rm(const char *name, const char *runtime, const rt_rm_params_t *params);
 int runtime_status(const char *name, const char *runtime, const rt_status_params_t *params,
-                   struct engine_container_status_info *status);
+                   struct runtime_container_status_info *status);
 int runtime_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
-                            struct engine_container_resources_stats_info *rs_stats);
+                            struct runtime_container_resources_stats_info *rs_stats);
 int runtime_exec(const char *name, const char *runtime, const rt_exec_params_t *params, int *exit_code);
 int runtime_pause(const char *name, const char *runtime, const rt_pause_params_t *params);
 int runtime_resume(const char *name, const char *runtime, const rt_resume_params_t *params);

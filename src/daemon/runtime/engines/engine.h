@@ -19,42 +19,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "runtime.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef enum {
-    ENGINE_CONTAINER_STATUS_UNKNOWN = 0,
-    ENGINE_CONTAINER_STATUS_CREATED = 1,
-    ENGINE_CONTAINER_STATUS_STARTING = 2,
-    ENGINE_CONTAINER_STATUS_RUNNING = 3,
-    ENGINE_CONTAINER_STATUS_STOPPED = 4,
-    ENGINE_CONTAINER_STATUS_PAUSED = 5,
-    ENGINE_CONTAINER_STATUS_RESTARTING = 6,
-    ENGINE_CONTAINER_STATUS_MAX_STATE = 7
-} Engine_Container_Status;
-
-struct engine_container_status_info {
-    bool has_pid;
-    uint32_t pid;
-    Engine_Container_Status status;
-};
-
-struct engine_container_resources_stats_info {
-    uint64_t pids_current;
-    /* CPU usage */
-    uint64_t cpu_use_nanos;
-    uint64_t cpu_system_use;
-    /* BlkIO usage */
-    uint64_t blkio_read;
-    uint64_t blkio_write;
-    /* Memory usage */
-    uint64_t mem_used;
-    uint64_t mem_limit;
-    /* Kernel Memory usage */
-    uint64_t kmem_used;
-    uint64_t kmem_limit;
-};
 
 struct engine_cgroup_resources {
     uint64_t blkio_weight;
@@ -67,19 +36,6 @@ struct engine_cgroup_resources {
     uint64_t memory_swap;
     uint64_t memory_reservation;
     uint64_t kernel_memory_limit;
-};
-
-struct engine_container_summary_info {
-    char *id;
-    uint32_t has_pid;
-    uint32_t pid;
-    Engine_Container_Status status;
-    char *image;
-    char *command;
-    uint32_t exit_code;
-    uint32_t restart_count;
-    char *startat;
-    char *finishat;
 };
 
 typedef struct _engine_start_request_t {
@@ -146,10 +102,10 @@ typedef bool (*engine_update_t)(const char *name, const char *enginepath, const 
 typedef bool (*engine_exec_t)(const engine_exec_request_t *request, int *exit_code);
 
 typedef int (*engine_get_container_status_t)(const char *name, const char *enginepath,
-                                             struct engine_container_status_info *status);
+                                             struct runtime_container_status_info *status);
 
 typedef int (*engine_get_container_resources_stats_t)(const char *name, const char *enginepath,
-                                                      struct engine_container_resources_stats_info *rs_stats);
+                                                      struct runtime_container_resources_stats_info *rs_stats);
 
 typedef bool (*engine_get_container_pids_t)(const char *name, const char *rootpath, pid_t **pids, size_t *pids_len);
 

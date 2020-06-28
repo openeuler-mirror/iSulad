@@ -101,12 +101,12 @@ out:
 }
 
 static void post_nonexist_image_containers(const container_t *cont, Container_Status status,
-                                           const struct engine_container_status_info *info)
+                                           const struct runtime_container_status_info *info)
 {
     int nret;
     const char *id = cont->common_config->id;
 
-    if (info->status == ENGINE_CONTAINER_STATUS_STOPPED) {
+    if (info->status == RUNTIME_CONTAINER_STATUS_STOPPED) {
         if (status != CONTAINER_STATUS_STOPPED && status != CONTAINER_STATUS_CREATED) {
             nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
             if (nret != 0) {
@@ -117,7 +117,7 @@ static void post_nonexist_image_containers(const container_t *cont, Container_St
             }
             state_set_stopped(cont->state, 255);
         }
-    } else if (info->status == ENGINE_CONTAINER_STATUS_RUNNING) {
+    } else if (info->status == RUNTIME_CONTAINER_STATUS_RUNNING) {
         nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, info->pid);
         if (nret != 0) {
             ERROR("Failed to post container %s to garbage"
@@ -216,7 +216,7 @@ static int restore_stopped_container(Container_Status status, const container_t 
 }
 
 static int restore_running_container(Container_Status status, container_t *cont,
-                                     const struct engine_container_status_info *info)
+                                     const struct runtime_container_status_info *info)
 {
     int ret = 0;
     int nret = 0;
@@ -246,7 +246,7 @@ out:
 }
 
 static int restore_paused_container(Container_Status status, container_t *cont,
-                                    const struct engine_container_status_info *info)
+                                    const struct runtime_container_status_info *info)
 {
     int ret = 0;
     int nret = 0;
@@ -286,7 +286,7 @@ static int restore_state(container_t *cont)
     const char *id = cont->common_config->id;
     const char *runtime = cont->runtime;
     rt_status_params_t params = { 0 };
-    struct engine_container_status_info real_status = { 0 };
+    struct runtime_container_status_info real_status = { 0 };
     Container_Status status = state_get_status(cont->state);
 
     (void)container_exit_on_next(cont); /* cancel restart policy */
@@ -304,20 +304,20 @@ static int restore_state(container_t *cont)
     if (nret != 0) {
         ERROR("Failed to restore container %s, make real status to STOPPED. Due to can not load container with status %d",
               id, status);
-        real_status.status = ENGINE_CONTAINER_STATUS_STOPPED;
+        real_status.status = RUNTIME_CONTAINER_STATUS_STOPPED;
     }
 
-    if (real_status.status == ENGINE_CONTAINER_STATUS_STOPPED) {
+    if (real_status.status == RUNTIME_CONTAINER_STATUS_STOPPED) {
         ret = restore_stopped_container(status, cont, &need_save);
         if (ret != 0) {
             goto out;
         }
-    } else if (real_status.status == ENGINE_CONTAINER_STATUS_RUNNING) {
+    } else if (real_status.status == RUNTIME_CONTAINER_STATUS_RUNNING) {
         ret = restore_running_container(status, cont, &real_status);
         if (ret != 0) {
             goto out;
         }
-    } else if (real_status.status == ENGINE_CONTAINER_STATUS_PAUSED) {
+    } else if (real_status.status == RUNTIME_CONTAINER_STATUS_PAUSED) {
         ret = restore_paused_container(status, cont, &real_status);
         if (ret != 0) {
             goto out;
