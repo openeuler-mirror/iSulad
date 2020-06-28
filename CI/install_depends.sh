@@ -24,10 +24,9 @@ fi
 buildstatus=${builddir}/build.fail
 
 declare -a buildlogs
-build_log_isulad_img=${builddir}/build.isulad_img.log
 build_log_crictl=${builddir}/build.crictl.log
 build_log_cni_plugins=${builddir}/build.cni_plugins.log
-buildlogs+=(${build_log_isulad_img} ${build_log_crictl} ${build_log_cni_plugins})
+buildlogs+=(${build_log_crictl} ${build_log_cni_plugins})
 
 mkdir -p ${builddir}/rpm
 mkdir -p ${builddir}/bin
@@ -35,17 +34,6 @@ mkdir -p ${builddir}/include
 mkdir -p ${builddir}/lib
 mkdir -p ${builddir}/lib/pkgconfig
 mkdir -p ${builddir}/systemd/system
-
-#install iSulad-img
-function make_isulad_img()
-{
-    cd ~
-    git clone https://gitee.com/openeuler/iSulad-img.git
-    cd iSulad-img
-    ./apply-patch
-    make -j $nproc
-    make DESTDIR=${builddir} install
-}
 
 #install crictl
 function make_crictl()
@@ -85,7 +73,6 @@ function check_make_status()
 }
 
 rm -rf ${buildstatus}
-check_make_status make_isulad_img ${build_log_isulad_img} &
 check_make_status make_crictl ${build_log_crictl} &
 check_make_status make_cni_plugins ${build_log_cni_plugins} &
 
