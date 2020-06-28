@@ -1257,6 +1257,7 @@ static int open_transaction(struct device_set *devset, const char *hash, int id)
         return -1;
     }
     devset->metadata_trans->open_transaction_id = devset->transaction_id + 1;
+    free(devset->metadata_trans->device_hash);
     devset->metadata_trans->device_hash = util_strdup_s(hash);
     devset->metadata_trans->device_id = id;
 
@@ -1653,6 +1654,7 @@ out:
     if (resume_dev) {
         (void)dev_resume_device(dm_name);
     }
+    free(dmi);
     free(dm_name);
     return ret;
 }

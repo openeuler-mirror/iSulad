@@ -335,7 +335,7 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
     char *mnt_dir = NULL;
     char *id_dir = NULL;
     char *rootfs_dir = NULL;
-    struct device_metadata dev_metadata;
+    struct device_metadata dev_metadata = { 0 };
     char *device_id_str = NULL;
     char *device_size_str = NULL;
 
@@ -410,6 +410,7 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
     }
 
 out:
+    free(dev_metadata.device_name);
     free(mnt_dir);
     free(id_dir);
     free(rootfs_dir);
