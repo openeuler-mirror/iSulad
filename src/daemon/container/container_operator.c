@@ -25,7 +25,6 @@
 #include "mainloop.h"
 #include "libisulad.h"
 #include "event_sender.h"
-#include "execution.h"
 #include "containers_gc.h"
 #include "image.h"
 #include "specs.h"
@@ -69,7 +68,7 @@ static bool save_after_auto_remove(container_t *cont)
             return true;
         }
         container_unlock(cont);
-        nret = cleanup_container(cont, true);
+        nret = delete_container(cont, true);
         container_lock(cont);
         if (nret != 0) {
             ERROR("Failed to cleanup container %s", cont->common_config->id);
@@ -917,7 +916,7 @@ out:
     return ret;
 }
 
-static int do_cleanup_container_resources(container_t *cont)
+static int do_delete_container(container_t *cont)
 {
     int ret = 0;
     char *id = NULL;
@@ -1003,7 +1002,7 @@ out:
     return ret;
 }
 
-int cleanup_container(container_t *cont, bool force)
+int delete_container(container_t *cont, bool force)
 {
     int ret = 0;
     char *id = NULL;
@@ -1048,7 +1047,7 @@ int cleanup_container(container_t *cont, bool force)
 
     plugin_event_container_post_remove(cont);
 
-    ret = do_cleanup_container_resources(cont);
+    ret = do_delete_container(cont);
     if (ret != 0) {
         goto reset_removal_progress;
     }
@@ -1057,6 +1056,110 @@ int cleanup_container(container_t *cont, bool force)
 
 reset_removal_progress:
     state_reset_removal_in_progress(cont->state);
+out:
+    return ret;
+}
+
+static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint32_t signal)
+{
+    if (util_process_alive(pid, start_time) == false) {
+        if (signal == SIGTERM || signal == SIGKILL) {
+            WARN("Process %d is not alive", pid);
+            return 0;
+        } else {
+            ERROR("Process (pid=%d) is not alive, can not kill with signal %u", pid, signal);
+            return -1;
+        }
+    } else {
+        int ret = kill(pid, (int)signal);
+        if (ret < 0) {
+            ERROR("Can not kill process (pid=%d) with signal %u: %s", pid, signal, strerror(errno));
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int kill_with_signal(container_t *cont, uint32_t signal)
+{
+    int ret = 0;
+    int nret = 0;
+    const char *id = cont->common_config->id;
+    bool need_unpause = is_paused(cont->state);
+    rt_resume_params_t params = { 0 };
+    char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };
+
+    if (container_exit_on_next(cont)) {
+        ERROR("Failed to cancel restart manager");
+        ret = -1;
+        goto out;
+    }
+    cont->common_config->has_been_manually_stopped = true;
+    (void)container_to_disk(cont);
+
+    if (!is_running(cont->state)) {
+        INFO("Container %s is already stopped", id);
+        ret = 0;
+        goto out;
+    }
+    if (is_restarting(cont->state)) {
+        INFO("Container %s is currently restarting we do not need to send the signal to the process", id);
+        ret = 0;
+        goto out;
+    }
+
+    stop_health_checks(id);
+
+    ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, signal);
+    if (ret != 0) {
+        ERROR("Failed to send signal to container %s with signal %u", id, signal);
+    }
+    if (signal == SIGKILL && need_unpause) {
+        params.rootpath = cont->root_path;
+        params.state = cont->state_path;
+        if (runtime_resume(id, cont->runtime, &params) != 0) {
+            ERROR("Cannot unpause container: %s", id);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    nret = snprintf(annotations, sizeof(annotations), "signal=%u", signal);
+    if (nret < 0 || (size_t)nret >= sizeof(annotations)) {
+        ERROR("Failed to get signal string");
+        ret = -1;
+        goto out;
+    }
+
+    (void)isulad_monitor_send_container_event(id, KILL, -1, 0, NULL, annotations);
+
+out:
+    return ret;
+}
+
+static int force_kill(container_t *cont)
+{
+    int ret = 0;
+    const char *id = cont->common_config->id;
+
+    ret = kill_with_signal(cont, SIGKILL);
+    if (ret != 0) {
+        WARN("Failed to stop Container(%s), try to wait 'STOPPED' for 90 seconds", id);
+    }
+    ret = container_wait_stop(cont, 90);
+    if (ret != 0) {
+        WARN("Container(%s) stuck for 90 seconds, try to kill the monitor of container", id);
+        ret = send_signal_to_process(cont->state->state->p_pid, cont->state->state->p_start_time, SIGKILL);
+        if (ret != 0) {
+            ERROR("Container stuck for 90 seconds and failed to kill the monitor of container, "
+                  "please check the config");
+            isulad_set_error_message("Container stuck for 90 seconds "
+                                     "and failed to kill the monitor of container, please check configuration files");
+            goto out;
+        }
+        ret = container_wait_stop(cont, -1);
+    }
 out:
     return ret;
 }
@@ -1112,6 +1215,38 @@ out:
     if (restart) {
         cont->hostconfig->auto_remove = cont->hostconfig->auto_remove_bak;
     }
+    container_unlock(cont);
+    return ret;
+}
+
+int kill_container(container_t *cont, uint32_t signal)
+{
+    int ret = 0;
+    char *id = NULL;
+
+    id = cont->common_config->id;
+
+    container_lock(cont);
+
+    if (!is_running(cont->state)) {
+        ERROR("Cannot kill container: Container %s is not running", id);
+        isulad_set_error_message("Cannot kill container: Container %s is not running", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (signal == 0 || signal == SIGKILL) {
+        ret = force_kill(cont);
+    } else {
+        ret = kill_with_signal(cont, signal);
+    }
+
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+out:
     container_unlock(cont);
     return ret;
 }
@@ -1187,110 +1322,6 @@ void umount_host_channel(const host_config_host_channel *host_channel)
     if (util_recursive_rmdir(host_channel->path_on_host, 0)) {
         ERROR("Failed to delete host path: %s", host_channel->path_on_host);
     }
-}
-
-static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint32_t signal)
-{
-    if (util_process_alive(pid, start_time) == false) {
-        if (signal == SIGTERM || signal == SIGKILL) {
-            WARN("Process %d is not alive", pid);
-            return 0;
-        } else {
-            ERROR("Process (pid=%d) is not alive, can not kill with signal %u", pid, signal);
-            return -1;
-        }
-    } else {
-        int ret = kill(pid, (int)signal);
-        if (ret < 0) {
-            ERROR("Can not kill process (pid=%d) with signal %u: %s", pid, signal, strerror(errno));
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-int kill_with_signal(container_t *cont, uint32_t signal)
-{
-    int ret = 0;
-    int nret = 0;
-    const char *id = cont->common_config->id;
-    bool need_unpause = is_paused(cont->state);
-    rt_resume_params_t params = { 0 };
-    char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };
-
-    if (container_exit_on_next(cont)) {
-        ERROR("Failed to cancel restart manager");
-        ret = -1;
-        goto out;
-    }
-    cont->common_config->has_been_manually_stopped = true;
-    (void)container_to_disk(cont);
-
-    if (!is_running(cont->state)) {
-        INFO("Container %s is already stopped", id);
-        ret = 0;
-        goto out;
-    }
-    if (is_restarting(cont->state)) {
-        INFO("Container %s is currently restarting we do not need to send the signal to the process", id);
-        ret = 0;
-        goto out;
-    }
-
-    stop_health_checks(id);
-
-    ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, signal);
-    if (ret != 0) {
-        ERROR("Failed to send signal to container %s with signal %u", id, signal);
-    }
-    if (signal == SIGKILL && need_unpause) {
-        params.rootpath = cont->root_path;
-        params.state = cont->state_path;
-        if (runtime_resume(id, cont->runtime, &params) != 0) {
-            ERROR("Cannot unpause container: %s", id);
-            ret = -1;
-            goto out;
-        }
-    }
-
-    nret = snprintf(annotations, sizeof(annotations), "signal=%u", signal);
-    if (nret < 0 || (size_t)nret >= sizeof(annotations)) {
-        ERROR("Failed to get signal string");
-        ret = -1;
-        goto out;
-    }
-
-    (void)isulad_monitor_send_container_event(id, KILL, -1, 0, NULL, annotations);
-
-out:
-    return ret;
-}
-
-int force_kill(container_t *cont)
-{
-    int ret = 0;
-    const char *id = cont->common_config->id;
-
-    ret = kill_with_signal(cont, SIGKILL);
-    if (ret != 0) {
-        WARN("Failed to stop Container(%s), try to wait 'STOPPED' for 90 seconds", id);
-    }
-    ret = container_wait_stop(cont, 90);
-    if (ret != 0) {
-        WARN("Container(%s) stuck for 90 seconds, try to kill the monitor of container", id);
-        ret = send_signal_to_process(cont->state->state->p_pid, cont->state->state->p_start_time, SIGKILL);
-        if (ret != 0) {
-            ERROR("Container stuck for 90 seconds and failed to kill the monitor of container, "
-                  "please check the config");
-            isulad_set_error_message("Container stuck for 90 seconds "
-                                     "and failed to kill the monitor of container, please check configuration files");
-            goto out;
-        }
-        ret = container_wait_stop(cont, -1);
-    }
-out:
-    return ret;
 }
 
 bool container_in_gc_progress(const char *id)

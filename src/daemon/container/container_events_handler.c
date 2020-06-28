@@ -174,7 +174,7 @@ static int container_state_changed(container_t *cont, const struct isulad_events
             container_unlock(cont);
 
             if (auto_remove) {
-                ret = cleanup_container(cont, true);
+                ret = delete_container(cont, true);
                 if (ret != 0) {
                     ERROR("Failed to cleanup container %s", cont->common_config->id);
                     ret = -1;

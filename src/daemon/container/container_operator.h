@@ -24,13 +24,13 @@ extern "C" {
 
 int start_container(container_t *cont, const char *console_fifos[], bool reset_rm);
 
-int clean_container_resource(const char *id, const char *runtime, pid_t pid);
-
-int cleanup_container(container_t *cont, bool force);
-
 int stop_container(container_t *cont, int timeout, bool force, bool restart);
 
+int clean_container_resource(const char *id, const char *runtime, pid_t pid);
+
 int set_container_to_removal(const container_t *cont);
+
+int delete_container(container_t *cont, bool force);
 
 int cleanup_mounts_by_id(const char *id, const char *engine_root_path);
 
@@ -38,9 +38,7 @@ void umount_host_channel(const host_config_host_channel *host_channel);
 
 void umount_share_shm(container_t *cont);
 
-int kill_with_signal(container_t *cont, uint32_t signal);
-
-int force_kill(container_t *cont);
+int kill_container(container_t *cont, uint32_t signal);
 
 bool container_in_gc_progress(const char *id);
 

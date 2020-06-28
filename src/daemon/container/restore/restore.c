@@ -443,7 +443,7 @@ static void handle_restored_container()
             if (cont->hostconfig != NULL && cont->hostconfig->auto_remove_bak) {
                 (void)set_container_to_removal(cont);
                 container_unlock(cont);
-                (void)cleanup_container(cont, true);
+                (void)delete_container(cont, true);
                 container_lock(cont);
             } else {
                 restored_restart_container(cont);
