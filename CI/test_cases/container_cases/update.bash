@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance update
 # concurrent: YES
-# spend time: 15
+# spend time: 16
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -26,7 +26,7 @@ source ../helpers.bash
 function do_test_t()
 {
     containername=test_update
-    containerid=`isula create -t --memory 50M --name $containername busybox`
+    containerid=`isula create -t --name $containername busybox`
     fn_check_eq "$?" "0" "create failed"
     testcontainer $containername inited
 
