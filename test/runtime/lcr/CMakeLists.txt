@@ -16,7 +16,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/libisulad.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//sysinfo.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/command_parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_ut_common.cpp
@@ -25,7 +25,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/container_unix_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/engine_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime/engines/lcr/lcr_rt_ops.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
     lcr_rt_ops_ut.cpp)
 
 target_include_directories(${EXE} PUBLIC
@@ -35,14 +35,14 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container/restart_manager
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container/health_check
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/events
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime/engines
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime/engines/lcr
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container/restart_manager
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container/health_check
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/events
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime/engines
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime/engines/lcr
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec/
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/config

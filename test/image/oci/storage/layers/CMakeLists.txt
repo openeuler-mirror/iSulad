@@ -20,13 +20,13 @@ add_executable(${DRIVER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/tar/util_archive.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/libisulad.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/driver.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/metadata_store.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/metadata_store.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/driver_quota_mock.cc
     storage_driver_ut.cpp)
 
@@ -40,12 +40,12 @@ target_include_directories(${DRIVER_EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/overlay2
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/quota
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks
     )
 
@@ -85,19 +85,19 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/json/schema/src/isula_utils_read_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console/console.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/storage.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/image_store/image.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/image_store/image_store.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/layer_store.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/layer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/driver.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/metadata_store.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/device_setup.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/storage.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store/image.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store/image_store.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/layer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/metadata_store.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/device_setup.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/storage_mock.cc
     storage_layers_ut.cpp)
 
@@ -114,13 +114,13 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_BINARY_DIR}/json
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/image_store
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/devmapper
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/quota
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/layer_store/graphdriver/overlay2
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2
     )
 
 target_link_libraries(${EXE}

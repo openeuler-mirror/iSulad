@@ -89,7 +89,7 @@ install(FILES src/utils/cutils/utils_timestamp.h
 	DESTINATION include/isulad)
 install(FILES src/utils/cutils/error.h
 	DESTINATION include/isulad)
-install(FILES src/daemon/runtime/engines/engine.h
+install(FILES src/daemon/modules/runtime/engines/engine.h
 	DESTINATION include/isulad)
 install(FILES src/daemon/image/image.h
 	DESTINATION include/isulad)

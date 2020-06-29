@@ -17,9 +17,9 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_timestamp.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/utils_images.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/rootfs_store/rootfs.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/rootfs_store/rootfs_store.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/utils_images.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/rootfs_store/rootfs.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/storage_mock.cc
     storage_rootfs_ut.cpp)
 
@@ -34,9 +34,9 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/json/schema/src
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/rootfs_store
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/rootfs_store
     )
 
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)

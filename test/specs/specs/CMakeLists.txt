@@ -15,12 +15,12 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs_mount.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs_extend.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//specs_security.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs_mount.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs_extend.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs_security.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/libisulad.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec//sysinfo.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/command_parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_ut_common.cpp
@@ -35,27 +35,27 @@ add_executable(${EXE}
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/image/oci
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/image
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/image/oci
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/image
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container/restart_manager
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/container/health_check
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container/restart_manager
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container/health_check
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/spec/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec/
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution/manager
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/events
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/events
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution/execute
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/tar
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/plugin
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/http
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/runtime/engines
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime/engines
     ${ENGINES_INCS}
     ${RUNTIME_INCS}
     ${IMAGE_INCS}
