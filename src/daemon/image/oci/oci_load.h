@@ -20,6 +20,7 @@
 #include "isula_libutils/oci_image_manifest.h"
 #include "isula_libutils/oci_image_spec.h"
 #include "isula_libutils/json_common.h"
+#include "libisulad.h"
 
 #ifdef __cplusplus
 extern "C" {

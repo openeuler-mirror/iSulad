@@ -91,6 +91,8 @@ install(FILES src/cutils/error.h
 	DESTINATION include/isulad)
 install(FILES src/daemon/runtime/engines/engine.h
 	DESTINATION include/isulad)
+install(FILES src/daemon/image/image.h
+	DESTINATION include/isulad)
 
 # install config files
 set(conf_prefix "/etc")

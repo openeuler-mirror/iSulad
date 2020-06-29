@@ -25,6 +25,7 @@
 #include "utils.h"
 #include "utils_images.h"
 #include "oci_config_merge.h"
+#include "libisulad.h"
 
 #include "filters.h"
 #include "storage.h"

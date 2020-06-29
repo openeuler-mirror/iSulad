@@ -23,7 +23,6 @@
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
-#include "libisulad.h"
 #include "isula_libutils/isulad_daemon_configs.h"
 #include "isula_libutils/container_inspect.h"
 #include "isula_libutils/imagetool_images_list.h"

@@ -16,6 +16,7 @@ ExclusiveArch:  x86_64 aarch64
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
 Provides:       libisula.so()(64bit)
+Provides:       libisulad_img.so()(64bit)
 %endif
 
 %if 0%{?is_systemd}
@@ -62,6 +63,7 @@ cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
 install -m 0644 ./src/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0644 ./src/daemon/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 
 install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
@@ -77,6 +79,7 @@ install -m 0644 ../src/client/connect/isula_connect.h		%{buildroot}/%{_includedi
 install -m 0644 ../src/cutils/utils_timestamp.h			%{buildroot}/%{_includedir}/isulad/utils_timestamp.h
 install -m 0644 ../src/cutils/error.h				%{buildroot}/%{_includedir}/isulad/error.h
 install -m 0644 ../src/daemon/runtime/engines/engine.h			%{buildroot}/%{_includedir}/isulad/engine.h
+install -m 0644 ../src/daemon/image/image.h         %{buildroot}/%{_includedir}/isulad/image.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json

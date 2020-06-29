@@ -24,6 +24,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "ext_image.h"
+#include "libisulad.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "storage.h"

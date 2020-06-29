@@ -38,6 +38,7 @@
 #include "linked_list.h"
 #include "pthread.h"
 #include "isulad_config.h"
+#include "libisulad.h"
 #include "storage.h"
 #include "constants.h"
 #include "utils_images.h"
