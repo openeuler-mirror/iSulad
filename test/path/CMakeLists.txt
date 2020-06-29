@@ -18,7 +18,7 @@ add_executable(${EXE}
 
 target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256

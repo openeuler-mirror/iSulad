@@ -26,9 +26,11 @@ endif()
 list(REMOVE_DUPLICATES CHECKED_INCLUDE_DIRS)
 
 add_subdirectory(utils)
+add_subdirectory(common)
 
 set(SHARED_INCS
 	${CMAKE_CURRENT_SOURCE_DIR}
+	${COMMON_INCS}
 	${UTILS_INCS}
 	${CMAKE_BINARY_DIR}/conf
 	${CHECKED_INCLUDE_DIRS}

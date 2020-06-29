@@ -28,7 +28,7 @@ target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../include
     ${CMAKE_BINARY_DIR}/conf
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/tar
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map

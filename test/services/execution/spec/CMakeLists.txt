@@ -41,7 +41,7 @@ add_executable(${MOCK_EXE}
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils
@@ -55,7 +55,7 @@ target_include_directories(${EXE} PUBLIC
 
 target_include_directories(${MOCK_EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils

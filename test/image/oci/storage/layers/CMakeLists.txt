@@ -33,7 +33,7 @@ add_executable(${DRIVER_EXE}
 target_include_directories(${DRIVER_EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/tar
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map

@@ -8,7 +8,7 @@ endif()
 add_library(libhttpclient ${LIBTYPE} ${http_client_srcs})
 
 target_include_directories(libhttpclient PUBLIC 
-    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/common
     ${CMAKE_SOURCE_DIR}/src/utils
     ${CMAKE_SOURCE_DIR}/src/utils/cutils
     ${CMAKE_SOURCE_DIR}/src/utils/http

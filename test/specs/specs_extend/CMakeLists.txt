@@ -38,7 +38,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/image/oci
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/image
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon
