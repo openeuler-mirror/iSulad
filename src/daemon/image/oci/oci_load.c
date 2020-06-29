@@ -367,8 +367,8 @@ static int oci_load_set_image_name(const char *img_id, const char *img_name)
         goto out;
     }
 
-    ret = storage_img_add_name(img_id, normalized_name);
-    if (ret != 0) {
+    if (storage_img_add_name(img_id, normalized_name) != 0) {
+        ret = -1;
         ERROR("add image name failed");
     }
 
@@ -411,8 +411,7 @@ static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
         goto out;
     }
 
-    ret = storage_img_create(desc->im_id, top_layer_id, NULL, &opts);
-    if (ret != 0) {
+    if (storage_img_create(desc->im_id, top_layer_id, NULL, &opts) != 0) {
         pre_top_layer = storage_get_img_top_layer(desc->im_id);
         if (pre_top_layer == NULL) {
             ERROR("create image %s failed", desc->im_id);
@@ -426,21 +425,20 @@ static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
             ret = -1;
             goto out;
         }
-        ret = 0;
     }
 
     if (dst_tag != NULL) {
-        ret = oci_load_set_image_name(desc->im_id, dst_tag);
-        if (ret != 0) {
+        if (oci_load_set_image_name(desc->im_id, dst_tag) != 0) {
             ERROR("Failed to set image:%s name by using tag:%s", desc->im_id, dst_tag);
+            ret = -1;
             goto out;
         }
     } else {
         for (; i < desc->repo_tags_len; i++) {
-            ret = oci_load_set_image_name(desc->im_id, desc->repo_tags[i]);
-            if (ret != 0) {
+            if (oci_load_set_image_name(desc->im_id, desc->repo_tags[i]) != 0) {
                 ERROR("Failed to set image:%s name by using tag:%s", desc->im_id, desc->repo_tags[i]);
-                break;
+                ret = -1;
+                goto out;
             }
         }
     }
@@ -469,10 +467,9 @@ static int oci_load_set_manifest(const oci_image_manifest *m, char *image_id)
         goto out;
     }
 
-    ret = storage_img_set_big_data(image_id, MANIFEST_BIG_DATA_KEY, manifest_str);
-    if (ret != 0) {
+    if (storage_img_set_big_data(image_id, MANIFEST_BIG_DATA_KEY, manifest_str) != 0) {
         ERROR("set big data failed");
-        goto out;
+        ret = -1;
     }
 
 out:
@@ -498,10 +495,9 @@ static int oci_load_set_config(load_image_t *desc)
         goto out;
     }
 
-    ret = storage_img_set_big_data(desc->im_id, desc->im_digest, config_str);
-    if (ret != 0) {
+    if (storage_img_set_big_data(desc->im_id, desc->im_digest, config_str) != 0) {
         ERROR("set big data failed");
-        goto out;
+        ret = -1;
     }
 
 out:
@@ -521,10 +517,9 @@ static int oci_load_set_loaded_time(char *image_id)
         goto out;
     }
 
-    ret = storage_img_set_loaded_time(image_id, &now);
-    if (ret != 0) {
+    if (storage_img_set_loaded_time(image_id, &now) != 0) {
         ERROR("set loaded time failed");
-        goto out;
+        ret = -1;
     }
 
 out:
@@ -541,41 +536,40 @@ static int oci_load_register_image(load_image_t *desc, const char *dst_tag)
         return -1;
     }
 
-    ret = oci_load_register_layers(desc);
-    if (ret != 0) {
+    if (oci_load_register_layers(desc) != 0) {
         ERROR("registry layers failed");
+        ret = -1;
         goto out;
     }
 
-    ret = oci_load_create_image(desc, dst_tag);
-    if (ret != 0) {
+    if (oci_load_create_image(desc, dst_tag) != 0) {
         ERROR("create image failed");
+        ret = -1;
         goto out;
     }
     image_created = true;
 
-    ret = oci_load_set_config(desc);
-    if (ret != 0) {
+    if (oci_load_set_config(desc) != 0) {
         ERROR("set image config failed");
+        ret = -1;
         goto out;
     }
 
-    ret = oci_load_set_manifest(desc->manifest, desc->im_id);
-    if (ret != 0) {
+    if (oci_load_set_manifest(desc->manifest, desc->im_id) != 0) {
         ERROR("set manifest failed");
+        ret = -1;
         goto out;
     }
 
-    ret = oci_load_set_loaded_time(desc->im_id);
-    if (ret != 0) {
+    if (oci_load_set_loaded_time(desc->im_id) != 0) {
         ERROR("set loaded time failed");
+        ret = -1;
         goto out;
     }
 
-    ret = storage_img_set_image_size(desc->im_id);
-    if (ret != 0) {
+    if (storage_img_set_image_size(desc->im_id) != 0) {
         ERROR("set image size failed for %s failed", desc->im_id);
-        goto out;
+        ret = -1;
     }
 
 out:
@@ -617,14 +611,14 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
 
         layer_fpath = util_path_join(dstdir, manifest->layers[i]);
         if (layer_fpath == NULL) {
-            ret = -1;
             ERROR("Path join failed");
+            ret = -1;
             goto out;
         }
 
-        ret = util_gzip_compressed(layer_fpath, &gzip);
-        if (ret != 0) {
+        if (util_gzip_compressed(layer_fpath, &gzip) != 0) {
             ERROR("Judge layer file gzip attribute err");
+            ret = -1;
             goto out;
         }
 
@@ -701,14 +695,14 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
     im->repo_tags_len = manifest->repo_tags_len;
     im->repo_tags = manifest->repo_tags_len == 0 ? NULL : str_array_copy(manifest->repo_tags, manifest->repo_tags_len);
 
-    ret = oci_load_set_layers_info(im, manifest, dstdir);
-    if (ret != 0) {
+    if (oci_load_set_layers_info(im, manifest, dstdir) != 0) {
+        ret = -1;
         ERROR("Image load set layers info err");
         goto out;
     }
 
-    ret = oci_load_set_chain_id(im);
-    if (ret != 0) {
+    if (oci_load_set_chain_id(im) != 0) {
+        ret = -1;
         ERROR("Calc image chain id failed");
     }
 
@@ -735,8 +729,8 @@ static int oci_load_set_manifest_info(load_image_t *im)
 
     im->manifest = util_common_calloc_s(sizeof(oci_image_manifest));
     if (im->manifest == NULL) {
-        ret = -1;
         ERROR("Out of memory");
+        ret = -1;
         goto out;
     }
 
@@ -908,9 +902,9 @@ int oci_do_load(const im_load_request *request)
         return -1;
     }
 
-    ret = util_mkdir_p(OCI_LOAD_TMP_WORK_DIR, TEMP_DIRECTORY_MODE);
-    if (ret != 0) {
+    if (util_mkdir_p(OCI_LOAD_TMP_WORK_DIR, TEMP_DIRECTORY_MODE) != 0) {
         ERROR("Unable to create oci image load tmp work dir:%s", OCI_LOAD_TMP_WORK_DIR);
+        ret = -1;
         goto out;
     }
 
@@ -927,9 +921,9 @@ int oci_do_load(const im_load_request *request)
     }
 
     options.whiteout_format = NONE_WHITEOUT_FORMATE;
-    ret = archive_unpack(&reader, dstdir, &options);
-    if (ret != 0) {
+    if (archive_unpack(&reader, dstdir, &options) != 0) {
         ERROR("Failed to unpack to :%s", dstdir);
+        ret = -1;
         goto out;
     }
 
@@ -967,22 +961,22 @@ int oci_do_load(const im_load_request *request)
             goto out;
         }
 
-        ret = oci_load_set_manifest_info(im);
-        if (ret != 0) {
+        if (oci_load_set_manifest_info(im) != 0) {
             ERROR("Image %s set manifest info err", im->im_id);
+            ret = -1;
             goto out;
         }
 
-        ret = oci_load_check_image_layers(im);
-        if (ret != 0) {
+        if (oci_load_check_image_layers(im) != 0) {
             ERROR("Image %s check err", im->im_id);
+            ret = -1;
             goto out;
         }
 
         im->manifest_digest = util_strdup_s(digest);
-        ret = oci_load_register_image(im, request->tag);
-        if (ret != 0) {
+        if (oci_load_register_image(im, request->tag) != 0) {
             ERROR("error register image %s to store", im->im_id);
+            ret = -1;
             goto out;
         }
         oci_load_free_image(im);
