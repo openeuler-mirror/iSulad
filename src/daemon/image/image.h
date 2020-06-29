@@ -24,7 +24,7 @@
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
 #include "libisulad.h"
-#include "daemon_arguments.h"
+#include "isula_libutils/isulad_daemon_configs.h"
 #include "isula_libutils/container_inspect.h"
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_fs_info.h"
@@ -204,7 +204,7 @@ struct graphdriver_status {
 };
 
 struct bim_ops {
-    int (*init)(const struct service_arguments *args);
+    int (*init)(const isulad_daemon_configs *args);
     void (*clean_resource)(void);
 
     /* detect whether image is of this bim type */
@@ -276,7 +276,7 @@ struct bim_type {
     const struct bim_ops *ops;
 };
 
-int image_module_init(const struct service_arguments *args);
+int image_module_init(const isulad_daemon_configs *args);
 
 void image_module_exit();
 

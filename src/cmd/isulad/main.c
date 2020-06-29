@@ -1063,7 +1063,7 @@ static int isulad_server_init_common()
         goto out;
     }
 
-    if (image_module_init(args)) {
+    if (image_module_init(args->json_confs) != 0) {
         ERROR("Failed to init image manager");
         goto out;
     }

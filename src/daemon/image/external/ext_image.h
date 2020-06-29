@@ -36,7 +36,6 @@ int ext_load_image(const im_load_request *request);
 int ext_login(const im_login_request *request);
 int ext_logout(const im_logout_request *request);
 
-int ext_init(const struct service_arguments *args);
+int ext_init(const isulad_daemon_configs *args);
 
 #endif
-

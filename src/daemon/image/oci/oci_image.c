@@ -46,7 +46,7 @@ static char *format_driver_name(const char *driver)
     }
 }
 
-static int storage_module_init_helper(const struct service_arguments *args)
+static int storage_module_init_helper(const isulad_daemon_configs *args)
 {
     int ret = 0;
     struct storage_module_init_options *storage_opts = NULL;
@@ -58,29 +58,29 @@ static int storage_module_init_helper(const struct service_arguments *args)
         goto out;
     }
 
-    storage_opts->driver_name = format_driver_name(args->json_confs->storage_driver);
+    storage_opts->driver_name = format_driver_name(args->storage_driver);
     if (storage_opts->driver_name == NULL) {
         ERROR("Failed to get storage driver name");
         ret = -1;
         goto out;
     }
 
-    storage_opts->storage_root = util_path_join(args->json_confs->graph, GRAPH_ROOTPATH_NAME);
+    storage_opts->storage_root = util_path_join(args->graph, GRAPH_ROOTPATH_NAME);
     if (storage_opts->storage_root == NULL) {
         ERROR("Failed to get storage root dir");
         ret = -1;
         goto out;
     }
 
-    storage_opts->storage_run_root = util_path_join(args->json_confs->state, GRAPH_ROOTPATH_NAME);
+    storage_opts->storage_run_root = util_path_join(args->state, GRAPH_ROOTPATH_NAME);
     if (storage_opts->storage_run_root == NULL) {
         ERROR("Failed to get storage run root dir");
         ret = -1;
         goto out;
     }
 
-    if (dup_array_of_strings((const char **)args->json_confs->storage_opts, args->json_confs->storage_opts_len,
-                             &storage_opts->driver_opts, &storage_opts->driver_opts_len) != 0) {
+    if (dup_array_of_strings((const char **)args->storage_opts, args->storage_opts_len, &storage_opts->driver_opts,
+                             &storage_opts->driver_opts_len) != 0) {
         ERROR("Failed to get storage storage opts");
         ret = -1;
         goto out;
@@ -110,7 +110,7 @@ static void cleanup_image_tmpdir()
     return;
 }
 
-int oci_init(const struct service_arguments *args)
+int oci_init(const isulad_daemon_configs *args)
 {
     int ret = 0;
 

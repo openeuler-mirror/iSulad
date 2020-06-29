@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-int oci_init(const struct service_arguments *args);
+int oci_init(const isulad_daemon_configs *args);
 void oci_exit();
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response);

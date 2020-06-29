@@ -129,7 +129,6 @@ out:
     return ret;
 }
 
-
 int embedded_merge_conf(const char *img_name, container_config *container_spec)
 {
     int ret = 0;
@@ -155,11 +154,10 @@ int embedded_get_user_conf(const char *basefs, host_config *hc, const char *user
         ERROR("Empty basefs or puser");
         return -1;
     }
-    return get_user("/", hc, userstr, puser);;
+    return get_user("/", hc, userstr, puser);
 }
 
-static int embedded_images_to_imagetool_images(struct db_all_images *all_images,
-                                               imagetool_images_list *list)
+static int embedded_images_to_imagetool_images(struct db_all_images *all_images, imagetool_images_list *list)
 {
     int ret = 0;
     size_t images_num = 0;
@@ -314,8 +312,7 @@ int embedded_remove_image(const im_rmi_request *request)
             }
 
             if (strcmp(conts[i]->common_config->image, image_ref) == 0) {
-                ERROR("unable to remove image %s, container %s is using it",
-                      image_ref, conts[i]->common_config->id);
+                ERROR("unable to remove image %s, container %s is using it", image_ref, conts[i]->common_config->id);
                 isulad_set_error_message("Image is in use");
                 ret = EIMAGEBUSY;
                 goto unref_continue;
@@ -351,19 +348,17 @@ int embedded_inspect_image(const im_inspect_request *request, char **inspected_j
     return lim_query_image_data(image_ref, IMAGE_DATA_TYPE_CONFIG, inspected_json, NULL);
 }
 
-int embedded_init(const struct service_arguments *args)
+int embedded_init(const isulad_daemon_configs *args)
 {
     if (args == NULL) {
         ERROR("Invalid image configs");
         return -1;
     }
 
-    return lim_init(args->json_confs->graph);
+    return lim_init(args->graph);
 }
 
 void embedded_exit()
 {
     db_common_finish();
 }
-
-

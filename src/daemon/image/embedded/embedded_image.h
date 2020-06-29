@@ -44,9 +44,8 @@ int embedded_inspect_image(const im_inspect_request *request, char **inspected_j
 
 int embedded_load_image(const im_load_request *request);
 
-int embedded_init(const struct service_arguments *args);
+int embedded_init(const isulad_daemon_configs *args);
 
 void embedded_exit();
 
 #endif
-

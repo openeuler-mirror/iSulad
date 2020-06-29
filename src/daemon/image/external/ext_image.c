@@ -175,7 +175,7 @@ int ext_logout(const im_logout_request *request)
     return 0;
 }
 
-int ext_init(const struct service_arguments *args)
+int ext_init(const isulad_daemon_configs *args)
 {
     return 0;
 }

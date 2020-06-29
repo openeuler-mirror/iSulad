@@ -1745,7 +1745,7 @@ void free_im_export_request(im_export_request *ptr)
     free(ptr);
 }
 
-static int bims_init(const struct service_arguments *args)
+static int bims_init(const isulad_daemon_configs *args)
 {
     int ret = 0;
     size_t i;
@@ -1765,7 +1765,7 @@ static int bims_init(const struct service_arguments *args)
     return ret;
 }
 
-int image_module_init(const struct service_arguments *args)
+int image_module_init(const isulad_daemon_configs *args)
 {
     if (args == NULL) {
         ERROR("Invalid input arguments");
