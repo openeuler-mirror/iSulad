@@ -893,7 +893,7 @@ void CRIRuntimeServiceImpl::PackContainerStatsAttributes(
 
 static void SetFsUsage(const imagetool_fs_info *fs_usage, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
 {
-    if (fs_usage == nullptr || fs_usage->image_filesystems[0] == nullptr) {
+    if (fs_usage == nullptr || fs_usage->image_filesystems_len == 0 || fs_usage->image_filesystems[0] == nullptr) {
         container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
         container->mutable_writable_layer()->mutable_inodes_used()->set_value(0);
         return;

@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance restartpolicy
 # concurrent: NO
-# spend time: 24
+# spend time: 29
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -29,7 +29,7 @@ function do_test_on_failure()
     isula run  --name $containername  -td --restart on-failure:3  busybox /bin/sh -c "exit 2"
     fn_check_eq "$?" "0" "run failed"
 
-    sleep 6
+    sleep 8
     count=`isula inspect --format='{{json .RestartCount}}' $containername`
     if [[ $count != "3"  ]];then
         echo "expect 3 but get $count"
@@ -49,7 +49,7 @@ function do_test_always_cancel()
 
     cpid=`isula inspect -f '{{json .State.Pid}}' $containername`
     kill -9 $cpid
-    sleep 6
+    sleep 8
     testcontainer $containername running
 
     isula stop $containername

@@ -86,7 +86,8 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			valgrind \
 			e2fsprogs \
 			lcov \
-			libasan
+			libasan \
+			lvm2
 
 RUN yum clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; \
