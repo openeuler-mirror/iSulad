@@ -891,6 +891,29 @@ void CRIRuntimeServiceImpl::PackContainerStatsAttributes(
     }
 }
 
+static void SetFsUsage(const imagetool_fs_info *fs_usage, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
+{
+    if (fs_usage == nullptr || fs_usage->image_filesystems[0] == nullptr) {
+        container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
+        container->mutable_writable_layer()->mutable_inodes_used()->set_value(0);
+        return;
+    }
+
+    if (fs_usage->image_filesystems[0]->used_bytes == nullptr) {
+        container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
+    } else {
+        container->mutable_writable_layer()->mutable_used_bytes()->set_value(
+            fs_usage->image_filesystems[0]->used_bytes->value);
+    }
+
+    if (fs_usage->image_filesystems[0]->inodes_used == nullptr) {
+        container->mutable_writable_layer()->mutable_inodes_used()->set_value(0);
+    } else {
+        container->mutable_writable_layer()->mutable_inodes_used()->set_value(
+            fs_usage->image_filesystems[0]->inodes_used->value);
+    }
+}
+
 void CRIRuntimeServiceImpl::PackContainerStatsFilesystemUsage(
     const char *id, const char *image_type,
     std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
@@ -905,21 +928,7 @@ void CRIRuntimeServiceImpl::PackContainerStatsFilesystemUsage(
         ERROR("Failed to get container filesystem usage");
     }
 
-    if (fs_usage == nullptr) {
-        container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
-        container->mutable_writable_layer()->mutable_inodes_used()->set_value(0);
-    } else {
-        if (fs_usage->image_filesystems[0]->used_bytes->value) {
-            container->mutable_writable_layer()->mutable_used_bytes()->set_value(
-                fs_usage->image_filesystems[0]->used_bytes->value);
-        }
-
-        if (fs_usage->image_filesystems[0]->inodes_used->value) {
-            container->mutable_writable_layer()->mutable_inodes_used()->set_value(
-                fs_usage->image_filesystems[0]->inodes_used->value);
-        }
-    }
-
+    SetFsUsage(fs_usage, container);
     free_imagetool_fs_info(fs_usage);
 }
 

@@ -789,6 +789,7 @@ static void construct_device_id_map(struct device_set *devset)
         mark_device_id_used(devset, device_info->info->device_id);
         devmapper_device_info_ref_dec(device_info);
     }
+    util_free_array(dev_arr);
 }
 
 static void count_deleted_devices(struct device_set *devset)
@@ -812,6 +813,7 @@ static void count_deleted_devices(struct device_set *devset)
         }
         devmapper_device_info_ref_dec(device_info);
     }
+    util_free_array(dev_arr);
 }
 
 static int remove_transaction_metadata(struct device_set *devset)
@@ -2383,6 +2385,8 @@ static int do_check_all_devices(struct device_set *devset)
         if (!util_has_prefix(devices_list[i], devset->device_prefix)) {
             continue;
         }
+        UTIL_FREE_AND_SET_NULL(target_type);
+        UTIL_FREE_AND_SET_NULL(params);
         if (dev_get_status(&start, &length, &target_type, &params, devices_list[i]) != 0) {
             WARN("devmapper: get device status %s failed", devices_list[i]);
             continue;
