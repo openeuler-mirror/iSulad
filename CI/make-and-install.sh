@@ -88,7 +88,7 @@ fi
 echo_success "===================RUN DT-LLT TESTCASES END========================="
 
 cd $ISULAD_COPY_PATH
-sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/cutils/utils.c
+sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils/cutils/utils.c
 
 # build rest version
 cd $ISULAD_COPY_PATH

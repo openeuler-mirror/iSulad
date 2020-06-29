@@ -7,3 +7,11 @@ set(CUTILS_SRCS
     ${MAP_SRCS}
     PARENT_SCOPE
     )
+
+set(CUTILS_INCS
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${MAP_INCS}
+    PARENT_SCOPE
+    )
+
+

@@ -3,20 +3,20 @@ project(iSulad_UT)
 SET(EXE storage_images_ut)
 
 add_executable(${EXE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_regex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_verify.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_array.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_string.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_convert.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_file.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_base64.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/util_atomic.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/sha256/sha256.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/path.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/map/map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/utils_timestamp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_verify.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_string.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_convert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_base64.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/util_atomic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/utils_images.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/image_store/image_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/registry_type.c
@@ -29,11 +29,11 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../include
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/tar
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cutils/map
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/sha256
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/http
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/tar
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/http
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/image/oci/storage/image_store

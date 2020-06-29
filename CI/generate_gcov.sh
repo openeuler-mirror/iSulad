@@ -44,7 +44,7 @@ genhtml --ignore-errors source -o $GCOV_RESULT_PATH/isula isula.info
 genhtml --ignore-errors source -o $GCOV_RESULT_PATH/isulad-shim isulad-shim.info
 genhtml --ignore-errors source -o $GCOV_RESULT_PATH/libisula libisula.info
 
-cd $ISULAD_COPY_PATH/build/src/http/CMakeFiles
+cd $ISULAD_COPY_PATH/build/src/utils/http/CMakeFiles
 lcov -c -o libhttpclient.info '/usr/*' -o libhttpclient.info
 
 # Remove std file

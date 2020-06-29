@@ -25,50 +25,28 @@ else()
 endif()
 list(REMOVE_DUPLICATES CHECKED_INCLUDE_DIRS)
 
-add_subdirectory(tar)
-add_subdirectory(sha256)
-add_subdirectory(cutils)
-add_subdirectory(console)
+add_subdirectory(utils)
 
 set(SHARED_INCS
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/cutils
-    ${CMAKE_CURRENT_SOURCE_DIR}/cutils/map
-    ${CMAKE_CURRENT_SOURCE_DIR}/sha256
-    ${CMAKE_CURRENT_SOURCE_DIR}/tar
-    ${CMAKE_CURRENT_SOURCE_DIR}/console
-    ${CMAKE_BINARY_DIR}/conf
-    ${CHECKED_INCLUDE_DIRS}
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${UTILS_INCS}
+	${CMAKE_BINARY_DIR}/conf
+	${CHECKED_INCLUDE_DIRS}
     )
 
 set(SHARED_SRCS
-    ${TAR_SRCS}
-    ${SHA256_SRCS}
-    ${CUTILS_SRCS}
-    ${CONSOLE_SRCS}
+	${UTILS_SRCS}
     )
-
-if (GRPC_CONNECTOR)
-	add_subdirectory(cpputils)
-	list(APPEND SHARED_SRCS ${CPPUTILS_SRCS})
-	list(APPEND SHARED_INCS ${CPPUTILS_INCS})
-else()
-        list(APPEND SHARED_INCS ${CMAKE_CURRENT_SOURCE_DIR}/api/services/containers/rest
-                ${CMAKE_CURRENT_SOURCE_DIR}/api/services/images/rest)
-
-endif()
 
 # get all c and header files
 list(REMOVE_DUPLICATES SHARED_INCS)
 list(REMOVE_DUPLICATES SHARED_SRCS)
 
-add_subdirectory(http)
-
 # ------ build libisula ------
 
 add_subdirectory(client)
 if (OPENSSL_VERIFY)
-    list(APPEND CLIENT_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/http/certificate.c)
+    list(APPEND CLIENT_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/utils/http/certificate.c)
 endif()
 
 add_library(libisula ${LIBTYPE}
@@ -79,7 +57,7 @@ add_library(libisula ${LIBTYPE}
 target_include_directories(libisula PUBLIC
     ${SHARED_INCS}
     ${CLIENT_INCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/http
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
 # set libisula FLAGS
@@ -128,7 +106,7 @@ target_include_directories(isulad PUBLIC
     ${SHARED_INCS}
     ${CONNECT_SOCKET_INCS}
     ${ISULAD_INCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/http
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
 target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})

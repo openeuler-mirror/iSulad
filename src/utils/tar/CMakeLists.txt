@@ -5,3 +5,8 @@ set(TAR_SRCS
     ${local_tar_srcs}
     PARENT_SCOPE
     )
+set(TAR_INCS
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    PARENT_SCOPE
+    )
+

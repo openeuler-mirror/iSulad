@@ -5,3 +5,8 @@ set(CONSOLE_SRCS
     ${local_console_srcs}
     PARENT_SCOPE
     )
+
+set(CONSOLE_INCS
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    PARENT_SCOPE
+    )
