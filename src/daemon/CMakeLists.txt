@@ -7,10 +7,10 @@ add_subdirectory(plugin)
 add_subdirectory(executor)
 add_subdirectory(spec)
 add_subdirectory(container)
-add_subdirectory(connect)
 add_subdirectory(log)
 add_subdirectory(events)
 add_subdirectory(events_sender)
+add_subdirectory(entry)
 
 set(local_daemon_srcs
     ${daemon_top_srcs}
@@ -20,7 +20,7 @@ set(local_daemon_srcs
     ${EXECUTOR_SRCS}
     ${SPEC_SRCS}
     ${MANAGER_SRCS}
-    ${SERVER_CONNECT_SRCS}
+    ${ENTRY_SRCS}
     ${LOG_GATHER_SRCS}
     ${EVENTS_SRCS}
     ${EVENTS_SENDER_SRCS}
@@ -34,17 +34,11 @@ set(local_daemon_incs
     ${EXECUTOR_INCS}
     ${SPEC_INCS}
     ${MANAGER_INCS}
-    ${SERVER_CONNECT_INCS}
+    ${ENTRY_INCS}
     ${LOG_GATHER_INCS}
     ${EVENTS_INCS}
     ${EVENTS_SENDER_INCS}
     )
-
-if (GRPC_CONNECTOR)
-        add_subdirectory(cri)
-        list(APPEND local_daemon_srcs ${CRI_SRCS})
-        list(APPEND local_daemon_incs ${CRI_INCS})
-endif()
 
 set(DAEMON_SRCS
     ${local_daemon_srcs}
