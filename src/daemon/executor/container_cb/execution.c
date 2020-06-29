@@ -51,7 +51,7 @@
 #include "error.h"
 #include "event_sender.h"
 #include "specs.h"
-#include "container_operator.h"
+#include "service_container.h"
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
 {

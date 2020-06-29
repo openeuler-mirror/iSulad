@@ -23,7 +23,7 @@
 #include "isula_libutils/container_garbage_config.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "container_operator.h"
+#include "service_container.h"
 #include "containers_store.h"
 #include "runtime.h"
 

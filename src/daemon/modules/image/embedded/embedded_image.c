@@ -21,7 +21,6 @@
 #include <sys/utsname.h>
 #include <ctype.h>
 
-#include "containers_store.h"
 #include "specs_extend.h"
 #include "isula_libutils/log.h"
 #include "embedded_image.h"
@@ -287,51 +286,11 @@ int embedded_remove_image(const im_rmi_request *request)
 {
     bool force = false;
     char *image_ref = NULL;
-    int ret = 0;
-    size_t i = 0;
-    size_t container_num = 0;
-    container_t **conts = NULL;
 
     force = request->force;
     image_ref = request->image.image;
 
-    if (!force) {
-        ret = containers_store_list(&conts, &container_num);
-        if (ret != 0) {
-            ERROR("query all containers info failed");
-            ret = -1;
-            goto out;
-        }
-        /* check if container is using this image */
-        for (i = 0; i < container_num; i++) {
-            if (ret != 0) {
-                goto unref_continue;
-            }
-            if (conts[i]->common_config->image == NULL) {
-                goto unref_continue;
-            }
-
-            if (strcmp(conts[i]->common_config->image, image_ref) == 0) {
-                ERROR("unable to remove image %s, container %s is using it", image_ref, conts[i]->common_config->id);
-                isulad_set_error_message("Image is in use");
-                ret = EIMAGEBUSY;
-                goto unref_continue;
-            }
-unref_continue:
-            container_unref(conts[i]);
-            continue;
-        }
-        if (ret != 0) {
-            ret = -1;
-            goto out;
-        }
-    }
-
-    ret = lim_delete_image(image_ref, force);
-
-out:
-    free(conts);
-    return ret;
+    return lim_delete_image(image_ref, force);
 }
 
 int embedded_inspect_image(const im_inspect_request *request, char **inspected_json)

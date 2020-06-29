@@ -51,7 +51,7 @@
 #include "callback.h"
 #include "log_gather.h"
 #include "containers_store.h"
-#include "container_operator.h"
+#include "service_container.h"
 #include "plugin.h"
 #include "selinux_label.h"
 #include "http.h"

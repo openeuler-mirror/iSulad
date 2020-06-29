@@ -27,6 +27,7 @@
 #include "utils.h"
 #include "cri_helpers.h"
 #include "event_sender.h"
+#include "service_image.h"
 
 static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {
@@ -313,26 +314,24 @@ void CRIImageServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image,
 {
     std::string out_str { "" };
     im_rmi_request *request { nullptr };
-    im_remove_response *response { nullptr };
+
+    DAEMON_CLEAR_ERRMSG();
 
     if (remove_request_from_grpc(&image, &request, error)) {
         goto cleanup;
     }
 
-    if (im_rm_image(request, &response) != 0) {
-        if (response != nullptr && response->errmsg != nullptr) {
-            error.SetError(response->errmsg);
+    if (delete_image(request->image.image, false) != 0) {
+        if (g_isulad_errmsg != nullptr) {
+            error.SetError(g_isulad_errmsg);
         } else {
             error.SetError("Failed to call remove image");
         }
-    } else {
-        (void)isulad_monitor_send_image_event(request->image.image, IM_REMOVE);
     }
 
 cleanup:
     DAEMON_CLEAR_ERRMSG();
     free_im_remove_request(request);
-    free_im_remove_response(response);
     return;
 }
 

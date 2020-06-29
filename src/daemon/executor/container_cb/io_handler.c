@@ -44,7 +44,7 @@
 #include "constants.h"
 #include "runtime.h"
 #include "event_sender.h"
-#include "container_operator.h"
+#include "service_container.h"
 
 static char *create_single_fifo(const char *statepath, const char *subpath, const char *stdflag)
 {

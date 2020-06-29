@@ -27,7 +27,7 @@
 #include "container_events_handler.h"
 #include "utils.h"
 #include "containers_store.h"
-#include "container_operator.h"
+#include "service_container.h"
 #include "plugin.h"
 
 /* events handler lock */

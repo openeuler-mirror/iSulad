@@ -44,7 +44,7 @@
 #include "constants.h"
 #include "runtime.h"
 #include "event_sender.h"
-#include "container_operator.h"
+#include "service_container.h"
 #include "io_handler.h"
 
 struct container_log_config {

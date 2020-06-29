@@ -26,7 +26,7 @@
 #include "utils.h"
 #include "health_check.h"
 #include "callback.h"
-#include "container_operator.h"
+#include "service_container.h"
 #include "isula_libutils/container_exec_request.h"
 #include "isula_libutils/container_exec_response.h"
 #include "containers_store.h"

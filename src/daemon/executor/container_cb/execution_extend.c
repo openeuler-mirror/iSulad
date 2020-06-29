@@ -36,7 +36,7 @@
 #include "verify.h"
 #include "isula_libutils/container_inspect.h"
 #include "containers_store.h"
-#include "container_operator.h"
+#include "service_container.h"
 #include "sysinfo.h"
 #include "specs.h"
 #include "runtime.h"

@@ -8,22 +8,22 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: jikui
- * Create: 2020-02-25
- * Description: provide containers_gc mock
+ * Author: lifeng
+ * Create: 2020-06-22
+ * Description: provide container supervisor definition
  ******************************************************************************/
+#ifndef __ISULAD_SERVICE_IMAGE_OPERATOR_H
+#define __ISULAD_SERVICE_IMAGE_OPERATOR_H
+#include <stdbool.h>
 
-#ifndef CONTAINERS_OPERATOR_MOCK_H_
-#define CONTAINERS_OPERATOR_MOCK_H_
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <gmock/gmock.h>
-#include "service_container.h"
+int delete_image(const char *image_ref, bool force);
 
-class MockContainersOperator {
-public:
-    MOCK_METHOD1(IsGcProgress, bool(const char *id));
-};
-
-void MockContainersOperator_SetMock(MockContainersOperator *mock);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

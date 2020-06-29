@@ -47,45 +47,41 @@ set(LIB_ISULAD_IMG libisulad_img)
 
 add_library(${LIB_ISULAD_IMG} ${LIBTYPE}
     ${local_image_srcs}
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_regex.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_file.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_verify.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_array.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_convert.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_string.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_base64.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_timestamp.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_fs.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/utils_aes.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/util_atomic.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/filters.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/path.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/map/map.c
-    ${CMAKE_SOURCE_DIR}/src/cutils/map/rb_tree.c
-    ${CMAKE_SOURCE_DIR}/src/sha256/sha256.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_regex.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_file.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_verify.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_array.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_convert.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_string.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_base64.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_timestamp.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_fs.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/utils_aes.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/util_atomic.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/filters.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/path.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/map/map.c
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/map/rb_tree.c
+    ${CMAKE_SOURCE_DIR}/src/utils/sha256/sha256.c
     ${CMAKE_SOURCE_DIR}/src/daemon/libisulad.c
     ${CMAKE_SOURCE_DIR}/src/daemon/isulad_config.c
     ${CMAKE_SOURCE_DIR}/src/daemon/daemon_arguments.c
-    ${CMAKE_SOURCE_DIR}/src/daemon/spec/sysinfo.c
-    ${CMAKE_SOURCE_DIR}/src/tar/isulad_tar.c
-    ${CMAKE_SOURCE_DIR}/src/tar/util_archive.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/modules/spec/sysinfo.c
+    ${CMAKE_SOURCE_DIR}/src/utils/tar/isulad_tar.c
+    ${CMAKE_SOURCE_DIR}/src/utils/tar/util_archive.c
     )
 
 target_include_directories(${LIB_ISULAD_IMG} PUBLIC
     ${local_image_incs}
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/sha256
+    ${CMAKE_SOURCE_DIR}/src/utils/sha256
     ${CMAKE_SOURCE_DIR}/src/http
-    ${CMAKE_SOURCE_DIR}/src/tar
+    ${CMAKE_SOURCE_DIR}/src/utils/tar
     ${CMAKE_SOURCE_DIR}/src/daemon
-    ${CMAKE_SOURCE_DIR}/src/daemon/spec/
-    ${CMAKE_SOURCE_DIR}/src/daemon/container
-    ${CMAKE_SOURCE_DIR}/src/daemon/runtime
-    ${CMAKE_SOURCE_DIR}/src/daemon/container/restart_manager
-    ${CMAKE_SOURCE_DIR}/src/daemon/container/health_check
-    ${CMAKE_SOURCE_DIR}/src/cutils
-    ${CMAKE_SOURCE_DIR}/src/cutils/map
+    ${CMAKE_SOURCE_DIR}/src/daemon/modules/spec/
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils
+    ${CMAKE_SOURCE_DIR}/src/utils/cutils/map
     ${CHECKED_INCLUDE_DIRS}
     )
 

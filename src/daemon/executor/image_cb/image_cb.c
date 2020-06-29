@@ -34,6 +34,7 @@
 #include "mediatype.h"
 #include "filters.h"
 #include "event_sender.h"
+#include "service_image.h"
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_common_operators.h"
 #endif
@@ -373,49 +374,6 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
-/* delete image info */
-static int delete_image_info(const char *image_ref, bool force)
-{
-    int ret = 0;
-    im_rmi_request *im_request = NULL;
-    im_remove_response *im_response = NULL;
-
-    if (image_ref == NULL) {
-        ERROR("invalid NULL param");
-        return EINVALIDARGS;
-    }
-
-    im_request = util_common_calloc_s(sizeof(im_rmi_request));
-    if (im_request == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    im_request->image.image = util_strdup_s(image_ref);
-    im_request->force = force;
-
-    ret = im_rm_image(im_request, &im_response);
-    if (ret != 0) {
-        if (im_response != NULL && im_response->errmsg != NULL) {
-            ERROR("Remove image %s failed:%s", image_ref, im_response->errmsg);
-            isulad_try_set_error_message("Remove image %s failed:%s", image_ref, im_response->errmsg);
-        } else {
-            ERROR("Remove image %s failed", image_ref);
-            isulad_try_set_error_message("Remove image %s failed", image_ref);
-        }
-        ret = -1;
-        goto out;
-    }
-    (void)isulad_monitor_send_image_event(im_request->image.image, IM_REMOVE);
-
-out:
-    free_im_remove_request(im_request);
-    free_im_remove_response(im_response);
-
-    return ret;
-}
-
 /* image remove cb */
 static int image_remove_cb(const image_delete_image_request *request, image_delete_image_response **response)
 {
@@ -448,7 +406,7 @@ static int image_remove_cb(const image_delete_image_request *request, image_dele
 
     EVENT("Image Event: {Object: %s, Type: Deleting}", image_ref);
 
-    ret = delete_image_info(image_ref, request->force);
+    ret = delete_image(image_ref, request->force);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         goto out;

@@ -45,7 +45,7 @@
 #include "namespace.h"
 #include "event_sender.h"
 #include "sysinfo.h"
-#include "container_operator.h"
+#include "service_container.h"
 
 static int runtime_check(const char *name, bool *runtime_res)
 {

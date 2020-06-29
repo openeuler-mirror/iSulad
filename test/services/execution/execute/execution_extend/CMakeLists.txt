@@ -58,6 +58,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/service
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/container
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/container/restart_manager
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/container/health_check

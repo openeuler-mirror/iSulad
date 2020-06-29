@@ -9,6 +9,7 @@ add_subdirectory(container)
 add_subdirectory(log)
 add_subdirectory(events)
 add_subdirectory(events_sender)
+add_subdirectory(service)
 
 set(local_modules_srcs
     ${modules_top_srcs}
@@ -20,6 +21,7 @@ set(local_modules_srcs
     ${LOG_GATHER_SRCS}
     ${EVENTS_SRCS}
     ${EVENTS_SENDER_SRCS}
+    ${SERVICE_SRCS}
     )
 
 set(local_modules_incs
@@ -32,6 +34,7 @@ set(local_modules_incs
     ${LOG_GATHER_INCS}
     ${EVENTS_INCS}
     ${EVENTS_SENDER_INCS}
+    ${SERVICE_INCS}
     )
 
 set(MODULES_SRCS
