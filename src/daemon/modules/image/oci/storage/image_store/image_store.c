@@ -3086,7 +3086,8 @@ static int pack_health_check_from_image(const docker_image_config_v2 *config_v2,
     size_t i;
     defs_health_check *healthcheck = NULL;
 
-    if (config_v2->config->healthcheck == NULL || config_v2->config->healthcheck->test_len == 0) {
+    if (config_v2->config == NULL || config_v2->config->healthcheck == NULL ||
+        config_v2->config->healthcheck->test_len == 0) {
         return 0;
     }
 
