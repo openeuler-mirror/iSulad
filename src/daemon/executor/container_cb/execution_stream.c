@@ -41,9 +41,9 @@
 #include "error.h"
 #include "isula_libutils/logger_json_file.h"
 #include "constants.h"
-#include "runtime.h"
-#include "event_sender.h"
-#include "service_container.h"
+#include "runtime_api.h"
+#include "events_sender_api.h"
+#include "service_container_api.h"
 #include "io_handler.h"
 
 struct container_log_config {

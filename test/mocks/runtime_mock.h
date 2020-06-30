@@ -17,7 +17,7 @@
 #define RUNTIME_MOCK_H_
 
 #include <gmock/gmock.h>
-#include "runtime.h"
+#include "runtime_api.h"
 
 class MockRuntime {
 public:

@@ -28,8 +28,8 @@
 #include "container_unix.h"
 #include "error.h"
 #include "image_api.h"
-#include "runtime.h"
-#include "service_container.h"
+#include "runtime_api.h"
+#include "service_container_api.h"
 #include "restartmanager.h"
 #include "health_check.h"
 

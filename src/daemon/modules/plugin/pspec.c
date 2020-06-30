@@ -17,7 +17,7 @@
 #include "isula_libutils/log.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/oci_runtime_pspec.h"
-#include "plugin.h"
+#include "plugin_api.h"
 #include "pspec.h"
 
 /*
@@ -26,12 +26,12 @@
  */
 #define PTR_UPDATE(old, new, field, ffree) \
     do {                                   \
-        if ((new)->field == NULL) {          \
+        if ((new)->field == NULL) {        \
             break;                         \
         }                                  \
-        ffree((old)->field);                 \
-        (old)->field = (new)->field;           \
-        (new)->field = NULL;                 \
+        ffree((old)->field);               \
+        (old)->field = (new)->field;       \
+        (new)->field = NULL;               \
     } while (0)
 
 /*
@@ -87,8 +87,7 @@ static oci_runtime_pspec *raw_get_pspec(oci_runtime_spec *oci)
     PPR_UPDATE(pspec, oci->process, env, env_len, free);
     PPR_UPDATE(pspec, oci->linux, devices, devices_len, free_defs_device);
 
-    PPR_UPDATE(pspec->resources, oci->linux->resources, devices, devices_len,
-               free_defs_device_cgroup);
+    PPR_UPDATE(pspec->resources, oci->linux->resources, devices, devices_len, free_defs_device_cgroup);
 
     return pspec;
 }
@@ -113,8 +112,7 @@ static void raw_set_pspec(oci_runtime_spec *oci, oci_runtime_pspec *pspec)
     PPR_UPDATE(oci->process, pspec, env, env_len, free);
     PPR_UPDATE(oci->linux, pspec, devices, devices_len, free_defs_device);
 
-    PPR_UPDATE(oci->linux->resources, pspec->resources, devices, devices_len,
-               free_defs_device_cgroup);
+    PPR_UPDATE(oci->linux->resources, pspec->resources, devices, devices_len, free_defs_device_cgroup);
 }
 
 char *get_pspec(oci_runtime_spec *oci)
@@ -254,4 +252,3 @@ revert_free_old:
 
     return dst;
 }
-

@@ -16,7 +16,7 @@
 #ifndef __RUNTIME_LCR_OPS_INTERFACE_H_
 #define __RUNTIME_LCR_OPS_INTERFACE_H_
 
-#include "runtime.h"
+#include "runtime_api.h"
 
 #ifdef __cplusplus
 extern "C" {

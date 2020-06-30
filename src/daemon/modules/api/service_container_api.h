@@ -14,9 +14,7 @@
  ******************************************************************************/
 #ifndef __ISULAD_SERVICE_CONTAINER_OPERATOR_H
 #define __ISULAD_SERVICE_CONTAINER_OPERATOR_H
-#include <pthread.h>
-#include <semaphore.h>
-#include "container_unix.h"
+#include "container_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,8 +37,6 @@ int kill_container(container_t *cont, uint32_t signal);
 int set_container_to_removal(const container_t *cont);
 
 int delete_container(container_t *cont, bool force);
-
-int container_module_init(char **msg);
 
 #ifdef __cplusplus
 }

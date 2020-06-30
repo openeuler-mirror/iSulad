@@ -13,7 +13,7 @@
  * Description: provide container supervisor functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "service_image.h"
+#include "service_image_api.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -23,7 +23,7 @@
 #include "image_api.h"
 #include "utils.h"
 #include "container_api.h"
-#include "event_sender.h"
+#include "events_sender_api.h"
 
 static bool check_image_in_used(const char *image_ref)
 {

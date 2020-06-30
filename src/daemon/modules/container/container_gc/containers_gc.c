@@ -23,9 +23,9 @@
 #include "isula_libutils/container_garbage_config.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "service_container.h"
+#include "service_container_api.h"
 #include "container_api.h"
-#include "runtime.h"
+#include "runtime_api.h"
 #include "restartmanager.h"
 
 static containers_gc_t g_gc_containers;

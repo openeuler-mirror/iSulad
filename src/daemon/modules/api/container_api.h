@@ -225,8 +225,6 @@ int dup_health_check_status(defs_health **dst, const defs_health *src);
 
 void update_health_monitor(const char *container_id);
 
-int64_t timeout_with_default(int64_t configured_value, int64_t default_value);
-
 extern int supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name, const char *runtime);
 
 extern char *exit_fifo_create(const char *cont_state_path);

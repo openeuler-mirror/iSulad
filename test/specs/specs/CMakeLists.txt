@@ -42,6 +42,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/isulad
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container/restart_manager

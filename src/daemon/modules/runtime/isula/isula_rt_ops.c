@@ -22,7 +22,7 @@
 #include "isula_rt_ops.h"
 #include "isula_libutils/log.h"
 #include "error.h"
-#include "runtime.h"
+#include "runtime_api.h"
 #include "constants.h"
 #include "isula_libutils/shim_client_process_state.h"
 #include "isula_libutils/shim_client_runtime_stats.h"
@@ -673,7 +673,7 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
             _exit(EXIT_SUCCESS);
         }
 
-realexec:
+    realexec:
         /* real shim process. */
         close(exec_fd[0]);
         if (setsid() < 0) {
@@ -685,7 +685,7 @@ realexec:
             (void)dprintf(exec_fd[1], "close inherited fds failed");
         }
 
-        execvp(SHIM_BINARY, (char * const *)params);
+        execvp(SHIM_BINARY, (char *const *)params);
         (void)dprintf(exec_fd[1], "exec failed: %s", strerror(errno));
     }
 

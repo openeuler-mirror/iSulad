@@ -30,7 +30,7 @@
 #include "libisulad.h"
 #include "isula_libutils/log.h"
 #include "sysinfo.h"
-#include "specs.h"
+#include "specs_api.h"
 #include "verify.h"
 #include "isulad_config.h"
 #include "selinux_label.h"

@@ -13,7 +13,7 @@
  * Description: provide log gather functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "log_gather.h"
+#include "log_gather_api.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -28,7 +28,7 @@
 #include "utils.h"
 #include "isulad_tar.h"
 
-typedef int(*log_save_t)(const void *buf, size_t count);
+typedef int (*log_save_t)(const void *buf, size_t count);
 static log_save_t g_save_log_op = NULL;
 
 static int g_fifo_fd = -1;
@@ -407,4 +407,3 @@ err_out:
 pexit:
     return NULL;
 }
-

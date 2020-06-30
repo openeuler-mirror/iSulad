@@ -27,8 +27,8 @@
 #include <sys/sysinfo.h>
 
 #include "isula_libutils/log.h"
-#include "event_sender.h"
-#include "collector.h"
+#include "events_sender_api.h"
+#include "events_collector_api.h"
 #include "io_wrapper.h"
 #include "isulad_config.h"
 #include "config.h"
@@ -36,10 +36,10 @@
 #include "verify.h"
 #include "isula_libutils/container_inspect.h"
 #include "container_api.h"
-#include "service_container.h"
+#include "service_container_api.h"
 #include "sysinfo.h"
-#include "specs.h"
-#include "runtime.h"
+#include "specs_api.h"
+#include "runtime_api.h"
 
 #include "filters.h"
 #include "utils.h"

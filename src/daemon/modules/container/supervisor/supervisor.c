@@ -22,9 +22,9 @@
 #include "supervisor.h"
 #include "mainloop.h"
 #include "libisulad.h"
-#include "event_sender.h"
+#include "events_sender_api.h"
 #include "containers_gc.h"
-#include "service_container.h"
+#include "service_container_api.h"
 
 pthread_mutex_t g_supervisor_lock = PTHREAD_MUTEX_INITIALIZER;
 struct epoll_descr g_supervisor_descr;

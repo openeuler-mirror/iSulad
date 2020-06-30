@@ -13,7 +13,7 @@
  * Description: provide container supervisor functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "service_container.h"
+#include "service_container_api.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -23,15 +23,15 @@
 #include "utils.h"
 #include "mainloop.h"
 #include "libisulad.h"
-#include "event_sender.h"
+#include "events_sender_api.h"
 #include "image_api.h"
-#include "specs.h"
+#include "specs_api.h"
 #include "isulad_config.h"
 #include "verify.h"
-#include "plugin.h"
+#include "plugin_api.h"
 #include "container_api.h"
 #include "namespace.h"
-#include "runtime.h"
+#include "runtime_api.h"
 
 int set_container_to_removal(const container_t *cont)
 {

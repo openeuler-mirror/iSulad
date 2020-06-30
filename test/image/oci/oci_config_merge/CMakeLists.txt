@@ -38,6 +38,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/runtime/engines
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec/
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/

@@ -40,6 +40,7 @@ target_include_directories(${DRIVER_EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver

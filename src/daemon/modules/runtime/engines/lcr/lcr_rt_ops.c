@@ -23,7 +23,7 @@
 #include "error.h"
 #include "isulad_config.h"
 #include "libisulad.h"
-#include "runtime.h"
+#include "runtime_api.h"
 
 bool rt_lcr_detect(const char *runtime)
 {

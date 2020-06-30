@@ -39,7 +39,7 @@
 #endif
 
 #include "constants.h"
-#include "collector.h"
+#include "events_collector_api.h"
 #include "isulad_commands.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -49,13 +49,13 @@
 #include "verify.h"
 #include "service_common.h"
 #include "callback.h"
-#include "log_gather.h"
+#include "log_gather_api.h"
 #include "container_api.h"
-#include "service_container.h"
-#include "plugin.h"
+#include "service_container_api.h"
+#include "plugin_api.h"
 #include "selinux_label.h"
 #include "http.h"
-#include "runtime.h"
+#include "runtime_api.h"
 
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"

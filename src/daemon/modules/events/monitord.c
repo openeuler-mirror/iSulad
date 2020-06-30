@@ -27,9 +27,9 @@
 #include "monitord.h"
 #include "mainloop.h"
 #include "isulad_config.h"
-#include "collector.h"
+#include "events_collector_api.h"
 #include "utils.h"
-#include "event_sender.h"
+#include "events_sender_api.h"
 
 struct monitord_handler {
     struct epoll_descr *pdescr;

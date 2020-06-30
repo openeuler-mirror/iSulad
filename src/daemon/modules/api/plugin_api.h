@@ -19,8 +19,8 @@
 #include <pthread.h>
 
 #include "map.h"
-#include "specs.h"                      /* oci_runtime_spec */
-#include "container_unix.h"             /* container_t */
+#include "specs_api.h" /* oci_runtime_spec */
+#include "container_api.h" /* container_t */
 
 /*
  * returned int should means:
@@ -32,14 +32,14 @@
  * comment.
  */
 
-#define PLUGIN_INIT_SKIP                        0
-#define PLUGIN_INIT_WITH_CONTAINER_RUNNING      1
-#define PLUGIN_INIT_WITH_CONTAINER_ALL          2
+#define PLUGIN_INIT_SKIP 0
+#define PLUGIN_INIT_WITH_CONTAINER_RUNNING 1
+#define PLUGIN_INIT_WITH_CONTAINER_ALL 2
 
-#define PLUGIN_EVENT_CONTAINER_PRE_CREATE       1UL
-#define PLUGIN_EVENT_CONTAINER_PRE_START        (1UL << 1)
-#define PLUGIN_EVENT_CONTAINER_POST_STOP        (1UL << 2)
-#define PLUGIN_EVENT_CONTAINER_POST_REMOVE      (1UL << 3)
+#define PLUGIN_EVENT_CONTAINER_PRE_CREATE 1UL
+#define PLUGIN_EVENT_CONTAINER_PRE_START (1UL << 1)
+#define PLUGIN_EVENT_CONTAINER_POST_STOP (1UL << 2)
+#define PLUGIN_EVENT_CONTAINER_POST_REMOVE (1UL << 3)
 
 typedef struct plugin_manifest {
     uint64_t init_type;
@@ -65,8 +65,8 @@ typedef struct plugin {
  * more plugint_put() shall be called.
  */
 plugin_t *plugin_new(const char *name, const char *addr);
-void plugin_get(plugin_t *plugin);      /* ref++ */
-void plugin_put(plugin_t *plugin);      /* ref-- */
+void plugin_get(plugin_t *plugin); /* ref++ */
+void plugin_put(plugin_t *plugin); /* ref-- */
 
 int plugin_set_activated(plugin_t *plugin, bool activated, const char *errmsg);
 int plugin_set_manifest(plugin_t *plugin, const plugin_manifest_t *manifest);
@@ -74,8 +74,8 @@ bool plugin_is_watching(plugin_t *plugin, uint64_t pe);
 
 typedef struct plugin_manager {
     pthread_rwlock_t pm_rwlock;
-    map_t *np;                          /* name:plugin */
-    map_t *eps;                         /* watch_event:plugins */
+    map_t *np; /* name:plugin */
+    map_t *eps; /* watch_event:plugins */
 } plugin_manager_t;
 
 /*
@@ -112,4 +112,3 @@ int plugin_event_container_post_remove(const container_t *cont);
 int plugin_event_container_post_remove2(const char *cid, const oci_runtime_spec *oci);
 
 #endif /* _PLUGIN_H_ */
-

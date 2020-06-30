@@ -34,6 +34,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution/manager
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/events
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime

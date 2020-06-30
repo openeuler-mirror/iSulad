@@ -57,6 +57,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/service
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/container

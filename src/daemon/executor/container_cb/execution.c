@@ -43,15 +43,15 @@
 #include "execution_stream.h"
 #include "execution_create.h"
 #include "io_handler.h"
-#include "plugin.h"
+#include "plugin_api.h"
 #include "execution_network.h"
-#include "runtime.h"
+#include "runtime_api.h"
 #include "specs_extend.h"
 #include "utils.h"
 #include "error.h"
-#include "event_sender.h"
-#include "specs.h"
-#include "service_container.h"
+#include "events_sender_api.h"
+#include "specs_api.h"
+#include "service_container_api.h"
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
 {

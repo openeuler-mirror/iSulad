@@ -22,13 +22,13 @@
 #include <sys/stat.h>
 
 #include "isula_libutils/log.h"
-#include "plugin.h"
+#include "plugin_api.h"
 #include "pspec.h"
 #include "utils.h"
 #include "parser.h"
 #include "buffer.h"
 #include "isulad_config.h"
-#include "specs.h"
+#include "specs_api.h"
 #include "specs_extend.h"
 #include "rest_common.h"
 #include "container_api.h"

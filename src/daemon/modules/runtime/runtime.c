@@ -21,7 +21,7 @@
 #include <sys/utsname.h>
 #include <ctype.h>
 
-#include "runtime.h"
+#include "runtime_api.h"
 #include "engine.h"
 #include "isulad_config.h"
 #include "isula_libutils/log.h"

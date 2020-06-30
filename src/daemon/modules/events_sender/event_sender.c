@@ -13,7 +13,7 @@
  * Description: provide container collector definition
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "event_sender.h"
+#include "events_sender_api.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,13 +78,12 @@ int isulad_monitor_send_container_event(const char *name, runtime_state_t state,
 {
     int ret = 0;
     struct monitord_msg msg = { .type = MONITORD_MSG_STATE,
-               .event_type = CONTAINER_EVENT,
-               .value = state,
-               .pid = -1,
-               .exit_code = -1,
-               .args = { 0x00 },
-               .extra_annations = { 0x00 }
-    };
+                                .event_type = CONTAINER_EVENT,
+                                .value = state,
+                                .pid = -1,
+                                .exit_code = -1,
+                                .args = { 0x00 },
+                                .extra_annations = { 0x00 } };
 
     if (name == NULL) {
         CRIT("Invalid input arguments");
@@ -124,11 +123,10 @@ int isulad_monitor_send_image_event(const char *name, image_state_t state)
     int ret = 0;
 
     struct monitord_msg msg = { .type = MONITORD_MSG_STATE,
-               .event_type = IMAGE_EVENT,
-               .value = state,
-               .args = { 0x00 },
-               .extra_annations = { 0x00 }
-    };
+                                .event_type = IMAGE_EVENT,
+                                .value = state,
+                                .args = { 0x00 },
+                                .extra_annations = { 0x00 } };
 
     if (name == NULL) {
         CRIT("Invalid input arguments");

@@ -27,8 +27,8 @@
 #include "container_events_handler.h"
 #include "utils.h"
 #include "container_api.h"
-#include "service_container.h"
-#include "plugin.h"
+#include "service_container_api.h"
+#include "plugin_api.h"
 #include "restartmanager.h"
 #include "health_check.h"
 

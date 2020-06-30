@@ -30,7 +30,7 @@
 
 #include "error.h"
 #include "isula_libutils/log.h"
-#include "specs.h"
+#include "specs_api.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/oci_runtime_hooks.h"
 #include "isula_libutils/docker_seccomp.h"
@@ -688,16 +688,16 @@ static int merge_hugetlbs(oci_runtime_spec *oci_spec, host_config_hugetlbs_eleme
 
     for (i = 0; i < hugetlbs_len; i++) {
         oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len] =
-            util_common_calloc_s(sizeof(defs_resources_hugepage_limits_element));
+                util_common_calloc_s(sizeof(defs_resources_hugepage_limits_element));
         if (oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len] == NULL) {
             ERROR("Failed to malloc memory for hugepage limits");
             ret = -1;
             goto out;
         }
         oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]->limit =
-            hugetlbs[i]->limit;
+                hugetlbs[i]->limit;
         oci_spec->linux->resources->hugepage_limits[oci_spec->linux->resources->hugepage_limits_len]->page_size =
-            util_strdup_s(hugetlbs[i]->page_size);
+                util_strdup_s(hugetlbs[i]->page_size);
         oci_spec->linux->resources->hugepage_limits_len++;
     }
 out:

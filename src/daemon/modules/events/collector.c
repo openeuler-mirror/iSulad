@@ -27,7 +27,7 @@
 
 #include "error.h"
 #include "isula_libutils/log.h"
-#include "collector.h"
+#include "events_collector_api.h"
 #include "monitord.h"
 #include "isulad_config.h"
 #include "libisulad.h"

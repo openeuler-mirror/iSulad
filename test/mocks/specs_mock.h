@@ -17,15 +17,15 @@
 #define SPECS_MOCK_H_
 
 #include <gmock/gmock.h>
-#include "specs.h"
+#include "specs_api.h"
 
 class MockSpecs {
 public:
-    MOCK_METHOD2(LoadOciConfig, oci_runtime_spec * (const char *rootpath, const char *name));
+    MOCK_METHOD2(LoadOciConfig, oci_runtime_spec *(const char *rootpath, const char *name));
     MOCK_METHOD2(MergeConfCgroup, int(oci_runtime_spec *oci_spec, const host_config *host_spec));
     MOCK_METHOD3(SaveOciConfig, int(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec));
 };
 
-void MockSpecs_SetMock(MockSpecs* mock);
+void MockSpecs_SetMock(MockSpecs *mock);
 
 #endif

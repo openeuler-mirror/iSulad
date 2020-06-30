@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "isula_libutils/oci_runtime_spec.h"
-#include "specs.h"
+#include "specs_api.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
 #include "oci_ut_common.h"
@@ -69,7 +69,7 @@ TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_2)
     oci_runtime_spec *oci_spec = NULL;
 
     // Parameter host_spec is NULL
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
     ASSERT_NE(merge_conf_cgroup(oci_spec, NULL), 0);
     free_oci_runtime_spec(oci_spec);
@@ -113,7 +113,7 @@ TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup)
     free(host_config_file);
     host_config_file = NULL;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
 
     ASSERT_EQ(merge_conf_cgroup(oci_spec, host_spec), 0);
@@ -245,10 +245,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_2)
     oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
 
-    host_spec = (host_config *) util_common_calloc_s(sizeof(host_config));
+    host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != NULL);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
@@ -268,10 +268,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_3)
     oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
 
-    host_spec = (host_config *) util_common_calloc_s(sizeof(host_config));
+    host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != NULL);
 
     host_spec->cgroup_parent = util_strdup_s("/test");
@@ -293,10 +293,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_4)
     oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
 
-    host_spec = (host_config *) util_common_calloc_s(sizeof(host_config));
+    host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != NULL);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
@@ -316,10 +316,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_5)
     oci_runtime_spec *oci_spec = nullptr;
     host_config *host_spec = nullptr;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
 
-    host_spec = (host_config *) util_common_calloc_s(sizeof(host_config));
+    host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
     ASSERT_TRUE(host_spec != NULL);
 
     host_spec->cgroup_parent = util_strdup_s("/test");

@@ -37,11 +37,11 @@
 #include "execution_information.h"
 #include "sysinfo.h"
 
-#include "runtime.h"
+#include "runtime_api.h"
 #include "list.h"
 #include "utils.h"
 #include "error.h"
-#include "event_sender.h"
+#include "events_sender_api.h"
 
 static int container_version_cb(const container_version_request *request, container_version_response **response)
 {
@@ -928,11 +928,14 @@ static int dup_health_check_config(const container_config *src, container_inspec
             dest->health_check->test[i] = util_strdup_s(src->healthcheck->test[i]);
             dest->health_check->test_len++;
         }
-        dest->health_check->interval = timeout_with_default(src->healthcheck->interval, DEFAULT_PROBE_INTERVAL);
-        dest->health_check->start_period = timeout_with_default(src->healthcheck->start_period, DEFAULT_START_PERIOD);
-        dest->health_check->timeout = timeout_with_default(src->healthcheck->timeout, DEFAULT_PROBE_TIMEOUT);
-        dest->health_check->retries = src->healthcheck->retries != 0 ? src->healthcheck->retries :
-                                                                       DEFAULT_PROBE_RETRIES;
+        dest->health_check->interval = (src->healthcheck->interval == 0) ? DEFAULT_PROBE_INTERVAL :
+                                                                           src->healthcheck->interval;
+        dest->health_check->start_period = (src->healthcheck->start_period == 0) ? DEFAULT_START_PERIOD :
+                                                                                   src->healthcheck->start_period;
+        dest->health_check->timeout = (src->healthcheck->timeout == 0) ? DEFAULT_PROBE_TIMEOUT :
+                                                                         src->healthcheck->timeout;
+        dest->health_check->retries = (src->healthcheck->retries != 0) ? src->healthcheck->retries :
+                                                                         DEFAULT_PROBE_RETRIES;
 
         dest->health_check->exit_on_unhealthy = src->healthcheck->exit_on_unhealthy;
     }

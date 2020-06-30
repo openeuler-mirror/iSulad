@@ -33,8 +33,8 @@
 #include "isulad_config.h"
 #include "mediatype.h"
 #include "filters.h"
-#include "event_sender.h"
-#include "service_image.h"
+#include "events_sender_api.h"
+#include "service_image_api.h"
 #ifdef ENABLE_OCI_IMAGE
 #include "oci_common_operators.h"
 #endif
