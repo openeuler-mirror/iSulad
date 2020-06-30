@@ -15,7 +15,7 @@
 #ifndef __IMAGE_OCI_IMAGE_H
 #define __IMAGE_OCI_IMAGE_H
 
-#include "image.h"
+#include "image_api.h"
 #include "isula_libutils/oci_image_spec.h"
 #include "oci_common_operators.h"
 

@@ -17,7 +17,7 @@
 #define IMAGE_MOCK_H_
 
 #include <gmock/gmock.h>
-#include "image.h"
+#include "image_api.h"
 
 class MockImage {
 public:
@@ -26,6 +26,6 @@ public:
     MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
 };
 
-void MockImage_SetMock(MockImage* mock);
+void MockImage_SetMock(MockImage *mock);
 
-#endif  // IMAGE_MOCK_H_
+#endif // IMAGE_MOCK_H_

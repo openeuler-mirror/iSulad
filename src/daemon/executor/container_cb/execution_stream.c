@@ -33,12 +33,11 @@
 #include "io_wrapper.h"
 #include "isulad_config.h"
 #include "config.h"
-#include "image.h"
+#include "image_api.h"
 #include "path.h"
 #include "isulad_tar.h"
 #include "isula_libutils/container_inspect.h"
-#include "containers_store.h"
-#include "container_state.h"
+#include "container_api.h"
 #include "error.h"
 #include "isula_libutils/logger_json_file.h"
 #include "constants.h"
@@ -302,8 +301,7 @@ err_out:
     return NULL;
 }
 
-static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[],
-                          defs_process_user *puser,
+static int exec_container(container_t *cont, const char *runtime, char *const console_fifos[], defs_process_user *puser,
                           const container_exec_request *request, int *exit_code)
 {
     int ret = 0;
@@ -601,7 +599,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
         goto pack_response;
     }
     (void)isulad_monitor_send_container_event(id, EXEC_START, -1, 0, exec_command, NULL);
-    if (exec_container(cont, cont->runtime, (char * const *)fifos, puser, request, &exit_code)) {
+    if (exec_container(cont, cont->runtime, (char *const *)fifos, puser, request, &exit_code)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }

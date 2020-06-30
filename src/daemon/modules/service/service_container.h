@@ -40,8 +40,6 @@ int set_container_to_removal(const container_t *cont);
 
 int delete_container(container_t *cont, bool force);
 
-bool container_in_gc_progress(const char *id);
-
 int container_module_init(char **msg);
 
 #ifdef __cplusplus

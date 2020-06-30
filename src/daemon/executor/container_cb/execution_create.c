@@ -34,11 +34,11 @@
 #include "config.h"
 #include "specs.h"
 #include "verify.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "execution_network.h"
 #include "runtime.h"
 #include "plugin.h"
-#include "image.h"
+#include "image_api.h"
 #include "utils.h"
 #include "error.h"
 #include "constants.h"
@@ -695,7 +695,7 @@ static host_config_host_channel *dup_host_channel(const host_config_host_channel
 
     dup_channel->path_on_host = channel->path_on_host != NULL ? util_strdup_s(channel->path_on_host) : NULL;
     dup_channel->path_in_container = channel->path_in_container != NULL ? util_strdup_s(channel->path_in_container) :
-                                     NULL;
+                                                                          NULL;
     dup_channel->permissions = channel->permissions != NULL ? util_strdup_s(channel->permissions) : NULL;
     dup_channel->size = channel->size;
 

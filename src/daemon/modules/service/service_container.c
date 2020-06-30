@@ -21,19 +21,17 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "supervisor.h"
 #include "mainloop.h"
 #include "libisulad.h"
 #include "event_sender.h"
-#include "containers_gc.h"
-#include "image.h"
+#include "image_api.h"
 #include "specs.h"
 #include "isulad_config.h"
 #include "verify.h"
 #include "plugin.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "namespace.h"
-#include "restore.h"
+#include "runtime.h"
 
 int set_container_to_removal(const container_t *cont)
 {
@@ -350,7 +348,7 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
         return 0;
     }
     int nret =
-        snprintf(properties, sizeof(properties), "mode=1777,size=%llu", (long long unsigned int)host_channel->size);
+            snprintf(properties, sizeof(properties), "mode=1777,size=%llu", (long long unsigned int)host_channel->size);
     if (nret < 0 || (size_t)nret >= sizeof(properties)) {
         ERROR("Failed to generate mount properties");
         return -1;
@@ -1322,41 +1320,4 @@ void umount_host_channel(const host_config_host_channel *host_channel)
     if (util_recursive_rmdir(host_channel->path_on_host, 0)) {
         ERROR("Failed to delete host path: %s", host_channel->path_on_host);
     }
-}
-
-bool container_in_gc_progress(const char *id)
-{
-    if (id == NULL) {
-        return false;
-    }
-
-    return gc_is_gc_progress(id);
-}
-
-int container_module_init(char **msg)
-{
-    int ret = 0;
-
-    if (new_gchandler()) {
-        *msg = "Create garbage handler thread failed";
-        ret = -1;
-        goto out;
-    }
-
-    if (new_supervisor()) {
-        *msg = "Create supervisor thread failed";
-        ret = -1;
-        goto out;
-    }
-
-    containers_restore();
-
-    if (start_gchandler()) {
-        *msg = "Failed to start garbage collecotor handler";
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
 }

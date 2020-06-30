@@ -29,8 +29,8 @@
 #include "service_container.h"
 #include "isula_libutils/container_exec_request.h"
 #include "isula_libutils/container_exec_response.h"
-#include "containers_store.h"
 #include "log_gather.h"
+#include "container_state.h"
 
 /* container state lock */
 static void container_health_check_lock(health_check_manager_t *health)
@@ -278,7 +278,7 @@ static int shift_and_store_log_result(defs_health *health, const defs_health_log
             health->log[i]->end = util_strdup_s(health->log[i + 1]->end);
             health->log[i]->exit_code = health->log[i + 1]->exit_code;
             health->log[i]->output = health->log[i + 1]->output != NULL ? util_strdup_s(health->log[i + 1]->output) :
-                                     NULL;
+                                                                          NULL;
         } else {
             health->log[i]->start = util_strdup_s(result->start);
             health->log[i]->end = util_strdup_s(result->end);
@@ -358,7 +358,7 @@ static int handle_unhealthy_case(container_t *cont, const defs_health_log_elemen
 
     if (strcmp(health_status, HEALTH_STARTING) == 0) {
         int64_t start_period =
-            timeout_with_default(cont->common_config->config->healthcheck->start_period, DEFAULT_START_PERIOD);
+                timeout_with_default(cont->common_config->config->healthcheck->start_period, DEFAULT_START_PERIOD);
         int64_t first, last;
         if (to_unix_nanos_from_str(cont->state->state->started_at, &first)) {
             ERROR("Parse container started time failed: %s", cont->state->state->started_at);

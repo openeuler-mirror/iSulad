@@ -15,7 +15,7 @@
 #ifndef __IMAGE_OCI_LOAD_H
 #define __IMAGE_OCI_LOAD_H
 
-#include "image.h"
+#include "image_api.h"
 #include "isula_libutils/image_manifest_items.h"
 #include "isula_libutils/oci_image_manifest.h"
 #include "isula_libutils/oci_image_spec.h"

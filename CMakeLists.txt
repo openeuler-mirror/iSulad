@@ -91,7 +91,7 @@ install(FILES src/utils/cutils/error.h
 	DESTINATION include/isulad)
 install(FILES src/daemon/modules/runtime/engines/engine.h
 	DESTINATION include/isulad)
-install(FILES src/daemon/modules/image/image.h
+install(FILES src/daemon/modules/api/image_api.h
 	DESTINATION include/isulad)
 
 # install config files

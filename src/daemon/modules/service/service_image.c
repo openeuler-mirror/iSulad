@@ -20,9 +20,9 @@
 #include <sys/mount.h>
 
 #include "isula_libutils/log.h"
-#include "image.h"
+#include "image_api.h"
 #include "utils.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "event_sender.h"
 
 static bool check_image_in_used(const char *image_ref)
@@ -54,7 +54,7 @@ static bool check_image_in_used(const char *image_ref)
             in_used = true;
             goto unref_continue;
         }
-unref_continue:
+    unref_continue:
         container_unref(conts[i]);
         continue;
     }

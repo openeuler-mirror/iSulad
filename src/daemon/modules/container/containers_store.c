@@ -15,12 +15,12 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "containers_store.h"
+#include "container_api.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 
 typedef struct memory_store_t {
-    map_t *map;  // map string container_t
+    map_t *map; // map string container_t
     pthread_rwlock_t rwlock;
 } memory_store;
 
@@ -264,8 +264,7 @@ int containers_store_list(container_t ***out, size_t *size)
         goto unlock;
     }
 
-    for (i = 0; map_itor_valid(itor) &&
-         i < *size; map_itor_next(itor), i++) {
+    for (i = 0; map_itor_valid(itor) && i < *size; map_itor_next(itor), i++) {
         conts[i] = map_itor_value(itor);
         container_refinc(conts[i]);
     }
@@ -435,7 +434,6 @@ unlock_out:
     return ret;
 }
 
-
 /* name index get */
 char *name_index_get(const char *name)
 {
@@ -521,7 +519,6 @@ out:
     return map_id_name;
 }
 
-
 /* name index init */
 int name_index_init(void)
 {
@@ -531,4 +528,3 @@ int name_index_init(void)
     }
     return 0;
 }
-

@@ -16,7 +16,7 @@
 #define __EMBEDDED_IMAGE_H
 
 #include <stdint.h>
-#include "image.h"
+#include "image_api.h"
 
 bool embedded_detect(const char *image_name);
 

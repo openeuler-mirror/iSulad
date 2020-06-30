@@ -31,6 +31,6 @@ public:
     MOCK_METHOD1(IsRemovalInProgress, bool(container_state_t *s));
 };
 
-void MockContainerState_SetMock(MockContainerState* mock);
+void MockContainerState_SetMock(MockContainerState *mock);
 
 #endif

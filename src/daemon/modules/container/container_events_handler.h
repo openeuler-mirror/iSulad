@@ -20,13 +20,7 @@
 #include "linked_list.h"
 
 #include "libisulad.h"
-
-typedef struct _container_events_handler_t {
-    pthread_mutex_t mutex;
-    bool init_mutex;
-    struct linked_list events_list;
-    bool has_handler;
-} container_events_handler_t;
+#include "container_api.h"
 
 container_events_handler_t *container_events_handler_new();
 

@@ -32,10 +32,10 @@
 #include "io_wrapper.h"
 #include "isulad_config.h"
 #include "config.h"
-#include "image.h"
+#include "image_api.h"
 #include "verify.h"
 #include "isula_libutils/container_inspect.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "service_container.h"
 #include "sysinfo.h"
 #include "specs.h"
@@ -964,7 +964,7 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
     if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be \"update\".");
         isulad_set_error_message(
-            "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
+                "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
         ret = -1;
         goto out;
     }

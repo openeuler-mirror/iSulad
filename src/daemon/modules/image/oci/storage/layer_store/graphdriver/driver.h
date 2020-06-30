@@ -24,7 +24,7 @@
 #include "driver_overlay2_types.h"
 #include "devices_constants.h"
 #include "storage.h"
-#include "image.h"
+#include "image_api.h"
 #include "isula_libutils/container_inspect.h"
 
 #ifdef __cplusplus

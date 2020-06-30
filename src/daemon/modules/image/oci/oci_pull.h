@@ -15,7 +15,7 @@
 #ifndef __IMAGE_OCI_PULL_H
 #define __IMAGE_OCI_PULL_H
 
-#include "image.h"
+#include "image_api.h"
 
 #ifdef __cplusplus
 extern "C" {

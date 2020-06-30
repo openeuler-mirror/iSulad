@@ -24,8 +24,9 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "service_container.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "runtime.h"
+#include "restartmanager.h"
 
 static containers_gc_t g_gc_containers;
 
@@ -141,7 +142,7 @@ static int gc_containers_to_disk()
             ERROR("Out of memory");
             return -1;
         }
-        linked_list_for_each_safe(it, &g_gc_containers.containers_list, next) {
+        linked_list_for_each_safe (it, &g_gc_containers.containers_list, next) {
             conts[i] = (container_garbage_config_gc_containers_element *)it->elem;
             i++;
         }
@@ -167,7 +168,7 @@ bool gc_is_gc_progress(const char *id)
 
     gc_containers_lock();
 
-    linked_list_for_each_safe(it, &g_gc_containers.containers_list, next) {
+    linked_list_for_each_safe (it, &g_gc_containers.containers_list, next) {
         cont = (container_garbage_config_gc_containers_element *)it->elem;
         if (strcmp(id, cont->id) == 0) {
             ret = true;
@@ -522,7 +523,7 @@ static void *gchandler(void *arg)
 
         do_gc_container(it);
 
-wait_continue:
+    wait_continue:
         usleep_nointerupt(100 * 1000); /* wait 100 millisecond to check next gc container */
     }
 error:
@@ -572,4 +573,13 @@ int start_gchandler()
     ret = 0;
 out:
     return ret;
+}
+
+bool container_in_gc_progress(const char *id)
+{
+    if (id == NULL) {
+        return false;
+    }
+
+    return gc_is_gc_progress(id);
 }

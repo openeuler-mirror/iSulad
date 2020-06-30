@@ -18,24 +18,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include "isula_libutils/host_config.h"
-
-struct restart_policy {
-    char *name;
-    uint64_t max_retry_count;
-};
-
-typedef struct _restart_manager_t {
-    pthread_mutex_t mutex;
-    bool init_mutex;
-    pthread_cond_t wait_cancel_con;
-    bool init_wait_cancel_con;
-    uint64_t refcnt;
-    host_config_restart_policy *policy;
-    int failure_count;
-    int64_t timeout;
-    bool active;
-    bool canceled;
-} restart_manager_t;
+#include "container_api.h"
 
 void restart_policy_free(host_config_restart_policy *policy);
 

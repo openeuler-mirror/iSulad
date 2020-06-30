@@ -26,9 +26,11 @@
 #include "isulad_config.h"
 #include "container_events_handler.h"
 #include "utils.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "service_container.h"
 #include "plugin.h"
+#include "restartmanager.h"
+#include "health_check.h"
 
 /* events handler lock */
 static void events_handler_lock(container_events_handler_t *handler)
@@ -57,7 +59,7 @@ void container_events_handler_free(container_events_handler_t *handler)
         return;
     }
 
-    linked_list_for_each_safe(it, &(handler->events_list), next) {
+    linked_list_for_each_safe (it, &(handler->events_list), next) {
         event = (struct isulad_events_format *)it->elem;
         linked_list_del(it);
         isulad_events_format_free(event);

@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container restart manager functions
  ******************************************************************************/
+#include "restartmanager.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -24,9 +25,7 @@
 #include "error.h"
 #include "isula_libutils/log.h"
 #include "isulad_config.h"
-#include "restartmanager.h"
 #include "utils.h"
-#include "containers_store.h"
 #include "service_container.h"
 
 #define backoffMultipulier 2U

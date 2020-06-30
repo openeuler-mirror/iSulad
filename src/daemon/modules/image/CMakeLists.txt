@@ -74,7 +74,7 @@ add_library(${LIB_ISULAD_IMG} ${LIBTYPE}
 
 target_include_directories(${LIB_ISULAD_IMG} PUBLIC
     ${local_image_incs}
-    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/daemon/modules/api
     ${CMAKE_SOURCE_DIR}/src/utils/sha256
     ${CMAKE_SOURCE_DIR}/src/http
     ${CMAKE_SOURCE_DIR}/src/utils/tar

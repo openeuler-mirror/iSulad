@@ -26,9 +26,10 @@
 #include "isula_libutils/docker_seccomp.h"
 #include "isula_libutils/cri_pod_network.h"
 #include "checkpoint_handler.h"
-#include "image.h"
+#include "image_api.h"
 
-namespace CRIHelpers {
+namespace CRIHelpers
+{
 class Constants {
 public:
     static const std::string DEFAULT_RUNTIME_NAME;

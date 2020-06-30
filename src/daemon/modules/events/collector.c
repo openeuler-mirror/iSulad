@@ -31,8 +31,9 @@
 #include "monitord.h"
 #include "isulad_config.h"
 #include "libisulad.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "event_type.h"
+#include "container_events_handler.h"
 
 static struct context_lists g_context_lists;
 
@@ -127,7 +128,7 @@ static container_events_type_t lcrsta2Evetype(int value)
     return et;
 }
 
-static const char * const g_isulad_event_strtype[] = {
+static const char *const g_isulad_event_strtype[] = {
     "exit",     "die",     "starting", "running", "stopping", "aborting",     "freezing",       "frozen",
     "thawed",   "oom",     "create",   "start",   "restart",  "stop",         "exec_create",    "exec_start",
     "exec_die", "attach",  "kill",     "top",     "reanme",   "archive-path", "extract-to-dir", "update",
@@ -144,7 +145,7 @@ static const char *isulad_event_sta2str(container_events_type_t sta)
     return g_isulad_event_strtype[sta];
 }
 
-static const char * const g_isulad_image_event_strtype[] = { "load", "remove", "pull", "login", "logout" };
+static const char *const g_isulad_image_event_strtype[] = { "load", "remove", "pull", "login", "logout" };
 
 static const char *isulad_image_event_sta2str(image_events_type_t sta)
 {
@@ -621,7 +622,7 @@ static int do_subscribe(const char *name, const types_timestamp_t *since, const 
         return -1;
     }
 
-    linked_list_for_each_safe(it, &g_events_buffer.event_list, next) {
+    linked_list_for_each_safe (it, &g_events_buffer.event_list, next) {
         c_event = (struct isulad_events_format *)it->elem;
 
         if (check_since_time(since, c_event) != 0) {
@@ -702,7 +703,7 @@ static void events_forward(struct isulad_events_format *r)
         return;
     }
 
-    linked_list_for_each_safe(it, &g_context_lists.context_list, next) {
+    linked_list_for_each_safe (it, &g_context_lists.context_list, next) {
         context_info = (struct context_elem *)it->elem;
         name = context_info->name;
 
@@ -729,7 +730,7 @@ static void events_forward(struct isulad_events_format *r)
 
         continue;
 
-delete_and_continue:
+    delete_and_continue:
         linked_list_del(it);
         sem_post(&context_info->context_sem);
         continue;
@@ -770,7 +771,7 @@ static void *event_should_exit(void *arg)
             continue;
         }
 
-        linked_list_for_each_safe(it, &g_context_lists.context_list, next) {
+        linked_list_for_each_safe (it, &g_context_lists.context_list, next) {
             context_info = (struct context_elem *)it->elem;
 
             if (context_info->stream.is_cancelled(context_info->stream.context)) {

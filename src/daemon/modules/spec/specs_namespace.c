@@ -20,7 +20,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "namespace.h"
-#include "containers_store.h"
+#include "container_api.h"
 
 static char *parse_share_namespace_with_prefix(const char *type, const char *path)
 {

@@ -21,7 +21,7 @@
 #include "lim.h"
 #include "limits.h"
 #include "isula_libutils/log.h"
-#include "image.h"
+#include "image_api.h"
 
 #define RAW_DIGEST_LEN 64
 
@@ -195,5 +195,4 @@ int embedded_load_image(const im_load_request *request)
 
     return load_image(request->file);
 }
-
 

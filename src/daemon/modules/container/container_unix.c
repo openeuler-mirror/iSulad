@@ -20,7 +20,14 @@
 #include "constants.h"
 #include "container_unix.h"
 #include "isula_libutils/log.h"
+#include "container_state.h"
+#include "restartmanager.h"
 #include "utils.h"
+#include "container_events_handler.h"
+#include "health_check.h"
+#include "containers_gc.h"
+#include "supervisor.h"
+#include "restore.h"
 
 static int parse_container_log_configs(container_t *cont);
 
@@ -401,27 +408,6 @@ static int pack_path_and_args_from_container_spec(const container_config *contai
 
 out:
     return ret;
-}
-
-/* container make basic v2 spec info */
-int v2_spec_make_basic_info(const char *id, const char *name, const char *image_name, const char *image_type,
-                            container_config_v2_common_config *v2_spec)
-{
-    char timebuffer[TIME_STR_SIZE] = { 0 };
-
-    if (v2_spec == NULL) {
-        return -1;
-    }
-
-    v2_spec->id = id ? util_strdup_s(id) : NULL;
-    v2_spec->name = name ? util_strdup_s(name) : NULL;
-    v2_spec->image = image_name ? util_strdup_s(image_name) : util_strdup_s("none");
-    v2_spec->image_type = image_type ? util_strdup_s(image_type) : NULL;
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
-    free(v2_spec->created);
-    v2_spec->created = util_strdup_s(timebuffer);
-
-    return 0;
 }
 
 /* container merge basic v2 spec info */
@@ -1097,4 +1083,32 @@ bool has_mount_for(container_t *cont, const char *mpath)
     }
 
     return false;
+}
+
+int container_module_init(char **msg)
+{
+    int ret = 0;
+
+    if (new_gchandler()) {
+        *msg = "Create garbage handler thread failed";
+        ret = -1;
+        goto out;
+    }
+
+    if (new_supervisor()) {
+        *msg = "Create supervisor thread failed";
+        ret = -1;
+        goto out;
+    }
+
+    containers_restore();
+
+    if (start_gchandler()) {
+        *msg = "Failed to start garbage collecotor handler";
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
 }

@@ -16,7 +16,7 @@
 #define __EXT_IMAGE_H
 
 #include <stdint.h>
-#include "image.h"
+#include "image_api.h"
 
 bool ext_detect(const char *image_name);
 int ext_filesystem_usage(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);

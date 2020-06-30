@@ -20,7 +20,7 @@
 #include <vector>
 #include <memory>
 #include "cri_services.h"
-#include "image.h"
+#include "image_api.h"
 
 class CRIImageServiceImpl : public cri::ImageManagerService {
 public:
@@ -51,8 +51,7 @@ private:
     void list_images_to_grpc(im_list_response *response, std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images,
                              Errors &error);
 
-    int status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_status_request **request,
-                                 Errors &error);
+    int status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_status_request **request, Errors &error);
 
     std::unique_ptr<runtime::v1alpha2::Image> status_image_to_grpc(im_status_response *response, Errors &error);
 

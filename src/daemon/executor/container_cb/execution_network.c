@@ -32,7 +32,7 @@
 #include "utils.h"
 #include "isulad_config.h"
 #include "config.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "namespace.h"
 #include "path.h"
 #include "selinux_label.h"
@@ -429,9 +429,7 @@ static bool is_need_add(const char *dns_search, const json_map_string_bool *dns_
     return need_to_add;
 }
 
-static int generate_new_search(const host_config *host_spec,
-                               json_map_string_bool *dns_search_map,
-                               char **content,
+static int generate_new_search(const host_config *host_spec, json_map_string_bool *dns_search_map, char **content,
                                bool search)
 {
     char *tmp = NULL;
@@ -464,9 +462,7 @@ static int generate_new_search(const host_config *host_spec,
     return 0;
 }
 
-static int generate_new_options(const host_config *host_spec,
-                                json_map_string_bool *dns_options_map,
-                                char **content,
+static int generate_new_options(const host_config *host_spec, json_map_string_bool *dns_options_map, char **content,
                                 bool options)
 {
     char *tmp = NULL;
@@ -532,8 +528,8 @@ error_out:
     return ret;
 }
 
-static int resolve_handle_content(const char *pline, const host_config *host_spec,
-                                  char **content, json_map_string_bool *dns_map, bool *search, bool *options)
+static int resolve_handle_content(const char *pline, const host_config *host_spec, char **content,
+                                  json_map_string_bool *dns_map, bool *search, bool *options)
 {
     int ret = 0;
     char *tmp = NULL;
@@ -688,10 +684,7 @@ static int chown_network(const char *user_remap, const char *rootfs, const char 
     }
     if (chown(file_path, host_uid, host_gid) != 0) {
         SYSERROR("Failed to chown network file '%s' to %u:%u", filename, host_uid, host_gid);
-        isulad_set_error_message("Failed to chown network file '%s' to %u:%u: %s",
-                                 filename,
-                                 host_uid,
-                                 host_gid,
+        isulad_set_error_message("Failed to chown network file '%s' to %u:%u: %s", filename, host_uid, host_gid,
                                  strerror(errno));
         ret = -1;
         goto out;
@@ -706,7 +699,7 @@ static int merge_network_for_universal_container(const host_config *host_spec, c
 {
     int ret = 0;
     int nret = 0;
-    char root_path[PATH_MAX] = {0x00};
+    char root_path[PATH_MAX] = { 0x00 };
 
     if (runtime_root == NULL || id == NULL) {
         ERROR("empty runtime root or id");
@@ -758,8 +751,8 @@ static int merge_network_for_syscontainer(const host_config *host_spec, const ch
     return 0;
 }
 
-int merge_network(const host_config *host_spec, const char *rootfs, const char *runtime_root,
-                  const char *id, const char *hostname)
+int merge_network(const host_config *host_spec, const char *rootfs, const char *runtime_root, const char *id,
+                  const char *hostname)
 {
     int ret = 0;
 
@@ -883,7 +876,6 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
         goto out;
     }
 
-
     if (util_write_file(file_path, hostname_content, strlen(hostname_content), NETWORK_MOUNT_FILE_MODE) != 0) {
         ERROR("Failed to create default hostname");
         ret = -1;
@@ -924,7 +916,7 @@ static int write_default_hosts(const char *file_path, const char *hostname)
     }
 
     ret = snprintf(content, content_len, "%s%s%s\n", default_config, loop_ip, hostname);
-    if (ret < 0 || (size_t)ret >=  content_len) {
+    if (ret < 0 || (size_t)ret >= content_len) {
         ERROR("Failed to generate default hosts");
         ret = -1;
         goto out_free;
@@ -940,7 +932,6 @@ out_free:
     free(content);
     return ret;
 }
-
 
 static int create_default_hosts(const char *id, const char *rootpath, bool share_host,
                                 container_config_v2_common_config *v2_spec)
@@ -975,7 +966,8 @@ out:
 
 static int write_default_resolve(const char *file_path)
 {
-    const char *default_ipv4_dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";;
+    const char *default_ipv4_dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";
+    ;
 
     return util_write_file(file_path, default_ipv4_dns, strlen(default_ipv4_dns), NETWORK_MOUNT_FILE_MODE);
 }
@@ -1010,8 +1002,6 @@ out:
     return ret;
 }
 
-
-
 int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
                                  container_config_v2_common_config *v2_spec)
 {
@@ -1044,5 +1034,3 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
 out:
     return ret;
 }
-
-

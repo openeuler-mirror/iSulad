@@ -22,14 +22,16 @@
 #include "isulad_config.h"
 #include "isula_libutils/log.h"
 #include "restore.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "supervisor.h"
 #include "containers_gc.h"
 #include "container_unix.h"
 #include "error.h"
-#include "image.h"
+#include "image_api.h"
 #include "runtime.h"
 #include "service_container.h"
+#include "restartmanager.h"
+#include "health_check.h"
 
 /* restore supervisor */
 static int restore_supervisor(const container_t *cont)
@@ -492,7 +494,7 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
         }
 
         continue;
-error_load:
+    error_load:
         if (remove_invalid_container(cont, runtime, rootpath, statepath, subdir[i])) {
             ERROR("Failed to delete subdir:%s", subdir[i]);
         }

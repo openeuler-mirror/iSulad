@@ -43,12 +43,10 @@
 #include "isula_libutils/parse_common.h"
 #include "specs_mount.h"
 #include "specs_extend.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "selinux_label.h"
 
-static int get_devices(const char *dir, char ***devices, size_t *device_len,
-                       int recursive_depth);
-
+static int get_devices(const char *dir, char ***devices, size_t *device_len, int recursive_depth);
 
 static int append_additional_mounts(oci_runtime_spec *oci_spec, const char *type)
 {
@@ -61,20 +59,12 @@ static int append_additional_mounts(oci_runtime_spec *oci_spec, const char *type
     defs_mount *tmp_mount = NULL;
     char **files = NULL;
     size_t files_len = 0;
-    char *mount_options[] = {"nosuid", "noexec", "nodev"};
+    char *mount_options[] = { "nosuid", "noexec", "nodev" };
     size_t mount_options_len = 0;
-    char *net_files[] = {"/proc/sys/net"};
-    char *ipc_files[] = {
-        "/proc/sys/kernel/shmmax",
-        "/proc/sys/kernel/shmmni",
-        "/proc/sys/kernel/shmall",
-        "/proc/sys/kernel/shm_rmid_forced",
-        "/proc/sys/kernel/msgmax",
-        "/proc/sys/kernel/msgmni",
-        "/proc/sys/kernel/msgmnb",
-        "/proc/sys/kernel/sem",
-        "/proc/sys/fs/mqueue"
-    };
+    char *net_files[] = { "/proc/sys/net" };
+    char *ipc_files[] = { "/proc/sys/kernel/shmmax",          "/proc/sys/kernel/shmmni", "/proc/sys/kernel/shmall",
+                          "/proc/sys/kernel/shm_rmid_forced", "/proc/sys/kernel/msgmax", "/proc/sys/kernel/msgmni",
+                          "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",    "/proc/sys/fs/mqueue" };
 
     if (strcmp(type, "net") == 0) {
         files = &net_files[0];
@@ -172,7 +162,7 @@ static bool valid_dirent_info(const char *dir, const struct dirent *info_archivo
     size_t i = 0;
     int nret = 0;
     char *pdot = NULL;
-    char fullpath[PATH_MAX] = {0};
+    char fullpath[PATH_MAX] = { 0 };
     char *skip_files[] = { "/dev/pts", "/dev/shm", "/dev/fd", "/dev/mqueue", "/dev/console" };
 
     if (dir == NULL || info_archivo == NULL) {
@@ -180,8 +170,7 @@ static bool valid_dirent_info(const char *dir, const struct dirent *info_archivo
     }
 
     // skip . ..
-    if (strncmp(info_archivo->d_name, ".", PATH_MAX) == 0 ||
-        strncmp(info_archivo->d_name, "..", PATH_MAX) == 0) {
+    if (strncmp(info_archivo->d_name, ".", PATH_MAX) == 0 || strncmp(info_archivo->d_name, "..", PATH_MAX) == 0) {
         return false;
     }
 
@@ -275,8 +264,7 @@ out:
 /* get_devices: retrieve all devices under dir
  * when errors occurs, caller should free memory pointing to *devices
  */
-static int get_devices(const char *dir, char ***devices, size_t *device_len,
-                       int recursive_depth)
+static int get_devices(const char *dir, char ***devices, size_t *device_len, int recursive_depth)
 {
     int nret = 0;
     char *fullpath = NULL;
@@ -288,12 +276,12 @@ static int get_devices(const char *dir, char ***devices, size_t *device_len,
         return -1;
     }
     midir = opendir(dir);
-    if (midir  == NULL) {
+    if (midir == NULL) {
         ERROR("get_devices: Error in opendir");
         return -1;
     }
     info_archivo = readdir(midir);
-    for (; info_archivo  != NULL; info_archivo = readdir(midir)) {
+    for (; info_archivo != NULL; info_archivo = readdir(midir)) {
         if (!valid_dirent_info(dir, info_archivo)) {
             continue;
         }
@@ -432,8 +420,7 @@ static int check_mount_element(const defs_mount *mount_element)
         goto out;
     }
 
-    if (strcmp(mount_element->type, "squashfs") &&
-        strcmp(mount_element->type, "bind")) {
+    if (strcmp(mount_element->type, "squashfs") && strcmp(mount_element->type, "bind")) {
         ERROR("invalid type %s, only support squashfs and bind", mount_element->type);
         ret = EINVALIDARGS;
         goto out;
@@ -519,7 +506,7 @@ defs_mount *parse_mount(const char *mount)
     char **kv = NULL;
     bool has_ro = false;
     bool has_pro = false;
-    char dstpath[PATH_MAX] = {0};
+    char dstpath[PATH_MAX] = { 0 };
 
     if (mount == NULL) {
         ERROR("invalid NULL param");
@@ -554,7 +541,7 @@ defs_mount *parse_mount(const char *mount)
         }
 
         ret = fill_mounts_item(kv[0], kv[1], mount_element, &has_ro, &has_pro);
-        if (ret == 1) {  /* ignore this item */
+        if (ret == 1) { /* ignore this item */
             ret = 0;
             util_free_array(kv);
             kv = NULL;
@@ -775,7 +762,7 @@ static host_config_devices_element *parse_one_device(const char *device_path, co
     int nret = 0;
     const char *cgroup_permissions = NULL;
     host_config_devices_element *device_map = NULL;
-    char tmp_container_path[PATH_MAX] = {0};
+    char tmp_container_path[PATH_MAX] = { 0 };
 
     if (device_path == NULL || !strcmp(device_path, "")) {
         ERROR("devices can't be empty");
@@ -792,8 +779,8 @@ static host_config_devices_element *parse_one_device(const char *device_path, co
 
     device_map->path_on_host = util_strdup_s(device_path);
     if (dir_container != NULL) {
-        nret = snprintf(tmp_container_path, sizeof(tmp_container_path), "%s/%s",
-                        dir_container, device_path + strlen(dir_host));
+        nret = snprintf(tmp_container_path, sizeof(tmp_container_path), "%s/%s", dir_container,
+                        device_path + strlen(dir_host));
         if (nret < 0 || (size_t)nret >= sizeof(tmp_container_path)) {
             ERROR("Failed to sprintf device path in container %s/%s", dir_container, device_path + strlen(dir_host));
             goto erro_out;
@@ -833,7 +820,8 @@ static int get_devices_from_path(const host_config_devices_element *dev_map, def
     if (ret < 0) {
         ERROR("device %s no exists", dev_map->path_on_host);
         isulad_set_error_message("Error gathering device information while adding device \"%s\",stat %s: "
-                                 "no such file or directory", dev_map->path_on_host, dev_map->path_on_host);
+                                 "no such file or directory",
+                                 dev_map->path_on_host, dev_map->path_on_host);
         return -1;
     }
 
@@ -847,8 +835,7 @@ static int get_devices_from_path(const host_config_devices_element *dev_map, def
         file_mode |= S_IFCHR;
         dev_type = "c";
     } else {
-        ERROR("Cannot determine the device number for device %s",
-              dev_map->path_on_host);
+        ERROR("Cannot determine the device number for device %s", dev_map->path_on_host);
         return -1;
     }
 
@@ -871,8 +858,7 @@ static int get_devices_from_path(const host_config_devices_element *dev_map, def
     return 0;
 }
 
-static int merge_custom_device(defs_device **out_spec_dev,
-                               defs_device_cgroup **out_spec_dev_cgroup,
+static int merge_custom_device(defs_device **out_spec_dev, defs_device_cgroup **out_spec_dev_cgroup,
                                const host_config_devices_element *dev_map)
 {
     int ret = 0;
@@ -995,9 +981,8 @@ static int get_read_bps_devices_from_path(const host_config_blkio_device_read_bp
     return 0;
 }
 
-static int merge_host_config_blk_read_bps_device(
-    defs_block_io_device_throttle **out_spec_read_bps_dev,
-    const host_config_blkio_device_read_bps_element *blkio_device_read_bps)
+static int merge_host_config_blk_read_bps_device(defs_block_io_device_throttle **out_spec_read_bps_dev,
+                                                 const host_config_blkio_device_read_bps_element *blkio_device_read_bps)
 {
     int ret = 0;
     defs_block_io_device_throttle *spec_read_bps_dev = NULL;
@@ -1051,9 +1036,9 @@ static int get_write_bps_devices_from_path(const host_config_blkio_device_write_
     return 0;
 }
 
-static int merge_host_config_blk_write_bps_device(
-    defs_block_io_device_throttle **out_spec_write_bps_dev,
-    const host_config_blkio_device_write_bps_element *blkio_device_write_bps)
+static int
+merge_host_config_blk_write_bps_device(defs_block_io_device_throttle **out_spec_write_bps_dev,
+                                       const host_config_blkio_device_write_bps_element *blkio_device_write_bps)
 {
     int ret = 0;
     defs_block_io_device_throttle *spec_write_bps_dev = NULL;
@@ -1082,8 +1067,8 @@ out:
     return ret;
 }
 
-static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_element **dev_maps,
-                             size_t devices_len, const char *permissions)
+static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_element **dev_maps, size_t devices_len,
+                             const char *permissions)
 {
     int ret = 0;
     size_t new_size = 0, old_size = 0;
@@ -1114,14 +1099,12 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
 
     /* malloc for cgroup->device */
     defs_device_cgroup **spec_cgroup_dev = NULL;
-    if (devices_len > SIZE_MAX / sizeof(defs_device_cgroup *) -
-        oci_spec->linux->resources->devices_len) {
+    if (devices_len > SIZE_MAX / sizeof(defs_device_cgroup *) - oci_spec->linux->resources->devices_len) {
         ERROR("Too many cgroup devices to merge!");
         ret = -1;
         goto out;
     }
-    new_size = (oci_spec->linux->resources->devices_len + devices_len)
-               * sizeof(defs_device_cgroup *);
+    new_size = (oci_spec->linux->resources->devices_len + devices_len) * sizeof(defs_device_cgroup *);
     old_size = oci_spec->linux->resources->devices_len * sizeof(defs_device_cgroup *);
     ret = mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
     if (ret != 0) {
@@ -1218,7 +1201,8 @@ static int merge_all_devices_in_dir(const char *dir, const char *dir_container, 
         ERROR("Error gathering device information while adding devices in directory \"%s\":no available device nodes",
               dir);
         isulad_set_error_message("Error gathering device information while adding devices in directory"
-                                 " \"%s\":,no available device nodes", dir);
+                                 " \"%s\":,no available device nodes",
+                                 dir);
         ret = -1;
         goto out;
     }
@@ -1308,7 +1292,7 @@ out:
 
 static inline bool is_sys_proc_mount_destination(const char *destination)
 {
-    return strcmp("/sys", destination) == 0 || strcmp("/proc", destination) == 0 || \
+    return strcmp("/sys", destination) == 0 || strcmp("/proc", destination) == 0 ||
            strcmp("/sys/fs/cgroup", destination) == 0;
 }
 
@@ -1440,8 +1424,7 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
 
     if (common_config != NULL) {
         if (common_config->mount_points == NULL) {
-            common_config->mount_points = util_common_calloc_s(sizeof(
-                                                                   container_config_v2_common_config_mount_points));
+            common_config->mount_points = util_common_calloc_s(sizeof(container_config_v2_common_config_mount_points));
             if (common_config->mount_points == NULL) {
                 ERROR("Out of memory");
                 ret = -1;
@@ -1452,8 +1435,8 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
         old_mp_key_size = common_config->mount_points->len * sizeof(char *);
         new_mp_val_size = (common_config->mount_points->len + volumes_len) *
                           sizeof(container_config_v2_common_config_mount_points_element *);
-        old_mp_val_size = common_config->mount_points->len *
-                          sizeof(container_config_v2_common_config_mount_points_element *);
+        old_mp_val_size =
+                common_config->mount_points->len * sizeof(container_config_v2_common_config_mount_points_element *);
 
         ret = mem_realloc((void **)&mp_key, new_mp_key_size, common_config->mount_points->keys, old_mp_key_size);
         if (ret != 0) {
@@ -1543,7 +1526,6 @@ static int merge_custom_one_device(oci_runtime_spec *oci_spec, const host_config
     }
     oci_spec->linux->resources->devices = spec_cgroup_dev;
 
-
     ret = merge_custom_device(&oci_spec->linux->devices[oci_spec->linux->devices_len],
                               &oci_spec->linux->resources->devices[oci_spec->linux->resources->devices_len], device);
     if (ret != 0) {
@@ -1557,7 +1539,6 @@ static int merge_custom_one_device(oci_runtime_spec *oci_spec, const host_config
 out:
     return ret;
 }
-
 
 static int merge_custom_devices(oci_runtime_spec *oci_spec, host_config_devices_element **devices, size_t devices_len)
 {
@@ -1622,12 +1603,10 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
         goto out;
     }
 
-    new_size = (oci_spec->linux->resources->block_io->weight_device_len + blkio_weight_device_len)
-               * sizeof(defs_block_io_device_weight *);
-    old_size = oci_spec->linux->resources->block_io->weight_device_len *
+    new_size = (oci_spec->linux->resources->block_io->weight_device_len + blkio_weight_device_len) *
                sizeof(defs_block_io_device_weight *);
-    ret = mem_realloc((void **)&weight_device, new_size,  oci_spec->linux->resources->block_io->weight_device,
-                      old_size);
+    old_size = oci_spec->linux->resources->block_io->weight_device_len * sizeof(defs_block_io_device_weight *);
+    ret = mem_realloc((void **)&weight_device, new_size, oci_spec->linux->resources->block_io->weight_device, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for weight devices");
         ret = -1;
@@ -1637,9 +1616,9 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
 
     for (i = 0; i < blkio_weight_device_len; i++) {
         ret = merge_host_config_blk_weight_device(
-                  &oci_spec->linux->resources->block_io->weight_device[oci_spec->
-                                                                       linux->resources->block_io->weight_device_len],
-                  blkio_weight_device[i]);
+                &oci_spec->linux->resources->block_io
+                         ->weight_device[oci_spec->linux->resources->block_io->weight_device_len],
+                blkio_weight_device[i]);
         if (ret != 0) {
             ERROR("Failed to merge blkio weight device");
             ret = -1;
@@ -1676,8 +1655,8 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
         goto out;
     }
 
-    new_size = (oci_spec->linux->resources->block_io->throttle_read_bps_device_len + throttle_read_bps_device_len)
-               * sizeof(defs_block_io_device_throttle *);
+    new_size = (oci_spec->linux->resources->block_io->throttle_read_bps_device_len + throttle_read_bps_device_len) *
+               sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_read_bps_device_len *
                sizeof(defs_block_io_device_throttle *);
     ret = mem_realloc((void **)&throttle_read_bps_device, new_size,
@@ -1691,8 +1670,9 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
 
     for (i = 0; i < throttle_read_bps_device_len; i++) {
         ret = merge_host_config_blk_read_bps_device(
-                  &oci_spec->linux->resources->block_io->throttle_read_bps_device[
-                      oci_spec->linux->resources->block_io->throttle_read_bps_device_len], blkio_read_bps_device[i]);
+                &oci_spec->linux->resources->block_io
+                         ->throttle_read_bps_device[oci_spec->linux->resources->block_io->throttle_read_bps_device_len],
+                blkio_read_bps_device[i]);
         if (ret != 0) {
             ERROR("Failed to merge blkio throttle read bps device");
             ret = -1;
@@ -1729,8 +1709,8 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
         goto out;
     }
 
-    new_size = (oci_spec->linux->resources->block_io->throttle_write_bps_device_len + throttle_write_bps_device_len)
-               * sizeof(defs_block_io_device_throttle *);
+    new_size = (oci_spec->linux->resources->block_io->throttle_write_bps_device_len + throttle_write_bps_device_len) *
+               sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_write_bps_device_len *
                sizeof(defs_block_io_device_throttle *);
     ret = mem_realloc((void **)&throttle_write_bps_device, new_size,
@@ -1744,8 +1724,9 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
 
     for (i = 0; i < throttle_write_bps_device_len; i++) {
         ret = merge_host_config_blk_write_bps_device(
-                  &oci_spec->linux->resources->block_io->throttle_write_bps_device[
-                      oci_spec->linux->resources->block_io->throttle_write_bps_device_len], blkio_write_bps_device[i]);
+                &oci_spec->linux->resources->block_io
+                         ->throttle_write_bps_device[oci_spec->linux->resources->block_io->throttle_write_bps_device_len],
+                blkio_write_bps_device[i]);
         if (ret != 0) {
             ERROR("Failed to merge blkio throttle write bps device");
             ret = -1;
@@ -1792,7 +1773,7 @@ int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec)
     }
 
     /* devices which will be populated into container */
-    if (host_spec->devices  != NULL && host_spec->devices_len != 0) {
+    if (host_spec->devices != NULL && host_spec->devices_len != 0) {
         /* privileged containers will populate all devices in host */
         if (!host_spec->privileged) {
             ret = merge_custom_devices(oci_spec, host_spec->devices, host_spec->devices_len);
@@ -1818,8 +1799,8 @@ static bool mounts_expand(oci_runtime_spec *container, size_t add_len)
         ERROR("Too many mount elements!");
         return false;
     }
-    ret = mem_realloc((void **)&tmp_mount, (old_len + add_len) * sizeof(defs_mount *),
-                      container->mounts, old_len * sizeof(defs_mount *));
+    ret = mem_realloc((void **)&tmp_mount, (old_len + add_len) * sizeof(defs_mount *), container->mounts,
+                      old_len * sizeof(defs_mount *));
     if (ret < 0) {
         ERROR("memory realloc failed for mount array expand");
         return false;
@@ -1986,7 +1967,6 @@ static inline bool is_mount_destination_hostname(const char *destination)
 {
     return strcmp(destination, "/etc/hostname") == 0;
 }
-
 
 /* find whether mount entry with destination "/etc/hostname" "/etc/hosts" "/etc/resolv.conf" exits in mount
  * if not exists: append mounts to ocispec by v2_spec
@@ -2166,7 +2146,7 @@ static int prepare_share_shm(oci_runtime_spec *oci_spec, host_config *host_spec,
                              container_config_v2_common_config *v2_spec)
 {
 #define MAX_PROPERTY_LEN 64
-    char shmproperty[MAX_PROPERTY_LEN] = {0};
+    char shmproperty[MAX_PROPERTY_LEN] = { 0 };
     int ret = -1;
     int nret = 0;
     bool has_mount = false;
@@ -2187,7 +2167,7 @@ static int prepare_share_shm(oci_runtime_spec *oci_spec, host_config *host_spec,
         ERROR("Build shm dir failed");
         goto out;
     }
-    nret = snprintf(shmproperty, MAX_PROPERTY_LEN, "mode=1777,size=%"PRId64, host_spec->shm_size);
+    nret = snprintf(shmproperty, MAX_PROPERTY_LEN, "mode=1777,size=%" PRId64, host_spec->shm_size);
     if (nret < 0 || nret >= MAX_PROPERTY_LEN) {
         ERROR("Sprintf failed");
         goto out;
@@ -2319,17 +2299,14 @@ int destination_compare(const void *p1, const void *p2)
     return strcmp(mount_1->destination, mount_2->destination);
 }
 
-int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
-                      container_config_v2_common_config *v2_spec)
+int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     container_config *container_spec = v2_spec->config;
 
     /* mounts to mount filesystem */
     if (container_spec->mounts && container_spec->mounts_len) {
-        ret = merge_volumes(oci_spec, container_spec->mounts,
-                            container_spec->mounts_len, v2_spec,
-                            parse_mount);
+        ret = merge_volumes(oci_spec, container_spec->mounts, container_spec->mounts_len, v2_spec, parse_mount);
         if (ret) {
             ERROR("Failed to merge mounts");
             goto out;
@@ -2338,9 +2315,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
 
     /* volumes to mount */
     if (host_spec->binds != NULL && host_spec->binds_len) {
-        ret = merge_volumes(oci_spec, host_spec->binds,
-                            host_spec->binds_len, v2_spec,
-                            parse_volume);
+        ret = merge_volumes(oci_spec, host_spec->binds, host_spec->binds_len, v2_spec, parse_volume);
         if (ret) {
             ERROR("Failed to merge volumes");
             goto out;
@@ -2414,5 +2389,3 @@ out:
     free(mntparent);
     return ret;
 }
-
-

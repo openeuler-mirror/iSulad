@@ -31,7 +31,7 @@
 #include "specs.h"
 #include "specs_extend.h"
 #include "rest_common.h"
-#include "containers_store.h"
+#include "container_api.h"
 #include "constants.h"
 
 #include "isula_libutils/plugin_activate_plugin_request.h"

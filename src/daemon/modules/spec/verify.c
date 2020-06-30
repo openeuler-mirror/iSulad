@@ -34,7 +34,7 @@
 #include "verify.h"
 #include "isulad_config.h"
 #include "selinux_label.h"
-#include "image.h"
+#include "image_api.h"
 
 /* verify hook timeout */
 static int verify_hook_timeout(int t)
@@ -136,16 +136,14 @@ static int verify_mem_limit_swap(const sysinfo_t *sysinfo, int64_t limit, int64_
 
     if (limit > 0 && !(sysinfo->cgmeminfo.limit)) {
         ERROR("Your kernel does not support memory limit capabilities. Limitation discarded.");
-        isulad_set_error_message(
-            "Your kernel does not support memory limit capabilities. Limitation discarded.");
+        isulad_set_error_message("Your kernel does not support memory limit capabilities. Limitation discarded.");
         ret = -1;
         goto out;
     }
 
     if (limit > 0 && swap != 0 && !(sysinfo->cgmeminfo.swap)) {
         ERROR("Your kernel does not support swap limit capabilities, memory limited without swap.");
-        isulad_set_error_message(
-            "Your kernel does not support swap limit capabilities, memory limited without swap.");
+        isulad_set_error_message("Your kernel does not support swap limit capabilities, memory limited without swap.");
         ret = -1;
         goto out;
     }
@@ -181,7 +179,7 @@ static int verify_memory_swappiness(const sysinfo_t *sysinfo, uint64_t swapiness
     if ((int64_t)swapiness != -1 && !(sysinfo->cgmeminfo.swappiness)) {
         ERROR("Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
         isulad_set_error_message(
-            "Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
+                "Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
         ret = -1;
         goto out;
     }
@@ -252,7 +250,8 @@ static int verify_memory_kernel(const sysinfo_t *sysinfo, int64_t kernel)
 
     if (kernel > 0 && !(sysinfo->cgmeminfo.kernel)) {
         ERROR("Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
-        isulad_set_error_message("Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
+        isulad_set_error_message(
+                "Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
         ret = -1;
         goto out;
     }
@@ -299,7 +298,6 @@ static int verify_files_limit(const sysinfo_t *sysinfo, int64_t files_limit)
     }
     return ret;
 }
-
 
 /* verify oom control */
 static int verify_oom_control(const sysinfo_t *sysinfo, bool oomdisable)
@@ -400,8 +398,7 @@ static int verify_cpu_shares(const sysinfo_t *sysinfo, int64_t cpu_shares)
 
     if (cpu_shares > 0 && !(sysinfo->cgcpuinfo.cpu_shares)) {
         ERROR("Your kernel does not support cgroup cpu shares. Shares discarded.");
-        isulad_set_error_message(
-            "Your kernel does not support cgroup cpu shares. Shares discarded.");
+        isulad_set_error_message("Your kernel does not support cgroup cpu shares. Shares discarded.");
         ret = -1;
     }
 
@@ -619,8 +616,7 @@ static bool is_cpuset_list_available(const char *provided, const char *available
         goto out;
     }
 
-    if (parse_unit_list(provided, parsed_provided) < 0 ||
-        parse_unit_list(available, parsed_available) < 0) {
+    if (parse_unit_list(provided, parsed_provided) < 0 || parse_unit_list(available, parsed_available) < 0) {
         goto out;
     }
     for (i = 0; i < cpu_num; i++) {
@@ -692,10 +688,10 @@ static int verify_resources_cpuset(const sysinfo_t *sysinfo, const char *cpus, c
 
     mems_available = is_cpuset_mems_available(sysinfo, mems);
     if (!mems_available) {
-        ERROR("Requested memory nodes are not available - requested %s, available: %s.",
-              mems, sysinfo->cpusetinfo.mems);
-        isulad_set_error_message("Requested memory nodes are not available - requested %s, available: %s.",
-                                 mems, sysinfo->cpusetinfo.mems);
+        ERROR("Requested memory nodes are not available - requested %s, available: %s.", mems,
+              sysinfo->cpusetinfo.mems);
+        isulad_set_error_message("Requested memory nodes are not available - requested %s, available: %s.", mems,
+                                 sysinfo->cpusetinfo.mems);
         ret = -1;
         goto out;
     }
@@ -952,8 +948,8 @@ static bool check_hugetlbs_repeated(size_t newlen, const char *pagesize,
 
     for (j = 0; j < newlen; j++) {
         if (newtlb[j] != NULL && newtlb[j]->page_size != NULL && !strcmp(newtlb[j]->page_size, pagesize)) {
-            WARN("hugetlb-limit setting of %s is repeated, former setting %lu will be replaced with %lu",
-                 pagesize, newtlb[j]->limit, hugetlb->limit);
+            WARN("hugetlb-limit setting of %s is repeated, former setting %lu will be replaced with %lu", pagesize,
+                 newtlb[j]->limit, hugetlb->limit);
             newtlb[j]->limit = hugetlb->limit;
             repeated = true;
             goto out;
@@ -964,8 +960,7 @@ out:
     return repeated;
 }
 
-static void free_hugetlbs_array(defs_resources_hugepage_limits_element **hugetlb,
-                                size_t hugetlb_len)
+static void free_hugetlbs_array(defs_resources_hugepage_limits_element **hugetlb, size_t hugetlb_len)
 {
     size_t i;
 
@@ -983,8 +978,7 @@ static void free_hugetlbs_array(defs_resources_hugepage_limits_element **hugetlb
 }
 
 /* verify resources hugetlbs */
-static int verify_resources_hugetlbs(const sysinfo_t *sysinfo,
-                                     defs_resources_hugepage_limits_element ***hugetlb,
+static int verify_resources_hugetlbs(const sysinfo_t *sysinfo, defs_resources_hugepage_limits_element ***hugetlb,
                                      size_t *hugetlb_len)
 {
     int ret = 0;
@@ -994,8 +988,7 @@ static int verify_resources_hugetlbs(const sysinfo_t *sysinfo,
 
     if (!sysinfo->hugetlbinfo.hugetlblimit) {
         ERROR("Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
-        isulad_set_error_message(
-            "Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
+        isulad_set_error_message("Your kernel does not support hugetlb limit. --hugetlb-limit discarded.");
         ret = -1;
         goto out;
     }
@@ -1153,9 +1146,7 @@ static bool verify_oci_linux_sysctl(const oci_runtime_config_linux *l)
             }
         }
         if (!check_sysctl_valid(l->sysctl->keys[i])) {
-            isulad_set_error_message("Sysctl %s=%s is not whitelist",
-                                     l->sysctl->keys[i],
-                                     l->sysctl->values[i]);
+            isulad_set_error_message("Sysctl %s=%s is not whitelist", l->sysctl->keys[i], l->sysctl->values[i]);
             return false;
         }
     }
@@ -1270,7 +1261,7 @@ static int get_source_mount(const char *src, char **srcpath, char **optional)
     mountinfo_t **minfos = NULL;
     mountinfo_t *info = NULL;
     int ret = 0;
-    char real_path[PATH_MAX + 1] = {0};
+    char real_path[PATH_MAX + 1] = { 0 };
     char *dirc = NULL;
     char *dname = NULL;
 
@@ -1463,8 +1454,7 @@ static int verify_custom_mount(defs_mount **mounts, size_t len)
             continue;
         }
 
-        if (!util_file_exists(iter->source) &&
-            util_mkdir_p(iter->source, CONFIG_DIRECTORY_MODE)) {
+        if (!util_file_exists(iter->source) && util_mkdir_p(iter->source, CONFIG_DIRECTORY_MODE)) {
             ERROR("Failed to create directory '%s': %s", iter->source, strerror(errno));
             isulad_try_set_error_message("Failed to create directory '%s': %s", iter->source, strerror(errno));
             ret = -1;
@@ -1989,8 +1979,7 @@ int verify_container_settings_start(const oci_runtime_spec *oci_spec)
             ret = -1;
             goto out;
         }
-        if (relabel_mounts_if_needed(oci_spec->mounts, oci_spec->mounts_len,
-                                     oci_spec->linux->mount_label) != 0) {
+        if (relabel_mounts_if_needed(oci_spec->mounts, oci_spec->mounts_len, oci_spec->linux->mount_label) != 0) {
             ERROR("Failed to relabel mount");
             ret = -1;
             goto out;
@@ -2042,5 +2031,3 @@ int verify_health_check_parameter(const container_config *container_spec)
 out:
     return ret;
 }
-
-

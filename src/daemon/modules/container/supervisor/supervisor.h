@@ -18,16 +18,8 @@
 #include <semaphore.h>
 #include "container_unix.h"
 
-extern char *exit_fifo_create(const char *cont_state_path);
-
 extern char *exit_fifo_name(const char *cont_state_path);
-
-extern int exit_fifo_open(const char *cont_exit_fifo);
-
-extern int supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name,
-                                       const char *runtime);
 
 extern int new_supervisor();
 
 #endif
-
