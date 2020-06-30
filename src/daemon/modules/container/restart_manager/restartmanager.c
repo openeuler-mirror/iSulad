@@ -75,7 +75,7 @@ static void *container_restart(void *args)
         goto out;
     }
 
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         ERROR("Cannot restart container %s in garbage collector progress.", id);
         goto set_stopped;
     }
@@ -94,14 +94,14 @@ static void *container_restart(void *args)
         goto set_stopped;
     }
 
-    if (start_container(cont, console_fifos, false) != 0 && is_restarting(cont->state)) {
+    if (start_container(cont, console_fifos, false) != 0 && container_is_restarting(cont->state)) {
         goto set_stopped;
     }
     goto out;
 
 set_stopped:
     container_lock(cont);
-    state_set_stopped(cont->state, arg->exit_code);
+    container_state_set_stopped(cont->state, arg->exit_code);
     container_wait_stop_cond_broadcast(cont);
     container_unlock(cont);
 out:

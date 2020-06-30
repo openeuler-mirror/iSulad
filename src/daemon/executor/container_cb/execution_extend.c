@@ -411,7 +411,7 @@ static int get_containers_stats(char **idsarray, size_t ids_len, const struct st
             }
             continue;
         }
-        if (is_running(cont->state)) {
+        if (container_is_running(cont->state)) {
             rt_stats_params_t params = { 0 };
             params.rootpath = cont->root_path;
             params.state = cont->state_path;
@@ -496,14 +496,14 @@ static int do_resume_container(container_t *cont)
 
     container_lock(cont);
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         ERROR("Container %s is not running", id);
         isulad_set_error_message("Container %s is not running", id);
         ret = -1;
         goto out;
     }
 
-    if (!is_paused(cont->state)) {
+    if (!container_is_paused(cont->state)) {
         ERROR("Container %s is not paused", id);
         isulad_set_error_message("Container %s is not paused", id);
         ret = -1;
@@ -518,9 +518,9 @@ static int do_resume_container(container_t *cont)
         goto out;
     }
 
-    state_reset_paused(cont->state);
+    container_state_reset_paused(cont->state);
 
-    update_health_monitor(cont->common_config->id);
+    container_update_health_monitor(cont->common_config->id);
 
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
@@ -641,7 +641,7 @@ static int container_resume_cb(const container_resume_request *request, containe
     isula_libutils_set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: Resuming}", id);
 
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot resume container %s in garbage collector progress.", id);
         ERROR("You cannot resume container %s in garbage collector progress.", id);
         cc = ISULAD_ERR_EXEC;
@@ -673,21 +673,21 @@ static int pause_container(container_t *cont)
 
     container_lock(cont);
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         ERROR("Container %s is not running", id);
         isulad_set_error_message("Container %s is not running", id);
         ret = -1;
         goto out;
     }
 
-    if (is_paused(cont->state)) {
+    if (container_is_paused(cont->state)) {
         ERROR("Container %s is already paused", id);
         isulad_set_error_message("Container %s is already paused", id);
         ret = -1;
         goto out;
     }
 
-    if (is_restarting(cont->state)) {
+    if (container_is_restarting(cont->state)) {
         ERROR("Container %s is restarting, wait until the container is running", id);
         isulad_set_error_message("Container %s is restarting, wait until the container is running", id);
         ret = -1;
@@ -702,9 +702,9 @@ static int pause_container(container_t *cont)
         goto out;
     }
 
-    state_set_paused(cont->state);
+    container_state_set_paused(cont->state);
 
-    update_health_monitor(cont->common_config->id);
+    container_update_health_monitor(cont->common_config->id);
 
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
@@ -781,7 +781,7 @@ static int container_pause_cb(const container_pause_request *request, container_
 
     EVENT("Event: {Object: %s, Type: Pausing}", id);
 
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot pause container %s in garbage collector progress.", id);
         ERROR("You cannot pause container %s in garbage collector progress.", id);
         cc = ISULAD_ERR_EXEC;
@@ -961,15 +961,15 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
         goto out;
     }
 
-    if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
+    if (container_is_removal_in_progress(cont->state) || container_is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be \"update\".");
         isulad_set_error_message(
-                "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
+            "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
         ret = -1;
         goto out;
     }
 
-    if (is_running(cont->state) && hostconfig->kernel_memory) {
+    if (container_is_running(cont->state) && hostconfig->kernel_memory) {
         ERROR("Can not update kernel memory to a running container, please stop it first.");
         isulad_set_error_message("Cannot update container %s: Can not update kernel memory to a running container,"
                                  " please stop it first.",
@@ -1060,7 +1060,7 @@ static int do_update_resources(const container_update_request *request, containe
         goto restore_ocispec;
     }
 
-    if (is_running(cont->state)) {
+    if (container_is_running(cont->state)) {
         params.rootpath = cont->root_path;
         params.hostconfig = hostconfig;
         if (runtime_update(id, cont->runtime, &params)) {
@@ -1236,7 +1236,7 @@ static int container_export_cb(const container_export_request *request, containe
     id = cont->common_config->id;
     isula_libutils_set_log_prefix(id);
 
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot export container %s in garbage collector progress.", id);
         ERROR("You cannot export container %s in garbage collector progress.", id);
         cc = ISULAD_ERR_EXEC;
@@ -1301,7 +1301,7 @@ static int resize_container(container_t *cont, const char *suffix, unsigned int 
 
     container_lock(cont);
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         ERROR("Container %s is not running", id);
         isulad_set_error_message("Container %s is not running", id);
         ret = -1;

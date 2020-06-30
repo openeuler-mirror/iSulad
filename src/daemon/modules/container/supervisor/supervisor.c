@@ -74,7 +74,7 @@ char *exit_fifo_name(const char *cont_state_path)
 }
 
 /* exit fifo create */
-char *exit_fifo_create(const char *cont_state_path)
+char *container_exit_fifo_create(const char *cont_state_path)
 {
     int ret = 0;
     char fifo_path[PATH_MAX] = { 0 };
@@ -99,7 +99,7 @@ char *exit_fifo_create(const char *cont_state_path)
 }
 
 /* exit fifo open */
-int exit_fifo_open(const char *cont_exit_fifo)
+int container_exit_fifo_open(const char *cont_exit_fifo)
 {
     int ret = 0;
 
@@ -236,7 +236,8 @@ static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata, struct epol
 }
 
 /* supervisor add exit monitor */
-int supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name, const char *runtime)
+int container_supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name,
+                                          const char *runtime)
 {
     int ret = 0;
     struct supervisor_handler_data *data = NULL;

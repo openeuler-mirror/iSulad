@@ -648,14 +648,14 @@ static int container_top_cb_check(const container_top_request *request, containe
         return -1;
     }
 
-    if (!is_running((*cont)->state)) {
+    if (!container_is_running((*cont)->state)) {
         ERROR("Container is not running");
         isulad_set_error_message("Container is is not running.");
         *cc = ISULAD_ERR_EXEC;
         return -1;
     }
 
-    if (is_restarting((*cont)->state)) {
+    if (container_is_restarting((*cont)->state)) {
         ERROR("Container %s is restarting, wait until the container is running.", name);
         isulad_set_error_message("Container %s is restarting, wait until the container is running.", name);
         *cc = ISULAD_ERR_EXEC;
@@ -929,13 +929,13 @@ static int dup_health_check_config(const container_config *src, container_inspec
             dest->health_check->test_len++;
         }
         dest->health_check->interval = (src->healthcheck->interval == 0) ? DEFAULT_PROBE_INTERVAL :
-                                                                           src->healthcheck->interval;
+                                       src->healthcheck->interval;
         dest->health_check->start_period = (src->healthcheck->start_period == 0) ? DEFAULT_START_PERIOD :
-                                                                                   src->healthcheck->start_period;
+                                           src->healthcheck->start_period;
         dest->health_check->timeout = (src->healthcheck->timeout == 0) ? DEFAULT_PROBE_TIMEOUT :
-                                                                         src->healthcheck->timeout;
+                                      src->healthcheck->timeout;
         dest->health_check->retries = (src->healthcheck->retries != 0) ? src->healthcheck->retries :
-                                                                         DEFAULT_PROBE_RETRIES;
+                                      DEFAULT_PROBE_RETRIES;
 
         dest->health_check->exit_on_unhealthy = src->healthcheck->exit_on_unhealthy;
     }
@@ -1122,7 +1122,7 @@ static int pack_inspect_container_state(const container_t *cont, container_inspe
     int ret = 0;
     container_config_v2_state *cont_state = NULL;
 
-    cont_state = state_get_info(cont->state);
+    cont_state = container_state_to_v2_state(cont->state);
     if (cont_state == NULL) {
         ERROR("Failed to read %s state", cont->common_config->id);
         ret = -1;
@@ -1136,7 +1136,7 @@ static int pack_inspect_container_state(const container_t *cont, container_inspe
         goto out;
     }
 
-    inspect->state->status = util_strdup_s(state_to_string(state_judge_status(cont_state)));
+    inspect->state->status = util_strdup_s(container_state_to_string(container_state_judge_status(cont_state)));
     inspect->state->running = cont_state->running;
     inspect->state->paused = cont_state->paused;
     inspect->state->restarting = cont_state->restarting;
@@ -1144,13 +1144,13 @@ static int pack_inspect_container_state(const container_t *cont, container_inspe
 
     inspect->state->exit_code = cont_state->exit_code;
     inspect->state->started_at = cont_state->started_at ? util_strdup_s(cont_state->started_at) :
-                                                          util_strdup_s(defaultContainerTime);
+                                 util_strdup_s(defaultContainerTime);
     inspect->state->finished_at = cont_state->finished_at ? util_strdup_s(cont_state->finished_at) :
-                                                            util_strdup_s(defaultContainerTime);
+                                  util_strdup_s(defaultContainerTime);
     inspect->state->error = cont->state->state->error ? util_strdup_s(cont->state->state->error) : NULL;
     inspect->restart_count = cont->common_config->restart_count;
 
-    if (dup_health_check_status(&inspect->state->health, cont_state->health) != 0) {
+    if (container_dup_health_check_status(&inspect->state->health, cont_state->health) != 0) {
         ERROR("Failed to dup health check info");
         ret = -1;
         goto out;
@@ -1523,7 +1523,7 @@ static int container_wait_cb(const container_wait_request *request, container_wa
         (void)container_wait_rm_locking(cont, -1);
     }
 
-    exit_code = state_get_exitcode(cont->state);
+    exit_code = container_state_get_exitcode(cont->state);
 
     INFO("Wait Container:%s", id);
 
@@ -1583,7 +1583,7 @@ static void restore_names_at_fail(container_t *cont, const char *ori_name, const
     free(cont->common_config->name);
     cont->common_config->name = util_strdup_s(ori_name);
 
-    if (!name_index_rename(ori_name, new_name, id)) {
+    if (!container_name_index_rename(ori_name, new_name, id)) {
         ERROR("Failed to restore name from \"%s\" to \"%s\" for container %s", new_name, ori_name, id);
     }
 }
@@ -1605,14 +1605,14 @@ static int container_rename(container_t *cont, const char *new_name)
         goto out;
     }
 
-    if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
+    if (container_is_removal_in_progress(cont->state) || container_is_dead(cont->state)) {
         ERROR("Can't rename container which is dead or marked for removal");
         isulad_set_error_message("Can't rename container which is dead or marked for removal");
         ret = -1;
         goto out;
     }
 
-    if (!name_index_rename(new_name, old_name, id)) {
+    if (!container_name_index_rename(new_name, old_name, id)) {
         ERROR("Name %s is in use", new_name);
         isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
                                  "You have to remove (or rename) that container to be able to reuse that name.",

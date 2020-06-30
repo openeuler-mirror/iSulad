@@ -179,7 +179,7 @@ static int verify_memory_swappiness(const sysinfo_t *sysinfo, uint64_t swapiness
     if ((int64_t)swapiness != -1 && !(sysinfo->cgmeminfo.swappiness)) {
         ERROR("Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
         isulad_set_error_message(
-                "Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
+            "Your kernel does not support memory swappiness capabilities, memory swappiness discarded.");
         ret = -1;
         goto out;
     }
@@ -251,7 +251,7 @@ static int verify_memory_kernel(const sysinfo_t *sysinfo, int64_t kernel)
     if (kernel > 0 && !(sysinfo->cgmeminfo.kernel)) {
         ERROR("Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
         isulad_set_error_message(
-                "Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
+            "Your kernel does not support kernel memory limit capabilities. Limitation discarded.");
         ret = -1;
         goto out;
     }

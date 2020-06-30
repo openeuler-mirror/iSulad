@@ -21,7 +21,7 @@
 
 class MockSpecs {
 public:
-    MOCK_METHOD2(LoadOciConfig, oci_runtime_spec *(const char *rootpath, const char *name));
+    MOCK_METHOD2(LoadOciConfig, oci_runtime_spec * (const char *rootpath, const char *name));
     MOCK_METHOD2(MergeConfCgroup, int(oci_runtime_spec *oci_spec, const host_config *host_spec));
     MOCK_METHOD3(SaveOciConfig, int(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec));
 };

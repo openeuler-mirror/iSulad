@@ -25,10 +25,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "health_check.h"
-#include "callback.h"
 #include "service_container_api.h"
-#include "isula_libutils/container_exec_request.h"
-#include "isula_libutils/container_exec_response.h"
 #include "log_gather_api.h"
 #include "container_state.h"
 
@@ -128,7 +125,7 @@ static void open_health_check_monitor(health_check_manager_t *health)
 
 // Called when the container is being stopped (whether because the health check is
 // failing or for any other reason).
-void stop_health_checks(const char *container_id)
+void container_stop_health_checks(const char *container_id)
 {
     container_t *cont = NULL;
 
@@ -269,7 +266,7 @@ static int shift_and_store_log_result(defs_health *health, const defs_health_log
             health->log[i]->end = util_strdup_s(health->log[i + 1]->end);
             health->log[i]->exit_code = health->log[i + 1]->exit_code;
             health->log[i]->output = health->log[i + 1]->output != NULL ? util_strdup_s(health->log[i + 1]->output) :
-                                                                          NULL;
+                                     NULL;
         } else {
             health->log[i]->start = util_strdup_s(result->start);
             health->log[i]->end = util_strdup_s(result->end);
@@ -349,8 +346,8 @@ static int handle_unhealthy_case(container_t *cont, const defs_health_log_elemen
 
     if (strcmp(health_status, HEALTH_STARTING) == 0) {
         int64_t start_period = (cont->common_config->config->healthcheck->start_period == 0) ?
-                                       DEFAULT_START_PERIOD :
-                                       cont->common_config->config->healthcheck->start_period;
+                               DEFAULT_START_PERIOD :
+                               cont->common_config->config->healthcheck->start_period;
         int64_t first, last;
         if (to_unix_nanos_from_str(cont->state->state->started_at, &first)) {
             ERROR("Parse container started time failed: %s", cont->state->state->started_at);
@@ -505,7 +502,6 @@ void *health_check_run(void *arg)
     struct io_write_wrapper Stdoutctx = { 0 };
     struct io_write_wrapper Stderrctx = { 0 };
     container_t *cont = NULL;
-    service_executor_t *cb = NULL;
     container_exec_request *container_req = NULL;
     container_exec_response *container_res = NULL;
     defs_health_log_element *result = NULL;
@@ -532,14 +528,14 @@ void *health_check_run(void *arg)
         goto out;
     }
 
-    cb = get_service_executor();
-    if (cb == NULL || cb->container.exec == NULL) {
-        ERROR("Failed to get service callback function");
+    container_req = (container_exec_request *)util_common_calloc_s(sizeof(container_exec_request));
+    if (container_req == NULL) {
+        ERROR("Out of memory");
         goto out;
     }
 
-    container_req = (container_exec_request *)util_common_calloc_s(sizeof(container_exec_request));
-    if (container_req == NULL) {
+    container_res = (container_exec_response *)util_common_calloc_s(sizeof(container_exec_response));
+    if (container_res == NULL) {
         ERROR("Out of memory");
         goto out;
     }
@@ -550,7 +546,7 @@ void *health_check_run(void *arg)
     container_req->attach_stdout = true;
     container_req->attach_stderr = true;
     container_req->timeout =
-            ((config->healthcheck->timeout == 0) ? DEFAULT_PROBE_TIMEOUT : config->healthcheck->timeout) / Time_Second;
+        ((config->healthcheck->timeout == 0) ? DEFAULT_PROBE_TIMEOUT : config->healthcheck->timeout) / Time_Second;
     container_req->container_id = util_strdup_s(cont->common_config->id);
     container_req->argv = cmd_slice;
     container_req->argv_len = util_array_len((const char **)cmd_slice);
@@ -571,7 +567,7 @@ void *health_check_run(void *arg)
     Stderrctx.context = (void *)output;
     Stderrctx.write_func = write_to_string;
     Stderrctx.close_func = NULL;
-    ret = cb->container.exec(container_req, &container_res, -1, &Stdoutctx, &Stderrctx);
+    ret = exec_container(cont, container_req, container_res, -1, &Stdoutctx, &Stderrctx);
     if (ret != 0) {
         health_check_exec_failed_handle(container_res, result);
     } else {
@@ -698,8 +694,8 @@ static void *health_check_monitor(void *arg)
         goto out;
     }
     probe_interval = (cont->common_config->config->healthcheck->interval == 0) ?
-                             DEFAULT_PROBE_INTERVAL :
-                             cont->common_config->config->healthcheck->interval;
+                     DEFAULT_PROBE_INTERVAL :
+                     cont->common_config->config->healthcheck->interval;
     set_monitor_idle_status(cont->health_check);
     while (true) {
         switch (get_health_check_monitor_state(cont->health_check)) {
@@ -731,7 +727,7 @@ out:
 // Ensure the health-check monitor is running or not, depending on the current
 // state of the container.
 // Called from monitor.go, with c locked.
-void update_health_monitor(const char *container_id)
+void container_update_health_monitor(const char *container_id)
 {
     bool want_running = false;
     container_t *cont = NULL;
@@ -777,7 +773,7 @@ out:
 // initHealthMonitor is called from monitor.go and we should never be running
 // two instances at once.
 // Note: Called with container locked.
-void init_health_monitor(const char *id)
+void container_init_health_monitor(const char *id)
 {
     container_t *cont = NULL;
 
@@ -804,7 +800,7 @@ void init_health_monitor(const char *id)
         goto out;
     }
     // This is needed in case we're auto-restarting
-    stop_health_checks(cont->common_config->id);
+    container_stop_health_checks(cont->common_config->id);
     if (cont->state == NULL || cont->state->state == NULL) {
         goto out;
     }
@@ -826,7 +822,7 @@ void init_health_monitor(const char *id)
         goto out;
     }
 
-    update_health_monitor(id);
+    container_update_health_monitor(id);
 
 out:
     container_unref(cont);

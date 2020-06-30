@@ -1074,7 +1074,7 @@ static int isulad_server_init_common()
         goto out;
     }
 
-    if (name_index_init()) {
+    if (container_name_index_init()) {
         ERROR("Failed to init name index");
         goto out;
     }

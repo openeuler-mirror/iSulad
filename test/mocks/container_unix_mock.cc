@@ -33,7 +33,7 @@ void container_unref(container_t *cont)
     return;
 }
 
-bool has_mount_for(container_t *cont, const char *mpath)
+bool container_has_mount_for(container_t *cont, const char *mpath)
 {
     if (g_container_unix_mock != nullptr) {
         return g_container_unix_mock->HasMountFor(cont, mpath);

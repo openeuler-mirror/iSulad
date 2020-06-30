@@ -15,6 +15,9 @@
 #ifndef __ISULAD_SERVICE_CONTAINER_OPERATOR_H
 #define __ISULAD_SERVICE_CONTAINER_OPERATOR_H
 #include "container_api.h"
+#include "io_wrapper.h"
+#include "isula_libutils/container_exec_request.h"
+#include "isula_libutils/container_exec_response.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +40,9 @@ int kill_container(container_t *cont, uint32_t signal);
 int set_container_to_removal(const container_t *cont);
 
 int delete_container(container_t *cont, bool force);
+
+int exec_container(const container_t *cont, const container_exec_request *request, container_exec_response *response,
+                   int stdinfd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler);
 
 #ifdef __cplusplus
 }

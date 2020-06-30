@@ -64,7 +64,8 @@ static int append_additional_mounts(oci_runtime_spec *oci_spec, const char *type
     char *net_files[] = { "/proc/sys/net" };
     char *ipc_files[] = { "/proc/sys/kernel/shmmax",          "/proc/sys/kernel/shmmni", "/proc/sys/kernel/shmall",
                           "/proc/sys/kernel/shm_rmid_forced", "/proc/sys/kernel/msgmax", "/proc/sys/kernel/msgmni",
-                          "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",    "/proc/sys/fs/mqueue" };
+                          "/proc/sys/kernel/msgmnb",          "/proc/sys/kernel/sem",    "/proc/sys/fs/mqueue"
+                        };
 
     if (strcmp(type, "net") == 0) {
         files = &net_files[0];
@@ -1436,7 +1437,7 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
         new_mp_val_size = (common_config->mount_points->len + volumes_len) *
                           sizeof(container_config_v2_common_config_mount_points_element *);
         old_mp_val_size =
-                common_config->mount_points->len * sizeof(container_config_v2_common_config_mount_points_element *);
+            common_config->mount_points->len * sizeof(container_config_v2_common_config_mount_points_element *);
 
         ret = mem_realloc((void **)&mp_key, new_mp_key_size, common_config->mount_points->keys, old_mp_key_size);
         if (ret != 0) {
@@ -1616,9 +1617,9 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
 
     for (i = 0; i < blkio_weight_device_len; i++) {
         ret = merge_host_config_blk_weight_device(
-                &oci_spec->linux->resources->block_io
-                         ->weight_device[oci_spec->linux->resources->block_io->weight_device_len],
-                blkio_weight_device[i]);
+                  &oci_spec->linux->resources->block_io
+                  ->weight_device[oci_spec->linux->resources->block_io->weight_device_len],
+                  blkio_weight_device[i]);
         if (ret != 0) {
             ERROR("Failed to merge blkio weight device");
             ret = -1;
@@ -1670,9 +1671,9 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
 
     for (i = 0; i < throttle_read_bps_device_len; i++) {
         ret = merge_host_config_blk_read_bps_device(
-                &oci_spec->linux->resources->block_io
-                         ->throttle_read_bps_device[oci_spec->linux->resources->block_io->throttle_read_bps_device_len],
-                blkio_read_bps_device[i]);
+                  &oci_spec->linux->resources->block_io
+                  ->throttle_read_bps_device[oci_spec->linux->resources->block_io->throttle_read_bps_device_len],
+                  blkio_read_bps_device[i]);
         if (ret != 0) {
             ERROR("Failed to merge blkio throttle read bps device");
             ret = -1;
@@ -1724,9 +1725,9 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
 
     for (i = 0; i < throttle_write_bps_device_len; i++) {
         ret = merge_host_config_blk_write_bps_device(
-                &oci_spec->linux->resources->block_io
-                         ->throttle_write_bps_device[oci_spec->linux->resources->block_io->throttle_write_bps_device_len],
-                blkio_write_bps_device[i]);
+                  &oci_spec->linux->resources->block_io
+                  ->throttle_write_bps_device[oci_spec->linux->resources->block_io->throttle_write_bps_device_len],
+                  blkio_write_bps_device[i]);
         if (ret != 0) {
             ERROR("Failed to merge blkio throttle write bps device");
             ret = -1;
@@ -2133,7 +2134,7 @@ static bool has_mount_shm(host_config *host_spec, container_config_v2_common_con
     cont->common_config = v2_spec;
     cont->hostconfig = host_spec;
 
-    ret = has_mount_for(cont, "/dev/shm");
+    ret = container_has_mount_for(cont, "/dev/shm");
 
     cont->common_config = NULL;
     cont->hostconfig = NULL;

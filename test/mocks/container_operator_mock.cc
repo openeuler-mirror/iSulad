@@ -24,7 +24,7 @@ void MockContainersOperator_SetMock(MockContainersOperator *mock)
     g_containers_operator_mock = mock;
 }
 
-bool container_in_gc_progress(const char *id)
+bool container_is_in_gc_progress(const char *id)
 {
     if (g_containers_operator_mock != nullptr) {
         return g_containers_operator_mock->IsGcProgress(id);

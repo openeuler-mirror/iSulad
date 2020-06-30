@@ -138,8 +138,8 @@ static const struct bim_ops g_ext_ops = {
 static const struct bim_type g_bims[] = {
 #ifdef ENABLE_OCI_IMAGE
     {
-            .image_type = IMAGE_TYPE_OCI,
-            .ops = &g_oci_ops,
+        .image_type = IMAGE_TYPE_OCI,
+        .ops = &g_oci_ops,
     },
 #endif
     { .image_type = IMAGE_TYPE_EXTERNAL, .ops = &g_ext_ops },
@@ -807,7 +807,7 @@ void free_im_list_response(im_list_response *ptr)
     free(ptr);
 }
 
-static bool check_im_pull_args(const im_pull_request *req, im_pull_response *const *resp)
+static bool check_im_pull_args(const im_pull_request *req, im_pull_response * const *resp)
 {
     if (req == NULL || resp == NULL) {
         ERROR("Request or response is NULL");

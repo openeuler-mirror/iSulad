@@ -199,7 +199,7 @@ static bool validate_layer_path_in_host_real(size_t layer_index, char *path_in_h
         ERROR("invalid path in host %s, real path is %s, layer %ld", path_in_host, real_path, layer_index);
         if (fmod == (uint32_t)S_IFREG) {
             isulad_try_set_error_message(
-                    "Invalid content in manifest: layer(except first layer) is not a regular file");
+                "Invalid content in manifest: layer(except first layer) is not a regular file");
         } else if ((int)fmod == S_IFDIR) {
             isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) is not a directory");
         } else if ((int)fmod == S_IFBLK) {
@@ -286,8 +286,8 @@ static bool validate_layer_media_type(size_t layer_index, char *media_type, uint
     }
 
     isulad_try_set_error_message(
-            "Invalid content in manifest: layer's media type must be"
-            " application/squashfs.image.rootfs.diff.img or application/bind.image.rootfs.diff.dir");
+        "Invalid content in manifest: layer's media type must be"
+        " application/squashfs.image.rootfs.diff.img or application/bind.image.rootfs.diff.dir");
     ERROR("invalid layer media type %s", media_type);
     return false;
 }
@@ -393,7 +393,7 @@ static bool validate_image_name(char *image_name)
     if (strcmp(image_name, "none") == 0 || strcmp(image_name, "none:latest") == 0) {
         ERROR("image name %s must not be none or none:latest", image_name);
         isulad_try_set_error_message(
-                "Image name 'none' or 'none:latest' in manifest is reserved, please use other name");
+            "Image name 'none' or 'none:latest' in manifest is reserved, please use other name");
         return false;
     }
 

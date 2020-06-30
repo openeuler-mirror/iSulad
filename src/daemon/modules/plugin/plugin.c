@@ -96,7 +96,7 @@ static char *dup_cid(const container_t *cont)
  */
 static int get_status(const container_t *cont)
 {
-    return (int)state_get_status(cont->state);
+    return (int)container_state_get_status(cont->state);
 }
 
 /*

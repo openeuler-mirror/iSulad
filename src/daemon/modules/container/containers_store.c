@@ -129,7 +129,7 @@ static container_t *containers_store_get_by_name(const char *name)
         return NULL;
     }
 
-    id = name_index_get(name);
+    id = container_name_index_get(name);
     if (id == NULL) {
         WARN("Could not find entity for %s", name);
         return NULL;
@@ -394,7 +394,7 @@ error_out:
 }
 
 /* name index add */
-bool name_index_add(const char *name, const char *id)
+bool container_name_index_add(const char *name, const char *id)
 {
     bool ret = false;
 
@@ -411,7 +411,7 @@ bool name_index_add(const char *name, const char *id)
 }
 
 /* name index rename */
-bool name_index_rename(const char *new_name, const char *old_name, const char *id)
+bool container_name_index_rename(const char *new_name, const char *old_name, const char *id)
 {
     bool ret = false;
 
@@ -435,7 +435,7 @@ unlock_out:
 }
 
 /* name index get */
-char *name_index_get(const char *name)
+char *container_name_index_get(const char *name)
 {
     char *id = NULL;
 
@@ -454,7 +454,7 @@ char *name_index_get(const char *name)
 }
 
 /* name index remove */
-bool name_index_remove(const char *name)
+bool container_name_index_remove(const char *name)
 {
     bool ret = false;
 
@@ -471,7 +471,7 @@ bool name_index_remove(const char *name)
 }
 
 /* name index get all */
-map_t *name_index_get_all(void)
+map_t *container_name_index_get_all(void)
 {
     bool ret = false;
     map_t *map_id_name = NULL;
@@ -520,7 +520,7 @@ out:
 }
 
 /* name index init */
-int name_index_init(void)
+int container_name_index_init(void)
 {
     g_indexs = name_index_new();
     if (g_indexs == NULL) {

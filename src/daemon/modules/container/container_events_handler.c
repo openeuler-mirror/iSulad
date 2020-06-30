@@ -59,7 +59,7 @@ void container_events_handler_free(container_events_handler_t *handler)
         return;
     }
 
-    linked_list_for_each_safe (it, &(handler->events_list), next) {
+    linked_list_for_each_safe(it, &(handler->events_list), next) {
         event = (struct isulad_events_format *)it->elem;
         linked_list_del(it);
         isulad_events_format_free(event);
@@ -121,14 +121,14 @@ static int container_state_changed(container_t *cont, const struct isulad_events
         case EVENTS_TYPE_STOPPED1:
             container_lock(cont);
 
-            if (false == is_running(cont->state)) {
+            if (false == container_is_running(cont->state)) {
                 DEBUG("Container is not in running state ignore STOPPED event");
                 container_unlock(cont);
                 ret = 0;
                 goto out;
             }
 
-            pid = state_get_pid(cont->state);
+            pid = container_state_get_pid(cont->state);
             if (pid != (int)events->pid) {
                 DEBUG("Container's pid \'%d\' is not equal to event's pid \'%d\', ignore STOPPED event", pid,
                       events->pid);
@@ -137,7 +137,7 @@ static int container_state_changed(container_t *cont, const struct isulad_events
                 goto out;
             }
 
-            started_at = state_get_started_at(cont->state);
+            started_at = container_state_get_started_at(cont->state);
 
             should_restart = restart_manager_should_restart(id, events->exit_status,
                                                             cont->common_config->has_been_manually_stopped,
@@ -147,15 +147,15 @@ static int container_state_changed(container_t *cont, const struct isulad_events
 
             if (should_restart) {
                 cont->common_config->restart_count++;
-                state_set_restarting(cont->state, (int)events->exit_status);
+                container_state_set_restarting(cont->state, (int)events->exit_status);
                 container_wait_stop_cond_broadcast(cont);
                 INFO("Try to restart container %s after %.2fs", id, (double)timeout / Time_Second);
                 (void)container_restart_in_thread(id, timeout, (int)events->exit_status);
             } else {
-                state_set_stopped(cont->state, (int)events->exit_status);
+                container_state_set_stopped(cont->state, (int)events->exit_status);
                 container_wait_stop_cond_broadcast(cont);
                 plugin_event_container_post_stop(cont);
-                stop_health_checks(cont->common_config->id);
+                container_stop_health_checks(cont->common_config->id);
             }
 
             auto_remove = !should_restart && cont->hostconfig != NULL && cont->hostconfig->auto_remove;

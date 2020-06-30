@@ -42,19 +42,19 @@ static char *parse_share_namespace_with_prefix(const char *type, const char *pat
         goto out;
     }
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         ERROR("Can not join namespace of a non running container %s", tmp_cid);
         isulad_set_error_message("Can not join namespace of a non running container %s", tmp_cid);
         goto out;
     }
 
-    if (is_restarting(cont->state)) {
+    if (container_is_restarting(cont->state)) {
         ERROR("Container %s is restarting, wait until the container is running", tmp_cid);
         isulad_set_error_message("Container %s is restarting, wait until the container is running", tmp_cid);
         goto out;
     }
 
-    pid = state_get_pid(cont->state);
+    pid = container_state_get_pid(cont->state);
     if (pid < 1 || kill(pid, 0) < 0) {
         ERROR("Container %s pid %d invalid", tmp_cid, pid);
         goto out;

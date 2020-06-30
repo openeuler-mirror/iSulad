@@ -673,7 +673,7 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
             _exit(EXIT_SUCCESS);
         }
 
-    realexec:
+realexec:
         /* real shim process. */
         close(exec_fd[0]);
         if (setsid() < 0) {
@@ -685,7 +685,7 @@ static int shim_create(bool fg, const char *id, const char *workdir, const char 
             (void)dprintf(exec_fd[1], "close inherited fds failed");
         }
 
-        execvp(SHIM_BINARY, (char *const *)params);
+        execvp(SHIM_BINARY, (char * const *)params);
         (void)dprintf(exec_fd[1], "exec failed: %s", strerror(errno));
     }
 

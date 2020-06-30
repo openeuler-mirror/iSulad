@@ -363,7 +363,7 @@ static char *try_generate_id()
             goto err_out;
         }
 
-        value = name_index_get(id);
+        value = container_name_index_get(id);
         if (value != NULL) {
             continue;
         } else {
@@ -549,7 +549,7 @@ static int maintain_container_id(const container_create_request *request, char *
 
     EVENT("Event: {Object: %s, Type: Creating %s}", id, name);
 
-    if (!name_index_add(name, id)) {
+    if (!container_name_index_add(name, id)) {
         ERROR("Name %s is in use", name);
         isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
                                  "You have to remove (or rename) that container to be able to reuse that name.",
@@ -695,7 +695,7 @@ static host_config_host_channel *dup_host_channel(const host_config_host_channel
 
     dup_channel->path_on_host = channel->path_on_host != NULL ? util_strdup_s(channel->path_on_host) : NULL;
     dup_channel->path_in_container = channel->path_in_container != NULL ? util_strdup_s(channel->path_in_container) :
-                                                                          NULL;
+                                     NULL;
     dup_channel->permissions = channel->permissions != NULL ? util_strdup_s(channel->permissions) : NULL;
     dup_channel->size = channel->size;
 
@@ -1033,7 +1033,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_channel;
     }
 
-    if (v2_spec_merge_contaner_spec(v2_spec) != 0) {
+    if (container_v2_spec_merge_contaner_spec(v2_spec) != 0) {
         ERROR("Failed to merge container settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
@@ -1061,7 +1061,7 @@ clean_container_root_dir:
     (void)delete_container_root_dir(id, runtime_root);
 
 clean_nameindex:
-    name_index_remove(name);
+    container_name_index_remove(name);
 
 pack_response:
     pack_create_response(*response, id, cc);

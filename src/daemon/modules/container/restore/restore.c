@@ -60,7 +60,7 @@ static int restore_supervisor(const container_t *cont)
         goto out;
     }
 
-    exit_fifo_fd = exit_fifo_open(exit_fifo);
+    exit_fifo_fd = container_exit_fifo_open(exit_fifo);
     if (exit_fifo_fd < 0) {
         ERROR("Failed to open exit FIFO %s", exit_fifo);
         ret = -1;
@@ -72,7 +72,7 @@ static int restore_supervisor(const container_t *cont)
     pid_info.start_time = cont->state->state->start_time;
     pid_info.pstart_time = cont->state->state->p_start_time;
 
-    if (supervisor_add_exit_monitor(exit_fifo_fd, &pid_info, id, runtime)) {
+    if (container_supervisor_add_exit_monitor(exit_fifo_fd, &pid_info, id, runtime)) {
         ERROR("Failed to add exit monitor to supervisor");
         ret = -1;
         goto out;
@@ -117,7 +117,7 @@ static void post_nonexist_image_containers(const container_t *cont, Container_St
                       "used with container!",
                       id);
             }
-            state_set_stopped(cont->state, 255);
+            container_state_set_stopped(cont->state, 255);
         }
     } else if (info->status == RUNTIME_CONTAINER_STATUS_RUNNING) {
         nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, info->pid);
@@ -127,7 +127,7 @@ static void post_nonexist_image_containers(const container_t *cont, Container_St
                   "used with container!",
                   id);
         }
-        state_set_stopped(cont->state, 255);
+        container_state_set_stopped(cont->state, 255);
     } else {
         ERROR("Container %s get invalid status %d", id, info->status);
     }
@@ -183,14 +183,14 @@ static void try_to_set_paused_container_pid(Container_Status status, const conta
                                             const container_pid_t *pid_info)
 {
     if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
-        state_set_running(cont->state, pid_info, false);
+        container_state_set_running(cont->state, pid_info, false);
     }
 }
 
 static void try_to_set_container_running(Container_Status status, container_t *cont, const container_pid_t *pid_info)
 {
     if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
-        state_set_running(cont->state, pid_info, true);
+        container_state_set_running(cont->state, pid_info, true);
     }
 }
 
@@ -210,7 +210,7 @@ static int restore_stopped_container(Container_Status status, const container_t 
                   "used with container!",
                   id);
         }
-        state_set_stopped(cont->state, 255);
+        container_state_set_stopped(cont->state, 255);
         *need_save = true;
     }
 
@@ -255,7 +255,7 @@ static int restore_paused_container(Container_Status status, container_t *cont,
     const char *id = cont->common_config->id;
     container_pid_t pid_info = { 0 };
 
-    state_set_paused(cont->state);
+    container_state_set_paused(cont->state);
 
     nret = container_read_proc(info->pid, &pid_info);
     if (nret == 0) {
@@ -289,7 +289,7 @@ static int restore_state(container_t *cont)
     const char *runtime = cont->runtime;
     rt_status_params_t params = { 0 };
     struct runtime_container_status_info real_status = { 0 };
-    Container_Status status = state_get_status(cont->state);
+    Container_Status status = container_state_get_status(cont->state);
 
     (void)container_exit_on_next(cont); /* cancel restart policy */
 
@@ -331,8 +331,8 @@ static int restore_state(container_t *cont)
     }
 
 out:
-    if (is_removal_in_progress(cont->state)) {
-        state_reset_removal_in_progress(cont->state);
+    if (container_is_removal_in_progress(cont->state)) {
+        container_state_reset_removal_in_progress(cont->state);
         need_save = true;
     }
     if (need_save && container_to_disk(cont) != 0) {
@@ -401,13 +401,13 @@ static void restored_restart_container(container_t *cont)
 
     id = cont->common_config->id;
 
-    started_at = state_get_started_at(cont->state);
-    if (restart_manager_should_restart(id, state_get_exitcode(cont->state),
+    started_at = container_state_get_started_at(cont->state);
+    if (restart_manager_should_restart(id, container_state_get_exitcode(cont->state),
                                        cont->common_config->has_been_manually_stopped, time_seconds_since(started_at),
                                        &timeout)) {
         cont->common_config->restart_count++;
         INFO("Restart container %s after 5 second", id);
-        (void)container_restart_in_thread(id, 5ULL * Time_Second, (int)state_get_exitcode(cont->state));
+        (void)container_restart_in_thread(id, 5ULL * Time_Second, (int)container_state_get_exitcode(cont->state));
     }
     free(started_at);
 }
@@ -432,15 +432,15 @@ static void handle_restored_container()
         cont = conts[i];
         container_lock(cont);
 
-        (void)reset_restart_manager(cont, false);
+        (void)container_reset_restart_manager(cont, false);
 
         id = cont->common_config->id;
 
-        if (is_running(cont->state)) {
+        if (container_is_running(cont->state)) {
             if (restore_supervisor(cont)) {
                 ERROR("Failed to restore %s supervisor", id);
             }
-            init_health_monitor(id);
+            container_init_health_monitor(id);
         } else {
             if (cont->hostconfig != NULL && cont->hostconfig->auto_remove_bak) {
                 (void)set_container_to_removal(cont);
@@ -482,7 +482,7 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
             goto error_load;
         }
 
-        index_flag = name_index_add(cont->common_config->name, cont->common_config->id);
+        index_flag = container_name_index_add(cont->common_config->name, cont->common_config->id);
         if (!index_flag) {
             ERROR("Failed add %s into name indexs", subdir[i]);
             goto error_load;
@@ -494,14 +494,14 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
         }
 
         continue;
-    error_load:
+error_load:
         if (remove_invalid_container(cont, runtime, rootpath, statepath, subdir[i])) {
             ERROR("Failed to delete subdir:%s", subdir[i]);
         }
         container_unref(cont);
 
         if (index_flag) {
-            name_index_remove(subdir[i]);
+            container_name_index_remove(subdir[i]);
         }
         continue;
     }

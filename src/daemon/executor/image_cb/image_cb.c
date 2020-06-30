@@ -529,7 +529,7 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
-static bool valid_repo_tags(char *const *const repo_tags, size_t repo_index)
+static bool valid_repo_tags(char * const * const repo_tags, size_t repo_index)
 {
     if (repo_tags != NULL && repo_tags[repo_index] != NULL) {
         return true;

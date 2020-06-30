@@ -84,7 +84,7 @@ void container_state_free(container_state_t *state)
 }
 
 /* state set starting */
-void state_set_starting(container_state_t *s)
+void container_state_set_starting(container_state_t *s)
 {
     if (s == NULL) {
         return;
@@ -98,7 +98,7 @@ void state_set_starting(container_state_t *s)
 }
 
 /* state set dead */
-void state_set_dead(container_state_t *s)
+void container_state_set_dead(container_state_t *s)
 {
     if (s == NULL) {
         return;
@@ -112,7 +112,7 @@ void state_set_dead(container_state_t *s)
 }
 
 /* state reset starting */
-void state_reset_starting(container_state_t *s)
+void container_state_reset_starting(container_state_t *s)
 {
     if (s == NULL) {
         return;
@@ -126,7 +126,7 @@ void state_reset_starting(container_state_t *s)
 }
 
 /* state set running */
-void state_set_running(container_state_t *s, const container_pid_t *pid_info, bool initial)
+void container_state_set_running(container_state_t *s, const container_pid_t *pid_info, bool initial)
 {
     container_config_v2_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
@@ -170,7 +170,7 @@ void state_set_running(container_state_t *s, const container_pid_t *pid_info, bo
 }
 
 /* state reset stopped */
-void state_set_stopped(container_state_t *s, int exit_code)
+void container_state_set_stopped(container_state_t *s, int exit_code)
 {
     container_config_v2_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
@@ -201,7 +201,7 @@ void state_set_stopped(container_state_t *s, int exit_code)
 }
 
 /* state set paused */
-void state_set_paused(container_state_t *s)
+void container_state_set_paused(container_state_t *s)
 {
     container_config_v2_state *state = NULL;
 
@@ -218,7 +218,7 @@ void state_set_paused(container_state_t *s)
 }
 
 /* state reset paused */
-void state_reset_paused(container_state_t *s)
+void container_state_reset_paused(container_state_t *s)
 {
     container_config_v2_state *state = NULL;
 
@@ -235,7 +235,7 @@ void state_reset_paused(container_state_t *s)
 }
 
 /* update start and finish time */
-void update_start_and_finish_time(container_state_t *s, const char *finish_at)
+void container_restart_update_start_and_finish_time(container_state_t *s, const char *finish_at)
 {
     container_config_v2_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
@@ -266,7 +266,7 @@ void update_start_and_finish_time(container_state_t *s, const char *finish_at)
 }
 
 /* state set restarting */
-void state_set_restarting(container_state_t *s, int exit_code)
+void container_state_set_restarting(container_state_t *s, int exit_code)
 {
     container_config_v2_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
@@ -298,9 +298,9 @@ void state_set_restarting(container_state_t *s, int exit_code)
     return;
 }
 
-// state_set_removal_in_progress sets the container state as being removed.
+// container_state_set_removal_in_progress sets the container state as being removed.
 // It returns true if the container was already in that state
-bool state_set_removal_in_progress(container_state_t *s)
+bool container_state_set_removal_in_progress(container_state_t *s)
 {
     bool ret = false;
 
@@ -322,7 +322,7 @@ bool state_set_removal_in_progress(container_state_t *s)
 }
 
 /* state reset removal in progress */
-void state_reset_removal_in_progress(container_state_t *s)
+void container_state_reset_removal_in_progress(container_state_t *s)
 {
     if (s == NULL) {
         return;
@@ -349,7 +349,7 @@ void container_state_set_error(container_state_t *s, const char *err)
 }
 
 /* state judge status */
-Container_Status state_judge_status(const container_config_v2_state *state)
+Container_Status container_state_judge_status(const container_config_v2_state *state)
 {
     if (state == NULL) {
         return CONTAINER_STATUS_UNKNOWN;
@@ -373,19 +373,16 @@ Container_Status state_judge_status(const container_config_v2_state *state)
     if (state->started_at == NULL || state->finished_at == NULL) {
         return CONTAINER_STATUS_UNKNOWN;
     }
-    if (strcmp(state->started_at, defaultContainerTime) == 0 &&
-        strcmp(state->finished_at, defaultContainerTime) == 0) {
+    if (strcmp(state->started_at, defaultContainerTime) == 0 && strcmp(state->finished_at, defaultContainerTime) == 0) {
         return CONTAINER_STATUS_CREATED;
     }
 
     return CONTAINER_STATUS_STOPPED;
 }
 
-const char *state_to_string(Container_Status cs)
+const char *container_state_to_string(Container_Status cs)
 {
-    const char *state_string[] = {
-        "unknown", "inited", "starting", "running", "exited", "paused", "restarting"
-    };
+    const char *state_string[] = { "unknown", "inited", "starting", "running", "exited", "paused", "restarting" };
 
     if (cs >= CONTAINER_STATUS_MAX_STATE) {
         return "unknown";
@@ -394,7 +391,7 @@ const char *state_to_string(Container_Status cs)
 }
 
 /* state get status */
-Container_Status state_get_status(container_state_t *s)
+Container_Status container_state_get_status(container_state_t *s)
 {
     Container_Status status = CONTAINER_STATUS_UNKNOWN;
 
@@ -404,13 +401,13 @@ Container_Status state_get_status(container_state_t *s)
 
     container_state_lock(s);
 
-    status = state_judge_status(s->state);
+    status = container_state_judge_status(s->state);
 
     container_state_unlock(s);
     return status;
 }
 
-int dup_health_check_status(defs_health **dst, const defs_health *src)
+int container_dup_health_check_status(defs_health **dst, const defs_health *src)
 {
     int ret = 0;
     size_t i = 0;
@@ -460,7 +457,7 @@ error:
 }
 
 /* state get info */
-container_config_v2_state *state_get_info(container_state_t *s)
+container_config_v2_state *container_state_to_v2_state(container_state_t *s)
 {
     container_config_v2_state *state = NULL;
 
@@ -485,13 +482,13 @@ container_config_v2_state *state_get_info(container_state_t *s)
     state->starting = s->state->starting;
     state->exit_code = s->state->exit_code;
 
-    state->started_at = s->state->started_at ?
-                        util_strdup_s(s->state->started_at) : util_strdup_s(defaultContainerTime);
-    state->finished_at = s->state->finished_at ?
-                         util_strdup_s(s->state->finished_at) : util_strdup_s(defaultContainerTime);
+    state->started_at = s->state->started_at ? util_strdup_s(s->state->started_at) :
+                        util_strdup_s(defaultContainerTime);
+    state->finished_at = s->state->finished_at ? util_strdup_s(s->state->finished_at) :
+                         util_strdup_s(defaultContainerTime);
     state->error = s->state->error ? util_strdup_s(s->state->error) : NULL;
 
-    if (dup_health_check_status(&state->health, s->state->health) != 0) {
+    if (container_dup_health_check_status(&state->health, s->state->health) != 0) {
         ERROR("Failed to dup health check info");
         free_container_config_v2_state(state);
         state = NULL;
@@ -503,7 +500,7 @@ container_config_v2_state *state_get_info(container_state_t *s)
 }
 
 /* state get exitcode */
-uint32_t state_get_exitcode(container_state_t *s)
+uint32_t container_state_get_exitcode(container_state_t *s)
 {
     uint32_t exit_code = 0;
     container_config_v2_state *state = NULL;
@@ -523,7 +520,7 @@ uint32_t state_get_exitcode(container_state_t *s)
 }
 
 /* is running */
-bool is_running(container_state_t *s)
+bool container_is_running(container_state_t *s)
 {
     bool ret = false;
 
@@ -541,7 +538,7 @@ bool is_running(container_state_t *s)
 }
 
 /* is restarting */
-bool is_restarting(container_state_t *s)
+bool container_is_restarting(container_state_t *s)
 {
     bool ret = false;
 
@@ -559,7 +556,7 @@ bool is_restarting(container_state_t *s)
 }
 
 /* is paused */
-bool is_paused(container_state_t *s)
+bool container_is_paused(container_state_t *s)
 {
     bool ret = false;
 
@@ -577,7 +574,7 @@ bool is_paused(container_state_t *s)
 }
 
 /* is removal in progress */
-bool is_removal_in_progress(container_state_t *s)
+bool container_is_removal_in_progress(container_state_t *s)
 {
     bool ret = false;
 
@@ -595,7 +592,7 @@ bool is_removal_in_progress(container_state_t *s)
 }
 
 /* is dead */
-bool is_dead(container_state_t *s)
+bool container_is_dead(container_state_t *s)
 {
     bool ret = false;
 
@@ -612,9 +609,8 @@ bool is_dead(container_state_t *s)
     return ret;
 }
 
-
-// state_get_pid holds the process id of a container.
-int state_get_pid(container_state_t *s)
+// container_state_get_pid holds the process id of a container.
+int container_state_get_pid(container_state_t *s)
 {
     int pid = 0;
 
@@ -632,7 +628,7 @@ int state_get_pid(container_state_t *s)
 }
 
 /* state get started at */
-char *state_get_started_at(container_state_t *s)
+char *container_state_get_started_at(container_state_t *s)
 {
     char *ret = NULL;
 
@@ -679,16 +675,14 @@ static inline bool is_state_string_exited(const char *state)
     return strcmp(state, "exited") == 0;
 }
 
-bool is_valid_state_string(const char *state)
+bool container_is_valid_state_string(const char *state)
 {
     if (state == NULL) {
         return false;
     }
-    if (!is_state_string_paused(state) && !is_state_string_restarting(state) && \
-        !is_state_string_running(state) && !is_state_string_dead(state) && \
-        !is_state_string_created(state) && !is_state_string_exited(state)) {
+    if (!is_state_string_paused(state) && !is_state_string_restarting(state) && !is_state_string_running(state) &&
+        !is_state_string_dead(state) && !is_state_string_created(state) && !is_state_string_exited(state)) {
         return false;
     }
     return true;
 }
-

@@ -33,7 +33,7 @@ public:
     MOCK_METHOD1(NameIndexRemove, bool(const char *name));
     MOCK_METHOD1(NameIndexGet, char *(const char *name));
     MOCK_METHOD2(NameIndexAdd, bool(const char *name, const char *id));
-    MOCK_METHOD0(NameIndexGetAll, map_t *(void));
+    MOCK_METHOD0(NameIndexGetAll, map_t * (void));
     MOCK_METHOD3(NameIndexRename, bool(const char *new_name, const char *old_name, const char *id));
 };
 

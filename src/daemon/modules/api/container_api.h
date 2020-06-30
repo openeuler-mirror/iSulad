@@ -116,17 +116,17 @@ int containers_store_list(container_t ***out, size_t *size);
 char **containers_store_list_ids(void);
 
 /* name indexs */
-int name_index_init(void);
+int container_name_index_init(void);
 
-bool name_index_remove(const char *name);
+bool container_name_index_remove(const char *name);
 
-char *name_index_get(const char *name);
+char *container_name_index_get(const char *name);
 
-bool name_index_add(const char *name, const char *id);
+bool container_name_index_add(const char *name, const char *id);
 
-map_t *name_index_get_all(void);
+map_t *container_name_index_get_all(void);
 
-bool name_index_rename(const char *new_name, const char *old_name, const char *id);
+bool container_name_index_rename(const char *new_name, const char *old_name, const char *id);
 
 void container_refinc(container_t *cont);
 
@@ -149,7 +149,7 @@ void container_unlock(container_t *cont);
 
 char *container_get_env_nolock(const container_t *cont, const char *key);
 
-int v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec);
+int container_v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec);
 
 char *container_get_command(const container_t *cont);
 
@@ -157,7 +157,7 @@ char *container_get_image(const container_t *cont);
 
 int container_exit_on_next(container_t *cont);
 
-bool reset_restart_manager(container_t *cont, bool reset_count);
+bool container_reset_restart_manager(container_t *cont, bool reset_count);
 
 void container_update_restart_manager(container_t *cont, const host_config_restart_policy *policy);
 
@@ -168,75 +168,77 @@ int container_wait_stop_locking(container_t *cont, int timeout);
 void container_wait_rm_cond_broadcast(container_t *cont);
 int container_wait_rm_locking(container_t *cont, int timeout);
 
-bool has_mount_for(container_t *cont, const char *mpath);
+bool container_has_mount_for(container_t *cont, const char *mpath);
 
-container_config_v2_state *state_get_info(container_state_t *s);
+container_config_v2_state *container_state_to_v2_state(container_state_t *s);
 
-void update_start_and_finish_time(container_state_t *s, const char *finish_at);
+void container_restart_update_start_and_finish_time(container_state_t *s, const char *finish_at);
 
-void state_set_starting(container_state_t *s);
+void container_state_set_starting(container_state_t *s);
 
-void state_reset_starting(container_state_t *s);
+void container_state_reset_starting(container_state_t *s);
 
-void state_set_running(container_state_t *s, const container_pid_t *pid_info, bool initial);
+void container_state_set_running(container_state_t *s, const container_pid_t *pid_info, bool initial);
 
-void state_set_stopped(container_state_t *s, int exit_code);
+void container_state_set_stopped(container_state_t *s, int exit_code);
 
-void state_set_restarting(container_state_t *s, int exit_code);
+void container_state_set_restarting(container_state_t *s, int exit_code);
 
-void state_set_paused(container_state_t *s);
-void state_reset_paused(container_state_t *s);
+void container_state_set_paused(container_state_t *s);
+void container_state_reset_paused(container_state_t *s);
 
-void state_set_dead(container_state_t *s);
+void container_state_set_dead(container_state_t *s);
 
-// state_set_removal_in_progress sets the container state as being removed.
+// container_state_set_removal_in_progress sets the container state as being removed.
 // It returns true if the container was already in that state
-bool state_set_removal_in_progress(container_state_t *s);
+bool container_state_set_removal_in_progress(container_state_t *s);
 
-void state_reset_removal_in_progress(container_state_t *s);
+void container_state_reset_removal_in_progress(container_state_t *s);
 
-const char *state_to_string(Container_Status cs);
+const char *container_state_to_string(Container_Status cs);
 
-Container_Status state_judge_status(const container_config_v2_state *state);
+Container_Status container_state_judge_status(const container_config_v2_state *state);
 
-Container_Status state_get_status(container_state_t *s);
+Container_Status container_state_get_status(container_state_t *s);
 
-bool is_running(container_state_t *s);
+bool container_is_running(container_state_t *s);
 
-bool is_restarting(container_state_t *s);
+bool container_is_restarting(container_state_t *s);
 
-bool is_removal_in_progress(container_state_t *s);
+bool container_is_removal_in_progress(container_state_t *s);
 
-bool is_paused(container_state_t *s);
+bool container_is_paused(container_state_t *s);
 
-uint32_t state_get_exitcode(container_state_t *s);
+uint32_t container_state_get_exitcode(container_state_t *s);
 
-int state_get_pid(container_state_t *s);
+int container_state_get_pid(container_state_t *s);
 
-bool is_dead(container_state_t *s);
+bool container_is_dead(container_state_t *s);
 
 void container_state_set_error(container_state_t *s, const char *err);
 
-char *state_get_started_at(container_state_t *s);
+char *container_state_get_started_at(container_state_t *s);
 
-bool is_valid_state_string(const char *state);
+bool container_is_valid_state_string(const char *state);
 
-int dup_health_check_status(defs_health **dst, const defs_health *src);
+int container_dup_health_check_status(defs_health **dst, const defs_health *src);
 
-void update_health_monitor(const char *container_id);
+void container_update_health_monitor(const char *container_id);
 
-extern int supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name, const char *runtime);
+extern int container_supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name,
+                                                 const char *runtime);
 
-extern char *exit_fifo_create(const char *cont_state_path);
+extern char *container_exit_fifo_create(const char *cont_state_path);
 
-extern int exit_fifo_open(const char *cont_exit_fifo);
+extern int container_exit_fifo_open(const char *cont_exit_fifo);
 
-void init_health_monitor(const char *id);
-void stop_health_checks(const char *container_id);
+void container_init_health_monitor(const char *id);
+void container_stop_health_checks(const char *container_id);
 
-bool container_in_gc_progress(const char *id);
+bool container_is_in_gc_progress(const char *id);
 
 int container_module_init(char **msg);
+
 #if defined(__cplusplus) || defined(c_plusplus)
 }
 #endif

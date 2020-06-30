@@ -411,7 +411,7 @@ out:
 }
 
 /* container merge basic v2 spec info */
-int v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec)
+int container_v2_spec_merge_contaner_spec(container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     int i = 0;
@@ -887,7 +887,7 @@ void container_reset_manually_stopped(container_t *cont)
 }
 
 /* reset restart manager */
-bool reset_restart_manager(container_t *cont, bool reset_count)
+bool container_reset_restart_manager(container_t *cont, bool reset_count)
 {
     if (cont == NULL) {
         ERROR("Invalid input arguments");
@@ -967,7 +967,7 @@ int container_wait_stop(container_t *cont, int timeout)
         return -1;
     }
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         goto unlock;
     }
 
@@ -987,7 +987,7 @@ int container_wait_stop_locking(container_t *cont, int timeout)
 
     container_lock(cont);
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         goto unlock;
     }
 
@@ -1046,7 +1046,7 @@ char *container_get_env_nolock(const container_t *cont, const char *key)
  * @cont: check container
  * @mpath: target mount path
  * */
-bool has_mount_for(container_t *cont, const char *mpath)
+bool container_has_mount_for(container_t *cont, const char *mpath)
 {
     size_t i = 0;
     char *work = NULL;

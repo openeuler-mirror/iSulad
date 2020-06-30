@@ -359,14 +359,14 @@ static int container_info_match(const struct list_context *ctx, const map_t *map
         goto out;
     }
 
-    cs = state_judge_status(cont_state);
+    cs = container_state_judge_status(cont_state);
     if (cs == CONTAINER_STATUS_CREATED) {
         if (!filters_args_match(ctx->ps_filters, "status", "created") &&
             !filters_args_match(ctx->ps_filters, "status", "inited")) {
             ret = -1;
             goto out;
         }
-    } else if (!filters_args_match(ctx->ps_filters, "status", state_to_string(cs))) {
+    } else if (!filters_args_match(ctx->ps_filters, "status", container_state_to_string(cs))) {
         ret = -1;
         goto out;
     }
@@ -410,7 +410,7 @@ static int fill_isuladinfo(container_container *isuladinfo, const container_conf
 
     isuladinfo->pid = (int32_t)cont_state->pid;
 
-    isuladinfo->status = (int)state_judge_status(cont_state);
+    isuladinfo->status = (int)container_state_judge_status(cont_state);
 
     isuladinfo->command = container_get_command(cont);
     image = container_get_image(cont);
@@ -469,7 +469,7 @@ static container_container *get_container_info(const char *name, const struct li
         ERROR("Container '%s' already removed", name);
         return NULL;
     }
-    cont_state = state_get_info(cont->state);
+    cont_state = container_state_to_v2_state(cont->state);
 
     if (get_cnt_state(ctx, cont_state, name) != 0) {
         ret = -1;
@@ -516,7 +516,7 @@ static int do_add_filters(const char *filter_key, const json_map_string_bool *fi
 
     for (j = 0; j < filter_value->len; j++) {
         if (strcmp(filter_key, "status") == 0) {
-            if (!is_valid_state_string(filter_value->keys[j])) {
+            if (!container_is_valid_state_string(filter_value->keys[j])) {
                 ERROR("Unrecognised filter value for status: %s", filter_value->keys[j]);
                 isulad_set_error_message("Unrecognised filter value for status: %s", filter_value->keys[j]);
                 ret = -1;
@@ -632,7 +632,7 @@ int container_list_cb(const container_list_request *request, container_list_resp
         goto pack_response;
     }
 
-    map_id_name = name_index_get_all();
+    map_id_name = container_name_index_get_all();
     if (map_id_name == NULL) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;

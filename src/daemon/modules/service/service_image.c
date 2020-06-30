@@ -54,7 +54,7 @@ static bool check_image_in_used(const char *image_ref)
             in_used = true;
             goto unref_continue;
         }
-    unref_continue:
+unref_continue:
         container_unref(conts[i]);
         continue;
     }

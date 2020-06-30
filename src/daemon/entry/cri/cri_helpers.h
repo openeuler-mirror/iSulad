@@ -28,8 +28,7 @@
 #include "checkpoint_handler.h"
 #include "image_api.h"
 
-namespace CRIHelpers
-{
+namespace CRIHelpers {
 class Constants {
 public:
     static const std::string DEFAULT_RUNTIME_NAME;

@@ -142,7 +142,7 @@ static int gc_containers_to_disk()
             ERROR("Out of memory");
             return -1;
         }
-        linked_list_for_each_safe (it, &g_gc_containers.containers_list, next) {
+        linked_list_for_each_safe(it, &g_gc_containers.containers_list, next) {
             conts[i] = (container_garbage_config_gc_containers_element *)it->elem;
             i++;
         }
@@ -168,7 +168,7 @@ bool gc_is_gc_progress(const char *id)
 
     gc_containers_lock();
 
-    linked_list_for_each_safe (it, &g_gc_containers.containers_list, next) {
+    linked_list_for_each_safe(it, &g_gc_containers.containers_list, next) {
         cont = (container_garbage_config_gc_containers_element *)it->elem;
         if (strcmp(id, cont->id) == 0) {
             ret = true;
@@ -304,7 +304,7 @@ static void apply_auto_remove_after_gc(const char *id)
         goto out;
     }
 
-    if (is_running(cont->state)) {
+    if (container_is_running(cont->state)) {
         INFO("container %s already running, skip apply auto remove after gc", id);
         goto out;
     }
@@ -336,13 +336,13 @@ static void apply_restart_policy_after_gc(const char *id)
 
     container_lock(cont);
 
-    if (is_running(cont->state)) {
+    if (container_is_running(cont->state)) {
         INFO("container %s already running, skip apply restart policy after gc", id);
         goto unlock_out;
     }
 
-    started_at = state_get_started_at(cont->state);
-    exit_code = state_get_exitcode(cont->state);
+    started_at = container_state_get_started_at(cont->state);
+    exit_code = container_state_get_exitcode(cont->state);
 
     should_restart = restart_manager_should_restart(id, exit_code, cont->common_config->has_been_manually_stopped,
                                                     time_seconds_since(started_at), &timeout);
@@ -350,7 +350,7 @@ static void apply_restart_policy_after_gc(const char *id)
 
     if (should_restart) {
         cont->common_config->restart_count++;
-        state_set_restarting(cont->state, (int)exit_code);
+        container_state_set_restarting(cont->state, (int)exit_code);
         INFO("Try to restart container %s after %.2fs", id, (double)timeout / Time_Second);
         (void)container_restart_in_thread(id, timeout, (int)exit_code);
         if (container_to_disk(cont)) {
@@ -400,7 +400,7 @@ static int do_runtime_resume_container(const container_t *cont)
         goto out;
     }
 
-    state_reset_paused(cont->state);
+    container_state_reset_paused(cont->state);
 
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
@@ -523,7 +523,7 @@ static void *gchandler(void *arg)
 
         do_gc_container(it);
 
-    wait_continue:
+wait_continue:
         usleep_nointerupt(100 * 1000); /* wait 100 millisecond to check next gc container */
     }
 error:
@@ -575,7 +575,7 @@ out:
     return ret;
 }
 
-bool container_in_gc_progress(const char *id)
+bool container_is_in_gc_progress(const char *id)
 {
     if (id == NULL) {
         return false;

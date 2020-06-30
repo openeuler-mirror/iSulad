@@ -49,12 +49,13 @@
 
 #define MAX_CAP_LEN 32
 
-static const char *const g_system_caps[] = { "SYS_BOOT",     "SETPCAP", "NET_RAW", "NET_BIND_SERVICE",
+static const char * const g_system_caps[] = { "SYS_BOOT",     "SETPCAP", "NET_RAW", "NET_BIND_SERVICE",
 #ifdef CAP_AUDIT_WRITE
-                                             "AUDIT_WRITE",
+                                              "AUDIT_WRITE",
 #endif
-                                             "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
-                                             "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT" };
+                                              "DAC_OVERRIDE", "SETFCAP", "SETGID",  "SETUID",           "MKNOD", "CHOWN",
+                                              "FOWNER",       "FSETID",  "KILL",    "SYS_CHROOT"
+                                            };
 
 static int append_capability(char ***dstcaps, size_t *dstcaps_len, const char *cap)
 {
@@ -310,24 +311,25 @@ static char *seccomp_trans_arch_for_docker(const char *arch)
 {
     size_t i = 0;
     char *arch_map[][2] = { { "SCMP_ARCH_X86", "x86" },
-                            { "SCMP_ARCH_X86_64", "amd64" },
-                            { "SCMP_ARCH_X32", "x32" },
-                            { "SCMP_ARCH_ARM", "arm" },
-                            { "SCMP_ARCH_AARCH64", "arm64" },
-                            { "SCMP_ARCH_MIPS", "mips" },
-                            { "SCMP_ARCH_MIPS64", "mips64" },
-                            { "SCMP_ARCH_MIPS64N32", "mips64n32" },
-                            { "SCMP_ARCH_MIPSEL", "mipsel" },
-                            { "SCMP_ARCH_MIPSEL64", "mipsel64" },
-                            { "SCMP_ARCH_MIPSEL64N32", "mipsel64n32" },
-                            { "SCMP_ARCH_PPC", "ppc" },
-                            { "SCMP_ARCH_PPC64", "ppc64" },
-                            { "SCMP_ARCH_PPC64LE", "ppc64le" },
-                            { "SCMP_ARCH_S390", "s390" },
-                            { "SCMP_ARCH_S390X", "s390x" },
-                            { "SCMP_ARCH_PARISC", "parisc" },
-                            { "SCMP_ARCH_PARISC64", "parisc64" },
-                            { "SCMP_ARCH_ALL", "all" } };
+        { "SCMP_ARCH_X86_64", "amd64" },
+        { "SCMP_ARCH_X32", "x32" },
+        { "SCMP_ARCH_ARM", "arm" },
+        { "SCMP_ARCH_AARCH64", "arm64" },
+        { "SCMP_ARCH_MIPS", "mips" },
+        { "SCMP_ARCH_MIPS64", "mips64" },
+        { "SCMP_ARCH_MIPS64N32", "mips64n32" },
+        { "SCMP_ARCH_MIPSEL", "mipsel" },
+        { "SCMP_ARCH_MIPSEL64", "mipsel64" },
+        { "SCMP_ARCH_MIPSEL64N32", "mipsel64n32" },
+        { "SCMP_ARCH_PPC", "ppc" },
+        { "SCMP_ARCH_PPC64", "ppc64" },
+        { "SCMP_ARCH_PPC64LE", "ppc64le" },
+        { "SCMP_ARCH_S390", "s390" },
+        { "SCMP_ARCH_S390X", "s390x" },
+        { "SCMP_ARCH_PARISC", "parisc" },
+        { "SCMP_ARCH_PARISC64", "parisc64" },
+        { "SCMP_ARCH_ALL", "all" }
+    };
     for (i = 0; i < sizeof(arch_map) / sizeof(arch_map[0]); i++) {
         if (strcmp(arch, arch_map[i][0]) == 0) {
             return util_strdup_s(arch_map[i][1]);
@@ -491,10 +493,10 @@ static int dup_architectures_to_oci_spec(const docker_seccomp *docker_seccomp_sp
         }
         for (i = 0; i < docker_seccomp_spec->arch_map_len; i++) {
             oci_seccomp_spec->architectures[oci_seccomp_spec->architectures_len++] =
-                    util_strdup_s(docker_seccomp_spec->arch_map[i]->architecture);
+                util_strdup_s(docker_seccomp_spec->arch_map[i]->architecture);
             for (j = 0; j < docker_seccomp_spec->arch_map[i]->sub_architectures_len; j++) {
                 oci_seccomp_spec->architectures[oci_seccomp_spec->architectures_len++] =
-                        util_strdup_s(docker_seccomp_spec->arch_map[i]->sub_architectures[j]);
+                    util_strdup_s(docker_seccomp_spec->arch_map[i]->sub_architectures[j]);
             }
         }
     }
@@ -572,7 +574,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
         }
 
         oci_seccomp_spec->syscalls[k]->names =
-                util_common_calloc_s(docker_seccomp_spec->syscalls[i]->names_len * sizeof(char *));
+            util_common_calloc_s(docker_seccomp_spec->syscalls[i]->names_len * sizeof(char *));
         if (oci_seccomp_spec->syscalls[k]->names == NULL) {
             return -1;
         }
@@ -959,7 +961,8 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
 {
     int ret = 0;
     char *unblocked_systemcall_for_system_container[] = { "mount", "umount2", "reboot", "name_to_handle_at",
-                                                          "unshare" };
+                                                          "unshare"
+                                                        };
     char **adds = NULL;
     size_t adds_len = 0;
     bool no_new_privileges = false;
@@ -1002,11 +1005,11 @@ int adapt_settings_for_system_container(oci_runtime_spec *oci_spec, const host_c
     }
 
     ret = append_systemcall_to_seccomp(
-            oci_spec->linux->seccomp,
-            make_seccomp_syscalls_element((const char **)unblocked_systemcall_for_system_container,
-                                          sizeof(unblocked_systemcall_for_system_container) /
-                                                  sizeof(unblocked_systemcall_for_system_container[0]),
-                                          "SCMP_ACT_ALLOW", 0, NULL));
+              oci_spec->linux->seccomp,
+              make_seccomp_syscalls_element((const char **)unblocked_systemcall_for_system_container,
+                                            sizeof(unblocked_systemcall_for_system_container) /
+                                            sizeof(unblocked_systemcall_for_system_container[0]),
+                                            "SCMP_ACT_ALLOW", 0, NULL));
     if (ret != 0) {
         ERROR("Failed to append systemcall to seccomp file");
         ret = -1;

@@ -787,12 +787,12 @@ static container_t *get_networked_container(const char *id, const char *connecte
     if (!check_state) {
         return nc;
     }
-    if (!is_running(nc->state)) {
+    if (!container_is_running(nc->state)) {
         ERROR("cannot join network of a non running container: %s", connected_id);
         isulad_set_error_message("cannot join network of a non running container: %s", connected_id);
         goto cleanup;
     }
-    if (is_restarting(nc->state)) {
+    if (container_is_restarting(nc->state)) {
         ERROR("Container %s is restarting, wait until the container is running", connected_id);
         isulad_set_error_message("Container %s is restarting, wait until the container is running", connected_id);
         goto cleanup;

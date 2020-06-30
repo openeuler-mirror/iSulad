@@ -348,9 +348,9 @@ static int container_start_cb(const container_start_request *request, container_
 
     EVENT("Event: {Object: %s, Type: Starting}", id);
 
-    state_set_starting(cont->state);
+    container_state_set_starting(cont->state);
 
-    if (is_running(cont->state)) {
+    if (container_is_running(cont->state)) {
         INFO("Container is already running");
         goto pack_response;
     }
@@ -376,7 +376,7 @@ pack_response:
     free(fifopath);
     pack_start_response(*response, cc, id);
     if (cont != NULL) {
-        state_reset_starting(cont->state);
+        container_state_reset_starting(cont->state);
         container_unref(cont);
     }
     isula_libutils_free_log_prefix();
@@ -395,7 +395,7 @@ static int restart_container(container_t *cont)
 
     container_lock(cont);
 
-    if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
+    if (container_is_removal_in_progress(cont->state) || container_is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be started.");
         isulad_set_error_message("Container is marked for removal and cannot be started.");
         goto out;
@@ -411,7 +411,7 @@ static int restart_container(container_t *cont)
     }
 
     if (ret == 0) {
-        update_start_and_finish_time(cont->state, timebuffer);
+        container_restart_update_start_and_finish_time(cont->state, timebuffer);
     }
 
     if (container_to_disk(cont)) {
@@ -439,7 +439,7 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     }
 
     /* begin start container */
-    state_set_starting(cont->state);
+    container_state_set_starting(cont->state);
     if (container_to_disk_locking(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         cc = ISULAD_ERR_EXEC;
@@ -447,7 +447,7 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
         goto out;
     }
 
-    if (is_running(cont->state)) {
+    if (container_is_running(cont->state)) {
         INFO("Container is already running");
         goto out;
     }
@@ -457,7 +457,7 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
         goto out;
     }
 out:
-    state_reset_starting(cont->state);
+    container_state_reset_starting(cont->state);
     return cc;
 }
 
@@ -538,7 +538,7 @@ static int container_restart_cb(const container_restart_request *request, contai
 
     EVENT("Event: {Object: %s, Type: restarting}", id);
 
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot restart container %s in garbage collector progress.", id);
         ERROR("You cannot restart container %s in garbage collector progress.", id);
         cc = ISULAD_ERR_EXEC;
@@ -627,7 +627,7 @@ static int container_stop_cb(const container_stop_request *request, container_st
 
     EVENT("Event: {Object: %s, Type: Stopping}", id);
 
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot stop container %s in garbage collector progress.", id);
         ERROR("You cannot stop container %s in garbage collector progress.", id);
         cc = ISULAD_ERR_EXEC;
@@ -724,7 +724,7 @@ static int container_kill_cb(const container_kill_request *request, container_ki
 
     EVENT("Event: {Object: %s, Type: Killing, Signal:%u}", id, signal);
 
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot kill container %s in garbage collector progress.", id);
         ERROR("You cannot kill container %s in garbage collector progress.", id);
         cc = ISULAD_ERR_EXEC;

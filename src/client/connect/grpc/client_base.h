@@ -58,7 +58,8 @@ public:
         if (arguments->tls) {
             m_tlsMode = ClientBaseConstants::TLS_ON;
             m_certFile = arguments->cert_file != nullptr ?
-                         std::string(arguments->cert_file, std::string(arguments->cert_file).length()) : "";
+                         std::string(arguments->cert_file, std::string(arguments->cert_file).length()) :
+                         "";
             std::string pem_root_certs = ReadTextFile(arguments->ca_file);
             std::string pem_private_key = ReadTextFile(arguments->key_file);
             std::string pem_cert_chain = ReadTextFile(arguments->cert_file);
@@ -69,9 +70,9 @@ public:
             // do not authenticate server based on given CA
             // mode4/tlsverify, tlscacert, tlscert, tlskey: Authenticate with client certificate
             // and authenticate server based on given CA
-            grpc::SslCredentialsOptions ssl_opts = {
-                arguments->tls_verify ? pem_root_certs : "", pem_private_key, pem_cert_chain
-            };
+            grpc::SslCredentialsOptions ssl_opts = { arguments->tls_verify ? pem_root_certs : "", pem_private_key,
+                                                     pem_cert_chain
+                                                   };
             // Create a default SSL ChannelCredentials object.
             auto channel_creds = grpc::SslCredentials(ssl_opts);
             // Create a channel using the credentials created in the previous step.
@@ -87,10 +88,9 @@ public:
 
     virtual void unpackStatus(Status &status, RP *response)
     {
-        if (!status.error_message().empty() && \
-            (status.error_code() == grpc::StatusCode::UNKNOWN ||
-             status.error_code() == grpc::StatusCode::PERMISSION_DENIED ||
-             status.error_code() == grpc::StatusCode::INTERNAL)) {
+        if (!status.error_message().empty() && (status.error_code() == grpc::StatusCode::UNKNOWN ||
+                                                status.error_code() == grpc::StatusCode::PERMISSION_DENIED ||
+                                                status.error_code() == grpc::StatusCode::INTERNAL)) {
             response->errmsg = util_strdup_s(status.error_message().c_str());
         } else {
             response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
@@ -232,4 +232,3 @@ int container_func(const REQUEST *request, RESPONSE *response, void *arg) noexce
 }
 
 #endif /* __CLIENT_BASH_H */
-

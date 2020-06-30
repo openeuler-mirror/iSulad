@@ -53,572 +53,82 @@ struct container_log_config {
     int64_t size;
 };
 
-static int do_append_process_exec_env(const char **default_env, defs_process *spec)
-{
-    int ret = 0;
-    size_t new_size = 0;
-    size_t old_size = 0;
-    size_t i = 0;
-    size_t j = 0;
-    char **temp = NULL;
-    char **default_kv = NULL;
-    char **custom_kv = NULL;
-    size_t default_env_len = util_array_len(default_env);
-
-    if (default_env_len == 0) {
-        return 0;
-    }
-
-    if (default_env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
-        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
-        ret = -1;
-        goto out;
-    }
-    new_size = (spec->env_len + default_env_len) * sizeof(char *);
-    old_size = spec->env_len * sizeof(char *);
-    ret = mem_realloc((void **)&temp, new_size, spec->env, old_size);
-    if (ret != 0) {
-        ERROR("Failed to realloc memory for envionment variables");
-        ret = -1;
-        goto out;
-    }
-
-    spec->env = temp;
-    for (i = 0; i < default_env_len; i++) {
-        bool found = false;
-        default_kv = util_string_split(default_env[i], '=');
-        if (default_kv == NULL) {
-            continue;
-        }
-
-        for (j = 0; j < spec->env_len; j++) {
-            custom_kv = util_string_split(spec->env[i], '=');
-            if (custom_kv == NULL) {
-                continue;
-            }
-            if (strcmp(default_kv[0], custom_kv[0]) == 0) {
-                found = true;
-            }
-            util_free_array(custom_kv);
-            custom_kv = NULL;
-            if (found) {
-                break;
-            }
-        }
-
-        if (!found) {
-            spec->env[spec->env_len] = util_strdup_s(default_env[i]);
-            spec->env_len++;
-        }
-        util_free_array(default_kv);
-        default_kv = NULL;
-    }
-out:
-    return ret;
-}
-
-static int append_necessary_process_env(bool tty, const container_config *container_spec, defs_process *spec)
-{
-    int ret = 0;
-    int nret = 0;
-    char **default_env = NULL;
-    char host_name_str[MAX_HOST_NAME_LEN + 10] = { 0 };
-
-    if (util_array_append(&default_env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin") != 0) {
-        ERROR("Failed to append default exec env");
-        ret = -1;
-        goto out;
-    }
-
-    if (container_spec->hostname != NULL) {
-        nret = snprintf(host_name_str, sizeof(host_name_str), "HOSTNAME=%s", container_spec->hostname);
-        if (nret < 0 || (size_t)nret >= sizeof(host_name_str)) {
-            ERROR("hostname is too long");
-            ret = -1;
-            goto out;
-        }
-        if (util_array_append(&default_env, host_name_str) != 0) {
-            ERROR("Failed to append default exec env");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    if (tty) {
-        if (util_array_append(&default_env, "TERM=xterm") != 0) {
-            ERROR("Failed to append default exec env");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    ret = do_append_process_exec_env((const char **)default_env, spec);
-
-out:
-    util_free_array(default_env);
-    return ret;
-}
-
-static int merge_exec_from_container_env(defs_process *spec, const container_config *container_spec)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    if (container_spec->env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
-        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < container_spec->env_len; i++) {
-        ret = util_array_append(&(spec->env), container_spec->env[i]);
-        if (ret != 0) {
-            ERROR("Failed to append container env to exec process env");
-            goto out;
-        }
-        spec->env_len++;
-    }
-
-out:
-    return ret;
-}
-
-static int merge_envs_from_request_env(defs_process *spec, const char **envs, size_t env_len)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    if (env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
-        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < env_len; i++) {
-        ret = util_array_append(&(spec->env), envs[i]);
-        if (ret != 0) {
-            ERROR("Failed to append request env to exec process env");
-            goto out;
-        }
-        spec->env_len++;
-    }
-
-out:
-    return ret;
-}
-
-static int dup_defs_process_user(defs_process_user *src, defs_process_user **dst)
-{
-    int ret = 0;
-    size_t i;
-
-    if (src == NULL) {
-        return 0;
-    }
-
-    *dst = (defs_process_user *)util_common_calloc_s(sizeof(defs_process_user));
-    if (*dst == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    (*dst)->username = util_strdup_s(src->username);
-    (*dst)->uid = src->uid;
-    (*dst)->gid = src->gid;
-
-    if (src->additional_gids_len != 0) {
-        (*dst)->additional_gids = util_common_calloc_s(sizeof(gid_t) * src->additional_gids_len);
-        if ((*dst)->additional_gids == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        (*dst)->additional_gids_len = src->additional_gids_len;
-        for (i = 0; i < src->additional_gids_len; i++) {
-            (*dst)->additional_gids[i] = src->additional_gids[i];
-        }
-    }
-
-out:
-    return ret;
-}
-
-static defs_process *make_exec_process_spec(const container_config *container_spec, defs_process_user *puser,
-                                            const char *runtime, const container_exec_request *request)
-{
-    int ret = 0;
-    defs_process *spec = NULL;
-
-    spec = util_common_calloc_s(sizeof(defs_process));
-    if (spec == NULL) {
-        return NULL;
-    }
-
-    if (strcasecmp(runtime, "lcr") != 0) {
-        ret = merge_exec_from_container_env(spec, container_spec);
-        if (ret != 0) {
-            ERROR("Failed to dup args for exec process spec");
-            goto err_out;
-        }
-    }
-
-    ret = merge_envs_from_request_env(spec, (const char **)request->env, request->env_len);
-    if (ret != 0) {
-        ERROR("Failed to dup args for exec process spec");
-        goto err_out;
-    }
-
-    if (strcasecmp(runtime, "lcr") != 0) {
-        ret = append_necessary_process_env(request->tty, container_spec, spec);
-        if (ret != 0) {
-            ERROR("Failed to append necessary for exec process spec");
-            goto err_out;
-        }
-    }
-
-    ret = dup_array_of_strings((const char **)request->argv, request->argv_len, &(spec->args), &(spec->args_len));
-    if (ret != 0) {
-        ERROR("Failed to dup envs for exec process spec");
-        goto err_out;
-    }
-
-    ret = dup_defs_process_user(puser, &(spec->user));
-    if (ret != 0) {
-        ERROR("Failed to dup process user for exec process spec");
-        goto err_out;
-    }
-
-    spec->terminal = request->tty;
-    spec->cwd = util_strdup_s(util_valid_str(container_spec->working_dir) ? container_spec->working_dir : "/");
-
-    return spec;
-
-err_out:
-    free_defs_process(spec);
-    return NULL;
-}
-
-static int exec_container(container_t *cont, const char *runtime, char *const console_fifos[], defs_process_user *puser,
-                          const container_exec_request *request, int *exit_code)
-{
-    int ret = 0;
-    char *engine_log_path = NULL;
-    char *loglevel = NULL;
-    char *logdriver = NULL;
-    defs_process *process_spec = NULL;
-    rt_exec_params_t params = { 0 };
-
-    loglevel = conf_get_isulad_loglevel();
-    if (loglevel == NULL) {
-        ERROR("Exec: failed to get log level");
-        ret = -1;
-        goto out;
-    }
-    logdriver = conf_get_isulad_logdriver();
-    if (logdriver == NULL) {
-        ERROR("Exec: Failed to get log driver");
-        ret = -1;
-        goto out;
-    }
-    engine_log_path = conf_get_engine_log_file();
-    if (strcmp(logdriver, "file") == 0 && engine_log_path == NULL) {
-        ERROR("Exec: Log driver is file, but engine log path is NULL");
-        ret = -1;
-        goto out;
-    }
-
-    process_spec = make_exec_process_spec(cont->common_config->config, puser, runtime, request);
-    if (process_spec == NULL) {
-        ERROR("Exec: Failed to make process spec");
-        ret = -1;
-        goto out;
-    }
-
-    params.loglevel = loglevel;
-    params.logpath = engine_log_path;
-    params.console_fifos = (const char **)console_fifos;
-    params.rootpath = cont->root_path;
-    params.timeout = request->timeout;
-    params.suffix = request->suffix;
-    params.state = cont->state_path;
-    params.spec = process_spec;
-    params.attach_stdin = request->attach_stdin;
-
-    if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
-        ERROR("Runtime exec container failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(loglevel);
-    free(engine_log_path);
-    free(logdriver);
-    free_defs_process(process_spec);
-
-    return ret;
-}
-
-static int container_exec_cb_check(const container_exec_request *request, container_exec_response **response,
-                                   uint32_t *cc, container_t **cont)
-{
-    char *container_name = NULL;
-
-    if (request == NULL) {
-        return -1;
-    }
-    *response = util_common_calloc_s(sizeof(container_exec_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        *cc = ISULAD_ERR_MEMOUT;
-        return -1;
-    }
-
-    container_name = request->container_id;
-
-    if (container_name == NULL) {
-        ERROR("receive NULL Request id");
-        *cc = ISULAD_ERR_INPUT;
-        return -1;
-    }
-
-    if (!util_valid_container_id_or_name(container_name)) {
-        ERROR("Invalid container name %s", container_name);
-        isulad_set_error_message("Invalid container name %s", container_name);
-        *cc = ISULAD_ERR_EXEC;
-        return -1;
-    }
-
-    if (request->suffix != NULL && !util_valid_exec_suffix(request->suffix)) {
-        ERROR("Invalid exec suffix %s", request->suffix);
-        isulad_set_error_message("Invalid exec suffix %s", request->suffix);
-        *cc = ISULAD_ERR_EXEC;
-        return -1;
-    }
-
-    *cont = containers_store_get(container_name);
-    if (*cont == NULL) {
-        ERROR("No such container:%s", container_name);
-        isulad_set_error_message("No such container:%s", container_name);
-        *cc = ISULAD_ERR_EXEC;
-        return -1;
-    }
-
-    return 0;
-}
-
-static int exec_prepare_console(container_t *cont, const container_exec_request *request, int stdinfd,
-                                struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
-                                char **fifos, char **fifopath, int *sync_fd, pthread_t *thread_id)
-{
-    int ret = 0;
-    const char *id = cont->common_config->id;
-
-    if (request->attach_stdin || request->attach_stdout || request->attach_stderr) {
-        if (create_daemon_fifos(id, cont->runtime, request->attach_stdin, request->attach_stdout,
-                                request->attach_stderr, "exec", fifos, fifopath)) {
-            ret = -1;
-            goto out;
-        }
-
-        *sync_fd = eventfd(0, EFD_CLOEXEC);
-        if (*sync_fd < 0) {
-            ERROR("Failed to create eventfd: %s", strerror(errno));
-            ret = -1;
-            goto out;
-        }
-        if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr, stdinfd,
-                               stdout_handler, stderr_handler, (const char **)fifos, thread_id)) {
-            ret = -1;
-            goto out;
-        }
-    }
-out:
-    return ret;
-}
-
-static void container_exec_cb_end(container_exec_response *response, uint32_t cc, int exit_code, int sync_fd,
-                                  pthread_t thread_id)
-{
-    if (response != NULL) {
-        response->cc = cc;
-        response->exit_code = (uint32_t)exit_code;
-        if (g_isulad_errmsg != NULL) {
-            response->errmsg = util_strdup_s(g_isulad_errmsg);
-            DAEMON_CLEAR_ERRMSG();
-        }
-    }
-    if (sync_fd >= 0 && cc != ISULAD_SUCCESS) {
-        if (eventfd_write(sync_fd, 1) < 0) {
-            ERROR("Failed to write eventfd: %s", strerror(errno));
-        }
-    }
-    if (thread_id > 0) {
-        if (pthread_join(thread_id, NULL) < 0) {
-            ERROR("Failed to join thread: %u", (unsigned int)thread_id);
-        }
-    }
-    if (sync_fd >= 0) {
-        close(sync_fd);
-    }
-}
-
-static int get_exec_user_info(const container_t *cont, const char *username, defs_process_user **puser)
-{
-    int ret = 0;
-
-    *puser = util_common_calloc_s(sizeof(defs_process_user));
-    if (*puser == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    ret = im_get_user_conf(cont->common_config->image_type, cont->common_config->base_fs, cont->hostconfig, username,
-                           *puser);
-    if (ret != 0) {
-        ERROR("Get user failed with '%s'", username ? username : "");
-        ret = -1;
-        goto out;
-    }
-out:
-    return ret;
-}
-static void get_exec_command(const container_exec_request *request, char *exec_command, size_t len)
-{
-    size_t i;
-    bool should_abbreviated = false;
-    size_t start = 0;
-    size_t end = 0;
-
-    for (i = 0; i < request->argv_len; i++) {
-        if (strlen(request->argv[i]) < len - strlen(exec_command)) {
-            (void)strcat(exec_command, request->argv[i]);
-            if (i != (request->argv_len - 1)) {
-                (void)strcat(exec_command, " ");
-            }
-        } else {
-            should_abbreviated = true;
-            goto out;
-        }
-    }
-
-out:
-    if (should_abbreviated) {
-        if (strlen(exec_command) <= len - 1 - 3) {
-            start = strlen(exec_command);
-            end = start + 3;
-        } else {
-            start = len - 1 - 3;
-            end = len - 1;
-        }
-
-        for (i = start; i < end; i++) {
-            exec_command[i] = '.';
-        }
-    }
-}
-
 static int container_exec_cb(const container_exec_request *request, container_exec_response **response, int stdinfd,
                              struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler)
 {
-    int exit_code = 0;
-    int sync_fd = -1;
+    int ret = 0;
     uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
-    char *fifos[3] = { NULL, NULL, NULL };
-    char *fifopath = NULL;
-    pthread_t thread_id = 0;
     container_t *cont = NULL;
-    defs_process_user *puser = NULL;
-    char exec_command[EVENT_ARGS_MAX] = { 0x00 };
 
     DAEMON_CLEAR_ERRMSG();
+
     if (request == NULL || response == NULL) {
         ERROR("Invalid NULL input");
         return -1;
     }
 
-    if (container_exec_cb_check(request, response, &cc, &cont) < 0) {
-        goto pack_response;
+    *response = util_common_calloc_s(sizeof(container_exec_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return -1;
     }
+
+    if (request->container_id == NULL) {
+        ERROR("receive NULL Request id");
+        cc = ISULAD_ERR_INPUT;
+        ret = -1;
+        goto pack_err_response;
+    }
+
+    if (!util_valid_container_id_or_name(request->container_id)) {
+        ERROR("Invalid container name %s", request->container_id);
+        isulad_set_error_message("Invalid container name %s", request->container_id);
+        cc = ISULAD_ERR_EXEC;
+        ret = -1;
+        goto pack_err_response;
+    }
+
+    if (request->suffix != NULL && !util_valid_exec_suffix(request->suffix)) {
+        ERROR("Invalid exec suffix %s", request->suffix);
+        isulad_set_error_message("Invalid exec suffix %s", request->suffix);
+        cc = ISULAD_ERR_EXEC;
+        ret = -1;
+        goto pack_err_response;
+    }
+
+    cont = containers_store_get(request->container_id);
+    if (cont == NULL) {
+        ERROR("No such container:%s", request->container_id);
+        isulad_set_error_message("No such container:%s", request->container_id);
+        cc = ISULAD_ERR_EXEC;
+        ret = -1;
+        goto pack_err_response;
+    }
+
     id = cont->common_config->id;
 
     isula_libutils_set_log_prefix(id);
-    EVENT("Event: {Object: %s, Type: execing}", id);
 
-    get_exec_command(request, exec_command, sizeof(exec_command));
-    (void)isulad_monitor_send_container_event(id, EXEC_CREATE, -1, 0, exec_command, NULL);
-
-    if (container_in_gc_progress(id)) {
-        isulad_set_error_message("You cannot exec container %s in garbage collector progress.", id);
-        ERROR("You cannot exec container %s in garbage collector progress.", id);
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
+    if (exec_container(cont, request, *response, stdinfd, stdout_handler, stderr_handler) != 0) {
+        ret = -1;
+        goto out;
     }
 
-    if (!is_running(cont->state)) {
-        ERROR("Container %s is not running", id);
-        isulad_set_error_message("Container %s is not running", id);
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
+    goto out;
 
-    if (is_paused(cont->state)) {
-        ERROR("Container %s ispaused, unpause the container before exec", id);
-        isulad_set_error_message("Container %s paused, unpause the container before exec", id);
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
-
-    if (is_restarting(cont->state)) {
-        ERROR("Container %s is currently restarting, wait until the container is running", id);
-        isulad_set_error_message("Container %s is currently restarting, wait until the container is running", id);
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
-
-    if (request->user != NULL) {
-        if (get_exec_user_info(cont, request->user, &puser) != 0) {
-            cc = ISULAD_ERR_EXEC;
-            goto pack_response;
-        }
-    } else {
-        if (cont->common_config->config->user != NULL) {
-            if (get_exec_user_info(cont, cont->common_config->config->user, &puser) != 0) {
-                cc = ISULAD_ERR_EXEC;
-                goto pack_response;
-            }
+pack_err_response:
+    if (*response != NULL) {
+        (*response)->cc = cc;
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+            DAEMON_CLEAR_ERRMSG();
         }
     }
 
-    if (exec_prepare_console(cont, request, stdinfd, stdout_handler, stderr_handler, fifos, &fifopath, &sync_fd,
-                             &thread_id)) {
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
-    (void)isulad_monitor_send_container_event(id, EXEC_START, -1, 0, exec_command, NULL);
-    if (exec_container(cont, cont->runtime, (char *const *)fifos, puser, request, &exit_code)) {
-        cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
-
-    EVENT("Event: {Object: %s, Type: execed}", id);
-    (void)isulad_monitor_send_container_event(id, EXEC_DIE, -1, 0, NULL, NULL);
-
-pack_response:
-    container_exec_cb_end(*response, cc, exit_code, sync_fd, thread_id);
-    delete_daemon_fifos(fifopath, (const char **)fifos);
-    free(fifos[0]);
-    free(fifos[1]);
-    free(fifos[2]);
-    free(fifopath);
-    free_defs_process_user(puser);
+out:
     container_unref(cont);
-
-    isula_libutils_free_log_prefix();
-    return (cc == ISULAD_SUCCESS) ? 0 : -1;
+    return ret;
 }
 
 static int container_attach_cb_check(const container_attach_request *request, container_attach_response **response,
@@ -663,21 +173,21 @@ static int attach_check_container_state(const container_t *cont)
     int ret = 0;
     const char *id = cont->common_config->id;
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         ERROR("Container is not running");
         isulad_set_error_message("Container is is not running.");
         ret = -1;
         goto out;
     }
 
-    if (is_paused(cont->state)) {
+    if (container_is_paused(cont->state)) {
         ERROR("Container %s is paused, unpause the container before attach.", id);
         isulad_set_error_message("Container %s is paused, unpause the container before attach.", id);
         ret = -1;
         goto out;
     }
 
-    if (is_restarting(cont->state)) {
+    if (container_is_restarting(cont->state)) {
         ERROR("Container %s is restarting, wait until the container is running.", id);
         isulad_set_error_message("Container %s is restarting, wait until the container is running.", id);
         ret = -1;
@@ -1048,7 +558,7 @@ static int pause_container(const container_t *cont)
         goto out;
     }
 
-    state_set_paused(cont->state);
+    container_state_set_paused(cont->state);
 
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
@@ -1074,7 +584,7 @@ static int resume_container(const container_t *cont)
         goto out;
     }
 
-    state_reset_paused(cont->state);
+    container_state_reset_paused(cont->state);
 
     if (container_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
@@ -1110,13 +620,13 @@ static int copy_from_container_cb(const struct isulad_copy_from_container_reques
 
     container_lock(cont);
 
-    if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
+    if (container_is_removal_in_progress(cont->state) || container_is_dead(cont->state)) {
         ERROR("can't copy file from a container which is dead or marked for removal");
         isulad_set_error_message("can't copy file from a container which is dead or marked for removal");
         goto unlock_container;
     }
 
-    need_pause = is_running(cont->state) && !is_paused(cont->state);
+    need_pause = container_is_running(cont->state) && !container_is_paused(cont->state);
     if (need_pause) {
         if (pause_container(cont) != 0) {
             ERROR("can't copy to a container which is cannot be paused");
@@ -1397,13 +907,13 @@ static int copy_to_container_cb(const container_copy_to_request *request, stream
 
     container_lock(cont);
 
-    if (is_removal_in_progress(cont->state) || is_dead(cont->state)) {
+    if (container_is_removal_in_progress(cont->state) || container_is_dead(cont->state)) {
         ERROR("can't copy to a container which is dead or marked for removal");
         isulad_set_error_message("can't copy to a container which is dead or marked for removal");
         goto unlock_container;
     }
 
-    need_pause = is_running(cont->state) && !is_paused(cont->state);
+    need_pause = container_is_running(cont->state) && !container_is_paused(cont->state);
     if (need_pause) {
         if (pause_container(cont) != 0) {
             ERROR("can't copy to a container which is cannot be paused");
@@ -1977,7 +1487,7 @@ static int do_follow_log_file(const char *cid, stream_func_wrapper *stream, stru
             ret = -1;
             break;
         }
-        if (!is_running(cont->state)) {
+        if (!container_is_running(cont->state)) {
             break;
         }
         if (stream->is_cancelled(stream->context)) {
@@ -2107,13 +1617,13 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
     id = cont->common_config->id;
     isula_libutils_set_log_prefix(id);
 
-    status = state_get_status(cont->state);
+    status = container_state_get_status(cont->state);
     if (status == CONTAINER_STATUS_CREATED) {
         goto out;
     }
 
     /* check state of container */
-    if (container_in_gc_progress(id)) {
+    if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("can not get logs from container which is dead or marked for removal");
         cc = ISULAD_ERR_EXEC;
         ERROR("can not get logs from container which is dead or marked for removal");
@@ -2149,7 +1659,7 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
         goto out;
     }
 
-    if (!is_running(cont->state)) {
+    if (!container_is_running(cont->state)) {
         goto out;
     }
 
