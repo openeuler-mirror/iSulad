@@ -47,7 +47,7 @@ typedef struct _container_t_ {
     container_state_t *state;
     host_config *hostconfig;
     restart_manager_t *rm;
-    events_handler_t *handler;
+    container_events_handler_t *handler;
     health_check_manager_t *health_check;
 
     /* log configs of container */

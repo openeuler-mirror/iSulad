@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,9 +8,9 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2017-11-22
- * Description: provide container events handler functions
+ * Author: lifeng
+ * Create: 2020-06-22
+ * Description: provide container events handler definition
  ******************************************************************************/
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +31,7 @@
 #include "plugin.h"
 
 /* events handler lock */
-static void events_handler_lock(events_handler_t *handler)
+static void events_handler_lock(container_events_handler_t *handler)
 {
     if (pthread_mutex_lock(&(handler->mutex)) != 0) {
         ERROR("Failed to lock events handler");
@@ -39,7 +39,7 @@ static void events_handler_lock(events_handler_t *handler)
 }
 
 /* events handler unlock */
-static void events_handler_unlock(events_handler_t *handler)
+static void events_handler_unlock(container_events_handler_t *handler)
 {
     if (pthread_mutex_unlock(&(handler->mutex)) != 0) {
         ERROR("Failed to unlock events handler");
@@ -47,7 +47,7 @@ static void events_handler_unlock(events_handler_t *handler)
 }
 
 /* events handler free */
-void events_handler_free(events_handler_t *handler)
+void container_events_handler_free(container_events_handler_t *handler)
 {
     struct isulad_events_format *event = NULL;
     struct linked_list *it = NULL;
@@ -71,12 +71,12 @@ void events_handler_free(events_handler_t *handler)
 }
 
 /* events handler new */
-events_handler_t *events_handler_new()
+container_events_handler_t *container_events_handler_new()
 {
     int ret;
-    events_handler_t *handler = NULL;
+    container_events_handler_t *handler = NULL;
 
-    handler = util_common_calloc_s(sizeof(events_handler_t));
+    handler = util_common_calloc_s(sizeof(container_events_handler_t));
     if (handler == NULL) {
         ERROR("Out of memory");
         return NULL;
@@ -95,7 +95,7 @@ events_handler_t *events_handler_new()
 
     return handler;
 cleanup:
-    events_handler_free(handler);
+    container_events_handler_free(handler);
     return NULL;
 }
 
@@ -191,7 +191,7 @@ out:
     return ret;
 }
 
-static int handle_one(container_t *cont, events_handler_t *handler)
+static int handle_one(container_t *cont, container_events_handler_t *handler)
 {
     struct linked_list *it = NULL;
     struct isulad_events_format *events = NULL;
@@ -231,7 +231,7 @@ static void *events_handler_thread(void *args)
     int ret = 0;
     char *name = args;
     container_t *cont = NULL;
-    events_handler_t *handler = NULL;
+    container_events_handler_t *handler = NULL;
 
     ret = pthread_detach(pthread_self());
     if (ret != 0) {
@@ -264,7 +264,7 @@ out:
 }
 
 /* events handler post events */
-int events_handler_post_events(const struct isulad_events_format *event)
+int container_events_handler_post_events(const struct isulad_events_format *event)
 {
     int ret = 0;
     char *name = NULL;

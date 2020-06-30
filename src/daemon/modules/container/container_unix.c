@@ -112,7 +112,7 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
         goto error_out;
     }
 
-    cont->handler = events_handler_new();
+    cont->handler = container_events_handler_new();
     if (cont->handler == NULL) {
         ERROR("Out of memory");
         goto error_out;
@@ -163,7 +163,7 @@ void container_free(container_t *container)
 
     restart_manager_unref(container->rm);
 
-    events_handler_free(container->handler);
+    container_events_handler_free(container->handler);
 
     health_check_manager_free(container->health_check);
 

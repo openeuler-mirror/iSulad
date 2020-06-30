@@ -828,7 +828,7 @@ static int post_event_to_events_hander(const struct isulad_events_format *events
         return 0;
     }
 
-    if (events_handler_post_events(events)) {
+    if (container_events_handler_post_events(events)) {
         ERROR("Failed to post events to events handler:%s", events->id);
         ret = -1;
         goto out;
