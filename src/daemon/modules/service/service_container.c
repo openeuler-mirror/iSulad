@@ -1709,28 +1709,17 @@ static int get_exec_user_info(const container_t *cont, const char *username, def
 out:
     return ret;
 }
-static void get_exec_command(const container_config *conf, const container_exec_request *request, char *exec_command,
-                             size_t len)
+static void get_exec_command(const container_exec_request *request, char *exec_command, size_t len)
 {
     size_t i;
     bool should_abbreviated = false;
     size_t start = 0;
     size_t end = 0;
 
-    for (i = 0; i < conf->entrypoint_len; i++) {
-        if (strlen(conf->entrypoint[i]) < len - strlen(exec_command)) {
-            (void)strcat(exec_command, conf->entrypoint[i]);
-            (void)strcat(exec_command, " ");
-        } else {
-            should_abbreviated = true;
-            goto out;
-        }
-    }
-
     for (i = 0; i < request->argv_len; i++) {
         if (strlen(request->argv[i]) < len - strlen(exec_command)) {
             (void)strcat(exec_command, request->argv[i]);
-            if (i != request->argv_len) {
+            if (i != (request->argv_len - 1)) {
                 (void)strcat(exec_command, " ");
             }
         } else {
@@ -1776,7 +1765,7 @@ int exec_container(const container_t *cont, const container_exec_request *reques
     id = cont->common_config->id;
     EVENT("Event: {Object: %s, Type: execing}", id);
 
-    get_exec_command(cont->common_config->config, request, exec_command, sizeof(exec_command));
+    get_exec_command(request, exec_command, sizeof(exec_command));
     (void)isulad_monitor_send_container_event(id, EXEC_CREATE, -1, 0, exec_command, NULL);
 
     if (container_is_in_gc_progress(id)) {
