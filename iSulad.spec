@@ -8,8 +8,8 @@ Version:   %{_version}
 Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
-URL:       isulad
-Source:    iSulad-2.0.3.tar.gz
+URL:       https://gitee.com/openeuler/iSulad
+Source:    iSulad-%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
