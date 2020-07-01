@@ -222,7 +222,7 @@ struct layer_list *invokeStorageLayersGetByUncompressDigest(const char *digest)
     return nullptr;
 }
 
-void free_layer(struct layer *ptr)
+void free_image_layer(struct layer *ptr)
 {
     if (ptr == NULL) {
         return;
@@ -248,7 +248,7 @@ void invokeFreeLayerList(struct layer_list *ptr)
     }
 
     for (; i < ptr->layers_len; i++) {
-        free_layer(ptr->layers[i]);
+        free_image_layer(ptr->layers[i]);
         ptr->layers[i] = NULL;
     }
     free(ptr->layers);

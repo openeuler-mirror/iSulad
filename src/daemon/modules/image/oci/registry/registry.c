@@ -228,7 +228,10 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
     }
 
     for (i = 0; i < manifest->layers_len; i++) {
-        if (strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_TAR_GZIP)) {
+        if (strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_TAR_GZIP) &&
+            strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_TAR) &&
+            strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_ND_TAR) &&
+            strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_ND_TAR_GZIP)) {
             ERROR("Unsupported layer's media type %s, layer index %ld", manifest->layers[i]->media_type, i);
             ret = -1;
             goto out;
@@ -1683,6 +1686,10 @@ static void cached_layers_kvfree(void *key, void *value)
 int registry_init()
 {
     int ret = 0;
+
+    if (util_mkdir_p(IMAGE_TMP_PATH, 0600)) {
+        ERROR("failed to create directory %s", IMAGE_TMP_PATH);
+    }
 
     g_shared = util_common_calloc_s(sizeof(registry_global));
     if (g_shared == NULL) {

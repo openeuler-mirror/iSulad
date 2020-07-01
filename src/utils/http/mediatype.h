@@ -81,7 +81,10 @@
 #define DOCKER_IMAGE_LAYER_FOREIGN_TAR_GZIP "application/vnd.docker.image.rootfs.foreign.diff.tar.gzip"
 #define DOCKER_IMAGE_V1 "application/vnd.docker.container.image.v1+json"
 #define OCI_IMAGE_V1 "application/vnd.oci.image.config.v1+json"
+#define OCI_IMAGE_LAYER_TAR "application/vnd.oci.image.layer.v1.tar"
 #define OCI_IMAGE_LAYER_TAR_GZIP "application/vnd.oci.image.layer.v1.tar+gzip"
+#define OCI_IMAGE_LAYER_ND_TAR "application/vnd.oci.image.layer.nondistributable.v1.tar"
+#define OCI_IMAGE_LAYER_ND_TAR_GZIP "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip"
 
 #endif
 

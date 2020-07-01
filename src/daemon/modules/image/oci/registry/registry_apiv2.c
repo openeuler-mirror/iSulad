@@ -183,7 +183,7 @@ static int parse_auths(pull_descriptor *desc, struct parsed_http_message *m)
     int ret = 0;
 
     for (i = 0; i < m->num_headers; i++) {
-        if (strcmp(m->headers[i][0], "Www-Authenticate") == 0) {
+        if (!strcmp(m->headers[i][0], "Www-Authenticate") || !strcmp(m->headers[i][0], "WWW-Authenticate")) {
             ret = parse_auth(desc, (char *)m->headers[i][1]);
             if (ret != 0) {
                 WARN("parse auth %s failed", (char *)m->headers[i][1]);

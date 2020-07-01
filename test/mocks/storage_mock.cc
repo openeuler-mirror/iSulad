@@ -39,3 +39,101 @@ void free_layer_list(struct layer_list *ptr)
         return g_storage_mock->FreeLayerList(ptr);
     }
 }
+
+int storage_img_create(const char *id, const char *parent_id, const char *metadata,
+                       struct storage_img_create_options *opts)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageImgCreate(id, parent_id, metadata, opts);
+    }
+    return -1;
+}
+
+imagetool_image * storage_img_get(const char *img_id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageImgGet(img_id);
+    }
+    return NULL;
+}
+
+int storage_img_set_big_data(const char *img_id, const char *key, const char *val)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageImgSetBigData(img_id, key, val);
+    }
+    return -1;
+}
+
+int storage_img_add_name(const char *img_id, const char *img_name)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageImgAddName(img_id, img_name);
+    }
+    return -1;
+}
+
+int storage_img_delete(const char *img_id, bool commit)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageImgDelete(img_id, commit);
+    }
+    return -1;
+}
+
+int storage_img_set_loaded_time(const char *img_id, types_timestamp_t *loaded_time)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageImgSetLoadedTime(img_id, loaded_time);
+    }
+    return -1;
+}
+
+int storage_img_set_image_size(const char *image_id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageImgSetImageSize(image_id);
+    }
+    return -1;
+}
+
+char * storage_get_img_top_layer(const char *id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageGetImgTopLayer(id);
+    }
+    return NULL;
+}
+
+int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *opts)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageLayerCreate(layer_id, opts);
+    }
+    return -1;
+}
+
+struct layer * storage_layer_get(const char *layer_id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageLayerGet(layer_id);
+    }
+    return NULL;
+}
+
+int storage_layer_try_repair_lowers(const char *layer_id, const char *last_layer_id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageLayerTryRepairLowers(layer_id, last_layer_id);
+    }
+    return -1;
+}
+
+void free_layer(struct layer *l)
+{
+    if (g_storage_mock != NULL) {
+        g_storage_mock->FreeLayer(l);
+    }
+    return;
+}
+

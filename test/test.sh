@@ -116,6 +116,7 @@ function ut_empty()
     find ../ -name "CMakeCache.txt"|xargs rm -f
     find ../ -name "CTestTestfile.cmake"|xargs rm -f
     find ./ -name "*.xml"|xargs rm -f
+    rm -f ../src/utils/http/libhttpclient.so
     rm -rf ../conf ../grpc ../json
     rm coverage -rf
     rm test_result.log -f

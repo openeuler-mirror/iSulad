@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+Server: nginx/1.10.1
+Date: Thu, 02 Jul 2020 09:14:16 GMT
+Content-Type: application/vnd.oci.image.index.v1+json
+Content-Length: 2080
+Connection: keep-alive
+Docker-Content-Digest: sha256:bd28e852703450d93220e6733a9f0901b92cd558911528b03fdba56156ae0a02
+Docker-Distribution-Api-Version: registry/2.0
+Etag: "sha256:bd28e852703450d93220e6733a9f0901b92cd558911528b03fdba56156ae0a02"
+
