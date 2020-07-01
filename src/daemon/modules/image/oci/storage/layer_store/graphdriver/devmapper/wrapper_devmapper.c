@@ -72,21 +72,6 @@ struct dm_task *task_create(int type)
     return dmt;
 }
 
-int set_name(struct dm_task *dmt, const char *name)
-{
-    int ret = 0;
-
-    if (dmt == NULL || name == NULL) {
-        return -1;
-    }
-
-    if (dm_task_set_name(dmt, name) != 1) {
-        ret = -1;
-    }
-
-    return ret;
-}
-
 int set_message(struct dm_task *dmt, const char *message)
 {
     if (dmt == NULL || message == NULL) {
@@ -130,21 +115,6 @@ int set_add_node(struct dm_task *dmt, dm_add_node_t add_node)
     }
 
 out:
-    return ret;
-}
-
-int set_ro(struct dm_task *dmt)
-{
-    int ret = 0;
-
-    if (dmt == NULL) {
-        return -1;
-    }
-
-    if (dm_task_set_ro(dmt) != 1) {
-        ret = -1;
-    }
-
     return ret;
 }
 
@@ -209,61 +179,6 @@ struct dm_task *task_create_named(int type, const char *dm_name)
 cleanup:
     dm_task_destroy(dmt);
     return NULL;
-}
-
-// GetTable is the programmatic example for "dmsetup table".
-// It outputs the current table for the specified device name.
-int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name)
-{
-    int ret = 0;
-    struct dm_task *dmt = NULL;
-    struct dm_info info;
-    uint64_t dm_length = 0;
-    uint64_t dm_start = 0;
-    char *dm_target_type = NULL;
-    char *dm_params = NULL;
-
-    if (start == NULL || length == NULL || target_type == NULL || params == NULL || name == NULL) {
-        ERROR("devicemapper: invalid input params to get table");
-        return -1;
-    }
-
-    dmt = task_create_named(DM_DEVICE_TABLE, name);
-    if (dmt == NULL) {
-        ret = -1;
-        ERROR("devicemapper:create named task failed");
-        goto cleanup;
-    }
-
-    if (dm_task_run(dmt) != 1) {
-        ret = -1;
-        ERROR("devicemapper: task run failed");
-        goto cleanup;
-    }
-
-    if (dm_task_get_info(dmt, &info) != 1) {
-        ret = -1;
-        ERROR("devicemapper: get info err");
-        goto cleanup;
-    }
-
-    if (info.exists == 0) {
-        ERROR("devicemapper: GetTable() Non existing device %s", name);
-        ret = -1;
-        goto cleanup;
-    }
-
-    (void)dm_get_next_target(dmt, NULL, &dm_start, &dm_length, &dm_target_type, &dm_params);
-    *start = dm_start;
-    *length = dm_length;
-    *target_type = util_strdup_s(dm_target_type);
-    *params = util_strdup_s(dm_params);
-
-cleanup:
-    if (dmt != NULL) {
-        dm_task_destroy(dmt);
-    }
-    return ret;
 }
 
 char *dev_get_driver_version()
@@ -359,39 +274,6 @@ cleanup:
     return ret;
 }
 
-struct dm_deps *dev_get_deps(const char *name)
-{
-    struct dm_task *dmt = NULL;
-    struct dm_deps *deps = NULL;
-
-    if (name == NULL) {
-        return NULL;
-    }
-
-    dmt = task_create_named(DM_DEVICE_DEPS, name);
-    if (dmt == NULL) {
-        ERROR("devicemapper: create named task for get deps failed");
-        goto cleanup;
-    }
-
-    if (dm_task_run(dmt) != 1) {
-        ERROR("devicemapper: task run failed");
-        goto cleanup;
-    }
-
-    deps = dm_task_get_deps(dmt);
-    if (deps == NULL) {
-        ERROR("devicemapper: get deps for device:%s err", name);
-        goto cleanup;
-    }
-
-cleanup:
-    if (dmt != NULL) {
-        dm_task_destroy(dmt);
-    }
-    return deps;
-}
-
 int dev_get_info(struct dm_info *info, const char *name)
 {
     int ret = 0;
@@ -470,7 +352,7 @@ static void *udev_wait_process(void *data)
 void dev_udev_wait(uint32_t cookie)
 {
     pthread_t tid;
-    int thread_result;
+    int thread_result = 0;
     udev_wait_pth_t *uwait = NULL;
     float timeout = 0;
     struct timeval start, end;
@@ -501,6 +383,7 @@ void dev_udev_wait(uint32_t cookie)
     while (true) {
         pthread_mutex_lock(&uwait->udev_mutex);
         if (uwait->state != DEV_INIT) {
+            pthread_mutex_unlock(&uwait->udev_mutex);
             goto free_out;
         }
         pthread_mutex_unlock(&uwait->udev_mutex);
@@ -512,6 +395,7 @@ void dev_udev_wait(uint32_t cookie)
         timeout = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000; // seconds
         if (timeout >= (float)dm_udev_wait_timeout) {
             if (dm_udev_complete(cookie) != 1) {
+                ERROR("Failed to complete udev cookie %u on udev wait timeout", cookie);
                 goto free_out;
             }
             INFO("devmapper: udev wait join thread start...");

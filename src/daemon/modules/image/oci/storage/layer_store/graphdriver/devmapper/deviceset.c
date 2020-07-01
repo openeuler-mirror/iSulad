@@ -135,17 +135,12 @@ out:
 static int enable_deferred_removal_deletion(struct device_set *devset)
 {
     if (devset->enable_deferred_removal) {
-        if (!devset->driver_deferred_removal_support) {
-            ERROR("devmapper: Deferred removal can not be enabled as kernel does not support it");
-            return -1;
-        }
         devset->deferred_remove = true;
     }
 
     if (devset->enable_deferred_deletion) {
         if (!devset->deferred_remove) {
-            ERROR("devmapper: Deferred deletion can not be enabled as deferred removal is not enabled. \
-                  Enable deferred removal using --storage-opt dm.use_deferred_removal=true parameter");
+            ERROR("devmapper: Deferred deletion can not be enabled as deferred removal is not enabled.");
             return -1;
         }
         devset->deferred_delete = true;
@@ -2623,6 +2618,10 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
     driver->devset = devset;
 
     devset->root = util_strdup_s(driver_home);
+    devset->user_base_size = false;
+    devset->driver_deferred_removal_support = false;
+    devset->enable_deferred_removal = false;
+    devset->enable_deferred_deletion = false;
     devset->base_fs_size = default_base_fs_size;
     devset->override_udev_sync_check = DEFAULT_UDEV_SYNC_OVERRIDE;
     devset->do_blk_discard = false;

@@ -77,15 +77,11 @@ char *dev_strerror(int errnum);
 
 struct dm_task* task_create(int type);
 
-int set_name(struct dm_task *dmt, const char *name);
-
 int set_message(struct dm_task *dmt, const char *message);
 
 int set_sector(struct dm_task *dmt, uint64_t sector);
 
 int set_add_node(struct dm_task *dmt, dm_add_node_t add_node);
-
-int set_ro(struct dm_task *dmt);
 
 void set_udev_wait_timeout(int64_t t);
 
@@ -94,8 +90,6 @@ int set_dev_dir(const char *dir);
 struct dm_task* task_create_named(int type, const char *name);
 
 void log_with_errno_init();
-
-int dev_get_table(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name);
 
 char *dev_get_driver_version();
 
