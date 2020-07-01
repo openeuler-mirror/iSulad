@@ -27,7 +27,6 @@
 #define DEVMAPPER_DECICE_DIRECTORY "/dev/mapper/"
 #define DEFAULT_THIN_BLOCK_SIZE 128
 #define DEFAULT_METADATA_LOOPBACK_SIZE (2 * 1024 * 1024 * 1024)
-// #define DEFAULT_BASE_FS_SIZE (10 * 1024 * 1024 * 1024)
 #define DEFAULT_UDEV_SYNC_OVERRIDE false
 #define MAX_DEVICE_ID (0xffffff) // 24 bit, pool limit
 

@@ -36,9 +36,6 @@
 #define DM_LOG_FATAL 2
 #define DM_LOG_DEBUG 7
 
-// static int64_t default_udev_wait_timeout = 185;
-static uint64_t default_base_fs_size = 10L * 1024L * 1024L * 1204L;
-
 static char *util_trim_prefice_string(char *str, const char *prefix)
 {
     if (str == NULL || !util_has_prefix(str, prefix)) {
@@ -1756,7 +1753,6 @@ static int save_base_device_uuid(struct device_set *devset, image_devmapper_devi
     int ret = 0;
     char *base_dev_uuid = NULL;
     char *dev_fname = NULL;
-    char *dm_name = NULL;
 
     if (activate_device_if_needed(devset, info, false) != 0) {
         ret = -1;
@@ -1764,14 +1760,13 @@ static int save_base_device_uuid(struct device_set *devset, image_devmapper_devi
         goto free_out;
     }
 
-    dm_name = get_dm_name(devset, info->hash);
-    if (dm_name == NULL) {
+    dev_fname = dev_name(devset, info);
+    if (dev_fname == NULL) {
         ret = -1;
         ERROR("devmapper: get dm name failed");
         goto free_out;
     }
 
-    dev_fname = get_dev_name(dm_name);
     base_dev_uuid = get_device_uuid(dev_fname);
     if (base_dev_uuid == NULL) {
         ret = -1;
@@ -1788,7 +1783,6 @@ static int save_base_device_uuid(struct device_set *devset, image_devmapper_devi
 
 free_out:
     deactivate_device(devset, info);
-    free(dm_name);
     free(dev_fname);
     free(base_dev_uuid);
     return ret;
@@ -1950,7 +1944,6 @@ out:
 static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_device_info *base_info)
 {
     int ret = 0;
-    char *dm_name = NULL;
     char *dev_fname = NULL;
     char *uuid = NULL;
     char *fs_type = NULL;
@@ -1960,13 +1953,12 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
         return -1;
     }
 
-    dm_name = get_dm_name(devset, base_info->hash);
-    if (dm_name == NULL) {
+    dev_fname = dev_name(devset, base_info);
+    if (dev_fname == NULL) {
         ret = -1;
         ERROR("devmapper: get dm name failed");
         goto out;
     }
-    dev_fname = get_dev_name(dm_name);
 
     uuid = get_device_uuid(dev_fname);
     if (uuid == NULL) {
@@ -2007,7 +1999,6 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
 
 out:
     deactivate_device(devset, base_info);
-    free(dm_name);
     free(dev_fname);
     free(uuid);
     free(fs_type);
@@ -2084,7 +2075,6 @@ static int grow_fs(struct device_set *devset, image_devmapper_device_info *info)
     int ret = 0;
     bool is_remove = false;
     char *mount_opt = NULL;
-    char *pool_name = NULL;
     char *dev_fname = NULL;
 
     if (activate_device_if_needed(devset, info, false) != 0) {
@@ -2103,11 +2093,10 @@ static int grow_fs(struct device_set *devset, image_devmapper_device_info *info)
 
     append_mount_options(&mount_opt, devset->mount_options);
 
-    pool_name = get_pool_name(devset);
-    dev_fname = get_dev_name(pool_name);
+    dev_fname = dev_name(devset, info);
     if (dev_fname == NULL) {
         ret = -1;
-        ERROR("devmapper: pool device name is NULL");
+        ERROR("devmapper: get device:%s full name failed", info->hash);
         goto out;
     }
 
@@ -2136,7 +2125,6 @@ out:
     if (is_remove && util_path_remove(FS_MOUNT_POINT) != 0) {
         ERROR("devmapper: remove path:%s failed", FS_MOUNT_POINT);
     }
-    free(pool_name);
     free(dev_fname);
     free(mount_opt);
     return ret;
@@ -2152,7 +2140,7 @@ static int check_grow_base_device_fs(struct device_set *devset, image_devmapper_
 
     base_dev_size = get_base_device_size(devset);
     if (devset->base_fs_size < base_dev_size) {
-        ERROR("devmapper: Base fs size cannot be smaller than %ld", base_dev_size);
+        ERROR("devmapper: Base fs size:%lu cannot be smaller than %lu",devset->base_fs_size, base_dev_size);
         return -1;
     }
 
@@ -2622,7 +2610,8 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
     devset->driver_deferred_removal_support = false;
     devset->enable_deferred_removal = false;
     devset->enable_deferred_deletion = false;
-    devset->base_fs_size = default_base_fs_size;
+    devset->base_fs_size = 10 * SIZE_GB;
+    ERROR("BASE fs size is %lu", devset->base_fs_size);
     devset->override_udev_sync_check = DEFAULT_UDEV_SYNC_OVERRIDE;
     devset->do_blk_discard = false;
     devset->thinp_block_size = DEFAULT_THIN_BLOCK_SIZE;
