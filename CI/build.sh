@@ -34,6 +34,7 @@ LXC_LOCK_DIR_HOST="/tmp/lxc_mount_dir"
 KEEP_CONTAINERS_ALIVE_DIR="/tmp/containerslock"
 TESTCASE_ASSIGN="${CIDIR}/testcase_assign"
 BASE_IMAGE=""
+disk=NULL
 
 rm -rf ${TESTCASE_ASSIGN}_*
 
@@ -52,6 +53,7 @@ function usage() {
     echo "    -n, --container-num Multiple containers execute scripts in parallel"
     echo "    -g, --enable-gcov   Enable gcov for code coverage analysis"
     echo "    -i, --ignore-ci     Not running testcase"
+    echo "    -d, --disk          Specify the disk to create isulad-thinpool"
     echo "        --rm            Auto remove containers after testcase run success"
     echo "    -h, --help          Script help information"
 }
@@ -60,7 +62,7 @@ function err() {
     echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
 }
 
-args=`getopt -o m:n:g:i:h --long module:,container-num:,enable-gcov:,ignore-ci:,help -- "$@"`
+args=`getopt -o m:n:g:i:d:h --long module:,container-num:,enable-gcov:,ignore-ci:,disk:,help -- "$@"`
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$args"
 
@@ -70,6 +72,7 @@ while true; do
         -n|--container-num) container_nums=${2} ; shift 2 ;;
         -g|--enable-gcov)   enable_gcov=${2} ; shift 2 ;;
         -i|--ignore-ci)     ignore_ci=${2} ; shift 2 ;;
+        -d|--disk)          disk=${2} ; shift 2 ;;
         -h|--help)          usage ; exit 0 ;;
         --)                 shift ; break ;;
         *)                  err "invalid parameter" ; exit -1 ;;
