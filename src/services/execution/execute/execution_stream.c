@@ -58,8 +58,7 @@ static char *create_single_fifo(const char *statepath, const char *subpath, cons
         return NULL;
     }
 
-    nret = console_fifo_name(statepath, subpath, stdflag, fifo_name, PATH_MAX,
-                             fifo_path, sizeof(fifo_path), true);
+    nret = console_fifo_name(statepath, subpath, stdflag, fifo_name, PATH_MAX, fifo_path, sizeof(fifo_path), true);
     if (nret != 0) {
         ERROR("Failed to get console fifo name.");
         free(fifo_name);
@@ -76,8 +75,8 @@ out:
     return fifo_name;
 }
 
-static int do_create_daemon_fifos(const char *statepath, const char *subpath, bool attach_stdin,
-                                  bool attach_stdout, bool attach_stderr, char *fifos[])
+static int do_create_daemon_fifos(const char *statepath, const char *subpath, bool attach_stdin, bool attach_stdout,
+                                  bool attach_stderr, char *fifos[])
 {
     int ret = -1;
 
@@ -144,8 +143,8 @@ int create_daemon_fifos(const char *id, const char *runtime, bool attach_stdin, 
         goto cleanup;
     }
 
-    nret = snprintf(subpath, PATH_MAX, "%s/%s/%u_%u_%u", id, operation,
-                    (unsigned int)tid, (unsigned int)now.tv_sec, (unsigned int)(now.tv_nsec));
+    nret = snprintf(subpath, PATH_MAX, "%s/%s/%u_%u_%u", id, operation, (unsigned int)tid, (unsigned int)now.tv_sec,
+                    (unsigned int)(now.tv_nsec));
     if (nret >= PATH_MAX || nret < 0) {
         ERROR("Failed to print string");
         goto cleanup;
@@ -497,8 +496,7 @@ err_out:
     return NULL;
 }
 
-static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[],
-                          defs_process_user *puser,
+static int exec_container(container_t *cont, const char *runtime, char * const console_fifos[], defs_process_user *puser,
                           const container_exec_request *request, int *exit_code)
 {
     int ret = 0;
@@ -615,9 +613,8 @@ static int exec_prepare_console(container_t *cont, const container_exec_request 
     const char *id = cont->common_config->id;
 
     if (request->attach_stdin || request->attach_stdout || request->attach_stderr) {
-        if (create_daemon_fifos(id, cont->runtime, request->attach_stdin,
-                                request->attach_stdout, request->attach_stderr,
-                                "exec", fifos, fifopath)) {
+        if (create_daemon_fifos(id, cont->runtime, request->attach_stdin, request->attach_stdout,
+                                request->attach_stderr, "exec", fifos, fifopath)) {
             ret = -1;
             goto out;
         }
@@ -628,8 +625,8 @@ static int exec_prepare_console(container_t *cont, const container_exec_request 
             ret = -1;
             goto out;
         }
-        if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr,
-                               stdinfd, stdout_handler, stderr_handler, (const char **)fifos, thread_id)) {
+        if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr, stdinfd,
+                               stdout_handler, stderr_handler, (const char **)fifos, thread_id)) {
             ret = -1;
             goto out;
         }
@@ -673,8 +670,8 @@ static int get_exec_user_info(const container_t *cont, const char *username, def
         ERROR("Out of memory");
         return -1;
     }
-    ret = im_get_user_conf(cont->common_config->image_type, cont->common_config->base_fs,
-                           cont->hostconfig, username, *puser);
+    ret = im_get_user_conf(cont->common_config->image_type, cont->common_config->base_fs, cont->hostconfig, username,
+                           *puser);
     if (ret != 0) {
         ERROR("Get user failed with '%s'", username ? username : "");
         ret = -1;
@@ -683,28 +680,17 @@ static int get_exec_user_info(const container_t *cont, const char *username, def
 out:
     return ret;
 }
-static void get_exec_command(const container_config *conf, const container_exec_request *request,
-                             char *exec_command, size_t len)
+static void get_exec_command(const container_exec_request *request, char *exec_command, size_t len)
 {
     size_t i;
     bool should_abbreviated = false;
     size_t start = 0;
     size_t end = 0;
 
-    for (i = 0; i < conf->entrypoint_len; i++) {
-        if (strlen(conf->entrypoint[i]) < len - strlen(exec_command)) {
-            (void)strcat(exec_command, conf->entrypoint[i]);
-            (void)strcat(exec_command, " ");
-        } else {
-            should_abbreviated = true;
-            goto out;
-        }
-    }
-
     for (i = 0; i < request->argv_len; i++) {
         if (strlen(request->argv[i]) < len - strlen(exec_command)) {
             (void)strcat(exec_command, request->argv[i]);
-            if (i != request->argv_len) {
+            if (i != (request->argv_len - 1)) {
                 (void)strcat(exec_command, " ");
             }
         } else {
@@ -729,8 +715,8 @@ out:
     }
 }
 
-static int container_exec_cb(const container_exec_request *request, container_exec_response **response,
-                             int stdinfd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler)
+static int container_exec_cb(const container_exec_request *request, container_exec_response **response, int stdinfd,
+                             struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler)
 {
     int exit_code = 0;
     int sync_fd = -1;
@@ -741,7 +727,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     pthread_t thread_id = 0;
     container_t *cont = NULL;
     defs_process_user *puser = NULL;
-    char exec_command[ARGS_MAX] = {0x00};
+    char exec_command[ARGS_MAX] = { 0x00 };
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || response == NULL) {
@@ -757,7 +743,7 @@ static int container_exec_cb(const container_exec_request *request, container_ex
     isula_libutils_set_log_prefix(id);
     EVENT("Event: {Object: %s, Type: execing}", id);
 
-    get_exec_command(cont->common_config->config, request, exec_command, sizeof(exec_command));
+    get_exec_command(request, exec_command, sizeof(exec_command));
     (void)isulad_monitor_send_container_event(id, EXEC_CREATE, -1, 0, exec_command, NULL);
 
     if (gc_is_gc_progress(id)) {
@@ -911,8 +897,8 @@ static int attach_prepare_console(const container_t *cont, const container_attac
             goto out;
         }
 
-        if (ready_copy_io_data(-1, true, request->stdin, request->stdout, request->stderr,
-                               stdinfd, stdout_handler, stderr_handler, (const char **)fifos, tid)) {
+        if (ready_copy_io_data(-1, true, request->stdin, request->stdout, request->stderr, stdinfd, stdout_handler,
+                               stderr_handler, (const char **)fifos, tid)) {
             ret = -1;
             goto out;
         }
@@ -1003,8 +989,7 @@ pack_response:
 }
 
 static int copy_from_container_cb_check(const struct isulad_copy_from_container_request *request,
-                                        struct isulad_copy_from_container_response **response,
-                                        container_t **cont)
+                                        struct isulad_copy_from_container_response **response, container_t **cont)
 {
     int ret = -1;
     char *name = NULL;
@@ -1046,8 +1031,8 @@ out:
 }
 
 static int archive_and_send_copy_data(const stream_func_wrapper *stream,
-                                      struct isulad_copy_from_container_response *response,
-                                      const char *resolvedpath, const char *abspath)
+                                      struct isulad_copy_from_container_response *response, const char *resolvedpath,
+                                      const char *abspath)
 {
     int ret = -1;
     int nret;
@@ -1188,8 +1173,7 @@ cleanup:
     return stat;
 }
 
-static int copy_from_container_send_path_stat(const stream_func_wrapper *stream,
-                                              const container_path_stat *stat)
+static int copy_from_container_send_path_stat(const stream_func_wrapper *stream, const container_path_stat *stat)
 {
     int ret = -1;
     char *json = NULL;
@@ -1386,8 +1370,7 @@ pack_response:
     return ret;
 }
 
-static int copy_to_container_cb_check(const container_copy_to_request *request,
-                                      container_t **cont)
+static int copy_to_container_cb_check(const container_copy_to_request *request, container_t **cont)
 {
     int ret = -1;
     char *name = NULL;
@@ -1516,8 +1499,8 @@ cleanup:
     return dstdir;
 }
 
-static int copy_to_container_resolve_path(const container_t *cont, const char *dstdir,
-                                          char **resolvedpath, char **abspath)
+static int copy_to_container_resolve_path(const container_t *cont, const char *dstdir, char **resolvedpath,
+                                          char **abspath)
 {
     int ret = -1;
     char *joined = NULL;
@@ -1586,8 +1569,7 @@ cleanup:
     return ret;
 }
 
-static int copy_to_container_cb(const container_copy_to_request *request,
-                                stream_func_wrapper *stream, char **err)
+static int copy_to_container_cb(const container_copy_to_request *request, stream_func_wrapper *stream, char **err)
 {
     int ret = -1;
     int nret;
@@ -2281,7 +2263,7 @@ static int container_logs_cb(const struct isulad_logs_request *request, stream_f
     char *id = NULL;
     container_t *cont = NULL;
     struct container_log_config *log_config = NULL;
-    struct last_log_file_position last_pos = {0};
+    struct last_log_file_position last_pos = { 0 };
     Container_Status status = CONTAINER_STATUS_UNKNOWN;
 
     *response = (struct isulad_logs_response *)util_common_calloc_s(sizeof(struct isulad_logs_response));
@@ -2376,4 +2358,3 @@ void container_stream_callback_init(service_container_callback_t *cb)
     cb->copy_to_container = copy_to_container_cb;
     cb->logs = container_logs_cb;
 }
-

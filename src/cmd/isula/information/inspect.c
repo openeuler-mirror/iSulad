@@ -201,7 +201,7 @@ static int client_inspect_container(const struct isula_inspect_request *request,
     if (ret != 0) {
         if ((response->errmsg != NULL) &&
             (strstr(response->errmsg, "Inspect invalid name") != NULL ||
-            strstr(response->errmsg, "No such image or container or accelerator") != NULL)) {
+             strstr(response->errmsg, "No such image or container or accelerator") != NULL)) {
             return CONTAINER_NOT_FOUND;
         }
 
