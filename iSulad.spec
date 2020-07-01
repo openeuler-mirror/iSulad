@@ -1,5 +1,5 @@
 %global _version 2.0.3
-%global _release 20200616.162831.gitf2fda744
+%global _release 20200628.170704.git76a33943
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -12,6 +12,13 @@ URL:       isulad
 Source:    iSulad-2.0.3.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
+
+Patch9000:  0001-isulad-shim-fix-probabilistic-bad-fd.patch
+Patch9001:  0002-iSulad-resolve-coredump-of-isula-inspect.patch
+Patch9002:  0003-Add-Pull-Request-Template-And-Issue-Template.patch
+Patch9003:  0004-fix-bug-of-creating-symlink-for-etc-mtab-when-etc-sy.patch
+Patch9004:  0005-fix-label-file-reading-bug.patch
+Patch9005:  0006-CI-add-testcases-use-host-rootfs.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
