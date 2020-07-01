@@ -17,6 +17,7 @@
 #define __IO_HANDLER_H_
 
 #include <pthread.h>
+#include <stdbool.h>
 #include "io_wrapper.h"
 
 #ifdef __cplusplus

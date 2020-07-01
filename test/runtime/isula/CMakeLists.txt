@@ -15,10 +15,10 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/libisulad.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//sysinfo.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/libisulad.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/command_parser.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/daemon_arguments.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_ut_common.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/namespace_mock.cc
@@ -45,7 +45,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container/restart_manager
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/container/health_check
