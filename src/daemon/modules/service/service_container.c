@@ -115,7 +115,7 @@ static int create_mtab_link(const oci_runtime_spec *oci_spec)
         }
     }
 
-    if (util_file_exists(slink)) {
+    if (util_fileself_exists(slink)) {
         goto out;
     }
 
