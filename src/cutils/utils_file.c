@@ -51,6 +51,24 @@ bool util_dir_exists(const char *path)
     return S_ISDIR(s.st_mode);
 }
 
+// This function is identical to "util_file_exists",except that if f is a symbolic file, return true
+bool util_fileself_exists(const char *f)
+{
+    struct stat buf;
+    int nret;
+
+    if (f == NULL) {
+        return false;
+    }
+
+    nret = lstat(f, &buf);
+    if (nret < 0) {
+        return false;
+    }
+    return true;
+}
+
+// When f is a symbolic file, if the file that it refers to not exits ,return false
 bool util_file_exists(const char *f)
 {
     struct stat buf;
