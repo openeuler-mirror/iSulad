@@ -27,6 +27,8 @@ extern "C" {
 
 bool util_dir_exists(const char *path);
 
+bool util_fileself_exists(const char *f);
+
 bool util_file_exists(const char *f);
 
 int util_path_remove(const char *path);
