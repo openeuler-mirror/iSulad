@@ -591,7 +591,7 @@ static int container_save_config_v2(const container_t *cont)
     int ret = 0;
     char *json_v2 = NULL;
     parser_error err = NULL;
-    container_config_v2 config_v2;
+    container_config_v2 config_v2 = {0};
 
     if (cont == NULL) {
         return -1;
