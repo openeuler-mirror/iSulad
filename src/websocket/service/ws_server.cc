@@ -288,18 +288,8 @@ int WebsocketServer::Wswrite(struct lws *wsi, void *in, size_t len)
     return 0;
 }
 
-void WebsocketServer::Receive(struct lws *wsi, void *user, void *in, size_t len)
+void WebsocketServer::Receive(struct lws *wsi, void *in, size_t len)
 {
-    if (user != nullptr) {
-        struct per_session_data__echo *pss = (struct per_session_data__echo *)user;
-        pss->final = lws_is_final_fragment(wsi);
-        pss->binary = lws_frame_is_binary(wsi);
-
-        (void)memcpy(&pss->buf[LWS_PRE], in, len);
-        pss->len = (unsigned int)len;
-        pss->rx += len;
-        lws_rx_flow_control(wsi, 0);
-    }
     if (m_wsis.find(wsi) == m_wsis.end()) {
         ERROR("invailed websocket session!");
         return;
@@ -353,13 +343,11 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                     return -1;
                 }
                 WebsocketServer::GetInstance()->SetLwsSendedFlag(wsi, true);
-                lws_rx_flow_control(wsi, 1);
             }
             break;
         case LWS_CALLBACK_RECEIVE: {
                 std::lock_guard<std::mutex> lock(m_mutex);
-                WebsocketServer::GetInstance()->Receive(wsi, nullptr, (char *)in, len);
-                lws_rx_flow_control(wsi, 0);
+                WebsocketServer::GetInstance()->Receive(wsi, (char *)in, len);
             }
             break;
         case LWS_CALLBACK_CLOSED: {
