@@ -26,7 +26,7 @@
 #include <sys/vfs.h>
 
 #include "isula_libutils/log.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "utils.h"
 #include "wrapper_devmapper.h"
 #include "devices_constants.h"
@@ -432,7 +432,8 @@ static bool thin_pool_exists(struct device_set *devset, const char *pool_name)
         goto out;
     }
 
-    if (dev_get_status(&start, &length, &target_type, &params, pool_name) != 0 || strcmp(target_type, "thin-pool") != 0) {
+    if (dev_get_status(&start, &length, &target_type, &params, pool_name) != 0 ||
+        strcmp(target_type, "thin-pool") != 0) {
         exist = false;
     }
 
@@ -966,8 +967,8 @@ static int init_metadata(struct device_set *devset, const char *pool_name)
     uint64_t total_size_in_sectors, transaction_id, data_used;
     uint64_t data_total, metadata_used, metadata_total;
 
-    if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total,
-                    &metadata_used, &metadata_total) != 0) {
+    if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
+                    &metadata_total) != 0) {
         ret = -1;
         ERROR("devmapper: get pool %s status failed", pool_name);
         goto out;
@@ -1081,8 +1082,8 @@ static int pool_has_free_space(struct device_set *devset)
         goto out;
     }
 
-    if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total,
-                    &metadata_used, &metadata_total) != 0) {
+    if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
+                    &metadata_total) != 0) {
         ret = -1;
         goto out;
     }
@@ -3144,8 +3145,8 @@ struct status *device_set_status(struct device_set *devset)
     st->base_device_size = get_base_device_size(devset);
     st->base_device_fs = util_strdup_s(devset->base_device_filesystem);
 
-    if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total,
-                    &metadata_used, &metadata_total) == 0) {
+    if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
+                    &metadata_total) == 0) {
         uint64_t block_size_in_sectors = total_size_in_sectors / data_total;
         st->data.used = data_used * block_size_in_sectors * 512;
         st->data.total = data_total * block_size_in_sectors * 512;

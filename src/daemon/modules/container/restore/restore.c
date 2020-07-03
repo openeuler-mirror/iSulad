@@ -44,7 +44,7 @@ static int restore_supervisor(const container_t *cont)
     char *id = cont->common_config->id;
     char *statepath = cont->state_path;
     char *runtime = cont->runtime;
-    container_pid_t pid_info = { 0 };
+    pid_ppid_info_t pid_info = { 0 };
 
     nret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
     if (nret < 0 || (size_t)nret >= sizeof(container_state)) {
@@ -88,9 +88,9 @@ out:
 static int post_stopped_container_to_gc(const char *id, const char *runtime, const char *statepath, uint32_t pid)
 {
     int ret = 0;
-    container_pid_t pid_info = { 0 };
+    pid_ppid_info_t pid_info = { 0 };
 
-    (void)container_read_proc(pid, &pid_info);
+    (void)util_read_pid_ppid_info(pid, &pid_info);
 
     if (gc_add_container(id, runtime, &pid_info)) {
         ERROR("Failed to post container %s to garbage collector", id);
@@ -169,7 +169,7 @@ out:
     return ret;
 }
 
-static bool is_same_process(const container_t *cont, const container_pid_t *pid_info)
+static bool is_same_process(const container_t *cont, const pid_ppid_info_t *pid_info)
 {
     if (pid_info->pid == cont->state->state->pid && pid_info->ppid == cont->state->state->p_pid &&
         pid_info->start_time == cont->state->state->start_time &&
@@ -180,14 +180,14 @@ static bool is_same_process(const container_t *cont, const container_pid_t *pid_
 }
 
 static void try_to_set_paused_container_pid(Container_Status status, const container_t *cont,
-                                            const container_pid_t *pid_info)
+                                            const pid_ppid_info_t *pid_info)
 {
     if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
         container_state_set_running(cont->state, pid_info, false);
     }
 }
 
-static void try_to_set_container_running(Container_Status status, container_t *cont, const container_pid_t *pid_info)
+static void try_to_set_container_running(Container_Status status, container_t *cont, const pid_ppid_info_t *pid_info)
 {
     if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
         container_state_set_running(cont->state, pid_info, true);
@@ -223,9 +223,9 @@ static int restore_running_container(Container_Status status, container_t *cont,
     int ret = 0;
     int nret = 0;
     const char *id = cont->common_config->id;
-    container_pid_t pid_info = { 0 };
+    pid_ppid_info_t pid_info = { 0 };
 
-    nret = container_read_proc(info->pid, &pid_info);
+    nret = util_read_pid_ppid_info(info->pid, &pid_info);
     if (nret == 0) {
         try_to_set_container_running(status, cont, &pid_info);
     } else {
@@ -253,11 +253,11 @@ static int restore_paused_container(Container_Status status, container_t *cont,
     int ret = 0;
     int nret = 0;
     const char *id = cont->common_config->id;
-    container_pid_t pid_info = { 0 };
+    pid_ppid_info_t pid_info = { 0 };
 
     container_state_set_paused(cont->state);
 
-    nret = container_read_proc(info->pid, &pid_info);
+    nret = util_read_pid_ppid_info(info->pid, &pid_info);
     if (nret == 0) {
         try_to_set_paused_container_pid(status, cont, &pid_info);
     } else {

@@ -19,7 +19,7 @@
 #include "error.h"
 #include "isula_libutils/log.h"
 #include "lim.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "mediatype.h"
 #include "snapshot.h"
 #include "snapshot_def.h"

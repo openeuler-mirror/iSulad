@@ -15,7 +15,7 @@
 #ifndef __SERVICE_CALLBACK_H_
 #define __SERVICE_CALLBACK_H_
 
-#include "libisulad.h"
+#include "err_msg.h"
 #include "io_wrapper.h"
 #include "isula_libutils/container_get_id_request.h"
 #include "isula_libutils/container_get_id_response.h"
@@ -76,17 +76,102 @@
 #include "isula_libutils/image_login_response.h"
 #include "isula_libutils/image_logout_request.h"
 #include "isula_libutils/image_logout_response.h"
+#include "events_format.h"
+#include "stream_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct {
-    int (*subscribe)(char *name, types_timestamp_t *since, types_timestamp_t *until,
-                     struct isulad_events_format ***events);
+typedef void(handle_events_callback_t)(struct isulad_events_format *event);
 
-    int (*wait)(struct isulad_events_request *request, stream_func_wrapper *stream);
-} service_container_events_callback_t;
+struct isulad_events_request {
+    handle_events_callback_t *cb;
+    bool storeonly;
+    char *id;
+    types_timestamp_t since;
+    types_timestamp_t until;
+};
+
+struct isulad_events_response {
+    uint32_t server_errono;
+    uint32_t cc;
+    char *errmsg;
+};
+
+struct isulad_copy_from_container_request {
+    char *id;
+    char *runtime;
+    char *srcpath;
+};
+
+struct isulad_copy_from_container_response {
+    char *data;
+    size_t data_len;
+};
+
+struct isulad_copy_to_container_data {
+    char *data;
+    size_t data_len;
+};
+
+struct isulad_logs_request {
+    char *id;
+    char *runtime;
+
+    char *since;
+    char *until;
+    bool timestamps;
+    bool follow;
+    int64_t tail;
+    bool details;
+};
+
+struct isulad_logs_response {
+    uint32_t cc;
+    char *errmsg;
+};
+
+struct isulad_container_rename_request {
+    char *old_name;
+    char *new_name;
+};
+
+struct isulad_container_rename_response {
+    char *id;
+    uint32_t cc;
+    char *errmsg;
+};
+
+struct isulad_container_resize_request {
+    char *id;
+    char *suffix;
+    uint32_t height;
+    uint32_t width;
+};
+
+struct isulad_container_resize_response {
+    char *id;
+    uint32_t cc;
+    char *errmsg;
+};
+
+void isulad_events_request_free(struct isulad_events_request *request);
+
+void isulad_copy_from_container_request_free(struct isulad_copy_from_container_request *request);
+
+void isulad_copy_from_container_response_free(struct isulad_copy_from_container_response *response);
+
+void isulad_container_rename_request_free(struct isulad_container_rename_request *request);
+
+void isulad_container_rename_response_free(struct isulad_container_rename_response *response);
+
+void isulad_container_resize_request_free(struct isulad_container_resize_request *request);
+
+void isulad_container_resize_response_free(struct isulad_container_resize_response *response);
+
+void isulad_logs_request_free(struct isulad_logs_request *request);
+void isulad_logs_response_free(struct isulad_logs_response *response);
 
 typedef struct {
     int (*version)(const container_version_request *request, container_version_response **response);
@@ -170,13 +255,8 @@ typedef struct {
 } service_image_callback_t;
 
 typedef struct {
-    int (*check)(const struct isulad_health_check_request *request, struct isulad_health_check_response *response);
-} service_health_callback_t;
-
-typedef struct {
     service_container_callback_t container;
     service_image_callback_t image;
-    service_health_callback_t health;
 } service_executor_t;
 
 int service_callback_init(void);

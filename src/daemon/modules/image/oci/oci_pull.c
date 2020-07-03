@@ -20,7 +20,7 @@
 #include "oci_common_operators.h"
 #include "registry.h"
 #include "isulad_config.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "storage.h"
 
 static int decode_auth(char *auth, char **username, char **password)

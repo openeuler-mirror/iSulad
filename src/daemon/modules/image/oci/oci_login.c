@@ -14,7 +14,7 @@
 *******************************************************************************/
 #include "oci_login.h"
 #include "utils.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "registry.h"
 #include "isulad_config.h"
@@ -37,7 +37,7 @@ static int is_valid_arguments(const char *server, const char *username, const ch
 int oci_do_login(const char *server, const char *username, const char *password)
 {
     int ret = -1;
-    registry_login_options options = {0};
+    registry_login_options options = { 0 };
     char **insecure_registries = NULL;
     char **registry = NULL;
     char *host = NULL;

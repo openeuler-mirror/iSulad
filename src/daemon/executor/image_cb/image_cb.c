@@ -27,7 +27,7 @@
 #include "image_cb.h"
 #include "utils.h"
 #include "error.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "image_api.h"
 #include "isulad_config.h"

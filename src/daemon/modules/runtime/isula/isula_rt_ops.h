@@ -24,7 +24,7 @@ extern "C" {
 
 bool rt_isula_detect(const char *runtime);
 int rt_isula_create(const char *name, const char *runtime, const rt_create_params_t *params);
-int rt_isula_start(const char *name, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info);
+int rt_isula_start(const char *name, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info);
 int rt_isula_restart(const char *name, const char *runtime, const rt_restart_params_t *params);
 int rt_isula_clean_resource(const char *name, const char *runtime, const rt_clean_params_t *params);
 int rt_isula_rm(const char *name, const char *runtime, const rt_rm_params_t *params);

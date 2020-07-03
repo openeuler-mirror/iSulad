@@ -17,7 +17,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <limits.h>
-#include "libisulad.h"
+#include "err_msg.h"
 #include "utils.h"
 
 struct monitord_sync_data {

@@ -115,7 +115,7 @@ out:
     return ret;
 }
 
-int runtime_start(const char *name, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info)
+int runtime_start(const char *name, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info)
 {
     int ret = 0;
     const struct rt_ops *ops = NULL;

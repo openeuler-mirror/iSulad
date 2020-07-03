@@ -29,7 +29,7 @@
 #include "utils.h"
 #include "isulad_config.h"
 #include "sysinfo.h"
-#include "libisulad.h"
+#include "err_msg.h"
 
 #define ENGINE_ROOTPATH_NAME "engines"
 #define GRAPH_ROOTPATH_CHECKED_FLAG "NEED_CHECK"

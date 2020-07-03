@@ -43,10 +43,6 @@
 extern "C" {
 #endif
 
-#ifndef MS_REC
-#define MS_REC 16384
-#endif
-
 #if __WORDSIZE == 64
 // current max user memory for 64-machine is 2^47 B
 #define MAX_MEMORY_SIZE ((size_t)1 << 47)
@@ -250,6 +246,13 @@ extern "C" {
         { SIGRTMAX - 1, "RTMAX-1" }, { SIGRTMAX, "RTMAX" },                                                    \
     }
 
+typedef struct _pid_ppid_info_t {
+    int pid; /* process id */
+    int ppid; /* pid of parent process */
+    unsigned long long start_time, /* start time of process -- seconds since 1-1-70 */
+             pstart_time; /* start time of parent process -- seconds since 1-1-70 */
+} pid_ppid_info_t;
+
 /* Basic data structure which holds all information we can get about a process.
  * (unless otherwise specified, fields are read from /proc/#/stat)
  *
@@ -397,6 +400,8 @@ char *without_sha256_prefix(char *digest);
 int normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant);
 
 char *util_full_digest_str(char *str);
+
+int util_read_pid_ppid_info(uint32_t pid, pid_ppid_info_t *pid_info);
 
 #ifdef __cplusplus
 }

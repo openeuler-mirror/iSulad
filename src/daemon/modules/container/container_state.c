@@ -126,7 +126,7 @@ void container_state_reset_starting(container_state_t *s)
 }
 
 /* state set running */
-void container_state_set_running(container_state_t *s, const container_pid_t *pid_info, bool initial)
+void container_state_set_running(container_state_t *s, const pid_ppid_info_t *pid_info, bool initial)
 {
     container_config_v2_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };

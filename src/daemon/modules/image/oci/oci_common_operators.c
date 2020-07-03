@@ -26,7 +26,7 @@
 #include "utils_images.h"
 #include "oci_config_merge.h"
 #include "image_rootfs_handler.h"
-#include "libisulad.h"
+#include "err_msg.h"
 
 #include "filters.h"
 #include "storage.h"

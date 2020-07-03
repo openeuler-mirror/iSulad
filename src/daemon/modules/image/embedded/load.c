@@ -16,7 +16,7 @@
 #include <string.h>
 
 #include "error.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "embedded_image.h"
 #include "lim.h"
 #include "limits.h"
@@ -195,4 +195,3 @@ int embedded_load_image(const im_load_request *request)
 
     return load_image(request->file);
 }
-

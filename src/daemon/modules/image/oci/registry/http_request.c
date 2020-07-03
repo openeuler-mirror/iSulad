@@ -30,7 +30,7 @@
 #include "certs.h"
 #include "auths.h"
 #include "isula_libutils/registry_token.h"
-#include "libisulad.h"
+#include "err_msg.h"
 
 #define MIN_TOKEN_EXPIRES_IN 60
 

@@ -18,7 +18,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "linked_list.h"
-#include "libisulad.h"
+#include "stream_wrapper.h"
 #include "event_type.h"
 
 #ifdef __cplusplus

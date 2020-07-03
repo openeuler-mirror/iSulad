@@ -29,7 +29,7 @@
 #include "isula_libutils/oci_runtime_state.h"
 #include "isulad_config.h"
 #include "utils_string.h"
-#include "libisulad.h"
+#include "err_msg.h"
 
 #define SHIM_BINARY "isulad-shim"
 #define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)
@@ -832,7 +832,7 @@ out:
     return ret;
 }
 
-int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info)
+int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info)
 {
     char workdir[PATH_MAX] = { 0 };
     pid_t pid = 0;
@@ -854,7 +854,7 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
         goto out;
     }
 
-    if (container_read_proc(pid, pid_info) != 0) {
+    if (util_read_pid_ppid_info(pid, pid_info) != 0) {
         ret = -1;
         ERROR("%s: failed read pid info", id);
         goto out;

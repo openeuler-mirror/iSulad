@@ -22,7 +22,7 @@
 #include <ctype.h>
 
 #include "image_api.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 

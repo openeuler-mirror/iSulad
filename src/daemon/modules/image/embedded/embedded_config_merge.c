@@ -12,8 +12,8 @@
  * Create: 2018-11-07
  * Description: provide embedded image merge config
  ******************************************************************************/
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -21,7 +21,7 @@
 
 #include "utils.h"
 #include "isula_libutils/log.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/embedded_manifest.h"
 #include "specs_extend.h"
@@ -61,7 +61,8 @@ static int embedded_merge_env(const embedded_config *config, container_config *c
 
     if (config->env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
         ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
-        isulad_set_error_message("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
+        isulad_set_error_message("The length of envionment variables is too long, the limit is %lld",
+                                 LIST_ENV_SIZE_MAX);
         ret = -1;
         goto out;
     }
@@ -108,7 +109,6 @@ out:
     return ret;
 }
 
-
 static int merge_embedded_config(const embedded_manifest *manifest, container_config *container_spec)
 {
     if (manifest->config != NULL) {
@@ -134,8 +134,7 @@ static int gen_abs_path(const embedded_manifest *manifest, char **abs_path, char
         (*abs_path) = util_add_path(config_path, manifest->layers[i]->path_in_host);
     }
     if ((*abs_path) == NULL) {
-        ERROR("add path %s and %s failed", config_path,
-              manifest->layers[i]->path_in_host);
+        ERROR("add path %s and %s failed", config_path, manifest->layers[i]->path_in_host);
         return -1;
     }
 
@@ -154,13 +153,11 @@ static int gen_one_mount(const embedded_manifest *manifest, char *mount, char *r
         return -1;
     }
     if (strcmp(manifest->layers[i]->media_type, MediaTypeEmbeddedLayerSquashfs) == 0) {
-        nret = snprintf(mount, PATH_MAX * 3,
-                        "type=squashfs,ro=true,src=%s,dst=%s",
-                        real_path, manifest->layers[i]->path_in_container);
+        nret = snprintf(mount, PATH_MAX * 3, "type=squashfs,ro=true,src=%s,dst=%s", real_path,
+                        manifest->layers[i]->path_in_container);
     } else {
-        nret = snprintf(mount, PATH_MAX * 3,
-                        "type=bind,ro=true,bind-propagation=rprivate,src=%s,dst=%s",
-                        real_path, manifest->layers[i]->path_in_container);
+        nret = snprintf(mount, PATH_MAX * 3, "type=bind,ro=true,bind-propagation=rprivate,src=%s,dst=%s", real_path,
+                        manifest->layers[i]->path_in_container);
     }
     if (nret < 0 || nret >= (PATH_MAX * 3)) {
         ERROR("print string for mounts failed");
@@ -302,5 +299,3 @@ out:
     free_embedded_manifest(manifest);
     return ret;
 }
-
-

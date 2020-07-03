@@ -21,6 +21,7 @@
 #include "sha256.h"
 #include "mediatype.h"
 #include "utils_images.h"
+#include "err_msg.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define OCI_SCHEMA_VERSION 2

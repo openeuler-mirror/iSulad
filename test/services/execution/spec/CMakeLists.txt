@@ -15,7 +15,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/libisulad.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec//selinux_label.c
     selinux_label_ut.cpp)
@@ -32,7 +32,7 @@ add_executable(${MOCK_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/rb_tree.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/libisulad.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/syscall_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/selinux_mock.cc
@@ -43,6 +43,7 @@ target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/sha256
@@ -57,6 +58,7 @@ target_include_directories(${MOCK_EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/sha256

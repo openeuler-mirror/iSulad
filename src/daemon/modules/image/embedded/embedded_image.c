@@ -28,6 +28,7 @@
 #include "embedded_config_merge.h"
 #include "db_all.h"
 #include "utils.h"
+#include "err_msg.h"
 
 static bool embedded_image_exist(const char *image_name)
 {

@@ -64,10 +64,10 @@ add_library(${LIB_ISULAD_IMG} ${LIBTYPE}
     ${CMAKE_SOURCE_DIR}/src/utils/cutils/map/map.c
     ${CMAKE_SOURCE_DIR}/src/utils/cutils/map/rb_tree.c
     ${CMAKE_SOURCE_DIR}/src/utils/sha256/sha256.c
-    ${CMAKE_SOURCE_DIR}/src/daemon/config/libisulad.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/err_msg.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/isulad_config.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/daemon_arguments.c
-    ${CMAKE_SOURCE_DIR}/src/daemon/config/sysinfo.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/sysinfo.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/isulad_tar.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/util_archive.c
     )
@@ -79,6 +79,7 @@ target_include_directories(${LIB_ISULAD_IMG} PUBLIC
     ${CMAKE_SOURCE_DIR}/src/http
     ${CMAKE_SOURCE_DIR}/src/utils/tar
     ${CMAKE_SOURCE_DIR}/src/daemon/config
+    ${CMAKE_SOURCE_DIR}/src/daemon/common
     ${CMAKE_SOURCE_DIR}/src/daemon/modules/spec/
     ${CMAKE_SOURCE_DIR}/src/utils/cutils
     ${CMAKE_SOURCE_DIR}/src/utils/cutils/map

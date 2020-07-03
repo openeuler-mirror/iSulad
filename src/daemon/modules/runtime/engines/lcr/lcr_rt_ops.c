@@ -22,7 +22,7 @@
 #include "engine.h"
 #include "error.h"
 #include "isulad_config.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "runtime_api.h"
 
 bool rt_lcr_detect(const char *runtime)
@@ -75,7 +75,7 @@ out:
     return ret;
 }
 
-static int parse_container_pid(const char *S, container_pid_t *pid_info)
+static int parse_container_pid(const char *S, pid_ppid_info_t *pid_info)
 {
     int num;
 
@@ -88,7 +88,7 @@ static int parse_container_pid(const char *S, container_pid_t *pid_info)
     return 0;
 }
 
-static int lcr_rt_read_pidfile(const char *pidfile, container_pid_t *pid_info)
+static int lcr_rt_read_pidfile(const char *pidfile, pid_ppid_info_t *pid_info)
 {
     if (pidfile == NULL || pid_info == NULL) {
         ERROR("Invalid input arguments");
@@ -104,7 +104,7 @@ static int lcr_rt_read_pidfile(const char *pidfile, container_pid_t *pid_info)
     return parse_container_pid(sbuf, pid_info);
 }
 
-int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info)
+int rt_lcr_start(const char *name, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info)
 {
     int ret = 0;
     struct engine_operation *engine_ops = NULL;

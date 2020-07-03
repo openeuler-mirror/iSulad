@@ -16,7 +16,7 @@
 #include "oci_import.h"
 #include "isula_libutils/log.h"
 #include "storage.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "utils.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/docker_image_config_v2.h"
@@ -28,7 +28,7 @@
 #define ROOTFS_TYPE "layers"
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define TIME_BUF_MAX_LEN 128
-#define TEMP_FILE_TEMPLATE IMAGE_TMP_PATH"import-XXXXXX"
+#define TEMP_FILE_TEMPLATE IMAGE_TMP_PATH "import-XXXXXX"
 
 typedef struct {
     char *manifest;
@@ -106,7 +106,7 @@ static int register_layer(import_desc *desc)
     }
 }
 
-static int  create_config(import_desc *desc)
+static int create_config(import_desc *desc)
 {
     int ret = 0;
     docker_image_config_v2 *config = NULL;
@@ -114,7 +114,7 @@ static int  create_config(import_desc *desc)
     char *host_arch = NULL;
     char *host_variant = NULL;
     parser_error err = NULL;
-    char time_str[TIME_BUF_MAX_LEN] = {0};
+    char time_str[TIME_BUF_MAX_LEN] = { 0 };
 
     if (desc == NULL || desc->uncompressed_digest == NULL) {
         ERROR("Invalid NULL param");
@@ -137,9 +137,9 @@ static int  create_config(import_desc *desc)
     config->rootfs = util_common_calloc_s(sizeof(docker_image_rootfs));
     config->config = util_common_calloc_s(sizeof(container_config));
     config->container_config = util_common_calloc_s(sizeof(container_config));
-    config->history = util_common_calloc_s(sizeof(docker_image_history*));
-    if (config->history == NULL || config->config == NULL ||
-        config->container_config == NULL || config->rootfs == NULL) {
+    config->history = util_common_calloc_s(sizeof(docker_image_history *));
+    if (config->history == NULL || config->config == NULL || config->container_config == NULL ||
+        config->rootfs == NULL) {
         ERROR("out of memory");
         isulad_try_set_error_message("out of memory");
         ret = -1;
@@ -221,8 +221,7 @@ static int create_manifest(import_desc *desc)
     registry_manifest_schema2 *manifest = NULL;
     parser_error err = NULL;
 
-    if (desc == NULL || desc->compressed_digest == NULL || desc->config == NULL ||
-        desc->config_digest == NULL) {
+    if (desc == NULL || desc->compressed_digest == NULL || desc->config == NULL || desc->config_digest == NULL) {
         ERROR("Invalid NULL param");
         return -1;
     }
@@ -236,7 +235,7 @@ static int create_manifest(import_desc *desc)
     }
 
     manifest->config = util_common_calloc_s(sizeof(registry_manifest_schema2_config));
-    manifest->layers = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element*));
+    manifest->layers = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element *));
     if (manifest->config == NULL || manifest->layers == NULL) {
         ERROR("out of memory");
         isulad_try_set_error_message("out of memory");
@@ -245,7 +244,7 @@ static int create_manifest(import_desc *desc)
     }
     manifest->layers_len = 1;
 
-    manifest->layers[0] = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element*));
+    manifest->layers[0] = util_common_calloc_s(sizeof(registry_manifest_schema2_layers_element *));
     if (manifest->layers[0] == NULL) {
         ERROR("out of memory");
         isulad_try_set_error_message("out of memory");
@@ -298,9 +297,8 @@ static int register_image(import_desc *desc)
     bool image_created = false;
     struct storage_img_create_options opts = { 0 };
 
-    if (desc == NULL || desc->manifest == NULL || desc->manifest_digest == NULL ||
-        desc->config == NULL || desc->config_digest == NULL ||
-        desc->uncompressed_digest == NULL) {
+    if (desc == NULL || desc->manifest == NULL || desc->manifest_digest == NULL || desc->config == NULL ||
+        desc->config_digest == NULL || desc->uncompressed_digest == NULL) {
         ERROR("Invalid NULL param");
         return -1;
     }
@@ -373,7 +371,7 @@ out:
     return ret;
 }
 
-static char * create_temp_file()
+static char *create_temp_file()
 {
     int fd = -1;
     char temp_file[] = TEMP_FILE_TEMPLATE;

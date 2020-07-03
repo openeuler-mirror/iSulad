@@ -16,7 +16,7 @@
 #define __SERVICE_COMMON_H
 
 #include "daemon_arguments.h"
-#include "libisulad.h"
+#include "err_msg.h"
 
 #ifdef __cplusplus
 extern "C" {

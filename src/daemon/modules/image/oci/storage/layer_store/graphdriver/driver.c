@@ -24,7 +24,7 @@
 #include "driver_devmapper.h"
 #include "utils_array.h"
 #include "utils.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "util_archive.h"
 
@@ -69,10 +69,9 @@ static const struct graphdriver_ops g_devmapper_ops = {
     .get_layer_fs_info = devmapper_get_layer_fs_info,
 };
 
-static struct graphdriver g_drivers[] = {
-    {.name = DRIVER_OVERLAY2_NAME,  .ops = &g_overlay2_ops},
-    {.name = DRIVER_OVERLAY_NAME,   .ops = &g_overlay2_ops},
-    {.name = DRIVER_DEVMAPPER_NAME, .ops = &g_devmapper_ops}
+static struct graphdriver g_drivers[] = { { .name = DRIVER_OVERLAY2_NAME, .ops = &g_overlay2_ops },
+    { .name = DRIVER_OVERLAY_NAME, .ops = &g_overlay2_ops },
+    { .name = DRIVER_DEVMAPPER_NAME, .ops = &g_devmapper_ops }
 };
 
 static const size_t g_numdrivers = sizeof(g_drivers) / sizeof(struct graphdriver);
@@ -97,7 +96,8 @@ int graphdriver_init(const struct storage_module_init_options *opts)
 
     for (i = 0; i < g_numdrivers; i++) {
         if (strcmp(opts->driver_name, g_drivers[i].name) == 0) {
-            if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)opts->driver_opts, opts->driver_opts_len) != 0) {
+            if (g_drivers[i].ops->init(&g_drivers[i], driver_home, (const char **)opts->driver_opts,
+                                       opts->driver_opts_len) != 0) {
                 ret = -1;
                 goto out;
             }
@@ -128,7 +128,8 @@ int graphdriver_create_rw(const char *id, const char *parent, struct driver_crea
         return -1;
     }
 
-    return g_graphdriver->ops->create_rw(id, parent, g_graphdriver, create_opts);;
+    return g_graphdriver->ops->create_rw(id, parent, g_graphdriver, create_opts);
+    ;
 }
 
 int graphdriver_create_ro(const char *id, const char *parent, const struct driver_create_opts *create_opts)
@@ -143,7 +144,8 @@ int graphdriver_create_ro(const char *id, const char *parent, const struct drive
         return -1;
     }
 
-    return g_graphdriver->ops->create_ro(id, parent, g_graphdriver, create_opts);;
+    return g_graphdriver->ops->create_ro(id, parent, g_graphdriver, create_opts);
+    ;
 }
 
 int graphdriver_rm_layer(const char *id)

@@ -17,9 +17,10 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/oci_runtime_spec.h"
+#include "utils.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -180,7 +181,7 @@ struct rt_ops {
     /* runtime ops */
     int (*rt_create)(const char *name, const char *runtime, const rt_create_params_t *params);
 
-    int (*rt_start)(const char *name, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info);
+    int (*rt_start)(const char *name, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info);
 
     int (*rt_restart)(const char *name, const char *runtime, const rt_restart_params_t *params);
 
@@ -211,7 +212,7 @@ struct rt_ops {
 
 int runtime_create(const char *name, const char *runtime, const rt_create_params_t *params);
 int runtime_clean_resource(const char *name, const char *runtime, const rt_clean_params_t *params);
-int runtime_start(const char *name, const char *runtime, const rt_start_params_t *params, container_pid_t *pid_info);
+int runtime_start(const char *name, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info);
 int runtime_restart(const char *name, const char *runtime, const rt_restart_params_t *params);
 int runtime_rm(const char *name, const char *runtime, const rt_rm_params_t *params);
 int runtime_status(const char *name, const char *runtime, const rt_status_params_t *params,

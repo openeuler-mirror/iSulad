@@ -25,7 +25,7 @@
 #include <sys/mount.h>
 
 #include "isula_libutils/log.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "utils.h"
 #include "wrapper_devmapper.h"
 #include "devices_constants.h"
@@ -550,4 +550,3 @@ int devmapper_get_layer_fs_info(const char *id, const struct graphdriver *driver
 {
     return 0;
 }
-

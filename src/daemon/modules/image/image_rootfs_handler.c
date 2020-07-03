@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 
 #include "isula_libutils/log.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "utils.h"
 #include "path.h"
 

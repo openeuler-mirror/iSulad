@@ -16,7 +16,7 @@
 #define __SPECS_MOUNT_H__
 
 #include <stdint.h>
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config_v2.h"
 #include "isula_libutils/oci_runtime_hooks.h"
@@ -26,9 +26,8 @@ int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_config *cont
 
 typedef defs_mount *(*parse_mount_cb)(const char *mount);
 
-int merge_volumes(oci_runtime_spec *oci_spec, char **volumes,
-                  size_t volumes_len, container_config_v2_common_config *common_config,
-                  parse_mount_cb parse_mount);
+int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len,
+                  container_config_v2_common_config *common_config, parse_mount_cb parse_mount);
 
 defs_mount *parse_mount(const char *mount);
 
@@ -48,4 +47,3 @@ bool mount_run_tmpfs(oci_runtime_spec *container, const host_config *host_spec, 
 int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec);
 
 #endif
-

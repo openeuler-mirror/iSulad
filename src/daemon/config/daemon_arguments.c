@@ -21,7 +21,7 @@
 #include "error.h"
 #include "utils.h"
 #include "daemon_arguments.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "constants.h"
 #include "isulad_config.h"
 #include "isula_libutils/log.h"

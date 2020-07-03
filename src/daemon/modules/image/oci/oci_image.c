@@ -18,7 +18,6 @@
 #include <semaphore.h>
 
 #include "isula_libutils/log.h"
-#include "isula_libutils/log.h"
 #include "oci_pull.h"
 #include "oci_login.h"
 #include "oci_logout.h"
@@ -29,6 +28,7 @@
 #include "oci_load.h"
 #include "oci_import.h"
 #include "oci_export.h"
+#include "err_msg.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 

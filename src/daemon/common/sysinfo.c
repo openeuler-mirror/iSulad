@@ -20,7 +20,7 @@
 #include <dirent.h>
 
 #include "error.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "sysinfo.h"
 #include "isula_libutils/log.h"
 

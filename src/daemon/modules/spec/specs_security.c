@@ -41,7 +41,7 @@
 #include "config.h"
 #include "isulad_config.h"
 #include "isula_libutils/parse_common.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "specs_extend.h"
 #include "selinux_label.h"
 #include "specs_api.h"

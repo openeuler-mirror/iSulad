@@ -17,13 +17,14 @@
 
 #include <pthread.h>
 
-#include "libisulad.h"
+#include "err_msg.h"
 #include "util_atomic.h"
 #include "isula_libutils/container_config_v2.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "linked_list.h"
 #include "map.h"
+#include "utils.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -178,7 +179,7 @@ void container_state_set_starting(container_state_t *s);
 
 void container_state_reset_starting(container_state_t *s);
 
-void container_state_set_running(container_state_t *s, const container_pid_t *pid_info, bool initial);
+void container_state_set_running(container_state_t *s, const pid_ppid_info_t *pid_info, bool initial);
 
 void container_state_set_stopped(container_state_t *s, int exit_code);
 
@@ -225,7 +226,7 @@ int container_dup_health_check_status(defs_health **dst, const defs_health *src)
 
 void container_update_health_monitor(const char *container_id);
 
-extern int container_supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name,
+extern int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_info, const char *name,
                                                  const char *runtime);
 
 extern char *container_exit_fifo_create(const char *cont_state_path);

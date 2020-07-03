@@ -5,6 +5,7 @@ add_subdirectory(executor)
 add_subdirectory(entry)
 add_subdirectory(modules)
 add_subdirectory(config)
+add_subdirectory(common)
 
 set(local_daemon_srcs
     ${daemon_top_srcs}
@@ -12,6 +13,7 @@ set(local_daemon_srcs
     ${ENTRY_SRCS}
     ${MODULES_SRCS}
     ${CONFIG_SRCS}
+    ${DAEMON_COMMON_SRCS}
     )
 
 set(local_daemon_incs
@@ -20,6 +22,7 @@ set(local_daemon_incs
     ${ENTRY_INCS}
     ${MODULES_INCS}
     ${CONFIG_INCS}
+    ${DAEMON_COMMON_INCS}
     )
 
 set(DAEMON_SRCS

@@ -21,7 +21,7 @@
 #include "utils.h"
 #include "supervisor.h"
 #include "mainloop.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "events_sender_api.h"
 #include "containers_gc.h"
 #include "service_container_api.h"
@@ -34,7 +34,7 @@ struct supervisor_handler_data {
     int exit_code;
     char *name;
     char *runtime;
-    container_pid_t pid_info;
+    pid_ppid_info_t pid_info;
 };
 
 /* supervisor handler lock */
@@ -236,7 +236,7 @@ static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata, struct epol
 }
 
 /* supervisor add exit monitor */
-int container_supervisor_add_exit_monitor(int fd, const container_pid_t *pid_info, const char *name,
+int container_supervisor_add_exit_monitor(int fd, const pid_ppid_info_t *pid_info, const char *name,
                                           const char *runtime)
 {
     int ret = 0;

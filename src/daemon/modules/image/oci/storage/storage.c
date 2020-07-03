@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include "storage.h"
 
-#include "libisulad.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -26,6 +25,7 @@
 #include "layer_store.h"
 #include "image_store.h"
 #include "rootfs_store.h"
+#include "err_msg.h"
 
 static pthread_rwlock_t g_storage_rwlock;
 

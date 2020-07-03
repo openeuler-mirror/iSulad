@@ -275,7 +275,7 @@ static char *get_absolute_path(const char *file)
 TEST_F(LcrRtOpsUnitTest, test_rt_lcr_start)
 {
     rt_start_params_t params = {};
-    container_pid_t pid_info = {};
+    pid_ppid_info_t pid_info = {};
     char *pid_path = get_absolute_path("runtime/lcr/pid.file");
 
     ASSERT_EQ(rt_lcr_start(nullptr, nullptr, nullptr, nullptr), -1);

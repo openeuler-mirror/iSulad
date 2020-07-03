@@ -15,7 +15,7 @@
 #include "storage.h"
 #include "oci_export.h"
 #include "isula_libutils/log.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "isulad_tar.h"
 
 int oci_do_export(char *id, char *file)

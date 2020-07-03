@@ -35,7 +35,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "namespace.h"
-#include "libisulad.h"
+#include "err_msg.h"
 
 #define SELINUXFS_MOUNT "/sys/fs/selinux"
 #define SELINUXFS_MAGIC 0xf97cff8c

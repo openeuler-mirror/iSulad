@@ -33,7 +33,7 @@
 #include "isula_libutils/oci_image_index.h"
 #include "isula_libutils/registry_manifest_list.h"
 #include "auths.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "sha256.h"
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-Api-Version: registry/2.0"

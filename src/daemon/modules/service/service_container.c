@@ -23,7 +23,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "mainloop.h"
-#include "libisulad.h"
+#include "err_msg.h"
 #include "events_sender_api.h"
 #include "image_api.h"
 #include "specs_api.h"
@@ -231,7 +231,7 @@ static void clean_resources_on_failure(const container_t *cont, const char *engi
 }
 
 static int do_post_start_on_success(const char *id, const char *runtime, const char *pidfile, int exit_fifo_fd,
-                                    const container_pid_t *pid_info)
+                                    const pid_ppid_info_t *pid_info)
 {
     int ret = 0;
 
@@ -351,7 +351,7 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
         return 0;
     }
     int nret =
-            snprintf(properties, sizeof(properties), "mode=1777,size=%llu", (long long unsigned int)host_channel->size);
+        snprintf(properties, sizeof(properties), "mode=1777,size=%llu", (long long unsigned int)host_channel->size);
     if (nret < 0 || (size_t)nret >= sizeof(properties)) {
         ERROR("Failed to generate mount properties");
         return -1;
@@ -583,7 +583,7 @@ static int umount_dev_tmpfs_for_system_container(const container_t *cont)
     return 0;
 }
 
-static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, container_pid_t *pid_info)
+static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
 {
     int ret = 0;
     int nret = 0;
@@ -755,7 +755,7 @@ out:
 int start_container(container_t *cont, const char *console_fifos[], bool reset_rm)
 {
     int ret = 0;
-    container_pid_t pid_info = { 0 };
+    pid_ppid_info_t pid_info = { 0 };
     int exit_code = 125;
 
     if (cont == NULL || console_fifos == NULL) {
@@ -1573,7 +1573,7 @@ err_out:
     return NULL;
 }
 
-static int do_exec_container(const container_t *cont, const char *runtime, char *const console_fifos[],
+static int do_exec_container(const container_t *cont, const char *runtime, char * const console_fifos[],
                              defs_process_user *puser, const container_exec_request *request, int *exit_code)
 {
     int ret = 0;
@@ -1816,7 +1816,7 @@ int exec_container(const container_t *cont, const container_exec_request *reques
         goto pack_response;
     }
     (void)isulad_monitor_send_container_event(id, EXEC_START, -1, 0, exec_command, NULL);
-    if (do_exec_container(cont, cont->runtime, (char *const *)fifos, puser, request, &exit_code)) {
+    if (do_exec_container(cont, cont->runtime, (char * const *)fifos, puser, request, &exit_code)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }

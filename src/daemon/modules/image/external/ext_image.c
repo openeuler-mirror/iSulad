@@ -25,7 +25,7 @@
 #include "utils.h"
 #include "ext_image.h"
 #include "image_rootfs_handler.h"
-#include "libisulad.h"
+#include "err_msg.h"
 
 #ifdef ENABLE_OCI_IMAGE
 #include "storage.h"

@@ -17,8 +17,9 @@
 
 #include <pthread.h>
 
-#include "libisulad.h"
+#include "err_msg.h"
 #include "linked_list.h"
+#include "utils.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -31,7 +32,7 @@ typedef struct _containers_gc_t_ {
 
 int new_gchandler();
 
-int gc_add_container(const char *id, const char *runtime, const container_pid_t *pid_info);
+int gc_add_container(const char *id, const char *runtime, const pid_ppid_info_t *pid_info);
 
 int gc_restore();
 
@@ -39,10 +40,8 @@ int start_gchandler();
 
 bool gc_is_gc_progress(const char *id);
 
-
 #if defined(__cplusplus) || defined(c_plusplus)
 }
 #endif
 
 #endif /* __ISULAD_CONTAINER_GC_H__ */
-

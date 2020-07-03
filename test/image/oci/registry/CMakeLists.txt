@@ -18,14 +18,14 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/utils_images.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/libisulad.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/http/parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_aes.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/image_store/image_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/isulad_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry_type.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/sysinfo.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/image_store/image_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/registry_apiv2.c
@@ -50,6 +50,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage/image_store
