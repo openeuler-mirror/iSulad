@@ -42,7 +42,7 @@ typedef struct _container_pid_t {
     int pid; /* process id */
     int ppid; /* pid of parent process */
     unsigned long long start_time, /* start time of process -- seconds since 1-1-70 */
-             pstart_time; /* start time of parent process -- seconds since 1-1-70 */
+            pstart_time; /* start time of parent process -- seconds since 1-1-70 */
 } container_pid_t;
 
 typedef enum {
@@ -225,8 +225,6 @@ void isulad_logs_response_free(struct isulad_logs_response *response);
 void isulad_events_format_free(struct isulad_events_format *value);
 
 int container_read_proc(uint32_t pid, container_pid_t *pid_info);
-
-int get_user(const char *basefs, const host_config *hc, const char *userstr, defs_process_user *puser);
 
 int event_copy(const struct isulad_events_format *src, struct isulad_events_format *dest);
 

@@ -25,6 +25,7 @@
 #include "utils.h"
 #include "utils_images.h"
 #include "oci_config_merge.h"
+#include "image_rootfs_handler.h"
 #include "libisulad.h"
 
 #include "filters.h"
@@ -85,7 +86,7 @@ int oci_get_user_conf(const char *basefs, host_config *hc, const char *userstr, 
         ERROR("Empty basefs or puser");
         return -1;
     }
-    return get_user(basefs, hc, userstr, puser);
+    return get_user_from_image_roofs(basefs, hc, userstr, puser);
 }
 
 static int oci_list_all_images(imagetool_images_list *images_list)

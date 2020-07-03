@@ -158,7 +158,7 @@ static int generate_user_and_groups_conf(const container_t *cont, defs_process_u
         username = cont->common_config->config->user;
     }
 
-    /* username may be NULL, we will handle it as UID 0 in get_user */
+    /* username may be NULL, we will handle it as UID 0 in im_get_user_conf */
     ret = im_get_user_conf(cont->common_config->image_type, cont->common_config->base_fs, cont->hostconfig, username,
                            *puser);
     if (ret != 0) {
@@ -351,7 +351,7 @@ static int mount_host_channel(const host_config_host_channel *host_channel, cons
         return 0;
     }
     int nret =
-        snprintf(properties, sizeof(properties), "mode=1777,size=%llu", (long long unsigned int)host_channel->size);
+            snprintf(properties, sizeof(properties), "mode=1777,size=%llu", (long long unsigned int)host_channel->size);
     if (nret < 0 || (size_t)nret >= sizeof(properties)) {
         ERROR("Failed to generate mount properties");
         return -1;
@@ -1573,7 +1573,7 @@ err_out:
     return NULL;
 }
 
-static int do_exec_container(const container_t *cont, const char *runtime, char * const console_fifos[],
+static int do_exec_container(const container_t *cont, const char *runtime, char *const console_fifos[],
                              defs_process_user *puser, const container_exec_request *request, int *exit_code)
 {
     int ret = 0;
@@ -1816,7 +1816,7 @@ int exec_container(const container_t *cont, const container_exec_request *reques
         goto pack_response;
     }
     (void)isulad_monitor_send_container_event(id, EXEC_START, -1, 0, exec_command, NULL);
-    if (do_exec_container(cont, cont->runtime, (char * const *)fifos, puser, request, &exit_code)) {
+    if (do_exec_container(cont, cont->runtime, (char *const *)fifos, puser, request, &exit_code)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }

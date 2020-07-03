@@ -21,7 +21,7 @@
 #include <sys/utsname.h>
 #include <ctype.h>
 
-#include "specs_extend.h"
+#include "image_rootfs_handler.h"
 #include "isula_libutils/log.h"
 #include "embedded_image.h"
 #include "lim.h"
@@ -153,7 +153,7 @@ int embedded_get_user_conf(const char *basefs, host_config *hc, const char *user
         ERROR("Empty basefs or puser");
         return -1;
     }
-    return get_user("/", hc, userstr, puser);
+    return get_user_from_image_roofs("/", hc, userstr, puser);
 }
 
 static int embedded_images_to_imagetool_images(struct db_all_images *all_images, imagetool_images_list *list)
