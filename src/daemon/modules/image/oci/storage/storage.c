@@ -1177,7 +1177,7 @@ out:
     return mount_point;
 }
 
-int storage_rootfs_umount(const char *container_id)
+int storage_rootfs_umount(const char *container_id, bool force)
 {
     int ret = 0;
     storage_rootfs *rootfs_info = NULL;
@@ -1195,7 +1195,7 @@ int storage_rootfs_umount(const char *container_id)
         goto out;
     }
 
-    if (layer_store_umount(rootfs_info->layer, true) != 0) {
+    if (layer_store_umount(rootfs_info->layer, force) != 0) {
         ERROR("Failed to umount layer %s", rootfs_info->layer);
         ret = -1;
         goto out;

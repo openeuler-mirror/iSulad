@@ -2140,7 +2140,7 @@ static int check_grow_base_device_fs(struct device_set *devset, image_devmapper_
 
     base_dev_size = get_base_device_size(devset);
     if (devset->base_fs_size < base_dev_size) {
-        ERROR("devmapper: Base fs size:%lu cannot be smaller than %lu",devset->base_fs_size, base_dev_size);
+        ERROR("devmapper: Base fs size:%lu cannot be smaller than %lu", devset->base_fs_size, base_dev_size);
         return -1;
     }
 

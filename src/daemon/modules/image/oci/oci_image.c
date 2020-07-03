@@ -223,7 +223,7 @@ int oci_umount_rf(const im_umount_request *request)
         return -1;
     }
 
-    return storage_rootfs_umount(request->name_id);
+    return storage_rootfs_umount(request->name_id, request->force);
 }
 
 int oci_rmi(const im_rmi_request *request)

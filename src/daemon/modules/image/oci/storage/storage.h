@@ -167,7 +167,7 @@ int storage_rootfs_fs_usgae(const char *container_id, imagetool_fs_info *fs_info
 
 char *storage_rootfs_mount(const char *container_id);
 
-int storage_rootfs_umount(const char *container_id);
+int storage_rootfs_umount(const char *container_id, bool force);
 
 #ifdef __cplusplus
 }

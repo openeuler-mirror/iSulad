@@ -50,7 +50,7 @@ out:
     free(errmsg);
     errmsg = NULL;
 
-    ret2 = storage_rootfs_umount(id);
+    ret2 = storage_rootfs_umount(id, false);
     if (ret2 != 0) {
         ret = ret2;
         ERROR("umount container %s failed", id);
