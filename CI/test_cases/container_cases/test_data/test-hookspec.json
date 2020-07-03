@@ -1,0 +1,20 @@
+{
+    "prestart": [
+        {
+            "args": [
+                "echo",
+                "1"
+            ],
+            "path": "/bin/echo"
+        }
+    ],
+    "poststop": [
+        {
+            "args": [
+                "echo",
+                "2"
+            ],
+            "path": "/bin/echo"
+        }
+    ]
+}

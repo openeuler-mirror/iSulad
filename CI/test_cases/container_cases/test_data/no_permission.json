@@ -1,0 +1,10 @@
+{
+    "prestart": [
+        {
+            "args": [
+                "/etc/passwd"
+            ],
+            "path": "/etc/passwd"
+        }
+    ]
+}
