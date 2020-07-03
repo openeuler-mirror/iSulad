@@ -2,7 +2,7 @@
 #
 # attributes: isulad basic container hook
 # concurrent: NA
-# spend time: 25
+# spend time: 8
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.

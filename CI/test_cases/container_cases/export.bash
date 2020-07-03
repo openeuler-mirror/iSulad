@@ -2,7 +2,7 @@
 #
 # attributes: isulad basic export container
 # concurrent: NA
-# spend time: 5
+# spend time: 6
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.

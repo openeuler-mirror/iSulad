@@ -2,7 +2,7 @@
 #
 # attributes: isulad basic container hook
 # concurrent: NA
-# spend time: 7
+# spend time: 4
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -22,15 +22,11 @@
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.bash
 
-test_data_path=$(realpath $curr_path/test_data)
-
-function test_hook_ignore_poststart_error_spec()
+function test_top_spec()
 {
     local ret=0
     local image="busybox"
-    local test="container hook test => (${FUNCNAME[@]})"
-    CONT=test_hook_spec
-    cp ${test_data_path}/poststart.sh /tmp/
+    local test="container top test => (${FUNCNAME[@]})"
 
     msg_info "${test} starting..."
 
@@ -40,33 +36,14 @@ function test_hook_ignore_poststart_error_spec()
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-    isula run -n $CONT -itd --hook-spec ${test_data_path}/oci_hook_poststart_check.json ${image} &
+    CONT=`isula run -itd $image /bin/sh`
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    for a in `seq 20`
-    do
-        bpid=`ps aux | grep "poststart.sh" | grep -v grep | awk '{print $2}'`
-        if [ "x" != "x$bpid" ];then
-            kill -9 $bpid
-            break
-        else
-            sleep .5
-            continue
-        fi
-    done
+    isula top $CONT -ef
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    status=`isula inspect -f '{{json .State.Status}}' $CONT`
-    if [ "$status" == "\"running\"" ];then
-        echo "get right status"
-    else
-        echo "expect $CONT running, but get $status"
-        ret++
-    fi
-
-    isula stop -t 0 ${CONT}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to stop ${CONT}" && ((ret++))
-
-    isula rm ${CONT}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm ${CONT}" && ((ret++))
+    isula rm -f $CONT
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}
@@ -74,6 +51,6 @@ function test_hook_ignore_poststart_error_spec()
 
 declare -i ans=0
 
-test_hook_ignore_poststart_error_spec || ((ans++))
+test_top_spec || ((ans++))
 
 show_result ${ans} "${curr_path}/${0}"

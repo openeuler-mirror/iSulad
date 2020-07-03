@@ -90,6 +90,8 @@ function isula_version()
         echo "isula version error"
         TC_RET_T=$(($TC_RET_T+1))
     fi
+
+    isula info
 }
 
 function do_test_t()

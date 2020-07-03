@@ -2,7 +2,7 @@
 #
 # attributes: isulad cri cni
 # concurrent: NA
-# spend time: 45
+# spend time: 46
 
 curr_path=$(dirname $(readlink -f "$0"))
 data_path=$(realpath $curr_path/criconfigs)

@@ -2,7 +2,7 @@
 #
 # attributes: isulad inheritance fd
 # concurrent: NO
-# spend time: 15
+# spend time: 16
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.

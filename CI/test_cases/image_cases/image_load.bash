@@ -2,7 +2,7 @@
 #
 # attributes: isulad basic image
 # concurrent: NA
-# spend time: 18
+# spend time: 22
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
