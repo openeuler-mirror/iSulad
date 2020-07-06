@@ -41,7 +41,7 @@ typedef struct {
     bool insecure_registry;
 } registry_login_options;
 
-int registry_init();
+int registry_init(char *auths_path, char *certs_dir);
 int registry_pull(registry_pull_options *options);
 int registry_login(registry_login_options *options);
 int registry_logout(char *host);

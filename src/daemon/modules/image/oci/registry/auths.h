@@ -19,9 +19,12 @@
 extern "C" {
 #endif
 
-#define AUTH_FILE_PATH "/root/.isulad/auths.json"
+#define DEFAULT_AUTH_DIR "/root/.isulad"
+#define AUTH_FILE_NAME "auths.json"
 #define AUTH_FILE_MODE 0600
 #define MAX_AUTHS_LEN 65536
+
+void auths_set_dir(char *auth_dir);
 
 int auths_load(char *host, char **username, char **password);
 

@@ -5,5 +5,5 @@ Content-Type: text/html; charset=utf-8
 Content-Length: 4
 Connection: close
 Docker-Distribution-API-Version: registry/2.0
-WWW-Authenticate: Bearer realm="https://auth.quay.io",service="quay.io"
+WWW-Authenticate: Basic realm="https://auth.quay.io"
 

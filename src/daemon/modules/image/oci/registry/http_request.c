@@ -62,12 +62,10 @@ static char *get_url_host(const char *url)
 
     tmp_url = util_strdup_s(url);
     end = strchr(tmp_url + strlen(prefix), '/');
-    if (end == NULL) {
-        ERROR("Unexpected url %s, it must contains '/' after host name", url);
-        goto out;
+    if (end != NULL) {
+        *end = 0;
     }
 
-    *end = 0;
     host = util_strdup_s(tmp_url + strlen(prefix));
 out:
     free(tmp_url);
@@ -330,7 +328,7 @@ static int get_bearer_token(pull_descriptor *desc, challenge *c)
     if (token->token != NULL) {
         c->cached_token = util_strdup_s(token->token);
     } else if (token->access_token != NULL) {
-        c->cached_token = util_strdup_s(token->token);
+        c->cached_token = util_strdup_s(token->access_token);
     } else {
         ret = -1;
         ERROR("no valid token found, response is %s", output);

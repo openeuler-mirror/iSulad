@@ -235,45 +235,6 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
     return 0;
 }
 
-char *oci_full_image_name(const char *host, const char *name, const char *tag)
-{
-    char temp[PATH_MAX] = { 0 };
-    const char *tmp_host = "";
-    const char *tmp_sep = "";
-    const char *tmp_prefix = "";
-    const char *tmp_colon = "";
-    const char *tmp_tag = DEFAULT_TAG;
-
-    if (name == NULL) {
-        ERROR("Invalid NULL name found when getting full image name");
-        return NULL;
-    }
-
-    if (host != NULL) {
-        tmp_host = host;
-        tmp_sep = "/";
-    }
-    if (strchr(name, '/') == NULL) {
-        tmp_prefix = DEFAULT_REPO_PREFIX;
-    }
-    if (tag != NULL) {
-        tmp_colon = ":";
-        tmp_tag = tag;
-    }
-    int nret = snprintf(temp, sizeof(temp), "%s%s%s%s%s%s", tmp_host, tmp_sep, tmp_prefix, name, tmp_colon, tmp_tag);
-    if (nret < 0 || (size_t)nret >= sizeof(temp)) {
-        ERROR("sprint temp image name failed, host %s, name %s, tag %s", host, name, tag);
-        return NULL;
-    }
-
-    if (!util_valid_image_name(temp)) {
-        ERROR("Invalid full image name %s, host %s, name %s, tag %s", temp, host, name, tag);
-        return NULL;
-    }
-
-    return util_strdup_s(temp);
-}
-
 char *oci_strip_dockerio_prefix(const char *name)
 {
     char prefix[PATH_MAX] = { 0 };

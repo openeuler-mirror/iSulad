@@ -126,7 +126,7 @@ int oci_init(const isulad_daemon_configs *args)
 
     cleanup_image_tmpdir();
 
-    ret = registry_init();
+    ret = registry_init(NULL, NULL);
     if (ret != 0) {
         ret = -1;
         goto out;

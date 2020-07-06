@@ -33,6 +33,36 @@
 #include "utils_file.h"
 #include "utils_string.h"
 
+static char *g_auth_path = DEFAULT_AUTH_DIR"/"AUTH_FILE_NAME ;
+
+void auths_set_dir(char *auth_dir)
+{
+    int sret = 0;
+    char path[PATH_MAX] = {0};
+
+    if (auth_dir == NULL) {
+        return;
+    }
+
+    sret = snprintf(path, sizeof(path), "%s/%s", auth_dir, AUTH_FILE_NAME);
+    if (sret < 0 || (size_t)sret >= sizeof(path)) {
+        ERROR("Failed to sprintf auths file, auth dir: %s", auth_dir);
+        return;
+    }
+
+    g_auth_path = util_strdup_s(path);
+
+    sret = snprintf(path, sizeof(path), "%s/%s", auth_dir, AUTH_AESKEY_NAME);
+    if (sret < 0 || (size_t)sret >= sizeof(path)) {
+        ERROR("Failed to sprintf auths aeskey, auth dir: %s", auth_dir);
+        return;
+    }
+
+    aes_set_key_path(path);
+
+    return;
+}
+
 static int decode_auth(char *encoded, char **username, char **password)
 {
     int nret = 0;
@@ -212,13 +242,13 @@ int auths_load(char *host, char **username, char **password)
         return -1;
     }
 
-    if (!util_file_exists(AUTH_FILE_PATH)) {
+    if (!util_file_exists(g_auth_path)) {
         return 0;
     }
 
-    auths = registry_auths_parse_file(AUTH_FILE_PATH, NULL, &err);
+    auths = registry_auths_parse_file(g_auth_path, NULL, &err);
     if (auths == NULL) {
-        ERROR("failed to parse file %s", AUTH_FILE_PATH);
+        ERROR("failed to parse file %s", g_auth_path);
         ret = -1;
         goto out;
     }
@@ -337,9 +367,9 @@ static int write_auth_file(char *content)
     int ret = 0;
     char *auths_dir = NULL;
 
-    auths_dir = util_path_dir(AUTH_FILE_PATH);
+    auths_dir = util_path_dir(g_auth_path);
     if (auths_dir == NULL) {
-        ERROR("get dir of %s for auths failed", AUTH_FILE_PATH);
+        ERROR("get dir of %s for auths failed", g_auth_path);
         ret = -1;
         goto out;
     }
@@ -350,7 +380,7 @@ static int write_auth_file(char *content)
         goto out;
     }
 
-    ret = util_write_file(AUTH_FILE_PATH, content, strlen(content), AUTH_FILE_MODE);
+    ret = util_write_file(g_auth_path, content, strlen(content), AUTH_FILE_MODE);
     if (ret != 0) {
         ERROR("failed to write auths json to file");
         goto out;
@@ -377,7 +407,7 @@ int auths_save(char *host, char *username, char *password)
         return -1;
     }
 
-    if (!util_file_exists(AUTH_FILE_PATH)) {
+    if (!util_file_exists(g_auth_path)) {
         auths = util_common_calloc_s(sizeof(registry_auths));
         element = util_common_calloc_s(sizeof(defs_map_string_object_auths));
         if (auths == NULL || element == NULL) {
@@ -388,9 +418,9 @@ int auths_save(char *host, char *username, char *password)
         auths->auths = element;
         element = NULL;
     } else {
-        auths = registry_auths_parse_file(AUTH_FILE_PATH, NULL, &err);
+        auths = registry_auths_parse_file(g_auth_path, NULL, &err);
         if (auths == NULL) {
-            ERROR("failed to parse file %s", AUTH_FILE_PATH);
+            ERROR("failed to parse file %s", g_auth_path);
             ret = -1;
             goto out;
         }
@@ -489,13 +519,13 @@ int auths_delete(char *host)
         return -1;
     }
 
-    if (!util_file_exists(AUTH_FILE_PATH)) {
+    if (!util_file_exists(g_auth_path)) {
         return 0;
     }
 
-    auths = registry_auths_parse_file(AUTH_FILE_PATH, NULL, &err);
+    auths = registry_auths_parse_file(g_auth_path, NULL, &err);
     if (auths == NULL) {
-        ERROR("failed to parse file %s", AUTH_FILE_PATH);
+        ERROR("failed to parse file %s", g_auth_path);
         ret = -1;
         goto out;
     }
@@ -511,7 +541,7 @@ int auths_delete(char *host)
         goto out;
     }
 
-    ret = util_write_file(AUTH_FILE_PATH, json, strlen(json), AUTH_FILE_MODE);
+    ret = util_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE);
     if (ret != 0) {
         ERROR("failed to write auths json to file");
         goto out;

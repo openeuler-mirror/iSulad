@@ -80,6 +80,8 @@ void free_pull_desc(pull_descriptor *desc)
     desc->username = NULL;
     free_sensitive_string(desc->password);
     desc->password = NULL;
+    free(desc->auths_dir);
+    desc->auths_dir = NULL;
 
     desc->use_decrypted_key = false;
     desc->cert_loaded = false;
@@ -89,6 +91,8 @@ void free_pull_desc(pull_descriptor *desc)
     desc->cert_file = NULL;
     free(desc->key_file);
     desc->key_file = NULL;
+    free(desc->certs_dir);
+    desc->certs_dir = NULL;
 
     free(desc->blobpath);
     desc->blobpath = NULL;

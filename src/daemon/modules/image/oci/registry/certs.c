@@ -27,9 +27,19 @@
 #include "utils_file.h"
 #include "utils_string.h"
 
-#define ISULAD_CERTD "/etc/isulad/certs.d"
+#define DEFAULT_ISULAD_CERTD "/etc/isulad/certs.d"
 #define CLIENT_CERT_SUFFIX ".cert"
 #define CA_SUFFIX ".crt"
+
+static char *g_certs_dir = DEFAULT_ISULAD_CERTD;
+
+void certs_set_dir(char *certs_dir)
+{
+    if (certs_dir != NULL) {
+        g_certs_dir = util_strdup_s(certs_dir);
+    }
+    return;
+}
 
 static char *corresponding_key_name(const char *cert_name)
 {
@@ -127,9 +137,9 @@ int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_f
         return -1;
     }
 
-    path = util_path_join(ISULAD_CERTD, host);
+    path = util_path_join(g_certs_dir, host);
     if (path == NULL) {
-        ERROR("failed to join path %s and %s when loading certs", ISULAD_CERTD, host);
+        ERROR("failed to join path %s and %s when loading certs", g_certs_dir, host);
         return -1;
     }
 

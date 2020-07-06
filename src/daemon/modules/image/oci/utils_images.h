@@ -47,7 +47,6 @@ char *oci_default_tag(const char *name);
 char *oci_add_host(const char *domain, const char *name);
 char *oci_normalize_image_name(const char *name);
 int oci_split_image_name(const char *image_name, char **host, char **name, char **tag);
-char *oci_full_image_name(const char *host, const char *name, const char *tag);
 char *oci_strip_dockerio_prefix(const char *name);
 char *make_big_data_base_name(const char *key);
 char *oci_calc_diffid(const char *file);

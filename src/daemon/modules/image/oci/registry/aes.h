@@ -20,8 +20,10 @@
 extern "C" {
 #endif
 
-#define AUTH_AESKEY "/root/.isulad/aeskey"
+#define AUTH_AESKEY_NAME "aeskey"
+#define DEFAULT_AUTH_AESKEY "/root/.isulad/" AUTH_AESKEY_NAME
 
+void aes_set_key_path(char *key_path);
 int aes_decode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len);
 int aes_encode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len);
 

@@ -30,6 +30,35 @@ function isula_pull()
 
     isula inspect busybox
     fn_check_eq "$?" "0" "isula inspect busybox"
+
+    isula rm -f `isula ps -a -q`
+    isula rmi centos
+
+    isula pull hub-mirror.c.163.com/library/busybox
+    fn_check_eq "$?" "0" "isula pull hub-mirror.c.163.com/library/busybox"
+
+    rm -f /etc/isulad/daemon.json.bak
+    cp /etc/isulad/daemon.json /etc/isulad/daemon.json.bak
+
+    sed -i "s/https/http/g" /etc/isulad/daemon.json
+    check_valgrind_log
+    fn_check_eq "$?" "0" "stop isulad with check valgrind"
+
+    start_isulad_with_valgrind
+    fn_check_eq "$?" "0" "start isulad with valgrind"
+
+    isula pull busybox
+    fn_check_eq "$?" "0" "isula pull busybox"
+
+    rm -f /etc/isulad/daemon.json
+    cp /etc/isulad/daemon.json.bak /etc/isulad/daemon.json
+    rm -f /etc/isulad/daemon.json.bak
+
+    check_valgrind_log
+    fn_check_eq "$?" "0" "stop isulad with check valgrind"
+
+    start_isulad_with_valgrind
+    fn_check_eq "$?" "0" "start isulad with valgrind"
 }
 
 function isula_login()

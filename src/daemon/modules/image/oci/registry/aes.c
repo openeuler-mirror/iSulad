@@ -20,13 +20,24 @@
 #include "isula_libutils/log.h"
 #include "aes.h"
 #include "utils_aes.h"
+#include "utils.h"
+
+static char *g_aeskey = DEFAULT_AUTH_AESKEY;
+
+void aes_set_key_path(char *key_path)
+{
+    if (key_path != NULL) {
+        g_aeskey = util_strdup_s(key_path);
+    }
+    return;
+}
 
 int aes_decode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len)
 {
     int ret = 0;
     unsigned char aeskey[AES_256_CFB_KEY_LEN];
 
-    ret = util_aes_key(AUTH_AESKEY, false, aeskey);
+    ret = util_aes_key(g_aeskey, false, aeskey);
     if (ret != 0) {
         ERROR("init aes for decode auth failed");
         return ret;
@@ -49,7 +60,7 @@ int aes_encode(unsigned char *input, size_t input_len, unsigned char *output, si
     int ret = 0;
     unsigned char aeskey[AES_256_CFB_KEY_LEN];
 
-    ret = util_aes_key(AUTH_AESKEY, true, aeskey);
+    ret = util_aes_key(g_aeskey, true, aeskey);
     if (ret != 0) {
         ERROR("init aes for decode auth failed");
         return ret;

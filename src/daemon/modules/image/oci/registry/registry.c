@@ -33,6 +33,7 @@
 #include "registry.h"
 #include "utils.h"
 #include "registry_apiv2.h"
+#include "certs.h"
 #include "auths.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/registry_manifest_schema1.h"
@@ -328,6 +329,10 @@ static void del_cached_layer(char *blob_digest, char *file)
     cached_layer *cache = NULL;
     struct linked_list *item = NULL;
     struct linked_list *next = NULL;
+
+    if (file == NULL) {
+        return;
+    }
 
     cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
     if (cache == NULL) {
@@ -1692,13 +1697,16 @@ static void cached_layers_kvfree(void *key, void *value)
     return;
 }
 
-int registry_init()
+int registry_init(char *auths_dir, char *certs_dir)
 {
     int ret = 0;
 
     if (util_mkdir_p(IMAGE_TMP_PATH, 0600)) {
         ERROR("failed to create directory %s", IMAGE_TMP_PATH);
     }
+
+    auths_set_dir(auths_dir);
+    certs_set_dir(certs_dir);
 
     g_shared = util_common_calloc_s(sizeof(registry_global));
     if (g_shared == NULL) {

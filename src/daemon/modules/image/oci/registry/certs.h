@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 
+void certs_set_dir(char *certs_dir);
+
 int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_file, char **key_file);
 
 #ifdef __cplusplus

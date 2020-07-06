@@ -80,12 +80,14 @@ typedef struct {
 
     char *username;
     char *password;
+    char *auths_dir;
 
     bool use_decrypted_key;
     bool cert_loaded;
     char *ca_file;
     char *cert_file;
     char *key_file;
+    char *certs_dir;
 
     char *blobpath;
     char *protocol;
