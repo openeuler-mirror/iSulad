@@ -105,7 +105,7 @@ static int cmd_logs_init(int argc, const char **argv)
         return ECOMMON;
     }
     g_cmd_logs_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), LOGS_OPTIONS(g_cmd_logs_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) LOGS_OPTIONS(g_cmd_logs_args),
                COMMON_OPTIONS(g_cmd_logs_args)
     };
 

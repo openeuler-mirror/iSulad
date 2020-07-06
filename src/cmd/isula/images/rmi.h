@@ -25,10 +25,8 @@
 extern "C" {
 #endif
 
-#define RMI_OPTIONS(cmdargs)                                                                         \
-    {                                                                                                \
-        CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, "Force removal of the image", NULL \
-    }
+#define RMI_OPTIONS(cmdargs) \
+    { CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, "Force removal of the image", NULL },
 
 extern const char g_cmd_rmi_desc[];
 extern const char g_cmd_rmi_usage[];

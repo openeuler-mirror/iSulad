@@ -156,8 +156,8 @@ static int exec_cmd_init(int argc, const char **argv)
     command_t cmd;
     struct isula_libutils_log_config lconf = { 0 };
 
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_exec_args),
-               EXEC_OPTIONS(g_cmd_exec_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_exec_args)
+        EXEC_OPTIONS(g_cmd_exec_args)
     };
 
     isula_libutils_default_log_config(argv[0], &lconf);

@@ -65,8 +65,8 @@ struct lengths {
 };
 
 const char * const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
-                                              "exited",  "paused", "restarting"
-                                            };
+                                             "exited",  "paused", "restarting"
+                                           };
 
 struct filter_field {
     char *name;
@@ -983,7 +983,7 @@ int cmd_list_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_list_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), LIST_OPTIONS(g_cmd_list_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) LIST_OPTIONS(g_cmd_list_args),
                COMMON_OPTIONS(g_cmd_list_args)
     };
 

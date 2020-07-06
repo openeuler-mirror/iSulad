@@ -220,8 +220,8 @@ int cmd_stats_main(int argc, const char **argv)
 {
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf), STATUS_OPTIONS(g_cmd_stats_args),
-               COMMON_OPTIONS(g_cmd_stats_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) STATUS_OPTIONS(g_cmd_stats_args)
+        COMMON_OPTIONS(g_cmd_stats_args)
     };
 
     if (client_arguments_init(&g_cmd_stats_args)) {

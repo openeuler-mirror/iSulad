@@ -183,7 +183,7 @@ int cmd_login_main(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1; /* exit 1 if failed to login */
     command_t cmd;
-    struct command_option options[] = { COMMON_OPTIONS(g_cmd_login_args), LOGIN_OPTIONS(g_cmd_login_args) };
+    struct command_option options[] = { COMMON_OPTIONS(g_cmd_login_args) LOGIN_OPTIONS(g_cmd_login_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_login_args)) {

@@ -326,10 +326,7 @@ struct client_arguments {
     char *key_file;
 };
 
-#define LOG_OPTIONS(log)                                                                      \
-    {                                                                                         \
-        CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL \
-    }
+#define LOG_OPTIONS(log) { CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL },
 
 #define COMMON_OPTIONS(cmdargs)                                                                                         \
     { CMD_OPT_TYPE_STRING_DUP, false, "host", 'H', &(cmdargs).socket, "Daemon socket(s) to connect to",                 \
@@ -357,14 +354,10 @@ struct client_arguments {
       &(cmdargs).key_file,                                                                                      \
       "Path to TLS key file (default \"/root/.iSulad/key.pem\")",                                               \
       NULL },                                                                                                   \
-    {                                                                                                                   \
-                                                                                                                        CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL                                                \
-    }
+    { CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL },
 
-#define VERSION_OPTIONS(cmdargs)                                                                 \
-    {                                                                                            \
-        CMD_OPT_TYPE_BOOL, false, "version", 0, NULL, "Print version information and quit", NULL \
-    }
+#define VERSION_OPTIONS(cmdargs) \
+    { CMD_OPT_TYPE_BOOL, false, "version", 0, NULL, "Print version information and quit", NULL },
 
 extern void print_common_help();
 

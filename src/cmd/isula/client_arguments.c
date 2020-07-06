@@ -244,7 +244,7 @@ void client_arguments_free(struct client_arguments *args)
 void print_common_help()
 {
     struct client_arguments cmd_common_args = {};
-    struct command_option options[] = { COMMON_OPTIONS(cmd_common_args), VERSION_OPTIONS(cmd_common_args) };
+    struct command_option options[] = { COMMON_OPTIONS(cmd_common_args) VERSION_OPTIONS(cmd_common_args) };
     size_t len = sizeof(options) / sizeof(options[0]);
     qsort(options, len, sizeof(options[0]), compare_options);
     fprintf(stdout, "COMMON OPTIONS :\n");

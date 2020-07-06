@@ -414,16 +414,17 @@ extern "C" {
       &(cmdargs).custom_conf.ns_change_opt,                                                                      \
       "Namespaced kernel param options for system container (default [])",                                       \
       NULL },                                                                                                    \
-    {                                                                                                                    \
-                                                                                                                         CMD_OPT_TYPE_CALLBACK, false, "ulimit", 0, &(cmdargs).custom_conf.ulimits, "Ulimit options (default [])",        \
-                                                                                                                         command_append_array                                                                                     \
-    }
+    { CMD_OPT_TYPE_CALLBACK, false, "ulimit", 0, &(cmdargs).custom_conf.ulimits, "Ulimit options (default [])",  \
+      command_append_array },
 
-#define CREATE_EXTEND_OPTIONS(cmdargs)                                                   \
-    {                                                                                    \
-        CMD_OPT_TYPE_BOOL, false, "interactive", 'i', &(cmdargs).custom_conf.open_stdin, \
-        "Keep STDIN open even if not attached", NULL                             \
-    }
+#define CREATE_EXTEND_OPTIONS(cmdargs)        \
+    { CMD_OPT_TYPE_BOOL,                      \
+        false,                                  \
+        "interactive",                          \
+        'i',                                    \
+        &(cmdargs).custom_conf.open_stdin,      \
+        "Keep STDIN open even if not attached", \
+        NULL },
 
 extern const char g_cmd_create_desc[];
 extern const char g_cmd_create_usage[];

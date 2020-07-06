@@ -93,7 +93,7 @@ int cmd_export_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_export_args.progname = argv[0];
-    struct command_option options[] = { COMMON_OPTIONS(g_cmd_export_args), EXPORT_OPTIONS(g_cmd_export_args) };
+    struct command_option options[] = { COMMON_OPTIONS(g_cmd_export_args) EXPORT_OPTIONS(g_cmd_export_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_export_desc,
                  g_cmd_export_usage);

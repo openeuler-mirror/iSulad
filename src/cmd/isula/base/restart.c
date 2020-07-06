@@ -70,8 +70,8 @@ int cmd_restart_main(int argc, const char **argv)
     int status = 0;
     command_t cmd;
     struct isula_libutils_log_config lconf = { 0 };
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_restart_args),
-               RESTART_OPTIONS(g_cmd_restart_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_restart_args)
+        RESTART_OPTIONS(g_cmd_restart_args)
     };
 
     isula_libutils_default_log_config(argv[0], &lconf);

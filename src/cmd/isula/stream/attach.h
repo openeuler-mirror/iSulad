@@ -17,7 +17,6 @@
 
 #include "client_arguments.h"
 #include "isula_libutils/container_inspect.h"
-#include "wait.h"
 
 extern const char g_cmd_attach_desc[];
 extern const char g_cmd_attach_usage[];

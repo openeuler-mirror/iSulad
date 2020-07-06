@@ -23,9 +23,14 @@
 extern "C" {
 #endif
 
-#define RESTART_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_CALLBACK, false, "time", 't', &(cmdargs).time, \
-        "Seconds to wait for stop before killing it (default 10)", command_convert_int }
+#define RESTART_OPTIONS(cmdargs)                                 \
+    { CMD_OPT_TYPE_CALLBACK,                                     \
+        false,                                                     \
+        "time",                                                    \
+        't',                                                       \
+        &(cmdargs).time,                                           \
+        "Seconds to wait for stop before killing it (default 10)", \
+        command_convert_int },
 
 extern const char g_cmd_restart_desc[];
 extern const char g_cmd_restart_usage[];
@@ -37,4 +42,3 @@ int cmd_restart_main(int argc, const char **argv);
 #endif
 
 #endif /* __CMD_RESTART_H */
-

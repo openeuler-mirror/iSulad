@@ -25,10 +25,7 @@
 extern "C" {
 #endif
 
-#define EXPORT_OPTIONS(cmdargs)                                                             \
-    {                                                                                       \
-        CMD_OPT_TYPE_STRING, false, "output", 'o', &(cmdargs).file, "Write to a file", NULL \
-    }
+#define EXPORT_OPTIONS(cmdargs) { CMD_OPT_TYPE_STRING, false, "output", 'o', &(cmdargs).file, "Write to a file", NULL },
 
 extern const char g_cmd_export_desc[];
 extern const char g_cmd_export_usage[];

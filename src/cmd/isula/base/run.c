@@ -244,9 +244,8 @@ int cmd_run_main(int argc, const char **argv)
 
     g_cmd_run_args.progname = argv[0];
     g_cmd_run_args.subcommand = argv[1];
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_run_args),
-               CREATE_OPTIONS(g_cmd_run_args), CREATE_EXTEND_OPTIONS(g_cmd_run_args),
-               RUN_OPTIONS(g_cmd_run_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_run_args) CREATE_OPTIONS(g_cmd_run_args)
+        CREATE_EXTEND_OPTIONS(g_cmd_run_args) RUN_OPTIONS(g_cmd_run_args)
     };
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_run_desc,
                  g_cmd_run_usage);

@@ -320,7 +320,7 @@ int cmd_images_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_images_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), IMAGES_OPTIONS(g_cmd_images_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) IMAGES_OPTIONS(g_cmd_images_args),
                COMMON_OPTIONS(g_cmd_images_args)
     };
 

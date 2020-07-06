@@ -89,8 +89,8 @@ int cmd_kill_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_kill_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_kill_args),
-               KILL_OPTIONS(g_cmd_kill_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_kill_args)
+        KILL_OPTIONS(g_cmd_kill_args)
     };
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_kill_desc,
                  g_cmd_kill_usage);

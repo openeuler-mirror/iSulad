@@ -746,7 +746,7 @@ int cmd_inspect_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_inspect_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), INSPECT_OPTIONS(g_cmd_inspect_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) INSPECT_OPTIONS(g_cmd_inspect_args),
                COMMON_OPTIONS(g_cmd_inspect_args)
     };
 

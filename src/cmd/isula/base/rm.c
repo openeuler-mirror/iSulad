@@ -114,8 +114,8 @@ int cmd_delete_main(int argc, const char **argv)
     bool status = false;
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_delete_args),
-               DELETE_OPTIONS(g_cmd_delete_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_delete_args)
+        DELETE_OPTIONS(g_cmd_delete_args)
     };
 
     isula_libutils_default_log_config(argv[0], &lconf);

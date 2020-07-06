@@ -119,12 +119,9 @@ int cmd_load_main(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = ECOMMON;
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_load_args),
-        LOAD_OPTIONS(g_cmd_load_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_load_args) LOAD_OPTIONS(g_cmd_load_args)
 #ifdef ENABLE_EMBEDDED_IMAGE
-        EMBEDDED_OPTIONS(g_cmd_load_args),
+        EMBEDDED_OPTIONS(g_cmd_load_args)
 #endif
     };
 

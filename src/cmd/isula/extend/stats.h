@@ -25,20 +25,23 @@
 extern "C" {
 #endif
 
-#define STATUS_OPTIONS(cmdargs)                                                \
-    {                                                                          \
-        CMD_OPT_TYPE_BOOL,                                                     \
-        false,                                                                 \
-        "all",                                                                 \
-        'a',                                                                   \
-        &(cmdargs).showall,                                                    \
-        "Show all containers (default shows just running)",                    \
-        NULL                                                                   \
-    },                                                                         \
-    {                                                                          \
-                                                                               CMD_OPT_TYPE_BOOL, false, "no-stream", 0, &(cmdargs).nostream,         \
-                                                                               "Disable streaming stats and only pull the first result", NULL \
-    }
+#define STATUS_OPTIONS(cmdargs)                                         \
+    {                                                                   \
+        CMD_OPT_TYPE_BOOL,                                              \
+        false,                                                          \
+        "all",                                                          \
+        'a',                                                            \
+        &(cmdargs).showall,                                             \
+        "Show all containers (default shows just running)",             \
+        NULL                                                            \
+    },                                                                  \
+    { CMD_OPT_TYPE_BOOL,                                        \
+      false,                                                    \
+      "no-stream",                                              \
+      0,                                                        \
+      &(cmdargs).nostream,                                      \
+      "Disable streaming stats and only pull the first result", \
+      NULL },
 
 extern const char g_cmd_stats_desc[];
 extern const char g_cmd_stats_usage[];

@@ -25,18 +25,21 @@
 extern "C" {
 #endif
 
-#define DELETE_OPTIONS(cmdargs)                                          \
-    { CMD_OPT_TYPE_BOOL,                                                 \
-        false,                                                             \
-        "force",                                                           \
-        'f',                                                               \
-        &(cmdargs).force,                                                  \
-        "Force the removal of a running container (uses SIGKILL)",         \
-        NULL },                                                            \
-    {                                                                    \
-                                                                         CMD_OPT_TYPE_BOOL, false, "volumes", 'v', &(cmdargs).volume,     \
-                                                                         "Remove the volumes associated with the container", NULL \
-    }
+#define DELETE_OPTIONS(cmdargs)                                   \
+    { CMD_OPT_TYPE_BOOL,                                          \
+        false,                                                      \
+        "force",                                                    \
+        'f',                                                        \
+        &(cmdargs).force,                                           \
+        "Force the removal of a running container (uses SIGKILL)",  \
+        NULL },                                                     \
+    { CMD_OPT_TYPE_BOOL,                                  \
+      false,                                              \
+      "volumes",                                          \
+      'v',                                                \
+      &(cmdargs).volume,                                  \
+      "Remove the volumes associated with the container", \
+      NULL },
 
 extern const char g_cmd_delete_desc[];
 extern const char g_cmd_delete_usage[];
