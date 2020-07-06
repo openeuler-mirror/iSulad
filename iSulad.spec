@@ -62,8 +62,8 @@ rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
-install -m 0644 ./src/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
-install -m 0644 ./src/daemon/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
+install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 
 install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
