@@ -42,7 +42,7 @@ using ::testing::_;
 
 using namespace std;
 
-#define HOOKS_CONFIG_FILE "specs/specs_extend/hooks.json"
+#define HOOKS_CONFIG_FILE "../../../../test/specs/specs_extend/hooks.json"
 
 TEST(make_sure_oci_spec_linux_ut, test_make_sure_oci_spec_linux)
 {

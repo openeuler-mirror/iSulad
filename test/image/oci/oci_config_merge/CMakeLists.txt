@@ -60,3 +60,4 @@ target_include_directories(${EXE} PUBLIC
 
 set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,util_common_calloc_s -Wl,--wrap,util_smart_calloc_s -Wl,--wrap,merge_env")
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+add_test(NAME ${EXE} COMMAND ${EXE})

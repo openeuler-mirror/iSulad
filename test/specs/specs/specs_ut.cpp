@@ -55,8 +55,8 @@ public:
     NiceMock<MockIsuladConf> m_isulad_conf;
 };
 
-#define HOST_CONFIG_FILE "specs/specs/hostconfig.json"
-#define OCI_RUNTIME_SPEC_FILE "specs/specs/oci_runtime_spec.json"
+#define HOST_CONFIG_FILE "../../../../test/specs/specs/hostconfig.json"
+#define OCI_RUNTIME_SPEC_FILE "../../../../test/specs/specs/oci_runtime_spec.json"
 
 TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_1)
 {

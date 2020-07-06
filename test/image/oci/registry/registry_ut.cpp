@@ -64,6 +64,7 @@ std::string get_dir()
         }
     }
 
+    return static_cast<std::string>(abs_path) +  "../../../../../test/image/oci/registry";
     return static_cast<std::string>(abs_path);
 }
 

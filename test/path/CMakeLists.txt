@@ -25,3 +25,4 @@ target_include_directories(${EXE} PUBLIC
     )
 set_target_properties(${EXE} PROPERTIES LINK_FLAGS "-Wl,--wrap,getcwd -Wl,--wrap,readlink")
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lcrypto -lyajl -lz)
+add_test(NAME ${EXE} COMMAND ${EXE})

@@ -49,7 +49,7 @@ std::string GetDirectory()
         }
     }
 
-    return static_cast<std::string>(abs_path);
+    return static_cast<std::string>(abs_path) + "../../../../../../test/image/oci/storage/rootfs";
 }
 
 bool dirExists(const char *path)

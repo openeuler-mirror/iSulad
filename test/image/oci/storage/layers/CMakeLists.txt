@@ -60,6 +60,8 @@ target_link_libraries(${DRIVER_EXE}
     ${LIBTAR_LIBRARY}
     -lwebsockets -lcrypto -lyajl -larchive -ldevmapper -lz)
 
+add_test(NAME ${DRIVER_EXE} COMMAND ${DRIVER_EXE})
+
 #[[
 SET(EXE storage_layers_ut)
 

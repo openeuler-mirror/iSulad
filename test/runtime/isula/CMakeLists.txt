@@ -55,3 +55,4 @@ target_include_directories(${EXE} PUBLIC
     )
 
 target_link_libraries(${EXE} ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} -lpthread -lgrpc++ -lprotobuf -lcrypto -lyajl -lz)
+add_test(NAME ${EXE} COMMAND ${EXE})

@@ -23,8 +23,8 @@
 #include "isula_libutils/container_config.h"
 #include "oci_ut_common.h"
 
-#define IMAGETOOL_IMAGE_FILE "image/oci/oci_config_merge/imagetool_image.json"
-#define OCI_RUNTIME_SPEC_FILE "image/oci/oci_config_merge/oci_runtime_spec.json"
+#define IMAGETOOL_IMAGE_FILE "../../../../../test/image/oci/oci_config_merge/imagetool_image.json"
+#define OCI_RUNTIME_SPEC_FILE "../../../../../test/image/oci/oci_config_merge/oci_runtime_spec.json"
 #define MALLOC_COUNT 5
 
 static int g_malloc_count = 0;
