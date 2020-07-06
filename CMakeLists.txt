@@ -76,6 +76,7 @@ ENDIF()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 OPTION(ENABLE_UT "ut switch" OFF)
+OPTION(ENABLE_FUZZ "fuzz switch" OFF)
 IF(ENABLE_UT)
     include(CTest)
     include(Dart)
