@@ -13,16 +13,20 @@
  * Description: provide container load functions
  ******************************************************************************/
 #include "load.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "connect.h"
+#include "libisula.h"
 
 #ifdef ENABLE_EMBEDDED_IMAGE
 const char g_cmd_load_desc[] = "load an image from a manifest or a tar archive";

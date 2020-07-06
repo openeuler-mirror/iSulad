@@ -17,6 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/imagetool_images_list.h>
+#include <isula_libutils/storage_rootfs.h>
+#include <pthread.h>
 
 #include "io_wrapper.h"
 #include "utils.h"
@@ -26,6 +31,11 @@
 #include "image_store.h"
 #include "rootfs_store.h"
 #include "err_msg.h"
+#include "constants.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 static pthread_rwlock_t g_storage_rwlock;
 

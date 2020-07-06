@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #include "selinux_label.h"
+
 #include <selinux/selinux.h>
 #include <selinux/context.h>
 #include <stdio.h>
@@ -24,18 +25,21 @@
 #include <string.h>
 #include <dirent.h>
 #include <pthread.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/xattr.h>
-#include <sys/vfs.h>
 #include <sys/statvfs.h>
-#include <sys/syscall.h>
+#include <errno.h>
+#include <stdint.h>
+#include <sys/statfs.h>
+#include <syscall.h>
+
 #include "map.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "namespace.h"
 #include "err_msg.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 #define SELINUXFS_MOUNT "/sys/fs/selinux"
 #define SELINUXFS_MAGIC 0xf97cff8c

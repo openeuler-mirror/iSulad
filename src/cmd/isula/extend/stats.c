@@ -13,24 +13,20 @@
  * Description: provide container stats functions
  ******************************************************************************/
 #define __STDC_FORMAT_MACROS /* Required for PRIu64 to work. */
-#include <errno.h>
-#include <inttypes.h>
-#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <termios.h>
 #include <unistd.h>
-#include <sys/epoll.h>
-#include <sys/ioctl.h>
+#include <string.h>
 
-#include "error.h"
 #include "client_arguments.h"
 #include "stats.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 #define ESC "\033"
 #define TERMCLEAR ESC "[H" ESC "[J"

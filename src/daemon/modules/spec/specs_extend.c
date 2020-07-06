@@ -15,28 +15,24 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
-#include <unistd.h>
 #include <stdbool.h>
-#include <sys/sysmacros.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <sys/utsname.h>
-#include <sched.h>
 #include <ctype.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_config_linux.h>
+#include <stdint.h>
 
-#include "error.h"
 #include "isula_libutils/log.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/host_config.h"
 #include "utils.h"
-#include "config.h"
 #include "path.h"
 #include "isulad_config.h"
 #include "specs_extend.h"
+#include "daemon_arguments.h"
+#include "err_msg.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 #define MERGE_HOOKS_ITEM_DEF(item)                                                     \
     int merge_##item##_conf(oci_runtime_spec_hooks *dest, oci_runtime_spec_hooks *src) \

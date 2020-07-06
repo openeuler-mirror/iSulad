@@ -27,6 +27,8 @@
 #include <time.h>
 #include <string.h>
 #include <sys/types.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include "utils_string.h"
 #include "utils_array.h"

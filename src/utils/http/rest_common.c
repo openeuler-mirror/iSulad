@@ -13,10 +13,18 @@
  * Description: provide rest common functions
  ******************************************************************************/
 #include "rest_common.h"
+
 #include <dlfcn.h>
 #include <string.h>
+#include <http_parser.h>
+#include <stdlib.h>
+
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "buffer.h"
+#include "http.h"
+#include "parser.h"
+#include "utils_string.h"
 
 typedef size_t (*buffer_strlen_t)(Buffer *buf);
 typedef int (*parse_http_t)(const char *buf, size_t len, struct parsed_http_message *m, enum http_parser_type type);

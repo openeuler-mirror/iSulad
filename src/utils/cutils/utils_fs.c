@@ -15,20 +15,24 @@
 
 #define _GNU_SOURCE
 #include "utils_fs.h"
+
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <linux/magic.h>
-#include <sys/param.h>
-#include <sys/stat.h>
 #include <sys/statfs.h>
 #include <dirent.h>
 #include <stdint.h>
 #include <sys/mount.h>
+
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 #ifndef JFS_SUPER_MAGIC
 #define JFS_SUPER_MAGIC 0x3153464a

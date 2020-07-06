@@ -16,7 +16,10 @@
 #ifndef ISULA_RT_OPS_H
 #define ISULA_RT_OPS_H /* ISULA_RT_OPS_H */
 
+#include <stdbool.h>
+
 #include "runtime_api.h"
+#include "utils.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -13,11 +13,9 @@
  * Description: provide namespace functions
  ******************************************************************************/
 #include "namespace.h"
-#include <string.h>
-#include <stdlib.h>
-#include <limits.h>
 
-#include "isula_libutils/log.h"
+#include <string.h>
+
 #include "utils.h"
 
 char *connected_container(const char *mode)

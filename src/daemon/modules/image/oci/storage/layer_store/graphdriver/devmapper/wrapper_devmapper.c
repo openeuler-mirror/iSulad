@@ -15,11 +15,16 @@
 #define _GNU_SOURCE
 #include <sys/time.h>
 #include <stdio.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "wrapper_devmapper.h"
 #include "isula_libutils/log.h"
-#include "utils_verify.h"
 #include "utils.h"
+
+struct dm_task;
 
 static bool dm_saw_busy = false;
 static bool dm_saw_exist = false;

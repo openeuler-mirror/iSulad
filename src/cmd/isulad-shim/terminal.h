@@ -18,6 +18,8 @@
 
 #include <pthread.h>
 #include <unistd.h>
+#include <stdint.h>
+
 #include "isula_libutils/logger_json_file.h"
 
 #ifdef __cplusplus

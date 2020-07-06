@@ -15,6 +15,10 @@
 #ifndef __CMD_RESTART_H
 #define __CMD_RESTART_H
 
+#include <stdbool.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

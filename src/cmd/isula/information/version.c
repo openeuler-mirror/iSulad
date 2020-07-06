@@ -13,13 +13,19 @@
  * Description: provide container version functions
  ******************************************************************************/
 #include "version.h"
+
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "config.h"
 #include "isula_connect.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "constants.h"
+#include "libisula.h"
 
 const char g_cmd_version_desc[] = "Display information about isula";
 const char g_cmd_version_usage[] = "version";

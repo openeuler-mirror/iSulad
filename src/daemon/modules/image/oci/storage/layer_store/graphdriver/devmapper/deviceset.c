@@ -13,17 +13,23 @@
 * Description: provide devicemapper graphdriver function definition
 ******************************************************************************/
 #include "deviceset.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <libdevmapper.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/sysmacros.h>
 #include <sys/mount.h>
-#include <sys/vfs.h>
+#include <errno.h>
+#include <isula_libutils/image_devmapper_device_info.h>
+#include <isula_libutils/image_devmapper_deviceset_metadata.h>
+#include <isula_libutils/image_devmapper_transaction.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <strings.h>
+#include <sys/statfs.h>
 
 #include "isula_libutils/log.h"
 #include "err_msg.h"
@@ -32,6 +38,14 @@
 #include "devices_constants.h"
 #include "libdevmapper.h"
 #include "driver.h"
+#include "constants.h"
+#include "map.h"
+#include "metadata_store.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_fs.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 #define DM_LOG_FATAL 2
 #define DM_LOG_DEBUG 7

@@ -13,15 +13,22 @@
  * Description: provide image import functions
  ******************************************************************************/
 #include "import.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
+#include <errno.h>
+#include <stdlib.h>
 
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils_verify.h"
 
 const char g_cmd_import_desc[] = "Import the contents from a tarball to create a filesystem image";
 const char g_cmd_import_usage[] = "import file REPOSITORY[:TAG]";

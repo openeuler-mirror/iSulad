@@ -15,6 +15,8 @@
 #ifndef __VERIFY_H
 #define __VERIFY_H
 
+#include <stdbool.h>
+
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"

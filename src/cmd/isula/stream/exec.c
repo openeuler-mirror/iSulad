@@ -13,13 +13,15 @@
  * Description: provide container exec functions
  ******************************************************************************/
 #include <semaphore.h>
-#include <fcntl.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "client_arguments.h"
 #include "exec.h"
@@ -29,6 +31,11 @@
 #include "utils.h"
 #include "isula_commands.h"
 #include "isula_libutils/container_inspect.h"
+#include "connect.h"
+#include "constants.h"
+#include "libisula.h"
+#include "utils_array.h"
+#include "utils_string.h"
 
 const char g_cmd_exec_desc[] = "Run a command in a running container";
 const char g_cmd_exec_usage[] = "exec [OPTIONS] CONTAINER COMMAND [ARG...]";

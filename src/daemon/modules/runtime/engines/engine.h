@@ -18,8 +18,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #include "runtime_api.h"
+
+struct runtime_container_resources_stats_info;
+struct runtime_container_status_info;
 
 #ifdef __cplusplus
 extern "C" {

@@ -14,18 +14,24 @@
  ******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <stdarg.h>
 #include <string.h>
-#include <limits.h>
-#include <sys/utsname.h>
-#include <ctype.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/container_inspect.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/imagetool_image.h>
+#include <isula_libutils/imagetool_image_status.h>
+#include <isula_libutils/imagetool_images_list.h>
+#include <isula_libutils/isulad_daemon_configs.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "image_api.h"
 #include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-
 #include "ext_image.h"
 #include "filters.h"
 

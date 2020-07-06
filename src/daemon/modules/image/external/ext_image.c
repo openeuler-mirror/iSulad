@@ -14,23 +14,19 @@
  ******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <stdarg.h>
 #include <string.h>
 #include <limits.h>
-#include <sys/utsname.h>
-#include <ctype.h>
+#include <errno.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "ext_image.h"
 #include "image_rootfs_handler.h"
 #include "err_msg.h"
+#include "utils_file.h"
 
 #ifdef ENABLE_OCI_IMAGE
-#include "storage.h"
 #include "oci_common_operators.h"
-#include "oci_config_merge.h"
 #endif
 
 bool ext_detect(const char *image_name)

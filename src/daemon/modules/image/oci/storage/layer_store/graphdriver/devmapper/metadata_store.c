@@ -13,11 +13,15 @@
  * Description: provide overlay2 function definition
  ******************************************************************************/
 
-#include <pthread.h>
+#include <isula_libutils/image_devmapper_device_info.h>
+#include <stdlib.h>
+
 #include "metadata_store.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "util_atomic.h"
+#include "map.h"
+#include "utils_array.h"
 
 void devmapper_device_info_ref_inc(devmapper_device_info_t *device_info)
 {

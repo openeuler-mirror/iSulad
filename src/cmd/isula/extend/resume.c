@@ -13,10 +13,18 @@
  * Description: provide container resume functions
  ******************************************************************************/
 #include "resume.h"
+
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_resume_desc[] = "Unpause all processes within one or more containers";
 const char g_cmd_resume_usage[] = "unpause [OPTIONS] CONTAINER [CONTAINER...]";

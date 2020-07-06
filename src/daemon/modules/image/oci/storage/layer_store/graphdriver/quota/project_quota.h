@@ -18,6 +18,7 @@
 #include <sys/mount.h>
 #include <sys/quota.h>
 #include <memory.h>
+#include <pthread.h>
 #include <linux/xattr.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>

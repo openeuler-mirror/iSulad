@@ -13,14 +13,19 @@
  * Description: provide container remove functions
  ******************************************************************************/
 #include "top.h"
-#include <limits.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
-#include "isula_commands.h"
 #include "utils.h"
 #include "isula_libutils/container_inspect.h"
 #include "attach.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_top_desc[] = "Display the running processes of a container";
 const char g_cmd_top_usage[] = "top [OPTIONS] CONTAINER [ps OPTIONS]";

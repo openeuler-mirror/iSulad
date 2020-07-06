@@ -15,7 +15,16 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <linux/limits.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/json_common.h>
+#include <limits.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/prctl.h>
 
 #include "constants.h"
 #include "containers_gc.h"
@@ -27,6 +36,8 @@
 #include "container_api.h"
 #include "runtime_api.h"
 #include "restartmanager.h"
+#include "utils_file.h"
+#include "utils_timestamp.h"
 
 static containers_gc_t g_gc_containers;
 

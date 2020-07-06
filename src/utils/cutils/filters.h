@@ -15,6 +15,9 @@
 #ifndef __FILTERS_DEF_H_
 #define __FILTERS_DEF_H_
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "map.h"
 
 struct filters_args {

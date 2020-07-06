@@ -13,9 +13,12 @@
  * Description: provide container cp functions
  ******************************************************************************/
 #include <limits.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
+#include <isula_libutils/container_path_stat.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "error.h"
 #include "cp.h"
@@ -24,6 +27,11 @@
 #include "path.h"
 #include "isula_connect.h"
 #include "isulad_tar.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "io_wrapper.h"
+#include "libisula.h"
+#include "utils.h"
 
 #define FromContainer 0x01u
 #define ToContainer 0x10u

@@ -12,6 +12,18 @@
 * Create: 2020-05-26
 * Description: isula image import operator implement
 *******************************************************************************/
+#include <errno.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/docker_image_history.h>
+#include <isula_libutils/docker_image_rootfs.h>
+#include <isula_libutils/imagetool_image.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "mediatype.h"
 #include "oci_import.h"
 #include "isula_libutils/log.h"
@@ -23,6 +35,8 @@
 #include "util_archive.h"
 #include "utils_images.h"
 #include "sha256.h"
+#include "utils_file.h"
+#include "utils_timestamp.h"
 
 #define IMPORT_COMMENT "Imported from tarball"
 #define ROOTFS_TYPE "layers"

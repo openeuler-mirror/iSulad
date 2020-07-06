@@ -13,8 +13,11 @@
  * Description: provide container function definition
  ******************************************************************************/
 #include "rootfs.h"
+
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "isula_libutils/storage_rootfs.h"
-#include "constants.h"
 #include "util_atomic.h"
 #include "utils.h"
 #include "isula_libutils/log.h"

@@ -14,10 +14,15 @@
  ******************************************************************************/
 #include <stdlib.h>
 #include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "container_api.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "map.h"
+#include "utils_array.h"
 
 typedef struct memory_store_t {
     map_t *map; // map string container_t

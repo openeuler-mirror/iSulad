@@ -13,6 +13,9 @@
  * Description: provide container remove functions
  ******************************************************************************/
 #include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "rm.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
@@ -20,6 +23,9 @@
 #include "isula_commands.h"
 #include "console.h"
 #include "utils.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils_file.h"
 
 const char g_cmd_delete_desc[] = "Remove one or more containers";
 const char g_cmd_delete_usage[] = "rm [OPTIONS] CONTAINER [CONTAINER...]";

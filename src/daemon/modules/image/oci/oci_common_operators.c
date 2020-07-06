@@ -13,13 +13,15 @@
  * Description: provide image common function definition
  ******************************************************************************/
 #include "oci_common_operators.h"
+
 #include <stdio.h>
-#include <unistd.h>
-#include <stdarg.h>
 #include <string.h>
-#include <limits.h>
-#include <sys/utsname.h>
-#include <ctype.h>
+#include <isula_libutils/imagetool_image.h>
+#include <isula_libutils/imagetool_image_status.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_image_spec.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -27,9 +29,11 @@
 #include "oci_config_merge.h"
 #include "image_rootfs_handler.h"
 #include "err_msg.h"
-
 #include "filters.h"
 #include "storage.h"
+#include "map.h"
+#include "utils_timestamp.h"
+#include "utils_verify.h"
 
 bool oci_detect(const char *image_name)
 {

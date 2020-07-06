@@ -15,7 +15,11 @@
 #ifndef __CMD_STATS_H
 #define __CMD_STATS_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {

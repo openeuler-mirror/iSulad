@@ -13,8 +13,11 @@
  * Description: provide image function definition
  ******************************************************************************/
 #include "image_type.h"
+
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "isula_libutils/storage_image.h"
-#include "constants.h"
 #include "util_atomic.h"
 #include "utils.h"
 #include "isula_libutils/log.h"

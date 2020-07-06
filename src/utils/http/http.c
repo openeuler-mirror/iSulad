@@ -13,13 +13,17 @@
  * Description: provide container http function
  ******************************************************************************/
 #include <curl/curl.h>
-#include <curl/easy.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "http.h"
 #include "buffer.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "utils_array.h"
+#include "utils_file.h"
 
 size_t fwrite_buffer(const char *ptr, size_t eltsize, size_t nmemb, void *buffer_)
 {

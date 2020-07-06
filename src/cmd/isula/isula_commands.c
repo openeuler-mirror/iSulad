@@ -19,6 +19,9 @@
 #include <limits.h>
 #include <pthread.h>
 #include <syslog.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "client_arguments.h"
 #include "config.h"
@@ -26,6 +29,8 @@
 #include "utils.h"
 #include "console.h"
 #include "constants.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 static void send_msg_to_syslog(int argc, const char **argv)
 {

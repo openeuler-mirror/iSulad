@@ -13,15 +13,26 @@
 * Description: provide oci image operator definition
 *******************************************************************************/
 #include "image_rootfs_handler.h"
+
 #include <grp.h>
 #include <pwd.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <isula_libutils/host_config.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "isula_libutils/log.h"
 #include "err_msg.h"
 #include "utils.h"
 #include "path.h"
+#include "utils_convert.h"
+#include "utils_file.h"
 
 #define MINUID 0
 #define MAXUID (((1LL << 31) - 1))

@@ -16,6 +16,9 @@
 #ifndef __EXECUTION_NET_WORK_H_
 #define __EXECUTION_NET_WORK_H_
 
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/host_config.h>
+
 #include "callback.h"
 #include "container_unix.h"
 

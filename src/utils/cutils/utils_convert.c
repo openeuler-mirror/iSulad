@@ -18,10 +18,8 @@
 
 #include <errno.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <sys/types.h>
 
 static inline bool is_invalid_error_str(const char *err_str, const char *numstr)
 {

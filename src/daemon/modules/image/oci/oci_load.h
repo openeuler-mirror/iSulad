@@ -15,12 +15,15 @@
 #ifndef __IMAGE_OCI_LOAD_H
 #define __IMAGE_OCI_LOAD_H
 
+#include <stddef.h>
+
 #include "image_api.h"
 #include "isula_libutils/image_manifest_items.h"
 #include "isula_libutils/oci_image_manifest.h"
 #include "isula_libutils/oci_image_spec.h"
 #include "isula_libutils/json_common.h"
 #include "err_msg.h"
+#include "utils_timestamp.h"
 
 #ifdef __cplusplus
 extern "C" {

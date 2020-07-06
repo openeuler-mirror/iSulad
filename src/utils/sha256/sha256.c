@@ -16,18 +16,16 @@
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 #include <fcntl.h> /* Obtain O_* constant definitions */
 #include <unistd.h>
-#include <stdalign.h>
-#include <stdint.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/wait.h>
 #include <openssl/sha.h>
 
 #include "sha256.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 #define BLKSIZE 32768
 

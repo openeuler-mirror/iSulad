@@ -16,6 +16,8 @@
 #include "buffer.h"
 
 #include <string.h>
+#include <stdint.h>
+
 #include "isula_libutils/log.h"
 #include "utils.h"
 

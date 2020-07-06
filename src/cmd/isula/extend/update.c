@@ -13,12 +13,16 @@
  * Description: provide container update functions
  ******************************************************************************/
 #include <string.h>
-#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "client_arguments.h"
 #include "update.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_update_desc[] = "Update configuration of one or more containers";
 const char g_cmd_update_usage[] = "update [OPTIONS] CONTAINER [CONTAINER...]";

@@ -13,22 +13,34 @@
  * Description: provide overlay2 function definition
  ******************************************************************************/
 #include "driver_overlay2.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/mount.h>
+#include <errno.h>
+#include <stdio.h>
+#include <strings.h>
 
-#include "constants.h"
 #include "isula_libutils/log.h"
-#include "err_msg.h"
 #include "path.h"
 #include "utils.h"
 #include "util_archive.h"
 #include "project_quota.h"
+#include "driver.h"
+#include "driver_overlay2_types.h"
+#include "image_api.h"
+#include "utils_array.h"
+#include "utils_convert.h"
+#include "utils_file.h"
+#include "utils_fs.h"
+#include "utils_string.h"
+#include "utils_timestamp.h"
+
+struct io_read_wrapper;
 
 #define OVERLAY_LINK_DIR "l"
 #define OVERLAY_LAYER_DIFF "diff"

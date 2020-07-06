@@ -14,14 +14,21 @@
 *******************************************************************************/
 #include "oci_pull.h"
 
+#include <isula_libutils/imagetool_image.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_images.h"
-#include "oci_common_operators.h"
 #include "registry.h"
 #include "isulad_config.h"
 #include "err_msg.h"
 #include "storage.h"
+#include "utils_array.h"
+#include "utils_base64.h"
+#include "utils_string.h"
 
 static int decode_auth(char *auth, char **username, char **password)
 {

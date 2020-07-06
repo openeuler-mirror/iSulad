@@ -15,13 +15,22 @@
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 #include "oci_config_merge.h"
-#include <fcntl.h> /* Obtain O_* constant definitions */
+
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/imagetool_image.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_image_spec.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "err_msg.h"
+#include "utils_array.h"
+#include "utils_string.h"
 
 static void oci_image_merge_working_dir(const char *working_dir, container_config *container_spec)
 {

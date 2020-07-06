@@ -15,6 +15,10 @@
 #ifndef __SERVICE_CALLBACK_H_
 #define __SERVICE_CALLBACK_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+
 #include "err_msg.h"
 #include "io_wrapper.h"
 #include "isula_libutils/container_get_id_request.h"
@@ -78,6 +82,7 @@
 #include "isula_libutils/image_logout_response.h"
 #include "events_format.h"
 #include "stream_wrapper.h"
+#include "utils_timestamp.h"
 
 #ifdef __cplusplus
 extern "C" {

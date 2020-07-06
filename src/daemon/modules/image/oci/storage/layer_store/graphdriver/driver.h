@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <isula_libutils/imagetool_fs_info.h>
+
 #include "isula_libutils/container_inspect.h"
 #include "isula_libutils/json_common.h"
 #include "io_wrapper.h"
@@ -26,6 +28,10 @@
 #include "storage.h"
 #include "image_api.h"
 #include "isula_libutils/container_inspect.h"
+
+struct graphdriver_status;
+struct io_read_wrapper;
+struct storage_module_init_options;
 
 #ifdef __cplusplus
 extern "C" {

@@ -13,11 +13,20 @@
  * Description: provide container export functions
  ******************************************************************************/
 #include "export.h"
+
 #include <limits.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_export_desc[] = "export container";
 const char g_cmd_export_usage[] = "export [command options] [ID|NAME]";

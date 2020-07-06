@@ -13,11 +13,15 @@
  * Description: provide plugin definition
  ******************************************************************************/
 
+#include <isula_libutils/defs.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_config_linux.h>
+#include <stdlib.h>
+
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/oci_runtime_pspec.h"
-#include "plugin_api.h"
 #include "pspec.h"
 
 /*

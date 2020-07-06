@@ -13,16 +13,32 @@
  * Description: provide container supervisor functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "service_container_api.h"
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <sys/mount.h>
 #include <sys/eventfd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/container_exec_request.h>
+#include <isula_libutils/container_exec_response.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <limits.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
+#include "service_container_api.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "mainloop.h"
 #include "err_msg.h"
 #include "events_sender_api.h"
 #include "image_api.h"
@@ -35,6 +51,13 @@
 #include "runtime_api.h"
 #include "error.h"
 #include "io_handler.h"
+#include "constants.h"
+#include "event_type.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_fs.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 int set_container_to_removal(const container_t *cont)
 {

@@ -15,6 +15,10 @@
 #ifndef __IMAGE_OCI_IMAGE_H
 #define __IMAGE_OCI_IMAGE_H
 
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/isulad_daemon_configs.h>
+
 #include "image_api.h"
 #include "isula_libutils/oci_image_spec.h"
 #include "oci_common_operators.h"

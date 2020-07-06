@@ -13,15 +13,13 @@
  * Description: provide container isulad functions
  ******************************************************************************/
 #include "events_format.h"
-#include <unistd.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <ctype.h>
-#include <sys/types.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "utils_array.h"
 
 /* events copy */
 int event_copy(const struct isulad_events_format *src, struct isulad_events_format *dest)

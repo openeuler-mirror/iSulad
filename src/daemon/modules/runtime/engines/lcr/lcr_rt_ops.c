@@ -14,8 +14,14 @@
  ********************************************************************************/
 
 #include <stdio.h>
-#include <unistd.h>
 #include <limits.h>
+#include <errno.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 #include "lcr_rt_ops.h"
 #include "isula_libutils/log.h"
@@ -24,6 +30,7 @@
 #include "isulad_config.h"
 #include "err_msg.h"
 #include "runtime_api.h"
+#include "utils_file.h"
 
 bool rt_lcr_detect(const char *runtime)
 {

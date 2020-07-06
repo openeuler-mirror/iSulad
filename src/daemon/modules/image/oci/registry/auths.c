@@ -14,17 +14,24 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <limits.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "auths.h"
 #include "aes.h"
 #include "isula_libutils/registry_auths.h"
+#include "utils_aes.h"
+#include "utils_array.h"
+#include "utils_base64.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 static int decode_auth(char *encoded, char **username, char **password)
 {

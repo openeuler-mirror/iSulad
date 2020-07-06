@@ -16,6 +16,10 @@
 #define __ISULAD_CONF_H
 
 #include <stdint.h>
+#include <isula_libutils/host_config.h>
+#include <pthread.h>
+#include <stdbool.h>
+
 #include "daemon_arguments.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/isulad_daemon_configs.h"

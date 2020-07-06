@@ -13,21 +13,21 @@
  * Description: provide container restart manager functions
  ******************************************************************************/
 #include "restartmanager.h"
+
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <linux/limits.h>
 #include <time.h>
 #include <pthread.h>
+#include <isula_libutils/host_config.h>
+#include <sys/time.h>
 
-#include "error.h"
 #include "isula_libutils/log.h"
-#include "isulad_config.h"
 #include "utils.h"
 #include "service_container_api.h"
 #include "container_unix.h"
+#include "err_msg.h"
+#include "util_atomic.h"
 
 #define backoffMultipulier 2U
 // unit nanos

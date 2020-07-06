@@ -15,14 +15,24 @@
 #include "images.h"
 
 #include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
 #include <string.h>
+#include <termios.h> // IWYU pragma: keep
+#include <errno.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_verify.h"
 
 #define IMAGES_OPTIONS(cmdargs)                                                                                        \
     { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display image names", NULL },               \

@@ -14,12 +14,17 @@
  ******************************************************************************/
 #include <stdlib.h>
 #include <string.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/defs.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-#include "container_unix.h"
 #include "container_state.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "error.h"
+#include "constants.h"
+#include "utils_timestamp.h"
 
 /* container state lock */
 void container_state_lock(container_state_t *state)

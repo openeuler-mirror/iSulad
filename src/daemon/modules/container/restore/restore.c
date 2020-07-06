@@ -14,10 +14,14 @@
  ********************************************************************************/
 
 #include <stdio.h>
-#include <dlfcn.h>
 #include <unistd.h>
 #include <limits.h>
-#include <pthread.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/host_config.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "isulad_config.h"
 #include "isula_libutils/log.h"
@@ -26,12 +30,15 @@
 #include "supervisor.h"
 #include "containers_gc.h"
 #include "container_unix.h"
-#include "error.h"
 #include "image_api.h"
 #include "runtime_api.h"
 #include "service_container_api.h"
 #include "restartmanager.h"
-#include "health_check.h"
+#include "constants.h"
+#include "utils.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_timestamp.h"
 
 /* restore supervisor */
 static int restore_supervisor(const container_t *cont)

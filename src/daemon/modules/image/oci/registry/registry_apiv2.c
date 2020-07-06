@@ -14,16 +14,17 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <limits.h>
-#include <sys/utsname.h>
+#include <http_parser.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <strings.h>
 
 #include "registry_type.h"
 #include "isula_libutils/log.h"
-#include "buffer.h"
 #include "http.h"
 #include "registry_apiv2.h"
 #include "http_request.h"
@@ -35,6 +36,10 @@
 #include "auths.h"
 #include "err_msg.h"
 #include "sha256.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-Api-Version: registry/2.0"
 #define MAX_ACCEPT_LEN 128

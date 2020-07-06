@@ -15,6 +15,11 @@
 
 #include "layer.h"
 
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/storage_layer.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "constants.h"
 #include "isula_libutils/storage_mount_point.h"
 #include "util_atomic.h"

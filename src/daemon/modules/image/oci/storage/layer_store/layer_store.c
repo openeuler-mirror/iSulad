@@ -18,6 +18,13 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <limits.h>
+#include <dirent.h>
+#include <isula_libutils/container_inspect.h>
+#include <isula_libutils/storage_layer.h>
+#include <isula_libutils/storage_mount_point.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "storage.h"
 #include "isula_libutils/json_common.h"
@@ -27,10 +34,12 @@
 #include "map.h"
 #include "utils_timestamp.h"
 #include "utils.h"
-#include "util_atomic.h"
 #include "utils_array.h"
 #include "utils_file.h"
 #include "isula_libutils/log.h"
+#include "constants.h"
+
+struct io_read_wrapper;
 
 typedef struct __layer_store_metadata_t {
     pthread_rwlock_t rwlock;

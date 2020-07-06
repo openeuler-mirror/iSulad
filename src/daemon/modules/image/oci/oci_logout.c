@@ -13,7 +13,9 @@
 * Description: isula logout operator implement
 *******************************************************************************/
 #include "oci_logout.h"
-#include "utils.h"
+
+#include <stddef.h>
+
 #include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "registry.h"

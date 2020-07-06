@@ -13,9 +13,8 @@
  * Description: provide rb tree functions
  ******************************************************************************/
 #include "rb_tree.h"
+
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"

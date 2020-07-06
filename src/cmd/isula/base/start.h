@@ -15,9 +15,11 @@
 #ifndef __CMD_START_H
 #define __CMD_START_H
 
+#include <termios.h>
+#include <stdbool.h>
+
 #include "client_arguments.h"
 #include "isula_commands.h"
-#include <termios.h>
 
 #ifdef __cplusplus
 extern "C" {

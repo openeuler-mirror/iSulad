@@ -13,15 +13,18 @@
  * Description: provide image tag functions
  ******************************************************************************/
 #include "tag.h"
+
 #include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
-#include <string.h>
+#include <stdlib.h>
 
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils_verify.h"
 
 const char g_cmd_tag_desc[] = "Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE";
 const char g_cmd_tag_usage[] = "tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]";

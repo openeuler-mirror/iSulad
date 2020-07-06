@@ -15,13 +15,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
-#include <unistd.h>
 #include <stdbool.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-#include <dirent.h>
+#include <errno.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/docker_seccomp.h>
+#include <isula_libutils/json_common.h>
+#include <limits.h>
+#include <stdint.h>
+#include <strings.h>
 
 #include "isula_libutils/log.h"
 #include "pack_config.h"
@@ -30,6 +31,11 @@
 #include "isula_libutils/parse_common.h"
 #include "path.h"
 #include "isula_libutils/container_config.h"
+#include "utils_array.h"
+#include "utils_convert.h"
+#include "utils_file.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 static bool parse_restart_policy(const char *policy, host_config_restart_policy **rp)
 {

@@ -16,6 +16,9 @@
 #ifndef __EXECUTION_CREATE_H_
 #define __EXECUTION_CREATE_H_
 
+#include <isula_libutils/container_create_request.h>
+#include <isula_libutils/container_create_response.h>
+
 #include "callback.h"
 #include "container_unix.h"
 

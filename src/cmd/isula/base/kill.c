@@ -12,11 +12,18 @@
  * Create: 2018-11-08
  * Description: provide container kill functions
  ******************************************************************************/
-#include "error.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "client_arguments.h"
 #include "kill.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils.h"
+#include "utils_verify.h"
 
 const char g_cmd_kill_desc[] = "Kill one or more  running containers";
 const char g_cmd_kill_usage[] = "kill [OPTIONS] CONTAINER [CONTAINER...]";

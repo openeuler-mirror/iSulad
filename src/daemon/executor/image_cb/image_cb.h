@@ -16,6 +16,9 @@
 #ifndef __IMAGE_CB_H_
 #define __IMAGE_CB_H_
 
+#include <isula_libutils/image_list_images_request.h>
+#include <isula_libutils/image_list_images_response.h>
+
 #include "callback.h"
 
 #ifdef __cplusplus

@@ -15,22 +15,26 @@
 
 #define _GNU_SOURCE
 #include "utils_file.h"
+
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <regex.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <limits.h>
 
 #include "constants.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "path.h"
 #include "map.h"
+#include "utils_array.h"
+#include "utils_string.h"
 
 static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size,
                                                    int64_t *total_inode, map_t *map);

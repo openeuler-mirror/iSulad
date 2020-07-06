@@ -19,8 +19,12 @@
 #include <stdbool.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "driver.h"
+
+struct dm_task;
 
 #ifdef __cplusplus
 extern "C" {

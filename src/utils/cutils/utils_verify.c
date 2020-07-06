@@ -15,17 +15,22 @@
 
 #define _GNU_SOURCE
 #include "utils_verify.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
 #include <sys/stat.h>
-#ifdef HAVE_LIBCAP_H
-#include <sys/capability.h>
-#endif
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/capability.h>
+#include <stdio.h>
+#include <strings.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_regex.h"
+#include "utils_array.h"
+#include "utils_string.h"
 
 const char *g_all_caps[] = {
     "CAP_CHOWN",

@@ -12,11 +12,19 @@
  * Create: 2018-11-08
  * Description: provide container events functions
  ******************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "error.h"
 #include "events.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils.h"
+#include "utils_timestamp.h"
 
 const char g_cmd_events_desc[] = "Get real time events from the server";
 const char g_cmd_events_usage[] = "events [command options]";

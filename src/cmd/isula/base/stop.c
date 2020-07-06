@@ -13,10 +13,16 @@
  * Description: provide container stop functions
  ******************************************************************************/
 #include "stop.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_stop_desc[] = "Stop one or more containers";
 const char g_cmd_stop_usage[] = "stop [OPTIONS] CONTAINER [CONTAINER...]";

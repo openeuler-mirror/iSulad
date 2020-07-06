@@ -14,15 +14,12 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <limits.h>
+#include <stdbool.h>
 
 #include "isula_libutils/log.h"
-#include "utils.h"
 #include "aes.h"
+#include "utils_aes.h"
 
 int aes_decode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len)
 {

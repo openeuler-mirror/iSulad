@@ -13,7 +13,6 @@
  * Description: provide container configure definition
  ******************************************************************************/
 #include <unistd.h>
-#include <sys/types.h>
 #include <grp.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -23,6 +22,11 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <errno.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/isulad_daemon_configs.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_spec.h>
 
 #include "constants.h"
 #include "isula_libutils/log.h"
@@ -30,6 +34,11 @@
 #include "isulad_config.h"
 #include "sysinfo.h"
 #include "err_msg.h"
+#include "daemon_arguments.h"
+#include "utils_array.h"
+#include "utils_convert.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 #define ENGINE_ROOTPATH_NAME "engines"
 #define GRAPH_ROOTPATH_CHECKED_FLAG "NEED_CHECK"

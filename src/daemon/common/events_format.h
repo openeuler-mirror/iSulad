@@ -17,6 +17,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
+
 #include "utils_timestamp.h"
 
 #ifdef __cplusplus

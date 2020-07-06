@@ -13,22 +13,20 @@
  * Description: provide container collector definition
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "events_sender_api.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <signal.h>
-#include <poll.h>
-#include <sys/prctl.h>
 #include <regex.h>
 #include <errno.h>
+#include <fcntl.h>
 
-#include "error.h"
+#include "events_sender_api.h"
 #include "isula_libutils/log.h"
 #include "isulad_config.h"
+#include "event_type.h"
+#include "utils.h"
+#include "utils_file.h"
 
 /* isulad monitor fifo send */
 static void isulad_monitor_fifo_send(const struct monitord_msg *msg)

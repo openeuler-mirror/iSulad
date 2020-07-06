@@ -17,6 +17,8 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include <stdbool.h>
+
 #include "isula_libutils/host_config.h"
 #include "container_api.h"
 

@@ -16,6 +16,14 @@
 #define __EXT_IMAGE_H
 
 #include <stdint.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/imagetool_images_list.h>
+#include <isula_libutils/isulad_daemon_configs.h>
+#include <stdbool.h>
+
 #include "image_api.h"
 
 bool ext_detect(const char *image_name);

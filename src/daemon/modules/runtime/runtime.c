@@ -14,12 +14,7 @@
  ******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <stdarg.h>
-#include <string.h>
-#include <limits.h>
-#include <sys/utsname.h>
-#include <ctype.h>
+#include <stdbool.h>
 
 #include "runtime_api.h"
 #include "engine.h"

@@ -16,6 +16,9 @@
 #define __SPECS_EXTEND_H__
 
 #include <stdint.h>
+#include <isula_libutils/defs.h>
+#include <stddef.h>
+
 #include "err_msg.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config_v2.h"

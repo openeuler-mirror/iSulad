@@ -15,6 +15,9 @@
 #ifndef __METADATA_STORE_H
 #define __METADATA_STORE_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "devices_constants.h"
 #include "isula_libutils/image_devmapper_device_info.h"
 

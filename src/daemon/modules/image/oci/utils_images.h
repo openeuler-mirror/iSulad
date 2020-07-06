@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <stddef.h>
+
 #include "isula_libutils/docker_image_config_v2.h"
 #include "isula_libutils/registry_manifest_schema1.h"
 #include "isula_libutils/image_manifest_v1_compatibility.h"

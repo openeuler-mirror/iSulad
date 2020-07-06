@@ -13,10 +13,24 @@
  * Description: provide quota function definition
  ******************************************************************************/
 #include "project_quota.h"
+
 #include <pthread.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <linux/dqblk_xfs.h>
+#include <linux/quota.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/quota.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "utils.h"
-#include "utils_string.h"
 #include "isula_libutils/log.h"
 
 // define for quotactl commands

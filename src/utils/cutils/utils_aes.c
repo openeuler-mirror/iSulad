@@ -16,16 +16,17 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
+#include <openssl/ossl_typ.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_aes.h"
 #include "openssl/aes.h"
 #include "openssl/evp.h"
+#include "utils_file.h"
 
 #define AES_256_CFB_IV_LEN 16
 

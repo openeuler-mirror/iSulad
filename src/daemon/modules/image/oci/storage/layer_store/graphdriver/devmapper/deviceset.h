@@ -16,8 +16,17 @@
 #define __GRAPHDRIVER_DEVICESET_H
 
 #include <pthread.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include "driver.h"
 #include "metadata_store.h"
+
+struct device_set;
+struct driver_mount_opts;
+struct graphdriver;
 
 #ifdef __cplusplus
 extern "C" {

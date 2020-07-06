@@ -14,24 +14,24 @@
  ******************************************************************************/
 #define _GNU_SOURCE
 #include "image_store.h"
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/types.h>
-#include <linux/limits.h>
+
 #include <libgen.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
-#include <stddef.h>
 #include <sha256.h>
 #include <isula_libutils/storage_image.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/imagetool_images_list.h>
+#include <isula_libutils/json_common.h>
+#include <limits.h>
+#include <pthread.h>
+#include <stdlib.h>
 
 #include "utils.h"
 #include "utils_file.h"
 #include "utils_images.h"
 #include "isula_libutils/log.h"
 #include "constants.h"
-
 #include "utils_array.h"
 #include "utils_string.h"
 #include "utils_regex.h"
@@ -41,7 +41,6 @@
 #include "utils_convert.h"
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/docker_image_config_v2.h"
-#include "isula_libutils/oci_image_spec.h"
 #include "isula_libutils/registry_manifest_schema1.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/oci_image_manifest.h"
@@ -49,6 +48,9 @@
 #include "registry_type.h"
 #include "mediatype.h"
 #include "storage.h"
+#include "image_type.h"
+#include "linked_list.h"
+#include "utils_verify.h"
 
 // the name of the big data item whose contents we consider useful for computing a "digest" of the
 // image, by which we can locate the image later.

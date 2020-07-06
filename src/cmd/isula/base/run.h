@@ -15,9 +15,14 @@
 #ifndef __CMD_RUN_H
 #define __CMD_RUN_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "create.h"
 #include "start.h"
 #include "wait.h"
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {

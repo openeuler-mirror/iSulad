@@ -15,6 +15,8 @@
 #ifndef __ISULAD_PATH_H_
 #define __ISULAD_PATH_H_
 
+#include <stdbool.h>
+#include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

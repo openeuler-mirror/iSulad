@@ -13,28 +13,28 @@
  * Description: provide tar functions
  ********************************************************************************/
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "stdbool.h"
 #include <sys/types.h>
 #include <sys/xattr.h>
-#include <sys/wait.h>
-#include <libgen.h>
-#include <limits.h>
-#include <signal.h>
 #include <sys/stat.h>
 #include <archive.h>
 #include <archive_entry.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdint.h>
 
+#include "stdbool.h"
 #include "util_archive.h"
 #include "utils.h"
-#include "path.h"
 #include "isula_libutils/log.h"
-#include "error.h"
-#include "isula_libutils/json_common.h"
+#include "io_wrapper.h"
+#include "utils_file.h"
+
+struct archive;
+struct archive_entry;
 
 #define ARCHIVE_READ_BUFFER_SIZE (10 * 1024)
 

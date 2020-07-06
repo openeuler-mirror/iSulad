@@ -18,6 +18,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pthread.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <stdint.h>
+
 #include "storage.h"
 #include "utils_timestamp.h"
 #include "map.h"
@@ -25,6 +28,8 @@
 #include "image_type.h"
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/imagetool_images_list.h"
+
+struct storage_module_init_options;
 
 #ifdef __cplusplus
 extern "C" {

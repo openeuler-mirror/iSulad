@@ -17,11 +17,24 @@
 
 #include <unistd.h>
 #include <sys/wait.h>
-
 #include <limits.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/isulad_daemon_configs.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/time.h>
+#include <time.h>
+
 #include "isula_rt_ops.h"
 #include "isula_libutils/log.h"
-#include "error.h"
 #include "runtime_api.h"
 #include "constants.h"
 #include "isula_libutils/shim_client_process_state.h"
@@ -30,6 +43,9 @@
 #include "isulad_config.h"
 #include "utils_string.h"
 #include "err_msg.h"
+#include "daemon_arguments.h"
+#include "utils_convert.h"
+#include "utils_file.h"
 
 #define SHIM_BINARY "isulad-shim"
 #define SHIM_LOG_SIZE ((BUFSIZ - 100) / 2)

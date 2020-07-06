@@ -13,10 +13,12 @@
  * Description: provide container start  functions
  ******************************************************************************/
 #include <semaphore.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <pthread.h>
-#include <malloc.h>
+#include <termios.h> // IWYU pragma: keep
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "error.h"
 #include "client_arguments.h"
@@ -26,6 +28,9 @@
 #include "console.h"
 #include "utils.h"
 #include "isula_commands.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_start_desc[] = "Start one or more stopped containers";
 const char g_cmd_start_usage[] = "start [OPTIONS] CONTAINER [CONTAINER...]";

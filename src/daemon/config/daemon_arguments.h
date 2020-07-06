@@ -17,6 +17,9 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <stdint.h>
+
 #include "isula_libutils/isulad_daemon_configs.h"
 #include "isula_libutils/oci_runtime_hooks.h"
 #include "isula_libutils/host_config.h"

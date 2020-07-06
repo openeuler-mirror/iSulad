@@ -16,11 +16,12 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/buffer.h>
+#include <openssl/evp.h>
+#include <openssl/ossl_typ.h>
 
 #include "isula_libutils/log.h"
-#include "utils.h"
 #include "utils_base64.h"
-#include "openssl/pem.h"
 #include "openssl/bio.h"
 
 size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t out_len)

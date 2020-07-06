@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <termios.h>
 #include <semaphore.h>
+#include <stddef.h>
+
 #include "io_wrapper.h"
 #include "constants.h"
 

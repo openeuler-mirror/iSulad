@@ -12,15 +12,20 @@
  * Create: 2018-11-08
  * Description: provide container inspect functions
  ******************************************************************************/
-#include "error.h"
+#include <regex.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <yajl/yajl_tree.h>
+
 #include "inspect.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
-#include "console.h"
 #include "utils.h"
-#include "isula_libutils/json_common.h"
-#include <regex.h>
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_inspect_desc[] = "Return low-level information on a container or image";
 const char g_cmd_inspect_usage[] = "inspect [options] CONTAINER|IMAGE [CONTAINER|IMAGE...]";

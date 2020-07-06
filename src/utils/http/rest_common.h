@@ -15,9 +15,13 @@
 #ifndef __REST_COMMON_H
 #define __REST_COMMON_H
 
+#include <stddef.h>
+
 #include "http/buffer.h"
 #include "http/http.h"
 #include "parser.h"
+
+struct parsed_http_message;
 
 #ifdef __cplusplus
 extern "C" {

@@ -16,10 +16,22 @@
 #define __GRAPHDRIVER_DEVMAPPER_H
 
 #include <pthread.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include "driver.h"
 #include "map.h"
 #include "isula_libutils/image_devmapper_transaction.h"
 #include "isula_libutils/image_devmapper_deviceset_metadata.h"
+
+struct driver_create_opts;
+struct driver_mount_opts;
+struct graphdriver;
+struct graphdriver_status;
+struct io_read_wrapper;
 
 #ifdef __cplusplus
 extern "C" {

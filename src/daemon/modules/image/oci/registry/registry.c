@@ -14,21 +14,26 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
+#include <isula_libutils/docker_image_rootfs.h>
+#include <isula_libutils/imagetool_image.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_image_content_descriptor.h>
+#include <isula_libutils/oci_image_manifest.h>
+#include <isula_libutils/oci_image_spec.h>
+#include <pthread.h>
+#include <stdlib.h>
 
 #include "mediatype.h"
 #include "isula_libutils/log.h"
-#include "registry_type.h"
 #include "registry.h"
 #include "utils.h"
-#include "oci_common_operators.h"
 #include "registry_apiv2.h"
 #include "auths.h"
-#include "certs.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/registry_manifest_schema1.h"
 #include "isula_libutils/docker_image_config_v2.h"
@@ -42,6 +47,10 @@
 #include "storage.h"
 #include "constants.h"
 #include "utils_images.h"
+#include "utils_file.h"
+#include "utils_string.h"
+#include "utils_timestamp.h"
+#include "utils_verify.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 

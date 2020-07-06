@@ -15,8 +15,12 @@
 #ifndef __CMD_EXEC_H
 #define __CMD_EXEC_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "client_arguments.h"
 #include "attach.h"
+#include "command_parser.h"
 
 #define EXEC_OPTIONS(cmdargs)                                                                                    \
     {                                                                                                            \

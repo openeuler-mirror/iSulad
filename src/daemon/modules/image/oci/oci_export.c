@@ -12,6 +12,9 @@
 * Create: 2020-06-01
 * Description: isula image export operator implement
 *******************************************************************************/
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "storage.h"
 #include "oci_export.h"
 #include "isula_libutils/log.h"

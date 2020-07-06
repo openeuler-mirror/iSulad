@@ -38,7 +38,6 @@ typedef enum {
 } command_option_type_t;
 
 struct _command;
-
 struct command_option;
 
 typedef int (*command_callback_t)(struct command_option *options, const char *arg);

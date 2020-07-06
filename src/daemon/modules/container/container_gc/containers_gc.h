@@ -16,6 +16,7 @@
 #define __ISULAD_CONTAINER_GC_H__
 
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "err_msg.h"
 #include "linked_list.h"

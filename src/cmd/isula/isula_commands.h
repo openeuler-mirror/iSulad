@@ -15,8 +15,10 @@
 #ifndef __COMMAND_H
 #define __COMMAND_H
 
-#include "client_arguments.h"
 #include <semaphore.h>
+#include <stdbool.h>
+
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {

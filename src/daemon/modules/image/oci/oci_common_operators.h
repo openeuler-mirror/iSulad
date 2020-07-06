@@ -16,6 +16,13 @@
 #define __OCI_COMMON_OPERATORS_H
 
 #include <stdint.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/imagetool_images_list.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "image_api.h"
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/oci_image_spec.h"

@@ -14,6 +14,8 @@
  ******************************************************************************/
 #include "isula_connect.h"
 
+#include <string.h>
+
 
 #ifdef GRPC_CONNECTOR
 #include "grpc_client.h"

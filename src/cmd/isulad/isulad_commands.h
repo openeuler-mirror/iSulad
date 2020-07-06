@@ -14,6 +14,10 @@
  ******************************************************************************/
 #ifndef __ISULAD_COMMAND_H
 #define __ISULAD_COMMAND_H
+#include <isula_libutils/isulad_daemon_configs.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "daemon_arguments.h"
 #include "command_parser.h"
 

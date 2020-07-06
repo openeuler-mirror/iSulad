@@ -12,13 +12,16 @@
  * Create: 2018-11-08
  * Description: provide container restart functions
  ******************************************************************************/
-#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "restart.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_restart_desc[] = "Restart one or more containers";
 const char g_cmd_restart_usage[] = "restart [OPTIONS] CONTAINER [CONTAINER...]";

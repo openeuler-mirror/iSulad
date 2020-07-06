@@ -13,15 +13,13 @@
  * Description: provide container isulad functions
  ******************************************************************************/
 #include "err_msg.h"
-#include <unistd.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <ctype.h>
 #include <stdarg.h>
-#include <sys/types.h>
 
 #include "utils.h"
+#include "utils_string.h"
 
 // record the errno
 __thread char *g_isulad_errmsg = NULL;

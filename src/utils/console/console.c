@@ -13,20 +13,22 @@
  * Description: provide console definition
  ******************************************************************************/
 #include <unistd.h>
-#include <sys/epoll.h>
-#include <sys/types.h>
 #include <limits.h>
-#include <termios.h>
-#include <pthread.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h> // IWYU pragma: keep
+#include <errno.h>
+#include <fcntl.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "console.h"
 #include "mainloop.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "constants.h"
+#include "utils_file.h"
 
 static ssize_t fd_write_function(void *context, const void *data, size_t len)
 {

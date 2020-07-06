@@ -13,15 +13,17 @@
  * Description: provide container remove functions
  ******************************************************************************/
 #include "rmi.h"
+
 #include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_rmi_desc[] = "Remove one or more images";
 const char g_cmd_rmi_usage[] = "rmi [OPTIONS] IMAGE [IMAGE...]";

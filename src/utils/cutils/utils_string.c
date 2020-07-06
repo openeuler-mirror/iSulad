@@ -15,13 +15,19 @@
 
 #define _GNU_SOURCE
 #include "utils_string.h"
+
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
+#include <strings.h>
+
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "map.h"
+#include "utils_array.h"
+#include "utils_convert.h"
 
 struct unit_map_def {
     int64_t mltpl;

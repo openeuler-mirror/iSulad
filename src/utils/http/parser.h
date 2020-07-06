@@ -40,6 +40,8 @@
 #ifndef _PARSER_H
 #define _PARSER_H
 
+#include <stddef.h>
+
 #include "http_parser.h"
 
 #undef TRUE

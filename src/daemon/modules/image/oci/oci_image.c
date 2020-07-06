@@ -14,8 +14,9 @@
 *******************************************************************************/
 #include "oci_image.h"
 
-#include <pthread.h>
-#include <semaphore.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "isula_libutils/log.h"
 #include "oci_pull.h"
@@ -29,6 +30,10 @@
 #include "oci_import.h"
 #include "oci_export.h"
 #include "err_msg.h"
+#include "oci_common_operators.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 

@@ -17,8 +17,8 @@
 
 #include <stdint.h>
 #include <pthread.h>
-#include "linked_list.h"
 
+#include "linked_list.h"
 #include "container_api.h"
 #include "events_format.h"
 

@@ -13,13 +13,19 @@
  * Description: provide container info functions
  ******************************************************************************/
 #include "info.h"
+
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "utils.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
-#include "config.h"
 #include "isula_connect.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_info_desc[] = "Display system-wide information";
 const char g_cmd_info_usage[] = "info";

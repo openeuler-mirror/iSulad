@@ -13,39 +13,31 @@
  * Description: provide container specs functions
  ******************************************************************************/
 #include "specs_security.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
-#include <unistd.h>
 #include <stdbool.h>
-#include <sys/sysmacros.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <sys/utsname.h>
-#include <sched.h>
-#include <ctype.h>
-#ifdef HAVE_LIBCAP_H
-#include <sys/capability.h>
-#endif
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/oci_runtime_config_linux.h>
+#include <linux/capability.h>
+#include <stdint.h>
+#include <strings.h>
 
-#include "error.h"
 #include "isula_libutils/log.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/docker_seccomp.h"
 #include "isula_libutils/host_config.h"
 #include "utils.h"
-#include "config.h"
-#include "isulad_config.h"
 #include "isula_libutils/parse_common.h"
 #include "err_msg.h"
 #include "specs_extend.h"
 #include "selinux_label.h"
 #include "specs_api.h"
 #include "constants.h"
+#include "utils_array.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 #define MAX_CAP_LEN 32
 

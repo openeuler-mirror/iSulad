@@ -14,9 +14,7 @@
  ******************************************************************************/
 
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
+
 #include "isula_commands.h"
 #include "create.h"
 #include "ps.h"

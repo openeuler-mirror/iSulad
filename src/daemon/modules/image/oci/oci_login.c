@@ -13,11 +13,16 @@
 * Description: isula login operator implement
 *******************************************************************************/
 #include "oci_login.h"
-#include "utils.h"
+
+#include <stdbool.h>
+#include <string.h>
+
 #include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "registry.h"
 #include "isulad_config.h"
+#include "utils_array.h"
+#include "utils_string.h"
 
 static int is_valid_arguments(const char *server, const char *username, const char *password)
 {

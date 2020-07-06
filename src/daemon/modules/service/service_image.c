@@ -13,17 +13,19 @@
  * Description: provide container supervisor functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "service_image_api.h"
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/mount.h>
+#include <isula_libutils/container_config_v2.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "service_image_api.h"
 #include "isula_libutils/log.h"
 #include "image_api.h"
 #include "utils.h"
 #include "container_api.h"
 #include "events_sender_api.h"
+#include "err_msg.h"
+#include "event_type.h"
 
 static bool check_image_in_used(const char *image_ref)
 {

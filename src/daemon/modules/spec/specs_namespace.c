@@ -13,14 +13,19 @@
  * Description: provide namespace spec definition
  ******************************************************************************/
 #include "specs_namespace.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <isula_libutils/container_config_v2.h>
+#include <signal.h>
+#include <stdio.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "namespace.h"
 #include "container_api.h"
+#include "err_msg.h"
 
 static char *parse_share_namespace_with_prefix(const char *type, const char *path)
 {

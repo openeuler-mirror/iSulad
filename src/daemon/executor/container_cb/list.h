@@ -16,6 +16,9 @@
 #ifndef __EXECUTION_CONTAINER_LIST_CB_H_
 #define __EXECUTION_CONTAINER_LIST_CB_H_
 
+#include <isula_libutils/container_list_request.h>
+#include <isula_libutils/container_list_response.h>
+
 #include "callback.h"
 
 #ifdef __cplusplus

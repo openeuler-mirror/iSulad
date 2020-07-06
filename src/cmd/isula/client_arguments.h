@@ -25,6 +25,7 @@
 #include "isula_libutils/json_common.h"
 #include "isula_connect.h"
 #include "namespace.h"
+#include "connect.h"
 
 #ifdef __cplusplus
 extern "C" {

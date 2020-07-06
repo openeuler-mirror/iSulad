@@ -15,8 +15,12 @@
 #ifndef __CMD_KILL_H
 #define __CMD_KILL_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "client_arguments.h"
 #include "wait.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {

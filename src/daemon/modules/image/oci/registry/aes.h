@@ -15,6 +15,7 @@
 #ifndef __IMAGE_AES_H
 #define __IMAGE_AES_H
 
+#include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

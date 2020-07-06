@@ -16,9 +16,17 @@
 #define __OCI_STORAGE_LAYER_STORE_H
 
 #include <stdint.h>
+#include <isula_libutils/imagetool_fs_info.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 #include "storage.h"
 #include "io_wrapper.h"
+
+struct io_read_wrapper;
+struct layer_list;
+struct storage_module_init_options;
 
 #ifdef __cplusplus
 extern "C" {

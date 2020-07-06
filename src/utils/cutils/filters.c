@@ -13,10 +13,14 @@
  * Description: provide filters functions
  ******************************************************************************/
 #include "filters.h"
+
 #include <stdlib.h>
 #include <string.h>
+
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "utils_array.h"
+#include "utils_regex.h"
 
 
 static void filters_args_fields_free(void *key, void *val)

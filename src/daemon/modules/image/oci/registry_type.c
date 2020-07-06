@@ -13,9 +13,11 @@
  * Description: provide registry functions
  ******************************************************************************/
 #include "registry_type.h"
-#include <stdio.h>
+
 #include <stdlib.h>
+
 #include "utils.h"
+#include "utils_array.h"
 
 void free_challenge(challenge *c)
 {

@@ -15,7 +15,11 @@
 #ifndef __CMD_STOP_H
 #define __CMD_STOP_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {

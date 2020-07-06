@@ -14,18 +14,18 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <limits.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <dirent.h>
+#include <errno.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "certs.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 #define ISULAD_CERTD "/etc/isulad/certs.d"
 #define CLIENT_CERT_SUFFIX ".cert"

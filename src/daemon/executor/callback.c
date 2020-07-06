@@ -14,6 +14,8 @@
  ******************************************************************************/
 #include "callback.h"
 
+#include <stdlib.h>
+
 #include "image_cb.h"
 #include "execution.h"
 

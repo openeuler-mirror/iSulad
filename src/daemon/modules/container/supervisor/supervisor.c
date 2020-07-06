@@ -14,8 +14,18 @@
  ******************************************************************************/
 #define _GNU_SOURCE
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/prctl.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -25,6 +35,9 @@
 #include "events_sender_api.h"
 #include "containers_gc.h"
 #include "service_container_api.h"
+#include "container_api.h"
+#include "event_type.h"
+#include "utils_file.h"
 
 pthread_mutex_t g_supervisor_lock = PTHREAD_MUTEX_INITIALIZER;
 struct epoll_descr g_supervisor_descr;

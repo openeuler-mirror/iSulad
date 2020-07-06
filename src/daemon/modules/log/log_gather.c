@@ -13,20 +13,25 @@
  * Description: provide log gather functions
  ******************************************************************************/
 #define _GNU_SOURCE
-#include "log_gather_api.h"
-
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <strings.h>
+#include <sys/prctl.h>
 
+#include "log_gather_api.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "isulad_tar.h"
+#include "utils_file.h"
 
 typedef int (*log_save_t)(const void *buf, size_t count);
 static log_save_t g_save_log_op = NULL;

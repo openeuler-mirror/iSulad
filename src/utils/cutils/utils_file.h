@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <dirent.h>
 
+struct dirent;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

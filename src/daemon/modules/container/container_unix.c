@@ -12,10 +12,20 @@
  * Create: 2017-11-22
  * Description: provide container unix functions
  ******************************************************************************/
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <linux/limits.h>
+#include <errno.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/json_common.h>
+#include <limits.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "constants.h"
 #include "container_unix.h"
@@ -28,6 +38,12 @@
 #include "containers_gc.h"
 #include "supervisor.h"
 #include "restore.h"
+#include "err_msg.h"
+#include "util_atomic.h"
+#include "utils_array.h"
+#include "utils_convert.h"
+#include "utils_file.h"
+#include "utils_string.h"
 
 static int parse_container_log_configs(container_t *cont);
 

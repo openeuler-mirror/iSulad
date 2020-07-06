@@ -18,6 +18,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <isula_libutils/imagetool_image.h>
+#include <isula_libutils/json_common.h>
+
 #include "utils_timestamp.h"
 #include "isula_libutils/storage_image.h"
 #include "isula_libutils/storage_rootfs.h"

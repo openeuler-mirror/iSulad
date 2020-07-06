@@ -17,6 +17,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+
 #include "utils_timestamp.h"
 #include "constants.h"
 #include "isula_libutils/oci_runtime_spec.h"

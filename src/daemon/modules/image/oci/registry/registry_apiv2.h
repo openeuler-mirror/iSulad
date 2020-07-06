@@ -15,6 +15,8 @@
 #ifndef __IMAGE_REGISTRY_APIV2_H
 #define __IMAGE_REGISTRY_APIV2_H
 
+#include <stddef.h>
+
 #include "registry_type.h"
 
 #ifdef __cplusplus

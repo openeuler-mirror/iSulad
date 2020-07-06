@@ -17,6 +17,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "constants.h"
 #include "isula_libutils/container_path_stat.h"

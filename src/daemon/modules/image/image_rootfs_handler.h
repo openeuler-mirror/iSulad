@@ -15,6 +15,8 @@
 #ifndef __IMAGE_ROOTFS_HANDLER_H
 #define __IMAGE_ROOTFS_HANDLER_H
 
+#include <isula_libutils/defs.h>
+
 #include "isula_libutils/oci_image_spec.h"
 #include "isula_libutils/host_config.h"
 #ifdef __cplusplus

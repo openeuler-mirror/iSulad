@@ -14,16 +14,19 @@
  ******************************************************************************/
 #include <unistd.h>
 #include <limits.h>
-#include <sys/types.h>
 #include <sys/param.h>
 #include <libgen.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "isula_libutils/log.h"
 #include "path.h"
 #include "utils.h"
+#include "utils_file.h"
 
 #define ISSLASH(C) ((C) == '/')
 #define IS_ABSOLUTE_FILE_NAME(F) (ISSLASH ((F)[0]))

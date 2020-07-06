@@ -13,37 +13,49 @@
  * Description: provide container extend callback function definition
  *********************************************************************************/
 #include "execution_extend.h"
+
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <lcr/lcrcontainer.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <ctype.h>
-#include <sys/stat.h>
-#include <pthread.h>
 #include <sys/sysinfo.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/container_export_request.h>
+#include <isula_libutils/container_export_response.h>
+#include <isula_libutils/container_info.h>
+#include <isula_libutils/container_pause_request.h>
+#include <isula_libutils/container_pause_response.h>
+#include <isula_libutils/container_resume_request.h>
+#include <isula_libutils/container_resume_response.h>
+#include <isula_libutils/container_stats_request.h>
+#include <isula_libutils/container_stats_response.h>
+#include <isula_libutils/container_update_request.h>
+#include <isula_libutils/container_update_response.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "isula_libutils/log.h"
 #include "events_sender_api.h"
 #include "events_collector_api.h"
-#include "io_wrapper.h"
 #include "isulad_config.h"
-#include "config.h"
 #include "image_api.h"
 #include "verify.h"
-#include "isula_libutils/container_inspect.h"
 #include "container_api.h"
-#include "service_container_api.h"
 #include "sysinfo.h"
 #include "specs_api.h"
 #include "runtime_api.h"
-
 #include "filters.h"
 #include "utils.h"
 #include "error.h"
+#include "err_msg.h"
+#include "event_type.h"
+#include "map.h"
+#include "stream_wrapper.h"
+#include "utils_array.h"
+#include "utils_verify.h"
 
 struct stats_context {
     struct filters_args *stats_filters;

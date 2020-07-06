@@ -16,10 +16,21 @@
 #include <dirent.h>
 #include <stddef.h>
 #include <sys/inotify.h>
-#include <linux/limits.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/defs.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <limits.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/select.h>
 
 #include "isula_libutils/log.h"
 #include "plugin_api.h"
@@ -33,7 +44,6 @@
 #include "rest_common.h"
 #include "container_api.h"
 #include "constants.h"
-
 #include "isula_libutils/plugin_activate_plugin_request.h"
 #include "isula_libutils/plugin_activate_plugin_response.h"
 #include "isula_libutils/plugin_init_plugin_request.h"
@@ -46,6 +56,13 @@
 #include "isula_libutils/plugin_event_post_stop_response.h"
 #include "isula_libutils/plugin_event_post_remove_request.h"
 #include "isula_libutils/plugin_event_post_remove_response.h"
+#include "err_msg.h"
+#include "map.h"
+#include "util_atomic.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_regex.h"
+#include "utils_string.h"
 
 #define plugin_socket_path "/run/isulad/plugins"
 #define plugin_socket_file_regex ".*.sock$"

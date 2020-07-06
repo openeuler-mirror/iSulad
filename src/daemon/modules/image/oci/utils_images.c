@@ -16,11 +16,26 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
+#include <isula_libutils/docker_image_config_v2.h>
+#include <isula_libutils/docker_image_history.h>
+#include <isula_libutils/docker_image_rootfs.h>
+#include <isula_libutils/image_manifest_v1_compatibility.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/registry_manifest_schema1.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_images.h"
 #include "sha256.h"
+#include "utils_array.h"
+#include "utils_base64.h"
+#include "utils_file.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 char *get_last_part(char **parts)
 {

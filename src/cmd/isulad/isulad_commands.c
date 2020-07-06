@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <isula_libutils/host_config.h>
+#include <stdint.h>
+#include <strings.h>
 
 #include "isulad_commands.h"
 #include "config.h"
@@ -23,10 +26,13 @@
 #include "path.h"
 #include "err_msg.h"
 #include "daemon_arguments.h"
-
 #include "utils.h"
 #include "constants.h"
 #include "isula_libutils/isulad_daemon_configs.h"
+#include "utils_array.h"
+#include "utils_convert.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 const char isulad_desc[] = "GLOBAL OPTIONS:";
 const char isulad_usage[] = "[global options]";

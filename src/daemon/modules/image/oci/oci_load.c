@@ -14,6 +14,20 @@
 *******************************************************************************/
 #include "oci_load.h"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <isula_libutils/image_manifest_items.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_image_content_descriptor.h>
+#include <isula_libutils/oci_image_manifest.h>
+#include <isula_libutils/oci_image_spec.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "util_archive.h"
@@ -22,6 +36,11 @@
 #include "mediatype.h"
 #include "utils_images.h"
 #include "err_msg.h"
+#include "constants.h"
+#include "io_wrapper.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_verify.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define OCI_SCHEMA_VERSION 2

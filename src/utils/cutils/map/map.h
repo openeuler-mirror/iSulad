@@ -15,7 +15,12 @@
 #ifndef __ISULAD_MAP_H__
 #define __ISULAD_MAP_H__
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "rb_tree.h"
+
+struct _map_t;
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {

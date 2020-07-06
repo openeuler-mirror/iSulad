@@ -15,7 +15,11 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <termios.h>
+#include <termios.h> // IWYU pragma: keep
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "run.h"
 #include "client_arguments.h"
@@ -24,6 +28,11 @@
 #include "isula_connect.h"
 #include "console.h"
 #include "error.h"
+#include "connect.h"
+#include "create.h"
+#include "libisula.h"
+#include "start.h"
+#include "wait.h"
 
 const char g_cmd_run_desc[] = "Run a command in a new container";
 const char g_cmd_run_usage[] = "run [OPTIONS] ROOTFS|IMAGE [COMMAND] [ARG...]";

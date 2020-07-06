@@ -13,7 +13,6 @@
  * Description: provide container map functions
  ******************************************************************************/
 #include <stdlib.h>
-#include <string.h>
 
 #include "map.h"
 #include "isula_libutils/log.h"

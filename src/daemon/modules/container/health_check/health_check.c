@@ -13,14 +13,17 @@
  * Description: provide health check functions
  *********************************************************************************/
 #define _GNU_SOURCE
-#include <unistd.h>
 #include <string.h>
-#include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <semaphore.h>
+#include <isula_libutils/container_config.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/container_exec_request.h>
+#include <isula_libutils/container_exec_response.h>
+#include <isula_libutils/defs.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -28,6 +31,10 @@
 #include "service_container_api.h"
 #include "log_gather_api.h"
 #include "container_state.h"
+#include "err_msg.h"
+#include "io_wrapper.h"
+#include "utils_array.h"
+#include "utils_timestamp.h"
 
 /* container state lock */
 static void container_health_check_lock(health_check_manager_t *health)

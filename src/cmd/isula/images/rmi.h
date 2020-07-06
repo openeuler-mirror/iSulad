@@ -15,7 +15,11 @@
 #ifndef __CMD_REMOVE_IMAGE_H
 #define __CMD_REMOVE_IMAGE_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
