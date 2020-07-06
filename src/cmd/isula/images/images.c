@@ -16,7 +16,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <termios.h> // IWYU pragma: keep
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
