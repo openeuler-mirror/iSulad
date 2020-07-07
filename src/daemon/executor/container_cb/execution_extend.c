@@ -68,7 +68,7 @@ static int service_events_handler(const struct isulad_events_request *request, c
     char *name = NULL;
     container_t *container = NULL;
 
-    name = request->id;
+    name = util_strdup_s(request->id);
 
     /* check whether specified container exists */
     if (name != NULL) {
@@ -79,7 +79,8 @@ static int service_events_handler(const struct isulad_events_request *request, c
             ret = -1;
             goto out;
         }
-
+        free(name);
+        name = util_strdup_s(container->common_config->id);
         container_unref(container);
     }
 
@@ -95,7 +96,9 @@ static int service_events_handler(const struct isulad_events_request *request, c
         ret = -1;
         goto out;
     }
+
 out:
+    free(name);
     return ret;
 }
 
