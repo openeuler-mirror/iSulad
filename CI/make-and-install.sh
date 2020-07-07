@@ -85,10 +85,11 @@ if [[ "x${GCOV}" == "xON" ]]; then
 else
     cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON ..
     make -j $(nproc)
-    ctest -D ExperimentalCoverage
+    ctest
     if [[ $? -ne 0 ]]; then
         exit 1
     fi
+    ctest -D ExperimentalCoverage
 fi
 echo_success "===================RUN DT-LLT TESTCASES END========================="
 

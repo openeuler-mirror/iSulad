@@ -597,15 +597,17 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_something)
 {
     char **names = NULL;
     size_t names_len = 0;
-    imagetool_fs_info fs_info;
+    imagetool_fs_info *fs_info = (imagetool_fs_info *)util_common_calloc_s(sizeof(imagetool_fs_info));
+    ASSERT_NE(fs_info, nullptr);
 
     ASSERT_EQ(image_store_get_images_number(), 2);
-    ASSERT_EQ(image_store_get_fs_info(&fs_info), 0);
+    ASSERT_EQ(image_store_get_fs_info(fs_info), 0);
     ASSERT_EQ(image_store_get_names(ids.at(0).c_str(), &names, &names_len), 0);
     ASSERT_EQ(names_len, 1);
     ASSERT_STREQ(names[0], "imagehub.isulad.com/official/centos:latest");
 
     util_free_array_by_len(names, names_len);
+    free_imagetool_fs_info(fs_info);
 }
 
 TEST_F(StorageImagesUnitTest, test_image_store_delete)
