@@ -1775,12 +1775,38 @@ out:
     return ret;
 }
 
-int overlay2_clean_up(const struct graphdriver *driver)
+static void free_overlay_options(struct overlay_options *opts)
 {
-    if (driver == NULL) {
-        return -1;
+    if (opts == NULL) {
+        return ;
     }
-    return umount(driver->home);
+    free((char *)opts->mount_options);
+    opts->mount_options = NULL;
+
+    free(opts);
+}
+
+int overlay2_clean_up(struct graphdriver *driver)
+{
+    int ret = 0;
+
+    if (driver == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (umount(driver->home) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    free_pquota_control(driver->quota_ctrl);
+    driver->quota_ctrl = NULL;
+    free_overlay_options(driver->overlay_opts);
+    driver->overlay_opts = NULL;
+
+out:
+    return ret;
 }
 
 static int check_lower_valid(const char *driver_home, const char *lower)

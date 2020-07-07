@@ -74,7 +74,7 @@ struct graphdriver_ops {
 
     int (*get_driver_status)(const struct graphdriver *driver, struct graphdriver_status *status);
 
-    int (*clean_up)(const struct graphdriver *driver);
+    int (*clean_up)(struct graphdriver *driver);
 
     int (*try_repair_lowers)(const char *id, const char *parent, const struct graphdriver *driver);
 

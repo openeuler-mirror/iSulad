@@ -368,12 +368,27 @@ void free_graphdriver_mount_opts(struct driver_mount_opts *opts)
 
 int graphdriver_cleanup(void)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
-        return -1;
+        ret = -1;
+        goto out;
     }
 
-    return g_graphdriver->ops->clean_up(g_graphdriver);
+    if (g_graphdriver->ops->clean_up(g_graphdriver) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    free((char *)g_graphdriver->home);
+    g_graphdriver->home = NULL;
+    free(g_graphdriver->backing_fs);
+    g_graphdriver->backing_fs = NULL;
+    g_graphdriver = NULL;
+
+out:
+    return ret;
 }
 
 int graphdriver_try_repair_lowers(const char *id, const char *parent)

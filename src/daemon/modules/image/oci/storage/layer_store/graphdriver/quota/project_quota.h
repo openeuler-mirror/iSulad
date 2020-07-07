@@ -97,6 +97,8 @@ struct pquota_control {
 
 struct pquota_control *project_quota_control_init(const char *home_dir, const char *fs);
 
+void free_pquota_control(struct pquota_control *ctrl);
+
 #ifdef __cplusplus
 }
 #endif

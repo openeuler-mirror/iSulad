@@ -536,6 +536,7 @@ static int util_mount_from_handler(const char *src, const char *dst, const char 
         goto out;
     }
 out:
+    free(mntdata);
     return ret;
 }
 

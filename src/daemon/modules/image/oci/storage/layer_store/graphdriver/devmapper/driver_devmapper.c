@@ -528,7 +528,7 @@ out:
     return ret;
 }
 
-int devmapper_clean_up(const struct graphdriver *driver)
+int devmapper_clean_up(struct graphdriver *driver)
 {
     if (driver == NULL) {
         ERROR("Invalid input param to cleanup devicemapper");

@@ -66,7 +66,7 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
 
 int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdriver_status *status);
 
-int devmapper_clean_up(const struct graphdriver *driver);
+int devmapper_clean_up(struct graphdriver *driver);
 
 int devmapper_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver);
 

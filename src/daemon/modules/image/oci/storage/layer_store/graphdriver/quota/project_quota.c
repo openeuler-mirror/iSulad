@@ -308,7 +308,7 @@ static void get_next_project_id(const char *dirpath, struct pquota_control *ctrl
     return;
 }
 
-static void free_pquota_control(struct pquota_control *ctrl)
+void free_pquota_control(struct pquota_control *ctrl)
 {
     if (ctrl == NULL) {
         return;

@@ -69,12 +69,13 @@ source $basepath/install_depends.sh
 
 echo_success "===================RUN DT-LLT TESTCASES START========================="
 cd $ISULAD_COPY_PATH
+sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils/cutils/utils.c
 rm -rf build
 mkdir build && cd build
 if [[ "x${GCOV}" == "xON" ]]; then
     cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DENABLE_UT=ON ..
     make -j $(nproc)
-    ctest # && ctest -T memcheck
+    ctest -T memcheck --output-on-failure
     if [[ $? -ne 0 ]]; then
         exit 1
     fi
@@ -84,7 +85,7 @@ if [[ "x${GCOV}" == "xON" ]]; then
 else
     cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON ..
     make -j $(nproc)
-    ctest
+    ctest -D ExperimentalCoverage
     if [[ $? -ne 0 ]]; then
         exit 1
     fi
@@ -92,7 +93,6 @@ fi
 echo_success "===================RUN DT-LLT TESTCASES END========================="
 
 cd $ISULAD_COPY_PATH
-sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils/cutils/utils.c
 
 # build rest version
 cd $ISULAD_COPY_PATH
