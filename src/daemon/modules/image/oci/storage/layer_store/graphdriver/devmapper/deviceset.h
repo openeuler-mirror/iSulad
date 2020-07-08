@@ -50,9 +50,7 @@ struct disk_usage {
 struct status {
     char *pool_name;
     char *data_file;
-    char *data_loopback;
     char *metadata_file;
-    char *metadata_loopback;
     struct disk_usage metadata;
     struct disk_usage data;
     uint64_t base_device_size;

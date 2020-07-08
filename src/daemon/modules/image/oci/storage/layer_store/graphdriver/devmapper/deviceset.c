@@ -245,34 +245,12 @@ out:
     return res_str;
 }
 
-// thin-pool or isulad-thinpool
-static char *get_pool_name(struct device_set *devset)
-{
-    char thinp_name[PATH_MAX] = { 0 };
-    int nret = 0;
-
-    if (devset == NULL) {
-        return NULL;
-    }
-
-    if (devset->thin_pool_device == NULL) {
-        nret = snprintf(thinp_name, sizeof(thinp_name), "%s-pool", devset->device_prefix);
-        if (nret < 0 || (size_t)nret >= sizeof(thinp_name)) {
-            ERROR("Print thinpool name %s-pool error", devset->device_prefix);
-            return NULL;
-        }
-        return util_strdup_s(thinp_name);
-    }
-
-    return util_strdup_s(devset->thin_pool_device);
-}
-
 static char *get_pool_dev_name(struct device_set *devset)
 {
     char *pool_name = NULL;
     char *dev_name = NULL;
 
-    pool_name = get_pool_name(devset);
+    pool_name = util_strdup_s(devset->thin_pool_device);
     if (pool_name == NULL) {
         ERROR("Failed to get pool name");
         goto out;
@@ -397,7 +375,7 @@ static int pool_status(struct device_set *devset, uint64_t *total_size_in_sector
         return -1;
     }
 
-    name = get_pool_name(devset);
+    name = util_strdup_s(devset->thin_pool_device);
     if (name == NULL) {
         ret = -1;
         goto out;
@@ -1534,7 +1512,7 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
         break;
     } while (true);
 
-    info = register_device(devset, device_id, hash, devset->base_fs_size, devset->metadata_trans->open_transaction_id);
+    info = register_device(devset, device_id, hash, size, devset->metadata_trans->open_transaction_id);
     if (info == NULL) {
         DEBUG("devmapper: Error registering device");
         (void)dev_delete_device(pool_dev, device_id);
@@ -2426,7 +2404,7 @@ static int do_init_metadate(struct device_set *devset)
     char *pool_name = NULL;
 
     // Check for the existence of the thin-pool device
-    pool_name = get_pool_name(devset);
+    pool_name = util_strdup_s(devset->thin_pool_device);
     if (pool_name == NULL) {
         ERROR("devmapper: pool name is null");
         ret = -1;
@@ -2626,7 +2604,6 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
     devset->enable_deferred_removal = false;
     devset->enable_deferred_deletion = false;
     devset->base_fs_size = 10 * SIZE_GB;
-    ERROR("BASE fs size is %lu", devset->base_fs_size);
     devset->override_udev_sync_check = DEFAULT_UDEV_SYNC_OVERRIDE;
     devset->do_blk_discard = false;
     devset->thinp_block_size = DEFAULT_THIN_BLOCK_SIZE;
@@ -2805,6 +2782,12 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
 
     // Grow the container rootfs.
     if (size > base_device_info->info->size) {
+        device_info = lookup_device(devset, hash);
+        if (device_info == NULL) {
+            ERROR("devmapper: lookup device %s failed", hash);
+            ret = -1;
+            goto free_out;
+        }
         if (grow_fs(devset, device_info->info) != 0) {
             ret = -1;
             goto free_out;
@@ -3081,52 +3064,12 @@ void free_devmapper_status(struct status *st)
     st->pool_name = NULL;
     free(st->data_file);
     st->data_file = NULL;
-    free(st->data_loopback);
-    st->data_loopback = NULL;
     free(st->metadata_file);
     st->metadata_file = NULL;
-    free(st->metadata_loopback);
-    st->metadata_loopback = NULL;
     free(st->base_device_fs);
     st->base_device_fs = NULL;
 
     free(st);
-}
-
-static bool is_real_file(const char *f)
-{
-    struct stat st;
-
-    if (f == NULL) {
-        return false;
-    }
-
-    if (stat(f, &st) < 0) {
-        return false;
-    }
-
-    return S_ISREG(st.st_mode);
-}
-
-static int get_underlying_available_space(const char *loop_file, uint64_t *available)
-{
-    struct statfs buf;
-    int ret = 0;
-
-    if (loop_file == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    if (statfs(loop_file, &buf) < 0) {
-        ret = -1;
-        ERROR("devmapper: can not stat loopfile filesystem %s", loop_file);
-        goto out;
-    }
-    *available = buf.f_bfree * buf.f_bsize;
-
-out:
-    return ret;
 }
 
 struct status *device_set_status(struct device_set *devset)
@@ -3147,11 +3090,9 @@ struct status *device_set_status(struct device_set *devset)
         goto free_out;
     }
 
-    st->pool_name = get_pool_name(devset);
+    st->pool_name = util_strdup_s(devset->thin_pool_device);
     st->data_file = util_strdup_s(devset->data_device);
-    st->data_loopback = util_strdup_s(devset->data_loop_file);
     st->metadata_file = util_strdup_s(devset->metadata_device);
-    st->metadata_loopback = util_strdup_s(devset->metadata_loop_file);
     st->udev_sync_supported = udev_sync_supported();
     st->deferred_remove_enabled = devset->deferred_remove;
     st->deferred_delete_enabled = devset->deferred_delete;
@@ -3171,22 +3112,6 @@ struct status *device_set_status(struct device_set *devset)
         st->metadata.available = st->metadata.total - st->metadata.used;
 
         st->sector_size = block_size_in_sectors * 512;
-
-        if (is_real_file(devset->data_loop_file)) {
-            uint64_t actual_space;
-            if (get_underlying_available_space(devset->data_loop_file, &actual_space) == 0 &&
-                actual_space < st->metadata.available) {
-                st->data.available = actual_space;
-            }
-        }
-
-        if (is_real_file(devset->metadata_loop_file)) {
-            uint64_t actual_space;
-            if (get_underlying_available_space(devset->data_loop_file, &actual_space) == 0 &&
-                actual_space < st->metadata.available) {
-                st->metadata.available = actual_space;
-            }
-        }
 
         min_free_data = (data_total * (uint64_t)devset->min_free_space_percent) / 100;
         st->min_free_space = min_free_data * block_size_in_sectors * 512;

@@ -56,9 +56,7 @@ struct device_set {
     char **mkfs_args; // []string类型数组切片
     size_t mkfs_args_len;
     char *data_device;
-    char *data_loop_file;
     char *metadata_device;
-    char *metadata_loop_file;
     uint64_t thinp_block_size;
     bool do_blk_discard;
     char *thin_pool_device;
