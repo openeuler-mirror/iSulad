@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# attributes: isulad inheritance create
+# attributes: isulad inheritance create basic
 # concurrent: YES
-# spend time: 17
+# spend time: 4
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2020. All rights reserved.
@@ -66,6 +66,48 @@ function do_test_t()
 
     cat "$LCR_ROOT_PATH/$containerid/config"  | grep "memory.limit_in_bytes = 1000000000"
     fn_check_eq "$?" "0" "create failed"
+
+    isula rm -f $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    # validate --label
+    containerid=`isula run -itd --name $containername  --label "iSulad=lcrd" busybox`
+    fn_check_eq "$?" "0" "create failed"
+
+    isula inspect -f "{{.Config.Labels}}" ${containerid} | grep iSulad | grep lcrd
+    fn_check_eq "$?" "0" " failed to set meta data on a container"
+
+    isula rm -f $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    # validate --label-file
+    echo "iSulad=lcrd\n   abc=kkk" > ./label_file
+    containerid=`isula run -itd --name $containername  --label-file ./label_file busybox`
+    fn_check_eq "$?" "0" "create failed"
+
+    isula inspect -f "{{.Config.Labels}}" ${containerid} | grep iSulad | grep lcrd
+    fn_check_eq "$?" "0" "failed to read in a line delimited file of labels and set meta data on a container"
+
+    isula inspect -f "{{.Config.Labels}}" ${containerid} | grep abc | grep kkk
+    fn_check_eq "$?" "0" "failed to read in a line delimited file of labels and set meta data on a container"
+
+    rm -f ./label_file
+
+    isula rm -f $containername
+    fn_check_eq "$?" "0" "rm failed"
+
+    # validate --dns --dns-search --dns-opt
+    containerid=`isula run -itd --name $containername --dns 8.8.8.8 --dns-opt debug --dns-search example.com busybox`
+    fn_check_eq "$?" "0" "create failed"
+
+    isula exec -it ${containerid} cat /etc/resolv.conf | grep "nameserver 8.8.8.8"
+    fn_check_eq "$?" "0" "failed to set custom DNS servers"
+
+    isula exec -it ${containerid} cat /etc/resolv.conf | grep "search" | grep "example.com"
+    fn_check_eq "$?" "0" "failed to set custom DNS search domains"
+
+    isula exec -it ${containerid} cat /etc/resolv.conf | grep "options" | grep "debug"
+    fn_check_eq "$?" "0" "failed to set DNS options"
 
     isula rm -f $containername
     fn_check_eq "$?" "0" "rm failed"
