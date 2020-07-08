@@ -1,0 +1,41 @@
+---
+version_control: gitee
+src_repo: openEuler/iSulad
+tag_prefix: "^v"
+seperator: "."
+last_query:
+  time_stamp: 2020-07-01 16:18:27.627607538 +08:00
+  raw_data: 
+    {
+        "assets": [
+            {
+                "browser_download_url": "https://gitee.com/openeuler/iSulad/repository/archive/v2.0.3"
+            }
+        ],
+        "author": {
+            "avatar_url": "https://gitee.com/assets/no_portrait.png",
+            "events_url": "https://gitee.com/api/v5/users/lifeng2221dd1/events{/privacy}",
+            "followers_url": "https://gitee.com/api/v5/users/lifeng2221dd1/followers",
+            "following_url": "https://gitee.com/api/v5/users/lifeng2221dd1/following_url{/other_user}",
+            "gists_url": "https://gitee.com/api/v5/users/lifeng2221dd1/gists{/gist_id}",
+            "html_url": "https://gitee.com/lifeng2221dd1",
+            "id": 5226885,
+            "login": "lifeng2221dd1",
+            "name": "lifeng_isula",
+            "organizations_url": "https://gitee.com/api/v5/users/lifeng2221dd1/orgs",
+            "received_events_url": "https://gitee.com/api/v5/users/lifeng2221dd1/received_events",
+            "repos_url": "https://gitee.com/api/v5/users/lifeng2221dd1/repos",
+            "site_admin": false,
+            "starred_url": "https://gitee.com/api/v5/users/lifeng2221dd1/starred{/owner}{/repo}",
+            "subscriptions_url": "https://gitee.com/api/v5/users/lifeng2221dd1/subscriptions",
+            "type": "User",
+            "url": "https://gitee.com/api/v5/users/lifeng2221dd1"
+        },
+        "body": "- bugfix\r\n- \u4ee3\u7801\u7ed3\u6784\u6574\u6539\r\n- LLT\u8865\u5145",
+        "created_at": "2020-06-16T18:57:07+08:00",
+        "id": 73541,
+        "name": "v2.0.3",
+        "prerelease": false,
+        "tag_name": "v2.0.3",
+        "target_commitish": "ef223d0ba57c660739555a5261c554882d1a34fa"
+    }
