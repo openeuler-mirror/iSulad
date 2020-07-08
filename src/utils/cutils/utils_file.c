@@ -1048,8 +1048,19 @@ static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_dep
     int nret = 0;
     struct dirent *pdirent = NULL;
     DIR *directory = NULL;
+    struct stat fstat;
     char fname[MAXPATHLEN];
 
+    // cal dir self node and size
+    nret = lstat(dirpath, &fstat);
+    if (nret != 0) {
+        ERROR("Failed to stat directory %s", dirpath);
+        return;
+    }
+    *total_size = *total_size + fstat.st_size;
+    *total_inode = *total_inode + 1;
+
+    // cal sub dirs node and size
     directory = opendir(dirpath);
     if (directory == NULL) {
         ERROR("Failed to open %s", dirpath);
@@ -1057,7 +1068,6 @@ static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_dep
     }
     pdirent = readdir(directory);
     for (; pdirent != NULL; pdirent = readdir(directory)) {
-        struct stat fstat;
         int pathname_len;
 
         if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
