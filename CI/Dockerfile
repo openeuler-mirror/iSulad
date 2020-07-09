@@ -63,8 +63,6 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			python3 \
 			python3-pip \
 			device-mapper-devel \
-			libarchive \
-			libarchive-devel \
 			libtar \
 			libtar-devel \
 			libcurl-devel \
@@ -241,6 +239,22 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	make -j $(nproc) && \
 	make install && \
 	ldconfig
+
+# install libarchive
+RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
+        set -x && \
+        cd ~ && \
+        git clone https://gitee.com/src-openeuler/libarchive.git && \
+        cd libarchive && \
+        tar -zxvf libarchive-3.4.1.tar.gz && \
+        cd libarchive-3.4.1 && \
+        patch -p1 -F1 -s < ../libarchive-uninitialized-value.patch && \
+        patch -p1 -F1 -s < ../CVE-2020-9308.patch && \
+        cd build && \
+        cmake ../ && \
+        make -j $(nproc) && \
+        make install && \
+        ldconfig
 
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]

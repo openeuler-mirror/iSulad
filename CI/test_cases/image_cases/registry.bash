@@ -34,6 +34,10 @@ function isula_pull()
     isula rm -f `isula ps -a -q`
     isula rmi centos
 
+    isula pull centos &
+    isula pull centos
+    fn_check_eq "$?" "0" "isula pull centos"
+
     isula pull hub-mirror.c.163.com/library/busybox
     fn_check_eq "$?" "0" "isula pull hub-mirror.c.163.com/library/busybox"
 
