@@ -278,7 +278,7 @@ static int remove_device(const char *name)
     }
 
     for (; i < max_retry; i++) {
-        ret = dev_remove_device(name);
+        ret = dev_delete_device_force(name);
         if (ret == 0) {
             DEBUG("devmapper: remove device:%s success", name);
             goto out;
@@ -2190,7 +2190,7 @@ static int delete_transaction(struct device_set *devset, image_devmapper_device_
         // If syncDelete is true, we want to return error. If deferred
         // deletion is not enabled, we return an error. If error is
         // something other then EBUSY, return an error.
-        if (sync_delete || !devset->deferred_delete || ret != ERR_BUSY) {
+        if (sync_delete || !devset->deferred_delete || nret != ERR_BUSY) {
             ERROR("devmapper: Error deleting device");
             ret = -1;
             goto out;
@@ -2369,7 +2369,7 @@ static int do_check_all_devices(struct device_set *devset)
         }
         // remove broken device
         if (length == 0) {
-            nret = dev_remove_device(devices_list[i]);
+            nret = dev_delete_device_force(devices_list[i]);
             if (nret != 0) {
                 WARN("devmapper: remove broken device %s failed, err:%s", devices_list[i], dev_strerror(nret));
             }
@@ -2382,7 +2382,7 @@ static int do_check_all_devices(struct device_set *devset)
             continue;
         }
         if (stat(device_path, &st)) {
-            nret = dev_remove_device(devices_list[i]);
+            nret = dev_delete_device_force(devices_list[i]);
             if (nret != 0) {
                 WARN("devmapper: remove incompelete device %s, err:%s", devices_list[i], dev_strerror(nret));
             }

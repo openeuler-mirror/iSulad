@@ -24,12 +24,10 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 
-struct dm_task;
-
-static bool dm_saw_busy = false;
-static bool dm_saw_exist = false;
-static bool dm_saw_enxio = false; // no such device or address
-// static bool dm_saw_eno_data = false; // no data available
+static bool g_dm_saw_busy = false;
+static bool g_dm_saw_exist = false;
+static bool g_dm_saw_enxio = false; // no such device or address
+static bool g_dm_saw_eno_data = false; // no data available
 static int64_t dm_udev_wait_timeout = 0;
 
 char *dev_strerror(int errnum)
@@ -415,7 +413,7 @@ free_out:
     free(uwait);
 }
 
-int dev_remove_device(const char *name)
+int dev_delete_device_force(const char *name)
 {
     int ret = 0;
     struct dm_task *dmt = NULL;
@@ -439,15 +437,15 @@ int dev_remove_device(const char *name)
         goto out;
     }
 
-    dm_saw_busy = false;
-    dm_saw_enxio = false;
+    g_dm_saw_busy = false;
+    g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
-        if (dm_saw_busy) {
+        if (g_dm_saw_busy) {
             ret = ERR_BUSY;
             goto udev;
         }
 
-        if (dm_saw_enxio) {
+        if (g_dm_saw_enxio) {
             ret = ERR_ENXIO;
             goto udev;
         }
@@ -494,9 +492,9 @@ int dev_remove_device_deferred(const char *name)
         goto out;
     }
 
-    dm_saw_enxio = false;
+    g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
-        if (dm_saw_enxio) {
+        if (g_dm_saw_enxio) {
             ret = ERR_ENXIO;
             goto udev;
         }
@@ -651,9 +649,9 @@ int dev_create_device(const char *pool_fname, int device_id)
         goto cleanup;
     }
 
-    dm_saw_exist = false;
+    g_dm_saw_exist = false;
     if (dm_task_run(dmt) != 1) {
-        if (dm_saw_exist) {
+        if (g_dm_saw_exist) {
             ret = ERR_DEVICE_ID_EXISTS;
         } else {
             ret = -1;
@@ -674,7 +672,7 @@ int dev_delete_device(const char *pool_fname, int device_id)
     int ret = 0;
     int nret = 0;
     uint64_t sector = 0;
-    char message[PATH_MAX] = { 0 }; // 临时字符缓冲区上限
+    char message[PATH_MAX] = { 0 };
     struct dm_task *dmt = NULL;
 
     if (pool_fname == NULL) {
@@ -706,9 +704,20 @@ int dev_delete_device(const char *pool_fname, int device_id)
         goto cleanup;
     }
 
+    g_dm_saw_busy = false;
+    g_dm_saw_eno_data = false;
     if (dm_task_run(dmt) != 1) {
+        if (g_dm_saw_busy) {
+            ret = ERR_BUSY;
+            ERROR("devicemapper: Error delete device:device is busy");
+            goto cleanup;
+        }
+        if (g_dm_saw_eno_data) {
+            DEBUG("devicemapper: device(id:%d) from pool(%s) does not exist", device_id, pool_fname);
+            goto cleanup;
+        }
         ret = -1;
-        ERROR("devicemapper: task run failed");
+        ERROR("devicemapper: Error running dev_delete_device");
         goto cleanup;
     }
 
@@ -917,14 +926,14 @@ int dev_cancel_deferred_remove(const char *dm_name)
         goto cleanup;
     }
 
-    dm_saw_busy = false;
-    dm_saw_enxio = false;
+    g_dm_saw_busy = false;
+    g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
-        if (dm_saw_busy) {
+        if (g_dm_saw_busy) {
             ret = ERR_BUSY;
             goto cleanup;
         }
-        if (dm_saw_enxio) {
+        if (g_dm_saw_enxio) {
             ret = ERR_ENXIO;
             goto cleanup;
         }
@@ -967,14 +976,18 @@ void storage_devmapper_log_callback(int level, char *file, int line, int dm_errn
 {
     if (level < LOG_LEVEL_DEBUG) {
         if (strstr(message, "busy") != NULL) {
-            dm_saw_busy = true;
+            g_dm_saw_busy = true;
         }
         if (strstr(message, "File exist") != NULL) {
-            dm_saw_exist = true;
+            g_dm_saw_exist = true;
         }
 
         if (strstr(message, "No such device or address") != NULL) {
-            dm_saw_enxio = true;
+            g_dm_saw_enxio = true;
+        }
+
+        if (strstr(message, "No data available") != NULL) {
+            g_dm_saw_eno_data = true;
         }
     }
     dm_log(level, file, line, dm_errno_or_class, message);
@@ -1043,9 +1056,9 @@ int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_de
         goto cleanup;
     }
 
-    dm_saw_exist = false;
+    g_dm_saw_exist = false;
     if (dm_task_run(dmt) != 1) {
-        if (dm_saw_exist) {
+        if (g_dm_saw_exist) {
             ret = ERR_DEVICE_ID_EXISTS;
             goto cleanup;
         }

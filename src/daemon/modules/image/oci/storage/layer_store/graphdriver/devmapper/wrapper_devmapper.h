@@ -101,7 +101,7 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
 
 int dev_get_info(struct dm_info *info, const char *name);
 
-int dev_remove_device(const char *name);
+int dev_delete_device_force(const char *name);
 
 int dev_remove_device_deferred(const char *name);
 
