@@ -118,7 +118,7 @@ RUN set -x && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/cmake.git && \
 	cd cmake && \
-	git checkout origin/openEuler-20.03-LTS && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf cmake-3.12.1.tar.gz && \
 	cd cmake-3.12.1 && \
 	./bootstrap && make && make install && \
@@ -131,6 +131,7 @@ RUN set -x && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/protobuf.git && \
 	cd protobuf && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf protobuf-all-3.9.0.tar.gz && \
 	cd protobuf-3.9.0 && \
 	./autogen.sh && \
@@ -145,6 +146,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/c-ares.git && \
 	cd c-ares && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf c-ares-1.15.0.tar.gz && \
 	cd c-ares-1.15.0 && \
 	autoreconf -if && \
@@ -159,6 +161,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/grpc.git && \
 	cd grpc && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf grpc-1.22.0.tar.gz && \
 	cd grpc-1.22.0 && \
 	make -j $(nproc) && \
@@ -171,6 +174,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libevent.git && \
 	cd libevent && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf libevent-2.1.11-stable.tar.gz && \
 	cd libevent-2.1.11-stable && \
 	./autogen.sh && \
@@ -185,6 +189,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libevhtp.git && \
 	cd libevhtp && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf libevhtp-1.2.18.tar.gz && \
 	cd libevhtp-1.2.18 && \
 	patch -p1 -F1 -s < ../0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch && \
@@ -205,6 +210,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/http-parser.git && \
 	cd http-parser && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf http-parser-2.9.2.tar.gz && \
 	cd http-parser-2.9.2 && \
 	make -j CFLAGS="-Wno-error" && \
@@ -217,6 +223,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libwebsockets.git && \
 	cd libwebsockets && \
+	git checkout openEuler-20.03-LTS-tag && \
 	tar -xzvf libwebsockets-2.4.2.tar.gz && \
 	cd libwebsockets-2.4.2 && \
 	patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch && \

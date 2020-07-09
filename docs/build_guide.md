@@ -29,6 +29,7 @@ $ sudo -E echo "/usr/local/lib" >> /etc/ld.so.conf
 ```
 $ git clone https://gitee.com/src-openeuler/protobuf.git
 $ cd protobuf
+$ git checkout openEuler-20.03-LTS-tag
 $ tar -xzvf protobuf-all-3.9.0.tar.gz
 $ cd protobuf-3.9.0
 $ sudo -E ./autogen.sh
@@ -42,6 +43,7 @@ $ sudo -E ldconfig
 ```
 $ git clone https://gitee.com/src-openeuler/c-ares.git
 $ cd c-ares
+$ git checkout openEuler-20.03-LTS-tag
 $ tar -xzvf c-ares-1.15.0.tar.gz
 $ cd c-ares-1.15.0
 $ sudo -E autoreconf -if
@@ -55,6 +57,7 @@ $ sudo -E ldconfig
 ```
 $ git clone https://gitee.com/src-openeuler/grpc.git
 $ cd grpc
+$ git checkout openEuler-20.03-LTS-tag
 $ tar -xzvf grpc-1.22.0.tar.gz
 $ cd grpc-1.22.0
 $ sudo -E make -j $(nproc)
@@ -66,6 +69,7 @@ $ sudo -E ldconfig
 ```
 $ git clone https://gitee.com/src-openeuler/http-parser.git
 $ cd http-parser
+$ git checkout openEuler-20.03-LTS-tag
 $ tar -xzvf http-parser-2.9.2.tar.gz
 $ cd http-parser-2.9.2
 $ sudo -E make -j CFLAGS="-Wno-error"
@@ -77,6 +81,7 @@ $ sudo -E ldconfig
 ```
 $ git clone https://gitee.com/src-openeuler/libwebsockets.git
 $ cd libwebsockets
+$ git checkout openEuler-20.03-LTS-tag
 $ tar -xzvf libwebsockets-2.4.2.tar.gz
 $ cd libwebsockets-2.4.2
 $ patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch
