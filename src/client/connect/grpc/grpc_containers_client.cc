@@ -13,27 +13,26 @@
  * Description: provide grpc containers client functions
  ******************************************************************************/
 #include "grpc_containers_client.h"
-#include <string>
-#include <memory>
-#include <sstream>
-#include <fstream>
-#include <thread>
+#include "client_base.h"
+#include "container.grpc.pb.h"
 #include "isula_libutils/container_copy_to_request.h"
 #include "isula_libutils/container_exec_request.h"
-#include "utils.h"
 #include "isulad_tar.h"
-#include "stoppable_thread.h"
-#include "container.grpc.pb.h"
-#include "client_base.h"
 #include "pack_config.h"
+#include "stoppable_thread.h"
+#include "utils.h"
+#include <fstream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <utility>
 
 using namespace containers;
 
-using grpc::Channel;
 using grpc::ClientContext;
 using grpc::ClientReader;
 using grpc::ClientReaderWriter;
-using grpc::ClientWriter;
 using grpc::Status;
 using grpc::StatusCode;
 using google::protobuf::Timestamp;
@@ -47,7 +46,7 @@ public:
     }
     ~ContainerVersion() = default;
 
-    int response_from_grpc(VersionResponse *gresponse, isula_version_response *response) override
+    auto response_from_grpc(VersionResponse *gresponse, isula_version_response *response) -> int override
     {
         if (!gresponse->version().empty()) {
             response->version = util_strdup_s(gresponse->version().c_str());
@@ -68,7 +67,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const VersionRequest &req, VersionResponse *reply) override
+    auto grpc_call(ClientContext *context, const VersionRequest &req, VersionResponse *reply) -> Status override
     {
         return stub_->Version(context, req, reply);
     }
@@ -83,7 +82,7 @@ public:
     }
     ~ContainerInfo() = default;
 
-    int response_from_grpc(InfoResponse *gresponse, isula_info_response *response) override
+    auto response_from_grpc(InfoResponse *gresponse, isula_info_response *response) -> int override
     {
         if (!gresponse->version().empty()) {
             response->version = util_strdup_s(gresponse->version().c_str());
@@ -110,13 +109,13 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const InfoRequest &req, InfoResponse *reply) override
+    auto grpc_call(ClientContext *context, const InfoRequest &req, InfoResponse *reply) -> Status override
     {
         return stub_->Info(context, req, reply);
     }
 
 private:
-    void get_os_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
+    static void get_os_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
     {
         if (!gresponse->kversion().empty()) {
             response->kversion = util_strdup_s(gresponse->kversion().c_str());
@@ -139,7 +138,7 @@ private:
         }
     }
 
-    void get_proxy_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
+    static void get_proxy_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
     {
         if (!gresponse->http_proxy().empty()) {
             response->http_proxy = util_strdup_s(gresponse->http_proxy().c_str());
@@ -152,7 +151,7 @@ private:
         }
     }
 
-    void get_driver_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
+    static void get_driver_info_from_grpc(isula_info_response *response, InfoResponse *gresponse)
     {
         if (!gresponse->driver_name().empty()) {
             response->driver_name = util_strdup_s(gresponse->driver_name().c_str());
@@ -172,10 +171,11 @@ public:
     }
     ~ContainerCreate() = default;
 
-    int request_to_grpc(const isula_create_request *request, CreateRequest *grequest) override
+    auto request_to_grpc(const isula_create_request *request, CreateRequest *grequest) -> int override
     {
         int ret = 0;
-        char *host_json = nullptr, *config_json = nullptr;
+        char *host_json = nullptr;
+        char *config_json = nullptr;
 
         if (request == nullptr) {
             return -1;
@@ -194,7 +194,7 @@ public:
             grequest->set_runtime(request->runtime);
         }
         ret = generate_hostconfig(request->hostconfig, &host_json);
-        if (ret) {
+        if (ret != 0) {
             ERROR("Failed to pack host config");
             return EINVALIDARGS;
         }
@@ -203,7 +203,7 @@ public:
         free(host_json);
 
         ret = generate_container_config(request->config, &config_json);
-        if (ret) {
+        if (ret != 0) {
             ERROR("Failed to pack custom config");
             return EINVALIDARGS;
         }
@@ -214,7 +214,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(CreateResponse *gresponse, isula_create_response *response) override
+    auto response_from_grpc(CreateResponse *gresponse, isula_create_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -226,7 +226,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const CreateRequest &req) override
+    auto check_parameter(const CreateRequest &req) -> int override
     {
         int nret = -1;
 
@@ -246,7 +246,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const CreateRequest &req, CreateResponse *reply) override
+    auto grpc_call(ClientContext *context, const CreateRequest &req, CreateResponse *reply) -> Status override
     {
         return stub_->Create(context, req, reply);
     }
@@ -261,7 +261,7 @@ public:
     }
     ~ContainerStart() = default;
 
-    int request_to_grpc(const isula_start_request *request, StartRequest *grequest) override
+    auto request_to_grpc(const isula_start_request *request, StartRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -286,7 +286,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(StartResponse *gresponse, struct isula_start_response *response) override
+    auto response_from_grpc(StartResponse *gresponse, struct isula_start_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -296,7 +296,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const StartRequest &req) override
+    auto check_parameter(const StartRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -306,7 +306,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const StartRequest &req, StartResponse *reply) override
+    auto grpc_call(ClientContext *context, const StartRequest &req, StartResponse *reply) -> Status override
     {
         return stub_->Start(context, req, reply);
     }
@@ -316,21 +316,21 @@ class RemoteStartWriteToServerTask : public StoppableThread {
 public:
     explicit RemoteStartWriteToServerTask(
         std::shared_ptr<ClientReaderWriter<RemoteStartRequest, RemoteStartResponse>> stream)
-        : m_stream(stream)
+        : m_stream(std::move(std::move(stream)))
     {
     }
     ~RemoteStartWriteToServerTask() = default;
 
-    void run()
+    void run() override
     {
-        while (stopRequested() == false) {
-            int cmd;
+        while (!stopRequested()) {
+            int cmd = 0;
             cmd = getchar();
             RemoteStartRequest request;
             if (cmd == EOF) {
                 request.set_finish(true);
             } else {
-                char in = (char)cmd;
+                char in = static_cast<char>(cmd);
                 request.set_stdin(&in, 1);
             }
             if (!m_stream->Write(request)) {
@@ -356,7 +356,7 @@ public:
     }
     ~ContainerRemoteStart() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct isula_start_request *request)
+    auto set_custom_header_metadata(ClientContext &context, const struct isula_start_request *request) -> int
     {
         if (request == nullptr || request->name == nullptr) {
             ERROR("Missing container id in the request");
@@ -379,13 +379,13 @@ public:
         return 0;
     }
 
-    void get_server_trailing_metadata(ClientContext &context, isula_start_response *response)
+    static void get_server_trailing_metadata(ClientContext &context, isula_start_response *response)
     {
         auto metadata = context.GetServerTrailingMetadata();
         auto cc = metadata.find("cc");
         if (cc != metadata.end()) {
             auto tmpstr = std::string(cc->second.data(), cc->second.length());
-            response->server_errono = (uint32_t)std::stoul(tmpstr, nullptr, 0);
+            response->server_errono = static_cast<uint32_t>(std::stoul(tmpstr, nullptr, 0));
         }
         auto errmsg = metadata.find("errmsg");
         if (errmsg != metadata.end()) {
@@ -394,7 +394,7 @@ public:
         }
     }
 
-    int run(const struct isula_start_request *request, struct isula_start_response *response) override
+    auto run(const struct isula_start_request *request, struct isula_start_response *response) -> int override
     {
         ClientContext context;
 
@@ -463,7 +463,7 @@ public:
     }
     ~ContainerTop() = default;
 
-    int request_to_grpc(const isula_top_request *request, TopRequest *grequest) override
+    auto request_to_grpc(const isula_top_request *request, TopRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -481,7 +481,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(TopResponse *gresponse, struct isula_top_response *response) override
+    auto response_from_grpc(TopResponse *gresponse, struct isula_top_response *response) -> int override
     {
         int i = 0;
         int num = gresponse->processes_size();
@@ -503,11 +503,11 @@ public:
         if (!gresponse->titles().empty()) {
             response->titles = util_strdup_s(gresponse->titles().c_str());
         }
-        if ((size_t)num > SIZE_MAX / sizeof(char *)) {
+        if (static_cast<size_t>(num) > SIZE_MAX / sizeof(char *)) {
             ERROR("Too many summary info!");
             return -1;
         }
-        response->processes = (char **)util_common_calloc_s(num * sizeof(char *));
+        response->processes = static_cast<char **>(util_common_calloc_s(num * sizeof(char *)));
         if (response->processes == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
@@ -516,12 +516,12 @@ public:
         for (i = 0; i < num; i++) {
             response->processes[i] = util_strdup_s(gresponse->processes(i).c_str());
         }
-        response->processes_len = (size_t)gresponse->processes_size();
+        response->processes_len = static_cast<size_t>(gresponse->processes_size());
 
         return 0;
     }
 
-    int check_parameter(const TopRequest &req) override
+    auto check_parameter(const TopRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -530,7 +530,7 @@ public:
 
         return 0;
     }
-    Status grpc_call(ClientContext *context, const TopRequest &req, TopResponse *reply) override
+    auto grpc_call(ClientContext *context, const TopRequest &req, TopResponse *reply) -> Status override
     {
         return stub_->Top(context, req, reply);
     }
@@ -545,7 +545,7 @@ public:
     }
     ~ContainerStop() = default;
 
-    int request_to_grpc(const isula_stop_request *request, StopRequest *grequest) override
+    auto request_to_grpc(const isula_stop_request *request, StopRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -560,7 +560,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(StopResponse *gresponse, isula_stop_response *response) override
+    auto response_from_grpc(StopResponse *gresponse, isula_stop_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -570,7 +570,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const StopRequest &req) override
+    auto check_parameter(const StopRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -580,7 +580,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const StopRequest &req, StopResponse *reply) override
+    auto grpc_call(ClientContext *context, const StopRequest &req, StopResponse *reply) -> Status override
     {
         return stub_->Stop(context, req, reply);
     }
@@ -595,7 +595,7 @@ public:
     }
     ~ContainerRename() = default;
 
-    int request_to_grpc(const isula_rename_request *request, RenameRequest *grequest) override
+    auto request_to_grpc(const isula_rename_request *request, RenameRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -612,7 +612,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(RenameResponse *gresponse, isula_rename_response *response) override
+    auto response_from_grpc(RenameResponse *gresponse, isula_rename_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -622,7 +622,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const RenameRequest &req) override
+    auto check_parameter(const RenameRequest &req) -> int override
     {
         if (req.oldname().empty()) {
             ERROR("Missing container old name in the request");
@@ -637,7 +637,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const RenameRequest &req, RenameResponse *reply) override
+    auto grpc_call(ClientContext *context, const RenameRequest &req, RenameResponse *reply) -> Status override
     {
         return stub_->Rename(context, req, reply);
     }
@@ -652,7 +652,7 @@ public:
     }
     ~ContainerResize() = default;
 
-    int request_to_grpc(const isula_resize_request *request, ResizeRequest *grequest) override
+    auto request_to_grpc(const isula_resize_request *request, ResizeRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -671,7 +671,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ResizeResponse *gresponse, isula_resize_response *response) override
+    auto response_from_grpc(ResizeResponse *gresponse, isula_resize_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -681,7 +681,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const ResizeRequest &req) override
+    auto check_parameter(const ResizeRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container id in the request");
@@ -691,7 +691,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const ResizeRequest &req, ResizeResponse *reply) override
+    auto grpc_call(ClientContext *context, const ResizeRequest &req, ResizeResponse *reply) -> Status override
     {
         return stub_->Resize(context, req, reply);
     }
@@ -707,7 +707,7 @@ public:
     }
     ~ContainerRestart() = default;
 
-    int request_to_grpc(const isula_restart_request *request, RestartRequest *grequest) override
+    auto request_to_grpc(const isula_restart_request *request, RestartRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -716,12 +716,12 @@ public:
         if (request->name != nullptr) {
             grequest->set_id(request->name);
         }
-        grequest->set_timeout((int32_t)(request->timeout));
+        grequest->set_timeout(static_cast<int32_t>(request->timeout));
 
         return 0;
     }
 
-    int response_from_grpc(RestartResponse *gresponse, isula_restart_response *response) override
+    auto response_from_grpc(RestartResponse *gresponse, isula_restart_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -731,7 +731,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const RestartRequest &req) override
+    auto check_parameter(const RestartRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in request");
@@ -741,7 +741,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const RestartRequest &req, RestartResponse *reply) override
+    auto grpc_call(ClientContext *context, const RestartRequest &req, RestartResponse *reply) -> Status override
     {
         return stub_->Restart(context, req, reply);
     }
@@ -756,7 +756,7 @@ public:
     }
     ~ContainerKill() = default;
 
-    int request_to_grpc(const isula_kill_request *request, KillRequest *grequest) override
+    auto request_to_grpc(const isula_kill_request *request, KillRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -770,7 +770,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(KillResponse *gresponse, isula_kill_response *response) override
+    auto response_from_grpc(KillResponse *gresponse, isula_kill_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -780,7 +780,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const KillRequest &req) override
+    auto check_parameter(const KillRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -790,7 +790,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const KillRequest &req, KillResponse *reply) override
+    auto grpc_call(ClientContext *context, const KillRequest &req, KillResponse *reply) -> Status override
     {
         return stub_->Kill(context, req, reply);
     }
@@ -805,7 +805,7 @@ public:
     }
     ~ContainerExec() = default;
 
-    int request_to_grpc(const isula_exec_request *request, ExecRequest *grequest) override
+    auto request_to_grpc(const isula_exec_request *request, ExecRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -844,7 +844,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ExecResponse *gresponse, isula_exec_response *response) override
+    auto response_from_grpc(ExecResponse *gresponse, isula_exec_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         response->exit_code = gresponse->exit_code();
@@ -855,7 +855,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const ExecRequest &req) override
+    auto check_parameter(const ExecRequest &req) -> int override
     {
         if (req.container_id().empty()) {
             ERROR("Missing container name in the request");
@@ -865,7 +865,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const ExecRequest &req, ExecResponse *reply) override
+    auto grpc_call(ClientContext *context, const ExecRequest &req, ExecResponse *reply) -> Status override
     {
         return stub_->Exec(context, req, reply);
     }
@@ -875,21 +875,21 @@ class RemoteExecWriteToServerTask : public StoppableThread {
 public:
     explicit RemoteExecWriteToServerTask(
         std::shared_ptr<ClientReaderWriter<RemoteExecRequest, RemoteExecResponse>> stream)
-        : m_stream(stream)
+        : m_stream(std::move(std::move(stream)))
     {
     }
     ~RemoteExecWriteToServerTask() = default;
 
-    void run()
+    void run() override
     {
-        while (stopRequested() == false) {
-            int cmd;
+        while (!stopRequested()) {
+            int cmd = 0;
             cmd = getchar();
             RemoteExecRequest request;
             if (cmd == EOF) {
                 request.set_finish(true);
             } else {
-                char in = (char)cmd;
+                char in = static_cast<char>(cmd);
                 request.add_cmd(&in, 1);
             }
             if (!m_stream->Write(request)) {
@@ -915,8 +915,8 @@ public:
     }
     ~ContainerRemoteExec() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct isula_exec_request *request,
-                                   struct isula_exec_response *response)
+    auto set_custom_header_metadata(ClientContext &context, const struct isula_exec_request *request,
+                                    struct isula_exec_response *response) -> int
     {
         int ret = 0;
         char *json = nullptr;
@@ -938,7 +938,7 @@ public:
         exec.attach_stderr = request->attach_stderr;
         exec.timeout = request->timeout;
         exec.argv = request->argv;
-        exec.argv_len = (size_t)request->argc;
+        exec.argv_len = static_cast<size_t>(request->argc);
         exec.env = request->env;
         exec.env_len = request->env_len;
         exec.suffix = request->suffix;
@@ -963,18 +963,18 @@ out:
         free(json);
         return ret;
     }
-    void get_server_trailing_metadata(ClientContext &context, isula_exec_response *response)
+    static void get_server_trailing_metadata(ClientContext &context, isula_exec_response *response)
     {
         auto metadata = context.GetServerTrailingMetadata();
         auto cc = metadata.find("cc");
         if (cc != metadata.end()) {
             auto tmpstr = std::string(cc->second.data(), cc->second.length());
-            response->server_errono = (uint32_t)std::stoul(tmpstr, nullptr, 0);
+            response->server_errono = static_cast<uint32_t>(std::stoul(tmpstr, nullptr, 0));
         }
         auto exit_code = metadata.find("exit_code");
         if (exit_code != metadata.end()) {
             auto tmpstr = std::string(exit_code->second.data(), exit_code->second.length());
-            response->exit_code = (uint32_t)std::stoul(tmpstr, nullptr, 0);
+            response->exit_code = static_cast<uint32_t>(std::stoul(tmpstr, nullptr, 0));
         }
         auto errmsg = metadata.find("errmsg");
         if (errmsg != metadata.end()) {
@@ -982,7 +982,7 @@ out:
             response->errmsg = util_strdup_s(tmpstr.c_str());
         }
     }
-    int run(const struct isula_exec_request *request, struct isula_exec_response *response) override
+    auto run(const struct isula_exec_request *request, struct isula_exec_response *response) -> int override
     {
         ClientContext context;
 
@@ -1044,7 +1044,7 @@ public:
     }
     ~ContainerInspect() = default;
 
-    int request_to_grpc(const isula_inspect_request *request, InspectContainerRequest *grequest) override
+    auto request_to_grpc(const isula_inspect_request *request, InspectContainerRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -1059,7 +1059,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(InspectContainerResponse *gresponse, isula_inspect_response *response) override
+    auto response_from_grpc(InspectContainerResponse *gresponse, isula_inspect_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->containerjson().empty()) {
@@ -1072,7 +1072,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const InspectContainerRequest &req) override
+    auto check_parameter(const InspectContainerRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -1082,8 +1082,8 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const InspectContainerRequest &req,
-                     InspectContainerResponse *reply) override
+    auto grpc_call(ClientContext *context, const InspectContainerRequest &req,
+                   InspectContainerResponse *reply) -> Status override
     {
         return stub_->Inspect(context, req, reply);
     }
@@ -1098,7 +1098,7 @@ public:
     }
     ~ContainerDelete() = default;
 
-    int request_to_grpc(const isula_delete_request *request, DeleteRequest *grequest) override
+    auto request_to_grpc(const isula_delete_request *request, DeleteRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -1112,7 +1112,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(DeleteResponse *gresponse, isula_delete_response *response) override
+    auto response_from_grpc(DeleteResponse *gresponse, isula_delete_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->id().empty()) {
@@ -1125,7 +1125,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const DeleteRequest &req) override
+    auto check_parameter(const DeleteRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -1135,7 +1135,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const DeleteRequest &req, DeleteResponse *reply) override
+    auto grpc_call(ClientContext *context, const DeleteRequest &req, DeleteResponse *reply) -> Status override
     {
         return stub_->Delete(context, req, reply);
     }
@@ -1150,14 +1150,14 @@ public:
     }
     ~ContainerList() = default;
 
-    int request_to_grpc(const isula_list_request *request, ListRequest *grequest) override
+    auto request_to_grpc(const isula_list_request *request, ListRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
         }
 
         if (request->filters != nullptr) {
-            google::protobuf::Map<std::string, std::string> *map;
+            google::protobuf::Map<std::string, std::string> *map = nullptr;
             map = grequest->mutable_filters();
             for (size_t i = 0; i < request->filters->len; i++) {
                 (*map)[request->filters->keys[i]] = request->filters->values[i];
@@ -1168,7 +1168,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ListResponse *gresponse, isula_list_response *response) override
+    auto response_from_grpc(ListResponse *gresponse, isula_list_response *response) -> int override
     {
         int i = 0;
         int num = gresponse->containers_size();
@@ -1182,12 +1182,12 @@ public:
             }
             return 0;
         }
-        if ((size_t)num > SIZE_MAX / sizeof(isula_container_summary_info *)) {
+        if (static_cast<size_t>(num) > SIZE_MAX / sizeof(isula_container_summary_info *)) {
             ERROR("Too many summary info!");
             return -1;
         }
-        response->container_summary = (struct isula_container_summary_info **)util_common_calloc_s(
-                                          sizeof(struct isula_container_summary_info *) * (size_t)num);
+        response->container_summary = static_cast<struct isula_container_summary_info **>(util_common_calloc_s(
+                                                                                              sizeof(struct isula_container_summary_info *) * static_cast<size_t>(num)));
         if (response->container_summary == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
@@ -1195,7 +1195,7 @@ public:
         }
 
         for (i = 0; i < num; i++) {
-            if (get_container_summary_from_grpc(response, gresponse, i)) {
+            if (get_container_summary_from_grpc(response, gresponse, i) != 0) {
                 return -1;
             }
         }
@@ -1203,16 +1203,16 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const ListRequest &req, ListResponse *reply) override
+    auto grpc_call(ClientContext *context, const ListRequest &req, ListResponse *reply) -> Status override
     {
         return stub_->List(context, req, reply);
     }
 
 private:
-    int get_container_summary_from_grpc(isula_list_response *response, ListResponse *gresponse, int index)
+    static auto get_container_summary_from_grpc(isula_list_response *response, ListResponse *gresponse, int index) -> int
     {
         response->container_summary[index] =
-            (struct isula_container_summary_info *)util_common_calloc_s(sizeof(struct isula_container_summary_info));
+            static_cast<struct isula_container_summary_info *>(util_common_calloc_s(sizeof(struct isula_container_summary_info)));
         if (response->container_summary[index] == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
@@ -1226,9 +1226,9 @@ private:
         response->container_summary[index]->name = util_strdup_s(name);
         response->container_summary[index]->runtime = !in.runtime().empty() ? util_strdup_s(in.runtime().c_str())
                                                       : nullptr;
-        response->container_summary[index]->has_pid = (int)in.pid() != 0;
-        response->container_summary[index]->pid = (uint32_t)in.pid();
-        response->container_summary[index]->status = (Container_Status)in.status();
+        response->container_summary[index]->has_pid = static_cast<uint32_t>(static_cast<int>(in.pid()) != 0);
+        response->container_summary[index]->pid = static_cast<uint32_t>(in.pid());
+        response->container_summary[index]->status = static_cast<Container_Status>(in.status());
         response->container_summary[index]->image = !in.image().empty() ? util_strdup_s(in.image().c_str())
                                                     : util_strdup_s("none");
         response->container_summary[index]->command = !in.command().empty() ? util_strdup_s(in.command().c_str())
@@ -1240,9 +1240,9 @@ private:
         response->container_summary[index]->finishat = util_strdup_s(finishtime);
 
         response->container_summary[index]->exit_code = in.exit_code();
-        response->container_summary[index]->restart_count = (uint32_t)(in.restartcount());
-        response->container_summary[index]->created = (int64_t)in.created();
-        std::string healthState { "" };
+        response->container_summary[index]->restart_count = static_cast<uint32_t>(in.restartcount());
+        response->container_summary[index]->created = static_cast<int64_t>(in.created());
+        std::string healthState;
         if (!in.health_state().empty()) {
             healthState = "(" + in.health_state() + ")";
         }
@@ -1263,7 +1263,7 @@ public:
     }
     ~ContainerWait() = default;
 
-    int request_to_grpc(const isula_wait_request *request, WaitRequest *grequest) override
+    auto request_to_grpc(const isula_wait_request *request, WaitRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -1276,9 +1276,9 @@ public:
         return 0;
     }
 
-    int response_from_grpc(WaitResponse *gresponse, isula_wait_response *response) override
+    auto response_from_grpc(WaitResponse *gresponse, isula_wait_response *response) -> int override
     {
-        response->exit_code = (int)gresponse->exit_code();
+        response->exit_code = static_cast<int>(gresponse->exit_code());
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
@@ -1287,7 +1287,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const WaitRequest &req) override
+    auto check_parameter(const WaitRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -1297,7 +1297,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const WaitRequest &req, WaitResponse *reply) override
+    auto grpc_call(ClientContext *context, const WaitRequest &req, WaitResponse *reply) -> Status override
     {
         return stub_->Wait(context, req, reply);
     }
@@ -1306,21 +1306,21 @@ public:
 class AttachWriteToServerTask : public StoppableThread {
 public:
     explicit AttachWriteToServerTask(std::shared_ptr<ClientReaderWriter<AttachRequest, AttachResponse>> stream)
-        : m_stream(stream)
+        : m_stream(std::move(std::move(stream)))
     {
     }
     ~AttachWriteToServerTask() = default;
 
-    void run()
+    void run() override
     {
-        while (stopRequested() == false) {
-            int cmd;
+        while (!stopRequested()) {
+            int cmd = 0;
             cmd = getchar();
             AttachRequest request;
             if (cmd == EOF) {
                 request.set_finish(true);
             } else {
-                char in = (char)cmd;
+                char in = static_cast<char>(cmd);
                 request.set_stdin(&in, 1);
             }
             if (!m_stream->Write(request)) {
@@ -1346,7 +1346,7 @@ public:
     }
     ~ContainerAttach() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct isula_attach_request *request)
+    auto set_custom_header_metadata(ClientContext &context, const struct isula_attach_request *request) -> int
     {
         if (request == nullptr || request->name == nullptr) {
             ERROR("Missing container id in the request");
@@ -1369,13 +1369,13 @@ public:
 
         return 0;
     }
-    void get_server_trailing_metadata(ClientContext &context, isula_attach_response *response)
+    static void get_server_trailing_metadata(ClientContext &context, isula_attach_response *response)
     {
         auto metadata = context.GetServerTrailingMetadata();
         auto cc = metadata.find("cc");
         if (cc != metadata.end()) {
             auto tmpstr = std::string(cc->second.data(), cc->second.length());
-            response->server_errono = (uint32_t)std::stoul(tmpstr, nullptr, 0);
+            response->server_errono = static_cast<uint32_t>(std::stoul(tmpstr, nullptr, 0));
         }
         auto errmsg = metadata.find("errmsg");
         if (errmsg != metadata.end()) {
@@ -1384,7 +1384,7 @@ public:
         }
     }
 
-    int run(const struct isula_attach_request *request, struct isula_attach_response *response) override
+    auto run(const struct isula_attach_request *request, struct isula_attach_response *response) -> int override
     {
         ClientContext context;
 
@@ -1450,7 +1450,7 @@ public:
     }
     ~ContainerPause() = default;
 
-    int request_to_grpc(const isula_pause_request *request, PauseRequest *grequest) override
+    auto request_to_grpc(const isula_pause_request *request, PauseRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -1463,7 +1463,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(PauseResponse *gresponse, isula_pause_response *response) override
+    auto response_from_grpc(PauseResponse *gresponse, isula_pause_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1473,7 +1473,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const PauseRequest &req) override
+    auto check_parameter(const PauseRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -1483,7 +1483,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const PauseRequest &req, PauseResponse *reply) override
+    auto grpc_call(ClientContext *context, const PauseRequest &req, PauseResponse *reply) -> Status override
     {
         return stub_->Pause(context, req, reply);
     }
@@ -1498,7 +1498,7 @@ public:
     }
     ~ContainerResume() = default;
 
-    int request_to_grpc(const isula_resume_request *request, ResumeRequest *grequest) override
+    auto request_to_grpc(const isula_resume_request *request, ResumeRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -1511,7 +1511,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ResumeResponse *gresponse, isula_resume_response *response) override
+    auto response_from_grpc(ResumeResponse *gresponse, isula_resume_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1521,7 +1521,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const ResumeRequest &req) override
+    auto check_parameter(const ResumeRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -1531,7 +1531,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const ResumeRequest &req, ResumeResponse *reply) override
+    auto grpc_call(ClientContext *context, const ResumeRequest &req, ResumeResponse *reply) -> Status override
     {
         return stub_->Resume(context, req, reply);
     }
@@ -1546,7 +1546,7 @@ public:
     }
     ~ContainerExport() = default;
 
-    int request_to_grpc(const isula_export_request *request, ExportRequest *grequest) override
+    auto request_to_grpc(const isula_export_request *request, ExportRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -1562,7 +1562,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ExportResponse *gresponse, isula_export_response *response) override
+    auto response_from_grpc(ExportResponse *gresponse, isula_export_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1572,7 +1572,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const ExportRequest &req) override
+    auto check_parameter(const ExportRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -1586,7 +1586,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const ExportRequest &req, ExportResponse *reply) override
+    auto grpc_call(ClientContext *context, const ExportRequest &req, ExportResponse *reply) -> Status override
     {
         return stub_->Export(context, req, reply);
     }
@@ -1601,7 +1601,7 @@ public:
     }
     ~ContainerUpdate() = default;
 
-    int request_to_grpc(const isula_update_request *request, UpdateRequest *grequest) override
+    auto request_to_grpc(const isula_update_request *request, UpdateRequest *grequest) -> int override
     {
         int ret = 0;
         char *json = nullptr;
@@ -1613,7 +1613,7 @@ public:
         isula_host_config_t hostconfig;
         (void)memset(&hostconfig, 0, sizeof(hostconfig));
 
-        if (request->updateconfig) {
+        if (request->updateconfig != nullptr) {
             hostconfig.restart_policy = request->updateconfig->restart_policy;
             hostconfig.cr = request->updateconfig->cr;
         }
@@ -1634,7 +1634,7 @@ cleanup:
         return ret;
     }
 
-    int response_from_grpc(UpdateResponse *gresponse, isula_update_response *response) override
+    auto response_from_grpc(UpdateResponse *gresponse, isula_update_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1644,7 +1644,7 @@ cleanup:
         return 0;
     }
 
-    int check_parameter(const UpdateRequest &req) override
+    auto check_parameter(const UpdateRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing container name in the request");
@@ -1654,7 +1654,7 @@ cleanup:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const UpdateRequest &req, UpdateResponse *reply) override
+    auto grpc_call(ClientContext *context, const UpdateRequest &req, UpdateResponse *reply) -> Status override
     {
         return stub_->Update(context, req, reply);
     }
@@ -1669,7 +1669,7 @@ public:
     }
     ~ContainerStats() = default;
 
-    int request_to_grpc(const isula_stats_request *request, StatsRequest *grequest) override
+    auto request_to_grpc(const isula_stats_request *request, StatsRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -1684,7 +1684,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(StatsResponse *gresponse, isula_stats_response *response) override
+    auto response_from_grpc(StatsResponse *gresponse, isula_stats_response *response) -> int override
     {
         int size = gresponse->containers_size();
         if (size > 0) {
@@ -1709,7 +1709,7 @@ public:
                 response->container_stats[i].kmem_used = gresponse->containers(i).kmem_used();
                 response->container_stats[i].kmem_limit = gresponse->containers(i).kmem_limit();
             }
-            response->container_num = (size_t)size;
+            response->container_num = static_cast<size_t>(size);
         }
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
@@ -1719,12 +1719,12 @@ public:
         return 0;
     }
 
-    int check_parameter(const StatsRequest &req) override
+    auto check_parameter(const StatsRequest & /*req*/) -> int override
     {
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const StatsRequest &req, StatsResponse *reply) override
+    auto grpc_call(ClientContext *context, const StatsRequest &req, StatsResponse *reply) -> Status override
     {
         return stub_->Stats(context, req, reply);
     }
@@ -1739,16 +1739,16 @@ public:
     }
     ~ContainerEvents() = default;
 
-    int run(const struct isula_events_request *request, struct isula_events_response *response) override
+    auto run(const struct isula_events_request *request, struct isula_events_response *response) -> int override
     {
-        int ret;
+        int ret = 0;
         EventsRequest req;
         Event event;
         ClientContext context;
         Status status;
         container_events_format_t *isula_event = nullptr;
 
-        if (SetMetadataInfo(context)) {
+        if (SetMetadataInfo(context) != 0) {
             ERROR("Failed to set metadata info for authorization");
             response->cc = ISULAD_ERR_INPUT;
             return -1;
@@ -1763,7 +1763,7 @@ public:
 
         std::unique_ptr<ClientReader<Event>> reader(stub_->Events(&context, req));
         while (reader->Read(&event)) {
-            isula_event = (container_events_format_t *)util_common_calloc_s(sizeof(container_events_format_t));
+            isula_event = static_cast<container_events_format_t *>(util_common_calloc_s(sizeof(container_events_format_t)));
             if (isula_event == nullptr) {
                 ERROR("Out of memory");
                 response->server_errono = ISULAD_ERR_EXEC;
@@ -1791,13 +1791,13 @@ public:
     }
 
 private:
-    void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
+    static void protobuf_timestamp_to_grpc(const types_timestamp_t *timestamp, Timestamp *gtimestamp)
     {
         gtimestamp->set_seconds(timestamp->seconds);
         gtimestamp->set_nanos(timestamp->nanos);
     }
 
-    void protobuf_timestamp_from_grpc(types_timestamp_t *timestamp, const Timestamp &gtimestamp)
+    static void protobuf_timestamp_from_grpc(types_timestamp_t *timestamp, const Timestamp &gtimestamp)
     {
         timestamp->has_seconds = gtimestamp.seconds() != 0;
         timestamp->seconds = gtimestamp.seconds();
@@ -1821,15 +1821,15 @@ private:
             event->id = util_strdup_s(gevent->id().c_str());
         }
 
-        google::protobuf::Map<std::string, std::string> map = gevent->annotations();
-        for (auto iter = map.cbegin(); iter != map.cend(); ++iter) {
-            std::string anno = iter->first + "=" + iter->second;
+        const google::protobuf::Map<std::string, std::string> &map = gevent->annotations();
+        for (const auto &iter : map) {
+            std::string anno = iter.first + "=" + iter.second;
             (void)util_array_append(&event->annotations, anno.c_str());
             event->annotations_len++;
         }
     }
 
-    int events_request_to_grpc(const struct isula_events_request *request, EventsRequest *grequest)
+    auto events_request_to_grpc(const struct isula_events_request *request, EventsRequest *grequest) -> int
     {
         if (request == nullptr) {
             return -1;
@@ -1842,10 +1842,10 @@ private:
         }
 
         if (request->since.has_seconds || request->since.has_nanos) {
-            protobuf_timestamp_to_grpc((const types_timestamp_t *)(&request->since), grequest->mutable_since());
+            protobuf_timestamp_to_grpc((&request->since), grequest->mutable_since());
         }
         if (request->until.has_seconds || request->until.has_nanos) {
-            protobuf_timestamp_to_grpc((const types_timestamp_t *)(&request->until), grequest->mutable_until());
+            protobuf_timestamp_to_grpc((&request->until), grequest->mutable_until());
         }
 
         return 0;
@@ -1855,29 +1855,29 @@ private:
 struct CopyFromContainerContext {
     CopyFromContainerRequest request;
     ClientContext context;
-    ClientReader<CopyFromContainerResponse> *reader;
+    ClientReader<CopyFromContainerResponse> *reader{};
 };
 
 // Note: len of buf can not smaller than ARCHIVE_BLOCK_SIZE
-static ssize_t CopyFromContainerRead(void *context, void *buf, size_t len)
+static auto CopyFromContainerRead(void *context, void *buf, size_t len) -> ssize_t
 {
     CopyFromContainerResponse res;
-    struct CopyFromContainerContext *gcopy = (struct CopyFromContainerContext *)context;
+    struct CopyFromContainerContext *gcopy = static_cast<struct CopyFromContainerContext *>(context);
     if (!gcopy->reader->Read(&res)) {
         return -1;
     }
     size_t data_len = res.data().length();
     if (data_len <= len) {
         (void)memcpy(buf, res.data().c_str(), data_len);
-        return (ssize_t)data_len;
+        return static_cast<ssize_t>(data_len);
     }
 
     return -1;
 }
 
-static int CopyFromContainerFinish(void *context, char **err)
+static auto CopyFromContainerFinish(void *context, char **err) -> int
 {
-    struct CopyFromContainerContext *gcopy = (struct CopyFromContainerContext *)context;
+    struct CopyFromContainerContext *gcopy = static_cast<struct CopyFromContainerContext *>(context);
     CopyFromContainerResponse res;
 
     if (gcopy->reader->Read(&res)) {
@@ -1913,10 +1913,10 @@ public:
     }
     ~CopyFromContainer() = default;
 
-    int run(const struct isula_copy_from_container_request *request,
-            struct isula_copy_from_container_response *response) override
+    auto run(const struct isula_copy_from_container_request *request,
+             struct isula_copy_from_container_response *response) -> int override
     {
-        int ret;
+        int ret = 0;
         CopyFromContainerResponse res;
         struct CopyFromContainerContext *ctx = new (std::nothrow)(struct CopyFromContainerContext);
         if (ctx == nullptr) {
@@ -1935,7 +1935,7 @@ public:
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
         ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
                                             ClientBaseConstants::COMMON_NAME_LEN);
-        if (ret) {
+        if (ret != 0) {
             ERROR("Failed to get common name in: %s", m_certFile.c_str());
             return -1;
         }
@@ -1972,8 +1972,8 @@ public:
     }
 
 private:
-    int copy_from_container_request_to_grpc(const struct isula_copy_from_container_request *request,
-                                            CopyFromContainerRequest *grequest)
+    static auto copy_from_container_request_to_grpc(const struct isula_copy_from_container_request *request,
+                                                    CopyFromContainerRequest *grequest) -> int
     {
         if (request == nullptr) {
             return -1;
@@ -2000,25 +2000,25 @@ public:
     explicit CopyToContainerWriteToServerTask(
         const struct io_read_wrapper *reader,
         std::shared_ptr<ClientReaderWriter<CopyToContainerRequest, CopyToContainerResponse>> stream)
-        : m_reader(reader), m_stream(stream)
+        : m_reader(reader), m_stream(std::move(std::move(stream)))
     {
     }
     ~CopyToContainerWriteToServerTask() = default;
 
-    void run()
+    void run() override
     {
         size_t len = ARCHIVE_BLOCK_SIZE;
-        char *buf = (char *)util_common_calloc_s(len);
+        char *buf = static_cast<char *>(util_common_calloc_s(len));
         if (buf == nullptr) {
             ERROR("Out of memory");
             m_stream->WritesDone();
             return;
         }
 
-        while (stopRequested() == false) {
+        while (!stopRequested()) {
             ssize_t have_read_len = m_reader->read(m_reader->context, buf, len);
             CopyToContainerRequest request;
-            request.set_data((const void*)buf, (size_t)have_read_len);
+            request.set_data((const void*)buf, static_cast<size_t>(have_read_len));
             if (!m_stream->Write(request)) {
                 DEBUG("Server may be exited, stop send data");
                 break;
@@ -2043,8 +2043,8 @@ public:
     }
     ~CopyToContainer() = default;
 
-    int set_custom_header_metadata(ClientContext &context, const struct isula_copy_to_container_request *request,
-                                   struct isula_copy_to_container_response *response)
+    auto set_custom_header_metadata(ClientContext &context, const struct isula_copy_to_container_request *request,
+                                    struct isula_copy_to_container_response *response) -> int
     {
         int ret = 0;
         char *json = nullptr;
@@ -2073,7 +2073,7 @@ public:
         }
         ret = get_common_name_from_tls_cert(m_certFile.c_str(), common_name_value,
                                             ClientBaseConstants::COMMON_NAME_LEN);
-        if (ret) {
+        if (ret != 0) {
             ERROR("Failed to get common name in: %s", m_certFile.c_str());
             ret = -1;
             goto out;
@@ -2087,7 +2087,8 @@ out:
         return ret;
     }
 
-    int run(const struct isula_copy_to_container_request *request, struct isula_copy_to_container_response *response)
+    auto run(const struct isula_copy_to_container_request *request,
+             struct isula_copy_to_container_response *response) -> int
     override
     {
         ClientContext context;
@@ -2133,7 +2134,7 @@ public:
     }
     ~ContainerLogs() = default;
 
-    int run(const struct isula_logs_request *request, struct isula_logs_response *response) override
+    auto run(const struct isula_logs_request *request, struct isula_logs_response *response) -> int override
     {
         ClientContext context;
         LogsRequest grequest;
@@ -2172,7 +2173,7 @@ public:
     }
 
 private:
-    void show_container_log(const struct isula_logs_request *request, const LogsResponse &gresponse)
+    static void show_container_log(const struct isula_logs_request *request, const LogsResponse &gresponse)
     {
         static std::ostream *os = nullptr;
 
@@ -2190,7 +2191,7 @@ private:
         (*os) << gresponse.data();
     }
 
-    int logs_request_to_grpc(const struct isula_logs_request *request, LogsRequest *grequest)
+    static auto logs_request_to_grpc(const struct isula_logs_request *request, LogsRequest *grequest) -> int
     {
         if (request == nullptr) {
             return -1;
@@ -2215,7 +2216,7 @@ private:
     }
 };
 
-int grpc_containers_client_ops_init(isula_connect_ops *ops)
+auto grpc_containers_client_ops_init(isula_connect_ops *ops) -> int
 {
     if (ops == nullptr) {
         return -1;

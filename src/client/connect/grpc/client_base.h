@@ -14,24 +14,20 @@
  ******************************************************************************/
 #ifndef __CLIENT_BASH_H
 #define __CLIENT_BASH_H
-#include <iostream>
-#include <string>
-#include <memory>
-#include <grpc++/grpc++.h>
-#include <sstream>
 #include <fstream>
+#include <grpc++/grpc++.h>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
 
+#include "certificate.h"
+#include "connect.h"
 #include "error.h"
 #include "isula_libutils/log.h"
-#include "connect.h"
 #include "utils.h"
-#include "certificate.h"
 
-using grpc::Channel;
 using grpc::ClientContext;
-using grpc::ClientReader;
-using grpc::ClientReaderWriter;
-using grpc::ClientWriter;
 using grpc::Status;
 
 namespace ClientBaseConstants {
@@ -99,9 +95,9 @@ public:
         response->cc = ISULAD_ERR_EXEC;
     }
 
-    virtual int run(const RQ *request, RP *response)
+    virtual auto run(const RQ *request, RP *response) -> int
     {
-        int ret;
+        int ret = 0;
         gRQ req;
         gRP reply;
         ClientContext context;
@@ -154,24 +150,24 @@ public:
     }
 
 protected:
-    virtual int request_to_grpc(const RQ *rq, gRQ *grq)
+    virtual auto request_to_grpc(const RQ * /*rq*/, gRQ * /*grq*/) -> int
     {
         return 0;
     };
-    virtual int response_from_grpc(gRP *reply, RP *response)
+    virtual auto response_from_grpc(gRP * /*reply*/, RP * /*response*/) -> int
     {
         return 0;
     };
-    virtual int check_parameter(const gRQ &grq)
+    virtual auto check_parameter(const gRQ & /*grq*/) -> int
     {
         return 0;
     };
-    virtual Status grpc_call(ClientContext *context, const gRQ &req, gRP *reply)
+    virtual auto grpc_call(ClientContext * /*context*/, const gRQ & /*req*/, gRP * /*reply*/) -> Status
     {
         return Status::OK;
     };
 
-    std::string ReadTextFile(const char *file)
+    auto ReadTextFile(const char *file) -> std::string
     {
         char *real_file = verify_file_and_get_real_path(file);
         if (real_file == nullptr) {
@@ -191,7 +187,7 @@ protected:
         return ss.str();
     }
 
-    int SetMetadataInfo(ClientContext &context)
+    auto SetMetadataInfo(ClientContext &context) -> int
     {
         // Set common name from cert.perm
         char common_name_value[ClientBaseConstants::COMMON_NAME_LEN] = { 0 };
@@ -215,7 +211,7 @@ protected:
 };
 
 template <class REQUEST, class RESPONSE, class FUNC>
-int container_func(const REQUEST *request, RESPONSE *response, void *arg) noexcept
+auto container_func(const REQUEST *request, RESPONSE *response, void *arg) noexcept -> int
 {
     if (request == nullptr || response == nullptr || arg == nullptr) {
         ERROR("Receive NULL args");
