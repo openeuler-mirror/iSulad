@@ -25,7 +25,7 @@ source ../helpers.bash
 function test_image_list()
 {
   local ret=0
-  local image="busybox"
+  local image="hello-world"
   local INVALID_IMAGE="k~k"
   local test="list images info test => (${FUNCNAME[@]})"
 
@@ -37,10 +37,10 @@ function test_image_list()
   isula pull $INVALID_IMAGE
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - sueccess to pull image: ${INVALID_IMAGE}, expect fail" && return ${FAILURE}
 
-  isula images | grep busybox
+  isula images | grep hello
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-  count=`isula images --filter "reference=*busybox*" | grep busybox | wc -l`
+  count=`isula images --filter "reference=*hello*" | grep hello | wc -l`
   [[ $count -ne 1 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image} with filter" && ((ret++))
 
   isula rmi ${image}
