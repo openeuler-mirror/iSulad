@@ -27,7 +27,7 @@
 #include "url.h"
 #include "errors.h"
 
-#define MAX_ECHO_PAYLOAD 1024
+#define MAX_ECHO_PAYLOAD 4096
 #define MAX_ARRAY_LEN 2
 #define MAX_BUF_LEN 256
 #define MAX_PROTOCOL_NUM 2
@@ -36,16 +36,6 @@
 #define PIPE_FD_NUM 2
 #define BUF_BASE_SIZE 1024
 #define LWS_TIMEOUT 50
-
-struct per_session_data__echo {
-    size_t rx, tx;
-    unsigned char buf[LWS_PRE + MAX_ECHO_PAYLOAD + 1];
-    unsigned int len;
-    unsigned int index;
-    int final;
-    int continuation;
-    int binary;
-};
 
 enum WebsocketChannel {
     STDINCHANNEL = 0,
@@ -95,7 +85,7 @@ private:
     std::vector<std::string> split(std::string str, char r);
     static void EmitLog(int level, const char *line);
     int CreateContext();
-    inline void Receive(struct lws *client, void *user, void *in, size_t len);
+    inline void Receive(struct lws *client, void *in, size_t len);
     int  Wswrite(struct lws *wsi, void *in, size_t len);
     inline int DumpHandshakeInfo(struct lws *wsi) noexcept;
     static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
@@ -110,7 +100,7 @@ private:
     volatile int m_force_exit = 0;
     std::thread m_pthread_service;
     const struct lws_protocols m_protocols[MAX_PROTOCOL_NUM] = {
-        {  "channel.k8s.io", Callback, sizeof(struct per_session_data__echo), MAX_ECHO_PAYLOAD, },
+        {  "channel.k8s.io", Callback, 0, MAX_ECHO_PAYLOAD, },
         { NULL, NULL, 0, 0 }
     };
     RouteCallbackRegister m_handler;
