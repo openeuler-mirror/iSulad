@@ -1327,7 +1327,8 @@ int layer_store_delete(const char *id)
     l = lookup(id);
     if (l == NULL) {
         ERROR("layer not known");
-        return -1;
+        ret = -1;
+        goto free_out;
     }
 
     if (umount_helper(l, true) != 0) {
@@ -1406,13 +1407,13 @@ int layer_store_list(struct layer_list *resp)
         return -1;
     }
 
-    resp->layers = (struct layer **)util_smart_calloc_s(sizeof(struct layer *), g_metadata.layers_list_len);
-    if (resp->layers == NULL) {
-        ERROR("Out of memory");
+    if (!layer_store_lock(false)) {
         return -1;
     }
 
-    if (!layer_store_lock(false)) {
+    resp->layers = (struct layer **)util_smart_calloc_s(sizeof(struct layer *), g_metadata.layers_list_len);
+    if (resp->layers == NULL) {
+        ERROR("Out of memory");
         ret = -1;
         goto unlock;
     }
