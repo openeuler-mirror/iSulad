@@ -31,3 +31,4 @@ int selinuxfs_exists(void)
     }
     return 0;
 }
+

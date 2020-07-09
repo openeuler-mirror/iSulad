@@ -3,7 +3,7 @@
 # This script is the implementation portal for the iSulad project Personal level build static check.
 # set -euxo pipefail
 #######################################################################
-##- @Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
+##- @Copyright (C) Huawei Technologies., Ltd. 2019-2020. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.
 # - You can use this software according to the terms and conditions of the Mulan PSL v2.
 # - You may obtain a copy of Mulan PSL v2 at:
@@ -18,13 +18,7 @@
 #######################################################################
 
 CURRENT_PATH=$(pwd)
-CI_TOOLS_PROJECT="/root/workspace/ci_tools"
-export LOCAL_INCLUDE="/root/workspace/ci_tools/rule/include"
 export EULER_CODE_PATH="$(realpath ${CURRENT_PATH}/..)"
-LINT_RULE_FILE="/root/workspace/ci_tools/rule/pclint"
-PCLINT_TOOL="/usr/local/bin/flint"
-CODESTYLE_TOOL="/usr/local/bin/cpplint.py"
-CMETRICS_TOOL="/root/cmetrics/cmetrics.py"
 
 function usage() {
     echo -e "\
@@ -38,11 +32,7 @@ function usage() {
   echo "Usage: $0 [options]"
   echo "Personal level build static check script for iSulad project"
   echo "Options:"
-  echo "    -u, --update-ci-tools    Update ci tools project and replace header files with latest ones"
-  echo "    -p, --pclint             Perform pclint code static check"
   echo "    -s, --codestyle          Perform codestyle(codedex) code static check"
-  echo "    -c, --detail-cmetrics    Detail code statistics analysis"
-  echo "    -m, --simple-cmetrics    Simple code statistics analysis"
   echo "    -a, --all                Perform all checks and statistics"
   echo "    -i, --incremental-check  Perform incremental check"
   echo "    -f, --quick-format       Incremental format code by astyle/clang-format"
@@ -53,64 +43,6 @@ function usage() {
 
 function err() {
   echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
-}
-
-function update_ci_tools() {
-  cd ${CI_TOOLS_PROJECT}
-  git fetch origin
-  git diff > static_check_backup.patch
-  git checkout .
-  git rebase origin/next_docker
-  cd ${CURRENT_PATH}
-  for file in $(find . -regextype posix-extended -regex ".*\.(h)")
-  do
-      cp $file $LOCAL_INCLUDE/docker/iSulad
-  done
-}
-
-PCLINT_MASKED_RULE="679|826|726|322|1001|834"
-
-function pclint_check() {
-    echo -e "\
-=================================================================================================\033[1;35m
-            ____   ______ __     ____ _   __ ______   ______ __  __ ______ ______ __ __
-           / __ \ / ____// /    /  _// | / //_  __/  / ____// / / // ____// ____// //_/
-          / /_/ // /    / /     / / /  |/ /  / /    / /    / /_/ // __/  / /    / ,<
-         / ____// /___ / /___ _/ / / /|  /  / /    / /___ / __  // /___ / /___ / /| |
-        /_/     \____//_____//___//_/ |_/  /_/     \____//_/ /_//_____/ \____//_/ |_| \033[0m
-================================================================================================="
-    local start_time=$(date +%s)
-    local files
-    if [[ ${1} == "all" ]]; then
-        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(c|cc)")
-    else
-        files=$(git diff --name-only HEAD | grep -E "*.c$")
-    fi
-    files=(${files// / })
-    local total=${#files[@]}
-    local failure_num=0
-    local index=1
-    for file in ${files[@]}
-    do
-        ${PCLINT_TOOL} -i ${LINT_RULE_FILE} std_lcrd.lnt $file 2>&1 | grep -E "Err|Warn|Info" | grep -vE ${PCLINT_MASKED_RULE}
-        if [[ $? -eq 0 ]];then
-            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
-              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
-              failure_num=$((failure_num+1))
-        else
-            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
-              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
-        fi
-        index=$((index+1))
-    done
-    printf "%0.s=" {1..96}
-    printf "\n"
-    local end_time=$(date +%s)
-    local duration=$((${end_time} - ${start_time}))
-    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
-    if [[ ${failure_num} -ne 0 ]]; then
-      exit -1
-    fi
 }
 
 CODESTYLE_MASKED_RULE=(
@@ -133,6 +65,8 @@ CODESTYLE_MASKED_RULE=(
   "\[whitespace/operators\]-\[4\]"
   "\[runtime/threadsafe_fn\]-\[2\]"
   "\[runtime/printf\]-\[4\]"
+  "\[whitespace/line_length\]-\[2\]"
+  "\[build/include_subdir\]-\[4\]"
 )
 function codestyle_check() {
     echo -e "\
@@ -143,13 +77,18 @@ function codestyle_check() {
         / /___ / /_/ // /_/ /_/ / / /|  // /_/ / ___/ / / /     / // /___ / /___
         \____/ \____//_____//___//_/ |_/ \____/ /____/ /_/     /_//_____//_____/\033[0m
 ================================================================================================="
+
+    if [[ $? -ne 0 ]]; then
+        echo "please install cpplint tool first -- pip(3) install cpplint"
+        exit 1
+    fi
     local masked_rule=$(echo ${CODESTYLE_MASKED_RULE[@]} | sed -e "s/ /|/g" -e "s/-/ /g")
     local start_time=$(date +%s)
     local files
     if [[ ${1} == "all" ]]; then
-        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(cc)")
     else
-        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+        files=$(git diff --name-only HEAD | grep -E "*.cc$")
     fi
     files=(${files// / })
     local total=${#files[@]}
@@ -157,7 +96,7 @@ function codestyle_check() {
     local index=1
     for file in ${files[@]}
     do
-        python3 ${CODESTYLE_TOOL} $file 2>&1 | grep -vE "${masked_rule}"
+       cpplint $file 2>&1 | grep -vE "${masked_rule}"
         if [[ $? -eq 0 ]];then
             printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
               ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
@@ -393,105 +332,8 @@ function cpp_check() {
     fi
 }
 
-function cmetrics_check() {
-    echo -e "\
-=================================================================================================\033[1;36m
-     ______ __  ___ ______ ______ ____   ____ ______ _____    ______ __  __ ______ ______ __ __
-    / ____//  |/  // ____//_  __// __ \ /  _// ____// ___/   / ____// / / // ____// ____// //_/
-   / /    / /|_/ // __/    / /  / /_/ / / / / /     \__ \   / /    / /_/ // __/  / /    / ,<
-  / /___ / /  / // /___   / /  / _, _/_/ / / /___  ___/ /  / /___ / __  // /___ / /___ / /| |
-  \____//_/  /_//_____/  /_/  /_/ |_|/___/ \____/ /____/   \____//_/ /_//_____/ \____//_/ |_|\033[0m
-================================================================================================="
-    if [[ ${1} == "simple" ]]; then
-        printf "%0.s*" {1..97}
-        printf "\n"
-        result=$(python3 ${CMETRICS_TOOL} -fp ./src)
-        echo "${result}"
-        printf "%0.s*" {1..97}
-        printf "\n"
-        CyclomaticComplexityPerMethod=$(echo "${result}" | grep '\[\*\] Cyclomatic Complexity per Method' | awk '{print $NF}')
-        if [[ $(echo "${CyclomaticComplexityPerMethod} > 5" | bc) -eq 1 ]]; then
-            echo -e "\033[1;31mFailure: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) greater then 5\033[0m."
-            exit 1
-        else
-            echo -e "\033[1;32mSuccess: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) less then 5\033[0m."
-            exit 0
-        fi
-    fi
-
-    local start_time=$(date +%s)
-    local files
-    if [[ ${1} == "all" ]]; then
-        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
-    else
-        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
-    fi
-    files=(${files// / })
-    local total=${#files[@]}
-    local failure_num=0
-    local index=1
-    if [[ ${total} -eq 0 ]]; then
-        return 0
-    fi
-    for file in ${files[@]}
-    do
-        result=$(python3 ${CMETRICS_TOOL} -fp ${file})
-        CyclomaticComplexityperMethod=$(echo "${result}" | grep "\[\*\] Cyclomatic Complexity per Method:" | awk '{print $NF}')
-        CyclomaticComplexityperMethod=${CyclomaticComplexityperMethod:-0}
-        MaximumCyclomaticComplexity=$(echo "${result}" | grep "\[\*\] Maximum Cyclomatic Complexity:" | awk '{print $NF}')
-        MaximumCyclomaticComplexity=${MaximumCyclomaticComplexity:-0}
-        MaximumDepth=$(echo "${result}" | grep "\[\*\] Maximum Depth:" | awk '{print $NF}')
-        MaximumDepth=${MaximumDepth:-0}
-        RawLines=$(echo "${result}" | grep "\[\*\] Raw Lines:" | awk '{print $NF}')
-        RawLines=${RawLines:-0}
-        if [[ ${MaximumCyclomaticComplexity} -gt 10 ]] || [[ $(echo "${CyclomaticComplexityperMethod} > 5" | bc) -eq 1 ]] || \
-          [[ ${MaximumDepth} -gt 5 ]] || [[ ${RawLines} -gt 2000 ]]; then
-            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;31m\033[5m%s\033[0m\n" \
-              ${index} ${total} ${file} "[FAILED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
-              failure_num=$((failure_num+1))
-        else
-            printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
-              ${index} ${total} ${file} "[PASS]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
-        fi
-        printf "%s\n%s\n%s\n            %-1.3f                  |             %3d               |     %2d        |    %4d\n%s\n" \
-"-------------------------------------------------------------------------------------------------" \
-"  Cyclomatic Complexity per Method | Maximum Cyclomatic Complexity | Maximum Depth | Raw Lines   " \
-"-------------------------------------------------------------------------------------------------" \
-  ${CyclomaticComplexityperMethod}    ${MaximumCyclomaticComplexity} ${MaximumDepth}  ${RawLines}   \
-"-------------------------------------------------------------------------------------------------"
-        index=$((index+1))
-    done
-    printf "%0.s=" {1..97}
-    printf "\n"
-    local end_time=$(date +%s)
-    local duration=$((${end_time} - ${start_time}))
-    echo -e "\033[1;36mTotal files: ${total}\033[0m, \033[1;32msuccess: $((total-failure_num))\033[0m, \033[1;31mfailure: ${failure_num}\033[0m. \033[1;33mSpend time: ${duration} seconds\033[0m"
-    printf "%0.s*" {1..97}
-    printf "\n"
-    if [[ ${1} == "all" ]]; then
-        result=$(python3 ${CMETRICS_TOOL} -fp ./src)
-    else
-        result=$(python3 ${CMETRICS_TOOL} -fp ${files[@]})
-    fi
-    echo "${result}"
-    printf "%0.s*" {1..96}
-    printf "\n"
-    CyclomaticComplexityPerMethod=$(echo "${result}" | grep '\[\*\] Cyclomatic Complexity per Method' | awk '{print $NF}')
-    if [[ $(echo "${CyclomaticComplexityPerMethod} > 5" | bc) -eq 1 ]]; then
-        echo -e "\033[1;31mFailure: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) greater then 5\033[0m."
-        exit 1
-    else
-        echo -e "\033[1;32mSuccess: cyclomatic complexity per method(${CyclomaticComplexityPerMethod}) less then 5\033[0m."
-        exit 0
-    fi
-}
-
 function incremental_check() {
     style_check "incremental"
-    if [[ $? -ne 0 ]]; then
-        exit -1
-    fi
-    pclint_check "incremental"
     if [[ $? -ne 0 ]]; then
         exit -1
     fi
@@ -503,15 +345,10 @@ function incremental_check() {
     if [[ $? -ne 0 ]]; then
         return -1
     fi
-    cmetrics_check "incremental"
 }
 
 function static_check_all() {
     style_check "all"
-    if [[ $? -ne 0 ]]; then
-        return -1
-    fi
-    pclint_check "all"
     if [[ $? -ne 0 ]]; then
         return -1
     fi
@@ -523,20 +360,15 @@ function static_check_all() {
     if [[ $? -ne 0 ]]; then
         return -1
     fi
-    cmetrics_check "simple"
 }
 
-args=`getopt -o upscmiaf:kh --long update-ci-tools,pclint,codestyle,detail-cmetrics,simple-cmetrics,incremental-check,all,quick-format:,style-check,cpp-check,help -- "$@"`
+args=`getopt -o siaf:kh --long codestyle,incremental-check,all,quick-format:,style-check,cpp-check,help -- "$@"`
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$args"
 
 while true; do
   case "$1" in
-    -u|--update-ci-tools)   update_ci_tools || (err "failed to update ci tools project" && exit -1); shift ;;
-    -p|--pclint)            pclint_check "all" || (err "failed to perfrom pclint code static check" && exit -1); shift ;;
     -s|--codestyle)         codestyle_check "all" || (err "failed to perfrom codestyle(codedex) code static check" && exit -1); shift ;;
-    -c|--detail-cmetrics)   cmetrics_check "all" || (err "failed to perform detail checks and statistics" && exit -1); shift ;;
-    -m|--simple-cmetrics)   cmetrics_check "simple" || (err "failed to perform simple checks and statistics" && exit -1); shift ;;
     -i|--incremental-check) incremental_check || (err "failed to perform incremental check" && exit -1); shift ;;
     -a|--all)               static_check_all || (err "failed to perform all checks and statistics" && exit -1); shift ;;
     -f|--quick-format)      quick_format $2 || (err "failed to format code" && exit -1); shift 2 ;;
