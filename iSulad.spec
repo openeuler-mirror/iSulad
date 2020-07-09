@@ -1,5 +1,5 @@
-%global _version 2.0.0
-%global _release 20200525.142955.git321f0ab6
+%global _version 2.0.3
+%global _release 20200628.170704.git76a33943
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -8,10 +8,17 @@ Version:   %{_version}
 Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
-URL:       isulad
-Source:    iSulad-2.0.tar.gz
+URL:       https://gitee.com/openeuler/iSulad
+Source:    iSulad-%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
+
+Patch9000:  0001-isulad-shim-fix-probabilistic-bad-fd.patch
+Patch9001:  0002-iSulad-resolve-coredump-of-isula-inspect.patch
+Patch9002:  0003-Add-Pull-Request-Template-And-Issue-Template.patch
+Patch9003:  0004-fix-bug-of-creating-symlink-for-etc-mtab-when-etc-sy.patch
+Patch9004:  0005-fix-label-file-reading-bug.patch
+Patch9005:  0006-CI-add-testcases-use-host-rootfs.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -29,15 +36,15 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-BuildRequires: cmake gcc-c++ lxc lxc-devel lcr yajl yajl-devel clibcni-devel
+BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
-BuildRequires: systemd-devel git python3
+BuildRequires: systemd-devel git
 
 Requires:      iSulad-img lcr lxc clibcni
-Requires:      grpc protobuf yajl
+Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
 Requires:      libcap libselinux libwebsockets
@@ -48,7 +55,7 @@ This is a umbrella project for gRPC-services based Lightweight Container
 Runtime Daemon, written by C.
 
 %prep
-%autosetup -c -n iSulad-%{version}
+%autosetup -n %{name} -Sgit -p1
 
 %build
 mkdir -p build
@@ -75,8 +82,8 @@ install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/libisula.h                        %{buildroot}/%{_includedir}/isulad/libisula.h
 install -m 0644 ../src/connect/client/isula_connect.h    %{buildroot}/%{_includedir}/isulad/isula_connect.h
 install -m 0644 ../src/container_def.h                  %{buildroot}/%{_includedir}/isulad/container_def.h
-install -m 0644 ../src/types_def.h                      %{buildroot}/%{_includedir}/isulad/types_def.h
-install -m 0644 ../src/error.h                          %{buildroot}/%{_includedir}/isulad/error.h
+install -m 0644 ../src/cutils/types_def.h               %{buildroot}/%{_includedir}/isulad/types_def.h
+install -m 0644 ../src/cutils/error.h                   %{buildroot}/%{_includedir}/isulad/error.h
 install -m 0644 ../src/engines/engine.h                 %{buildroot}/%{_includedir}/isulad/engine.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
