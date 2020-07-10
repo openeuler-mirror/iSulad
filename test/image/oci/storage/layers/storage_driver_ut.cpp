@@ -202,7 +202,6 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_mount_layer)
 
     mount_opts = (struct driver_mount_opts *)malloc(sizeof(struct driver_mount_opts));
     ASSERT_NE(mount_opts, nullptr);
-    mount_opts->mount_label = strdup("mount_label");
     mount_opts->options = (char **)malloc(1 * sizeof(char *));
     mount_opts->options[0] = strdup("ro");
     mount_opts->options_len = 1;

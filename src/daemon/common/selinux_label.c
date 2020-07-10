@@ -1071,3 +1071,94 @@ int get_disable_security_opt(char ***labels, size_t *labels_len)
 
     return 0;
 }
+
+#define MOUNT_CONTEXT "context="
+
+static char *fill_selinux_label_with_src(const char *src, const char *mount_label)
+{
+    int nret = 0;
+    char *result = NULL;
+    size_t data_size = 0;
+
+    if (strlen(mount_label) >= (INT_MAX - strlen(src) - strlen(MOUNT_CONTEXT) - 4)) {
+        ERROR("mount_label string too large");
+        goto err_out;
+    }
+
+    data_size = strlen(src) + 1 + strlen(MOUNT_CONTEXT) + 2 + strlen(mount_label) + 1;
+
+    result = util_common_calloc_s(data_size);
+    if (result == NULL) {
+        ERROR("Memory out");
+        goto err_out;
+    }
+
+    nret = snprintf(result, data_size, "%s,%s\"%s\"", src, MOUNT_CONTEXT, mount_label);
+    if (nret < 0 || (size_t)nret >= data_size) {
+        ERROR("failed to snprintf selinux label");
+        goto err_out;
+    }
+
+    goto out;
+
+err_out:
+    free(result);
+    result = NULL;
+
+out:
+    return result;
+}
+
+static char *fill_selinux_label_without_src(const char *mount_label)
+{
+    int nret = 0;
+    char *result = NULL;
+    size_t data_size = 0;
+
+    if (strlen(mount_label) >= (INT_MAX - strlen(MOUNT_CONTEXT) - 3)) {
+        ERROR("mount_label string too large");
+        goto err_out;
+    }
+
+    data_size = strlen(MOUNT_CONTEXT) + strlen(mount_label) + 3;
+
+    result = util_common_calloc_s(data_size);
+    if (result == NULL) {
+        ERROR("Memory out");
+        goto err_out;
+    }
+
+    nret = snprintf(result, data_size, "%s\"%s\"", MOUNT_CONTEXT, mount_label);
+    if (nret < 0 || (size_t)nret >= data_size) {
+        ERROR("failed to snprintf selinux label");
+        goto err_out;
+    }
+
+    goto out;
+
+err_out:
+    free(result);
+    result = NULL;
+
+out:
+    return result;
+}
+
+char *selinux_format_mountlabel(const char *src, const char *mount_label)
+{
+    char *result = NULL;
+
+    if (src == NULL && mount_label == NULL) {
+        return NULL;
+    }
+
+    if (src != NULL && mount_label != NULL) {
+        result = fill_selinux_label_with_src(src, mount_label);
+    } else if (src == NULL) {
+        result = fill_selinux_label_without_src(mount_label);
+    } else {
+        result = util_strdup_s(src);
+    }
+
+    return result;
+}

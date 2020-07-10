@@ -453,6 +453,9 @@ void free_im_prepare_request(im_prepare_request *request)
     free(request->image_type);
     request->image_type = NULL;
 
+    free(request->mount_label);
+    request->mount_label = NULL;
+
     free_json_map_string_string(request->storage_opt);
     request->storage_opt = NULL;
 

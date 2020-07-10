@@ -129,7 +129,7 @@ out:
     return ret;
 }
 
-static struct layer_opts *fill_create_layer_opts(storage_layer_create_opts_t *copts)
+static struct layer_opts *fill_create_layer_opts(storage_layer_create_opts_t *copts, const char *mount_label)
 {
     struct layer_opts *opts = NULL;
 
@@ -144,12 +144,15 @@ static struct layer_opts *fill_create_layer_opts(storage_layer_create_opts_t *co
     opts->compressed_digest = util_strdup_s(copts->compressed_digest);
     opts->writable = copts->writable;
 
+    opts->opts = util_common_calloc_s(sizeof(struct layer_store_mount_opts));
+    if (opts->opts == NULL) {
+        ERROR("Memory out");
+        goto err_out;
+    }
+
+    opts->opts->mount_label = util_strdup_s(mount_label);
+
     if (copts->storage_opts != NULL) {
-        opts->opts = util_common_calloc_s(sizeof(struct layer_store_mount_opts));
-        if (opts->opts == NULL) {
-            ERROR("Memory out");
-            goto err_out;
-        }
         opts->opts->mount_opts = util_common_calloc_s(sizeof(json_map_string_string));
         if (opts->opts->mount_opts == NULL) {
             ERROR("Memory out");
@@ -194,7 +197,7 @@ int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *copt
         goto out;
     }
 
-    opts = fill_create_layer_opts(copts);
+    opts = fill_create_layer_opts(copts, NULL);
     if (opts == NULL) {
         ERROR("Failed to fill create ro layer options");
         ret = -1;
@@ -984,7 +987,7 @@ void free_layer_list(struct layer_list *ptr)
     free(ptr);
 }
 
-static int do_create_container_rw_layer(const char *container_id, const char *image_top_layer,
+static int do_create_container_rw_layer(const char *container_id, const char *image_top_layer, const char *mount_label,
                                         json_map_string_string *storage_opts)
 {
     int ret = 0;
@@ -996,7 +999,7 @@ static int do_create_container_rw_layer(const char *container_id, const char *im
         .storage_opts = storage_opts,
     };
 
-    opts = fill_create_layer_opts(&copts);
+    opts = fill_create_layer_opts(&copts, mount_label);
     if (opts == NULL) {
         ERROR("Failed to fill create opts");
         ret = -1;
@@ -1014,7 +1017,8 @@ out:
     return ret;
 }
 
-int storage_rootfs_create(const char *container_id, const char *image, json_map_string_string *storage_opts,
+int storage_rootfs_create(const char *container_id, const char *image, const char *mount_label,
+                          json_map_string_string *storage_opts,
                           char **mountpoint)
 {
     int ret = 0;
@@ -1042,7 +1046,7 @@ int storage_rootfs_create(const char *container_id, const char *image, json_map_
     }
 
     // note: we use container id as the layer id of the container
-    if (do_create_container_rw_layer(container_id, image_info->top_layer, storage_opts) != 0) {
+    if (do_create_container_rw_layer(container_id, image_info->top_layer, mount_label, storage_opts) != 0) {
         ERROR("Failed to do create rootfs layer");
         ret = -1;
         goto unlock_out;

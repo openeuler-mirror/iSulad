@@ -20,6 +20,7 @@ add_executable(${DRIVER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/tar/util_archive.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/err_msg.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/selinux_label.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/driver.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
@@ -58,7 +59,7 @@ target_link_libraries(${DRIVER_EXE}
     ${CMAKE_THREAD_LIBS_INIT}
     ${ISULA_LIBUTILS_LIBRARY}
     ${LIBTAR_LIBRARY}
-    -lwebsockets -lcrypto -lyajl -larchive -ldevmapper -lz)
+    -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
 
 add_test(NAME ${DRIVER_EXE} COMMAND ${DRIVER_EXE})
 
@@ -132,5 +133,5 @@ target_link_libraries(${EXE}
     ${GMOCK_LIBRARY}
     ${GMOCK_MAIN_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}
-    -lwebsockets -lcrypto -lyajl -larchive -ldevmapper -lz)
+    -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
 ]]

@@ -46,6 +46,7 @@
 #include "utils_fs.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "selinux_label.h"
 
 #define DM_LOG_FATAL 2
 #define DM_LOG_DEBUG 7
@@ -2810,6 +2811,7 @@ static char *generate_mount_options(const struct driver_mount_opts *moptions, co
     char *res_str = NULL;
     char *options = NULL;
     bool add_nouuid = false;
+    char *tmp = NULL;
 
     options = util_strdup_s(dev_options);
     if (moptions != NULL && moptions->options_len > 0) {
@@ -2823,6 +2825,23 @@ static char *generate_mount_options(const struct driver_mount_opts *moptions, co
 
     append_mount_options(&res_str, options);
 
+    if (moptions != NULL && moptions->mount_label != NULL) {
+        tmp = selinux_format_mountlabel(res_str, moptions->mount_label);
+        if (tmp == NULL) {
+            goto error_out;
+        }
+        free(res_str);
+        res_str = tmp;
+        tmp = NULL;
+    }
+
+    goto out;
+
+error_out:
+    free(res_str);
+    res_str = NULL;
+
+out:
     free(options);
     return res_str;
 }

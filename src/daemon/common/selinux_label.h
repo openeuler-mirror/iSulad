@@ -30,6 +30,7 @@ int init_label(const char **label_opts, size_t label_opts_len, char **process_la
 int relabel(const char *path, const char *file_label, bool shared);
 int get_disable_security_opt(char ***labels, size_t *labels_len);
 int dup_security_opt(const char *src, char ***dst, size_t *len);
+char *selinux_format_mountlabel(const char *src, const char *mount_label);
 
 #ifdef __cplusplus
 }

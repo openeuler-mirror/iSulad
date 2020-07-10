@@ -65,6 +65,7 @@ add_library(${LIB_ISULAD_IMG} ${LIBTYPE}
     ${CMAKE_SOURCE_DIR}/src/utils/cutils/map/rb_tree.c
     ${CMAKE_SOURCE_DIR}/src/utils/sha256/sha256.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/err_msg.c
+    ${CMAKE_SOURCE_DIR}/src/daemon/common/selinux_label.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/isulad_config.c
     ${CMAKE_SOURCE_DIR}/src/daemon/config/daemon_arguments.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/sysinfo.c
@@ -93,6 +94,7 @@ target_link_libraries(${LIB_ISULAD_IMG}
     ${ISULA_LIBUTILS_LIBRARY}
     ${DEVMAPPER_LIBRARY}
     ${LIBTAR_LIBRARY}
+    ${SELINUX_LIBRARY}
     -lpthread -lcrypto -larchive -lz libhttpclient)
 
 install(TARGETS ${LIB_ISULAD_IMG}

@@ -161,7 +161,8 @@ int oci_prepare_rf(const im_prepare_request *request, char **real_rootfs)
         return -1;
     }
 
-    if (storage_rootfs_create(request->container_id, request->image_name, request->storage_opt, real_rootfs) != 0) {
+    if (storage_rootfs_create(request->container_id, request->image_name, request->mount_label, request->storage_opt,
+                              real_rootfs) != 0) {
         ERROR("Failed to create container rootfs:%s", request->container_id);
         isulad_set_error_message("Failed to create container rootfs:%s", request->container_id);
         ret = -1;

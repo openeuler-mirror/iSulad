@@ -39,6 +39,7 @@
 #include "utils_fs.h"
 #include "utils_string.h"
 #include "utils_timestamp.h"
+#include "selinux_label.h"
 
 struct io_read_wrapper;
 
@@ -622,6 +623,11 @@ static char *get_lower(const char *parent, const char *driver_home)
     }
 
     lower = util_common_calloc_s(lower_len);
+    if (lower == NULL) {
+        ERROR("Memory out");
+        goto err_out;
+    }
+
     if (parent_lowers != NULL) {
         nret = snprintf(lower, lower_len, "%s/%s:%s", OVERLAY_LINK_DIR, parent_link, parent_lowers);
     } else {
@@ -1118,6 +1124,10 @@ static char *get_mount_opt_data_with_custom_option(size_t cur_size, const char *
 
     data_size = cur_size + strlen(custom_opts) + 1;
     mount_data = util_common_calloc_s(data_size);
+    if (mount_data == NULL) {
+        ERROR("Memory out");
+        goto error_out;
+    }
 
     nret = snprintf(mount_data, data_size, "%s,%s", custom_opts, cur_opts);
     if (nret < 0 || (size_t)nret >= data_size) {
@@ -1149,6 +1159,10 @@ static char *get_mount_opt_data_with_driver_option(size_t cur_size, const char *
 
     data_size = cur_size + strlen(mount_opts) + 1;
     mount_data = util_common_calloc_s(data_size);
+    if (mount_data == NULL) {
+        ERROR("Memory out");
+        goto error_out;
+    }
 
     nret = snprintf(mount_data, data_size, "%s,%s", mount_opts, cur_opts);
     if (nret < 0 || (size_t)nret >= data_size) {
@@ -1197,6 +1211,10 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
                 strlen(",workdir=") + strlen(work_dir) + 1;
 
     mount_data = util_common_calloc_s(data_size);
+    if (mount_data == NULL) {
+        ERROR("Memory out");
+        goto error_out;
+    }
 
     nret = snprintf(mount_data, data_size, "lowerdir=%s,upperdir=%s,workdir=%s", abs_lower_dir, upper_dir, work_dir);
     if (nret < 0 || (size_t)nret >= data_size) {
@@ -1211,6 +1229,7 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
         }
         free(mount_data);
         mount_data = tmp;
+        tmp = NULL;
     } else if (driver->overlay_opts->mount_options != NULL) {
         tmp = get_mount_opt_data_with_driver_option(data_size, mount_data, driver->overlay_opts->mount_options);
         if (tmp == NULL) {
@@ -1218,6 +1237,17 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
         }
         free(mount_data);
         mount_data = tmp;
+        tmp = NULL;
+    }
+
+    if (mount_opts != NULL && mount_opts->mount_label != NULL) {
+        tmp = selinux_format_mountlabel(mount_data, mount_opts->mount_label);
+        if (tmp == NULL) {
+            goto error_out;
+        }
+        free(mount_data);
+        mount_data = tmp;
+        tmp = NULL;
     }
 
     goto out;
@@ -1263,6 +1293,10 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
                 strlen(",workdir=") + strlen(work_dir) + 1;
 
     mount_data = util_common_calloc_s(data_size);
+    if (mount_data == NULL) {
+        ERROR("Memory out");
+        goto error_out;
+    }
 
     nret = snprintf(mount_data, data_size, "lowerdir=%s,upperdir=%s,workdir=%s", rel_lower_dir, upper_dir, work_dir);
     if (nret < 0 || (size_t)nret >= data_size) {
@@ -1277,6 +1311,7 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
         }
         free(mount_data);
         mount_data = tmp;
+        tmp = NULL;
     } else if (driver->overlay_opts->mount_options != NULL) {
         tmp = get_mount_opt_data_with_driver_option(data_size, mount_data, driver->overlay_opts->mount_options);
         if (tmp == NULL) {
@@ -1284,6 +1319,17 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
         }
         free(mount_data);
         mount_data = tmp;
+        tmp = NULL;
+    }
+
+    if (mount_opts != NULL && mount_opts->mount_label != NULL) {
+        tmp = selinux_format_mountlabel(mount_data, mount_opts->mount_label);
+        if (tmp == NULL) {
+            goto error_out;
+        }
+        free(mount_data);
+        mount_data = tmp;
+        tmp = NULL;
     }
 
     goto out;

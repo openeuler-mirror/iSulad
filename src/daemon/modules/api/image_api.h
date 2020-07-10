@@ -189,6 +189,7 @@ typedef struct {
     char *image_name;
     char *container_id;
     char *rootfs; // only used for external image type
+    char *mount_label; // mount label for selinux
     json_map_string_string *storage_opt;
 } im_prepare_request;
 
