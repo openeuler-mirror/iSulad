@@ -32,7 +32,6 @@
 #include "isula_libutils/parse_common.h"
 #include "err_msg.h"
 #include "specs_extend.h"
-#include "selinux_label.h"
 #include "specs_api.h"
 #include "constants.h"
 #include "utils_array.h"
@@ -850,37 +849,16 @@ out:
     return ret;
 }
 
-int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec, const char **label_opts,
-                  size_t label_opts_len)
+int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec)
 {
-    char *process_label = NULL;
-    char *mount_label = NULL;
-
-    int ret = make_sure_oci_spec_process(oci_spec);
-    if (ret < 0) {
-        goto out;
+    if (make_sure_oci_spec_process(oci_spec) < 0) {
+        return -1;
     }
 
-    if (init_label(label_opts, label_opts_len, &process_label, &mount_label) != 0) {
-        ERROR("Failed to append label");
-        ret = -1;
-        goto out;
-    }
+    oci_spec->linux->mount_label = util_strdup_s(v2_spec->mount_label);
+    oci_spec->process->selinux_label = util_strdup_s(v2_spec->process_label);
 
-    if (mount_label != NULL) {
-        oci_spec->linux->mount_label = util_strdup_s(mount_label);
-        v2_spec->mount_label = util_strdup_s(mount_label);
-    }
-
-    if (process_label != NULL) {
-        oci_spec->process->selinux_label = util_strdup_s(process_label);
-        v2_spec->process_label = util_strdup_s(process_label);
-    }
-
-out:
-    free(process_label);
-    free(mount_label);
-    return ret;
+    return 0;
 }
 
 static int get_adds_cap_for_system_container(const host_config *host_spec, char ***adds, size_t *adds_len)

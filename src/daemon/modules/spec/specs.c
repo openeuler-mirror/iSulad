@@ -1919,10 +1919,6 @@ static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spe
                                container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
-    bool no_new_privileges = false;
-    char **label_opts = NULL;
-    size_t label_opts_len = 0;
-    char *seccomp_profile = NULL;
 
     ret = generate_security_opt(host_spec);
     if (ret != 0) {
@@ -1943,36 +1939,26 @@ static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spe
         goto out;
     }
 
-    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts, &label_opts_len, &seccomp_profile);
-    if (ret != 0) {
-        ERROR("Failed to parse security opt");
-        goto out;
-    }
-
     // merge external parameter
-    ret = merge_seccomp(oci_spec, seccomp_profile);
+    ret = merge_seccomp(oci_spec, v2_spec->seccomp_profile);
     if (ret != 0) {
         ERROR("Failed to merge user seccomp file");
         goto out;
     }
-    v2_spec->seccomp_profile = util_strdup_s(seccomp_profile);
 
-    ret = merge_no_new_privileges(oci_spec, no_new_privileges);
+    ret = merge_no_new_privileges(oci_spec, v2_spec->no_new_privileges);
     if (ret != 0) {
         ERROR("Failed to merge no new privileges");
         goto out;
     }
-    v2_spec->no_new_privileges = no_new_privileges;
 
-    ret = merge_selinux(oci_spec, v2_spec, (const char **)label_opts, label_opts_len);
+    ret = merge_selinux(oci_spec, v2_spec);
     if (ret != 0) {
         ERROR("Failed to merge selinux config");
         goto out;
     }
 
 out:
-    util_free_array(label_opts);
-    free(seccomp_profile);
     return ret;
 }
 

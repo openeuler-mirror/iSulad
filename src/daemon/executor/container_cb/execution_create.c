@@ -55,6 +55,7 @@
 #include "utils_string.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#include "selinux_label.h"
 
 static int runtime_check(const char *name, bool *runtime_res)
 {
@@ -855,7 +856,7 @@ static int get_basic_spec(const container_create_request *request, const char *i
 }
 
 static int do_image_create_container_roofs_layer(const char *container_id, const char *image_type,
-                                                 const char *image_name, const char *rootfs,
+                                                 const char *image_name, const char *mount_label, const char *rootfs,
                                                  json_map_string_string *storage_opt, char **real_rootfs)
 {
     int ret = 0;
@@ -870,6 +871,7 @@ static int do_image_create_container_roofs_layer(const char *container_id, const
     request->container_id = util_strdup_s(container_id);
     request->image_name = util_strdup_s(image_name);
     request->image_type = util_strdup_s(image_type);
+    request->mount_label = util_strdup_s(mount_label);
     request->rootfs = util_strdup_s(rootfs);
     if (storage_opt != NULL) {
         request->storage_opt = util_common_calloc_s(sizeof(json_map_string_string));
@@ -892,6 +894,45 @@ static int do_image_create_container_roofs_layer(const char *container_id, const
 
 out:
     free_im_prepare_request(request);
+    return ret;
+}
+
+static int pack_security_config_to_v2_spec(const host_config *host_spec, container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    bool no_new_privileges = false;
+    char **label_opts = NULL;
+    size_t label_opts_len = 0;
+    char *seccomp_profile = NULL;
+    char *process_label = NULL;
+    char *mount_label = NULL;
+
+    ret = parse_security_opt(host_spec, &no_new_privileges, &label_opts, &label_opts_len, &seccomp_profile);
+    if (ret != 0) {
+        ERROR("Failed to parse security opt");
+        goto out;
+    }
+
+    v2_spec->seccomp_profile = seccomp_profile;
+    seccomp_profile = NULL;
+    v2_spec->no_new_privileges = no_new_privileges;
+
+    if (init_label((const char **)label_opts, label_opts_len, &process_label, &mount_label) != 0) {
+        ERROR("Failed to append label");
+        ret = -1;
+        goto out;
+    }
+
+    v2_spec->mount_label = mount_label;
+    mount_label = NULL;
+    v2_spec->process_label = process_label;
+    process_label = NULL;
+
+out:
+    util_free_array(label_opts);
+    free(seccomp_profile);
+    free(process_label);
+    free(mount_label);
     return ret;
 }
 
@@ -965,14 +1006,20 @@ int container_create_cb(const container_create_request *request, container_creat
 
     v2_spec->config = container_spec;
 
+    if (pack_security_config_to_v2_spec(host_spec, v2_spec) != 0) {
+        ERROR("Failed to pack security config");
+        cc = ISULAD_ERR_INPUT;
+        goto clean_container_root_dir;
+    }
+
     if (init_container_network_confs(id, runtime_root, host_spec, v2_spec) != 0) {
         ERROR("Init Network files failed");
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
 
-    ret = do_image_create_container_roofs_layer(id, image_type, image_name, request->rootfs, host_spec->storage_opt,
-                                                &real_rootfs);
+    ret = do_image_create_container_roofs_layer(id, image_type, image_name, v2_spec->mount_label,
+                                                request->rootfs, host_spec->storage_opt, &real_rootfs);
     if (ret != 0) {
         ERROR("Can not create container %s rootfs layer", id);
         cc = ISULAD_ERR_EXEC;

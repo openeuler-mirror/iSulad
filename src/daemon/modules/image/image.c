@@ -452,6 +452,8 @@ void free_im_prepare_request(im_prepare_request *request)
     request->rootfs = NULL;
     free(request->image_type);
     request->image_type = NULL;
+    free(request->mount_label);
+    request->mount_label = NULL;
 
     free(request->mount_label);
     request->mount_label = NULL;
