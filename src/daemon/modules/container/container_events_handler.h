@@ -12,8 +12,8 @@
  * Create: 2020-06-22
  * Description: provide container events handler definition
  ******************************************************************************/
-#ifndef __CONTAINER_EVENTS_HANDLER_H
-#define __CONTAINER_EVENTS_HANDLER_H
+#ifndef DAEMON_MODULES_CONTAINER_CONTAINER_EVENTS_HANDLER_H
+#define DAEMON_MODULES_CONTAINER_CONTAINER_EVENTS_HANDLER_H
 
 #include <stdint.h>
 #include <pthread.h>
@@ -28,4 +28,4 @@ void container_events_handler_free(container_events_handler_t *handler);
 
 int container_events_handler_post_events(const struct isulad_events_format *event);
 
-#endif /* __CONTAINER_EVENTS_HANDLER_H */
+#endif // DAEMON_MODULES_CONTAINER_CONTAINER_EVENTS_HANDLER_H

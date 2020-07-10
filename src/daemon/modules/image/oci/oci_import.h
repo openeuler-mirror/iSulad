@@ -12,8 +12,8 @@
 * Create: 2020-05-26
 * Description: isula image import operator implement
 *******************************************************************************/
-#ifndef __IMAGE_OCI_IMPORT_H
-#define __IMAGE_OCI_IMPORT_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_IMPORT_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_IMPORT_H
 
 #ifdef __cplusplus
 extern "C" {

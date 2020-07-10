@@ -12,8 +12,8 @@
  * Create: 2020-04-23
  * Description: provide aes process definition
  ******************************************************************************/
-#ifndef __IMAGE_AES_H
-#define __IMAGE_AES_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_AES_H
+#define DAEMON_MODULES_IMAGE_OCI_REGISTRY_AES_H
 
 #include <stddef.h>
 #ifdef __cplusplus

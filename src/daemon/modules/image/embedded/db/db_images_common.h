@@ -12,8 +12,8 @@
  * Create: 2018-11-07
  * Description: provide common functions for images
  ******************************************************************************/
-#ifndef __DB_IMAGES_COMMON_H_
-#define __DB_IMAGES_COMMON_H_
+#ifndef DAEMON_MODULES_IMAGE_EMBEDDED_DB_DB_IMAGES_COMMON_H
+#define DAEMON_MODULES_IMAGE_EMBEDDED_DB_DB_IMAGES_COMMON_H
 
 #include <stdint.h>
 

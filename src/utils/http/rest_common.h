@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container restful common function definition
  ******************************************************************************/
-#ifndef __REST_COMMON_H
-#define __REST_COMMON_H
+#ifndef UTILS_HTTP_REST_COMMON_H
+#define UTILS_HTTP_REST_COMMON_H
 
 #include <stddef.h>
 
@@ -48,5 +48,5 @@ void put_body(char *body);
 }
 #endif
 
-#endif /* __REST_COMMON_H */
+#endif // UTILS_HTTP_REST_COMMON_H
 

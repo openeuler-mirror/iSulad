@@ -12,8 +12,8 @@
  * Create: 2019-04-02
  * Description: provide overlay2 function definition
  ******************************************************************************/
-#ifndef __GRAPHDRIVER_OVERLAY2_H
-#define __GRAPHDRIVER_OVERLAY2_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_OVERLAY2_DRIVER_OVERLAY2_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_OVERLAY2_DRIVER_OVERLAY2_H
 
 #include <isula_libutils/imagetool_fs_info.h>
 #include <isula_libutils/json_common.h>

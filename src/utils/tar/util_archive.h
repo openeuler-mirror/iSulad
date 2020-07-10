@@ -12,8 +12,8 @@
  * Create: 2020-03-14
  * Description: provide tar function definition
  *********************************************************************************/
-#ifndef __ISULAD_ARCHIVE_H_
-#define __ISULAD_ARCHIVE_H_
+#ifndef UTILS_TAR_UTIL_ARCHIVE_H
+#define UTILS_TAR_UTIL_ARCHIVE_H
 
 #include <unistd.h>
 #include <stdio.h>

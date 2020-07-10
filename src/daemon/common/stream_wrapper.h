@@ -12,8 +12,8 @@
  * Create: 2020-06-08
  * Description: provide container isulad definition
  ******************************************************************************/
-#ifndef __STREAM_WRAPPER_H
-#define __STREAM_WRAPPER_H
+#ifndef DAEMON_COMMON_STREAM_WRAPPER_H
+#define DAEMON_COMMON_STREAM_WRAPPER_H
 
 #include <stdbool.h>
 #include <stdint.h>

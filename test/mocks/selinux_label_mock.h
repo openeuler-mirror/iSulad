@@ -14,8 +14,8 @@
  ******************************************************************************/
 
 
-#ifndef SELINUX_LABEL_MOCK_H_
-#define SELINUX_LABEL_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_SELINUX_LABEL_MOCK_H
+#define _ISULAD_TEST_MOCKS_SELINUX_LABEL_MOCK_H
 
 #include <gmock/gmock.h>
 #include "selinux_label.h"
@@ -35,4 +35,4 @@ public:
 
 void SelinuxLabel_SetMock(MockSelinuxLabel* mock);
 
-#endif  // SELINUX_LABEL_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_SELINUX_LABEL_MOCK_H

@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container collector definition
  ******************************************************************************/
-#ifndef __COLLECTOR_H
-#define __COLLECTOR_H
+#ifndef DAEMON_MODULES_API_EVENTS_COLLECTOR_API_H
+#define DAEMON_MODULES_API_EVENTS_COLLECTOR_API_H
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -46,4 +46,4 @@ int events_module_init(char **msg);
 }
 #endif
 
-#endif /* __COLLECTOR_H */
+#endif // DAEMON_MODULES_API_EVENTS_COLLECTOR_API_H

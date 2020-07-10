@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide grpc service definition
  ******************************************************************************/
-#ifndef __GRPC_SERVICE_H
-#define __GRPC_SERVICE_H
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_GRPC_SERVICE_H
+#define DAEMON_ENTRY_CONNECT_GRPC_GRPC_SERVICE_H
 
 #include <stdbool.h>
 #include "service_common.h"
@@ -32,5 +32,5 @@ void grpc_server_shutdown(void);
 }
 #endif
 
-#endif /* __GRPC_SERVICE_H */
+#endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_SERVICE_H
 

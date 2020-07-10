@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container load definition
  ******************************************************************************/
-#ifndef __CMD_LOAD_H
-#define __CMD_LOAD_H
+#ifndef CMD_ISULA_IMAGES_LOAD_H
+#define CMD_ISULA_IMAGES_LOAD_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -46,4 +46,4 @@ int cmd_load_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_LOAD_H */
+#endif // CMD_ISULA_IMAGES_LOAD_H

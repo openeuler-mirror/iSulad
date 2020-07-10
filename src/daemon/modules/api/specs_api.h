@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide specs definition
  ******************************************************************************/
-#ifndef __SPECS_H__
-#define __SPECS_H__
+#ifndef DAEMON_MODULES_API_SPECS_API_H
+#define DAEMON_MODULES_API_SPECS_API_H
 
 #include <stdint.h>
 #include "err_msg.h"

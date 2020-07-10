@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide image list function definition
  ******************************************************************************/
-#ifndef __LIM_H
-#define __LIM_H
+#ifndef DAEMON_MODULES_IMAGE_EMBEDDED_LIM_H
+#define DAEMON_MODULES_IMAGE_EMBEDDED_LIM_H
 
 #include <stdint.h>
 #include <stdbool.h>

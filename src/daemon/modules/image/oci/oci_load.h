@@ -12,8 +12,8 @@
 * Create: 2020-05-14
 * Description: isula load operator implement
 *******************************************************************************/
-#ifndef __IMAGE_OCI_LOAD_H
-#define __IMAGE_OCI_LOAD_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_LOAD_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_LOAD_H
 
 #include <stddef.h>
 

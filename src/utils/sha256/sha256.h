@@ -12,12 +12,12 @@
  * Create: 2017-11-22
  * Description: provide container sha256 definition
  ******************************************************************************/
-#ifndef SHA256_H
-#define SHA256_H 1
+#ifndef UTILS_SHA256_SHA256_H
+#define UTILS_SHA256_SHA256_H 1
 
-#include <stdio.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <zlib.h>
 
 #ifdef __cplusplus

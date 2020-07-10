@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container package configure definition
  ******************************************************************************/
-#ifndef __PACK_CONFIG_H__
-#define __PACK_CONFIG_H__
+#ifndef CLIENT_CONNECT_PACK_CONFIG_H
+#define CLIENT_CONNECT_PACK_CONFIG_H
 
 #include "libisula.h"
 

@@ -13,13 +13,13 @@
  * Description: provide container sha256 functions
  ********************************************************************************/
 
-#ifndef __UTILS_ARRAY_H
-#define __UTILS_ARRAY_H
+#ifndef UTILS_CUTILS_UTILS_ARRAY_H
+#define UTILS_CUTILS_UTILS_ARRAY_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,5 +40,5 @@ int util_array_append(char ***array, const char *element);
 }
 #endif
 
-#endif /* __UTILS_H */
+#endif // UTILS_CUTILS_UTILS_ARRAY_H
 

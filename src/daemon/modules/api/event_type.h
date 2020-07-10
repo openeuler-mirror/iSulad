@@ -12,8 +12,8 @@
  * Create: 2020-06-23
  * Description: provide container collector definition
  ******************************************************************************/
-#ifndef __EVENT_TYPE_H
-#define __EVENT_TYPE_H
+#ifndef DAEMON_MODULES_API_EVENT_TYPE_H
+#define DAEMON_MODULES_API_EVENT_TYPE_H
 
 #include "constants.h"
 
@@ -74,4 +74,4 @@ struct monitord_msg {
 }
 #endif
 
-#endif /* __EVENT_TYPE_H */
+#endif // DAEMON_MODULES_API_EVENT_TYPE_H

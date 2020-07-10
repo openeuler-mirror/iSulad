@@ -13,8 +13,8 @@
  * Description: provide plugin definition
  ******************************************************************************/
 
-#ifndef PSPEC_H
-#define PSPEC_H /* PSPEC_H */
+#ifndef DAEMON_MODULES_PLUGIN_PSPEC_H
+#define DAEMON_MODULES_PLUGIN_PSPEC_H /* PSPEC_H */
 
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/oci_runtime_pspec.h"
@@ -39,5 +39,5 @@ int set_pspec(oci_runtime_spec *oci, const char *data);
  */
 char *merge_pspec(const char *base, const char *data);
 
-#endif /* PSPEC_H */
+#endif // DAEMON_MODULES_PLUGIN_PSPEC_H
 

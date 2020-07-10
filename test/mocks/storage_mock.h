@@ -13,8 +13,8 @@
  * Description: provide image storage mock
  ******************************************************************************/
 
-#ifndef STORAGE_MOCK_H_
-#define STORAGE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_STORAGE_MOCK_H
+#define _ISULAD_TEST_MOCKS_STORAGE_MOCK_H
 
 #include <gmock/gmock.h>
 #include "storage.h"
@@ -41,4 +41,4 @@ public:
 
 void MockStorage_SetMock(MockStorage* mock);
 
-#endif // STORAGE_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_STORAGE_MOCK_H

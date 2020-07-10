@@ -13,8 +13,8 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef __EXEC_SERVE_H_
-#define __EXEC_SERVE_H_
+#ifndef DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_EXEC_SERVE_H
+#define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_EXEC_SERVE_H
 
 #include <iostream>
 #include <string>
@@ -42,4 +42,4 @@ public:
 private:
     int RequestFromCri(const runtime::v1alpha2::ExecRequest *grequest, container_exec_request **request);
 };
-#endif /* __EXEC_SERVE_H_ */
+#endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_EXEC_SERVE_H

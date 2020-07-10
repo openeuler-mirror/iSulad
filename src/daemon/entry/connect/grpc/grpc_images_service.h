@@ -13,8 +13,8 @@
  * Description: provide grpc images functions
  ******************************************************************************/
 
-#ifndef _GRPC_IMAGES_SERVICE_H_
-#define _GRPC_IMAGES_SERVICE_H_
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_GRPC_IMAGES_SERVICE_H
+#define DAEMON_ENTRY_CONNECT_GRPC_GRPC_IMAGES_SERVICE_H
 
 #include <grpc++/grpc++.h>
 
@@ -98,5 +98,5 @@ private:
     int image_logout_request_from_grpc(const LogoutRequest *grequest, image_logout_request **request);
 };
 
-#endif /* _GRPC_IMAGES_SERVICE_H_ */
+#endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_IMAGES_SERVICE_H
 

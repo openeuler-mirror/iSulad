@@ -12,8 +12,8 @@
  * Create: 2020-05-26
  * Description: provide image import definition
  ******************************************************************************/
-#ifndef __CMD_IMPORT_H
-#define __CMD_IMPORT_H
+#ifndef CMD_ISULA_IMAGES_IMPORT_H
+#define CMD_ISULA_IMAGES_IMPORT_H
 
 #include "client_arguments.h"
 
@@ -30,4 +30,4 @@ int cmd_import_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_IMPORT_H */
+#endif // CMD_ISULA_IMAGES_IMPORT_H

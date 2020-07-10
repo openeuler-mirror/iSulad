@@ -13,8 +13,8 @@
  * Description: provide driver quota mock
  ******************************************************************************/
 
-#ifndef DRIVER_QUOTA_MOCK_H_
-#define DRIVER_QUOTA_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_DRIVER_QUOTA_MOCK_H
+#define _ISULAD_TEST_MOCKS_DRIVER_QUOTA_MOCK_H
 
 #include <gmock/gmock.h>
 #include "project_quota.h"
@@ -30,4 +30,4 @@ public:
 
 void MockDriverQuota_SetMock(MockDriverQuota* mock);
 
-#endif  // DRIVER_QUOTA_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_DRIVER_QUOTA_MOCK_H

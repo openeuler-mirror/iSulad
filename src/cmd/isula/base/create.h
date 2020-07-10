@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container create definition
  ******************************************************************************/
-#ifndef __CMD_CREATE_H
-#define __CMD_CREATE_H
+#ifndef CMD_ISULA_BASE_CREATE_H
+#define CMD_ISULA_BASE_CREATE_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -448,4 +448,4 @@ int cmd_create_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_CREATE_H */
+#endif // CMD_ISULA_BASE_CREATE_H

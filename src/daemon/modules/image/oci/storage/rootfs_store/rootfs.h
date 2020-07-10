@@ -12,8 +12,8 @@
  * Create: 2020-05-12
  * Description: provide containers function definition
  ******************************************************************************/
-#ifndef __OCI_STORAGE_ROOTFS_H
-#define __OCI_STORAGE_ROOTFS_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_ROOTFS_STORE_ROOTFS_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_ROOTFS_STORE_ROOTFS_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -40,4 +40,4 @@ void free_rootfs_t(cntrootfs_t *ptr);
 }
 #endif
 
-#endif // __OCI_STORAGE_ROOTFS_H
+#endif // DAEMON_MODULES_IMAGE_OCI_STORAGE_ROOTFS_STORE_ROOTFS_H

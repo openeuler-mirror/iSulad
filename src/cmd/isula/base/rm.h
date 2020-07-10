@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container remove definition
  ******************************************************************************/
-#ifndef __CMD_DELETE_H
-#define __CMD_DELETE_H
+#ifndef CMD_ISULA_BASE_RM_H
+#define CMD_ISULA_BASE_RM_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -50,4 +50,4 @@ int cmd_delete_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_DELETE_H */
+#endif // CMD_ISULA_BASE_RM_H

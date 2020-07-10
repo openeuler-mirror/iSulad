@@ -12,8 +12,8 @@
  * Create: 2020-06-15
  * Description: provide container isulad definition
  ******************************************************************************/
-#ifndef __ERROR_MSG_H
-#define __ERROR_MSG_H
+#ifndef DAEMON_COMMON_ERR_MSG_H
+#define DAEMON_COMMON_ERR_MSG_H
 
 #include <stdbool.h>
 #include <stdint.h>

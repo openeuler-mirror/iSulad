@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container isula library definition
  ******************************************************************************/
-#ifndef __LIB_ISULA_H
-#define __LIB_ISULA_H
+#ifndef CLIENT_LIBISULA_H
+#define CLIENT_LIBISULA_H
 
 #include <stdbool.h>
 #include <stdint.h>

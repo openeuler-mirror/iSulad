@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container sysinfo definition
  ******************************************************************************/
-#ifndef __SYSINFO_H
-#define __SYSINFO_H
+#ifndef DAEMON_COMMON_SYSINFO_H
+#define DAEMON_COMMON_SYSINFO_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -142,5 +142,5 @@ void free_mounts_info(mountinfo_t **minfos);
 }
 #endif
 
-#endif /* __SYSINFO_H */
+#endif // DAEMON_COMMON_SYSINFO_H
 

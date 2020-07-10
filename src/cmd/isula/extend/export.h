@@ -12,8 +12,8 @@
  * Create: 2019-04-04
  * Description: provide container resume definition
  ******************************************************************************/
-#ifndef __CMD_EXPORT_H
-#define __CMD_EXPORT_H
+#ifndef CMD_ISULA_EXTEND_EXPORT_H
+#define CMD_ISULA_EXTEND_EXPORT_H
 
 #include <stdbool.h>
 #include <stddef.h>

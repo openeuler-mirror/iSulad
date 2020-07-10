@@ -12,8 +12,8 @@
  * Create: 2020-03-05
  * Description: provide http request definition
  ******************************************************************************/
-#ifndef __IMAGE_HTTP_REQUEST_H
-#define __IMAGE_HTTP_REQUEST_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_HTTP_REQUEST_H
+#define DAEMON_MODULES_IMAGE_OCI_REGISTRY_HTTP_REQUEST_H
 
 #include "registry_type.h"
 

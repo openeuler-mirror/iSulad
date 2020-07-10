@@ -12,8 +12,8 @@
 * Create: 2019-07-15
 * Description: isula image pull operator implement
 *******************************************************************************/
-#ifndef __IMAGE_OCI_PULL_H
-#define __IMAGE_OCI_PULL_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_PULL_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_PULL_H
 
 #include "image_api.h"
 

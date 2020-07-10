@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container verify definition
  ******************************************************************************/
-#ifndef __VERIFY_H
-#define __VERIFY_H
+#ifndef DAEMON_MODULES_SPEC_VERIFY_H
+#define DAEMON_MODULES_SPEC_VERIFY_H
 
 #include <stdbool.h>
 
@@ -39,5 +39,5 @@ int verify_health_check_parameter(const container_config *container_spec);
 }
 #endif
 
-#endif /* __VERIFY_H */
+#endif // DAEMON_MODULES_SPEC_VERIFY_H
 

@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide cri runtime service function definition
  **********************************************************************************/
-#ifndef _CRI_RUNTIME_SERVICES_IMPL_H_
-#define _CRI_RUNTIME_SERVICES_IMPL_H_
+#ifndef DAEMON_ENTRY_CRI_CRI_RUNTIME_SERVICE_H
+#define DAEMON_ENTRY_CRI_CRI_RUNTIME_SERVICE_H
 
 #include <string>
 #include <map>
@@ -285,4 +285,4 @@ private:
     std::string m_podSandboxImage;
 };
 
-#endif /* _CRI_RUNTIME_SERVICES_IMPL_H_ */
+#endif // DAEMON_ENTRY_CRI_CRI_RUNTIME_SERVICE_H

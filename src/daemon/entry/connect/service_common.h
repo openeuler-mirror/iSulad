@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide common service definition
  ******************************************************************************/
-#ifndef __SERVICE_COMMON_H
-#define __SERVICE_COMMON_H
+#ifndef DAEMON_ENTRY_CONNECT_SERVICE_COMMON_H
+#define DAEMON_ENTRY_CONNECT_SERVICE_COMMON_H
 
 #include "daemon_arguments.h"
 #include "err_msg.h"

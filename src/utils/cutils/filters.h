@@ -12,8 +12,8 @@
  * Create: 2018-11-07
  * Description: provide filters function definition
  ******************************************************************************/
-#ifndef __FILTERS_DEF_H_
-#define __FILTERS_DEF_H_
+#ifndef UTILS_CUTILS_FILTERS_H
+#define UTILS_CUTILS_FILTERS_H
 
 #include <stdbool.h>
 #include <stddef.h>

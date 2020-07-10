@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container buffer definition
  ******************************************************************************/
-#ifndef ISULAD_BUFFER_H
-#define ISULAD_BUFFER_H
+#ifndef UTILS_HTTP_BUFFER_H
+#define UTILS_HTTP_BUFFER_H
 
 #include <stdlib.h>
 #include <strings.h>

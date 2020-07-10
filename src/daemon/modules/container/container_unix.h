@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container unix definition
  ******************************************************************************/
-#ifndef __ISULAD_CONTAINER_UNIX_H__
-#define __ISULAD_CONTAINER_UNIX_H__
+#ifndef DAEMON_MODULES_CONTAINER_CONTAINER_UNIX_H
+#define DAEMON_MODULES_CONTAINER_CONTAINER_UNIX_H
 
 #include <pthread.h>
 
@@ -34,4 +34,4 @@ int save_config_v2_json(const char *id, const char *rootpath, const char *v2conf
 }
 #endif
 
-#endif /* __ISULAD_CONTAINER_UNIX_H__ */
+#endif // DAEMON_MODULES_CONTAINER_CONTAINER_UNIX_H

@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide grpc client definition
  ******************************************************************************/
-#ifndef __GRPC_CLIENT_H
-#define __GRPC_CLIENT_H
+#ifndef CLIENT_CONNECT_GRPC_GRPC_CLIENT_H
+#define CLIENT_CONNECT_GRPC_GRPC_CLIENT_H
 
 #include "isula_connect.h"
 
@@ -27,5 +27,5 @@ int grpc_ops_init(isula_connect_ops *ops);
 }
 #endif
 
-#endif /* __GRPC_CLIENT_H */
+#endif // CLIENT_CONNECT_GRPC_GRPC_CLIENT_H
 

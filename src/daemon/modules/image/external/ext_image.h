@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Explanation: provide image function definition
  ******************************************************************************/
-#ifndef __EXT_IMAGE_H
-#define __EXT_IMAGE_H
+#ifndef DAEMON_MODULES_IMAGE_EXTERNAL_EXT_IMAGE_H
+#define DAEMON_MODULES_IMAGE_EXTERNAL_EXT_IMAGE_H
 
 #include <stdint.h>
 #include <isula_libutils/container_config.h>

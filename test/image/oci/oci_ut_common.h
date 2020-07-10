@@ -13,8 +13,8 @@
  * Create: 2019-08-29
  */
 
-#ifndef __OCI_UT_COMMON_H
-#define __OCI_UT_COMMON_H
+#ifndef _ISULAD_TEST_IMAGE_OCI_OCI_UT_COMMON_H
+#define _ISULAD_TEST_IMAGE_OCI_OCI_UT_COMMON_H
 
 #include <stdlib.h>
 #include <stdio.h>

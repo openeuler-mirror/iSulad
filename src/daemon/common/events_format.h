@@ -12,8 +12,8 @@
  * Create: 2020-06-15
  * Description: provide container isulad functions
  ******************************************************************************/
-#ifndef __EVENT_FORMAT_H
-#define __EVENT_FORMAT_H
+#ifndef DAEMON_COMMON_EVENTS_FORMAT_H
+#define DAEMON_COMMON_EVENTS_FORMAT_H
 
 #include <stdbool.h>
 #include <stdint.h>

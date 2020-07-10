@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container mainloop definition
  ******************************************************************************/
-#ifndef __EPOLLLOOP_H
-#define __EPOLLLOOP_H
+#ifndef UTILS_CUTILS_MAINLOOP_H
+#define UTILS_CUTILS_MAINLOOP_H
 
 #include <stdint.h>
 #include "linked_list.h"

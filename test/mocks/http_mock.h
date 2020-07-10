@@ -13,8 +13,8 @@
  * Description: provide http mock
  ******************************************************************************/
 
-#ifndef HTTP_MOCK_H_
-#define HTTP_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_HTTP_MOCK_H
+#define _ISULAD_TEST_MOCKS_HTTP_MOCK_H
 
 #include <gmock/gmock.h>
 #include "http.h"
@@ -28,4 +28,4 @@ public:
 
 void MockHttp_SetMock(MockHttp* mock);
 
-#endif // HTTP_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_HTTP_MOCK_H

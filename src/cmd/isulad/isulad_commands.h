@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container commands definition
  ******************************************************************************/
-#ifndef __ISULAD_COMMAND_H
-#define __ISULAD_COMMAND_H
+#ifndef CMD_ISULAD_ISULAD_COMMANDS_H
+#define CMD_ISULAD_ISULAD_COMMANDS_H
 #include <isula_libutils/isulad_daemon_configs.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -265,4 +265,4 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
 }
 #endif
 
-#endif /* __COMMAND_H */
+#endif // CMD_ISULAD_ISULAD_COMMANDS_H

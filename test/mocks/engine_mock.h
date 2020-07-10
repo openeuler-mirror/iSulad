@@ -13,8 +13,8 @@
  * Description: provide engine mock
  ******************************************************************************/
 
-#ifndef ENGINE_MOCK_H_
-#define ENGINE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_ENGINE_MOCK_H
+#define _ISULAD_TEST_MOCKS_ENGINE_MOCK_H
 
 #include <gmock/gmock.h>
 #include "engine.h"
@@ -27,4 +27,4 @@ public:
 
 void MockEngine_SetMock(MockEngine* mock);
 
-#endif  // ENGINE_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_ENGINE_MOCK_H

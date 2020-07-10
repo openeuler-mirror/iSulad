@@ -13,8 +13,8 @@
  * Description: process definition
  ******************************************************************************/
 
-#ifndef __SHIM_PROCESS_H_
-#define __SHIM_PROCESS_H_
+#ifndef CMD_ISULAD_SHIM_PROCESS_H
+#define CMD_ISULAD_SHIM_PROCESS_H
 
 #include <pthread.h>
 #include <semaphore.h>

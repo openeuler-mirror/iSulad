@@ -13,8 +13,8 @@
  * Description: provide plugin definition
  ******************************************************************************/
 
-#ifndef _PLUGIN_H_
-#define _PLUGIN_H_ /* _PLUGIN_H_ */
+#ifndef DAEMON_MODULES_API_PLUGIN_API_H
+#define DAEMON_MODULES_API_PLUGIN_API_H /* _PLUGIN_H_ */
 
 #include <pthread.h>
 
@@ -111,4 +111,4 @@ int plugin_event_container_post_stop(const container_t *cont);
 int plugin_event_container_post_remove(const container_t *cont);
 int plugin_event_container_post_remove2(const char *cid, const oci_runtime_spec *oci);
 
-#endif /* _PLUGIN_H_ */
+#endif // DAEMON_MODULES_API_PLUGIN_API_H

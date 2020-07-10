@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container ps definition
  ******************************************************************************/
-#ifndef __CMD_LIST_H
-#define __CMD_LIST_H
+#ifndef CMD_ISULA_INFORMATION_PS_H
+#define CMD_ISULA_INFORMATION_PS_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -56,4 +56,4 @@ int cmd_list_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_LIST_H */
+#endif // CMD_ISULA_INFORMATION_PS_H

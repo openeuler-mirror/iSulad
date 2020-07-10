@@ -13,8 +13,8 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef __URL_H_
-#define __URL_H_
+#ifndef UTILS_CPPUTILS_URL_H
+#define UTILS_CPPUTILS_URL_H
 #include <iostream>
 #include <string>
 #include <iomanip>

@@ -13,8 +13,8 @@
  * Description: provide naming function definition
  *********************************************************************************/
 
-#ifndef _CRI_NAMING_H_
-#define _CRI_NAMING_H_
+#ifndef DAEMON_ENTRY_CRI_NAMING_H
+#define DAEMON_ENTRY_CRI_NAMING_H
 
 #include "cri_runtime_service.h"
 #include <string>
@@ -30,4 +30,4 @@ void ParseSandboxName(const std::string &name, runtime::v1alpha2::PodSandboxMeta
 void ParseContainerName(const std::string &name, runtime::v1alpha2::ContainerMetadata *metadata, Errors &err);
 } // namespace CRINaming
 
-#endif /* _CRI_RUNTIME_SERVICES_IMPL_H_ */
+#endif // DAEMON_ENTRY_CRI_NAMING_H

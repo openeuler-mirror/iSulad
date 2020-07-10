@@ -12,8 +12,8 @@
  * Create: 2019-06-07
  * Description: provide certificate function
  ******************************************************************************/
-#ifndef _ISULAD_HTTP_CERTIFICATE_H
-#define _ISULAD_HTTP_CERTIFICATE_H
+#ifndef UTILS_HTTP_CERTIFICATE_H
+#define UTILS_HTTP_CERTIFICATE_H
 #include <stddef.h>
 
 #ifdef __cplusplus

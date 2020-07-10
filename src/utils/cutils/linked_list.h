@@ -101,7 +101,8 @@ static inline void linked_list_add_tail(struct linked_list *head,
 /* Idiom to free an linked list */
 static inline void linked_list_del(const struct linked_list *list)
 {
-    struct linked_list *next, *prev;
+    struct linked_list *next = NULL;
+    struct linked_list *prev = NULL;
 
     next = list->next;
     prev = list->prev;
@@ -113,7 +114,7 @@ static inline void linked_list_del(const struct linked_list *list)
 static inline size_t linked_list_len(struct linked_list *list)
 {
     size_t i = 0;
-    struct linked_list *iter;
+    struct linked_list *iter = NULL;
     linked_list_for_each(iter, list) {
         i++;
     }

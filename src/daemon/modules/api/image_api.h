@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide image function definition
  ******************************************************************************/
-#ifndef __IMAGE_H
-#define __IMAGE_H
+#ifndef DAEMON_MODULES_API_IMAGE_API_H
+#define DAEMON_MODULES_API_IMAGE_API_H
 
 #include <stdint.h>
 

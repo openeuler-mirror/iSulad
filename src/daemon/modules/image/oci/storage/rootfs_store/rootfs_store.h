@@ -12,8 +12,8 @@
  * Create: 2020-05-12
  * Description: provide containers module interface definition
  ******************************************************************************/
-#ifndef __OCI_STORAGE_ROOTFS_STORE_H
-#define __OCI_STORAGE_ROOTFS_STORE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_ROOTFS_STORE_ROOTFS_STORE_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_ROOTFS_STORE_ROOTFS_STORE_H
 
 #include <stdbool.h>
 #include <string.h>
@@ -90,4 +90,4 @@ void rootfs_store_free();
 }
 #endif
 
-#endif /* __OCI_STORAGE_ROOTFS_STORE_H */
+#endif // DAEMON_MODULES_IMAGE_OCI_STORAGE_ROOTFS_STORE_ROOTFS_STORE_H

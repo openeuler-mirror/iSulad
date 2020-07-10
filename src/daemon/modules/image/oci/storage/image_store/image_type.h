@@ -12,8 +12,8 @@
  * Create: 2020-04-26
  * Description: provide image function definition
  ******************************************************************************/
-#ifndef __OCI_STORAGE_IMAGE_TYPE_H
-#define __OCI_STORAGE_IMAGE_TYPE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_IMAGE_STORE_IMAGE_TYPE_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_IMAGE_STORE_IMAGE_TYPE_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -40,4 +40,4 @@ void free_image_t(image_t *ptr);
 }
 #endif
 
-#endif // __OCI_STORAGE_IMAGE_TYPE_H
+#endif // DAEMON_MODULES_IMAGE_OCI_STORAGE_IMAGE_STORE_IMAGE_TYPE_H

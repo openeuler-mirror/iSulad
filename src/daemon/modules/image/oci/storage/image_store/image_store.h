@@ -12,8 +12,8 @@
  * Create: 2020-03-13
  * Description: provide images module interface definition
  ******************************************************************************/
-#ifndef __OCI_STORAGE_IMAGE_STORE_H
-#define __OCI_STORAGE_IMAGE_STORE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_IMAGE_STORE_IMAGE_STORE_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_IMAGE_STORE_IMAGE_STORE_H
 
 #include <stdbool.h>
 #include <string.h>
@@ -114,4 +114,4 @@ void image_store_free();
 }
 #endif
 
-#endif /* __OCI_STORAGE_IMAGE_STORE_H */
+#endif // DAEMON_MODULES_IMAGE_OCI_STORAGE_IMAGE_STORE_IMAGE_STORE_H

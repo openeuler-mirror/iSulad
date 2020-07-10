@@ -1,5 +1,5 @@
-#ifndef __EXECUTION_STREAM_H_
-#define __EXECUTION_STREAM_H_
+#ifndef DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_STREAM_H
+#define DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_STREAM_H
 
 /******************************************************************************
  * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.

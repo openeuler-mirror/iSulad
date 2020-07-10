@@ -33,7 +33,7 @@ function usage() {
   echo "Options:"
   echo "    -s, --codestyle          Perform codestyle(codedex) code static check"
   echo "    -c, --tidy-check         Perform clang-tidy code static check"
-  echo "    -x, --tidy-fix          Quick fix code with clang-tidy"
+  echo "    -x, --tidy-fix           Quick fix code with clang-tidy"
   echo "    -a, --all                Perform all checks and statistics"
   echo "    -i, --incremental-check  Perform incremental check"
   echo "    -f, --quick-format       Incremental format code by astyle/clang-format"
@@ -423,8 +423,15 @@ function clang_tidy_fix() {
         cd ${CURRENT_PATH}
     fi
 
+
     local files
-    if [[ ${1} == "all" ]]; then
+    if [[ ${1} == "fixdef" ]];then
+        if [[ ${CURRENT_PATH} != "/iSulad/tools" ]]; then
+            echo "Please move project to /"
+            exit 1
+        fi
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h)")
+    elif [[ ${1} == "all" ]]; then
         files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
     elif [[ ${1} == "incremental" ]]; then
         files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
@@ -444,8 +451,13 @@ function clang_tidy_fix() {
 
     for file in ${files[@]}
     do
-    	clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
-        	google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' --fix ${file} >/dev/null 2>&1
+        if [[ ${1} == "fixdef" ]];then
+            clang-tidy -checks='-*,llvm-header-guard' --fix ${file} >/dev/null 2>&1
+            sed -i 's/_ISULAD_SRC_//g ' ${file} >/dev/null 2>&1
+        else
+            clang-tidy -checks='-*,abseil-*,bugprone-*,cert-*,clang-analyzer-*,cppcoreguidelines-*, \
+                google-*,hicpp-*,linuxkernel-*,llvm-*,llvmlibc-*,-llvm-header-guard,misc-*,modernize-*,performance-*,portability-*,readability-*' --fix ${file} >/dev/null 2>&1
+        fi
         printf "[\033[1;36m%03d\033[0m\033[1;33m/\033[0m\033[1;34m%03d\033[0m]@%-80s \033[1;32m%-5s\033[0m\n" \
           ${index} ${total} ${file} "[REPAIRED]" | sed -e 's/ /-/g' -e 's/@/ /' -e 's/-/ /'
         index=$((index+1))

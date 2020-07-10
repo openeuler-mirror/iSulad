@@ -12,8 +12,8 @@
  * Create: 2020-02-27
  * Description: provide registry definition
  ******************************************************************************/
-#ifndef __IMAGE_REGISTRY_H
-#define __IMAGE_REGISTRY_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_REGISTRY_H
+#define DAEMON_MODULES_IMAGE_OCI_REGISTRY_REGISTRY_H
 
 #include <stdbool.h>
 

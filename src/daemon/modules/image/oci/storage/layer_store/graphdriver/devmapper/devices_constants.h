@@ -13,8 +13,8 @@
 * Description: wrap libdevmapper function to manuplite devicemapper
 ******************************************************************************/
 
-#ifndef __DEVICES_CONSTANTS_
-#define __DEVICES_CONSTANTS_
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_DEVICES_CONSTANTS_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_DEVICES_CONSTANTS_H
 
 #include "map.h"
 #include "isula_libutils/image_devmapper_transaction.h"

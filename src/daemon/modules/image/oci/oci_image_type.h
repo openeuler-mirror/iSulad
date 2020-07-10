@@ -13,8 +13,8 @@
  * Description: provide image type definition
  ******************************************************************************/
 
-#ifndef __OCI_IMAGE_TYPE_H_
-#define __OCI_IMAGE_TYPE_H_
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_IMAGE_TYPE_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_IMAGE_TYPE_H
 
 #ifdef __cplusplus
 extern "C" {

@@ -12,8 +12,8 @@
 * Create: 2019-07-12
 * Description: provide isula connect command definition
 *******************************************************************************/
-#ifndef __ISULAD_CLIENT_CONNECT_H
-#define __ISULAD_CLIENT_CONNECT_H
+#ifndef CLIENT_CONNECT_CONNECT_H
+#define CLIENT_CONNECT_CONNECT_H
 
 #include <stdbool.h>
 

@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container list callback function definition
  *********************************************************************************/
-#ifndef __EXECUTION_INFORMATION_H_
-#define __EXECUTION_INFORMATION_H_
+#ifndef DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_INFORMATION_H
+#define DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_INFORMATION_H
 
 
 #include "callback.h"

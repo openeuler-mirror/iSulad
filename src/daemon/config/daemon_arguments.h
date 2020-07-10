@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container server arguments definition
  ******************************************************************************/
-#ifndef __ISULAD_ARGUMENTS_H
-#define __ISULAD_ARGUMENTS_H
+#ifndef DAEMON_CONFIG_DAEMON_ARGUMENTS_H
+#define DAEMON_CONFIG_DAEMON_ARGUMENTS_H
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -81,4 +81,4 @@ void free_default_ulimit(host_config_ulimits_element **default_ulimit);
 }
 #endif
 
-#endif /* __ISULAD_ARGUMENTS_H */
+#endif // DAEMON_CONFIG_DAEMON_ARGUMENTS_H

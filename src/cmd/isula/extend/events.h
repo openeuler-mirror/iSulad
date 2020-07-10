@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container events definition
  ******************************************************************************/
-#ifndef __CMD_EVENT_H
-#define __CMD_EVENT_H
+#ifndef CMD_ISULA_EXTEND_EVENTS_H
+#define CMD_ISULA_EXTEND_EVENTS_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -51,4 +51,4 @@ int cmd_events_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_EVENT_H */
+#endif // CMD_ISULA_EXTEND_EVENTS_H

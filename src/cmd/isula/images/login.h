@@ -11,8 +11,8 @@
  * Author: wangfengtu
  * Description: provide login definition
  ******************************************************************************/
-#ifndef __CMD_LOGIN_H
-#define __CMD_LOGIN_H
+#ifndef CMD_ISULA_IMAGES_LOGIN_H
+#define CMD_ISULA_IMAGES_LOGIN_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -44,4 +44,4 @@ int cmd_login_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_LOGIN_H */
+#endif // CMD_ISULA_IMAGES_LOGIN_H

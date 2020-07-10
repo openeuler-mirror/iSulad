@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container http function definition
  ******************************************************************************/
-#ifndef ISULAD_HTTP_H
-#define ISULAD_HTTP_H
+#ifndef UTILS_HTTP_HTTP_H
+#define UTILS_HTTP_HTTP_H
 
 #include <stdbool.h>
 #include <stddef.h>

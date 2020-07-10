@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container wait definition
  ******************************************************************************/
-#ifndef __CMD_WAIT_H
-#define __CMD_WAIT_H
+#ifndef CMD_ISULA_INFORMATION_WAIT_H
+#define CMD_ISULA_INFORMATION_WAIT_H
 
 #include "client_arguments.h"
 
@@ -31,4 +31,4 @@ int client_wait(const struct client_arguments *args, unsigned int *exit_code);
 }
 #endif
 
-#endif /* __CMD_WAIT_H */
+#endif // CMD_ISULA_INFORMATION_WAIT_H

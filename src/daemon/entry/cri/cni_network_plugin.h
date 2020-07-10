@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide cni network plugin function definition
  ********************************************************************************/
-#ifndef _CRI_CNI_NETWORK_PLUGIN_H_
-#define _CRI_CNI_NETWORK_PLUGIN_H_
+#ifndef DAEMON_ENTRY_CRI_CNI_NETWORK_PLUGIN_H
+#define DAEMON_ENTRY_CRI_CNI_NETWORK_PLUGIN_H
 
 #include <memory>
 #include <string>

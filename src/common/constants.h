@@ -13,8 +13,8 @@
  * Description: provide macro definition
  ******************************************************************************/
 
-#ifndef _ISULAD_CONSTANTS_H
-#define _ISULAD_CONSTANTS_H
+#ifndef COMMON_CONSTANTS_H
+#define COMMON_CONSTANTS_H
 
 #ifdef __cplusplus
 extern "C" {

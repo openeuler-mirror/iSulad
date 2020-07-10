@@ -12,8 +12,8 @@
  * Create: 2018-11-1
  * Description: provide sysctl function definition
  ********************************************************************************/
-#ifndef _ISULA_SYSCTL_TOOLS_
-#define _ISULA_SYSCTL_TOOLS_
+#ifndef DAEMON_ENTRY_CRI_SYSCTL_TOOLS_H
+#define DAEMON_ENTRY_CRI_SYSCTL_TOOLS_H
 
 #ifdef __cplusplus
 extern "C" {

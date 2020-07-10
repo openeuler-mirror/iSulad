@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container start  definition
  ******************************************************************************/
-#ifndef __CMD_START_H
-#define __CMD_START_H
+#ifndef CMD_ISULA_BASE_START_H
+#define CMD_ISULA_BASE_START_H
 
 #include <termios.h>
 #include <stdbool.h>
@@ -39,4 +39,4 @@ int cmd_start_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_START_H */
+#endif // CMD_ISULA_BASE_START_H

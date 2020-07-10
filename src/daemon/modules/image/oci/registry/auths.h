@@ -12,8 +12,8 @@
  * Create: 2020-03-20
  * Description: provide auths file process definition
  ******************************************************************************/
-#ifndef __IMAGE_AUTHS_H
-#define __IMAGE_AUTHS_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_AUTHS_H
+#define DAEMON_MODULES_IMAGE_OCI_REGISTRY_AUTHS_H
 
 #ifdef __cplusplus
 extern "C" {

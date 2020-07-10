@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container client base functions
  ******************************************************************************/
-#ifndef __CLIENT_BASH_H
-#define __CLIENT_BASH_H
+#ifndef CLIENT_CONNECT_GRPC_CLIENT_BASE_H
+#define CLIENT_CONNECT_GRPC_CLIENT_BASE_H
 #include <fstream>
 #include <grpc++/grpc++.h>
 #include <iostream>
@@ -227,4 +227,4 @@ auto container_func(const REQUEST *request, RESPONSE *response, void *arg) noexc
     return client->run(request, response);
 }
 
-#endif /* __CLIENT_BASH_H */
+#endif // CLIENT_CONNECT_GRPC_CLIENT_BASE_H

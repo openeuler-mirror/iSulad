@@ -13,13 +13,13 @@
  * Description: provide file system utils functions
  *******************************************************************************/
 
-#ifndef __UTILS_FS_H
-#define __UTILS_FS_H
+#ifndef UTILS_CUTILS_UTILS_FS_H
+#define UTILS_CUTILS_UTILS_FS_H
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/types.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,5 +40,5 @@ int util_mount_from(const char *base, const char *src, const char *dst, const ch
 }
 #endif
 
-#endif /* __UTILS_FS_H */
+#endif // UTILS_CUTILS_UTILS_FS_H
 

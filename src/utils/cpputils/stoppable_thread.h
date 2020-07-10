@@ -12,8 +12,8 @@
  * Create: 2019-4-19
  * Description: provide stoppable thread definition
  *********************************************************************************/
-#ifndef __STOPPABLE_THREAD_H_
-#define __STOPPABLE_THREAD_H_
+#ifndef UTILS_CPPUTILS_STOPPABLE_THREAD_H
+#define UTILS_CPPUTILS_STOPPABLE_THREAD_H
 
 #include <iostream>
 #include <chrono>
@@ -48,5 +48,5 @@ private:
     std::future<void> m_future_obj;
 };
 
-#endif /* __STOPPABLE_THREAD_H_ */
+#endif // UTILS_CPPUTILS_STOPPABLE_THREAD_H
 

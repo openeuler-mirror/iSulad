@@ -13,8 +13,8 @@
  * Description: provide container list callback function definition
  *******************************************************************************/
 
-#ifndef __RUNTIME_LCR_OPS_INTERFACE_H_
-#define __RUNTIME_LCR_OPS_INTERFACE_H_
+#ifndef DAEMON_MODULES_RUNTIME_ENGINES_LCR_LCR_RT_OPS_H
+#define DAEMON_MODULES_RUNTIME_ENGINES_LCR_LCR_RT_OPS_H
 
 #include <stdbool.h>
 

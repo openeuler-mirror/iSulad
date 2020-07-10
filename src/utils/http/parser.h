@@ -37,8 +37,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef _PARSER_H
-#define _PARSER_H
+#ifndef UTILS_HTTP_PARSER_H
+#define UTILS_HTTP_PARSER_H
 
 #include <stddef.h>
 

@@ -12,8 +12,8 @@
  * Create: 2019-04-02
  * Description: provide graphdriver function definition
  ******************************************************************************/
-#ifndef __GRAPHDRIVER_H
-#define __GRAPHDRIVER_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DRIVER_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DRIVER_H
 
 #include <stdint.h>
 #include <stdbool.h>

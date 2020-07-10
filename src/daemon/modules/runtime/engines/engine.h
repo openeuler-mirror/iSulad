@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container engine definition
  ******************************************************************************/
-#ifndef __ISULAD_ENGINE_H
-#define __ISULAD_ENGINE_H
+#ifndef DAEMON_MODULES_RUNTIME_ENGINES_ENGINE_H
+#define DAEMON_MODULES_RUNTIME_ENGINES_ENGINE_H
 
 #include <stdbool.h>
 #include <stdlib.h>

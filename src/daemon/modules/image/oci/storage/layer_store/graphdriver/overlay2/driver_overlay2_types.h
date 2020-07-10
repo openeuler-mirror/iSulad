@@ -12,8 +12,8 @@
  * Create: 2020-02-27
  * Description: provide overlay2 types definition
  ******************************************************************************/
-#ifndef __GRAPHDRIVER_OVERLAY2_TYPES_H
-#define __GRAPHDRIVER_OVERLAY2_TYPES_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_OVERLAY2_DRIVER_OVERLAY2_TYPES_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_OVERLAY2_DRIVER_OVERLAY2_TYPES_H
 
 #include <stdbool.h>
 #include <stdint.h>

@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide monitord definition
  ******************************************************************************/
-#ifndef __ISULAD_MONITORD_H
-#define __ISULAD_MONITORD_H
+#ifndef DAEMON_MODULES_EVENTS_MONITORD_H
+#define DAEMON_MODULES_EVENTS_MONITORD_H
 #include <pthread.h>
 #include <semaphore.h>
 #include <limits.h>

@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container logs definition
  ******************************************************************************/
-#ifndef __CMD_LOGS_H
-#define __CMD_LOGS_H
+#ifndef CMD_ISULA_INFORMATION_LOGS_H
+#define CMD_ISULA_INFORMATION_LOGS_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -43,4 +43,4 @@ int cmd_logs_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_LOGS_H */
+#endif // CMD_ISULA_INFORMATION_LOGS_H

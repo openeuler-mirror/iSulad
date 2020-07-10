@@ -12,8 +12,8 @@
 * Create: 2019-07-15
 * Description: isula logout operator implement
 *******************************************************************************/
-#ifndef __IMAGE_OCI_LOGOUT_H
-#define __IMAGE_OCI_LOGOUT_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_LOGOUT_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_LOGOUT_H
 
 #include <stdbool.h>
 

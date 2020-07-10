@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container stats definition
  ******************************************************************************/
-#ifndef __CMD_STATS_H
-#define __CMD_STATS_H
+#ifndef CMD_ISULA_EXTEND_STATS_H
+#define CMD_ISULA_EXTEND_STATS_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -52,4 +52,4 @@ int cmd_stats_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_STATS_H */
+#endif // CMD_ISULA_EXTEND_STATS_H

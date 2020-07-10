@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container restful client definition
  ******************************************************************************/
-#ifndef __REST_CLIENT_H
-#define __REST_CLIENT_H
+#ifndef CLIENT_CONNECT_REST_REST_CLIENT_H
+#define CLIENT_CONNECT_REST_REST_CLIENT_H
 
 #include "isula_connect.h"
 

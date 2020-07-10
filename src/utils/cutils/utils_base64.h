@@ -13,13 +13,13 @@
  * Description: provide base64 functions
  ********************************************************************************/
 
-#ifndef __UTILS_BASE64_H
-#define __UTILS_BASE64_H
+#ifndef UTILS_CUTILS_UTILS_BASE64_H
+#define UTILS_CUTILS_UTILS_BASE64_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,5 +35,5 @@ size_t util_base64_decode_len(char *input, size_t len);
 }
 #endif
 
-#endif /* __UTILS_BASE64_H */
+#endif // UTILS_CUTILS_UTILS_BASE64_H
 

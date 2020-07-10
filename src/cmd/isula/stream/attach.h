@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container attach definition
  ******************************************************************************/
-#ifndef __CMD_ATTACH_H
-#define __CMD_ATTACH_H
+#ifndef CMD_ISULA_STREAM_ATTACH_H
+#define CMD_ISULA_STREAM_ATTACH_H
 
 #include "client_arguments.h"
 #include "isula_libutils/container_inspect.h"
@@ -23,4 +23,4 @@ extern const char g_cmd_attach_usage[];
 extern struct client_arguments g_cmd_attach_args;
 int inspect_container(const struct client_arguments *args, container_inspect **inspect_data);
 int cmd_attach_main(int argc, const char **argv);
-#endif /* __CMD_ATTACH_H */
+#endif // CMD_ISULA_STREAM_ATTACH_H

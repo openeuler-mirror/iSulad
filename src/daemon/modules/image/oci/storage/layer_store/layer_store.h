@@ -12,8 +12,8 @@
  * Create: 2020-03-24
  * Description: provide layer store function definition
  ******************************************************************************/
-#ifndef __OCI_STORAGE_LAYER_STORE_H
-#define __OCI_STORAGE_LAYER_STORE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_LAYER_STORE_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_LAYER_STORE_H
 
 #include <stdint.h>
 #include <isula_libutils/imagetool_fs_info.h>

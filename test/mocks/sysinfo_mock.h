@@ -13,8 +13,8 @@
  * Description: provide sysinfo mock
  ******************************************************************************/
 
-#ifndef SYSINFO_MOCK_H_
-#define SYSINFO_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_SYSINFO_MOCK_H
+#define _ISULAD_TEST_MOCKS_SYSINFO_MOCK_H
 
 #include <gmock/gmock.h>
 #include "sysinfo.h"

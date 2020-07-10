@@ -12,8 +12,8 @@
  * Create: 2020-04-01
  * Description: provide storage function definition
  ******************************************************************************/
-#ifndef __STORAGE_H
-#define __STORAGE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_STORAGE_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_STORAGE_H
 
 #include <stdint.h>
 #include <stdbool.h>

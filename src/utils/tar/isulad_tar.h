@@ -13,8 +13,8 @@
  * Description: provide tar function definition
  *********************************************************************************/
 
-#ifndef __ISULAD_TAR_H_
-#define __ISULAD_TAR_H_
+#ifndef UTILS_TAR_ISULAD_TAR_H
+#define UTILS_TAR_ISULAD_TAR_H
 
 #include <unistd.h>
 #include <stdio.h>

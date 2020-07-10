@@ -12,8 +12,8 @@
 * Create: 2020-06-15
 * Description: provide isula image rootfs handler definition
 *******************************************************************************/
-#ifndef __IMAGE_ROOTFS_HANDLER_H
-#define __IMAGE_ROOTFS_HANDLER_H
+#ifndef DAEMON_MODULES_IMAGE_IMAGE_ROOTFS_HANDLER_H
+#define DAEMON_MODULES_IMAGE_IMAGE_ROOTFS_HANDLER_H
 
 #include <isula_libutils/defs.h>
 
@@ -29,4 +29,4 @@ int get_user_from_image_roofs(const char *basefs, const host_config *hc, const c
 }
 #endif
 
-#endif /* __IMAGE_ROOTFS_HANDLER_H */
+#endif // DAEMON_MODULES_IMAGE_IMAGE_ROOTFS_HANDLER_H

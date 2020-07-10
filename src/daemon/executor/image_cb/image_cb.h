@@ -13,8 +13,8 @@
  * Description: provide image function definition
  ********************************************************************************/
 
-#ifndef __IMAGE_CB_H_
-#define __IMAGE_CB_H_
+#ifndef DAEMON_EXECUTOR_IMAGE_CB_IMAGE_CB_H
+#define DAEMON_EXECUTOR_IMAGE_CB_IMAGE_CB_H
 
 #include <isula_libutils/image_list_images_request.h>
 #include <isula_libutils/image_list_images_response.h>

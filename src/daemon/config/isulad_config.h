@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container configure definition
  ******************************************************************************/
-#ifndef __ISULAD_CONF_H
-#define __ISULAD_CONF_H
+#ifndef DAEMON_CONFIG_ISULAD_CONFIG_H
+#define DAEMON_CONFIG_ISULAD_CONFIG_H
 
 #include <stdint.h>
 #include <isula_libutils/host_config.h>
@@ -103,4 +103,4 @@ char *conf_get_isulad_monitor_fifo_path();
 }
 #endif
 
-#endif /* __ISULAD_CONF_H */
+#endif // DAEMON_CONFIG_ISULAD_CONFIG_H

@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container exec definition
  ******************************************************************************/
-#ifndef __CMD_EXEC_H
-#define __CMD_EXEC_H
+#ifndef CMD_ISULA_STREAM_EXEC_H
+#define CMD_ISULA_STREAM_EXEC_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -49,4 +49,4 @@ extern const char g_cmd_exec_usage[];
 extern struct client_arguments g_cmd_exec_args;
 int cmd_exec_main(int argc, const char **argv);
 
-#endif /* __CMD_EXEC_H */
+#endif // CMD_ISULA_STREAM_EXEC_H

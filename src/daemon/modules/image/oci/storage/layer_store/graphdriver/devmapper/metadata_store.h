@@ -12,8 +12,8 @@
  * Create: 2020-06-12
  * Description: provide overlay2 function definition
  ******************************************************************************/
-#ifndef __METADATA_STORE_H
-#define __METADATA_STORE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_METADATA_STORE_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_METADATA_STORE_H
 
 #include <stdbool.h>
 #include <stdint.h>

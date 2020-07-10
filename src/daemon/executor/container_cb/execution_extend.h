@@ -14,8 +14,8 @@
  *********************************************************************************/
 
 
-#ifndef __EXECUTION_EXTEND_H_
-#define __EXECUTION_EXTEND_H_
+#ifndef DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_EXTEND_H
+#define DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_EXTEND_H
 
 #include "callback.h"
 

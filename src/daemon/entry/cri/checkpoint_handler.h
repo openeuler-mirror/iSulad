@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide checkpoint handler function definition
  *********************************************************************************/
-#ifndef _CRI_CHECKPOINT_H
-#define _CRI_CHECKPOINT_H
+#ifndef DAEMON_ENTRY_CRI_CHECKPOINT_HANDLER_H
+#define DAEMON_ENTRY_CRI_CHECKPOINT_HANDLER_H
 #include <string>
 #include <vector>
 #include <memory>

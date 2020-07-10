@@ -13,8 +13,8 @@
  * Description: provide container client arguments definition
  ******************************************************************************/
 
-#ifndef __ISULA_ARGUMENTS_H
-#define __ISULA_ARGUMENTS_H
+#ifndef CMD_ISULA_CLIENT_ARGUMENTS_H
+#define CMD_ISULA_CLIENT_ARGUMENTS_H
 
 #include <stdbool.h>
 #include <getopt.h>
@@ -375,4 +375,4 @@ extern client_connect_config_t get_connect_config(const struct client_arguments 
 }
 #endif
 
-#endif /* __ISULA_ARGUMENTS_H */
+#endif // CMD_ISULA_CLIENT_ARGUMENTS_H

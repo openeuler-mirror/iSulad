@@ -13,8 +13,8 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef __WEBSOCKET_SERVER_H_
-#define __WEBSOCKET_SERVER_H_
+#ifndef DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H
+#define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H
 #include <vector>
 #include <unordered_map>
 #include <string>
@@ -113,5 +113,5 @@ ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len);
 ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len);
 int closeWsConnect(void *context, char **err);
 
-#endif /* __WEBSOCKET_SERVER_H_ */
+#endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H
 

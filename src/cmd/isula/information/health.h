@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container health definition
  ******************************************************************************/
-#ifndef __CMD_HEALTHCHECK_H
-#define __CMD_HEALTHCHECK_H
+#ifndef CMD_ISULA_INFORMATION_HEALTH_H
+#define CMD_ISULA_INFORMATION_HEALTH_H
 
 #include <stdbool.h>
 #include <stddef.h>

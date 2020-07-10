@@ -13,8 +13,8 @@
  * Description: provide regex patten functions
  ********************************************************************************/
 
-#ifndef __UTILS_REGEX_H
-#define __UTILS_REGEX_H
+#ifndef UTILS_CUTILS_UTILS_REGEX_H
+#define UTILS_CUTILS_UTILS_REGEX_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,5 +28,5 @@ int util_wildcard_to_regex(const char *wildcard, char **regex);
 }
 #endif
 
-#endif /* __UTILS_REGEX_H */
+#endif // UTILS_CUTILS_UTILS_REGEX_H
 

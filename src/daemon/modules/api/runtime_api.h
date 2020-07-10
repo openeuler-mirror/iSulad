@@ -12,8 +12,8 @@
  * Create: 2019-11-22
  * Description: provide runtime function definition
  ******************************************************************************/
-#ifndef __RUNTIME_H
-#define __RUNTIME_H
+#ifndef DAEMON_MODULES_API_RUNTIME_API_H
+#define DAEMON_MODULES_API_RUNTIME_API_H
 
 #include <stdint.h>
 #include <stdbool.h>

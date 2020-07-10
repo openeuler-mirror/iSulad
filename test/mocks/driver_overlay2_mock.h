@@ -13,8 +13,8 @@
  * Description: provide driver overlay2 mock
  ******************************************************************************/
 
-#ifndef DRIVER_OVERLAY2_MOCK_H_
-#define DRIVER_OVERLAY2_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_DRIVER_OVERLAY2_MOCK_H
+#define _ISULAD_TEST_MOCKS_DRIVER_OVERLAY2_MOCK_H
 
 #include <gmock/gmock.h>
 #include "driver_overlay2.h"
@@ -29,4 +29,4 @@ public:
 
 void MockDriverOverlay2_SetMock(MockDriverOverlay2* mock);
 
-#endif  // DRIVER_OVERLAY2_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_DRIVER_OVERLAY2_MOCK_H

@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide log gather definition
  ******************************************************************************/
-#ifndef __ISULAD_LOG_GATHER_H_
-#define __ISULAD_LOG_GATHER_H_
+#ifndef DAEMON_MODULES_API_LOG_GATHER_API_H
+#define DAEMON_MODULES_API_LOG_GATHER_API_H
 
 #include "utils.h"
 #include "isula_libutils/log.h"

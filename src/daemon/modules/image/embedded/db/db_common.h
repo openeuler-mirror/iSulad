@@ -12,8 +12,8 @@
  * Create: 2018-11-07
  * Description: provide image definition
  ******************************************************************************/
-#ifndef __DB_COMMON_H_
-#define __DB_COMMON_H_
+#ifndef DAEMON_MODULES_IMAGE_EMBEDDED_DB_DB_COMMON_H
+#define DAEMON_MODULES_IMAGE_EMBEDDED_DB_DB_COMMON_H
 
 #define DB_OUT_OF_MEMORY        -3
 #define DB_INVALID_PARAM        -2
@@ -29,5 +29,5 @@ int db_common_init(const char *rootpath);
 
 void db_common_finish(void);
 
-#endif /* __DB_COMMON_H_ */
+#endif // DAEMON_MODULES_IMAGE_EMBEDDED_DB_DB_COMMON_H
 

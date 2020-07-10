@@ -12,8 +12,8 @@
  * Create: 2020-03-20
  * Description: provide certs file process definition
  ******************************************************************************/
-#ifndef __IMAGE_CERTS_H
-#define __IMAGE_CERTS_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_CERTS_H
+#define DAEMON_MODULES_IMAGE_OCI_REGISTRY_CERTS_H
 
 #include <stdbool.h>
 #ifdef __cplusplus

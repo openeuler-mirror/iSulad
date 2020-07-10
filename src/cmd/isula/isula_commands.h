@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container commands definition
  ******************************************************************************/
-#ifndef __COMMAND_H
-#define __COMMAND_H
+#ifndef CMD_ISULA_ISULA_COMMANDS_H
+#define CMD_ISULA_ISULA_COMMANDS_H
 
 #include <semaphore.h>
 #include <stdbool.h>
@@ -76,4 +76,4 @@ int run_command(struct command *commands, int argc, const char **argv);
 }
 #endif
 
-#endif /* __COMMAND_H */
+#endif // CMD_ISULA_ISULA_COMMANDS_H

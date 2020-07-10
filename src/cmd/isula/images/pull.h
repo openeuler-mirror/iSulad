@@ -13,8 +13,8 @@
  * Description: provide pull image
  ********************************************************************************/
 
-#ifndef __CMD_PULL_IMAGE_H
-#define __CMD_PULL_IMAGE_H
+#ifndef CMD_ISULA_IMAGES_PULL_H
+#define CMD_ISULA_IMAGES_PULL_H
 
 #include "client_arguments.h"
 
@@ -33,4 +33,4 @@ int cmd_pull_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_PULL_IMAGE_H */
+#endif // CMD_ISULA_IMAGES_PULL_H

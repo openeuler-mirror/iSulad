@@ -12,8 +12,8 @@
  * Create: 2020-03-05
  * Description: provide registry api v2 definition
  ******************************************************************************/
-#ifndef __IMAGE_REGISTRY_APIV2_H
-#define __IMAGE_REGISTRY_APIV2_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_REGISTRY_APIV2_H
+#define DAEMON_MODULES_IMAGE_OCI_REGISTRY_REGISTRY_APIV2_H
 
 #include <stddef.h>
 

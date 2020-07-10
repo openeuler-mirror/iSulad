@@ -13,8 +13,8 @@
  * Description: provide containers store mock
  ******************************************************************************/
 
-#ifndef CONTAINERS_STORE_MOCK_H_
-#define CONTAINERS_STORE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_CONTAINERS_STORE_MOCK_H
+#define _ISULAD_TEST_MOCKS_CONTAINERS_STORE_MOCK_H
 
 #include <gmock/gmock.h>
 #include "container_api.h"
@@ -39,4 +39,4 @@ public:
 
 void MockContainersStore_SetMock(MockContainersStore *mock);
 
-#endif // CONTAINERS_STORE_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_CONTAINERS_STORE_MOCK_H

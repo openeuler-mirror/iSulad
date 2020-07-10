@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide grpc container functions
  ******************************************************************************/
-#ifndef _GRPC_CONTAINER_SERVICE_H_
-#define _GRPC_CONTAINER_SERVICE_H_
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_GRPC_CONTAINERS_SERVICE_H
+#define DAEMON_ENTRY_CONNECT_GRPC_GRPC_CONTAINERS_SERVICE_H
 #include <string>
 #include <map>
 #include <grpc++/grpc++.h>
@@ -220,4 +220,4 @@ private:
     int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
 };
 
-#endif /* _GRPC_CONTAINER_SERVICE_H_ */
+#endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_CONTAINERS_SERVICE_H

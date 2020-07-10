@@ -13,8 +13,8 @@
  * Description: provide container unix mock
  ******************************************************************************/
 
-#ifndef CONTAINER_UNIX_MOCK_H_
-#define CONTAINER_UNIX_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_CONTAINER_UNIX_MOCK_H
+#define _ISULAD_TEST_MOCKS_CONTAINER_UNIX_MOCK_H
 
 #include <gmock/gmock.h>
 #include "container_unix.h"
@@ -32,4 +32,4 @@ public:
 
 void MockContainerUnix_SetMock(MockContainerUnix* mock);
 
-#endif  // CONTAINER_UNIX_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_CONTAINER_UNIX_MOCK_H

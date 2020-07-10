@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container state definition
  ******************************************************************************/
-#ifndef __ISULAD_CONTAINER_STATE_H__
-#define __ISULAD_CONTAINER_STATE_H__
+#ifndef DAEMON_MODULES_CONTAINER_CONTAINER_STATE_H
+#define DAEMON_MODULES_CONTAINER_CONTAINER_STATE_H
 
 #include <pthread.h>
 
@@ -35,4 +35,4 @@ void container_state_unlock(container_state_t *state);
 }
 #endif
 
-#endif /* __ISULAD_CONTAINER_STATE_H__ */
+#endif // DAEMON_MODULES_CONTAINER_CONTAINER_STATE_H

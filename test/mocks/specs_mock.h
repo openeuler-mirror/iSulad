@@ -13,8 +13,8 @@
  * Description: provide specs mock
  ******************************************************************************/
 
-#ifndef SPECS_MOCK_H_
-#define SPECS_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_SPECS_MOCK_H
+#define _ISULAD_TEST_MOCKS_SPECS_MOCK_H
 
 #include <gmock/gmock.h>
 #include "specs_api.h"

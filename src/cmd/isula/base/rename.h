@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container rename definition
  ******************************************************************************/
-#ifndef __CMD_RENAME_H
-#define __CMD_RENAME_H
+#ifndef CMD_ISULA_BASE_RENAME_H
+#define CMD_ISULA_BASE_RENAME_H
 
 #include "client_arguments.h"
 

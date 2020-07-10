@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Explanation: provide image function definition
  ******************************************************************************/
-#ifndef __EMBEDDED_IMAGE_H
-#define __EMBEDDED_IMAGE_H
+#ifndef DAEMON_MODULES_IMAGE_EMBEDDED_EMBEDDED_IMAGE_H
+#define DAEMON_MODULES_IMAGE_EMBEDDED_EMBEDDED_IMAGE_H
 
 #include <stdint.h>
 #include "image_api.h"

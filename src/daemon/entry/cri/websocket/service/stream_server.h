@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide websocket stream service definition
  ******************************************************************************/
-#ifndef __WEBSOCKET_STREAM_SERVICE_H
-#define __WEBSOCKET_STREAM_SERVICE_H
+#ifndef DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_STREAM_SERVER_H
+#define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_STREAM_SERVER_H
 #include "errors.h"
 
 #ifdef __cplusplus
@@ -30,6 +30,6 @@ void websocket_server_shutdown(void);
 }
 #endif
 
-#endif /* __WEBSOCKET_STREAM_SERVICE_H */
+#endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_STREAM_SERVER_H
 
 

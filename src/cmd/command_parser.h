@@ -13,8 +13,8 @@
  * Description: provide command definition
  ******************************************************************************/
 
-#ifndef __COMMANDER_H_
-#define __COMMANDER_H_
+#ifndef CMD_COMMAND_PARSER_H
+#define CMD_COMMAND_PARSER_H
 #include <unistd.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -108,4 +108,4 @@ int command_convert_swappiness(command_option_t *option, const char *arg);
 }
 #endif
 
-#endif /* COMMANDER_H */
+#endif // CMD_COMMAND_PARSER_H

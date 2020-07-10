@@ -12,8 +12,8 @@
 * Create: 2020-01-19
 * Description: wrap libdevmapper function to manuplite devicemapper
 ******************************************************************************/
-#ifndef __WRAPPER_DEVMAPPER_H
-#define __WRAPPER_DEVMAPPER_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_WRAPPER_DEVMAPPER_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_WRAPPER_DEVMAPPER_H
 
 #include <libdevmapper.h>
 #include <stdbool.h>

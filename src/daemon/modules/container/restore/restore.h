@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide restore definition
  ******************************************************************************/
-#ifndef __ISULAD_RESTORE_H
-#define __ISULAD_RESTORE_H
+#ifndef DAEMON_MODULES_CONTAINER_RESTORE_RESTORE_H
+#define DAEMON_MODULES_CONTAINER_RESTORE_RESTORE_H
 
 #include <stdbool.h>
 #include <stdint.h>

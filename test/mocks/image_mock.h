@@ -13,8 +13,8 @@
  * Description: provide image mock
  ******************************************************************************/
 
-#ifndef IMAGE_MOCK_H_
-#define IMAGE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_IMAGE_MOCK_H
+#define _ISULAD_TEST_MOCKS_IMAGE_MOCK_H
 
 #include <gmock/gmock.h>
 #include "image_api.h"
@@ -28,4 +28,4 @@ public:
 
 void MockImage_SetMock(MockImage *mock);
 
-#endif // IMAGE_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_IMAGE_MOCK_H

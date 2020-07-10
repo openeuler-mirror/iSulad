@@ -13,8 +13,8 @@
  * Description: provide container io handler function definition
  *********************************************************************************/
 
-#ifndef __IO_HANDLER_H_
-#define __IO_HANDLER_H_
+#ifndef DAEMON_MODULES_API_IO_HANDLER_H
+#define DAEMON_MODULES_API_IO_HANDLER_H
 
 #include <pthread.h>
 #include <stdbool.h>

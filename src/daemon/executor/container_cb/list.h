@@ -13,8 +13,8 @@
  * Description: provide container list callback function definition
  ******************************************************************************/
 
-#ifndef __EXECUTION_CONTAINER_LIST_CB_H_
-#define __EXECUTION_CONTAINER_LIST_CB_H_
+#ifndef DAEMON_EXECUTOR_CONTAINER_CB_LIST_H
+#define DAEMON_EXECUTOR_CONTAINER_CB_LIST_H
 
 #include <isula_libutils/container_list_request.h>
 #include <isula_libutils/container_list_response.h>

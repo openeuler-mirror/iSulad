@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide err function definition
  *********************************************************************************/
-#ifndef _ERRORS_H_
-#define _ERRORS_H_
+#ifndef DAEMON_ENTRY_CRI_ERRORS_H
+#define DAEMON_ENTRY_CRI_ERRORS_H
 
 #include <string>
 #include <vector>
@@ -48,4 +48,4 @@ private:
     int m_code;
 };
 
-#endif /* _ERRORS_H_ */
+#endif // DAEMON_ENTRY_CRI_ERRORS_H

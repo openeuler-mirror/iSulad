@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide containers store definition
  ******************************************************************************/
-#ifndef __ISULAD_MEMORY_STORE_H__
-#define __ISULAD_MEMORY_STORE_H__
+#ifndef DAEMON_MODULES_CONTAINER_CONTAINERS_STORE_H
+#define DAEMON_MODULES_CONTAINER_CONTAINERS_STORE_H
 
 #include "container_api.h"
 
@@ -25,4 +25,4 @@ extern "C" {
 }
 #endif
 
-#endif /* __ISULAD_MEMORY_STORE_H__ */
+#endif // DAEMON_MODULES_CONTAINER_CONTAINERS_STORE_H

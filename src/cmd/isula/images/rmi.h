@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container remove definition
  ******************************************************************************/
-#ifndef __CMD_REMOVE_IMAGE_H
-#define __CMD_REMOVE_IMAGE_H
+#ifndef CMD_ISULA_IMAGES_RMI_H
+#define CMD_ISULA_IMAGES_RMI_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -37,4 +37,4 @@ int cmd_rmi_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_REMOVE_IMAGE_H */
+#endif // CMD_ISULA_IMAGES_RMI_H

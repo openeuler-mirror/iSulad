@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide image restful client definition
  ******************************************************************************/
-#ifndef __REST_IMAGES_CLIENT_H
-#define __REST_IMAGES_CLIENT_H
+#ifndef CLIENT_CONNECT_REST_REST_IMAGES_CLIENT_H
+#define CLIENT_CONNECT_REST_REST_IMAGES_CLIENT_H
 
 #include "isula_connect.h"
 

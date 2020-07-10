@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container path function definition
  ******************************************************************************/
-#ifndef __ISULAD_PATH_H_
-#define __ISULAD_PATH_H_
+#ifndef UTILS_CUTILS_PATH_H
+#define UTILS_CUTILS_PATH_H
 
 #include <stdbool.h>
 #include <stddef.h>

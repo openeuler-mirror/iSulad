@@ -13,14 +13,14 @@
  * Description: provide container sha256 functions
  ********************************************************************************/
 
-#ifndef __UTILS_FILE_H
-#define __UTILS_FILE_H
+#ifndef UTILS_CUTILS_UTILS_FILE_H
+#define UTILS_CUTILS_UTILS_FILE_H
 
+#include <dirent.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/types.h>
 #include <stdio.h>
-#include <dirent.h>
+#include <sys/types.h>
 
 struct dirent;
 
@@ -98,4 +98,4 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
 }
 #endif
 
-#endif /* __UTILS_H */
+#endif // UTILS_CUTILS_UTILS_FILE_H

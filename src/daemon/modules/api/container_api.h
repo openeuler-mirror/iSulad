@@ -12,8 +12,8 @@
  * Create: 2020-06-22
  * Description: provide container api definition
  ******************************************************************************/
-#ifndef __ISULAD_CONTAINER_API_H__
-#define __ISULAD_CONTAINER_API_H__
+#ifndef DAEMON_MODULES_API_CONTAINER_API_H
+#define DAEMON_MODULES_API_CONTAINER_API_H
 
 #include <pthread.h>
 
@@ -244,4 +244,4 @@ int container_module_init(char **msg);
 }
 #endif
 
-#endif /* __ISULAD_CONTAINER_API_H__ */
+#endif // DAEMON_MODULES_API_CONTAINER_API_H

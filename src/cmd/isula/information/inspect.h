@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container inspect definition
  ******************************************************************************/
-#ifndef __CMD_INSPECT_H
-#define __CMD_INSPECT_H
+#ifndef CMD_ISULA_INFORMATION_INSPECT_H
+#define CMD_ISULA_INFORMATION_INSPECT_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -47,4 +47,4 @@ int cmd_inspect_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_INSPECT_H */
+#endif // CMD_ISULA_INFORMATION_INSPECT_H

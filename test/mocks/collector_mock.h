@@ -13,8 +13,8 @@
  * Description: provide collector mock
  ******************************************************************************/
 
-#ifndef COLLECTOR_MOCK_H_
-#define COLLECTOR_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_COLLECTOR_MOCK_H
+#define _ISULAD_TEST_MOCKS_COLLECTOR_MOCK_H
 
 #include <gmock/gmock.h>
 #include "events_collector_api.h"

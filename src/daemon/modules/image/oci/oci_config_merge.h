@@ -13,8 +13,8 @@
  * Description: provide oci config merge functions
  ******************************************************************************/
 
-#ifndef __OCI_IMAGE_MERGE_CONFIG_H_
-#define __OCI_IMAGE_MERGE_CONFIG_H_
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_CONFIG_MERGE_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_CONFIG_MERGE_H
 
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/oci_runtime_spec.h"

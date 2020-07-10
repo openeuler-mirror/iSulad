@@ -13,8 +13,8 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef __ROUTE_CALLBACK_REGISTER_H_
-#define __ROUTE_CALLBACK_REGISTER_H_
+#ifndef DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H
+#define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H
 #include <iostream>
 #include <string>
 #include <memory>
@@ -89,6 +89,6 @@ private:
     int m_read_pipe_fd;
 };
 
-#endif /* __ROUTE_CALLBACK_REGISTER_H_ */
+#endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ROUTE_CALLBACK_REGISTER_H
 
 

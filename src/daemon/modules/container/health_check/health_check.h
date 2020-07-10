@@ -12,8 +12,8 @@
  * Create: 2018-11-1
  * Description: provide health check definition
  *********************************************************************************/
-#ifndef __ISULAD_HEALTH_CHECK_H_
-#define __ISULAD_HEALTH_CHECK_H_
+#ifndef DAEMON_MODULES_CONTAINER_HEALTH_CHECK_HEALTH_CHECK_H
+#define DAEMON_MODULES_CONTAINER_HEALTH_CHECK_HEALTH_CHECK_H
 
 #include "utils_timestamp.h"
 #include "container_api.h"
@@ -31,4 +31,4 @@ void health_check_manager_free(health_check_manager_t *health_check);
 }
 #endif
 
-#endif /* __ISULAD_HEALTH_CHECK_H_ */
+#endif // DAEMON_MODULES_CONTAINER_HEALTH_CHECK_HEALTH_CHECK_H

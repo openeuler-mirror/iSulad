@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container kill definition
  ******************************************************************************/
-#ifndef __CMD_KILL_H
-#define __CMD_KILL_H
+#ifndef CMD_ISULA_BASE_KILL_H
+#define CMD_ISULA_BASE_KILL_H
 
 #include <stdbool.h>
 #include <stddef.h>

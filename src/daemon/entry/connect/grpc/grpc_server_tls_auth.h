@@ -13,8 +13,8 @@
  * Description: provide grpc tls request authorization
  ******************************************************************************/
 
-#ifndef _GRPC_SERVER_TLS_AUTH_H_
-#define _GRPC_SERVER_TLS_AUTH_H_
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_GRPC_SERVER_TLS_AUTH_H
+#define DAEMON_ENTRY_CONNECT_GRPC_GRPC_SERVER_TLS_AUTH_H
 #include <string>
 #include <grpc++/grpc++.h>
 
@@ -30,5 +30,5 @@ namespace GrpcServerTlsAuth {
 Status auth(ServerContext *context, std::string action);
 };
 
-#endif /* _GRPC_SERVER_TLS_AUTH_H_ */
+#endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_SERVER_TLS_AUTH_H
 

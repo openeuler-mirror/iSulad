@@ -13,12 +13,12 @@
  * Description: provide container sha256 functions
  ********************************************************************************/
 
-#ifndef __UTILS_STRING_H
-#define __UTILS_STRING_H
+#ifndef UTILS_CUTILS_UTILS_STRING_H
+#define UTILS_CUTILS_UTILS_STRING_H
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,5 +85,5 @@ int util_parse_bool_string(const char *str, bool *converted);
 }
 #endif
 
-#endif /* __UTILS_STRING_H */
+#endif // UTILS_CUTILS_UTILS_STRING_H
 

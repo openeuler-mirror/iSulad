@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container callback definition
  ******************************************************************************/
-#ifndef __SERVICE_CALLBACK_H_
-#define __SERVICE_CALLBACK_H_
+#ifndef DAEMON_EXECUTOR_CALLBACK_H
+#define DAEMON_EXECUTOR_CALLBACK_H
 
 #include <stdbool.h>
 #include <stdint.h>

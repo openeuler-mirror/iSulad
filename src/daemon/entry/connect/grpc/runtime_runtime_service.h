@@ -13,8 +13,8 @@
  * Description: provide container runtime functions
  ******************************************************************************/
 
-#ifndef _RUNTIME_RUNTIME_SERVICES_IMPL_H_
-#define _RUNTIME_RUNTIME_SERVICES_IMPL_H_
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_RUNTIME_SERVICE_H
+#define DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_RUNTIME_SERVICE_H
 
 #include "api.grpc.pb.h"
 #include "callback.h"
@@ -106,5 +106,5 @@ private:
     CRIRuntimeServiceImpl rService;
 };
 
-#endif /* _RUNTIME_RUNTIME_SERVICES_IMPL_H_ */
+#endif // DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_RUNTIME_SERVICE_H
 

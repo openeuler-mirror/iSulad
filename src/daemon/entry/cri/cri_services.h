@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide cri service function definition
  *********************************************************************************/
-#ifndef _CRI_SERVICES_H_
-#define _CRI_SERVICES_H_
+#ifndef DAEMON_ENTRY_CRI_CRI_SERVICES_H
+#define DAEMON_ENTRY_CRI_CRI_SERVICES_H
 
 #include <string>
 #include <memory>
@@ -111,4 +111,4 @@ public:
 };
 
 } // namespace cri
-#endif /* _CRI_SERVICES_H_ */
+#endif // DAEMON_ENTRY_CRI_CRI_SERVICES_H

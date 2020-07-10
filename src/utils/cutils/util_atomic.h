@@ -47,7 +47,7 @@ static inline void atomic_mutex_unlock(pthread_mutex_t *mutex)
 /* atomic int get */
 static inline uint64_t atomic_int_get(const volatile uint64_t *atomic)
 {
-    uint64_t value;
+    uint64_t value = 0;
 
     atomic_mutex_lock(&g_atomic_lock);
     value = *atomic;
@@ -76,7 +76,7 @@ static inline void atomic_int_set_image(volatile uint64_t *atomic, uint64_t valu
 /* atomic int inc */
 static inline uint64_t atomic_int_inc(volatile uint64_t *atomic)
 {
-    uint64_t value;
+    uint64_t value = 0;
 
     atomic_mutex_lock(&g_atomic_lock);
     value = ++(*atomic);
@@ -88,7 +88,7 @@ static inline uint64_t atomic_int_inc(volatile uint64_t *atomic)
 /* atomic int inc for image */
 static inline uint64_t atomic_int_inc_image(volatile uint64_t *atomic)
 {
-    uint64_t value;
+    uint64_t value = 0;
 
     atomic_mutex_lock(&g_atomic_image_lock);
     value = ++(*atomic);
@@ -141,7 +141,7 @@ static inline bool atomic_int_compare_exchange(volatile uint64_t *atomic, uint64
 /* atomic int add */
 static inline uint64_t atomic_int_add(volatile uint64_t *atomic, uint64_t val)
 {
-    uint64_t oldval;
+    uint64_t oldval = 0;
 
     atomic_mutex_lock(&g_atomic_lock);
     oldval = *atomic;
@@ -154,7 +154,7 @@ static inline uint64_t atomic_int_add(volatile uint64_t *atomic, uint64_t val)
 /* atomic int and */
 static inline uint64_t atomic_int_and(volatile uint64_t *atomic, uint64_t val)
 {
-    uint64_t oldval;
+    uint64_t oldval = 0;
 
     atomic_mutex_lock(&g_atomic_lock);
     oldval = *atomic;
@@ -167,7 +167,7 @@ static inline uint64_t atomic_int_and(volatile uint64_t *atomic, uint64_t val)
 /* atomic int or */
 static inline uint64_t atomic_int_or(volatile uint64_t *atomic, uint64_t val)
 {
-    uint64_t oldval;
+    uint64_t oldval = 0;
 
     atomic_mutex_lock(&g_atomic_lock);
     oldval = *atomic;
@@ -180,7 +180,7 @@ static inline uint64_t atomic_int_or(volatile uint64_t *atomic, uint64_t val)
 /* atomic int xor */
 static inline uint64_t atomic_int_xor(volatile uint64_t *atomic, uint64_t val)
 {
-    uint64_t oldval;
+    uint64_t oldval = 0;
 
     atomic_mutex_lock(&g_atomic_lock);
     oldval = *atomic;

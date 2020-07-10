@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide cri security context function definition
  *********************************************************************************/
-#ifndef _CRI_SECURITY_CONTEXT_H_
-#define _CRI_SECURITY_CONTEXT_H_
+#ifndef DAEMON_ENTRY_CRI_CRI_SECURITY_CONTEXT_H
+#define DAEMON_ENTRY_CRI_CRI_SECURITY_CONTEXT_H
 
 #include <string>
 #include "api.pb.h"
@@ -30,4 +30,4 @@ void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig
 
 } // namespace CRISecurity
 
-#endif /* _CRI_SECURITY_CONTEXT_H_ */
+#endif // DAEMON_ENTRY_CRI_CRI_SECURITY_CONTEXT_H

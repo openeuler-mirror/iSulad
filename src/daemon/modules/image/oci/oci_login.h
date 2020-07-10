@@ -12,8 +12,8 @@
 * Create: 2019-07-15
 * Description: isula logint operator implement
 *******************************************************************************/
-#ifndef __IMAGE_OCI_LOGIN_H
-#define __IMAGE_OCI_LOGIN_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_LOGIN_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_LOGIN_H
 
 #include <stdbool.h>
 

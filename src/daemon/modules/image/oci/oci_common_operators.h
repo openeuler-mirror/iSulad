@@ -12,8 +12,8 @@
  * Create: 2019-07-23
  * Description: provide image common function definition
  ******************************************************************************/
-#ifndef __OCI_COMMON_OPERATORS_H
-#define __OCI_COMMON_OPERATORS_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_COMMON_OPERATORS_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_COMMON_OPERATORS_H
 
 #include <stdint.h>
 #include <isula_libutils/container_config.h>

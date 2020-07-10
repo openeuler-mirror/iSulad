@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container resume definition
  ******************************************************************************/
-#ifndef __CMD_RESUME_H
-#define __CMD_RESUME_H
+#ifndef CMD_ISULA_EXTEND_RESUME_H
+#define CMD_ISULA_EXTEND_RESUME_H
 
 #include "client_arguments.h"
 

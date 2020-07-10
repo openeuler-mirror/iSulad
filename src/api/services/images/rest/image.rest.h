@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container image rest definition
  ********************************************************************************/
-#ifndef IMAGE_REST_H_
-#define IMAGE_REST_H_
+#ifndef API_SERVICES_IMAGES_REST_IMAGE_REST_H
+#define API_SERVICES_IMAGES_REST_IMAGE_REST_H
 
 #include "isula_libutils/image_load_image_request.h"
 #include "isula_libutils/image_load_image_response.h"

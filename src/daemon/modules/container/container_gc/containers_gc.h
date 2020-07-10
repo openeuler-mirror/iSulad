@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container gc definition
  ******************************************************************************/
-#ifndef __ISULAD_CONTAINER_GC_H__
-#define __ISULAD_CONTAINER_GC_H__
+#ifndef DAEMON_MODULES_CONTAINER_CONTAINER_GC_CONTAINERS_GC_H
+#define DAEMON_MODULES_CONTAINER_CONTAINER_GC_CONTAINERS_GC_H
 
 #include <pthread.h>
 #include <stdbool.h>
@@ -45,4 +45,4 @@ bool gc_is_gc_progress(const char *id);
 }
 #endif
 
-#endif /* __ISULAD_CONTAINER_GC_H__ */
+#endif // DAEMON_MODULES_CONTAINER_CONTAINER_GC_CONTAINERS_GC_H

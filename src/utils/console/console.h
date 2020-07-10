@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide console definition
  ******************************************************************************/
-#ifndef _CONSOLE_H
-#define _CONSOLE_H
+#ifndef UTILS_CONSOLE_CONSOLE_H
+#define UTILS_CONSOLE_CONSOLE_H
 
 #include <unistd.h>
 #include <stdbool.h>

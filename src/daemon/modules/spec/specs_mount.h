@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide specs definition
  ******************************************************************************/
-#ifndef __SPECS_MOUNT_H__
-#define __SPECS_MOUNT_H__
+#ifndef DAEMON_MODULES_SPEC_SPECS_MOUNT_H
+#define DAEMON_MODULES_SPEC_SPECS_MOUNT_H
 
 #include <stdint.h>
 #include <isula_libutils/container_config.h>

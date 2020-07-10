@@ -13,8 +13,8 @@
  * Description: provide selinux label handle function definition
  ******************************************************************************/
 
-#ifndef __SELINUX_LABLE_H
-#define __SELINUX_LABLE_H
+#ifndef DAEMON_MODULES_SPEC_SELINUX_LABEL_H
+#define DAEMON_MODULES_SPEC_SELINUX_LABEL_H
 
 #include <stddef.h>
 #include <stdbool.h>
@@ -35,4 +35,4 @@ int dup_security_opt(const char *src, char ***dst, size_t *len);
 }
 #endif
 
-#endif /* __SELINUX_LABLE_H */
+#endif // DAEMON_MODULES_SPEC_SELINUX_LABEL_H

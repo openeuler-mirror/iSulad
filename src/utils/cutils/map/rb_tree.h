@@ -12,11 +12,11 @@
  * Create: 2018-11-08
  * Description: provide rb tree definition
  ******************************************************************************/
-#ifndef __RB_TREE_H_
-#define __RB_TREE_H_
+#ifndef UTILS_CUTILS_MAP_RB_TREE_H
+#define UTILS_CUTILS_MAP_RB_TREE_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -79,5 +79,5 @@ void *rbtree_iterator_value(rb_iterator_t *itor);
 }
 #endif
 
-#endif /* __RB_TREE_H_ */
+#endif // UTILS_CUTILS_MAP_RB_TREE_H
 

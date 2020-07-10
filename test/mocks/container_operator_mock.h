@@ -13,8 +13,8 @@
  * Description: provide containers_gc mock
  ******************************************************************************/
 
-#ifndef CONTAINERS_OPERATOR_MOCK_H_
-#define CONTAINERS_OPERATOR_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_CONTAINER_OPERATOR_MOCK_H
+#define _ISULAD_TEST_MOCKS_CONTAINER_OPERATOR_MOCK_H
 
 #include <gmock/gmock.h>
 #include "service_container_api.h"

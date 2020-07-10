@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container top definition
  ******************************************************************************/
-#ifndef __CMD_TOP_H
-#define __CMD_TOP_H
+#ifndef CMD_ISULA_INFORMATION_TOP_H
+#define CMD_ISULA_INFORMATION_TOP_H
 
 #include "client_arguments.h"
 
@@ -30,4 +30,4 @@ int cmd_top_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_TOP_H */
+#endif // CMD_ISULA_INFORMATION_TOP_H

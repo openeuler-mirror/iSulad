@@ -13,13 +13,13 @@
  * Description: provide container sha256 functions
  ********************************************************************************/
 
-#ifndef __UTILS_VERIFY_H
-#define __UTILS_VERIFY_H
+#ifndef UTILS_CUTILS_UTILS_VERIFY_H
+#define UTILS_CUTILS_UTILS_VERIFY_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,4 +103,4 @@ bool util_valid_exec_suffix(const char *suffix);
 }
 #endif
 
-#endif /* __UTILS_H */
+#endif // UTILS_CUTILS_UTILS_VERIFY_H

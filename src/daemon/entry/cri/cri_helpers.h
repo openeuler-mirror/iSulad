@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide cri helpers functions
  *********************************************************************************/
-#ifndef _CRI_HELPERS_H_
-#define _CRI_HELPERS_H_
+#ifndef DAEMON_ENTRY_CRI_CRI_HELPERS_H
+#define DAEMON_ENTRY_CRI_CRI_HELPERS_H
 #include <string>
 #include <memory>
 #include <vector>
@@ -119,4 +119,4 @@ void GetCheckpoint(const std::string &jsonCheckPoint, cri::PodSandboxCheckpoint 
 
 }; // namespace CRIHelpers
 
-#endif /* _CRI_HELPERS_H_ */
+#endif // DAEMON_ENTRY_CRI_CRI_HELPERS_H

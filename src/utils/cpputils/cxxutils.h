@@ -12,8 +12,8 @@
  * Author: wujing
  * Create: 2019-05-17
  ******************************************************************************/
-#ifndef __CXXUTILS_H_
-#define __CXXUTILS_H_
+#ifndef UTILS_CPPUTILS_CXXUTILS_H
+#define UTILS_CPPUTILS_CXXUTILS_H
 
 #include <iostream>
 #include <string>
@@ -24,5 +24,5 @@ namespace CXXUtils {
 std::vector<std::string> Split(const std::string &str, char delimiter);
 std::string StringsJoin(const std::vector<std::string> &vec, const std::string &sep);
 };
-#endif /* __CXXUTILS_H_ */
+#endif // UTILS_CPPUTILS_CXXUTILS_H
 

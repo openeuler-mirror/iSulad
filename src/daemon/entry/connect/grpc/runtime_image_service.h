@@ -13,8 +13,8 @@
  * Description: provide runtime image functions
  ******************************************************************************/
 
-#ifndef _RUNTIME_IMAGE_SERVICES_IMPL_H_
-#define _RUNTIME_IMAGE_SERVICES_IMPL_H_
+#ifndef DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_IMAGE_SERVICE_H
+#define DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_IMAGE_SERVICE_H
 
 #include "api.grpc.pb.h"
 #include "callback.h"
@@ -44,6 +44,6 @@ public:
 private:
     CRIImageServiceImpl rService;
 };
-#endif /* _RUNTIME_IMAGE_SERVICES_IMPL_H_ */
+#endif // DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_IMAGE_SERVICE_H
 
 

@@ -12,8 +12,8 @@
  * Create: 2020-04-02
  * Description: provide quota function definition
  ******************************************************************************/
-#ifndef __PROJECT_QUOTA_H
-#define __PROJECT_QUOTA_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_QUOTA_PROJECT_QUOTA_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_QUOTA_PROJECT_QUOTA_H
 
 #include <sys/mount.h>
 #include <sys/quota.h>

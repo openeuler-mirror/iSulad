@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container grpc client definition
  ******************************************************************************/
-#ifndef __GRPC_CONTAINERS_CLIENT_H
-#define __GRPC_CONTAINERS_CLIENT_H
+#ifndef CLIENT_CONNECT_GRPC_GRPC_CONTAINERS_CLIENT_H
+#define CLIENT_CONNECT_GRPC_GRPC_CONTAINERS_CLIENT_H
 
 #include "isula_connect.h"
 

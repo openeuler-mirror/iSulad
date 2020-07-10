@@ -13,8 +13,8 @@
  * Description: provide container sha256 functions
  ********************************************************************************/
 
-#ifndef __UTILS_CONVERT_H
-#define __UTILS_CONVERT_H
+#ifndef UTILS_CUTILS_UTILS_CONVERT_H
+#define UTILS_CUTILS_UTILS_CONVERT_H
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -33,5 +33,5 @@ int util_str_to_bool(const char *boolstr, bool *converted);
 }
 #endif
 
-#endif /* __UTILS_CONVERT_H */
+#endif // UTILS_CUTILS_UTILS_CONVERT_H
 

@@ -13,8 +13,8 @@
  * Description: provide cri image service function definition
  *********************************************************************************/
 
-#ifndef _CRI_IMAGE_SERVICES_IMPL_H_
-#define _CRI_IMAGE_SERVICES_IMPL_H_
+#ifndef DAEMON_ENTRY_CRI_CRI_IMAGE_SERVICE_H
+#define DAEMON_ENTRY_CRI_CRI_IMAGE_SERVICE_H
 
 #include <string>
 #include <vector>
@@ -61,4 +61,4 @@ private:
     int remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_rmi_request **request, Errors &error);
 };
 
-#endif /* _CRI_IMAGE_SERVICES_IMPL_H_ */
+#endif // DAEMON_ENTRY_CRI_CRI_IMAGE_SERVICE_H

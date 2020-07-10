@@ -13,13 +13,13 @@
  * Description: provide aes functions
  ********************************************************************************/
 
-#ifndef __UTILS_AES_H
-#define __UTILS_AES_H
+#ifndef UTILS_CUTILS_UTILS_AES_H
+#define UTILS_CUTILS_UTILS_AES_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,5 +44,5 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
 }
 #endif
 
-#endif /* __UTILS_AES_H */
+#endif // UTILS_CUTILS_UTILS_AES_H
 

@@ -12,8 +12,8 @@
 * Create: 2019-07-15
 * Description: provide isula image operator definition
 *******************************************************************************/
-#ifndef __IMAGE_OCI_IMAGE_H
-#define __IMAGE_OCI_IMAGE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_OCI_IMAGE_H
+#define DAEMON_MODULES_IMAGE_OCI_OCI_IMAGE_H
 
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/imagetool_fs_info.h>
@@ -50,4 +50,4 @@ int oci_tag(const im_tag_request *request);
 }
 #endif
 
-#endif /* __IMAGE_OCI_IMAGE_H */
+#endif // DAEMON_MODULES_IMAGE_OCI_OCI_IMAGE_H

@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide specs definition
  ******************************************************************************/
-#ifndef __SPECS_EXTEND_H__
-#define __SPECS_EXTEND_H__
+#ifndef DAEMON_MODULES_SPEC_SPECS_EXTEND_H
+#define DAEMON_MODULES_SPEC_SPECS_EXTEND_H
 
 #include <stdint.h>
 #include <isula_libutils/defs.h>

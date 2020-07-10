@@ -13,8 +13,8 @@
  * Description: provide isula image common functions
  ********************************************************************************/
 
-#ifndef __UTILS_IMAGES_H
-#define __UTILS_IMAGES_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_UTILS_IMAGES_H
+#define DAEMON_MODULES_IMAGE_OCI_UTILS_IMAGES_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -59,5 +59,5 @@ types_timestamp_t created_to_timestamp(char *created);
 }
 #endif
 
-#endif /* __UTILS_IMAGES_H */
+#endif // DAEMON_MODULES_IMAGE_OCI_UTILS_IMAGES_H
 

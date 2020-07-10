@@ -13,8 +13,8 @@
  * Description: provide runtime mock
  ******************************************************************************/
 
-#ifndef RUNTIME_MOCK_H_
-#define RUNTIME_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_RUNTIME_MOCK_H
+#define _ISULAD_TEST_MOCKS_RUNTIME_MOCK_H
 
 #include <gmock/gmock.h>
 #include "runtime_api.h"

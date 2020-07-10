@@ -12,8 +12,8 @@
  * Create: 2020-06-11
  * Description: provide namespace spec definition
  ******************************************************************************/
-#ifndef __SPECS_NAMESPACE_H
-#define __SPECS_NAMESPACE_H
+#ifndef DAEMON_MODULES_SPEC_SPECS_NAMESPACE_H
+#define DAEMON_MODULES_SPEC_SPECS_NAMESPACE_H
 
 #include <stdbool.h>
 #include <string.h>

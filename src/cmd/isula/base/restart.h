@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container restart definition
  ******************************************************************************/
-#ifndef __CMD_RESTART_H
-#define __CMD_RESTART_H
+#ifndef CMD_ISULA_BASE_RESTART_H
+#define CMD_ISULA_BASE_RESTART_H
 
 #include <stdbool.h>
 
@@ -41,4 +41,4 @@ int cmd_restart_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_RESTART_H */
+#endif // CMD_ISULA_BASE_RESTART_H

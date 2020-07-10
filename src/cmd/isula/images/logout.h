@@ -11,8 +11,8 @@
  * Author: wangfengtu
  * Description: provide logout definition
  ******************************************************************************/
-#ifndef __CMD_LOGOUT_H
-#define __CMD_LOGOUT_H
+#ifndef CMD_ISULA_IMAGES_LOGOUT_H
+#define CMD_ISULA_IMAGES_LOGOUT_H
 
 #include "client_arguments.h"
 
@@ -29,4 +29,4 @@ int cmd_logout_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_LOGOUT_H */
+#endif // CMD_ISULA_IMAGES_LOGOUT_H

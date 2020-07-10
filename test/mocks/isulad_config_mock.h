@@ -13,8 +13,8 @@
  * Description: provide isulad config mock
  ******************************************************************************/
 
-#ifndef ISULAD_CONFIG_MOCK_H_
-#define ISULAD_CONFIG_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_ISULAD_CONFIG_MOCK_H
+#define _ISULAD_TEST_MOCKS_ISULAD_CONFIG_MOCK_H
 
 #include <gmock/gmock.h>
 #include "isulad_config.h"
@@ -38,4 +38,4 @@ public:
 
 void MockIsuladConf_SetMock(MockIsuladConf *mock);
 
-#endif // ISULAD_CONFIG_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_ISULAD_CONFIG_MOCK_H

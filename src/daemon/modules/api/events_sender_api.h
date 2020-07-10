@@ -12,8 +12,8 @@
  * Create: 2020-06-23
  * Description: provide container collector definition
  ******************************************************************************/
-#ifndef __EVENT_SENDER_H
-#define __EVENT_SENDER_H
+#ifndef DAEMON_MODULES_API_EVENTS_SENDER_API_H
+#define DAEMON_MODULES_API_EVENTS_SENDER_API_H
 
 #include "event_type.h"
 
@@ -30,4 +30,4 @@ int isulad_monitor_send_image_event(const char *name, image_state_t state);
 }
 #endif
 
-#endif /* __EVENT_SENDER_H */
+#endif // DAEMON_MODULES_API_EVENTS_SENDER_API_H

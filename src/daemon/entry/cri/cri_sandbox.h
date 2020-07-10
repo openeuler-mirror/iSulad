@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide sandbox manager function definition
  *********************************************************************************/
-#ifndef _CRI_SANDBOX_MANAGER_IMPL_H_
-#define _CRI_SANDBOX_MANAGER_IMPL_H_
+#ifndef DAEMON_ENTRY_CRI_CRI_SANDBOX_H
+#define DAEMON_ENTRY_CRI_CRI_SANDBOX_H
 
 #include "cri_services.h"
 #include "callback.h"
@@ -27,4 +27,4 @@ public:
     virtual ~CRISandboxManagerImpl() = default;
 };
 
-#endif /* _CRI_SANDBOX_MANAGER_IMPL_H_ */
+#endif // DAEMON_ENTRY_CRI_CRI_SANDBOX_H

@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container update definition
  ******************************************************************************/
-#ifndef __CMD_UPDATE_H
-#define __CMD_UPDATE_H
+#ifndef CMD_ISULA_EXTEND_UPDATE_H
+#define CMD_ISULA_EXTEND_UPDATE_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -94,4 +94,4 @@ int update_checker(const struct client_arguments *args);
 }
 #endif
 
-#endif /* __CMD_UPDATE_H */
+#endif // CMD_ISULA_EXTEND_UPDATE_H

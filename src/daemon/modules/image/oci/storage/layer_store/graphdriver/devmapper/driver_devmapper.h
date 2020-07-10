@@ -12,8 +12,8 @@
 * Create: 2020-01-19
 * Description: provide devicemapper graphdriver function definition
 ******************************************************************************/
-#ifndef __GRAPHDRIVER_DEVMAPPER_H
-#define __GRAPHDRIVER_DEVMAPPER_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_DRIVER_DEVMAPPER_H
+#define DAEMON_MODULES_IMAGE_OCI_STORAGE_LAYER_STORE_GRAPHDRIVER_DEVMAPPER_DRIVER_DEVMAPPER_H
 
 #include <pthread.h>
 #include <isula_libutils/imagetool_fs_info.h>

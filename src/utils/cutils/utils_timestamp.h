@@ -12,8 +12,8 @@
  * Create: 2018-11-1
  * Description: provide typedef functions definition
  ********************************************************************************/
-#ifndef _TYPES_DEF_H_
-#define _TYPES_DEF_H_
+#ifndef UTILS_CUTILS_UTILS_TIMESTAMP_H
+#define UTILS_CUTILS_UTILS_TIMESTAMP_H
 
 #include <stdbool.h>
 #include <stdint.h>

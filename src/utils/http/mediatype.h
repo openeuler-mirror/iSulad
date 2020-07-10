@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container mediatype definition
  ******************************************************************************/
-#ifndef _MEDIATYPE_H
-#define _MEDIATYPE_H
+#ifndef UTILS_HTTP_MEDIATYPE_H
+#define UTILS_HTTP_MEDIATYPE_H
 
 #define MediaTypeDockerSchema2Layer "application/vnd.docker.image.rootfs.diff.tar"
 #define MediaTypeDockerSchema2LayerGzip "application/vnd.docker.image.rootfs.diff.tar.gzip"

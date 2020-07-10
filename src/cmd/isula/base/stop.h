@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container stop definition
  ******************************************************************************/
-#ifndef __CMD_STOP_H
-#define __CMD_STOP_H
+#ifndef CMD_ISULA_BASE_STOP_H
+#define CMD_ISULA_BASE_STOP_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -45,4 +45,4 @@ int cmd_stop_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_STOP_H */
+#endif // CMD_ISULA_BASE_STOP_H

@@ -13,8 +13,8 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef __REQUEST_CACHE_H_
-#define __REQUEST_CACHE_H_
+#ifndef DAEMON_ENTRY_CRI_REQUEST_CACHE_H
+#define DAEMON_ENTRY_CRI_REQUEST_CACHE_H
 #include <string>
 #include <list>
 #include <atomic>
@@ -55,4 +55,4 @@ private:
     const size_t TokenLen { 8 };
 };
 
-#endif /* __REQUEST_CACHE_H_ */
+#endif // DAEMON_ENTRY_CRI_REQUEST_CACHE_H

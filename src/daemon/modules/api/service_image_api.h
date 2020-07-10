@@ -12,8 +12,8 @@
  * Create: 2020-06-22
  * Description: provide container supervisor definition
  ******************************************************************************/
-#ifndef __ISULAD_SERVICE_IMAGE_OPERATOR_H
-#define __ISULAD_SERVICE_IMAGE_OPERATOR_H
+#ifndef DAEMON_MODULES_API_SERVICE_IMAGE_API_H
+#define DAEMON_MODULES_API_SERVICE_IMAGE_API_H
 #include <stdbool.h>
 
 #ifdef __cplusplus

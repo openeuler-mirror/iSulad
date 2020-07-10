@@ -13,8 +13,8 @@
  * Create: 2019-01-02
  ******************************************************************************/
 
-#ifndef __ATTACH_SERVE_H_
-#define __ATTACH_SERVE_H_
+#ifndef DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
+#define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
 
 #include "route_callback_register.h"
 #include <chrono>
@@ -38,5 +38,5 @@ private:
     int RequestFromCri(const runtime::v1alpha2::AttachRequest *grequest,
                        container_attach_request **request);
 };
-#endif /* __ATTACH_SERVE_H_ */
+#endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_ATTACH_SERVE_H
 

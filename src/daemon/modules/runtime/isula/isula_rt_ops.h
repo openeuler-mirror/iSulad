@@ -13,8 +13,8 @@
  * Description: runtime ops
  ******************************************************************************/
 
-#ifndef ISULA_RT_OPS_H
-#define ISULA_RT_OPS_H /* ISULA_RT_OPS_H */
+#ifndef DAEMON_MODULES_RUNTIME_ISULA_ISULA_RT_OPS_H
+#define DAEMON_MODULES_RUNTIME_ISULA_ISULA_RT_OPS_H /* ISULA_RT_OPS_H */
 
 #include <stdbool.h>
 
@@ -50,4 +50,4 @@ int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resi
 }
 #endif
 
-#endif /* ISULA_RT_OPS_H */
+#endif // DAEMON_MODULES_RUNTIME_ISULA_ISULA_RT_OPS_H

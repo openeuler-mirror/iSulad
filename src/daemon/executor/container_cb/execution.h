@@ -13,8 +13,8 @@
  * Description: provide container list callback function definition
  *******************************************************************************/
 
-#ifndef __EXECUTION_H_
-#define __EXECUTION_H_
+#ifndef DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_H
+#define DAEMON_EXECUTOR_CONTAINER_CB_EXECUTION_H
 
 #include "callback.h"
 

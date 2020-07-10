@@ -13,8 +13,8 @@
  * Description: provide registry type definition
  ******************************************************************************/
 
-#ifndef _IMAGE_REGISTRY_TYPE_H
-#define _IMAGE_REGISTRY_TYPE_H
+#ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_TYPE_H
+#define DAEMON_MODULES_IMAGE_OCI_REGISTRY_TYPE_H
 
 #include <stdint.h>
 #include <time.h>
@@ -109,4 +109,4 @@ void free_challenge(challenge *c);
 void free_layer_blob(layer_blob *layer);
 void free_pull_desc(pull_descriptor *desc);
 
-#endif  /* _IMAGE_REGISTRY_TYPE_H */
+#endif // DAEMON_MODULES_IMAGE_OCI_REGISTRY_TYPE_H

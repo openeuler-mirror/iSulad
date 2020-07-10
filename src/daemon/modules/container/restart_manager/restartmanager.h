@@ -12,8 +12,8 @@
  * Create: 2017-11-22
  * Description: provide container restart manager definition
  ******************************************************************************/
-#ifndef __RESTARTMANAGER_H
-#define __RESTARTMANAGER_H
+#ifndef DAEMON_MODULES_CONTAINER_RESTART_MANAGER_RESTARTMANAGER_H
+#define DAEMON_MODULES_CONTAINER_RESTART_MANAGER_RESTARTMANAGER_H
 
 #include <stdint.h>
 #include <pthread.h>
@@ -43,4 +43,4 @@ int restart_manager_wait_cancel(restart_manager_t *rm, uint64_t timeout);
 
 int container_restart_in_thread(const char *id, uint64_t timeout, int exit_code);
 
-#endif /* __RESTARTMANAGER_H */
+#endif // DAEMON_MODULES_CONTAINER_RESTART_MANAGER_RESTARTMANAGER_H

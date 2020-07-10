@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide isula connect command definition
  ******************************************************************************/
-#ifndef __ISULA_CONNECT_H
-#define __ISULA_CONNECT_H
+#ifndef CLIENT_CONNECT_ISULA_CONNECT_H
+#define CLIENT_CONNECT_ISULA_CONNECT_H
 
 #include "libisula.h"
 #include "connect.h"
@@ -112,4 +112,4 @@ isula_connect_ops *get_connect_client_ops(void);
 }
 #endif
 
-#endif /* __ISULA_CONNECT_H */
+#endif // CLIENT_CONNECT_ISULA_CONNECT_H
