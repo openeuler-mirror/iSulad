@@ -63,6 +63,7 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			python3 \
 			python3-pip \
 			device-mapper-devel \
+			xz-devel \
 			libtar \
 			libtar-devel \
 			libcurl-devel \
@@ -251,7 +252,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
         patch -p1 -F1 -s < ../libarchive-uninitialized-value.patch && \
         patch -p1 -F1 -s < ../CVE-2020-9308.patch && \
         cd build && \
-        cmake ../ && \
+        cmake -DCMAKE_USE_SYSTEM_LIBRARIES=ON ../ && \
         make -j $(nproc) && \
         make install && \
         ldconfig

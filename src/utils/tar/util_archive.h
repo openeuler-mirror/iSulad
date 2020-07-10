@@ -40,8 +40,6 @@ struct archive_options {
 
 int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, const struct archive_options *options);
 
-int archive_uncompress(const char *src, const char *dest, char **errmsg);
-
 #ifdef __cplusplus
 }
 #endif

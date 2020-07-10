@@ -60,6 +60,9 @@ function test_image_import()
 declare -i ans=0
 
 test_image_import || ((ans++))
+if [ ${ans} -ne 0 ];then
+    cat $ISUALD_LOG
+fi
 
 show_result ${ans} "${curr_path}/${0}"
 

@@ -32,7 +32,6 @@
 #include "utils.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/docker_image_config_v2.h"
-#include "util_archive.h"
 #include "utils_images.h"
 #include "sha256.h"
 #include "utils_file.h"
@@ -42,7 +41,6 @@
 #define ROOTFS_TYPE "layers"
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define TIME_BUF_MAX_LEN 128
-#define TEMP_FILE_TEMPLATE IMAGE_TMP_PATH "import-XXXXXX"
 
 typedef struct {
     char *manifest;
@@ -54,7 +52,7 @@ typedef struct {
     int64_t compressed_size;
     types_timestamp_t now_time;
     char *tag;
-    char *uncompressed_file;
+    char *layer_file;
 } import_desc;
 
 static void free_import_desc(import_desc *desc)
@@ -79,8 +77,8 @@ static void free_import_desc(import_desc *desc)
     desc->tag = NULL;
     free(desc->uncompressed_digest);
     desc->uncompressed_digest = NULL;
-    free(desc->uncompressed_file);
-    desc->uncompressed_file = NULL;
+    free(desc->layer_file);
+    desc->layer_file = NULL;
 
     free(desc);
 
@@ -114,7 +112,7 @@ static int register_layer(import_desc *desc)
             .uncompress_digest = desc->uncompressed_digest,
             .compressed_digest = desc->compressed_digest,
             .writable = false,
-            .layer_data_path = desc->uncompressed_file,
+            .layer_data_path = desc->layer_file,
         };
         return storage_layer_create(id, &copts);
     }
@@ -385,22 +383,6 @@ out:
     return ret;
 }
 
-static char *create_temp_file()
-{
-    int fd = -1;
-    char temp_file[] = TEMP_FILE_TEMPLATE;
-
-    fd = mkstemp(temp_file);
-    if (fd < 0) {
-        ERROR("make temporary file failed: %s", strerror(errno));
-        isulad_try_set_error_message("make temporary file failed: %s", strerror(errno));
-        return NULL;
-    }
-    close(fd);
-
-    return util_strdup_s(temp_file);
-}
-
 static import_desc *prepre_import(char *file, char *tag)
 {
     int ret = 0;
@@ -430,30 +412,6 @@ static import_desc *prepre_import(char *file, char *tag)
         goto out;
     }
 
-    desc->uncompressed_file = create_temp_file();
-    if (desc->uncompressed_file == NULL) {
-        ERROR("create temporary file for import failed");
-        isulad_try_set_error_message("create temporary file for import failed");
-        ret = -1;
-        goto out;
-    }
-
-    ret = archive_uncompress(file, desc->uncompressed_file, &errmsg);
-    if (ret != 0) {
-        ERROR("uncompress %s for import failed: %s", file, errmsg);
-        isulad_try_set_error_message("uncompress %s for import failed: %s", file, errmsg);
-        ret = -1;
-        goto out;
-    }
-
-    desc->uncompressed_digest = sha256_full_file_digest(desc->uncompressed_file);
-    if (desc->uncompressed_digest == NULL) {
-        ERROR("Calc uncompressed digest of file %s failed", file);
-        isulad_try_set_error_message("Calc uncompressed digest of file %s failed", file);
-        ret = -1;
-        goto out;
-    }
-
     if (!get_now_time_stamp(&desc->now_time)) {
         ERROR("get time stamp for import failed");
         isulad_try_set_error_message("get time stamp for import failed");
@@ -461,6 +419,13 @@ static import_desc *prepre_import(char *file, char *tag)
         goto out;
     }
     desc->tag = util_strdup_s(tag);
+    // We do not use uncompressed digest(diffid) to do commit or save
+    // or integration check. So here we use compressed digest instead
+    // to avoid decompresstion and file written to speed up import. If
+    // any later operation use diffid, here we need to decompress the
+    // archive and calculate the uncompressed digest.
+    desc->uncompressed_digest = util_strdup_s(desc->compressed_digest);
+    desc->layer_file = util_strdup_s(file);
 
 out:
     if (ret != 0) {
@@ -521,11 +486,6 @@ static int do_import(char *file, char *tag)
     }
 
 out:
-    if (desc->uncompressed_file != NULL) {
-        if (util_path_remove(desc->uncompressed_file)) {
-            WARN("failed to remove file %s: %s", desc->uncompressed_file, strerror(errno));
-        }
-    }
     free_import_desc(desc);
     desc = NULL;
 
