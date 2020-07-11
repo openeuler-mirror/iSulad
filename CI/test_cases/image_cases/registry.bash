@@ -25,14 +25,19 @@ source ../helpers.bash
 
 function isula_pull()
 {
+    isula rm -f `isula ps -a -q`
+    isula rmi busybox
+
+    for i in `seq 1 10`
+    do
+        isula pull busybox &
+    done
     isula pull busybox
     fn_check_eq "$?" "0" "isula pull busybox"
+    wait
 
     isula inspect busybox
     fn_check_eq "$?" "0" "isula inspect busybox"
-
-    isula rm -f `isula ps -a -q`
-    isula rmi centos
 
     isula pull hub-mirror.c.163.com/library/busybox
     fn_check_eq "$?" "0" "isula pull hub-mirror.c.163.com/library/busybox"
