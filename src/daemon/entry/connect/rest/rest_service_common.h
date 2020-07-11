@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container restful service common definition
  ******************************************************************************/
-#ifndef __REST_SERVICE_COMMON_H
-#define __REST_SERVICE_COMMON_H
+#ifndef DAEMON_ENTRY_CONNECT_REST_REST_SERVICE_COMMON_H
+#define DAEMON_ENTRY_CONNECT_REST_REST_SERVICE_COMMON_H
 
 #include <evhtp.h>
 

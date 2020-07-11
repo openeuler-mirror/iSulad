@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide image restful service definition
  ******************************************************************************/
-#ifndef __REST_IMAGES_SERVICE_H
-#define __REST_IMAGES_SERVICE_H
+#ifndef DAEMON_ENTRY_CONNECT_REST_REST_IMAGES_SERVICE_H
+#define DAEMON_ENTRY_CONNECT_REST_REST_IMAGES_SERVICE_H
 
 #include "rest_service_common.h"
 

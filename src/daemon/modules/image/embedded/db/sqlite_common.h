@@ -12,8 +12,8 @@
  * Create: 2018-11-07
  * Description: provide sqlite function definition
  ******************************************************************************/
-#ifndef __DB_SQLITE_COMMON_H_
-#define __DB_SQLITE_COMMON_H_
+#ifndef DAEMON_MODULES_IMAGE_EMBEDDED_DB_SQLITE_COMMON_H
+#define DAEMON_MODULES_IMAGE_EMBEDDED_DB_SQLITE_COMMON_H
 
 #include <sqlite3.h>
 

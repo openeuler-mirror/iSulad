@@ -13,8 +13,8 @@
  * Description: provide selinux label handle function definition
  ******************************************************************************/
 
-#ifndef DAEMON_MODULES_SPEC_SELINUX_LABEL_H
-#define DAEMON_MODULES_SPEC_SELINUX_LABEL_H
+#ifndef DAEMON_COMMON_SELINUX_LABEL_H
+#define DAEMON_COMMON_SELINUX_LABEL_H
 
 #include <stddef.h>
 #include <stdbool.h>
@@ -36,4 +36,4 @@ char *selinux_format_mountlabel(const char *src, const char *mount_label);
 }
 #endif
 
-#endif // DAEMON_MODULES_SPEC_SELINUX_LABEL_H
+#endif // DAEMON_COMMON_SELINUX_LABEL_H
