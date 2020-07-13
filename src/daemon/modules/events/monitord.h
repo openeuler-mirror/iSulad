@@ -18,7 +18,6 @@
 #include <semaphore.h>
 #include <limits.h>
 
-#include "err_msg.h"
 #include "utils.h"
 
 struct monitord_sync_data {

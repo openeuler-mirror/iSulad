@@ -22,7 +22,6 @@
 #include "isula_libutils/oci_image_manifest.h"
 #include "isula_libutils/oci_image_spec.h"
 #include "isula_libutils/json_common.h"
-#include "err_msg.h"
 #include "utils_timestamp.h"
 
 #ifdef __cplusplus

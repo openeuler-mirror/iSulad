@@ -17,7 +17,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "err_msg.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "utils.h"

@@ -17,7 +17,6 @@
 
 #include <pthread.h>
 
-#include "err_msg.h"
 #include "util_atomic.h"
 #include "isula_libutils/container_config_v2.h"
 #include "isula_libutils/host_config.h"

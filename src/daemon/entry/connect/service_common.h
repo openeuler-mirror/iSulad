@@ -16,7 +16,6 @@
 #define DAEMON_ENTRY_CONNECT_SERVICE_COMMON_H
 
 #include "daemon_arguments.h"
-#include "err_msg.h"
 
 #ifdef __cplusplus
 extern "C" {

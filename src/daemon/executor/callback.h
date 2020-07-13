@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "err_msg.h"
 #include "io_wrapper.h"
 #include "isula_libutils/container_get_id_request.h"
 #include "isula_libutils/container_get_id_response.h"

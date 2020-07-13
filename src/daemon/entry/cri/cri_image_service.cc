@@ -28,6 +28,7 @@
 #include "cri_helpers.h"
 #include "events_sender_api.h"
 #include "service_image_api.h"
+#include "err_msg.h"
 
 static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {

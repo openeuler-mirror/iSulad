@@ -18,7 +18,6 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#include "err_msg.h"
 #include "linked_list.h"
 #include "utils.h"
 

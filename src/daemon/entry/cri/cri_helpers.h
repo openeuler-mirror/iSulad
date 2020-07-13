@@ -19,6 +19,7 @@
 #include <vector>
 #include <map>
 
+#include "constants.h"
 #include "api.pb.h"
 #include "errors.h"
 #include "isula_libutils/host_config.h"

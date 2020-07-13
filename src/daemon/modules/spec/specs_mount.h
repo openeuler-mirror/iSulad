@@ -21,7 +21,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "err_msg.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config_v2.h"
 #include "isula_libutils/oci_runtime_hooks.h"
