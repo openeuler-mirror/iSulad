@@ -205,7 +205,7 @@ static inline void delete_g_layer_list_item(struct linked_list *item)
     g_metadata.layers_list_len -= 1;
 }
 
-static void remove_layer_list_tail()
+void remove_layer_list_tail()
 {
     struct linked_list *item = NULL;
 
@@ -712,34 +712,6 @@ static inline layer_t *lookup_with_lock(const char *id)
 
     ret = lookup(id);
     layer_store_unlock();
-    return ret;
-}
-
-bool layer_store_check(const char *id)
-{
-    layer_t *l = NULL;
-    bool ret = false;
-
-    if (id == NULL) {
-        return false;
-    }
-
-    DEBUG("Checking layer %s", id);
-    if (!graphdriver_layer_exists(id)) {
-        WARN("Invalid data of layer %s", id);
-        return false;
-    }
-
-    l = lookup_with_lock(id);
-    if (l == NULL) {
-        ERROR("layer not known");
-        goto out;
-    }
-    //TODO: read tar split file and verify
-
-    ret = true;
-out:
-    layer_ref_dec(l);
     return ret;
 }
 
@@ -1574,31 +1546,6 @@ int layer_store_umount(const char *id, bool force)
     }
     layer_lock(l);
     ret = umount_helper(l, force);
-    layer_unlock(l);
-
-    layer_ref_dec(l);
-    return ret;
-}
-
-int layer_store_mounted(const char *id)
-{
-    layer_t *l = NULL;
-    int ret = 0;
-
-    if (id == NULL) {
-        return ret;
-    }
-    // TODO: add lock
-    l = lookup_with_lock(id);
-    if (l == NULL) {
-        ERROR("layer not known");
-        return ret;
-    }
-
-    layer_lock(l);
-    if (l->smount_point != NULL) {
-        ret = l->smount_point->count;
-    }
     layer_unlock(l);
 
     layer_ref_dec(l);

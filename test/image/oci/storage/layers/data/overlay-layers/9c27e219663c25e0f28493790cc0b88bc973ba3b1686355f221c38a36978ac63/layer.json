@@ -1,0 +1,10 @@
+{
+    "id": "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63",
+    "names": [
+        "hello_world:latest"
+    ],
+    "created": "2020-07-09T11:57:39.992267244Z",
+    "compressed-diff-digest": "sha256:0e03bdcc26d7a9a57ef3b6f1bf1a210cff6239bff7c8cac72435984032851689",
+    "diff-digest": "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63",
+    "diff-size": 1672256
+}

@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <gtest/gtest.h>
 #include "path.h"
+#include "utils.h"
 #include "storage.h"
 #include "layer.h"
 
@@ -57,212 +58,205 @@ bool dirExists(const char *path)
     return true;
 }
 
+void free_layer(struct layer *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->id);
+    ptr->id = NULL;
+    free(ptr->parent);
+    ptr->parent = NULL;
+    free(ptr->mount_point);
+    ptr->mount_point = NULL;
+    free(ptr->compressed_digest);
+    ptr->compressed_digest = NULL;
+    free(ptr->uncompressed_digest);
+    ptr->uncompressed_digest = NULL;
+    free(ptr);
+}
+
+void free_layer_list(struct layer_list *ptr)
+{
+    size_t i = 0;
+    if (ptr == NULL) {
+        return;
+    }
+
+    for (; i < ptr->layers_len; i++) {
+        free_layer(ptr->layers[i]);
+        ptr->layers[i] = NULL;
+    }
+    free(ptr->layers);
+    ptr->layers = NULL;
+    free(ptr);
+}
+
 /********************************test data 1: container layer json**************************************
 {
-  "id": "ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1",
-  "names": [
-    "689feccc14f14112b43b1fbf7dc14c3426e4fdd6e2bff462ec70b9f6ee4b3fae-layer"
-  ],
-  "parent": "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
-  "created": "2020-04-29T07:34:27.076073345Z"
+    "id": "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b",
+    "parent": "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63",
+    "created": "2020-07-09T16:54:43.402330834Z"
 }
 
 mount info
 {
-    "id": "ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1",
-    "path": "/var/lib/isulad/storage/overlay/ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1/merged",
-    "count": 1
+    "path": "/var/lib/isulad/storage/overlay/7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b/merged"
 }
  ******************************************************************************************/
 
-/********************************test data 2: busybox image layer json**************************************
+/********************************test data 2: hello-world image layer json**************************************
 {
-  "id": "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
-  "created": "2020-04-16T12:08:52.304153815Z",
-  "compressed-diff-digest": "sha256:8f52abd3da461b2c0c11fda7a1b53413f1a92320eb96525ddf92c0b5cde781ad",
-  "compressed-size": 740169,
-  "diff-digest": "sha256:6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
-  "diff-size": 1441280,
-  "compression": 2
+    "id": "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63",
+    "names": [
+        "hello_world:latest"
+    ],
+    "created": "2020-07-09T11:57:39.992267244Z",
+    "compressed-diff-digest": "sha256:0e03bdcc26d7a9a57ef3b6f1bf1a210cff6239bff7c8cac72435984032851689",
+    "diff-digest": "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63",
+    "diff-size": 1672256
 }
  ******************************************************************************************/
 
-class StorageImagesUnitTest : public testing::Test {
+class StorageLayersUnitTest : public testing::Test {
 protected:
     void SetUp() override
     {
         struct storage_module_init_options opts = {0};
-        std::string dir = GetDirectory() + "/data";
-        std::string rundir = GetDirectory() + "/data/run";
 
-        ASSERT_STRNE(cleanpath(dir.c_str(), real_path, sizeof(real_path)), nullptr);
+        std::string isulad_dir = "/var/lib/isulad/";
+        std::string root_dir = isulad_dir + "data";
+        std::string run_dir = isulad_dir + "data/run";
+        std::string data_dir = GetDirectory() + "/data";
+
+        ASSERT_STRNE(cleanpath(data_dir.c_str(), data_path, sizeof(data_path)), nullptr);
+        std::string cp_command = "cp -r " + std::string(data_path) + " " + isulad_dir;
+        ASSERT_EQ(system(cp_command.c_str()), 0);
+
+        ASSERT_STRNE(cleanpath(root_dir.c_str(), real_path, sizeof(real_path)), nullptr);
         opts.storage_root = strdup(real_path);
-        ASSERT_STRNE(cleanpath(rundir.c_str(), real_run_path, sizeof(real_run_path)), nullptr);
+        ASSERT_STRNE(cleanpath(run_dir.c_str(), real_run_path, sizeof(real_run_path)), nullptr);
         opts.storage_run_root = strdup(real_run_path);
         opts.driver_name = strdup("overlay");
         ASSERT_EQ(layer_store_init(&opts), 0);
+
         free(opts.storage_root);
+        free(opts.storage_run_root);
         free(opts.driver_name);
     }
 
     void TearDown() override
     {
+        layer_store_exit();
+        layer_store_cleanup();
+
+        std::string rm_command = "rm -rf /var/lib/isulad/data";
+        ASSERT_EQ(system(rm_command.c_str()), 0);
     }
 
-    std::vector<std::string> ids { "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
-        "ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1" };
     char real_path[PATH_MAX] = { 0x00 };
     char real_run_path[PATH_MAX] = { 0x00 };
+    char data_path[PATH_MAX] = { 0x00 };
 };
 
-TEST_F(StorageImagesUnitTest, test_layers_load)
+TEST_F(StorageLayersUnitTest, test_layers_load)
 {
-    size_t layers_len = 0;
-    struct layer **layers = layer_store_list(&layers_len);
+    struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
+    ASSERT_NE(layer_list, nullptr);
 
-    ASSERT_EQ(layers_len, 2);
+    ASSERT_EQ(layer_store_list(layer_list), 0);
+    ASSERT_EQ(layer_list->layers_len, 2);
 
-    // check layer 6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a
-    ASSERT_NE(layers[0], nullptr);
-    ASSERT_STREQ(layers[0]->id, "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
-    ASSERT_EQ(layers[0]->parent, nullptr);
-    ASSERT_STREQ(layers[0]->compressed_digest, "sha256:8f52abd3da461b2c0c11fda7a1b53413f1a92320eb96525ddf92c0b5cde781ad");
-    ASSERT_EQ(layers[0]->compress_size, 740169);
-    ASSERT_STREQ(layers[0]->uncompressed_digest, "sha256:6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
-    ASSERT_EQ(layers[0]->uncompress_size, 1441280);
+    struct layer **layers = layer_list->layers;
+    ASSERT_NE(layers, nullptr);
 
-    // check layer ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1
-    ASSERT_NE(layers[1], nullptr);
-    ASSERT_STREQ(layers[1]->id, "ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1");
-    ASSERT_STREQ(layers[1]->parent, "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
-    ASSERT_EQ(layers[1]->mount_count, 1);
-    ASSERT_STREQ(layers[1]->mount_point,
-                 "/var/lib/isulad/storage/overlay/ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1/merged");
+    int id_container = 1;
+    int id_image = 0;
+    if (strcmp(layers[0]->id, "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b") == 0) {
+        id_container = 0;
+        id_image = 1;
+    }
+
+    // check layer 7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b
+    std::string mount_point = std::string(real_path) + "/overlay/7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b/merged";
+    ASSERT_NE(layers[id_container], nullptr);
+    ASSERT_STREQ(layers[id_container]->id, "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b");
+    ASSERT_STREQ(layers[id_container]->parent, "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
+    ASSERT_STREQ(layers[id_container]->mount_point, mount_point.c_str());
+
+    // check layer 9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63
+    ASSERT_NE(layers[id_image], nullptr);
+    ASSERT_STREQ(layers[id_image]->id, "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
+    ASSERT_STREQ(layers[id_image]->parent, nullptr);
+    ASSERT_STREQ(layers[id_image]->compressed_digest, "sha256:0e03bdcc26d7a9a57ef3b6f1bf1a210cff6239bff7c8cac72435984032851689");
+    ASSERT_STREQ(layers[id_image]->uncompressed_digest, "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
+    ASSERT_EQ(layers[id_image]->uncompress_size, 1672256);
+
+    free_layer_list(layer_list);
+
+    layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
+    remove_layer_list_tail();
+    ASSERT_EQ(layer_store_list(layer_list), 0);
+    ASSERT_EQ(layer_list->layers_len, 1);
+    free_layer_list(layer_list);
 }
 
-/********************************test data *************************************************
+TEST_F(StorageLayersUnitTest, test_layer_store_exists)
 {
-    "id": "50551ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
-    "digest": "manifest",
-    "names": [
-        "euleros:3.1",
-        "hello_world:latest"
-    ],
-    "layer": "9994458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
-    "metadata": "{}",
-    "created": "2020-04-02T05:44:23.408951489-04:00",
-    "loaded": "2020-04-02T05:44:23.408987703-04:00"
-}
-******************************************************************************************/
-TEST_F(StorageImagesUnitTest, test_layer_store_create)
-{
-    std::string id { "d3b9337701b412d8235da15ae7653560ccc6cf042c18298214aa5543c38588f8" };
-    std::string parent { "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a" };
-    struct layer_opts opts = {
-        .parent = strdup(parent.c_str()),
-        .writable = true,
-    };
-    char *new_id = nullptr;
+    std::string id { "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b" };
+    std::string incorrectId { "50551ff67da98ab8540d7132" };
 
-    auto created_layer = layer_store_create(id.c_str(), &opts, nullptr, &new_id);
-    ASSERT_EQ(created_layer, 0);
-
-    ASSERT_TRUE(layer_store_exists(id.c_str()));
-
-    ASSERT_EQ(layer_store_delete(id.c_str()), 0);
-    ASSERT_FALSE(layer_store_exists(id.c_str()));
-    ASSERT_FALSE(dirExists((std::string(real_path) + "/" + id).c_str()));
-}
-
-TEST_F(StorageImagesUnitTest, test_layer_store_lookup)
-{
-    std::string id { "ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1" };
-    std::string name { "689feccc14f14112b43b1fbf7dc14c3426e4fdd6e2bff462ec70b9f6ee4b3fae-layer" };
-    std::string incorrectId { "4db68de4ff27" };
-    struct layer *l = NULL;
-
-    l = layer_store_lookup(name.c_str());
-    ASSERT_NE(l, nullptr);
-    ASSERT_STREQ(l->id, id.c_str());
-    free_layer(l);
-    l = layer_store_lookup(id.c_str());
-    ASSERT_NE(l, nullptr);
-    ASSERT_STREQ(l->id, id.c_str());
-    free_layer(l);
-    l = layer_store_lookup(incorrectId.c_str());
-    ASSERT_EQ(l->id, nullptr);
-    free_layer(l);
-}
-
-TEST_F(StorageImagesUnitTest, test_layer_store_exists)
-{
-    std::string id { "ac86325a0e6384e251f2f4418d7b36321ad6811f9ba8a3dc87e13d634b0ec1d1" };
-    std::string name { "689feccc14f14112b43b1fbf7dc14c3426e4fdd6e2bff462ec70b9f6ee4b3fae-layer" };
-    std::string incorrectId { "4db68de4ff27" };
-
-    ASSERT_TRUE(layer_store_exists(name.c_str()));
     ASSERT_TRUE(layer_store_exists(id.c_str()));
     ASSERT_FALSE(layer_store_exists(incorrectId.c_str()));
 }
 
-TEST_F(StorageImagesUnitTest, test_layer_store_list)
+TEST_F(StorageLayersUnitTest, test_layer_store_create)
 {
-    struct layer **layers = NULL;
-    size_t len = 0;
+    char *new_id = nullptr;
+    struct layer_opts opts = { 0 };
+    opts.parent = strdup("9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
+    opts.writable = true;
 
-    layers = layer_store_list(&len);
-    ASSERT_EQ(len, 2);
+    ASSERT_EQ(layer_store_create(nullptr, &opts, nullptr, &new_id), 0);
+    ASSERT_TRUE(layer_store_exists(new_id));
 
-    for (size_t i {}; i < len; i++) {
-        ASSERT_NE(find(ids.begin(), ids.end(), std::string(layers[i]->id)), ids.end());
-    }
+    ASSERT_EQ(layer_store_delete(new_id), 0);
+    ASSERT_FALSE(layer_store_exists(new_id));
+    ASSERT_FALSE(dirExists((std::string(real_path) + "/" + std::string(new_id)).c_str()));
 
-    for (size_t i {}; i < len; i++) {
-        free_layer(layers[i]);
-        layers[i] = NULL;
-    }
-    free(layers);
+    free(opts.parent);
+    free(new_id);
 }
 
-TEST_F(StorageImagesUnitTest, test_layer_store_by_compress_digest)
+TEST_F(StorageLayersUnitTest, test_layer_store_by_compress_digest)
 {
-    struct layer **layers = NULL;
-    size_t len = 0;
-    std::string compress { "sha256:8f52abd3da461b2c0c11fda7a1b53413f1a92320eb96525ddf92c0b5cde781ad" };
-    std::string id { "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a" };
+    std::string compress { "sha256:0e03bdcc26d7a9a57ef3b6f1bf1a210cff6239bff7c8cac72435984032851689" };
+    std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
+    struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
 
-    layers = layer_store_by_compress_digest(compress.c_str(), &len);
-    ASSERT_EQ(len, 1);
+    ASSERT_EQ(layer_store_by_compress_digest(compress.c_str(), layer_list), 0);
+    ASSERT_EQ(layer_list->layers_len, 1);
 
+    struct layer **layers = layer_list->layers;
     ASSERT_STREQ(layers[0]->id, id.c_str());
     ASSERT_STREQ(layers[0]->compressed_digest, compress.c_str());
-    ASSERT_EQ(layers[0]->compress_size, 740169);
 
-    for (size_t i {}; i < len; i++) {
-        free_layer(layers[i]);
-        layers[i] = NULL;
-    }
-    free(layers);
+    free_layer_list(layer_list);
 }
 
-TEST_F(StorageImagesUnitTest, test_layer_store_by_uncompress_digest)
+TEST_F(StorageLayersUnitTest, test_layer_store_by_uncompress_digest)
 {
-    struct layer **layers = NULL;
-    size_t len = 0;
-    std::string uncompress { "sha256:6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a" };
-    std::string id { "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a" };
+    std::string uncompress { "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
+    std::string id { "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63" };
+    struct layer_list *layer_list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
 
-    layers = layer_store_by_uncompress_digest(uncompress.c_str(), &len);
-    ASSERT_EQ(len, 1);
+    ASSERT_EQ(layer_store_by_uncompress_digest(uncompress.c_str(), layer_list), 0);
+    ASSERT_EQ(layer_list->layers_len, 1);
 
+    struct layer **layers = layer_list->layers;
     ASSERT_STREQ(layers[0]->id, id.c_str());
     ASSERT_STREQ(layers[0]->uncompressed_digest, uncompress.c_str());
-    ASSERT_EQ(layers[0]->uncompress_size, 1441280);
+    ASSERT_EQ(layers[0]->uncompress_size, 1672256);
 
-    for (size_t i {}; i < len; i++) {
-        free_layer(layers[i]);
-        layers[i] = NULL;
-    }
-    free(layers);
+    free_layer_list(layer_list);
 }
-

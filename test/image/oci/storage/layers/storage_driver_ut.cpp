@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "path.h"
+#include "utils.h"
 #include "utils_array.h"
 #include "driver_overlay2.h"
 #include "driver_quota_mock.h"
@@ -115,11 +116,11 @@ protected:
                           + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/work ";
         ASSERT_EQ(system(mkdir.c_str()), 0);
 
-        opts = (struct storage_module_init_options *)malloc(sizeof(struct storage_module_init_options));
+        opts = (struct storage_module_init_options *)util_common_calloc_s(sizeof(struct storage_module_init_options));
         opts->storage_root = strdup(root_dir.c_str());
         opts->storage_run_root = strdup(run_dir.c_str());
         opts->driver_name = strdup("overlay");
-        opts->driver_opts = (char **)malloc(4 * sizeof(char *));
+        opts->driver_opts = (char **)util_common_calloc_s(4 * sizeof(char *));
         opts->driver_opts[0] = strdup("overlay2.basesize=128M");
         opts->driver_opts[1] = strdup("overlay2.override_kernel_check=true");
         opts->driver_opts[2] = strdup("overlay2.skip_mount_home=false");
@@ -162,14 +163,13 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_create_rw)
     std::string id { "eb29745b8228e1e97c01b1d5c2554a319c00a94d8dd5746a3904222ad65a13f8" };
     struct driver_create_opts *create_opts;
 
-    create_opts = (struct driver_create_opts *)malloc(sizeof(struct driver_create_opts));
+    create_opts = (struct driver_create_opts *)util_common_calloc_s(sizeof(struct driver_create_opts));
     ASSERT_NE(create_opts, nullptr);
 
-    create_opts->mount_label = strdup("mount_label");    
-    create_opts->storage_opt = (json_map_string_string *)malloc(sizeof(json_map_string_string));
+    create_opts->storage_opt = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
     ASSERT_NE(create_opts->storage_opt, nullptr);
-    create_opts->storage_opt->keys = (char **)malloc(sizeof(char *));
-    create_opts->storage_opt->values = (char **)malloc(sizeof(char *));
+    create_opts->storage_opt->keys = (char **)util_common_calloc_s(sizeof(char *));
+    create_opts->storage_opt->values = (char **)util_common_calloc_s(sizeof(char *));
     create_opts->storage_opt->keys[0] = strdup("size");
     create_opts->storage_opt->values[0] = strdup("128M");
     create_opts->storage_opt->len = 1;
@@ -200,9 +200,9 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_mount_layer)
     free(mount_dir);
     mount_dir = nullptr;
 
-    mount_opts = (struct driver_mount_opts *)malloc(sizeof(struct driver_mount_opts));
+    mount_opts = (struct driver_mount_opts *)util_common_calloc_s(sizeof(struct driver_mount_opts));
     ASSERT_NE(mount_opts, nullptr);
-    mount_opts->options = (char **)malloc(1 * sizeof(char *));
+    mount_opts->options = (char **)util_common_calloc_s(1 * sizeof(char *));
     mount_opts->options[0] = strdup("ro");
     mount_opts->options_len = 1;
 
