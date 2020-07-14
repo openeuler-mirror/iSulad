@@ -1660,6 +1660,11 @@ int image_store_delete(const char *id)
         return -1;
     }
 
+    if (!image_store_exists(id)) {
+        WARN("image %s not exists already, return success", id);
+        return 0;
+    }
+
     if (!image_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock image store with exclusive lock, not allowed to delete image from store");
         return -1;

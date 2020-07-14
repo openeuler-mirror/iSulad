@@ -1029,6 +1029,11 @@ int rootfs_store_delete(const char *id)
         return -1;
     }
 
+    if (!rootfs_store_exists(id)) {
+        WARN("rootfs %s not exists already, return success", id);
+        return 0;
+    }
+
     if (!rootfs_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock rootfs store");
         ret = -1;

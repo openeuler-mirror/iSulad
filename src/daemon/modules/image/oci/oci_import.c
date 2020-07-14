@@ -523,8 +523,3 @@ out:
 
     return ret;
 }
-
-void oci_import_cleanup()
-{
-    return;
-}

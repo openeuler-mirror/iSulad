@@ -388,258 +388,6 @@ out:
     return mount_point;
 }
 
-static int do_validate_rootfs_layer(layer_t *l)
-{
-    int ret = 0;
-    char *mount_point = NULL;
-
-    // it is a layer of image, just ignore
-    if (l->slayer->diff_digest != NULL) {
-        return 0;
-    }
-
-    if (update_mount_point(l) != 0) {
-        ERROR("Failed to update mount point");
-        ret = -1;
-        goto out;
-    }
-
-    // try to mount the layer, and set mount count to 1
-    if (l->smount_point->count > 0) {
-        l->smount_point->count = 0;
-        mount_point = mount_helper(l, NULL);
-        if (mount_point == NULL) {
-            ERROR("Failed to mount layer %s", l->slayer->id);
-            ret = -1;
-            goto out;
-        }
-    }
-
-out:
-    free(mount_point);
-    return ret;
-}
-
-static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir)
-{
-#define LAYER_NAME_LEN 64
-    bool ret = true;
-    char tmpdir[PATH_MAX] = { 0 };
-    int nret = 0;
-    char *rpath = NULL;
-    char *mount_point_path = NULL;
-    layer_t *l = NULL;
-
-    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", path_name, sub_dir->d_name);
-    if (nret < 0 || nret >= PATH_MAX) {
-        ERROR("Sprintf: %s failed", sub_dir->d_name);
-        ret = false;
-        goto free_out;
-    }
-
-    if (!util_dir_exists(tmpdir)) {
-        // ignore non-dir
-        DEBUG("%s is not directory", sub_dir->d_name);
-        ret = true;
-        goto free_out;
-    }
-
-    if (strlen(sub_dir->d_name) != LAYER_NAME_LEN) {
-        DEBUG("%s is invalid subdir name", sub_dir->d_name);
-        ret = true;
-        goto free_out;
-    }
-
-    rpath = layer_json_path(sub_dir->d_name);
-    if (rpath == NULL) {
-        ret = false;
-        goto remove_invalid_dir;
-    }
-    mount_point_path = mountpoint_json_path(sub_dir->d_name);
-    if (mount_point_path == NULL) {
-        ret = false;
-        goto remove_invalid_dir;
-    }
-
-    l = load_layer(rpath, mount_point_path);
-    if (l == NULL) {
-        WARN("load layer: %s failed", sub_dir->d_name);
-        ret = false;
-        goto remove_invalid_dir;
-    }
-
-    if (do_validate_image_layer(l) != 0) {
-        ret = false;
-        goto remove_invalid_dir;
-    }
-
-    if (do_validate_rootfs_layer(l) != 0) {
-        ret = false;
-        goto remove_invalid_dir;
-    }
-
-    if (!append_layer_into_list(l)) {
-        ERROR("Failed to append layer info to list");
-        ret = false;
-        goto remove_invalid_dir;
-    }
-
-    ret = true;
-    goto free_out;
-
-remove_invalid_dir:
-    (void)graphdriver_umount_layer(sub_dir->d_name);
-    (void)graphdriver_rm_layer(sub_dir->d_name);
-    (void)util_recursive_rmdir(tmpdir, 0);
-
-free_out:
-    free(rpath);
-    free(mount_point_path);
-    if (!ret) {
-        free_layer_t(l);
-    }
-    return ret;
-}
-
-static int load_layers_from_json_files()
-{
-    int ret = 0;
-    struct linked_list *item = NULL;
-    struct linked_list *next = NULL;
-    bool should_save = false;
-
-    if (!layer_store_lock(true)) {
-        return -1;
-    }
-
-    ret = util_scan_subdirs(g_root_dir, load_layer_json_cb);
-    if (ret != 0) {
-        goto unlock_out;
-    }
-
-    linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
-        layer_t *tl = (layer_t *)item->elem;
-        size_t i = 0;
-
-        if (!map_insert(g_metadata.by_id, (void *)tl->slayer->id, (void *)tl)) {
-            ERROR("Insert id: %s for layer failed", tl->slayer->id);
-            ret = -1;
-            goto unlock_out;
-        }
-
-        for (; i < tl->slayer->names_len; i++) {
-            if (remove_name(tl->slayer->names[i])) {
-                should_save = true;
-            }
-            if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
-                ret = -1;
-                ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
-                goto unlock_out;
-            }
-        }
-
-        ret = insert_digest_into_map(g_metadata.by_compress_digest, tl->slayer->compressed_diff_digest, tl->slayer->id);
-        if (ret != 0) {
-            ERROR("update layer: %s compress failed", tl->slayer->id);
-            goto unlock_out;
-        }
-
-        ret = insert_digest_into_map(g_metadata.by_uncompress_digest, tl->slayer->diff_digest, tl->slayer->id);
-        if (ret != 0) {
-            ERROR("update layer: %s uncompress failed", tl->slayer->id);
-            goto unlock_out;
-        }
-
-        // check complete
-        if (tl->slayer->incompelte) {
-            if (layer_store_delete(tl->slayer->id) != 0) {
-                ERROR("delete layer: %s failed", tl->slayer->id);
-                ret = -1;
-                goto unlock_out;
-            }
-            should_save = true;
-        }
-
-        if (should_save && save_layer(tl) != 0) {
-            ERROR("save layer: %s failed", tl->slayer->id);
-            ret = -1;
-            goto unlock_out;
-        }
-    }
-
-    ret = 0;
-    goto unlock_out;
-unlock_out:
-    layer_store_unlock();
-    return ret;
-}
-
-int layer_store_init(const struct storage_module_init_options *conf)
-{
-    int nret = 0;
-
-    if (!init_from_conf(conf)) {
-        return -1;
-    }
-
-    // init manager structs
-    g_metadata.layers_list_len = 0;
-    linked_list_init(&g_metadata.layers_list);
-
-    nret = pthread_rwlock_init(&(g_metadata.rwlock), NULL);
-    if (nret != 0) {
-        ERROR("Failed to init metadata rwlock");
-        goto free_out;
-    }
-    g_metadata.by_id = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, layer_map_kvfree);
-    if (g_metadata.by_id == NULL) {
-        ERROR("Failed to new ids map");
-        goto free_out;
-    }
-    g_metadata.by_name = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, layer_map_kvfree);
-    if (g_metadata.by_name == NULL) {
-        ERROR("Failed to new names map");
-        goto free_out;
-    }
-    g_metadata.by_compress_digest = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, digest_map_kvfree);
-    if (g_metadata.by_compress_digest == NULL) {
-        ERROR("Failed to new compress map");
-        goto free_out;
-    }
-    g_metadata.by_uncompress_digest = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, digest_map_kvfree);
-    if (g_metadata.by_uncompress_digest == NULL) {
-        ERROR("Failed to new uncompress map");
-        goto free_out;
-    }
-
-    // build root dir and run dir
-    nret = util_mkdir_p(g_root_dir, IMAGE_STORE_PATH_MODE);
-    if (nret != 0) {
-        ERROR("build root dir of layer store failed");
-        goto free_out;
-    }
-    nret = util_mkdir_p(g_run_dir, IMAGE_STORE_PATH_MODE);
-    if (nret != 0) {
-        ERROR("build run dir of layer store failed");
-        goto free_out;
-    }
-
-    if (load_layers_from_json_files() != 0) {
-        goto free_out;
-    }
-
-    DEBUG("Init layer store success");
-    return 0;
-free_out:
-    layer_store_cleanup();
-    return -1;
-}
-
-void layer_store_exit()
-{
-    graphdriver_cleanup();
-}
-
 static inline char *tar_split_path(const char *id)
 {
     char *result = NULL;
@@ -1283,18 +1031,11 @@ out:
     return ret;
 }
 
-int layer_store_delete(const char *id)
+static int do_delete_layer(const char *id)
 {
-    layer_t *l = NULL;
     int ret = 0;
+    layer_t *l = NULL;
     char *tspath = NULL;
-
-    if (id == NULL) {
-        return -1;
-    }
-    if (!layer_store_lock(true)) {
-        return -1;
-    }
 
     l = lookup(id);
     if (l == NULL) {
@@ -1334,6 +1075,31 @@ int layer_store_delete(const char *id)
 free_out:
     free(tspath);
     layer_ref_dec(l);
+    return ret;
+}
+
+int layer_store_delete(const char *id)
+{
+    int ret = 0;
+
+    if (id == NULL) {
+        return -1;
+    }
+
+    if (!layer_store_exists(id)) {
+        WARN("layer %s not exists already, return success", id);
+        return 0;
+    }
+
+    if (!layer_store_lock(true)) {
+        return -1;
+    }
+
+    if (do_delete_layer(id) != 0) {
+        ERROR("Failed to delete layer %s", id);
+        ret = -1;
+    }
+
     layer_store_unlock();
     return ret;
 }
@@ -1631,4 +1397,256 @@ void free_layer_store_mount_opts(struct layer_store_mount_opts *ptr)
 int layer_store_get_layer_fs_info(const char *layer_id, imagetool_fs_info *fs_info)
 {
     return graphdriver_get_layer_fs_info(layer_id, fs_info);
+}
+
+static int do_validate_rootfs_layer(layer_t *l)
+{
+    int ret = 0;
+    char *mount_point = NULL;
+
+    // it is a layer of image, just ignore
+    if (l->slayer->diff_digest != NULL) {
+        return 0;
+    }
+
+    if (update_mount_point(l) != 0) {
+        ERROR("Failed to update mount point");
+        ret = -1;
+        goto out;
+    }
+
+    // try to mount the layer, and set mount count to 1
+    if (l->smount_point->count > 0) {
+        l->smount_point->count = 0;
+        mount_point = mount_helper(l, NULL);
+        if (mount_point == NULL) {
+            ERROR("Failed to mount layer %s", l->slayer->id);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    free(mount_point);
+    return ret;
+}
+
+static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir)
+{
+#define LAYER_NAME_LEN 64
+    bool ret = true;
+    char tmpdir[PATH_MAX] = { 0 };
+    int nret = 0;
+    char *rpath = NULL;
+    char *mount_point_path = NULL;
+    layer_t *l = NULL;
+
+    nret = snprintf(tmpdir, PATH_MAX, "%s/%s", path_name, sub_dir->d_name);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Sprintf: %s failed", sub_dir->d_name);
+        ret = false;
+        goto free_out;
+    }
+
+    if (!util_dir_exists(tmpdir)) {
+        // ignore non-dir
+        DEBUG("%s is not directory", sub_dir->d_name);
+        ret = true;
+        goto free_out;
+    }
+
+    if (strlen(sub_dir->d_name) != LAYER_NAME_LEN) {
+        DEBUG("%s is invalid subdir name", sub_dir->d_name);
+        ret = true;
+        goto free_out;
+    }
+
+    rpath = layer_json_path(sub_dir->d_name);
+    if (rpath == NULL) {
+        ret = false;
+        goto remove_invalid_dir;
+    }
+    mount_point_path = mountpoint_json_path(sub_dir->d_name);
+    if (mount_point_path == NULL) {
+        ret = false;
+        goto remove_invalid_dir;
+    }
+
+    l = load_layer(rpath, mount_point_path);
+    if (l == NULL) {
+        WARN("load layer: %s failed", sub_dir->d_name);
+        ret = false;
+        goto remove_invalid_dir;
+    }
+
+    if (do_validate_image_layer(l) != 0) {
+        ret = false;
+        goto remove_invalid_dir;
+    }
+
+    if (do_validate_rootfs_layer(l) != 0) {
+        ret = false;
+        goto remove_invalid_dir;
+    }
+
+    if (!append_layer_into_list(l)) {
+        ERROR("Failed to append layer info to list");
+        ret = false;
+        goto remove_invalid_dir;
+    }
+
+    ret = true;
+    goto free_out;
+
+remove_invalid_dir:
+    (void)graphdriver_umount_layer(sub_dir->d_name);
+    (void)graphdriver_rm_layer(sub_dir->d_name);
+    (void)util_recursive_rmdir(tmpdir, 0);
+
+free_out:
+    free(rpath);
+    free(mount_point_path);
+    if (!ret) {
+        free_layer_t(l);
+    }
+    return ret;
+}
+
+static int load_layers_from_json_files()
+{
+    int ret = 0;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+    bool should_save = false;
+
+    if (!layer_store_lock(true)) {
+        return -1;
+    }
+
+    ret = util_scan_subdirs(g_root_dir, load_layer_json_cb);
+    if (ret != 0) {
+        goto unlock_out;
+    }
+
+    linked_list_for_each_safe(item, &(g_metadata.layers_list), next) {
+        layer_t *tl = (layer_t *)item->elem;
+        size_t i = 0;
+
+        if (!map_insert(g_metadata.by_id, (void *)tl->slayer->id, (void *)tl)) {
+            ERROR("Insert id: %s for layer failed", tl->slayer->id);
+            ret = -1;
+            goto unlock_out;
+        }
+
+        for (; i < tl->slayer->names_len; i++) {
+            if (remove_name(tl->slayer->names[i])) {
+                should_save = true;
+            }
+            if (!map_insert(g_metadata.by_name, (void *)tl->slayer->names[i], (void *)tl)) {
+                ret = -1;
+                ERROR("Insert name: %s for layer failed", tl->slayer->names[i]);
+                goto unlock_out;
+            }
+        }
+
+        ret = insert_digest_into_map(g_metadata.by_compress_digest, tl->slayer->compressed_diff_digest, tl->slayer->id);
+        if (ret != 0) {
+            ERROR("update layer: %s compress failed", tl->slayer->id);
+            goto unlock_out;
+        }
+
+        ret = insert_digest_into_map(g_metadata.by_uncompress_digest, tl->slayer->diff_digest, tl->slayer->id);
+        if (ret != 0) {
+            ERROR("update layer: %s uncompress failed", tl->slayer->id);
+            goto unlock_out;
+        }
+
+        // check complete
+        if (tl->slayer->incompelte) {
+            if (do_delete_layer(tl->slayer->id) != 0) {
+                ERROR("delete layer: %s failed", tl->slayer->id);
+                ret = -1;
+                goto unlock_out;
+            }
+            should_save = true;
+        }
+
+        if (should_save && save_layer(tl) != 0) {
+            ERROR("save layer: %s failed", tl->slayer->id);
+            ret = -1;
+            goto unlock_out;
+        }
+    }
+
+    ret = 0;
+    goto unlock_out;
+unlock_out:
+    layer_store_unlock();
+    return ret;
+}
+
+int layer_store_init(const struct storage_module_init_options *conf)
+{
+    int nret = 0;
+
+    if (!init_from_conf(conf)) {
+        return -1;
+    }
+
+    // init manager structs
+    g_metadata.layers_list_len = 0;
+    linked_list_init(&g_metadata.layers_list);
+
+    nret = pthread_rwlock_init(&(g_metadata.rwlock), NULL);
+    if (nret != 0) {
+        ERROR("Failed to init metadata rwlock");
+        goto free_out;
+    }
+    g_metadata.by_id = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, layer_map_kvfree);
+    if (g_metadata.by_id == NULL) {
+        ERROR("Failed to new ids map");
+        goto free_out;
+    }
+    g_metadata.by_name = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, layer_map_kvfree);
+    if (g_metadata.by_name == NULL) {
+        ERROR("Failed to new names map");
+        goto free_out;
+    }
+    g_metadata.by_compress_digest = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, digest_map_kvfree);
+    if (g_metadata.by_compress_digest == NULL) {
+        ERROR("Failed to new compress map");
+        goto free_out;
+    }
+    g_metadata.by_uncompress_digest = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, digest_map_kvfree);
+    if (g_metadata.by_uncompress_digest == NULL) {
+        ERROR("Failed to new uncompress map");
+        goto free_out;
+    }
+
+    // build root dir and run dir
+    nret = util_mkdir_p(g_root_dir, IMAGE_STORE_PATH_MODE);
+    if (nret != 0) {
+        ERROR("build root dir of layer store failed");
+        goto free_out;
+    }
+    nret = util_mkdir_p(g_run_dir, IMAGE_STORE_PATH_MODE);
+    if (nret != 0) {
+        ERROR("build run dir of layer store failed");
+        goto free_out;
+    }
+
+    if (load_layers_from_json_files() != 0) {
+        goto free_out;
+    }
+
+    DEBUG("Init layer store success");
+    return 0;
+free_out:
+    layer_store_cleanup();
+    return -1;
+}
+
+void layer_store_exit()
+{
+    graphdriver_cleanup();
 }

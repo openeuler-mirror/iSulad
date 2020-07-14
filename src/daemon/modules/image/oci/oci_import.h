@@ -20,7 +20,6 @@ extern "C" {
 #endif
 
 int oci_do_import(char *file, char *tag, char **id);
-void oci_import_cleanup();
 
 #ifdef __cplusplus
 }
