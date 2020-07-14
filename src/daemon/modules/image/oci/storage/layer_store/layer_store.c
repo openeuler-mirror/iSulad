@@ -1039,8 +1039,7 @@ static int do_delete_layer(const char *id)
 
     l = lookup(id);
     if (l == NULL) {
-        ERROR("layer not known");
-        ret = -1;
+        WARN("layer %s not exists already, return success", id);
         goto free_out;
     }
 
@@ -1084,11 +1083,6 @@ int layer_store_delete(const char *id)
 
     if (id == NULL) {
         return -1;
-    }
-
-    if (!layer_store_exists(id)) {
-        WARN("layer %s not exists already, return success", id);
-        return 0;
     }
 
     if (!layer_store_lock(true)) {
@@ -1182,10 +1176,6 @@ static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list 
     digest_layer_t *id_list = NULL;
     size_t i = 0;
 
-    if (!layer_store_lock(false)) {
-        return -1;
-    }
-
     id_list = (digest_layer_t *)map_search(m, (void *)digest);
     if (id_list == NULL) {
         ERROR("Not found digest: %s", digest);
@@ -1223,24 +1213,40 @@ static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list 
 
     ret = 0;
 free_out:
-    layer_store_unlock();
     return ret;
 }
 
 int layer_store_by_compress_digest(const char *digest, struct layer_list *resp)
 {
+    int ret = 0;
+
     if (resp == NULL) {
         return -1;
     }
-    return layers_by_digest_map(g_metadata.by_compress_digest, digest, resp);
+
+    if (!layer_store_lock(false)) {
+        return -1;
+    }
+
+    ret = layers_by_digest_map(g_metadata.by_compress_digest, digest, resp);
+    layer_store_unlock();
+    return ret;
 }
 
 int layer_store_by_uncompress_digest(const char *digest, struct layer_list *resp)
 {
+    int ret = 0;
+
     if (resp == NULL) {
         return -1;
     }
-    return layers_by_digest_map(g_metadata.by_uncompress_digest, digest, resp);
+    if (!layer_store_lock(false)) {
+        return -1;
+    }
+
+    ret = layers_by_digest_map(g_metadata.by_uncompress_digest, digest, resp);
+    layer_store_unlock();
+    return ret;
 }
 
 struct layer *layer_store_lookup(const char *name)
