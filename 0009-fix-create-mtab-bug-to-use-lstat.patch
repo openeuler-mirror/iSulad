@@ -1,0 +1,70 @@
+From 8e5863fc9dd9795bcfa5a11b3c1d609e4f73465e Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Thu, 2 Jul 2020 10:16:19 +0800
+Subject: [PATCH 09/12] fix create mtab bug to use lstat
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ src/cutils/utils_file.c                    | 18 ++++++++++++++++++
+ src/cutils/utils_file.h                    |  2 ++
+ src/services/execution/execute/execution.c |  2 +-
+ 3 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/src/cutils/utils_file.c b/src/cutils/utils_file.c
+index f543145..1969d38 100644
+--- a/src/cutils/utils_file.c
++++ b/src/cutils/utils_file.c
+@@ -51,6 +51,24 @@ bool util_dir_exists(const char *path)
+     return S_ISDIR(s.st_mode);
+ }
+ 
++// This function is identical to "util_file_exists",except that if f is a symbolic file, return true
++bool util_fileself_exists(const char *f)
++{
++    struct stat buf;
++    int nret;
++
++    if (f == NULL) {
++        return false;
++    }
++
++    nret = lstat(f, &buf);
++    if (nret < 0) {
++        return false;
++    }
++    return true;
++}
++
++// When f is a symbolic file, if the file that it refers to not exits ,return false
+ bool util_file_exists(const char *f)
+ {
+     struct stat buf;
+diff --git a/src/cutils/utils_file.h b/src/cutils/utils_file.h
+index 11f702f..6944a4a 100644
+--- a/src/cutils/utils_file.h
++++ b/src/cutils/utils_file.h
+@@ -27,6 +27,8 @@ extern "C" {
+ 
+ bool util_dir_exists(const char *path);
+ 
++bool util_fileself_exists(const char *f);
++
+ bool util_file_exists(const char *f);
+ 
+ int util_path_remove(const char *path);
+diff --git a/src/services/execution/execute/execution.c b/src/services/execution/execute/execution.c
+index 4ffcde7..e6ce152 100644
+--- a/src/services/execution/execute/execution.c
++++ b/src/services/execution/execute/execution.c
+@@ -822,7 +822,7 @@ static int create_mtab_link(const oci_runtime_spec *oci_spec)
+         WARN("Failed to delete \"%s\": %s", dir, strerror(errno));
+     }
+ 
+-    if (util_file_exists(slink)) {
++    if (util_fileself_exists(slink)) {
+         goto out;
+     }
+ 
+-- 
+2.20.1
+

@@ -1,7 +1,7 @@
-From d5698095b50813afa2a0c0063c8a7c3df142bac9 Mon Sep 17 00:00:00 2001
+From ae7350ce59d092667a7777232b5364cc5c01115f Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 24 Jun 2020 12:07:39 +0800
-Subject: [PATCH 5/6] fix label-file reading bug
+Subject: [PATCH 05/12] fix label-file reading bug
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: wujing <wujing50@huawei.com>
  2 files changed, 4 insertions(+), 13 deletions(-)
 
 diff --git a/src/cmd/isula/base/create.c b/src/cmd/isula/base/create.c
-index 6fbc294e..148eea16 100644
+index 6fbc294..148eea1 100644
 --- a/src/cmd/isula/base/create.c
 +++ b/src/cmd/isula/base/create.c
 @@ -26,6 +26,7 @@
@@ -55,7 +55,7 @@ index 6fbc294e..148eea16 100644
  
  out:
 diff --git a/src/services/execution/spec/selinux_label.c b/src/services/execution/spec/selinux_label.c
-index 203ee29c..5732880f 100644
+index 203ee29..5732880 100644
 --- a/src/services/execution/spec/selinux_label.c
 +++ b/src/services/execution/spec/selinux_label.c
 @@ -125,7 +125,6 @@ static void find_selinux_fs_among_mounts(char **fs)
@@ -85,5 +85,5 @@ index 203ee29c..5732880f 100644
          }
          if (verify_selinuxfs_mount(fields[MOUNT_POOINT_FIFTH_FIELD - 1])) {
 -- 
-2.25.1
+2.20.1
 

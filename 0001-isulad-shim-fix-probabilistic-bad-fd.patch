@@ -1,7 +1,7 @@
-From 2c990693f8f78a202e2f7cc1115e133ad6950f34 Mon Sep 17 00:00:00 2001
+From 5fc7f3cd19ef0f22f47d31e45bf7d103568d1ae2 Mon Sep 17 00:00:00 2001
 From: leizhongkai <leizhongkai@huawei.com>
 Date: Thu, 18 Jun 2020 12:06:12 +0800
-Subject: [PATCH 1/6] isulad-shim: fix probabilistic bad fd
+Subject: [PATCH 01/12] isulad-shim: fix probabilistic bad fd
 
 1. fix `epoll_ctl()` probabilistic returns bad fd when the epfd not read
 2. fix typos
@@ -13,7 +13,7 @@ Signed-off-by: leizhongkai <leizhongkai@huawei.com>
  2 files changed, 25 insertions(+), 12 deletions(-)
 
 diff --git a/src/cmd/isulad-shim/process.c b/src/cmd/isulad-shim/process.c
-index cf315359..da9bdb64 100644
+index cf31535..da9bdb6 100644
 --- a/src/cmd/isulad-shim/process.c
 +++ b/src/cmd/isulad-shim/process.c
 @@ -242,7 +242,7 @@ static void* task_io_copy(void *data)
@@ -141,7 +141,7 @@ index cf315359..da9bdb64 100644
              return status;
          }
 diff --git a/src/cmd/isulad-shim/process.h b/src/cmd/isulad-shim/process.h
-index 6d0fb195..71bc20cc 100644
+index 6d0fb19..71bc20c 100644
 --- a/src/cmd/isulad-shim/process.h
 +++ b/src/cmd/isulad-shim/process.h
 @@ -75,6 +75,7 @@ typedef struct process {
@@ -153,5 +153,5 @@ index 6d0fb195..71bc20cc 100644
  
  typedef struct {
 -- 
-2.25.1
+2.20.1
 
