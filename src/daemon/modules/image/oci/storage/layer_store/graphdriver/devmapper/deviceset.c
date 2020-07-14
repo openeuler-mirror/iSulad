@@ -128,8 +128,6 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
             }
             devset->user_base_size = true;
             devset->base_fs_size = (uint64_t)converted;
-        } else if (strcasecmp(dup, "dm.mkfsarg") == 0 || strcasecmp(dup, "dm.mountopt") == 0) {
-            /* We have no way to check validation here, validation is checked when using them. */
         } else {
             isulad_set_error_message("devicemapper: unknown option: '%s'", dup);
             ret = -1;
@@ -2188,9 +2186,6 @@ static int delete_transaction(struct device_set *devset, image_devmapper_device_
     pool_fname = get_pool_dev_name(devset);
     nret = dev_delete_device(pool_fname, info->device_id);
     if (nret != 0) {
-        // If syncDelete is true, we want to return error. If deferred
-        // deletion is not enabled, we return an error. If error is
-        // something other then EBUSY, return an error.
         if (sync_delete || !devset->deferred_delete || nret != ERR_BUSY) {
             ERROR("devmapper: Error deleting device");
             ret = -1;
@@ -2772,7 +2767,8 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
 
     if (size < base_device_info->info->size) {
         ret = -1;
-        ERROR("devmapper: Container size cannot be smaller than %lu", base_device_info->info->size);
+        ERROR("devmapper: Container size:%lu cannot be smaller than %lu",size, base_device_info->info->size);
+        isulad_set_error_message("Container size cannot be smaller than %lu", base_device_info->info->size);
         goto free_out;
     }
 
@@ -2854,7 +2850,7 @@ int mount_device(const char *hash, const char *path, const struct driver_mount_o
     char *dev_fname = NULL;
     char *options = NULL;
 
-    if (hash == NULL || path == NULL || mount_opts == NULL) {
+    if (hash == NULL || path == NULL) {
         ERROR("devmapper: invalid input params to mount device");
         return -1;
     }

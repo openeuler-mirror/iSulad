@@ -164,7 +164,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     char *id_file = NULL;
     int ret = 0;
 
-    if (id == NULL || driver == NULL || mount_opts == NULL) {
+    if (id == NULL || driver == NULL) {
         return NULL;
     }
 
