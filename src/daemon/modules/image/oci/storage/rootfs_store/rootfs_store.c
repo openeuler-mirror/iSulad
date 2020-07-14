@@ -1036,8 +1036,7 @@ int rootfs_store_delete(const char *id)
 
     if (!rootfs_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock rootfs store");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     cntr = lookup(id);
@@ -1117,7 +1116,7 @@ int rootfs_store_wipe()
 
     if (!rootfs_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock rootfs store, not allowed to delete rootfs");
-        ret = -1;
+        return -1;
     }
 
     linked_list_for_each_safe(item, &(g_rootfs_store->rootfs_list), next) {
@@ -1275,8 +1274,7 @@ int rootfs_store_set_big_data(const char *id, const char *key, const char *data)
 
     if (!rootfs_store_lock(EXCLUSIVE)) {
         ERROR("Failed to lock rootfs store with exclusive lock, not allowed to change rootfs big data assignments");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     cntr = lookup(id);
@@ -1556,6 +1554,7 @@ static int get_size_with_update_big_data(const char *id, const char *key, int64_
     }
 
     free(data);
+    data = NULL;
 
     if (!rootfs_store_lock(SHARED)) {
         ERROR("Failed to lock rootfs store with shared lock, not allowed to get rootfs big data size assignments");
@@ -1612,6 +1611,7 @@ int64_t rootfs_store_big_data_size(const char *id, const char *key)
     bret = get_value_from_json_map_string_int64(cntr->srootfs->big_data_sizes, key, &size);
 
     rootfs_ref_dec(cntr);
+    rootfs_store_unlock();
 
     if (bret || get_size_with_update_big_data(id, key, &size) == 0) {
         goto out;
@@ -1620,7 +1620,6 @@ int64_t rootfs_store_big_data_size(const char *id, const char *key)
     ERROR("Size is not known");
 
 out:
-    rootfs_store_unlock();
     return size;
 }
 
@@ -1642,7 +1641,7 @@ static char *get_digest_with_update_big_data(const char *id, const char *key)
 
     if (!rootfs_store_lock(SHARED)) {
         ERROR("Failed to lock rootfs store with shared lock, not allowed to get container digest assignments");
-        goto out_unlock;
+        goto out;
     }
 
     cntr = lookup(id);

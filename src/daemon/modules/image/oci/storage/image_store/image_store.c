@@ -832,9 +832,6 @@ static int set_big_data_for_converted_image(const char *id, const char *config_d
     char *manifest_str = NULL;
     char *full_config_digest = NULL;
 
-    // unlock image store for set big data for converted image
-    image_store_unlock();
-
     full_config_digest = util_full_digest(config_digest);
     if (full_config_digest == NULL) {
         ret = -1;
@@ -867,12 +864,6 @@ static int set_big_data_for_converted_image(const char *id, const char *config_d
     }
 
 out:
-    // relock image store
-    if (!image_store_lock(EXCLUSIVE)) {
-        ERROR("Failed to lock image store with exclusive lock, not allowed to load images from json files");
-        ret = -1;
-    }
-
     free(full_config_digest);
     free(manifest_str);
     return ret;
@@ -1014,11 +1005,6 @@ static int get_images_from_json()
     char *id_patten = "^[a-f0-9]{64}$";
     char image_path[PATH_MAX] = { 0x00 };
 
-    if (!image_store_lock(EXCLUSIVE)) {
-        ERROR("Failed to lock image store with exclusive lock, not allowed to load images from json files");
-        return -1;
-    }
-
     ret = util_list_all_subdir(g_image_store->dir, &image_dirs);
     if (ret != 0) {
         ERROR("Failed to get images directory");
@@ -1062,7 +1048,6 @@ static int get_images_from_json()
 
 out:
     util_free_array(image_dirs);
-    image_store_unlock();
     return ret;
 }
 

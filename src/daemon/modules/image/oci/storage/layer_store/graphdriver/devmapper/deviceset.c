@@ -2767,7 +2767,7 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
 
     if (size < base_device_info->info->size) {
         ret = -1;
-        ERROR("devmapper: Container size:%lu cannot be smaller than %lu",size, base_device_info->info->size);
+        ERROR("devmapper: Container size:%lu cannot be smaller than %lu", size, base_device_info->info->size);
         isulad_set_error_message("Container size cannot be smaller than %lu", base_device_info->info->size);
         goto free_out;
     }
