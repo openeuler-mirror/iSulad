@@ -63,7 +63,7 @@ void auths_set_dir(char *auth_dir)
     return;
 }
 
-static int decode_auth(char *encoded, char **username, char **password)
+static int decode_auth_aes(char *encoded, char **username, char **password)
 {
     int nret = 0;
     int ret = 0;
@@ -147,7 +147,7 @@ out:
     return ret;
 }
 
-static char *encode_auth(char *username, char *password)
+static char *encode_auth_aes(char *username, char *password)
 {
     int ret = 0;
     int nret = 0;
@@ -259,9 +259,9 @@ int auths_load(char *host, char **username, char **password)
 
     for (i = 0; i < auths->auths->len; i++) {
         if (!strcmp(host, auths->auths->keys[i])) {
-            ret = decode_auth(auths->auths->values[i]->auth, username, password);
+            ret = decode_auth_aes(auths->auths->values[i]->auth, username, password);
             if (ret != 0) {
-                ERROR("Decode auth failed");
+                ERROR("Decode auth with aes failed");
                 goto out;
             }
         }
@@ -426,9 +426,9 @@ int auths_save(char *host, char *username, char *password)
         }
     }
 
-    auth = encode_auth(username, password);
+    auth = encode_auth_aes(username, password);
     if (auth == NULL) {
-        ERROR("encode auth failed");
+        ERROR("encode auth with aes failed");
         ret = -1;
         goto out;
     }

@@ -25,9 +25,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/unistd.h>
 
 #include "storage.h"
 #include "isula_libutils/json_common.h"
+#include "isula_libutils/storage_entry.h"
+#include "isula_libutils/go_crc64.h"
 #include "layer.h"
 #include "driver.h"
 #include "linked_list.h"
@@ -36,8 +41,12 @@
 #include "utils.h"
 #include "utils_array.h"
 #include "utils_file.h"
+#include "util_gzip.h"
 #include "isula_libutils/log.h"
 #include "constants.h"
+
+#define PAYLOAD_CRC_LEN 12
+#define FILE_CRC_LEN 8
 
 struct io_read_wrapper;
 
@@ -55,6 +64,11 @@ typedef struct digest_layer {
     struct linked_list layer_list;
     size_t layer_list_len;
 } digest_layer_t;
+
+typedef struct {
+    FILE *tmp_file;
+    storage_entry *entry;
+} tar_split;
 
 static layer_store_metadata g_metadata;
 static char *g_root_dir;
@@ -1655,4 +1669,308 @@ free_out:
 void layer_store_exit()
 {
     graphdriver_cleanup();
+}
+
+static uint64_t payload_to_crc(char *payload)
+{
+    int ret = 0;
+    int i = 0;
+    uint64_t crc = 0;
+    uint8_t crc_sums[FILE_CRC_LEN] = {0};
+
+    ret = util_base64_decode(payload, PAYLOAD_CRC_LEN, crc_sums, FILE_CRC_LEN);
+    if (ret < 0) {
+        ERROR("decode tar split payload from base64 failed, payload %s", payload);
+        return -1;
+    }
+
+    for (i = 0; i < FILE_CRC_LEN; i++) {
+        crc |= crc_sums[i];
+        if (i == FILE_CRC_LEN - 1) {
+            break;
+        }
+        crc <<= FILE_CRC_LEN;
+    }
+
+    return crc;
+}
+
+static int file_crc(char *file, uint64_t *crc, uint64_t policy)
+{
+#define BLKSIZE 32768
+    int ret = 0;
+    const isula_crc_table_t * ctab = NULL;
+    int fd = 0;
+    void *buffer = NULL;
+    ssize_t size = 0;
+
+    fd = util_open(file, O_RDONLY, 0);
+    if (fd < 0) {
+        ERROR("Open file: %s, failed: %s", file, strerror(errno));
+        return -1;
+    }
+
+    ctab = new_isula_crc_table(policy);
+    if (ctab == NULL || !ctab->inited) {
+        ERROR("create crc table failed");
+        ret = -1;
+        goto out;
+    }
+
+    buffer = util_common_calloc_s(BLKSIZE);
+    if (buffer == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    *crc = 0;
+    while (true) {
+        size = util_read_nointr(fd, buffer, BLKSIZE);
+        if (size < 0) {
+            ERROR("read file %s failed: %s", file, strerror(errno));
+            ret = -1;
+            break;
+        } else if (size == 0) {
+            break;
+        }
+
+        if (!isula_crc_update(ctab, crc, buffer, (size_t)size)) {
+            ERROR("crc update failed");
+            ret = -1;
+            break;
+        }
+    }
+
+out:
+
+    close(fd);
+    free(buffer);
+
+    return ret;
+}
+
+static int valid_crc(storage_entry *entry, char *rootfs)
+{
+    int ret = 0;
+    int nret = 0;
+    uint64_t crc = 0;
+    uint64_t expected_crc = 0;
+    char file[PATH_MAX] = {0};
+    struct stat st;
+
+    nret = snprintf(file, PATH_MAX, "%s/%s", rootfs, entry->name);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("snprintf %s/%s failed", rootfs, entry->name);
+        ret = -1;
+        goto out;
+    }
+
+    if (entry->payload == NULL) {
+        if (stat(file, &st) != 0) {
+            ERROR("stat file %s failed: %s", file, strerror(errno));
+            ret = -1;
+            goto out;
+        }
+    } else {
+        if (strlen(entry->payload) != PAYLOAD_CRC_LEN) {
+            ERROR("invalid payload %s of file %s", entry->payload, file);
+            ret = -1;
+            goto out;
+        }
+
+        ret = file_crc(file, &crc, ISO_POLY);
+        if (ret != 0) {
+            ERROR("calc crc of file %s failed", file);
+            ret = -1;
+            goto out;
+        }
+
+        expected_crc = payload_to_crc(entry->payload);
+        if (crc != expected_crc) {
+            ERROR("file %s crc 0x%jx not as expected 0x%jx", file, crc, expected_crc);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+
+    return ret;
+}
+
+static void free_tar_split(tar_split *ts)
+{
+    if (ts == NULL) {
+        return;
+    }
+    free_storage_entry(ts->entry);
+    ts->entry = NULL;
+    if (ts->tmp_file != NULL) {
+        fclose(ts->tmp_file);
+        ts->tmp_file = NULL;
+    }
+    free(ts);
+    return;
+}
+
+static tar_split *new_tar_split(layer_t *l)
+{
+    int ret = 0;
+    tar_split *ts = NULL;
+    char *tspath = NULL;
+
+    ts = util_common_calloc_s(sizeof(tar_split));
+    if (ts == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    ts->tmp_file = tmpfile();
+    if (ts->tmp_file == NULL) {
+        ERROR("create tmpfile failed: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    tspath = tar_split_path(l->slayer->id);
+    if (tspath == NULL) {
+        ERROR("get tar split path of layer %s failed", l->slayer->id);
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_gzip_d(tspath, ts->tmp_file);
+    if (ret != 0) {
+        ERROR("unzip tar split file %s failed", tspath);
+        goto out;
+    }
+
+    rewind(ts->tmp_file);
+
+out:
+    if (ret != 0) {
+        free_tar_split(ts);
+        ts = NULL;
+    }
+    free(tspath);
+
+    return ts;
+}
+
+static int next_tar_split_entry(tar_split *ts, storage_entry **entry)
+{
+    int ret = 0;
+    int nret = 0;
+    char *pline = NULL;
+    size_t length = 0;
+    char *errmsg = NULL;
+
+    nret = getline(&pline, &length, ts->tmp_file);
+    if (nret == -1) {
+        // end of file
+        if (errno == 0) {
+            *entry = NULL;
+            return 0;
+        }
+        ERROR("error read line from tar split: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    util_trim_newline(pline);
+
+    if (ts->entry != NULL) {
+        free_storage_entry(ts->entry);
+    }
+    ts->entry = storage_entry_parse_data(pline, NULL, &errmsg);
+    if (ts->entry == NULL) {
+        ERROR("parse tar split entry failed: %s\nline:%s", errmsg, pline);
+        ret = -1;
+        goto out;
+    }
+
+    *entry = ts->entry;
+
+out:
+    free(errmsg);
+    free(pline);
+
+    return ret;
+}
+
+static int do_integration_check(layer_t *l, char *rootfs)
+{
+#define STORAGE_ENTRY_TYPE_CRC 1
+    int ret = 0;
+    tar_split *ts = NULL;
+    storage_entry *entry = NULL;
+
+    ts = new_tar_split(l);
+    if (ts == NULL) {
+        ERROR("new tar split for layer %s failed", l->slayer->id);
+        return -1;
+    }
+
+    ret = next_tar_split_entry(ts, &entry);
+    if (ret != 0) {
+        ERROR("get next tar split entry failed");
+        goto out;
+    }
+    while (entry != NULL) {
+        if (entry->type == STORAGE_ENTRY_TYPE_CRC) {
+            ret = valid_crc(entry, rootfs);
+            if (ret != 0) {
+                ERROR("integration check failed, layer %s, file %s", l->slayer->id, entry->name);
+                goto out;
+            }
+        }
+
+        ret = next_tar_split_entry(ts, &entry);
+        if (ret != 0) {
+            ERROR("get next tar split entry failed");
+            goto out;
+        }
+    }
+
+out:
+    free_tar_split(ts);
+
+    return ret;
+}
+
+int layer_store_check(const char *id)
+{
+    int ret = 0;
+    char *rootfs = NULL;
+
+    layer_t *l = lookup_with_lock(id);
+    if (l == NULL || l->slayer == NULL) {
+        ERROR("layer %s not found when checking integration", id);
+        return -1;
+    }
+
+    // It's a container layer, not a layer of image, ignore checking
+    if (l->slayer->diff_digest == NULL) {
+        goto out;
+    }
+
+    rootfs = layer_store_mount(id, NULL);
+    if (rootfs == NULL) {
+        ERROR("mount layer of %s failed", id);
+        ret = -1;
+        goto out;
+    }
+
+    ret = do_integration_check(l, rootfs);
+    if (ret != 0) {
+        ERROR("do integration check failed for layer %s", l->slayer->id);
+        goto out;
+    }
+
+out:
+    (void)layer_store_umount(id, false);
+    layer_ref_dec(l);
+
+    return ret;
 }

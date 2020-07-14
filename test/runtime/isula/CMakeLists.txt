@@ -12,6 +12,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/util_atomic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/tar/util_gzip.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
@@ -34,6 +35,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/tar
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/services/execution/manager
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/events

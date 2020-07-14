@@ -72,6 +72,8 @@ void free_layer_opts(struct layer_opts *opts);
 
 int layer_store_get_layer_fs_info(const char *layer_id, imagetool_fs_info *fs_info);
 
+int layer_store_check(const char *id);
+
 #ifdef __cplusplus
 }
 #endif

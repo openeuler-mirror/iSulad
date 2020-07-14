@@ -42,7 +42,7 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
 
     stream = gzopen(dstfile, "w");
     if (stream == NULL) {
-        ERROR("gzopen error: %s", strerror(errno));
+        ERROR("gzopen %s error: %s", dstfile, strerror(errno));
         close(srcfd);
         return -1;
     }
@@ -89,27 +89,19 @@ out:
 }
 
 // Decompress
-int util_gzip_d(const char *srcfile, const char *dstfile, const mode_t mode)
+int util_gzip_d(const char *srcfile, const FILE *dstfp)
 {
     gzFile stream = NULL;
-    int dstfd = 0;
     const char *gzerr = NULL;
     int errnum = 0;
     int ret = 0;
-    ssize_t size = 0;
+    size_t size = 0;
     void *buffer = NULL;
     size_t n = 0;
 
     stream = gzopen(srcfile, "r");
     if (stream == NULL) {
-        ERROR("gzopen error: %s", strerror(errno));
-        return -1;
-    }
-
-    dstfd = util_open(dstfile, O_WRONLY | O_CREAT | O_TRUNC, mode);
-    if (dstfd < 0) {
-        ERROR("Creat file: %s failed: %s", dstfile, strerror(errno));
-        gzclose(stream);
+        ERROR("gzopen %s failed: %s", srcfile, strerror(errno));
         return -1;
     }
 
@@ -132,8 +124,8 @@ int util_gzip_d(const char *srcfile, const char *dstfile, const mode_t mode)
         }
 
         if (n > 0) {
-            size = util_write_nointr(dstfd, buffer, n);
-            if (size < 0 || ((size_t)size) != n) {
+            size = fwrite(buffer, 1, n, (FILE *)dstfp);
+            if (size != n) {
                 ret = -1;
                 ERROR("Write file failed: %s", strerror(errno));
                 break;
@@ -147,12 +139,9 @@ int util_gzip_d(const char *srcfile, const char *dstfile, const mode_t mode)
 
 out:
     gzclose(stream);
-    close(dstfd);
     free(buffer);
-    if (ret != 0) {
-        if (util_path_remove(dstfile) != 0) {
-            ERROR("Remove file %s failed: %s", dstfile, strerror(errno));
-        }
+    if (ret == 0) {
+        (void)fflush((FILE *)dstfp);
     }
 
     return ret;
