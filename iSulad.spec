@@ -1,5 +1,5 @@
 %global _version 2.0.3
-%global _release 20200628.170704.git76a33943
+%global _release 20200714.103041.git4c67aa03
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -8,7 +8,7 @@ Version:   %{_version}
 Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
-URL:       https://gitee.com/openeuler/iSulad
+URL:       https://gitee.com/openeuler/iSuladd40006-CI-add-testcases-use-host-rootfs.patch
 Source:    iSulad-%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
@@ -19,6 +19,12 @@ Patch9002:  0003-Add-Pull-Request-Template-And-Issue-Template.patch
 Patch9003:  0004-fix-bug-of-creating-symlink-for-etc-mtab-when-etc-sy.patch
 Patch9004:  0005-fix-label-file-reading-bug.patch
 Patch9005:  0006-CI-add-testcases-use-host-rootfs.patch
+Patch9006:  0007-add-d-disk-param-for-CI.patch
+Patch9007:  0008-events-fix-wrong-format-of-exec-command.patch
+Patch9008:  0009-fix-create-mtab-bug-to-use-lstat.patch
+Patch9009:  0010-init-struct.patch
+Patch9010:  0011-Fix-stuck-problem-caused-by-websocket-traffic-restri.patch
+Patch9011:  0012-build-add-checkout-LTS-tag-for-third-party-software.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)

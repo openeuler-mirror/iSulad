@@ -1,7 +1,7 @@
-From 74229fbdc66ba00b8bb3febbd4cdfa3358375a9a Mon Sep 17 00:00:00 2001
+From edcab5958f38a7924700fa39b9142ad21062c79b Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 24 Jun 2020 11:11:45 +0800
-Subject: [PATCH 3/6] Add Pull Request Template And Issue Template
+Subject: [PATCH 03/12] Add Pull Request Template And Issue Template
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -18,7 +18,7 @@ Signed-off-by: wujing <wujing50@huawei.com>
 
 diff --git a/.gitee/ISSUE_TEMPLATE.en.md b/.gitee/ISSUE_TEMPLATE.en.md
 new file mode 100644
-index 00000000..a00edf17
+index 0000000..a00edf1
 --- /dev/null
 +++ b/.gitee/ISSUE_TEMPLATE.en.md
 @@ -0,0 +1,13 @@
@@ -37,7 +37,7 @@ index 00000000..a00edf17
 +
 diff --git a/.gitee/ISSUE_TEMPLATE.zh-CN.md b/.gitee/ISSUE_TEMPLATE.zh-CN.md
 new file mode 100644
-index 00000000..aac2216e
+index 0000000..aac2216
 --- /dev/null
 +++ b/.gitee/ISSUE_TEMPLATE.zh-CN.md
 @@ -0,0 +1,16 @@
@@ -59,7 +59,7 @@ index 00000000..aac2216e
 +
 diff --git a/.gitee/PULL_REQUEST_TEMPLATE.en.md b/.gitee/PULL_REQUEST_TEMPLATE.en.md
 new file mode 100644
-index 00000000..911ad96d
+index 0000000..911ad96
 --- /dev/null
 +++ b/.gitee/PULL_REQUEST_TEMPLATE.en.md
 @@ -0,0 +1,16 @@
@@ -81,7 +81,7 @@ index 00000000..911ad96d
 +### Validation Report
 diff --git a/.gitee/PULL_REQUEST_TEMPLATE.zh-CN.md b/.gitee/PULL_REQUEST_TEMPLATE.zh-CN.md
 new file mode 100644
-index 00000000..a842cab7
+index 0000000..a842cab
 --- /dev/null
 +++ b/.gitee/PULL_REQUEST_TEMPLATE.zh-CN.md
 @@ -0,0 +1,15 @@
@@ -101,7 +101,7 @@ index 00000000..a842cab7
 +
 +### 验证报告
 diff --git a/.gitignore b/.gitignore
-index 11cbe8e8..7e1bcf63 100644
+index 11cbe8e..7e1bcf6 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -2,7 +2,10 @@ build
@@ -116,5 +116,5 @@ index 11cbe8e8..7e1bcf63 100644
 +compile_commands.json
 +tags
 -- 
-2.25.1
+2.20.1
 

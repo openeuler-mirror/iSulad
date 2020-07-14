@@ -1,7 +1,7 @@
-From 9e2556703a44d96feb66972541ce200cd018801a Mon Sep 17 00:00:00 2001
+From e822b71ddcc50611e0718304ab2f93e41632ca66 Mon Sep 17 00:00:00 2001
 From: jikui <jikui2@huawei.com>
 Date: Tue, 23 Jun 2020 20:59:09 +0800
-Subject: [PATCH 2/6] iSulad: resolve coredump of isula inspect ""
+Subject: [PATCH 02/12] iSulad: resolve coredump of isula inspect ""
 
 Signed-off-by: jikui <jikui2@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: jikui <jikui2@huawei.com>
  1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/src/cmd/isula/information/inspect.c b/src/cmd/isula/information/inspect.c
-index e9b6ff6d..fe011ad9 100644
+index e9b6ff6..fe011ad 100644
 --- a/src/cmd/isula/information/inspect.c
 +++ b/src/cmd/isula/information/inspect.c
 @@ -199,8 +199,9 @@ static int client_inspect_container(const struct isula_inspect_request *request,
@@ -33,5 +33,5 @@ index e9b6ff6d..fe011ad9 100644
      }
      exit(EXIT_SUCCESS);
 -- 
-2.25.1
+2.20.1
 
