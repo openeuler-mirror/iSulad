@@ -28,12 +28,11 @@ extern "C" {
 // note: the output length must include the '\0' and the return size is include the '\0'.
 size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t out_len);
 size_t util_base64_encode_len(size_t len);
-size_t util_base64_decode(char *input, size_t len, unsigned char *out, size_t out_len);
-size_t util_base64_decode_len(char *input, size_t len);
+size_t util_base64_decode(const char *input, size_t len, unsigned char *out, size_t out_len);
+size_t util_base64_decode_len(const char *input, size_t len);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // UTILS_CUTILS_UTILS_BASE64_H
-

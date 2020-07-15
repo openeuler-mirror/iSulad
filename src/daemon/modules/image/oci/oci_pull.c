@@ -30,7 +30,7 @@
 #include "utils_base64.h"
 #include "utils_string.h"
 
-static int decode_auth(char *auth, char **username, char **password)
+static int decode_auth(const char *auth, char **username, char **password)
 {
     int nret = 0;
     int ret = 0;
@@ -111,14 +111,16 @@ static int pull_image(const im_pull_request *request, char **name)
         ERROR("Out of memory");
         goto out;
     }
-    options->auth.username = request->username;
-    options->auth.password = request->password;
+
     if (request->auth != NULL) {
         ret = decode_auth(request->auth, &options->auth.username, &options->auth.password);
         if (ret != 0) {
             ERROR("Decode auth failed");
             goto out;
         }
+    } else {
+        options->auth.username = util_strdup_s(request->username);
+        options->auth.password = util_strdup_s(request->password);
     }
 
     options->skip_tls_verify = conf_get_skip_insecure_verify_flag();

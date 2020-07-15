@@ -116,7 +116,7 @@ size_t util_base64_encode_len(size_t len)
     }
 }
 
-size_t util_base64_decode_len(char *input, size_t len)
+size_t util_base64_decode_len(const char *input, size_t len)
 {
     size_t padding_count = 0;
 
@@ -135,7 +135,7 @@ size_t util_base64_decode_len(char *input, size_t len)
     return (strlen(input) / 4 * 3) - padding_count;
 }
 
-size_t util_base64_decode(char *input, size_t len, unsigned char *out, size_t out_len)
+size_t util_base64_decode(const char *input, size_t len, unsigned char *out, size_t out_len)
 {
     BIO *base64 = NULL;
     BIO *io = NULL;

@@ -30,7 +30,10 @@ function test_crictl_image()
 
   msg_info "${test} starting..."
 
-  crictl pull ${image}
+  crictl pull --creds test:test ${image}
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+
+  crictl pull --auth dGVzdDp0ZXN0 ${image}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
 
   crictl inspecti busybox | grep busybox
