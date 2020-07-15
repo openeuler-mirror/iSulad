@@ -93,8 +93,8 @@ check_make_status make_cni_plugins ${build_log_cni_plugins} &
 cd ~
 git clone https://gitee.com/src-openeuler/lxc.git
 cd lxc
-tar xf lxc-4.0.1.tar.gz
-cd lxc-4.0.1
+tar xf lxc-4.0.3.tar.gz
+cd lxc-4.0.3
 mv ../*.patch .
 for var in $(ls 0*.patch | sort -n)
 do

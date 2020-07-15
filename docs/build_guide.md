@@ -100,9 +100,9 @@ iSulad depend on some specific versions dependencies.
 ```
 $ git clone https://gitee.com/src-openeuler/lxc.git
 $ cd lxc
-$ tar -zxf lxc-4.0.1.tar.gz
+$ tar -zxf lxc-4.0.3.tar.gz
 $ ./apply-patches
-$ cd lxc-4.0.1
+$ cd lxc-4.0.3
 $ sudo -E ./autogen.sh
 $ sudo -E ./configure
 $ sudo -E make -j
