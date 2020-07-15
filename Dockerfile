@@ -241,7 +241,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	git clone https://gitee.com/src-openeuler/lxc.git && \
 	cd lxc && \
 	./apply-patches && \
-	cd lxc-4.0.1 && \
+	cd lxc-4.0.3 && \
 	./autogen.sh && \
 	./configure && \
 	make -j $(nproc) && \
