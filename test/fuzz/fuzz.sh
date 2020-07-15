@@ -15,6 +15,8 @@ fi
 
 # 运行fuzz测试程序
 ${current_dir}/im_oci_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_oci_image_exist_fuzz-
+${current_dir}/im_config_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_config_image_exist_fuzz-
+${current_dir}/im_get_image_count_fuzz ${FUZZ_OPTION} -artifact_prefix=im_get_image_count_fuzz-
 
 # 查找crash文件
 
@@ -26,4 +28,6 @@ if [ x"${crash}" != x"" ];then
     exit 1
 else
     echo "all fuzz success."
+    rm -f ${current_dir}/corpus/*
+    rm -f ${current_dir}/*_fuzz
 fi
