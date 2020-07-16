@@ -567,35 +567,27 @@ TEST_F(RegistryUnitTest, test_pull_v1_image)
 
 TEST_F(RegistryUnitTest, test_login)
 {
-    registry_login_options *options = NULL;
+    registry_login_options options = {0};
 
-    options = (registry_login_options *)util_common_calloc_s(sizeof(registry_login_options));
-    ASSERT_NE(options, nullptr);
-
-    options->host = util_strdup_s("hub-mirror.c.163.com");
-    options->auth.username = util_strdup_s("test");
-    options->auth.password = util_strdup_s("test");
-    options->skip_tls_verify = true;
-    options->insecure_registry = true;
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_,::testing::_,::testing::_,::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestLogin));
-    ASSERT_EQ(registry_login(options), 0);
 
-    free(options->host);
-    options->host = util_strdup_s("test2.com");
-    free(options->auth.username);
-    options->auth.username = util_strdup_s("test2");
-    free(options->auth.password);
-    options->auth.password = util_strdup_s("test2");
-    ASSERT_EQ(registry_login(options), 0);
+    options.host = (char*)"test2.com";
+    options.auth.username = (char*)"test2";
+    options.auth.password = (char*)"test2";
+    options.skip_tls_verify = true;
+    options.insecure_registry = true;
+    ASSERT_EQ(registry_login(&options), 0);
 
-    free(options->host);
-    options->host = util_strdup_s("hub-mirror.c.163.com");
-    free(options->auth.username);
-    options->auth.username = util_strdup_s("test3");
-    free(options->auth.password);
-    options->auth.password = util_strdup_s("test3");
-    ASSERT_EQ(registry_login(options), 0);
+    options.host = (char*)"hub-mirror.c.163.com";
+    options.auth.username = (char*)"test";
+    options.auth.password = (char*)"test";
+    ASSERT_EQ(registry_login(&options), 0);
+
+    options.host = (char*)"hub-mirror.c.163.com";
+    options.auth.username = (char*)"test3";
+    options.auth.password = (char*)"test3";
+    ASSERT_EQ(registry_login(&options), 0);
 }
 
 TEST_F(RegistryUnitTest, test_logout)

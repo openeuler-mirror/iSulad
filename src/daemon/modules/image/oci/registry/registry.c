@@ -1823,15 +1823,3 @@ void free_registry_pull_options(registry_pull_options *options)
     free(options);
     return;
 }
-
-void free_registry_login_options(registry_login_options *options)
-{
-    if (options == NULL) {
-        return;
-    }
-    free_registry_auth(&options->auth);
-    free(options->host);
-    options->host = NULL;
-    free(options);
-    return;
-}
