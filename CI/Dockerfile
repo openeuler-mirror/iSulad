@@ -46,6 +46,7 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			docbook2X \
 			libselinux \
 			libselinux-devel \
+			container-selinux \
 			libseccomp \
 			libseccomp-devel \
 			yajl-devel \

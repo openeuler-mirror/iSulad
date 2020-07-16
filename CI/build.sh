@@ -88,7 +88,7 @@ declare -A scripts
 pwd
 TESTCASE_PATH="./CI/test_cases"
 
-for file in $(find ${TESTCASE_PATH} -not \( -path '.*/data' -prune \) -regextype posix-extended -regex ".*\.(bash)" | grep -v "helpers.bash" | sort)
+for file in $(find ${TESTCASE_PATH} -not \( -path '.*/data' -prune \) -not \( -path "${TESTCASE_PATH}/manual_cases" -prune \) -regextype posix-extended -regex ".*\.(bash)" | grep -v "helpers.bash" | sort)
 do
     attributes=$(sed -n '3p' $file)
     if [[ "x$attributes" == "x" ]] || [[ ! "${attributes}" =~ "attributes:" ]];then
