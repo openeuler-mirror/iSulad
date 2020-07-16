@@ -22,6 +22,10 @@
 #include <isula_libutils/container_inspect.h>
 #include <isula_libutils/storage_layer.h>
 #include <isula_libutils/storage_mount_point.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/log.h>
+#include <isula_libutils/storage_entry.h>
+#include <isula_libutils/go_crc64.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,10 +33,10 @@
 #include <sys/stat.h>
 #include <sys/unistd.h>
 
+#include <archive.h>
+#include <archive_entry.h>
+
 #include "storage.h"
-#include "isula_libutils/json_common.h"
-#include "isula_libutils/storage_entry.h"
-#include "isula_libutils/go_crc64.h"
 #include "layer.h"
 #include "driver.h"
 #include "linked_list.h"
@@ -42,7 +46,9 @@
 #include "utils_array.h"
 #include "utils_file.h"
 #include "util_gzip.h"
-#include "isula_libutils/log.h"
+#include "buffer.h"
+#include "http.h"
+#include "utils_base64.h"
 #include "constants.h"
 
 #define PAYLOAD_CRC_LEN 12
@@ -81,6 +87,8 @@ static int insert_digest_into_map(map_t *by_digest, const char *digest, const ch
 static int delete_digest_from_map(map_t *by_digest, const char *digest, const char *id);
 
 static bool remove_name(const char *name);
+
+#define READ_BLOCK_SIZE 10240
 
 static inline bool layer_store_lock(bool writable)
 {
@@ -399,6 +407,20 @@ save_json:
 out:
     free_graphdriver_mount_opts(d_opts);
     return mount_point;
+}
+
+static inline char *tar_split_tmp_path(const char *id)
+{
+    char *result = NULL;
+    int nret = 0;
+
+    nret = asprintf(&result, "%s/%s/%s.tar-split", g_root_dir, id, id);
+    if (nret < 0 || nret > PATH_MAX) {
+        SYSERROR("Create tar split path failed");
+        return NULL;
+    }
+
+    return result;
 }
 
 static inline char *tar_split_path(const char *id)
@@ -815,23 +837,280 @@ out:
     return ret;
 }
 
+static void free_archive_read(struct archive *read_a)
+{
+    if (read_a == NULL) {
+        return;
+    }
+    archive_read_close(read_a);
+    archive_read_free(read_a);
+}
+
+static struct archive *create_archive_read(int fd)
+{
+    int nret = 0;
+    struct archive *ret = NULL;
+
+    ret = archive_read_new();
+    if (ret == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+    nret = archive_read_support_filter_all(ret);
+    if (nret != 0) {
+        ERROR("archive read support compression all failed");
+        goto err_out;
+    }
+    nret = archive_read_support_format_all(ret);
+    if (nret != 0) {
+        ERROR("archive read support format all failed");
+        goto err_out;
+    }
+    nret = archive_read_open_fd(ret, fd, READ_BLOCK_SIZE);
+    if (nret != 0) {
+        ERROR("archive read open file failed: %s", archive_error_string(ret));
+        goto err_out;
+    }
+
+    return ret;
+err_out:
+    free_archive_read(ret);
+    return NULL;
+}
+
+typedef int (*archive_entry_cb_t)(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf);
+
+static void free_storage_entry_data(storage_entry *entry)
+{
+    if (entry->name != NULL) {
+        free(entry->name);
+        entry->name = NULL;
+    }
+    if (entry->payload != NULL) {
+        free(entry->payload);
+        entry->payload = NULL;
+    }
+}
+
+static char *caculate_playload(struct archive *ar)
+{
+    int r = 0;
+    unsigned char *block_buf = NULL;
+    size_t block_size = 0;
+#if ARCHIVE_VERSION_NUMBER >= 3000000
+    int64_t block_offset = 0;
+#else
+    off_t block_offset = 0;
+#endif
+    char *ret = NULL;
+    int nret = 0;
+    const isula_crc_table_t* ctab = NULL;
+    uint64_t crc = 0;
+    unsigned char sum_data[8] = {0};
+    unsigned char tmp_data[9] = {0};
+    bool empty = true;
+
+    ctab = new_isula_crc_table(ISO_POLY);
+
+    if (ctab == NULL) {
+        return NULL;
+    }
+
+    for (;;) {
+        r = archive_read_data_block(ar, (const void **)&block_buf, &block_size, &block_offset);
+        if (r == ARCHIVE_EOF) {
+            break;
+        }
+        if (r != ARCHIVE_OK) {
+            nret = -1;
+            break;
+        }
+        if (!isula_crc_update(ctab, &crc, block_buf, block_size)) {
+            nret = -1;
+            break;
+        }
+        empty = false;
+    }
+    if (empty) {
+        goto out;
+    }
+
+    isula_crc_sum(crc, sum_data);
+    for (r = 0; r < 8; r++) {
+        tmp_data[r] = sum_data[r];
+    }
+    nret = util_base64_encode(tmp_data, 8, &ret);
+
+    if (nret != 0) {
+        return NULL;
+    }
+
+out:
+    return ret;
+}
+
+static int archive_entry_parse(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf)
+{
+    storage_entry sentry = { 0 };
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, stderr };
+    parser_error jerr = NULL;
+    char *data = NULL;
+    int ret = -1;
+    ssize_t nret = 0;
+
+    // get entry information: name, size
+    sentry.type = 1;
+    sentry.name = util_strdup_s(archive_entry_pathname(entry));
+    sentry.size = archive_entry_size(entry);
+    sentry.position = position;
+    // caculate playload
+    sentry.payload = caculate_playload(ar);
+
+    data = storage_entry_generate_json(&sentry, &ctx, &jerr);
+    if (data == NULL) {
+        ERROR("parse entry failed: %s", jerr);
+        goto out;
+    }
+    nret = buffer_append(json_buf, data, strlen(data));
+    if (nret != 0) {
+        goto out;
+    }
+    nret = buffer_append(json_buf, "\n", 1);
+    if (nret != 0) {
+        goto out;
+    }
+
+    ret = 0;
+out:
+    free_storage_entry_data(&sentry);
+    free(data);
+    free(jerr);
+    return ret;
+}
+
+static int foreach_archive_entry(archive_entry_cb_t cb, int fd, const char *dist)
+{
+    int ret = -1;
+    int nret = 0;
+    struct archive *read_a = NULL;
+    struct archive_entry *entry = NULL;
+    int32_t position = 0;
+    Buffer *json_buf = NULL;
+
+    // we need reset fd point to first position
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        ERROR("can not reposition of archive file");
+        goto out;
+    }
+    json_buf = buffer_alloc(HTTP_GET_BUFFER_SIZE);
+    if (json_buf == NULL) {
+        ERROR("Failed to malloc output_buffer");
+        goto out;
+    }
+
+    read_a = create_archive_read(fd);
+    if (read_a == NULL) {
+        goto out;
+    }
+
+    for (;;) {
+        nret = archive_read_next_header(read_a, &entry);
+        if (nret == ARCHIVE_EOF) {
+            DEBUG("read entry: %d", position);
+            break;
+        }
+        if (nret != ARCHIVE_OK) {
+            ERROR("archive read header failed: %s", archive_error_string(read_a));
+            goto out;
+        }
+        nret = cb(entry, read_a, position, json_buf);
+        if (nret != 0) {
+            goto out;
+        }
+        position++;
+    }
+    nret = util_atomic_write_file(dist, json_buf->contents, json_buf->bytes_used, SECURE_CONFIG_FILE_MODE);
+    if (nret != 0) {
+        ERROR("save tar split failed");
+        goto out;
+    }
+
+    ret = 0;
+out:
+    buffer_free(json_buf);
+    free_archive_read(read_a);
+    return ret;
+}
+
+static int make_tar_split_file(const char *lid, const struct io_read_wrapper *diff)
+{
+    /*
+     * step 1: read header;
+     * step 2: build entry json;
+     * step 3: write into tar split;
+     * step 4: gzip tar split, and save file.
+     * */
+    int *pfd = (int *)diff->context;
+    char *save_fname = NULL;
+    char *save_fname_gz = NULL;
+    int ret = -1;
+
+    save_fname = tar_split_tmp_path(lid);
+    if (save_fname == NULL) {
+        return -1;
+    }
+    save_fname_gz = tar_split_path(lid);
+    if (save_fname_gz == NULL) {
+        goto out;
+    }
+
+    ret = foreach_archive_entry(archive_entry_parse, *pfd, save_fname);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // not exist entry for layer, just return 0
+    if (!util_file_exists(save_fname)) {
+        goto out;
+    }
+
+    // gzip tar split file
+    ret = util_gzip_z(save_fname, save_fname_gz, SECURE_CONFIG_FILE_MODE);
+
+    // always remove tmp tar split file, even though gzip failed.
+    // if remove failed, just log message
+    if (util_path_remove(save_fname) != 0) {
+        WARN("remove tmp tar split failed");
+    }
+
+out:
+    free(save_fname_gz);
+    free(save_fname);
+    return ret;
+}
+
 static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
 {
     int64_t size = 0;
     int ret = 0;
+    int nret = 0;
 
     if (diff == NULL) {
         return 0;
     }
 
-    ret = graphdriver_apply_diff(l->slayer->id, diff, &size);
+    nret = graphdriver_apply_diff(l->slayer->id, diff, &size);
+    if (nret != 0) {
+        goto out;
+    }
 
     INFO("Apply layer get size: %ld", size);
     l->slayer->diff_size = size;
     // uncompress digest get from up caller
 
-    // TODO: save split tar
+    ret = make_tar_split_file(l->slayer->id, diff);
 
+out:
     return ret;
 }
 
@@ -1689,7 +1968,7 @@ static uint64_t payload_to_crc(char *payload)
         if (i == crc_sums_len - 1) {
             break;
         }
-        crc <<= crc_sums_len;
+        crc <<= 8;
     }
 
     return crc;
