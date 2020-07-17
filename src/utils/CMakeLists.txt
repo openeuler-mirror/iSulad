@@ -6,6 +6,7 @@ add_subdirectory(cutils)
 add_subdirectory(sha256)
 add_subdirectory(tar)
 add_subdirectory(http)
+add_subdirectory(buffer)
 
 set(local_utils_srcs
     ${utils_top_srcs}
@@ -13,6 +14,7 @@ set(local_utils_srcs
     ${SHA256_SRCS}
     ${CUTILS_SRCS}
     ${CONSOLE_SRCS}
+    ${BUFFER_SRCS}
     )
 
 set(local_utils_incs
@@ -21,6 +23,7 @@ set(local_utils_incs
     ${SHA256_INCS}
     ${CUTILS_INCS}
     ${CONSOLE_INCS}
+    ${BUFFER_INCS}
     )
 
 if (GRPC_CONNECTOR)

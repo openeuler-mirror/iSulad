@@ -17,7 +17,7 @@
 
 #include <stddef.h>
 
-#include "http/buffer.h"
+#include "buffer.h"
 #include "http/http.h"
 #include "parser.h"
 
@@ -49,4 +49,3 @@ void put_body(char *body);
 #endif
 
 #endif // UTILS_HTTP_REST_COMMON_H
-
