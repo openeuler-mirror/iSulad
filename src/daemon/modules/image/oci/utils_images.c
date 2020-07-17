@@ -286,7 +286,6 @@ char *make_big_data_base_name(const char *key)
     int ret = 0;
     int nret = 0;
     char *b64_encode_name = NULL;
-    size_t b64_encode_name_len = 0;
     char *base_name = NULL;
     size_t name_size;
 
@@ -294,15 +293,7 @@ char *make_big_data_base_name(const char *key)
         return util_strdup_s(key);
     }
 
-    b64_encode_name_len = util_base64_encode_len(strlen(key));
-    b64_encode_name = util_common_calloc_s(b64_encode_name_len + 1);
-    if (b64_encode_name == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    nret = util_base64_encode((unsigned char *)key, strlen(key), b64_encode_name, b64_encode_name_len);
+    nret = util_base64_encode((unsigned char *)key, strlen(key), &b64_encode_name);
     if (nret < 0) {
         ret = -1;
         ERROR("Encode auth to base64 failed");

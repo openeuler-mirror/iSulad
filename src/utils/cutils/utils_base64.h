@@ -25,11 +25,11 @@
 extern "C" {
 #endif
 
-// note: the output length must include the '\0' and the return size is include the '\0'.
-size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t out_len);
-size_t util_base64_encode_len(size_t len);
-size_t util_base64_decode(const char *input, size_t len, unsigned char *out, size_t out_len);
-size_t util_base64_decode_len(const char *input, size_t len);
+int util_base64_encode(unsigned char *bytes, size_t len, char **out);
+
+// note: The result out put will be *out_len + 1, and it's filled with '\0', so if the decoded
+//       data is a string, it's safe to use it as a string.
+int util_base64_decode(const char *input, size_t len, unsigned char **out, size_t *out_len);
 
 #ifdef __cplusplus
 }

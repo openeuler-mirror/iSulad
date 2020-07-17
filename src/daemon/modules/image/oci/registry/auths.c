@@ -78,17 +78,7 @@ static int decode_auth_aes(char *encoded, char **username, char **password)
         return -1;
     }
 
-    decoded_len = util_base64_decode_len(encoded, strlen(encoded));
-    if (decoded_len < 0) {
-        return -1;
-    }
-    decoded = util_common_calloc_s(decoded_len);
-    if (decoded == NULL) {
-        ERROR("out of memory");
-        return -1;
-    }
-
-    nret = util_base64_decode(encoded, strlen(encoded), decoded, decoded_len);
+    nret = util_base64_decode(encoded, strlen(encoded), &decoded, &decoded_len);
     if (nret < 0) {
         ERROR("decode auth from base64 failed");
         ret = -1;
@@ -108,21 +98,14 @@ static int decode_auth_aes(char *encoded, char **username, char **password)
         goto out;
     }
 
-    // auth is encoded by base64.
-    decoded_len = util_base64_decode_len(auth, strlen(auth));
-    if (decoded_len < 0) {
-        ERROR("calc base64 decode length for auth failed");
-        ret = -1;
-        goto out;
-    }
-
-    nret = util_base64_decode(auth, strlen(auth), decoded, decoded_len);
+    free(decoded);
+    decoded = NULL;
+    nret = util_base64_decode(auth, strlen(auth), &decoded, &decoded_len);
     if (nret < 0) {
         ERROR("decode auth from base64 failed");
         ret = -1;
         goto out;
     }
-    decoded[decoded_len] = 0;
 
     auth_parts = util_string_split((char *)decoded, ':');
     if (auth_parts == NULL || util_array_len((const char **)auth_parts) != 2) {
@@ -152,7 +135,6 @@ static char *encode_auth_aes(char *username, char *password)
     int ret = 0;
     int nret = 0;
     int sret = 0;
-    size_t plain_text_base64_len = 0;
     size_t plain_text_base64_encode_len = 0;
     char *plain_text_base64 = NULL;
     char plain_text[PATH_MAX] = { 0 };
@@ -160,7 +142,6 @@ static char *encode_auth_aes(char *username, char *password)
     size_t aes_buf_len = 0;
     size_t aes_len = 0;
     char *aes_base64 = NULL;
-    size_t aes_base64_len = 0;
 
     sret = snprintf(plain_text, sizeof(plain_text), "%s:%s", username, password);
     if (sret < 0 || (size_t)sret >= sizeof(plain_text)) {
@@ -169,16 +150,7 @@ static char *encode_auth_aes(char *username, char *password)
         goto out;
     }
 
-    plain_text_base64_len = util_base64_encode_len(strlen(plain_text));
-    plain_text_base64 = util_common_calloc_s(plain_text_base64_len);
-    if (plain_text_base64 == NULL) {
-        ERROR("out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    nret = util_base64_encode((unsigned char *)plain_text, strlen(plain_text), plain_text_base64,
-                              plain_text_base64_len);
+    nret = util_base64_encode((unsigned char *)plain_text, strlen(plain_text), &plain_text_base64);
     if (nret < 0) {
         ERROR("encode plain text to auth failed");
         ret = -1;
@@ -186,7 +158,7 @@ static char *encode_auth_aes(char *username, char *password)
     }
 
     // Do not encode char '\0'
-    plain_text_base64_encode_len = plain_text_base64_len - 1;
+    plain_text_base64_encode_len = strlen(plain_text_base64);
     aes_buf_len = util_aes_encode_buf_len(plain_text_base64_encode_len);
     aes_len = AES_256_CFB_IV_LEN + plain_text_base64_encode_len;
     aes = util_common_calloc_s(aes_buf_len);
@@ -202,15 +174,7 @@ static char *encode_auth_aes(char *username, char *password)
         goto out;
     }
 
-    aes_base64_len = util_base64_encode_len(aes_len);
-    aes_base64 = util_common_calloc_s(aes_base64_len + 1);
-    if (aes_base64 == NULL) {
-        ERROR("out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    nret = util_base64_encode(aes, aes_len, aes_base64, aes_base64_len);
+    nret = util_base64_encode(aes, aes_len, &aes_base64);
     if (nret < 0) {
         ERROR("encode plain text to auth failed");
         ret = -1;

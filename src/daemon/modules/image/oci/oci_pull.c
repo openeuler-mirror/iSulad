@@ -43,17 +43,7 @@ static int decode_auth(const char *auth, char **username, char **password)
         return -1;
     }
 
-    decoded_len = util_base64_decode_len(auth, strlen(auth));
-    if (decoded_len < 0) {
-        return -1;
-    }
-    decoded = util_common_calloc_s(decoded_len + 1);
-    if (decoded == NULL) {
-        ERROR("out of memory");
-        return -1;
-    }
-
-    nret = util_base64_decode(auth, strlen(auth), decoded, decoded_len);
+    nret = util_base64_decode(auth, strlen(auth), &decoded, &decoded_len);
     if (nret < 0) {
         ERROR("decode auth from base64 failed");
         ret = -1;

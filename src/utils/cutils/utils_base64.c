@@ -23,20 +23,21 @@
 #include "isula_libutils/log.h"
 #include "utils_base64.h"
 #include "openssl/bio.h"
+#include "utils.h"
 
-size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t out_len)
+int util_base64_encode(unsigned char *bytes, size_t len, char **out)
 {
     BIO *base64 = NULL;
     BIO *io = NULL;
-    size_t result_len = 0;
     int ret = 0;
     int bio_ret = 0;
     BUF_MEM *pmem = NULL;
     size_t i = 0;
+    char *out_put = NULL;
     size_t count = 0;
 
-    if (bytes == NULL || len == 0 || out == NULL || out_len < util_base64_encode_len(len)) {
-        ERROR("Invalid param for encoding base64, input length %zu, out length %zu", len, out_len);
+    if (bytes == NULL || len == 0 || out == NULL) {
+        ERROR("Invalid param for encoding base64");
         return -1;
     }
 
@@ -69,18 +70,19 @@ size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t ou
     }
 
     (void)BIO_get_mem_ptr(io, &pmem);
+    out_put = util_common_calloc_s(pmem->length + 1);
+    if (out_put == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
     // BIO_write append '\n' if every 76 chars have be output, so we need to strip them.
     for (i = 0; i < pmem->length; i++) {
         if (pmem->data[i] == '\n') {
             continue;
         }
-        if (count + 1 == out_len) {
-            ERROR("result length larger than output length, result length %zu, input length %zu, output length %zu",
-                  pmem->length, len, out_len);
-            ret = -1;
-            goto out;
-        }
-        out[count] = pmem->data[i];
+        out_put[count] = pmem->data[i];
         count++;
     }
 
@@ -90,8 +92,8 @@ size_t util_base64_encode(unsigned char *bytes, size_t len, char *out, size_t ou
         goto out;
     }
 
-    out[count] = 0;
-    result_len = count + 1;
+    out_put[count] = 0;
+    *out = out_put;
 
 out:
 
@@ -101,19 +103,11 @@ out:
     }
 
     if (ret != 0) {
-        return -1;
-    } else {
-        return result_len;
+        free(out_put);
+        out_put = NULL;
     }
-}
 
-size_t util_base64_encode_len(size_t len)
-{
-    if (len % 3 == 0) {
-        return len / 3 * 4 + 1;
-    } else {
-        return (len / 3 + 1) * 4 + 1;
-    }
+    return ret;
 }
 
 size_t util_base64_decode_len(const char *input, size_t len)
@@ -135,17 +129,17 @@ size_t util_base64_decode_len(const char *input, size_t len)
     return (strlen(input) / 4 * 3) - padding_count;
 }
 
-size_t util_base64_decode(const char *input, size_t len, unsigned char *out, size_t out_len)
+int util_base64_decode(const char *input, size_t len, unsigned char **out, size_t *out_len)
 {
     BIO *base64 = NULL;
     BIO *io = NULL;
     int ret = 0;
-    size_t result_len = util_base64_decode_len(input, len);
-    size_t size = 0;
+    int bio_ret = 0;
+    unsigned char *out_put = NULL;
+    size_t out_put_len = 0;
 
-    if (input == NULL || result_len < 0 || out == 0 || result_len > out_len) {
-        ERROR("Invalid param for base64 decode, input length %zu, result length %zu, output length %zu", len,
-              result_len, out_len);
+    if (input == NULL || len % 4 != 0 || out == NULL || out_len == NULL) {
+        ERROR("Invalid param for base64 decode");
         return -1;
     }
 
@@ -161,11 +155,20 @@ size_t util_base64_decode(const char *input, size_t len, unsigned char *out, siz
     io = BIO_new_mem_buf(input, len);
     io = BIO_push(base64, io);
 
-    size = BIO_read(io, out, out_len);
-    if (size != result_len) {
-        ERROR("base64 decode failed, actual length not match calculated length, expected %zu, got %zu", result_len,
-              size);
+    out_put_len = util_base64_decode_len(input, len);
+    out_put = util_common_calloc_s(out_put_len + 1); // '+1' for '\0'
+    if (out_put == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
     }
+
+    bio_ret = BIO_read(io, out_put, out_put_len);
+    if (bio_ret <= 0) {
+        ERROR("base64 decode failed, result is %d", bio_ret);
+    }
+    *out = out_put;
+    *out_len = out_put_len;
 
 out:
     if (io != NULL) {
@@ -174,8 +177,9 @@ out:
     }
 
     if (ret != 0) {
-        return -1;
-    } else {
-        return result_len;
+        free(out_put);
+        out_put = NULL;
     }
+
+    return ret;
 }

@@ -46,7 +46,6 @@
 #include "constants.h"
 
 #define PAYLOAD_CRC_LEN 12
-#define FILE_CRC_LEN 8
 
 struct io_read_wrapper;
 
@@ -1676,20 +1675,21 @@ static uint64_t payload_to_crc(char *payload)
     int ret = 0;
     int i = 0;
     uint64_t crc = 0;
-    uint8_t crc_sums[FILE_CRC_LEN] = {0};
+    uint8_t *crc_sums = NULL;
+    size_t crc_sums_len = 0;
 
-    ret = util_base64_decode(payload, PAYLOAD_CRC_LEN, crc_sums, FILE_CRC_LEN);
+    ret = util_base64_decode(payload, strlen(payload), &crc_sums, &crc_sums_len);
     if (ret < 0) {
         ERROR("decode tar split payload from base64 failed, payload %s", payload);
         return -1;
     }
 
-    for (i = 0; i < FILE_CRC_LEN; i++) {
+    for (i = 0; i < crc_sums_len; i++) {
         crc |= crc_sums[i];
-        if (i == FILE_CRC_LEN - 1) {
+        if (i == crc_sums_len - 1) {
             break;
         }
-        crc <<= FILE_CRC_LEN;
+        crc <<= crc_sums_len;
     }
 
     return crc;

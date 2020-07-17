@@ -134,7 +134,6 @@ static char *encode_auth(const char *username, const char *password)
     char *auth = NULL;
     size_t auth_len = 0;
     char *auth_base64 = NULL;
-    size_t auth_base64_len = 0;
     int ret = 0;
     int nret = 0;
 
@@ -157,15 +156,7 @@ static char *encode_auth(const char *username, const char *password)
         goto out;
     }
 
-    auth_base64_len = util_base64_encode_len(strlen(auth));
-    auth_base64 = util_common_calloc_s(auth_base64_len);
-    if (auth_base64 == NULL) {
-        ret = -1;
-        ERROR("Failed to sprintf username and password");
-        goto out;
-    }
-
-    nret = util_base64_encode((unsigned char *)auth, strlen(auth), auth_base64, auth_base64_len);
+    nret = util_base64_encode((unsigned char *)auth, strlen(auth), &auth_base64);
     if (nret < 0) {
         ret = -1;
         ERROR("Encode auth to base64 failed");
