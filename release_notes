@@ -1,0 +1,22 @@
+2020-07-17 lifeng release 2.0.4
+    - tools: add generate release notes
+    - !572 lxc: update lxc to 4.0.3 Merge pull request !572 from lifeng_isula/master
+    - !530 修复websocket限流可能引起卡死 Merge pull request !530 from JingWoo/master
+    - !550 build: add checkout LTS tag for third party software Merge pull request !550 from lifeng_isula/master
+    - !523 init struct before use it Merge pull request !523 from haozi007/work
+    - !519 fix create mtab bug to use lstat Merge pull request !519 from gaohuatao/ci_master
+    - !517 events: fix wrong format of exec command Merge pull request !517 from lifeng_isula/master
+    - !518 add -d/--disk param for CI Merge pull request !518 from gaohuatao/ci_master
+    - !494 CI: add testcases use host rootfs / Merge pull request !494 from lifeng_isula/master
+    - !492 Fix label-file reading bug Merge pull request !492 from JingWoo/master
+    - !485 fix bug of creating symlink for /etc/mtab when /etc symlink exists Merge pull request !485 from gaohuatao/master_mtab
+    - !489 Add Pull Request Template And Issue Template Merge pull request !489 from JingWoo/master
+    - !487 iSulad: resolve coredump of isula inspect "" Merge pull request !487 from Jackey_1024/ma_0623
+    - !467 isulad-shim: fix probabilistic bad fd Merge pull request !467 from zklei/epoll_ctl
+    - !465 Release v2.0.3 Merge pull request !465 from lifeng_isula/master
+    - !464 iSulad: change llt to ut Merge pull request !464 from Jackey_1024/0616
+
+    dev stats:
+      - 23 files changed, 221 insertions(+), 123 deletions(-)
+      - contributors: lifeng68, gaohuatao, wujing, haozi007, jikui, leizhongkai
+
