@@ -135,6 +135,7 @@ container_t *invokeContainersStoreGet(const char *id_or_name)
     container_t *cont = (container_t *)util_common_calloc_s(sizeof(container_t));
     cont->common_config =
             (container_config_v2_common_config *)util_common_calloc_s(sizeof(container_config_v2_common_config));
+    cont->refcnt = 1;
     return cont;
 }
 
@@ -221,6 +222,8 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_pause)
     testing::Mock::VerifyAndClearExpectations(&m_containersGc);
     testing::Mock::VerifyAndClearExpectations(&m_containersOperator);
     testing::Mock::VerifyAndClearExpectations(&m_containerUnix);
+    free_container_pause_request(request);
+    free_container_pause_response(response);
 }
 
 TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_resume)
@@ -246,4 +249,6 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_resume)
     testing::Mock::VerifyAndClearExpectations(&m_containersGc);
     testing::Mock::VerifyAndClearExpectations(&m_containersOperator);
     testing::Mock::VerifyAndClearExpectations(&m_containerUnix);
+    free_container_resume_request(request);
+    free_container_resume_response(response);
 }

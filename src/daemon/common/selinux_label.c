@@ -326,7 +326,7 @@ out:
 }
 
 /* selinux state free */
-static void selinux_state_free(selinux_state *state)
+static void do_selinux_state_free(selinux_state *state)
 {
     if (state == NULL) {
         return;
@@ -363,7 +363,7 @@ static selinux_state *selinux_state_new(void)
     return state;
 
 error_out:
-    selinux_state_free(g_selinux_state);
+    do_selinux_state_free(state);
     return NULL;
 }
 
@@ -376,6 +376,11 @@ int selinux_state_init(void)
     }
 
     return 0;
+}
+
+void selinux_state_free()
+{
+    do_selinux_state_free(g_selinux_state);
 }
 
 /* MCS already exists */

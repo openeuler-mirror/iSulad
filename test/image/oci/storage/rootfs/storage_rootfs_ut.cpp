@@ -104,7 +104,7 @@ protected:
     }
 
     std::vector<std::string> ids { "0e025f44cdca20966a5e5f11e1d9d8eb726aef2d38ed20f89ea986987c2010a9",
-        "28a8e1311d71345b08788c16b8c4f45a57641854f0e7c16802eedd0eb334b832" };
+                                   "28a8e1311d71345b08788c16b8c4f45a57641854f0e7c16802eedd0eb334b832" };
     char store_real_path[PATH_MAX] = { 0x00 };
 };
 
@@ -127,7 +127,9 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_load)
     ASSERT_EQ(cntr->names_len, 1);
     ASSERT_STREQ(cntr->names[0], "0e025f44cdca20966a5e5f11e1d9d8eb726aef2d38ed20f89ea986987c2010a9");
     ASSERT_EQ(rootfs_store_set_big_data(ids.at(0).c_str(), "userdata", BIG_DATA_CONTENT.c_str()), 0);
-    ASSERT_STREQ(rootfs_store_big_data(ids.at(0).c_str(), "userdata"), BIG_DATA_CONTENT.c_str());
+    char *userdata_tmp = NULL;
+    userdata_tmp = rootfs_store_big_data(ids.at(0).c_str(), "userdata");
+    ASSERT_STREQ(userdata_tmp, BIG_DATA_CONTENT.c_str());
     ASSERT_EQ(rootfs_store_set_metadata(ids.at(0).c_str(), META_DATA_CONTENT.c_str()), 0);
 
     cntr_tmp = rootfs_store_get_rootfs(ids.at(0).c_str());
@@ -137,6 +139,7 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_load)
 
     free_storage_rootfs(cntr);
     free_storage_rootfs(cntr_tmp);
+    free(userdata_tmp);
 }
 
 TEST_F(StorageRootfsUnitTest, test_rootfs_store_create)
@@ -149,11 +152,11 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_create)
     std::string layer_without_id { "h88ca140c6716a68d7bba0fe6529334e98de529bd8fb7agf3a21f08e772629a9" };
     std::string metadata { "{}" };
     char *created_container = rootfs_store_create(id.c_str(), names_with_id,
-                                                  sizeof(names_with_id) / sizeof(names_with_id[0]), image.c_str(), layer_with_id.c_str(),
-                                                  metadata.c_str(), nullptr);
-    char *container_without_id = rootfs_store_create(nullptr, names_without_id,
-                                                     sizeof(names_without_id) / sizeof(names_without_id[0]), image.c_str(),
-                                                     layer_without_id.c_str(), metadata.c_str(), nullptr);
+                                                  sizeof(names_with_id) / sizeof(names_with_id[0]), image.c_str(),
+                                                  layer_with_id.c_str(), metadata.c_str(), nullptr);
+    char *container_without_id =
+            rootfs_store_create(nullptr, names_without_id, sizeof(names_without_id) / sizeof(names_without_id[0]),
+                                image.c_str(), layer_without_id.c_str(), metadata.c_str(), nullptr);
 
     ASSERT_STREQ(created_container, id.c_str());
     ASSERT_NE(container_without_id, nullptr);
@@ -161,6 +164,8 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_create)
     ASSERT_EQ(rootfs_store_get_rootfs(id.c_str()), nullptr);
     ASSERT_EQ(rootfs_store_delete(container_without_id), 0);
     ASSERT_FALSE(dirExists((std::string(store_real_path) + "/" + id).c_str()));
+    free(created_container);
+    free(container_without_id);
 }
 
 TEST_F(StorageRootfsUnitTest, test_rootfs_store_lookup)
