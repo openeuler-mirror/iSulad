@@ -685,7 +685,7 @@ static int device_file_walk(struct device_set *devset)
             continue;
         }
 
-        device_info = lookup_device(devset, entry->d_name); // entry->d_name 取值base  hash值等
+        device_info = lookup_device(devset, entry->d_name);
         if (device_info == NULL) {
             ERROR("devmapper: Error looking up device %s", entry->d_name);
             ret = -1;
@@ -868,6 +868,42 @@ static int remove_metadata(struct device_set *devset, const char *hash)
     return ret;
 }
 
+static int load_transaction_metadata(struct device_set *devset)
+{
+    image_devmapper_transaction *trans = NULL;
+    char fname[PATH_MAX] = { 0 };
+    parser_error err = NULL;
+    int ret = 0;
+    int nret = 0;
+
+    nret = snprintf(fname, sizeof(fname), "%s/metadata/%s", devset->root, TRANSACTION_METADATA);
+    if (nret < 0 || (size_t)nret >= sizeof(fname)) {
+        ERROR("devmapper: failed make transaction-metadata full path");
+        ret = -1;
+        goto out;
+    }
+
+    if (!util_file_exists(fname)) {
+        devset->metadata_trans->open_transaction_id = devset->transaction_id;
+        WARN("There is no active transaction, may be during upgrade");
+        goto out;
+    }
+
+    trans = image_devmapper_transaction_parse_file(fname, NULL, &err);
+    if (trans == NULL) {
+        ERROR("devmapper: load transaction metadata file error %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    free_image_devmapper_transaction(devset->metadata_trans);
+    devset->metadata_trans = trans;
+
+out:
+    free(err);
+    return ret;
+}
+
 static void rollback_transaction(struct device_set *devset)
 {
     char *pool_dev = NULL;
@@ -900,9 +936,17 @@ static void rollback_transaction(struct device_set *devset)
 
 static int process_pending_transaction(struct device_set *devset)
 {
+    int ret = 0;
+
     if (devset == NULL || devset->metadata_trans == NULL) {
         ERROR("devmapper: device set or tansaction is NULL");
         return -1;
+    }
+
+    if (load_transaction_metadata(devset) != 0) {
+        ERROR("devmapper: load transaction-metadata failed, process pending transaction terminate");
+        ret = -1;
+        goto out;
     }
 
     // If there was open transaction but pool transaction ID is same
@@ -918,12 +962,11 @@ static int process_pending_transaction(struct device_set *devset)
              devset->metadata_trans->open_transaction_id, devset->transaction_id);
         goto out;
     }
-
     rollback_transaction(devset);
     devset->metadata_trans->open_transaction_id = devset->transaction_id;
 
 out:
-    return 0;
+    return ret;
 }
 
 static void cleanup_deleted_devices(struct device_set *devset)
@@ -1592,6 +1635,7 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
     }
 
     if (pool_has_free_space(devset) != 0) {
+        ERROR("devmapper: pool has no free space");
         ret = -1;
         goto out;
     }
@@ -2966,7 +3010,7 @@ bool has_device(const char *hash, struct device_set *devset)
 
     if (pthread_rwlock_wrlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("lock devmapper conf failed");
-        return -1;
+        return false;
     }
 
     device_info = lookup_device(devset, hash);
