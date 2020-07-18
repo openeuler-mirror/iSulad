@@ -40,6 +40,7 @@
 #include "utils_string.h"
 #include "utils_timestamp.h"
 #include "selinux_label.h"
+#include "err_msg.h"
 
 struct io_read_wrapper;
 
@@ -740,6 +741,7 @@ static int set_layer_quota(const char *dir, const json_map_string_string *opts, 
             ret = util_parse_byte_size_string(opts->values[i], &converted);
             if (ret != 0) {
                 ERROR("Invalid size: '%s': %s", opts->values[i], strerror(-ret));
+                isulad_set_error_message("Invalid quota size: '%s': %s", opts->values[i], strerror(-ret));
                 ret = -1;
                 goto out;
             }
@@ -747,12 +749,22 @@ static int set_layer_quota(const char *dir, const json_map_string_string *opts, 
             break;
         } else {
             ERROR("Unknown option %s", opts->keys[i]);
+            isulad_set_error_message("Unknown storage option %s", opts->keys[i]);
             ret = -1;
             goto out;
         }
     }
 
-    ret = driver->quota_ctrl->set_quota(dir, driver->quota_ctrl, quota);
+    if (quota > 0 && quota < 4096) {
+        ERROR("Illegal storage quota size %lu, 4096 at least", quota);
+        isulad_set_error_message("Illegal storage quota size %lu, 4096 at least", quota);
+        ret = -1;
+        goto out;
+    }
+
+    if (quota > 0) {
+        ret = driver->quota_ctrl->set_quota(dir, driver->quota_ctrl, quota);
+    }
 
 out:
     return ret;
@@ -807,12 +819,16 @@ out:
     return ret;
 }
 
-static int apply_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota)
+static int append_default_quota_opts(struct driver_create_opts *ori_opts, uint64_t quota)
 {
     int ret = 0;
     int nret = 0;
     size_t i = 0;
     char tmp[50] = { 0 }; //tmp to hold unit64
+
+    if (quota == 0) {
+        return 0;
+    }
 
     nret = snprintf(tmp, sizeof(tmp), "%llu", (unsigned long long)quota);
     if (nret < 0 || (size_t)nret >= sizeof(tmp)) {
@@ -859,11 +875,13 @@ int overlay2_create_rw(const char *id, const char *parent, const struct graphdri
 
     if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0 && !driver->support_quota) {
         ERROR("--storage-opt is supported only for overlay over xfs or ext4 with 'pquota' mount option");
+        isulad_set_error_message(
+            "--storage-opt is supported only for overlay over xfs or ext4 with 'pquota' mount option");
         ret = -1;
         goto out;
     }
 
-    if (driver->support_quota && apply_quota_opts(create_opts, driver->overlay_opts->default_quota) != 0) {
+    if (driver->support_quota && append_default_quota_opts(create_opts, driver->overlay_opts->default_quota) != 0) {
         ret = -1;
         goto out;
     }
@@ -1824,7 +1842,7 @@ out:
 static void free_overlay_options(struct overlay_options *opts)
 {
     if (opts == NULL) {
-        return ;
+        return;
     }
     free((char *)opts->mount_options);
     opts->mount_options = NULL;
