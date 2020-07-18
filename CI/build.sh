@@ -388,8 +388,6 @@ do
         docker cp ${cptemp}/systemd ${container}:/lib
         # Docker cannot cp file to tmpfs /tmp in container
         docker exec ${container} sh -c "umask 0022 && cp -r ${testcase_data}/ci_testcase_data/embedded /tmp"
-        docker cp ${cptemp}/rpm ${container}:/
-        docker exec ${container} /bin/sh -c "rpm --force --nodeps -ivh /rpm/*"
     }&
 done
 wait

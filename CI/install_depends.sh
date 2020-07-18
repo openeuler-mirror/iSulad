@@ -28,7 +28,6 @@ build_log_crictl=${builddir}/build.crictl.log
 build_log_cni_plugins=${builddir}/build.cni_plugins.log
 buildlogs+=(${build_log_crictl} ${build_log_cni_plugins})
 
-mkdir -p ${builddir}/rpm
 mkdir -p ${builddir}/bin
 mkdir -p ${builddir}/include
 mkdir -p ${builddir}/lib
@@ -88,15 +87,10 @@ do
     patch -p1 < ${var}
 done
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
-sed -i '/unmount-namespace/d' ./lxc.spec.in
-sed -i '/bridge-utils/d' ./lxc.spec.in
 ./autogen.sh
-./configure --sysconfdir=/etc
-make rpm
-cd ~/rpmbuild/RPMS/x86_64/
-rpm -ivh --force lxc-*.rpm
-mkdir -p ${builddir}/rpm
-cp lxc-*.rpm ${builddir}/rpm
+./configure --prefix=${builddir}
+make -j $(nproc)
+make install
 ldconfig
 
 # install lcr
