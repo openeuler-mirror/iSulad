@@ -41,6 +41,7 @@ target_include_directories(${DRIVER_EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/buffer
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/api
@@ -111,6 +112,7 @@ target_include_directories(${LAYER_EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/http
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/buffer
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/api

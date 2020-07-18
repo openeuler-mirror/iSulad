@@ -12,8 +12,8 @@
  * Create: 2018-11-08
  * Description: provide container buffer definition
  ******************************************************************************/
-#ifndef UTILS_HTTP_BUFFER_H
-#define UTILS_HTTP_BUFFER_H
+#ifndef UTILS_BUFFER_H
+#define UTILS_BUFFER_H
 
 #include <stdlib.h>
 #include <strings.h>
@@ -33,4 +33,3 @@ void buffer_free(Buffer *buf);
 int buffer_append(Buffer *buf, const char *append, size_t len);
 void buffer_empty(Buffer *buf);
 #endif
-

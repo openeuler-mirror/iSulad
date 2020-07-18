@@ -333,9 +333,8 @@ out:
     return ret;
 }
 
-static struct driver_mount_opts *fill_driver_mount_opts(const struct layer_store_mount_opts *opts, const layer_t *l)
+static struct driver_mount_opts *fill_driver_mount_opts(const layer_t *l)
 {
-    size_t i = 0;
     struct driver_mount_opts *d_opts = NULL;
 
     d_opts = util_common_calloc_s(sizeof(struct driver_mount_opts));
@@ -344,22 +343,8 @@ static struct driver_mount_opts *fill_driver_mount_opts(const struct layer_store
         goto err_out;
     }
 
-    if (opts == NULL || opts->mount_label == NULL) {
+    if (l->slayer->mountlabel != NULL) {
         d_opts->mount_label = util_strdup_s(l->slayer->mountlabel);
-    } else {
-        d_opts->mount_label = util_strdup_s(opts->mount_label);
-    }
-
-    if (opts != NULL && opts->mount_opts->len > 0) {
-        d_opts->options = util_smart_calloc_s(sizeof(char *), opts->mount_opts->len);
-        for (; i < opts->mount_opts->len; i++) {
-            char *tmp_opt = NULL;
-            if (asprintf(&tmp_opt, "%s=%s", opts->mount_opts->keys[i], opts->mount_opts->values[i]) != 0) {
-                ERROR("Out of memory");
-                goto err_out;
-            }
-            d_opts->options_len += 1;
-        }
     }
 
     return d_opts;
@@ -369,7 +354,7 @@ err_out:
     return NULL;
 }
 
-static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
+static char *mount_helper(layer_t *l)
 {
     char *mount_point = NULL;
     int nret = 0;
@@ -387,7 +372,7 @@ static char *mount_helper(layer_t *l, const struct layer_store_mount_opts *opts)
         goto save_json;
     }
 
-    d_opts = fill_driver_mount_opts(opts, l);
+    d_opts = fill_driver_mount_opts(l);
     if (d_opts == NULL) {
         ERROR("Failed to fill layer %s driver mount opts", l->slayer->id);
         goto out;
@@ -904,10 +889,10 @@ static char *caculate_playload(struct archive *ar)
 #endif
     char *ret = NULL;
     int nret = 0;
-    const isula_crc_table_t* ctab = NULL;
+    const isula_crc_table_t *ctab = NULL;
     uint64_t crc = 0;
-    unsigned char sum_data[8] = {0};
-    unsigned char tmp_data[9] = {0};
+    unsigned char sum_data[8] = { 0 };
+    unsigned char tmp_data[9] = { 0 };
     bool empty = true;
 
     ctab = new_isula_crc_table(ISO_POLY);
@@ -1567,7 +1552,7 @@ struct layer *layer_store_lookup(const char *name)
     return ret;
 }
 
-char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opts)
+char *layer_store_mount(const char *id)
 {
     layer_t *l = NULL;
     char *result = NULL;
@@ -1583,7 +1568,7 @@ char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opt
         return NULL;
     }
     layer_lock(l);
-    result = mount_helper(l, opts);
+    result = mount_helper(l);
     if (result == NULL) {
         ERROR("Failed to mount layer %s", id);
     }
@@ -1716,7 +1701,7 @@ static int do_validate_rootfs_layer(layer_t *l)
     // try to mount the layer, and set mount count to 1
     if (l->smount_point->count > 0) {
         l->smount_point->count = 0;
-        mount_point = mount_helper(l, NULL);
+        mount_point = mount_helper(l);
         if (mount_point == NULL) {
             ERROR("Failed to mount layer %s", l->slayer->id);
             ret = -1;
@@ -1978,7 +1963,7 @@ static int file_crc(char *file, uint64_t *crc, uint64_t policy)
 {
 #define BLKSIZE 32768
     int ret = 0;
-    const isula_crc_table_t * ctab = NULL;
+    const isula_crc_table_t *ctab = NULL;
     int fd = 0;
     void *buffer = NULL;
     ssize_t size = 0;
@@ -2035,7 +2020,7 @@ static int valid_crc(storage_entry *entry, char *rootfs)
     int nret = 0;
     uint64_t crc = 0;
     uint64_t expected_crc = 0;
-    char file[PATH_MAX] = {0};
+    char file[PATH_MAX] = { 0 };
     struct stat st;
 
     nret = snprintf(file, PATH_MAX, "%s/%s", rootfs, entry->name);
@@ -2234,7 +2219,7 @@ int layer_store_check(const char *id)
         goto out;
     }
 
-    rootfs = layer_store_mount(id, NULL);
+    rootfs = layer_store_mount(id);
     if (rootfs == NULL) {
         ERROR("mount layer of %s failed", id);
         ret = -1;

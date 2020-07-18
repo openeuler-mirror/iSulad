@@ -63,7 +63,7 @@ int layer_store_list(struct layer_list *resp);
 int layer_store_by_compress_digest(const char *digest, struct layer_list *resp);
 int layer_store_by_uncompress_digest(const char *digest, struct layer_list *resp);
 struct layer *layer_store_lookup(const char *name);
-char *layer_store_mount(const char *id, const struct layer_store_mount_opts *opts);
+char *layer_store_mount(const char *id);
 int layer_store_umount(const char *id, bool force);
 int layer_store_try_repair_lowers(const char *id);
 

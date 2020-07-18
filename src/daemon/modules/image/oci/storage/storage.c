@@ -150,7 +150,9 @@ static struct layer_opts *fill_create_layer_opts(storage_layer_create_opts_t *co
         goto err_out;
     }
 
-    opts->opts->mount_label = util_strdup_s(mount_label);
+    if (mount_label != NULL) {
+        opts->opts->mount_label = util_strdup_s(mount_label);
+    }
 
     if (copts->storage_opts != NULL) {
         opts->opts->mount_opts = util_common_calloc_s(sizeof(json_map_string_string));
@@ -1018,8 +1020,7 @@ out:
 }
 
 int storage_rootfs_create(const char *container_id, const char *image, const char *mount_label,
-                          json_map_string_string *storage_opts,
-                          char **mountpoint)
+                          json_map_string_string *storage_opts, char **mountpoint)
 {
     int ret = 0;
     char *rootfs_id = NULL;
@@ -1180,7 +1181,7 @@ char *storage_rootfs_mount(const char *container_id)
         goto out;
     }
 
-    mount_point = layer_store_mount(rootfs_info->layer, NULL);
+    mount_point = layer_store_mount(rootfs_info->layer);
     if (mount_point == NULL) {
         ERROR("Failed to mount %s", rootfs_info->layer);
         goto out;
