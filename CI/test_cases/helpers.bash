@@ -95,6 +95,7 @@ function wait_isulad_running() {
         fi
         if [ $waitcnt -gt $maxcnt ];then
             echo "iSulad is not running after ${maxcnt}s"
+            tail $ISUALD_LOG
             return 1
         fi
         waitcnt=$(($waitcnt+1))

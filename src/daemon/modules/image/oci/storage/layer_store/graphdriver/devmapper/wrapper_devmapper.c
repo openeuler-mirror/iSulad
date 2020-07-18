@@ -23,6 +23,7 @@
 #include "wrapper_devmapper.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "err_msg.h"
 
 static bool g_dm_saw_busy = false;
 static bool g_dm_saw_exist = false;
@@ -64,7 +65,6 @@ char *dev_strerror(int errnum)
             break;
     }
     return errmsg;
-
 }
 
 struct dm_task *task_create(int type)
@@ -342,12 +342,14 @@ static void *udev_wait_process(void *data)
         pthread_mutex_lock(&uwait->udev_mutex);
         uwait->state = ERR_UDEV_WAIT;
         pthread_mutex_unlock(&uwait->udev_mutex);
+        DAEMON_CLEAR_ERRMSG();
         pthread_exit((void *)ERR_UDEV_WAIT);
     }
 
     pthread_mutex_lock(&uwait->udev_mutex);
     uwait->state = DEV_OK;
     pthread_mutex_unlock(&uwait->udev_mutex);
+    DAEMON_CLEAR_ERRMSG();
     pthread_exit((void *)0);
 }
 

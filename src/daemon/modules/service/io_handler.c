@@ -34,6 +34,7 @@
 #include "io_wrapper.h"
 #include "utils.h"
 #include "utils_file.h"
+#include "err_msg.h"
 
 static char *create_single_fifo(const char *statepath, const char *subpath, const char *stdflag)
 {
@@ -376,6 +377,7 @@ err:
         sem_post(&thread_arg->wait_sem);
     }
     io_copy_thread_cleanup(writers, thread_arg, infds, outfds, srcfds, len);
+    DAEMON_CLEAR_ERRMSG();
     return NULL;
 }
 

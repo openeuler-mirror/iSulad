@@ -114,7 +114,7 @@ RUN set -x && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/cmake.git && \
 	cd cmake && \
-	git checkout origin/openEuler-20.03-LTS && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf cmake-3.12.1.tar.gz && \
 	cd cmake-3.12.1 && \
 	./bootstrap && make && make install && \
@@ -127,6 +127,7 @@ RUN set -x && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/protobuf.git && \
 	cd protobuf && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf protobuf-all-3.9.0.tar.gz && \
 	cd protobuf-3.9.0 && \
 	./autogen.sh && \
@@ -141,6 +142,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/c-ares.git && \
 	cd c-ares && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf c-ares-1.15.0.tar.gz && \
 	cd c-ares-1.15.0 && \
 	autoreconf -if && \
@@ -168,6 +170,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libevent.git && \
 	cd libevent && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf libevent-2.1.11-stable.tar.gz && \
 	cd libevent-2.1.11-stable && \
 	./autogen.sh && \
@@ -182,12 +185,11 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libevhtp.git && \
 	cd libevhtp && \
-	tar -xzvf libevhtp-1.2.18.tar.gz && \
-	cd libevhtp-1.2.18 && \
-	patch -p1 -F1 -s < ../0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch && \
-	patch -p1 -F1 -s < ../0002-evhtp-enable-dynamic-thread-pool.patch && \
-	patch -p1 -F1 -s < ../0003-close-open-ssl.-we-do-NOT-use-it-in-lcrd.patch && \
-	patch -p1 -F1 -s < ../0004-Use-shared-library-instead-static-one.patch && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
+	tar -xzvf libevhtp-1.2.16.tar.gz && \
+	cd libevhtp-1.2.16 && \
+	patch -p1 -F1 -s < ../0001-support-dynamic-threads.patch && \
+	patch -p1 -F1 -s < ../0002-close-openssl.patch && \
 	rm -rf build && \
 	mkdir build && \
 	cd build && \
@@ -202,8 +204,9 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/http-parser.git && \
 	cd http-parser && \
-	tar -xzvf http-parser-2.9.4.tar.gz && \
-	cd http-parser-2.9.4 && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
+	tar -xzvf http-parser-2.9.2.tar.gz && \
+	cd http-parser-2.9.2 && \
 	make -j CFLAGS="-Wno-error" && \
 	make CFLAGS="-Wno-error" install && \
 	ldconfig
@@ -214,8 +217,10 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libwebsockets.git && \
 	cd libwebsockets && \
-	tar -xzvf libwebsockets-4.0.1.tar.gz && \
-	cd libwebsockets-4.0.1 && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
+	tar -xzvf libwebsockets-2.4.2.tar.gz && \
+	cd libwebsockets-2.4.2 && \
+	patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch && \
 	mkdir build && \
 	cd build && \
 	cmake -DLWS_WITH_SSL=0 -DLWS_MAX_SMP=32 -DCMAKE_BUILD_TYPE=Debug ../ && \
@@ -229,6 +234,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/gtest.git && \
 	cd gtest && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar xf release-1.8.1.tar.gz && \
 	cd googletest-release-1.8.1 && \
 	patch -p1 -F1 -s < ../gtest-1.8.1-null-pointer.patch && \
@@ -248,10 +254,10 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
         cd ~ && \
         git clone https://gitee.com/src-openeuler/libarchive.git && \
         cd libarchive && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
         tar -zxvf libarchive-3.4.1.tar.gz && \
         cd libarchive-3.4.1 && \
         patch -p1 -F1 -s < ../libarchive-uninitialized-value.patch && \
-        patch -p1 -F1 -s < ../CVE-2020-9308.patch && \
         cd build && \
         cmake -DCMAKE_USE_SYSTEM_LIBRARIES=ON ../ && \
         make -j $(nproc) && \

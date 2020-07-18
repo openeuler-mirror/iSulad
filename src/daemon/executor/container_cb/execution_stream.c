@@ -1462,6 +1462,7 @@ static void *follow_thread_func(void *arg)
 
 set_flag:
     *(farg->finish) = true;
+    DAEMON_CLEAR_ERRMSG();
     return NULL;
 }
 

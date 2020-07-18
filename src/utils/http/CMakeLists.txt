@@ -5,7 +5,9 @@ if (NOT OPENSSL_VERIFY)
     list(REMOVE_ITEM http_client_srcs "${CMAKE_CURRENT_SOURCE_DIR}/certificate.c")
 endif()
 
-add_library(libhttpclient ${LIBTYPE} ${http_client_srcs})
+add_library(libhttpclient ${LIBTYPE} ${http_client_srcs}
+    ${CMAKE_SOURCE_DIR}/src/utils/buffer/buffer.c
+    )
 
 target_include_directories(libhttpclient PUBLIC 
     ${CMAKE_SOURCE_DIR}/src/common

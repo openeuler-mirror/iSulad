@@ -596,6 +596,7 @@ out:
     free_container_exec_request(container_req);
     free_container_exec_response(container_res);
     container_unref(cont);
+    DAEMON_CLEAR_ERRMSG();
     return NULL;
 }
 
@@ -728,6 +729,7 @@ out:
     free(container_id);
     container_id = NULL;
     container_unref(cont);
+    DAEMON_CLEAR_ERRMSG();
     return NULL;
 }
 
