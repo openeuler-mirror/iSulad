@@ -24,22 +24,6 @@
 extern "C" {
 #endif
 
-enum { SHA224_SIZE = 224 / 8 };
-enum { SHA224_ALIGN = 4 };
-enum { SHA256_SIZE = 256 / 4 };
-enum { SHA256_ALIGN = 4 };
-
-/* read file stream buffer */
-extern int fstream_read(FILE *stream, int fd);
-
-/* read gzfile stream buffer.  */
-extern int gzstream_read(gzFile gzstream, int fd);
-
-extern int sha256sum_calculate(void *stream, char *buffer_out, size_t len, bool isfile, bool isgzip);
-/* Compute SHA256 (SHA224) message digest for bytes read from STREAM.
-   The result is a 64 characters string without prefix "sha256:"  */
-char *sha256_digest(void *stream, bool isgzip);
-
 char *sha256_digest_file(const char *filename, bool isgzip);
 
 char *sha256_digest_str(const char *val);
