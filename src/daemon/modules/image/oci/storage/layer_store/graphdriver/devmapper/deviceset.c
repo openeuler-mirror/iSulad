@@ -77,14 +77,17 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
         char *p = NULL;
         char *val = NULL;
         int ret = 0;
+        int nret = 0;
 
         dup = util_strdup_s(options[i]);
         if (dup == NULL) {
-            isulad_set_error_message("Out of memory");
+            ERROR("Out of memory");
             return -1;
         }
+
         p = strchr(dup, '=');
         if (!p) {
+            ERROR("Unable to parse key/value option: '%s'", dup);
             isulad_set_error_message("Unable to parse key/value option: '%s'", dup);
             free(dup);
             return -1;
@@ -95,11 +98,13 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
             if (strcmp(val, "ext4") == 0) {
                 devset->filesystem = util_strdup_s(val);
             } else {
+                ERROR("Invalid filesystem: '%s': not supported", val);
                 isulad_set_error_message("Invalid filesystem: '%s': not supported", val);
                 ret = -1;
             }
         } else if (strcasecmp(dup, "dm.thinpooldev") == 0) {
             if (!util_valid_str(val)) {
+                ERROR("Invalid thinpool device, it must not be empty");
                 isulad_set_error_message("Invalid thinpool device, it must not be empty");
                 ret = -1;
                 goto out;
@@ -109,26 +114,53 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
         } else if (strcasecmp(dup, "dm.min_free_space") == 0) {
             long converted = 0;
             ret = util_parse_percent_string(val, &converted);
-            if (ret != 0 || converted == 100) {
+            if (ret != 0 || converted >= 100) {
+                ERROR("Invalid min free space: '%s': %s", val, strerror(-ret));
                 isulad_set_error_message("Invalid min free space: '%s': %s", val, strerror(-ret));
                 ret = -1;
+                goto out;
             }
             devset->min_free_space_percent = (uint32_t)converted;
         } else if (strcasecmp(dup, "dm.basesize") == 0) {
             int64_t converted = 0;
-            ret = util_parse_byte_size_string(val, &converted);
-            if (ret != 0) {
+            if (util_parse_byte_size_string(val, &converted) != 0) {
+                ERROR("Invalid size: '%s': %s", val, strerror(-ret));
                 isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
+                ret = -1;
                 goto out;
             }
             if (converted <= 0) {
+                ERROR("dm.basesize is lower than zero");
                 isulad_set_error_message("dm.basesize is lower than zero");
                 ret = -1;
                 goto out;
             }
             devset->user_base_size = true;
             devset->base_fs_size = (uint64_t)converted;
+        } else if (strcasecmp(dup, "dm.mkfsarg") == 0) {
+            if (!util_valid_str(val)) {
+                ERROR("Invalid dm.mkfsarg value");
+                isulad_set_error_message("Invalid dm.mkfsarg value");
+                ret = -1;
+                goto out;
+            }
+            nret = util_array_append(&devset->mkfs_args, val);
+            if (nret != 0) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+            devset->mkfs_args_len++;
+        } else if (strcasecmp(dup, "dm.mountopt") == 0 || strcasecmp(dup, "devicemapper.mountopt") == 0) {
+            if (!util_valid_str(val)) {
+                ERROR("Invalid dm.mountopt or devicemapper.mountopt value");
+                isulad_set_error_message("Invalid dm.mountopt or devicemapper.mountopt value");
+                ret = -1;
+                goto out;
+            }
+            devset->mount_options = util_strdup_s(val);
         } else {
+            ERROR("devicemapper: unknown option: '%s'", dup);
             isulad_set_error_message("devicemapper: unknown option: '%s'", dup);
             ret = -1;
         }
@@ -486,7 +518,7 @@ static void run_blkid_get_uuid(void *args)
     char **tmp_args = (char **)args;
     size_t CMD_ARGS_NUM = 6;
 
-    if (util_array_len((const char **)tmp_args) != CMD_ARGS_NUM) {
+    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
         COMMAND_ERROR("Blkid get uuid need six args");
         exit(1);
     }
@@ -1827,12 +1859,6 @@ free_out:
 static void run_mkfs_ext4(void *args)
 {
     char **tmp_args = (char **)args;
-    size_t CMD_ARGS_NUM = 4;
-
-    if (util_array_len((const char **)tmp_args) != CMD_ARGS_NUM) {
-        COMMAND_ERROR("mkfs.ext4 need four args");
-        exit(1);
-    }
 
     execvp(tmp_args[0], tmp_args);
 }
@@ -1846,7 +1872,10 @@ static int save_base_device_filesystem(struct device_set *devset, const char *fs
 
 static int create_file_system(struct device_set *devset, image_devmapper_device_info *info)
 {
+#define ARGS_LEN 5
     int ret = 0;
+    int i = 0;
+    size_t cnt = 0;
     char *dev_fname = NULL;
     char **args = NULL;
     char *stdout = NULL;
@@ -1875,17 +1904,21 @@ static int create_file_system(struct device_set *devset, image_devmapper_device_
         goto out;
     }
 
-    args = (char **)util_common_calloc_s(sizeof(char *) * 5);
+    args = (char **)util_common_calloc_s(sizeof(char *) * (ARGS_LEN + devset->mkfs_args_len));
     if (args == NULL) {
         ret = -1;
         ERROR("devmapper: out of memory");
         goto out;
     }
 
-    args[0] = util_strdup_s("mkfs.ext4");
-    args[1] = util_strdup_s("-E");
-    args[2] = util_strdup_s("nodiscard,lazy_itable_init=0,lazy_journal_init=0");
-    args[3] = util_strdup_s(dev_fname);
+    args[i++] = util_strdup_s("mkfs.ext4");
+    args[i++] = util_strdup_s("-E");
+    args[i++] = util_strdup_s("nodiscard,lazy_itable_init=0,lazy_journal_init=0");
+    for (cnt = 0; cnt < devset->mkfs_args_len; cnt++) {
+        args[i++] = util_strdup_s(devset->mkfs_args[cnt]);
+    }
+    args[i++] = util_strdup_s(dev_fname);
+
     if (!util_exec_cmd(run_mkfs_ext4, args, NULL, &stdout, &stderr)) {
         ret = -1;
         ERROR("Unexpected command output %s with error: %s", stdout, stderr);
@@ -2073,12 +2106,9 @@ static void append_mount_options(char **dest, const char *suffix)
     char *res_string = NULL;
     size_t length;
 
-    if (dest == NULL) {
-        return;
-    }
-
     if (*dest == NULL) {
         *dest = util_strdup_s(suffix);
+        return;
     }
 
     if (suffix == NULL) {
@@ -2644,6 +2674,9 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
     devset->enable_deferred_removal = false;
     devset->enable_deferred_deletion = false;
     devset->base_fs_size = 10 * SIZE_GB;
+    devset->mkfs_args = NULL;
+    devset->mkfs_args_len = 0;
+    devset->mount_options = NULL;
     devset->override_udev_sync_check = DEFAULT_UDEV_SYNC_OVERRIDE;
     devset->do_blk_discard = false;
     devset->thinp_block_size = DEFAULT_THIN_BLOCK_SIZE;
@@ -2845,26 +2878,12 @@ free_out:
     return ret;
 }
 
-// moptions->options_len > 0
 static char *generate_mount_options(const struct driver_mount_opts *moptions, const char *dev_options)
 {
     char *res_str = NULL;
-    char *options = NULL;
-    bool add_nouuid = false;
     char *tmp = NULL;
 
-    options = util_strdup_s(dev_options);
-    if (moptions != NULL && moptions->options_len > 0) {
-        add_nouuid = !util_valid_str(options) || strings_contains_word("nouuid", options);
-        free(options);
-        options = util_string_join(",", (const char **)moptions->options, moptions->options_len);
-        if (add_nouuid) {
-            res_str = util_strdup_s("nouuid");
-        }
-    }
-
-    append_mount_options(&res_str, options);
-
+    append_mount_options(&res_str, dev_options);
     if (moptions != NULL && moptions->mount_label != NULL) {
         tmp = selinux_format_mountlabel(res_str, moptions->mount_label);
         if (tmp == NULL) {
@@ -2882,7 +2901,6 @@ error_out:
     res_str = NULL;
 
 out:
-    free(options);
     return res_str;
 }
 

@@ -53,7 +53,7 @@ struct device_set {
     uint64_t base_fs_size;
     char *filesystem;
     char *mount_options;
-    char **mkfs_args;
+    char **mkfs_args; // Characters string separated by spaces
     size_t mkfs_args_len;
     char *data_device;
     char *metadata_device;
