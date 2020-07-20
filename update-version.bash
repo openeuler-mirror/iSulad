@@ -1,3 +1,7 @@
+#!/bin/bash
+# usage
+# ./update-version.bash
+
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.
@@ -12,9 +16,6 @@
 ##- @Author: wujing
 ##- @Create: 2019-04-25
 #######################################################################
-#!/bin/bash
-# usage
-# ./update-version.bash
 
 function update_release_notes()
 {

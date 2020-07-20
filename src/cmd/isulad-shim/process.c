@@ -572,6 +572,7 @@ static int console_init(process_t *p)
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     ret = pthread_create(&tid_accept, &attr, task_console_accept, ac);
+    pthread_attr_destroy(&attr);
     if (ret != SHIM_OK) {
         goto failure;
     }
