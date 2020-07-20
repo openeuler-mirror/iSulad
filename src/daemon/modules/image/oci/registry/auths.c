@@ -68,10 +68,9 @@ static int decode_auth_aes(char *encoded, char **username, char **password)
     int nret = 0;
     int ret = 0;
     unsigned char *decoded = NULL;
-    size_t decoded_len = 0;
     char **auth_parts = NULL;
     char *auth = NULL;
-    size_t auth_buf_len = 0;
+    size_t decoded_len = 0;
 
     if (encoded == NULL || username == NULL || password == NULL) {
         ERROR("invalid NULL pointer");
@@ -85,13 +84,7 @@ static int decode_auth_aes(char *encoded, char **username, char **password)
         goto out;
     }
 
-    auth_buf_len = util_aes_decode_buf_len(decoded_len);
-    auth = util_common_calloc_s(auth_buf_len + 1);
-    if (auth == NULL) {
-        ERROR("out of memory");
-        return -1;
-    }
-    ret = aes_decode(decoded, decoded_len, (unsigned char *)auth, auth_buf_len);
+    ret = aes_decode(decoded, decoded_len, (unsigned char **)&auth);
     if (ret < 0) {
         ERROR("decode aes failed");
         ret = -1;
@@ -139,7 +132,6 @@ static char *encode_auth_aes(char *username, char *password)
     char *plain_text_base64 = NULL;
     char plain_text[PATH_MAX] = { 0 };
     unsigned char *aes = NULL;
-    size_t aes_buf_len = 0;
     size_t aes_len = 0;
     char *aes_base64 = NULL;
 
@@ -159,15 +151,8 @@ static char *encode_auth_aes(char *username, char *password)
 
     // Do not encode char '\0'
     plain_text_base64_encode_len = strlen(plain_text_base64);
-    aes_buf_len = util_aes_encode_buf_len(plain_text_base64_encode_len);
     aes_len = AES_256_CFB_IV_LEN + plain_text_base64_encode_len;
-    aes = util_common_calloc_s(aes_buf_len);
-    if (aes == NULL) {
-        ERROR("out of memory");
-        ret = -1;
-        goto out;
-    }
-    ret = aes_encode((unsigned char *)plain_text_base64, plain_text_base64_encode_len, aes, aes_buf_len);
+    ret = aes_encode((unsigned char *)plain_text_base64, plain_text_base64_encode_len, &aes);
     if (ret < 0) {
         ERROR("encode aes failed");
         ret = -1;
@@ -183,12 +168,12 @@ static char *encode_auth_aes(char *username, char *password)
 
 out:
     (void)memset(plain_text, 0, strlen(plain_text));
-    free(aes);
+    free_sensitive_string((char*)aes);
     aes = NULL;
-    free(plain_text_base64);
+    free_sensitive_string(plain_text_base64);
     plain_text_base64 = NULL;
     if (ret != 0) {
-        free(aes_base64);
+        free_sensitive_string(aes_base64);
         aes_base64 = NULL;
     }
     return aes_base64;

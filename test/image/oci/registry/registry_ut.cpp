@@ -660,6 +660,17 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
     ASSERT_NE(registry_pull(&options), 0);
 }
 
+TEST_F(RegistryUnitTest, test_aes)
+{
+    char *text = (char*)"test";
+    unsigned char *encoded = NULL;
+    char *decoded = NULL;
+    ASSERT_EQ(aes_encode((unsigned char *)text, strlen(text), &encoded), 0);
+    ASSERT_EQ(aes_decode(encoded, AES_256_CFB_IV_LEN+strlen(text), (unsigned char **)&decoded), 0);
+    ASSERT_STREQ(decoded, text);
+    free(encoded);
+    free(decoded);
+}
 
 TEST_F(RegistryUnitTest, test_cleanup)
 {

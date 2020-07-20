@@ -105,16 +105,23 @@ size_t util_aes_encode_buf_len(size_t len)
     return AES_256_CFB_IV_LEN + util_aes_decode_buf_len(len);
 }
 
-int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char *out, size_t out_len)
+int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char **out)
 {
     int ret = 0;
     int evp_ret = 0;
     int tmp_out_len = 0;
     int size = 0;
     int expected_size = len;
-    unsigned char *iv = out;
+    unsigned char *iv = NULL;
     const EVP_CIPHER *cipher = EVP_aes_256_cfb();
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+    *out = util_common_calloc_s(util_aes_encode_buf_len(len) + 1);
+    if (*out == NULL) {
+        ERROR("out of memory");
+        return -1;
+    }
+    iv = *out;
 
     ret = util_generate_random_str((char *)iv, AES_256_CFB_IV_LEN);
     if (ret != 0) {
@@ -129,7 +136,7 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
         goto out;
     }
 
-    evp_ret = EVP_EncryptUpdate(ctx, out + AES_256_CFB_IV_LEN, &tmp_out_len, bytes, len);
+    evp_ret = EVP_EncryptUpdate(ctx, (*out) + AES_256_CFB_IV_LEN, &tmp_out_len, bytes, len);
     if (evp_ret != 1) {
         ERROR("evp encrypt update failed, result %d: %s", evp_ret, strerror(errno));
         ret = -1;
@@ -137,7 +144,7 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     }
     size = tmp_out_len;
 
-    evp_ret = EVP_EncryptFinal(ctx, out + AES_256_CFB_IV_LEN + tmp_out_len, &tmp_out_len);
+    evp_ret = EVP_EncryptFinal(ctx, (*out) + AES_256_CFB_IV_LEN + tmp_out_len, &tmp_out_len);
     if (evp_ret != 1) {
         ERROR("evp encrypt final failed, result %d: %s", evp_ret, strerror(errno));
         ret = -1;
@@ -151,14 +158,20 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
         goto out;
     }
 
+    *(*out + AES_256_CFB_IV_LEN + expected_size) = 0;
+
 out:
     EVP_CIPHER_CTX_free(ctx);
     ctx = NULL;
+    if (ret != 0) {
+        free(*out);
+        *out = NULL;
+    }
 
     return ret;
 }
 
-int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char *out, size_t out_len)
+int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char **out)
 {
     int ret = 0;
     int evp_ret = 0;
@@ -169,6 +182,17 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     const EVP_CIPHER *cipher = EVP_aes_256_cfb();
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
+    if (len <= AES_256_CFB_IV_LEN) {
+        ERROR("Invalid aes length, it must be larger than %d", AES_256_CFB_IV_LEN);
+        return -1;
+    }
+
+    *out = util_common_calloc_s(util_aes_decode_buf_len(len) + 1);
+    if (*out == NULL) {
+        ERROR("out of memory");
+        return -1;
+    }
+
     iv = bytes;
     evp_ret = EVP_DecryptInit(ctx, cipher, aeskey, iv);
     if (evp_ret != 1) {
@@ -178,7 +202,7 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     }
 
     expected_size = len - AES_256_CFB_IV_LEN;
-    evp_ret = EVP_DecryptUpdate(ctx, out, &tmp_out_len, bytes + AES_256_CFB_IV_LEN, expected_size);
+    evp_ret = EVP_DecryptUpdate(ctx, *out, &tmp_out_len, bytes + AES_256_CFB_IV_LEN, expected_size);
     if (evp_ret != 1) {
         ERROR("evp decrypt update failed, result %d: %s", evp_ret, strerror(errno));
         ret = -1;
@@ -186,7 +210,7 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     }
     size = tmp_out_len;
 
-    evp_ret = EVP_DecryptFinal(ctx, out + tmp_out_len, &tmp_out_len);
+    evp_ret = EVP_DecryptFinal(ctx, (*out) + tmp_out_len, &tmp_out_len);
     if (evp_ret != 1) {
         ERROR("evp decrypt final failed, result %d: %s", evp_ret, strerror(errno));
         ret = -1;
@@ -200,9 +224,15 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
         goto out;
     }
 
+    *(*out + expected_size) = 0;
+
 out:
     EVP_CIPHER_CTX_free(ctx);
     ctx = NULL;
+    if (ret != 0) {
+        free(*out);
+        *out = NULL;
+    }
 
     return ret;
 }

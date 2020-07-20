@@ -32,7 +32,7 @@ void aes_set_key_path(char *key_path)
     return;
 }
 
-int aes_decode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len)
+int aes_decode(unsigned char *input, size_t input_len, unsigned char **output)
 {
     int ret = 0;
     unsigned char aeskey[AES_256_CFB_KEY_LEN];
@@ -43,7 +43,7 @@ int aes_decode(unsigned char *input, size_t input_len, unsigned char *output, si
         return ret;
     }
 
-    ret = util_aes_decode(aeskey, input, input_len, (unsigned char *)output, output_buf_len);
+    ret = util_aes_decode(aeskey, input, input_len, output);
     if (ret < 0) {
         ERROR("decode aes failed");
         ret = -1;
@@ -55,7 +55,7 @@ out:
     return ret;
 }
 
-int aes_encode(unsigned char *input, size_t input_len, unsigned char *output, size_t output_buf_len)
+int aes_encode(unsigned char *input, size_t input_len, unsigned char **output)
 {
     int ret = 0;
     unsigned char aeskey[AES_256_CFB_KEY_LEN];
@@ -66,7 +66,7 @@ int aes_encode(unsigned char *input, size_t input_len, unsigned char *output, si
         return ret;
     }
 
-    ret = util_aes_encode(aeskey, (unsigned char *)input, input_len, output, output_buf_len);
+    ret = util_aes_encode(aeskey, input, input_len, output);
     if (ret < 0) {
         ERROR("encode aes failed");
         ret = -1;

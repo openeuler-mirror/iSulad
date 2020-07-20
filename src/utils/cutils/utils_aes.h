@@ -30,15 +30,13 @@ extern "C" {
 
 int util_aes_key(char *key_path, bool create, unsigned char *aeskey);
 
-// This is the output buffer length, not the result data length.
-size_t util_aes_encode_buf_len(size_t len);
-// note: input bytes is "IV+data", "bytes + AES_256_CFB_IV_LEN" is the real data to be encoded.
-int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char *out, size_t out_len);
+// note: Input bytes is "IV+data", "bytes+AES_256_CFB_IV_LEN" is the real data to be encoded.
+//       The output length is the input "len" and add the '\0' after end of the length.
+int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char **out);
 
-// This is the output buffer length, not the result data length.
-size_t util_aes_decode_buf_len(size_t len);
-// note: output bytes is "IV+data", "bytes + AES_256_CFB_IV_LEN" is the read encoded data.
-int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char *out, size_t out_len);
+// note: Iutput bytes is "IV+data", "bytes+AES_256_CFB_IV_LEN" is the read encoded data.
+//       the output length is the input "len-AES_256_CFB_IV_LEN" and add the '\0' after end of the length.
+int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, unsigned char **out);
 
 #ifdef __cplusplus
 }
