@@ -23,8 +23,15 @@ declare -a lines
 LCR_ROOT_PATH="/var/lib/isulad/engines/lcr"
 valgrind_log="/tmp/valgrind.log"
 ISUALD_LOG="/var/lib/isulad/isulad.log"
+ISULAD_ROOT_PATH="/var/lib/isulad"
+ISULAD_RUN_ROOT_PATH="/var/run/isulad"
 
 declare -r -i FAILURE=1
+
+function is_overlay_driver() {
+    isula info | grep "Storage Driver" | grep "overlay"
+    return $?
+}
 
 function cut_output_lines() {
     message=`$@ 2>&1`

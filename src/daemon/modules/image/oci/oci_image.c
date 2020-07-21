@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "isula_libutils/log.h"
 #include "oci_pull.h"
@@ -34,6 +35,7 @@
 #include "utils_array.h"
 #include "utils_file.h"
 #include "utils_string.h"
+#include "isulad_config.h"
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 
@@ -49,6 +51,43 @@ static char *format_driver_name(const char *driver)
     } else {
         return util_strdup_s(driver);
     }
+}
+
+static int do_integration_of_images_check(bool image_layer_check, struct storage_module_init_options *opts)
+{
+    char *check_file = NULL;
+    int fd = -1;
+    int ret = 0;
+
+    check_file = conf_get_graph_check_flag_file();
+    if (check_file == NULL) {
+        ERROR("Failed to get oci image checked flag");
+        return -1;
+    }
+    opts->integration_check = util_file_exists(check_file) && image_layer_check;
+    if (opts->integration_check) {
+        INFO("OCI image checked flag %s exist, need to check image integrity", check_file);
+    }
+
+    if (util_build_dir(check_file) != 0) {
+        ERROR("Failed to create directory for checked flag file: %s", check_file);
+        ret = -1;
+        goto out;
+    }
+
+    fd = util_open(check_file, O_RDWR | O_CREAT, SECURE_CONFIG_FILE_MODE);
+    if (fd < 0) {
+        ERROR("Failed to create checked file: %s", check_file);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (fd >= 0) {
+        close(fd);
+    }
+    free(check_file);
+    return ret;
 }
 
 static int storage_module_init_helper(const isulad_daemon_configs *args)
@@ -70,14 +109,14 @@ static int storage_module_init_helper(const isulad_daemon_configs *args)
         goto out;
     }
 
-    storage_opts->storage_root = util_path_join(args->graph, GRAPH_ROOTPATH_NAME);
+    storage_opts->storage_root = util_path_join(args->graph, OCI_IMAGE_GRAPH_ROOTPATH_NAME);
     if (storage_opts->storage_root == NULL) {
         ERROR("Failed to get storage root dir");
         ret = -1;
         goto out;
     }
 
-    storage_opts->storage_run_root = util_path_join(args->state, GRAPH_ROOTPATH_NAME);
+    storage_opts->storage_run_root = util_path_join(args->state, OCI_IMAGE_GRAPH_ROOTPATH_NAME);
     if (storage_opts->storage_run_root == NULL) {
         ERROR("Failed to get storage run root dir");
         ret = -1;
@@ -87,6 +126,11 @@ static int storage_module_init_helper(const isulad_daemon_configs *args)
     if (dup_array_of_strings((const char **)args->storage_opts, args->storage_opts_len, &storage_opts->driver_opts,
                              &storage_opts->driver_opts_len) != 0) {
         ERROR("Failed to get storage storage opts");
+        ret = -1;
+        goto out;
+    }
+
+    if (do_integration_of_images_check(args->image_layer_check, storage_opts) != 0) {
         ret = -1;
         goto out;
     }

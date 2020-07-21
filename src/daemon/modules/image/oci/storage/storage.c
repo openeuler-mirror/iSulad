@@ -12,10 +12,12 @@
  * Create: 2020-04-01
  * Description: provide storage functions
  ******************************************************************************/
+#define _GNU_SOURCE
 #include "storage.h"
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <isula_libutils/imagetool_fs_info.h>
@@ -36,8 +38,12 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "sha256.h"
 
 static pthread_rwlock_t g_storage_rwlock;
+static char *g_storage_run_root;
+
+static bool storage_integration_check();
 
 static inline bool storage_lock(pthread_rwlock_t *store_lock, bool writable)
 {
@@ -624,65 +630,71 @@ out:
     return ret;
 }
 
-int storage_img_delete(const char *img_id, bool commit)
+static int do_storage_img_delete(const char *img_id, bool commit)
 {
     int ret = 0;
     bool in_using = false;
     imagetool_image *image_info = NULL;
 
-    if (img_id == NULL) {
-        ERROR("Invalid input arguments");
-        ret = -1;
-        goto out;
-    }
-
-    if (!storage_lock(&g_storage_rwlock, true)) {
-        ERROR("Failed to lock storage, not allowed to delete image");
-        ret = -1;
-        goto out;
-    }
-
     if (!image_store_exists(img_id)) {
         WARN("Image %s not exists", img_id);
         ret = 0;
-        goto unlock_out;
+        goto out;
     }
 
     image_info = image_store_get_image(img_id);
     if (image_info == NULL) {
         ERROR("Failed to get image %s info", img_id);
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
 
     if (check_image_occupancy_status(img_id, &in_using) != 0) {
         ERROR("Failed to check image occupancy status");
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
 
     if (in_using) {
         ERROR("Image is in use by a container");
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
 
     if (image_store_delete(image_info->id) != 0) {
         ERROR("Failed to delete img %s", img_id);
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
 
     if (delete_img_related_layers(image_info->id, image_info->top_layer) != 0) {
         ERROR("Failed to delete img related layer %s", img_id);
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
 
-unlock_out:
-    storage_unlock(&g_storage_rwlock);
 out:
     free_imagetool_image(image_info);
+    return ret;
+}
+
+int storage_img_delete(const char *img_id, bool commit)
+{
+    int ret = 0;
+
+    if (img_id == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock storage, not allowed to delete image");
+        return -1;
+    }
+
+    ret = do_storage_img_delete(img_id, commit);
+
+    storage_unlock(&g_storage_rwlock);
     return ret;
 }
 
@@ -906,6 +918,7 @@ int storage_module_init(struct storage_module_init_options *opts)
         ret = -1;
         goto out;
     }
+    g_storage_run_root = util_strdup_s(opts->storage_run_root);
 
     if (make_storage_directory(opts) != 0) {
         ret = -1;
@@ -942,6 +955,11 @@ int storage_module_init(struct storage_module_init_options *opts)
         goto out;
     }
 
+    if (opts->integration_check && !storage_integration_check()) {
+        ERROR("do integration check failed");
+        ret = -1;
+    }
+
 out:
     return ret;
 }
@@ -970,6 +988,8 @@ void free_storage_module_init_options(struct storage_module_init_options *opts)
 
 void storage_module_exit()
 {
+    free(g_storage_run_root);
+    g_storage_run_root = NULL;
     layer_store_exit();
 }
 
@@ -1087,52 +1107,57 @@ out:
     return ret;
 }
 
-int storage_rootfs_delete(const char *container_id)
+static int do_storage_rootfs_delete(const char *container_id)
 {
     int ret = 0;
     storage_rootfs *rootfs_info = NULL;
 
-    if (container_id == NULL) {
-        ERROR("Invalid input arguments");
-        ret = -1;
-        goto out;
-    }
-
-    if (!storage_lock(&g_storage_rwlock, true)) {
-        ERROR("Failed to lock storage, not allowed to delete image");
-        ret = -1;
-        goto out;
-    }
-
     if (!rootfs_store_exists(container_id)) {
         WARN("Container rootfs %s not exists", container_id);
         ret = 0;
-        goto unlock_out;
+        goto out;
     }
 
     rootfs_info = rootfs_store_get_rootfs(container_id);
     if (rootfs_info == NULL) {
         ERROR("Failed to get rootfs %s info", container_id);
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
 
     if (layer_store_delete(rootfs_info->layer) != 0) {
         ERROR("Failed to remove layer %s", rootfs_info->layer);
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
 
     if (rootfs_store_delete(container_id) != 0) {
         ERROR("Failed to remove rootfs %s", container_id);
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
-
-unlock_out:
-    storage_unlock(&g_storage_rwlock);
 out:
     free_storage_rootfs(rootfs_info);
+    return ret;
+}
+
+int storage_rootfs_delete(const char *container_id)
+{
+    int ret = 0;
+
+    if (container_id == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock storage, not allowed to delete image");
+        return -1;
+    }
+
+    ret = do_storage_rootfs_delete(container_id);
+
+    storage_unlock(&g_storage_rwlock);
     return ret;
 }
 
@@ -1218,5 +1243,362 @@ int storage_rootfs_umount(const char *container_id, bool force)
 
 out:
     free_storage_rootfs(rootfs_info);
+    return ret;
+}
+
+static char *get_check_layer_data_path()
+{
+    char *ret = NULL;
+    char *sum = NULL;
+
+    sum = sha256_digest_str(g_storage_run_root);
+    if (sum == NULL) {
+        return NULL;
+    }
+    if (asprintf(&ret, "%s/%s.json", g_storage_run_root, sum) == -1) {
+        free(sum);
+        return NULL;
+    }
+
+    free(sum);
+    return ret;
+}
+
+static void free_layers_linked_list(struct linked_list *layers)
+{
+    struct linked_list *iter = NULL;
+    struct linked_list *next = NULL;
+
+    if (layers == NULL) {
+        return;
+    }
+    linked_list_for_each_safe(iter, layers, next) {
+        linked_list_del(iter);
+        free(iter->elem);
+        iter->elem = NULL;
+        free(iter);
+    }
+    free(layers);
+}
+
+static struct linked_list *get_image_layers(const char *top_lid)
+{
+    struct linked_list *head = NULL;
+    struct linked_list *work = NULL;
+    char *parent = NULL;
+    struct layer *l = NULL;
+
+    if (top_lid == NULL) {
+        return NULL;
+    }
+
+    head = util_common_calloc_s(sizeof(struct linked_list));
+    if (head == NULL) {
+        return NULL;
+    }
+
+    linked_list_init(head);
+    parent = util_strdup_s(top_lid);
+    for (;;) {
+        if (parent == NULL) {
+            break;
+        }
+        work = util_common_calloc_s(sizeof(struct linked_list));
+        if (work == NULL) {
+            ERROR("Out of memory");
+            goto err_out;
+        }
+        work->elem = (void *)parent;
+        linked_list_add_tail(head, work);
+        l = layer_store_lookup(parent);
+        parent = NULL;
+        if (l == NULL) {
+            break;
+        }
+        parent = util_strdup_s(l->parent);
+        free_layer(l);
+    }
+
+    return head;
+err_out:
+    free_layers_linked_list(head);
+    return NULL;
+}
+
+static bool parse_checked_layer_cb(const char *line, void *context)
+{
+    static bool default_value = true;
+    map_t *checked_layers = (map_t *)context;
+
+    if (!map_replace(checked_layers, (void *)line, (void *)&default_value)) {
+        WARN("Add layer: %s failed, ignore it, cause to recheck it", line);
+    }
+    return true;
+}
+
+static int parse_checked_layer_file(const char *path, map_t *checked_layers)
+{
+    FILE *fp = NULL;
+    int ret = 0;
+
+    fp = util_fopen(path, "r");
+    if (fp == NULL) {
+        if (errno == ENOENT) {
+            return 0;
+        }
+        return -1;
+    }
+
+    ret = isula_utils_read_line(fp, parse_checked_layer_cb, (void *)checked_layers);
+
+    fclose(fp);
+    return ret;
+}
+
+static int do_add_checked_layer(const char *lid, int fd, map_t *checked_layers)
+{
+    bool default_value = true;
+    char buf[PATH_MAX] = { 0 };
+    int ret = 0;
+
+    if (strlen(lid) >= PATH_MAX - 1) {
+        ERROR("Invalid layer id: %s", lid);
+        ret = -1;
+        goto out;
+    }
+    (void)memcpy(buf, lid, strlen(lid));
+    buf[strlen(lid)] = '\n';
+    // save checked layer ids into file
+    if (util_write_nointr(fd, buf, strlen(lid) + 1) < 0) {
+        ERROR("Write checked layer data failed: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+    if (!map_replace(checked_layers, (void *)lid, (void *)&default_value)) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int do_check_layers_list(const char *path, struct linked_list *layer_ids, map_t *checked_layers)
+{
+    struct linked_list *iter = NULL;
+    struct linked_list *next = NULL;
+    char *tmp_id = NULL;
+    int ret = 0;
+    int fd = -1;
+    int nret;
+
+    fd = util_open(path, O_WRONLY | O_CREAT | O_APPEND, SECURE_CONFIG_FILE_MODE);
+    if (fd == -1) {
+        return -1;
+    }
+
+    linked_list_for_each_safe(iter, layer_ids, next) {
+        tmp_id = (char *)iter->elem;
+        DEBUG("Try to check layer: %s", tmp_id);
+        if (map_search(checked_layers, (void *)tmp_id) != NULL) {
+            INFO("Layer: %s checked, skip", tmp_id);
+            continue;
+        }
+        nret = layer_store_check(tmp_id);
+        if (nret != 0) {
+            ERROR("Layer: %s check failed", tmp_id);
+            // this layer is invalid
+            ret = -1;
+            goto out;
+        }
+        DEBUG("Layer: %s is integration", tmp_id);
+
+        nret = do_add_checked_layer(tmp_id, fd, checked_layers);
+        if (nret != 0) {
+            ret = -1;
+            goto out;
+        }
+
+        linked_list_del(iter);
+        free(iter->elem);
+        iter->elem = NULL;
+        free(iter);
+    }
+
+out:
+    close(fd);
+    return ret;
+}
+
+static int do_storage_check_image(const char *path, const char *id, map_t *checked_layers)
+{
+    int ret = -1;
+    imagetool_image *img = NULL;
+    struct linked_list *layer_ids = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    img = image_store_get_image(id);
+    if (img == NULL) {
+        goto out;
+    }
+    layer_ids = get_image_layers(img->top_layer);
+    if (layer_ids == NULL) {
+        goto out;
+    }
+
+    // check for all layers belong to the image
+    ret = do_check_layers_list(path, layer_ids, checked_layers);
+
+out:
+    free_imagetool_image(img);
+    free_layers_linked_list(layer_ids);
+    return ret;
+}
+
+static bool do_storage_integration_check(const char *path, map_t *checked_layers)
+{
+    struct rootfs_list *all_rootfs = NULL;
+    bool ret = false;
+    int nret = 0;
+    imagetool_images_list *all_images = NULL;
+    size_t i = 0;
+    size_t j = 0;
+
+    all_images = util_common_calloc_s(sizeof(imagetool_images_list));
+    if (all_images == NULL) {
+        ERROR("Memory out");
+        goto out;
+    }
+    nret = storage_get_all_images(all_images);
+    if (nret != 0) {
+        goto out;
+    }
+
+    all_rootfs = util_common_calloc_s(sizeof(struct rootfs_list));
+    if (all_rootfs == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    if (rootfs_store_get_all_rootfs(all_rootfs) != 0) {
+        ERROR("Failed to get all container rootfs information");
+        goto out;
+    }
+
+    for (i = 0; i < all_images->images_len; i++) {
+        nret = do_storage_check_image(path, all_images->images[i]->id, checked_layers);
+        if (nret == 0) {
+            continue;
+        }
+        // invalid image
+        for (j = 0; j < all_rootfs->rootfs_len; j++) {
+            if (strcmp(all_rootfs->rootfs[j]->image, all_images->images[i]->id) != 0) {
+                continue;
+            }
+            INFO("Remove container: %s related invalid image", all_rootfs->rootfs[j]->id);
+            nret = do_storage_rootfs_delete(all_rootfs->rootfs[j]->id);
+            if (nret != 0) {
+                ERROR("Failed to delete container: %s with invalid image: %s", all_rootfs->rootfs[j]->id, all_images->images[i]->id);
+            }
+        }
+        INFO("Remove unintegration image: %s", all_images->images[i]->id);
+        nret = do_storage_img_delete(all_images->images[i]->id, true);
+        if (nret != 0) {
+            ERROR("Failed to delete invalid image: %s", all_images->images[i]->id);
+        }
+    }
+
+    // remove containers with can not find image
+    for (j = 0; j < all_rootfs->rootfs_len; j++) {
+        if (image_store_exists(all_rootfs->rootfs[j]->image)) {
+            continue;
+        }
+        WARN("Delete container %s due to no related image", all_rootfs->rootfs[j]->id);
+        nret = do_storage_rootfs_delete(all_rootfs->rootfs[j]->id);
+        if (nret != 0) {
+            ERROR("Failed to delete container: %s with unfound image: %s", all_rootfs->rootfs[j]->id, all_rootfs->rootfs[j]->image);
+        }
+    }
+
+    ret = true;
+out:
+    free_imagetool_images_list(all_images);
+    free_rootfs_list(all_rootfs);
+    return ret;
+}
+
+static void delete_unchecked_layers(map_t *checked_layers)
+{
+    struct layer_list *all_layers = NULL;
+    size_t i;
+
+    all_layers = util_common_calloc_s(sizeof(struct layer_list));
+    if (all_layers == NULL) {
+        ERROR("Memory out");
+        return;
+    }
+
+    if (layer_store_list(all_layers) != 0) {
+        ERROR("Failed to get all images info");
+        goto out;
+    }
+
+    for (i = 0; i < all_layers->layers_len; i++) {
+        if (map_search(checked_layers, (void *)all_layers->layers[i]->id) != NULL) {
+            continue;
+        }
+        WARN("Delete unchecked layer: %s due to no related image", all_layers->layers[i]->id);
+        if (layer_store_delete(all_layers->layers[i]->id) != 0) {
+            ERROR("Failed to delete unchecked layer %s", all_layers->layers[i]->id);
+        }
+    }
+
+out:
+    free_layer_list(all_layers);
+}
+
+static bool storage_integration_check()
+{
+    bool ret = false;
+    map_t *checked_layers = NULL;
+    char *checked_layer_data_path = NULL;
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock storage, not allowed to delete image");
+        return false;
+    }
+
+    checked_layer_data_path = get_check_layer_data_path();
+    if (checked_layer_data_path == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+    checked_layers = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (checked_layers == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+    // load checked layer ids
+    if (parse_checked_layer_file(checked_layer_data_path, checked_layers) != 0) {
+        ERROR("Load checked layer file failed");
+        goto out;
+    }
+    ret = do_storage_integration_check(checked_layer_data_path, checked_layers);
+    if (!ret) {
+        goto out;
+    }
+
+    delete_unchecked_layers(checked_layers);
+
+    ret = true;
+out:
+    map_free(checked_layers);
+    storage_unlock(&g_storage_rwlock);
+    free(checked_layer_data_path);
     return ret;
 }

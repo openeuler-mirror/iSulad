@@ -226,9 +226,6 @@ free_out:
 /* conf get graph checked flag file path */
 char *conf_get_graph_check_flag_file()
 {
-    return NULL;
-#if 0
-    TODO implement image check in image module, get image check flag file path from image module
     char *epath = NULL;
     char *rootpath = NULL;
     size_t len;
@@ -238,11 +235,11 @@ char *conf_get_graph_check_flag_file()
         ERROR("Get rootpath failed");
         return epath;
     }
-    if (strlen(rootpath) > ((SIZE_MAX - strlen(GRAPH_ROOTPATH_NAME)) - strlen(GRAPH_ROOTPATH_CHECKED_FLAG)) - 3) {
+    if (strlen(rootpath) > ((SIZE_MAX - strlen(OCI_IMAGE_GRAPH_ROOTPATH_NAME)) - strlen(GRAPH_ROOTPATH_CHECKED_FLAG)) - 3) {
         ERROR("Root path is too long");
         goto free_out;
     }
-    len = strlen(rootpath) + 1 + strlen(GRAPH_ROOTPATH_NAME) + 1 + strlen(GRAPH_ROOTPATH_CHECKED_FLAG) + 1;
+    len = strlen(rootpath) + 1 + strlen(OCI_IMAGE_GRAPH_ROOTPATH_NAME) + 1 + strlen(GRAPH_ROOTPATH_CHECKED_FLAG) + 1;
     if (len > PATH_MAX) {
         ERROR("The size of path exceeds the limit");
         goto free_out;
@@ -253,7 +250,7 @@ char *conf_get_graph_check_flag_file()
         goto free_out;
     }
 
-    int nret = snprintf(epath, len, "%s/%s/%s", rootpath, GRAPH_ROOTPATH_NAME, GRAPH_ROOTPATH_CHECKED_FLAG);
+    int nret = snprintf(epath, len, "%s/%s/%s", rootpath, OCI_IMAGE_GRAPH_ROOTPATH_NAME, GRAPH_ROOTPATH_CHECKED_FLAG);
     if (nret < 0 || (size_t)nret >= len) {
         ERROR("Sprintf graph checked flag failed");
         free(epath);
@@ -263,7 +260,6 @@ char *conf_get_graph_check_flag_file()
 free_out:
     free(rootpath);
     return epath;
-#endif
 }
 
 /* conf get routine rootdir */

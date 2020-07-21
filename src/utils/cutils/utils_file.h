@@ -94,6 +94,10 @@ int util_scan_subdirs(const char *directory, subdir_callback_t cb);
 
 int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode);
 
+typedef bool (*read_line_callback_t)(const char *, void *context);
+
+int isula_utils_read_line(FILE *fp, read_line_callback_t cb, void *context);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1448,3 +1448,38 @@ char *isula_utils_read_file(const char *path)
     (void)fclose(fp);
     return buf;
 }
+
+int isula_utils_read_line(FILE *fp, read_line_callback_t cb, void *context)
+{
+    size_t len = 0;
+    char *line = NULL;
+    ssize_t nret = 0;
+    int ret = 0;
+
+    if (fp == NULL) {
+        ERROR("Invalid parameter");
+        return -1;
+    }
+
+    errno = 0;
+    for (;;) {
+        nret = getline(&line, &len, fp);
+        if (nret == -1) {
+            // end of file
+            ret = (errno == 0 ? 0 : -1);
+            if (ret != 0) {
+                ERROR("error read line from tar split: %s", strerror(errno));
+            }
+            goto out;
+        }
+
+        util_trim_newline(line);
+        if (!cb(line, context)) {
+            goto out;
+        }
+    }
+out:
+    free(line);
+    return ret;
+}
+

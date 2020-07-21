@@ -31,7 +31,6 @@
 extern "C" {
 #endif
 
-#define GRAPH_ROOTPATH_NAME "storage"
 #define OCI_LOAD_TMP_WORK_DIR "/var/tmp/isulad-oci-load"
 
 struct layer {
@@ -69,6 +68,7 @@ struct storage_module_init_options {
     // driver_opts are driver-specific options.
     char **driver_opts;
     size_t driver_opts_len;
+    bool integration_check;
 };
 
 struct storage_img_create_options {

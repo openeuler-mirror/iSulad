@@ -14,6 +14,7 @@
  ********************************************************************************/
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 #include <zlib.h>
+#include <sys/stat.h>
 
 #include "utils.h"
 #include "util_gzip.h"
@@ -34,7 +35,7 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
     const char *gzerr = NULL;
     int errnum = 0;
 
-    srcfd = util_open(srcfile, O_RDONLY, mode);
+    srcfd = util_open(srcfile, O_RDONLY, SECURE_CONFIG_FILE_MODE);
     if (srcfd < 0) {
         ERROR("Open src file: %s, failed: %s", srcfile, strerror(errno));
         return -1;
@@ -73,6 +74,10 @@ int util_gzip_z(const char *srcfile, const char *dstfile, const mode_t mode)
             ret = -1;
             break;
         }
+    }
+    if (chmod(dstfile, mode) != 0) {
+        ERROR("Change mode of tar-split file");
+        ret = -1;
     }
 
 out:

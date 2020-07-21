@@ -1545,7 +1545,7 @@ int overlay2_umount_layer(const char *id, const struct graphdriver *driver)
         goto out;
     }
 
-    if (umount2(merged_dir, MNT_DETACH)) {
+    if (umount2(merged_dir, MNT_DETACH) && errno != EINVAL) {
         SYSERROR("Failed to umount the target: %s", merged_dir);
     }
 

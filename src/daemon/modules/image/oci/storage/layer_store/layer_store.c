@@ -1960,6 +1960,7 @@ static uint64_t payload_to_crc(char *payload)
         crc <<= 8;
     }
 
+    free(crc_sums);
     return crc;
 }
 
@@ -2035,7 +2036,7 @@ static int valid_crc(storage_entry *entry, char *rootfs)
     }
 
     if (entry->payload == NULL) {
-        if (stat(file, &st) != 0) {
+        if (lstat(file, &st) != 0) {
             ERROR("stat file %s failed: %s", file, strerror(errno));
             ret = -1;
             goto out;
@@ -2057,7 +2058,7 @@ static int valid_crc(storage_entry *entry, char *rootfs)
         expected_crc = payload_to_crc(entry->payload);
         if (crc != expected_crc) {
             ERROR("file %s crc 0x%jx not as expected 0x%jx", file, crc, expected_crc);
-            ret = -1;
+            ret = 1;
             goto out;
         }
     }
@@ -2082,28 +2083,21 @@ static void free_tar_split(tar_split *ts)
     return;
 }
 
-static tar_split *new_tar_split(layer_t *l)
+static tar_split *new_tar_split(layer_t *l, const char *tspath)
 {
     int ret = 0;
     tar_split *ts = NULL;
-    char *tspath = NULL;
 
     ts = util_common_calloc_s(sizeof(tar_split));
     if (ts == NULL) {
         ERROR("out of memory");
-        return NULL;
+        ret = -1;
+        goto out;
     }
 
     ts->tmp_file = tmpfile();
     if (ts->tmp_file == NULL) {
         ERROR("create tmpfile failed: %s", strerror(errno));
-        ret = -1;
-        goto out;
-    }
-
-    tspath = tar_split_path(l->slayer->id);
-    if (tspath == NULL) {
-        ERROR("get tar split path of layer %s failed", l->slayer->id);
         ret = -1;
         goto out;
     }
@@ -2121,7 +2115,6 @@ out:
         free_tar_split(ts);
         ts = NULL;
     }
-    free(tspath);
 
     return ts;
 }
@@ -2134,15 +2127,16 @@ static int next_tar_split_entry(tar_split *ts, storage_entry **entry)
     size_t length = 0;
     char *errmsg = NULL;
 
+    errno = 0;
     nret = getline(&pline, &length, ts->tmp_file);
     if (nret == -1) {
         // end of file
         if (errno == 0) {
             *entry = NULL;
-            return 0;
+        } else {
+            ERROR("error read line from tar split: %s", strerror(errno));
+            ret = -1;
         }
-        ERROR("error read line from tar split: %s", strerror(errno));
-        ret = -1;
         goto out;
     }
 
@@ -2173,11 +2167,23 @@ static int do_integration_check(layer_t *l, char *rootfs)
     int ret = 0;
     tar_split *ts = NULL;
     storage_entry *entry = NULL;
+    char *tspath = NULL;
 
-    ts = new_tar_split(l);
+    tspath = tar_split_path(l->slayer->id);
+    if (tspath == NULL) {
+        ERROR("get tar split path of layer %s failed", l->slayer->id);
+        return -1;
+    }
+    if (!util_file_exists(tspath)) {
+        WARN("Can not found tar split of layer: %s, just skip it", l->slayer->id);
+        goto out;
+    }
+
+    ts = new_tar_split(l, tspath);
     if (ts == NULL) {
         ERROR("new tar split for layer %s failed", l->slayer->id);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     ret = next_tar_split_entry(ts, &entry);
@@ -2202,11 +2208,18 @@ static int do_integration_check(layer_t *l, char *rootfs)
     }
 
 out:
+    free(tspath);
     free_tar_split(ts);
 
     return ret;
 }
 
+/*
+ * return value:
+ *   <0: operator failed
+ *    0: valid layer
+ *   >0: invalid layer
+ * */
 int layer_store_check(const char *id)
 {
     int ret = 0;
@@ -2232,13 +2245,13 @@ int layer_store_check(const char *id)
 
     ret = do_integration_check(l, rootfs);
     if (ret != 0) {
-        ERROR("do integration check failed for layer %s", l->slayer->id);
         goto out;
     }
 
 out:
     (void)layer_store_umount(id, false);
     layer_ref_dec(l);
+    free(rootfs);
 
     return ret;
 }

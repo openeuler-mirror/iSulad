@@ -104,6 +104,8 @@ extern "C" {
 #define OCI_VERSION "1.0.1"
 #endif
 
+#define OCI_IMAGE_GRAPH_ROOTPATH_NAME "storage"
+
 #define DEFAULT_TCP_HOST "tcp://localhost:2375"
 #define DEFAULT_TLS_HOST "tcp://localhost:2376"
 
