@@ -23,7 +23,7 @@ extern "C" {
 #define AUTH_AESKEY_NAME "aeskey"
 #define DEFAULT_AUTH_AESKEY "/root/.isulad/" AUTH_AESKEY_NAME
 
-void aes_set_key_path(char *key_path);
+void aes_set_key_dir(char *key_dir);
 // output length is "input_len+AES_256_CFB_IV_LEN"
 int aes_encode(unsigned char *input, size_t input_len, unsigned char **output);
 // output length is "input_len-AES_256_CFB_IV_LEN"

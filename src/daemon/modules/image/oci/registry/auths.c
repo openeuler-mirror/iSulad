@@ -52,13 +52,7 @@ void auths_set_dir(char *auth_dir)
 
     g_auth_path = util_strdup_s(path);
 
-    sret = snprintf(path, sizeof(path), "%s/%s", auth_dir, AUTH_AESKEY_NAME);
-    if (sret < 0 || (size_t)sret >= sizeof(path)) {
-        ERROR("Failed to sprintf auths aeskey, auth dir: %s", auth_dir);
-        return;
-    }
-
-    aes_set_key_path(path);
+    aes_set_key_dir(auth_dir);
 
     return;
 }

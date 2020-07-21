@@ -24,11 +24,23 @@
 
 static char *g_aeskey = DEFAULT_AUTH_AESKEY;
 
-void aes_set_key_path(char *key_path)
+void aes_set_key_dir(char *key_dir)
 {
-    if (key_path != NULL) {
-        g_aeskey = util_strdup_s(key_path);
+    int sret = 0;
+    char path[PATH_MAX] = {0};
+
+    if (key_dir == NULL) {
+        return;
     }
+
+    sret = snprintf(path, sizeof(path), "%s/%s", key_dir, AUTH_AESKEY_NAME);
+    if (sret < 0 || (size_t)sret >= sizeof(path)) {
+        ERROR("Failed to sprintf auths %s/%s", key_dir, AUTH_AESKEY_NAME);
+        return;
+    }
+
+    g_aeskey = util_strdup_s(path);
+
     return;
 }
 
