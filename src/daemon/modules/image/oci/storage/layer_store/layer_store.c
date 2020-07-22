@@ -863,7 +863,8 @@ err_out:
     return NULL;
 }
 
-typedef int (*archive_entry_cb_t)(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf);
+typedef int (*archive_entry_cb_t)(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf,
+                                  int64_t *size);
 
 static void free_storage_entry_data(storage_entry *entry)
 {
@@ -934,7 +935,8 @@ out:
     return ret;
 }
 
-static int archive_entry_parse(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf)
+static int archive_entry_parse(struct archive_entry *entry, struct archive *ar, int32_t position, Buffer *json_buf,
+                               int64_t *size)
 {
     storage_entry sentry = { 0 };
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, stderr };
@@ -965,6 +967,8 @@ static int archive_entry_parse(struct archive_entry *entry, struct archive *ar, 
         goto out;
     }
 
+    *size = *size + sentry.size;
+
     ret = 0;
 out:
     free_storage_entry_data(&sentry);
@@ -973,7 +977,7 @@ out:
     return ret;
 }
 
-static int foreach_archive_entry(archive_entry_cb_t cb, int fd, const char *dist)
+static int foreach_archive_entry(archive_entry_cb_t cb, int fd, const char *dist, int64_t *size)
 {
     int ret = -1;
     int nret = 0;
@@ -1008,7 +1012,7 @@ static int foreach_archive_entry(archive_entry_cb_t cb, int fd, const char *dist
             ERROR("archive read header failed: %s", archive_error_string(read_a));
             goto out;
         }
-        nret = cb(entry, read_a, position, json_buf);
+        nret = cb(entry, read_a, position, json_buf, size);
         if (nret != 0) {
             goto out;
         }
@@ -1027,7 +1031,7 @@ out:
     return ret;
 }
 
-static int make_tar_split_file(const char *lid, const struct io_read_wrapper *diff)
+static int make_tar_split_file(const char *lid, const struct io_read_wrapper *diff, int64_t *size)
 {
     /*
      * step 1: read header;
@@ -1049,7 +1053,7 @@ static int make_tar_split_file(const char *lid, const struct io_read_wrapper *di
         goto out;
     }
 
-    ret = foreach_archive_entry(archive_entry_parse, *pfd, save_fname);
+    ret = foreach_archive_entry(archive_entry_parse, *pfd, save_fname, size);
     if (ret != 0) {
         goto out;
     }
@@ -1084,16 +1088,16 @@ static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
         return 0;
     }
 
-    nret = graphdriver_apply_diff(l->slayer->id, diff, &size);
+    nret = graphdriver_apply_diff(l->slayer->id, diff);
     if (nret != 0) {
         goto out;
     }
 
+    // uncompress digest get from up caller
+    ret = make_tar_split_file(l->slayer->id, diff, &size);
+
     INFO("Apply layer get size: %ld", size);
     l->slayer->diff_size = size;
-    // uncompress digest get from up caller
-
-    ret = make_tar_split_file(l->slayer->id, diff);
 
 out:
     return ret;

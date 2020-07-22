@@ -59,8 +59,7 @@ int devmapper_umount_layer(const char *id, const struct graphdriver *driver);
 
 bool devmapper_layer_exists(const char *id, const struct graphdriver *driver);
 
-int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
-                         int64_t *layer_size);
+int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content);
 
 int devmapper_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
 
@@ -71,7 +70,6 @@ int devmapper_clean_up(struct graphdriver *driver);
 int devmapper_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver);
 
 int devmapper_get_layer_fs_info(const char *id, const struct graphdriver *driver, imagetool_fs_info *fs_info);
-
 
 #ifdef __cplusplus
 }

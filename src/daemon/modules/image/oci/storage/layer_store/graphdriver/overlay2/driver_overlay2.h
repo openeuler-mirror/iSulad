@@ -52,8 +52,7 @@ int overlay2_umount_layer(const char *id, const struct graphdriver *driver);
 
 bool overlay2_layer_exists(const char *id, const struct graphdriver *driver);
 
-int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
-                        int64_t *layer_size);
+int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content);
 
 int overlay2_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
 
@@ -74,4 +73,3 @@ int overlay2_get_layer_fs_info(const char *id, const struct graphdriver *driver,
 #endif
 
 #endif
-

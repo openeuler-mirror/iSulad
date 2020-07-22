@@ -212,19 +212,19 @@ bool graphdriver_layer_exists(const char *id)
     return g_graphdriver->ops->exists(id, g_graphdriver);
 }
 
-int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content, int64_t *layer_size)
+int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content)
 {
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
     }
 
-    if (id == NULL || content == NULL || layer_size == NULL) {
+    if (id == NULL || content == NULL) {
         ERROR("Invalid input arguments for driver umount layer");
         return -1;
     }
 
-    return g_graphdriver->ops->apply_diff(id, g_graphdriver, content, layer_size);
+    return g_graphdriver->ops->apply_diff(id, g_graphdriver, content);
 }
 
 container_inspect_graph_driver *graphdriver_get_metadata(const char *id)

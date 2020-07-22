@@ -1643,8 +1643,7 @@ out:
     return exists;
 }
 
-int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
-                        int64_t *layer_size)
+int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content)
 {
     int ret = 0;
     char *layer_dir = NULL;
@@ -1679,8 +1678,6 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
         ret = -1;
         goto out;
     }
-
-    utils_calculate_dir_size_without_hardlink(layer_diff, layer_size, NULL);
 
 out:
     free(layer_dir);

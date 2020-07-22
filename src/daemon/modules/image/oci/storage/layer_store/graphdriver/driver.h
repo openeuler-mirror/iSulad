@@ -67,8 +67,7 @@ struct graphdriver_ops {
 
     bool (*exists)(const char *id, const struct graphdriver *driver);
 
-    int (*apply_diff)(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content,
-                      int64_t *layer_size);
+    int (*apply_diff)(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content);
 
     int (*get_layer_metadata)(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);
 
@@ -113,7 +112,7 @@ int graphdriver_umount_layer(const char *id);
 
 bool graphdriver_layer_exists(const char *id);
 
-int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content, int64_t *layer_size);
+int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content);
 
 struct graphdriver_status *graphdriver_get_status(void);
 
