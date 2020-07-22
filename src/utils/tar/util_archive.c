@@ -165,6 +165,7 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
     flags |= ARCHIVE_EXTRACT_FFLAGS;
     flags |= ARCHIVE_EXTRACT_SECURE_SYMLINKS;
     flags |= ARCHIVE_EXTRACT_SECURE_NODOTDOT;
+    flags |= ARCHIVE_EXTRACT_XATTR;
 
     a = archive_read_new();
     archive_read_support_filter_all(a);
