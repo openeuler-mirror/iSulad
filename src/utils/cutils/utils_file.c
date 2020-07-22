@@ -1466,15 +1466,16 @@ int isula_utils_read_line(FILE *fp, read_line_callback_t cb, void *context)
         nret = getline(&line, &len, fp);
         if (nret == -1) {
             // end of file
-            ret = (errno == 0 ? 0 : -1);
-            if (ret != 0) {
-                ERROR("error read line from tar split: %s", strerror(errno));
+            if (errno != 0) {
+                ret = -1;
+                ERROR("read line failed: %s", strerror(errno));
             }
             goto out;
         }
 
         util_trim_newline(line);
         if (!cb(line, context)) {
+            ret = -1;
             goto out;
         }
     }
