@@ -23,6 +23,10 @@ declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.bash
 rootfs_tar="${curr_path}/rootfs.tar"
 rootfs_tar_xz="${curr_path}/rootfs.tar.xz"
+rootfs_empty_gz="${curr_path}/empty.gz"
+rootfs_file_gz="${curr_path}/file.gz"
+import_empty_gz="empty"
+import_file_gz="file"
 import_tar="import_tar"
 import_tar_xz="import_tar_xz"
 
@@ -52,6 +56,12 @@ function test_image_import()
 
   isula rmi ${import_tar_xz}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fail to remove ${import_tar_xz}" && ((ret++))
+
+  isula import ${rootfs_empty_gz} ${import_empty_gz}
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - should not import ${rootfs_empty_gz} success" && ((ret++))
+
+  isula import ${rootfs_file_gz} ${import_file_gz}
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - should not import ${rootfs_file_gz} success" && ((ret++))
 
   msg_info "${test} finished with return ${ret}..."
   return ${ret}

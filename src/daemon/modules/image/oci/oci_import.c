@@ -36,6 +36,7 @@
 #include "sha256.h"
 #include "utils_file.h"
 #include "utils_timestamp.h"
+#include "util_archive.h"
 
 #define IMPORT_COMMENT "Imported from tarball"
 #define ROOTFS_TYPE "layers"
@@ -500,6 +501,13 @@ int oci_do_import(char *file, char *tag, char **id)
     if (file == NULL || tag == NULL || id == NULL) {
         ERROR("Invalid NULL param");
         return -1;
+    }
+
+    if (!valid_archive_format(file)) {
+        ERROR("file %s format error or unsupported for import", file);
+        isulad_try_set_error_message("file %s format error or unsupported for import", file);
+        ret = -1;
+        goto out;
     }
 
     ret = do_import(file, tag);

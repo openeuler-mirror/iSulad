@@ -294,3 +294,60 @@ child_out:
 cleanup:
     return ret;
 }
+
+bool valid_archive_format(const char *file)
+{
+    int ret = ARCHIVE_FAILED;
+    struct archive *read_archive = NULL;
+    struct archive_entry *entry = NULL;
+
+    if (file == NULL) {
+        ERROR("Invalid NULL file path when checking archive format");
+        return false;
+    }
+
+    read_archive = archive_read_new();
+    if (read_archive == NULL) {
+        ERROR("archive read new failed");
+        return false;
+    }
+
+    ret = archive_read_support_filter_all(read_archive);
+    if (ret != ARCHIVE_OK) {
+        ERROR("Failed to set archive read support filter all, result is %d, errmsg: %s",
+              ret, archive_error_string(read_archive));
+        goto out;
+    }
+
+    ret = archive_read_support_format_all(read_archive);
+    if (ret != ARCHIVE_OK) {
+        ERROR("Failed to set archive read support format all, result is %d, errmsg: %s",
+              ret, archive_error_string(read_archive));
+        goto out;
+    }
+
+    ret = archive_read_open_filename(read_archive, file, ARCHIVE_READ_BUFFER_SIZE);
+    if (ret != ARCHIVE_OK) {
+        ERROR("Failed to open archive %s: %s", file, archive_error_string(read_archive));
+        goto out;
+    }
+
+    // format code upated when archive_read_next_header is called
+    ret = archive_read_next_header(read_archive, &entry);
+    if (ret == ARCHIVE_EOF) {
+        ERROR("Invalid empty archive, it's not archive format");
+        goto out;
+    }
+    if (ret != ARCHIVE_OK) {
+        ERROR("Failed to read next header for file %s: %s", file, archive_error_string(read_archive));
+        goto out;
+    }
+
+out:
+    if (archive_read_free(read_archive) != ARCHIVE_OK) {
+        ERROR("Failed to free archive %s: %s", file, archive_error_string(read_archive));
+    }
+    read_archive = NULL;
+
+    return (ret == ARCHIVE_OK);
+}
