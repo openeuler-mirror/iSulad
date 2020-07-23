@@ -2027,6 +2027,7 @@ static int valid_crc(storage_entry *entry, char *rootfs)
     uint64_t expected_crc = 0;
     char file[PATH_MAX] = { 0 };
     struct stat st;
+    char *fname = NULL;
 
     nret = snprintf(file, PATH_MAX, "%s/%s", rootfs, entry->name);
     if (nret < 0 || nret >= PATH_MAX) {
@@ -2036,11 +2037,16 @@ static int valid_crc(storage_entry *entry, char *rootfs)
     }
 
     if (entry->payload == NULL) {
-        if (lstat(file, &st) != 0) {
-            ERROR("stat file %s failed: %s", file, strerror(errno));
-            ret = -1;
+        if (lstat(file, &st) == 0) {
             goto out;
         }
+        fname = util_path_base(file);
+        // is placeholder for overlay, ignore this file
+        if (fname != NULL && util_has_prefix(fname, ".wh")) {
+            goto out;
+        }
+        ERROR("stat file or dir: %s, failed: %s", file, strerror(errno));
+        ret = -1;
     } else {
         if (strlen(entry->payload) != PAYLOAD_CRC_LEN) {
             ERROR("invalid payload %s of file %s", entry->payload, file);
@@ -2064,7 +2070,7 @@ static int valid_crc(storage_entry *entry, char *rootfs)
     }
 
 out:
-
+    free(fname);
     return ret;
 }
 
