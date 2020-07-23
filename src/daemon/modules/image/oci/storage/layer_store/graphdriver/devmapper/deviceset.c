@@ -174,22 +174,6 @@ out:
     return 0;
 }
 
-static int enable_deferred_removal_deletion(struct device_set *devset)
-{
-    if (devset->enable_deferred_removal) {
-        devset->deferred_remove = true;
-    }
-
-    if (devset->enable_deferred_deletion) {
-        if (!devset->deferred_remove) {
-            ERROR("devmapper: Deferred deletion can not be enabled as deferred removal is not enabled.");
-            return -1;
-        }
-        devset->deferred_delete = true;
-    }
-    return 0;
-}
-
 static char *metadata_dir(struct device_set *devset)
 {
     char *dir = NULL;
@@ -297,38 +281,7 @@ out:
     return dev_name;
 }
 
-static int remove_device(const char *name)
-{
-    int i = 0;
-    int max_retry = 200;
-    int ret = 0;
-
-    if (name == NULL) {
-        ERROR("Invalid input");
-        return -1;
-    }
-
-    for (; i < max_retry; i++) {
-        ret = dev_delete_device_force(name);
-        if (ret == 0) {
-            DEBUG("devmapper: remove device:%s success", name);
-            goto out;
-        }
-
-        if (ret != ERR_BUSY) {
-            ERROR("devmapper: remove device err,cause is not busy,stop retry");
-            goto out;
-        }
-        INFO("devmapper: device is busy so we cannot remove, after 0.1s to retry");
-        sleep(0.1);
-    }
-
-out:
-    return ret;
-}
-
-static int deactivate_device_mode(struct device_set *devset, image_devmapper_device_info *dev_info,
-                                  bool deferred_remove)
+static int deactivate_device_mode(struct device_set *devset, image_devmapper_device_info *dev_info)
 {
     int ret = 0;
     int nret = 0;
@@ -358,28 +311,15 @@ static int deactivate_device_mode(struct device_set *devset, image_devmapper_dev
         goto free_out;
     }
 
-    if (deferred_remove) {
-        nret = dev_remove_device_deferred(dm_name);
-        if (nret != 0) {
-            if (nret == ERR_ENXIO) {
-                WARN("devmapper: device %s has gone", dm_name);
-                goto free_out;
-            }
-            ret = -1;
-            ERROR("devmapper: remove device:%s failed, err:%s", dm_name, dev_strerror(nret));
+    nret = dev_remove_device_deferred(dm_name);
+    if (nret != 0) {
+        if (nret == ERR_ENXIO) {
+            WARN("devmapper: device %s has gone", dm_name);
             goto free_out;
         }
-    } else {
-        nret = remove_device(dm_name);
-        if (nret != 0) {
-            if (nret == ERR_ENXIO) {
-                WARN("devmapper: device %s has gone", dm_name);
-                goto free_out;
-            }
-            ret = -1;
-            ERROR("devmapper: remove device:%s without deferred failed, err:%s", dm_name, dev_strerror(nret));
-            goto free_out;
-        }
+        ret = -1;
+        ERROR("devmapper: remove device:%s failed, err:%s", dm_name, dev_strerror(nret));
+        goto free_out;
     }
 
 free_out:
@@ -389,7 +329,7 @@ free_out:
 
 static int deactivate_device(struct device_set *devset, image_devmapper_device_info *dev_info)
 {
-    return deactivate_device_mode(devset, dev_info, devset->deferred_remove);
+    return deactivate_device_mode(devset, dev_info);
 }
 
 static int pool_status(struct device_set *devset, uint64_t *total_size_in_sectors, uint64_t *transaction_id,
@@ -1672,27 +1612,24 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
         goto out;
     }
 
-    if (devset->deferred_remove) {
-        if (dev_get_info_with_deferred(dm_name, dmi) != 0) {
-            ret = -1;
-            goto out;
-        }
-        if (dmi->deferred_remove != 0) {
-            nret = cancel_deferred_removal(devset, base_info->hash);
-            if (nret != 0) {
-                if (nret != ERR_ENXIO) {
-                    ret = -1;
-                    goto out;
-                }
-                UTIL_FREE_AND_SET_NULL(dmi);
-            } else {
-                deactive_dev = true;
-            }
-        }
-    } else if (dev_get_info(dmi, dm_name) != 0) {
+
+    if (dev_get_info_with_deferred(dm_name, dmi) != 0) {
         ret = -1;
         goto out;
     }
+    if (dmi->deferred_remove != 0) {
+        nret = cancel_deferred_removal(devset, base_info->hash);
+        if (nret != 0) {
+            if (nret != ERR_ENXIO) {
+                ret = -1;
+                goto out;
+            }
+            UTIL_FREE_AND_SET_NULL(dmi);
+        } else {
+            deactive_dev = true;
+        }
+    }
+
 
     if (dmi != NULL && dmi->exists != 0) {
         if (dev_suspend_device(dm_name) != 0) {
@@ -1728,10 +1665,6 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
     char *dm_name = NULL;
     struct dm_info dmi = { 0 };
 
-    if (!devset->deferred_remove) {
-        return 0;
-    }
-
     dm_name = get_dm_name(devset, info->hash);
     if (dm_name == NULL) {
         ret = -1;
@@ -1739,7 +1672,6 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
         goto out;
     }
 
-    DEBUG("devmapper: cancelDeferredRemovalIfNeeded START(%s)", dm_name);
     if (dev_get_info_with_deferred(dm_name, &dmi) != 0) {
         ret = -1;
         ERROR("devmapper: can not get info from dm %s", dm_name);
@@ -2260,7 +2192,7 @@ static int delete_transaction(struct device_set *devset, image_devmapper_device_
     pool_fname = get_pool_dev_name(devset);
     nret = dev_delete_device(pool_fname, info->device_id);
     if (nret != 0) {
-        if (sync_delete || !devset->deferred_delete || nret != ERR_BUSY) {
+        if (sync_delete || nret != ERR_BUSY) {
             ERROR("devmapper: Error deleting device");
             ret = -1;
             goto out;
@@ -2293,7 +2225,6 @@ out:
 static int do_delete_device(struct device_set *devset, const char *hash, bool sync_delete)
 {
     int ret = 0;
-    bool deferred_remove = false;
     devmapper_device_info_t *device_info = NULL;
 
     if (devset == NULL || hash == NULL) {
@@ -2306,12 +2237,7 @@ static int do_delete_device(struct device_set *devset, const char *hash, bool sy
         return -1;
     }
 
-    deferred_remove = devset->deferred_remove;
-    if (!devset->deferred_delete) {
-        deferred_remove = false;
-    }
-
-    if (deactivate_device_mode(devset, device_info->info, deferred_remove) != 0) {
+    if (deactivate_device_mode(devset, device_info->info) != 0) {
         ret = -1;
         ERROR("devmapper: Error deactivating device");
         goto out;
@@ -2505,12 +2431,6 @@ static int do_devmapper_init(struct device_set *devset)
     bool support = false;
     char *metadata_path = NULL;
 
-    if (enable_deferred_removal_deletion(devset) != 0) {
-        ERROR("devmapper: enable deferred remove failed");
-        ret = -1;
-        goto out;
-    }
-
     support = udev_set_sync_support(true);
     if (!support) {
         ERROR("devmapper: Udev sync is not supported. This will lead to data loss and unexpected behavior.");
@@ -2597,12 +2517,15 @@ static int determine_driver_capabilities(const char *version, struct device_set 
         goto out;
     }
 
-    if (major > 4) {
-        devset->driver_deferred_removal_support = true;
+    if (major < 4) {
+        ERROR("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal", major);
+        isulad_set_error_message("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal", major);
+        ret = -1;
         goto out;
     }
 
-    if (major < 4) {
+    if (major > 4) {
+        DEBUG("devicemapper driver version >= 4.27.0, surpport deferred removal");
         goto out;
     }
 
@@ -2611,13 +2534,14 @@ static int determine_driver_capabilities(const char *version, struct device_set 
         ERROR("devmapper: invalid size: '%s': %s", tmp_str[1], strerror(-ret));
         goto out;
     }
-
     /*
      * If major is 4 and minor is 27, then there is no need to
      * check for patch level as it can not be less than 0.
      */
-    if (minor >= 27) {
-        devset->driver_deferred_removal_support = true;
+    if (minor < 27) {
+        ERROR("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal", minor);
+        isulad_set_error_message("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal", minor);
+        ret = -1;
         goto out;
     }
 
@@ -2644,11 +2568,6 @@ static int devmapper_init_cap_by_version(struct device_set *devset)
         goto out;
     }
 
-    if (devset->driver_deferred_removal_support) {
-        devset->enable_deferred_deletion = true;
-        devset->enable_deferred_removal = true;
-    }
-
 out:
     free(version);
     return ret;
@@ -2670,9 +2589,6 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
 
     devset->root = util_strdup_s(driver_home);
     devset->user_base_size = false;
-    devset->driver_deferred_removal_support = false;
-    devset->enable_deferred_removal = false;
-    devset->enable_deferred_deletion = false;
     devset->base_fs_size = 10 * SIZE_GB;
     devset->mkfs_args = NULL;
     devset->mkfs_args_len = 0;
@@ -3171,8 +3087,8 @@ struct status *device_set_status(struct device_set *devset)
     st->data_file = util_strdup_s(devset->data_device);
     st->metadata_file = util_strdup_s(devset->metadata_device);
     st->udev_sync_supported = udev_sync_supported();
-    st->deferred_remove_enabled = devset->deferred_remove;
-    st->deferred_delete_enabled = devset->deferred_delete;
+    st->deferred_remove_enabled = true;
+    st->deferred_delete_enabled = true;
     st->deferred_deleted_device_count = devset->nr_deleted_devices;
     st->base_device_size = get_base_device_size(devset);
     st->base_device_fs = util_strdup_s(devset->base_device_filesystem);

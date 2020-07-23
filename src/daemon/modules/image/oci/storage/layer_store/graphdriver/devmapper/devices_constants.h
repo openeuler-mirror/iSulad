@@ -64,8 +64,6 @@ struct device_set {
     image_devmapper_transaction *metadata_trans;
 
     bool override_udev_sync_check;
-    bool deferred_remove;
-    bool deferred_delete;
     char *base_device_uuid;
     char *base_device_filesystem;
     uint nr_deleted_devices; // number of deleted devices
@@ -73,9 +71,6 @@ struct device_set {
     char *xfs_nospace_retries; // max retries when xfs receives ENOSPC
     int64_t udev_wait_timeout;
 
-    bool driver_deferred_removal_support;
-    bool enable_deferred_removal;
-    bool enable_deferred_deletion;
     bool user_base_size;
 };
 

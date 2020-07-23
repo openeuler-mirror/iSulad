@@ -281,11 +281,6 @@ static void free_driver_mount_opts(struct driver_mount_opts *opts)
     free(opts);
 }
 
-bool devmapper_layer_exists(const char *id, const struct graphdriver *driver)
-{
-    return has_device(id, driver->devset);
-}
-
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content)
 {
     struct driver_mount_opts *mount_opts = NULL;

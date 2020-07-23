@@ -64,7 +64,6 @@ static const struct graphdriver_ops g_devmapper_ops = {
     .rm_layer = devmapper_rm_layer,
     .mount_layer = devmapper_mount_layer,
     .umount_layer = devmapper_umount_layer,
-    .exists = devmapper_layer_exists,
     .apply_diff = devmapper_apply_diff,
     .get_layer_metadata = devmapper_get_layer_metadata,
     .get_driver_status = devmapper_get_driver_status,
