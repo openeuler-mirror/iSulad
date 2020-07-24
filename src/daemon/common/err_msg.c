@@ -89,3 +89,4 @@ void isulad_append_error_message(const char *format, ...)
     }
     g_isulad_errmsg = result;
 }
+

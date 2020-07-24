@@ -43,6 +43,8 @@
 
 #define DOCKER_API_VERSION_HEADER "Docker-Distribution-Api-Version: registry/2.0"
 #define MAX_ACCEPT_LEN 128
+// retry 5 times
+#define RETRY_TIMES 5
 
 static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http_message *message)
 {
@@ -446,7 +448,7 @@ static int registry_request(pull_descriptor *desc, char *path, char **custom_hea
         }
         DEBUG("resp=%s", *output_buffer);
     } else {
-        ret = http_request_file(desc, url, (const char **)headers, file);
+        ret = http_request_file(desc, url, (const char **)headers, file, type);
         if (ret != 0) {
             ERROR("http request file failed, url: %s", url);
             goto out;
@@ -478,7 +480,7 @@ static int check_content_type(const char *content_type)
     return -1;
 }
 
-static int parse_manifests_info(char *http_head, char **content_type, char **digest)
+static int parse_manifest_head(char *http_head, char **content_type, char **digest)
 {
     int ret = 0;
     struct parsed_http_message *message = NULL;
@@ -589,7 +591,56 @@ out:
     return ret;
 }
 
-static int fetch_manifests_info(pull_descriptor *desc, char **content_type, char **digest)
+static int split_head_body(char *file, char **http_head)
+{
+    int ret = 0;
+    char *all = NULL;
+    char *head = NULL;
+    char *deli = "\r\n\r\n"; // default delimiter, may change in later process
+    char *body = NULL;
+
+    all = util_read_text_file(file);
+    if (all == NULL) {
+        ERROR("read file %s failed", file);
+        return -1;
+    }
+
+    head = strstr(all, "HTTP/1.1");
+    if (head == NULL) {
+        ERROR("No HTTP/1.1 found");
+        ret = -1;
+        goto out;
+    }
+    body = strstr(head, deli);
+    if (body == NULL) {
+        deli = "\n\n";
+        body = strstr(head, deli);
+        if (body == NULL) {
+            ERROR("No body found, data=%s", head);
+            ret = -1;
+            goto out;
+        }
+    }
+    body += strlen(deli);
+
+    ret = util_write_file(file, body, strlen(body), 0600);
+    if (ret != 0) {
+        ERROR("rewrite body to file failed");
+        ret = -1;
+        goto out;
+    }
+    *body = 0;
+
+    *http_head = util_strdup_s(head);
+
+out:
+    free(all);
+    all = NULL;
+
+    return ret;
+}
+
+static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content_type, char **digest)
 {
     int ret = 0;
     int sret = 0;
@@ -615,13 +666,19 @@ static int fetch_manifests_info(pull_descriptor *desc, char **content_type, char
         goto out;
     }
 
-    ret = registry_request(desc, path, custom_headers, NULL, &http_head, HEAD_ONLY);
+    ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY);
     if (ret != 0) {
         ERROR("registry: Get %s failed", path);
         goto out;
     }
 
-    ret = parse_manifests_info(http_head, content_type, digest);
+    ret = split_head_body(file, &http_head);
+    if (ret != 0) {
+        ERROR("registry: Split %s to head body failed", file);
+        goto out;
+    }
+
+    ret = parse_manifest_head(http_head, content_type, digest);
     if (ret != 0) {
         ret = -1;
         goto out;
@@ -643,6 +700,7 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
     int sret = 0;
     char accept[MAX_ELEMENT_SIZE] = { 0 };
     char **custom_headers = NULL;
+    int retry_times = RETRY_TIMES;
 
     // digest can be NULL
     if (desc == NULL || path == NULL || file == NULL || content_type == NULL) {
@@ -663,19 +721,31 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
         goto out;
     }
 
-    ret = registry_request(desc, path, custom_headers, file, NULL, BODY_ONLY);
-    if (ret != 0) {
-        ERROR("registry: Get %s failed", path);
-        goto out;
-    }
-
-    // If content is signatured, digest is for payload but not fetched data
-    if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
-        if (!sha256_valid_digest_file(file, digest)) {
-            ERROR("data from %s does not have digest %s", path, digest);
-            ret = -1;
+    while (retry_times > 0) {
+        retry_times--;
+        ret = registry_request(desc, path, custom_headers, file, NULL, BODY_ONLY);
+        if (ret != 0) {
+            if (retry_times > 0) {
+                continue;
+            }
+            ERROR("registry: Get %s failed", path);
+            desc->cancel = true;
             goto out;
         }
+
+        // If content is signatured, digest is for payload but not fetched data
+        if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
+            if (!sha256_valid_digest_file(file, digest)) {
+                if (retry_times > 0) {
+                    continue;
+                }
+                ret = -1;
+                ERROR("data from %s does not have digest %s", path, digest);
+                desc->cancel = true;
+                goto out;
+            }
+        }
+        break;
     }
 
 out:
@@ -869,7 +939,7 @@ out:
     return ret;
 }
 
-static int fetch_manifests_data(pull_descriptor *desc, char *file, char **content_type, char **digest)
+static int fetch_manifest_data(pull_descriptor *desc, char *file, char **content_type, char **digest)
 {
     int ret = 0;
     int sret = 0;
@@ -879,23 +949,6 @@ static int fetch_manifests_data(pull_descriptor *desc, char *file, char **conten
     if (desc == NULL || file == NULL || content_type == NULL || *content_type == NULL || digest == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
-    }
-
-    if (*digest != NULL) {
-        sret = snprintf(path, sizeof(path), "/v2/%s/manifests/%s", desc->name, *digest);
-    } else {
-        sret = snprintf(path, sizeof(path), "/v2/%s/manifests/%s", desc->name, desc->tag);
-    }
-    if (sret < 0 || (size_t)sret >= sizeof(path)) {
-        ERROR("Failed to sprintf path for manifest");
-        ret = -1;
-        goto out;
-    }
-
-    ret = fetch_data(desc, path, file, *content_type, *digest);
-    if (ret != 0) {
-        ERROR("registry: Get %s failed", path);
-        goto out;
     }
 
     // If it's manifest list, we must choose the manifest which match machine's architecture to download.
@@ -947,13 +1000,13 @@ int fetch_manifest(pull_descriptor *desc)
         return -1;
     }
 
-    ret = fetch_manifests_info(desc, &content_type, &digest);
+    ret = fetch_manifest_list(desc, file, &content_type, &digest);
     if (ret != 0) {
         ret = -1;
         goto out;
     }
 
-    ret = fetch_manifests_data(desc, file, &content_type, &digest);
+    ret = fetch_manifest_data(desc, file, &content_type, &digest);
     if (ret != 0) {
         ret = -1;
         goto out;

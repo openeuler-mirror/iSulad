@@ -731,7 +731,7 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
 
         layers[index].media_type = util_strdup_s(DOCKER_IMAGE_LAYER_TAR_GZIP);
         layers[index].digest = util_strdup_s(manifest->fs_layers[i]->blob_sum);
-        list = storage_layers_get_by_uncompress_digest(layers[index].digest);
+        list = storage_layers_get_by_compress_digest(layers[index].digest);
         if (list != NULL) {
             for (j = 0; j < list->layers_len; j++) {
                 if ((list->layers[j]->parent == NULL && index == 0) ||

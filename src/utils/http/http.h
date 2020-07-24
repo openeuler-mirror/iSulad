@@ -70,6 +70,7 @@ struct http_get_options {
     char *key_file;
 
     char *errmsg;
+    int errcode;
 
     void *progressinfo;
     progress_info_func progress_info_op;

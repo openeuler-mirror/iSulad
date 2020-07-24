@@ -88,30 +88,6 @@ protected:
     NiceMock<MockStorage> m_storage_mock;
 };
 
-int invokeHttpRequestBuf(pull_descriptor *desc, const char *url, const char **custom_headers, char **output,
-                     	    resp_data_type type)
-{
-    std::string file;
-
-    std::string data_path = get_dir() + "/data/";
-    if (!strcmp(url, "https://quay.io/v2/")) {
-	file = data_path + "v1_ping_head";
-    } else if (!strcmp(url, "https://quay.io/v2/coreos/etcd/manifests/v3.3.17-arm64")) {
-	file = data_path + "v1_manifest_head";
-    } else {
-	ERROR("%s not match failed", url);
-	return -1;
-    }
-
-    *output = util_read_text_file(file.c_str());
-    if (*output == NULL) {
-	ERROR("read file %s failed", file.c_str());
-	return -1;
-    }
-
-    return 0;
-}
-
 int invokeHttpRequestV1(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
 {
     std::string file;
@@ -129,7 +105,7 @@ int invokeHttpRequestV1(const char *url, struct http_get_options *options, long 
 	    file = data_path + "ping_head";
 	}
     } else if (!strcmp(url, "https://quay.io/v2/coreos/etcd/manifests/v3.3.17-arm64")) {
-	file = data_path + "manifest_head";
+	file = data_path + "manifest";
     } else if (util_has_prefix(url, "https://auth.quay.io")) {
 	token_count++;
 	if (token_count == 2) {
@@ -137,8 +113,6 @@ int invokeHttpRequestV1(const char *url, struct http_get_options *options, long 
 	} else {
 	    file = data_path + "token_body";
 	}
-    } else if (util_has_prefix(url, "https://quay.io/v2/coreos/etcd/manifests/sha256")) {
-	file = data_path + "manifest_body";
     } else if (util_has_prefix(url, "https://quay.io/v2/coreos/etcd/blobs/sha256")) {
 	file = std::string("");
     } else {
@@ -176,6 +150,7 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
     char *data = NULL;
     int64_t size = 0;
     Buffer *output_buffer = (Buffer *)options->output;
+    static bool retry = true;
 
     // Test insecure registry, assume registry cann't support https.
     if (util_has_prefix(url, "https://")) {
@@ -186,14 +161,16 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
     if (!strcmp(url, "http://hub-mirror.c.163.com/v2/")) {
 	file = data_path + "ping_head";
     } else if (!strcmp(url, "http://hub-mirror.c.163.com/v2/library/busybox/manifests/latest")) {
-	file = data_path + "manifest_head";
-    } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/manifests/sha256:9ddee63a")) {
 	file = data_path + "manifest_list";
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/manifests/sha256:2131f09e")) {
 	file = data_path + "manifest_body";
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/blobs/sha256:c7c37e47")) {
 	file = data_path + "config";
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/blobs/sha256:91f30d77")) {
+	if (retry) {
+	    retry = false;
+	    return -1;
+	}
 	file = data_path + "0";
     } else {
 	ERROR("%s not match failed", url);
@@ -238,8 +215,6 @@ int invokeHttpRequestOCI(const char *url, struct http_get_options *options, long
     if (!strcmp(url, "https://hub-mirror.c.163.com/v2/")) {
 	file = data_path + "ping_head";
     } else if (!strcmp(url, "https://hub-mirror.c.163.com/v2/library/busybox/manifests/latest")) {
-	file = data_path + "manifest_head";
-    } else if (util_has_prefix(url, "https://hub-mirror.c.163.com/v2/library/busybox/manifests/sha256:bd28e852")) {
 	file = data_path + "index";
     } else if (util_has_prefix(url, "https://hub-mirror.c.163.com/v2/library/busybox/manifests/sha256:106429d7")) {
 	file = data_path + "manifest_body";
@@ -365,12 +340,12 @@ struct layer * invokeStorageLayerGet(const char *layer_id)
     return NULL;
 }
 
-struct layer_list *invokeStorageLayersGetByUncompressDigest(const char *digest)
+struct layer_list *invokeStorageLayersGetByCompressDigest(const char *digest)
 {
     int ret = 0;
     struct layer_list *list = NULL;
 
-    list = (struct layer_list*)util_common_calloc_s(sizeof(struct layer_list*));
+    list = (struct layer_list*)util_common_calloc_s(sizeof(struct layer_list));
     if (list == NULL) {
 	ERROR("out of memory");
         return NULL;
@@ -655,8 +630,8 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
     .WillRepeatedly(Invoke(invokeHttpRequestV1));
     EXPECT_CALL(m_storage_mock, StorageLayerGet(::testing::_))
     .WillRepeatedly(Invoke(invokeStorageLayerGet));
-    EXPECT_CALL(m_storage_mock, StorageLayersGetByUncompressDigest(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageLayersGetByUncompressDigest));
+    EXPECT_CALL(m_storage_mock, StorageLayersGetByCompressDigest(::testing::_))
+    .WillRepeatedly(Invoke(invokeStorageLayersGetByCompressDigest));
     ASSERT_NE(registry_pull(&options), 0);
 }
 

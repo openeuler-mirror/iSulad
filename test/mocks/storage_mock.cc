@@ -24,10 +24,10 @@ void MockStorage_SetMock(MockStorage *mock)
     g_storage_mock = mock;
 }
 
-struct layer_list *storage_layers_get_by_uncompress_digest(const char *digest)
+struct layer_list *storage_layers_get_by_compress_digest(const char *digest)
 {
     if (g_storage_mock != NULL) {
-        return g_storage_mock->StorageLayersGetByUncompressDigest(digest);
+        return g_storage_mock->StorageLayersGetByCompressDigest(digest);
     }
 
     return NULL;

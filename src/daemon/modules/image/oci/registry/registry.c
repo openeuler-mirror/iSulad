@@ -54,6 +54,7 @@
 #include "utils_verify.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
+#define MAX_CONCURRENT_DOWNLOAD_NUM 5
 
 typedef struct {
     pull_descriptor *desc;
@@ -505,12 +506,6 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
 
             if (desc->layers[i].diff_id == NULL) {
                 desc->layers[i].diff_id = util_strdup_s(cache->diffid);
-            } else if (cache->diffid == NULL) {
-                ERROR("unexpected NULL diff id");
-                return -1;
-            } else if (strcmp(desc->layers[i].diff_id, cache->diffid)) {
-                ERROR("invalid diff id, expect %s, got %s", desc->layers[i].diff_id, cache->diffid);
-                return -1;
             }
 
             if (desc->layers[i].file == NULL) {
@@ -1101,10 +1096,19 @@ static void set_cached_layers_info(char *blob_digest, char *diffid, int result, 
     return;
 }
 
-static int fetch_one_layer(thread_fetch_info *info)
+static void *fetch_layer_in_thread(void *arg)
 {
+    thread_fetch_info *info = (thread_fetch_info *)arg;
     int ret = 0;
     char *diffid = NULL;
+
+    ret = pthread_detach(pthread_self());
+    if (ret != 0) {
+        ERROR("Set thread detach fail");
+        goto out;
+    }
+
+    prctl(PR_SET_NAME, "fetch_layer");
 
     if (fetch_layer(info->desc, info->index) != 0) {
         ERROR("fetch layer %ld failed", info->index);
@@ -1112,16 +1116,30 @@ static int fetch_one_layer(thread_fetch_info *info)
         goto out;
     }
 
-    diffid = oci_calc_diffid(info->file);
-    if (diffid == NULL) {
-        ERROR("calc diffid for layer %ld failed", info->index);
-        ret = -1;
-        goto out;
+    // calc diffid only if it's schema v1. schema v1 have
+    // no diff id so we need to calc it. schema v2 have
+    // diff id in config and we do not want to calc it again
+    // as it cost too much time.
+    if (is_manifest_schemav1(info->desc->manifest.media_type)) {
+        diffid = oci_calc_diffid(info->file);
+        if (diffid == NULL) {
+            ERROR("calc diffid for layer %ld failed", info->index);
+            ret = -1;
+            goto out;
+        }
     }
 
 out:
     // notify to continue downloading
     mutex_lock(&g_shared->mutex);
+    if (ret != 0) {
+        info->desc->cancel = true;
+        if (info->desc->errmsg == NULL && g_isulad_errmsg != NULL) {
+            info->desc->errmsg = util_strdup_s(g_isulad_errmsg);
+        }
+    }
+    DAEMON_CLEAR_ERRMSG();
+    info->desc->pulling_number--;
     set_cached_layers_info(info->blob_digest, diffid, ret, info->file);
     if (pthread_cond_broadcast(&g_shared->cond)) {
         ERROR("Failed to broadcast");
@@ -1131,46 +1149,53 @@ out:
     free(diffid);
     diffid = NULL;
 
-    return ret;
+    return NULL;
 }
 
-static int do_fetch(thread_fetch_info *info)
+static int add_fetch_task(thread_fetch_info *info)
 {
     int ret = 0;
     int cond_ret = 0;
+    pthread_t tid = 0;
     bool cached_layers_added = true;
     cached_layer *cache = NULL;
 
     mutex_lock(&g_shared->mutex);
     cache = get_cached_layer(info->blob_digest);
+    if (cache == NULL) {
+        // If there are too many download threads, wait until anyone completed.
+        while (info->desc->pulling_number >= MAX_CONCURRENT_DOWNLOAD_NUM) {
+            cond_ret = pthread_cond_wait(&g_shared->cond, &g_shared->mutex);
+            if (cond_ret != 0) {
+                ERROR("condition wait failed, ret %d", cond_ret);
+                ret = -1;
+                goto out;
+            }
+        }
+    }
 
     ret = add_cached_layer(info->blob_digest, info->file);
     if (ret != 0) {
         ERROR("add fetch info failed, ret %d", cond_ret);
         ret = -1;
-        goto unlock_out;
+        goto out;
     }
     cached_layers_added = true;
 
-    mutex_unlock(&g_shared->mutex);
-
     if (cache == NULL) {
-        ret = fetch_one_layer(info);
+        ret = pthread_create(&tid, NULL, fetch_layer_in_thread, info);
         if (ret != 0) {
-            ERROR("failed to to fetch layer %d", (int)info->index);
+            ERROR("failed to start thread fetch layer %d", (int)info->index);
             goto out;
         }
+        info->desc->pulling_number++;
     }
 
-    goto out;
-unlock_out:
-    mutex_unlock(&g_shared->mutex);
 out:
     if (ret != 0 && cached_layers_added) {
-        mutex_lock(&g_shared->mutex);
         del_cached_layer(info->blob_digest, info->file);
-        mutex_unlock(&g_shared->mutex);
     }
+    mutex_unlock(&g_shared->mutex);
 
     return ret;
 }
@@ -1187,12 +1212,22 @@ static void free_thread_fetch_info(thread_fetch_info *info)
     return;
 }
 
-static bool all_fetch_complete(thread_fetch_info *infos, size_t infos_len, int *result)
+static bool all_fetch_complete(thread_fetch_info *infos, pull_descriptor *desc, int *result)
 {
     size_t i = 0;
     cached_layer *cache = NULL;
+    size_t infos_len = desc->layers_len;
+
+    if (!desc->config.complete) {
+        return false;
+    }
 
     *result = 0;
+
+    if (desc->config.result != 0) {
+        *result = desc->config.result;
+    }
+
     for (i = 0; i < infos_len; i++) {
         if (!infos[i].use) {
             continue;
@@ -1216,13 +1251,71 @@ static bool all_fetch_complete(thread_fetch_info *infos, size_t infos_len, int *
     return true;
 }
 
-static int fetch_layers(pull_descriptor *desc)
+static void *fetch_config_in_thread(void *arg)
+{
+    pull_descriptor *desc = (pull_descriptor *)arg;
+    int ret = 0;
+
+    ret = pthread_detach(pthread_self());
+    if (ret != 0) {
+        ERROR("Set thread detach fail");
+        goto out;
+    }
+
+    prctl(PR_SET_NAME, "fetch_config");
+
+    ret = fetch_and_parse_config(desc);
+    if (ret != 0) {
+        ERROR("fetch and parse config failed for image %s", desc->dest_image_name);
+        isulad_try_set_error_message("fetch and parse config failed");
+        goto out;
+    }
+
+out:
+    mutex_lock(&g_shared->mutex);
+    if (ret != 0) {
+        desc->cancel = true;
+        if (desc->errmsg == NULL && g_isulad_errmsg != NULL) {
+            desc->errmsg = util_strdup_s(g_isulad_errmsg);
+        }
+    }
+    DAEMON_CLEAR_ERRMSG();
+    desc->config.complete = true;
+    desc->config.result = ret;
+    if (pthread_cond_broadcast(&g_shared->cond)) {
+        ERROR("Failed to broadcast");
+    }
+    mutex_unlock(&g_shared->mutex);
+
+    return NULL;
+}
+
+static int add_fetch_config_task(pull_descriptor *desc)
+{
+    pthread_t tid = 0;
+
+    // manifest schema1 cann't pull config, the config is composited by
+    // the history[0].v1Compatibility in manifest and rootfs's diffID
+    if (is_manifest_schemav1(desc->manifest.media_type)) {
+        desc->config.complete = true;
+        desc->config.result = 0;
+        return 0;
+    }
+
+    if (pthread_create(&tid, NULL, fetch_config_in_thread, desc)) {
+        ERROR("failed to start thread to fetch config");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int fetch_all(pull_descriptor *desc)
 {
     size_t i = 0;
     size_t j = 0;
     int ret = 0;
     int sret = 0;
-    struct layer *l = NULL;
     thread_fetch_info *infos = NULL;
     char file[PATH_MAX] = { 0 };
     int cond_ret = 0;
@@ -1241,6 +1334,15 @@ static int fetch_layers(pull_descriptor *desc)
         return -1;
     }
 
+    // fetch config in thread
+    ret = add_fetch_config_task(desc);
+    if (ret != 0) {
+        ERROR("add fetch config task failed");
+        free(infos);
+        return -1;
+    }
+
+    // fetch layers
     for (i = 0; i < desc->layers_len; i++) {
         // Skip empty layer
         if (desc->layers[i].empty_layer) {
@@ -1248,37 +1350,27 @@ static int fetch_layers(pull_descriptor *desc)
         }
 
         // Skip layer that already exist in local store
-        if (desc->layers[i].chain_id) {
-            l = storage_layer_get(without_sha256_prefix(desc->layers[i].chain_id));
-            if (l != NULL) {
-                desc->layers[i].already_exist = true;
-                parent_chain_id = desc->layers[i].chain_id;
-                free_layer(l);
-                l = NULL;
-                continue;
-            }
-        }
-
-        // Skip layer that already exist in local store for schema1
-        if (is_manifest_schemav1(desc->manifest.media_type)) {
-            list = storage_layers_get_by_uncompress_digest(desc->layers[i].digest);
-            if (list != NULL) {
-                for (j = 0; j < list->layers_len; j++) {
-                    if ((list->layers[j]->parent == NULL && i == 0) ||
-                        (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
-                         !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)))) {
-                        desc->layers[i].already_exist = true;
+        list = storage_layers_get_by_compress_digest(desc->layers[i].digest);
+        if (list != NULL) {
+            for (j = 0; j < list->layers_len; j++) {
+                if ((list->layers[j]->parent == NULL && i == 0) ||
+                    (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
+                     !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)) &&
+                     strcmp(list->layers[j]->uncompressed_digest, list->layers[j]->compressed_digest))) {
+                    desc->layers[i].already_exist = true;
+                    // oci or schema2 get diff id and chain id when get config
+                    if (is_manifest_schemav1(desc->manifest.media_type)) {
                         desc->layers[i].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);
                         desc->layers[i].chain_id = util_string_append(list->layers[j]->id, SHA256_PREFIX);
-                        parent_chain_id = desc->layers[i].chain_id;
-                        break;
                     }
+                    parent_chain_id = desc->layers[i].chain_id;
+                    break;
                 }
-                free_layer_list(list);
-                list = NULL;
-                if (desc->layers[i].already_exist) {
-                    continue;
-                }
+            }
+            free_layer_list(list);
+            list = NULL;
+            if (desc->layers[i].already_exist) {
+                continue;
             }
         }
 
@@ -1290,7 +1382,7 @@ static int fetch_layers(pull_descriptor *desc)
         if (sret < 0 || (size_t)sret >= sizeof(file)) {
             ERROR("Failed to sprintf file for layer %d", (int)i);
             ret = -1;
-            goto out;
+            break;
         }
 
         infos[i].desc = desc;
@@ -1299,14 +1391,19 @@ static int fetch_layers(pull_descriptor *desc)
         infos[i].file = util_strdup_s(file);
         infos[i].blob_digest = util_strdup_s(desc->layers[i].digest);
 
-        ret = do_fetch(&infos[i]);
+        ret = add_fetch_task(&infos[i]);
         if (ret != 0) {
-            goto out;
+            infos[i].use = false;
+            break;
         }
     }
+    if (ret != 0) {
+        desc->cancel = true;
+    }
 
+    // wait until all pulled or cancelled
     mutex_lock(&g_shared->mutex);
-    while (!all_fetch_complete(infos, desc->layers_len, &result)) {
+    while (!all_fetch_complete(infos, desc, &result)) {
         cond_ret = pthread_cond_wait(&g_shared->cond, &g_shared->mutex);
         if (cond_ret != 0) {
             ERROR("condition wait for all layers to complete failed, ret %d", cond_ret);
@@ -1323,13 +1420,13 @@ static int fetch_layers(pull_descriptor *desc)
         if (set_cached_info_to_desc(infos, desc->layers_len, desc) != 0) {
             ERROR("set cached infos to desc failed");
         }
+    } else if (desc->errmsg != NULL) {
+        ERROR("pull image %s failed: %s", desc->dest_image_name, desc->errmsg);
+        isulad_try_set_error_message(desc->errmsg);
     }
 
     mutex_unlock(&g_shared->mutex);
 
-out:
-    free_layer_list(list);
-    list = NULL;
     for (i = 0; i < desc->layers_len; i++) {
         if (ret != 0 && infos[i].use) {
             mutex_lock(&g_shared->mutex);
@@ -1484,18 +1581,7 @@ static int registry_fetch(pull_descriptor *desc, bool *reuse)
         goto out;
     }
 
-    // manifest schema1 cann't pull config, the config is composited by
-    // the history[0].v1Compatibility in manifest and rootfs's diffID
-    if (!is_manifest_schemav1(desc->manifest.media_type)) {
-        ret = fetch_and_parse_config(desc);
-        if (ret != 0) {
-            ERROR("fetch and parse config failed for image %s", desc->dest_image_name);
-            isulad_try_set_error_message("fetch and parse config failed");
-            goto out;
-        }
-    }
-
-    ret = fetch_layers(desc);
+    ret = fetch_all(desc);
     if (ret != 0) {
         ERROR("fetch layers failed for image %s", desc->dest_image_name);
         isulad_try_set_error_message("fetch layers failed");
@@ -1594,6 +1680,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->insecure_registry = options->insecure_registry;
+    desc->cancel = false;
 
     if (options->auth.username != NULL && options->auth.password != NULL) {
         desc->username = util_strdup_s(options->auth.username);

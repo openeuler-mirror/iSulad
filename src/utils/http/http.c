@@ -266,7 +266,10 @@ static void check_buf_len(struct http_get_options *options, char *errbuf, CURLco
             return;
         }
     }
+    ERROR("curl response error code %d, error message: %s", curl_result, errbuf);
+    free(options->errmsg);
     options->errmsg = util_strdup_s(errbuf);
+    options->errcode = curl_result;
 
     return;
 }
@@ -346,8 +349,11 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     /* set URL to get here */
     curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     curl_easy_setopt(curl_handle, CURLOPT_NOSIGNAL, 1L);
-    /* complete connection within 15 seconds */
+    /* complete connection within 30 seconds */
     curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, 30L);
+    /* if less than 1k data is received in 30s, abort */
+    curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_LIMIT, 1024L);
+    curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_TIME, 30L);
     /* provide a buffer to store errors in */
     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);

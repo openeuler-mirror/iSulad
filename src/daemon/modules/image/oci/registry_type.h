@@ -53,6 +53,8 @@ typedef struct {
     // Downloaded file path
     char *file;
     types_timestamp_t create_time;
+    bool complete;
+    int result;
 } config_blob;
 
 typedef struct {
@@ -88,6 +90,10 @@ typedef struct {
     char *cert_file;
     char *key_file;
     char *certs_dir;
+
+    int pulling_number;
+    bool cancel;
+    char *errmsg;
 
     char *blobpath;
     char *protocol;
