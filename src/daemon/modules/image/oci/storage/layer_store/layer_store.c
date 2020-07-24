@@ -282,17 +282,24 @@ free_out:
     return false;
 }
 
-//TODO check layer of a image, check if tar-splite and driver data exist
-static int do_validate_image_layer(layer_t *l)
+static int do_validate_image_layer(const char *path, layer_t *l)
 {
+    char *tspath = NULL;
+    int ret = 0;
+
     // it is not a layer of image
     if (l->slayer->diff_digest == NULL) {
         return 0;
     }
 
-    // TODO check if tar-splite and driver data exist
+    tspath = tar_split_path(l->slayer->id);
+    if (!util_file_exists(tspath) || !graphdriver_layer_exists(l->slayer->id)) {
+        ERROR("Invalid data of layer: %s remove it", l->slayer->id);
+        ret = -1;
+    }
 
-    return 0;
+    free(tspath);
+    return ret;
 }
 
 static int update_mount_point(layer_t *l)
@@ -1297,7 +1304,7 @@ static int umount_helper(layer_t *l, bool force)
         goto save_json;
     }
 
-    // TODO: not exist file error need to ignore
+    // not exist file error need to ignore
     ret = graphdriver_umount_layer(l->slayer->id);
     if (ret != 0) {
         ERROR("Call driver umount failed");
@@ -1721,7 +1728,7 @@ out:
 static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir)
 {
 #define LAYER_NAME_LEN 64
-    bool ret = true;
+    bool flag = false;
     char tmpdir[PATH_MAX] = { 0 };
     int nret = 0;
     char *rpath = NULL;
@@ -1731,58 +1738,54 @@ static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_d
     nret = snprintf(tmpdir, PATH_MAX, "%s/%s", path_name, sub_dir->d_name);
     if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Sprintf: %s failed", sub_dir->d_name);
-        ret = false;
         goto free_out;
     }
 
     if (!util_dir_exists(tmpdir)) {
         // ignore non-dir
         DEBUG("%s is not directory", sub_dir->d_name);
-        ret = true;
+        goto free_out;
+    }
+
+    mount_point_path = mountpoint_json_path(sub_dir->d_name);
+    if (mount_point_path == NULL) {
+        ERROR("Out of Memory");
         goto free_out;
     }
 
     if (strlen(sub_dir->d_name) != LAYER_NAME_LEN) {
-        DEBUG("%s is invalid subdir name", sub_dir->d_name);
-        ret = true;
-        goto free_out;
+        ERROR("%s is invalid subdir name", sub_dir->d_name);
+        goto remove_invalid_dir;
     }
 
     rpath = layer_json_path(sub_dir->d_name);
     if (rpath == NULL) {
-        ret = false;
-        goto remove_invalid_dir;
-    }
-    mount_point_path = mountpoint_json_path(sub_dir->d_name);
-    if (mount_point_path == NULL) {
-        ret = false;
+        ERROR("%s is invalid layer", sub_dir->d_name);
         goto remove_invalid_dir;
     }
 
     l = load_layer(rpath, mount_point_path);
     if (l == NULL) {
-        WARN("load layer: %s failed", sub_dir->d_name);
-        ret = false;
+        ERROR("load layer: %s failed, remove it", sub_dir->d_name);
         goto remove_invalid_dir;
     }
 
-    if (do_validate_image_layer(l) != 0) {
-        ret = false;
+    if (do_validate_image_layer(tmpdir, l) != 0) {
+        ERROR("%s is invalid image layer", sub_dir->d_name);
         goto remove_invalid_dir;
     }
 
     if (do_validate_rootfs_layer(l) != 0) {
-        ret = false;
+        ERROR("%s is invalid rootfs layer", sub_dir->d_name);
         goto remove_invalid_dir;
     }
 
     if (!append_layer_into_list(l)) {
         ERROR("Failed to append layer info to list");
-        ret = false;
         goto remove_invalid_dir;
     }
 
-    ret = true;
+    flag = true;
     goto free_out;
 
 remove_invalid_dir:
@@ -1793,10 +1796,12 @@ remove_invalid_dir:
 free_out:
     free(rpath);
     free(mount_point_path);
-    if (!ret) {
+    if (!flag) {
         free_layer_t(l);
     }
-    return ret;
+    // always return true;
+    // if load layer failed, just remove it
+    return true;
 }
 
 static int load_layers_from_json_files()
@@ -2042,7 +2047,7 @@ static int valid_crc(storage_entry *entry, char *rootfs)
         }
         fname = util_path_base(file);
         // is placeholder for overlay, ignore this file
-        if (fname != NULL && util_has_prefix(fname, ".wh")) {
+        if (fname != NULL && util_has_prefix(fname, ".wh.")) {
             goto out;
         }
         ERROR("stat file or dir: %s, failed: %s", file, strerror(errno));

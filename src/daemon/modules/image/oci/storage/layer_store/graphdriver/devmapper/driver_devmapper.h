@@ -57,6 +57,8 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
 
 int devmapper_umount_layer(const char *id, const struct graphdriver *driver);
 
+bool devmapper_layer_exist(const char *id, const struct graphdriver *driver);
+
 int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const struct io_read_wrapper *content);
 
 int devmapper_get_layer_metadata(const char *id, const struct graphdriver *driver, json_map_string_string *map_info);

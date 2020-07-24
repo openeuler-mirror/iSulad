@@ -1532,9 +1532,9 @@ int overlay2_umount_layer(const char *id, const struct graphdriver *driver)
         goto out;
     }
 
+    // ignore error of umount point do not exist
     if (!util_dir_exists(layer_dir)) {
-        SYSERROR("layer dir %s not exist", layer_dir);
-        ret = -1;
+        SYSWARN("layer dir %s not exist", layer_dir);
         goto out;
     }
 
