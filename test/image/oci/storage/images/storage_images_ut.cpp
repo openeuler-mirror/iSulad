@@ -297,6 +297,22 @@ protected:
         image_store_free();
     }
 
+    void BackUp()
+    {
+        std::string backup = std::string(store_real_path) + ".bak";
+        std::string command = "cp -r " + std::string(store_real_path) + " " + backup;
+        ASSERT_EQ(system(command.c_str()), 0);
+    }
+
+    void Restore()
+    {
+        std::string backup = std::string(store_real_path) + ".bak";
+        std::string rm_command = "rm -rf " + std::string(store_real_path);
+        std::string undo_command = "mv " + backup + " " + std::string(store_real_path);
+        ASSERT_EQ(system(rm_command.c_str()), 0);
+        ASSERT_EQ(system(undo_command.c_str()), 0);
+    }
+
     std::vector<std::string> ids { "39891ff67da98ab8540d71320915f33d2eb80ab42908e398472cab3c1ce7ac10",
         "e4db68de4ff27c2adfea0c54bbb73a61a42f5b667c326de4d7d5b19ab71c6a3b" };
     char store_real_path[PATH_MAX] = { 0x00 };
@@ -612,11 +628,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_something)
 
 TEST_F(StorageImagesUnitTest, test_image_store_delete)
 {
-    std::string backup = std::string(store_real_path) + ".bak";
-    std::string command = "cp -r " + std::string(store_real_path) + " " + backup;
-    std::string rm_command = "rm -rf " + std::string(store_real_path);
-    std::string undo_command = "mv " + backup + " " + std::string(store_real_path);
-    ASSERT_EQ(system(command.c_str()), 0);
+    BackUp();
 
     for (auto elem : ids) {
         ASSERT_TRUE(image_store_exists(elem.c_str()));
@@ -626,17 +638,12 @@ TEST_F(StorageImagesUnitTest, test_image_store_delete)
         ASSERT_FALSE(dirExists((std::string(store_real_path) + "/overlay-images/" + elem).c_str()));
     }
 
-    ASSERT_EQ(system(rm_command.c_str()), 0);
-    ASSERT_EQ(system(undo_command.c_str()), 0);
+    Restore();
 }
 
 TEST_F(StorageImagesUnitTest, test_image_store_wipe)
 {
-    std::string backup = std::string(store_real_path) + ".bak";
-    std::string command = "cp -r " + std::string(store_real_path) + " " + backup;
-    std::string rm_command = "rm -rf " + std::string(store_real_path);
-    std::string undo_command = "mv " + backup + " " + std::string(store_real_path);
-    ASSERT_EQ(system(command.c_str()), 0);
+    BackUp();
 
     for (auto elem : ids) {
         ASSERT_TRUE(image_store_exists(elem.c_str()));
@@ -650,6 +657,35 @@ TEST_F(StorageImagesUnitTest, test_image_store_wipe)
         ASSERT_FALSE(dirExists((std::string(store_real_path) + "/overlay-images/" + elem).c_str()));
     }
 
-    ASSERT_EQ(system(rm_command.c_str()), 0);
-    ASSERT_EQ(system(undo_command.c_str()), 0);
+    Restore();
+}
+
+TEST_F(StorageImagesUnitTest, test_image_store_remove_single_name)
+{
+    BackUp();
+
+    for (auto elem : ids) {
+        ASSERT_TRUE(image_store_exists(elem.c_str()));
+        ASSERT_TRUE(dirExists((std::string(store_real_path) + "/overlay-images/" + elem).c_str()));
+    }
+
+    ASSERT_EQ(image_store_add_name(ids.at(0).c_str(), "imagehub.isulad.com/official/busybox:latest"), 0);
+
+    Restore();
+}
+
+TEST_F(StorageImagesUnitTest, test_image_store_remove_multi_name)
+{
+    BackUp();
+
+    for (auto elem : ids) {
+        ASSERT_TRUE(image_store_exists(elem.c_str()));
+        ASSERT_TRUE(dirExists((std::string(store_real_path) + "/overlay-images/" + elem).c_str()));
+    }
+
+    ASSERT_EQ(image_store_add_name(ids.at(1).c_str(), "imagehub.isulad.com/official/newname:latest"), 0);
+    ASSERT_EQ(image_store_add_name(ids.at(1).c_str(), "imagehub.isulad.com/official/othername:latest"), 0);
+    ASSERT_EQ(image_store_add_name(ids.at(0).c_str(), "imagehub.isulad.com/official/busybox:latest"), 0);
+
+    Restore();
 }
