@@ -730,41 +730,6 @@ cleanup:
     return ret;
 }
 
-int dev_get_info_with_deferred(const char *dm_name, struct dm_info *dmi)
-{
-    int ret = 0;
-    struct dm_task *dmt = NULL;
-
-    if (dm_name == NULL || dmi == NULL) {
-        ERROR("devicemapper: invalid input params to get info with deferred");
-        return -1;
-    }
-
-    dmt = task_create_named(DM_DEVICE_INFO, dm_name);
-    if (dmt == NULL) {
-        ret = -1;
-        goto cleanup;
-    }
-
-    if (dm_task_run(dmt) != 1) {
-        ret = -1;
-        ERROR("devicemapper: task run failed");
-        goto cleanup;
-    }
-
-    if (dm_task_get_info(dmt, dmi) != 1) {
-        ret = -1;
-        ERROR("devicemapper: get info err");
-        goto cleanup;
-    }
-
-cleanup:
-    if (dmt != NULL) {
-        dm_task_destroy(dmt);
-    }
-    return ret;
-}
-
 // SuspendDevice is the programmatic example of "dmsetup suspend".
 // It suspends the specified device.
 int dev_suspend_device(const char *dm_name)

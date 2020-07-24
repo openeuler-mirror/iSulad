@@ -1588,17 +1588,10 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
 {
     int ret = 0;
     int nret = 0;
-    struct dm_info *dmi = NULL;
+    struct dm_info dinfo = { 0 };
     char *dm_name = NULL;
     bool resume_dev = false;
     bool deactive_dev = false;
-
-    dmi = util_common_calloc_s(sizeof(struct dm_info));
-    if (dmi == NULL) {
-        ret = -1;
-        ERROR("Out of memory");
-        goto out;
-    }
 
     dm_name = get_dm_name(devset, base_info->hash);
     if (dm_name == NULL) {
@@ -1612,26 +1605,26 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
         goto out;
     }
 
-
-    if (dev_get_info_with_deferred(dm_name, dmi) != 0) {
+    if (dev_get_info(&dinfo, dm_name) != 0) {
+        ERROR("devmapper: get dev info with deferred failed");
         ret = -1;
         goto out;
     }
-    if (dmi->deferred_remove != 0) {
+
+    if (dinfo.deferred_remove != 0) {
         nret = cancel_deferred_removal(devset, base_info->hash);
         if (nret != 0) {
             if (nret != ERR_ENXIO) {
                 ret = -1;
                 goto out;
             }
-            UTIL_FREE_AND_SET_NULL(dmi);
+            dinfo.exists = 0;
         } else {
             deactive_dev = true;
         }
     }
 
-
-    if (dmi != NULL && dmi->exists != 0) {
+    if (dinfo.exists != 0) {
         if (dev_suspend_device(dm_name) != 0) {
             ret = -1;
             goto out;
@@ -1653,7 +1646,6 @@ out:
     if (resume_dev) {
         (void)dev_resume_device(dm_name);
     }
-    free(dmi);
     free(dm_name);
     return ret;
 }
@@ -1672,7 +1664,7 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
         goto out;
     }
 
-    if (dev_get_info_with_deferred(dm_name, &dmi) != 0) {
+    if (dev_get_info(&dmi, dm_name) != 0) {
         ret = -1;
         ERROR("devmapper: can not get info from dm %s", dm_name);
         goto out;
@@ -1725,6 +1717,7 @@ static int activate_device_if_needed(struct device_set *devset, image_devmapper_
     }
 
     if (dinfo.exists != 0) {
+        DEBUG("device with name:%s already exists, no need to activate", dm_name);
         ret = 0;
         goto out;
     }

@@ -115,8 +115,6 @@ int dev_create_device(const char *pool_dev_name, int device_id);
 
 int dev_delete_device(const char *pool_fname, int device_id);
 
-int dev_get_info_with_deferred(const char *dm_name, struct dm_info *dmi);
-
 int dev_suspend_device(const char *dm_name);
 
 int dev_resume_device(const char *dm_name);
