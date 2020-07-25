@@ -264,6 +264,10 @@ static container_info *get_container_stats(const container_t *cont,
 
     info->image_type = util_strdup_s(cont->common_config->image_type);
 
+    info->status = util_strdup_s(container_state_to_string(container_state_get_status(cont->state)));
+    info->cache = einfo->cache;
+    info->cache_total = einfo->cache_total;
+
     if (copy_map_labels(cont->common_config->config, &map_labels) != 0) {
         ret = -1;
         goto cleanup;

@@ -41,6 +41,14 @@ extern "C" {
       0,                                                        \
       &(cmdargs).nostream,                                      \
       "Disable streaming stats and only pull the first result", \
+      NULL                                                      \
+    },                                                          \
+    { CMD_OPT_TYPE_BOOL,                                        \
+      false,                                                    \
+      "original",                                               \
+      0,                                                        \
+      &(cmdargs).original,                                      \
+      "Show original data",                                     \
       NULL },
 
 extern const char g_cmd_stats_desc[];

@@ -789,6 +789,11 @@ int ContainerServiceImpl::stats_response_to_grpc(const container_stats_response 
             stats->set_mem_limit(response->container_stats[i]->mem_limit);
             stats->set_kmem_used(response->container_stats[i]->kmem_used);
             stats->set_kmem_limit(response->container_stats[i]->kmem_limit);
+            if (response->container_stats[i]->status != nullptr) {
+                stats->set_status(response->container_stats[i]->status);
+            }
+            stats->set_cache(response->container_stats[i]->cache);
+            stats->set_cache_total(response->container_stats[i]->cache_total);
         }
     }
     gresponse->set_cc(response->cc);

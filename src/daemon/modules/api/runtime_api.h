@@ -58,6 +58,9 @@ struct runtime_container_resources_stats_info {
     /* Kernel Memory usage */
     uint64_t kmem_used;
     uint64_t kmem_limit;
+    /* Cache usage */
+    uint64_t cache;
+    uint64_t cache_total;
 };
 
 typedef struct _rt_create_params_t {
