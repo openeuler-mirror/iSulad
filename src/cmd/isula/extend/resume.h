@@ -12,10 +12,10 @@
  * Create: 2018-11-08
  * Description: provide container resume definition
  ******************************************************************************/
-#ifndef __CMD_RESUME_H
-#define __CMD_RESUME_H
+#ifndef CMD_ISULA_EXTEND_RESUME_H
+#define CMD_ISULA_EXTEND_RESUME_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,4 +31,3 @@ int cmd_resume_main(int argc, const char **argv);
 #endif
 
 #endif
-

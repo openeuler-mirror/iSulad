@@ -13,11 +13,11 @@
  * Description: provide collector mock
  ******************************************************************************/
 
-#ifndef COLLECTOR_MOCK_H_
-#define COLLECTOR_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_COLLECTOR_MOCK_H
+#define _ISULAD_TEST_MOCKS_COLLECTOR_MOCK_H
 
 #include <gmock/gmock.h>
-#include "collector.h"
+#include "events_collector_api.h"
 
 class MockCollector {
 public:
@@ -29,6 +29,6 @@ public:
                                                       const char *args, const char *extra_annations));
 };
 
-void MockCollector_SetMock(MockCollector* mock);
+void MockCollector_SetMock(MockCollector *mock);
 
 #endif

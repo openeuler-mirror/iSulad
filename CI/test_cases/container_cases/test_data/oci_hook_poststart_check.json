@@ -1,0 +1,13 @@
+{
+    "prestart": [],
+    "poststart": [
+        {
+            "args": [
+                "poststart.sh",
+                "10"
+            ],
+            "path": "/tmp/poststart.sh"
+        }
+    ],
+    "poststop": []
+}

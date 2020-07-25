@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "isula_libutils/oci_runtime_spec.h"
-#include "specs.h"
+#include "specs_api.h"
 #include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
 #include "oci_ut_common.h"
@@ -42,12 +42,12 @@ using ::testing::_;
 
 using namespace std;
 
-#define HOOKS_CONFIG_FILE "specs/specs_extend/hooks.json"
+#define HOOKS_CONFIG_FILE "../../../../test/specs/specs_extend/hooks.json"
 
 TEST(make_sure_oci_spec_linux_ut, test_make_sure_oci_spec_linux)
 {
     oci_runtime_spec *oci_spec = NULL;
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
     ASSERT_EQ(make_sure_oci_spec_linux(oci_spec), 0);
     ASSERT_TRUE(oci_spec->linux != NULL);
@@ -58,7 +58,7 @@ TEST(make_sure_oci_spec_linux_ut, test_make_sure_oci_spec_linux)
 TEST(make_sure_oci_spec_process_ut, test_make_sure_oci_spec_process)
 {
     oci_runtime_spec *oci_spec = NULL;
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
     ASSERT_EQ(make_sure_oci_spec_process(oci_spec), 0);
     ASSERT_TRUE(oci_spec->process != NULL);
@@ -69,7 +69,7 @@ TEST(make_sure_oci_spec_process_ut, test_make_sure_oci_spec_process)
 TEST(make_sure_oci_spec_linux_resources_ut, test_make_sure_oci_spec_linux_resources)
 {
     oci_runtime_spec *oci_spec = NULL;
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
     ASSERT_EQ(make_sure_oci_spec_linux_resources(oci_spec), 0);
     ASSERT_TRUE(oci_spec->linux != NULL);
@@ -81,7 +81,7 @@ TEST(make_sure_oci_spec_linux_resources_ut, test_make_sure_oci_spec_linux_resour
 TEST(make_sure_oci_spec_linux_resources_blkio_ut, test_make_sure_oci_spec_linux_resources_blkio)
 {
     oci_runtime_spec *oci_spec = NULL;
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
     ASSERT_EQ(make_sure_oci_spec_linux_resources_blkio(oci_spec), 0);
     ASSERT_TRUE(oci_spec->linux != NULL);
@@ -100,9 +100,9 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_2)
 {
     oci_runtime_spec *oci_spec = NULL;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
-    oci_spec->hooks = (oci_runtime_spec_hooks*)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
+    oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
     ASSERT_NE(merge_hooks(oci_spec->hooks, NULL), 0);
     free_oci_runtime_spec(oci_spec);
     oci_spec = NULL;
@@ -144,9 +144,9 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_4)
     free(hooks_config_file);
     hooks_config_file = NULL;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
-    oci_spec->hooks = (oci_runtime_spec_hooks*)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
+    oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
 
@@ -172,9 +172,9 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_prestart)
     free(hooks_config_file);
     hooks_config_file = NULL;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
-    oci_spec->hooks = (oci_runtime_spec_hooks*)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
+    oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
     ASSERT_EQ(oci_spec->hooks->prestart_len, 1);
@@ -210,9 +210,9 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_poststart)
     free(hooks_config_file);
     hooks_config_file = NULL;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
-    oci_spec->hooks = (oci_runtime_spec_hooks*)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
+    oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
     ASSERT_EQ(oci_spec->hooks->poststart_len, 2);
@@ -257,9 +257,9 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_poststop)
     free(hooks_config_file);
     hooks_config_file = NULL;
 
-    oci_spec = (oci_runtime_spec *) util_common_calloc_s(sizeof(oci_runtime_spec));
+    oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
     ASSERT_TRUE(oci_spec != NULL);
-    oci_spec->hooks = (oci_runtime_spec_hooks*)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
+    oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
     ASSERT_EQ(oci_spec->hooks->poststop_len, 2);

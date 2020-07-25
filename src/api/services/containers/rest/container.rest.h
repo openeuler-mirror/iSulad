@@ -12,8 +12,8 @@
  * Create: 2018-11-22
  * Description: provide container rest definition
  **********************************************************************************/
-#ifndef CONTAINER_REST_H_
-#define CONTAINER_REST_H_
+#ifndef API_SERVICES_CONTAINERS_REST_CONTAINER_REST_H
+#define API_SERVICES_CONTAINERS_REST_CONTAINER_REST_H
 
 #include "isula_libutils/container_create_request.h"
 #include "isula_libutils/container_create_response.h"

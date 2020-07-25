@@ -12,20 +12,34 @@
  * Create: 2018-11-08
  * Description: provide container remove definition
  ******************************************************************************/
-#ifndef __CMD_DELETE_H
-#define __CMD_DELETE_H
+#ifndef CMD_ISULA_BASE_RM_H
+#define CMD_ISULA_BASE_RM_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define DELETE_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, \
-        "Force the removal of a running container (uses SIGKILL)", NULL }, \
-    { CMD_OPT_TYPE_BOOL, false, "volumes", 'v', &(cmdargs).volume, \
-      "Remove the volumes associated with the container", NULL }
+#define DELETE_OPTIONS(cmdargs)                                   \
+    { CMD_OPT_TYPE_BOOL,                                          \
+        false,                                                      \
+        "force",                                                    \
+        'f',                                                        \
+        &(cmdargs).force,                                           \
+        "Force the removal of a running container (uses SIGKILL)",  \
+        NULL },                                                     \
+    { CMD_OPT_TYPE_BOOL,                                  \
+      false,                                              \
+      "volumes",                                          \
+      'v',                                                \
+      &(cmdargs).volume,                                  \
+      "Remove the volumes associated with the container", \
+      NULL },
 
 extern const char g_cmd_delete_desc[];
 extern const char g_cmd_delete_usage[];
@@ -36,5 +50,4 @@ int cmd_delete_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_DELETE_H */
-
+#endif // CMD_ISULA_BASE_RM_H

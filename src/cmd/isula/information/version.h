@@ -12,10 +12,10 @@
  * Create: 2018-11-08
  * Description: provide container version definition
  ******************************************************************************/
-#ifndef __CMD_VERSION_H
-#define __CMD_VERSION_H
+#ifndef CMD_ISULA_INFORMATION_VERSION_H
+#define CMD_ISULA_INFORMATION_VERSION_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,5 +30,4 @@ int cmd_version_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_VERSION_H */
-
+#endif // CMD_ISULA_INFORMATION_VERSION_H

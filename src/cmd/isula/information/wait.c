@@ -12,11 +12,19 @@
  * Create: 2018-11-08
  * Description: provide container wait functions
  ******************************************************************************/
-#include "error.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "wait.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "constants.h"
+#include "libisula.h"
+#include "utils.h"
 
 const char g_cmd_wait_desc[] = "Block until one or more containers stop, then print their exit codes";
 const char g_cmd_wait_usage[] = "wait [OPTIONS] CONTAINER [CONTAINER...]";
@@ -81,7 +89,7 @@ int cmd_wait_main(int argc, const char **argv)
     int i = 0;
     int status = 0;
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_wait_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_wait_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_wait_args)) {
@@ -130,4 +138,3 @@ int cmd_wait_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

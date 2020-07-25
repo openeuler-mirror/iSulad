@@ -13,11 +13,13 @@
  * Description: container logs ops
  ******************************************************************************/
 
-#ifndef __SHIM_TERMINAL_H
-#define __SHIM_TERMINAL_H
+#ifndef CMD_ISULAD_SHIM_TERMINAL_H
+#define CMD_ISULAD_SHIM_TERMINAL_H
 
 #include <pthread.h>
 #include <unistd.h>
+#include <stdint.h>
+
 #include "isula_libutils/logger_json_file.h"
 
 #ifdef __cplusplus
@@ -41,4 +43,4 @@ int shim_create_container_log_file(log_terminal *terminal);
 }
 #endif
 
-#endif /* __SHIM_TERMINAL_H */
+#endif // CMD_ISULAD_SHIM_TERMINAL_H

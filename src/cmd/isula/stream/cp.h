@@ -12,15 +12,14 @@
  * Create: 2019-04-17
  * Description: provide container cp definition
  ******************************************************************************/
-#ifndef __CMD_COPY_H
-#define __CMD_COPY_H
+#ifndef CMD_ISULA_STREAM_CP_H
+#define CMD_ISULA_STREAM_CP_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 extern const char g_cmd_cp_desc[];
 extern const char g_cmd_cp_usage[];
 extern struct client_arguments g_cmd_cp_args;
 int cmd_cp_main(int argc, const char **argv);
 
-#endif /* __CMD_COPY_H */
-
+#endif // CMD_ISULA_STREAM_CP_H

@@ -19,11 +19,10 @@ namespace {
 MockContainersStore *g_containers_store_mock = NULL;
 }
 
-void MockContainersStore_SetMock(MockContainersStore* mock)
+void MockContainersStore_SetMock(MockContainersStore *mock)
 {
     g_containers_store_mock = mock;
 }
-
 
 int containers_store_init(void)
 {
@@ -81,8 +80,7 @@ char **containers_store_list_ids(void)
     return nullptr;
 }
 
-
-int name_index_init(void)
+int container_name_index_init(void)
 {
     if (g_containers_store_mock != nullptr) {
         return g_containers_store_mock->NameIndexInit();
@@ -90,7 +88,7 @@ int name_index_init(void)
     return -1;
 }
 
-bool name_index_remove(const char *name)
+bool container_name_index_remove(const char *name)
 {
     if (g_containers_store_mock != nullptr) {
         return g_containers_store_mock->NameIndexRemove(name);
@@ -98,7 +96,7 @@ bool name_index_remove(const char *name)
     return false;
 }
 
-char *name_index_get(const char *name)
+char *container_name_index_get(const char *name)
 {
     if (g_containers_store_mock != nullptr) {
         return g_containers_store_mock->NameIndexGet(name);
@@ -106,8 +104,7 @@ char *name_index_get(const char *name)
     return nullptr;
 }
 
-
-bool name_index_add(const char *name, const char *id)
+bool container_name_index_add(const char *name, const char *id)
 {
     if (g_containers_store_mock != nullptr) {
         return g_containers_store_mock->NameIndexAdd(name, id);
@@ -115,7 +112,7 @@ bool name_index_add(const char *name, const char *id)
     return false;
 }
 
-map_t *name_index_get_all(void)
+map_t *container_name_index_get_all(void)
 {
     if (g_containers_store_mock != nullptr) {
         return g_containers_store_mock->NameIndexGetAll();
@@ -123,7 +120,7 @@ map_t *name_index_get_all(void)
     return nullptr;
 }
 
-bool name_index_rename(const char *new_name, const char *old_name, const char *id)
+bool container_name_index_rename(const char *new_name, const char *old_name, const char *id)
 {
     if (g_containers_store_mock != nullptr) {
         return g_containers_store_mock->NameIndexRename(new_name, old_name, id);

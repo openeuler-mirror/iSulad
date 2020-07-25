@@ -15,20 +15,30 @@
 #include "images.h"
 
 #include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
 #include <string.h>
+#include <errno.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils_array.h"
+#include "utils_file.h"
+#include "utils_verify.h"
 
-#define IMAGES_OPTIONS(cmdargs)                                                                          \
-    { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display image names", NULL }, \
-    { CMD_OPT_TYPE_CALLBACK, false, "filter", 'f', &(cmdargs).filters, \
-        "Filter output based on conditions provided", command_append_array }
-
+#define IMAGES_OPTIONS(cmdargs)                                                                                        \
+    { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &((cmdargs).dispname), "Only display image names", NULL },               \
+    {                                                                                                                  \
+        CMD_OPT_TYPE_CALLBACK, false, "filter", 'f', &(cmdargs).filters, "Filter output based on conditions provided", \
+        command_append_array                                                                                   \
+    }
 
 #define CREATED_DISPLAY_FORMAT "YYYY-MM-DD HH:MM:SS"
 #define SHORT_DIGEST_LEN 12
@@ -266,8 +276,8 @@ static int list_images(const struct client_arguments *args)
         goto out;
     }
     if (args->filters != NULL) {
-        request.filters = isula_filters_parse_args((const char **)args->filters,
-                                                   util_array_len((const char **)(args->filters)));
+        request.filters =
+            isula_filters_parse_args((const char **)args->filters, util_array_len((const char **)(args->filters)));
         if (request.filters == NULL) {
             ERROR("Failed to parse filters args");
             ret = -1;
@@ -310,10 +320,8 @@ int cmd_images_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_images_args.progname = argv[0];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        IMAGES_OPTIONS(g_cmd_images_args),
-        COMMON_OPTIONS(g_cmd_images_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) IMAGES_OPTIONS(g_cmd_images_args),
+               COMMON_OPTIONS(g_cmd_images_args)
     };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_images_desc,
@@ -334,4 +342,3 @@ int cmd_images_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

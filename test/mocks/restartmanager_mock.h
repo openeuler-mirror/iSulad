@@ -13,8 +13,8 @@
  * Description: provide restartmanager mock
  ******************************************************************************/
 
-#ifndef RESTARTMANAGER_MOCK_H_
-#define RESTARTMANAGER_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_RESTARTMANAGER_MOCK_H
+#define _ISULAD_TEST_MOCKS_RESTARTMANAGER_MOCK_H
 
 #include <gmock/gmock.h>
 #include "restartmanager.h"

@@ -14,10 +14,8 @@
  ******************************************************************************/
 
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include "commands.h"
+
+#include "isula_commands.h"
 #include "create.h"
 #include "ps.h"
 #include "rm.h"
@@ -94,11 +92,7 @@ struct command g_commands[] = {
 #ifdef ENABLE_OCI_IMAGE
     {
         // `stats` sub-command
-        "stats",
-        cmd_stats_main,
-        g_cmd_stats_desc,
-        NULL,
-        &g_cmd_stats_args
+        "stats", cmd_stats_main, g_cmd_stats_desc, NULL, &g_cmd_stats_args
     },
     {
         // `cp` sub-command
@@ -174,11 +168,7 @@ struct command g_commands[] = {
     },
     {
         // `rename` sub-command
-        "rename",
-        cmd_rename_main,
-        g_cmd_rename_desc,
-        NULL,
-        &g_cmd_rename_args
+        "rename", cmd_rename_main, g_cmd_rename_desc, NULL, &g_cmd_rename_args
     },
     {
         // `pull` sub-command
@@ -211,4 +201,3 @@ int main(int argc, char **argv)
     }
     return run_command(g_commands, argc, (const char **)argv);
 }
-

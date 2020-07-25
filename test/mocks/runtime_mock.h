@@ -13,11 +13,11 @@
  * Description: provide runtime mock
  ******************************************************************************/
 
-#ifndef RUNTIME_MOCK_H_
-#define RUNTIME_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_RUNTIME_MOCK_H
+#define _ISULAD_TEST_MOCKS_RUNTIME_MOCK_H
 
 #include <gmock/gmock.h>
-#include "runtime.h"
+#include "runtime_api.h"
 
 class MockRuntime {
 public:
@@ -27,9 +27,9 @@ public:
     MOCK_METHOD3(RuntimeResize, int(const char *name, const char *runtime, const rt_resize_params_t *params));
     MOCK_METHOD3(RuntimeExecResize, int(const char *name, const char *runtime, const rt_exec_resize_params_t *params));
     MOCK_METHOD4(RuntimeResourcesStats, int(const char *name, const char *runtime, const rt_stats_params_t *params,
-                                            struct engine_container_resources_stats_info *rs_stats));
+                                            struct runtime_container_resources_stats_info *rs_stats));
 };
 
-void MockRuntime_SetMock(MockRuntime* mock);
+void MockRuntime_SetMock(MockRuntime *mock);
 
 #endif

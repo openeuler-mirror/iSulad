@@ -12,17 +12,21 @@
  * Create: 2018-11-08
  * Description: provide container remove definition
  ******************************************************************************/
-#ifndef __CMD_REMOVE_IMAGE_H
-#define __CMD_REMOVE_IMAGE_H
+#ifndef CMD_ISULA_IMAGES_RMI_H
+#define CMD_ISULA_IMAGES_RMI_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define RMI_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, "Force removal of the image", NULL }
+    { CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, "Force removal of the image", NULL },
 
 extern const char g_cmd_rmi_desc[];
 extern const char g_cmd_rmi_usage[];
@@ -33,5 +37,4 @@ int cmd_rmi_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_REMOVE_IMAGE_H */
-
+#endif // CMD_ISULA_IMAGES_RMI_H

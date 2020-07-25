@@ -12,17 +12,23 @@
  * Create: 2018-11-08
  * Description: provide container health definition
  ******************************************************************************/
-#ifndef __CMD_HEALTHCHECK_H
-#define __CMD_HEALTHCHECK_H
+#ifndef CMD_ISULA_INFORMATION_HEALTH_H
+#define CMD_ISULA_INFORMATION_HEALTH_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HEALTH_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING, false, "service", 'S', &(cmdargs).service, "GRPC service name", NULL }
+#define HEALTH_OPTIONS(cmdargs)                                                                   \
+    {                                                                                             \
+        CMD_OPT_TYPE_STRING, false, "service", 'S', &(cmdargs).service, "GRPC service name", NULL \
+    }
 
 extern const char g_cmd_health_check_desc[];
 extern const char g_cmd_health_check_usage[];
@@ -34,4 +40,3 @@ int cmd_health_check_main(int argc, const char **argv);
 #endif
 
 #endif
-

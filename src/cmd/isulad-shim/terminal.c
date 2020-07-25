@@ -16,8 +16,18 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <linux/limits.h>
 #include <limits.h>
+#include <termios.h> // IWYU pragma: keep
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/logger_json_file.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
+
 #include "terminal.h"
 #include "common.h"
 
@@ -38,7 +48,7 @@ static int shim_rename_old_log_file(log_terminal *terminal)
 {
     int ret;
     unsigned int i;
-    char tmp[PATH_MAX] = {0};
+    char tmp[PATH_MAX] = { 0 };
     char *rename_fname = NULL;
 
     for (i = terminal->log_maxfile - 1; i > 1; i--) {
@@ -125,8 +135,7 @@ static int64_t get_log_file_size(int fd)
     return log_st.st_size;
 }
 
-static int shim_json_data_write(log_terminal *terminal, const char *buf,
-                                int read_count)
+static int shim_json_data_write(log_terminal *terminal, const char *buf, int read_count)
 {
     int ret;
     int64_t available_space = -1;
@@ -161,8 +170,7 @@ static int shim_json_data_write(log_terminal *terminal, const char *buf,
     return (read_count - ret);
 }
 
-static bool get_time_buffer(struct timespec *timestamp, char *timebuffer,
-                            size_t maxsize)
+static bool get_time_buffer(struct timespec *timestamp, char *timebuffer, size_t maxsize)
 {
     struct tm tm_utc = { 0 };
     int32_t nanos = 0;
@@ -201,8 +209,7 @@ static bool get_now_time_buffer(char *timebuffer, size_t maxsize)
     return get_time_buffer(&ts, timebuffer, maxsize);
 }
 
-static ssize_t shim_logger_write(log_terminal *terminal, const char *type, const char *buf,
-                                 int read_count)
+static ssize_t shim_logger_write(log_terminal *terminal, const char *type, const char *buf, int read_count)
 {
     logger_json_file *msg = NULL;
     ssize_t ret = -1;
@@ -249,13 +256,12 @@ cleanup:
     return ret;
 }
 
-void shim_write_container_log_file(log_terminal *terminal, const char *type, char *buf,
-                                   int read_count)
+void shim_write_container_log_file(log_terminal *terminal, const char *type, char *buf, int read_count)
 {
     static char cache[BUF_CACHE_SIZE];
     static int size = 0;
     int upto, index;
-    int begin = 0, buf_readed = 0,  buf_left = 0;
+    int begin = 0, buf_readed = 0, buf_left = 0;
 
     if (terminal == NULL) {
         return;
@@ -321,4 +327,3 @@ int shim_create_container_log_file(log_terminal *terminal)
 
     return SHIM_OK;
 }
-

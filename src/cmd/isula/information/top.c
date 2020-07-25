@@ -13,16 +13,19 @@
  * Description: provide container remove functions
  ******************************************************************************/
 #include "top.h"
-#include <limits.h>
-#include "arguments.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
-#include "commands.h"
-#include "console.h"
 #include "utils.h"
 #include "isula_libutils/container_inspect.h"
 #include "attach.h"
-#include "commander.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_top_desc[] = "Display the running processes of a container";
 const char g_cmd_top_usage[] = "top [OPTIONS] CONTAINER [ps OPTIONS]";
@@ -116,7 +119,7 @@ int cmd_top_main(int argc, const char **argv)
 {
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_top_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_top_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_top_args)) {
@@ -152,4 +155,3 @@ int cmd_top_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

@@ -65,23 +65,3 @@ if (GRPC_CONNECTOR)
     endif()
 endif()
 
-
-if (ENABLE_OCI_IMAGE)
-    message("---------------Generate OCI image proto-----------------------")
-    execute_process(COMMAND mkdir -p ${IMAGE_SERVICE_PROTOS_OUT_PATH})
-    execute_process(COMMAND ${CMD_PROTOC} -I ${CMAKE_CURRENT_SOURCE_DIR}/src/api/image_client --cpp_out=${IMAGE_SERVICE_PROTOS_OUT_PATH}
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/api/image_client/isula_image.proto ERROR_VARIABLE image_client_err)
-    if (image_client_err)
-        message("Parse image client api.proto failed: ")
-        message(FATAL_ERROR ${image_client_err})
-    endif()
-
-    execute_process(COMMAND ${CMD_PROTOC} -I ${CMAKE_CURRENT_SOURCE_DIR}/src/api/image_client --grpc_out=${IMAGE_SERVICE_PROTOS_OUT_PATH}
-        --plugin=protoc-gen-grpc=${CMD_GRPC_CPP_PLUGIN} ${CMAKE_CURRENT_SOURCE_DIR}/src/api/image_client/isula_image.proto
-        ERROR_VARIABLE image_client_err)
-endif()
-
-if (image_client_err)
-	message("Parse image client api.proto plugin failed: ")
-	message(FATAL_ERROR ${image_client_err})
-endif()

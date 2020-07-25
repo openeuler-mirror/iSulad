@@ -24,28 +24,15 @@ fi
 buildstatus=${builddir}/build.fail
 
 declare -a buildlogs
-build_log_isulad_img=${builddir}/build.isulad_img.log
 build_log_crictl=${builddir}/build.crictl.log
 build_log_cni_plugins=${builddir}/build.cni_plugins.log
-buildlogs+=(${build_log_isulad_img} ${build_log_crictl} ${build_log_cni_plugins})
+buildlogs+=(${build_log_crictl} ${build_log_cni_plugins})
 
-mkdir -p ${builddir}/rpm
 mkdir -p ${builddir}/bin
 mkdir -p ${builddir}/include
 mkdir -p ${builddir}/lib
 mkdir -p ${builddir}/lib/pkgconfig
 mkdir -p ${builddir}/systemd/system
-
-#install iSulad-img
-function make_isulad_img()
-{
-    cd ~
-    git clone https://gitee.com/openeuler/iSulad-img.git
-    cd iSulad-img
-    ./apply-patch
-    make -j $nproc
-    make DESTDIR=${builddir} install
-}
 
 #install crictl
 function make_crictl()
@@ -85,7 +72,6 @@ function check_make_status()
 }
 
 rm -rf ${buildstatus}
-check_make_status make_isulad_img ${build_log_isulad_img} &
 check_make_status make_crictl ${build_log_crictl} &
 check_make_status make_cni_plugins ${build_log_cni_plugins} &
 
@@ -101,15 +87,10 @@ do
     patch -p1 < ${var}
 done
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/lxc/start.c
-sed -i '/unmount-namespace/d' ./lxc.spec.in
-sed -i '/bridge-utils/d' ./lxc.spec.in
 ./autogen.sh
-./configure --sysconfdir=/etc
-make rpm
-cd ~/rpmbuild/RPMS/x86_64/
-rpm -ivh --force lxc-*.rpm
-mkdir -p ${builddir}/rpm
-cp lxc-*.rpm ${builddir}/rpm
+./configure --prefix=${builddir}
+make -j $(nproc)
+make install
 ldconfig
 
 # install lcr
@@ -119,7 +100,7 @@ cd lcr
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils.c
 mkdir -p build
 cd build
-cmake  -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} ../
+cmake -DENABLE_UT=ON -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} ../
 make -j $(nproc)
 make install
 cd -

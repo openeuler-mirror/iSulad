@@ -17,59 +17,59 @@
 #include <stdio.h>
 #include <stdio_ext.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <time.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/prctl.h>
-#include <sys/wait.h>
 #include <sys/mount.h>
-#include <lcr/lcrcontainer.h>
 #include <sys/resource.h>
 #include <malloc.h>
 #include <regex.h>
-#include <execinfo.h>
-#include <sys/syscall.h>
 #include <semaphore.h>
+#include <locale.h>
+#include <isula_libutils/isulad_daemon_configs.h>
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/oci_runtime_hooks.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <limits.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/time.h>
 #ifdef SYSTEMD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
 
 #include "constants.h"
-#include "libisulad.h"
-#include "collector.h"
-#include "commands.h"
+#include "events_collector_api.h"
+#include "isulad_commands.h"
 #include "isula_libutils/log.h"
-#include "engine.h"
 #include "utils.h"
 #include "isulad_config.h"
-#include "image.h"
+#include "image_api.h"
 #include "sysinfo.h"
 #include "verify.h"
-#include "monitord.h"
 #include "service_common.h"
 #include "callback.h"
-#include "log_gather.h"
-#include "containers_store.h"
-#include "restore.h"
-#include "supervisor.h"
-#include "containers_gc.h"
-#include "plugin.h"
+#include "log_gather_api.h"
+#include "container_api.h"
+#include "plugin_api.h"
 #include "selinux_label.h"
-
-
-#ifdef ENABLE_OCI_IMAGE
-#include "driver.h"
-#endif
+#include "http.h"
+#include "runtime_api.h"
+#include "daemon_arguments.h"
+#include "err_msg.h"
+#include "utils_convert.h"
+#include "utils_file.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"
-#endif
-
-#ifdef ENABLE_EMBEDDED_IMAGE
-#include "db_common.h"
 #endif
 
 sem_t g_daemon_shutdown_sem;
@@ -146,7 +146,6 @@ out:
     return ret;
 }
 
-#ifdef ENABLE_OCI_IMAGE
 static int umount_rootfs_mnt_dir(const char *mntdir)
 {
     int ret = -1;
@@ -188,10 +187,7 @@ static void umount_daemon_mntpoint()
         free(mntdir);
         mntdir = NULL;
     }
-
-    graphdriver_umount_mntpoint();
 }
-#endif
 
 static inline bool unlink_ignore_enoent(const char *fname)
 {
@@ -220,24 +216,6 @@ static void clean_residual_files()
         WARN("Unlink file: %s error: %s", fname, strerror(errno));
     }
     free(fname);
-
-#ifdef ENABLE_OCI_IMAGE
-    /* remove image server socket file */
-    fname = conf_get_im_server_sock_addr();
-    if (fname != NULL && unlink_ignore_enoent(fname + strlen(UNIX_SOCKET_PREFIX))) {
-        WARN("Unlink file: %s error: %s", fname + strlen(UNIX_SOCKET_PREFIX), strerror(errno));
-    }
-    free(fname);
-
-#define ISULAD_KIT_PID_FILE "/var/run/isula_image.pid"
-#define ISULAD_KIT_INFO_FILE "/var/run/isula_image.info"
-    if (unlink_ignore_enoent(ISULAD_KIT_PID_FILE)) {
-        WARN("Unlink file: %s error: %s", ISULAD_KIT_PID_FILE, strerror(errno));
-    }
-    if (unlink_ignore_enoent(ISULAD_KIT_INFO_FILE)) {
-        WARN("Unlink file: %s error: %s", ISULAD_KIT_INFO_FILE, strerror(errno));
-    }
-#endif
 }
 
 static void daemon_shutdown()
@@ -245,17 +223,10 @@ static void daemon_shutdown()
     /* clean resource first, left time to wait finish */
     image_module_exit();
 
-#ifdef ENABLE_EMBEDDED_IMAGE
-    /* shutdown db */
-    db_common_finish();
-#endif
-
     /* shutdown server */
     server_common_shutdown();
 
-#ifdef ENABLE_OCI_IMAGE
     umount_daemon_mntpoint();
-#endif
 
     clean_residual_files();
 }
@@ -422,7 +393,8 @@ int check_and_save_pid(const char *fn)
     if (fcntl(fd, F_SETLK, &lk) != 0) {
         /* another daemonize instance is already running, don't start up */
         COMMAND_ERROR("Pid file found, ensure isulad is not running or delete pid file %s"
-                      " or please specify another pid file", fn);
+                      " or please specify another pid file",
+                      fn);
         ret = -1;
         goto out;
     }
@@ -902,15 +874,6 @@ static int update_server_args(struct service_arguments *args)
         goto out;
     }
 
-#ifdef ENABLE_OCI_IMAGE
-    args->driver = graphdriver_init(args->json_confs->storage_driver, args->json_confs->storage_opts,
-                                    args->json_confs->storage_opts_len);
-    if (args->driver == NULL) {
-        ret = -1;
-        goto out;
-    }
-#endif
-
 out:
     return ret;
 }
@@ -1081,14 +1044,6 @@ static int isulad_server_pre_init(const struct service_arguments *args, const ch
         goto out;
     }
 
-#ifdef ENABLE_EMBEDDED_IMAGE
-    if (db_common_init(args->json_confs->graph)) {
-        ERROR("Failed to init database");
-        ret = -1;
-        goto out;
-    }
-#endif
-
     if (service_callback_init()) {
         ERROR("Failed to init service callback");
         ret = -1;
@@ -1110,46 +1065,32 @@ static int isulad_server_init_common()
         goto out;
     }
 
-    if (isulad_server_conf_rdlock()) {
-        goto out;
-    }
-
     args = conf_get_server_conf();
     if (args == NULL) {
         ERROR("Failed to get isulad server config");
-        goto unlock_out;
+        goto out;
     }
 
     if (isulad_server_pre_init(args, log_full_path, fifo_full_path) != 0) {
-        goto unlock_out;
+        goto out;
     }
 
-    if (image_module_init(args->json_confs->graph)) {
+    if (image_module_init(args->json_confs) != 0) {
         ERROR("Failed to init image manager");
-        goto unlock_out;
+        goto out;
     }
-
-#ifdef ENABLE_OCI_IMAGE
-    /* update status of graphdriver after image server running */
-    update_graphdriver_status(&(args->driver));
-#endif
 
     if (containers_store_init()) {
         ERROR("Failed to init containers store");
-        goto unlock_out;
+        goto out;
     }
 
-    if (name_index_init()) {
+    if (container_name_index_init()) {
         ERROR("Failed to init name index");
-        goto unlock_out;
+        goto out;
     }
 
     ret = 0;
-unlock_out:
-    if (isulad_server_conf_unlock()) {
-        ret = -1;
-        goto out;
-    }
 
 out:
     free(log_full_path);
@@ -1275,34 +1216,6 @@ out:
     return ret;
 }
 
-static int isulad_server_init_engines()
-{
-    int ret = 0;
-    char *engine = NULL;
-
-    engine = conf_get_isulad_engine();
-    if (engine == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    if (engines_global_init()) {
-        ERROR("Init engines global failed");
-        ret = -1;
-        goto out;
-    }
-
-    /* Init default engine, now is lcr */
-    if (engines_discovery(engine)) {
-        ERROR("Failed to discovery default engine:%s", engine);
-        ret = -1;
-    }
-
-out:
-    free(engine);
-    return ret;
-}
-
 static void set_mallopt()
 {
     if (mallopt(M_ARENA_TEST, 8) == 0) {
@@ -1317,40 +1230,6 @@ static void set_mallopt()
     if (mallopt(M_MMAP_THRESHOLD, 64 * 1024) == 0) {
         fprintf(stderr, "change M_MMAP_THRESHOLD to 64KB");
     }
-}
-
-static int start_monitord()
-{
-    int ret = 0;
-    int monitord_exitcode = 0;
-    sem_t monitord_sem;
-    struct monitord_sync_data msync = { 0 };
-
-    msync.monitord_sem = &monitord_sem;
-    msync.exit_code = &monitord_exitcode;
-    if (sem_init(msync.monitord_sem, 0, 0)) {
-        isulad_set_error_message("Failed to init monitor sem");
-        ret = -1;
-        goto out;
-    }
-
-    if (new_monitord(&msync)) {
-        isulad_set_error_message("Create monitord thread failed");
-        ret = -1;
-        sem_destroy(msync.monitord_sem);
-        goto out;
-    }
-
-    sem_wait(msync.monitord_sem);
-    sem_destroy(msync.monitord_sem);
-    if (monitord_exitcode) {
-        isulad_set_error_message("Monitord start failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
 }
 
 /* shutdown handler */
@@ -1390,7 +1269,6 @@ out:
     return ret;
 }
 
-
 static int start_daemon_threads(char **msg)
 {
     int ret = -1;
@@ -1400,33 +1278,11 @@ static int start_daemon_threads(char **msg)
         goto out;
     }
 
-    if (newcollector()) {
-        *msg = "Create collector thread failed";
+    if (events_module_init(msg) != 0) {
         goto out;
     }
 
-    if (start_monitord()) {
-        *msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path";
-        goto out;
-    }
-
-    if (new_gchandler()) {
-        *msg = "Create garbage handler thread failed";
-        goto out;
-    }
-
-    if (new_supervisor()) {
-        *msg = "Create supervisor thread failed";
-        goto out;
-    }
-
-    containers_restore();
-
-    /* sync containers list with remote */
-    im_sync_containers_isuladkit();
-
-    if (start_gchandler()) {
-        *msg = "Failed to start garbage collecotor handler";
+    if (container_module_init(msg) != 0) {
         goto out;
     }
 
@@ -1473,8 +1329,8 @@ static int pre_init_daemon(int argc, char **argv, char **msg)
         goto out;
     }
 
-    if (isulad_server_init_engines()) {
-        *msg = "Failed to init engines";
+    if (runtime_init() != 0) {
+        *msg = "Failed to init runtime";
         goto out;
     }
 
@@ -1487,6 +1343,21 @@ static int pre_init_daemon(int argc, char **argv, char **msg)
     }
 
     ret = 0;
+out:
+    return ret;
+}
+
+static int set_locale()
+{
+    int ret = 0;
+
+    /* Change from the standard (C) to en_US.UTF-8 locale, so libarchive can handle filename conversions.*/
+    if (setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) {
+        COMMAND_ERROR("Could not set locale to en_US.UTF-8:%s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
 out:
     return ret;
 }
@@ -1505,6 +1376,12 @@ int main(int argc, char **argv)
     if (pre_init_daemon_log() != 0) {
         exit(ECOMMON);
     }
+
+    if (set_locale() != 0) {
+        exit(ECOMMON);
+    }
+
+    http_global_init();
 
     set_mallopt();
 
@@ -1573,4 +1450,3 @@ failure:
     DAEMON_CLEAR_ERRMSG();
     exit(1);
 }
-

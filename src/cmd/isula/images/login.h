@@ -11,21 +11,29 @@
  * Author: wangfengtu
  * Description: provide login definition
  ******************************************************************************/
-#ifndef __CMD_LOGIN_H
-#define __CMD_LOGIN_H
+#ifndef CMD_ISULA_IMAGES_LOGIN_H
+#define CMD_ISULA_IMAGES_LOGIN_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define LOGIN_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING, false, "username", 'u', &(cmdargs).username, "Username", NULL }, \
+#define LOGIN_OPTIONS(cmdargs)                                                                      \
+    { CMD_OPT_TYPE_STRING, false, "username", 'u', &(cmdargs).username, "Username", NULL },         \
     { CMD_OPT_TYPE_STRING, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
-    { CMD_OPT_TYPE_BOOL, false, "password-stdin", 0, &(cmdargs).password_stdin, \
-      "Take the password from stdin", NULL }, \
-
+    { CMD_OPT_TYPE_BOOL,                                                                    \
+      false,                                                                                \
+      "password-stdin",                                                                     \
+      0,                                                                                    \
+      &(cmdargs).password_stdin,                                                            \
+      "Take the password from stdin",                                                       \
+      NULL },
 
 extern const char g_cmd_login_desc[];
 extern const char g_cmd_login_usage[];
@@ -36,5 +44,4 @@ int cmd_login_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_LOGIN_H */
-
+#endif // CMD_ISULA_IMAGES_LOGIN_H

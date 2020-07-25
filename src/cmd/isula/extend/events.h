@@ -12,22 +12,35 @@
  * Create: 2018-11-08
  * Description: provide container events definition
  ******************************************************************************/
-#ifndef __CMD_EVENT_H
-#define __CMD_EVENT_H
+#ifndef CMD_ISULA_EXTEND_EVENTS_H
+#define CMD_ISULA_EXTEND_EVENTS_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define EVENTS_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING, false, "name", 'n', &(cmdargs).name, \
-        "Name of the container", NULL }, \
-    { CMD_OPT_TYPE_STRING, false, "since", 'S', &(cmdargs).since, \
-      "Show all events created since this timestamp", NULL }, \
-    { CMD_OPT_TYPE_STRING, false, "until", 'U', &(cmdargs).until, \
-      "Show all events created until this timestamp", NULL }
+#define EVENTS_OPTIONS(cmdargs)                                                                  \
+    { CMD_OPT_TYPE_STRING, false, "name", 'n', &(cmdargs).name, "Name of the container", NULL }, \
+    { CMD_OPT_TYPE_STRING,                                                               \
+      false,                                                                             \
+      "since",                                                                           \
+      'S',                                                                               \
+      &(cmdargs).since,                                                                  \
+      "Show all events created since this timestamp",                                    \
+      NULL },                                                                            \
+    { CMD_OPT_TYPE_STRING,                                                               \
+      false,                                                                             \
+      "until",                                                                           \
+      'U',                                                                               \
+      &(cmdargs).until,                                                                  \
+      "Show all events created until this timestamp",                                    \
+      NULL },
 
 extern const char g_cmd_events_desc[];
 extern const char g_cmd_events_usage[];
@@ -38,5 +51,4 @@ int cmd_events_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_EVENT_H */
-
+#endif // CMD_ISULA_EXTEND_EVENTS_H

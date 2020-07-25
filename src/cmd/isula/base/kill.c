@@ -12,11 +12,18 @@
  * Create: 2018-11-08
  * Description: provide container kill functions
  ******************************************************************************/
-#include "error.h"
-#include "arguments.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "client_arguments.h"
 #include "kill.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils.h"
+#include "utils_verify.h"
 
 const char g_cmd_kill_desc[] = "Kill one or more  running containers";
 const char g_cmd_kill_usage[] = "kill [OPTIONS] CONTAINER [CONTAINER...]";
@@ -82,9 +89,7 @@ int cmd_kill_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_kill_args.progname = argv[0];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_kill_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_kill_args)
         KILL_OPTIONS(g_cmd_kill_args)
     };
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_kill_desc,
@@ -136,4 +141,3 @@ int cmd_kill_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

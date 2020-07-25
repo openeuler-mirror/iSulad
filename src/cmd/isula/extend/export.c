@@ -13,11 +13,20 @@
  * Description: provide container export functions
  ******************************************************************************/
 #include "export.h"
+
 #include <limits.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_export_desc[] = "export container";
 const char g_cmd_export_usage[] = "export [command options] [ID|NAME]";
@@ -84,7 +93,7 @@ int cmd_export_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_export_args.progname = argv[0];
-    struct command_option options[] = { COMMON_OPTIONS(g_cmd_export_args), EXPORT_OPTIONS(g_cmd_export_args) };
+    struct command_option options[] = { COMMON_OPTIONS(g_cmd_export_args) EXPORT_OPTIONS(g_cmd_export_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_export_desc,
                  g_cmd_export_usage);
@@ -120,10 +129,9 @@ int cmd_export_main(int argc, const char **argv)
 
     g_cmd_export_args.name = g_cmd_export_args.argv[i];
     if (client_export(&g_cmd_export_args)) {
-        ERROR("Container \"%s\" export failed", g_cmd_export_args.name);
+        COMMAND_ERROR("Container \"%s\" export failed", g_cmd_export_args.name);
         exit(ECOMMON);
     }
 
     exit(EXIT_SUCCESS);
 }
-

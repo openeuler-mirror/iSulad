@@ -13,10 +13,16 @@
  * Description: provide container stop functions
  ******************************************************************************/
 #include "stop.h"
-#include "arguments.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_stop_desc[] = "Stop one or more containers";
 const char g_cmd_stop_usage[] = "stop [OPTIONS] CONTAINER [CONTAINER...]";
@@ -69,9 +75,7 @@ int cmd_stop_main(int argc, const char **argv)
     int status = 0;
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_stop_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_stop_args)
         STOP_OPTIONS(g_cmd_stop_args)
     };
 
@@ -120,4 +124,3 @@ int cmd_stop_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

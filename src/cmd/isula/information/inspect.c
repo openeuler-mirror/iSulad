@@ -12,15 +12,20 @@
  * Create: 2018-11-08
  * Description: provide container inspect functions
  ******************************************************************************/
-#include "error.h"
+#include <regex.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <yajl/yajl_tree.h>
+
 #include "inspect.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
-#include "console.h"
 #include "utils.h"
-#include "isula_libutils/json_common.h"
-#include <regex.h>
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_inspect_desc[] = "Return low-level information on a container or image";
 const char g_cmd_inspect_usage[] = "inspect [options] CONTAINER|IMAGE [CONTAINER|IMAGE...]";
@@ -192,8 +197,8 @@ static bool inspect_filter_done(yajl_val root, const char *filter, container_tre
  * CONTAINER_NOT_FOUND: no such container
 */
 static int client_inspect_container(const struct isula_inspect_request *request,
-                                    struct isula_inspect_response *response,
-                                    client_connect_config_t *config, const isula_connect_ops *ops)
+                                    struct isula_inspect_response *response, client_connect_config_t *config,
+                                    const isula_connect_ops *ops)
 {
     int ret = 0;
 
@@ -741,10 +746,8 @@ int cmd_inspect_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_inspect_args.progname = argv[0];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        INSPECT_OPTIONS(g_cmd_inspect_args),
-        COMMON_OPTIONS(g_cmd_inspect_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) INSPECT_OPTIONS(g_cmd_inspect_args),
+               COMMON_OPTIONS(g_cmd_inspect_args)
     };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_inspect_desc,
@@ -815,9 +818,8 @@ int cmd_inspect_main(int argc, const char **argv)
     free(filter_string);
 
     if (status) {
-        COMMAND_ERROR("Inspec error: No such object:%s", g_cmd_inspect_args.name);
+        COMMAND_ERROR("Inspect error: No such object:%s", g_cmd_inspect_args.name);
         exit(ECOMMON);
     }
     exit(EXIT_SUCCESS);
 }
-

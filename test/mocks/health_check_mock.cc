@@ -24,7 +24,7 @@ void MockHealthCheck_SetMock(MockHealthCheck *mock)
     g_health_check_mock = mock;
 }
 
-void update_health_monitor(const char *container_id)
+void container_update_health_monitor(const char *container_id)
 {
     if (g_health_check_mock != nullptr) {
         return g_health_check_mock->UpdateHealthMonitor(container_id);

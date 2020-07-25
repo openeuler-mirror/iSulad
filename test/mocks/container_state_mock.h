@@ -13,8 +13,8 @@
  * Description: provide container_state mock
  ******************************************************************************/
 
-#ifndef CONTAINER_STATE_MOCK_H_
-#define CONTAINER_STATE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_CONTAINER_STATE_MOCK_H
+#define _ISULAD_TEST_MOCKS_CONTAINER_STATE_MOCK_H
 
 #include <gmock/gmock.h>
 #include "container_state.h"
@@ -31,6 +31,6 @@ public:
     MOCK_METHOD1(IsRemovalInProgress, bool(container_state_t *s));
 };
 
-void MockContainerState_SetMock(MockContainerState* mock);
+void MockContainerState_SetMock(MockContainerState *mock);
 
 #endif

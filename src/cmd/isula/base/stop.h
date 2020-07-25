@@ -12,19 +12,28 @@
  * Create: 2018-11-08
  * Description: provide container stop definition
  ******************************************************************************/
-#ifndef __CMD_STOP_H
-#define __CMD_STOP_H
+#ifndef CMD_ISULA_BASE_STOP_H
+#define CMD_ISULA_BASE_STOP_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define STOP_OPTIONS(cmdargs) \
+#define STOP_OPTIONS(cmdargs)                                                                    \
     { CMD_OPT_TYPE_BOOL, false, "force", 'f', &(cmdargs).force, "Stop by force killing", NULL }, \
-    { CMD_OPT_TYPE_CALLBACK, false, "time", 't', &(cmdargs).time, \
-      "Seconds to wait for stop before killing it (default 10)", command_convert_int }
+    { CMD_OPT_TYPE_CALLBACK,                                                             \
+      false,                                                                             \
+      "time",                                                                            \
+      't',                                                                               \
+      &(cmdargs).time,                                                                   \
+      "Seconds to wait for stop before killing it (default 10)",                         \
+      command_convert_int },
 
 extern const char g_cmd_stop_desc[];
 extern const char g_cmd_stop_usage[];
@@ -36,5 +45,4 @@ int cmd_stop_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_STOP_H */
-
+#endif // CMD_ISULA_BASE_STOP_H

@@ -70,7 +70,6 @@ TEST(isula_rt_ops_ut, test_rt_isula_detect)
     ASSERT_FALSE(rt_isula_detect("lcr"));
 }
 
-
 TEST_F(IsulaRtOpsUnitTest, test_rt_isula_create)
 {
     ASSERT_EQ(rt_isula_create(nullptr, nullptr, nullptr), -1);
@@ -122,7 +121,7 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_exec)
 TEST_F(IsulaRtOpsUnitTest, test_rt_isula_status)
 {
     rt_status_params_t params = {};
-    struct engine_container_status_info status = {};
+    struct runtime_container_status_info status = {};
     ASSERT_EQ(rt_isula_status(nullptr, nullptr, nullptr, nullptr), -1);
     ASSERT_EQ(rt_isula_status("123", nullptr, nullptr, nullptr), -1);
     ASSERT_EQ(rt_isula_status("123", "kata-runtime", nullptr, nullptr), -1);

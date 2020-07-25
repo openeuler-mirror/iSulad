@@ -13,8 +13,8 @@
  * Description: provide containers_gc mock
  ******************************************************************************/
 
-#ifndef CONTAINERS_GC_MOCK_H_
-#define CONTAINERS_GC_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_CONTAINERS_GC_MOCK_H
+#define _ISULAD_TEST_MOCKS_CONTAINERS_GC_MOCK_H
 
 #include <gmock/gmock.h>
 #include "containers_gc.h"
@@ -24,6 +24,6 @@ public:
     MOCK_METHOD1(GcIsGcProgress, bool(const char *id));
 };
 
-void MockContainersGc_SetMock(MockContainersGc* mock);
+void MockContainersGc_SetMock(MockContainersGc *mock);
 
 #endif

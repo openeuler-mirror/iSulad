@@ -13,13 +13,19 @@
  * Description: provide container info functions
  ******************************************************************************/
 #include "info.h"
+
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
-#include "config.h"
 #include "isula_connect.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_info_desc[] = "Display system-wide information";
 const char g_cmd_info_usage[] = "info";
@@ -153,7 +159,7 @@ int cmd_info_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_info_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_info_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_info_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_info_desc,
                  g_cmd_info_usage);
@@ -177,4 +183,3 @@ int cmd_info_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

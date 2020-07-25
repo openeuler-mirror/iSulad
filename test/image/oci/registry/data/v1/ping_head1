@@ -1,0 +1,9 @@
+HTTP/1.1 401 UNAUTHORIZED
+Server: nginx/1.12.1
+Date: Tue, 30 Jun 2020 09:33:45 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 4
+Connection: close
+Docker-Distribution-API-Version: registry/2.0
+WWW-Authenticate: Basic realm="https://auth.quay.io"
+

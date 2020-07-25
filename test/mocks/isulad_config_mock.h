@@ -13,8 +13,8 @@
  * Description: provide isulad config mock
  ******************************************************************************/
 
-#ifndef ISULAD_CONFIG_MOCK_H_
-#define ISULAD_CONFIG_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_ISULAD_CONFIG_MOCK_H
+#define _ISULAD_TEST_MOCKS_ISULAD_CONFIG_MOCK_H
 
 #include <gmock/gmock.h>
 #include "isulad_config.h"
@@ -32,10 +32,10 @@ public:
     MOCK_METHOD0(ConfGetGraphRootpath, char *(void));
     MOCK_METHOD0(ConfGetIsuladStorageDriver, char *(void));
     MOCK_METHOD1(GetSystemCpuUsage, int(uint64_t *val));
-    MOCK_METHOD0(ConfGetIsuladStorageDriverBackingFs, char*());
-
+    MOCK_METHOD0(ConfGetIsuladStorageDriverBackingFs, char *());
+    MOCK_METHOD0(GetMonitordPath, char *(void));
 };
 
-void MockIsuladConf_SetMock(MockIsuladConf* mock);
+void MockIsuladConf_SetMock(MockIsuladConf *mock);
 
-#endif  // ISULAD_CONFIG_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_ISULAD_CONFIG_MOCK_H

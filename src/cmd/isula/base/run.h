@@ -12,22 +12,36 @@
  * Create: 2018-11-08
  * Description: provide container run definition
  ******************************************************************************/
-#ifndef __CMD_RUN_H
-#define __CMD_RUN_H
+#ifndef CMD_ISULA_BASE_RUN_H
+#define CMD_ISULA_BASE_RUN_H
+
+#include <stdbool.h>
+#include <stddef.h>
 
 #include "create.h"
 #include "start.h"
-#include "wait.h"
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define RUN_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_BOOL, false, "detach", 'd', &(cmdargs).detach, \
-        "Run container in background and print container ID", NULL }, \
-    { CMD_OPT_TYPE_BOOL, false, "rm", 0, &(cmdargs).custom_conf.auto_remove, \
-      "Automatically remove the container when it exits", NULL }
+#define RUN_OPTIONS(cmdargs)                                      \
+    { CMD_OPT_TYPE_BOOL,                                          \
+        false,                                                      \
+        "detach",                                                   \
+        'd',                                                        \
+        &(cmdargs).detach,                                          \
+        "Run container in background and print container ID",       \
+        NULL },                                                     \
+    { CMD_OPT_TYPE_BOOL,                                  \
+      false,                                              \
+      "rm",                                               \
+      0,                                                  \
+      &(cmdargs).custom_conf.auto_remove,                 \
+      "Automatically remove the container when it exits", \
+      NULL },
 
 extern const char g_cmd_run_desc[];
 extern const char g_cmd_run_usage[];
@@ -38,5 +52,4 @@ int cmd_run_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_RUN_H */
-
+#endif // CMD_ISULA_BASE_RUN_H

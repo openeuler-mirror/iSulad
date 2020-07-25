@@ -13,23 +13,19 @@
  * Description: provide image mock
  ******************************************************************************/
 
-#ifndef IMAGE_MOCK_H_
-#define IMAGE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_IMAGE_MOCK_H
+#define _ISULAD_TEST_MOCKS_IMAGE_MOCK_H
 
 #include <gmock/gmock.h>
-#include "image.h"
+#include "image_api.h"
 
 class MockImage {
 public:
     virtual ~MockImage() = default;
-    MOCK_METHOD2(ImGetStorageStatus, int(const char *, im_storage_status_response **));
-    MOCK_METHOD1(FreeImStorageStatusResponse, void(im_storage_status_response *));
     MOCK_METHOD1(ImContainerExport, int(const im_export_request *request));
     MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
-    MOCK_METHOD3(ImGetStorageMetadata, int(const char *image_type, char *id, im_storage_metadata_response **response));
-    MOCK_METHOD1(FreeImStorageMetadataResponse, void(im_storage_metadata_response *ptr));
 };
 
-void MockImage_SetMock(MockImage* mock);
+void MockImage_SetMock(MockImage *mock);
 
-#endif  // IMAGE_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_IMAGE_MOCK_H

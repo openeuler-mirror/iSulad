@@ -55,11 +55,6 @@ char *conf_get_isulad_storage_driver_success()
     return util_strdup_s("overlay");
 }
 
-char **conf_get_storage_opts_success()
-{
-    return single_array_from_string("overlay.override_kernel_check=true");
-}
-
 char **conf_get_registry_list_success()
 {
     return single_array_from_string("docker.io");
@@ -72,7 +67,7 @@ char **conf_get_insecure_registry_list_success()
 
 char *json_path(const char *file)
 {
-    char base_path[PATH_MAX] = {0};
+    char base_path[PATH_MAX] = { 0 };
     char *json_file = NULL;
 
     if (getcwd(base_path, PATH_MAX) == NULL) {

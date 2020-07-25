@@ -13,8 +13,8 @@
  * Description: provide verify mock
  ******************************************************************************/
 
-#ifndef VERIFY_MOCK_H_
-#define VERIFY_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_VERIFY_MOCK_H
+#define _ISULAD_TEST_MOCKS_VERIFY_MOCK_H
 
 #include <gmock/gmock.h>
 #include "verify.h"

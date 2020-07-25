@@ -13,15 +13,17 @@
  * Description: provide container remove functions
  ******************************************************************************/
 #include "rmi.h"
+
 #include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_rmi_desc[] = "Remove one or more images";
 const char g_cmd_rmi_usage[] = "rmi [OPTIONS] IMAGE [IMAGE...]";
@@ -80,11 +82,7 @@ int cmd_rmi_main(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = 1; /* exit 1 if remove failed because docker return 1 */
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_rmi_args),
-        RMI_OPTIONS(g_cmd_rmi_args)
-    };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_rmi_args) RMI_OPTIONS(g_cmd_rmi_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_rmi_args)) {
@@ -128,4 +126,3 @@ int cmd_rmi_main(int argc, const char **argv)
     }
     exit(EXIT_SUCCESS);
 }
-

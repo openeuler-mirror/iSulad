@@ -56,6 +56,35 @@ find_library(LIBYAJL_LIBRARY yajl
     HINTS ${PC_LIBYAJL_LIBDIR} ${PC_LIBYAJL_LIBRARY_DIRS})
 _CHECK(LIBYAJL_LIBRARY "LIBYAJL_LIBRARY-NOTFOUND" "libyajl.so")
 
+# check libarchive
+pkg_check_modules(PC_LIBARCHIVE REQUIRED "libarchive>=3")
+find_path(LIBARCHIVE_INCLUDE_DIR archive.h
+	HINTS ${PC_LIBARCHIVE_INCLUDEDIR} ${PC_LIBARCHIVE_INCLUDE_DIRS})
+_CHECK(LIBARCHIVE_INCLUDE_DIR "LIBARCHIVE_INCLUDE_DIR-NOTFOUND" "archive.h")
+find_library(LIBARCHIVE_LIBRARY archive
+    HINTS ${PC_LIBARCHIVE_LIBDIR} ${PC_LIBARCHIVE_LIBRARY_DIRS})
+_CHECK(LIBARCHIVE_LIBRARY "LIBARCHIVE_LIBRARY-NOTFOUND" "libarchive.so")
+
+# check libtar
+find_path(LIBTAR_INCLUDE_DIR libtar.h
+	HINTS ${PC_LIBTAR_INCLUDEDIR} ${PC_LIBTAR_INCLUDE_DIRS})
+_CHECK(LIBTAR_INCLUDE_DIR "LIBTAR_INCLUDE_DIR-NOTFOUND" "libtar.h")
+find_library(LIBTAR_LIBRARY tar
+	HINTS ${PC_LIBTAR_LIBDIR} ${PC_LIBTAR_LIBRARY_DIRS})
+_CHECK(LIBTAR_LIBRARY "LIBTAR_LIBRARY-NOTFOUND" "libtar.so")
+
+# check libcrypto
+pkg_check_modules(PC_CRYPTO REQUIRED "libcrypto")
+find_library(CRYPTO_LIBRARY crypto
+    HINTS ${PC_CRYPTO_LIBDIR} ${PC_LIBCRYPTO_LIBRARY_DIRS})
+_CHECK(CRYPTO_LIBRARY "CRYPTO_LIBRARY-NOTFOUND" "libcrypto.so")
+
+# check websocket
+find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
+_CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
+find_library(WEBSOCKET_LIBRARY websockets)
+_CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
+
 find_path(HTTP_PARSER_INCLUDE_DIR http_parser.h)
 _CHECK(HTTP_PARSER_INCLUDE_DIR "HTTP_PARSER_INCLUDE_DIR-NOTFOUND" "http_parser.h")
 find_library(HTTP_PARSER_LIBRARY http_parser)
@@ -116,15 +145,14 @@ if (GRPC_CONNECTOR OR ENABLE_OCI_IMAGE)
     find_library(GPR_LIBRARY gpr)
     _CHECK(GPR_LIBRARY "GPR_LIBRARY-NOTFOUND" "libgpr.so")
 
+    # check devmapper
+    find_path(DEVMAPPER_INCLUDE_DIR libdevmapper.h)
+    _CHECK(DEVMAPPER_INCLUDE_DIR "DEVMAPPER_INCLUDE_DIR-NOTFOUND" "libdevmapper.h")
+    find_library(DEVMAPPER_LIBRARY devmapper)
+    _CHECK(DEVMAPPER_LIBRARY "DEVMAPPER_LIBRARY-NOTFOUND" "libdevmapper.so")
 endif()
 
 if (GRPC_CONNECTOR)
-    # check websocket
-    find_path(WEBSOCKET_INCLUDE_DIR libwebsockets.h)
-    _CHECK(WEBSOCKET_INCLUDE_DIR "WEBSOCKET_INCLUDE_DIR-NOTFOUND" libwebsockets.h)
-    find_library(WEBSOCKET_LIBRARY websockets)
-    _CHECK(WEBSOCKET_LIBRARY "WEBSOCKET_LIBRARY-NOTFOUND" "libwebsockets.so")
-
     # check clibcni
     pkg_check_modules(PC_CLIBCNI REQUIRED "clibcni")
     find_path(CLIBCNI_INCLUDE_DIR clibcni/api.h

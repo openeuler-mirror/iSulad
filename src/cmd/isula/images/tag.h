@@ -12,10 +12,10 @@
  * Create: 2020-04-15
  * Description: provide image tag definition
  ******************************************************************************/
-#ifndef __CMD_TAG_IMAGE_H
-#define __CMD_TAG_IMAGE_H
+#ifndef CMD_ISULA_IMAGES_TAG_H
+#define CMD_ISULA_IMAGES_TAG_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,5 +30,4 @@ int cmd_tag_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_TAG_IMAGE_H */
-
+#endif // CMD_ISULA_IMAGES_TAG_H

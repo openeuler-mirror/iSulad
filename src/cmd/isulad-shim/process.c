@@ -16,30 +16,31 @@
 #define _GNU_SOURCE
 #include <sys/epoll.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/uio.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
 #include <sys/wait.h>
 #include <semaphore.h>
-#include <sys/time.h>
-#include <sys/resource.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
-#include <termios.h>
+#include <termios.h> // IWYU pragma: keep
+#include <sys/resource.h> // IWYU pragma: keep
+#include <isula_libutils/json_common.h>
+#include <isula_libutils/shim_client_process_state.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "common.h"
 #include "process.h"
 #include "terminal.h"
 
 #define MAX_EVENTS 100
-#define DEFAULT_IO_COPY_BUF (16*1024)
-#define DEFAULT_LOG_FILE_SIZE (4*1024)
+#define DEFAULT_IO_COPY_BUF (16 * 1024)
+#define DEFAULT_LOG_FILE_SIZE (4 * 1024)
 
 extern int g_log_fd;
 
@@ -52,8 +53,7 @@ struct epoll_loop_handler {
     void *cbdata;
 };
 
-
-static shim_client_process_state* load_process()
+static shim_client_process_state *load_process()
 {
     parser_error err = NULL;
     shim_client_process_state *p_state = NULL;
@@ -88,7 +88,7 @@ static int receive_fd(int sock)
     u_char *pfd = NULL;
     int fd = -1;
     int cmsgsize = CMSG_LEN(sizeof(int));
-    struct cmsghdr* cmptr = (struct cmsghdr*)calloc(1, cmsgsize);
+    struct cmsghdr *cmptr = (struct cmsghdr *)calloc(1, cmsgsize);
     if (cmptr == NULL) {
         return -1;
     }
@@ -100,7 +100,7 @@ static int receive_fd(int sock)
 
     struct msghdr msg;
     msg.msg_iov = iov;
-    msg.msg_iovlen  = 1;
+    msg.msg_iovlen = 1;
     msg.msg_name = NULL;
     msg.msg_namelen = 0;
     msg.msg_control = cmptr;
@@ -228,9 +228,9 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
     pthread_mutex_unlock(&(ioc->mutex));
 }
 
-static void* task_io_copy(void *data)
+static void *task_io_copy(void *data)
 {
-    io_thread_t *io_thd = (io_thread_t*)data;
+    io_thread_t *io_thd = (io_thread_t *)data;
     if (io_thd == NULL || io_thd->ioc == NULL) {
         return NULL;
     }
@@ -261,7 +261,8 @@ static void* task_io_copy(void *data)
             fd_node_t *fn = ioc->fd_to;
             for (; fn != NULL; fn = fn->next) {
                 if (fn->is_log) {
-                    shim_write_container_log_file(io_thd->terminal, ioc->id == stdid_out ? "stdout" : "stderr", buf, r_count);
+                    shim_write_container_log_file(io_thd->terminal, ioc->id == stdid_out ? "stdout" : "stderr", buf,
+                                                  r_count);
                 } else {
                     int w_count = 0;
                     w_count = write_nointr(fn->fd, buf, r_count);
@@ -289,7 +290,7 @@ static void* task_io_copy(void *data)
 
 static void do_io_copy(int fd, uint32_t event, void *data)
 {
-    io_thread_t *thd = (io_thread_t*)data;
+    io_thread_t *thd = (io_thread_t *)data;
     if (thd->ioc == NULL || fd != thd->ioc->fd_from) {
         return;
     }
@@ -376,7 +377,7 @@ static int start_io_copy_threads(process_t *p)
 static void destroy_io_thread(process_t *p, int std_id)
 {
     io_thread_t *io_thd = p->io_threads[std_id];
-    if (io_thd ==  NULL) {
+    if (io_thd == NULL) {
         return;
     }
 
@@ -427,12 +428,12 @@ static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio,
     return SHIM_OK;
 }
 
-static void* task_console_accept(void *data)
+static void *task_console_accept(void *data)
 {
     int conn_fd = -1;
     int recv_fd = -1;
     int ret = SHIM_ERR;
-    console_accept_t *ac = (console_accept_t*)data;
+    console_accept_t *ac = (console_accept_t *)data;
 
     conn_fd = accept(ac->listen_fd, NULL, NULL);
     if (conn_fd < 0) {
@@ -479,9 +480,9 @@ out:
     return NULL;
 }
 
-static void* task_io_loop(void *data)
+static void *task_io_loop(void *data)
 {
-    process_t *p = (process_t*)data;
+    process_t *p = (process_t *)data;
     int wait_fds = 0;
     struct epoll_event evs[MAX_EVENTS];
     int i;
@@ -504,7 +505,7 @@ static void* task_io_loop(void *data)
         }
 
         for (i = 0; i < wait_fds; i++) {
-            io_thread_t *thd_io = (io_thread_t*)evs[i].data.ptr;
+            io_thread_t *thd_io = (io_thread_t *)evs[i].data.ptr;
             do_io_copy(thd_io->ioc->fd_from, evs[i].events, thd_io);
         }
     }
@@ -534,7 +535,7 @@ static int console_init(process_t *p)
     int ret = SHIM_ERR;
     int fd = -1;
     struct sockaddr_un addr;
-    console_accept_t* ac = NULL;
+    console_accept_t *ac = NULL;
 
     fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -547,7 +548,7 @@ static int console_init(process_t *p)
     (void)strcpy(addr.sun_path, p->console_sock_path);
 
     // bind
-    ret = bind(fd, (struct sockaddr*)&addr, sizeof(addr));
+    ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (ret < 0) {
         write_message(g_log_fd, ERR_MSG, "bind console fd failed:%d", SHIM_SYS_ERR(errno));
         goto failure;
@@ -560,7 +561,7 @@ static int console_init(process_t *p)
         goto failure;
     }
 
-    ac = (console_accept_t*)calloc(1, sizeof(console_accept_t));
+    ac = (console_accept_t *)calloc(1, sizeof(console_accept_t));
     if (ac == NULL) {
         goto failure;
     }
@@ -588,10 +589,10 @@ failure:
     return SHIM_ERR;
 }
 
-static stdio_t* initialize_io(process_t *p)
+static stdio_t *initialize_io(process_t *p)
 {
     int ret = SHIM_ERR;
-    int stdio_fd[3][2] = { {-1, -1}, {-1, -1}, {-1, -1} };
+    int stdio_fd[3][2] = { { -1, -1 }, { -1, -1 }, { -1, -1 } };
     int i, j;
 
     stdio_t *stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
@@ -600,19 +601,18 @@ static stdio_t* initialize_io(process_t *p)
         goto failure;
     }
 
-    if ((pipe2(stdio_fd[0], O_CLOEXEC | O_NONBLOCK) != 0) ||
-        (pipe2(stdio_fd[1], O_CLOEXEC | O_NONBLOCK) != 0) ||
+    if ((pipe2(stdio_fd[0], O_CLOEXEC | O_NONBLOCK) != 0) || (pipe2(stdio_fd[1], O_CLOEXEC | O_NONBLOCK) != 0) ||
         (pipe2(stdio_fd[2], O_CLOEXEC | O_NONBLOCK) != 0)) {
         write_message(g_log_fd, ERR_MSG, "open pipe failed when init io:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
 
-    p->stdio->in = stdio_fd[0][0];// r
+    p->stdio->in = stdio_fd[0][0]; // r
     stdio->in = stdio_fd[0][1]; // w
-    p->stdio->out = stdio_fd[1][1];// w
-    stdio->out = stdio_fd[1][0];// r
-    p->stdio->err = stdio_fd[2][1];// w
-    stdio->err = stdio_fd[2][0];// r
+    p->stdio->out = stdio_fd[1][1]; // w
+    stdio->out = stdio_fd[1][0]; // r
+    p->stdio->err = stdio_fd[2][1]; // w
+    stdio->err = stdio_fd[2][0]; // r
 
     for (i = 0; i < 3; i++) {
         for (j = 0; j < 2; j++) {
@@ -658,7 +658,6 @@ static int open_terminal_io(process_t *p)
     // begin listen and accept fd from p->console_sock_path
     return console_init(p);
 }
-
 
 static int open_generic_io(process_t *p)
 {
@@ -748,10 +747,10 @@ clean_out:
     return SHIM_ERR;
 }
 
-process_t* new_process(char *id, char *bundle, char *runtime)
+process_t *new_process(char *id, char *bundle, char *runtime)
 {
-    shim_client_process_state* p_state;
-    process_t* p = NULL;
+    shim_client_process_state *p_state;
+    process_t *p = NULL;
     int i;
     int ret;
 
@@ -760,7 +759,7 @@ process_t* new_process(char *id, char *bundle, char *runtime)
         return NULL;
     }
 
-    p = (process_t*)calloc(1, sizeof(process_t));
+    p = (process_t *)calloc(1, sizeof(process_t));
     if (p == NULL) {
         return NULL;
     }
@@ -787,7 +786,7 @@ process_t* new_process(char *id, char *bundle, char *runtime)
     p->stdio = NULL;
     p->shim_io = NULL;
 
-    for (i = 0; i < 3; i ++) {
+    for (i = 0; i < 3; i++) {
         p->io_threads[i] = NULL;
     }
 
@@ -966,7 +965,7 @@ int create_process(process_t *p)
     }
 
     pid_t pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         write_message(g_log_fd, ERR_MSG, "fork failed when create process:%d", SHIM_SYS_ERR(errno));
         return SHIM_ERR;
     }
@@ -1099,11 +1098,10 @@ int process_signal_handle_routine(process_t *p)
             if (p->exit_fd > 0) {
                 (void)write_nointr(p->exit_fd, &status, sizeof(int));
             }
-            for (i = 0; i < 3; i ++) {
+            for (i = 0; i < 3; i++) {
                 destroy_io_thread(p, i);
             }
             return status;
         }
     }
 }
-

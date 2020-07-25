@@ -18,9 +18,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <linux/limits.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <fcntl.h>

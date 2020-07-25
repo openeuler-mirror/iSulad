@@ -13,21 +13,19 @@
  * Description: provide container logs functions
  ******************************************************************************/
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h> /* Obtain O_* constant definitions */
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <limits.h>
-#include <errno.h>
-#include "error.h"
+#include <stdint.h>
+#include <string.h>
 
 #include "logs.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
+#include "utils.h"
+#include "utils_convert.h"
 
 const char g_cmd_logs_desc[] = "Fetch the logs of a container";
 const char g_cmd_logs_usage[] = "logs [OPTIONS] CONTAINER";
@@ -107,10 +105,8 @@ static int cmd_logs_init(int argc, const char **argv)
         return ECOMMON;
     }
     g_cmd_logs_args.progname = argv[0];
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        LOGS_OPTIONS(g_cmd_logs_args),
-        COMMON_OPTIONS(g_cmd_logs_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) LOGS_OPTIONS(g_cmd_logs_args),
+               COMMON_OPTIONS(g_cmd_logs_args)
     };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_logs_desc,
@@ -149,4 +145,3 @@ int cmd_logs_main(int argc, const char **argv)
     }
     return 0;
 }
-

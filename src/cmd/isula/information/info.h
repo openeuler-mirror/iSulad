@@ -12,10 +12,10 @@
  * Create: 2018-11-08
  * Description: provide container info definition
  ******************************************************************************/
-#ifndef __CMD_INFO_H
-#define __CMD_INFO_H
+#ifndef CMD_ISULA_INFORMATION_INFO_H
+#define CMD_ISULA_INFORMATION_INFO_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,5 +30,4 @@ int cmd_info_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_INFO_H */
-
+#endif // CMD_ISULA_INFORMATION_INFO_H

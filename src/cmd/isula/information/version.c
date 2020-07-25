@@ -13,13 +13,19 @@
  * Description: provide container version functions
  ******************************************************************************/
 #include "version.h"
+
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "config.h"
 #include "isula_connect.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "constants.h"
+#include "libisula.h"
 
 const char g_cmd_version_desc[] = "Display information about isula";
 const char g_cmd_version_usage[] = "version";
@@ -91,7 +97,7 @@ int cmd_version_main(int argc, const char **argv)
 {
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_version_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_version_args) };
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_version_args)) {
@@ -120,4 +126,3 @@ int cmd_version_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

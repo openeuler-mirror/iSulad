@@ -13,24 +13,20 @@
  * Description: provide container stats functions
  ******************************************************************************/
 #define __STDC_FORMAT_MACROS /* Required for PRIu64 to work. */
-#include <errno.h>
-#include <inttypes.h>
-#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <termios.h>
 #include <unistd.h>
-#include <sys/epoll.h>
-#include <sys/ioctl.h>
+#include <string.h>
 
-#include "error.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "stats.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 #define ESC "\033"
 #define TERMCLEAR ESC "[H" ESC "[J"
@@ -74,8 +70,8 @@ static void isula_size_humanize(unsigned long long val, char *buf, size_t bufsz)
 static void stats_print_header(void)
 {
     printf(TERMRVRS TERMBOLD);
-    printf("%-16s %-10s %-26s %-10s %-26s %-10s", "CONTAINER", "CPU %", "MEM USAGE / LIMIT", "MEM %",
-           "BLOCK I / O", "PIDS");
+    printf("%-16s %-10s %-26s %-10s %-26s %-10s", "CONTAINER", "CPU %", "MEM USAGE / LIMIT", "MEM %", "BLOCK I / O",
+           "PIDS");
     printf("\n");
     printf(TERMNORM);
 }
@@ -224,9 +220,7 @@ int cmd_stats_main(int argc, const char **argv)
 {
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        STATUS_OPTIONS(g_cmd_stats_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) STATUS_OPTIONS(g_cmd_stats_args)
         COMMON_OPTIONS(g_cmd_stats_args)
     };
 
@@ -253,4 +247,3 @@ int cmd_stats_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

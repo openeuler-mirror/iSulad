@@ -69,26 +69,30 @@ source $basepath/install_depends.sh
 
 echo_success "===================RUN DT-LLT TESTCASES START========================="
 cd $ISULAD_COPY_PATH
+sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils/cutils/utils.c
 rm -rf build
-cd ./test
+mkdir build && cd build
 if [[ "x${GCOV}" == "xON" ]]; then
-  ./test.sh -mcoverage -c -r -t
-  if [[ $? -ne 0 ]]; then
-      exit 1
-  fi
-  ISULAD_SRC_PATH=$(env | grep TOPDIR | awk -F = '{print $2}')
-  tar -zcf $ISULAD_SRC_PATH/isulad-llt-gcov.tar.gz ./coverage
+    cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DENABLE_UT=ON ..
+    make -j $(nproc)
+    ctest -T memcheck --output-on-failure
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
+    make coverage
+    ISULAD_SRC_PATH=$(env | grep TOPDIR | awk -F = '{print $2}')
+    tar -zcf $ISULAD_SRC_PATH/isulad-llt-gcov.tar.gz ./test/coverage/
 else
-  ./test.sh -m -c -r
-  if [[ $? -ne 0 ]]; then
-      exit 1
-  fi
+    cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON ..
+    make -j $(nproc)
+    ctest -T memcheck --output-on-failure
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
 fi
-./test.sh -e
 echo_success "===================RUN DT-LLT TESTCASES END========================="
 
 cd $ISULAD_COPY_PATH
-sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/cutils/utils.c
 
 # build rest version
 cd $ISULAD_COPY_PATH

@@ -13,10 +13,17 @@
  * Description: provide container health functions
  ******************************************************************************/
 #include "health.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "constants.h"
+#include "libisula.h"
 
 const char g_cmd_health_check_desc[] = "iSulad health check";
 const char g_cmd_health_check_usage[] = "health [command options]";
@@ -81,9 +88,8 @@ int cmd_health_check_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_health_check_args.progname = argv[0];
-    struct command_option options[] = {
-        HEALTH_OPTIONS(g_cmd_health_check_args),
-        COMMON_OPTIONS(g_cmd_health_check_args)
+    struct command_option options[] = { HEALTH_OPTIONS(g_cmd_health_check_args),
+               COMMON_OPTIONS(g_cmd_health_check_args)
     };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
@@ -100,4 +106,3 @@ int cmd_health_check_main(int argc, const char **argv)
     printf("iSulad with socket name '%s' is SERVING\n", g_cmd_health_check_args.socket);
     exit(EXIT_SUCCESS);
 }
-

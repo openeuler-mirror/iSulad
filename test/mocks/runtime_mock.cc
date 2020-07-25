@@ -33,7 +33,7 @@ int runtime_pause(const char *name, const char *runtime, const rt_pause_params_t
 }
 
 int runtime_resources_stats(const char *name, const char *runtime, const rt_stats_params_t *params,
-                            struct engine_container_resources_stats_info *rs_stats)
+                            struct runtime_container_resources_stats_info *rs_stats)
 {
     if (g_runtime_mock != nullptr) {
         return g_runtime_mock->RuntimeResourcesStats(name, runtime, params, rs_stats);

@@ -13,11 +13,11 @@
  * Description: provide containers store mock
  ******************************************************************************/
 
-#ifndef CONTAINERS_STORE_MOCK_H_
-#define CONTAINERS_STORE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_CONTAINERS_STORE_MOCK_H
+#define _ISULAD_TEST_MOCKS_CONTAINERS_STORE_MOCK_H
 
 #include <gmock/gmock.h>
-#include "containers_store.h"
+#include "container_api.h"
 
 class MockContainersStore {
 public:
@@ -37,6 +37,6 @@ public:
     MOCK_METHOD3(NameIndexRename, bool(const char *new_name, const char *old_name, const char *id));
 };
 
-void MockContainersStore_SetMock(MockContainersStore* mock);
+void MockContainersStore_SetMock(MockContainersStore *mock);
 
-#endif  // CONTAINERS_STORE_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_CONTAINERS_STORE_MOCK_H

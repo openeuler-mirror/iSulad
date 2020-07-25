@@ -24,7 +24,7 @@ void MockContainerState_SetMock(MockContainerState *mock)
     g_container_state_mock = mock;
 }
 
-bool is_running(container_state_t *s)
+bool container_is_running(container_state_t *s)
 {
     if (g_container_state_mock != nullptr) {
         return g_container_state_mock->IsRunning(s);
@@ -32,7 +32,7 @@ bool is_running(container_state_t *s)
     return true;
 }
 
-bool is_restarting(container_state_t *s)
+bool container_is_restarting(container_state_t *s)
 {
     if (g_container_state_mock != nullptr) {
         return g_container_state_mock->IsRestarting(s);
@@ -40,7 +40,7 @@ bool is_restarting(container_state_t *s)
     return false;
 }
 
-bool is_dead(container_state_t *s)
+bool container_is_dead(container_state_t *s)
 {
     if (g_container_state_mock != nullptr) {
         return g_container_state_mock->IsDead(s);
@@ -55,7 +55,7 @@ void container_state_set_error(container_state_t *s, const char *err)
     }
 }
 
-bool is_paused(container_state_t *s)
+bool container_is_paused(container_state_t *s)
 {
     if (g_container_state_mock != nullptr) {
         return g_container_state_mock->IsPaused(s);
@@ -63,21 +63,21 @@ bool is_paused(container_state_t *s)
     return true;
 }
 
-void state_reset_paused(container_state_t *s)
+void container_state_reset_paused(container_state_t *s)
 {
     if (g_container_state_mock != nullptr) {
         return g_container_state_mock->StateResetPaused(s);
     }
 }
 
-void state_set_paused(container_state_t *s)
+void container_state_set_paused(container_state_t *s)
 {
     if (g_container_state_mock != nullptr) {
         return g_container_state_mock->StateSetPaused(s);
     }
 }
 
-bool is_removal_in_progress(container_state_t *s)
+bool container_is_removal_in_progress(container_state_t *s)
 {
     if (g_container_state_mock != nullptr) {
         return g_container_state_mock->IsRemovalInProgress(s);

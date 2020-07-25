@@ -12,25 +12,40 @@
  * Create: 2018-11-08
  * Description: provide container ps definition
  ******************************************************************************/
-#ifndef __CMD_LIST_H
-#define __CMD_LIST_H
+#ifndef CMD_ISULA_INFORMATION_PS_H
+#define CMD_ISULA_INFORMATION_PS_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define LIST_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_BOOL, false, "all", 'a', &(cmdargs).list_all, \
-        "Display all containers (default shows just running)", NULL }, \
-    { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &(cmdargs).dispname, "Only display numeric IDs", NULL }, \
-    { CMD_OPT_TYPE_CALLBACK, false, "filter", 'f', &(cmdargs).filters, \
-      "Filter output based on conditions provided", command_append_array }, \
-    { CMD_OPT_TYPE_BOOL, false, "no-trunc", 0, &(cmdargs).no_trunc, \
-      "Don't truncate output", NULL }, \
-    { CMD_OPT_TYPE_STRING, false, "format", 0, &(cmdargs).format, \
-      "Format the output using the given go template", NULL }
+#define LIST_OPTIONS(cmdargs)                                                                                        \
+    { CMD_OPT_TYPE_BOOL,                                                                                             \
+        false,                                                                                                         \
+        "all",                                                                                                         \
+        'a',                                                                                                           \
+        &(cmdargs).list_all,                                                                                           \
+        "Display all containers (default shows just running)",                                                         \
+        NULL },                                                                                                        \
+    { CMD_OPT_TYPE_BOOL, false, "quiet", 'q', &(cmdargs).dispname, "Only display numeric IDs", NULL },       \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                 \
+      false,                                                                                                 \
+      "filter",                                                                                              \
+      'f',                                                                                                   \
+      &(cmdargs).filters,                                                                                    \
+      "Filter output based on conditions provided",                                                          \
+      command_append_array },                                                                                \
+    { CMD_OPT_TYPE_BOOL, false, "no-trunc", 0, &(cmdargs).no_trunc, "Don't truncate output", NULL },         \
+    {                                                                                                                \
+                                                                                                                     CMD_OPT_TYPE_STRING, false, "format", 0, &(cmdargs).format, "Format the output using the given go template", \
+                                                                                                                     NULL                                                                                                 \
+    }
 
 extern const char g_cmd_list_desc[];
 extern const char g_cmd_list_usage[];
@@ -41,5 +56,4 @@ int cmd_list_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_LIST_H */
-
+#endif // CMD_ISULA_INFORMATION_PS_H

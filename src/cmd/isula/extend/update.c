@@ -13,12 +13,16 @@
  * Description: provide container update functions
  ******************************************************************************/
 #include <string.h>
-#include <errno.h>
-#include "arguments.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "client_arguments.h"
 #include "update.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
+#include "connect.h"
+#include "libisula.h"
 
 const char g_cmd_update_desc[] = "Update configuration of one or more containers";
 const char g_cmd_update_usage[] = "update [OPTIONS] CONTAINER [CONTAINER...]";
@@ -107,10 +111,8 @@ int cmd_update_main(int argc, const char **argv)
     int i = 0;
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        UPDATE_OPTIONS(g_cmd_update_args),
-        COMMON_OPTIONS(g_cmd_update_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) UPDATE_OPTIONS(g_cmd_update_args),
+               COMMON_OPTIONS(g_cmd_update_args)
     };
 
     isula_libutils_default_log_config(argv[0], &lconf);
@@ -163,4 +165,3 @@ int update_checker(const struct client_arguments *args)
 
     return ret;
 }
-

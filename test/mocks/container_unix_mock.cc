@@ -19,11 +19,10 @@ namespace {
 MockContainerUnix *g_container_unix_mock = NULL;
 }
 
-void MockContainerUnix_SetMock(MockContainerUnix* mock)
+void MockContainerUnix_SetMock(MockContainerUnix *mock)
 {
     g_container_unix_mock = mock;
 }
-
 
 /* container unref */
 void container_unref(container_t *cont)
@@ -34,17 +33,12 @@ void container_unref(container_t *cont)
     return;
 }
 
-bool has_mount_for(container_t *cont, const char *mpath)
+bool container_has_mount_for(container_t *cont, const char *mpath)
 {
     if (g_container_unix_mock != nullptr) {
         return g_container_unix_mock->HasMountFor(cont, mpath);
     }
     return false;
-}
-
-int container_read_proc(uint32_t pid, container_pid_t *pid_info)
-{
-    return 0;
 }
 
 int container_to_disk(const container_t *cont)
@@ -75,4 +69,3 @@ void container_update_restart_manager(container_t *cont, const host_config_resta
         return g_container_unix_mock->ContainerUpdateRestartManager(cont, policy);
     }
 }
-

@@ -18,13 +18,13 @@
 #include <gtest/gtest.h>
 #include "mock.h"
 #include "isula_libutils/oci_runtime_spec.h"
+#include "oci_config_merge.h"
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/container_config.h"
-#include "oci_config_merge.h"
 #include "oci_ut_common.h"
 
-#define IMAGETOOL_IMAGE_FILE "image/oci/oci_config_merge/imagetool_image.json"
-#define OCI_RUNTIME_SPEC_FILE "image/oci/oci_config_merge/oci_runtime_spec.json"
+#define IMAGETOOL_IMAGE_FILE "../../../../../test/image/oci/oci_config_merge/imagetool_image.json"
+#define OCI_RUNTIME_SPEC_FILE "../../../../../test/image/oci/oci_config_merge/oci_runtime_spec.json"
 #define MALLOC_COUNT 5
 
 static int g_malloc_count = 0;
@@ -37,8 +37,8 @@ extern "C" {
     DECLARE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len));
     DEFINE_WRAPPER_V(util_smart_calloc_s, void *, (size_t size, size_t len), (size, len));
 
-    DECLARE_WRAPPER(merge_env, int, (oci_runtime_spec *oci_spec, const char **env, size_t env_len));
-    DEFINE_WRAPPER(merge_env, int, (oci_runtime_spec *oci_spec, const char **env, size_t env_len), \
+    DECLARE_WRAPPER(merge_env, int, (oci_runtime_spec * oci_spec, const char **env, size_t env_len));
+    DEFINE_WRAPPER(merge_env, int, (oci_runtime_spec * oci_spec, const char **env, size_t env_len),
                    (oci_spec, env, env_len));
 }
 
@@ -79,8 +79,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     // All parameter NULL
     ASSERT_NE(oci_image_merge_config(NULL, NULL), 0);
 
-
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     ASSERT_NE(oci_image_merge_config(NULL, custom_config), 0);
@@ -99,7 +98,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     free(imagetool_image_file);
     imagetool_image_file = NULL;
 
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);
@@ -136,11 +135,10 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     free(imagetool_image_file);
     imagetool_image_file = NULL;
 
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);
-
 
     free_imagetool_image(tool_image);
     tool_image = NULL;
@@ -163,12 +161,12 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     ASSERT_TRUE(tool_image->spec->config->volumes != NULL);
     tool_image->spec->config->volumes->keys = single_array_from_string("/data");
     ASSERT_TRUE(tool_image->spec->config->volumes->keys != NULL);
-    tool_image->spec->config->volumes->values = (defs_map_string_object_element **)
-                                                util_common_calloc_s(sizeof(defs_map_string_object_element *));
+    tool_image->spec->config->volumes->values =
+        (defs_map_string_object_element **)util_common_calloc_s(sizeof(defs_map_string_object_element *));
     ASSERT_TRUE(tool_image->spec->config->volumes->values != NULL);
     tool_image->spec->config->volumes->len = 1;
 
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);
@@ -213,8 +211,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     tool_image->spec->config->user = util_strdup_s("mail");
     ASSERT_TRUE(tool_image->spec->config->user != NULL);
 
-
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     util_free_array(custom_config->cmd);
@@ -231,8 +228,8 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     custom_config->user = util_strdup_s("daemon");
     ASSERT_TRUE(custom_config->user != NULL);
 
-    custom_config->health_check = (defs_health_check *) util_common_calloc_s(sizeof(defs_health_check));
-    ASSERT_TRUE(custom_config->health_check != NULL);
+    custom_config->healthcheck = (defs_health_check *)util_common_calloc_s(sizeof(defs_health_check));
+    ASSERT_TRUE(custom_config->healthcheck != NULL);
 
     ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);
 
@@ -290,8 +287,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     tool_image->spec->config->user = util_strdup_s("mail");
     ASSERT_TRUE(tool_image->spec->config->user != NULL);
 
-
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     util_free_array(custom_config->cmd);
@@ -338,15 +334,15 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
         free(imagetool_image_file);
         imagetool_image_file = NULL;
 
-        custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+        custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
         ASSERT_TRUE(custom_config != NULL);
 
         g_malloc_match = 1;
         // Test update_health_check_from_image executed failed caused by malloc failed.
         if (i == 3) {
             g_malloc_match = 2;
-            custom_config->health_check = (defs_health_check *) util_common_calloc_s(sizeof(defs_health_check));
-            ASSERT_TRUE(custom_config->health_check != NULL);
+            custom_config->healthcheck = (defs_health_check *)util_common_calloc_s(sizeof(defs_health_check));
+            ASSERT_TRUE(custom_config->healthcheck != NULL);
         }
         // Test do_duplicate_entrypoints executed failed caused by malloc failed.
         if (i == 4) {
@@ -378,7 +374,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     free(imagetool_image_file);
     imagetool_image_file = NULL;
 
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     free_imagetool_image(tool_image);
@@ -401,7 +397,7 @@ TEST(oci_config_merge_ut, test_oci_image_merge_config)
     tool_image->healthcheck->test = NULL;
     tool_image->healthcheck->test_len = 0;
 
-    custom_config = (container_config *) util_common_calloc_s(sizeof(container_config));
+    custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     ASSERT_TRUE(custom_config != NULL);
 
     ASSERT_EQ(oci_image_merge_config(tool_image, custom_config), 0);

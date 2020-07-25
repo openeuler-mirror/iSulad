@@ -14,8 +14,8 @@
  ******************************************************************************/
 
 
-#ifndef SYSCALL_MOCK_H_
-#define SYSCALL_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_SYSCALL_MOCK_H
+#define _ISULAD_TEST_MOCKS_SYSCALL_MOCK_H
 
 #include <gmock/gmock.h>
 #include <sys/vfs.h>
@@ -28,4 +28,4 @@ public:
 
 void Syscall_SetMock(MockSyscall* mock);
 
-#endif  // SYSCALL_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_SYSCALL_MOCK_H

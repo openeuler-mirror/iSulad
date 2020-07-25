@@ -2,6 +2,7 @@ set(CHECKED_INCLUDE_DIRS
     ${STD_HEADER_CTYPE}
     ${STD_HEADER_SYS_PARAM}
     ${LIBYAJL_INCLUDE_DIR}
+    ${LIBARCHIVE_INCLUDE_DIR}
     ${HTTP_PARSER_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIR}
@@ -24,91 +25,49 @@ else()
 endif()
 list(REMOVE_DUPLICATES CHECKED_INCLUDE_DIRS)
 
+add_subdirectory(utils)
+add_subdirectory(common)
+
 set(SHARED_INCS
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/cutils 
-    ${CMAKE_CURRENT_SOURCE_DIR}/sha256
-    ${CMAKE_CURRENT_SOURCE_DIR}/tar
-    ${CMAKE_CURRENT_SOURCE_DIR}/console
-    ${CMAKE_CURRENT_SOURCE_DIR}/map
-    ${CMAKE_BINARY_DIR}/conf
-    ${CHECKED_INCLUDE_DIRS}
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${COMMON_INCS}
+	${UTILS_INCS}
+	${CMAKE_BINARY_DIR}/conf
+	${CHECKED_INCLUDE_DIRS}
     )
 
-add_subdirectory(tar)
-add_subdirectory(sha256)
-add_subdirectory(cutils)
-add_subdirectory(console)
-add_subdirectory(map)
-
 set(SHARED_SRCS
-    ${TAR_SRCS}
-    ${SHA256_SRCS}
-    ${CUTILS_SRCS}
-    ${CONSOLE_SRCS}
-    ${MAP_SRCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/container_def.c
+	${UTILS_SRCS}
     )
 
 # get all c and header files
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/connect)
-
-if (GRPC_CONNECTOR)
-    # GRPC
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/types CONNECT_API_TYPES)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/containers CONNECT_API_CONTAINERS)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/images CONNECT_API_IMAGES)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri CONNECT_API_CRI)
-    set(CONNECT_API ${CONNECT_API_TYPES} ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI})
-
-    list(APPEND SHARED_INCS
-        ${CMAKE_BINARY_DIR}/grpc/src/api/types
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/containers
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/images
-        ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
-        ${CMAKE_CURRENT_SOURCE_DIR}/cpputils
-        )
-
-    add_subdirectory(cpputils)
-    add_subdirectory(websocket)
-
-    list(APPEND SHARED_SRCS ${CPPUTILS_SRCS})
-else()
-    list(APPEND SHARED_INCS
-         ${CMAKE_CURRENT_SOURCE_DIR}/api/services/containers/rest
-         ${CMAKE_CURRENT_SOURCE_DIR}/api/services/images/rest
-         )
-endif()
-
-list(APPEND SHARED_SRCS ${CONNECT_API} ${CPPUTILS_SRCS})
 list(REMOVE_DUPLICATES SHARED_INCS)
 list(REMOVE_DUPLICATES SHARED_SRCS)
 
-add_subdirectory(http)
-
 # ------ build libisula ------
+
+add_subdirectory(client)
 if (OPENSSL_VERIFY)
-    list(APPEND CONNECTOR ${CMAKE_CURRENT_SOURCE_DIR}/http/certificate.c)
+    list(APPEND CLIENT_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/utils/http/certificate.c)
 endif()
 
 add_library(libisula ${LIBTYPE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/libisula.c
-    ${CONNECTOR}
+    ${CLIENT_SRCS}
     ${SHARED_SRCS}
     )
 
 target_include_directories(libisula PUBLIC
     ${SHARED_INCS}
-    ${CONNECTOR_INCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/http
+    ${CLIENT_INCS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
 # set libisula FLAGS
 set_target_properties(libisula PROPERTIES PREFIX "")
-target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY})
+target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
 
 if (GRPC_CONNECTOR)
-    target_link_libraries(libisula -Wl,--as-needed -lstdc++ -lcrypto)
+    target_link_libraries(libisula -Wl,--as-needed -lstdc++)
     target_link_libraries(libisula -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(libisula -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 else()
@@ -135,60 +94,24 @@ target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -
 # ------ build isula-shim finish -------
 
 # ------ build isulad -------
-add_subdirectory(services)
-add_subdirectory(image)
-add_subdirectory(runtime)
-
-if (ENABLE_OCI_IMAGE)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/types CONNECT_API_TYPES)
-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/image_client/ IMAGE_CLIENT_SRCS)
-
-    list(APPEND IMAGE_SRCS
-        ${ISULA_IMAGE_CLIENT_SRCS}
-        ${CONNECT_API_TYPES} ${IMAGE_CLIENT_SRCS}
-        )
-    list(APPEND IMAGE_INCS
-        ${CMAKE_BINARY_DIR}/grpc/src/api/types
-        ${CMAKE_BINARY_DIR}/grpc/src/api/image_client
-        ${GRPC_INCLUDE_DIR}
-        ${ISULA_IMAGE_CLIENT_INCS}
-        )
-endif()
-
-add_subdirectory(engines)
-
-add_subdirectory(plugin)
-add_subdirectory(config)
+add_subdirectory(daemon)
 
 add_executable(isulad
-    ${CONNECT_SOCKET} ${SHARED_SRCS}
-    ${ISULAD_SRCS} ${SERVICES_SRCS}
+    ${DAEMON_SRCS}
+    ${SHARED_SRCS}
+    ${ISULAD_SRCS}
     ${HTTP_SRCS}
-    ${ENGINES_SRCS}
-    ${IMAGE_SRCS}
-    ${RUNTIME_SRCS}
-    ${PLUGIN_SRCS}
-    ${CONFIG_SRCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/libisulad.c
-    ${WEBSOCKET_SERVICE_SRCS}
     )
 
 target_include_directories(isulad PUBLIC
+    ${DAEMON_INCS}
     ${SHARED_INCS}
     ${CONNECT_SOCKET_INCS}
-    ${SERVICES_INCS}
-    ${IMAGE_INCS}
-    ${RUNTIME_INCS}
-    ${ENGINES_INCS}
     ${ISULAD_INCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/plugin
-    ${CMAKE_CURRENT_SOURCE_DIR}/map
-    ${CMAKE_CURRENT_SOURCE_DIR}/config
-    ${CMAKE_CURRENT_SOURCE_DIR}/http
-    ${WEBSOCKET_SERVICE_INCS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
-target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY})
+target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
 target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread libhttpclient)
 if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(isulad ${SQLITE3_LIBRARY})
@@ -196,10 +119,10 @@ endif()
 
 if (GRPC_CONNECTOR)
     message("GRPC iSulad")
-    target_link_libraries(isulad -Wl,--as-needed -lstdc++ -lcrypto)
+    target_link_libraries(isulad -Wl,--as-needed -lstdc++)
     target_link_libraries(isulad -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
-    target_link_libraries(isulad ${CLIBCNI_LIBRARY} ${WEBSOCKET_LIBRARY})
+    target_link_libraries(isulad ${CLIBCNI_LIBRARY})
 else()
     message("Restful iSulad")
     target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
@@ -207,6 +130,7 @@ endif()
 
 if (ENABLE_OCI_IMAGE)
     target_link_libraries(isulad -Wl,--as-needed -lstdc++)
+    target_link_libraries(isulad -Wl,--as-needed -ldevmapper)
     target_link_libraries(isulad -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 endif()

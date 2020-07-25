@@ -13,20 +13,30 @@
  * Description: provide container attach functions
  ******************************************************************************/
 #include <semaphore.h>
-#include <fcntl.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
 #include <pthread.h>
+#include <termios.h> // IWYU pragma: keep
+#include <errno.h>
+#include <isula_libutils/container_inspect.h>
+#include <isula_libutils/json_common.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/prctl.h>
+#include <sys/time.h>
+#include <time.h>
 
-#include "arguments.h"
-#include "exec.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
 #include "attach.h"
-#include "commands.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "constants.h"
+#include "libisula.h"
 
 const char g_cmd_attach_desc[] = "Attach to a running container";
 const char g_cmd_attach_usage[] = "attach [OPTIONS] CONTAINER";
@@ -161,7 +171,7 @@ static int attach_cmd_init(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_attach_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_attach_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_attach_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_attach_desc,
                  g_cmd_attach_usage);
@@ -386,4 +396,3 @@ int cmd_attach_main(int argc, const char **argv)
 out:
     exit((exit_code != 0) ? (int)exit_code : ret);
 }
-

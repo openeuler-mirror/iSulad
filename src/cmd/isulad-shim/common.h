@@ -13,10 +13,12 @@
  * Description: common definition of isulad-shim
  ******************************************************************************/
 
-#ifndef __COMMON_H_
-#define __COMMON_H_
+#ifndef CMD_ISULAD_SHIM_COMMON_H
+#define CMD_ISULAD_SHIM_COMMON_H
 
 #include <stdbool.h>
+#include <stddef.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {

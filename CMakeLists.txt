@@ -9,7 +9,7 @@ include(cmake/set_build_flags.cmake)
 
 #set(CMAKE_C_COMPILER "gcc" CACHE PATH "c compiler")
 
-set(GIT_COMMIT_HASH "191411002d5001425aadbc0526eb3545921ee0c5")
+set(GIT_COMMIT_HASH "576a51fa5c02c88a837d0dbad01e7ac58b7dea52")
 message("--  commit id: " ${GIT_COMMIT_HASH})
 add_definitions(-DISULAD_GIT_COMMIT="${GIT_COMMIT_HASH}")
 
@@ -56,6 +56,9 @@ include(cmake/protoc.cmake)
 # unit test and coverage
 SET(CMAKE_VERBOSE_MAKEFILE OFF)
 IF(ENABLE_COVERAGE)
+    IF(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(WARNING "Debugging mode should be turned on when generating code coverage reports, otherwise coverage may be inaccurate")
+    ENDIF()
     MESSAGE(STATUS "Enable coverage compile option")
     SET(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-inline-functions")
     SET(COVERAGE_CXX_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage")
@@ -73,7 +76,12 @@ ENDIF()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 OPTION(ENABLE_UT "ut switch" OFF)
+OPTION(ENABLE_FUZZ "fuzz switch" OFF)
 IF(ENABLE_UT)
+    include(CTest)
+    include(Dart)
+    find_program(MEMORYCHECK_COMMAND NAMES valgrind)
+    set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full")
     enable_testing()
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 ENDIF(ENABLE_UT)
@@ -81,17 +89,17 @@ ENDIF(ENABLE_UT)
 # install all files
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc
   DESTINATION ${LIB_INSTALL_DIR_DEFAULT}/pkgconfig PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
-install(FILES src/libisula.h
+install(FILES src/client/libisula.h
 	DESTINATION include/isulad)
-install(FILES src/connect/client/isula_connect.h
+install(FILES src/client/connect/isula_connect.h
 	DESTINATION include/isulad)
-install(FILES src/container_def.h
+install(FILES src/utils/cutils/utils_timestamp.h
 	DESTINATION include/isulad)
-install(FILES src/cutils/types_def.h
+install(FILES src/utils/cutils/error.h
 	DESTINATION include/isulad)
-install(FILES src/cutils/error.h
+install(FILES src/daemon/modules/runtime/engines/engine.h
 	DESTINATION include/isulad)
-install(FILES src/engines/engine.h
+install(FILES src/daemon/modules/api/image_api.h
 	DESTINATION include/isulad)
 
 # install config files

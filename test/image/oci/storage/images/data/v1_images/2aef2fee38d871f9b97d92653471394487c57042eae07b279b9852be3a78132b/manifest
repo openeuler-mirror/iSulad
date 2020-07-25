@@ -1,0 +1,98 @@
+{
+   "schemaVersion": 1,
+   "name": "coreos/etcd",
+   "tag": "v3.3.17-arm64",
+   "architecture": "arm64",
+   "fsLayers": [
+      {
+         "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+      },
+      {
+         "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+      },
+      {
+         "blobSum": "sha256:fca276b00973f1a1cc7a9ae86a35f430e968bdd5eb7f1001226e84b466df0ab3"
+      },
+      {
+         "blobSum": "sha256:e206e39b1faf8c8a7ee64087194fc6bb041c427ff61918c867e63e3043e3e373"
+      },
+      {
+         "blobSum": "sha256:ec0fd8a33d0939a0865c77999b673412c7173bdc1edea407875d67450f77688b"
+      },
+      {
+         "blobSum": "sha256:315db447e923063b48b8637d90cd06d62f25dfebf835ae86a745060a5aa69f49"
+      },
+      {
+         "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+      },
+      {
+         "blobSum": "sha256:2d7e11a39e1443dbb0549c610a2c074090448f06dd74bb5c71afbeacd3728836"
+      },
+      {
+         "blobSum": "sha256:0d50334e42c821bc3cba70d4ea10be0c6c9af46179fd95a363c4923f75dc4432"
+      },
+      {
+         "blobSum": "sha256:036e18d91b38771191e73ff9df2cc49d2161e1f52951323b3807b35c4c4a0955"
+      },
+      {
+         "blobSum": "sha256:3bab9736f67fd5add499c55afd6f652b096c999a887e5541fb3728bc267ea4df"
+      },
+      {
+         "blobSum": "sha256:270b8855c17de6980aff6cb060c7d95c35e018cfb30c85e5a0b7810ad5620761"
+      }
+   ],
+   "history": [
+      {
+         "v1Compatibility": "{\"architecture\":\"arm64\",\"config\":{\"Hostname\":\"53f77c73de31\",\"Domainname\":\"\",\"User\":\"\",\"AttachStdin\":false,\"AttachStdout\":false,\"AttachStderr\":false,\"ExposedPorts\":{\"2379/tcp\":{},\"2380/tcp\":{}},\"Tty\":false,\"OpenStdin\":false,\"StdinOnce\":false,\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"],\"Cmd\":[\"/usr/local/bin/etcd\"],\"ArgsEscaped\":true,\"Image\":\"sha256:9cb3d5c138e0c447ff62216b6ce326e04edfddcc190f7bd3f7e2680da6e25b70\",\"Volumes\":null,\"WorkingDir\":\"\",\"Entrypoint\":null,\"OnBuild\":null,\"Labels\":{}},\"container\":\"f2070c5609097b3b1fcdaa40e35f1143cf41d66c9d59ec7f8cc3541469bfbdfc\",\"container_config\":{\"Hostname\":\"53f77c73de31\",\"Domainname\":\"\",\"User\":\"\",\"AttachStdin\":false,\"AttachStdout\":false,\"AttachStderr\":false,\"ExposedPorts\":{\"2379/tcp\":{},\"2380/tcp\":{}},\"Tty\":false,\"OpenStdin\":false,\"StdinOnce\":false,\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"],\"Cmd\":[\"/bin/sh\",\"-c\",\"#(nop) \",\"CMD [\\\"/usr/local/bin/etcd\\\"]\"],\"ArgsEscaped\":true,\"Image\":\"sha256:9cb3d5c138e0c447ff62216b6ce326e04edfddcc190f7bd3f7e2680da6e25b70\",\"Volumes\":null,\"WorkingDir\":\"\",\"Entrypoint\":null,\"OnBuild\":null,\"Labels\":{}},\"created\":\"2019-10-11T17:26:17.800168778Z\",\"docker_version\":\"18.09.3\",\"id\":\"d564c5fe101f6686baf59dff54988b0b8d56708a40a6850daa24c03c651ccc1a\",\"os\":\"linux\",\"parent\":\"c1a47fe227f7ae7bf81d6733b8ff291f1a4c9f4a93d3a654005fedc24a0b3036\",\"throwaway\":true}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"c1a47fe227f7ae7bf81d6733b8ff291f1a4c9f4a93d3a654005fedc24a0b3036\",\"parent\":\"c944fa91882085f67693cd782f58ced69356a936092a4ec9be8a4296f9017826\",\"created\":\"2019-10-11T17:26:17.560832911Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop)  EXPOSE 2379 2380\"]},\"throwaway\":true}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"c944fa91882085f67693cd782f58ced69356a936092a4ec9be8a4296f9017826\",\"parent\":\"e7f51d2ad28c3e102b83fbfa3a57a16e8d42dc43ed8507849478358c5761bd74\",\"created\":\"2019-10-11T17:26:17.273665596Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD dir:775d993671759a717245a050055b985a56bafb39a089c8483e2d42b2ec700a47 in /var/lib/etcd \"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"e7f51d2ad28c3e102b83fbfa3a57a16e8d42dc43ed8507849478358c5761bd74\",\"parent\":\"5a4a44d817ea8e4f9f64f53d94ebc9ece97cca87ece9e8819a821d0255d04960\",\"created\":\"2019-10-11T17:26:16.948882085Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD dir:151f86996cae1258f11e6e150ea780e839cca4995047a80a2b9a6513b92066e0 in /var/etcd \"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"5a4a44d817ea8e4f9f64f53d94ebc9ece97cca87ece9e8819a821d0255d04960\",\"parent\":\"53d37c58c406e14248c822bc03d01dd3de5336fdc73b929ad6b25253e8ef46bd\",\"created\":\"2019-10-11T17:26:16.528761622Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD file:9ce06ab1e5aaf75aab78b71608a6608f22370ddcab228e0fd88c5b34be9f7297 in /usr/local/bin/ \"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"53d37c58c406e14248c822bc03d01dd3de5336fdc73b929ad6b25253e8ef46bd\",\"parent\":\"74155b1c5bca0ec8892907831c2972a65c9a2803528b4cd4eff6dd09fd2b1ffa\",\"created\":\"2019-10-11T17:26:15.705078233Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD file:206c8c379365eab43752e80eb59dd85de5d5d45692c830e35da9a9b2bae22fec in /usr/local/bin/ \"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"74155b1c5bca0ec8892907831c2972a65c9a2803528b4cd4eff6dd09fd2b1ffa\",\"parent\":\"51a102e78a26131dc06b0ad7b8d0ec0d66c83d6849340f4fcf9da546e5166b18\",\"created\":\"2017-05-11T00:53:00.051022Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop)  CMD [\\\"/bin/bash\\\"]\"]},\"throwaway\":true}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"51a102e78a26131dc06b0ad7b8d0ec0d66c83d6849340f4fcf9da546e5166b18\",\"parent\":\"0aaf8369298e315dc824a36a13d9e605a7773096a5f986152e18f3caf63e03f0\",\"created\":\"2017-05-11T00:52:59.319464Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c mkdir -p /run/systemd \\u0026\\u0026 echo 'docker' \\u003e /run/systemd/container\"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"0aaf8369298e315dc824a36a13d9e605a7773096a5f986152e18f3caf63e03f0\",\"parent\":\"51a3271f7a59c60ab0caeed1619643c1432ebe992607152ad3ee753ada29c10e\",\"created\":\"2017-05-11T00:52:57.775315Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c sed -i 's/^#\\\\s*\\\\(deb.*universe\\\\)$/\\\\1/g' /etc/apt/sources.list\"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"51a3271f7a59c60ab0caeed1619643c1432ebe992607152ad3ee753ada29c10e\",\"parent\":\"43d12d919247a207fd5f7327fa8f60d27ac866ebcc74b1265703bfc7024bd4c1\",\"created\":\"2017-05-11T00:52:56.236173Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c rm -rf /var/lib/apt/lists/*\"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"43d12d919247a207fd5f7327fa8f60d27ac866ebcc74b1265703bfc7024bd4c1\",\"parent\":\"0097dff5b0612c1ce681350ee665d46d3a66c3e94dcffb6cb451d8acc67fe637\",\"created\":\"2017-05-11T00:52:54.664827Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c set -xe \\t\\t\\u0026\\u0026 echo '#!/bin/sh' \\u003e /usr/sbin/policy-rc.d \\t\\u0026\\u0026 echo 'exit 101' \\u003e\\u003e /usr/sbin/policy-rc.d \\t\\u0026\\u0026 chmod +x /usr/sbin/policy-rc.d \\t\\t\\u0026\\u0026 dpkg-divert --local --rename --add /sbin/initctl \\t\\u0026\\u0026 cp -a /usr/sbin/policy-rc.d /sbin/initctl \\t\\u0026\\u0026 sed -i 's/^exit.*/exit 0/' /sbin/initctl \\t\\t\\u0026\\u0026 echo 'force-unsafe-io' \\u003e /etc/dpkg/dpkg.cfg.d/docker-apt-speedup \\t\\t\\u0026\\u0026 echo 'DPkg::Post-Invoke { \\\"rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true\\\"; };' \\u003e /etc/apt/apt.conf.d/docker-clean \\t\\u0026\\u0026 echo 'APT::Update::Post-Invoke { \\\"rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true\\\"; };' \\u003e\\u003e /etc/apt/apt.conf.d/docker-clean \\t\\u0026\\u0026 echo 'Dir::Cache::pkgcache \\\"\\\"; Dir::Cache::srcpkgcache \\\"\\\";' \\u003e\\u003e /etc/apt/apt.conf.d/docker-clean \\t\\t\\u0026\\u0026 echo 'Acquire::Languages \\\"none\\\";' \\u003e /etc/apt/apt.conf.d/docker-no-languages \\t\\t\\u0026\\u0026 echo 'Acquire::GzipIndexes \\\"true\\\"; Acquire::CompressionTypes::Order:: \\\"gz\\\";' \\u003e /etc/apt/apt.conf.d/docker-gzip-indexes \\t\\t\\u0026\\u0026 echo 'Apt::AutoRemove::SuggestsImportant \\\"false\\\";' \\u003e /etc/apt/apt.conf.d/docker-autoremove-suggests\"]}}"
+      },
+      {
+         "v1Compatibility": "{\"id\":\"0097dff5b0612c1ce681350ee665d46d3a66c3e94dcffb6cb451d8acc67fe637\",\"created\":\"2017-05-11T00:52:52.712811Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD file:fcb21fb0d6f380f47e0bca159c19eb5e0c91a0005d50404f0e12990fb632dbaa in / \"]}}"
+      }
+   ],
+   "signatures": [
+      {
+         "header": {
+            "jwk": {
+               "crv": "P-256",
+               "kid": "NDI5:354X:J4XR:KECC:IX45:MMT6:IXHR:QESN:IJ5Q:H5IR:2LUZ:6L2J",
+               "kty": "EC",
+               "x": "GzGzIys-FuiC6Djb_iZ7wa_QYfQua6PocIhlxD9dyFU",
+               "y": "Z85MmyENsM4l6FuPfxXrZ2U7OU6LRNRooo-TCjwvNQI"
+            },
+            "alg": "ES256"
+         },
+         "signature": "_iZdRlkMVXQpbxoW9SE6ZiCYbSc_7JtGn3fhnLGoAHy-T6pWdui1_oGRd6VxZSDOKIdyHx6arJaUfdCxZzKndg",
+         "protected": "eyJmb3JtYXRMZW5ndGgiOjg0NzcsImZvcm1hdFRhaWwiOiJDbjAiLCJ0aW1lIjoiMjAxOS0xMC0xMVQxNzoyOTo1M1oifQ"
+      }
+   ]
+}

@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+Server: nginx/1.10.1
+Date: Thu, 02 Jul 2020 09:14:16 GMT
+Content-Type: application/vnd.docker.distribution.manifest.list.v2+json
+Content-Length: 2080
+Connection: keep-alive
+Docker-Content-Digest: sha256:9ddee63a712cea977267342e8750ecbc60d3aab25f04ceacfa795e6fce341793
+Docker-Distribution-Api-Version: registry/2.0
+Etag: "sha256:9ddee63a712cea977267342e8750ecbc60d3aab25f04ceacfa795e6fce341793"
+

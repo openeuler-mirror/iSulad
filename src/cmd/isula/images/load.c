@@ -13,16 +13,20 @@
  * Description: provide container load functions
  ******************************************************************************/
 #include "load.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "utils.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
+#include "connect.h"
+#include "libisula.h"
 
 #ifdef ENABLE_EMBEDDED_IMAGE
 const char g_cmd_load_desc[] = "load an image from a manifest or a tar archive";
@@ -83,10 +87,8 @@ static bool valid_param()
     }
 
     if (g_cmd_load_args.type != NULL) {
-        if ((strcmp(g_cmd_load_args.type, "docker") != 0) &&
-            (strcmp(g_cmd_load_args.type, "embedded") != 0)) {
-            COMMAND_ERROR("Invalid image type: image type must be embedded or docker, got %s",
-                          g_cmd_load_args.type);
+        if ((strcmp(g_cmd_load_args.type, "docker") != 0) && (strcmp(g_cmd_load_args.type, "embedded") != 0)) {
+            COMMAND_ERROR("Invalid image type: image type must be embedded or docker, got %s", g_cmd_load_args.type);
             return false;
         }
     }
@@ -117,12 +119,9 @@ int cmd_load_main(int argc, const char **argv)
     struct isula_libutils_log_config lconf = { 0 };
     int exit_code = ECOMMON;
     command_t cmd;
-    struct command_option options[] = {
-        LOG_OPTIONS(lconf),
-        COMMON_OPTIONS(g_cmd_load_args),
-        LOAD_OPTIONS(g_cmd_load_args),
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_load_args) LOAD_OPTIONS(g_cmd_load_args)
 #ifdef ENABLE_EMBEDDED_IMAGE
-        EMBEDDED_OPTIONS(g_cmd_load_args),
+        EMBEDDED_OPTIONS(g_cmd_load_args)
 #endif
     };
 
@@ -172,4 +171,3 @@ int cmd_load_main(int argc, const char **argv)
     printf("Load image from \"%s\" success\n", g_cmd_load_args.file);
     exit(EXIT_SUCCESS);
 }
-

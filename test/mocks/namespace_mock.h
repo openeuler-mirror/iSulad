@@ -13,8 +13,8 @@
  * Description: provide namespace mock
  ******************************************************************************/
 
-#ifndef NAMESPACE_MOCK_H_
-#define NAMESPACE_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_NAMESPACE_MOCK_H
+#define _ISULAD_TEST_MOCKS_NAMESPACE_MOCK_H
 
 #include <gmock/gmock.h>
 #include "namespace.h"
@@ -30,4 +30,4 @@ public:
 
 void MockNamespace_SetMock(MockNamespace *mock);
 
-#endif // NAMESPACE_MOCK_H_
+#endif // _ISULAD_TEST_MOCKS_NAMESPACE_MOCK_H

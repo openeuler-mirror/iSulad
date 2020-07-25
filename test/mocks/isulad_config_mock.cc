@@ -19,7 +19,7 @@ namespace {
 MockIsuladConf *g_isulad_conf_mock = NULL;
 }
 
-void MockIsuladConf_SetMock(MockIsuladConf* mock)
+void MockIsuladConf_SetMock(MockIsuladConf *mock)
 {
     g_isulad_conf_mock = mock;
 }
@@ -28,6 +28,14 @@ char *conf_get_routine_rootdir(const char *runtime)
 {
     if (g_isulad_conf_mock != nullptr) {
         return g_isulad_conf_mock->GetRuntimeDir(runtime);
+    }
+    return nullptr;
+}
+
+char *conf_get_isulad_monitor_fifo_path()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->GetMonitordPath();
     }
     return nullptr;
 }

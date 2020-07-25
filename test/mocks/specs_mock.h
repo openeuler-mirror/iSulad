@@ -13,11 +13,11 @@
  * Description: provide specs mock
  ******************************************************************************/
 
-#ifndef SPECS_MOCK_H_
-#define SPECS_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_SPECS_MOCK_H
+#define _ISULAD_TEST_MOCKS_SPECS_MOCK_H
 
 #include <gmock/gmock.h>
-#include "specs.h"
+#include "specs_api.h"
 
 class MockSpecs {
 public:
@@ -26,6 +26,6 @@ public:
     MOCK_METHOD3(SaveOciConfig, int(const char *id, const char *rootpath, const oci_runtime_spec *oci_spec));
 };
 
-void MockSpecs_SetMock(MockSpecs* mock);
+void MockSpecs_SetMock(MockSpecs *mock);
 
 #endif

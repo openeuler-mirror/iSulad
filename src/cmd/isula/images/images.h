@@ -12,10 +12,10 @@
  * Create: 2018-11-08
  * Description: provide container images definition
  ******************************************************************************/
-#ifndef __CMD_IMAGES_LIST_H
-#define __CMD_IMAGES_LIST_H
+#ifndef CMD_ISULA_IMAGES_IMAGES_H
+#define CMD_ISULA_IMAGES_IMAGES_H
 
-#include "arguments.h"
+#include "client_arguments.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,5 +30,4 @@ int cmd_images_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_IMAGES_LIST_H */
-
+#endif // CMD_ISULA_IMAGES_IMAGES_H

@@ -1,5 +1,5 @@
 %global _version 2.0.3
-%global _release 20200616.185159.git19141100
+%global _release 20200722.144012.git576a51fa
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -16,6 +16,7 @@ ExclusiveArch:  x86_64 aarch64
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
 Provides:       libisula.so()(64bit)
+Provides:       libisulad_img.so()(64bit)
 %endif
 
 %if 0%{?is_systemd}
@@ -31,7 +32,7 @@ Requires(preun): initscripts
 
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
-BuildRequires: libcurl libcurl-devel sqlite-devel
+BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel libtar-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
@@ -40,7 +41,7 @@ Requires:      iSulad-img lcr lxc clibcni
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
-Requires:      libcap libselinux libwebsockets
+Requires:      libcap libselinux libwebsockets libarchive libtar device-mapper
 Requires:      systemd
 
 %description
@@ -61,7 +62,8 @@ rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
-install -m 0644 ./src/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 
 install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
@@ -72,12 +74,12 @@ install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
-install -m 0644 ../src/libisula.h                        %{buildroot}/%{_includedir}/isulad/libisula.h
-install -m 0644 ../src/connect/client/isula_connect.h    %{buildroot}/%{_includedir}/isulad/isula_connect.h
-install -m 0644 ../src/container_def.h                  %{buildroot}/%{_includedir}/isulad/container_def.h
-install -m 0644 ../src/cutils/types_def.h               %{buildroot}/%{_includedir}/isulad/types_def.h
-install -m 0644 ../src/cutils/error.h                   %{buildroot}/%{_includedir}/isulad/error.h
-install -m 0644 ../src/engines/engine.h                 %{buildroot}/%{_includedir}/isulad/engine.h
+install -m 0644 ../src/client/libisula.h			%{buildroot}/%{_includedir}/isulad/libisula.h
+install -m 0644 ../src/client/connect/isula_connect.h		%{buildroot}/%{_includedir}/isulad/isula_connect.h
+install -m 0644 ../src/utils/cutils/utils_timestamp.h			%{buildroot}/%{_includedir}/isulad/utils_timestamp.h
+install -m 0644 ../src/utils/cutils/error.h				%{buildroot}/%{_includedir}/isulad/error.h
+install -m 0644 ../src/daemon/modules/runtime/engines/engine.h			%{buildroot}/%{_includedir}/isulad/engine.h
+install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json

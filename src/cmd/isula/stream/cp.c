@@ -13,17 +13,25 @@
  * Description: provide container cp functions
  ******************************************************************************/
 #include <limits.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
+#include <isula_libutils/container_path_stat.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "error.h"
 #include "cp.h"
-#include "arguments.h"
+#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "path.h"
 #include "isula_connect.h"
-#include "libtar.h"
+#include "isulad_tar.h"
+#include "command_parser.h"
+#include "connect.h"
+#include "io_wrapper.h"
+#include "libisula.h"
+#include "utils.h"
 
 #define FromContainer 0x01u
 #define ToContainer 0x10u
@@ -316,7 +324,7 @@ int cmd_cp_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_cp_args.progname = argv[0];
-    struct command_option options[] = { LOG_OPTIONS(lconf), COMMON_OPTIONS(g_cmd_cp_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_cp_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_cp_desc,
                  g_cmd_cp_usage);
@@ -345,4 +353,3 @@ int cmd_cp_main(int argc, const char **argv)
 
     exit(EXIT_SUCCESS);
 }
-

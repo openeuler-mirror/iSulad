@@ -12,20 +12,31 @@
  * Create: 2018-11-08
  * Description: provide container inspect definition
  ******************************************************************************/
-#ifndef __CMD_INSPECT_H
-#define __CMD_INSPECT_H
+#ifndef CMD_ISULA_INFORMATION_INSPECT_H
+#define CMD_ISULA_INFORMATION_INSPECT_H
 
-#include "arguments.h"
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "client_arguments.h"
+#include "command_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define INSPECT_OPTIONS(cmdargs) \
-    { CMD_OPT_TYPE_STRING, false, "format", 'f', &(cmdargs).format, \
-        "Format the output using the given go template", NULL }, \
-    { CMD_OPT_TYPE_CALLBACK, false, "time", 't', &(cmdargs).time, \
-      "Seconds to wait for inspect timeout (default 120)", command_convert_int }
+#define INSPECT_OPTIONS(cmdargs)                                                         \
+    { CMD_OPT_TYPE_STRING,                                                               \
+        false,                                                                             \
+        "format",                                                                          \
+        'f',                                                                               \
+        &(cmdargs).format,                                                                 \
+        "Format the output using the given go template",                                   \
+        NULL },                                                                            \
+    {                                                                                    \
+                                                                                         CMD_OPT_TYPE_CALLBACK, false, "time", 't', &(cmdargs).time,                      \
+                                                                                         "Seconds to wait for inspect timeout (default 120)", command_convert_int \
+    }
 
 extern const char g_cmd_inspect_desc[];
 extern const char g_cmd_inspect_usage[];
@@ -36,5 +47,4 @@ int cmd_inspect_main(int argc, const char **argv);
 }
 #endif
 
-#endif /* __CMD_INSPECT_H */
-
+#endif // CMD_ISULA_INFORMATION_INSPECT_H

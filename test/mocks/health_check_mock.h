@@ -13,8 +13,8 @@
  * Description: provide health_check mock
  ******************************************************************************/
 
-#ifndef HEALTH_CHECK_MOCK_H_
-#define HEALTH_CHECK_MOCK_H_
+#ifndef _ISULAD_TEST_MOCKS_HEALTH_CHECK_MOCK_H
+#define _ISULAD_TEST_MOCKS_HEALTH_CHECK_MOCK_H
 
 #include <gmock/gmock.h>
 #include "health_check.h"
