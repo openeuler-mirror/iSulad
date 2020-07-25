@@ -131,18 +131,10 @@ $ sudo -E make -j
 $ sudo -E make install
 ```
 
-### build and install iSulad-img
-```
-$ git clone https://gitee.com/openeuler/iSulad-img.git
-$ cd iSulad-img
-$ ./apply-patch
-$ sudo -E make
-$ sudo -E make install
-```
-
 ### build and install iSulad
 ```sh
 $ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad
 $ mkdir build
 $ cd build
 $ sudo -E cmake ..
