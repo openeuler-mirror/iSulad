@@ -83,8 +83,6 @@ char *conf_get_isulad_native_umask();
 
 char *conf_get_isulad_cgroup_parent();
 
-unsigned int conf_get_im_opt_timeout();
-
 char *conf_get_default_runtime();
 
 char *conf_get_graph_check_flag_file();
