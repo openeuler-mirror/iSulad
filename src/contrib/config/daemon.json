@@ -24,8 +24,6 @@
     "insecure-registries": [
     ],
     "pod-sandbox-image": "",
-    "image-opt-timeout": "5m",
-    "image-server-sock-addr": "unix:///var/run/isulad/isula_image.sock",
     "native.umask": "secure",
     "network-plugin": "",
     "cni-bin-dir": "",

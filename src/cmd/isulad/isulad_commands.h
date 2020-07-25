@@ -159,13 +159,6 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
-      "image-opt-timeout",                                                                                        \
-      0,                                                                                                          \
-      &(cmdargs)->json_confs->image_opt_timeout,                                                                  \
-      "Max timeout(default 5m) for image operation",                                                              \
-      NULL },                                                                                                     \
-    { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
-      false,                                                                                                      \
       "network-plugin",                                                                                           \
       0,                                                                                                          \
       &(cmdargs)->json_confs->network_plugin,                                                                     \

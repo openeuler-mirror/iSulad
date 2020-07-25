@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#define DECLARE_OCI_UT_COMMON_WRAPPER                                                   \
+#define DECLARE_OCI_UT_COMMON_WRAPPER                                                    \
     extern "C" {                                                                         \
         DECLARE_WRAPPER_V(conf_get_graph_rootpath, char *, ());                              \
         DEFINE_WRAPPER_V(conf_get_graph_rootpath, char *, (), ());                           \
@@ -41,10 +41,6 @@ extern "C" {
         \
         DECLARE_WRAPPER_V(conf_get_insecure_registry_list, char **, ());                     \
         DEFINE_WRAPPER_V(conf_get_insecure_registry_list, char **, (), ());                  \
-        \
-        DECLARE_WRAPPER(conf_get_im_opt_timeout, unsigned int, ());                          \
-        DEFINE_WRAPPER(conf_get_im_opt_timeout, unsigned int, (), ());                       \
-        \
         DECLARE_WRAPPER_V(execvp, int, (const char *file, char * const argv[]));              \
         DEFINE_WRAPPER_V(execvp, int, (const char *file, char * const argv[]), (file, argv)); \
     }
@@ -56,7 +52,6 @@ extern "C" {
         MOCK_SET_V(conf_get_isulad_storage_driver, conf_get_isulad_storage_driver_success);   \
         MOCK_SET_V(conf_get_registry_list, conf_get_registry_list_success);                   \
         MOCK_SET_V(conf_get_insecure_registry_list, conf_get_insecure_registry_list_success); \
-        MOCK_SET(conf_get_im_opt_timeout, 300);                                               \
     }                                                                                         \
     while (0)                                                                                 \
         ;
@@ -68,7 +63,6 @@ extern "C" {
         MOCK_CLEAR(conf_get_isulad_storage_driver);  \
         MOCK_CLEAR(conf_get_registry_list);          \
         MOCK_CLEAR(conf_get_insecure_registry_list); \
-        MOCK_CLEAR(conf_get_im_opt_timeout);         \
     }                                                \
     while (0)                                        \
         ;

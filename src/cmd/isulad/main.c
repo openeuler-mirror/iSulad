@@ -735,13 +735,6 @@ static int parse_conf_time_duration(struct service_arguments *args)
         goto out;
     }
 
-    /* parse image opt timeout */
-    if (args->json_confs->image_opt_timeout != NULL &&
-        parse_time_duration(args->json_confs->image_opt_timeout, &args->image_opt_timeout)) {
-        ret = -1;
-        goto out;
-    }
-
 out:
     return ret;
 }

@@ -235,7 +235,8 @@ char *conf_get_graph_check_flag_file()
         ERROR("Get rootpath failed");
         return epath;
     }
-    if (strlen(rootpath) > ((SIZE_MAX - strlen(OCI_IMAGE_GRAPH_ROOTPATH_NAME)) - strlen(GRAPH_ROOTPATH_CHECKED_FLAG)) - 3) {
+    if (strlen(rootpath) >
+        ((SIZE_MAX - strlen(OCI_IMAGE_GRAPH_ROOTPATH_NAME)) - strlen(GRAPH_ROOTPATH_CHECKED_FLAG)) - 3) {
         ERROR("Root path is too long");
         goto free_out;
     }
@@ -1033,27 +1034,6 @@ out:
     return ret;
 }
 
-/* conf get image opt timeout */
-unsigned int conf_get_im_opt_timeout()
-{
-    struct service_arguments *conf = NULL;
-    unsigned int ret = 0;
-    if (isulad_server_conf_rdlock() != 0) {
-        return 0;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL) {
-        goto out;
-    }
-
-    ret = conf->image_opt_timeout;
-
-out:
-    (void)isulad_server_conf_unlock();
-    return ret;
-}
-
 char *conf_get_default_runtime()
 {
     struct service_arguments *conf = NULL;
@@ -1624,7 +1604,6 @@ int merge_json_confs_into_global(struct service_arguments *args)
     override_string_value(&args->json_confs->cgroup_parent, &tmp_json_confs->cgroup_parent);
     override_string_value(&args->json_confs->rootfsmntdir, &tmp_json_confs->rootfsmntdir);
     override_string_value(&args->json_confs->start_timeout, &tmp_json_confs->start_timeout);
-    override_string_value(&args->json_confs->image_opt_timeout, &tmp_json_confs->image_opt_timeout);
     override_string_value(&args->json_confs->pod_sandbox_image, &tmp_json_confs->pod_sandbox_image);
     override_string_value(&args->json_confs->network_plugin, &tmp_json_confs->network_plugin);
     override_string_value(&args->json_confs->cni_bin_dir, &tmp_json_confs->cni_bin_dir);
