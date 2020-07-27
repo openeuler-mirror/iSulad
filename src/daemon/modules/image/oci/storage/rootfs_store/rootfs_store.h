@@ -50,9 +50,6 @@ int rootfs_store_delete(const char *id);
 // Remove records of all containers
 int rootfs_store_wipe();
 
-// Stores a (potentially large) piece of data associated with this ID.
-int rootfs_store_set_big_data(const char *id, const char *key, const char *data);
-
 // Updates the metadata associated with the item with the specified ID.
 int rootfs_store_set_metadata(const char *id, const char *metadata);
 
@@ -64,18 +61,6 @@ bool rootfs_store_exists(const char *id);
 
 // Retrieve information about a container given an ID or name.
 storage_rootfs *rootfs_store_get_rootfs(const char *id);
-
-// Retrieves a (potentially large) piece of data associated with this ID, if it has previously been set.
-char *rootfs_store_big_data(const char *id, const char *key);
-
-// Retrieves the size of a (potentially large) piece of data associated with this ID, if it has previously been set.
-int64_t rootfs_store_big_data_size(const char *id, const char *key);
-
-// Retrieves the digest of a (potentially large) piece of data associated with this ID, if it has previously been set.
-char *rootfs_store_big_data_digest(const char *id, const char *key);
-
-// Returns a list of the names of previously-stored pieces of data.
-int rootfs_store_big_data_names(const char *id, char ***names, size_t *names_len);
 
 // Reads metadata associated with an item with the specified ID.
 char *rootfs_store_metadata(const char *id);

@@ -31,7 +31,6 @@
 #include "path.h"
 #include "storage.h"
 
-std::string BIG_DATA_CONTENT = "big data test";
 std::string META_DATA_CONTENT = "metadata test";
 
 std::string GetDirectory()
@@ -126,10 +125,6 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_load)
     ASSERT_STRNE(cntr->metadata, nullptr);
     ASSERT_EQ(cntr->names_len, 1);
     ASSERT_STREQ(cntr->names[0], "0e025f44cdca20966a5e5f11e1d9d8eb726aef2d38ed20f89ea986987c2010a9");
-    ASSERT_EQ(rootfs_store_set_big_data(ids.at(0).c_str(), "userdata", BIG_DATA_CONTENT.c_str()), 0);
-    char *userdata_tmp = NULL;
-    userdata_tmp = rootfs_store_big_data(ids.at(0).c_str(), "userdata");
-    ASSERT_STREQ(userdata_tmp, BIG_DATA_CONTENT.c_str());
     ASSERT_EQ(rootfs_store_set_metadata(ids.at(0).c_str(), META_DATA_CONTENT.c_str()), 0);
 
     cntr_tmp = rootfs_store_get_rootfs(ids.at(0).c_str());
@@ -139,7 +134,6 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_load)
 
     free_storage_rootfs(cntr);
     free_storage_rootfs(cntr_tmp);
-    free(userdata_tmp);
 }
 
 TEST_F(StorageRootfsUnitTest, test_rootfs_store_create)
@@ -238,10 +232,6 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_get_all_rootfs)
             ASSERT_STREQ(cntr->layer, "253836aa199405a39b6262b1e55a0d946b80988bc2f82d8f2b802fc175e4874e");
             ASSERT_STREQ(cntr->names[0], "0e025f44cdca20966a5e5f11e1d9d8eb726aef2d38ed20f89ea986987c2010a9");
             ASSERT_EQ(cntr->names_len, 1);
-            ASSERT_STREQ(cntr->big_data_names[0], "userdata");
-            ASSERT_EQ(*(cntr->big_data_sizes->values), rootfs_store_big_data_size(ids.at(0).c_str(), "userdata"));
-            ASSERT_NE(digest = rootfs_store_big_data_digest(ids.at(0).c_str(), "userdata"), nullptr);
-            ASSERT_EQ(rootfs_store_big_data_names(ids.at(0).c_str(), &names, &names_len), 0);
         }
     }
 
