@@ -28,6 +28,18 @@
 #include "utils.h"
 #include "storage.h"
 #include "layer.h"
+#include "driver_quota_mock.h"
+
+using ::testing::Args;
+using ::testing::ByRef;
+using ::testing::SetArgPointee;
+using ::testing::DoAll;
+using ::testing::NiceMock;
+using ::testing::Return;
+using ::testing::NotNull;
+using ::testing::AtLeast;
+using ::testing::Invoke;
+using ::testing::_;
 
 std::string GetDirectory()
 {
@@ -92,6 +104,22 @@ void free_layer_list(struct layer_list *ptr)
     free(ptr);
 }
 
+int invokeIOCtl(int fd, int cmd)
+{
+    return 0;
+}
+
+int invokeQuotaCtl(int cmd, const char* special, int id, caddr_t addr)
+{
+#define XFS_QUOTA_PDQ_ACCT (1<<4)   // project quota accounting
+#define XFS_QUOTA_PDQ_ENFD (1<<5)   // project quota limits enforcement
+
+    fs_quota_stat_t* fs_quota_stat_info = (fs_quota_stat_t *)addr;
+    fs_quota_stat_info->qs_flags = XFS_QUOTA_PDQ_ACCT | XFS_QUOTA_PDQ_ENFD;
+
+    return 0;
+}
+
 /********************************test data 1: container layer json**************************************
 {
     "id": "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b",
@@ -122,6 +150,7 @@ class StorageLayersUnitTest : public testing::Test {
 protected:
     void SetUp() override
     {
+        MockDriverQuota_SetMock(&m_driver_quota_mock);
         struct storage_module_init_options opts = {0};
 
         std::string isulad_dir = "/var/lib/isulad/";
@@ -138,6 +167,8 @@ protected:
         ASSERT_STRNE(cleanpath(run_dir.c_str(), real_run_path, sizeof(real_run_path)), nullptr);
         opts.storage_run_root = strdup(real_run_path);
         opts.driver_name = strdup("overlay");
+
+        EXPECT_CALL(m_driver_quota_mock, QuotaCtl(_, _, _, _)).WillRepeatedly(Invoke(invokeQuotaCtl));
         ASSERT_EQ(layer_store_init(&opts), 0);
 
         free(opts.storage_root);
@@ -147,6 +178,8 @@ protected:
 
     void TearDown() override
     {
+        MockDriverQuota_SetMock(nullptr);
+
         layer_store_exit();
         layer_store_cleanup();
 
@@ -154,6 +187,7 @@ protected:
         ASSERT_EQ(system(rm_command.c_str()), 0);
     }
 
+    NiceMock<MockDriverQuota> m_driver_quota_mock;
     char real_path[PATH_MAX] = { 0x00 };
     char real_run_path[PATH_MAX] = { 0x00 };
     char data_path[PATH_MAX] = { 0x00 };
@@ -213,18 +247,31 @@ TEST_F(StorageLayersUnitTest, test_layer_store_exists)
 TEST_F(StorageLayersUnitTest, test_layer_store_create)
 {
     char *new_id = nullptr;
-    struct layer_opts opts = { 0 };
-    opts.parent = strdup("9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
-    opts.writable = true;
+    struct layer_opts *layer_opt = (struct layer_opts *)util_common_calloc_s(sizeof(struct layer_opts));
+    layer_opt->parent = strdup("9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
+    layer_opt->writable = true;
 
-    ASSERT_EQ(layer_store_create(nullptr, &opts, nullptr, &new_id), 0);
+    layer_opt->opts = (struct layer_store_mount_opts *)util_common_calloc_s(sizeof(struct layer_store_mount_opts));
+    layer_opt->opts->mount_opts = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
+    layer_opt->opts->mount_opts->keys = (char **)util_common_calloc_s(sizeof(char *));
+    layer_opt->opts->mount_opts->values = (char **)util_common_calloc_s(sizeof(char *));
+    layer_opt->opts->mount_opts->keys[0] = strdup("size");
+    layer_opt->opts->mount_opts->values[0] = strdup("128M");
+    layer_opt->opts->mount_opts->len = 1;
+
+    layer_opt->names = (char **)util_common_calloc_s(sizeof(char *));
+    layer_opt->names[0] = strdup("layer_name");
+    layer_opt->names_len = 1;
+
+    EXPECT_CALL(m_driver_quota_mock, IOCtl(_, _)).WillRepeatedly(Invoke(invokeIOCtl));
+    ASSERT_EQ(layer_store_create(nullptr, layer_opt, nullptr, &new_id), 0);
     ASSERT_TRUE(layer_store_exists(new_id));
 
     ASSERT_EQ(layer_store_delete(new_id), 0);
     ASSERT_FALSE(layer_store_exists(new_id));
     ASSERT_FALSE(dirExists((std::string(real_path) + "/" + std::string(new_id)).c_str()));
 
-    free(opts.parent);
+    free_layer_opts(layer_opt);
     free(new_id);
 }
 

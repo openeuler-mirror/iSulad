@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  * Author: zhangxiaoyu
  * Create: 2020-06-20
- * Description: provide driver quota mock
+ * Description: provide quota syscall mock
  ******************************************************************************/
 
 #include "driver_quota_mock.h"
