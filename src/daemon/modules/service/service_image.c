@@ -50,6 +50,12 @@ static bool check_image_in_used(const char *image_ref)
             goto unref_continue;
         }
 
+        // if image type is not embedded type, do not check here
+        if (conts[i]->common_config->image_type == NULL ||
+            strcmp(IMAGE_TYPE_EMBEDDED, conts[i]->common_config->image_type) != 0) {
+            goto unref_continue;
+        }
+
         if (strcmp(conts[i]->common_config->image, image_ref) == 0) {
             isulad_set_error_message("Image used by %s", conts[i]->common_config->id);
             ERROR("Image used by %s", conts[i]->common_config->id);

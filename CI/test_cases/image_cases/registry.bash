@@ -59,6 +59,8 @@ function isula_pull()
     cp /etc/isulad/daemon.json.bak /etc/isulad/daemon.json
     rm -f /etc/isulad/daemon.json.bak
 
+    isula rmi hub-mirror.c.163.com/library/busybox
+
     check_valgrind_log
     fn_check_eq "$?" "0" "stop isulad with check valgrind"
 
