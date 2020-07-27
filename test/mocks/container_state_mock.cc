@@ -84,3 +84,19 @@ bool container_is_removal_in_progress(container_state_t *s)
     }
     return true;
 }
+
+Container_Status container_state_get_status(container_state_t *s)
+{
+    if (g_container_state_mock != nullptr) {
+        return g_container_state_mock->ContainerStateGetStatus(s);
+    }
+    return CONTAINER_STATUS_UNKNOWN;
+}
+
+const char *container_state_to_string(Container_Status cs)
+{
+    if (g_container_state_mock != nullptr) {
+        return g_container_state_mock->ContainerStatetoString(cs);
+    }
+    return "unknown";
+}

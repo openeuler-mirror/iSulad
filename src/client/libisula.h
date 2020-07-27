@@ -330,6 +330,11 @@ struct isula_container_info {
     // Kernel Memory usage
     uint64_t kmem_used;
     uint64_t kmem_limit;
+
+    char *status;
+    // Cache usage
+    uint64_t cache;
+    uint64_t cache_total;
 };
 
 struct isula_inspect_request {

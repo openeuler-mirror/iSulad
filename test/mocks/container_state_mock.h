@@ -29,6 +29,8 @@ public:
     MOCK_METHOD2(ContainerStateSetError, void(container_state_t *s, const char *err));
     MOCK_METHOD1(StateSetPaused, void(container_state_t *s));
     MOCK_METHOD1(IsRemovalInProgress, bool(container_state_t *s));
+    MOCK_METHOD1(ContainerStateGetStatus, Container_Status(container_state_t *s));
+    MOCK_METHOD1(ContainerStatetoString, const char *(Container_Status cs));
 };
 
 void MockContainerState_SetMock(MockContainerState *mock);

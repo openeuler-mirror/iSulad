@@ -272,6 +272,7 @@ struct client_arguments {
     // stats
     bool nostream;
     bool showall;
+    bool original;
 
     // update
     struct args_cgroup_resources cr;

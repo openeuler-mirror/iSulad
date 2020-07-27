@@ -40,6 +40,7 @@ const char g_cmd_stats_usage[] = "stats [OPTIONS] [CONTAINER...]";
 struct client_arguments g_cmd_stats_args = {
     .showall = false,
     .nostream = false,
+    .original = false,
     .runtime = "lcr",
 };
 
@@ -136,6 +137,43 @@ static void stats_print(const struct isula_container_info *stats)
     free(short_id);
 }
 
+static void stats_print_original_data_header(void)
+{
+    printf("%-16s %-10s %-10s %-20s %-20s %-15s %-15s %-15s %-15s %-15s %-15s %-15s %-40s", "ID", "PIDS", "Status",
+           "CpuUseNanos", "CpuSystemUse", "OnlineCpus", "BlkioRead", "BlkioWrite", "MemUsed", "MemLimit",
+           "KmemUsed", "CacheUsage", "NAMES");
+    printf("\n");
+}
+
+static void stats_print_original_data(const struct isula_container_info *stats)
+{
+#define SHORTIDLEN 12
+    char *short_id = NULL;
+
+    short_id = util_strdup_s(stats->id);
+    if (strlen(short_id) > SHORTIDLEN) {
+        short_id[SHORTIDLEN] = '\0';
+    }
+
+    printf("%-16s %-10llu %-10s %-20lu %-20lu %-15u %-15lu %-15lu %-15lu %-15lu %-15lu %-15lu %-40s", short_id,
+           (unsigned long long)stats->pids_current, stats->status, stats->cpu_use_nanos, stats->cpu_system_use,
+           stats->online_cpus, stats->blkio_read, stats->blkio_write, stats->mem_used, stats->mem_limit, stats->kmem_used,
+           stats->cache, stats->id);
+
+    free(short_id);
+}
+
+static void stats_output_original(const struct client_arguments *args, struct isula_stats_response **response)
+{
+    size_t i;
+
+    stats_print_original_data_header();
+    for (i = 0; i < (*response)->container_num; i++) {
+        stats_print_original_data(&((*response)->container_stats[i]));
+        printf("\n");
+    }
+}
+
 static void stats_output(const struct client_arguments *args, struct isula_stats_response **response)
 {
     size_t i;
@@ -175,7 +213,7 @@ static int client_stats_mainloop(const struct client_arguments *args, const stru
         if (response == NULL) {
             ERROR("Out of memory");
             ret = -1;
-            goto err_out;
+            goto out;
         }
 
         ret = ops->container.stats(request, response, &config);
@@ -184,19 +222,25 @@ static int client_stats_mainloop(const struct client_arguments *args, const stru
             client_print_error(response->cc, response->server_errono, response->errmsg);
             isula_stats_response_free(response);
             ret = -1;
-            goto err_out;
+            goto out;
+        }
+
+        if (args->original) {
+            stats_output_original(args, &response);
+            isula_stats_response_free(response);
+            goto out;
         }
 
         stats_output(args, &response);
         isula_stats_response_free(response);
         if (args->nostream) {
-            goto err_out;
+            goto out;
         }
 
         sleep(1);
     }
 
-err_out:
+out:
     isula_stats_response_free(g_oldstats);
     g_oldstats = NULL;
     return ret;
