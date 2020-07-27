@@ -123,28 +123,28 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
     }
 
     if (delete_device(id, false, driver->devset) != 0) {
-        ret = -1;
         ERROR("failed to remove device %s", id);
+        ret = -1;
         goto out;
     }
 
     mnt_parent_dir = util_path_join(driver->home, "mnt");
     if (mnt_parent_dir == NULL) {
-        ret = -1;
         ERROR("Failed to join devmapper mnt dir %s", id);
+        ret = -1;
         goto out;
     }
 
     mnt_point_dir = util_path_join(mnt_parent_dir, id);
     if (mnt_point_dir == NULL) {
-        ret = -1;
         ERROR("Failed to join devampper mount point dir %s", id);
+        ret = -1;
         goto out;
     }
 
     if (util_path_remove(mnt_point_dir) != 0) {
-        ret = -1;
         ERROR("Remove path:%s failed", mnt_point_dir);
+        ret = -1;
         goto out;
     }
 
@@ -171,32 +171,34 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     mnt_parent_dir = util_path_join(driver->home, "mnt");
     if (mnt_parent_dir == NULL) {
         ERROR("Failed to join devmapper mnt dir%s", id);
+        ret = -1;
         goto out;
     }
 
     mnt_point_dir = util_path_join(mnt_parent_dir, id);
     if (mnt_point_dir == NULL) {
         ERROR("Failed to join devampper mount point dir:%s", id);
+        ret = -1;
         goto out;
     }
 
     if (util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
-        ret = -1;
         ERROR("Failed to mkdir path:%s", mnt_point_dir);
+        ret = -1;
         goto out;
     }
 
     DEBUG("devmapper: start to mount container device");
     if (mount_device(id, mnt_point_dir, mount_opts, driver->devset) != 0) {
-        ret = -1;
         ERROR("Mount device:%s to path:%s failed", id, mnt_parent_dir);
+        ret = -1;
         goto out;
     }
 
     rootfs = util_path_join(mnt_point_dir, "rootfs");
     if (rootfs == NULL) {
-        ret = -1;
         ERROR("Failed to join devmapper rootfs %s", mnt_point_dir);
+        ret = -1;
         goto out;
     }
 
@@ -211,8 +213,6 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
 
     id_file = util_path_join(mnt_point_dir, "id");
     if (!util_file_exists(id_file)) {
-        // Create an "id" file with the container/image id in it to help reconstruct this in case
-        // of later problems
         if (util_atomic_write_file(id_file, id, strlen(id), SECURE_CONFIG_FILE_MODE) != 0) {
             if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {
                 DEBUG("devmapper: unmount %s failed", mnt_point_dir);
@@ -256,8 +256,8 @@ int devmapper_umount_layer(const char *id, const struct graphdriver *driver)
     }
 
     if (unmount_device(id, mp, driver->devset) != 0) {
-        ret = -1;
         ERROR("devmapper: unmount %s failed", mp);
+        ret = -1;
         goto out;
     }
 
@@ -300,8 +300,8 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
 
     mount_opts = util_common_calloc_s(sizeof(struct driver_mount_opts));
     if (mount_opts == NULL) {
-        ret = -1;
         ERROR("devmapper: out of memory");
+        ret = -1;
         goto out;
     }
 
@@ -314,8 +314,8 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
 
     options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
     if (archive_unpack(content, layer_fs, &options) != 0) {
-        ret = -1;
         ERROR("devmapper: failed to unpack to :%s", layer_fs);
+        ret = -1;
         goto out;
     }
 
@@ -348,29 +348,29 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
     }
 
     if (export_device_metadata(&dev_metadata, id, driver->devset) != 0) {
-        ret = -1;
         ERROR("Failed to export device metadata of device %s", id);
+        ret = -1;
         goto out;
     }
 
     device_id_str = util_int_to_string(dev_metadata.device_id);
     if (device_id_str == NULL) {
-        ret = -1;
         ERROR("Failed to map long long int to string");
+        ret = -1;
         goto out;
     }
 
     device_size_str = util_uint_to_string(dev_metadata.device_size);
     if (device_size_str == NULL) {
-        ret = -1;
         ERROR("Failed to map long long unsigned int to string");
+        ret = -1;
         goto out;
     }
 
     mnt_dir = util_path_join(driver->home, "mnt");
     if (mnt_dir == NULL) {
-        ret = -1;
         ERROR("Failed to join mnt dir");
+        ret = -1;
         goto out;
     }
 
@@ -382,8 +382,8 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
     }
     rootfs_dir = util_path_join(id_dir, "rootfs");
     if (rootfs_dir == NULL) {
-        ret = -1;
         ERROR("Failed to join devmapper rootfs dir");
+        ret = -1;
         goto out;
     }
 
@@ -539,7 +539,6 @@ int devmapper_clean_up(struct graphdriver *driver)
         return -1;
     }
 
-    // Is it necessary to execute recursiveUmount()?
     return umount(driver->home);
 }
 
