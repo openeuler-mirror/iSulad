@@ -100,6 +100,7 @@ add_executable(${LAYER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/driver_quota_mock.cc
     storage_layers_ut.cpp)
 
 target_include_directories(${LAYER_EXE} PUBLIC
@@ -123,10 +124,13 @@ target_include_directories(${LAYER_EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks
     )
 
 target_link_libraries(${LAYER_EXE}
     ${GTEST_BOTH_LIBRARIES}
+    ${GMOCK_LIBRARY}
+    ${GMOCK_MAIN_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}
     ${ISULA_LIBUTILS_LIBRARY}
     ${LIBTAR_LIBRARY}
