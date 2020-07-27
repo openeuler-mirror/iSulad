@@ -1050,6 +1050,7 @@ static int make_tar_split_file(const char *lid, const struct io_read_wrapper *di
     char *save_fname = NULL;
     char *save_fname_gz = NULL;
     int ret = -1;
+    int tfd = -1;
 
     save_fname = tar_split_tmp_path(lid);
     if (save_fname == NULL) {
@@ -1059,6 +1060,13 @@ static int make_tar_split_file(const char *lid, const struct io_read_wrapper *di
     if (save_fname_gz == NULL) {
         goto out;
     }
+    tfd = util_open(save_fname, O_WRONLY | O_CREAT, SECURE_CONFIG_FILE_MODE);
+    if (tfd == -1) {
+        SYSERROR("touch file failed");
+        goto out;
+    }
+    close(tfd);
+    tfd = -1;
 
     ret = foreach_archive_entry(archive_entry_parse, *pfd, save_fname, size);
     if (ret != 0) {
@@ -2186,7 +2194,8 @@ static int do_integration_check(layer_t *l, char *rootfs)
         return -1;
     }
     if (!util_file_exists(tspath)) {
-        WARN("Can not found tar split of layer: %s, just skip it", l->slayer->id);
+        ERROR("Can not found tar split of layer: %s", l->slayer->id);
+        ret = -1;
         goto out;
     }
 
