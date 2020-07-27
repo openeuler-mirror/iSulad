@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  * Author: gaohuatao
  * Create: 2020-06-12
- * Description: provide overlay2 function definition
+ * Description: provide devicemapper metadata store function definition
  ******************************************************************************/
 
 #include <isula_libutils/image_devmapper_device_info.h>
@@ -59,7 +59,6 @@ void devmapper_device_info_ref_dec(devmapper_device_info_t *device_info)
     free_devmapper_device_info_t(device_info);
 }
 
-/* metadata store map kvfree */
 static void metadata_store_map_kvfree(void *key, void *value)
 {
     free(key);
@@ -67,7 +66,6 @@ static void metadata_store_map_kvfree(void *key, void *value)
     devmapper_device_info_ref_dec((devmapper_device_info_t *)value);
 }
 
-/* metadata store free */
 static void metadata_store_free(metadata_store_t *store)
 {
     if (store == NULL) {
@@ -78,7 +76,6 @@ static void metadata_store_free(metadata_store_t *store)
     free(store);
 }
 
-/* metadata store new */
 metadata_store_t *metadata_store_new(void)
 {
     metadata_store_t *store = NULL;
@@ -196,7 +193,6 @@ bool metadata_store_remove(const char *hash, metadata_store_t *meta_store)
     return map_remove(meta_store->map, (void *)hash);
 }
 
-/* metadata store list hashes */
 char **metadata_store_list_hashes(metadata_store_t *meta_store)
 {
     bool ret = false;
