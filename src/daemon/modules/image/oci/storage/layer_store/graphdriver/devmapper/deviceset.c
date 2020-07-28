@@ -96,6 +96,7 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
         val++;
         if (strcasecmp(dup, "dm.fs") == 0) {
             if (strcmp(val, "ext4") == 0) {
+                free(devset->filesystem);
                 devset->filesystem = util_strdup_s(val);
             } else {
                 ERROR("Invalid filesystem: '%s': not supported", val);
@@ -418,13 +419,9 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
         goto out;
     }
 
-    if (strcmp(hash, "base") == 0) {
-        nret = snprintf(metadata_file, sizeof(metadata_file), "%s/base", metadata_path);
-    } else {
-        nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, hash);
-    }
-
+    nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, hash);
     if (nret < 0 || (size_t)nret >= sizeof(metadata_file)) {
+        ERROR("Get metadata file with hash:%s path failed", hash);
         goto out;
     }
 
@@ -432,6 +429,11 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
     if (info == NULL) {
         ERROR("load metadata file %s failed %s", metadata_file, err != NULL ? err : "");
         goto out;
+    }
+
+    if (!util_valid_str(info->hash)) {
+        free(info->hash);
+        info->hash = util_strdup_s(hash);
     }
 
     if (info->device_id > MAX_DEVICE_ID) {
@@ -492,6 +494,8 @@ static char *get_device_uuid(const char *dev_fname)
         ERROR("call blkid -s UUID -o value %s no stdout", dev_fname);
         goto free_out;
     }
+    util_trim_newline(stdout_msg);
+    stdout_msg = util_trim_space(stdout_msg);
     uuid = util_strdup_s(stdout_msg);
 
 free_out:
@@ -846,6 +850,11 @@ static int load_transaction_metadata(struct device_set *devset)
         ERROR("devmapper: load transaction metadata file error %s", err);
         ret = -1;
         goto out;
+    }
+
+    if (!util_valid_str(trans->device_hash)) {
+        free(trans->device_hash);
+        trans->device_hash = util_strdup_s("base");
     }
 
     free_image_devmapper_transaction(devset->metadata_trans);
@@ -1951,12 +1960,11 @@ static int verify_base_device_uuidfs(struct device_set *devset, image_devmapper_
         }
     }
 
-    if (devset->filesystem == NULL || strcmp(devset->base_device_filesystem, devset->filesystem) != 0) {
-        WARN("devmapper: Base device already exists and has filesystem %s on it. "
-             "User specified filesystem %s will be ignored.",
-             devset->base_device_filesystem, devset->filesystem);
-        free(devset->filesystem);
-        devset->filesystem = util_strdup_s(devset->base_device_filesystem);
+    if (strcasecmp(devset->base_device_filesystem, "ext4") != 0) {
+        ERROR("devmapper:Current Base Device Filesystem:%s is not ext4, not surpport expect ext4",
+              devset->base_device_filesystem);
+        ret = -1;
+        goto out;
     }
 
 out:
@@ -2421,8 +2429,6 @@ static int do_devmapper_init(struct device_set *devset)
         goto out;
     }
 
-    // Right now this loads only NextDeviceID. If there is more metadata
-    // down the line, we might have to move it earlier.
     if (load_deviceset_metadata(devset) != 0) {
         ERROR("devmapper: load device set metadata failed");
         ret = -1;
@@ -2544,6 +2550,7 @@ static int devmapper_init_devset(const char *driver_home, const char **options, 
     devset->root = util_strdup_s(driver_home);
     devset->user_base_size = false;
     devset->base_fs_size = 10 * SIZE_GB;
+    devset->filesystem = util_strdup_s("ext4");
     devset->mkfs_args = NULL;
     devset->mkfs_args_len = 0;
     devset->mount_options = NULL;
