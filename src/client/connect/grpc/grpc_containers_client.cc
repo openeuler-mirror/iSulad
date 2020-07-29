@@ -1708,6 +1708,9 @@ public:
                 response->container_stats[i].mem_limit = gresponse->containers(i).mem_limit();
                 response->container_stats[i].kmem_used = gresponse->containers(i).kmem_used();
                 response->container_stats[i].kmem_limit = gresponse->containers(i).kmem_limit();
+                if (!gresponse->containers(i).name().empty()) {
+                    response->container_stats[i].name = util_strdup_s(gresponse->containers(i).name().c_str());
+                }
                 if (!gresponse->containers(i).status().empty()) {
                     response->container_stats[i].status = util_strdup_s(gresponse->containers(i).status().c_str());
                 }
