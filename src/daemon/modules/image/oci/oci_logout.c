@@ -19,6 +19,8 @@
 #include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "registry.h"
+#include "utils_array.h"
+#include "utils_string.h"
 
 static inline int is_valid_arguments(const char *server)
 {
@@ -32,19 +34,29 @@ static inline int is_valid_arguments(const char *server)
 int oci_do_logout(const char *server)
 {
     int ret = -1;
+    char *host = NULL;
+    char **parts = NULL;
 
     if (is_valid_arguments(server) != 0) {
         ERROR("Invlaid arguments");
         return -1;
     }
 
-    ret = registry_logout((char *)server);
+    parts = util_string_split(server, '/');
+    if (parts == NULL || util_array_len((const char **)parts) == 0) {
+        ret = -1;
+        goto out;
+    }
+    host = parts[0];
+
+    ret = registry_logout((char *)host);
     if (ret != 0) {
         ERROR("registry logout failed");
         goto out;
     }
 
 out:
+    util_free_array(parts);
 
     return ret;
 }
