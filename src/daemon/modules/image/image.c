@@ -35,6 +35,79 @@
 #include "ext_image.h"
 #include "filters.h"
 
+struct bim_ops {
+    int (*init)(const isulad_daemon_configs *args);
+    void (*clean_resource)(void);
+
+    /* detect whether image is of this bim type */
+    bool (*detect)(const char *image_name);
+
+    /* rootfs ops */
+    int (*prepare_rf)(const im_prepare_request *request, char **real_rootfs);
+    int (*mount_rf)(const im_mount_request *request);
+    int (*umount_rf)(const im_umount_request *request);
+    int (*delete_rf)(const im_delete_rootfs_request *request);
+    int (*export_rf)(const im_export_request *request);
+    char *(*resolve_image_name)(const char *image_name);
+
+    /* merge image config ops */
+    int (*merge_conf)(const char *img_name, container_config *container_spec);
+
+    /* get user config ops */
+    int (*get_user_conf)(const char *basefs, host_config *hc, const char *userstr, defs_process_user *puser);
+
+    /* list images */
+    int (*list_ims)(const im_list_request *request, imagetool_images_list **images);
+
+    /* get count of images */
+    size_t (*get_image_count)(void);
+
+    /* remove image */
+    int (*rm_image)(const im_rmi_request *request);
+
+    /* inspect image */
+    int (*inspect_image)(const im_inspect_request *request, char **inpected_json);
+
+    int (*container_fs_usage)(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
+
+    int (*image_status)(im_status_request *request, im_status_response **response);
+
+    int (*get_filesystem_info)(im_fs_info_response **response);
+
+    /* import */
+    int (*import)(const im_import_request *request, char **id);
+
+    /* load image */
+    int (*load_image)(const im_load_request *request);
+
+    /* pull image */
+    int (*pull_image)(const im_pull_request *request, im_pull_response *response);
+
+    /* login */
+    int (*login)(const im_login_request *request);
+
+    /* logout */
+    int (*logout)(const im_logout_request *request);
+
+    /* Add a tag to the image */
+    int (*tag_image)(const im_tag_request *request);
+};
+
+struct bim {
+    /* common arguments */
+    const struct bim_ops *ops;
+    const char *type;
+
+    char *image_name;
+    char *ext_config_image;
+    char *container_id;
+};
+
+struct bim_type {
+    const char *image_type;
+    const struct bim_ops *ops;
+};
+
 #ifdef ENABLE_OCI_IMAGE
 #include "driver.h"
 #include "storage.h"
