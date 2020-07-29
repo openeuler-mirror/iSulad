@@ -400,7 +400,7 @@ out:
 }
 
 static int registry_request(pull_descriptor *desc, char *path, char **custom_headers, char *file, char **output_buffer,
-                            resp_data_type type)
+                            resp_data_type type, CURLcode *errcode)
 {
     int ret = 0;
     int sret = 0;
@@ -448,7 +448,7 @@ static int registry_request(pull_descriptor *desc, char *path, char **custom_hea
         }
         DEBUG("resp=%s", *output_buffer);
     } else {
-        ret = http_request_file(desc, url, (const char **)headers, file, type);
+        ret = http_request_file(desc, url, (const char **)headers, file, type, errcode);
         if (ret != 0) {
             ERROR("http request file failed, url: %s", url);
             goto out;
@@ -647,6 +647,7 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
     char *http_head = NULL;
     char **custom_headers = NULL;
     char path[PATH_MAX] = { 0 };
+    CURLcode errcode = CURLE_OK;
 
     if (desc == NULL || content_type == NULL || digest == NULL) {
         ERROR("Invalid NULL pointer");
@@ -666,7 +667,7 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
         goto out;
     }
 
-    ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY);
+    ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY, &errcode);
     if (ret != 0) {
         ERROR("registry: Get %s failed", path);
         goto out;
@@ -694,6 +695,23 @@ out:
     return ret;
 }
 
+static void try_log_resp_body(char *path, char *file)
+{
+    char *body = NULL;
+    size_t size = 0;
+
+    body = util_read_text_file(file);
+    if (body == NULL) {
+        return;
+    }
+
+    size = strlen(body);
+    if (size < LXC_LOG_BUFFER_SIZE) { // Max length not exactly, just avoid too long.
+        ERROR("Get %s response message body: %s", path, body);
+    }
+    return;
+}
+
 static int fetch_data(pull_descriptor *desc, char *path, char *file, char *content_type, char *digest)
 {
     int ret = 0;
@@ -701,6 +719,9 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
     char accept[MAX_ELEMENT_SIZE] = { 0 };
     char **custom_headers = NULL;
     int retry_times = RETRY_TIMES;
+    resp_data_type type = BODY_ONLY;
+    bool forbid_resume = false;
+    CURLcode errcode = CURLE_OK;
 
     // digest can be NULL
     if (desc == NULL || path == NULL || file == NULL || content_type == NULL) {
@@ -723,12 +744,20 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
 
     while (retry_times > 0) {
         retry_times--;
-        ret = registry_request(desc, path, custom_headers, file, NULL, BODY_ONLY);
+        ret = registry_request(desc, path, custom_headers, file, NULL, type, &errcode);
         if (ret != 0) {
+            if (errcode == CURLE_RANGE_ERROR) {
+                forbid_resume = true;
+                type = BODY_ONLY;
+            }
+            if (!forbid_resume) {
+                type = RESUME_BODY;
+            }
             if (retry_times > 0) {
                 continue;
             }
             ERROR("registry: Get %s failed", path);
+            isulad_try_set_error_message("Get %s failed", path);
             desc->cancel = true;
             goto out;
         }
@@ -736,11 +765,15 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
         // If content is signatured, digest is for payload but not fetched data
         if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
             if (!sha256_valid_digest_file(file, digest)) {
+                type = BODY_ONLY;
+                (void)util_path_remove(file); // remove the invalid file to avoid resume pulling
                 if (retry_times > 0) {
                     continue;
                 }
                 ret = -1;
+                try_log_resp_body(path, file);
                 ERROR("data from %s does not have digest %s", path, digest);
+                isulad_try_set_error_message("Invalid data fetched for %s, this mainly caused by server error", path);
                 desc->cancel = true;
                 goto out;
             }
@@ -1112,6 +1145,7 @@ int login_to_registry(pull_descriptor *desc)
     int sret = 0;
     char *resp_buffer = NULL;
     char path[PATH_MAX] = { 0 };
+    CURLcode errcode = CURLE_OK;
 
     if (desc == NULL) {
         ERROR("Invalid NULL pointer");
@@ -1125,7 +1159,7 @@ int login_to_registry(pull_descriptor *desc)
         goto out;
     }
 
-    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY);
+    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY, &errcode);
     if (ret != 0) {
         ERROR("registry: Get %s failed, resp: %s", path, resp_buffer);
         isulad_try_set_error_message("login to registry for %s failed", desc->host);

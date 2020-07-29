@@ -71,6 +71,7 @@ struct http_get_options {
 
     char *errmsg;
     int errcode;
+    bool resume;
 
     void *progressinfo;
     progress_info_func progress_info_op;

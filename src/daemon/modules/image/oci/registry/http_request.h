@@ -15,6 +15,7 @@
 #ifndef DAEMON_MODULES_IMAGE_OCI_REGISTRY_HTTP_REQUEST_H
 #define DAEMON_MODULES_IMAGE_OCI_REGISTRY_HTTP_REQUEST_H
 
+#include <curl/curl.h>
 #include "registry_type.h"
 
 #ifdef __cplusplus
@@ -25,12 +26,13 @@ typedef enum {
     HEAD_ONLY = 0,
     BODY_ONLY = 1,
     HEAD_BODY = 2,
+    RESUME_BODY = 3,
 } resp_data_type;
 
 int http_request_buf(pull_descriptor *desc, const char *url, const char **custom_headers, char **output,
                      resp_data_type type);
 int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file,
-                      resp_data_type type);
+                      resp_data_type type, CURLcode *errcode);
 
 #ifdef __cplusplus
 }

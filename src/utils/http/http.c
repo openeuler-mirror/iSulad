@@ -13,6 +13,8 @@
  * Description: provide container http function
  ******************************************************************************/
 #include <curl/curl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -296,14 +298,29 @@ static void curl_getinfo_on_condition(long *response_code, CURL *curl_handle, ch
     curl_easy_getinfo(curl_handle, CURLINFO_REDIRECT_URL, tmp);
 }
 
-static int ensure_path_file(char **rpath, const struct http_get_options *options, FILE **pagefile)
+static int ensure_path_file(char **rpath, void *output, bool resume, FILE **pagefile, size_t *fsize)
 {
-    if (util_ensure_path(rpath, options->output)) {
+    const char *mode = "w+";
+    struct stat st;
+
+    if (util_ensure_path(rpath, output)) {
         return -1;
     }
-    *pagefile = util_fopen(*rpath, "w+");
+
+    if (resume) {
+        mode = "a";
+        if (stat(*rpath, &st) < 0) {
+            ERROR("stat %s failed: %s", *rpath, strerror(errno));
+            return -1;
+        }
+        *fsize = (size_t)st.st_size;
+    } else {
+        *fsize = 0;
+    }
+
+    *pagefile = util_fopen(*rpath, mode);
     if (*pagefile == NULL) {
-        ERROR("Failed to open file %s\n", (const char *)options->output);
+        ERROR("Failed to open file %s\n", (const char *)output);
         return -1;
     }
     return 0;
@@ -334,6 +351,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     bool file_args;
     char *redir_url = NULL;
     char *tmp = NULL;
+    size_t fsize = 0;
 
     if (recursive_len + 1 >= MAX_REDIRCT_NUMS) {
         ERROR("reach the max redirect num");
@@ -371,9 +389,14 @@ int http_request(const char *url, struct http_get_options *options, long *respon
         curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, fwrite_buffer);
     } else if (file_args) {
         /* open the file */
-        if (ensure_path_file(&rpath, options, &pagefile) == -1) {
+        if (ensure_path_file(&rpath, options->output, options->resume, &pagefile, &fsize) != 0) {
+            ret = -1;
             goto out;
         }
+        if (options->resume) {
+            curl_easy_setopt(curl_handle, CURLOPT_RESUME_FROM_LARGE, (curl_off_t)fsize);
+        }
+        curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, pagefile);
         curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, fwrite_file);
     } else {
