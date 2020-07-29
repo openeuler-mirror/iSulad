@@ -22,7 +22,7 @@
 class MockStorage {
 public:
     virtual ~MockStorage() = default;
-    MOCK_METHOD1(StorageLayersGetByUncompressDigest, struct layer_list * (const char *digest));
+    MOCK_METHOD1(StorageLayersGetByCompressDigest, struct layer_list * (const char *digest));
     MOCK_METHOD1(FreeLayerList, void(struct layer_list *ptr));
     MOCK_METHOD4(StorageImgCreate, int(const char *id, const char *parent_id, const char *metadata,
                                        struct storage_img_create_options *opts));

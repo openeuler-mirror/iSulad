@@ -239,7 +239,7 @@ out:
     return ret;
 }
 
-struct layer_list *storage_layers_get_by_uncompress_digest(const char *digest)
+struct layer_list *storage_layers_get_by_compress_digest(const char *digest)
 {
     int ret = 0;
     struct layer_list *layers = NULL;

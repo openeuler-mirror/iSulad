@@ -180,7 +180,7 @@ struct layer_list *new_layer_list(const char *parent, const char *id, const char
     return list;
 }
 
-struct layer_list *invokeStorageLayersGetByUncompressDigest(const char *digest)
+struct layer_list *invokeStorageLayersGetByCompressDigest(const char *digest)
 {
     if (strcmp(digest, "sha256:270b8855c17de6980aff6cb060c7d95c35e018cfb30c85e5a0b7810ad5620761") == 0) {
         return new_layer_list(nullptr, "777a4eeaaf3deda1634b11faa1f3b205899bfeaef1b35793011b0cc498f2f569",
@@ -263,8 +263,8 @@ TEST_F(StorageImagesCompatibilityUnitTest, test_load_v1_image)
     std::string dir = GetDirectory() + "/data";
     ASSERT_STRNE(cleanpath(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
 
-    EXPECT_CALL(m_storage_mock, StorageLayersGetByUncompressDigest(_))
-    .WillRepeatedly(Invoke(invokeStorageLayersGetByUncompressDigest));
+    EXPECT_CALL(m_storage_mock, StorageLayersGetByCompressDigest(_))
+    .WillRepeatedly(Invoke(invokeStorageLayersGetByCompressDigest));
     EXPECT_CALL(m_storage_mock, FreeLayerList(_))
     .WillRepeatedly(Invoke(invokeFreeLayerList));
     opts.storage_root = strdup(store_real_path);

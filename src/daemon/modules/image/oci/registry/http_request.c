@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <time.h>
+#include <curl/curl.h>
 
 #include "isula_libutils/log.h"
 #include "buffer.h"
@@ -677,7 +678,18 @@ out:
     return ret;
 }
 
-int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file)
+static int progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
+{
+    bool *cancel = p;
+    if (*cancel) {
+        // return nonzero code means abort transition
+        return -1;
+    }
+    return 0;
+}
+
+int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file,
+                      resp_data_type type)
 {
     int ret = 0;
     struct http_get_options *options = NULL;
@@ -695,9 +707,15 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
     }
 
     memset(options, 0x00, sizeof(struct http_get_options));
+    if (type == HEAD_BODY) {
+        options->with_head = 1;
+    }
     options->with_body = 1;
     options->outputtype = HTTP_REQUEST_FILE;
     options->output = file;
+    options->show_progress = 1;
+    options->progressinfo = &desc->cancel;
+    options->progress_info_op = progress;
 
     ret = setup_common_options(desc, options, url, custom_headers);
     if (ret != 0) {
@@ -707,7 +725,7 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
     }
 
     ret = http_request(url, options, NULL, 0);
-    if (ret) {
+    if (ret != 0) {
         ERROR("Failed to get http request: %s", options->errmsg);
         isulad_try_set_error_message("%s", options->errmsg);
         ret = -1;

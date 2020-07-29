@@ -94,6 +94,9 @@ void free_pull_desc(pull_descriptor *desc)
     free(desc->certs_dir);
     desc->certs_dir = NULL;
 
+    free(desc->errmsg);
+    desc->errmsg = NULL;
+
     free(desc->blobpath);
     desc->blobpath = NULL;
     free(desc->protocol);

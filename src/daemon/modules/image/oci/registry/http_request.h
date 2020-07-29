@@ -29,7 +29,8 @@ typedef enum {
 
 int http_request_buf(pull_descriptor *desc, const char *url, const char **custom_headers, char **output,
                      resp_data_type type);
-int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file);
+int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file,
+                      resp_data_type type);
 
 #ifdef __cplusplus
 }
