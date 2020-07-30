@@ -331,6 +331,7 @@ struct isula_container_info {
     uint64_t kmem_used;
     uint64_t kmem_limit;
 
+    char *name;
     char *status;
     // Cache usage
     uint64_t cache;

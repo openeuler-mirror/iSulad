@@ -81,9 +81,10 @@ message Container_info {
 	uint64 mem_limit = 11;
 	uint64 kmem_used = 12;
 	uint64 kmem_limit = 13;
-	string status = 14;
-	uint64 cache = 15;
-	uint64 cache_total = 16;
+	string name = 14;
+	string status = 15;
+	uint64 cache = 16;
+	uint64 cache_total = 17;
 }
 
 message Event {

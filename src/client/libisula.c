@@ -119,6 +119,8 @@ void isula_container_info_free(struct isula_container_info *info)
 
     free(info->id);
     info->id = NULL;
+    free(info->name);
+    info->name = NULL;
     free(info->status);
     info->status = NULL;
     free(info);
