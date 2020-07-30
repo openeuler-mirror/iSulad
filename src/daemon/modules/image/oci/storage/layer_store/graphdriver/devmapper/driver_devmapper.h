@@ -40,6 +40,7 @@ extern "C" {
 typedef enum {
     STRING,
     UINT64_T,
+    INT,
 } data_type;
 
 int devmapper_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);

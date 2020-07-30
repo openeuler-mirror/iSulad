@@ -97,6 +97,8 @@ void log_with_errno_init();
 
 char *dev_get_driver_version();
 
+char *dev_get_library_version();
+
 int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char **params, const char *name);
 
 int dev_get_info(struct dm_info *info, const char *name);
@@ -128,6 +130,8 @@ int dev_cancel_deferred_remove(const char *dm_name);
 int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_device_id);
 
 int dev_set_transaction_id(const char *pool_name, uint64_t old_id, uint64_t new_id);
+
+void dev_check_sem_set_stat(int *semusz, int *semmni);
 
 #ifdef __cplusplus
 }
