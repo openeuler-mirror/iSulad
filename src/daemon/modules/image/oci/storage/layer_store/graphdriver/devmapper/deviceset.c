@@ -1093,6 +1093,9 @@ static int pool_has_free_space(struct device_set *devset)
         ERROR("devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
               "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
               data_total - data_used, min_free_data);
+        isulad_set_error_message("devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
+                                 "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
+                                 data_total - data_used, min_free_data);
         ret = -1;
         goto out;
     }
@@ -1108,6 +1111,10 @@ static int pool_has_free_space(struct device_set *devset)
               "which is less than minimum required %lu free metadata blocks. "
               "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
               metadata_total - metadata_used, min_free_metadata);
+        isulad_set_error_message("devmapper: Thin Pool has %lu free metadata blocks "
+                                 "which is less than minimum required %lu free metadata blocks. "
+                                 "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
+                                 metadata_total - metadata_used, min_free_metadata);
         ret = -1;
         goto out;
     }
