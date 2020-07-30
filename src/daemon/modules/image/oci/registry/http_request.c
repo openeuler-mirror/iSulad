@@ -689,12 +689,12 @@ static int progress(void *p, double dltotal, double dlnow, double ultotal, doubl
 }
 
 int http_request_file(pull_descriptor *desc, const char *url, const char **custom_headers, char *file,
-                      resp_data_type type)
+                      resp_data_type type, CURLcode *errcode)
 {
     int ret = 0;
     struct http_get_options *options = NULL;
 
-    if (desc == NULL || url == NULL || file == NULL) {
+    if (desc == NULL || url == NULL || file == NULL || errcode == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
     }
@@ -711,6 +711,9 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
         options->with_head = 1;
     }
     options->with_body = 1;
+    if (type == RESUME_BODY) {
+        options->resume = true;
+    }
     options->outputtype = HTTP_REQUEST_FILE;
     options->output = file;
     options->show_progress = 1;
@@ -733,6 +736,7 @@ int http_request_file(pull_descriptor *desc, const char *url, const char **custo
     }
 
 out:
+    *errcode = options->errcode;
     free_http_get_options(options);
     options = NULL;
 
