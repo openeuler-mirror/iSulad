@@ -762,6 +762,10 @@ static int set_layer_quota(const char *dir, const json_map_string_string *opts, 
         goto out;
     }
 
+    if (quota == 0) {
+        quota = driver->overlay_opts->default_quota;
+    }
+
     if (quota > 0) {
         ret = driver->quota_ctrl->set_quota(dir, driver->quota_ctrl, quota);
     }
