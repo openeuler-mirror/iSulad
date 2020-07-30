@@ -1139,6 +1139,41 @@ out:
     return ret;
 }
 
+int parse_login(char *http_head, char *host)
+{
+    int ret = 0;
+    struct parsed_http_message *message = NULL;
+
+    message = get_parsed_message(http_head);
+    if (message == NULL) {
+        ERROR("Get parsed message failed. http response size %zu, response:%s", strlen(http_head), http_head);
+        isulad_try_set_error_message("login to registry for %s failed: parse response failed", host);
+        ret = -1;
+        goto out;
+    }
+
+    if (message->status_code == StatusUnauthorized) {
+        ERROR("login to registry for %s failed: invalid username/password", host);
+        isulad_try_set_error_message("login to registry for %s failed: invalid username/password", host);
+        ret = -1;
+        goto out;
+    }
+
+    if (message->status_code != StatusOK) {
+        ERROR("login to registry for %s failed: server response code %d", host, message->status_code);
+        isulad_try_set_error_message("login to registry for %s failed: server response code %d", host,
+                                     message->status_code);
+        ret = -1;
+        goto out;
+    }
+
+out:
+
+    free_parsed_http_message(&message);
+
+    return ret;
+}
+
 int login_to_registry(pull_descriptor *desc)
 {
     int ret = 0;
@@ -1159,10 +1194,15 @@ int login_to_registry(pull_descriptor *desc)
         goto out;
     }
 
-    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY, &errcode);
+    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_ONLY, &errcode);
     if (ret != 0) {
         ERROR("registry: Get %s failed, resp: %s", path, resp_buffer);
         isulad_try_set_error_message("login to registry for %s failed", desc->host);
+        goto out;
+    }
+
+    ret = parse_login(resp_buffer, desc->host);
+    if (ret != 0) {
         goto out;
     }
 
