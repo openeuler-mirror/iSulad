@@ -19,6 +19,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
 
 #include "wrapper_devmapper.h"
 #include "isula_libutils/log.h"
@@ -220,6 +223,19 @@ cleanup:
         dm_task_destroy(dmt);
     }
     return version;
+}
+
+// dev_get_library_version return the device mapper library version
+char *dev_get_library_version()
+{
+    char version[128] = { 0 };
+
+    if (dm_get_library_version(version, sizeof(version)) != 1) {
+        ERROR("dm_get_library_version failed");
+        return NULL;
+    }
+
+    return util_strdup_s(version);
 }
 
 // GetStatus is the programmatic example of "dmsetup status".
@@ -1089,4 +1105,21 @@ cleanup:
         dm_task_destroy(dmt);
     }
     return ret;
+}
+
+void dev_check_sem_set_stat(int *semusz, int *semmni)
+{
+    struct seminfo sinfo;
+
+    if (semusz == NULL || semmni == NULL) {
+        return;
+    }
+
+    if (semctl(0, 0, SEM_INFO, &sinfo) != 0) {
+        WARN("Get devmapper library version err:%s", strerror(errno));
+        return;
+    }
+
+    *semusz = sinfo.semusz;
+    *semmni = sinfo.semmni;
 }

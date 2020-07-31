@@ -421,7 +421,8 @@ out:
     return ret;
 }
 
-static void status_append(const char *name, const char *value, uint64_t data, char **status, data_type type)
+static void status_append(const char *name, const char *value, uint64_t u_data, int integer_data, char **status,
+                          data_type type)
 {
 #define MAX_INFO_LENGTH 100
     char tmp[PATH_MAX] = { 0 };
@@ -437,7 +438,10 @@ static void status_append(const char *name, const char *value, uint64_t data, ch
             nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %s\n", name, value);
             break;
         case UINT64_T:
-            nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %lu\n", name, data);
+            nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %lu\n", name, u_data);
+            break;
+        case INT:
+            nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %d\n", name, integer_data);
             break;
         default:
             break;
@@ -458,39 +462,45 @@ char *status_to_str(const struct status *st)
 {
     char *str = NULL;
 
-    status_append("Pool Name", st->pool_name, 0, &str, STRING);
-    status_append("Pool Blocksize", NULL, st->sector_size, &str, UINT64_T);
-    status_append("Base Device Size", NULL, st->base_device_size, &str, UINT64_T);
-    status_append("Backing Filesystem", st->base_device_fs, 0, &str, STRING);
-    status_append("Data file", st->data_file, 0, &str, STRING);
-    status_append("Metadata file", st->metadata_file, 0, &str, STRING);
-    status_append("Data Space Used", NULL, st->data.used, &str, UINT64_T);
-    status_append("Data Space Total", NULL, st->data.total, &str, UINT64_T);
-    status_append("Data Space Available", NULL, st->data.available, &str, UINT64_T);
-    status_append("Metadata Space Used", NULL, st->metadata.used, &str, UINT64_T);
-    status_append("Metadata Space Total", NULL, st->metadata.total, &str, UINT64_T);
-    status_append("Metadata Space Available", NULL, st->metadata.available, &str, UINT64_T);
-    status_append("Thin Pool Minimum Free Space", NULL, st->min_free_space, &str, UINT64_T);
+    status_append("Pool Name", st->pool_name, 0, 0, &str, STRING);
+    status_append("Pool Blocksize", NULL, st->sector_size, 0, &str, UINT64_T);
+    status_append("Base Device Size", NULL, st->base_device_size, 0, &str, UINT64_T);
+    status_append("Backing Filesystem", st->base_device_fs, 0, 0, &str, STRING);
+    status_append("Data file", st->data_file, 0, 0, &str, STRING);
+    status_append("Metadata file", st->metadata_file, 0, 0, &str, STRING);
+    status_append("Data Space Used", NULL, st->data.used, 0, &str, UINT64_T);
+    status_append("Data Space Total", NULL, st->data.total, 0, &str, UINT64_T);
+    status_append("Data Space Available", NULL, st->data.available, 0, &str, UINT64_T);
+    status_append("Metadata Space Used", NULL, st->metadata.used, 0, &str, UINT64_T);
+    status_append("Metadata Space Total", NULL, st->metadata.total, 0, &str, UINT64_T);
+    status_append("Metadata Space Available", NULL, st->metadata.available, 0, &str, UINT64_T);
+    status_append("Thin Pool Minimum Free Space", NULL, st->min_free_space, 0, &str, UINT64_T);
 
     if (st->udev_sync_supported) {
-        status_append("Udev Sync Supported", "true", 0, &str, STRING);
+        status_append("Udev Sync Supported", "true", 0, 0, &str, STRING);
     } else {
-        status_append("Udev Sync Supported", "false", 0, &str, STRING);
+        status_append("Udev Sync Supported", "false", 0, 0, &str, STRING);
     }
 
     if (st->deferred_remove_enabled) {
-        status_append("Deferred Removal Enabled", "true", 0, &str, STRING);
+        status_append("Deferred Removal Enabled", "true", 0, 0, &str, STRING);
     } else {
-        status_append("Deferred Removal Enabled", "false", 0, &str, STRING);
+        status_append("Deferred Removal Enabled", "false", 0, 0, &str, STRING);
     }
 
     if (st->deferred_delete_enabled) {
-        status_append("Deferred Deletion Enabled", "true", 0, &str, STRING);
+        status_append("Deferred Deletion Enabled", "true", 0, 0, &str, STRING);
     } else {
-        status_append("Deferred Deletion Enabled", "false", 0, &str, STRING);
+        status_append("Deferred Deletion Enabled", "false", 0, 0, &str, STRING);
     }
 
-    status_append("Deferred Deleted Device Count", NULL, st->deferred_deleted_device_count, &str, UINT64_T);
+    status_append("Deferred Deleted Device Count", NULL, st->deferred_deleted_device_count, 0, &str, UINT64_T);
+    status_append("Library Version", st->library_version, 0, 0, &str, STRING);
+    status_append("Semaphore Set Used", NULL, 0, st->semusz, &str, INT);
+    status_append("Semaphore Set Total", NULL, 0, st->semmni, &str, INT);
+    if (st->sem_msg != NULL) {
+        status_append("WARNING", st->sem_msg, 0, 0, &str, STRING);
+    }
 
     return str;
 }

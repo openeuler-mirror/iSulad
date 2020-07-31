@@ -3013,14 +3013,13 @@ void free_devmapper_status(struct status *st)
     if (st == NULL) {
         return;
     }
-    free(st->pool_name);
-    st->pool_name = NULL;
-    free(st->data_file);
-    st->data_file = NULL;
-    free(st->metadata_file);
-    st->metadata_file = NULL;
-    free(st->base_device_fs);
-    st->base_device_fs = NULL;
+
+    UTIL_FREE_AND_SET_NULL(st->pool_name);
+    UTIL_FREE_AND_SET_NULL(st->data_file);
+    UTIL_FREE_AND_SET_NULL(st->metadata_file);
+    UTIL_FREE_AND_SET_NULL(st->base_device_fs);
+    UTIL_FREE_AND_SET_NULL(st->library_version);
+    UTIL_FREE_AND_SET_NULL(st->sem_msg);
 
     free(st);
 }
@@ -3031,6 +3030,8 @@ struct status *device_set_status(struct device_set *devset)
     uint64_t total_size_in_sectors, transaction_id, data_used;
     uint64_t data_total, metadata_used, metadata_total;
     uint64_t min_free_data;
+    int sem_usz = 0;
+    int sem_mni = 0;
 
     if (pthread_rwlock_wrlock(&(devset->devmapper_driver_rwlock)) != 0) {
         ERROR("lock devmapper conf failed");
@@ -3052,6 +3053,8 @@ struct status *device_set_status(struct device_set *devset)
     st->deferred_deleted_device_count = devset->nr_deleted_devices;
     st->base_device_size = get_base_device_size(devset);
     st->base_device_fs = util_strdup_s(devset->base_device_filesystem);
+    st->library_version = dev_get_library_version();
+    st->sem_msg = NULL;
 
     if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
                     &metadata_total) == 0) {
@@ -3069,6 +3072,21 @@ struct status *device_set_status(struct device_set *devset)
         min_free_data = (data_total * (uint64_t)devset->min_free_space_percent) / 100;
         st->min_free_space = min_free_data * block_size_in_sectors * 512;
     }
+    dev_check_sem_set_stat(&sem_usz, &sem_mni);
+    st->semusz = sem_usz;
+    st->semmni = sem_mni;
+    if (sem_usz == sem_mni) {
+        int msg_len = 0;
+        char msg[PATH_MAX] = { 0 };
+
+        msg_len = snprintf(msg, PATH_MAX, "system semaphore nums has attached limit: %d", sem_usz);
+        if (msg_len < 0 || msg_len >= PATH_MAX) {
+            WARN("Cannot get semaphore err msg");
+            goto free_out;
+        }
+        st->sem_msg = util_strdup_s(msg);
+    }
+
 
 free_out:
     (void)pthread_rwlock_unlock(&devset->devmapper_driver_rwlock);

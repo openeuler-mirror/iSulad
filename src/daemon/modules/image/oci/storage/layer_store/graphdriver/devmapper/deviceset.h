@@ -51,16 +51,20 @@ struct status {
     char *pool_name;
     char *data_file;
     char *metadata_file;
+    char *base_device_fs;
+    char *library_version;
     struct disk_usage metadata;
     struct disk_usage data;
     uint64_t base_device_size;
-    char *base_device_fs;
     uint64_t sector_size;
+    uint64_t min_free_space;
     bool udev_sync_supported;
     bool deferred_remove_enabled;
     bool deferred_delete_enabled;
     unsigned int deferred_deleted_device_count;
-    uint64_t min_free_space;
+    int semusz;
+    int semmni;
+    char *sem_msg;
 };
 
 int device_set_init(struct graphdriver *driver, const char *drvier_home, const char **options, size_t len);
