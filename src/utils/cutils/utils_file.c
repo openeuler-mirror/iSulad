@@ -23,6 +23,8 @@
 #include <unistd.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
 #include <regex.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -207,6 +209,39 @@ static bool check_dir_valid(const char *dirpath, int recursive_depth, int *failu
     return true;
 }
 
+static int mark_file_mutable(const char *fname)
+{
+    int ret = 0;
+    int fd = -EBADF;
+    int attributes = 0;
+
+    fd = open(fname, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
+    if (fd < 0) {
+        SYSERROR("Failed to open file to modify flags:%s", fname);
+        return -1;
+    }
+
+    if (ioctl(fd, FS_IOC_GETFLAGS, &attributes) < 0) {
+        SYSERROR("Failed to retrieve file flags");
+        ret = -1;
+        goto out;
+    }
+
+    attributes &= ~FS_IMMUTABLE_FL;
+
+    if (ioctl(fd, FS_IOC_SETFLAGS, &attributes) < 0) {
+        SYSERROR("Failed to set file flags");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (fd >= 0) {
+        close(fd);
+    }
+    return ret;
+}
+
 static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int recursive_depth, int *saved_errno,
                                       int failure)
 {
@@ -220,7 +255,15 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
             if (*saved_errno == 0) {
                 *saved_errno = errno;
             }
-            failure = 1;
+
+            if (mark_file_mutable(fname) != 0) {
+                ERROR("Failed to mark file mutable");
+            }
+
+            if (unlink(fname) < 0) {
+                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+                failure = 1;
+            }
         }
     }
 
@@ -285,6 +328,44 @@ static int recursive_rmdir_helper(const char *dirpath, int recursive_depth, int 
     return failure;
 }
 
+static void run_force_rmdir(void *args)
+{
+    execvp(((char **)args)[0], (char **)args);
+}
+
+static int exec_force_rmdir_command(const char *dir)
+{
+    int ret = 0;
+    char **args = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
+
+    if (dir == NULL) {
+        ERROR("Directory path is NULL");
+        return -1;
+    }
+
+    if (util_array_append(&args, "rm") != 0 ||
+        util_array_append(&args, "-rf") != 0 ||
+        util_array_append(&args, dir) != 0) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto free_out;
+    }
+
+    if (!util_exec_cmd(run_force_rmdir, args, NULL, &stdout_msg, &stderr_msg)) {
+        ERROR("force rmdir failed, unexpected command output %s with error: %s", stdout_msg, stderr_msg);
+        ret = -1;
+        goto free_out;
+    }
+
+free_out:
+    util_free_array(args);
+    free(stdout_msg);
+    free(stderr_msg);
+    return ret;
+}
+
 int util_recursive_rmdir(const char *dirpath, int recursive_depth)
 {
     int failure = 0;
@@ -299,6 +380,13 @@ int util_recursive_rmdir(const char *dirpath, int recursive_depth)
     }
 
     failure = recursive_rmdir_helper(dirpath, recursive_depth, &saved_errno);
+    if (failure != 0) {
+        INFO("Recursive delete dir failed. Try delete forcely with command");
+        failure = exec_force_rmdir_command(dirpath);
+        if (failure != 0) {
+            ERROR("Recursive delete dir forcely with command failed");
+        }
+    }
 
 err_out:
     errno = saved_errno;

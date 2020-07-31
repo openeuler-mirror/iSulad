@@ -61,9 +61,16 @@ function rm_running_container()
 function rm_running_container_force()
 {
     containername=test_rm_running_force
-    isula run -td --name $containername busybox
+    conID=$(isula run -td --name $containername busybox)
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
+
+    # lock config file
+    chattr +i /var/lib/isulad/engines/lcr/${conID}/config
+
+    # Create a deep directory
+    isula exec -it ${conID} /bin/sh -c "dir=/a;i=0;while [ \${i} -le 2048 ]; do mkdir \${dir}; dir=\${dir}/a; let i=\${i}+1; done"
+    fn_check_eq "$?" "0" "exec failed"
 
     isula rm --force $containername
     fn_check_eq "$?" "0" "rm failed"
@@ -71,6 +78,8 @@ function rm_running_container_force()
     isula inspect $containername
     fn_check_ne "$?" "0" "inspect should fail"
 }
+
+
 
 function do_test_t()
 {
