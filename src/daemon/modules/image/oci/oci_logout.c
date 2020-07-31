@@ -25,7 +25,7 @@
 static inline int is_valid_arguments(const char *server)
 {
     if (server == NULL) {
-        isulad_set_error_message("Logout requires server address");
+        isulad_set_error_message("Failed to logout with error: logout requires server address");
         return -1;
     }
     return 0;
@@ -52,6 +52,7 @@ int oci_do_logout(const char *server)
     ret = registry_logout((char *)host);
     if (ret != 0) {
         ERROR("registry logout failed");
+        isulad_set_error_message("Failed to logout with error: %s", g_isulad_errmsg);
         goto out;
     }
 

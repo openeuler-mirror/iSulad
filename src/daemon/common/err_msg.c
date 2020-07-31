@@ -30,7 +30,6 @@ void isulad_set_error_message(const char *format, ...)
     int ret = 0;
     char errbuf[BUFSIZ + 1] = { 0 };
 
-    DAEMON_CLEAR_ERRMSG();
     va_list argp;
     va_start(argp, format);
 
@@ -40,6 +39,7 @@ void isulad_set_error_message(const char *format, ...)
         return;
     }
 
+    DAEMON_CLEAR_ERRMSG();
     g_isulad_errmsg = util_strdup_s(errbuf);
 }
 

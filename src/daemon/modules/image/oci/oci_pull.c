@@ -184,6 +184,7 @@ int oci_do_pull_image(const im_pull_request *request, im_pull_response *response
     ret = pull_image(request, &dest_image_name);
     if (ret != 0) {
         ERROR("pull image %s failed", request->image);
+        isulad_set_error_message("Failed to pull image %s with error: %s", dest_image_name, g_isulad_errmsg);
         ret = -1;
         goto out;
     }
@@ -191,6 +192,8 @@ int oci_do_pull_image(const im_pull_request *request, im_pull_response *response
     image = storage_img_get(dest_image_name);
     if (image == NULL) {
         ERROR("get image %s failed after pulling", request->image);
+        isulad_set_error_message("Failed to pull image %s with error: image not found after pulling",
+                                 dest_image_name);
         ret = -1;
         goto out;
     }

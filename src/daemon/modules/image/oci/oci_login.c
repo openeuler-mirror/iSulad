@@ -27,12 +27,12 @@
 static int is_valid_arguments(const char *server, const char *username, const char *password)
 {
     if (server == NULL) {
-        isulad_set_error_message("Login requires server address");
+        isulad_set_error_message("Failed to login with error: login requires server address");
         return -1;
     }
 
     if (username == NULL || password == NULL) {
-        isulad_set_error_message("Missing username or password");
+        isulad_set_error_message("Failed to login with error: missing username or password");
         return -1;
     }
 
@@ -74,6 +74,7 @@ int oci_do_login(const char *server, const char *username, const char *password)
     ret = registry_login(&options);
     if (ret != 0) {
         ERROR("registry login failed");
+        isulad_set_error_message("Failed to login with error: %s", g_isulad_errmsg);
         goto out;
     }
 

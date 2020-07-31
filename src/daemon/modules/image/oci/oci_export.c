@@ -36,14 +36,14 @@ int oci_do_export(char *id, char *file)
     mount_point = storage_rootfs_mount(id);
     if (mount_point == NULL) {
         ERROR("mount container %s failed", id);
-        isulad_try_set_error_message("failed to mount rootfs");
+        isulad_set_error_message("Failed to export rootfs with error: failed to mount rootfs");
         return -1;
     }
 
     ret = chroot_tar(mount_point, file, &errmsg);
     if (ret != 0) {
-        ERROR("export container %s to file %s failed", id, file);
-        isulad_try_set_error_message("%s", errmsg);
+        ERROR("failed to export container %s to file %s: %s", id, file, errmsg);
+        isulad_set_error_message("Failed to export rootfs with error: %s", errmsg);
         goto out;
     }
 
@@ -57,7 +57,7 @@ out:
     if (ret2 != 0) {
         ret = ret2;
         ERROR("umount container %s failed", id);
-        isulad_try_set_error_message("failed to umount rootfs");
+        isulad_try_set_error_message("Failed to export rootfs with error: failed to umount rootfs");
     }
 
     return ret;
