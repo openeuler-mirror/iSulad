@@ -528,6 +528,9 @@ int oci_do_import(char *file, char *tag, char **id)
 
 out:
     free_imagetool_image(image);
+    if (ret != 0) {
+        isulad_set_error_message("Import image %s failed: %s", file, g_isulad_errmsg);
+    }
 
     return ret;
 }

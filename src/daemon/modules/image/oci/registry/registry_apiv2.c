@@ -766,7 +766,6 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
         if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
             if (!sha256_valid_digest_file(file, digest)) {
                 type = BODY_ONLY;
-                (void)util_path_remove(file); // remove the invalid file to avoid resume pulling
                 if (retry_times > 0) {
                     continue;
                 }

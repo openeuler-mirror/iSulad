@@ -924,18 +924,21 @@ int oci_do_load(const im_load_request *request)
 
     if (util_mkdir_p(OCI_LOAD_TMP_WORK_DIR, TEMP_DIRECTORY_MODE) != 0) {
         ERROR("Unable to create oci image load tmp work dir:%s", OCI_LOAD_TMP_WORK_DIR);
+        isulad_try_set_error_message("Unable to create oci image load tmp work dir:%s", OCI_LOAD_TMP_WORK_DIR);
         ret = -1;
         goto out;
     }
 
     if (mkdtemp(dstdir) == NULL) {
         ERROR("make temporary direcory failed: %s", strerror(errno));
+        isulad_try_set_error_message("make temporary direcory failed: %s", strerror(errno));
         ret = -1;
         goto out;
     }
 
     if (file_read_wrapper(request->file, &reader) != 0) {
         ERROR("Failed to fill layer read wrapper");
+        isulad_try_set_error_message("Failed to fill layer read wrapper");
         ret = -1;
         goto out;
     }
@@ -943,6 +946,7 @@ int oci_do_load(const im_load_request *request)
     options.whiteout_format = NONE_WHITEOUT_FORMATE;
     if (archive_unpack(&reader, dstdir, &options) != 0) {
         ERROR("Failed to unpack to :%s", dstdir);
+        isulad_try_set_error_message("Failed to unpack to :%s", dstdir);
         ret = -1;
         goto out;
     }
@@ -950,6 +954,7 @@ int oci_do_load(const im_load_request *request)
     manifest_fpath = util_path_join(dstdir, "manifest.json");
     if (manifest_fpath == NULL) {
         ERROR("Failed to join manifest.json path:%s", dstdir);
+        isulad_try_set_error_message("Failed to join manifest.json path:%s", dstdir);
         ret = -1;
         goto out;
     }
@@ -957,12 +962,14 @@ int oci_do_load(const im_load_request *request)
     manifest = load_manifest(manifest_fpath, &manifest_len);
     if (manifest == NULL) {
         ERROR("Failed to load manifest.json file from path:%s", manifest_fpath);
+        isulad_try_set_error_message("Failed to load manifest.json file from path:%s", manifest_fpath);
         ret = -1;
         goto out;
     }
 
     if (!oci_check_load_tags(manifest, manifest_len, request->tag)) {
         ERROR("Value of --tags or repo tags invalid");
+        isulad_try_set_error_message("Value of --tags or repo tags invalid");
         ret = -1;
         goto out;
     }
@@ -971,6 +978,7 @@ int oci_do_load(const im_load_request *request)
     if (digest == NULL) {
         ret = -1;
         ERROR("calculate digest failed for manifest file %s", manifest_fpath);
+        isulad_try_set_error_message("calculate digest failed for manifest file %s", manifest_fpath);
         goto out;
     }
 
@@ -978,17 +986,20 @@ int oci_do_load(const im_load_request *request)
         im = oci_load_process_manifest(manifest[i], dstdir);
         if (im == NULL) {
             ret = -1;
+            isulad_try_set_error_message("process manifest failed");
             goto out;
         }
 
         if (oci_load_set_manifest_info(im) != 0) {
             ERROR("Image %s set manifest info err", im->im_id);
+            isulad_try_set_error_message("Image %s set manifest info err", im->im_id);
             ret = -1;
             goto out;
         }
 
         if (oci_load_check_image_layers(im) != 0) {
             ERROR("Image %s check err", im->im_id);
+            isulad_try_set_error_message("Image %s check err", im->im_id);
             ret = -1;
             goto out;
         }
@@ -996,6 +1007,7 @@ int oci_do_load(const im_load_request *request)
         im->manifest_digest = util_strdup_s(digest);
         if (oci_load_register_image(im, request->tag) != 0) {
             ERROR("error register image %s to store", im->im_id);
+            isulad_try_set_error_message("error register image %s to store", im->im_id);
             ret = -1;
             goto out;
         }
@@ -1004,6 +1016,9 @@ int oci_do_load(const im_load_request *request)
     }
 
 out:
+    if (ret != 0) {
+        isulad_set_error_message("Load image %s failed: %s", request->file, g_isulad_errmsg);
+    }
     free(manifest_fpath);
     free(digest);
     for (i = 0; i < manifest_len; i++) {
