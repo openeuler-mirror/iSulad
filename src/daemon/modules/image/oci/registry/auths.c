@@ -21,12 +21,14 @@
 #include <isula_libutils/json_common.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "auths.h"
 #include "aes.h"
 #include "isula_libutils/registry_auths.h"
+#include "err_msg.h"
 #include "utils_aes.h"
 #include "utils_array.h"
 #include "utils_base64.h"
@@ -320,12 +322,14 @@ static int write_auth_file(char *content)
     ret = util_mkdir_p(auths_dir, 0700);
     if (ret != 0) {
         ERROR("mkdir of %s for aeskey failed", auths_dir);
+        isulad_try_set_error_message("create direcotry %s failed", auths_dir);
         goto out;
     }
 
-    ret = util_write_file(g_auth_path, content, strlen(content), AUTH_FILE_MODE);
+    ret = util_atomic_write_file(g_auth_path, content, strlen(content), AUTH_FILE_MODE);
     if (ret != 0) {
-        ERROR("failed to write auths json to file");
+        ERROR("failed to write auths json to file %s", g_auth_path);
+        isulad_try_set_error_message("failed to write auths json to file %s", g_auth_path);
         goto out;
     }
 
@@ -350,7 +354,8 @@ int auths_save(char *host, char *username, char *password)
         return -1;
     }
 
-    if (!util_file_exists(g_auth_path)) {
+    auths = registry_auths_parse_file(g_auth_path, NULL, &err);
+    if (auths == NULL) {
         auths = util_common_calloc_s(sizeof(registry_auths));
         element = util_common_calloc_s(sizeof(defs_map_string_object_auths));
         if (auths == NULL || element == NULL) {
@@ -360,18 +365,12 @@ int auths_save(char *host, char *username, char *password)
         }
         auths->auths = element;
         element = NULL;
-    } else {
-        auths = registry_auths_parse_file(g_auth_path, NULL, &err);
-        if (auths == NULL) {
-            ERROR("failed to parse file %s", g_auth_path);
-            ret = -1;
-            goto out;
-        }
     }
 
     auth = encode_auth_aes(username, password);
     if (auth == NULL) {
         ERROR("encode auth with aes failed");
+        isulad_try_set_error_message("failed to encode auth");
         ret = -1;
         goto out;
     }
@@ -379,6 +378,7 @@ int auths_save(char *host, char *username, char *password)
     ret = add_auth(auths, host, auth);
     if (ret != 0) {
         ERROR("add auth failed");
+        isulad_try_set_error_message("failed to add auth");
         goto out;
     }
 
@@ -387,6 +387,7 @@ int auths_save(char *host, char *username, char *password)
     json = registry_auths_generate_json(auths, NULL, &err);
     if (json == NULL) {
         ERROR("failed to generate auths to json");
+        isulad_try_set_error_message("failed to generate auths to json");
         ret = -1;
         goto out;
     }
@@ -416,6 +417,7 @@ static void delete_auth(registry_auths *auths, char *host)
 {
     size_t i = 0;
     bool found = false;
+    int count = 0;
 
     if (auths->auths == NULL || auths->auths->len == 0) {
         return;
@@ -426,26 +428,34 @@ static void delete_auth(registry_auths *auths, char *host)
             // Free current position
             free(auths->auths->keys[i]);
             auths->auths->keys[i] = NULL;
-            if (auths->auths->values[i]->auth != NULL) {
-                free(auths->auths->values[i]->auth);
-                auths->auths->values[i]->auth = NULL;
-            }
-            free(auths->auths->values[i]);
+            free_defs_map_string_object_auths_element(auths->auths->values[i]);
             auths->auths->values[i] = NULL;
             found = true;
             continue;
         }
-        if (found) {
-            // Move to empty position
-            auths->auths->keys[i - 1] = auths->auths->keys[i];
-            auths->auths->keys[i] = NULL;
-            auths->auths->values[i - 1] = auths->auths->values[i];
-            auths->auths->values[i] = NULL;
+    }
+
+    if (!found) {
+        return;
+    }
+
+    for (i = 0; i < auths->auths->len; i++) {
+        if (auths->auths->keys[count] != NULL) {
+            count++;
+            continue;
         }
+        if (auths->auths->keys[i] == NULL) {
+            continue;
+        }
+        // Move to empty position
+        auths->auths->keys[count] = auths->auths->keys[i];
+        auths->auths->keys[count] = NULL;
+        auths->auths->values[count] = auths->auths->values[i];
+        auths->auths->values[count] = NULL;
+        count++;
     }
-    if (found) {
-        auths->auths->len -= 1;
-    }
+
+    auths->auths->len = count;
 
     return;
 }
@@ -469,6 +479,7 @@ int auths_delete(char *host)
     auths = registry_auths_parse_file(g_auth_path, NULL, &err);
     if (auths == NULL) {
         ERROR("failed to parse file %s", g_auth_path);
+        isulad_try_set_error_message("failed to parse file %s", g_auth_path);
         ret = -1;
         goto out;
     }
@@ -480,13 +491,15 @@ int auths_delete(char *host)
     json = registry_auths_generate_json(auths, NULL, &err);
     if (json == NULL) {
         ERROR("failed to generate auths to json");
+        isulad_try_set_error_message("failed to generate auths to json");
         ret = -1;
         goto out;
     }
 
-    ret = util_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE);
+    ret = util_atomic_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE);
     if (ret != 0) {
-        ERROR("failed to write auths json to file");
+        ERROR("failed to write auths json to file %s", g_auth_path);
+        isulad_try_set_error_message("failed to write auths json to file %s", g_auth_path);
         goto out;
     }
 
@@ -498,5 +511,5 @@ out:
     free(err);
     err = NULL;
 
-    return 0;
+    return ret;
 }
