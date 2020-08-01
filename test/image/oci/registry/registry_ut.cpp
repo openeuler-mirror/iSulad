@@ -26,6 +26,8 @@
 #include <sys/stat.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <curl/curl.h>
+
 #include "utils.h"
 #include "utils_array.h"
 #include "path.h"
@@ -146,11 +148,15 @@ int invokeHttpRequestV1(const char *url, struct http_get_options *options, long 
 
 int invokeHttpRequestV2(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
 {
+#define COUNT_TEST_CANCEL 2
+#define COUNT_TEST_NOT_FOUND 3
+#define COUNT_TEST_SERVER_ERROR 4
     std::string file;
     char *data = NULL;
     int64_t size = 0;
     Buffer *output_buffer = (Buffer *)options->output;
     static bool retry = true;
+    static int count = 0;
 
     // Test insecure registry, assume registry cann't support https.
     if (util_has_prefix(url, "https://")) {
@@ -159,19 +165,44 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
 
     std::string data_path = get_dir() + "/data/v2/";
     if (!strcmp(url, "http://hub-mirror.c.163.com/v2/")) {
+	count++;
 	file = data_path + "ping_head";
     } else if (!strcmp(url, "http://hub-mirror.c.163.com/v2/library/busybox/manifests/latest")) {
-	file = data_path + "manifest_list";
+	// test not found
+	if (count == COUNT_TEST_NOT_FOUND) {
+	    file = data_path + "manifest_404";
+	} else {
+	    file = data_path + "manifest_list";
+	}
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/manifests/sha256:2131f09e")) {
 	file = data_path + "manifest_body";
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/blobs/sha256:c7c37e47")) {
 	file = data_path + "config";
+	if (count == COUNT_TEST_CANCEL) {
+	    bool *cancel = (bool*)options->progressinfo;
+	    while (!(*cancel)) {
+	        sleep(0); // schedule out to let cancel variable set to be true
+	    }
+	    if (options->progress_info_op(options->progressinfo, 0, 0, 0, 0) != 0) {
+                return -1;
+	    }
+	}
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/blobs/sha256:91f30d77")) {
 	if (retry) {
 	    retry = false;
+	    options->errcode = CURLE_RANGE_ERROR;
 	    return -1;
 	}
-	file = data_path + "0";
+	// test cancel
+	if (count == COUNT_TEST_CANCEL) {
+	    return -1;
+	}
+	// test server error
+	if (count == COUNT_TEST_SERVER_ERROR) {
+	    file = data_path + "0_server_error";
+	} else {
+	    file = data_path + "0";
+	}
     } else {
 	ERROR("%s not match failed", url);
 	return -1;
@@ -567,7 +598,15 @@ TEST_F(RegistryUnitTest, test_login)
 
 TEST_F(RegistryUnitTest, test_logout)
 {
+    char *auth_data = NULL;
+    std::string auths_file = get_dir() + "/auths/" + AUTH_FILE_NAME;
+
     ASSERT_EQ(registry_logout((char*)"test2.com"), 0);
+
+    auth_data = util_read_text_file(auths_file.c_str());
+    ASSERT_NE(strstr(auth_data, "hub-mirror.c.163.com"), nullptr);
+    free(auth_data);
+    auth_data = NULL;
 }
 
 TEST_F(RegistryUnitTest, test_pull_v2_image)
@@ -575,15 +614,23 @@ TEST_F(RegistryUnitTest, test_pull_v2_image)
     registry_pull_options options;
     options.image_name = (char*)"hub-mirror.c.163.com/library/busybox:latest";
     options.dest_image_name = (char*)"docker.io/library/busybox:latest";
-    options.auth.username = (char*)"test";
-    options.auth.password = (char*)"test";
     options.skip_tls_verify = true;
     options.insecure_registry = true;
 
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_,::testing::_,::testing::_,::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV2));
     mockStorageAll(&m_storage_mock);
+    // test retry success
     ASSERT_EQ(registry_pull(&options), 0);
+
+    // test cancel
+    ASSERT_NE(registry_pull(&options), 0);
+
+    // test not found
+    ASSERT_NE(registry_pull(&options), 0);
+
+    // test server error
+    ASSERT_NE(registry_pull(&options), 0);
 }
 
 TEST_F(RegistryUnitTest, test_pull_oci_image)
