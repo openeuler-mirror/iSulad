@@ -685,7 +685,7 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
-static int pause_container(container_t *cont)
+static int do_pause_container(container_t *cont)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
@@ -808,7 +808,7 @@ static int container_pause_cb(const container_pause_request *request, container_
         goto pack_response;
     }
 
-    ret = pause_container(cont);
+    ret = do_pause_container(cont);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
@@ -984,7 +984,7 @@ static int update_host_config_check(container_t *cont, host_config *hostconfig)
     if (container_is_removal_in_progress(cont->state) || container_is_dead(cont->state)) {
         ERROR("Container is marked for removal and cannot be \"update\".");
         isulad_set_error_message(
-            "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
+                "Cannot update container %s: Container is marked for removal and cannot be \"update\".", id);
         ret = -1;
         goto out;
     }

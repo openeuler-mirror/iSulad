@@ -740,7 +740,7 @@ static ssize_t extract_stream_to_io_read(void *content, void *buf, size_t buf_le
     struct isulad_copy_to_container_data copy = { 0 };
 
     if (!stream->read_func(stream->reader, &copy)) {
-        DEBUG("Client may exited");
+        ERROR("Failed to read data from stream, grpc Client may exited");
         return -1;
     }
     if (copy.data_len > buf_len) {
