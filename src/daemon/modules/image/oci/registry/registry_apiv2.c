@@ -648,6 +648,7 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
     char **custom_headers = NULL;
     char path[PATH_MAX] = { 0 };
     CURLcode errcode = CURLE_OK;
+    int retry_times = RETRY_TIMES;
 
     if (desc == NULL || content_type == NULL || digest == NULL) {
         ERROR("Invalid NULL pointer");
@@ -667,10 +668,17 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
         goto out;
     }
 
-    ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY, &errcode);
-    if (ret != 0) {
-        ERROR("registry: Get %s failed", path);
-        goto out;
+    while (retry_times > 0) {
+        retry_times--;
+        ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY, &errcode);
+        if (ret != 0) {
+            if (retry_times > 0) {
+                continue;
+            }
+            ERROR("registry: Get %s failed", path);
+            goto out;
+        }
+        break;
     }
 
     ret = split_head_body(file, &http_head);
