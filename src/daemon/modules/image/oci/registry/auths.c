@@ -449,9 +449,9 @@ static void delete_auth(registry_auths *auths, char *host)
         }
         // Move to empty position
         auths->auths->keys[count] = auths->auths->keys[i];
-        auths->auths->keys[count] = NULL;
+        auths->auths->keys[i] = NULL;
         auths->auths->values[count] = auths->auths->values[i];
-        auths->auths->values[count] = NULL;
+        auths->auths->values[i] = NULL;
         count++;
     }
 
