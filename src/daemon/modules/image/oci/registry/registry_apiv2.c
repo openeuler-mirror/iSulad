@@ -672,7 +672,7 @@ static int fetch_manifest_list(pull_descriptor *desc, char *file, char **content
         retry_times--;
         ret = registry_request(desc, path, custom_headers, file, NULL, HEAD_BODY, &errcode);
         if (ret != 0) {
-            if (retry_times > 0) {
+            if (retry_times > 0 && !desc->cancel) {
                 continue;
             }
             ERROR("registry: Get %s failed", path);
@@ -761,7 +761,7 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
             if (!forbid_resume) {
                 type = RESUME_BODY;
             }
-            if (retry_times > 0) {
+            if (retry_times > 0 && !desc->cancel) {
                 continue;
             }
             ERROR("registry: Get %s failed", path);
@@ -774,7 +774,7 @@ static int fetch_data(pull_descriptor *desc, char *path, char *file, char *conte
         if (strcmp(content_type, DOCKER_MANIFEST_SCHEMA1_PRETTYJWS) && digest != NULL) {
             if (!sha256_valid_digest_file(file, digest)) {
                 type = BODY_ONLY;
-                if (retry_times > 0) {
+                if (retry_times > 0 && !desc->cancel) {
                     continue;
                 }
                 ret = -1;
