@@ -1,7 +1,6 @@
 %global _version 2.0.3
-%global _release 20200722.144012.git576a51fa
+%global _release 20200803.130854.git0c7dc28a
 %global is_systemd 1
-%global debug_package %{nil}
 
 Name:      iSulad
 Version:   %{_version}
@@ -54,7 +53,7 @@ Runtime Daemon, written by C.
 %build
 mkdir -p build
 cd build
-%cmake -DDEBUG=OFF -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
+%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
 %make_build
 
 %install
@@ -64,6 +63,9 @@ install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
 install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
 install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
+chmod +x %{buildroot}/%{_libdir}/libisula.so
+chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
+chmod +x %{buildroot}/%{_libdir}/libisulad_img.so
 
 install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
@@ -211,3 +213,10 @@ fi
 %else
 %config(noreplace,missingok) %{_initddir}/isulad.init
 %endif
+
+%changelog
+* Mon Aug 03 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.3-20200803.130854.git0c7dc28a
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add debug packages
