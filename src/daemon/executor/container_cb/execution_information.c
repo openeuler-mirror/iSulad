@@ -1355,7 +1355,7 @@ static int pack_inspect_data(const container_t *cont, container_inspect **out_in
     }
 
     if (!strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI)) {
-        inspect->graph_driver = im_graphdriver_get_metadata(cont->common_config->id);
+        inspect->graph_driver = im_graphdriver_get_metadata_by_container_id(cont->common_config->id);
         if (inspect->graph_driver == NULL) {
             ret = -1;
             goto out;

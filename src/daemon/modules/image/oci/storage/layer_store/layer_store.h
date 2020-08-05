@@ -74,6 +74,8 @@ int layer_store_get_layer_fs_info(const char *layer_id, imagetool_fs_info *fs_in
 
 int layer_store_check(const char *id);
 
+container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char *id);
+
 #ifdef __cplusplus
 }
 #endif

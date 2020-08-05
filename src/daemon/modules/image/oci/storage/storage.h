@@ -26,6 +26,7 @@
 #include "isula_libutils/storage_rootfs.h"
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_fs_info.h"
+#include "isula_libutils/container_inspect.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -172,6 +173,8 @@ int storage_rootfs_fs_usgae(const char *container_id, imagetool_fs_info *fs_info
 char *storage_rootfs_mount(const char *container_id);
 
 int storage_rootfs_umount(const char *container_id, bool force);
+
+container_inspect_graph_driver *storage_get_metadata_by_container_id(const char *id);
 
 #ifdef __cplusplus
 }

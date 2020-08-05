@@ -113,7 +113,7 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
     char *mnt_point_dir = NULL;
     int ret = 0;
 
-    if (id == NULL || driver == NULL) {
+    if (!util_valid_str(id) || driver == NULL) {
         return -1;
     }
 
@@ -164,7 +164,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     char *id_file = NULL;
     int ret = 0;
 
-    if (id == NULL || driver == NULL) {
+    if (!util_valid_str(id) || driver == NULL) {
         return NULL;
     }
 
@@ -188,7 +188,6 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
         goto out;
     }
 
-    DEBUG("devmapper: start to mount container device");
     if (mount_device(id, mnt_point_dir, mount_opts, driver->devset) != 0) {
         ERROR("Mount device:%s to path:%s failed", id, mnt_parent_dir);
         ret = -1;
@@ -237,7 +236,8 @@ int devmapper_umount_layer(const char *id, const struct graphdriver *driver)
     char *mp = NULL;
     char *mnt_dir = NULL;
 
-    if (id == NULL || driver == NULL) {
+    if (!util_valid_str(id) || driver == NULL) {
+        ERROR("Invalid input params to umount layer with id(%s)", id);
         return -1;
     }
 
@@ -293,8 +293,8 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
     int ret = 0;
     struct archive_options options = { 0 };
 
-    if (id == NULL || driver == NULL || content == NULL) {
-        ERROR("invalid argument");
+    if (!util_valid_str(id) || driver == NULL || content == NULL) {
+        ERROR("invalid argument to apply diff with id(%s)", id);
         return -1;
     }
 
@@ -341,7 +341,7 @@ int devmapper_get_layer_metadata(const char *id, const struct graphdriver *drive
     char *device_id_str = NULL;
     char *device_size_str = NULL;
 
-    if (id == NULL || driver == NULL || map_info == NULL) {
+    if (!util_valid_str(id) || driver == NULL || map_info == NULL) {
         ERROR("invalid argument");
         ret = -1;
         goto out;
