@@ -15,20 +15,20 @@
 #include "checkpoint_handler.h"
 
 #include <cstring>
+#include <errno.h>
+#include <linux/limits.h>
 #include <memory>
 #include <string>
-#include <linux/limits.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "constants.h"
-#include "utils.h"
-#include "isula_libutils/log.h"
 #include "cri_helpers.h"
 #include "isula_libutils/cri_checkpoint.h"
+#include "isula_libutils/log.h"
+#include "utils.h"
 
 namespace cri {
-PortMapping &PortMapping::operator=(const PortMapping &obj)
+auto PortMapping::operator=(const PortMapping &obj) -> PortMapping &
 {
     if (&obj == this) {
         return *this;
@@ -74,7 +74,7 @@ PortMapping::~PortMapping()
     delete m_hostPort;
 }
 
-const std::string *PortMapping::GetProtocol() const
+auto PortMapping::GetProtocol() const -> const std::string *
 {
     return m_protocol;
 }
@@ -87,7 +87,7 @@ void PortMapping::SetProtocol(const std::string &protocol)
     }
 }
 
-const int32_t *PortMapping::GetContainerPort() const
+auto PortMapping::GetContainerPort() const -> const int32_t *
 {
     return m_containerPort;
 }
@@ -101,7 +101,7 @@ void PortMapping::SetContainerPort(int32_t containerPort)
     }
 }
 
-const int32_t *PortMapping::GetHostPort() const
+auto PortMapping::GetHostPort() const -> const int32_t *
 {
     return m_hostPort;
 }
@@ -168,7 +168,7 @@ void PortMapping::CStructToPortMapping(const cri_port_mapping *pmapping, Errors 
     }
 }
 
-const std::vector<PortMapping> &CheckpointData::GetPortMappings() const
+auto CheckpointData::GetPortMappings() const -> const std::vector<PortMapping> &
 {
     return m_portMappings;
 }
@@ -178,7 +178,7 @@ void CheckpointData::InsertPortMapping(const PortMapping &portMapping)
     m_portMappings.push_back(portMapping);
 }
 
-bool CheckpointData::GetHostNetwork()
+auto CheckpointData::GetHostNetwork() const -> bool
 {
     return m_hostNetwork;
 }
@@ -232,7 +232,7 @@ void CheckpointData::CStructToCheckpointData(const cri_checkpoint_data *data, Er
         return;
     }
     m_hostNetwork = data->host_network;
-    if (data->port_mappings && data->port_mappings_len > 0) {
+    if ((data->port_mappings != nullptr) && data->port_mappings_len > 0) {
         for (size_t i = 0; i < data->port_mappings_len; i++) {
             PortMapping tmpPortMap;
             tmpPortMap.CStructToPortMapping(data->port_mappings[i], error);
@@ -248,7 +248,7 @@ out:
     m_portMappings.clear();
 }
 
-const std::string &PodSandboxCheckpoint::GetVersion() const
+auto PodSandboxCheckpoint::GetVersion() const -> const std::string &
 {
     return m_version;
 }
@@ -258,7 +258,7 @@ void PodSandboxCheckpoint::SetVersion(const std::string &version)
     m_version = version;
 }
 
-const std::string &PodSandboxCheckpoint::GetName() const
+auto PodSandboxCheckpoint::GetName() const -> const std::string &
 {
     return m_name;
 }
@@ -268,7 +268,7 @@ void PodSandboxCheckpoint::SetName(const std::string &name)
     m_name = name;
 }
 
-const std::string &PodSandboxCheckpoint::GetNamespace() const
+auto PodSandboxCheckpoint::GetNamespace() const -> const std::string &
 {
     return m_namespace;
 }
@@ -278,7 +278,7 @@ void PodSandboxCheckpoint::SetNamespace(const std::string &ns)
     m_namespace = ns;
 }
 
-std::shared_ptr<CheckpointData> PodSandboxCheckpoint::GetData()
+auto PodSandboxCheckpoint::GetData() -> std::shared_ptr<CheckpointData>
 {
     return m_data;
 }
@@ -288,7 +288,7 @@ void PodSandboxCheckpoint::SetData(CheckpointData *data)
     m_data = std::shared_ptr<CheckpointData>(data);
 }
 
-const std::string &PodSandboxCheckpoint::GetCheckSum() const
+auto PodSandboxCheckpoint::GetCheckSum() const -> const std::string &
 {
     return m_checkSum;
 }

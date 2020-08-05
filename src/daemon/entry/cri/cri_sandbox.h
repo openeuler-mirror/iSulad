@@ -22,7 +22,7 @@ class CRISandboxManagerImpl : public cri::PodSandboxManager {
 public:
     CRISandboxManagerImpl() = default;
     CRISandboxManagerImpl(const CRISandboxManagerImpl &) = delete;
-    CRISandboxManagerImpl &operator=(const CRISandboxManagerImpl &) = delete;
+    auto operator=(const CRISandboxManagerImpl &) -> CRISandboxManagerImpl & = delete;
 
     virtual ~CRISandboxManagerImpl() = default;
 };

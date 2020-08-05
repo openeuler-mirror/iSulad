@@ -14,20 +14,20 @@
  *********************************************************************************/
 #ifndef DAEMON_ENTRY_CRI_CRI_HELPERS_H
 #define DAEMON_ENTRY_CRI_CRI_HELPERS_H
-#include <string>
-#include <memory>
-#include <vector>
 #include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "constants.h"
 #include "api.pb.h"
-#include "errors.h"
-#include "isula_libutils/host_config.h"
 #include "callback.h"
-#include "isula_libutils/docker_seccomp.h"
-#include "isula_libutils/cri_pod_network.h"
 #include "checkpoint_handler.h"
+#include "constants.h"
+#include "errors.h"
 #include "image_api.h"
+#include "isula_libutils/cri_pod_network.h"
+#include "isula_libutils/docker_seccomp.h"
+#include "isula_libutils/host_config.h"
 
 namespace CRIHelpers {
 class Constants {
@@ -58,45 +58,46 @@ public:
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR;
 };
 
-std::string GetDefaultSandboxImage(Errors &err);
+auto GetDefaultSandboxImage(Errors &err) -> std::string;
 
-json_map_string_string *MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels, Errors &error);
+auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels,
+                Errors &error) -> json_map_string_string *;
 
-json_map_string_string *MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations,
-                                        Errors &error);
+auto MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations,
+                     Errors &error) -> json_map_string_string *;
 
 void ExtractLabels(json_map_string_string *input, google::protobuf::Map<std::string, std::string> &labels);
 
 void ExtractAnnotations(json_map_string_string *input, google::protobuf::Map<std::string, std::string> &annotations);
 
-int FiltersAdd(defs_filters *filters, const std::string &key, const std::string &value);
+auto FiltersAdd(defs_filters *filters, const std::string &key, const std::string &value) -> int;
 
-int FiltersAddLabel(defs_filters *filters, const std::string &key, const std::string &value);
+auto FiltersAddLabel(defs_filters *filters, const std::string &key, const std::string &value) -> int;
 
 void ProtobufAnnoMapToStd(const google::protobuf::Map<std::string, std::string> &annotations,
                           std::map<std::string, std::string> &newAnnos);
 
-runtime::v1alpha2::ContainerState ContainerStatusToRuntime(Container_Status status);
+auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::ContainerState;
 
-char **StringVectorToCharArray(std::vector<std::string> &path);
+auto StringVectorToCharArray(std::vector<std::string> &path) -> char **;
 
-imagetool_image *InspectImageByID(const std::string &imageID, Errors &err);
+auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image *;
 
-std::string ToPullableImageID(const std::string &id, imagetool_image *image);
+auto ToPullableImageID(const std::string &id, imagetool_image *image) -> std::string;
 
-bool IsContainerNotFoundError(const std::string &err);
+auto IsContainerNotFoundError(const std::string &err) -> bool;
 
-bool IsImageNotFoundError(const std::string &err);
+auto IsImageNotFoundError(const std::string &err) -> bool;
 
-std::string sha256(const char *val);
+auto sha256(const char *val) -> std::string;
 
-cri_pod_network_element **GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations,
-                                                     size_t *len, Errors &error);
+auto GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations,
+                                size_t *len, Errors &error) -> cri_pod_network_element **;
 
-std::unique_ptr<runtime::v1alpha2::PodSandbox> CheckpointToSandbox(const std::string &id,
-                                                                   const cri::PodSandboxCheckpoint &checkpoint);
+auto CheckpointToSandbox(const std::string &id,
+                         const cri::PodSandboxCheckpoint &checkpoint) -> std::unique_ptr<runtime::v1alpha2::PodSandbox>;
 
-std::string StringsJoin(const std::vector<std::string> &vec, const std::string &sep);
+auto StringsJoin(const std::vector<std::string> &vec, const std::string &sep) -> std::string;
 
 void UpdateCreateConfig(container_config *createConfig, host_config *hc,
                         const runtime::v1alpha2::ContainerConfig &config, const std::string &podSandboxID,
@@ -105,16 +106,17 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
 void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1alpha2::Mount> &mounts,
                            host_config *hostconfig, Errors &err);
 
-std::vector<std::string>
-GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs);
+auto GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs) ->
+std::vector<std::string>;
 
-bool ValidateCheckpointKey(const std::string &key, Errors &error);
+auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool;
 
-std::string ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state);
+auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state) -> std::string;
 
-std::vector<std::string> GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error);
+auto GetSecurityOpts(const std::string &seccompProfile, const char &separator,
+                     Errors &error) -> std::vector<std::string>;
 
-std::string CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error);
+auto CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
 
 void GetCheckpoint(const std::string &jsonCheckPoint, cri::PodSandboxCheckpoint &checkpoint, Errors &error);
 

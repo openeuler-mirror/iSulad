@@ -22,7 +22,7 @@ class CRIContainerManagerImpl : public cri::ContainerManager {
 public:
     CRIContainerManagerImpl() = default;
     CRIContainerManagerImpl(const CRIContainerManagerImpl &) = delete;
-    CRIContainerManagerImpl &operator=(const CRIContainerManagerImpl &) = delete;
+    auto operator=(const CRIContainerManagerImpl &) -> CRIContainerManagerImpl & = delete;
 
     virtual ~CRIContainerManagerImpl() = default;
 };

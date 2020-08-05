@@ -15,9 +15,9 @@
 #ifndef DAEMON_ENTRY_CRI_CRI_SERVICES_H
 #define DAEMON_ENTRY_CRI_CRI_SERVICES_H
 
-#include <string>
-#include <memory>
 #include <cstdint>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "api.pb.h"
@@ -32,9 +32,10 @@ public:
 
 class ContainerManager {
 public:
-    virtual std::string CreateContainer(const std::string &podSandboxID,
-                                        const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                        const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error) = 0;
+    virtual auto CreateContainer(const std::string &podSandboxID,
+                                 const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                 const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                 Errors &error) -> std::string = 0;
 
     virtual void StartContainer(const std::string &containerID, Errors &error) = 0;
 
@@ -50,8 +51,8 @@ public:
                                     std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
                                     Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::v1alpha2::ContainerStatus> ContainerStatus(const std::string &containerID,
-                                                                                Errors &error) = 0;
+    virtual auto ContainerStatus(const std::string &containerID,
+                                 Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStatus> = 0;
 
     virtual void UpdateContainerResources(const std::string &containerID,
                                           const runtime::v1alpha2::LinuxContainerResources &resources,
@@ -69,15 +70,15 @@ public:
 
 class PodSandboxManager {
 public:
-    virtual std::string RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &runtimeHandler,
-                                      Errors &error) = 0;
+    virtual auto RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &runtimeHandler,
+                               Errors &error) -> std::string = 0;
 
     virtual void StopPodSandbox(const std::string &podSandboxID, Errors &error) = 0;
 
     virtual void RemovePodSandbox(const std::string &podSandboxID, Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> PodSandboxStatus(const std::string &podSandboxID,
-                                                                                  Errors &error) = 0;
+    virtual auto PodSandboxStatus(const std::string &podSandboxID,
+                                  Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> = 0;
 
     virtual void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
                                 std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error) = 0;
@@ -90,7 +91,7 @@ class RuntimeManager {
 public:
     virtual void UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::v1alpha2::RuntimeStatus> Status(Errors &error) = 0;
+    virtual auto Status(Errors &error) -> std::unique_ptr<runtime::v1alpha2::RuntimeStatus> = 0;
 };
 
 class ImageManagerService {
@@ -98,11 +99,11 @@ public:
     virtual void ListImages(const runtime::v1alpha2::ImageFilter &filter,
                             std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error) = 0;
 
-    virtual std::unique_ptr<runtime::v1alpha2::Image> ImageStatus(const runtime::v1alpha2::ImageSpec &image,
-                                                                  Errors &error) = 0;
+    virtual auto ImageStatus(const runtime::v1alpha2::ImageSpec &image,
+                             Errors &error) -> std::unique_ptr<runtime::v1alpha2::Image> = 0;
 
-    virtual std::string PullImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
-                                  Errors &error) = 0;
+    virtual auto PullImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
+                           Errors &error) -> std::string = 0;
 
     virtual void RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error) = 0;
 

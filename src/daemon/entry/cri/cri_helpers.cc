@@ -14,21 +14,21 @@
  *********************************************************************************/
 
 #include "cri_helpers.h"
-#include <utility>
+#include <algorithm>
 #include <functional>
 #include <iostream>
-#include <algorithm>
 #include <openssl/sha.h>
 #include <sys/utsname.h>
+#include <utility>
 
-#include "cri_runtime_service.h"
 #include "api.pb.h"
+#include "cri_runtime_service.h"
 #include "cri_security_context.h"
-#include "utils.h"
-#include "isula_libutils/log.h"
-#include "path.h"
-#include "isula_libutils/parse_common.h"
 #include "cxxutils.h"
+#include "isula_libutils/log.h"
+#include "isula_libutils/parse_common.h"
+#include "path.h"
+#include "utils.h"
 
 namespace CRIHelpers {
 const std::string Constants::DEFAULT_RUNTIME_NAME { "lcr" };
@@ -58,12 +58,12 @@ const char *InternalLabelKeys[] = {
     CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str(), nullptr
 };
 
-std::string GetDefaultSandboxImage(Errors &err)
+auto GetDefaultSandboxImage(Errors &err) -> std::string
 {
     const std::string defaultPodSandboxImageName { "pause" };
     const std::string defaultPodSandboxImageVersion { "3.0" };
     std::string machine;
-    struct utsname uts;
+    struct utsname uts {};
 
     if (uname(&uts) < 0) {
         err.SetError("Failed to read host arch.");
@@ -85,7 +85,8 @@ std::string GetDefaultSandboxImage(Errors &err)
     return defaultPodSandboxImageName + "-" + machine + ":" + defaultPodSandboxImageVersion;
 }
 
-json_map_string_string *MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels, Errors &error)
+auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels,
+                Errors &error) -> json_map_string_string *
 {
     json_map_string_string *labels = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
     if (labels == nullptr) {
@@ -93,7 +94,7 @@ json_map_string_string *MakeLabels(const google::protobuf::Map<std::string, std:
         return nullptr;
     }
 
-    if (mapLabels.size() > 0) {
+    if (!mapLabels.empty()) {
         if (mapLabels.size() > LIST_SIZE_MAX) {
             error.Errorf("Labels list is too long, the limit is %d", LIST_SIZE_MAX);
             goto cleanup;
@@ -111,8 +112,8 @@ cleanup:
     return nullptr;
 }
 
-json_map_string_string *MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations,
-                                        Errors &error)
+auto MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations,
+                     Errors &error) -> json_map_string_string *
 {
     json_map_string_string *annotations =
         (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
@@ -121,7 +122,7 @@ json_map_string_string *MakeAnnotations(const google::protobuf::Map<std::string,
         return nullptr;
     }
 
-    if (mapAnnotations.size() > 0) {
+    if (!mapAnnotations.empty()) {
         if (mapAnnotations.size() > LIST_SIZE_MAX) {
             error.Errorf("Annotations list is too long, the limit is %d", LIST_SIZE_MAX);
             goto cleanup;
@@ -147,7 +148,7 @@ void ProtobufAnnoMapToStd(const google::protobuf::Map<std::string, std::string> 
     }
 }
 
-static bool IsSandboxLabel(json_map_string_string *input)
+static auto IsSandboxLabel(json_map_string_string *input) -> bool
 {
     bool is_sandbox_label { false };
 
@@ -207,7 +208,7 @@ void ExtractAnnotations(json_map_string_string *input, google::protobuf::Map<std
     }
 }
 
-int FiltersAdd(defs_filters *filters, const std::string &key, const std::string &value)
+auto FiltersAdd(defs_filters *filters, const std::string &key, const std::string &value) -> int
 {
     if (filters == nullptr) {
         return -1;
@@ -230,7 +231,7 @@ int FiltersAdd(defs_filters *filters, const std::string &key, const std::string 
         return -1;
     }
 
-    if (filters->len) {
+    if (filters->len != 0u) {
         (void)memcpy(keys, filters->keys, filters->len * sizeof(char *));
 
         (void)memcpy(vals, filters->values, filters->len * sizeof(json_map_string_bool *));
@@ -245,7 +246,7 @@ int FiltersAdd(defs_filters *filters, const std::string &key, const std::string 
         ERROR("Out of memory");
         return -1;
     }
-    if (append_json_map_string_bool(filters->values[filters->len], value.c_str(), true)) {
+    if (append_json_map_string_bool(filters->values[filters->len], value.c_str(), true) != 0) {
         ERROR("Append failed");
         return -1;
     }
@@ -255,7 +256,7 @@ int FiltersAdd(defs_filters *filters, const std::string &key, const std::string 
     return 0;
 }
 
-int FiltersAddLabel(defs_filters *filters, const std::string &key, const std::string &value)
+auto FiltersAddLabel(defs_filters *filters, const std::string &key, const std::string &value) -> int
 {
     if (filters == nullptr) {
         return -1;
@@ -263,7 +264,7 @@ int FiltersAddLabel(defs_filters *filters, const std::string &key, const std::st
     return FiltersAdd(filters, "label", key + "=" + value);
 }
 
-runtime::v1alpha2::ContainerState ContainerStatusToRuntime(Container_Status status)
+auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::ContainerState
 {
     switch (status) {
         case CONTAINER_STATUS_CREATED:
@@ -280,7 +281,7 @@ runtime::v1alpha2::ContainerState ContainerStatusToRuntime(Container_Status stat
     }
 }
 
-char **StringVectorToCharArray(std::vector<std::string> &path)
+auto StringVectorToCharArray(std::vector<std::string> &path) -> char **
 {
     size_t len = path.size();
     if (len == 0 || len > (SIZE_MAX / sizeof(char *)) - 1) {
@@ -291,14 +292,14 @@ char **StringVectorToCharArray(std::vector<std::string> &path)
         return nullptr;
     }
     size_t i {};
-    for (auto it = path.cbegin(); it != path.cend(); it++) {
-        result[i++] = util_strdup_s(it->c_str());
+    for (const auto &it : path) {
+        result[i++] = util_strdup_s(it.c_str());
     }
 
     return result;
 }
 
-imagetool_image *InspectImageByID(const std::string &imageID, Errors &err)
+auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image *
 {
     im_status_request *request { nullptr };
     im_status_response *response { nullptr };
@@ -337,7 +338,7 @@ cleanup:
     return image;
 }
 
-std::string ToPullableImageID(const std::string &id, imagetool_image *image)
+auto ToPullableImageID(const std::string &id, imagetool_image *image) -> std::string
 {
     // Default to the image ID, but if RepoDigests is not empty, use
     // the first digest instead.
@@ -349,19 +350,19 @@ std::string ToPullableImageID(const std::string &id, imagetool_image *image)
 }
 
 // IsContainerNotFoundError checks whether the error is container not found error.
-bool IsContainerNotFoundError(const std::string &err)
+auto IsContainerNotFoundError(const std::string &err) -> bool
 {
     return err.find("No such container:") != std::string::npos ||
            err.find("No such image or container") != std::string::npos;
 }
 
 // IsImageNotFoundError checks whether the error is Image not found error.
-bool IsImageNotFoundError(const std::string &err)
+auto IsImageNotFoundError(const std::string &err) -> bool
 {
     return err.find("No such image:") != std::string::npos;
 }
 
-std::string sha256(const char *val)
+auto sha256(const char *val) -> std::string
 {
     if (val == nullptr) {
         return "";
@@ -385,8 +386,8 @@ std::string sha256(const char *val)
     return outputBuffer;
 }
 
-cri_pod_network_element **GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations,
-                                                     size_t *len, Errors &error)
+auto GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations,
+                                size_t *len, Errors &error) -> cri_pod_network_element **
 {
     auto iter = annotations.find(CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY);
 
@@ -403,8 +404,8 @@ cri_pod_network_element **GetNetworkPlaneFromPodAnno(const google::protobuf::Map
     return result;
 }
 
-std::unique_ptr<runtime::v1alpha2::PodSandbox> CheckpointToSandbox(const std::string &id,
-                                                                   const cri::PodSandboxCheckpoint &checkpoint)
+auto CheckpointToSandbox(const std::string &id,
+                         const cri::PodSandboxCheckpoint &checkpoint) -> std::unique_ptr<runtime::v1alpha2::PodSandbox>
 {
     std::unique_ptr<runtime::v1alpha2::PodSandbox> result(new (std::nothrow) runtime::v1alpha2::PodSandbox);
     if (result == nullptr) {
@@ -461,7 +462,7 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
 void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1alpha2::Mount> &mounts,
                            host_config *hostconfig, Errors &err)
 {
-    if (mounts.size() <= 0 || hostconfig == nullptr) {
+    if (mounts.empty() || hostconfig == nullptr) {
         return;
     }
     if ((size_t)mounts.size() > INT_MAX / sizeof(char *)) {
@@ -498,7 +499,7 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1a
             // Falls back to "private"
         }
 
-        if (attrs.size() > 0) {
+        if (!attrs.empty()) {
             bind += ":" + CXXUtils::StringsJoin(attrs, ",");
         }
         hostconfig->binds[i] = util_strdup_s(bind.c_str());
@@ -506,8 +507,8 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1a
     }
 }
 
-std::vector<std::string> GenerateEnvList(
-    const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs)
+auto GenerateEnvList(
+    const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs) -> std::vector<std::string>
 {
     std::vector<std::string> vect;
     std::for_each(envs.begin(), envs.end(), [&vect](const ::runtime::v1alpha2::KeyValue & elem) {
@@ -516,7 +517,7 @@ std::vector<std::string> GenerateEnvList(
     return vect;
 }
 
-bool ValidateCheckpointKey(const std::string &key, Errors &error)
+auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool
 {
     const std::string PATTERN { "^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$" };
 
@@ -534,7 +535,7 @@ err_out:
     return false;
 }
 
-std::string ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state)
+auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state) -> std::string
 {
     if (state.state() == runtime::v1alpha2::CONTAINER_CREATED) {
         return "created";
@@ -553,7 +554,7 @@ struct iSuladOpt {
     std::string msg;
 };
 
-std::vector<std::string> fmtiSuladOpts(const std::vector<iSuladOpt> &opts, const char &sep)
+auto fmtiSuladOpts(const std::vector<iSuladOpt> &opts, const char &sep) -> std::vector<std::string>
 {
     std::vector<std::string> fmtOpts(opts.size());
     for (size_t i {}; i < opts.size(); i++) {
@@ -562,7 +563,7 @@ std::vector<std::string> fmtiSuladOpts(const std::vector<iSuladOpt> &opts, const
     return fmtOpts;
 }
 
-std::vector<iSuladOpt> GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error)
+auto GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> std::vector<iSuladOpt>
 {
     if (seccompProfile.empty() || seccompProfile == "unconfined") {
         return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
@@ -577,7 +578,7 @@ std::vector<iSuladOpt> GetSeccompiSuladOpts(const std::string &seccompProfile, E
     }
     std::string fname = seccompProfile.substr(std::string("localhost/").length(), seccompProfile.length());
     char dstpath[PATH_MAX] { 0 };
-    if (!cleanpath(fname.c_str(), dstpath, sizeof(dstpath))) {
+    if (cleanpath(fname.c_str(), dstpath, sizeof(dstpath)) == nullptr) {
         error.Errorf("failed to get clean path");
         return std::vector<iSuladOpt> {};
     }
@@ -608,7 +609,8 @@ std::vector<iSuladOpt> GetSeccompiSuladOpts(const std::string &seccompProfile, E
     return ret;
 }
 
-std::vector<std::string> GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separator,
+                            Errors &error) -> std::vector<std::string>
 {
     std::vector<iSuladOpt> seccompOpts = GetSeccompiSuladOpts(seccompProfile, error);
     if (error.NotEmpty()) {
@@ -618,7 +620,8 @@ std::vector<std::string> GetSeccompSecurityOpts(const std::string &seccompProfil
     return fmtiSuladOpts(seccompOpts, separator);
 }
 
-std::vector<std::string> GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+auto GetSecurityOpts(const std::string &seccompProfile, const char &separator,
+                     Errors &error) -> std::vector<std::string>
 {
     std::vector<std::string> seccompSecurityOpts = GetSeccompSecurityOpts(seccompProfile, separator, error);
     if (error.NotEmpty()) {
@@ -627,7 +630,7 @@ std::vector<std::string> GetSecurityOpts(const std::string &seccompProfile, cons
     return seccompSecurityOpts;
 }
 
-std::string CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error)
+auto CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string
 {
     cri_checkpoint *criCheckpoint { nullptr };
     struct parser_context ctx {
@@ -635,7 +638,7 @@ std::string CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &erro
     };
     parser_error err { nullptr };
     char *jsonStr { nullptr };
-    std::string result { "" };
+    std::string result;
 
     checkpoint.CheckpointToCStruct(&criCheckpoint, error);
     if (error.NotEmpty()) {

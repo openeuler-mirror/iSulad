@@ -14,21 +14,21 @@
  *********************************************************************************/
 #include "cri_runtime_service.h"
 
-#include <iostream>
-#include <memory>
-#include <vector>
-#include <map>
-#include <string>
 #include <grpc++/grpc++.h>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
 #include <unistd.h>
+#include <vector>
 
-#include "isula_libutils/log.h"
-#include "utils.h"
 #include "config.h"
-#include "isula_libutils/host_config.h"
 #include "cri_helpers.h"
-#include "network_plugin.h"
 #include "isula_libutils/container_inspect.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/log.h"
+#include "network_plugin.h"
+#include "utils.h"
 
 namespace CRIRuntimeService {
 std::string Constants::namespaceModeHost { "host" };
@@ -49,11 +49,11 @@ CRIRuntimeServiceImpl::CRIRuntimeServiceImpl()
 }
 
 void CRIRuntimeServiceImpl::VersionResponseToGRPC(container_version_response *response,
-                                                  runtime::v1alpha2::VersionResponse *gResponse, Errors &error)
+                                                  runtime::v1alpha2::VersionResponse *gResponse)
 {
     gResponse->set_version(CRIRuntimeService::Constants::kubeAPIVersion);
     gResponse->set_runtime_name(CRIRuntimeService::Constants::iSulaRuntimeName);
-    gResponse->set_runtime_version(response->version ? response->version : "");
+    gResponse->set_runtime_version(response->version != nullptr ? response->version : "");
     gResponse->set_runtime_api_version(VERSION);
 }
 
@@ -94,20 +94,20 @@ void CRIRuntimeServiceImpl::Version(const std::string &apiVersion, runtime::v1al
 
     container_version_response *response { nullptr };
     if (m_cb->container.version(nullptr, &response) != 0) {
-        if (response != nullptr && response->errmsg) {
+        if (response != nullptr && (response->errmsg != nullptr)) {
             error.SetError(response->errmsg);
         } else {
             error.SetError("Failed to call version callback");
         }
         goto cleanup;
     }
-    VersionResponseToGRPC(response, versionResponse, error);
+    VersionResponseToGRPC(response, versionResponse);
 
 cleanup:
     free_container_version_response(response);
 }
 
-void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error)
+void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors & /*error*/)
 {
     INFO("iSulad cri received runtime config: %s", config.network_config().pod_cidr().c_str());
     if (m_pluginManager != nullptr && config.has_network_config() && !(config.network_config().pod_cidr().empty())) {
@@ -116,10 +116,9 @@ void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::Runtime
             config.network_config().pod_cidr();
         m_pluginManager->Event(CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE, events);
     }
-    return;
 }
 
-std::unique_ptr<runtime::v1alpha2::RuntimeStatus> CRIRuntimeServiceImpl::Status(Errors &error)
+auto CRIRuntimeServiceImpl::Status(Errors &error) -> std::unique_ptr<runtime::v1alpha2::RuntimeStatus>
 {
     std::unique_ptr<runtime::v1alpha2::RuntimeStatus> status(new (std::nothrow) runtime::v1alpha2::RuntimeStatus);
     if (status == nullptr) {
@@ -159,11 +158,11 @@ std::unique_ptr<runtime::v1alpha2::RuntimeStatus> CRIRuntimeServiceImpl::Status(
     return status;
 }
 
-std::string CRIRuntimeServiceImpl::GetNetNS(const std::string &podSandboxID, Errors &err)
+auto CRIRuntimeServiceImpl::GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string
 {
-    int ret;
+    int ret = 0;
     char fullpath[PATH_MAX] { 0 };
-    std::string result { "" };
+    std::string result;
     const std::string NetNSFmt { "/proc/%d/ns/net" };
 
     container_inspect *inspect_data = InspectContainer(podSandboxID, err);

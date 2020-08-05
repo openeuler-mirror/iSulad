@@ -15,55 +15,55 @@
 #include "cri_sandbox.h"
 #include "cri_runtime_service.h"
 
-#include <vector>
-#include <utility>
-#include <map>
-#include <sstream>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 
-#include <unistd.h>
 #include <grpc++/grpc++.h>
+#include <unistd.h>
 
-#include "cxxutils.h"
-#include "isula_libutils/log.h"
-#include "utils.h"
-#include "errors.h"
-#include "naming.h"
-#include "isula_libutils/host_config.h"
-#include "cri_helpers.h"
 #include "checkpoint_handler.h"
+#include "cri_helpers.h"
 #include "cri_security_context.h"
+#include "cxxutils.h"
+#include "errors.h"
+#include "isula_libutils/host_config.h"
+#include "isula_libutils/log.h"
+#include "naming.h"
+#include "utils.h"
 
-runtime::v1alpha2::NamespaceMode CRIRuntimeServiceImpl::SharesHostNetwork(container_inspect *inspect)
+auto CRIRuntimeServiceImpl::SharesHostNetwork(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode
 {
-    if (inspect != nullptr && inspect->host_config != nullptr && inspect->host_config->network_mode &&
+    if (inspect != nullptr && inspect->host_config != nullptr && (inspect->host_config->network_mode != nullptr) &&
         std::string(inspect->host_config->network_mode) == CRIRuntimeService::Constants::namespaceModeHost) {
         return runtime::v1alpha2::NamespaceMode::NODE;
     }
     return runtime::v1alpha2::NamespaceMode::POD;
 }
 
-runtime::v1alpha2::NamespaceMode CRIRuntimeServiceImpl::SharesHostPid(container_inspect *inspect)
+auto CRIRuntimeServiceImpl::SharesHostPid(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode
 {
-    if (inspect != nullptr && inspect->host_config != nullptr && inspect->host_config->pid_mode &&
+    if (inspect != nullptr && inspect->host_config != nullptr && (inspect->host_config->pid_mode != nullptr) &&
         std::string(inspect->host_config->pid_mode) == CRIRuntimeService::Constants::namespaceModeHost) {
         return runtime::v1alpha2::NamespaceMode::NODE;
     }
     return runtime::v1alpha2::NamespaceMode::CONTAINER;
 }
 
-runtime::v1alpha2::NamespaceMode CRIRuntimeServiceImpl::SharesHostIpc(container_inspect *inspect)
+auto CRIRuntimeServiceImpl::SharesHostIpc(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode
 {
-    if (inspect != nullptr && inspect->host_config != nullptr && inspect->host_config->ipc_mode &&
+    if (inspect != nullptr && inspect->host_config != nullptr && (inspect->host_config->ipc_mode != nullptr) &&
         std::string(inspect->host_config->ipc_mode) == CRIRuntimeService::Constants::namespaceModeHost) {
         return runtime::v1alpha2::NamespaceMode::NODE;
     }
     return runtime::v1alpha2::NamespaceMode::POD;
 }
 
-bool CRIRuntimeServiceImpl::EnsureSandboxImageExists(const std::string &image, Errors &error)
+auto CRIRuntimeServiceImpl::EnsureSandboxImageExists(const std::string &image, Errors &error) -> bool
 {
     runtime::v1alpha2::ImageSpec imageRef;
     runtime::v1alpha2::AuthConfig auth;
@@ -79,14 +79,10 @@ bool CRIRuntimeServiceImpl::EnsureSandboxImageExists(const std::string &image, E
 
     imageRef.set_image(image);
     std::string outRef = rImageService.PullImage(imageRef, auth, error);
-    if (!error.Empty() || outRef.empty()) {
-        return false;
-    }
-
-    return true;
+    return !(!error.Empty() || outRef.empty());
 }
 
-std::string CRIRuntimeServiceImpl::ParseCheckpointProtocol(runtime::v1alpha2::Protocol protocol)
+auto CRIRuntimeServiceImpl::ParseCheckpointProtocol(runtime::v1alpha2::Protocol protocol) -> std::string
 {
     switch (protocol) {
         case runtime::v1alpha2::UDP:
@@ -108,7 +104,7 @@ void CRIRuntimeServiceImpl::ConstructPodSandboxCheckpoint(const runtime::v1alpha
     for (int i = 0; i < len; i++) {
         cri::PortMapping item;
 
-        runtime::v1alpha2::PortMapping iter = config.port_mappings(i);
+        const runtime::v1alpha2::PortMapping &iter = config.port_mappings(i);
         item.SetProtocol(ParseCheckpointProtocol(iter.protocol()));
         item.SetContainerPort(iter.container_port());
         item.SetHostPort(iter.host_port());
@@ -119,8 +115,9 @@ void CRIRuntimeServiceImpl::ConstructPodSandboxCheckpoint(const runtime::v1alpha
     }
 }
 
-void CRIRuntimeServiceImpl::ApplySandboxResources(const runtime::v1alpha2::LinuxPodSandboxConfig *lc, host_config *hc,
-                                                  Errors &error)
+void CRIRuntimeServiceImpl::ApplySandboxResources(const runtime::v1alpha2::LinuxPodSandboxConfig * /*lc*/,
+                                                  host_config *hc,
+                                                  Errors & /*error*/)
 {
     hc->memory_swap = CRIRuntimeService::Constants::DefaultMemorySwap;
     hc->cpu_shares = CRIRuntimeService::Constants::DefaultSandboxCPUshares;
@@ -178,7 +175,7 @@ void CRIRuntimeServiceImpl::MergeSecurityContextToHostConfig(const runtime::v1al
         error.Errorf("failed to generate security options for sandbox %s", c.metadata().name().c_str());
         return;
     }
-    if (securityOpts.size() > 0) {
+    if (!securityOpts.empty()) {
         char **tmp_security_opt = nullptr;
 
         if (securityOpts.size() > (SIZE_MAX / sizeof(char *)) - hc->security_opt_len) {
@@ -193,8 +190,8 @@ void CRIRuntimeServiceImpl::MergeSecurityContextToHostConfig(const runtime::v1al
             return;
         }
         hc->security_opt = tmp_security_opt;
-        for (size_t i = 0; i < securityOpts.size(); i++) {
-            hc->security_opt[hc->security_opt_len] = util_strdup_s(securityOpts[i].c_str());
+        for (const auto &securityOpt : securityOpts) {
+            hc->security_opt[hc->security_opt_len] = util_strdup_s(securityOpt.c_str());
             hc->security_opt_len++;
         }
     }
@@ -252,7 +249,7 @@ void CRIRuntimeServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alpha2::Pod
             error.Errorf("failed to generate security options for sandbox %s", c.metadata().name().c_str());
             return;
         }
-        if (securityOpts.size() > 0) {
+        if (!securityOpts.empty()) {
             char **tmp_security_opt = nullptr;
 
             if (securityOpts.size() > (SIZE_MAX / sizeof(char *)) - hc->security_opt_len) {
@@ -267,8 +264,8 @@ void CRIRuntimeServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alpha2::Pod
                 return;
             }
             hc->security_opt = tmp_security_opt;
-            for (size_t i = 0; i < securityOpts.size(); i++) {
-                hc->security_opt[hc->security_opt_len] = util_strdup_s(securityOpts[i].c_str());
+            for (const auto &securityOpt : securityOpts) {
+                hc->security_opt[hc->security_opt_len] = util_strdup_s(securityOpt.c_str());
                 hc->security_opt_len++;
             }
         }
@@ -313,11 +310,11 @@ void CRIRuntimeServiceImpl::SetupSandboxFiles(const std::string &resolvPath,
     }
 }
 
-container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
+auto CRIRuntimeServiceImpl::PackCreateContainerRequest(
     const runtime::v1alpha2::PodSandboxConfig &config,
     const std::string &image, host_config *hostconfig,
     container_config *custom_config,
-    const std::string &runtimeHandler, Errors &error)
+    const std::string &runtimeHandler, Errors &error) -> container_create_request *
 {
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perror = nullptr;
@@ -356,11 +353,11 @@ error_out:
     return nullptr;
 }
 
-container_create_request *CRIRuntimeServiceImpl::GenerateSandboxCreateContainerRequest(
+auto CRIRuntimeServiceImpl::GenerateSandboxCreateContainerRequest(
     const runtime::v1alpha2::PodSandboxConfig &config,
     const std::string &image, std::string &jsonCheckpoint,
     const std::string &runtimeHandler,
-    Errors &error)
+    Errors &error) -> container_create_request *
 {
     container_create_request *create_request = nullptr;
     host_config *hostconfig = nullptr;
@@ -416,12 +413,12 @@ cleanup:
     return create_request;
 }
 
-std::string CRIRuntimeServiceImpl::CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                          const std::string &image, std::string &jsonCheckpoint,
-                                                          const std::string &runtimeHandler,
-                                                          Errors &error)
+auto CRIRuntimeServiceImpl::CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config,
+                                                   const std::string &image, std::string &jsonCheckpoint,
+                                                   const std::string &runtimeHandler,
+                                                   Errors &error) -> std::string
 {
-    std::string response_id { "" };
+    std::string response_id;
     container_create_request *create_request =
         GenerateSandboxCreateContainerRequest(config, image, jsonCheckpoint, runtimeHandler, error);
     if (error.NotEmpty()) {
@@ -430,7 +427,7 @@ std::string CRIRuntimeServiceImpl::CreateSandboxContainer(const runtime::v1alpha
 
     container_create_response *create_response = nullptr;
     if (m_cb->container.create(create_request, &create_response) != 0) {
-        if (create_response != nullptr && create_response->errmsg) {
+        if (create_response != nullptr && (create_response->errmsg != nullptr)) {
             error.SetError(create_response->errmsg);
         } else {
             error.SetError("Failed to call create container callback");
@@ -456,7 +453,7 @@ void CRIRuntimeServiceImpl::StartSandboxContainer(const std::string &response_id
     container_start_response *start_response = nullptr;
     int ret = m_cb->container.start(start_request, &start_response, -1, nullptr, nullptr);
     if (ret != 0) {
-        if (start_response != nullptr && start_response->errmsg) {
+        if (start_response != nullptr && (start_response->errmsg != nullptr)) {
             error.SetError(start_response->errmsg);
         } else {
             error.SetError("Failed to call start container callback");
@@ -483,7 +480,7 @@ void CRIRuntimeServiceImpl::SetupUserDefinedNetworkPlane(const runtime::v1alpha2
         goto cleanup;
     }
     for (size_t i = 0; i < len; i++) {
-        if (networks[i] && networks[i]->name && networks[i]->interface &&
+        if ((networks[i] != nullptr) && (networks[i]->name != nullptr) && (networks[i]->interface != nullptr) &&
             strcmp(networks[i]->name, Network::DEFAULT_NETWORK_PLANE_NAME.c_str()) != 0) {
             INFO("SetupPod net: %s", networks[i]->name);
             m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(), networks[i]->interface, response_id,
@@ -547,9 +544,9 @@ cleanup:
     free_container_inspect(inspect_data);
 }
 
-std::string CRIRuntimeServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                 const std::string &runtimeHandler,
-                                                 Errors &error)
+auto CRIRuntimeServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config,
+                                          const std::string &runtimeHandler,
+                                          Errors &error) -> std::string
 {
     std::string response_id;
     std::string jsonCheckpoint;
@@ -599,9 +596,10 @@ cleanup:
     return response_id;
 }
 
-int CRIRuntimeServiceImpl::GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork, std::string &name,
-                                                  std::string &ns, std::string &realSandboxID,
-                                                  std::map<std::string, std::string> &stdAnnos, Errors &error)
+auto CRIRuntimeServiceImpl::GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork,
+                                                   std::string &name,
+                                                   std::string &ns, std::string &realSandboxID,
+                                                   std::map<std::string, std::string> &stdAnnos, Errors &error) -> int
 {
     Errors statusErr;
 
@@ -632,7 +630,7 @@ int CRIRuntimeServiceImpl::GetRealSandboxIDToStop(const std::string &podSandboxI
     return 0;
 }
 
-int CRIRuntimeServiceImpl::StopAllContainersInSandbox(const std::string &realSandboxID, Errors &error)
+auto CRIRuntimeServiceImpl::StopAllContainersInSandbox(const std::string &realSandboxID, Errors &error) -> int
 {
     int ret = 0;
     container_list_request *list_request = nullptr;
@@ -694,9 +692,9 @@ cleanup:
     return ret;
 }
 
-int CRIRuntimeServiceImpl::TearDownPodCniNetwork(const std::string &realSandboxID, std::vector<std::string> &errlist,
-                                                 std::map<std::string, std::string> &stdAnnos, const std::string &ns,
-                                                 const std::string &name, Errors &error)
+auto CRIRuntimeServiceImpl::TearDownPodCniNetwork(const std::string &realSandboxID, std::vector<std::string> &errlist,
+                                                  std::map<std::string, std::string> &stdAnnos, const std::string &ns,
+                                                  const std::string &name, Errors &error) -> int
 {
     int ret = 0;
     cri_pod_network_element **networks = nullptr;
@@ -717,7 +715,7 @@ int CRIRuntimeServiceImpl::TearDownPodCniNetwork(const std::string &realSandboxI
         goto cleanup;
     }
     for (size_t i = 0; i < len; i++) {
-        if (networks[i] && networks[i]->name && networks[i]->interface &&
+        if ((networks[i] != nullptr) && (networks[i]->name != nullptr) && (networks[i]->interface != nullptr) &&
             strcmp(networks[i]->name, Network::DEFAULT_NETWORK_PLANE_NAME.c_str()) != 0) {
             Errors tmpErr;
             m_pluginManager->TearDownPod(ns, name, networks[i]->interface, inspect_data->id, stdAnnos, tmpErr);
@@ -733,9 +731,9 @@ cleanup:
     return ret;
 }
 
-int CRIRuntimeServiceImpl::ClearCniNetwork(const std::string &realSandboxID, bool hostNetwork, const std::string &ns,
-                                           const std::string &name, std::vector<std::string> &errlist,
-                                           std::map<std::string, std::string> &stdAnnos, Errors &error)
+auto CRIRuntimeServiceImpl::ClearCniNetwork(const std::string &realSandboxID, bool hostNetwork, const std::string &ns,
+                                            const std::string &name, std::vector<std::string> &errlist,
+                                            std::map<std::string, std::string> &stdAnnos, Errors & /*error*/) -> int
 {
     Errors networkErr;
 
@@ -759,9 +757,12 @@ int CRIRuntimeServiceImpl::ClearCniNetwork(const std::string &realSandboxID, boo
 
 void CRIRuntimeServiceImpl::StopPodSandbox(const std::string &podSandboxID, Errors &error)
 {
-    std::string name, ns, realSandboxID;
+    std::string name;
+    std::string ns;
+    std::string realSandboxID;
     bool hostNetwork = false;
-    Errors statusErr, networkErr;
+    Errors statusErr;
+    Errors networkErr;
     std::map<std::string, std::string> stdAnnos;
     std::vector<std::string> errlist;
 
@@ -776,15 +777,15 @@ void CRIRuntimeServiceImpl::StopPodSandbox(const std::string &podSandboxID, Erro
         return;
     }
 
-    if (GetRealSandboxIDToStop(podSandboxID, hostNetwork, name, ns, realSandboxID, stdAnnos, error)) {
+    if (GetRealSandboxIDToStop(podSandboxID, hostNetwork, name, ns, realSandboxID, stdAnnos, error) != 0) {
         return;
     }
 
-    if (StopAllContainersInSandbox(realSandboxID, error)) {
+    if (StopAllContainersInSandbox(realSandboxID, error) != 0) {
         return;
     }
 
-    if (ClearCniNetwork(realSandboxID, hostNetwork, ns, name, errlist, stdAnnos, error)) {
+    if (ClearCniNetwork(realSandboxID, hostNetwork, ns, name, errlist, stdAnnos, error) != 0) {
         return;
     }
 
@@ -797,7 +798,7 @@ void CRIRuntimeServiceImpl::StopPodSandbox(const std::string &podSandboxID, Erro
 
 void CRIRuntimeServiceImpl::StopContainerHelper(const std::string &containerID, Errors &error)
 {
-    int ret;
+    int ret = 0;
     container_stop_request *request { nullptr };
     container_stop_response *response { nullptr };
     // Termination grace period
@@ -827,7 +828,8 @@ cleanup:
     free_container_stop_response(response);
 }
 
-int CRIRuntimeServiceImpl::DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors)
+auto CRIRuntimeServiceImpl::DoRemovePodSandbox(const std::string &realSandboxID,
+                                               std::vector<std::string> &errors) -> int
 {
     int ret = 0;
     container_delete_request *remove_request { nullptr };
@@ -853,7 +855,7 @@ int CRIRuntimeServiceImpl::DoRemovePodSandbox(const std::string &realSandboxID, 
         // removed from docker or doesn't exist
         ClearNetworkReady(realSandboxID);
     } else {
-        if (remove_response != nullptr && remove_response->errmsg) {
+        if (remove_response != nullptr && (remove_response->errmsg != nullptr)) {
             errors.push_back(remove_response->errmsg);
         } else {
             errors.push_back("Failed to call remove container callback");
@@ -863,8 +865,8 @@ int CRIRuntimeServiceImpl::DoRemovePodSandbox(const std::string &realSandboxID, 
     free_container_delete_response(remove_response);
     return ret;
 }
-int CRIRuntimeServiceImpl::RemoveAllContainersInSandbox(const std::string &realSandboxID,
-                                                        std::vector<std::string> &errors)
+auto CRIRuntimeServiceImpl::RemoveAllContainersInSandbox(const std::string &realSandboxID,
+                                                         std::vector<std::string> &errors) -> int
 {
     int ret = 0;
     container_list_request *list_request { nullptr };
@@ -944,11 +946,11 @@ void CRIRuntimeServiceImpl::RemovePodSandbox(const std::string &podSandboxID, Er
         }
     }
 
-    if (RemoveAllContainersInSandbox(realSandboxID, errors)) {
+    if (RemoveAllContainersInSandbox(realSandboxID, errors) != 0) {
         goto cleanup;
     }
 
-    if (DoRemovePodSandbox(realSandboxID, errors)) {
+    if (DoRemovePodSandbox(realSandboxID, errors) != 0) {
         goto cleanup;
     }
 
@@ -956,9 +958,9 @@ cleanup:
     error.SetAggregate(errors);
 }
 
-bool CRIRuntimeServiceImpl::IsDefaultNetworkPlane(cri_pod_network_element *network)
+auto CRIRuntimeServiceImpl::IsDefaultNetworkPlane(cri_pod_network_element *network) -> bool
 {
-    if (network && network->name && network->interface &&
+    if ((network != nullptr) && (network->name != nullptr) && (network->interface != nullptr) &&
         strcmp(network->name, Network::DEFAULT_NETWORK_PLANE_NAME.c_str()) != 0) {
         return true;
     }
@@ -981,7 +983,7 @@ void CRIRuntimeServiceImpl::PodSandboxStatusToGRPC(container_inspect *inspect, c
     int64_t createdAt {};
     runtime::v1alpha2::NamespaceOption *options { nullptr };
 
-    if (inspect->id) {
+    if (inspect->id != nullptr) {
         podStatus->set_id(inspect->id);
     }
 
@@ -991,13 +993,13 @@ void CRIRuntimeServiceImpl::PodSandboxStatusToGRPC(container_inspect *inspect, c
     }
     podStatus->set_created_at(createdAt);
 
-    if (inspect->state && inspect->state->running) {
+    if ((inspect->state != nullptr) && inspect->state->running) {
         podStatus->set_state(runtime::v1alpha2::SANDBOX_READY);
     } else {
         podStatus->set_state(runtime::v1alpha2::SANDBOX_NOTREADY);
     }
 
-    if (inspect->config) {
+    if (inspect->config != nullptr) {
         CRIHelpers::ExtractLabels(inspect->config->labels, *podStatus->mutable_labels());
         CRIHelpers::ExtractAnnotations(inspect->config->annotations, *podStatus->mutable_annotations());
     }
@@ -1015,7 +1017,7 @@ void CRIRuntimeServiceImpl::PodSandboxStatusToGRPC(container_inspect *inspect, c
         return;
     }
 
-    if (inspect->name) {
+    if (inspect->name != nullptr) {
         CRINaming::ParseSandboxName(inspect->name, *podStatus->mutable_metadata(), error);
         if (error.NotEmpty()) {
             return;
@@ -1023,8 +1025,8 @@ void CRIRuntimeServiceImpl::PodSandboxStatusToGRPC(container_inspect *inspect, c
     }
 }
 
-std::string CRIRuntimeServiceImpl::GetIPFromPlugin(container_inspect *inspect, std::string networkInterface,
-                                                   Errors &error)
+auto CRIRuntimeServiceImpl::GetIPFromPlugin(container_inspect *inspect, const std::string &networkInterface,
+                                            Errors &error) -> std::string
 {
     if (inspect == nullptr || inspect->id == nullptr || inspect->name == nullptr) {
         error.SetError("Empty arguments");
@@ -1038,7 +1040,7 @@ std::string CRIRuntimeServiceImpl::GetIPFromPlugin(container_inspect *inspect, s
     }
     std::string cid = inspect->id;
     Network::PodNetworkStatus status;
-    if (networkInterface == "") {
+    if (networkInterface.empty()) {
         m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(),
                                              Network::DEFAULT_NETWORK_INTERFACE_NAME, cid, status, error);
     } else {
@@ -1052,13 +1054,13 @@ std::string CRIRuntimeServiceImpl::GetIPFromPlugin(container_inspect *inspect, s
     return status.GetIP();
 }
 
-std::string CRIRuntimeServiceImpl::GetIP(const std::string &podSandboxID, container_inspect *inspect,
-                                         const std::string &networkInterface, Errors &error)
+auto CRIRuntimeServiceImpl::GetIP(const std::string &podSandboxID, container_inspect *inspect,
+                                  const std::string &networkInterface, Errors &error) -> std::string
 {
     if (inspect == nullptr || inspect->network_settings == nullptr) {
         return "";
     }
-    if (SharesHostNetwork(inspect)) {
+    if (SharesHostNetwork(inspect) != 0) {
         // For sandboxes using host network, the shim is not responsible for reporting the IP.
         return "";
     }
@@ -1075,7 +1077,7 @@ std::string CRIRuntimeServiceImpl::GetIP(const std::string &podSandboxID, contai
         return ip;
     }
 
-    if (inspect->network_settings->ip_address) {
+    if (inspect->network_settings->ip_address != nullptr) {
         WARN("Use container inspect ip info: %s", error.GetCMessage());
         error.Clear();
         return inspect->network_settings->ip_address;
@@ -1085,8 +1087,8 @@ std::string CRIRuntimeServiceImpl::GetIP(const std::string &podSandboxID, contai
     return "";
 }
 
-std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> CRIRuntimeServiceImpl::PodSandboxStatus(
-    const std::string &podSandboxID, Errors &error)
+auto CRIRuntimeServiceImpl::PodSandboxStatus(
+    const std::string &podSandboxID, Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus>
 {
     container_inspect *inspect { nullptr };
     std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> podStatus(new runtime::v1alpha2::PodSandboxStatus);
@@ -1118,7 +1120,7 @@ void CRIRuntimeServiceImpl::ListPodSandboxToGRPC(container_list_response *respon
     for (size_t i = 0; i < response->containers_len; i++) {
         std::unique_ptr<runtime::v1alpha2::PodSandbox> pod(new runtime::v1alpha2::PodSandbox);
 
-        if (response->containers[i]->id) {
+        if (response->containers[i]->id != nullptr) {
             pod->set_id(response->containers[i]->id);
         }
         if (response->containers[i]->status == CONTAINER_STATUS_RUNNING) {
@@ -1193,7 +1195,7 @@ void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1alpha2::PodSandboxFi
                                            std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
                                            Errors &error)
 {
-    int ret;
+    int ret = 0;
     container_list_request *request { nullptr };
     container_list_response *response { nullptr };
     bool filterOutReadySandboxes { false };
@@ -1210,7 +1212,7 @@ void CRIRuntimeServiceImpl::ListPodSandbox(const runtime::v1alpha2::PodSandboxFi
 
     ret = m_cb->container.list(request, &response);
     if (ret != 0) {
-        if (response != nullptr && response->errmsg) {
+        if (response != nullptr && (response->errmsg != nullptr)) {
             error.SetError(response->errmsg);
         } else {
             error.SetError("Failed to call start container callback");
@@ -1229,7 +1231,7 @@ void CRIRuntimeServiceImpl::PortForward(const runtime::v1alpha2::PortForwardRequ
 {
 }
 
-bool CRIRuntimeServiceImpl::GetNetworkReady(const std::string &podSandboxID, Errors &error)
+auto CRIRuntimeServiceImpl::GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool
 {
     bool ready { false };
 

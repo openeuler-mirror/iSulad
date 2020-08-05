@@ -15,11 +15,11 @@
 #ifndef DAEMON_ENTRY_CRI_CRI_SECURITY_CONTEXT_H
 #define DAEMON_ENTRY_CRI_CRI_SECURITY_CONTEXT_H
 
-#include <string>
 #include "api.pb.h"
 #include "errors.h"
-#include "isula_libutils/host_config.h"
 #include "isula_libutils/container_config.h"
+#include "isula_libutils/host_config.h"
+#include <string>
 
 namespace CRISecurity {
 void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, container_config *config,
