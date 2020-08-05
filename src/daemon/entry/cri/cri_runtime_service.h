@@ -149,11 +149,10 @@ private:
                                       Errors &error);
 
     void PackContainerStatsFilesystemUsage(const char *id, const char *image_type,
-                                           std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
-                                           Errors &error);
+                                           std::unique_ptr<runtime::v1alpha2::ContainerStats> &container);
 
     void ContainerStatsToGRPC(container_stats_response *response,
-                              std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *pods, Errors &error);
+                              std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error);
 
     void ContainerStatusToGRPC(container_inspect *inspect,
                                std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error);
@@ -175,7 +174,7 @@ private:
     void MakeSandboxIsuladConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc,
                                  container_config *container_config, Errors &error);
 
-    void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_config *container_config,
+    void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_config *cConfig,
                              Errors &error);
 
     void GetContainerLogPath(const std::string &containerID, char **path, char **realPath, Errors &error);
@@ -196,7 +195,8 @@ private:
     runtime::v1alpha2::NamespaceMode SharesHostPid(container_inspect *inspect);
     runtime::v1alpha2::NamespaceMode SharesHostIpc(container_inspect *inspect);
 
-    void GetContainerTimeStamps(container_inspect *inspect, int64_t *createdAt, int64_t *startedAt, int64_t *finishedAt,
+    void GetContainerTimeStamps(container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
+                                int64_t *finishedAt,
                                 Errors &err);
     int ValidateExecRequest(const runtime::v1alpha2::ExecRequest &req, Errors &error);
 
