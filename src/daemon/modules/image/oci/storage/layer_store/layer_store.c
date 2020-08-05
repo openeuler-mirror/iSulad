@@ -2275,3 +2275,10 @@ out:
 
     return ret;
 }
+
+container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char *id)
+{
+    return graphdriver_get_metadata(id);
+}
+
+

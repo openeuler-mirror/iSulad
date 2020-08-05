@@ -419,7 +419,7 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
         goto out;
     }
 
-    nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, hash);
+    nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, util_valid_str(hash) ? hash : "base");
     if (nret < 0 || (size_t)nret >= sizeof(metadata_file)) {
         ERROR("Get metadata file with hash:%s path failed", hash);
         goto out;
@@ -815,6 +815,7 @@ static int remove_metadata(struct device_set *devset, const char *hash)
         return -1;
     }
 
+    DEBUG("devmapper: start to remove metadata file:%s", fname);
     if (util_path_remove(fname) != 0) {
         ERROR("devmapper: remove metadata file %s failed", hash);
         ret = -1;
@@ -937,6 +938,7 @@ static void cleanup_deleted_devices(struct device_set *devset)
     size_t i;
 
     if (devset->nr_deleted_devices == 0) {
+        DEBUG("devmapper: no devices to delete");
         return;
     }
 
@@ -948,6 +950,23 @@ static void cleanup_deleted_devices(struct device_set *devset)
     ids_len = util_array_len((const char **)idsarray);
 
     for (i = 0; i < ids_len; i++) {
+        devmapper_device_info_t *device_info = NULL;
+
+        device_info = lookup_device(devset, idsarray[i]);
+        if (device_info == NULL || device_info->info == NULL) {
+            ERROR("devmapper: no such device with hash(%s)", idsarray[i]);
+            continue;
+        }
+
+        if (!device_info->info->deleted) {
+            devmapper_device_info_ref_dec(device_info);
+            device_info = NULL;
+            DEBUG("No need to delete device with hash(%s)", idsarray[i]);
+            continue;
+        }
+
+        devmapper_device_info_ref_dec(device_info);
+        device_info = NULL;
         if (delete_device(idsarray[i], false, devset) != 0) {
             WARN("devmapper:Deletion of device: \"%s\" failed", idsarray[i]);
         }
@@ -1429,6 +1448,7 @@ static image_devmapper_device_info *create_register_device(struct device_set *de
     }
 
     if (close_transaction(devset) != 0) {
+        ERROR("devmapper: close transaction failed, start to delete device with hash(%s)", hash);
         if (unregister_device(devset, hash) != 0) {
             DEBUG("devmapper: unregister device %s failed", hash);
         }
@@ -1517,6 +1537,7 @@ static int create_register_snap_device(struct device_set *devset, image_devmappe
     }
 
     if (close_transaction(devset) != 0) {
+        ERROR("devmapper: close transaction failed, start to delete device with hash(%s)", hash);
         ret = -1;
         (void)unregister_device(devset, hash);
         (void)dev_delete_device(pool_dev, device_id);
@@ -2171,6 +2192,7 @@ static int delete_transaction(struct device_set *devset, image_devmapper_device_
     }
 
     if (nret == 0) {
+        ERROR("devmapper: close transaction failed, start to delete device with hash(%s)", info->hash);
         if (unregister_device(devset, info->hash) != 0) {
             ERROR("devmapper: unregiste device:%s failed", info->hash);
             ret = -1;
@@ -2903,7 +2925,7 @@ bool has_device(const char *hash, struct device_set *devset)
     bool res = false;
     devmapper_device_info_t *device_info = NULL;
 
-    if (hash == NULL || devset == NULL) {
+    if (!util_valid_str(hash) || devset == NULL) {
         ERROR("devmapper: invalid input params to judge device metadata exists");
         return false;
     }
@@ -2930,7 +2952,6 @@ free_out:
 int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
 {
     int ret = 0;
-    devmapper_device_info_t *device_info = NULL;
 
     if (devset == NULL || hash == NULL) {
         ERROR("Invalid input params");
@@ -2942,13 +2963,6 @@ int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
         return -1;
     }
 
-    device_info = lookup_device(devset, hash);
-    if (device_info == NULL) {
-        ERROR("devmapper: lookup device \"%s\" failed", hash);
-        ret = -1;
-        goto free_out;
-    }
-
     if (do_delete_device(devset, hash, sync_delete) != 0) {
         ERROR("devmapper: do delete device: \"%s\" failed", hash);
         ret = -1;
@@ -2956,7 +2970,6 @@ int delete_device(const char *hash, bool sync_delete, struct device_set *devset)
     }
 
 free_out:
-    devmapper_device_info_ref_dec(device_info);
     if (pthread_rwlock_unlock(&devset->devmapper_driver_rwlock)) {
         ERROR("unlock devmapper conf failed");
         ret = -1;

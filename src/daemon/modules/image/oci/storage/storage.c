@@ -1602,3 +1602,22 @@ out:
     free(checked_layer_data_path);
     return ret;
 }
+
+container_inspect_graph_driver *storage_get_metadata_by_container_id(const char *id)
+{
+    storage_rootfs *rootfs_info = NULL;
+    container_inspect_graph_driver *container_metadata = NULL;
+
+    rootfs_info = rootfs_store_get_rootfs(id);
+    if (rootfs_info == NULL) {
+        ERROR("Failed to get rootfs %s info", id);
+        return NULL;
+    }
+
+    container_metadata = layer_store_get_metadata_by_layer_id(rootfs_info->layer);
+    free_storage_rootfs(rootfs_info);
+
+    return container_metadata;
+}
+
+

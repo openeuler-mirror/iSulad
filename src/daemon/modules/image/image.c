@@ -1908,7 +1908,7 @@ void free_im_fs_info_response(im_fs_info_response *ptr)
     free(ptr);
 }
 
-container_inspect_graph_driver *im_graphdriver_get_metadata(const char *id)
+container_inspect_graph_driver *im_graphdriver_get_metadata_by_container_id(const char *id)
 {
     if (id == NULL) {
         ERROR("Invalid input arguments for get driver metadata of container");
@@ -1916,7 +1916,7 @@ container_inspect_graph_driver *im_graphdriver_get_metadata(const char *id)
     }
 
 #ifdef ENABLE_OCI_IMAGE
-    return graphdriver_get_metadata(id);
+    return storage_get_metadata_by_container_id(id);
 #else
     return NULL;
 #endif

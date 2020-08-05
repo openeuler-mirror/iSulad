@@ -310,7 +310,7 @@ void free_im_export_request(im_export_request *ptr);
 
 int im_resolv_image_name(const char *image_type, const char *image_name, char **resolved_name);
 
-container_inspect_graph_driver *im_graphdriver_get_metadata(const char *id);
+container_inspect_graph_driver *im_graphdriver_get_metadata_by_container_id(const char *id);
 
 struct graphdriver_status *im_graphdriver_get_status(void);
 
