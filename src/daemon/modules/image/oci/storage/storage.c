@@ -1500,13 +1500,13 @@ static bool do_storage_integration_check(const char *path, map_t *checked_layers
             if (strcmp(all_rootfs->rootfs[j]->image, all_images->images[i]->id) != 0) {
                 continue;
             }
-            INFO("Remove container: %s related invalid image", all_rootfs->rootfs[j]->id);
+            ERROR("Remove container: %s related invalid image", all_rootfs->rootfs[j]->id);
             nret = do_storage_rootfs_delete(all_rootfs->rootfs[j]->id);
             if (nret != 0) {
                 ERROR("Failed to delete container: %s with invalid image: %s", all_rootfs->rootfs[j]->id, all_images->images[i]->id);
             }
         }
-        INFO("Remove unintegration image: %s", all_images->images[i]->id);
+        ERROR("Remove unintegration image: %s", all_images->images[i]->id);
         nret = do_storage_img_delete(all_images->images[i]->id, true);
         if (nret != 0) {
             ERROR("Failed to delete invalid image: %s", all_images->images[i]->id);
@@ -1518,7 +1518,7 @@ static bool do_storage_integration_check(const char *path, map_t *checked_layers
         if (image_store_exists(all_rootfs->rootfs[j]->image)) {
             continue;
         }
-        WARN("Delete container %s due to no related image", all_rootfs->rootfs[j]->id);
+        ERROR("Delete container %s due to no related image", all_rootfs->rootfs[j]->id);
         nret = do_storage_rootfs_delete(all_rootfs->rootfs[j]->id);
         if (nret != 0) {
             ERROR("Failed to delete container: %s with unfound image: %s", all_rootfs->rootfs[j]->id, all_rootfs->rootfs[j]->image);

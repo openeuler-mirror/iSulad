@@ -593,6 +593,22 @@ static uint64_t get_base_device_size(struct device_set *devset)
     return res;
 }
 
+static bool util_valid_device_hash(const char *hash)
+{
+    char *patten = "^[a-f0-9]{64}$";
+
+    if (hash == NULL) {
+        ERROR("invalid NULL param");
+        return false;
+    }
+
+    if (strcmp(hash, "base") == 0) {
+        return true;
+    }
+
+    return util_reg_match(patten, hash) == 0;
+}
+
 static int device_file_walk(struct device_set *devset)
 {
     int ret = 0;
@@ -626,7 +642,11 @@ static int device_file_walk(struct device_set *devset)
         (void)memset(fname, 0, sizeof(fname));
         pathname_len = snprintf(fname, PATH_MAX, "%s/%s", metadir, entry->d_name);
         if (pathname_len < 0 || pathname_len >= PATH_MAX) {
-            WARN("Pathname too long");
+            ERROR("Pathname too long");
+            continue;
+        }
+
+        if (strcmp(entry->d_name, DEVICE_SET_METAFILE) == 0 || strcmp(entry->d_name, TRANSACTION_METADATA) == 0) {
             continue;
         }
 
@@ -637,16 +657,15 @@ static int device_file_walk(struct device_set *devset)
         }
 
         if (S_ISDIR(st.st_mode)) {
-            DEBUG("devmapper: skipping dir");
+            DEBUG("Walk metadata file to skip dir:%s", fname);
             continue;
         }
 
-        if (util_has_suffix(entry->d_name, ".migrated")) {
-            DEBUG("devmapper: skipping file %s", entry->d_name);
-            continue;
-        }
-
-        if (strcmp(entry->d_name, DEVICE_SET_METAFILE) == 0 || strcmp(entry->d_name, TRANSACTION_METADATA) == 0) {
+        if (!util_valid_device_hash(entry->d_name)) {
+            ERROR("Remove device metadata file:%s related invalid device file", entry->d_name);
+            if (util_path_remove(fname) != 0) {
+                ERROR("Failed to delete device metadata file:%s with invalid name", fname);
+            }
             continue;
         }
 
@@ -1814,6 +1833,7 @@ static int create_file_system(struct device_set *devset, image_devmapper_device_
 
     dev_fname = dev_name(devset, info);
     if (dev_fname == NULL) {
+        ERROR("devmapper: get dev name failed");
         ret = -1;
         goto out;
     }
@@ -1824,6 +1844,7 @@ static int create_file_system(struct device_set *devset, image_devmapper_device_
     }
 
     if (save_base_device_filesystem(devset, devset->filesystem) != 0) {
+        ERROR("devmapper; save base device filesystem:%s failed", devset->filesystem);
         ret = -1;
         goto out;
     }
