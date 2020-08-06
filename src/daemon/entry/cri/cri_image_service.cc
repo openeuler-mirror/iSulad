@@ -17,18 +17,18 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
-#include <unistd.h>
 #include <grpc++/grpc++.h>
+#include <unistd.h>
 
-#include "isula_libutils/log.h"
-#include "utils.h"
 #include "cri_helpers.h"
-#include "events_sender_api.h"
-#include "service_image_api.h"
 #include "err_msg.h"
+#include "events_sender_api.h"
+#include "isula_libutils/log.h"
+#include "service_image_api.h"
+#include "utils.h"
 
 static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {
@@ -67,12 +67,11 @@ static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<r
         image->set_username(element->username);
     }
 
-    return;
 }
 
-int CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
-                                                const runtime::v1alpha2::AuthConfig *auth, im_pull_request **request,
-                                                Errors &error)
+auto CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                 const runtime::v1alpha2::AuthConfig *auth, im_pull_request **request,
+                                                 Errors &error) -> int
 {
     im_pull_request *tmpreq = (im_pull_request *)util_common_calloc_s(sizeof(im_pull_request));
     if (tmpreq == nullptr) {
@@ -114,8 +113,9 @@ int CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageSp
     return 0;
 }
 
-int CRIImageServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter, im_list_request **request,
-                                                Errors &error)
+auto CRIImageServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter,
+                                                 im_list_request **request,
+                                                 Errors &error) -> int
 {
     im_list_request *tmpreq = (im_list_request *)util_common_calloc_s(sizeof(im_list_request));
     if (tmpreq == nullptr) {
@@ -162,12 +162,12 @@ void CRIImageServiceImpl::ListImages(const runtime::v1alpha2::ImageFilter &filte
     im_list_response *response { nullptr };
 
     int ret = list_request_from_grpc(&filter, &request, error);
-    if (ret) {
+    if (ret != 0) {
         goto cleanup;
     }
 
     ret = im_list_images(request, &response);
-    if (ret) {
+    if (ret != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
         } else {
@@ -182,11 +182,10 @@ cleanup:
     DAEMON_CLEAR_ERRMSG();
     free_im_list_request(request);
     free_im_list_response(response);
-    return;
 }
 
-int CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
-                                                  im_status_request **request, Errors &error)
+auto CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                   im_status_request **request, Errors &error) -> int
 {
     im_status_request *tmpreq = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
     if (tmpreq == nullptr) {
@@ -204,8 +203,8 @@ int CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::Image
     return 0;
 }
 
-std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::status_image_to_grpc(im_status_response *response,
-                                                                                    Errors &error)
+auto CRIImageServiceImpl::status_image_to_grpc(im_status_response *response,
+                                               Errors & /*error*/) -> std::unique_ptr<runtime::v1alpha2::Image>
 {
     imagetool_image_status *image_info = response->image_info;
     if (image_info == nullptr) {
@@ -227,8 +226,8 @@ std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::status_image_to_g
     return image;
 }
 
-std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
-                                                                           Errors &error)
+auto CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
+                                      Errors &error) -> std::unique_ptr<runtime::v1alpha2::Image>
 {
     im_status_request *request { nullptr };
     im_status_response *response { nullptr };
@@ -258,10 +257,10 @@ cleanup:
     return out;
 }
 
-std::string CRIImageServiceImpl::PullImage(const runtime::v1alpha2::ImageSpec &image,
-                                           const runtime::v1alpha2::AuthConfig &auth, Errors &error)
+auto CRIImageServiceImpl::PullImage(const runtime::v1alpha2::ImageSpec &image,
+                                    const runtime::v1alpha2::AuthConfig &auth, Errors &error) -> std::string
 {
-    std::string out_str { "" };
+    std::string out_str;
     im_pull_request *request { nullptr };
     im_pull_response *response { nullptr };
 
@@ -292,8 +291,8 @@ cleanup:
     return out_str;
 }
 
-int CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_rmi_request **request,
-                                                  Errors &error)
+auto CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_rmi_request **request,
+                                                   Errors &error) -> int
 {
     im_rmi_request *tmpreq = (im_rmi_request *)util_common_calloc_s(sizeof(im_rmi_request));
     if (tmpreq == nullptr) {
@@ -313,12 +312,12 @@ int CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::Image
 
 void CRIImageServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error)
 {
-    std::string out_str { "" };
+    std::string out_str;
     im_rmi_request *request { nullptr };
 
     DAEMON_CLEAR_ERRMSG();
 
-    if (remove_request_from_grpc(&image, &request, error)) {
+    if (remove_request_from_grpc(&image, &request, error) != 0) {
         goto cleanup;
     }
 
@@ -333,12 +332,11 @@ void CRIImageServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image,
 cleanup:
     DAEMON_CLEAR_ERRMSG();
     free_im_remove_request(request);
-    return;
 }
 
 void CRIImageServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
                                           std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *fs_infos,
-                                          Errors &error)
+                                          Errors & /*error*/)
 {
     imagetool_fs_info *got_fs_info = response->fs_info;
     if (got_fs_info == nullptr) {
@@ -396,7 +394,7 @@ void CRIImageServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alp
 {
     im_fs_info_response *response { nullptr };
 
-    if (im_get_filesystem_info(IMAGE_TYPE_OCI, &response)) {
+    if (im_get_filesystem_info(IMAGE_TYPE_OCI, &response) != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
         } else {
@@ -410,5 +408,4 @@ void CRIImageServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alp
 out:
     DAEMON_CLEAR_ERRMSG();
     free_im_fs_info_response(response);
-    return;
 }

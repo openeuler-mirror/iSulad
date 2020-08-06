@@ -15,19 +15,19 @@
 #ifndef DAEMON_ENTRY_CRI_CNI_NETWORK_PLUGIN_H
 #define DAEMON_ENTRY_CRI_CNI_NETWORK_PLUGIN_H
 
-#include <memory>
-#include <string>
 #include <map>
-#include <vector>
+#include <memory>
 #include <set>
+#include <string>
 #include <thread>
+#include <vector>
 
 #include <clibcni/api.h>
 
+#include "cri_runtime_service.h"
+#include "errors.h"
 #include "network_plugin.h"
 #include "utils.h"
-#include "errors.h"
-#include "cri_runtime_service.h"
 
 namespace Network {
 #define UNUSED(x) ((void)(x))
@@ -39,10 +39,10 @@ class CNINetwork {
 public:
     CNINetwork() = delete;
     CNINetwork(const CNINetwork &) = delete;
-    CNINetwork &operator=(const CNINetwork &) = delete;
+    auto operator=(const CNINetwork &) -> CNINetwork & = delete;
     CNINetwork(const std::string &name, struct cni_network_list_conf *netList);
     ~CNINetwork();
-    const std::string &GetName() const
+    auto GetName() const -> const std::string &
     {
         return m_name;
     }
@@ -54,26 +54,25 @@ public:
     {
         m_path = binDirs;
     }
-    std::string GetNetworkConfigJsonStr()
+    auto GetNetworkConfigJsonStr() -> std::string
     {
-        return m_networkConfig->bytes ? m_networkConfig->bytes : "";
+        return m_networkConfig->bytes != nullptr ? m_networkConfig->bytes : "";
     }
-    std::string GetNetworkType() const
+    auto GetNetworkType() const -> std::string
     {
-        return m_networkConfig->first_plugin_type ? m_networkConfig->first_plugin_type : "";
+        return m_networkConfig->first_plugin_type != nullptr ? m_networkConfig->first_plugin_type : "";
     }
-    std::string GetNetworkName() const
+    auto GetNetworkName() const -> std::string
     {
-        return m_networkConfig->first_plugin_name ? m_networkConfig->first_plugin_name : "";
+        return m_networkConfig->first_plugin_name != nullptr ? m_networkConfig->first_plugin_name : "";
     }
-    struct cni_network_list_conf *UpdateCNIConfList(struct cni_network_list_conf *newConf)
-    {
+    auto UpdateCNIConfList(struct cni_network_list_conf *newConf) -> struct cni_network_list_conf * {
         struct cni_network_list_conf *result = m_networkConfig;
         m_networkConfig = newConf;
         return result;
     }
 
-    char **GetPaths(Errors &err);
+    auto GetPaths(Errors &err) -> char **;
 
 private:
     std::string m_name;
@@ -95,9 +94,9 @@ public:
 
     void Event(const std::string &name, std::map<std::string, std::string> &details) override;
 
-    const std::string &Name() const override;
+    auto Name() const -> const std::string &override;
 
-    std::map<int, bool> *Capabilities() override;
+    auto Capabilities() -> std::map<int, bool> * override;
 
     void SetUpPod(const std::string &ns, const std::string &name,
                   const std::string &interfaceName, const std::string &podSandboxID,
@@ -105,7 +104,7 @@ public:
                   const std::map<std::string, std::string> &options, Errors &error) override;
 
     void TearDownPod(const std::string &ns, const std::string &name,
-                     const std::string &networkPlane, const std::string &podSandboxID,
+                     const std::string &interfaceName, const std::string &podSandboxID,
                      const std::map<std::string, std::string> &annotations, Errors &error) override;
 
     void GetPodNetworkStatus(const std::string &ns, const std::string &name, const std::string &interfaceName,
@@ -119,7 +118,7 @@ private:
     virtual void PlatformInit(Errors &error);
     virtual void SyncNetworkConfig();
 
-    virtual void GetDefaultCNINetwork(const std::string &pluginDir, std::vector<std::string> &binDirs, Errors &error);
+    virtual void GetDefaultCNINetwork(const std::string &confDir, std::vector<std::string> &binDirs, Errors &error);
 
     virtual void CheckInitialized(Errors &error);
 
@@ -143,15 +142,16 @@ private:
                                      const std::map<std::string, std::string> &options,
                                      struct runtime_conf **cni_rc, Errors &error);
 
-private:
+
     void RLockNetworkMap(Errors &error);
     void WLockNetworkMap(Errors &error);
     void UnlockNetworkMap(Errors &error);
     void SetDefaultNetwork(std::unique_ptr<CNINetwork> network, std::vector<std::string> &binDirs, Errors &err);
     void SetPodCidr(const std::string &podCidr);
-    int GetCNIConfFiles(const std::string &pluginDir, std::vector<std::string> &vect_files, Errors &err);
-    int LoadCNIConfigFileList(const std::string &elem, struct cni_network_list_conf **n_list);
-    int InsertConfNameToAllPanes(struct cni_network_list_conf *n_list, std::set<std::string> &allPanes, Errors &err);
+    static auto GetCNIConfFiles(const std::string &pluginDir, std::vector<std::string> &vect_files, Errors &err) -> int;
+    static auto LoadCNIConfigFileList(const std::string &elem, struct cni_network_list_conf **n_list) -> int;
+    static auto InsertConfNameToAllPanes(struct cni_network_list_conf *n_list, std::set<std::string> &allPanes,
+                                         Errors &err) -> int;
     void ResetCNINetwork(std::map<std::string, std::unique_ptr<CNINetwork>> &newNets, Errors &err);
     void UpdateDefaultNetwork();
 

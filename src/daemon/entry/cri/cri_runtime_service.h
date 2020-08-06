@@ -15,21 +15,21 @@
 #ifndef DAEMON_ENTRY_CRI_CRI_RUNTIME_SERVICE_H
 #define DAEMON_ENTRY_CRI_CRI_RUNTIME_SERVICE_H
 
-#include <string>
 #include <map>
-#include <vector>
 #include <memory>
 #include <pthread.h>
+#include <string>
+#include <vector>
 
-#include "checkpoint_handler.h"
-#include "network_plugin.h"
-#include "cri_services.h"
 #include "callback.h"
-#include "isula_libutils/container_inspect.h"
-#include "isula_libutils/host_config.h"
-#include "errors.h"
+#include "checkpoint_handler.h"
 #include "cri_image_service.h"
+#include "cri_services.h"
+#include "errors.h"
+#include "isula_libutils/container_inspect.h"
 #include "isula_libutils/cri_pod_network.h"
+#include "isula_libutils/host_config.h"
+#include "network_plugin.h"
 
 namespace CRIRuntimeService {
 class Constants {
@@ -60,36 +60,36 @@ class CRIRuntimeServiceImpl : public cri::RuntimeManager,
 public:
     CRIRuntimeServiceImpl();
     CRIRuntimeServiceImpl(const CRIRuntimeServiceImpl &) = delete;
-    CRIRuntimeServiceImpl &operator=(const CRIRuntimeServiceImpl &) = delete;
+    auto operator=(const CRIRuntimeServiceImpl &) -> CRIRuntimeServiceImpl & = delete;
 
     virtual ~CRIRuntimeServiceImpl() = default;
 
     void Init(Network::NetworkPluginConf mConf, const std::string &podSandboxImage, Errors &err);
 
-    std::string GetRealContainerOrSandboxID(const std::string &id, bool isSandbox, Errors &error);
+    auto GetRealContainerOrSandboxID(const std::string &id, bool isSandbox, Errors &error) -> std::string;
 
-    std::string GetContainerOrSandboxRuntime(const std::string &realID, Errors &error);
+    auto GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string;
 
-    container_inspect *InspectContainer(const std::string &containerID, Errors &err);
+    auto InspectContainer(const std::string &containerID, Errors &err) -> container_inspect *;
 
-    std::string GetNetNS(const std::string &podSandboxID, Errors &err);
+    auto GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string;
 
     void Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse,
                  Errors &error) override;
 
     void UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error) override;
 
-    std::unique_ptr<runtime::v1alpha2::RuntimeStatus> Status(Errors &error) override;
+    auto Status(Errors &error) -> std::unique_ptr<runtime::v1alpha2::RuntimeStatus> override;
 
-    std::string RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &runtimeHandler,
-                              Errors &error) override;
+    auto RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &runtimeHandler,
+                       Errors &error) -> std::string override;
 
     void StopPodSandbox(const std::string &podSandboxID, Errors &error) override;
 
     void RemovePodSandbox(const std::string &podSandboxID, Errors &error) override;
 
-    std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> PodSandboxStatus(const std::string &podSandboxID,
-                                                                          Errors &error) override;
+    auto PodSandboxStatus(const std::string &podSandboxID,
+                          Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> override;
 
     void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
                         std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error) override;
@@ -97,9 +97,10 @@ public:
     void PortForward(const runtime::v1alpha2::PortForwardRequest &req, runtime::v1alpha2::PortForwardResponse *resp,
                      Errors &error) override;
 
-    std::string CreateContainer(const std::string &podSandboxID,
-                                const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error) override;
+    auto CreateContainer(const std::string &podSandboxID,
+                         const runtime::v1alpha2::ContainerConfig &containerConfig,
+                         const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                         Errors &error) -> std::string override;
 
     void StartContainer(const std::string &containerID, Errors &error) override;
 
@@ -114,8 +115,8 @@ public:
                             std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats,
                             Errors &error) override;
 
-    std::unique_ptr<runtime::v1alpha2::ContainerStatus> ContainerStatus(const std::string &containerID,
-                                                                        Errors &error) override;
+    auto ContainerStatus(const std::string &containerID,
+                         Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStatus> override;
 
     void UpdateContainerResources(const std::string &containerID,
                                   const runtime::v1alpha2::LinuxContainerResources &resources, Errors &error) override;
@@ -129,18 +130,18 @@ public:
                 Errors &error) override;
 
 private:
-    void VersionResponseToGRPC(container_version_response *response, runtime::v1alpha2::VersionResponse *gResponse,
-                               Errors &error);
-    bool IsDefaultNetworkPlane(cri_pod_network_element *network);
+    void VersionResponseToGRPC(container_version_response *response, runtime::v1alpha2::VersionResponse *gResponse);
+
+    static auto IsDefaultNetworkPlane(cri_pod_network_element *network) -> bool;
     void SetSandboxStatusNetwork(container_inspect *inspect, const std::string &podSandboxID,
                                  std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error);
 
     void PodSandboxStatusToGRPC(container_inspect *inspect, const std::string &podSandboxID,
                                 std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error);
 
-    void ListPodSandboxToGRPC(container_list_response *response,
-                              std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
-                              bool filterOutReadySandboxes, Errors &error);
+    static void ListPodSandboxToGRPC(container_list_response *response,
+                                     std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
+                                     bool filterOutReadySandboxes, Errors &error);
 
     void ListContainersToGRPC(container_list_response *response,
                               std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *pods, Errors &error);
@@ -163,16 +164,16 @@ private:
     void ListContainersFromGRPC(const runtime::v1alpha2::ContainerFilter *filter, container_list_request **request,
                                 Errors &error);
 
-    void ListPodSandboxFromGRPC(const runtime::v1alpha2::PodSandboxFilter *filter, container_list_request **request,
-                                bool *filterOutReadySandboxes, Errors &error);
+    static void ListPodSandboxFromGRPC(const runtime::v1alpha2::PodSandboxFilter *filter, container_list_request **request,
+                                       bool *filterOutReadySandboxes, Errors &error);
 
-    void ApplySandboxResources(const runtime::v1alpha2::LinuxPodSandboxConfig *lc, host_config *hc, Errors &error);
+    static void ApplySandboxResources(const runtime::v1alpha2::LinuxPodSandboxConfig *lc, host_config *hc, Errors &error);
 
-    void ApplySandboxLinuxOptions(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, host_config *hc,
-                                  container_config *container_config, Errors &error);
+    static void ApplySandboxLinuxOptions(const runtime::v1alpha2::LinuxPodSandboxConfig &lc, host_config *hc,
+                                         container_config *custom_config, Errors &error);
 
     void MakeSandboxIsuladConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc,
-                                 container_config *container_config, Errors &error);
+                                 container_config *custom_config, Errors &error);
 
     void MakeContainerConfig(const runtime::v1alpha2::ContainerConfig &config, container_config *cConfig,
                              Errors &error);
@@ -183,58 +184,59 @@ private:
 
     void RemoveContainerLogSymlink(const std::string &containerID, Errors &error);
 
-    std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata);
+    auto MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata) -> std::string;
 
-    std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s,
-                                  const runtime::v1alpha2::ContainerConfig &c);
+    auto MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s,
+                           const runtime::v1alpha2::ContainerConfig &c) -> std::string;
 
     void modifyContainerNamespaceOptions(bool hasOpts, const runtime::v1alpha2::NamespaceOption &nsOpts, const char *ID,
                                          host_config *hconf, Errors &err);
 
-    runtime::v1alpha2::NamespaceMode SharesHostNetwork(container_inspect *inspect);
-    runtime::v1alpha2::NamespaceMode SharesHostPid(container_inspect *inspect);
-    runtime::v1alpha2::NamespaceMode SharesHostIpc(container_inspect *inspect);
+    static auto SharesHostNetwork(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
+    static auto SharesHostPid(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
+    static auto SharesHostIpc(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
 
     void GetContainerTimeStamps(container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
                                 int64_t *finishedAt,
                                 Errors &err);
-    int ValidateExecRequest(const runtime::v1alpha2::ExecRequest &req, Errors &error);
+    auto ValidateExecRequest(const runtime::v1alpha2::ExecRequest &req, Errors &error) -> int;
 
-    std::string BuildURL(const std::string &method, const std::string &token);
+    auto BuildURL(const std::string &method, const std::string &token) -> std::string;
 
-    int ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req, Errors &error);
+    auto ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req, Errors &error) -> int;
 
-    std::string ParseCheckpointProtocol(runtime::v1alpha2::Protocol protocol);
+    static auto ParseCheckpointProtocol(runtime::v1alpha2::Protocol protocol) -> std::string;
 
     void ConstructPodSandboxCheckpoint(const runtime::v1alpha2::PodSandboxConfig &config,
                                        cri::PodSandboxCheckpoint &checkpoint);
 
-    std::string GetIP(const std::string &podSandboxID, container_inspect *inspect, const std::string &networkInterface,
-                      Errors &error);
-    std::string GetIPFromPlugin(container_inspect *inspect, std::string networkInterface, Errors &error);
-    bool GetNetworkReady(const std::string &podSandboxID, Errors &error);
+    auto GetIP(const std::string &podSandboxID, container_inspect *inspect, const std::string &networkInterface,
+               Errors &error) -> std::string;
+    auto GetIPFromPlugin(container_inspect *inspect, const std::string &networkInterface, Errors &error) -> std::string;
+    auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
     void SetNetworkReady(const std::string &podSandboxID, bool ready, Errors &error);
     void ClearNetworkReady(const std::string &podSandboxID);
-    bool EnsureSandboxImageExists(const std::string &image, Errors &error);
+    auto EnsureSandboxImageExists(const std::string &image, Errors &error) -> bool;
     void StopContainerHelper(const std::string &containerID, Errors &error);
-    void SetupSandboxFiles(const std::string &podID, const runtime::v1alpha2::PodSandboxConfig &config, Errors &error);
-    container_create_request *
+    static void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1alpha2::PodSandboxConfig &config,
+                                  Errors &error);
+    auto
     GenerateCreateContainerRequest(const std::string &realPodSandboxID,
                                    const runtime::v1alpha2::ContainerConfig &containerConfig,
                                    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                   const std::string &podSandboxRuntime, Errors &error);
-    host_config *GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                   Errors &error);
-    int PackCreateContainerHostConfigSecurityContext(const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                     host_config *hostconfig, Errors &error);
-    int PackCreateContainerHostConfigDevices(const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                             host_config *hostconfig, Errors &error);
-    container_config *GenerateCreateContainerCustomConfig(const std::string &realPodSandboxID,
-                                                          const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                          const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                                          Errors &error);
-    int PackContainerImageToStatus(container_inspect *inspect,
-                                   std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error);
+                                   const std::string &podSandboxRuntime, Errors &error) -> container_create_request *;
+    auto GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                           Errors &error) -> host_config *;
+    auto PackCreateContainerHostConfigSecurityContext(const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                      host_config *hostconfig, Errors &error) -> int;
+    auto PackCreateContainerHostConfigDevices(const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                              host_config *hostconfig, Errors &error) -> int;
+    auto GenerateCreateContainerCustomConfig(const std::string &realPodSandboxID,
+                                             const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                             const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                             Errors &error) -> container_config *;
+    auto PackContainerImageToStatus(container_inspect *inspect,
+                                    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error) -> int;
     void UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt, int64_t &startedAt,
                                      int64_t &finishedAt,
                                      std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus);
@@ -249,32 +251,36 @@ private:
                                       container_inspect *inspect_data, std::map<std::string, std::string> &stdAnnos,
                                       std::map<std::string, std::string> &options, Errors &error);
     void StartSandboxContainer(const std::string &response_id, Errors &error);
-    std::string CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image,
-                                       std::string &jsonCheckpoint, const std::string &runtimeHandler, Errors &error);
-    container_create_request *GenerateSandboxCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                                    const std::string &image,
-                                                                    std::string &jsonCheckpoint,
-                                                                    const std::string &runtimeHandler, Errors &error);
-    container_create_request *PackCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                         const std::string &image, host_config *hostconfig,
-                                                         container_config *container_config,
-                                                         const std::string &runtimeHandler, Errors &error);
-    int GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork, std::string &name, std::string &ns,
-                               std::string &realSandboxID, std::map<std::string, std::string> &stdAnnos, Errors &error);
-    int StopAllContainersInSandbox(const std::string &realSandboxID, Errors &error);
-    int TearDownPodCniNetwork(const std::string &realSandboxID, std::vector<std::string> &errlist,
-                              std::map<std::string, std::string> &stdAnnos, const std::string &ns,
-                              const std::string &name, Errors &error);
-    int ClearCniNetwork(const std::string &realSandboxID, bool hostNetwork, const std::string &ns,
-                        const std::string &name, std::vector<std::string> &errlist,
-                        std::map<std::string, std::string> &stdAnnos, Errors &error);
-    int RemoveAllContainersInSandbox(const std::string &realSandboxID, std::vector<std::string> &errors);
-    int DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors);
-    void MergeSecurityContextToHostConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc, Errors &error);
-    int PackContainerStatsFilter(const runtime::v1alpha2::ContainerStatsFilter *filter,
-                                 container_stats_request *request, Errors &error);
+    auto CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image,
+                                std::string &jsonCheckpoint, const std::string &runtimeHandler,
+                                Errors &error) -> std::string;
+    auto GenerateSandboxCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
+                                               const std::string &image,
+                                               std::string &jsonCheckpoint,
+                                               const std::string &runtimeHandler,
+                                               Errors &error) -> container_create_request *;
+    static auto PackCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
+                                           const std::string &image, host_config *hostconfig,
+                                           container_config *custom_config,
+                                           const std::string &runtimeHandler,
+                                           Errors &error) -> container_create_request *;
+    auto GetRealSandboxIDToStop(const std::string &podSandboxID, bool &hostNetwork, std::string &name, std::string &ns,
+                                std::string &realSandboxID, std::map<std::string, std::string> &stdAnnos, Errors &error) -> int;
+    auto StopAllContainersInSandbox(const std::string &realSandboxID, Errors &error) -> int;
+    auto TearDownPodCniNetwork(const std::string &realSandboxID, std::vector<std::string> &errlist,
+                               std::map<std::string, std::string> &stdAnnos, const std::string &ns,
+                               const std::string &name, Errors &error) -> int;
+    auto ClearCniNetwork(const std::string &realSandboxID, bool hostNetwork, const std::string &ns,
+                         const std::string &name, std::vector<std::string> &errlist,
+                         std::map<std::string, std::string> &stdAnnos, Errors &error) -> int;
+    auto RemoveAllContainersInSandbox(const std::string &realSandboxID, std::vector<std::string> &errors) -> int;
+    auto DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors) -> int;
+    static void MergeSecurityContextToHostConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc,
+                                                 Errors &error);
+    auto PackContainerStatsFilter(const runtime::v1alpha2::ContainerStatsFilter *filter,
+                                  container_stats_request *request, Errors &error) -> int;
 
-private:
+
     service_executor_t *m_cb { nullptr };
 
     std::shared_ptr<Network::PluginManager> m_pluginManager { nullptr };

@@ -13,21 +13,22 @@
  * Description: provide cni network plugin function definition
  **********************************************************************************/
 #include "cni_network_plugin.h"
-#include <iostream>
-#include <memory>
 #include <algorithm>
-#include <vector>
-#include <utility>
-#include <set>
 #include <chrono>
+#include <iostream>
+#include <utility>
+#include <memory>
+#include <set>
+#include <utility>
+#include <vector>
 
+#include "cri_helpers.h"
 #include "cxxutils.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "cri_helpers.h"
 
 namespace Network {
-static std::unique_ptr<CNINetwork> GetLoNetwork(std::vector<std::string> binDirs, const std::string &vendorDirPrefix)
+static auto GetLoNetwork(std::vector<std::string> binDirs) -> std::unique_ptr<CNINetwork>
 {
     const std::string loNetConfListJson { "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\","
                                           "\"plugins\":[{\"type\": \"loopback\" }]}" };
@@ -44,7 +45,7 @@ static std::unique_ptr<CNINetwork> GetLoNetwork(std::vector<std::string> binDirs
         char **traces = get_backtrace();
         if (traces != nullptr) {
             ERROR("show backtrace: ");
-            for (char **sym = traces; sym && *sym; sym++) {
+            for (char **sym = traces; (sym != nullptr) && (*sym != nullptr); sym++) {
                 ERROR("%s", *sym);
             }
             util_free_array(traces);
@@ -75,7 +76,7 @@ CNINetwork::~CNINetwork()
     free_cni_network_list_conf(m_networkConfig);
 }
 
-char **CNINetwork::GetPaths(Errors &err)
+auto CNINetwork::GetPaths(Errors &err) -> char **
 {
     char **paths = CRIHelpers::StringVectorToCharArray(m_path);
     if (paths == nullptr) {
@@ -90,7 +91,7 @@ void ProbeNetworkPlugins(const std::string &pluginDir, const std::string &binDir
     const std::string useBinDir = binDir.empty() ? DEFAULT_CNI_DIR : binDir;
     std::vector<std::string> binDirs = CXXUtils::Split(useBinDir, ',');
     auto plugin = std::make_shared<CniNetworkPlugin>(binDirs, pluginDir);
-    plugin->SetLoNetwork(GetLoNetwork(binDirs, ""));
+    plugin->SetLoNetwork(GetLoNetwork(binDirs));
     plugins->push_back(plugin);
 }
 
@@ -151,10 +152,10 @@ void CniNetworkPlugin::PlatformInit(Errors &error)
     }
     m_nsenterPath = tpath;
     free(tpath);
-    return;
 }
 
-int CniNetworkPlugin::GetCNIConfFiles(const std::string &pluginDir, std::vector<std::string> &vect_files, Errors &err)
+auto CniNetworkPlugin::GetCNIConfFiles(const std::string &pluginDir, std::vector<std::string> &vect_files,
+                                       Errors &err) -> int
 {
     int ret { 0 };
     std::string usePluginDir { pluginDir };
@@ -187,7 +188,7 @@ out:
     return ret;
 }
 
-int CniNetworkPlugin::LoadCNIConfigFileList(const std::string &elem, struct cni_network_list_conf **n_list)
+auto CniNetworkPlugin::LoadCNIConfigFileList(const std::string &elem, struct cni_network_list_conf **n_list) -> int
 {
     int ret { 0 };
     std::size_t found = elem.rfind(".conflist");
@@ -227,11 +228,11 @@ out:
     return ret;
 }
 
-int CniNetworkPlugin::InsertConfNameToAllPanes(struct cni_network_list_conf *n_list, std::set<std::string> &allPanes,
-                                               Errors &err)
+auto CniNetworkPlugin::InsertConfNameToAllPanes(struct cni_network_list_conf *n_list, std::set<std::string> &allPanes,
+                                                Errors &err) -> int
 {
     int ret { 0 };
-    std::string confName { "" };
+    std::string confName;
 
     if (n_list == nullptr) {
         err.Errorf("Invalid arguments");
@@ -265,7 +266,7 @@ void CniNetworkPlugin::GetDefaultCNINetwork(const std::string &confDir, std::vec
     }
 
     sort(files.begin(), files.end());
-    for (auto elem : files) {
+    for (const auto &elem : files) {
         struct cni_network_list_conf *n_list = nullptr;
 
         if (LoadCNIConfigFileList(elem, &n_list) != 0) {
@@ -336,10 +337,9 @@ void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &h
     m_syncThread = std::thread([&]() {
         UpdateDefaultNetwork();
     });
-    return;
 }
 
-const std::string &CniNetworkPlugin::Name() const
+auto CniNetworkPlugin::Name() const -> const std::string &
 {
     return CNI_PLUGIN_NAME;
 }
@@ -418,7 +418,7 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
     UnlockNetworkMap(err);
 }
 
-std::map<int, bool> *CniNetworkPlugin::Capabilities()
+auto CniNetworkPlugin::Capabilities() -> std::map<int, bool> *
 {
     return m_noop.Capabilities();
 }
@@ -459,11 +459,12 @@ void CniNetworkPlugin::Event(const std::string &name, std::map<std::string, std:
     SetPodCidr(iter->second);
 }
 
-void CniNetworkPlugin::GetPodNetworkStatus(const std::string &ns, const std::string &name,
+void CniNetworkPlugin::GetPodNetworkStatus(const std::string & /*ns*/, const std::string & /*name*/,
                                            const std::string &interfaceName, const std::string &podSandboxID,
                                            PodNetworkStatus &status, Errors &err)
 {
-    std::string netnsPath, ip;
+    std::string netnsPath;
+    std::string ip;
     Errors tmpErr;
 
     if (podSandboxID.empty()) {
@@ -592,7 +593,7 @@ static void PrepareRuntimeConf(const std::string &podName,
     }
 
     auto iter = options.find("UID");
-    std::string podUID {""};
+    std::string podUID;
     if (iter != options.end()) {
         podUID = iter->second;
     }
@@ -647,7 +648,7 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName,
     *cni_rc = nullptr;
 
     auto iter = annotations.find(CRIHelpers::Constants::POD_CHECKPOINT_KEY);
-    std::string jsonCheckpoint { "" };
+    std::string jsonCheckpoint;
     if (iter != annotations.end()) {
         jsonCheckpoint = iter->second;
     }
@@ -668,7 +669,7 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName,
                   std::back_inserter(portMappings));
     }
 
-    if (portMappings.size() > 0) {
+    if (!portMappings.empty()) {
         if (portMappings.size() > SIZE_MAX / sizeof(struct cni_port_mapping *)) {
             err.SetError("Invalid cni port mapping size");
             goto free_out;
@@ -679,8 +680,8 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName,
             err.SetError("Out of memory");
             goto free_out;
         }
-        for (auto iter = portMappings.cbegin(); iter != portMappings.cend(); iter++) {
-            if (iter->GetHostPort() && *(iter->GetHostPort()) <= 0) {
+        for (const auto &portMapping : portMappings) {
+            if ((portMapping.GetHostPort() != nullptr) && *(portMapping.GetHostPort()) <= 0) {
                 continue;
             }
             rt->p_mapping[rt->p_mapping_len] =
@@ -689,14 +690,14 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName,
                 err.SetError("Out of memory");
                 goto free_out;
             }
-            if (iter->GetHostPort()) {
-                rt->p_mapping[rt->p_mapping_len]->host_port = *(iter->GetHostPort());
+            if (portMapping.GetHostPort() != nullptr) {
+                rt->p_mapping[rt->p_mapping_len]->host_port = *(portMapping.GetHostPort());
             }
-            if (iter->GetContainerPort()) {
-                rt->p_mapping[rt->p_mapping_len]->container_port = *(iter->GetContainerPort());
+            if (portMapping.GetContainerPort() != nullptr) {
+                rt->p_mapping[rt->p_mapping_len]->container_port = *(portMapping.GetContainerPort());
             }
-            if (iter->GetProtocol()) {
-                rt->p_mapping[rt->p_mapping_len]->protocol = strings_to_lower(iter->GetProtocol()->c_str());
+            if (portMapping.GetProtocol() != nullptr) {
+                rt->p_mapping[rt->p_mapping_len]->protocol = strings_to_lower(portMapping.GetProtocol()->c_str());
             }
             // ignore hostip, because GetPodPortMappings() don't set
             (rt->p_mapping_len)++;

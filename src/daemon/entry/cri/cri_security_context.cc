@@ -13,10 +13,10 @@
  * Description: provide cri security context functions
  *********************************************************************************/
 #include "cri_security_context.h"
-#include <memory>
 #include "cri_runtime_service.h"
-#include "utils.h"
 #include "isula_libutils/log.h"
+#include "utils.h"
+#include <memory>
 
 namespace CRISecurity {
 static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
@@ -40,7 +40,7 @@ static void ModifyHostConfigCapabilities(const runtime::v1alpha2::LinuxContainer
     }
 
     const google::protobuf::RepeatedPtrField<std::string> &capAdd = sc.capabilities().add_capabilities();
-    if (capAdd.size() > 0) {
+    if (!capAdd.empty()) {
         if (static_cast<size_t>(capAdd.size()) > SIZE_MAX / sizeof(char *)) {
             error.SetError("Invalid capability add size");
             return;
@@ -56,7 +56,7 @@ static void ModifyHostConfigCapabilities(const runtime::v1alpha2::LinuxContainer
         }
     }
     const google::protobuf::RepeatedPtrField<std::string> &capDrop = sc.capabilities().drop_capabilities();
-    if (capDrop.size() > 0) {
+    if (!capDrop.empty()) {
         if (static_cast<size_t>(capDrop.size()) > SIZE_MAX / sizeof(char *)) {
             error.SetError("Invalid capability drop size");
             return;
@@ -101,12 +101,12 @@ static void ModifyHostConfigNoNewPrivs(const runtime::v1alpha2::LinuxContainerSe
 static void ModifyHostConfigscSupplementalGroups(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
                                                  host_config *hostConfig, Errors &error)
 {
-    if (sc.supplemental_groups().size() == 0) {
+    if (sc.supplemental_groups().empty()) {
         return;
     }
 
     const google::protobuf::RepeatedField<google::protobuf::int64> &groups = sc.supplemental_groups();
-    if (groups.size() > 0) {
+    if (!groups.empty()) {
         if (static_cast<size_t>(groups.size()) > SIZE_MAX / sizeof(char *)) {
             error.SetError("Invalid group size");
             return;
@@ -172,7 +172,7 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
 }
 
 static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts,
-                                            const std::string &podSandboxID, host_config *hostConfig, Errors &error)
+                                            const std::string &podSandboxID, host_config *hostConfig)
 {
     std::string sandboxNSMode = "container:" + podSandboxID;
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::POD) {
@@ -186,8 +186,7 @@ static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOp
     ModifyHostNetworkOptionForContainer(nsOpts.network(), podSandboxID, hostConfig);
 }
 
-static void ModifySandboxNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig,
-                                          Errors &error)
+static void ModifySandboxNamespaceOptions(const runtime::v1alpha2::NamespaceOption &nsOpts, host_config *hostConfig)
 {
     /* set common Namespace options */
     ModifyCommonNamespaceOptions(nsOpts, hostConfig);
@@ -223,7 +222,7 @@ void ApplySandboxSecurityContext(const runtime::v1alpha2::LinuxPodSandboxConfig 
     if (error.NotEmpty()) {
         return;
     }
-    ModifySandboxNamespaceOptions(sc->namespace_options(), hc, error);
+    ModifySandboxNamespaceOptions(sc->namespace_options(), hc);
 }
 
 void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig &lc, const std::string &podSandboxID,
@@ -237,11 +236,7 @@ void ApplyContainerSecurityContext(const runtime::v1alpha2::LinuxContainerConfig
             return;
         }
     }
-    ModifyContainerNamespaceOptions(lc.security_context().namespace_options(), podSandboxID, hc, error);
-    if (error.NotEmpty()) {
-        ERROR("Modify namespace options failed: %s", error.GetCMessage());
-        return;
-    }
+    ModifyContainerNamespaceOptions(lc.security_context().namespace_options(), podSandboxID, hc);
 }
 
 } // namespace CRISecurity

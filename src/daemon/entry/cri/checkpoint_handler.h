@@ -14,9 +14,9 @@
  *********************************************************************************/
 #ifndef DAEMON_ENTRY_CRI_CHECKPOINT_HANDLER_H
 #define DAEMON_ENTRY_CRI_CHECKPOINT_HANDLER_H
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "errors.h"
 #include "isula_libutils/cri_checkpoint.h"
@@ -28,16 +28,16 @@ class PortMapping {
 public:
     PortMapping() = default;
     PortMapping(const PortMapping &obj);
-    PortMapping &operator=(const PortMapping &);
+    auto operator=(const PortMapping &) -> PortMapping &;
     ~PortMapping();
     void PortMappingToCStruct(cri_port_mapping **pmapping, Errors &error);
     void CStructToPortMapping(const cri_port_mapping *pmapping, Errors &error);
 
-    const std::string *GetProtocol() const;
+    auto GetProtocol() const -> const std::string *;
     void SetProtocol(const std::string &protocol);
-    const int32_t *GetContainerPort() const;
+    auto GetContainerPort() const -> const int32_t *;
     void SetContainerPort(int32_t containerPort);
-    const int32_t *GetHostPort() const;
+    auto GetHostPort() const -> const int32_t *;
     void SetHostPort(int32_t hostPort);
 
 private:
@@ -51,9 +51,9 @@ public:
     void CheckpointDataToCStruct(cri_checkpoint_data **data, Errors &error);
     void CStructToCheckpointData(const cri_checkpoint_data *data, Errors &error);
 
-    const std::vector<PortMapping> &GetPortMappings() const;
+    auto GetPortMappings() const -> const std::vector<PortMapping> &;
     void InsertPortMapping(const PortMapping &portMapping);
-    bool GetHostNetwork();
+    auto GetHostNetwork() const -> bool;
     void SetHostNetwork(bool hostNetwork);
 
 private:
@@ -68,15 +68,15 @@ public:
     void CheckpointToCStruct(cri_checkpoint **checkpoint, Errors &error);
     void CStructToCheckpoint(const cri_checkpoint *checkpoint, Errors &error);
 
-    const std::string &GetVersion() const;
+    auto GetVersion() const -> const std::string &;
     void SetVersion(const std::string &version);
-    const std::string &GetName() const;
+    auto GetName() const -> const std::string &;
     void SetName(const std::string &name);
-    const std::string &GetNamespace() const;
+    auto GetNamespace() const -> const std::string &;
     void SetNamespace(const std::string &ns);
-    std::shared_ptr<CheckpointData> GetData();
+    auto GetData() -> std::shared_ptr<CheckpointData>;
     void SetData(CheckpointData *data);
-    const std::string &GetCheckSum() const;
+    auto GetCheckSum() const -> const std::string &;
     void SetCheckSum(const std::string &checkSum);
 
 private:
