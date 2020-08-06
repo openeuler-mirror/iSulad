@@ -1343,10 +1343,7 @@ static int parse_checked_layer_file(const char *path, map_t *checked_layers)
 
     fp = util_fopen(path, "r");
     if (fp == NULL) {
-        if (errno == ENOENT) {
-            return 0;
-        }
-        return -1;
+        return (errno == ENOENT ? 0 : -1);
     }
 
     ret = isula_utils_read_line(fp, parse_checked_layer_cb, (void *)checked_layers);
