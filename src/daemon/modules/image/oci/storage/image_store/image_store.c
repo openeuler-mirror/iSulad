@@ -1354,6 +1354,7 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
         ret = -1;
         goto out;
     }
+    im = NULL;
 
     if (image_store_append_image(dst_id, searchable_digest, img) != 0) {
         ERROR("Failed to append image to image store");

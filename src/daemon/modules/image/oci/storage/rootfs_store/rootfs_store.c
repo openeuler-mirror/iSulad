@@ -784,6 +784,7 @@ char *rootfs_store_create(const char *id, const char **names, size_t names_len, 
         ret = -1;
         goto out;
     }
+    c = NULL;
 
     if (rootfs_store_append_container_rootfs(dst_id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
         ERROR("Failed to append container to container store");

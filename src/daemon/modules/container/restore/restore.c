@@ -74,6 +74,13 @@ static int restore_supervisor(const container_t *cont)
         goto out;
     }
 
+    if (!util_process_alive(cont->state->state->pid, cont->state->state->start_time)) {
+        ERROR("Container %s pid %d already dead, skip add supervisor", id, cont->state->state->pid);
+        close(exit_fifo_fd);
+        ret = -1;
+        goto out;
+    }
+
     pid_info.pid = cont->state->state->pid;
     pid_info.ppid = cont->state->state->p_pid;
     pid_info.start_time = cont->state->state->start_time;
@@ -444,10 +451,13 @@ static void handle_restored_container()
         id = cont->common_config->id;
 
         if (container_is_running(cont->state)) {
-            if (restore_supervisor(cont)) {
-                ERROR("Failed to restore %s supervisor", id);
+            if (restore_supervisor(cont) != 0) {
+                ERROR("Failed to restore %s supervisor, set state to stopped", id);
+                container_state_set_stopped(cont->state, 255);
+                goto unlock_continue;
             }
             container_init_health_monitor(id);
+
         } else {
             if (cont->hostconfig != NULL && cont->hostconfig->auto_remove_bak) {
                 (void)set_container_to_removal(cont);
@@ -459,6 +469,7 @@ static void handle_restored_container()
             }
         }
 
+unlock_continue:
         container_unlock(cont);
         container_unref(cont);
     }
