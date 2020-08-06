@@ -110,10 +110,10 @@ base operators of client
 
 base operators of CRI
 
-| operator (ms) | Docker | CRIO | iSulad | vs Docker | vs Podman |
-| ------------- | ------ | ---- | ------ | --------- | --------- |
-| runp          | 681    | 321  | 186    | -72.69%   | -42.06%   |
-| stopp         | 400    | 356  | 169    | -57.75%   | -52.53%   |
+| operator (ms) | Docker | CRIO | iSulad | vs Docker | vs CRIO |
+| ------------- | ------ | ---- | ------ | --------- | ------- |
+| runp          | 681    | 321  | 186    | -72.69%   | -42.06% |
+| stopp         | 400    | 356  | 169    | -57.75%   | -52.53% |
 
 ##### parallel to run operator 100 times
 
@@ -129,10 +129,10 @@ base operator of client
 
 base operators of CRI
 
-| operator (ms) | Docker | CRIO | iSulad | vs Docker | vs Podman |
-| ------------- | ------ | ---- | ------ | --------- | --------- |
-| 100 * runp    | 13998  | 4946 | 2825   | -79.82%   | -42.88%   |
-| 100 * stopp   | 8402   | 4834 | 4543   | -45.93%   | -6.02%    |
+| operator (ms) | Docker | CRIO | iSulad | vs Docker | vs CRIO |
+| ------------- | ------ | ---- | ------ | --------- | ------- |
+| 100 * runp    | 13998  | 4946 | 2825   | -79.82%   | -42.88% |
+| 100 * stopp   | 8402   | 4834 | 4543   | -45.93%   | -6.02%  |
 
 ## How to Contribute
 
