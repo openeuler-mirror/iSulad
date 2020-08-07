@@ -144,3 +144,8 @@ iSulad follows the kernel coding conventions. You can find a detailed introducti
 ## Licensing
 
 iSulad is licensed under the Mulan PSL v2.
+
+## Join us
+You can join us on any of the following channels:
+* Join our [mailing list](https://mailweb.openeuler.org/postorius/lists/isulad.openeuler.org/)
+* Join our Biweekly meeting at 16:30 pm on Tuesday (meeting link will be mailed at mailing list)
