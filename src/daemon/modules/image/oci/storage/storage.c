@@ -904,66 +904,6 @@ out:
     return ret;
 }
 
-int storage_module_init(struct storage_module_init_options *opts)
-{
-    int ret = 0;
-
-    ret = util_recursive_rmdir(OCI_LOAD_TMP_WORK_DIR, 0);
-    if (ret != 0) {
-        ERROR("failed to remove dir %s", OCI_LOAD_TMP_WORK_DIR);
-        goto out;
-    }
-
-    if (check_module_init_opt(opts) != 0) {
-        ret = -1;
-        goto out;
-    }
-    g_storage_run_root = util_strdup_s(opts->storage_run_root);
-
-    if (make_storage_directory(opts) != 0) {
-        ret = -1;
-        goto out;
-    }
-
-    if (layer_store_init(opts) != 0) {
-        ERROR("Failed to init layer store");
-        ret = -1;
-        goto out;
-    }
-
-    if (image_store_init(opts) != 0) {
-        ERROR("Failed to init image store");
-        ret = -1;
-        goto out;
-    }
-
-    if (restore_images_size() != 0) {
-        ERROR("Failed to recal image size");
-        ret = -1;
-        goto out;
-    }
-
-    if (rootfs_store_init(opts) != 0) {
-        ERROR("Failed to init rootfs store");
-        ret = -1;
-        goto out;
-    }
-
-    if (pthread_rwlock_init(&g_storage_rwlock, NULL) != 0) {
-        ERROR("Failed to init storage rwlock");
-        ret = -1;
-        goto out;
-    }
-
-    if (opts->integration_check && !storage_integration_check()) {
-        ERROR("do integration check failed");
-        ret = -1;
-    }
-
-out:
-    return ret;
-}
-
 void free_storage_module_init_options(struct storage_module_init_options *opts)
 {
     if (opts == NULL) {
@@ -1500,7 +1440,8 @@ static bool do_storage_integration_check(const char *path, map_t *checked_layers
             ERROR("Remove container: %s related invalid image", all_rootfs->rootfs[j]->id);
             nret = do_storage_rootfs_delete(all_rootfs->rootfs[j]->id);
             if (nret != 0) {
-                ERROR("Failed to delete container: %s with invalid image: %s", all_rootfs->rootfs[j]->id, all_images->images[i]->id);
+                ERROR("Failed to delete container: %s with invalid image: %s", all_rootfs->rootfs[j]->id,
+                      all_images->images[i]->id);
             }
         }
         ERROR("Remove unintegration image: %s", all_images->images[i]->id);
@@ -1518,7 +1459,8 @@ static bool do_storage_integration_check(const char *path, map_t *checked_layers
         ERROR("Delete container %s due to no related image", all_rootfs->rootfs[j]->id);
         nret = do_storage_rootfs_delete(all_rootfs->rootfs[j]->id);
         if (nret != 0) {
-            ERROR("Failed to delete container: %s with unfound image: %s", all_rootfs->rootfs[j]->id, all_rootfs->rootfs[j]->image);
+            ERROR("Failed to delete container: %s with unfound image: %s", all_rootfs->rootfs[j]->id,
+                  all_rootfs->rootfs[j]->image);
         }
     }
 
@@ -1617,4 +1559,178 @@ container_inspect_graph_driver *storage_get_metadata_by_container_id(const char 
     return container_metadata;
 }
 
+static int do_check_img_layers_exist(const char *img_id)
+{
+    int ret = 0;
+    char *layer_id = NULL;
+    struct layer *layer_info = NULL;
 
+    if (img_id == NULL) {
+        ERROR("Invalid arguments");
+        ret = -1;
+        goto out;
+    }
+
+    layer_id = image_store_top_layer(img_id);
+    if (layer_id == NULL) {
+        ERROR("Failed to get top layer of image %s", img_id);
+        ret = -1;
+        goto out;
+    }
+
+    while (layer_id != NULL) {
+        layer_info = layer_store_lookup(layer_id);
+        if (layer_info == NULL) {
+            ERROR("Failed to get layer info for layer %s", layer_id);
+            ret = -1;
+            goto out;
+        }
+
+        free(layer_id);
+        layer_id = util_strdup_s(layer_info->parent);
+        free_layer(layer_info);
+        layer_info = NULL;
+    }
+
+out:
+    free(layer_id);
+    free_layer(layer_info);
+    return ret;
+}
+
+static void storage_delete_rootfs_by_img_id(const char *img_id, const struct rootfs_list *all_rootfs)
+{
+    size_t i = 0;
+
+    // remove rootfs with invalid image
+    for (i = 0; i < all_rootfs->rootfs_len; i++) {
+        if (strcmp(all_rootfs->rootfs[i]->image, img_id) != 0) {
+            continue;
+        }
+
+        ERROR("Remove container rootfs: %s related invalid image %s", all_rootfs->rootfs[i]->id, img_id);
+
+        if (do_storage_rootfs_delete(all_rootfs->rootfs[i]->id) != 0) {
+            ERROR("Failed to delete container: %s with invalid image: %s", all_rootfs->rootfs[i]->id, img_id);
+        }
+    }
+}
+
+static int storage_check_image_layers_exist()
+{
+    int ret = 0;
+    int nret = 0;
+    imagetool_images_list *all_images = NULL;
+    struct rootfs_list *all_rootfs = NULL;
+    size_t i = 0;
+
+    all_images = util_common_calloc_s(sizeof(imagetool_images_list));
+    if (all_images == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto out;
+    }
+    nret = storage_get_all_images(all_images);
+    if (nret != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    all_rootfs = util_common_calloc_s(sizeof(struct rootfs_list));
+    if (all_rootfs == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (rootfs_store_get_all_rootfs(all_rootfs) != 0) {
+        ERROR("Failed to get all container rootfs information");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < all_images->images_len; i++) {
+        if (do_check_img_layers_exist(all_images->images[i]->id) == 0) {
+            continue;
+        }
+
+        storage_delete_rootfs_by_img_id(all_images->images[i]->id, all_rootfs);
+
+        ERROR("Remove invalid image: %s due to layers not exist", all_images->images[i]->id);
+        nret = do_storage_img_delete(all_images->images[i]->id, true);
+        if (nret != 0) {
+            ERROR("Failed to delete invalid image: %s", all_images->images[i]->id);
+        }
+    }
+
+out:
+    free_imagetool_images_list(all_images);
+    free_rootfs_list(all_rootfs);
+    return ret;
+}
+
+int storage_module_init(struct storage_module_init_options *opts)
+{
+    int ret = 0;
+
+    ret = util_recursive_rmdir(OCI_LOAD_TMP_WORK_DIR, 0);
+    if (ret != 0) {
+        ERROR("failed to remove dir %s", OCI_LOAD_TMP_WORK_DIR);
+        goto out;
+    }
+
+    if (check_module_init_opt(opts) != 0) {
+        ret = -1;
+        goto out;
+    }
+    g_storage_run_root = util_strdup_s(opts->storage_run_root);
+
+    if (make_storage_directory(opts) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (layer_store_init(opts) != 0) {
+        ERROR("Failed to init layer store");
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_init(opts) != 0) {
+        ERROR("Failed to init image store");
+        ret = -1;
+        goto out;
+    }
+
+    if (restore_images_size() != 0) {
+        ERROR("Failed to recal image size");
+        ret = -1;
+        goto out;
+    }
+
+    if (rootfs_store_init(opts) != 0) {
+        ERROR("Failed to init rootfs store");
+        ret = -1;
+        goto out;
+    }
+
+    if (pthread_rwlock_init(&g_storage_rwlock, NULL) != 0) {
+        ERROR("Failed to init storage rwlock");
+        ret = -1;
+        goto out;
+    }
+
+    if (storage_check_image_layers_exist() != 0) {
+        ERROR("do image layers exist check failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (opts->integration_check && !storage_integration_check()) {
+        ERROR("do integration check failed");
+        ret = -1;
+    }
+
+out:
+    return ret;
+}
