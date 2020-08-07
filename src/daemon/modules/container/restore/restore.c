@@ -116,39 +116,6 @@ out:
     return ret;
 }
 
-static void post_nonexist_image_containers(const container_t *cont, Container_Status status,
-                                           const struct runtime_container_status_info *info)
-{
-    int nret;
-    const char *id = cont->common_config->id;
-
-    if (info->status == RUNTIME_CONTAINER_STATUS_STOPPED) {
-        if (status != CONTAINER_STATUS_STOPPED && status != CONTAINER_STATUS_CREATED) {
-            nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
-            if (nret != 0) {
-                ERROR("Failed to post container %s to garbage"
-                      "collector, that may lost some resources"
-                      "used with container!",
-                      id);
-            }
-            container_state_set_stopped(cont->state, 255);
-        }
-    } else if (info->status == RUNTIME_CONTAINER_STATUS_RUNNING) {
-        nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, info->pid);
-        if (nret != 0) {
-            ERROR("Failed to post container %s to garbage"
-                  "collector, that may lost some resources"
-                  "used with container!",
-                  id);
-        }
-        container_state_set_stopped(cont->state, 255);
-    } else {
-        ERROR("Container %s get invalid status %d", id, info->status);
-    }
-
-    return;
-}
-
 static int check_container_image_exist(const container_t *cont)
 {
     int ret = 0;
@@ -208,7 +175,7 @@ static void try_to_set_container_running(Container_Status status, container_t *c
     }
 }
 
-static int restore_stopped_container(Container_Status status, const container_t *cont, bool *need_save)
+static void restore_stopped_container(Container_Status status, const container_t *cont, bool *need_save)
 {
     const char *id = cont->common_config->id;
     pid_t pid = 0;
@@ -227,14 +194,11 @@ static int restore_stopped_container(Container_Status status, const container_t 
         container_state_set_stopped(cont->state, 255);
         *need_save = true;
     }
-
-    return 0;
 }
 
-static int restore_running_container(Container_Status status, container_t *cont,
-                                     const struct runtime_container_status_info *info)
+static void restore_running_container(Container_Status status, container_t *cont,
+                                      const struct runtime_container_status_info *info)
 {
-    int ret = 0;
     int nret = 0;
     const char *id = cont->common_config->id;
     pid_ppid_info_t pid_info = { 0 };
@@ -242,6 +206,7 @@ static int restore_running_container(Container_Status status, container_t *cont,
     nret = util_read_pid_ppid_info(info->pid, &pid_info);
     if (nret == 0) {
         try_to_set_container_running(status, cont, &pid_info);
+        container_reset_manually_stopped(cont);
     } else {
         ERROR("Failed to restore container:%s due to unable to read container pid information", id);
         nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
@@ -251,20 +216,13 @@ static int restore_running_container(Container_Status status, container_t *cont,
                   "used with container!",
                   id);
         }
-        ret = -1;
-        goto out;
+        container_state_set_stopped(cont->state, 255);
     }
-
-    container_reset_manually_stopped(cont);
-
-out:
-    return ret;
 }
 
-static int restore_paused_container(Container_Status status, container_t *cont,
-                                    const struct runtime_container_status_info *info)
+static void restore_paused_container(Container_Status status, container_t *cont,
+                                     const struct runtime_container_status_info *info)
 {
-    int ret = 0;
     int nret = 0;
     const char *id = cont->common_config->id;
     pid_ppid_info_t pid_info = { 0 };
@@ -274,6 +232,7 @@ static int restore_paused_container(Container_Status status, container_t *cont,
     nret = util_read_pid_ppid_info(info->pid, &pid_info);
     if (nret == 0) {
         try_to_set_paused_container_pid(status, cont, &pid_info);
+        container_reset_manually_stopped(cont);
     } else {
         ERROR("Failed to restore container:%s due to unable to read container pid information", id);
         nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
@@ -283,20 +242,13 @@ static int restore_paused_container(Container_Status status, container_t *cont,
                   "used with container!",
                   id);
         }
-        ret = -1;
-        goto out;
+        container_state_set_stopped(cont->state, 255);
     }
-
-    container_reset_manually_stopped(cont);
-
-out:
-    return ret;
 }
 
 /* restore state */
-static int restore_state(container_t *cont)
+static void restore_state(container_t *cont)
 {
-    int ret = 0;
     int nret = 0;
     bool need_save = false;
     const char *id = cont->common_config->id;
@@ -306,13 +258,6 @@ static int restore_state(container_t *cont)
     Container_Status status = container_state_get_status(cont->state);
 
     (void)container_exit_on_next(cont); /* cancel restart policy */
-
-    if (check_container_image_exist(cont) != 0) {
-        ERROR("Failed to restore container:%s due to image not exist", id);
-        post_nonexist_image_containers(cont, status, &real_status);
-        ret = -1;
-        goto out;
-    }
 
     params.rootpath = cont->root_path;
     params.state = cont->state_path;
@@ -324,36 +269,22 @@ static int restore_state(container_t *cont)
     }
 
     if (real_status.status == RUNTIME_CONTAINER_STATUS_STOPPED) {
-        ret = restore_stopped_container(status, cont, &need_save);
-        if (ret != 0) {
-            goto out;
-        }
+        restore_stopped_container(status, cont, &need_save);
     } else if (real_status.status == RUNTIME_CONTAINER_STATUS_RUNNING) {
-        ret = restore_running_container(status, cont, &real_status);
-        if (ret != 0) {
-            goto out;
-        }
+        restore_running_container(status, cont, &real_status);
     } else if (real_status.status == RUNTIME_CONTAINER_STATUS_PAUSED) {
-        ret = restore_paused_container(status, cont, &real_status);
-        if (ret != 0) {
-            goto out;
-        }
+        restore_paused_container(status, cont, &real_status);
     } else {
         ERROR("Container %s get invalid status %d", id, real_status.status);
-        ret = -1;
-        goto out;
     }
 
-out:
     if (container_is_removal_in_progress(cont->state)) {
         container_state_reset_removal_in_progress(cont->state);
         need_save = true;
     }
     if (need_save && container_to_disk(cont) != 0) {
         ERROR("Failed to re-save container \"%s\" to disk", id);
-        ret = -1;
     }
-    return ret;
 }
 
 /* remove invalid container */
@@ -450,14 +381,24 @@ static void handle_restored_container()
 
         id = cont->common_config->id;
 
+        if (container_is_in_gc_progress(id)) {
+            ERROR("Container %s is in gc process, skip it in restore process", id);
+            goto unlock_continue;
+        }
+
         if (container_is_running(cont->state)) {
             if (restore_supervisor(cont) != 0) {
                 ERROR("Failed to restore %s supervisor, set state to stopped", id);
                 container_state_set_stopped(cont->state, 255);
+                if (post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0) != 0) {
+                    ERROR("Failed to post container %s to garbage"
+                          "collector, that may lost some resources"
+                          "used with container!",
+                          id);
+                }
                 goto unlock_continue;
             }
             container_init_health_monitor(id);
-
         } else {
             if (cont->hostconfig != NULL && cont->hostconfig->auto_remove_bak) {
                 (void)set_container_to_removal(cont);
@@ -495,10 +436,12 @@ static void scan_dir_to_add_store(const char *runtime, const char *rootpath, con
             goto error_load;
         }
 
-        if (restore_state(cont)) {
-            WARN("Failed to restore container %s state", subdir[i]);
+        if (check_container_image_exist(cont) != 0) {
+            ERROR("Failed to restore container:%s due to image not exist", subdir[i]);
             goto error_load;
         }
+
+        restore_state(cont);
 
         index_flag = container_name_index_add(cont->common_config->name, cont->common_config->id);
         if (!index_flag) {
