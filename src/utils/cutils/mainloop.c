@@ -67,10 +67,9 @@ out:
 }
 
 /* epoll loop add handler */
-int epoll_loop_add_handler(struct epoll_descr *descr, int fd,
-                           epoll_loop_callback_t callback, void *data)
+int epoll_loop_add_handler(struct epoll_descr *descr, int fd, epoll_loop_callback_t callback, void *data)
 {
-    struct epoll_event ev;
+    struct epoll_event ev = { 0 };
     struct epoll_loop_handler *epoll_handler = NULL;
     struct linked_list *node = NULL;
 
@@ -100,8 +99,8 @@ int epoll_loop_add_handler(struct epoll_descr *descr, int fd,
     return 0;
 
 fail_out:
+    (void)epoll_ctl(descr->fd, EPOLL_CTL_DEL, fd, &ev);
     free(epoll_handler);
-
     return -1;
 }
 
@@ -156,4 +155,3 @@ int epoll_loop_close(struct epoll_descr *descr)
 
     return close(descr->fd);
 }
-
