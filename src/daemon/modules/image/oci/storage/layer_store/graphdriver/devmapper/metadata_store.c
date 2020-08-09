@@ -26,6 +26,7 @@
 void devmapper_device_info_ref_inc(devmapper_device_info_t *device_info)
 {
     if (device_info == NULL) {
+        ERROR("invalid argument");
         return;
     }
     atomic_int_inc(&device_info->refcnt);
@@ -34,6 +35,7 @@ void devmapper_device_info_ref_inc(devmapper_device_info_t *device_info)
 static void free_devmapper_device_info_t(devmapper_device_info_t *ptr)
 {
     if (ptr == NULL) {
+        ERROR("invalid argument");
         return;
     }
 
@@ -48,6 +50,7 @@ void devmapper_device_info_ref_dec(devmapper_device_info_t *device_info)
     bool is_zero = false;
 
     if (device_info == NULL) {
+        ERROR("invalid argument");
         return;
     }
 
@@ -69,6 +72,7 @@ static void metadata_store_map_kvfree(void *key, void *value)
 static void metadata_store_free(metadata_store_t *store)
 {
     if (store == NULL) {
+        ERROR("invalid argument");
         return;
     }
     map_free(store->map);
@@ -140,6 +144,7 @@ bool metadata_store_add(const char *hash, image_devmapper_device_info *device, m
     devmapper_device_info_t *device_info = NULL;
 
     if (hash == NULL || device == NULL || meta_store == NULL) {
+        ERROR("invalid argument");
         return false;
     }
 
@@ -200,6 +205,7 @@ char **metadata_store_list_hashes(metadata_store_t *meta_store)
     map_itor *itor = NULL;
 
     if (map_size(meta_store->map) == 0) {
+        DEBUG("Metadata store hash list is empty");
         ret = true;
         goto unlock;
     }

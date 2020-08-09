@@ -42,6 +42,7 @@ int devmapper_init(struct graphdriver *driver, const char *driver_home, const ch
     char *root_dir = NULL;
 
     if (driver == NULL || driver_home == NULL) {
+        ERROR("Invalid input params");
         return -1;
     }
 
@@ -89,6 +90,7 @@ int devmapper_create_rw(const char *id, const char *parent, const struct graphdr
                         struct driver_create_opts *create_opts)
 {
     if (id == NULL || driver == NULL || create_opts == NULL) {
+        ERROR("invalid argument");
         return -1;
     }
 
@@ -100,6 +102,7 @@ int devmapper_create_ro(const char *id, const char *parent, const struct graphdr
                         const struct driver_create_opts *create_opts)
 {
     if (id == NULL || driver == NULL || create_opts == NULL) {
+        ERROR("invalid argument");
         return -1;
     }
 
@@ -114,6 +117,7 @@ int devmapper_rm_layer(const char *id, const struct graphdriver *driver)
     int ret = 0;
 
     if (!util_valid_str(id) || driver == NULL) {
+        ERROR("invalid argument");
         return -1;
     }
 
@@ -430,6 +434,7 @@ static void status_append(const char *name, const char *value, uint64_t u_data, 
     size_t nret = 0;
 
     if (name == NULL) {
+        ERROR("invalid argument");
         return;
     }
 
@@ -527,6 +532,7 @@ int devmapper_get_driver_status(const struct graphdriver *driver, struct graphdr
     status_str = status_to_str(st);
     status->status = util_strdup_s(status_str);
     if (status->status == NULL) {
+        ERROR("Get devicemapper driver status string failed");
         ret = -1;
         goto out;
     }
