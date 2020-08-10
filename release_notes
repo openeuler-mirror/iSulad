@@ -1,5 +1,47 @@
-2020-07-17 lifeng release 2.0.4
-    - tools: add generate release notes
+2020-08-10 lifeng release 2.0.4
+    - !640 code: add DEL fd from epoll when fail Merge pull request !640 from lifeng_isula/master
+    - !641 devmapper: optimize error processing log Merge pull request !641 from gaohuatao/update
+    - !639 ReadME: add contact ways for contributors to follow Merge pull request !639 from haomintsai/add-maillist
+    - !638 storage: add image layers exists Merge pull request !638 from lifeng_isula/master
+    - !637  View coderestore: do not remove container when restart state failed Merge pull request !637 from lifeng_isula/master
+    - !636 readme: fix performance title Merge pull request !636 from haozi007/master
+    - !635 image: fix coredump when create image/rootfs failed Merge pull request !635 from lifeng_isula/master
+    - !634 image: remove needless if Merge pull request !634 from haozi007/master
+    - !633 devmapper: remove invalid tmp metadata file Merge pull request !633 from gaohuatao/update
+    - !632 refector: fix cri code according to coding standards Merge pull request !632 from JingWoo/master
+    - !631 devmapper:fix update bug that base file removed and container inspect Merge pull request !631 from gaohuatao/update
+    - !630 refector: modernize cpp code Merge pull request !630 from JingWoo/master
+    - !629 do not retry if cancelled Merge pull request !629 from wangfengtu/no_retry
+    - !627 iSulad : add debug packages Merge pull request !627 from YoungJQ/master
+    - !628 performance test Merge pull request !628 from haozi007/master
+    - !626 add more unit test for pulling image Merge pull request !626 from wangfengtu/fix_logout
+    - !625 clean code: rename pause_container to do_pause_container Merge pull request !625 from lifeng_isula/master
+    - !624 retry fetch manifest if failed Merge pull request !624 from wangfengtu/retry_manifest
+    - !623 try print error message like before Merge pull request !623 from wangfengtu/echo_back
+    - !622 fix: Remove the lock and force deletion Merge pull request !622 from JingWoo/master
+    - !621 enhance stability of auths Merge pull request !621 from wangfengtu/auths
+    - !620 devmapper: add status interface semaphore info Merge pull request !620 from gaohuatao/update
+    - !619 fix login success even if server response unauthorized Merge pull request !619 from wangfengtu/login
+    - !618 devmapper: When thinpool has no space  left, echo err info Merge pull request !618 from gaohuatao/update
+    - !617 resume pulling layers Merge pull request !617 from wangfengtu/resume
+    - !616 quota: use default quota size when specify size=0 Merge pull request !616 from lifeng_isula/master
+    - !615 stats: stats --original show correct container name Merge pull request !615 from Zhangxiaoyu/master
+    - !613 image: move internal struct defines to image.c Merge pull request !613 from lifeng_isula/master
+    - !614 fix cann't logout by image Merge pull request !614 from wangfengtu/logout
+    - !611 concurrent pull layers Merge pull request !611 from wangfengtu/fast_pull
+    - !612 devmapper: surpport update from isulad-img Merge pull request !612 from gaohuatao/update
+    - !610 iSulad：add source file to libisulad_img.so Merge pull request !610 from Jackey_1024/master
+    - !607 fix check image error Merge pull request !607 from haozi007/master
+    - !609 add layer_store_ut code Merge pull request !609 from Zhangxiaoyu/master
+    - !608 iSulad: remove big-data related codes of rootfs_store Merge pull request !608 from Jackey_1024/master
+    - !606 devmapper: format codes to unify style and delete unused comments Merge pull request !606 from gaohuatao/master_dev1
+    - !605 isula stats: add --original option to show original data Merge pull request !605 from Zhangxiaoyu/master
+    - !604 image: only check embedded image in use at service module Merge pull request !604 from lifeng_isula/master
+    - !603 iSulad-img: remove iSulad-img from build guilde Merge pull request !603 from lifeng_isula/master
+    - !602 interface: remove image operate time out arguments Merge pull request !602 from lifeng_isula/master
+    - !601 Image:  merge implement_image to master Merge pull request !601 from lifeng_isula/image
+    - !586 Removes the definition of the thread attributes object Merge pull request !586 from JingWoo/master
+    - !580 tools: add generate release notes Merge pull request !580 from lifeng_isula/master
     - !572 lxc: update lxc to 4.0.3 Merge pull request !572 from lifeng_isula/master
     - !530 修复websocket限流可能引起卡死 Merge pull request !530 from JingWoo/master
     - !550 build: add checkout LTS tag for third party software Merge pull request !550 from lifeng_isula/master
@@ -17,6 +59,7 @@
     - !464 iSulad: change llt to ut Merge pull request !464 from Jackey_1024/0616
 
     dev stats:
-      - 23 files changed, 221 insertions(+), 123 deletions(-)
-      - contributors: lifeng68, gaohuatao, wujing, haozi007, jikui, leizhongkai
+      - 1029 files changed, 127349 insertions(+), 99155 deletions(-)
+      - contributors: lifeng68, wujing, WangFengTu, gaohuatao, LiFeng, haozi007, jikui, Zhangxiaoyu, zhangxiaoyu, Haomin, YoungJQ, farm, leizhongkai
+
 
