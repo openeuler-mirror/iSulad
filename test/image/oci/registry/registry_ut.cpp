@@ -181,7 +181,7 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
 	if (count == COUNT_TEST_CANCEL) {
 	    bool *cancel = (bool*)options->progressinfo;
 	    while (!(*cancel)) {
-	        sleep(0); // schedule out to let cancel variable set to be true
+	        sleep(1); // schedule out to let cancel variable set to be true
 	    }
 	    if (options->progress_info_op(options->progressinfo, 0, 0, 0, 0) != 0) {
                 return -1;
@@ -611,15 +611,20 @@ TEST_F(RegistryUnitTest, test_logout)
 
 TEST_F(RegistryUnitTest, test_pull_v2_image)
 {
+    struct timespec start_time;
+    struct timespec end_time;
     registry_pull_options options;
     options.image_name = (char*)"hub-mirror.c.163.com/library/busybox:latest";
     options.dest_image_name = (char*)"docker.io/library/busybox:latest";
     options.skip_tls_verify = true;
     options.insecure_registry = true;
 
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_,::testing::_,::testing::_,::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV2));
     mockStorageAll(&m_storage_mock);
+
     // test retry success
     ASSERT_EQ(registry_pull(&options), 0);
 
@@ -631,6 +636,10 @@ TEST_F(RegistryUnitTest, test_pull_v2_image)
 
     // test server error
     ASSERT_NE(registry_pull(&options), 0);
+
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+
+    ASSERT_TRUE(end_time.tv_sec-start_time.tv_sec <= 10);
 }
 
 TEST_F(RegistryUnitTest, test_pull_oci_image)
