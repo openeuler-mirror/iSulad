@@ -81,6 +81,7 @@ struct dm_task *task_create(int type)
 int set_message(struct dm_task *dmt, const char *message)
 {
     if (dmt == NULL || message == NULL) {
+        ERROR("invalid argument");
         return -1;
     }
 
@@ -92,10 +93,12 @@ int set_sector(struct dm_task *dmt, uint64_t sector)
     int ret = 0;
 
     if (dmt == NULL) {
+        ERROR("invalid argument");
         return -1;
     }
 
     if (dm_task_set_sector(dmt, sector) != 1) {
+        ERROR("devicemapper; set sectot failed");
         ret = -1;
     }
 
@@ -107,6 +110,7 @@ int set_add_node(struct dm_task *dmt, dm_add_node_t add_node)
     int ret = 0;
 
     if (dmt == NULL) {
+        ERROR("invalid argument");
         return -1;
     }
 
@@ -149,6 +153,7 @@ int set_dev_dir(const char *dir)
     int ret = 0;
 
     if (dir == NULL) {
+        ERROR("invalid argument");
         return -1;
     }
 
@@ -200,6 +205,7 @@ char *dev_get_driver_version()
 
     dmt = task_create(DM_DEVICE_VERSION);
     if (dmt == NULL) {
+        ERROR("devicemapper: create task DM_DEVICE_VERSION failed");
         goto err_out;
     }
 
@@ -209,6 +215,7 @@ char *dev_get_driver_version()
     }
 
     if (dm_task_get_driver_version(dmt, version, size) == 0) {
+        ERROR("devicemapper; get driver version failed");
         goto err_out;
     }
 
@@ -257,6 +264,7 @@ int dev_get_status(uint64_t *start, uint64_t *length, char **target_type, char *
 
     dmt = task_create_named(DM_DEVICE_STATUS, name);
     if (dmt == NULL) {
+        ERROR("devicemapper:create named task(DM_DEVICE_STATUS) failed");
         ret = -1;
         goto cleanup;
     }
@@ -304,6 +312,7 @@ int dev_get_info(struct dm_info *info, const char *name)
 
     dmt = task_create_named(DM_DEVICE_INFO, name);
     if (dmt == NULL) {
+        ERROR("devicemapper:create named task(DM_DEVICE_INFO) failed");
         ret = -1;
         goto cleanup;
     }
@@ -436,6 +445,7 @@ int dev_delete_device_force(const char *name)
     uint32_t cookie = 0;
 
     if (name == NULL) {
+        ERROR("invalid argument");
         ret = -1;
         goto out;
     }
@@ -456,12 +466,15 @@ int dev_delete_device_force(const char *name)
     g_dm_saw_busy = false;
     g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
+        ERROR("devicemapper: run task to delete device faild");
         if (g_dm_saw_busy) {
+            ERROR("devicemapper: delete task run err type is \"device is busy\"");
             ret = ERR_BUSY;
             goto udev;
         }
 
         if (g_dm_saw_enxio) {
+            ERROR("devicemapper: delete task run err type is \"No such device or address\"");
             ret = ERR_ENXIO;
             goto udev;
         }
@@ -487,17 +500,20 @@ int dev_remove_device_deferred(const char *name)
     uint16_t flags = DM_UDEV_DISABLE_LIBRARY_FALLBACK;
 
     if (name == NULL) {
+        ERROR("invalid argument");
         ret = -1;
         goto out;
     }
 
     dmt = task_create_named(DM_DEVICE_REMOVE, name);
     if (dmt == NULL) {
+        ERROR("devicemapper:create named task(DM_DEVICE_REMOVE) failed");
         ret = -1;
         goto out;
     }
 
     if (dm_task_deferred_remove(dmt) != 1) {
+        ERROR("devicemapper: do task deferred remove failed");
         ret = ERR_TASK_DEFERRED_REMOVE;
         goto out;
     }
@@ -510,11 +526,12 @@ int dev_remove_device_deferred(const char *name)
 
     g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
+        ERROR("devicemapper: Error running RemoveDeviceDeferred %d", ret);
         if (g_dm_saw_enxio) {
+            ERROR("devicemapper: delete deferred task run err type is \"No such device or address\"");
             ret = ERR_ENXIO;
             goto udev;
         }
-        ERROR("devicemapper: Error running RemoveDeviceDeferred %d", ret);
         ret = ERR_TASK_RUN;
         goto udev;
     }
@@ -576,6 +593,7 @@ int dev_get_device_list(char ***list, size_t *length)
     struct dm_task *dmt = NULL;
 
     if (list == NULL || length == NULL) {
+        ERROR("Invalid arguments");
         return -1;
     }
 
@@ -642,7 +660,7 @@ int dev_create_device(const char *pool_fname, int device_id)
 
     dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_fname);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+        ERROR("devicemapper:create named task(DM_DEVICE_TARGET_MSG) failed");
         ret = -1;
         goto cleanup;
     }
@@ -698,7 +716,7 @@ int dev_delete_device(const char *pool_fname, int device_id)
 
     dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_fname);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task %s failed", pool_fname);
+        ERROR("devicemapper:create named task(DM_DEVICE_TARGET_MSG) failed");
         ret = -1;
         goto cleanup;
     }
@@ -758,13 +776,13 @@ int dev_suspend_device(const char *dm_name)
 
     dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+        ERROR("devicemapper:create named task(DM_DEVICE_SUSPEND) failed");
         ret = -1;
         goto out;
     }
 
     if (dm_task_run(dmt) != 1) {
-        ERROR("devicemapper: Error running deviceCreate (ActivateDevice) %d", ret);
+        ERROR("devicemapper: Error running deviceCreate (ActivateDevice)");
         ret = -1;
         goto out;
     }
@@ -792,7 +810,7 @@ int dev_resume_device(const char *dm_name)
 
     dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+        ERROR("devicemapper:create named task(DM_DEVICE_SUSPEND) failed");
         ret = -1;
         goto out;
     }
@@ -835,7 +853,7 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
 
     dmt = task_create_named(DM_DEVICE_CREATE, name);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+        ERROR("devicemapper:create named task(DM_DEVICE_CREATE) failed");
         ret = -1;
         goto out;
     }
@@ -891,7 +909,7 @@ int dev_cancel_deferred_remove(const char *dm_name)
 
     dmt = task_create_named(DM_DEVICE_TARGET_MSG, dm_name);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+        ERROR("devicemapper:create named task(DM_DEVICE_TARGET_MSG) failed");
         ret = -1;
         goto cleanup;
     }
@@ -911,10 +929,12 @@ int dev_cancel_deferred_remove(const char *dm_name)
     g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
         if (g_dm_saw_busy) {
+            ERROR("devicemapper: Error delete device:device is busy");
             ret = ERR_BUSY;
             goto cleanup;
         }
         if (g_dm_saw_enxio) {
+            ERROR("devicemapper: Error delete device:no such device or address");
             ret = ERR_ENXIO;
             goto cleanup;
         }
@@ -1013,7 +1033,7 @@ int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_de
 
     dmt = task_create_named(DM_DEVICE_TARGET_MSG, pool_name);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task failed");
+        ERROR("devicemapper:create named task(DM_DEVICE_TARGET_MSG) failed");
         ret = -1;
         goto cleanup;
     }
@@ -1040,6 +1060,7 @@ int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_de
     g_dm_saw_exist = false;
     if (dm_task_run(dmt) != 1) {
         if (g_dm_saw_exist) {
+            ERROR("devicemapper: Error create snap:device id not exists");
             ret = ERR_DEVICE_ID_EXISTS;
             goto cleanup;
         }
