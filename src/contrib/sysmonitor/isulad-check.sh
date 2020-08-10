@@ -1,3 +1,4 @@
+#!/bin/sh
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
 # - iSulad licensed under the Mulan PSL v2.
@@ -12,7 +13,7 @@
 ##- @Author: maoweiyong
 ##- @Create: 2019-02-25
 #######################################################################*/
-#!/bin/sh
+
 source /etc/sysconfig/iSulad
 
 #健康检查文件
@@ -115,7 +116,7 @@ function health_check() {
             echo "success">${healthcheck_file}
             return
         else
-            if [ $ret -ne 137];then
+            if [ $ret -ne 137 ];then
                 sleep 1
             fi
             i=$(($i+1))
