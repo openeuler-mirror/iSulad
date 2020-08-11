@@ -43,6 +43,8 @@ bool metadata_store_remove(const char *hash, metadata_store_t *meta_store);
 
 char **metadata_store_list_hashes(metadata_store_t *meta_store);
 
+void metadata_store_free(metadata_store_t *store);
+
 #ifdef __cplusplus
 }
 #endif

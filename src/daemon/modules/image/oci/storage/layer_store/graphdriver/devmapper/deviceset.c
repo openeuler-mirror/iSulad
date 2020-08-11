@@ -3272,3 +3272,30 @@ free_out:
     }
     return ret;
 }
+
+void free_device_set(struct device_set *devset)
+{
+    if (devset == NULL) {
+        return;
+    }
+
+    UTIL_FREE_AND_SET_NULL(devset->root);
+    UTIL_FREE_AND_SET_NULL(devset->device_prefix);
+    metadata_store_free(devset->meta_store);
+    devset->meta_store = NULL;
+    map_free(devset->device_id_map);
+    devset->device_id_map = NULL;
+    UTIL_FREE_AND_SET_NULL(devset->filesystem);
+    pthread_rwlock_destroy(&(devset->devmapper_driver_rwlock));
+    UTIL_FREE_AND_SET_NULL(devset->mount_options);
+    util_free_array_by_len(devset->mkfs_args, devset->mkfs_args_len);
+    UTIL_FREE_AND_SET_NULL(devset->data_device);
+    UTIL_FREE_AND_SET_NULL(devset->metadata_device);
+    UTIL_FREE_AND_SET_NULL(devset->thin_pool_device);
+    free_image_devmapper_transaction(devset->metadata_trans);
+    devset->metadata_trans = NULL;
+    UTIL_FREE_AND_SET_NULL(devset->base_device_uuid);
+    UTIL_FREE_AND_SET_NULL(devset->base_device_filesystem);
+
+    free(devset);
+}

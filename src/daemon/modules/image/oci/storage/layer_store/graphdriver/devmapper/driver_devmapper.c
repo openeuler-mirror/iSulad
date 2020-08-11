@@ -545,6 +545,8 @@ out:
 
 int devmapper_clean_up(struct graphdriver *driver)
 {
+    int ret = 0;
+
     if (driver == NULL) {
         ERROR("Invalid input param to cleanup devicemapper");
         return -1;
@@ -552,10 +554,14 @@ int devmapper_clean_up(struct graphdriver *driver)
 
     if (device_set_shutdown(driver->devset, driver->home) != 0) {
         ERROR("devmapper: shutdown device set failed root is %s", driver->home);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
-    return umount(driver->home);
+    free_device_set(driver->devset);
+
+out:
+    return ret;
 }
 
 int devmapper_repair_lowers(const char *id, const char *parent, const struct graphdriver *driver)

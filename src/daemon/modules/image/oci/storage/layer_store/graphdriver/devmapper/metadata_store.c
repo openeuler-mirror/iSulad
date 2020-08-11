@@ -69,7 +69,7 @@ static void metadata_store_map_kvfree(void *key, void *value)
     devmapper_device_info_ref_dec((devmapper_device_info_t *)value);
 }
 
-static void metadata_store_free(metadata_store_t *store)
+void metadata_store_free(metadata_store_t *store)
 {
     if (store == NULL) {
         ERROR("invalid argument");

@@ -68,7 +68,6 @@ struct device_set {
     char *base_device_filesystem;
     uint nr_deleted_devices; // number of deleted devices
     uint32_t min_free_space_percent;
-    char *xfs_nospace_retries; // max retries when xfs receives ENOSPC
     int64_t udev_wait_timeout;
 
     bool user_base_size;
