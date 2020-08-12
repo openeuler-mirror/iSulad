@@ -379,8 +379,8 @@ void WebsocketServer::Start(Errors &err)
     }
 
     if (CreateContext() < 0) {
-        err.SetError("Websocket server start failed!, please check your network status"
-                     "(eg: port " + std::to_string(m_listenPort) + "is occupied)");
+        err.SetError("Websocket server start failed! please check your network status"
+                     "(eg: port " + std::to_string(m_listenPort) + " is occupied)");
         return;
     }
     m_pthread_service = std::thread(&WebsocketServer::ServiceWorkThread, this, 0);
