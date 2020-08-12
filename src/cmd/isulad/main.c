@@ -220,11 +220,11 @@ static void clean_residual_files()
 
 static void daemon_shutdown()
 {
-    /* clean resource first, left time to wait finish */
-    image_module_exit();
-
     /* shutdown server */
     server_common_shutdown();
+
+    /* clean resource first, left time to wait finish */
+    image_module_exit();
 
     umount_daemon_mntpoint();
 
