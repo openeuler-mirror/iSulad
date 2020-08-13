@@ -33,7 +33,10 @@ using grpc::SslServerCredentialsOptions;
 
 class GRPCServerImpl {
 public:
-    explicit GRPCServerImpl(Network::NetworkPluginConf &conf) : m_conf(conf) {}
+    explicit GRPCServerImpl(Network::NetworkPluginConf &conf)
+        : m_conf(conf)
+    {
+    }
 
     virtual ~GRPCServerImpl() = default;
 
@@ -50,8 +53,7 @@ public:
             ERROR("Init runtime service failed: %s", err.GetCMessage());
             return -1;
         }
-        auto hosts = std::vector<std::string>(args->hosts,
-                                              args->hosts + args->hosts_len);
+        auto hosts = std::vector<std::string>(args->hosts, args->hosts + args->hosts_len);
         for (auto host : hosts) {
             if (host.find("tcp://") == 0) {
                 m_tcpPath.push_back(host.erase(0, std::string("tcp://").length()));
@@ -128,8 +130,8 @@ private:
 
             grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert { key, cert };
             grpc::SslServerCredentialsOptions sslOps {
-                args->json_confs->tls_verify ? GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY
-                : GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE
+                args->json_confs->tls_verify ? GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY :
+                GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE
             };
             // Daemon modes : if tls_verify is set, Authenticate clients, otherwise do not
             // --tlsverify --tlscacert, --tlscert, --tlskey set: Authenticate clients
@@ -232,4 +234,3 @@ void grpc_server_shutdown(void)
 {
     g_grpcserver->Shutdown();
 }
-

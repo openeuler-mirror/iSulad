@@ -1241,7 +1241,7 @@ static void *do_shutdown_handler(void *arg)
 
     daemon_shutdown();
 
-    exit(0);
+    return NULL;
 }
 
 /* news_shutdown_handler */

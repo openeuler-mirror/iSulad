@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <pthread.h>
 #include <isula_libutils/imagetool_fs_info.h>
 
 #include "isula_libutils/container_inspect.h"
@@ -96,6 +97,8 @@ struct graphdriver {
 
     // options for device mapper
     struct device_set *devset;
+
+    pthread_rwlock_t rwlock; // lock to protect graphdriver between cleanup and other operations
 };
 
 int graphdriver_init(const struct storage_module_init_options *opts);

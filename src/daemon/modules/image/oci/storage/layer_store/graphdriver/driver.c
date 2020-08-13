@@ -80,6 +80,42 @@ static struct graphdriver g_drivers[] = { { .name = DRIVER_OVERLAY2_NAME, .ops =
 
 static const size_t g_numdrivers = sizeof(g_drivers) / sizeof(struct graphdriver);
 
+static inline bool driver_rd_lock()
+{
+    int nret = 0;
+
+    nret = pthread_rwlock_rdlock(&g_graphdriver->rwlock);
+    if (nret != 0) {
+        ERROR("Lock driver memory store failed: %s", strerror(nret));
+        return false;
+    }
+
+    return true;
+}
+
+static inline bool driver_wr_lock()
+{
+    int nret = 0;
+
+    nret = pthread_rwlock_wrlock(&g_graphdriver->rwlock);
+    if (nret != 0) {
+        ERROR("Lock driver memory store failed: %s", strerror(nret));
+        return false;
+    }
+
+    return true;
+}
+
+static inline void driver_unlock()
+{
+    int nret = 0;
+
+    nret = pthread_rwlock_unlock(&g_graphdriver->rwlock);
+    if (nret != 0) {
+        FATAL("Unlock driver memory store failed: %s", strerror(nret));
+    }
+}
+
 int graphdriver_init(const struct storage_module_init_options *opts)
 {
     int ret = 0;
@@ -116,12 +152,21 @@ int graphdriver_init(const struct storage_module_init_options *opts)
         goto out;
     }
 
+    ret = pthread_rwlock_init(&(g_graphdriver->rwlock), NULL);
+    if (ret != 0) {
+        ERROR("Failed to init driver rwlock");
+        ret = -1;
+        goto out;
+    }
+
 out:
     return ret;
 }
 
 int graphdriver_create_rw(const char *id, const char *parent, struct driver_create_opts *create_opts)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
@@ -132,12 +177,21 @@ int graphdriver_create_rw(const char *id, const char *parent, struct driver_crea
         return -1;
     }
 
-    return g_graphdriver->ops->create_rw(id, parent, g_graphdriver, create_opts);
-    ;
+    if (!driver_rd_lock()) {
+        return -1;
+    }
+
+    ret = g_graphdriver->ops->create_rw(id, parent, g_graphdriver, create_opts);
+
+    driver_unlock();
+
+    return ret;
 }
 
 int graphdriver_create_ro(const char *id, const char *parent, const struct driver_create_opts *create_opts)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
@@ -148,12 +202,21 @@ int graphdriver_create_ro(const char *id, const char *parent, const struct drive
         return -1;
     }
 
-    return g_graphdriver->ops->create_ro(id, parent, g_graphdriver, create_opts);
-    ;
+    if (!driver_rd_lock()) {
+        return -1;
+    }
+
+    ret = g_graphdriver->ops->create_ro(id, parent, g_graphdriver, create_opts);
+
+    driver_unlock();
+
+    return ret;
 }
 
 int graphdriver_rm_layer(const char *id)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
@@ -164,11 +227,21 @@ int graphdriver_rm_layer(const char *id)
         return -1;
     }
 
-    return g_graphdriver->ops->rm_layer(id, g_graphdriver);
+    if (!driver_rd_lock()) {
+        return -1;
+    }
+
+    ret = g_graphdriver->ops->rm_layer(id, g_graphdriver);
+
+    driver_unlock();
+
+    return ret;
 }
 
 char *graphdriver_mount_layer(const char *id, const struct driver_mount_opts *mount_opts)
 {
+    char *result = NULL;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return NULL;
@@ -179,11 +252,21 @@ char *graphdriver_mount_layer(const char *id, const struct driver_mount_opts *mo
         return NULL;
     }
 
-    return g_graphdriver->ops->mount_layer(id, g_graphdriver, mount_opts);
+    if (!driver_rd_lock()) {
+        return NULL;
+    }
+
+    result = g_graphdriver->ops->mount_layer(id, g_graphdriver, mount_opts);
+
+    driver_unlock();
+
+    return result;
 }
 
 int graphdriver_umount_layer(const char *id)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
@@ -194,26 +277,46 @@ int graphdriver_umount_layer(const char *id)
         return -1;
     }
 
-    return g_graphdriver->ops->umount_layer(id, g_graphdriver);
+    if (!driver_rd_lock()) {
+        return -1;
+    }
+
+    ret = g_graphdriver->ops->umount_layer(id, g_graphdriver);
+
+    driver_unlock();
+
+    return ret;
 }
 
 bool graphdriver_layer_exists(const char *id)
 {
+    bool ret = false;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
-        return -1;
+        return false;
     }
 
     if (id == NULL) {
         ERROR("Invalid input arguments for driver exists layer");
-        return -1;
+        return false;
     }
 
-    return g_graphdriver->ops->exists(id, g_graphdriver);
+    if (!driver_rd_lock()) {
+        return false;
+    }
+
+    ret = g_graphdriver->ops->exists(id, g_graphdriver);
+
+    driver_unlock();
+
+    return ret;
 }
 
 int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
@@ -224,7 +327,15 @@ int graphdriver_apply_diff(const char *id, const struct io_read_wrapper *content
         return -1;
     }
 
-    return g_graphdriver->ops->apply_diff(id, g_graphdriver, content);
+    if (!driver_rd_lock()) {
+        return -1;
+    }
+
+    ret = g_graphdriver->ops->apply_diff(id, g_graphdriver, content);
+
+    driver_unlock();
+
+    return ret;
 }
 
 container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
@@ -262,10 +373,14 @@ container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
         goto free_out;
     }
 
+    if (!driver_rd_lock()) {
+        goto free_out;
+    }
+
     ret = g_graphdriver->ops->get_layer_metadata(id, g_graphdriver, metadata);
     if (ret != 0) {
         ERROR("Failed to get metadata map info");
-        goto free_out;
+        goto unlock_driver;
     }
 
     inspect_driver->name = util_strdup_s(g_graphdriver->name);
@@ -297,9 +412,13 @@ container_inspect_graph_driver *graphdriver_get_metadata(const char *id)
     } else {
         ERROR("Unsupported driver %s", g_graphdriver->name);
         ret = -1;
-        goto free_out;
+        goto unlock_driver;
     }
+
     ret = 0;
+
+unlock_driver:
+    driver_unlock();
 
 free_out:
     free_json_map_string_string(metadata);
@@ -326,11 +445,18 @@ struct graphdriver_status *graphdriver_get_status(void)
         goto free_out;
     }
 
+    if (!driver_rd_lock()) {
+        goto free_out;
+    }
+
     ret = g_graphdriver->ops->get_driver_status(g_graphdriver, status);
     if (ret != 0) {
         ERROR("Failed to get driver status");
-        goto free_out;
+        goto unlock_driver;
     }
+
+unlock_driver:
+    driver_unlock();
 
 free_out:
     if (ret != 0) {
@@ -376,6 +502,11 @@ int graphdriver_cleanup(void)
         goto out;
     }
 
+    if (!driver_wr_lock()) {
+        ret = -1;
+        goto out;
+    }
+
     if (g_graphdriver->ops->clean_up(g_graphdriver) != 0) {
         ret = -1;
         goto out;
@@ -385,6 +516,8 @@ int graphdriver_cleanup(void)
     g_graphdriver->home = NULL;
     free(g_graphdriver->backing_fs);
     g_graphdriver->backing_fs = NULL;
+    driver_unlock();
+    pthread_rwlock_destroy(&(g_graphdriver->rwlock));
     g_graphdriver = NULL;
 
 out:
@@ -393,6 +526,8 @@ out:
 
 int graphdriver_try_repair_lowers(const char *id, const char *parent)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
@@ -403,11 +538,21 @@ int graphdriver_try_repair_lowers(const char *id, const char *parent)
         return -1;
     }
 
-    return g_graphdriver->ops->try_repair_lowers(id, parent, g_graphdriver);
+    if (!driver_rd_lock()) {
+        return -1;
+    }
+
+    ret = g_graphdriver->ops->try_repair_lowers(id, parent, g_graphdriver);
+
+    driver_unlock();
+
+    return ret;
 }
 
 int graphdriver_get_layer_fs_info(const char *id, imagetool_fs_info *fs_info)
 {
+    int ret = 0;
+
     if (g_graphdriver == NULL) {
         ERROR("Driver not inited yet");
         return -1;
@@ -418,5 +563,13 @@ int graphdriver_get_layer_fs_info(const char *id, imagetool_fs_info *fs_info)
         return -1;
     }
 
-    return g_graphdriver->ops->get_layer_fs_info(id, g_graphdriver, fs_info);
+    if (!driver_rd_lock()) {
+        return -1;
+    }
+
+    ret = g_graphdriver->ops->get_layer_fs_info(id, g_graphdriver, fs_info);
+
+    driver_unlock();
+
+    return ret;
 }
