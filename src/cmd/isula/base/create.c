@@ -1131,6 +1131,9 @@ static void free_alloced_memory_in_config(isula_container_config_t *custom_conf)
 
     free_json_map_string_string(custom_conf->annotations);
     custom_conf->annotations = NULL;
+
+    free(custom_conf->log_driver);
+    custom_conf->log_driver = NULL;
 }
 
 /*
