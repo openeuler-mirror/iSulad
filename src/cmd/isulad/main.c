@@ -73,6 +73,7 @@
 #endif
 
 sem_t g_daemon_shutdown_sem;
+sem_t g_daemon_wait_shutdown_sem;
 
 static int create_client_run_path(const char *group)
 {
@@ -229,6 +230,8 @@ static void daemon_shutdown()
     umount_daemon_mntpoint();
 
     clean_residual_files();
+
+    sem_post(&g_daemon_wait_shutdown_sem);
 }
 
 static void sigint_handler(int x)
@@ -281,6 +284,11 @@ static int add_shutdown_signal_handler()
 
     if (sem_init(&g_daemon_shutdown_sem, 0, 0) == -1) {
         ERROR("Failed to init daemon shutdown sem");
+        return -1;
+    }
+
+    if (sem_init(&g_daemon_wait_shutdown_sem, 0, 0) == -1) {
+        ERROR("Failed to init wait daemon shutdown sem");
         return -1;
     }
 
@@ -1432,6 +1440,8 @@ int main(int argc, char **argv)
 #endif
 
     server_common_start();
+
+    sem_wait(&g_daemon_wait_shutdown_sem);
 
     DAEMON_CLEAR_ERRMSG();
     return 0;
