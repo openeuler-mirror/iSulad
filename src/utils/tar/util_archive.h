@@ -42,6 +42,8 @@ int archive_unpack(const struct io_read_wrapper *content, const char *dstdir, co
 
 bool valid_archive_format(const char *file);
 
+int archive_chroot_tar(char *path, char *file, char **errmsg);
+
 #ifdef __cplusplus
 }
 #endif

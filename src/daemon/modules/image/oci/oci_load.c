@@ -397,6 +397,26 @@ out:
     return ret;
 }
 
+static int check_time_valid(oci_image_spec *conf)
+{
+    int64_t nanos = 0;
+    int i = 0;
+
+    if (to_unix_nanos_from_str(conf->created, &nanos) != 0) {
+        ERROR("Invalid created time %s", conf->created);
+        return -1;
+    }
+
+    for (i = 0; i < conf->history_len; i++) {
+        if (to_unix_nanos_from_str(conf->history[i]->created, &nanos) != 0) {
+            ERROR("Invalid history created time %s", conf->history[i]->created);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
 {
     int ret = 0;
@@ -417,6 +437,11 @@ static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
     if (conf == NULL || conf->created == NULL) {
         ERROR("Get image created time failed");
         ret = -1;
+        goto out;
+    }
+
+    ret = check_time_valid(conf);
+    if (ret != 0) {
         goto out;
     }
 

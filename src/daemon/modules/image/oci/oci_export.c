@@ -19,7 +19,7 @@
 #include "oci_export.h"
 #include "isula_libutils/log.h"
 #include "err_msg.h"
-#include "isulad_tar.h"
+#include "util_archive.h"
 
 int oci_do_export(char *id, char *file)
 {
@@ -40,7 +40,7 @@ int oci_do_export(char *id, char *file)
         return -1;
     }
 
-    ret = chroot_tar(mount_point, file, &errmsg);
+    ret = archive_chroot_tar(mount_point, file, &errmsg);
     if (ret != 0) {
         ERROR("failed to export container %s to file %s: %s", id, file, errmsg);
         isulad_set_error_message("Failed to export rootfs with error: %s", errmsg);
