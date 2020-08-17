@@ -208,11 +208,12 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
             break;
         }
         if (ioc->fd_to->fd == to) {
+            // remove the first fd node
             tmp = ioc->fd_to;
             ioc->fd_to = ioc->fd_to->next;
             break;
         }
-        fd_node_t *pre = NULL;
+        fd_node_t *pre = ioc->fd_to;
         tmp = ioc->fd_to->next;
         while (tmp != NULL && tmp->fd != to) {
             pre = tmp;
