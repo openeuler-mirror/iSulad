@@ -513,6 +513,7 @@ static int tar_all(int fd)
 
     w = archive_write_new();
     archive_write_set_format_pax(w);
+    archive_write_set_options(w, "xattrheader=SCHILY");
     ret = archive_write_open_fd(w, fd);
     if (ret != ARCHIVE_OK) {
         ERROR("open archive write failed: %s", archive_error_string(w));
