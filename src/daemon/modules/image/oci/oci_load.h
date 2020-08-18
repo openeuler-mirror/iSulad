@@ -49,6 +49,7 @@ typedef struct {
     char *manifest_digest;
     types_timestamp_t create_time;
     oci_image_manifest *manifest;
+    char *layer_of_hold_flag;
 } load_image_t;
 
 int oci_do_load(const im_load_request *request);

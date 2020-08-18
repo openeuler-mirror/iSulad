@@ -597,25 +597,23 @@ static int register_layers(pull_descriptor *desc)
             goto out;
         }
 
-        // Lock this layer when create layer to avoid concurrent create for the same layer.
-        mutex_lock(&cached->mutex);
-        l = storage_layer_get(id);
-        if (l != NULL) {
-            free_layer(l);
-            l = NULL;
-        } else {
-            storage_layer_create_opts_t copts = {
-                .parent = parent,
-                .uncompress_digest = desc->layers[i].diff_id,
-                .compressed_digest = desc->layers[i].digest,
-                .writable = false,
-                .layer_data_path = desc->layers[i].file,
-            };
-            ret = storage_layer_create(id, &copts);
-        }
-        mutex_unlock(&cached->mutex);
+        storage_layer_create_opts_t copts = {
+            .parent = parent,
+            .uncompress_digest = desc->layers[i].diff_id,
+            .compressed_digest = desc->layers[i].digest,
+            .writable = false,
+            .layer_data_path = desc->layers[i].file,
+        };
+        ret = storage_layer_create(id, &copts);
         if (ret != 0) {
             ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i].file);
+            goto out;
+        }
+        free(desc->layer_of_hold_flag);
+        desc->layer_of_hold_flag = util_strdup_s(id);
+        if (parent != NULL && storage_set_hold_flag(parent, false) != 0) {
+            ERROR("clear hold flag failed for layer %s", parent);
+            ret = -1;
             goto out;
         }
 
@@ -1357,6 +1355,15 @@ static int fetch_all(pull_descriptor *desc)
                     (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
                      !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)) &&
                      strcmp(list->layers[j]->uncompressed_digest, list->layers[j]->compressed_digest))) {
+                    // If can't set hold flag, it means it not exist anymore.
+                    if (storage_set_hold_flag(list->layers[j]->id, true) != 0) {
+                        continue;
+                    }
+                    free(desc->layer_of_hold_flag);
+                    desc->layer_of_hold_flag = util_strdup_s(list->layers[j]->id);
+                    if (parent_chain_id != NULL && storage_set_hold_flag(parent_chain_id, false) != 0) {
+                        continue;
+                    }
                     desc->layers[i].already_exist = true;
                     // oci or schema2 get diff id and chain id when get config
                     if (is_manifest_schemav1(desc->manifest.media_type)) {
@@ -1749,6 +1756,11 @@ int registry_pull(registry_pull_options *options)
     INFO("Pull images %s success", options->image_name);
 
 out:
+    if (desc->layer_of_hold_flag != NULL &&
+        storage_set_hold_flag(desc->layer_of_hold_flag, false) != 0) {
+        ERROR("clear hold flag failed for layer %s", desc->layer_of_hold_flag);
+    }
+
     if (desc->blobpath != NULL) {
         if (util_recursive_rmdir(desc->blobpath, 0)) {
             WARN("failed to remove directory %s", desc->blobpath);

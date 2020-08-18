@@ -200,6 +200,9 @@ static void oci_load_free_image(load_image_t *im)
 
     free_oci_image_manifest(im->manifest);
 
+    free(im->layer_of_hold_flag);
+    im->layer_of_hold_flag = NULL;
+
     free(im);
 }
 
@@ -317,7 +320,6 @@ static int oci_load_register_layers(load_image_t *desc)
 {
     int ret = 0;
     size_t i = 0;
-    struct layer *l = NULL;
     char *id = NULL;
     char *parent = NULL;
 
@@ -339,27 +341,23 @@ static int oci_load_register_layers(load_image_t *desc)
             goto out;
         }
 
-        l = storage_layer_get(id);
-        if (l != NULL) {
-            free_layer(l);
-            l = NULL;
-            ret = storage_layer_try_repair_lowers(id, parent);
-            if (ret != 0) {
-                ERROR("try to repair lowers for layer %s failed", id);
-            }
-        } else {
-            storage_layer_create_opts_t copts = {
-                .parent = parent,
-                .uncompress_digest = desc->layers[i]->diff_id,
-                .compressed_digest = desc->layers[i]->compressed_digest,
-                .writable = false,
-                .layer_data_path = desc->layers[i]->fpath,
-            };
-            ret = storage_layer_create(id, &copts);
-        }
-
+        storage_layer_create_opts_t copts = {
+            .parent = parent,
+            .uncompress_digest = desc->layers[i]->diff_id,
+            .compressed_digest = desc->layers[i]->compressed_digest,
+            .writable = false,
+            .layer_data_path = desc->layers[i]->fpath,
+        };
+        ret = storage_layer_create(id, &copts);
         if (ret != 0) {
             ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i]->fpath);
+            goto out;
+        }
+        free(desc->layer_of_hold_flag);
+        desc->layer_of_hold_flag = util_strdup_s(id);
+        if (parent != NULL && storage_set_hold_flag(parent, false) != 0) {
+            ERROR("clear hold flag failed for layer %s", parent);
+            ret = -1;
             goto out;
         }
 
@@ -1052,6 +1050,11 @@ out:
     free(manifest);
 
     if (im != NULL) {
+        if (im->layer_of_hold_flag != NULL &&
+            storage_set_hold_flag(im->layer_of_hold_flag, false) != 0) {
+            ERROR("clear hold flag failed for layer %s", im->layer_of_hold_flag);
+        }
+
         oci_load_free_image(im);
     }
 

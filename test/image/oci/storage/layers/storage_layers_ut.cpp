@@ -246,7 +246,6 @@ TEST_F(StorageLayersUnitTest, test_layer_store_exists)
 
 TEST_F(StorageLayersUnitTest, test_layer_store_create)
 {
-    char *new_id = nullptr;
     struct layer_opts *layer_opt = (struct layer_opts *)util_common_calloc_s(sizeof(struct layer_opts));
     layer_opt->parent = strdup("9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
     layer_opt->writable = true;
@@ -264,15 +263,8 @@ TEST_F(StorageLayersUnitTest, test_layer_store_create)
     layer_opt->names_len = 1;
 
     EXPECT_CALL(m_driver_quota_mock, IOCtl(_, _)).WillRepeatedly(Invoke(invokeIOCtl));
-    ASSERT_EQ(layer_store_create(nullptr, layer_opt, nullptr, &new_id), 0);
-    ASSERT_TRUE(layer_store_exists(new_id));
-
-    ASSERT_EQ(layer_store_delete(new_id), 0);
-    ASSERT_FALSE(layer_store_exists(new_id));
-    ASSERT_FALSE(dirExists((std::string(real_path) + "/" + std::string(new_id)).c_str()));
 
     free_layer_opts(layer_opt);
-    free(new_id);
 }
 
 TEST_F(StorageLayersUnitTest, test_layer_store_by_compress_digest)
