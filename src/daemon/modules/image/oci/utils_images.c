@@ -37,6 +37,9 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 
+// nanos of 2038-01-19T03:14:07, the max valid linux time
+#define MAX_NANOS 2147483647000000000
+
 char *get_last_part(char **parts)
 {
     char *last_part = NULL;
@@ -518,3 +521,25 @@ out:
     return timestamp;
 }
 
+bool oci_valid_time(char *time)
+{
+    int64_t nanos = 0;
+
+    if (time == NULL) {
+        ERROR("Invalid NULL time");
+        return false;
+    }
+
+    if (to_unix_nanos_from_str(time, &nanos) != 0) {
+        ERROR("Failed to translate created time %s to nanos", time);
+        return false;
+    }
+
+    // valid created time range from utc time 1970-01-01T00:00:00 to 2038-01-19T03:14:07
+    if (nanos < 0 || nanos > MAX_NANOS) {
+        ERROR("Invalid time %s out of range 1970-01-01T00:00:00 to 2038-01-19T03:14:07", time);
+        return false;
+    }
+
+    return true;
+}

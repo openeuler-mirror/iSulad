@@ -54,6 +54,7 @@ void free_items_not_inherit(docker_image_config_v2 *config);
 int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
                            docker_image_config_v2 *config);
 types_timestamp_t created_to_timestamp(char *created);
+bool oci_valid_time(char *time);
 
 #ifdef __cplusplus
 }

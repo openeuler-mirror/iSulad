@@ -35,6 +35,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/auths.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/registry/aes.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/storage_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/oci_image_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/http_mock.cc
     registry_ut.cpp)
 
