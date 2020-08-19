@@ -151,6 +151,8 @@ char *storage_img_get_image_id(const char *img_name);
 /* layer operations */
 int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *opts);
 
+int storage_set_hold_flag(const char *layer_id, bool hold);
+
 struct layer_list *storage_layers_get_by_compress_digest(const char *digest);
 
 struct layer *storage_layer_get(const char *layer_id);

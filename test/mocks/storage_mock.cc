@@ -137,3 +137,10 @@ void free_layer(struct layer *l)
     return;
 }
 
+int storage_set_hold_flag(const char *layer_id, bool hold)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageSetHoldFlag(layer_id, hold);
+    }
+    return -1;
+}

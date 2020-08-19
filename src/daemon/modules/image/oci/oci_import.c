@@ -54,6 +54,7 @@ typedef struct {
     types_timestamp_t now_time;
     char *tag;
     char *layer_file;
+    char *layer_of_hold_flag;
 } import_desc;
 
 static void free_import_desc(import_desc *desc)
@@ -80,6 +81,8 @@ static void free_import_desc(import_desc *desc)
     desc->uncompressed_digest = NULL;
     free(desc->layer_file);
     desc->layer_file = NULL;
+    free(desc->layer_of_hold_flag);
+    desc->layer_of_hold_flag = NULL;
 
     free(desc);
 
@@ -89,7 +92,6 @@ static void free_import_desc(import_desc *desc)
 static int register_layer(import_desc *desc)
 {
     char *id = NULL;
-    struct layer *l = NULL;
 
     if (desc == NULL || desc->uncompressed_digest == NULL || desc->compressed_digest == NULL) {
         ERROR("Invalid NULL param");
@@ -102,21 +104,19 @@ static int register_layer(import_desc *desc)
         return -1;
     }
 
-    l = storage_layer_get(id);
-    if (l != NULL) {
-        free_layer(l);
-        l = NULL;
-        return 0;
-    } else {
-        storage_layer_create_opts_t copts = {
-            .parent = NULL,
-            .uncompress_digest = desc->uncompressed_digest,
-            .compressed_digest = desc->compressed_digest,
-            .writable = false,
-            .layer_data_path = desc->layer_file,
-        };
-        return storage_layer_create(id, &copts);
+    storage_layer_create_opts_t copts = {
+        .parent = NULL,
+        .uncompress_digest = desc->uncompressed_digest,
+        .compressed_digest = desc->compressed_digest,
+        .writable = false,
+        .layer_data_path = desc->layer_file,
+    };
+    if (storage_layer_create(id, &copts) != 0) {
+        return -1;
     }
+    desc->layer_of_hold_flag = util_strdup_s(id);
+
+    return 0;
 }
 
 static int create_config(import_desc *desc)
@@ -374,6 +374,13 @@ static int register_image(import_desc *desc)
     }
 
 out:
+    if (desc->layer_of_hold_flag != NULL &&
+        storage_set_hold_flag(desc->layer_of_hold_flag, false) != 0) {
+        ERROR("clear hold flag failed for layer %s", desc->layer_of_hold_flag);
+    } else {
+        free(desc->layer_of_hold_flag);
+        desc->layer_of_hold_flag = NULL;
+    }
 
     if (ret != 0 && image_created) {
         if (storage_img_delete(image_id, true)) {
@@ -487,6 +494,11 @@ static int do_import(char *file, char *tag)
     }
 
 out:
+    if (desc->layer_of_hold_flag != NULL &&
+        storage_set_hold_flag(desc->layer_of_hold_flag, false) != 0) {
+        ERROR("clear hold flag failed for layer %s", desc->layer_of_hold_flag);
+    }
+
     free_import_desc(desc);
     desc = NULL;
 

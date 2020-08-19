@@ -37,6 +37,7 @@ public:
     MOCK_METHOD1(StorageLayerGet, struct layer * (const char *layer_id));
     MOCK_METHOD2(StorageLayerTryRepairLowers, int(const char *layer_id, const char *last_layer_id));
     MOCK_METHOD1(FreeLayer, void(struct layer *l));
+    MOCK_METHOD2(StorageSetHoldFlag, int (const char *layer_id, bool hold));
 };
 
 void MockStorage_SetMock(MockStorage* mock);
