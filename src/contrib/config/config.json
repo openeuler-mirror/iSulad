@@ -262,7 +262,17 @@
 			"/proc/timer_list",
 			"/proc/timer_stats",
 			"/proc/sysmonitor",
-			"/sys/firmware"
+			"/sys/firmware",
+			"/proc/pagealloc_statistics",
+			"/proc/pagealloc_module",
+			"/proc/pagealloc_bt",
+			"/proc/slaballoc_statistics",
+			"/proc/slaballoc_module",
+			"/proc/slaballoc_bt",
+			"/proc/lru_info/dump_lru_info",
+			"/proc/lru_info/lru_info_file",
+			"/proc/pin_memory",
+			"/proc/1/app_id"
 		],
 		"readonlyPaths": [
 			"/proc/asound",
