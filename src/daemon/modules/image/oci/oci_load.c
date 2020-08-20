@@ -397,16 +397,15 @@ out:
 
 static int check_time_valid(oci_image_spec *conf)
 {
-    int64_t nanos = 0;
     int i = 0;
 
-    if (to_unix_nanos_from_str(conf->created, &nanos) != 0) {
+    if (!oci_valid_time(conf->created)) {
         ERROR("Invalid created time %s", conf->created);
         return -1;
     }
 
     for (i = 0; i < conf->history_len; i++) {
-        if (to_unix_nanos_from_str(conf->history[i]->created, &nanos) != 0) {
+        if (!oci_valid_time(conf->history[i]->created)) {
             ERROR("Invalid history created time %s", conf->history[i]->created);
             return -1;
         }

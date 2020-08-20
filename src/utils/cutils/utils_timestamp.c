@@ -435,9 +435,10 @@ bool fix_date(struct tm *tm)
         return false;
     }
 
+    // Max year 2100 is enough, do not be 9999, it can overflow when translate it to nanos
     bool ret = (is_out_of_range(tm->tm_hour, 0, 23)) || (is_out_of_range(tm->tm_min, 0, 59)) ||
                (is_out_of_range(tm->tm_sec, 0, 59)) || (is_out_of_range(tm->tm_mon, 1, 12)) ||
-               (is_out_of_range(tm->tm_year, 1900, 9999));
+               (is_out_of_range(tm->tm_year, 1900, 2100));
 
     if (ret) {
         ERROR("Normal section out of range");

@@ -802,6 +802,44 @@ out:
     return ret;
 }
 
+static int check_time_valid(pull_descriptor *desc)
+{
+    int ret = 0;
+    parser_error err = NULL;
+    size_t i = 0;
+    docker_image_config_v2 *conf = NULL;
+
+    // oci/docker's configs are compatable
+    conf = docker_image_config_v2_parse_file(desc->config.file, NULL, &err);
+    if (conf == NULL) {
+        ERROR("parse config failed: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (!oci_valid_time(conf->created)) {
+        ERROR("Invalid created time %s", conf->created);
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < conf->history_len; i++) {
+        if (!oci_valid_time(conf->history[i]->created)) {
+            ERROR("Invalid history created time %s", conf->history[i]->created);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    free_docker_image_config_v2(conf);
+    conf = NULL;
+    free(err);
+    err = NULL;
+
+    return ret;
+}
+
 static int register_image(pull_descriptor *desc)
 {
     int ret = 0;
@@ -811,6 +849,10 @@ static int register_image(pull_descriptor *desc)
 
     if (desc == NULL) {
         ERROR("Invalid NULL pointer");
+        return -1;
+    }
+
+    if (check_time_valid(desc) != 0) {
         return -1;
     }
 
