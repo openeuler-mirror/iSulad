@@ -3310,7 +3310,8 @@ static int image_list_shrink_to_fit(imagetool_images_list *images_list)
     }
 
     // memory shrink to fit
-    ret = mem_realloc((void **)(&tmp), images_list->images_len, images_list->images, g_image_store->images_list_len);
+    ret = mem_realloc((void **)(&tmp), images_list->images_len * sizeof(imagetool_image *),
+                      images_list->images, g_image_store->images_list_len * sizeof(imagetool_image *));
     if (ret != 0) {
         ERROR("Failed to realloc memory for memory shrink to fit");
         return -1;
