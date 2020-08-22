@@ -35,7 +35,8 @@ extern "C" {
 #define HTTP_PREFIX "http://"
 
 #define DEFAULT_TAG ":latest"
-#define DEFAULT_HOSTNAME "docker.io/"
+#define OLD_HOSTNAME "docker.io/"
+#define DEFAULT_HOSTNAME "isula.io/"
 #define DEFAULT_REPO_PREFIX "library/"
 #define MAX_ID_BUF_LEN 256
 
@@ -47,7 +48,7 @@ char *oci_default_tag(const char *name);
 char *oci_add_host(const char *domain, const char *name);
 char *oci_normalize_image_name(const char *name);
 int oci_split_image_name(const char *image_name, char **host, char **name, char **tag);
-char *oci_strip_dockerio_prefix(const char *name);
+char *oci_strip_isulaio_prefix(const char *name);
 char *make_big_data_base_name(const char *key);
 char *oci_calc_diffid(const char *file);
 void free_items_not_inherit(docker_image_config_v2 *config);

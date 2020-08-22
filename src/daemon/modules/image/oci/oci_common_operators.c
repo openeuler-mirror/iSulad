@@ -57,7 +57,7 @@ char *oci_resolve_image_name(const char *name)
     return oci_normalize_image_name(name);
 }
 
-static void oci_strip_dockerio(const imagetool_image *image)
+static void oci_strip_isulaio(const imagetool_image *image)
 {
     char *repo_tag = NULL;
     char *repo_digest = NULL;
@@ -69,14 +69,14 @@ static void oci_strip_dockerio(const imagetool_image *image)
 
     for (i = 0; i < image->repo_tags_len; i++) {
         repo_tag = image->repo_tags[i];
-        image->repo_tags[i] = oci_strip_dockerio_prefix(repo_tag);
+        image->repo_tags[i] = oci_strip_isulaio_prefix(repo_tag);
         free(repo_tag);
         repo_tag = NULL;
     }
 
     for (i = 0; i < image->repo_digests_len; i++) {
         repo_digest = image->repo_digests[i];
-        image->repo_digests[i] = oci_strip_dockerio_prefix(repo_digest);
+        image->repo_digests[i] = oci_strip_isulaio_prefix(repo_digest);
         free(repo_digest);
         repo_digest = NULL;
     }
@@ -395,7 +395,7 @@ out:
     return ret;
 }
 
-static void oci_strip_all_dockerios(const imagetool_images_list *images)
+static void oci_strip_all_isulaios(const imagetool_images_list *images)
 {
     size_t i = 0;
 
@@ -404,7 +404,7 @@ static void oci_strip_all_dockerios(const imagetool_images_list *images)
     }
 
     for (i = 0; i < images->images_len; i++) {
-        oci_strip_dockerio(images->images[i]);
+        oci_strip_isulaio(images->images[i]);
     }
 
     return;
@@ -432,7 +432,7 @@ int oci_list_images(const im_list_request *request, imagetool_images_list **imag
         ret = oci_list_all_images(*images);
     }
 
-    oci_strip_all_dockerios(*images);
+    oci_strip_all_isulaios(*images);
 
 out:
     if (ret != 0) {
@@ -494,7 +494,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
         goto pack_response;
     }
 
-    oci_strip_dockerio(image_info);
+    oci_strip_isulaio(image_info);
 
     (*response)->image_info->image = image_info;
     image_info = NULL;

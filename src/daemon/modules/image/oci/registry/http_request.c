@@ -580,7 +580,7 @@ static char *build_get_token_url(challenge *c, char *username, char *scope)
     }
 
     // url format example:
-    // https://auth.docker.io/token?account=name&service=registry.docker.io&scope=repository:samalba/my-app:pull
+    // https://auth.isula.io/token?account=name&service=registry.isula.io&scope=repository:samalba/my-app:pull
     url_len += strlen(c->realm) + strlen("?");
     if (username != NULL) {
         url_len += strlen("account=") + strlen(username) + strlen("&");
