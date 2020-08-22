@@ -513,6 +513,43 @@ static int do_append_image(storage_image *im)
     return 0;
 }
 
+static void replace_default_hostname(char **name)
+{
+    int nret = 0;
+    char tmp_name[PATH_MAX] = { 0x00 };
+
+    nret = snprintf(tmp_name, sizeof(tmp_name), "%s%s", DEFAULT_HOSTNAME, *name + strlen(OLD_HOSTNAME));
+    if (nret < 0 || (size_t)nret >= sizeof(tmp_name)) {
+        ERROR("Failed to replace default hostname");
+        return;
+    }
+
+    free(*name);
+    *name = util_strdup_s(tmp_name);
+
+    return;
+}
+
+static int update_default_hostname(storage_image *im)
+{
+    int ret = 0;
+    size_t i = 0;
+    bool updated = false;
+
+    for (i = 0; i < im->names_len; i++) {
+        if (util_has_prefix(im->names[i], OLD_HOSTNAME)) {
+            replace_default_hostname(&im->names[i]);
+            updated = true;
+        }
+    }
+
+    if (updated) {
+        ret = save_image(im);
+    }
+
+    return ret;
+}
+
 static int append_image_by_directory(const char *image_dir)
 {
     int ret = 0;
@@ -531,6 +568,12 @@ static int append_image_by_directory(const char *image_dir)
     if (im == NULL) {
         ERROR("Failed to parse images path: %s", err);
         return -1;
+    }
+
+    ret = update_default_hostname(im);
+    if (ret != 0) {
+        ERROR("Failed to update default hostname");
+        goto out;
     }
 
     if (do_append_image(im) != 0) {

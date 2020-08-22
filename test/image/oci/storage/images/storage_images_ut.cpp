@@ -364,7 +364,7 @@ TEST_F(StorageImagesUnitTest, test_images_load)
   "id": "ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689",
   "digest": "sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e",
   "names": [
-    "docker.io/library/health_check:latest"
+    "isula.io/library/health_check:latest"
   ],
   "layer": "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a",
   "metadata": "{}",
@@ -387,7 +387,7 @@ TEST_F(StorageImagesUnitTest, test_images_load)
 TEST_F(StorageImagesUnitTest, test_image_store_create)
 {
     std::string id { "ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689" };
-    const char *names[] = { "docker.io/library/health_check:latest" };
+    const char *names[] = { "isula.io/library/health_check:latest" };
     std::string layer { "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a" };
     std::string metadata { "{}" };
     types_timestamp_t time { 0x00 };
@@ -450,7 +450,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_NE(image->loaded, nullptr);
     ASSERT_NE(image->repo_tags, nullptr);
     ASSERT_EQ(image->repo_tags_len, 1);
-    ASSERT_STREQ(image->repo_tags[0], "docker.io/library/health_check:latest");
+    ASSERT_STREQ(image->repo_tags[0], "isula.io/library/health_check:latest");
     ASSERT_NE(image->username, nullptr);
     ASSERT_EQ(image->size, 0);
     ASSERT_EQ(image->spec->config->env_len, 1);
@@ -471,7 +471,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     ASSERT_STREQ(
         image->repo_digests[0],
-        "docker.io/library/health_check@sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
+        "isula.io/library/health_check@sha256:fdb7b1fccaaa535cb8211a194dd6314acc643f3a36d1a7d2b79c299a9173fa7e");
 
     free_imagetool_image(image);
 
@@ -486,11 +486,11 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_EQ(image->size, 1000);
     free_imagetool_image(image);
 
-    ASSERT_EQ(image_store_add_name(id.c_str(), "docker.io/library/test:latest"), 0);
+    ASSERT_EQ(image_store_add_name(id.c_str(), "isula.io/library/test:latest"), 0);
     image = image_store_get_image(id.c_str());
     ASSERT_EQ(image->repo_tags_len, 2);
-    ASSERT_STREQ(image->repo_tags[0], "docker.io/library/health_check:latest");
-    ASSERT_STREQ(image->repo_tags[1], "docker.io/library/test:latest");
+    ASSERT_STREQ(image->repo_tags[0], "isula.io/library/health_check:latest");
+    ASSERT_STREQ(image->repo_tags[1], "isula.io/library/test:latest");
     free_imagetool_image(image);
 
     char **img_names = NULL;

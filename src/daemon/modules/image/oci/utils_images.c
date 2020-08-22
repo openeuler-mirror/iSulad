@@ -165,19 +165,19 @@ char *oci_normalize_image_name(const char *name)
     char temp[PATH_MAX] = { 0 };
     char **parts = NULL;
     char *last_part = NULL;
-    char *add_dockerio = "";
+    char *add_isulaio = "";
     char *add_library = "";
     char *add_default_tag = "";
 
-    // Add prefix docker.io if necessary
+    // Add prefix isula.io if necessary
     parts = util_string_split(name, '/');
     if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") && strcmp(*parts, "localhost")) ||
         (strstr(name, "/") == NULL)) {
-        add_dockerio = DEFAULT_HOSTNAME;
+        add_isulaio = DEFAULT_HOSTNAME;
     }
 
     // Add library if necessary
-    if (strlen(add_dockerio) != 0 && strstr(name, "/") == NULL) {
+    if (strlen(add_isulaio) != 0 && strstr(name, "/") == NULL) {
         add_library = DEFAULT_REPO_PREFIX;
     }
 
@@ -190,7 +190,7 @@ char *oci_normalize_image_name(const char *name)
     util_free_array(parts);
 
     // Normalize image name
-    int nret = snprintf(temp, sizeof(temp), "%s%s%s%s", add_dockerio, add_library, name, add_default_tag);
+    int nret = snprintf(temp, sizeof(temp), "%s%s%s%s", add_isulaio, add_library, name, add_default_tag);
     if (nret < 0 || (size_t)nret >= sizeof(temp)) {
         ERROR("sprint temp image name failed");
         return NULL;
@@ -238,7 +238,7 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
     return 0;
 }
 
-char *oci_strip_dockerio_prefix(const char *name)
+char *oci_strip_isulaio_prefix(const char *name)
 {
     char prefix[PATH_MAX] = { 0 };
     size_t size = 0;
@@ -254,13 +254,13 @@ char *oci_strip_dockerio_prefix(const char *name)
         return NULL;
     }
 
-    // Strip docker.io/library
+    // Strip isula.io/library
     size = strlen(prefix);
     if (strncmp(name, prefix, size) == 0 && strlen(name) > size) {
         return util_strdup_s(name + size);
     }
 
-    // Strip docker.io
+    // Strip isula.io
     size = strlen(DEFAULT_HOSTNAME);
     if (strncmp(name, DEFAULT_HOSTNAME, size) == 0 && strlen(name) > size) {
         return util_strdup_s(name + size);
