@@ -83,15 +83,14 @@ static int load_certs(const char *path, const char *name, bool use_decrypted_key
         *ca_file = util_path_join(path, name);
         if (*ca_file == NULL) {
             ret = -1;
-            ERROR("error join %s and %s", path, name);
+            ERROR("error join ca suffix");
             goto out;
         }
-        DEBUG("ca file: %s", *ca_file);
         goto out;
     } else if (cert_file != NULL && *cert_file == NULL && util_has_suffix(name, CLIENT_CERT_SUFFIX)) {
         key_name = corresponding_key_name(name);
         if (key_name == NULL) {
-            ERROR("find corresponding key name for %s failed", name);
+            ERROR("find corresponding key name for cert failed");
             ret = -1;
             goto out;
         }
@@ -99,11 +98,9 @@ static int load_certs(const char *path, const char *name, bool use_decrypted_key
         *cert_file = util_path_join(path, name);
         if (*cert_file == NULL || *key_file == NULL) {
             ret = -1;
-            ERROR("error join %s and %s, or error join %s and %s", path, name, path, key_name);
+            ERROR("error join key name");
             goto out;
         }
-        DEBUG("client cert file: %s", *cert_file);
-        DEBUG("client key file: %s", *key_file);
         goto out;
     } else {
         goto out;
@@ -139,7 +136,7 @@ int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_f
 
     path = util_path_join(g_certs_dir, host);
     if (path == NULL) {
-        ERROR("failed to join path %s and %s when loading certs", g_certs_dir, host);
+        ERROR("failed to join certs dir when loading certs");
         return -1;
     }
 
@@ -151,7 +148,7 @@ int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_f
 
     dir = opendir(path);
     if (dir == NULL) {
-        ERROR("error open %s for reading certs for %s: %s", path, host, strerror(errno));
+        ERROR("error open file for reading certs");
         ret = -1;
         goto out;
     }
@@ -174,7 +171,7 @@ int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_f
     }
 
     if (*ca_file == NULL || *cert_file == NULL || *key_file == NULL) {
-        WARN("Loaded only part of certs, continue to try");
+        ERROR("Loaded only part of certs, continue to try");
     }
 
 out:

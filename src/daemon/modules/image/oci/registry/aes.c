@@ -35,7 +35,7 @@ void aes_set_key_dir(char *key_dir)
 
     sret = snprintf(path, sizeof(path), "%s/%s", key_dir, AUTH_AESKEY_NAME);
     if (sret < 0 || (size_t)sret >= sizeof(path)) {
-        ERROR("Failed to sprintf auths %s/%s", key_dir, AUTH_AESKEY_NAME);
+        ERROR("Failed to sprintf auths");
         return;
     }
 

@@ -48,7 +48,7 @@ void auths_set_dir(char *auth_dir)
 
     sret = snprintf(path, sizeof(path), "%s/%s", auth_dir, AUTH_FILE_NAME);
     if (sret < 0 || (size_t)sret >= sizeof(path)) {
-        ERROR("Failed to sprintf auths file, auth dir: %s", auth_dir);
+        ERROR("Failed to sprintf auths file");
         return;
     }
 
@@ -314,22 +314,22 @@ static int write_auth_file(char *content)
 
     auths_dir = util_path_dir(g_auth_path);
     if (auths_dir == NULL) {
-        ERROR("get dir of %s for auths failed", g_auth_path);
+        ERROR("get dir for auths failed");
         ret = -1;
         goto out;
     }
 
     ret = util_mkdir_p(auths_dir, 0700);
     if (ret != 0) {
-        ERROR("mkdir of %s for aeskey failed", auths_dir);
-        isulad_try_set_error_message("create direcotry %s failed", auths_dir);
+        ERROR("mkdir for aeskey failed");
+        isulad_try_set_error_message("create direcotry for auths failed");
         goto out;
     }
 
     ret = util_atomic_write_file(g_auth_path, content, strlen(content), AUTH_FILE_MODE);
     if (ret != 0) {
-        ERROR("failed to write auths json to file %s", g_auth_path);
-        isulad_try_set_error_message("failed to write auths json to file %s", g_auth_path);
+        ERROR("failed to write auths json to file");
+        isulad_try_set_error_message("failed to write auths json to file");
         goto out;
     }
 
@@ -478,8 +478,8 @@ int auths_delete(char *host)
 
     auths = registry_auths_parse_file(g_auth_path, NULL, &err);
     if (auths == NULL) {
-        ERROR("failed to parse file %s", g_auth_path);
-        isulad_try_set_error_message("failed to parse file %s", g_auth_path);
+        ERROR("failed to parse file");
+        isulad_try_set_error_message("failed to parse file");
         ret = -1;
         goto out;
     }
@@ -498,8 +498,8 @@ int auths_delete(char *host)
 
     ret = util_atomic_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE);
     if (ret != 0) {
-        ERROR("failed to write auths json to file %s", g_auth_path);
-        isulad_try_set_error_message("failed to write auths json to file %s", g_auth_path);
+        ERROR("failed to write auths json to file");
+        isulad_try_set_error_message("failed to write auths json to file");
         goto out;
     }
 
