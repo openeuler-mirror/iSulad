@@ -632,7 +632,7 @@ TEST_F(RegistryUnitTest, test_pull_v2_image)
     struct timespec end_time;
     registry_pull_options options;
     options.image_name = (char*)"hub-mirror.c.163.com/library/busybox:latest";
-    options.dest_image_name = (char*)"isula.io/library/busybox:latest";
+    options.dest_image_name = (char*)"docker.io/library/busybox:latest";
     options.skip_tls_verify = true;
     options.insecure_registry = true;
 
@@ -667,7 +667,7 @@ TEST_F(RegistryUnitTest, test_pull_oci_image)
     ASSERT_NE(options, nullptr);
 
     options->image_name = util_strdup_s("hub-mirror.c.163.com/library/busybox:latest");
-    options->dest_image_name = util_strdup_s("isula.io/library/busybox:latest");
+    options->dest_image_name = util_strdup_s("docker.io/library/busybox:latest");
     options->auth.username = NULL;
     options->auth.password = NULL;
     options->skip_tls_verify = false;
@@ -684,7 +684,7 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
 {
     registry_pull_options options;
     options.image_name = (char*)"hub-mirror.c.163.com/library/busybox:latest";
-    options.dest_image_name = (char*)"isula.io/library/busybox:latest";
+    options.dest_image_name = (char*)"docker.io/library/busybox:latest";
     options.auth.username = (char*)"test";
     options.auth.password = (char*)"test";
     options.skip_tls_verify = true;

@@ -1,0 +1,572 @@
+#######################################################################
+##- @Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
+# - iSulad licensed under the Mulan PSL v2.
+# - You can use this software according to the terms and conditions of the Mulan PSL v2.
+# - You may obtain a copy of Mulan PSL v2 at:
+# -     http://license.coscl.org.cn/MulanPSL2
+# - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+# - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+# - PURPOSE.
+# - See the Mulan PSL v2 for more details.
+##- @Description: generate cetification
+##- @Author: wujing
+##- @Create: 2019-04-25
+#######################################################################
+#!/bin/bash
+#set -x
+LWC_PATH=/usr
+DEFAULT_ROOTFS_PATH=/dev/ram0
+ISULA_COMMON_OPTION=
+SOCKET_PATH=unix:///var/run/docker.sock
+SPACE_REPLACE_MAGIC="[#)"
+export IMAGE_NONE_PATH=$DEFAULT_ROOTFS_PATH
+info_isula_command_help()
+{
+	echo "See 'docker $1 --help'." 1>&2
+}
+
+error_invalid_flag()
+{
+    echo "flag provided but not defined: $2" 1>&2
+    info_isula_command_help $1
+}
+
+INFO_DOCKER_COMMAND_NO_ARGUMENT()
+{
+	echo "\"docker $1\" requires at least 1 argument(s)." 1>&2
+	info_isula_command_help $1
+}
+
+LOG_ERROR()
+{
+	echo "[ERROR] $1" 1>&2
+}
+
+RUN_USAGE="
+Usage:  docker run [OPTIONS] none|IMAGE [COMMAND] [ARG...]
+
+Run a command in a new container
+
+Options:
+      --cap-add=[]                 Add Linux capabilities
+      --cap-drop=[]                Drop Linux capabilities
+      --cpuset-cpus                CPUs in which to allow execution (e.g. 0-3, 0,1)
+      --cpu-shares                 CPU shares (relative weight)
+      --cpu-quota                  Limit CPU CFS (Completely Fair Scheduler) quota
+  -d, --detach                     Run container in background and print container ID
+      --device=[]                  Add a host device to the container
+  -e, --env=[]                     Set environment variables
+      --entrypoint                 Entrypoint to run when starting the container
+      --external-rootfs=PATH       Specify the custom rootfs that is not managed by isulad for the container, directory or block device
+      --help                       Print usage
+      --hook-spec                  File containing hook definition(prestart, poststart, poststop)
+  -h, --hostname                   Container host name
+      --hugetlb-limit=[]           Huge page limit (format: [size:]<limit>, e.g. --hugetlb-limit 2MB:32MB)
+  -i, --interactive                Keep STDIN open even if not attached
+      --log-opt=[]                 Log driver options
+  -m, --memory                     Memory limit
+      --memory-swap                Swap limit equal to memory plus swap: '-1' to enable unlimited swap
+      --mount                      Attach a filesystem mount to the service
+      --name=NAME                  NAME of the container
+      --net=none                   Connect a container to a network
+      --privileged                 Give extended privileges to this container
+  -R, --runtime                    Runtime to use for containers(default: lcr)
+      --restart=no                 Restart policy to apply when a container exits(no, always, on-failure[:max-retries])
+  -t, --tty                        Allocate a pseudo-TTY
+  -u, --user                       Username or UID (format: <name|uid>[:<group|gid>])
+  -v, --volume=[]                  Bind mount a volume"
+
+command_run()
+{
+    shift
+    if [ -z "$*"  ]; then
+    	INFO_DOCKER_COMMAND_NO_ARGUMENT run
+	exit 1
+    fi
+    for param in $*
+    do
+    	if [ --help == $param  ]; then
+	    echo "$RUN_USAGE"
+	    exit 0
+	fi
+    done
+    exec $LWC_PATH/bin/isula run $ISULA_COMMON_OPTION "$@"
+}
+
+STOP_USAGE="
+Usage:  docker stop [OPTIONS] CONTAINER [CONTAINER...]
+
+Stop a running container.
+Sending SIGTERM and then SIGKILL after a grace period
+
+Options:
+      --help       Print usage
+  -t, --time int   Seconds to wait for stop before killing it (default 10)"
+
+command_stop()
+{
+    shift
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT stop
+        exit 1
+    fi
+
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$STOP_USAGE"
+            exit 0
+        fi
+    done
+
+    exec $LWC_PATH/bin/isula stop $ISULA_COMMON_OPTION  "$@"
+}
+
+KILL_USAGE="
+Usage:  docker kill [OPTIONS] CONTAINER [CONTAINER...]
+
+Kill one or more running containers
+
+Options:
+      --help            Print usage
+  -s, --signal string   Signal to send to the container (default "KILL")"
+
+command_kill()
+{
+    shift
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT kill
+        exit 1
+    fi
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$KILL_USAGE"
+            exit 0
+        fi
+    done
+    exec $LWC_PATH/bin/isula kill $ISULA_COMMON_OPTION "$@"
+}
+
+PS_USAGE="
+Usage:  docker ps [OPTIONS]
+
+List containers
+
+Options:
+  -a, --all             Show all containers (default shows just running)
+      --help            Print usage
+  -q, --quiet           Only display containers name"
+
+command_ps()
+{
+    shift
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$PS_USAGE"
+            exit 0
+        fi
+    done
+    RET=0
+    $LWC_PATH/bin/isula ps $ISULA_COMMON_OPTION "$@"
+    let "RET=$?"
+    if [ $RET == 1  -o  $RET == 125 ]; then
+        info_isula_command_help ps
+    fi
+    exit $RET
+}
+
+PULL_USAGE="
+Usage:  docker pull [OPTIONS] NAME[:TAG|@DIGEST]
+
+Pull an image or a repository from a registry
+
+      --help                          Print STOP_USAGE"
+
+command_pull()
+{
+    shift
+    while true ; do
+        case "$1" in
+            --help)
+                echo "$PULL_USAGE"
+                exit 0 ;;
+            *)
+                break ;;
+        esac    # --- end of case ---
+    done
+
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT pull
+        exit 1
+    fi
+
+    IMAGE_NAME=`echo "$1" | awk -F : '{print $1}'`
+    echo "Pulling repository docker.io/library/$IMAGE_NAME"
+    echo "Error while pulling image: Get https://index.docker.io/v1/repositories/library/$IMAGE_NAME/images" 1>&2
+    exit 1
+}
+
+command_version()
+{
+    exec $LWC_PATH/bin/isula version $ISULA_COMMON_OPTION
+}
+
+INSPECT_USAGE="
+Usage:  docker inspect [OPTIONS] CONTAINER|IMAGE [CONTAINER|IMAGE...]
+
+Return low-level information on a container or image
+
+Options:
+  -f, --format string   Format the output using the given Go template
+      --help            Print usage"
+
+command_inspect()
+{
+    shift
+    while true ; do
+        case "$1" in
+            --help)
+                echo "$INSPECT_USAGE"
+                exit 0;;
+            -f | --format)
+                FORMAT="$2"
+                shift 2 ;;
+            --format=*)
+                FORMAT="${1#*=}"
+                shift ;;
+            -f=*)
+                FORMAT="${1#*=}"
+                shift ;;
+            --)
+                shift
+                break ;;
+            -*)
+                error_invalid_flag inspect $1
+                exit 125 ;;
+            *)
+                break ;;
+        esac    # --- end of case ---
+    done
+
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT inspect
+        exit 1
+    fi
+
+    if [ -z "$FORMAT" ] ; then
+        exec $LWC_PATH/bin/isula inspect $ISULA_COMMON_OPTION $ISULA_INSPECT_OPTION "$@"
+    else
+        exec $LWC_PATH/bin/isula inspect $ISULA_COMMON_OPTION $ISULA_INSPECT_OPTION -f "$FORMAT" "$@"
+    fi
+}
+
+EXEC_USAGE="
+Usage:  docker exec [OPTIONS] CONTAINER COMMAND [ARG...]
+
+Run a command in a running container
+
+Options:
+  -d, --detach               Detached mode: run command in the background
+      --help                 Print usage"
+
+command_exec()
+{
+    shift
+    if [ -z "$*" ] ; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT exec
+        exit 1
+    fi
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$EXEC_USAGE"
+            exit 0
+        fi
+    done
+
+    exec $LWC_PATH/bin/isula exec $ISULA_COMMON_OPTION "$@"
+}
+
+RM_USAGE="
+Usage:  docker rm [OPTIONS] CONTAINER [CONTAINER...]
+
+Remove one or more containers
+
+Options:
+  -f, --force     Force the removal of a running container (uses SIGKILL)
+      --help      Print usage"
+
+command_rm()
+{
+    shift
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT rm
+        exit 1
+    fi
+
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$RM_USAGE"
+            exit 0
+        fi
+    done
+    exec $LWC_PATH/bin/isula rm $ISULA_COMMON_OPTION "$@"
+}
+
+RMI_USAGE="
+Usage:  docker rmi [OPTIONS] IMAGE [IMAGE...]
+
+Remove one or more images
+
+Options:
+  -f, --force     Force removal of the image
+      --help      Print usage"
+
+command_rmi()
+{
+    shift
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT rmi
+        exit 1
+    fi
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$RMI_USAGE"
+            exit 0
+        fi
+    done
+    exec $LWC_PATH/bin/isula rmi $ISULA_COMMON_OPTION "$@"
+}
+
+LOAD_USAGE="
+Usage:  docker load [OPTIONS] --input=FILE --type=TYPE
+
+load an image from a manifest
+
+Options:
+      --help      Print usage
+  -i, --input     Read from a manifest
+  -t, --type      Image type, only support 'embedded' currently"
+
+command_load()
+{
+    shift
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$LOAD_USAGE"
+            exit 0
+        fi
+    done
+    exec $LWC_PATH/bin/isula load $ISULA_COMMON_OPTION "$@"
+}
+
+IMAGES_USAGE="
+Usage:  docker images
+
+List images
+
+Options:
+      --help       Print usage
+  -q, --quiet      Only display image names"
+
+command_images()
+{
+    shift
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$IMAGES_USAGE"
+            exit 0
+        fi
+    done
+    exec $LWC_PATH/bin/isula images $ISULA_COMMON_OPTION "$@"
+}
+
+RESTART_USAGE="
+Usage:  docker restart [OPTIONS] CONTAINER [CONTAINER...]
+
+Restart a container
+
+Options:
+      --help       Print usage
+  -t, --time int   Seconds to wait for stop before killing the container (default 10)"
+
+command_restart()
+{
+    shift
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT restart
+        exit 1
+    fi
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$RESTART_USAGE"
+            exit 0
+        fi
+    done
+    exec $LWC_PATH/bin/isula restart $ISULA_COMMON_OPTION "$@"
+}
+
+WAIT_USAGE="
+Usage:  docker wait CONTAINER
+
+Block until one container stop, then print their exit codes
+
+Options:
+      --help   Print usage"
+
+command_wait()
+{
+    shift
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT wait
+        exit 1
+    fi
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$WAIT_USAGE"
+            exit 0
+        fi
+    done
+    exec $LWC_PATH/bin/isula wait $ISULA_COMMON_OPTION "$@"
+}
+
+LOGS_USAGE="
+Usage:  docker logs [OPTIONS] CONTAINER
+
+Fetch the logs of a container
+
+Options:
+  -f, --follow         Follow log output
+      --help           Print usage
+      --tail=all       Number of lines to show from the end of the logs"
+
+command_logs()
+{
+    shift
+    if [ -z "$*" ]; then
+        INFO_DOCKER_COMMAND_NO_ARGUMENT logs
+        exit 1
+    fi
+
+    for param in $*
+    do
+        if [ --help == $param ]; then
+            echo "$LOGS_USAGE"
+            exit 0
+        fi
+    done
+
+    RET=0
+    $LWC_PATH/bin/isula logs $ISULA_COMMON_OPTION  "$@"
+    let "RET=$?"
+    if [ $RET == 1 ]; then
+        info_isula_command_help logs
+    fi
+    exit $RET
+}
+
+DOCKER_COMMAND_USAGE="
+Usage: docker [OPTIONS] COMMAND [arg...]
+       docker [ --help | -v | --version ]
+
+A self-sufficient runtime for containers
+
+Options:
+      --help               Print usage
+  -H, --host=[]            Daemon socket(s) to connect to
+  -v, --version            Print version information and quit
+
+Commands:
+
+  exec        Run a command in a running container
+  images      List images
+  inspect     Return low-level information on a container or image
+  kill        Kill one or more running containers
+  load        Load an image from a manifest
+  logs        Fetch the logs of a container
+  ps          List containers
+  restart     Restart one or more containers
+  rm          Remove one or more containers
+  rmi         Remove one or more images
+  run         Run a command in a new container
+  stop        Stop one or more running containers
+  version     Show the Docker version information
+  wait        Block until one or more containers stop, then print their exit codes
+
+Run 'docker COMMAND --help' for more information on a command."
+
+command_docker()
+{
+    case $1 in
+        run)
+            command_run "$@" ;;
+        stop)
+            command_stop "$@" ;;
+        kill)
+            command_kill "$@" ;;
+        ps)
+            command_ps "$@" ;;
+        pull)
+            command_pull "$@";;
+        version)
+            command_version "$@";;
+        inspect)
+            command_inspect "$@";;
+        exec)
+            command_exec "$@";;
+        rm)
+            command_rm "$@";;
+        rmi)
+            command_rmi "$@";;
+        load)
+            command_load "$@";;
+        images)
+            command_images "$@";;
+        restart)
+            command_restart "$@";;
+        wait)
+            command_wait "$@";;
+        logs)
+            command_logs "$@";;
+        *)
+            echo "docker: '$1' is not a docker command." ;
+            echo "See 'docker --help'" ;
+            exit 1 ;;
+    esac
+}
+
+if [ -z "$*" ] ; then
+    echo "$DOCKER_COMMAND_USAGE"
+    exit 0
+fi
+
+while true ; do
+    case $1 in
+        --help | help | "")
+            echo "$DOCKER_COMMAND_USAGE" ;
+            exit 0 ;;
+        -H | --host)
+            SOCKET_PATH="$2"
+            shift 2 ;;
+        --host=*)
+            SOCKET_PATH=${1#*=}
+            shift ;;
+        -v | --version)
+            echo "Docker version 1.11.2, build df5f654"
+            exit 0 ;;
+        *)
+            break;;
+    esac
+done
+
+ISULA_COMMON_OPTION="$ISULA_COMMON_OPTION -H $SOCKET_PATH"
+
+command_docker "$@";

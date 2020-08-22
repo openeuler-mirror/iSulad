@@ -90,7 +90,7 @@ static int parse_challenges(pull_descriptor *desc, char *schema, char *params)
     // Support "Bearer" and "Basic" only.
     if (!strcasecmp(schema, "Bearer")) {
         // params:
-        // realm="https://auth.isula.io/token",service="registry.isula.io"
+        // realm="https://auth.docker.io/token",service="registry.docker.io"
         params = util_trim_space(params);
         kv_strs = util_string_split(params, ',');
         len = util_array_len((const char **)kv_strs);
@@ -168,7 +168,7 @@ static int parse_auth(pull_descriptor *desc, char *auth)
     }
 
     // parts[0]: Bearer
-    // parts[1]: realm="https://auth.isula.io/token",service="registry.isula.io"
+    // parts[1]: realm="https://auth.docker.io/token",service="registry.docker.io"
     ret = parse_challenges(desc, parts[0], parts[1]);
     if (ret != 0) {
         ERROR("Parse challenges failed, schema: %s, params: %s", parts[0], parts[1]);
@@ -256,7 +256,7 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
     // HTTP/1.1 401 Unauthorized
     // Content-Type: application/json
     // Docker-Distribution-Api-Version: registry/2.0
-    // Www-Authenticate: Bearer realm="https://auth.isula.io/token",service="registry.isula.io"
+    // Www-Authenticate: Bearer realm="https://auth.docker.io/token",service="registry.docker.io"
     // Date: Mon, 16 Mar 2020 01:16:09 GMT
     // Content-Length: 87
     // Strict-Transport-Security: max-age=31536000
@@ -337,7 +337,7 @@ int registry_pingv2(pull_descriptor *desc, char *protocol)
     }
 
     // Sending url
-    // https://registry-1.isula.io/v2/
+    // https://registry-1.docker.io/v2/
     INFO("sending ping url: %s", url);
     ret = http_request_buf(desc, url, (const char **)headers, &output, HEAD_ONLY);
     if (ret != 0) {
