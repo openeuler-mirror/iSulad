@@ -13,21 +13,16 @@
  * Description: provide grpc container service functions
  ******************************************************************************/
 #include "grpc_images_client.h"
-#include <string>
-#include "images.grpc.pb.h"
 #include "api.grpc.pb.h"
-#include "utils.h"
 #include "client_base.h"
+#include "images.grpc.pb.h"
+#include "utils.h"
+#include <string>
 
 using namespace images;
 
-using grpc::Channel;
 using grpc::ClientContext;
-using grpc::ClientReader;
-using grpc::ClientReaderWriter;
-using grpc::ClientWriter;
 using grpc::Status;
-using google::protobuf::Timestamp;
 
 class ImagesList : public ClientBase<ImagesService, ImagesService::Stub, isula_list_images_request, ListImagesRequest,
     isula_list_images_response, ListImagesResponse> {
@@ -38,13 +33,13 @@ public:
     }
     ~ImagesList() = default;
 
-    int request_to_grpc(const isula_list_images_request *request, ListImagesRequest *grequest) override
+    auto request_to_grpc(const isula_list_images_request *request, ListImagesRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
         }
         if (request->filters != nullptr) {
-            google::protobuf::Map<std::string, std::string> *map;
+            google::protobuf::Map<std::string, std::string> *map = nullptr;
             map = grequest->mutable_filters();
             for (size_t i = 0; i < request->filters->len; i++) {
                 (*map)[request->filters->keys[i]] = request->filters->values[i];
@@ -53,10 +48,10 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ListImagesResponse *gresponse, isula_list_images_response *response) override
+    auto response_from_grpc(ListImagesResponse *gresponse, isula_list_images_response *response) -> int override
     {
         struct isula_image_info *images_list = nullptr;
-        int i;
+        int i = 0;
         int num = gresponse->images_size();
 
         if (num <= 0) {
@@ -111,7 +106,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const ListImagesRequest &req, ListImagesResponse *reply) override
+    auto grpc_call(ClientContext *context, const ListImagesRequest &req, ListImagesResponse *reply) -> Status override
     {
         return stub_->List(context, req, reply);
     }
@@ -126,7 +121,7 @@ public:
     }
     ~ImagesDelete() = default;
 
-    int request_to_grpc(const isula_rmi_request *request, DeleteImageRequest *grequest) override
+    auto request_to_grpc(const isula_rmi_request *request, DeleteImageRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -140,7 +135,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(DeleteImageResponse *gresponse, isula_rmi_response *response) override
+    auto response_from_grpc(DeleteImageResponse *gresponse, isula_rmi_response *response) -> int override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -151,7 +146,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const DeleteImageRequest &req) override
+    auto check_parameter(const DeleteImageRequest &req) -> int override
     {
         if (req.name().empty()) {
             ERROR("Missing image name in the request");
@@ -161,7 +156,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const DeleteImageRequest &req, DeleteImageResponse *reply) override
+    auto grpc_call(ClientContext *context, const DeleteImageRequest &req, DeleteImageResponse *reply) -> Status override
     {
         return stub_->Delete(context, req, reply);
     }
@@ -176,7 +171,7 @@ public:
     }
     ~ImageTag() = default;
 
-    int request_to_grpc(const isula_tag_request *request, TagImageRequest *grequest) override
+    auto request_to_grpc(const isula_tag_request *request, TagImageRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -192,7 +187,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(TagImageResponse *gresponse, isula_tag_response *response) override
+    auto response_from_grpc(TagImageResponse *gresponse, isula_tag_response *response) -> int override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -203,7 +198,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const TagImageRequest &req) override
+    auto check_parameter(const TagImageRequest &req) -> int override
     {
         if (req.src_name().empty()) {
             ERROR("Missing source image name in the request");
@@ -217,7 +212,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const TagImageRequest &req, TagImageResponse *reply) override
+    auto grpc_call(ClientContext *context, const TagImageRequest &req, TagImageResponse *reply) -> Status override
     {
         return stub_->Tag(context, req, reply);
     }
@@ -232,7 +227,7 @@ public:
     }
     ~ImagesLoad() = default;
 
-    int request_to_grpc(const isula_load_request *request, LoadImageRequest *grequest) override
+    auto request_to_grpc(const isula_load_request *request, LoadImageRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -251,7 +246,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(LoadImageResponse *gresponse, isula_load_response *response) override
+    auto response_from_grpc(LoadImageResponse *gresponse, isula_load_response *response) -> int override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -262,7 +257,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const LoadImageRequest &req) override
+    auto check_parameter(const LoadImageRequest &req) -> int override
     {
         if (req.file().empty()) {
             ERROR("Missing manifest file name in the request");
@@ -276,7 +271,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const LoadImageRequest &req, LoadImageResponse *reply) override
+    auto grpc_call(ClientContext *context, const LoadImageRequest &req, LoadImageResponse *reply) -> Status override
     {
         return stub_->Load(context, req, reply);
     }
@@ -291,7 +286,7 @@ public:
     }
     ~Import() = default;
 
-    int request_to_grpc(const isula_import_request *request, ImportRequest *grequest) override
+    auto request_to_grpc(const isula_import_request *request, ImportRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -307,7 +302,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(ImportResponse *gresponse, isula_import_response *response) override
+    auto response_from_grpc(ImportResponse *gresponse, isula_import_response *response) -> int override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -321,7 +316,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const ImportRequest &req) override
+    auto check_parameter(const ImportRequest &req) -> int override
     {
         if (req.file().empty()) {
             ERROR("Missing tallball file name in the request");
@@ -335,7 +330,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const ImportRequest &req, ImportResponse *reply) override
+    auto grpc_call(ClientContext *context, const ImportRequest &req, ImportResponse *reply) -> Status override
     {
         return stub_->Import(context, req, reply);
     }
@@ -351,7 +346,7 @@ public:
     }
     ~ImagesPull() = default;
 
-    int request_to_grpc(const isula_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest) override
+    auto request_to_grpc(const isula_pull_request *request, runtime::v1alpha2::PullImageRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -369,7 +364,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, isula_pull_response *response) override
+    auto response_from_grpc(runtime::v1alpha2::PullImageResponse *gresponse, isula_pull_response *response) -> int override
     {
         if (!gresponse->image_ref().empty()) {
             response->image_ref = util_strdup_s(gresponse->image_ref().c_str());
@@ -378,7 +373,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const runtime::v1alpha2::PullImageRequest &req) override
+    auto check_parameter(const runtime::v1alpha2::PullImageRequest &req) -> int override
     {
         if (req.image().image().empty()) {
             ERROR("Missing image name in the request");
@@ -388,8 +383,8 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const runtime::v1alpha2::PullImageRequest &req,
-                     runtime::v1alpha2::PullImageResponse *reply) override
+    auto grpc_call(ClientContext *context, const runtime::v1alpha2::PullImageRequest &req,
+                   runtime::v1alpha2::PullImageResponse *reply) -> Status override
     {
         return stub_->PullImage(context, req, reply);
     }
@@ -404,7 +399,7 @@ public:
     }
     ~ImageInspect() = default;
 
-    int request_to_grpc(const isula_inspect_request *request, InspectImageRequest *grequest) override
+    auto request_to_grpc(const isula_inspect_request *request, InspectImageRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -419,7 +414,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(InspectImageResponse *gresponse, isula_inspect_response *response) override
+    auto response_from_grpc(InspectImageResponse *gresponse, isula_inspect_response *response) -> int override
     {
         response->server_errono = gresponse->cc();
         if (!gresponse->imagejson().empty()) {
@@ -432,7 +427,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const InspectImageRequest &req) override
+    auto check_parameter(const InspectImageRequest &req) -> int override
     {
         if (req.id().empty()) {
             ERROR("Missing image name in the request");
@@ -442,7 +437,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const InspectImageRequest &req, InspectImageResponse *reply) override
+    auto grpc_call(ClientContext *context, const InspectImageRequest &req, InspectImageResponse *reply) -> Status override
     {
         return stub_->Inspect(context, req, reply);
     }
@@ -455,7 +450,7 @@ public:
     explicit Login(void *args) : ClientBase(args) {}
     ~Login() = default;
 
-    int request_to_grpc(const isula_login_request *request, LoginRequest *grequest) override
+    auto request_to_grpc(const isula_login_request *request, LoginRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -477,7 +472,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(LoginResponse *gresponse, isula_login_response *response) override
+    auto response_from_grpc(LoginResponse *gresponse, isula_login_response *response) -> int override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -488,7 +483,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const LoginRequest &req) override
+    auto check_parameter(const LoginRequest &req) -> int override
     {
         if (req.username().empty()) {
             ERROR("Missing username in the request");
@@ -510,7 +505,7 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const LoginRequest &req, LoginResponse *reply) override
+    auto grpc_call(ClientContext *context, const LoginRequest &req, LoginResponse *reply) -> Status override
     {
         return stub_->Login(context, req, reply);
     }
@@ -523,7 +518,7 @@ public:
     explicit Logout(void *args) : ClientBase(args) {}
     ~Logout() = default;
 
-    int request_to_grpc(const isula_logout_request *request, LogoutRequest *grequest) override
+    auto request_to_grpc(const isula_logout_request *request, LogoutRequest *grequest) -> int override
     {
         if (request == nullptr) {
             return -1;
@@ -539,7 +534,7 @@ public:
         return 0;
     }
 
-    int response_from_grpc(LogoutResponse *gresponse, isula_logout_response *response) override
+    auto response_from_grpc(LogoutResponse *gresponse, isula_logout_response *response) -> int override
     {
         response->server_errono = (uint32_t)gresponse->cc();
 
@@ -550,7 +545,7 @@ public:
         return 0;
     }
 
-    int check_parameter(const LogoutRequest &req) override
+    auto check_parameter(const LogoutRequest &req) -> int override
     {
         if (req.server().empty()) {
             ERROR("Missing server in the request");
@@ -564,13 +559,13 @@ public:
         return 0;
     }
 
-    Status grpc_call(ClientContext *context, const LogoutRequest &req, LogoutResponse *reply) override
+    auto grpc_call(ClientContext *context, const LogoutRequest &req, LogoutResponse *reply) -> Status override
     {
         return stub_->Logout(context, req, reply);
     }
 };
 
-int grpc_images_client_ops_init(isula_connect_ops *ops)
+auto grpc_images_client_ops_init(isula_connect_ops *ops) -> int
 {
     if (ops == nullptr) {
         return -1;
