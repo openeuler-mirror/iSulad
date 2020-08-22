@@ -270,9 +270,7 @@
 			"/proc/slaballoc_module",
 			"/proc/slaballoc_bt",
 			"/proc/lru_info/dump_lru_info",
-			"/proc/lru_info/lru_info_file",
-			"/proc/pin_memory",
-			"/proc/1/app_id"
+			"/proc/lru_info/lru_info_file"
 		],
 		"readonlyPaths": [
 			"/proc/asound",

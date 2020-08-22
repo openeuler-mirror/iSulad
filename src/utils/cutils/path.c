@@ -29,8 +29,8 @@
 #include "utils_file.h"
 
 #define ISSLASH(C) ((C) == '/')
-#define IS_ABSOLUTE_FILE_NAME(F) (ISSLASH ((F)[0]))
-#define IS_RELATIVE_FILE_NAME(F) (!IS_ABSOLUTE_FILE_NAME (F))
+#define IS_ABSOLUTE_FILE_NAME(F) (ISSLASH((F)[0]))
+#define IS_RELATIVE_FILE_NAME(F) (!IS_ABSOLUTE_FILE_NAME(F))
 
 static bool do_clean_path_continue(const char *endpos, const char *stpos, const char *respath, char **dst)
 {
@@ -50,8 +50,7 @@ static bool do_clean_path_continue(const char *endpos, const char *stpos, const 
     return false;
 }
 
-static int do_clean_path(const char *respath, const char *limit_respath,
-                         const char *stpos, char **dst)
+static int do_clean_path(const char *respath, const char *limit_respath, const char *stpos, char **dst)
 {
     char *dest = *dst;
     const char *endpos = NULL;
@@ -98,8 +97,7 @@ char *cleanpath(const char *path, char *realpath, size_t realpath_len)
     const char *stpos = NULL;
     const char *limit_respath = NULL;
 
-    if (path == NULL || path[0] == '\0' || \
-        realpath == NULL || (realpath_len < PATH_MAX)) {
+    if (path == NULL || path[0] == '\0' || realpath == NULL || (realpath_len < PATH_MAX)) {
         return NULL;
     }
 
@@ -146,8 +144,7 @@ error:
     return NULL;
 }
 
-static int do_path_realloc(const char *start, const char *end,
-                           char **rpath, char **dest, const char **rpath_limit)
+static int do_path_realloc(const char *start, const char *end, char **rpath, char **dest, const char **rpath_limit)
 {
     int nret = 0;
     size_t new_size;
@@ -184,8 +181,7 @@ static int do_path_realloc(const char *start, const char *end,
     return 0;
 }
 
-static int do_get_symlinks_copy_buf(const char *buf, const char *prefix, size_t prefix_len,
-                                    char **rpath, char **dest)
+static int do_get_symlinks_copy_buf(const char *buf, const char *prefix, size_t prefix_len, char **rpath, char **dest)
 {
     if (IS_ABSOLUTE_FILE_NAME(buf)) {
         if (prefix_len) {
@@ -203,9 +199,8 @@ static int do_get_symlinks_copy_buf(const char *buf, const char *prefix, size_t 
     return 0;
 }
 
-static int do_get_symlinks(const char **fullpath, const char *prefix, size_t prefix_len,
-                           char **rpath, char **dest, const char **end,
-                           int *num_links, char **extra_buf)
+static int do_get_symlinks(const char **fullpath, const char *prefix, size_t prefix_len, char **rpath, char **dest,
+                           const char **end, int *num_links, char **extra_buf)
 {
     int ret = -1;
     size_t len;
@@ -305,9 +300,8 @@ static inline bool is_specify_parent(const char *end, const char *start)
     return (end - start == 2) && is_current_char(start[0]) && is_current_char(start[1]);
 }
 
-static int do_eval_symlinks_in_scope(const char *fullpath, const char *prefix,
-                                     size_t prefix_len,
-                                     char **rpath, char **dest, const char *rpath_limit)
+static int do_eval_symlinks_in_scope(const char *fullpath, const char *prefix, size_t prefix_len, char **rpath,
+                                     char **dest, const char *rpath_limit)
 {
     int nret = 0;
     int num_links = 0;
@@ -397,6 +391,11 @@ static char *eval_symlinks_in_scope(const char *fullpath, const char *rootpath)
         prefix_len = 0;
     }
 
+    if (prefix_len >= (PATH_MAX - 1)) {
+        ERROR("prefix too long");
+        goto out;
+    }
+
     dest = rpath;
     if (prefix_len) {
         (void)memcpy(rpath, prefix, prefix_len);
@@ -404,8 +403,7 @@ static char *eval_symlinks_in_scope(const char *fullpath, const char *rootpath)
     }
     *dest++ = '/';
 
-    if (do_eval_symlinks_in_scope(fullpath, prefix, prefix_len, &rpath, &dest,
-                                  rpath_limit)) {
+    if (do_eval_symlinks_in_scope(fullpath, prefix, prefix_len, &rpath, &dest, rpath_limit)) {
         goto out;
     }
 
