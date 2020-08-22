@@ -431,7 +431,7 @@ static void status_append(const char *name, const char *value, uint64_t u_data, 
 #define MAX_INFO_LENGTH 100
     char tmp[PATH_MAX] = { 0 };
     char *str = NULL;
-    size_t nret = 0;
+    int nret = 0;
 
     if (name == NULL) {
         ERROR("invalid argument");

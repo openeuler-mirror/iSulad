@@ -1049,8 +1049,7 @@ out:
     free(manifest);
 
     if (im != NULL) {
-        if (im->layer_of_hold_flag != NULL &&
-            storage_set_hold_flag(im->layer_of_hold_flag, false) != 0) {
+        if (im->layer_of_hold_flag != NULL && storage_set_hold_flag(im->layer_of_hold_flag, false) != 0) {
             ERROR("clear hold flag failed for layer %s", im->layer_of_hold_flag);
         }
 

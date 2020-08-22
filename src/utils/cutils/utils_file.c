@@ -188,6 +188,10 @@ int util_mkdir_p(const char *dir, mode_t mode)
         UTIL_FREE_AND_SET_NULL(cur_dir);
     } while (tmp_pos != dir);
 
+    if (chmod(base, mode) != 0) {
+        SYSERROR("Failed to chmod for directory");
+    }
+
     return 0;
 err_out:
     free(cur_dir);
@@ -345,8 +349,7 @@ static int exec_force_rmdir_command(const char *dir)
         return -1;
     }
 
-    if (util_array_append(&args, "rm") != 0 ||
-        util_array_append(&args, "-rf") != 0 ||
+    if (util_array_append(&args, "rm") != 0 || util_array_append(&args, "-rf") != 0 ||
         util_array_append(&args, dir) != 0) {
         ERROR("Out of memory");
         ret = -1;
@@ -1571,4 +1574,3 @@ out:
     free(line);
     return ret;
 }
-
