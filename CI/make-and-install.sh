@@ -72,27 +72,13 @@ cd $ISULAD_COPY_PATH
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils/cutils/utils.c
 rm -rf build
 mkdir build && cd build
-if [[ "x${GCOV}" == "xON" ]]; then
-    cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DENABLE_UT=ON ..
-    make -j $(nproc)
-    ctest -T memcheck --output-on-failure
-    if [[ $? -ne 0 ]]; then
-        exit 1
-    fi
-    make coverage
-    ISULAD_SRC_PATH=$(env | grep TOPDIR | awk -F = '{print $2}')
-    tar -zcf $ISULAD_SRC_PATH/isulad-llt-gcov.tar.gz ./test/coverage/
-else
-    cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON ..
-    make -j $(nproc)
-    ctest -T memcheck --output-on-failure
-    if [[ $? -ne 0 ]]; then
-        exit 1
-    fi
+cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_UT=ON ..
+make -j $(nproc)
+ctest -T memcheck --output-on-failure
+if [[ $? -ne 0 ]]; then
+    exit 1
 fi
 echo_success "===================RUN DT-LLT TESTCASES END========================="
-
-cd $ISULAD_COPY_PATH
 
 # build rest version
 cd $ISULAD_COPY_PATH
@@ -111,7 +97,7 @@ rm -rf build
 mkdir build
 cd build
 if [[ ${enable_gcov} -ne 0 ]]; then
-  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=debug -DGCOV=ON -DENABLE_EMBEDDED=ON ..
+  cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DCMAKE_BUILD_TYPE=Debug -DGCOV=ON -DENABLE_EMBEDDED=ON -DENABLE_COVERAGE=ON -DENABLE_UT=ON ..
 else
   cmake -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} -DCMAKE_INSTALL_SYSCONFDIR=${builddir}/etc -DENABLE_EMBEDDED=ON ..
 fi
