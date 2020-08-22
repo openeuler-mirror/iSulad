@@ -49,9 +49,6 @@ char *image_store_lookup(const char *id);
 // Remove the record of the image.
 int image_store_delete(const char *id);
 
-// Remove records of all images
-int image_store_wipe();
-
 // Stores a (potentially large) piece of data associated with this ID.
 int image_store_set_big_data(const char *id, const char *key, const char *data);
 

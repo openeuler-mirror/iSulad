@@ -641,24 +641,6 @@ TEST_F(StorageImagesUnitTest, test_image_store_delete)
     Restore();
 }
 
-TEST_F(StorageImagesUnitTest, test_image_store_wipe)
-{
-    BackUp();
-
-    for (auto elem : ids) {
-        ASSERT_TRUE(image_store_exists(elem.c_str()));
-        ASSERT_TRUE(dirExists((std::string(store_real_path) + "/overlay-images/" + elem).c_str()));
-    }
-
-    ASSERT_EQ(image_store_wipe(), 0);
-
-    for (auto elem : ids) {
-        ASSERT_FALSE(image_store_exists(elem.c_str()));
-        ASSERT_FALSE(dirExists((std::string(store_real_path) + "/overlay-images/" + elem).c_str()));
-    }
-
-    Restore();
-}
 
 TEST_F(StorageImagesUnitTest, test_image_store_remove_single_name)
 {

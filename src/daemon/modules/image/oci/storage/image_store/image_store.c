@@ -1674,10 +1674,38 @@ static int remove_image_dir(const char *id)
     return 0;
 }
 
-int image_store_delete(const char *id)
+static int do_delete_image_info(const char *id)
 {
     int ret = 0;
     image_t *img = NULL;
+
+    img = lookup(id);
+    if (img == NULL) {
+        WARN("image %s not exists already, return success", id);
+        ret = 0;
+        goto out;
+    }
+
+    if (remove_image_from_memory(img->simage->id) != 0) {
+        ERROR("Failed to remove image from memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (remove_image_dir(img->simage->id) != 0) {
+        ERROR("Failed to delete image directory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    image_ref_dec(img);
+    return ret;
+}
+
+int image_store_delete(const char *id)
+{
+    int ret = 0;
 
     if (id == NULL) {
         ERROR("Invalid input parameter: empty id");
@@ -1687,11 +1715,6 @@ int image_store_delete(const char *id)
     if (g_image_store == NULL) {
         ERROR("Image store is not ready");
         return -1;
-    }
-
-    if (!image_store_exists(id)) {
-        WARN("image %s not exists already, return success", id);
-        return 0;
     }
 
     if (!image_store_lock(EXCLUSIVE)) {
@@ -1699,99 +1722,13 @@ int image_store_delete(const char *id)
         return -1;
     }
 
-    img = lookup(id);
-    if (img == NULL) {
-        ERROR("Image not known");
-        ret = -1;
-        goto out;
-    }
-
-    if (remove_image_from_memory(img->simage->id) != 0) {
-        ERROR("Failed to remove image from memory");
-        ret = -1;
-        goto out;
-    }
-
-    if (remove_image_dir(img->simage->id) != 0) {
-        ERROR("Failed to delete image directory");
+    if (do_delete_image_info(id) != 0) {
+        ERROR("Failed to delete image info %s", id);
         ret = -1;
         goto out;
     }
 
 out:
-    image_ref_dec(img);
-    image_store_unlock();
-    return ret;
-}
-
-static int delete_image_from_store_without_lock(const char *id)
-{
-    int ret = 0;
-    image_t *img = NULL;
-
-    if (id == NULL) {
-        ERROR("Invalid input parameter: empty id");
-        return -1;
-    }
-
-    if (g_image_store == NULL) {
-        ERROR("Image store is not ready");
-        return -1;
-    }
-
-    img = lookup(id);
-    if (img == NULL) {
-        ERROR("Image not known");
-        return -1;
-    }
-
-    if (remove_image_from_memory(img->simage->id) != 0) {
-        ERROR("Failed to remove image from memory");
-        ret = -1;
-        goto out;
-    }
-
-    if (remove_image_dir(img->simage->id) != 0) {
-        ERROR("Failed to delete image directory");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    image_ref_dec(img);
-    return ret;
-}
-
-int image_store_wipe()
-{
-    int ret = 0;
-    char *id = NULL;
-    struct linked_list *item = NULL;
-    struct linked_list *next = NULL;
-
-    if (g_image_store == NULL) {
-        ERROR("Image store is not ready");
-        return -1;
-    }
-
-    if (!image_store_lock(EXCLUSIVE)) {
-        ERROR("Failed to lock image store with exclusive lock, not allowed to delete images");
-        return -1;
-    }
-
-    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
-        id = util_strdup_s(((image_t *)item->elem)->simage->id);
-        if (delete_image_from_store_without_lock(id) != 0) {
-            ERROR("Failed to delete image: %s", id);
-            ret = -1;
-            goto out;
-        }
-        free(id);
-        id = NULL;
-    }
-
-out:
-    free(id);
     image_store_unlock();
     return ret;
 }
@@ -3335,35 +3272,6 @@ out:
     return imginfo;
 }
 
-static int image_list_shrink_to_fit(imagetool_images_list *images_list)
-{
-    int ret = 0;
-    imagetool_image **tmp = NULL;
-
-    // all images loaded
-    if (images_list->images_len == g_image_store->images_list_len) {
-        return 0;
-    }
-
-    // all images damaged
-    if (images_list->images_len == 0) {
-        free(images_list->images);
-        images_list->images = NULL;
-        return 0;
-    }
-
-    // memory shrink to fit
-    ret = mem_realloc((void **)(&tmp), images_list->images_len * sizeof(imagetool_image *),
-                      images_list->images, g_image_store->images_list_len * sizeof(imagetool_image *));
-    if (ret != 0) {
-        ERROR("Failed to realloc memory for memory shrink to fit");
-        return -1;
-    }
-
-    images_list->images = tmp;
-    return 0;
-}
-
 int image_store_get_all_images(imagetool_images_list *images_list)
 {
     int ret = 0;
@@ -3380,8 +3288,8 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         return -1;
     }
 
-    if (!image_store_lock(SHARED)) {
-        ERROR("Failed to lock image store with shared lock, not allowed to get all the known images");
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to get all the known images");
         return -1;
     }
 
@@ -3399,18 +3307,11 @@ int image_store_get_all_images(imagetool_images_list *images_list)
     linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
         imagetool_image *imginfo = NULL;
         image_t *img = (image_t *)item->elem;
-
         imginfo = get_image_info(img);
         if (imginfo == NULL) {
             ERROR("Delete image %s due to: Get image information failed, image may be damaged", img->simage->id);
-            image_store_unlock();
-            if (image_store_delete(img->simage->id) != 0) {
+            if (do_delete_image_info(img->simage->id) != 0) {
                 ERROR("Failed to delete image, please delete residual file manually");
-            }
-            if (!image_store_lock(SHARED)) {
-                ERROR("Failed to relock image store with shared lock, not allowed to get the known images");
-                ret = -1;
-                goto out;
             }
             continue;
         }
@@ -3418,14 +3319,8 @@ int image_store_get_all_images(imagetool_images_list *images_list)
         imginfo = NULL;
     }
 
-    if (image_list_shrink_to_fit(images_list) != 0) {
-        WARN("Failed to shrink to fit memory");
-        goto unlock;
-    }
-
 unlock:
     image_store_unlock();
-out:
     return ret;
 }
 
