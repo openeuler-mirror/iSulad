@@ -1018,8 +1018,8 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_container_root_dir;
     }
 
-    ret = do_image_create_container_roofs_layer(id, image_type, image_name, v2_spec->mount_label,
-                                                request->rootfs, host_spec->storage_opt, &real_rootfs);
+    ret = do_image_create_container_roofs_layer(id, image_type, image_name, v2_spec->mount_label, request->rootfs,
+                                                host_spec->storage_opt, &real_rootfs);
     if (ret != 0) {
         ERROR("Can not create container %s rootfs layer", id);
         cc = ISULAD_ERR_EXEC;
@@ -1072,7 +1072,6 @@ int container_create_cb(const container_create_request *request, container_creat
     host_channel = dup_host_channel(host_spec->host_channel);
     if (prepare_host_channel(host_channel, host_spec->user_remap)) {
         ERROR("Failed to prepare host channel");
-        sleep(111);
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
     }
