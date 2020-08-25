@@ -630,7 +630,7 @@ TEST_F(RegistryUnitTest, test_pull_v2_image)
 {
     struct timespec start_time;
     struct timespec end_time;
-    registry_pull_options options;
+    registry_pull_options options { 0x00 };
     options.image_name = (char*)"hub-mirror.c.163.com/library/busybox:latest";
     options.dest_image_name = (char*)"docker.io/library/busybox:latest";
     options.skip_tls_verify = true;
