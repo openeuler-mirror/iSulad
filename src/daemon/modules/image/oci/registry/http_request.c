@@ -305,15 +305,14 @@ static int get_bearer_token(pull_descriptor *desc, challenge *c)
     ret = http_request_get_token(desc, c, &output);
     if (ret != 0 || output == NULL) {
         ERROR("http request get token failed, result is %d", ret);
+        ret = -1;
         goto out;
     }
-
-    DEBUG("get token output: %s", output);
 
     token = registry_token_parse_data(output, NULL, &err);
     if (token == NULL) {
         ret = -1;
-        ERROR("parse token from response failed due to err: %s. response is %s", err, output);
+        ERROR("parse token from response failed due to err: %s", err);
         goto out;
     }
 
@@ -323,7 +322,7 @@ static int get_bearer_token(pull_descriptor *desc, challenge *c)
         c->cached_token = util_strdup_s(token->access_token);
     } else {
         ret = -1;
-        ERROR("no valid token found, response is %s", output);
+        ERROR("no valid token found");
         goto out;
     }
 
