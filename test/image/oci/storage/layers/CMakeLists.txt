@@ -63,7 +63,7 @@ target_link_libraries(${DRIVER_EXE}
     ${LIBTAR_LIBRARY}
     -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
 
-add_test(NAME ${DRIVER_EXE} COMMAND ${DRIVER_EXE})
+add_test(NAME ${DRIVER_EXE} COMMAND ${DRIVER_EXE}  --gtest_output=xml:${DRIVER_EXE}-Results.xml)
 
 # storage_layers_ut
 SET(LAYER_EXE storage_layers_ut)
@@ -136,4 +136,4 @@ target_link_libraries(${LAYER_EXE}
     ${LIBTAR_LIBRARY}
     -lwebsockets -lcrypto -lyajl -larchive ${SELINUX_LIBRARY} -ldevmapper -lz)
 
-add_test(NAME ${LAYER_EXE} COMMAND ${LAYER_EXE})
+add_test(NAME ${LAYER_EXE} COMMAND ${LAYER_EXE} --gtest_output=xml:${LAYER_EXE}-Results.xml)
