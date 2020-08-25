@@ -526,7 +526,7 @@ static int new_temp_console_path(process_t *p)
     if (p->console_sock_path == NULL) {
         return SHIM_ERR;
     }
-    snprintf(p->console_sock_path, MAX_CONSOLE_SOCK_LEN, "/tmp/isulad%s-pty.sock", str_rand);
+    snprintf(p->console_sock_path, MAX_CONSOLE_SOCK_LEN, "/run/isulad%s-pty.sock", str_rand);
 
     return SHIM_OK;
 }
