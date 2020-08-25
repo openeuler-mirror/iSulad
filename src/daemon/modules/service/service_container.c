@@ -353,6 +353,9 @@ static int write_env_to_target_file(const container_t *cont, const oci_runtime_s
     if (cont->hostconfig->env_target_file == NULL || oci_spec->process == NULL) {
         return 0;
     }
+    if (!cont->hostconfig->system_container || cont->hostconfig->external_rootfs == NULL) {
+        return 0;
+    }
     env_path = util_path_join(cont->common_config->base_fs, cont->hostconfig->env_target_file);
     if (env_path == NULL) {
         ERROR("Failed to get env target file path: %s", cont->hostconfig->env_target_file);
