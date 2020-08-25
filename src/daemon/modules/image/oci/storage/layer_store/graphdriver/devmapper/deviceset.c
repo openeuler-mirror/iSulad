@@ -738,7 +738,7 @@ static void mark_device_id_free(struct device_set *devset, int device_id)
             WARN("devmapper: map insert failed");
         }
     } else {
-        value = *value_ptr % mask;
+        value = *value_ptr & mask;
         res = map_replace(devset->device_id_map, &key, &value);
         if (!res) {
             WARN("devmapper: map replace failed");
