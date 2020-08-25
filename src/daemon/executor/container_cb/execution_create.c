@@ -936,6 +936,92 @@ out:
     return ret;
 }
 
+static void v2_spec_fill_basic_info(const char *id, const char *name, const char *image_name, const char *image_type,
+                                    container_config *container_spec, container_config_v2_common_config *v2_spec)
+{
+    char timebuffer[TIME_STR_SIZE] = { 0 };
+    v2_spec->id = id ? util_strdup_s(id) : NULL;
+    v2_spec->name = name ? util_strdup_s(name) : NULL;
+    v2_spec->image = image_name ? util_strdup_s(image_name) : util_strdup_s("none");
+    v2_spec->image_type = image_type ? util_strdup_s(image_type) : NULL;
+    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    free(v2_spec->created);
+    v2_spec->created = util_strdup_s(timebuffer);
+    v2_spec->config = container_spec;
+}
+
+static int create_v2_config_json(const char *id, const char *runtime_root, container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    char *v2_json = NULL;
+    parser_error err = NULL;
+    container_config_v2 config_v2 = { 0 };
+    container_config_v2_state state = { 0 };
+
+    config_v2.common_config = v2_spec;
+    config_v2.state = &state;
+
+    v2_json = container_config_v2_generate_json(&config_v2, NULL, &err);
+    if (v2_json == NULL) {
+        ERROR("Failed to generate container config V2 json string:%s", err ? err : " ");
+        ret = -1;
+        goto out;
+    }
+
+    ret = save_config_v2_json(id, runtime_root, v2_json);
+    if (ret != 0) {
+        ERROR("Failed to save container config V2 json to file");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(v2_json);
+    free(err);
+    return ret;
+}
+
+static int create_host_config_json(const char *id, const char *runtime_root, host_config *host_spec)
+{
+    int ret = 0;
+    parser_error err = NULL;
+    char *json_host_config = NULL;
+
+    json_host_config = host_config_generate_json(host_spec, NULL, &err);
+    if (json_host_config == NULL) {
+        ERROR("Failed to generate container host config json string:%s", err ? err : " ");
+        ret = -1;
+        goto out;
+    }
+
+    ret = save_host_config(id, runtime_root, json_host_config);
+    if (ret != 0) {
+        ERROR("Failed to save container host config json to file");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(json_host_config);
+    free(err);
+
+    return ret;
+}
+
+static int save_container_config_before_create(const char *id, const char *runtime_root, host_config *host_spec,
+                                               container_config_v2_common_config *v2_spec)
+{
+    if (create_v2_config_json(id, runtime_root, v2_spec) != 0) {
+        return -1;
+    }
+
+    if (create_host_config_json(id, runtime_root, host_spec) != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
 /*
  * request -> host_spec + container_spec
  * container_spec + image config
@@ -995,16 +1081,13 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_container_root_dir;
     }
 
-    char timebuffer[TIME_STR_SIZE] = { 0 };
-    v2_spec->id = id ? util_strdup_s(id) : NULL;
-    v2_spec->name = name ? util_strdup_s(name) : NULL;
-    v2_spec->image = image_name ? util_strdup_s(image_name) : util_strdup_s("none");
-    v2_spec->image_type = image_type ? util_strdup_s(image_type) : NULL;
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
-    free(v2_spec->created);
-    v2_spec->created = util_strdup_s(timebuffer);
+    v2_spec_fill_basic_info(id, name, image_name, image_type, container_spec, v2_spec);
 
-    v2_spec->config = container_spec;
+    if (save_container_config_before_create(id, runtime_root, host_spec, v2_spec) != 0) {
+        ERROR("Failed to malloc container_config_v2_common_config");
+        cc = ISULAD_ERR_INPUT;
+        goto clean_container_root_dir;
+    }
 
     if (pack_security_config_to_v2_spec(host_spec, v2_spec) != 0) {
         ERROR("Failed to pack security config");
@@ -1082,14 +1165,14 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_channel;
     }
 
-    if (save_oci_config(id, runtime_root, oci_spec) != 0) {
-        ERROR("Failed to save container settings");
+    if (container_v2_spec_merge_contaner_spec(v2_spec) != 0) {
+        ERROR("Failed to merge container settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
     }
 
-    if (container_v2_spec_merge_contaner_spec(v2_spec) != 0) {
-        ERROR("Failed to merge container settings");
+    if (save_oci_config(id, runtime_root, oci_spec) != 0) {
+        ERROR("Failed to save container settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
     }
