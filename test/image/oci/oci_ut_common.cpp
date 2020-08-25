@@ -57,7 +57,7 @@ char *conf_get_isulad_storage_driver_success()
 
 char **conf_get_registry_list_success()
 {
-    return single_array_from_string("docker.io");
+    return single_array_from_string("isula.io");
 }
 
 char **conf_get_insecure_registry_list_success()

@@ -144,7 +144,7 @@ char *oci_add_host(const char *host, const char *name)
         need_repo_prefix = true;
     }
 
-    with_host = util_common_calloc_s(strlen(host) + strlen("/") + strlen(DEFAULT_REPO_PREFIX) + strlen(name) + 1);
+    with_host = util_common_calloc_s(strlen(host) + strlen("/") + strlen(REPO_PREFIX_TO_STRIP) + strlen(name) + 1);
     if (with_host == NULL) {
         ERROR("out of memory");
         return NULL;
@@ -152,51 +152,24 @@ char *oci_add_host(const char *host, const char *name)
     (void)strcat(with_host, host);
     (void)strcat(with_host, "/");
     if (need_repo_prefix) {
-        (void)strcat(with_host, DEFAULT_REPO_PREFIX);
+        (void)strcat(with_host, REPO_PREFIX_TO_STRIP);
     }
     (void)strcat(with_host, name);
 
     return with_host;
 }
 
-// normalize the unqualified image to be domain/repo/image...
+// normalize strip the docker.io/library prefix if necessary
+// and add default latest tag if no tag found
 char *oci_normalize_image_name(const char *name)
 {
-    char temp[PATH_MAX] = { 0 };
-    char **parts = NULL;
-    char *last_part = NULL;
-    char *add_dockerio = "";
-    char *add_library = "";
-    char *add_default_tag = "";
+    char *with_tag = oci_default_tag(name);
+    char *result = NULL;
 
-    // Add prefix docker.io if necessary
-    parts = util_string_split(name, '/');
-    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") && strcmp(*parts, "localhost")) ||
-        (strstr(name, "/") == NULL)) {
-        add_dockerio = DEFAULT_HOSTNAME;
-    }
+    result = oci_strip_dockerio_prefix(with_tag);
+    free(with_tag);
 
-    // Add library if necessary
-    if (strlen(add_dockerio) != 0 && strstr(name, "/") == NULL) {
-        add_library = DEFAULT_REPO_PREFIX;
-    }
-
-    // Add default tag if necessary
-    last_part = get_last_part(parts);
-    if (last_part != NULL && strrchr(last_part, ':') == NULL) {
-        add_default_tag = DEFAULT_TAG;
-    }
-
-    util_free_array(parts);
-
-    // Normalize image name
-    int nret = snprintf(temp, sizeof(temp), "%s%s%s%s", add_dockerio, add_library, name, add_default_tag);
-    if (nret < 0 || (size_t)nret >= sizeof(temp)) {
-        ERROR("sprint temp image name failed");
-        return NULL;
-    }
-
-    return util_strdup_s(temp);
+    return result;
 }
 
 int oci_split_image_name(const char *image_name, char **host, char **name, char **tag)
@@ -240,33 +213,23 @@ int oci_split_image_name(const char *image_name, char **host, char **name, char 
 
 char *oci_strip_dockerio_prefix(const char *name)
 {
-    char prefix[PATH_MAX] = { 0 };
-    size_t size = 0;
+    const char *striped = name;
 
     if (name == NULL) {
         ERROR("NULL image name");
         return NULL;
     }
 
-    int nret = snprintf(prefix, sizeof(prefix), "%s%s", DEFAULT_HOSTNAME, DEFAULT_REPO_PREFIX);
-    if (nret < 0 || (size_t)nret >= sizeof(prefix)) {
-        ERROR("sprint prefix prefix failed");
-        return NULL;
+    // Strip docker.io/
+    if (util_has_prefix(name, HOSTNAME_TO_STRIP)) {
+        striped += strlen(HOSTNAME_TO_STRIP);
+    }
+    // Strip library/
+    if (util_has_prefix(striped, REPO_PREFIX_TO_STRIP)) {
+        striped += strlen(REPO_PREFIX_TO_STRIP);
     }
 
-    // Strip docker.io/library
-    size = strlen(prefix);
-    if (strncmp(name, prefix, size) == 0 && strlen(name) > size) {
-        return util_strdup_s(name + size);
-    }
-
-    // Strip docker.io
-    size = strlen(DEFAULT_HOSTNAME);
-    if (strncmp(name, DEFAULT_HOSTNAME, size) == 0 && strlen(name) > size) {
-        return util_strdup_s(name + size);
-    }
-
-    return util_strdup_s(name);
+    return util_strdup_s(striped);
 }
 
 static bool should_use_origin_name(const char *name)

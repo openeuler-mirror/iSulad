@@ -119,7 +119,7 @@ static int pull_image(const im_pull_request *request, char **name)
     host = oci_get_host(request->image);
     if (host != NULL) {
         options->image_name = oci_default_tag(request->image);
-        options->dest_image_name = util_strdup_s(options->image_name);
+        options->dest_image_name = oci_normalize_image_name(request->image);
         update_option_insecure_registry(options, insecure_registries, host);
         ret = registry_pull(options);
         if (ret != 0) {
