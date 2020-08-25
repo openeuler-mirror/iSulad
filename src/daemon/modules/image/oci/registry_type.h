@@ -75,6 +75,7 @@ typedef struct {
 } layer_blob;
 
 typedef struct {
+    char *image_name;
     char *dest_image_name;
     char *host;
     char *name;

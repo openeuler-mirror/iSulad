@@ -69,6 +69,8 @@ void free_pull_desc(pull_descriptor *desc)
 
     free(desc->dest_image_name);
     desc->dest_image_name = NULL;
+    free(desc->image_name);
+    desc->image_name = NULL;
     free(desc->host);
     desc->host = NULL;
     free(desc->name);
