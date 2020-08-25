@@ -523,7 +523,7 @@ static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, p
         }
 
         if (desc->layers[i].diff_id == NULL) {
-            ERROR("layer %zu of image %s have invalid NULL diffid", i, desc->dest_image_name);
+            ERROR("layer %zu of image %s have invalid NULL diffid", i, desc->image_name);
             return -1;
         }
 
@@ -566,7 +566,7 @@ static int register_layers(pull_descriptor *desc)
 
         id = without_sha256_prefix(desc->layers[i].chain_id);
         if (id == NULL) {
-            ERROR("layer %zu have NULL digest for image %s", i, desc->dest_image_name);
+            ERROR("layer %zu have NULL digest for image %s", i, desc->image_name);
             ret = -1;
             goto out;
         }
@@ -647,7 +647,7 @@ static int get_top_layer_index(pull_descriptor *desc, size_t *top_layer_index)
         return 0;
     }
 
-    ERROR("No valid layer found for image %s", desc->dest_image_name);
+    ERROR("No valid layer found for image %s", desc->image_name);
     return -1;
 }
 
@@ -666,7 +666,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
 
     ret = get_top_layer_index(desc, &top_layer_index);
     if (ret != 0) {
-        ERROR("get top layer index for image %s failed", desc->dest_image_name);
+        ERROR("get top layer index for image %s failed", desc->image_name);
         return -1;
     }
 
@@ -674,7 +674,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
     opts.digest = desc->manifest.digest;
     top_layer_id = without_sha256_prefix(desc->layers[top_layer_index].chain_id);
     if (top_layer_id == NULL) {
-        ERROR("NULL top layer id found for image %s", desc->dest_image_name);
+        ERROR("NULL top layer id found for image %s", desc->image_name);
         ret = -1;
         goto out;
     }
@@ -683,7 +683,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
     if (ret != 0) {
         pre_top_layer = storage_get_img_top_layer(image_id);
         if (pre_top_layer == NULL) {
-            ERROR("create image %s for %s failed", image_id, desc->dest_image_name);
+            ERROR("create image %s for %s failed", image_id, desc->image_name);
             ret = -1;
             goto out;
         }
@@ -858,7 +858,7 @@ static int register_image(pull_descriptor *desc)
 
     ret = register_layers(desc);
     if (ret != 0) {
-        ERROR("register layers for image %s failed", desc->dest_image_name);
+        ERROR("register layers for image %s failed", desc->image_name);
         isulad_try_set_error_message("register layers failed");
         goto out;
     }
@@ -866,7 +866,7 @@ static int register_image(pull_descriptor *desc)
     image_id = without_sha256_prefix(desc->config.digest);
     ret = create_image(desc, image_id, &reuse);
     if (ret != 0) {
-        ERROR("create image %s failed", desc->dest_image_name);
+        ERROR("create image %s failed", desc->image_name);
         isulad_try_set_error_message("create image failed");
         goto out;
     }
@@ -880,28 +880,28 @@ static int register_image(pull_descriptor *desc)
 
     ret = set_config(desc, image_id);
     if (ret != 0) {
-        ERROR("set image config for image %s failed", desc->dest_image_name);
+        ERROR("set image config for image %s failed", desc->image_name);
         isulad_try_set_error_message("set image config failed");
         goto out;
     }
 
     ret = set_manifest(desc, image_id);
     if (ret != 0) {
-        ERROR("set manifest for image %s failed", desc->dest_image_name);
+        ERROR("set manifest for image %s failed", desc->image_name);
         isulad_try_set_error_message("set manifest failed");
         goto out;
     }
 
     ret = set_loaded_time(desc, image_id);
     if (ret != 0) {
-        ERROR("set loaded time for image %s failed", desc->dest_image_name);
+        ERROR("set loaded time for image %s failed", desc->image_name);
         isulad_try_set_error_message("set loaded time failed");
         goto out;
     }
 
     ret = storage_img_set_image_size(image_id);
     if (ret != 0) {
-        ERROR("set image size failed for %s failed", desc->dest_image_name);
+        ERROR("set image size failed for %s failed", desc->image_name);
         isulad_try_set_error_message("set image size failed");
         goto out;
     }
@@ -1306,7 +1306,7 @@ static void *fetch_config_in_thread(void *arg)
 
     ret = fetch_and_parse_config(desc);
     if (ret != 0) {
-        ERROR("fetch and parse config failed for image %s", desc->dest_image_name);
+        ERROR("fetch and parse config failed for image %s", desc->image_name);
         isulad_try_set_error_message("fetch and parse config failed");
         goto out;
     }
@@ -1470,7 +1470,7 @@ static int fetch_all(pull_descriptor *desc)
             ERROR("set cached infos to desc failed");
         }
     } else if (desc->errmsg != NULL) {
-        ERROR("pull image %s failed: %s", desc->dest_image_name, desc->errmsg);
+        ERROR("pull image %s failed: %s", desc->image_name, desc->errmsg);
         isulad_try_set_error_message(desc->errmsg);
     }
 
@@ -1548,7 +1548,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
     json = docker_image_config_v2_generate_json(config, NULL, &err);
     if (json == NULL) {
         ret = -1;
-        ERROR("generate json from config failed for image %s", desc->dest_image_name);
+        ERROR("generate json from config failed for image %s", desc->image_name);
         goto out;
     }
 
@@ -1598,7 +1598,7 @@ static bool reuse_image(pull_descriptor *desc)
     }
 
     if (!strcmp(id, image->id)) {
-        DEBUG("image %s with id %s already exist, ignore pulling", desc->dest_image_name, image->id);
+        DEBUG("image %s with id %s already exist, ignore pulling", desc->image_name, image->id);
         reuse = true;
     }
 
@@ -1620,7 +1620,7 @@ static int registry_fetch(pull_descriptor *desc, bool *reuse)
 
     ret = fetch_and_parse_manifest(desc);
     if (ret != 0) {
-        ERROR("fetch and parse manifest failed for image %s", desc->dest_image_name);
+        ERROR("fetch and parse manifest failed for image %s", desc->image_name);
         isulad_try_set_error_message("fetch and parse manifest failed");
         goto out;
     }
@@ -1632,7 +1632,7 @@ static int registry_fetch(pull_descriptor *desc, bool *reuse)
 
     ret = fetch_all(desc);
     if (ret != 0) {
-        ERROR("fetch layers failed for image %s", desc->dest_image_name);
+        ERROR("fetch layers failed for image %s", desc->image_name);
         isulad_try_set_error_message("fetch layers failed");
         goto out;
     }
@@ -1643,7 +1643,7 @@ static int registry_fetch(pull_descriptor *desc, bool *reuse)
     if (is_manifest_schemav1(desc->manifest.media_type)) {
         ret = create_config_from_v1config(desc);
         if (ret != 0) {
-            ERROR("create config from v1 config failed for image %s", desc->dest_image_name);
+            ERROR("create config from v1 config failed for image %s", desc->image_name);
             isulad_try_set_error_message("create config from v1 config failed");
             goto out;
         }
@@ -1684,7 +1684,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     }
 
     if (!util_valid_image_name(options->dest_image_name)) {
-        ERROR("Invalid dest image name %s", options->dest_image_name);
+        ERROR("Invalid dest image name %s", options->image_name);
         isulad_try_set_error_message("Invalid image name");
         return -1;
     }
@@ -1723,6 +1723,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         goto out;
     }
 
+    desc->image_name = util_strdup_s(options->image_name);
     desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
     desc->blobpath = util_strdup_s(blobpath);
