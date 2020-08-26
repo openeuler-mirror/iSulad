@@ -1473,3 +1473,43 @@ void util_parse_user_group(const char *username, char **user, char **group, char
 
     return;
 }
+
+defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_map_string_object *dst = NULL;
+
+    if (src == NULL) {
+        ERROR("invalid null param");
+        return NULL;
+    }
+
+    dst = util_common_calloc_s(sizeof(defs_map_string_object));
+    if (dst == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    dst->keys = util_common_calloc_s(src->len * sizeof(char*));
+    dst->values = util_common_calloc_s(src->len * sizeof(defs_map_string_object_element*));
+    if (dst->keys == NULL || dst->values == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < src->len; i++) {
+        dst->keys[i] = util_strdup_s(src->keys[i]);
+        dst->values[i] = NULL;
+    }
+    dst->len = src->len;
+
+out:
+    if (ret != 0) {
+        free_defs_map_string_object(dst);
+        dst = NULL;
+    }
+
+    return dst;
+}

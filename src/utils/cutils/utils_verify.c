@@ -484,7 +484,7 @@ bool util_valid_key_dst(const char *key)
         return false;
     }
 
-    return !strcmp(key, "dst") || !strcmp(key, "destination");
+    return !strcmp(key, "dst") || !strcmp(key, "destination") || !strcmp(key, "target");
 }
 
 bool util_valid_key_ro(const char *key)
@@ -512,6 +512,15 @@ bool util_valid_key_selinux(const char *key)
     }
 
     return !strcmp(key, "bind-selinux-opts");
+}
+
+bool util_valid_key_nocopy(const char *key)
+{
+    if (key == NULL) {
+        return false;
+    }
+
+    return !strcmp(key, "volume-nocopy");
 }
 
 bool util_valid_value_true(const char *value)
@@ -738,4 +747,16 @@ bool util_valid_sysctl(const char *sysctl_key)
         }
     }
     return false;
+}
+
+bool util_valid_volume_name(const char *name)
+{
+    char *patten = "^[a-zA-Z0-9][a-zA-Z0-9_.-]+$";
+
+    if (name == NULL) {
+        ERROR("invalid NULL param");
+        return false;
+    }
+
+    return util_reg_match(patten, name) == 0;
 }

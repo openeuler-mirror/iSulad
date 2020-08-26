@@ -22,6 +22,7 @@
 #include <fstream>
 #include "grpc_containers_service.h"
 #include "grpc_images_service.h"
+#include "grpc_volumes_service.h"
 #include "runtime_runtime_service.h"
 #include "runtime_image_service.h"
 #include "isula_libutils/log.h"
@@ -70,6 +71,7 @@ public:
         // clients. In this case it corresponds to an *synchronous* service.
         m_builder.RegisterService(&m_containerService);
         m_builder.RegisterService(&m_imagesService);
+        m_builder.RegisterService(&m_volumeService);
         m_builder.RegisterService(&m_runtimeRuntimeService);
         m_builder.RegisterService(&m_runtimeImageService);
 
@@ -181,6 +183,7 @@ private:
     Network::NetworkPluginConf m_conf;
     ContainerServiceImpl m_containerService;
     ImagesServiceImpl m_imagesService;
+    VolumeServiceImpl m_volumeService;
     RuntimeRuntimeServiceImpl m_runtimeRuntimeService;
     RuntimeImageServiceImpl m_runtimeImageService;
     ServerBuilder m_builder;

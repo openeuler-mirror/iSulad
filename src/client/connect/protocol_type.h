@@ -22,6 +22,8 @@
 #include "constants.h"
 #include "io_wrapper.h"
 #include "isula_libutils/container_path_stat.h"
+#include "isula_libutils/json_common.h"
+#include "isula_libutils/mount_spec.h"
 #include "utils_timestamp.h"
 
 #ifdef __cplusplus
@@ -575,6 +577,45 @@ struct isula_resize_response {
     char *errmsg;
 };
 
+struct isula_list_volume_request {
+    char unuseful;
+};
+
+struct isula_volume_info {
+    char *driver;
+    char *name;
+};
+
+struct isula_list_volume_response {
+    size_t volumes_len;
+    struct isula_volume_info *volumes;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
+struct isula_remove_volume_request {
+    char *name;
+};
+
+struct isula_remove_volume_response {
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
+struct isula_prune_volume_request {
+    char unuseful;
+};
+
+struct isula_prune_volume_response {
+    size_t volumes_len;
+    char **volumes;
+    uint32_t cc;
+    uint32_t server_errono;
+    char *errmsg;
+};
+
 void container_events_format_free(container_events_format_t *value);
 
 struct isula_filters *isula_filters_parse_args(const char **array, size_t len);
@@ -718,6 +759,20 @@ void isula_resize_response_free(struct isula_resize_response *response);
 
 void isula_logs_request_free(struct isula_logs_request *request);
 void isula_logs_response_free(struct isula_logs_response *response);
+
+void isula_volume_list_free(size_t volumes_num, struct isula_volume_info *volumes);
+
+void isula_list_volume_request_free(struct isula_list_volume_request *request);
+
+void isula_list_volume_response_free(struct isula_list_volume_response *response);
+
+void isula_remove_volume_request_free(struct isula_remove_volume_request *request);
+
+void isula_remove_volume_response_free(struct isula_remove_volume_response *response);
+
+void isula_prune_volume_request_free(struct isula_prune_volume_request *request);
+
+void isula_prune_volume_response_free(struct isula_prune_volume_response *response);
 
 #ifdef __cplusplus
 }

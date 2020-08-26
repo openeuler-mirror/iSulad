@@ -52,9 +52,6 @@ typedef struct isula_container_config {
     bool system_container;
     char *ns_change_opt;
 
-    char **mounts;
-    size_t mounts_len;
-
     char *entrypoint;
 
     char **cmd;

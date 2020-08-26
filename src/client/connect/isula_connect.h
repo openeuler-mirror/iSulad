@@ -94,6 +94,17 @@ typedef struct {
 } image_ops;
 
 typedef struct {
+    int (*list)(const struct isula_list_volume_request *request, struct isula_list_volume_response *response,
+                void *arg);
+
+    int (*remove)(const struct isula_remove_volume_request *request, struct isula_remove_volume_response *response,
+                  void *arg);
+
+    int (*prune)(const struct isula_prune_volume_request *request, struct isula_prune_volume_response *response,
+                 void *arg);
+} volume_ops;
+
+typedef struct {
     int (*check)(const struct isula_health_check_request *request, struct isula_health_check_response *response,
                  void *arg);
 } health_ops;
@@ -101,6 +112,7 @@ typedef struct {
 typedef struct {
     container_ops container;
     image_ops image;
+    volume_ops volume;
     health_ops health;
 } isula_connect_ops;
 

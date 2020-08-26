@@ -69,6 +69,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "volume.h"
 
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"
@@ -1089,6 +1090,11 @@ static int isulad_server_init_common()
     }
 
     if (isulad_server_pre_init(args, log_full_path, fifo_full_path) != 0) {
+        goto out;
+    }
+
+    if (volume_init(args->json_confs->graph) != 0) {
+        ERROR("Failed to init volume");
         goto out;
     }
 

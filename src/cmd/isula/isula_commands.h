@@ -32,8 +32,10 @@ extern "C" {
 // @longdesc: Long description to show when you run `help <command>`
 struct command {
     const char * const name;
+    const char * const subname;
     int (*executor)(int, const char **);
     const char * const description;
+    const char * const subdescription;
     const char * const longdesc;
     struct client_arguments *args;
 };
@@ -44,8 +46,11 @@ struct command {
 // NOTE: Command arrays must end in a command with all member is NULL
 const struct command *command_by_name(const struct command *cmds, const char * const name);
 
+bool valid_subname(const struct command *cmds, const char *name);
+
 // Default help command if implementation doesn't prvide one
-int command_default_help(const char * const program_name, struct command *commands, int argc, const char **argv);
+int command_default_help(const char * const name, const char * const subname, struct command *commands,
+                         int argc, const char **argv);
 
 int run_command(struct command *commands, int argc, const char **argv);
 

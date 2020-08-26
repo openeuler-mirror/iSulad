@@ -161,7 +161,6 @@ static host_config *get_host_spec_from_request(const container_create_request *r
     if (host_spec == NULL) {
         ERROR("Failed to parse host config data:%s", err);
     }
-
     free(err);
     return host_spec;
 }
@@ -1396,6 +1395,8 @@ umount_channel:
     umount_host_channel(host_channel);
 umount_shm:
     umount_shm_by_configs(host_spec, v2_spec);
+
+    (void)release_volumes(v2_spec->mount_points, id, false);
 
 clean_rootfs:
     (void)im_remove_container_rootfs(image_type, id);

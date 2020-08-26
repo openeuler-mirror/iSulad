@@ -45,6 +45,9 @@
 #include "utils_verify.h"
 #include "isula_container_spec.h"
 #include "isula_host_spec.h"
+#include "utils_mount_spec.h"
+
+#define DEFAULT_MOUNT_TYPE "volume"
 
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
@@ -510,22 +513,6 @@ static void request_pack_custom_system_container(const struct client_arguments *
     return;
 }
 
-static int request_pack_custom_mounts(const struct client_arguments *args, isula_container_config_t *conf)
-{
-    if (args->custom_conf.mounts == NULL) {
-        return 0;
-    }
-
-    if (util_dup_array_of_strings((const char **)args->custom_conf.mounts,
-                                  util_array_len((const char **)(args->custom_conf.mounts)), &conf->mounts,
-                                  &conf->mounts_len) != 0) {
-        COMMAND_ERROR("Failed to dup mounts info");
-        return -1;
-    }
-
-    return 0;
-}
-
 static void request_pack_custom_entrypoint(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.entrypoint != NULL) {
@@ -654,11 +641,6 @@ static isula_container_config_t *request_pack_custom_conf(const struct client_ar
 
     /* system container */
     request_pack_custom_system_container(args, conf);
-
-    /* mounts to mount filesystem */
-    if (request_pack_custom_mounts(args, conf) != 0) {
-        goto error_out;
-    }
 
     /* entrypoint */
     request_pack_custom_entrypoint(args, conf);
@@ -994,6 +976,51 @@ inline static int request_pack_host_binds(const struct client_arguments *args, i
     return 0;
 }
 
+inline static int request_pack_host_volumes_from(const struct client_arguments *args, isula_host_config_t *hostconfig)
+{
+    /* volumes-from */
+    if (args->custom_conf.volumes_from != NULL) {
+        if (util_dup_array_of_strings((const char **)(args->custom_conf.volumes_from),
+                                      util_array_len((const char **)(args->custom_conf.volumes_from)),
+                                      &hostconfig->volumes_from, &hostconfig->volumes_from_len) != 0) {
+            COMMAND_ERROR("Failed to dup volumes-from");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int request_pack_host_mounts(const struct client_arguments *args, isula_host_config_t *hostconfig)
+{
+    size_t size = 0;
+    size_t i = 0;
+    mount_spec *mount = NULL;
+    char *errmsg = NULL;
+
+    if (args->custom_conf.mounts == NULL) {
+        return 0;
+    }
+
+    size = (size_t)util_array_len((const char **)(args->custom_conf.mounts));
+    hostconfig->mounts = util_common_calloc_s(sizeof(mount_spec *) * size);
+    if (hostconfig->mounts == NULL) {
+        COMMAND_ERROR("out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < size; i++) {
+        if (util_parse_mount_spec(args->custom_conf.mounts[i], &mount, &errmsg) != 0) {
+            COMMAND_ERROR("%s", errmsg);
+            free(errmsg);
+            return -1;
+        }
+        hostconfig->mounts[hostconfig->mounts_len++] = mount;
+    }
+
+    return 0;
+}
+
 inline static void request_pack_host_hook_spec(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* hook-spec file */
@@ -1092,6 +1119,10 @@ static isula_host_config_t *request_pack_host_config(const struct client_argumen
         goto error_out;
     }
 
+    if (request_pack_host_mounts(args, hostconfig) != 0) {
+        goto error_out;
+    }
+
     if (request_pack_host_caps(args, hostconfig) != 0) {
         goto error_out;
     }
@@ -1125,6 +1156,10 @@ static isula_host_config_t *request_pack_host_config(const struct client_argumen
     }
 
     if (request_pack_host_binds(args, hostconfig) != 0) {
+        goto error_out;
+    }
+
+    if (request_pack_host_volumes_from(args, hostconfig) != 0) {
         goto error_out;
     }
 
@@ -1701,10 +1736,13 @@ static bool check_volumes_valid(const char *volume)
     // volume format: src:dst:mode
     switch (alen) {
         case 1:
+#ifdef ENABLE_OCI_IMAGE
+            // anonymous volume, do nothing
+#else
             COMMAND_ERROR("Not supported volume format '%s'", volume);
             ret = false;
+#endif
             goto free_out;
-        /* fall-through */
         case 2:
             if (util_valid_mount_mode(array[1])) {
                 // Destination + Mode is not a valid volume - volumes
@@ -1733,7 +1771,11 @@ static bool check_volumes_valid(const char *volume)
             goto free_out;
     }
 
+#ifdef ENABLE_OCI_IMAGE
+    if (array[1][0] != '/' || strcmp(array[1], "/") == 0) {
+#else
     if (array[0][0] != '/' || array[1][0] != '/' || strcmp(array[1], "/") == 0) {
+#endif
         COMMAND_ERROR("Invalid volume: path must be absolute, and destination can't be '/'");
         ret = false;
         goto free_out;
@@ -1758,276 +1800,6 @@ static bool check_volumes_conf_valid(const char *volume)
     }
 
     return check_volumes_valid(volume);
-}
-
-struct valid_mounts_state {
-    char *mount;
-    bool has_type;
-    bool has_src;
-    bool has_dst;
-    bool type_squashfs;
-    char *source;
-};
-
-#define MOUNT_STATE_CHECK_SUCCESS 0
-#define MOUNT_STATE_CHECK_IGNORE 1
-#define MOUNT_STATE_CHECK_INVALID_ARG 2
-
-static int parse_mount_item_type(const char *value, struct valid_mounts_state *state)
-{
-    /* If value of type is NULL, ignore it */
-    if (value == NULL) {
-        return MOUNT_STATE_CHECK_IGNORE;
-    }
-
-    if (state->has_type) {
-        COMMAND_ERROR("Invalid mount specification '%s'.More than one type found", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    if (strcmp(value, "squashfs") && strcmp(value, "bind")) {
-        COMMAND_ERROR("Invalid mount specification '%s'.Type must be squashfs or bind", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    if (strcmp(value, "squashfs") == 0) {
-        state->type_squashfs = true;
-    }
-
-    state->has_type = true;
-    return MOUNT_STATE_CHECK_SUCCESS;
-}
-
-static int parse_mount_item_src(const char *value, struct valid_mounts_state *state)
-{
-    /* If value of source is NULL, ignore it */
-    if (value == NULL) {
-        return MOUNT_STATE_CHECK_IGNORE;
-    }
-
-    if (state->has_src) {
-        COMMAND_ERROR("Invalid mount specification '%s'.More than one source found", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    if (value[0] != '/') {
-        COMMAND_ERROR("Invalid mount specification '%s'.Source must be absolute path", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    free(state->source);
-    state->source = util_strdup_s(value);
-
-    state->has_src = true;
-    return MOUNT_STATE_CHECK_SUCCESS;
-}
-
-static int parse_mount_item_dst(const char *value, struct valid_mounts_state *state)
-{
-    char dstpath[PATH_MAX] = { 0 };
-
-    /* If value of destination is NULL, ignore it */
-    if (value == NULL) {
-        return MOUNT_STATE_CHECK_IGNORE;
-    }
-
-    if (state->has_dst) {
-        COMMAND_ERROR("Invalid mount specification '%s'.More than one destination found", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    if (value[0] != '/') {
-        COMMAND_ERROR("Invalid mount specification '%s'.Destination must be absolute path", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    if (strcmp(value, "/") == 0) {
-        COMMAND_ERROR("Invalid mount specification '%s'.Destination can't be '/'", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    if (!util_clean_path(value, dstpath, sizeof(dstpath))) {
-        COMMAND_ERROR("Invalid mount specification '%s'.Can't translate destination path to clean path", state->mount);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-
-    state->has_dst = true;
-    return MOUNT_STATE_CHECK_SUCCESS;
-}
-
-static int parse_mount_item_ro(const char *value, const struct valid_mounts_state *state)
-{
-    if (value != NULL) {
-        if (strcmp(value, "1") && strcmp(value, "true") && strcmp(value, "0") && strcmp(value, "false")) {
-            COMMAND_ERROR("Invalid mount specification '%s'.Invalid readonly mode:%s", state->mount, value);
-            return MOUNT_STATE_CHECK_INVALID_ARG;
-        }
-    }
-    return MOUNT_STATE_CHECK_SUCCESS;
-}
-
-static int parse_mount_item_propagation(const char *value, const struct valid_mounts_state *state)
-{
-    if (value == NULL) {
-        return MOUNT_STATE_CHECK_IGNORE;
-    }
-
-    if (!util_valid_propagation_mode(value)) {
-        COMMAND_ERROR("Invalid mount specification '%s'.Invalid propagation mode:%s", state->mount, value);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-    return MOUNT_STATE_CHECK_SUCCESS;
-}
-
-static int parse_mount_item_selinux(const char *value, const struct valid_mounts_state *state)
-{
-    if (value == NULL) {
-        return MOUNT_STATE_CHECK_IGNORE;
-    }
-
-    if (!util_valid_label_mode(value)) {
-        COMMAND_ERROR("Invalid mount specification '%s'.Invalid bind selinux opts:%s", state->mount, value);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-    return MOUNT_STATE_CHECK_SUCCESS;
-}
-
-/*
- * 0: success
- * 1: ignore this item, continue
- * 2: failed
- */
-static int valid_mounts_item(const char *mntkey, const char *value, struct valid_mounts_state *state)
-{
-    if (strcmp(mntkey, "type") == 0) {
-        return parse_mount_item_type(value, state);
-    } else if (strcmp(mntkey, "src") == 0 || strcmp(mntkey, "source") == 0) {
-        return parse_mount_item_src(value, state);
-    } else if (strcmp(mntkey, "dst") == 0 || strcmp(mntkey, "destination") == 0) {
-        return parse_mount_item_dst(value, state);
-    } else if (strcmp(mntkey, "ro") == 0 || strcmp(mntkey, "readonly") == 0) {
-        return parse_mount_item_ro(value, state);
-    } else if (strcmp(mntkey, "bind-propagation") == 0) {
-        return parse_mount_item_propagation(value, state);
-    } else if (strcmp(mntkey, "bind-selinux-opts") == 0) {
-        return parse_mount_item_selinux(value, state);
-    } else {
-        COMMAND_ERROR("Invalid mount specification '%s'.Unsupported item:%s", state->mount, mntkey);
-        return MOUNT_STATE_CHECK_INVALID_ARG;
-    }
-}
-
-static int parse_mounts_conf(const char *mount, struct valid_mounts_state *state)
-{
-    int ret = 0;
-    size_t i = 0;
-    size_t items_len = 0;
-    char **items = NULL;
-    char **key_val = NULL;
-
-    items = util_string_split(mount, ',');
-    if (items == NULL) {
-        ret = EINVALIDARGS;
-        COMMAND_ERROR("Invalid mount specification '%s'. unsupported format", mount);
-        goto out;
-    }
-
-    items_len = util_array_len((const char **)items);
-
-    for (i = 0; i < items_len; i++) {
-        key_val = util_string_split(items[i], '=');
-        if (key_val == NULL) {
-            continue;
-        }
-
-        ret = valid_mounts_item(key_val[0], key_val[1], state);
-        if (ret == MOUNT_STATE_CHECK_IGNORE) { /* ignore this item */
-            ret = 0;
-            util_free_array(key_val);
-            key_val = NULL;
-            continue;
-        } else if (ret == MOUNT_STATE_CHECK_INVALID_ARG) { /* invalid args */
-            ret = EINVALIDARGS;
-            goto out;
-        }
-        util_free_array(key_val);
-        key_val = NULL;
-    }
-
-out:
-    util_free_array(key_val);
-    util_free_array(items);
-    return ret;
-}
-
-static int check_parsed_mounts_conf(const char *mount, const struct valid_mounts_state *state)
-{
-    int ret = 0;
-    char real_path[PATH_MAX] = { 0 }; /* Init to zero every time loop enter here. */
-
-    if (!state->has_type) {
-        ret = EINVALIDARGS;
-        COMMAND_ERROR("Invalid mount specification '%s'.Missing type", mount);
-        goto out;
-    }
-
-    if (!state->has_src) {
-        ret = EINVALIDARGS;
-        COMMAND_ERROR("Invalid mount specification '%s'.Missing source", mount);
-        goto out;
-    }
-
-    if (!state->has_dst) {
-        ret = EINVALIDARGS;
-        COMMAND_ERROR("Invalid mount specification '%s'.Missing destination", mount);
-        goto out;
-    }
-
-    if (state->type_squashfs) {
-        if (strlen(state->source) > PATH_MAX || realpath(state->source, real_path) == NULL) {
-            ret = EINVALIDARGS;
-            COMMAND_ERROR("Invalid mount specification '%s'.Source %s not exist", mount, state->source);
-            goto out;
-        }
-
-        /* Make sure it's a regular file */
-        if (!util_valid_file(real_path, S_IFREG)) {
-            ret = EINVALIDARGS;
-            COMMAND_ERROR("Invalid mount specification '%s'.Source %s is not a squashfs file", mount, state->source);
-            goto out;
-        }
-    }
-out:
-    return ret;
-}
-
-static bool check_mounts_conf_valid(const char *mount)
-{
-    int ret = 0;
-    struct valid_mounts_state state = { (char *)mount, false, false, false, NULL };
-
-    if (mount == NULL) {
-        COMMAND_ERROR("Invalid mount specification: can't be empty");
-        return false;
-    }
-    if (!mount[0]) {
-        COMMAND_ERROR("Invalid mount specification: can't be empty");
-        return false;
-    }
-
-    ret = parse_mounts_conf(mount, &state);
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = check_parsed_mounts_conf(mount, &state);
-    if (ret != 0) {
-        goto out;
-    }
-
-out:
-    free(state.source);
-    return ret ? false : true;
 }
 
 static int check_hook_spec_file(const char *hook_spec)
@@ -2204,6 +1976,17 @@ static int create_name_checker(const struct client_arguments *args)
 
 out:
     return ret;
+}
+
+static bool check_mounts_conf_valid(const char *mount_str)
+{
+    char *errmsg = NULL;
+
+    if (!util_valid_mount_spec(mount_str, &errmsg)) {
+        COMMAND_ERROR("%s", errmsg);
+        return false;
+    }
+    return true;
 }
 
 static int create_devices_volumes_checker(const struct client_arguments *args)

@@ -35,6 +35,9 @@ void umount_host_channel(const host_config_host_channel *host_channel);
 
 void umount_share_shm(container_t *cont);
 
+int release_volumes(container_config_v2_common_config_mount_points *mount_points,
+                    char *id, bool rm_anonymous_volumes);
+
 int kill_container(container_t *cont, uint32_t signal);
 
 int set_container_to_removal(const container_t *cont);

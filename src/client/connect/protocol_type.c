@@ -1313,3 +1313,99 @@ void container_events_format_free(container_events_format_t *value)
 
     free(value);
 }
+
+void isula_volume_list_free(size_t volumes_len, struct isula_volume_info *volumes)
+{
+    size_t i = 0;
+    struct isula_volume_info *volume = NULL;
+
+    if (volumes == NULL) {
+        return;
+    }
+
+    for (i = 0, volume = volumes; i < volumes_len; i++, volume++) {
+        free(volume->driver);
+        free(volume->name);
+    }
+    free(volumes);
+
+    return;
+}
+
+void isula_list_volume_request_free(struct isula_list_volume_request *request)
+{
+    free(request);
+    return;
+}
+
+void isula_list_volume_response_free(struct isula_list_volume_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    isula_volume_list_free(response->volumes_len, response->volumes);
+    response->volumes = NULL;
+    response->volumes_len = 0;
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+    return;
+}
+
+void isula_remove_volume_request_free(struct isula_remove_volume_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name);
+    free(request);
+
+    return;
+}
+
+void isula_remove_volume_response_free(struct isula_remove_volume_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+    return;
+}
+
+void isula_prune_volume_request_free(struct isula_prune_volume_request *request)
+{
+    free(request);
+    return;
+}
+
+void isula_prune_volume_response_free(struct isula_prune_volume_response *response)
+{
+    size_t i = 0;
+
+    if (response == NULL) {
+        return;
+    }
+
+    for (i = 0; i < response->volumes_len; i++) {
+        free(response->volumes[i]);
+        response->volumes[i] = NULL;
+    }
+    response->volumes_len = 0;
+
+    free(response->volumes);
+    response->volumes = NULL;
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+    return;
+}

@@ -1038,6 +1038,21 @@ out:
     return ret;
 }
 
+static int dup_container_config_volumes(const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+
+    if (src->volumes != NULL) {
+        dest->volumes = dup_map_string_empty_object(src->volumes);
+        if (dest->volumes == 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+out:
+    return ret;
+}
+
 static int dup_container_config_annotations(const container_config *src, container_inspect_config *dest)
 {
     int ret = 0;
@@ -1086,6 +1101,11 @@ static int dup_container_config(const char *image, const container_config *src, 
         goto out;
     }
 
+    if (dup_container_config_volumes(src, dest) != 0) {
+        ret = -1;
+        goto out;
+    }
+
     if (dup_container_config_annotations(src, dest) != 0) {
         ret = -1;
         goto out;
@@ -1126,6 +1146,7 @@ static int mount_point_to_inspect(const container_t *cont, container_inspect *in
             ERROR("Out of memory");
             return -1;
         }
+        inspect->mounts[i]->type = util_strdup_s(mp->type);
         inspect->mounts[i]->source = util_strdup_s(mp->source);
         inspect->mounts[i]->destination = util_strdup_s(mp->destination);
         inspect->mounts[i]->name = util_strdup_s(mp->name);

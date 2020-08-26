@@ -33,6 +33,7 @@ extern "C" {
     "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])"                             \
     "((\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))+)?(:[0-9]+)?/)?[a-z0-9]" \
     "+((([._]|__|[-]*)[a-z0-9]+)+)?((/[a-z0-9]+((([._]|__|[-]*)[a-z0-9]+)+)?)+)?$"
+#define VALID_VOLUME_NAME "[a-zA-Z0-9][a-zA-Z0-9_.-]"
 
 extern const char *g_all_caps[];
 
@@ -80,6 +81,8 @@ bool util_valid_key_propagation(const char *key);
 
 bool util_valid_key_selinux(const char *key);
 
+bool util_valid_key_nocopy(const char *key);
+
 bool util_valid_value_true(const char *value);
 
 bool util_valid_value_false(const char *value);
@@ -115,6 +118,8 @@ bool util_valid_device_cgroup_rule(const char *value);
 int util_valid_env(const char *env, char **dst);
 
 bool util_valid_sysctl(const char *sysctl_key);
+
+bool util_valid_volume_name(const char *name);
 
 #ifdef __cplusplus
 }

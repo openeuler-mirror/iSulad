@@ -68,33 +68,6 @@ out:
     return ret;
 }
 
-static int pack_container_custom_config_mounts(container_config *container_spec,
-                                               const isula_container_config_t *custom_conf)
-{
-    int ret = 0;
-    int i = 0;
-
-    /* mounts to mount filesystem */
-    if (custom_conf->mounts != NULL && custom_conf->mounts_len > 0) {
-        if (custom_conf->mounts_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many mounts to mount filesystem!");
-            ret = -1;
-            goto out;
-        }
-        container_spec->mounts = util_common_calloc_s(custom_conf->mounts_len * sizeof(char *));
-        if (container_spec->mounts == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < (int)custom_conf->mounts_len; i++) {
-            container_spec->mounts[container_spec->mounts_len] = util_strdup_s(custom_conf->mounts[i]);
-            container_spec->mounts_len++;
-        }
-    }
-out:
-    return ret;
-}
-
 static int pack_container_custom_config_array(container_config *container_spec,
                                               const isula_container_config_t *custom_conf)
 {
@@ -331,11 +304,6 @@ static int pack_container_custom_config_pre(container_config *container_spec,
         goto out;
     }
 
-    ret = pack_container_custom_config_mounts(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
-
     ret = pack_container_custom_config_array(container_spec, custom_conf);
     if (ret != 0) {
         goto out;
@@ -461,10 +429,6 @@ void isula_container_config_free(isula_container_config_t *config)
 
     free(config->user);
     config->user = NULL;
-
-    util_free_array_by_len(config->mounts, config->mounts_len);
-    config->mounts = NULL;
-    config->mounts_len = 0;
 
     util_free_array_by_len(config->cmd, config->cmd_len);
     config->cmd = NULL;

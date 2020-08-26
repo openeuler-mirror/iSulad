@@ -29,7 +29,10 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/container_unix_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec//specs_mount.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/volume/volume.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/volume/local.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/selinux_label_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/storage_mock.cc
     oci_config_merge_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
@@ -41,12 +44,14 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/map
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/volume
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/api
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/runtime/engines
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec/
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/restart_manager
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/health_check
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/storage
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/events
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/runtime
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image

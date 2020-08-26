@@ -63,6 +63,9 @@ struct custom_configs {
     /* hook-spec file */
     char *hook_spec;
 
+    /* volumes-from container(s) */
+    char **volumes_from;
+
     /* volumes to mount */
     char **volumes;
 
