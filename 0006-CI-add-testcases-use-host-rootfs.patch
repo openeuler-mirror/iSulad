@@ -1,7 +1,7 @@
-From bb9fd6c70af00857af1e7cbfa14ccf31e2cbc1e5 Mon Sep 17 00:00:00 2001
+From 2b84ea779f90ded53c7f070feacd8defd0c9e333 Mon Sep 17 00:00:00 2001
 From: lifeng68 <lifeng68@huawei.com>
 Date: Wed, 24 Jun 2020 17:25:50 +0800
-Subject: [PATCH 6/6] CI: add testcases use host rootfs /
+Subject: [PATCH 06/12] CI: add testcases use host rootfs /
 
 Signed-off-by: lifeng68 <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: lifeng68 <lifeng68@huawei.com>
  1 file changed, 12 insertions(+), 1 deletion(-)
 
 diff --git a/CI/test_cases/basic_cases/run.bash b/CI/test_cases/basic_cases/run.bash
-index 9b57c2e6..8db3f1ee 100755
+index 9b57c2e..8db3f1e 100755
 --- a/CI/test_cases/basic_cases/run.bash
 +++ b/CI/test_cases/basic_cases/run.bash
 @@ -50,7 +50,7 @@ function do_test_t()
@@ -40,5 +40,5 @@ index 9b57c2e6..8db3f1ee 100755
  }
  
 -- 
-2.25.1
+2.20.1
 
