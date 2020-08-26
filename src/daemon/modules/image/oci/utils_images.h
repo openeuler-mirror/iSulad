@@ -35,8 +35,8 @@ extern "C" {
 #define HTTP_PREFIX "http://"
 
 #define DEFAULT_TAG ":latest"
-#define DEFAULT_HOSTNAME "docker.io/"
-#define DEFAULT_REPO_PREFIX "library/"
+#define HOSTNAME_TO_STRIP "docker.io/"
+#define REPO_PREFIX_TO_STRIP "library/"
 #define MAX_ID_BUF_LEN 256
 
 #define IMAGE_TMP_PATH "/var/tmp/isula-image/"

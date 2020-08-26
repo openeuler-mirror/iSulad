@@ -513,6 +513,42 @@ static int do_append_image(storage_image *im)
     return 0;
 }
 
+static void strip_dockerio_prefix(char **name)
+{
+    char *new_image_name = NULL;
+
+    new_image_name = oci_strip_dockerio_prefix(*name);
+    if (new_image_name == NULL) {
+        return;
+    }
+
+    free(*name);
+    *name = new_image_name;
+
+    return;
+}
+
+static int strip_default_hostname(storage_image *im)
+{
+    int ret = 0;
+    size_t i = 0;
+    bool striped = false;
+
+    for (i = 0; i < im->names_len; i++) {
+        if (util_has_prefix(im->names[i], HOSTNAME_TO_STRIP) ||
+            util_has_prefix(im->names[i], REPO_PREFIX_TO_STRIP)) {
+            strip_dockerio_prefix(&im->names[i]);
+            striped = true;
+        }
+    }
+
+    if (striped) {
+        ret = save_image(im);
+    }
+
+    return ret;
+}
+
 static int append_image_by_directory(const char *image_dir)
 {
     int ret = 0;
@@ -531,6 +567,12 @@ static int append_image_by_directory(const char *image_dir)
     if (im == NULL) {
         ERROR("Failed to parse images path: %s", err);
         return -1;
+    }
+
+    ret = strip_default_hostname(im);
+    if (ret != 0) {
+        ERROR("Failed to strip default hostname");
+        goto out;
     }
 
     if (do_append_image(im) != 0) {
