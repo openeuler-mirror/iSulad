@@ -1117,20 +1117,20 @@ int fetch_layer(pull_descriptor *desc, size_t index)
     }
 
     if (index >= desc->layers_len) {
-        ERROR("Invalid layer index %ld, total layer number %ld", index, desc->layers_len);
+        ERROR("Invalid layer index %zu, total layer number %zu", index, desc->layers_len);
         return -1;
     }
 
-    sret = snprintf(file, sizeof(file), "%s/%d", desc->blobpath, (int)index);
+    sret = snprintf(file, sizeof(file), "%s/%zu", desc->blobpath, index);
     if (sret < 0 || (size_t)sret >= sizeof(file)) {
-        ERROR("Failed to sprintf file for layer %lu", index);
+        ERROR("Failed to sprintf file for layer %zu", index);
         return -1;
     }
 
     layer = &desc->layers[index];
     sret = snprintf(path, sizeof(path), "/v2/%s/blobs/%s", desc->name, layer->digest);
     if (sret < 0 || (size_t)sret >= sizeof(path)) {
-        ERROR("Failed to sprintf path for layer %ld, name %s, digest %s", index, desc->name, layer->digest);
+        ERROR("Failed to sprintf path for layer %zu, name %s, digest %s", index, desc->name, layer->digest);
         ret = -1;
         goto out;
     }

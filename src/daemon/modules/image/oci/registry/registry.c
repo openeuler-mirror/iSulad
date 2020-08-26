@@ -101,13 +101,13 @@ static int parse_manifest_schema1(pull_descriptor *desc)
     }
 
     if (manifest->fs_layers_len > MAX_LAYER_NUM || manifest->fs_layers_len == 0) {
-        ERROR("Invalid layer number %ld, maxium is %d and it can't be 0", manifest->fs_layers_len, MAX_LAYER_NUM);
+        ERROR("Invalid layer number %zu, maxium is %d and it can't be 0", manifest->fs_layers_len, MAX_LAYER_NUM);
         ret = -1;
         goto out;
     }
 
     if (manifest->fs_layers_len != manifest->history_len) {
-        ERROR("Invalid layer number %ld do not match history number %ld", manifest->fs_layers_len,
+        ERROR("Invalid layer number %zu do not match history number %zu", manifest->fs_layers_len,
               manifest->history_len);
         ret = -1;
         goto out;
@@ -173,7 +173,7 @@ static int parse_manifest_schema2(pull_descriptor *desc)
     desc->config.size = manifest->config->size;
 
     if (manifest->layers_len > MAX_LAYER_NUM) {
-        ERROR("Invalid layer number %ld, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
+        ERROR("Invalid layer number %zu, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
         ret = -1;
         goto out;
     }
@@ -188,7 +188,7 @@ static int parse_manifest_schema2(pull_descriptor *desc)
     for (i = 0; i < manifest->layers_len; i++) {
         if (strcmp(manifest->layers[i]->media_type, DOCKER_IMAGE_LAYER_TAR_GZIP) &&
             strcmp(manifest->layers[i]->media_type, DOCKER_IMAGE_LAYER_FOREIGN_TAR_GZIP)) {
-            ERROR("Unsupported layer's media type %s, layer index %ld", manifest->layers[i]->media_type, i);
+            ERROR("Unsupported layer's media type %s, layer index %zu", manifest->layers[i]->media_type, i);
             ret = -1;
             goto out;
         }
@@ -226,7 +226,7 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
     desc->config.size = manifest->config->size;
 
     if (manifest->layers_len > MAX_LAYER_NUM) {
-        ERROR("Invalid layer number %ld, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
+        ERROR("Invalid layer number %zu, maxium is %d", manifest->layers_len, MAX_LAYER_NUM);
         ret = -1;
         goto out;
     }
@@ -243,7 +243,7 @@ static int parse_manifest_ociv1(pull_descriptor *desc)
             strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_TAR) &&
             strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_ND_TAR) &&
             strcmp(manifest->layers[i]->media_type, OCI_IMAGE_LAYER_ND_TAR_GZIP)) {
-            ERROR("Unsupported layer's media type %s, layer index %ld", manifest->layers[i]->media_type, i);
+            ERROR("Unsupported layer's media type %s, layer index %zu", manifest->layers[i]->media_type, i);
             ret = -1;
             goto out;
         }
@@ -1151,7 +1151,7 @@ static void *fetch_layer_in_thread(void *arg)
     prctl(PR_SET_NAME, "fetch_layer");
 
     if (fetch_layer(info->desc, info->index) != 0) {
-        ERROR("fetch layer %ld failed", info->index);
+        ERROR("fetch layer %zu failed", info->index);
         ret = -1;
         goto out;
     }
@@ -1163,7 +1163,7 @@ static void *fetch_layer_in_thread(void *arg)
     if (is_manifest_schemav1(info->desc->manifest.media_type)) {
         diffid = oci_calc_diffid(info->file);
         if (diffid == NULL) {
-            ERROR("calc diffid for layer %ld failed", info->index);
+            ERROR("calc diffid for layer %zu failed", info->index);
             ret = -1;
             goto out;
         }
@@ -1225,7 +1225,7 @@ static int add_fetch_task(thread_fetch_info *info)
     if (cache == NULL) {
         ret = pthread_create(&tid, NULL, fetch_layer_in_thread, info);
         if (ret != 0) {
-            ERROR("failed to start thread fetch layer %d", (int)info->index);
+            ERROR("failed to start thread fetch layer %zu", info->index);
             goto out;
         }
         info->desc->pulling_number++;
@@ -1427,9 +1427,9 @@ static int fetch_all(pull_descriptor *desc)
         // to get layers by compressed digest to reuse layer.
         parent_chain_id = NULL;
 
-        sret = snprintf(file, sizeof(file), "%s/%d", desc->blobpath, (int)i);
+        sret = snprintf(file, sizeof(file), "%s/%zu", desc->blobpath, i);
         if (sret < 0 || (size_t)sret >= sizeof(file)) {
-            ERROR("Failed to sprintf file for layer %d", (int)i);
+            ERROR("Failed to sprintf file for layer %zu", i);
             ret = -1;
             break;
         }
@@ -1514,7 +1514,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
 
     if (manifest->fs_layers_len != desc->layers_len || manifest->fs_layers_len != manifest->history_len ||
         manifest->history_len == 0) {
-        ERROR("Invalid length manifest, fs layers length %ld, histroy length %ld, layers length %ld",
+        ERROR("Invalid length manifest, fs layers length %zu, histroy length %zu, layers length %zu",
               manifest->fs_layers_len, manifest->history_len, desc->layers_len);
         ret = -1;
         goto out;
@@ -1736,10 +1736,6 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         desc->username = util_strdup_s(options->auth.username);
         desc->password = util_strdup_s(options->auth.password);
     } else {
-        free(desc->username);
-        desc->username = NULL;
-        free(desc->password);
-        desc->password = NULL;
         ret = auths_load(desc->host, &desc->username, &desc->password);
         if (ret != 0) {
             ERROR("Failed to load auths for host %s", desc->host);
