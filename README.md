@@ -71,18 +71,18 @@ X86 machine:
 | Configuration | Information                                  |
 | ------------- | -------------------------------------------- |
 | OS            | Fedora32 X86_64                              |
-| kernel        | linux 5.7.10-201.fc32.x86_64                 |
+| Kernel        | linux 5.7.10-201.fc32.x86_64                 |
 | CPU           | 48 cores，Intel Xeon CPU E5-2695 v2 @ 2.4GHZ |
-| memory        | 132 GB                                       |
+| Memory        | 132 GB                                       |
 
 ARM machine:
 
-| 配置项 | 配置信息      |
-| ------ | ------------- |
-| OS     | Euleros       |
-| 内核   | linux 4.19.90 |
-| CPU    | 64核          |
-| 内存   | 196 GB        |
+| Configuration | Information   |
+| ------------- | ------------- |
+| OS            | Euleros       |
+| Kernel        | linux 4.19.90 |
+| CPU           | 64 cores      |
+| Memory        | 196 GB        |
 
 #### Version of Softwares
 
