@@ -120,7 +120,7 @@ if [ $? -eq 0 ];then
 fi
 echo_success "===================RUN INTEGRATION START========================="
 cd ./CI/test_cases
-./ci_isula.bash -p isulad -l /
+./ci_isula.sh -p isulad -l /
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
