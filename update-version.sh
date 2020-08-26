@@ -1,6 +1,6 @@
 #!/bin/bash
 # usage
-# ./update-version.bash
+# ./update-version.sh
 
 #######################################################################
 ##- @Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
