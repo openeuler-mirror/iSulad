@@ -509,6 +509,7 @@ int graphdriver_cleanup(void)
 
     if (g_graphdriver->ops->clean_up(g_graphdriver) != 0) {
         ret = -1;
+        driver_unlock();
         goto out;
     }
 
