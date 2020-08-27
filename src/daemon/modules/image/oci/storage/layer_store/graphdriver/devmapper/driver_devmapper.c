@@ -205,7 +205,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
         goto out;
     }
 
-    if (util_mkdir_p(rootfs, 0755) != 0 || !util_dir_exists(rootfs)) {
+    if (util_mkdir_p(rootfs, DEFAULT_SECURE_DIRECTORY_MODE) != 0 || !util_dir_exists(rootfs)) {
         ERROR("Unable to create devmapper rootfs directory %s.", rootfs);
         ret = -1;
         if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {

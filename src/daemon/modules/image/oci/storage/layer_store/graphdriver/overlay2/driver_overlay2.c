@@ -394,7 +394,7 @@ static int mk_diff_directory(const char *layer_dir)
         goto out;
     }
 
-    if (util_mkdir_p(diff_dir, 0755) != 0) {
+    if (util_mkdir_p(diff_dir, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
         ERROR("Unable to create layer diff directory %s.", diff_dir);
         ret = -1;
         goto out;
