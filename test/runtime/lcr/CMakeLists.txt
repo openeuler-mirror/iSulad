@@ -19,14 +19,14 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/command_parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/config/daemon_arguments.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_ut_common.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/image/oci/oci_ut_common.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/container_unix_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/engine_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/runtime/engines/lcr/lcr_rt_ops.c
-    lcr_rt_ops_ut.cpp)
+    lcr_rt_ops_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

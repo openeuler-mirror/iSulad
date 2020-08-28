@@ -22,7 +22,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/registry_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store/image_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/storage_mock.cc
-    storage_images_ut.cpp)
+    storage_images_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

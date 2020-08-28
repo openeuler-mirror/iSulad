@@ -18,9 +18,9 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 SET(EXE0 im_oci_image_exist_fuzz)
 SET(EXE1 im_config_image_exist_fuzz)
 SET(EXE2 im_get_image_count_fuzz)
-add_executable(${EXE0} im_oci_image_exist_fuzz.cpp)
-add_executable(${EXE1} im_config_image_exist_fuzz.cpp)
-add_executable(${EXE2} im_get_image_count_fuzz.cpp)
+add_executable(${EXE0} im_oci_image_exist_fuzz.cc)
+add_executable(${EXE1} im_config_image_exist_fuzz.cc)
+add_executable(${EXE2} im_get_image_count_fuzz.cc)
 
 SET(IMAGE_FUZZ_INCLUDE_DIRS
     ${GTEST_INCLUDE_DIR}

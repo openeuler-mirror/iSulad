@@ -30,7 +30,7 @@ add_executable(${DRIVER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/driver_quota_mock.cc
-    storage_driver_ut.cpp)
+    storage_driver_ut.cc)
 
 target_include_directories(${DRIVER_EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}
@@ -101,7 +101,7 @@ add_executable(${LAYER_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/overlay2/driver_overlay2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/driver_quota_mock.cc
-    storage_layers_ut.cpp)
+    storage_layers_ut.cc)
 
 target_include_directories(${LAYER_EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

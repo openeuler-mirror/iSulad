@@ -103,7 +103,7 @@ protected:
     }
 
     std::vector<std::string> ids { "0e025f44cdca20966a5e5f11e1d9d8eb726aef2d38ed20f89ea986987c2010a9",
-                                   "28a8e1311d71345b08788c16b8c4f45a57641854f0e7c16802eedd0eb334b832" };
+        "28a8e1311d71345b08788c16b8c4f45a57641854f0e7c16802eedd0eb334b832" };
     char store_real_path[PATH_MAX] = { 0x00 };
 };
 
@@ -149,8 +149,8 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_create)
                                                   sizeof(names_with_id) / sizeof(names_with_id[0]), image.c_str(),
                                                   layer_with_id.c_str(), metadata.c_str(), nullptr);
     char *container_without_id =
-            rootfs_store_create(nullptr, names_without_id, sizeof(names_without_id) / sizeof(names_without_id[0]),
-                                image.c_str(), layer_without_id.c_str(), metadata.c_str(), nullptr);
+        rootfs_store_create(nullptr, names_without_id, sizeof(names_without_id) / sizeof(names_without_id[0]),
+                            image.c_str(), layer_without_id.c_str(), metadata.c_str(), nullptr);
 
     ASSERT_STREQ(created_container, id.c_str());
     ASSERT_NE(container_without_id, nullptr);
