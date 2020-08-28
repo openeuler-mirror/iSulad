@@ -45,12 +45,12 @@ void print_options(int options_len, const command_option_t *options)
     int max_opt_len = 0;
 
     for (i = 0; i < options_len; i++) {
-        command_option_t option = options[i];
+        const command_option_t *option = &(options[i]);
         // -s
         int len = 2;
         // -s, --large, 6 is the length of "-s, --".
-        if (option.large != NULL) {
-            len = (int)(strlen(option.large) + 6);
+        if (option->large != NULL) {
+            len = (int)(strlen(option->large) + 6);
         }
         if (len > max_opt_len) {
             max_opt_len = len;
@@ -62,20 +62,20 @@ void print_options(int options_len, const command_option_t *options)
     max_opt_len += 6;
 
     for (i = 0; i < options_len; i++) {
-        command_option_t option = options[i];
+        const command_option_t *option = &(options[i]);
         int curindex = 0;
         int space_left = 0;
 
         curindex = fprintf(stdout, "  ");
-        if (option.small) {
-            curindex += fprintf(stdout, "-%c", (char)option.small);
+        if (option->small) {
+            curindex += fprintf(stdout, "-%c", (char)option->small);
         }
 
-        if (option.large != NULL) {
-            if (option.small) {
-                curindex += fprintf(stdout, ", --%s", option.large);
+        if (option->large != NULL) {
+            if (option->small) {
+                curindex += fprintf(stdout, ", --%s", option->large);
             } else {
-                curindex += fprintf(stdout, "    --%s", option.large);
+                curindex += fprintf(stdout, "    --%s", option->large);
             }
         }
 
@@ -83,7 +83,7 @@ void print_options(int options_len, const command_option_t *options)
             space_left = max_opt_len - curindex;
         }
 
-        fprintf(stdout, "%*s%s\n", space_left, "", option.description);
+        fprintf(stdout, "%*s%s\n", space_left, "", option->description);
     }
     fputc('\n', stdout);
 }
