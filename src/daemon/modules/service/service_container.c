@@ -1707,7 +1707,7 @@ static void exec_container_end(container_exec_response *response, uint32_t cc, i
         }
     }
     if (thread_id > 0) {
-        if (pthread_join(thread_id, NULL) < 0) {
+        if (pthread_join(thread_id, NULL) != 0) {
             ERROR("Failed to join thread: %u", (unsigned int)thread_id);
         }
     }
