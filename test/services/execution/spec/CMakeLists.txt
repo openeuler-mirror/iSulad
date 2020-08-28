@@ -18,7 +18,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/selinux_label.c
-    selinux_label_ut.cpp)
+    selinux_label_ut.cc)
 
 add_executable(${MOCK_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils.c
@@ -37,7 +37,7 @@ add_executable(${MOCK_EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/syscall_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/selinux_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/selinux_label.c
-    selinux_label_mock_ut.cpp)
+    selinux_label_mock_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

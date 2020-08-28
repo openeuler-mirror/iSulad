@@ -25,7 +25,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/client/connect/isula_connect.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cmd/isula/extend/resume.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/grpc_client_mock.cc
-    resume_ut.cpp)
+    resume_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

@@ -22,13 +22,13 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cmd/command_parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/daemon_arguments.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/image/oci/oci_ut_common.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/image/oci/oci_ut_common.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/container_unix_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec//specs_mount.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/selinux_label_mock.cc
-    oci_config_merge_ut.cpp)
+    oci_config_merge_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

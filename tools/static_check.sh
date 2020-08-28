@@ -87,9 +87,9 @@ function codestyle_check() {
     local start_time=$(date +%s)
     local files
     if [[ ${1} == "all" ]]; then
-        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(cc)")
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(cc|cpp)")
     else
-        files=$(git diff --name-only HEAD | grep -E "*.cc$")
+        files=$(git diff --name-only HEAD | grep -E "*.cc$|*.cpp$")
     fi
     files=(${files// / })
     local total=${#files[@]}
@@ -128,7 +128,7 @@ function clang_format() {
       \____//_____//_/  |_|/_/ |_/ \____/       /_/     \____//_/ |_|/_/  /_//_/  |_|/_/ \033[0m]
 ================================================================================================="
     local start_time=$(date +%s)
-    local files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+    local files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$|*.cpp$")
     files=(${files// / })
     local total=${#files[@]}
     local failure_num=0
@@ -208,7 +208,7 @@ function astyle_format() {
     /_/  |_|/____/ /_/     /_//_____//_____/      /_/     \____//_/ |_|/_/  /_//_/  |_|/_/ \033[0m]
 ================================================================================================="
     local start_time=$(date +%s)
-    local files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+    local files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     files=(${files// / })
     local total=${#files[@]}
     local failure_num=0
@@ -263,9 +263,9 @@ echo -e "\
     local start_time=$(date +%s)
     local files
     if [[ ${1} == "all" ]]; then
-        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     else
-        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$|*.cpp$")
     fi
     files=(${files// / })
     local total=${#files[@]}
@@ -360,13 +360,13 @@ function clang_tidy_check() {
 
     local files
     if [[ ${1} == "all" ]]; then
-        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     elif [[ ${1} == "incremental" ]]; then
-        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$|*.cpp$")
 	elif [[ -f "$1" ]]; then
         files="$1"
 	elif [[ -d "$1" ]]; then
-        files=$(find "$1" -regextype posix-extended -regex ".*\.(h|c|cc)")
+        files=$(find "$1" -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     fi
     files=(${files// / })
     local total=${#files[@]}
@@ -432,13 +432,13 @@ function clang_tidy_fix() {
         fi
         files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h)")
     elif [[ ${1} == "all" ]]; then
-        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc)")
+        files=$(find ./src ./test -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     elif [[ ${1} == "incremental" ]]; then
-        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$")
+        files=$(git diff --name-only HEAD | grep -E "*.h$|*.c$|*.cc$|*.cpp$")
 	elif [[ -f "$1" ]]; then
         files="$1"
 	elif [[ -d "$1" ]]; then
-        files=$(find "$1" -regextype posix-extended -regex ".*\.(h|c|cc)")
+        files=$(find "$1" -regextype posix-extended -regex ".*\.(h|c|cc|cpp)")
     fi
     files=(${files// / })
     local total=${#files[@]}

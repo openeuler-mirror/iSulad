@@ -212,7 +212,8 @@ TEST_F(StorageLayersUnitTest, test_layers_load)
     }
 
     // check layer 7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b
-    std::string mount_point = std::string(real_path) + "/overlay/7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b/merged";
+    std::string mount_point = std::string(real_path) +
+                              "/overlay/7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b/merged";
     ASSERT_NE(layers[id_container], nullptr);
     ASSERT_STREQ(layers[id_container]->id, "7db8f44a0a8e12ea4283e3180e98880007efbd5de2e7c98b67de9cdd4dfffb0b");
     ASSERT_STREQ(layers[id_container]->parent, "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
@@ -222,8 +223,10 @@ TEST_F(StorageLayersUnitTest, test_layers_load)
     ASSERT_NE(layers[id_image], nullptr);
     ASSERT_STREQ(layers[id_image]->id, "9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
     ASSERT_STREQ(layers[id_image]->parent, nullptr);
-    ASSERT_STREQ(layers[id_image]->compressed_digest, "sha256:0e03bdcc26d7a9a57ef3b6f1bf1a210cff6239bff7c8cac72435984032851689");
-    ASSERT_STREQ(layers[id_image]->uncompressed_digest, "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
+    ASSERT_STREQ(layers[id_image]->compressed_digest,
+                 "sha256:0e03bdcc26d7a9a57ef3b6f1bf1a210cff6239bff7c8cac72435984032851689");
+    ASSERT_STREQ(layers[id_image]->uncompressed_digest,
+                 "sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63");
     ASSERT_EQ(layers[id_image]->uncompress_size, 1672256);
 
     free_layer_list(layer_list);

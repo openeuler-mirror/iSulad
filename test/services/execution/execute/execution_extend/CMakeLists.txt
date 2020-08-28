@@ -42,7 +42,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/engine_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/restartmanager_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../mocks/specs_mock.cc
-    execution_extend_ut.cpp)
+    execution_extend_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

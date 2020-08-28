@@ -14,7 +14,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c    
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
-    utils_array_ut.cpp)
+    utils_array_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
     ${GTEST_INCLUDE_DIR}

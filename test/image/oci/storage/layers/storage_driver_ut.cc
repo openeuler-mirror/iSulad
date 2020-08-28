@@ -109,11 +109,12 @@ protected:
         std::string cp_command = "cp -r " + std::string(data_path) + " " + isulad_dir;
         ASSERT_EQ(system(cp_command.c_str()), 0);
 
-        std::string mkdir = "mkdir -p " + root_dir + "/overlay/1be74353c3d0fd55fb5638a52953e6f1bc441e5b1710921db9ec2aa202725569/merged "
-                          + root_dir + "/overlay/1be74353c3d0fd55fb5638a52953e6f1bc441e5b1710921db9ec2aa202725569/work && "
+        std::string mkdir = "mkdir -p " + root_dir +
+                            "/overlay/1be74353c3d0fd55fb5638a52953e6f1bc441e5b1710921db9ec2aa202725569/merged "
+                            + root_dir + "/overlay/1be74353c3d0fd55fb5638a52953e6f1bc441e5b1710921db9ec2aa202725569/work && "
                             "mkdir -p " + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/empty "
-                          + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/merged "
-                          + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/work ";
+                            + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/merged "
+                            + root_dir + "/overlay/9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63/work ";
         ASSERT_EQ(system(mkdir.c_str()), 0);
 
         opts = (struct storage_module_init_options *)util_common_calloc_s(sizeof(struct storage_module_init_options));
@@ -225,7 +226,7 @@ TEST_F(StorageDriverUnitTest, test_graphdriver_try_repair_lowers)
 TEST(StorageOverlay2QuotaOptionsTest, test_overlay2_is_quota_options)
 {
     std::vector<std::string> options { "overlay2.size", "overlay2.basesize" };
-    for(auto option : options) {
+    for (auto option : options) {
         ASSERT_TRUE(overlay2_is_quota_options(nullptr, option.c_str()));
     }
 }

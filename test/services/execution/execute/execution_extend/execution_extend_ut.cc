@@ -134,7 +134,7 @@ container_t *invokeContainersStoreGet(const char *id_or_name)
     }
     container_t *cont = (container_t *)util_common_calloc_s(sizeof(container_t));
     cont->common_config =
-            (container_config_v2_common_config *)util_common_calloc_s(sizeof(container_config_v2_common_config));
+        (container_config_v2_common_config *)util_common_calloc_s(sizeof(container_config_v2_common_config));
     cont->refcnt = 1;
     return cont;
 }
@@ -204,7 +204,7 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_pause)
     service_container_callback_t cb;
     container_pause_request *request = (container_pause_request *)util_common_calloc_s(sizeof(container_pause_request));
     container_pause_response *response =
-            (container_pause_response *)util_common_calloc_s(sizeof(container_pause_response));
+        (container_pause_response *)util_common_calloc_s(sizeof(container_pause_response));
     request->id = util_strdup_s("64ff21ebf4e4");
 
     EXPECT_CALL(m_runtime, RuntimePause(_, _, _)).WillRepeatedly(Invoke(invokeRuntimePause));
@@ -230,9 +230,9 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_resume)
 {
     service_container_callback_t cb;
     container_resume_request *request =
-            (container_resume_request *)util_common_calloc_s(sizeof(container_resume_request));
+        (container_resume_request *)util_common_calloc_s(sizeof(container_resume_request));
     container_resume_response *response =
-            (container_resume_response *)util_common_calloc_s(sizeof(container_resume_response));
+        (container_resume_response *)util_common_calloc_s(sizeof(container_resume_response));
     request->id = util_strdup_s("64ff21ebf4e4");
 
     EXPECT_CALL(m_runtime, RuntimeResume(_, _, _)).WillRepeatedly(Invoke(invokeRuntimeResume));
