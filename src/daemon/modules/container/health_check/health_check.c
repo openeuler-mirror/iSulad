@@ -634,7 +634,7 @@ static int do_monitor_interval(const char *container_id, health_check_manager_t 
         ret = -1;
         goto out;
     }
-    if (pthread_join(exec_tid, NULL) < 0) {
+    if (pthread_join(exec_tid, NULL) != 0) {
         ERROR("Failed to run health check thread");
         ret = -1;
         goto out;
