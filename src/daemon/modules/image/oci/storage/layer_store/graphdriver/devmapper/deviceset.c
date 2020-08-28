@@ -3128,6 +3128,12 @@ struct status *device_set_status(struct device_set *devset)
 
     if (pool_status(devset, &total_size_in_sectors, &transaction_id, &data_used, &data_total, &metadata_used,
                     &metadata_total) == 0) {
+        if (data_total == 0) {
+            ERROR("devmapper: device data total value is zero");
+            free_devmapper_status(st);
+            st = NULL;
+            goto free_out;
+        }
         uint64_t block_size_in_sectors = total_size_in_sectors / data_total;
         st->data.used = data_used * block_size_in_sectors * 512;
         st->data.total = data_total * block_size_in_sectors * 512;
@@ -3152,6 +3158,8 @@ struct status *device_set_status(struct device_set *devset)
         msg_len = snprintf(msg, PATH_MAX, "system semaphore nums has attached limit: %d", sem_usz);
         if (msg_len < 0 || msg_len >= PATH_MAX) {
             ERROR("Cannot get semaphore err msg");
+            free_devmapper_status(st);
+            st = NULL;
             goto free_out;
         }
         st->sem_msg = util_strdup_s(msg);
