@@ -163,12 +163,14 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
     mydata->content = content;
 
     flags = ARCHIVE_EXTRACT_TIME;
+    flags |= ARCHIVE_EXTRACT_OWNER;
     flags |= ARCHIVE_EXTRACT_PERM;
     flags |= ARCHIVE_EXTRACT_ACL;
     flags |= ARCHIVE_EXTRACT_FFLAGS;
     flags |= ARCHIVE_EXTRACT_SECURE_SYMLINKS;
     flags |= ARCHIVE_EXTRACT_SECURE_NODOTDOT;
     flags |= ARCHIVE_EXTRACT_XATTR;
+    flags |= ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS;
 
     a = archive_read_new();
     archive_read_support_filter_all(a);
@@ -318,15 +320,15 @@ bool valid_archive_format(const char *file)
 
     ret = archive_read_support_filter_all(read_archive);
     if (ret != ARCHIVE_OK) {
-        ERROR("Failed to set archive read support filter all, result is %d, errmsg: %s",
-              ret, archive_error_string(read_archive));
+        ERROR("Failed to set archive read support filter all, result is %d, errmsg: %s", ret,
+              archive_error_string(read_archive));
         goto out;
     }
 
     ret = archive_read_support_format_all(read_archive);
     if (ret != ARCHIVE_OK) {
-        ERROR("Failed to set archive read support format all, result is %d, errmsg: %s",
-              ret, archive_error_string(read_archive));
+        ERROR("Failed to set archive read support format all, result is %d, errmsg: %s", ret,
+              archive_error_string(read_archive));
         goto out;
     }
 
@@ -399,10 +401,10 @@ int update_entry_for_hardlink(map_t *map_link, struct archive_entry *entry)
         return 0;
     }
 
-    linkname = map_search(map_link, (void*)&ino);
+    linkname = map_search(map_link, (void *)&ino);
     if (linkname == NULL) {
-        linkname = (char*)path;
-        if (!map_insert(map_link, (void*)&ino, linkname)) {
+        linkname = (char *)path;
+        if (!map_insert(map_link, (void *)&ino, linkname)) {
             ERROR("insert to map failed");
             fprintf(stderr, "insert to map failed");
             return -1;
@@ -457,9 +459,8 @@ int tar_handler(struct archive *r, struct archive *w)
         ret = archive_write_header(w, entry);
         if (ret != ARCHIVE_OK) {
             ERROR("Fail to write tar header: %s", archive_error_string(w));
-            fprintf(stderr, "Fail to write tar header: %s\nlink:%s target:%s",
-                    archive_error_string(w), archive_entry_pathname(entry),
-                    archive_entry_hardlink(entry));
+            fprintf(stderr, "Fail to write tar header: %s\nlink:%s target:%s", archive_error_string(w),
+                    archive_entry_pathname(entry), archive_entry_hardlink(entry));
             break;
         }
 
@@ -536,7 +537,7 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
     pid_t pid;
     int pipe_for_read[2] = { -1, -1 };
     int keepfds[] = { -1, -1 };
-    char errbuf[BUFSIZ] = {0};
+    char errbuf[BUFSIZ] = { 0 };
     int fd = 0;
 
     if (pipe2(pipe_for_read, O_CLOEXEC) != 0) {
