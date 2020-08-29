@@ -443,7 +443,19 @@ static void status_append(const char *name, const char *value, uint64_t u_data, 
             nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %s\n", name, value);
             break;
         case UINT64_T:
-            nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %lu\n", name, u_data);
+            // If u_data does not reach int64_t limit, executing of type conversion is safe
+            if (u_data < LONG_MAX) {
+                char *human_size = NULL;
+                human_size = util_human_size_decimal((int64_t)u_data);
+                if (human_size == NULL) {
+                    WARN("devmapper: convert human size failed");
+                }
+                nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %s\n", name, human_size);
+                free(human_size);
+            } else {
+                // If unsigned long int is bigger than LONG_MAX, just print directly with Byte unit
+                nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %lu B\n", name, u_data);
+            }
             break;
         case INT:
             nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %d\n", name, integer_data);
