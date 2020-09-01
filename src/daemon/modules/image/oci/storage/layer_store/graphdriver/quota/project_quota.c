@@ -370,7 +370,7 @@ struct pquota_control *project_quota_control_init(const char *home_dir, const ch
     }
 
     if (!fs_support_quota(fs)) {
-        ERROR("quota isn't supported for filesystem %s", fs);
+        WARN("quota isn't supported for filesystem %s", fs);
         goto err_out;
     }
 
@@ -402,7 +402,7 @@ struct pquota_control *project_quota_control_init(const char *home_dir, const ch
     }
 
     if (get_quota_stat(ctrl->backing_fs_device) != 0) {
-        ERROR("quota isn't supported on your system %s", home_dir);
+        WARN("quota isn't supported on your system %s", home_dir);
         goto err_out;
     }
 

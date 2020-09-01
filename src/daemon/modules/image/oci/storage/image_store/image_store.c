@@ -535,8 +535,7 @@ static int strip_default_hostname(storage_image *im)
     bool striped = false;
 
     for (i = 0; i < im->names_len; i++) {
-        if (util_has_prefix(im->names[i], HOSTNAME_TO_STRIP) ||
-            util_has_prefix(im->names[i], REPO_PREFIX_TO_STRIP)) {
+        if (util_has_prefix(im->names[i], HOSTNAME_TO_STRIP) || util_has_prefix(im->names[i], REPO_PREFIX_TO_STRIP)) {
             strip_dockerio_prefix(&im->names[i]);
             striped = true;
         }
@@ -3250,7 +3249,7 @@ imagetool_image *image_store_get_image(const char *id)
 
     img = lookup(id);
     if (img == NULL) {
-        ERROR("Image not known");
+        WARN("Image not known");
         goto unlock;
     }
 

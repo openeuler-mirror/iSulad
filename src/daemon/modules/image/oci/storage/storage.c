@@ -268,7 +268,7 @@ struct layer_list *storage_layers_get_by_compress_digest(const char *digest)
 
     ret = layer_store_by_compress_digest(digest, layers);
     if (ret != 0) {
-        ERROR("get layers by compressed digest failed");
+        WARN("get layers by compressed digest failed");
         goto out;
     }
 
