@@ -1465,7 +1465,7 @@ static int layers_by_digest_map(map_t *m, const char *digest, struct layer_list 
 
     id_list = (digest_layer_t *)map_search(m, (void *)digest);
     if (id_list == NULL) {
-        ERROR("Not found digest: %s", digest);
+        WARN("Not found digest: %s", digest);
         goto free_out;
     }
 
@@ -2271,5 +2271,3 @@ container_inspect_graph_driver *layer_store_get_metadata_by_layer_id(const char 
 {
     return graphdriver_get_metadata(id);
 }
-
-
