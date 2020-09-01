@@ -86,14 +86,14 @@ ARM machine:
 
 #### Version of Softwares
 
-| Name      | Version                                                      |
-| --------- | ------------------------------------------------------------ |
+| Name      | Version                                                                |
+| --------- | ---------------------------------------------------------------------- |
 | iSulad    | Version:	2.0.3 , Git commit:  3bb24761f07cc0ac399e1cb783053db8b33b263d |
-| docker    | Version:    19.03.11, Git commit:   42e35e6                  |
-| podman    | version 2.0.3                                                |
-| CRI-O     | v1.15.4                                                      |
-| kubelet   | v1.15.0                                                      |
-| cri-tools | v1.15.0                                                      |
+| docker    | Version:    19.03.11, Git commit:   42e35e6                            |
+| podman    | version 2.0.3                                                          |
+| CRI-O     | v1.15.4                                                                |
+| kubelet   | v1.15.0                                                                |
+| cri-tools | v1.15.0                                                                |
 
 #### Design of testcase
 
@@ -193,6 +193,10 @@ We always welcome new contributors. And we are happy to provide guidance for the
 iSulad follows the kernel coding conventions. You can find a detailed introduction at:
 
 - https://www.kernel.org/doc/html/v4.10/process/coding-style.html
+
+You can get more information about iSulad from our wikis, including roadmap, feature design documents, etc:
+
+- https://gitee.com/openeuler/iSulad/wikis
 
 ## Licensing
 
