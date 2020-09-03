@@ -1,3 +1,55 @@
+2020-09-03 lifeng release 2.0.5
+    - !693 Set mount rootfs highest mode Merge pull request !693 from gaohuatao/update
+    - !692 log: fix log level to warn Merge pull request !692 from lifeng_isula/master
+    - !691 Readme: add guide for wiki Merge pull request !691 from lifeng_isula/master
+    - !690 devmapper: convert human size to get info Merge pull request !690 from gaohuatao/update
+    - !689  fix: fix error checking pthread_join return value bug Merge pull request !689 from JingWoo/master
+    - !688 unpack: restore file uid/gid when unpack Merge pull request !688 from lifeng_isula/master
+    - !686 cmd: use pointer instead of struct copy Merge pull request !686 from lifeng_isula/master
+    - !684 fix code review format bug Merge pull request !684 from gaohuatao/update
+    - !687 fix dt testcase coding style Merge pull request !687 from JingWoo/master
+    - !685 unlock driver when clean up driver failed Merge pull request !685 from Zhangxiaoyu/master
+    - !682 CI: fix wrong suffix from bash to sh Merge pull request !682 from lifeng_isula/master
+    - !681 unified suffix name of script files in CI Merge pull request !681 from Jackey_1024/my_CI
+    - !680 unified suffix name of script files Merge pull request !680 from Jackey_1024/master
+    - !676 fix code review comment Merge pull request !676 from wangfengtu/review
+    - !678 do no use docker.io in local storage Merge pull request !678 from wangfengtu/nodockerio
+    - !677 添加test/fuzz/fuzz.sh的copyright信息 Merge pull request !677 from Jackey_1024/master
+    - !675 change readme Merge pull request !675 from haozi007/master
+    - !674 devmapper: fix mark device id free bug Merge pull request !674 from gaohuatao/update
+    - !673 fix register dt testcase coredump Merge pull request !673 from JingWoo/master
+    - !672  DT: generate xml report for testcase Merge pull request !672 from JingWoo/master
+    - !670 clean code: remove unused code Merge pull request !670 from lifeng_isula/master
+    - !671 do not log or print local image name to avoid misunderstanding Merge pull request !671 from wangfengtu/local_image
+    - !669 do not log token Merge pull request !669 from wangfengtu/token
+    - !668 change the directory of the temporary socket file from `/tmp` to `/run` Merge pull request !668 from zklei/tmp
+    - !667 image: fix lock error when list all images Merge pull request !667 from lifeng_isula/master
+    - !666 回退 'Pull Request !664 : do not use docker.io' Merge pull request !666 from lifeng_isula/revert-merge-664-master
+    - !665 merge unit and function testcases coverage Merge pull request !665 from JingWoo/master
+    - !664 do not use docker.io Merge pull request !664 from wangfengtu/remove_dockerio
+    - !660 cleancode: Coding standardization Merge pull request !660 from JingWoo/master
+    - !663 do not print key path Merge pull request !663 from wangfengtu/key_dir
+    - !661 maskpath: donot mask cnos path now Merge pull request !661 from lifeng_isula/master
+    - !662 fix segment fault when list images Merge pull request !662 from wangfengtu/segfault
+    - !658 more restricted created time check Merge pull request !658 from wangfengtu/valid_time
+    - !659 libarchive ≥ 3.2 Merge pull request !659 from YoungJQ/master
+    - !657 maskpath: add more masked paths Merge pull request !657 from lifeng_isula/master
+    - !656 Hold layer when creating image Merge pull request !656 from wangfengtu/hold
+    - !655 Fill xattrs in SCHILY only Merge pull request !655 from wangfengtu/xattr
+    - !654 isulad-shim: fix panic when remove one of the io copy node Merge pull request !654 from zklei/core
+    - !651 use libarchive to tar container's rootfs Merge pull request !651 from wangfengtu/export
+    - !650 shutdown: add sem for shutdown cleanup correct Merge pull request !650 from lifeng_isula/master
+    - !649 isula: fix memory leak in client create Merge pull request !649 from Zhangxiaoyu/master
+    - !648 driver: add wr lock to protect drviver between clean_up and other ops Merge pull request !648 from lifeng_isula/master
+    - !647 fix: shutdown grpc server without a deadline and forces cancellation Merge pull request !647 from JingWoo/master
+    - !645 devmapper: add deviceset free Merge pull request !645 from gaohuatao/update
+    - !646 mark failure if registry images ut take too much time Merge pull request !646 from wangfengtu/time_limit
+    - !644 fix isulad-check.sh Merge pull request !644 from Zhangxiaoyu/master
+
+    dev stats:
+      - 169 files changed, 1621 insertions(+), 1671 deletions(-)
+      - contributors: WangFengTu, lifeng68, wujing, gaohuatao, Zhangxiaoyu, jikui, leizhongkai, haozi007, lifeng_isula, root
+
 2020-08-10 lifeng release 2.0.4
     - !640 code: add DEL fd from epoll when fail Merge pull request !640 from lifeng_isula/master
     - !641 devmapper: optimize error processing log Merge pull request !641 from gaohuatao/update
