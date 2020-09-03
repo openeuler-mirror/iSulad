@@ -60,6 +60,8 @@ extern "C" {
 
 #define ROOTFS_STORE_PATH_MODE 0700
 
+#define DEFAULT_HIGHEST_DIRECTORY_MODE 0755
+
 #define ISULAD_CONFIG "/etc/isulad"
 
 #define ISULAD_DAEMON_JSON_CONF_FILE ISULAD_CONFIG "/daemon.json"
