@@ -1,5 +1,5 @@
 %global _version 2.0.3
-%global _release 20200714.103041.git4c67aa03
+%global _release 20200902.114727.git6d945f26
 %global is_systemd 1
 %global debug_package %{nil}
 
@@ -9,7 +9,7 @@ Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSuladd40006-CI-add-testcases-use-host-rootfs.patch
-Source:    iSulad-%{version}.tar.gz
+Source0:   https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz 
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
@@ -222,3 +222,10 @@ fi
 %else
 %config(noreplace,missingok) %{_initddir}/isulad.init
 %endif
+
+%changelog
+* Wed Sep 02 2020 YoungJQ <yangjiaqi11@huawei.com> - 2.0.3-20200902.114727.git6d945f26
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: modify source0 address
