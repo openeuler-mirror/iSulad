@@ -797,7 +797,7 @@ erro_out:
     return NULL;
 }
 
-static int parse_blkio_throttle_bps_device(const char *device, char **path, const uint64_t *rate)
+static int parse_blkio_throttle_bps_device(const char *device, char **path, uint64_t *rate)
 {
     int ret = 0;
     char **split = NULL;
@@ -859,6 +859,80 @@ static defs_blkio_device *pack_throttle_bps_device(const char *device)
 error_out:
     free(path);
     free_defs_blkio_device(bps_dev);
+    return NULL;
+}
+
+static int parse_blkio_throttle_iops_device(const char *device, char **path, uint64_t *rate)
+{
+    int ret = 0;
+    char **split = NULL;
+
+    split = util_string_split_multi(device, ':');
+    if (split == NULL || util_array_len((const char **)split) != 2) {
+        COMMAND_ERROR("bad format: %s", device);
+        ret = -1;
+        goto out;
+    }
+
+    if (strncmp(split[0], "/dev/", strlen("/dev/")) != 0) {
+        COMMAND_ERROR("bad format for device path: %s", device);
+        ret = -1;
+        goto out;
+    }
+
+    if (!util_valid_positive_interger(split[1])) {
+        COMMAND_ERROR("invalid rate for device: %s. The correct format is <device-path>:<number>."
+                      " Number must be unsigned 64 bytes integer.",
+                      device);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_safe_uint64(split[1], rate) != 0) {
+        COMMAND_ERROR("invalid rate for device: %s. The correct format is <device-path>:<number>."
+                      " Number must be unsigned 64 bytes integer.",
+                      device);
+        ret = -1;
+        goto out;
+    }
+
+    *path = util_strdup_s(split[0]);
+
+out:
+    util_free_array(split);
+    return ret;
+}
+
+// validate that the specified string has a valid device-rate format.
+static defs_blkio_device *pack_throttle_iops_device(const char *device)
+{
+    char *path = NULL;
+    uint64_t rate = 0;
+    defs_blkio_device *iops_dev = NULL;
+
+    if (device == NULL || !strcmp(device, "")) {
+        COMMAND_ERROR("blkio throttle read bps device can't be empty");
+        return NULL;
+    }
+
+    iops_dev = util_common_calloc_s(sizeof(defs_blkio_device));
+    if (iops_dev == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    if (parse_blkio_throttle_iops_device(device, &path, &rate) != 0) {
+        goto error_out;
+    }
+
+    iops_dev->path = path;
+    iops_dev->rate = rate;
+
+    return iops_dev;
+
+error_out:
+    free(path);
+    free_defs_blkio_device(iops_dev);
     return NULL;
 }
 
@@ -1387,18 +1461,13 @@ static int generate_blkio_weight_device(host_config **dstconfig, const isula_hos
         goto out;
     }
 
-    if (srcconfig->blkio_weight_device_len > SIZE_MAX / sizeof(defs_blkio_weight_device *)) {
-        ERROR("Too many blkio weight devies to get!");
-        ret = -1;
-        goto out;
-    }
-
     (*dstconfig)->blkio_weight_device =
-        util_common_calloc_s(srcconfig->blkio_weight_device_len * sizeof(defs_blkio_weight_device *));
+        util_smart_calloc_s(sizeof(defs_blkio_weight_device *), srcconfig->blkio_weight_device_len);
     if ((*dstconfig)->blkio_weight_device == NULL) {
         ret = -1;
         goto out;
     }
+
     for (i = 0; i < srcconfig->blkio_weight_device_len; i++) {
         (*dstconfig)->blkio_weight_device[(*dstconfig)->blkio_weight_device_len] =
             pack_blkio_weight_devices(srcconfig->blkio_weight_device[i]);
@@ -1427,18 +1496,13 @@ static int generate_blkio_throttle_read_bps_device(host_config **dstconfig, cons
         goto out;
     }
 
-    if (srcconfig->blkio_throttle_read_bps_device_len > SIZE_MAX / sizeof(defs_blkio_device *)) {
-        ERROR("Too many blkio throttle read bps devies to get!");
-        ret = -1;
-        goto out;
-    }
-
     (*dstconfig)->blkio_device_read_bps =
-        util_common_calloc_s(srcconfig->blkio_throttle_read_bps_device_len * sizeof(defs_blkio_device *));
+        util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_read_bps_device_len);
     if ((*dstconfig)->blkio_device_read_bps == NULL) {
         ret = -1;
         goto out;
     }
+
     for (i = 0; i < srcconfig->blkio_throttle_read_bps_device_len; i++) {
         (*dstconfig)->blkio_device_read_bps[(*dstconfig)->blkio_device_read_bps_len] =
             pack_throttle_bps_device(srcconfig->blkio_throttle_read_bps_device[i]);
@@ -1467,18 +1531,13 @@ static int generate_blkio_throttle_write_bps_device(host_config **dstconfig, con
         goto out;
     }
 
-    if (srcconfig->blkio_throttle_write_bps_device_len > SIZE_MAX / sizeof(defs_blkio_device *)) {
-        ERROR("Too many blkio throttle write bps devies to get!");
-        ret = -1;
-        goto out;
-    }
-
     (*dstconfig)->blkio_device_write_bps =
-        util_common_calloc_s(srcconfig->blkio_throttle_write_bps_device_len * sizeof(defs_blkio_device *));
+        util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_write_bps_device_len);
     if ((*dstconfig)->blkio_device_write_bps == NULL) {
         ret = -1;
         goto out;
     }
+
     for (i = 0; i < srcconfig->blkio_throttle_write_bps_device_len; i++) {
         (*dstconfig)->blkio_device_write_bps[(*dstconfig)->blkio_device_write_bps_len] =
             pack_throttle_bps_device(srcconfig->blkio_throttle_write_bps_device[i]);
@@ -1494,6 +1553,76 @@ out:
     return ret;
 }
 
+static int generate_blkio_throttle_read_iops_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    if (dstconfig == NULL || *dstconfig == NULL) {
+        goto out;
+    }
+
+    if (srcconfig->blkio_throttle_read_iops_device == NULL || srcconfig->blkio_throttle_read_iops_device_len == 0) {
+        goto out;
+    }
+
+    (*dstconfig)->blkio_device_read_iops =
+        util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_read_iops_device_len);
+    if ((*dstconfig)->blkio_device_read_iops == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < srcconfig->blkio_throttle_read_iops_device_len; i++) {
+        (*dstconfig)->blkio_device_read_iops[(*dstconfig)->blkio_device_read_iops_len] =
+            pack_throttle_iops_device(srcconfig->blkio_throttle_read_iops_device[i]);
+        if ((*dstconfig)->blkio_device_read_iops[(*dstconfig)->blkio_device_read_iops_len] == NULL) {
+            ERROR("Failed to get blkio throttle read iops devices");
+            ret = -1;
+            goto out;
+        }
+
+        (*dstconfig)->blkio_device_read_iops_len++;
+    }
+out:
+    return ret;
+}
+
+static int generate_blkio_throttle_write_iops_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    if (dstconfig == NULL || *dstconfig == NULL) {
+        goto out;
+    }
+
+    if (srcconfig->blkio_throttle_write_iops_device == NULL || srcconfig->blkio_throttle_write_iops_device_len == 0) {
+        goto out;
+    }
+
+    (*dstconfig)->blkio_device_write_iops =
+        util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_write_iops_device_len);
+    if ((*dstconfig)->blkio_device_write_iops == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < srcconfig->blkio_throttle_write_iops_device_len; i++) {
+        (*dstconfig)->blkio_device_write_iops[(*dstconfig)->blkio_device_write_iops_len] =
+            pack_throttle_iops_device(srcconfig->blkio_throttle_write_iops_device[i]);
+        if ((*dstconfig)->blkio_device_write_iops[(*dstconfig)->blkio_device_write_iops_len] == NULL) {
+            ERROR("Failed to get blkio throttle write iops devices");
+            ret = -1;
+            goto out;
+        }
+
+        (*dstconfig)->blkio_device_write_iops_len++;
+    }
+out:
+    return ret;
+}
+
 static int generate_blkio(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret;
@@ -1503,6 +1632,7 @@ static int generate_blkio(host_config **dstconfig, const isula_host_config_t *sr
     if (ret < 0) {
         goto out;
     }
+
     /* blkio throttle read bps devies */
     ret = generate_blkio_throttle_read_bps_device(dstconfig, srcconfig);
     if (ret < 0) {
@@ -1511,6 +1641,18 @@ static int generate_blkio(host_config **dstconfig, const isula_host_config_t *sr
 
     /* blkio throttle write bps devies */
     ret = generate_blkio_throttle_write_bps_device(dstconfig, srcconfig);
+    if (ret < 0) {
+        goto out;
+    }
+
+    /* blkio throttle read iops devies */
+    ret = generate_blkio_throttle_read_iops_device(dstconfig, srcconfig);
+    if (ret < 0) {
+        goto out;
+    }
+
+    /* blkio throttle write iops devies */
+    ret = generate_blkio_throttle_write_iops_device(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }

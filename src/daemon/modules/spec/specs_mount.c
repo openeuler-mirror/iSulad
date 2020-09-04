@@ -958,111 +958,56 @@ out:
     return ret;
 }
 
-static int get_read_bps_devices_from_path(const defs_blkio_device *read_bps_dev,
-                                          defs_block_io_device_throttle *spec_read_bps_dev)
+static int get_blkio_device_throttle_info(const defs_blkio_device *blkio_dev_info,
+                                          defs_block_io_device_throttle *blkio_dev_throttle)
 {
     int ret = 0;
     struct stat st;
 
-    if (read_bps_dev == NULL || spec_read_bps_dev == NULL) {
+    if (blkio_dev_info == NULL || blkio_dev_throttle == NULL) {
         return -1;
     }
 
-    ret = stat(read_bps_dev->path, &st);
+    ret = stat(blkio_dev_info->path, &st);
     if (ret < 0) {
-        ERROR("Failed to get state of device:%s", read_bps_dev->path);
-        isulad_set_error_message("no such file or directory: %s", read_bps_dev->path);
+        ERROR("no such file or directory :%s", blkio_dev_info->path);
+        isulad_set_error_message("no such file or directory: %s", blkio_dev_info->path);
         return -1;
     }
 
-    /* fill spec throttle read bps dev */
-    spec_read_bps_dev->rate = read_bps_dev->rate;
-    spec_read_bps_dev->major = (int64_t)major(st.st_rdev);
-    spec_read_bps_dev->minor = (int64_t)minor(st.st_rdev);
+    /* fill spec throttle write bps dev */
+    blkio_dev_throttle->rate = blkio_dev_info->rate;
+    blkio_dev_throttle->major = (int64_t)major(st.st_rdev);
+    blkio_dev_throttle->minor = (int64_t)minor(st.st_rdev);
 
     return 0;
 }
 
-static int merge_host_config_blk_read_bps_device(defs_block_io_device_throttle **out_spec_read_bps_dev,
-                                                 const defs_blkio_device *blkio_device_read_bps)
+static int merge_host_config_blk_device(defs_block_io_device_throttle **blkio_dev_throttle,
+                                        const defs_blkio_device *blkio_dev)
 {
     int ret = 0;
-    defs_block_io_device_throttle *spec_read_bps_dev = NULL;
+    defs_block_io_device_throttle *tmp_throttle = NULL;
 
-    spec_read_bps_dev = util_common_calloc_s(sizeof(defs_block_io_device_throttle));
-    if (spec_read_bps_dev == NULL) {
+    tmp_throttle = util_common_calloc_s(sizeof(defs_block_io_device_throttle));
+    if (tmp_throttle == NULL) {
         ERROR("Memory out");
         ret = -1;
         goto erro_out;
     }
 
-    ret = get_read_bps_devices_from_path(blkio_device_read_bps, spec_read_bps_dev);
+    ret = get_blkio_device_throttle_info(blkio_dev, tmp_throttle);
     if (ret != 0) {
         ERROR("Failed to get throttle read bps devices info");
         ret = -1;
         goto erro_out;
     }
 
-    *out_spec_read_bps_dev = spec_read_bps_dev;
+    *blkio_dev_throttle = tmp_throttle;
     goto out;
 
 erro_out:
-    free_defs_block_io_device_throttle(spec_read_bps_dev);
-
-out:
-    return ret;
-}
-
-static int get_write_bps_devices_from_path(const defs_blkio_device *write_bps_dev,
-                                           defs_block_io_device_throttle *spec_write_bps_dev)
-{
-    int ret = 0;
-    struct stat st;
-
-    if (write_bps_dev == NULL || spec_write_bps_dev == NULL) {
-        return -1;
-    }
-
-    ret = stat(write_bps_dev->path, &st);
-    if (ret < 0) {
-        ERROR("no such file or directory :%s", write_bps_dev->path);
-        isulad_set_error_message("no such file or directory: %s", write_bps_dev->path);
-        return -1;
-    }
-
-    /* fill spec throttle write bps dev */
-    spec_write_bps_dev->rate = write_bps_dev->rate;
-    spec_write_bps_dev->major = (int64_t)major(st.st_rdev);
-    spec_write_bps_dev->minor = (int64_t)minor(st.st_rdev);
-
-    return 0;
-}
-
-static int merge_host_config_blk_write_bps_device(defs_block_io_device_throttle **out_spec_write_bps_dev,
-                                                  const defs_blkio_device *blkio_device_write_bps)
-{
-    int ret = 0;
-    defs_block_io_device_throttle *spec_write_bps_dev = NULL;
-
-    spec_write_bps_dev = util_common_calloc_s(sizeof(defs_block_io_device_throttle));
-    if (spec_write_bps_dev == NULL) {
-        ERROR("Memory out");
-        ret = -1;
-        goto erro_out;
-    }
-
-    ret = get_write_bps_devices_from_path(blkio_device_write_bps, spec_write_bps_dev);
-    if (ret != 0) {
-        ERROR("Failed to get throttle write bps devices info");
-        ret = -1;
-        goto erro_out;
-    }
-
-    *out_spec_write_bps_dev = spec_write_bps_dev;
-    goto out;
-
-erro_out:
-    free_defs_block_io_device_throttle(spec_write_bps_dev);
+    free_defs_block_io_device_throttle(tmp_throttle);
 
 out:
     return ret;
@@ -1668,7 +1613,7 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec, defs_blkio_de
     oci_spec->linux->resources->block_io->throttle_read_bps_device = throttle_read_bps_device;
 
     for (i = 0; i < throttle_read_bps_device_len; i++) {
-        ret = merge_host_config_blk_read_bps_device(
+        ret = merge_host_config_blk_device(
                   &oci_spec->linux->resources->block_io
                   ->throttle_read_bps_device[oci_spec->linux->resources->block_io->throttle_read_bps_device_len],
                   blkio_read_bps_device[i]);
@@ -1721,7 +1666,7 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec, defs_blkio_d
     oci_spec->linux->resources->block_io->throttle_write_bps_device = throttle_write_bps_device;
 
     for (i = 0; i < throttle_write_bps_device_len; i++) {
-        ret = merge_host_config_blk_write_bps_device(
+        ret = merge_host_config_blk_device(
                   &oci_spec->linux->resources->block_io
                   ->throttle_write_bps_device[oci_spec->linux->resources->block_io->throttle_write_bps_device_len],
                   blkio_write_bps_device[i]);
@@ -1731,6 +1676,112 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec, defs_blkio_d
             goto out;
         }
         oci_spec->linux->resources->block_io->throttle_write_bps_device_len++;
+    }
+
+out:
+    return ret;
+}
+
+static int merge_blkio_read_iops_device(oci_runtime_spec *oci_spec, defs_blkio_device **blkio_read_iops_device,
+                                        size_t throttle_read_iops_device_len)
+{
+    int ret = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
+    size_t i = 0;
+    defs_block_io_device_throttle **throttle_read_iops_device = NULL;
+
+    ret = make_sure_oci_spec_linux_resources_blkio(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    if (oci_spec->linux->resources->block_io->throttle_read_iops_device_len >
+        LIST_DEVICE_SIZE_MAX - throttle_read_iops_device_len) {
+        ERROR("Too many throttle read iops devices to merge, the limit is %lld", LIST_DEVICE_SIZE_MAX);
+        isulad_set_error_message("Too many throttle read iops devices devices to merge, the limit is %d",
+                                 LIST_DEVICE_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+
+    new_size = (oci_spec->linux->resources->block_io->throttle_read_iops_device_len + throttle_read_iops_device_len) *
+               sizeof(defs_block_io_device_throttle *);
+    old_size = oci_spec->linux->resources->block_io->throttle_read_iops_device_len *
+               sizeof(defs_block_io_device_throttle *);
+    ret = mem_realloc((void **)&throttle_read_iops_device, new_size,
+                      oci_spec->linux->resources->block_io->throttle_read_iops_device, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for blkio throttle read iops devices");
+        ret = -1;
+        goto out;
+    }
+    oci_spec->linux->resources->block_io->throttle_read_iops_device = throttle_read_iops_device;
+
+    for (i = 0; i < throttle_read_iops_device_len; i++) {
+        ret = merge_host_config_blk_device(
+                  &oci_spec->linux->resources->block_io
+                  ->throttle_read_iops_device[oci_spec->linux->resources->block_io->throttle_read_iops_device_len],
+                  blkio_read_iops_device[i]);
+        if (ret != 0) {
+            ERROR("Failed to merge blkio throttle read iops device");
+            ret = -1;
+            goto out;
+        }
+        oci_spec->linux->resources->block_io->throttle_read_iops_device_len++;
+    }
+
+out:
+    return ret;
+}
+
+static int merge_blkio_write_iops_device(oci_runtime_spec *oci_spec, defs_blkio_device **blkio_write_iops_device,
+                                         size_t throttle_write_iops_device_len)
+{
+    int ret = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
+    size_t i = 0;
+    defs_block_io_device_throttle **throttle_write_iops_device = NULL;
+
+    ret = make_sure_oci_spec_linux_resources_blkio(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    if (oci_spec->linux->resources->block_io->throttle_write_iops_device_len >
+        LIST_DEVICE_SIZE_MAX - throttle_write_iops_device_len) {
+        ERROR("Too many throttle write iops devices to merge, the limit is %lld", LIST_DEVICE_SIZE_MAX);
+        isulad_set_error_message("Too many throttle write iops devices devices to merge, the limit is %d",
+                                 LIST_DEVICE_SIZE_MAX);
+        ret = -1;
+        goto out;
+    }
+
+    new_size = (oci_spec->linux->resources->block_io->throttle_write_iops_device_len + throttle_write_iops_device_len) *
+               sizeof(defs_block_io_device_throttle *);
+    old_size = oci_spec->linux->resources->block_io->throttle_write_iops_device_len *
+               sizeof(defs_block_io_device_throttle *);
+    ret = mem_realloc((void **)&throttle_write_iops_device, new_size,
+                      oci_spec->linux->resources->block_io->throttle_write_iops_device, old_size);
+    if (ret != 0) {
+        ERROR("Failed to realloc memory for throttle write iops devices");
+        ret = -1;
+        goto out;
+    }
+    oci_spec->linux->resources->block_io->throttle_write_iops_device = throttle_write_iops_device;
+
+    for (i = 0; i < throttle_write_iops_device_len; i++) {
+        ret = merge_host_config_blk_device(
+                  &oci_spec->linux->resources->block_io->throttle_write_iops_device
+                  [oci_spec->linux->resources->block_io->throttle_write_iops_device_len],
+                  blkio_write_iops_device[i]);
+        if (ret != 0) {
+            ERROR("Failed to merge blkio throttle write iops device");
+            ret = -1;
+            goto out;
+        }
+        oci_spec->linux->resources->block_io->throttle_write_iops_device_len++;
     }
 
 out:
@@ -1766,6 +1817,26 @@ int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec)
                                            host_spec->blkio_device_write_bps_len);
         if (ret != 0) {
             ERROR("Failed to merge blkio write bps devices");
+            goto out;
+        }
+    }
+
+    /* blkio throttle read iops devices */
+    if (host_spec->blkio_device_read_iops != NULL && host_spec->blkio_device_read_iops_len != 0) {
+        ret = merge_blkio_read_iops_device(oci_spec, host_spec->blkio_device_read_iops,
+                                           host_spec->blkio_device_read_iops_len);
+        if (ret != 0) {
+            ERROR("Failed to merge blkio read iops devices");
+            goto out;
+        }
+    }
+
+    /* blkio throttle write iops devices */
+    if (host_spec->blkio_device_write_iops != NULL && host_spec->blkio_device_write_iops_len != 0) {
+        ret = merge_blkio_write_iops_device(oci_spec, host_spec->blkio_device_write_iops,
+                                            host_spec->blkio_device_write_iops_len);
+        if (ret != 0) {
+            ERROR("Failed to merge blkio write iops devices");
             goto out;
         }
     }

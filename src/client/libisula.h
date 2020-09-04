@@ -179,6 +179,12 @@ typedef struct isula_host_config {
     char **blkio_throttle_write_bps_device;
     size_t blkio_throttle_write_bps_device_len;
 
+    char **blkio_throttle_read_iops_device;
+    size_t blkio_throttle_read_iops_device_len;
+
+    char **blkio_throttle_write_iops_device;
+    size_t blkio_throttle_write_iops_device_len;
+
     bool privileged;
     bool system_container;
     char **ns_change_files;

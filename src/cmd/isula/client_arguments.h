@@ -197,6 +197,12 @@ struct custom_configs {
 
     /* device write bps */
     char **blkio_throttle_write_bps_device;
+
+    /* device read iops */
+    char **blkio_throttle_read_iops_device;
+
+    /* device write iops */
+    char **blkio_throttle_write_iops_device;
 };
 
 struct args_cgroup_resources {

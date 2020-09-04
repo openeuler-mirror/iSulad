@@ -238,6 +238,18 @@ void client_arguments_free(struct client_arguments *args)
 
     free(args->key_file);
     args->key_file = NULL;
+
+    util_free_array(custom_conf->blkio_throttle_read_bps_device);
+    custom_conf->blkio_throttle_read_bps_device = NULL;
+
+    util_free_array(custom_conf->blkio_throttle_write_bps_device);
+    custom_conf->blkio_throttle_write_bps_device = NULL;
+
+    util_free_array(custom_conf->blkio_throttle_read_iops_device);
+    custom_conf->blkio_throttle_read_iops_device = NULL;
+
+    util_free_array(custom_conf->blkio_throttle_write_iops_device);
+    custom_conf->blkio_throttle_write_iops_device = NULL;
 }
 
 /* print common help */

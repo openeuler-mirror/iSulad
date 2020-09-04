@@ -765,37 +765,12 @@ out:
     return ret;
 }
 
-static inline bool is_hostconfig_blkio_weight_invalid(uint16_t weight)
-{
-    return weight > 0 && (weight < 10 || weight > 1000);
-}
-
-/* verify hostconfig blkio weight */
-static int verify_hostconfig_blkio_weight(const sysinfo_t *sysinfo, uint16_t weight)
-{
-    int ret = 0;
-
-    if (weight > 0 && !(sysinfo->blkioinfo.blkio_weight)) {
-        ERROR("Your kernel does not support Block I/O weight. Weight in host config discarded.");
-        isulad_set_error_message("Your kernel does not support Block I/O weight. Weight in host config discarded.");
-        ret = -1;
-        goto out;
-    }
-    if (is_hostconfig_blkio_weight_invalid(weight)) {
-        ERROR("Range of blkio weight is from 10 to 1000.");
-        isulad_set_error_message("Range of blkio weight is from 10 to 1000.");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
 /* verify blkio device */
-static int verify_blkio_device(const sysinfo_t *sysinfo, size_t weight_device_len)
+static int verify_blkio_device(const sysinfo_t *sysinfo, const defs_block_io_device_weight **weight_device,
+                               size_t weight_device_len)
 {
     int ret = 0;
+    size_t i = 0;
 
     if (weight_device_len > 0 && !(sysinfo->blkioinfo.blkio_weight_device)) {
         ERROR("Your kernel does not support Block I/O weight_device.");
@@ -803,6 +778,16 @@ static int verify_blkio_device(const sysinfo_t *sysinfo, size_t weight_device_le
         ret = -1;
     }
 
+    for (i = 0; i < weight_device_len; i++) {
+        if (is_blkio_weight_invalid(weight_device[i]->weight)) {
+            ERROR("Range of blkio weight is from 10 to 1000.");
+            isulad_set_error_message("Range of blkio weight is from 10 to 1000.");
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
     return ret;
 }
 
@@ -929,7 +914,8 @@ static int verify_resources_blkio(const sysinfo_t *sysinfo, const defs_resources
         goto out;
     }
 
-    ret = verify_blkio_device(sysinfo, blkio->weight_device_len);
+    ret = verify_blkio_device(sysinfo, (const defs_block_io_device_weight **)blkio->weight_device,
+                              blkio->weight_device_len);
     if (ret != 0) {
         goto out;
     }
@@ -1771,12 +1757,25 @@ static int host_config_settings_blkio(const sysinfo_t *sysinfo, const host_confi
 {
     int ret = 0;
 
-    ret = verify_hostconfig_blkio_weight(sysinfo, hostconfig->blkio_weight);
+    ret = verify_blkio_weight(sysinfo, hostconfig->blkio_weight);
     if (ret != 0) {
         goto out;
     }
 
-    ret = verify_blkio_device(sysinfo, hostconfig->blkio_weight_device_len);
+    ret = verify_blkio_device(sysinfo, (const defs_block_io_device_weight **)hostconfig->blkio_weight_device,
+                              hostconfig->blkio_weight_device_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = verify_blkio_rw_bps_device(sysinfo, hostconfig->blkio_device_read_bps_len,
+                                     hostconfig->blkio_device_write_bps_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = verify_blkio_rw_iops_device(sysinfo, hostconfig->blkio_device_read_iops_len,
+                                      hostconfig->blkio_device_write_iops_len);
     if (ret != 0) {
         goto out;
     }

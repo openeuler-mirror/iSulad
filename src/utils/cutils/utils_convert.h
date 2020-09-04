@@ -28,10 +28,10 @@ int util_safe_uint(const char *numstr, unsigned int *converted);
 int util_safe_llong(const char *numstr, long long *converted);
 int util_safe_strtod(const char *numstr, double *converted);
 int util_str_to_bool(const char *boolstr, bool *converted);
+int util_safe_uint64(const char *numstr, uint64_t *converted);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // UTILS_CUTILS_UTILS_CONVERT_H
-
