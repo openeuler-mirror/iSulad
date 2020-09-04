@@ -899,7 +899,7 @@ out:
     return ret;
 }
 
-static int get_weight_devices_from_path(const host_config_blkio_weight_device_element *weight_dev,
+static int get_weight_devices_from_path(const defs_blkio_weight_device *weight_dev,
                                         defs_block_io_device_weight *spec_weight_dev)
 {
     int ret = 0;
@@ -929,7 +929,7 @@ static int get_weight_devices_from_path(const host_config_blkio_weight_device_el
 }
 
 static int merge_host_config_blk_weight_device(defs_block_io_device_weight **out_spec_weight_dev,
-                                               const host_config_blkio_weight_device_element *weight_dev)
+                                               const defs_blkio_weight_device *weight_dev)
 {
     int ret = 0;
     defs_block_io_device_weight *spec_weight_dev = NULL;
@@ -958,7 +958,7 @@ out:
     return ret;
 }
 
-static int get_read_bps_devices_from_path(const host_config_blkio_device_read_bps_element *read_bps_dev,
+static int get_read_bps_devices_from_path(const defs_blkio_device *read_bps_dev,
                                           defs_block_io_device_throttle *spec_read_bps_dev)
 {
     int ret = 0;
@@ -984,7 +984,7 @@ static int get_read_bps_devices_from_path(const host_config_blkio_device_read_bp
 }
 
 static int merge_host_config_blk_read_bps_device(defs_block_io_device_throttle **out_spec_read_bps_dev,
-                                                 const host_config_blkio_device_read_bps_element *blkio_device_read_bps)
+                                                 const defs_blkio_device *blkio_device_read_bps)
 {
     int ret = 0;
     defs_block_io_device_throttle *spec_read_bps_dev = NULL;
@@ -1013,7 +1013,7 @@ out:
     return ret;
 }
 
-static int get_write_bps_devices_from_path(const host_config_blkio_device_write_bps_element *write_bps_dev,
+static int get_write_bps_devices_from_path(const defs_blkio_device *write_bps_dev,
                                            defs_block_io_device_throttle *spec_write_bps_dev)
 {
     int ret = 0;
@@ -1038,9 +1038,8 @@ static int get_write_bps_devices_from_path(const host_config_blkio_device_write_
     return 0;
 }
 
-static int
-merge_host_config_blk_write_bps_device(defs_block_io_device_throttle **out_spec_write_bps_dev,
-                                       const host_config_blkio_device_write_bps_element *blkio_device_write_bps)
+static int merge_host_config_blk_write_bps_device(defs_block_io_device_throttle **out_spec_write_bps_dev,
+                                                  const defs_blkio_device *blkio_device_write_bps)
 {
     int ret = 0;
     defs_block_io_device_throttle *spec_write_bps_dev = NULL;
@@ -1583,8 +1582,7 @@ out:
     return ret;
 }
 
-static int merge_blkio_weight_device(oci_runtime_spec *oci_spec,
-                                     host_config_blkio_weight_device_element **blkio_weight_device,
+static int merge_blkio_weight_device(oci_runtime_spec *oci_spec, defs_blkio_weight_device **blkio_weight_device,
                                      size_t blkio_weight_device_len)
 {
     int ret = 0;
@@ -1633,8 +1631,7 @@ out:
     return ret;
 }
 
-static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec,
-                                       host_config_blkio_device_read_bps_element **blkio_read_bps_device,
+static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec, defs_blkio_device **blkio_read_bps_device,
                                        size_t throttle_read_bps_device_len)
 {
     int ret = 0;
@@ -1687,8 +1684,7 @@ out:
     return ret;
 }
 
-static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec,
-                                        host_config_blkio_device_write_bps_element **blkio_write_bps_device,
+static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec, defs_blkio_device **blkio_write_bps_device,
                                         size_t throttle_write_bps_device_len)
 {
     int ret = 0;

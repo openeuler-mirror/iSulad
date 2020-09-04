@@ -415,6 +415,20 @@ extern "C" {
       "Namespaced kernel param options for system container (default [])",                                       \
       NULL },                                                                                                    \
     { CMD_OPT_TYPE_CALLBACK, false, "ulimit", 0, &(cmdargs).custom_conf.ulimits, "Ulimit options (default [])",  \
+      command_append_array },                                                                                    \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                     \
+      false,                                                                                                     \
+      "blkio-weight",                                                                                            \
+      0,                                                                                                         \
+      &(cmdargs).cr.blkio_weight,                                                                                \
+      "Block IO (relative weight), between 10 and 1000, or 0 to disable (default 0)",                            \
+      command_convert_u16 },                                                                                     \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                     \
+      false,                                                                                                     \
+      "blkio-weight-device",                                                                                     \
+      0,                                                                                                         \
+      &(cmdargs).custom_conf.weight_devices,                                                                     \
+      "Block IO weight (relative device weight) (default []), format: DEVICE_NAME:WEIGHT",                       \
       command_append_array },
 
 #define CREATE_EXTEND_OPTIONS(cmdargs)        \

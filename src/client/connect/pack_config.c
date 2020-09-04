@@ -356,9 +356,8 @@ static int check_parsed_device(const host_config_devices_element *device_map)
     }
 
     if (!util_file_exists(device_map->path_on_host)) {
-        COMMAND_ERROR(
-            "Error gathering device information while adding device \"%s\",stat %s:no such file or directory",
-            device_map->path_on_host, device_map->path_on_host);
+        COMMAND_ERROR("Error gathering device information while adding device \"%s\",stat %s:no such file or directory",
+                      device_map->path_on_host, device_map->path_on_host);
         ret = -1;
         goto out;
     }
@@ -439,7 +438,8 @@ static int check_ulimit_input(const char *val)
 
     if (val[0] == '=' || val[strlen(val) - 1] == '=') {
         COMMAND_ERROR("Invalid ulimit argument: \"%s\", delimiter '=' can't"
-                      " be the first or the last character", val);
+                      " be the first or the last character",
+                      val);
         ret = -1;
     }
 
@@ -484,7 +484,7 @@ static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limi
             goto out;
         }
     } else {
-        *hard = *soft;  // default to soft in case no hard was set
+        *hard = *soft; // default to soft in case no hard was set
     }
 out:
     return ret;
@@ -547,7 +547,8 @@ static host_config_ulimits_element *parse_ulimit(const char *val)
 
     if (parts[1][0] == ':' || parts[1][strlen(parts[1]) - 1] == ':') {
         COMMAND_ERROR("Invalid ulimit value: \"%s\", delimiter ':' can't be the first"
-                      " or the last character", val);
+                      " or the last character",
+                      val);
         ret = -1;
         goto out;
     }
@@ -560,8 +561,7 @@ static host_config_ulimits_element *parse_ulimit(const char *val)
     }
 
     if (limitvals_len > 2) {
-        COMMAND_ERROR("Too many limit value arguments - %s, can only have up to two, `soft[:hard]`",
-                      parts[1]);
+        COMMAND_ERROR("Too many limit value arguments - %s, can only have up to two, `soft[:hard]`", parts[1]);
         ret = -1;
         goto out;
     }
@@ -739,19 +739,19 @@ static int pack_hostconfig_cgroup(host_config *dstconfig, const isula_host_confi
     return ret;
 }
 
-static host_config_blkio_weight_device_element *pack_blkio_weight_devices(const char *devices)
+static defs_blkio_weight_device *pack_blkio_weight_devices(const char *devices)
 {
     char **tmp_str = NULL;
     unsigned int weight = 0;
     size_t tmp_str_len = 0;
-    host_config_blkio_weight_device_element *weight_dev = NULL;
+    defs_blkio_weight_device *weight_dev = NULL;
 
     if (devices == NULL || !strcmp(devices, "")) {
         COMMAND_ERROR("Weight devices can't be empty");
         return NULL;
     }
 
-    weight_dev = util_common_calloc_s(sizeof(host_config_blkio_weight_device_element));
+    weight_dev = util_common_calloc_s(sizeof(defs_blkio_weight_device));
     if (weight_dev == NULL) {
         ERROR("Out of memory");
         return NULL;
@@ -793,7 +793,7 @@ static host_config_blkio_weight_device_element *pack_blkio_weight_devices(const 
 
 erro_out:
     util_free_array(tmp_str);
-    free_host_config_blkio_weight_device_element(weight_dev);
+    free_defs_blkio_weight_device(weight_dev);
     return NULL;
 }
 
@@ -817,7 +817,8 @@ static int parse_blkio_throttle_bps_device(const char *device, char **path, cons
 
     if (util_parse_byte_size_string(split[1], (int64_t *)rate) != 0) {
         COMMAND_ERROR("invalid rate for device: %s. The correct format is <device-path>:<number>[<unit>]."
-                      " Number must be a positive integer. Unit is optional and can be kb, mb, or gb", device);
+                      " Number must be a positive integer. Unit is optional and can be kb, mb, or gb",
+                      device);
         ret = -1;
         goto out;
     }
@@ -829,19 +830,19 @@ out:
 }
 
 // validate that the specified string has a valid device-rate format.
-static host_config_blkio_device_read_bps_element *pack_throttle_read_bps_device(const char *device)
+static defs_blkio_device *pack_throttle_bps_device(const char *device)
 {
     char *path = NULL;
     uint64_t rate = 0;
-    host_config_blkio_device_read_bps_element *read_bps_dev = NULL;
+    defs_blkio_device *bps_dev = NULL;
 
     if (device == NULL || !strcmp(device, "")) {
         COMMAND_ERROR("blkio throttle read bps device can't be empty");
         return NULL;
     }
 
-    read_bps_dev = util_common_calloc_s(sizeof(host_config_blkio_device_read_bps_element));
-    if (read_bps_dev == NULL) {
+    bps_dev = util_common_calloc_s(sizeof(defs_blkio_device));
+    if (bps_dev == NULL) {
         ERROR("Out of memory");
         return NULL;
     }
@@ -850,47 +851,14 @@ static host_config_blkio_device_read_bps_element *pack_throttle_read_bps_device(
         goto error_out;
     }
 
-    read_bps_dev->path = path;
-    read_bps_dev->rate = rate;
+    bps_dev->path = path;
+    bps_dev->rate = rate;
 
-    return read_bps_dev;
-
-error_out:
-    free(path);
-    free_host_config_blkio_device_read_bps_element(read_bps_dev);
-    return NULL;
-}
-
-// validate that the specified string has a valid device-rate format.
-static host_config_blkio_device_write_bps_element *pack_throttle_write_bps_device(const char *device)
-{
-    char *path = NULL;
-    uint64_t rate = 0;
-    host_config_blkio_device_write_bps_element *write_bps_dev = NULL;
-
-    if (device == NULL || !strcmp(device, "")) {
-        COMMAND_ERROR("blkio throttle write bps device can't be empty");
-        return NULL;
-    }
-
-    write_bps_dev = util_common_calloc_s(sizeof(host_config_blkio_device_write_bps_element));
-    if (write_bps_dev == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    if (parse_blkio_throttle_bps_device(device, &path, &rate) != 0) {
-        goto error_out;
-    }
-
-    write_bps_dev->path = path;
-    write_bps_dev->rate = rate;
-
-    return write_bps_dev;
+    return bps_dev;
 
 error_out:
     free(path);
-    free_host_config_blkio_device_write_bps_element(write_bps_dev);
+    free_defs_blkio_device(bps_dev);
     return NULL;
 }
 
@@ -1218,8 +1186,7 @@ static int append_seccomp_to_security_opts(const char *full_opt, const char *sec
 
     seccomp_spec = get_seccomp_security_opt_spec(seccomp_file);
     if (seccomp_spec == NULL) {
-        ERROR("Failed to parse docker format seccomp specification file \"%s\", error message: %s",
-              seccomp_file, err);
+        ERROR("Failed to parse docker format seccomp specification file \"%s\", error message: %s", seccomp_file, err);
         COMMAND_ERROR("failed to parse seccomp file: %s", seccomp_file);
         ret = -1;
         goto out;
@@ -1340,8 +1307,7 @@ int generate_storage_opts(host_config **dstconfig, const isula_host_config_t *sr
         goto out;
     }
     for (j = 0; j < srcconfig->storage_opts->len; j++) {
-        ret = append_json_map_string_string((*dstconfig)->storage_opt,
-                                            srcconfig->storage_opts->keys[j],
+        ret = append_json_map_string_string((*dstconfig)->storage_opt, srcconfig->storage_opts->keys[j],
                                             srcconfig->storage_opts->values[j]);
         if (ret != 0) {
             ERROR("Append map failed");
@@ -1421,14 +1387,14 @@ static int generate_blkio_weight_device(host_config **dstconfig, const isula_hos
         goto out;
     }
 
-    if (srcconfig->blkio_weight_device_len > SIZE_MAX / sizeof(host_config_blkio_weight_device_element *)) {
+    if (srcconfig->blkio_weight_device_len > SIZE_MAX / sizeof(defs_blkio_weight_device *)) {
         ERROR("Too many blkio weight devies to get!");
         ret = -1;
         goto out;
     }
 
     (*dstconfig)->blkio_weight_device =
-        util_common_calloc_s(srcconfig->blkio_weight_device_len * sizeof(host_config_blkio_weight_device_element *));
+        util_common_calloc_s(srcconfig->blkio_weight_device_len * sizeof(defs_blkio_weight_device *));
     if ((*dstconfig)->blkio_weight_device == NULL) {
         ret = -1;
         goto out;
@@ -1461,23 +1427,21 @@ static int generate_blkio_throttle_read_bps_device(host_config **dstconfig, cons
         goto out;
     }
 
-    if (srcconfig->blkio_throttle_read_bps_device_len >
-        SIZE_MAX / sizeof(host_config_blkio_device_read_bps_element *)) {
+    if (srcconfig->blkio_throttle_read_bps_device_len > SIZE_MAX / sizeof(defs_blkio_device *)) {
         ERROR("Too many blkio throttle read bps devies to get!");
         ret = -1;
         goto out;
     }
 
     (*dstconfig)->blkio_device_read_bps =
-        util_common_calloc_s(srcconfig->blkio_throttle_read_bps_device_len *
-                             sizeof(host_config_blkio_device_read_bps_element *));
+        util_common_calloc_s(srcconfig->blkio_throttle_read_bps_device_len * sizeof(defs_blkio_device *));
     if ((*dstconfig)->blkio_device_read_bps == NULL) {
         ret = -1;
         goto out;
     }
     for (i = 0; i < srcconfig->blkio_throttle_read_bps_device_len; i++) {
         (*dstconfig)->blkio_device_read_bps[(*dstconfig)->blkio_device_read_bps_len] =
-            pack_throttle_read_bps_device(srcconfig->blkio_throttle_read_bps_device[i]);
+            pack_throttle_bps_device(srcconfig->blkio_throttle_read_bps_device[i]);
         if ((*dstconfig)->blkio_device_read_bps[(*dstconfig)->blkio_device_read_bps_len] == NULL) {
             ERROR("Failed to get blkio throttle read bps devices");
             ret = -1;
@@ -1503,23 +1467,21 @@ static int generate_blkio_throttle_write_bps_device(host_config **dstconfig, con
         goto out;
     }
 
-
-    if (srcconfig->blkio_throttle_write_bps_device_len >
-        SIZE_MAX / sizeof(host_config_blkio_device_write_bps_element *)) {
+    if (srcconfig->blkio_throttle_write_bps_device_len > SIZE_MAX / sizeof(defs_blkio_device *)) {
         ERROR("Too many blkio throttle write bps devies to get!");
         ret = -1;
         goto out;
     }
 
-    (*dstconfig)->blkio_device_write_bps = util_common_calloc_s(srcconfig->blkio_throttle_write_bps_device_len *
-                                                                sizeof(host_config_blkio_device_write_bps_element *));
+    (*dstconfig)->blkio_device_write_bps =
+        util_common_calloc_s(srcconfig->blkio_throttle_write_bps_device_len * sizeof(defs_blkio_device *));
     if ((*dstconfig)->blkio_device_write_bps == NULL) {
         ret = -1;
         goto out;
     }
     for (i = 0; i < srcconfig->blkio_throttle_write_bps_device_len; i++) {
         (*dstconfig)->blkio_device_write_bps[(*dstconfig)->blkio_device_write_bps_len] =
-            pack_throttle_write_bps_device(srcconfig->blkio_throttle_write_bps_device[i]);
+            pack_throttle_bps_device(srcconfig->blkio_throttle_write_bps_device[i]);
         if ((*dstconfig)->blkio_device_write_bps[(*dstconfig)->blkio_device_write_bps_len] == NULL) {
             ERROR("Failed to get blkio throttle write bps devices");
             ret = -1;
@@ -2017,9 +1979,8 @@ out:
     return ret;
 }
 
-static int pack_custom_with_health_check(container_config *container_spec,
-                                         const isula_container_config_t *custom_conf, bool have_health_settings,
-                                         defs_health_check *health_config)
+static int pack_custom_with_health_check(container_config *container_spec, const isula_container_config_t *custom_conf,
+                                         bool have_health_settings, defs_health_check *health_config)
 {
     int ret = 0;
 
@@ -2150,8 +2111,7 @@ out:
 }
 
 /* translate create_custom_config to container_config */
-static int pack_container_custom_config(container_config *container_spec,
-                                        const isula_container_config_t *custom_conf)
+static int pack_container_custom_config(container_config *container_spec, const isula_container_config_t *custom_conf)
 {
     int ret = -1;
 
@@ -2240,4 +2200,3 @@ out:
 
     return ret;
 }
-
