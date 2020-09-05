@@ -50,7 +50,7 @@ function do_test_t()
 
     echo AA > /tmp/test_run_env
 
-    isula run --name $containername -itd -e AAA=BB -e BAA --env-file /tmp/test_run_env busybox
+    isula run --name $containername -itd --user 100:100 -e AAA=BB -e BAA --env-file /tmp/test_run_env busybox
     fn_check_eq "$?" "0" "run failed"
     testcontainer $containername running
 
