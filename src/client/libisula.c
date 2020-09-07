@@ -332,6 +332,25 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     hostconfig->blkio_weight_device = NULL;
     hostconfig->blkio_weight_device_len = 0;
 
+    util_free_array_by_len(hostconfig->blkio_throttle_read_bps_device, hostconfig->blkio_throttle_read_bps_device_len);
+    hostconfig->blkio_throttle_read_bps_device = NULL;
+    hostconfig->blkio_throttle_read_bps_device_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_throttle_write_bps_device,
+                           hostconfig->blkio_throttle_write_bps_device_len);
+    hostconfig->blkio_throttle_write_bps_device = NULL;
+    hostconfig->blkio_throttle_write_bps_device_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_throttle_read_iops_device,
+                           hostconfig->blkio_throttle_read_iops_device_len);
+    hostconfig->blkio_throttle_read_iops_device = NULL;
+    hostconfig->blkio_throttle_read_iops_device_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_throttle_write_iops_device,
+                           hostconfig->blkio_throttle_write_iops_device_len);
+    hostconfig->blkio_throttle_write_iops_device = NULL;
+    hostconfig->blkio_throttle_write_iops_device_len = 0;
+
     container_cgroup_resources_free(hostconfig->cr);
     hostconfig->cr = NULL;
 

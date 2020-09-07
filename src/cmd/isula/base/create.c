@@ -875,11 +875,31 @@ static void request_pack_host_device_write_bps(const struct client_arguments *ar
     }
 }
 
+static void request_pack_host_device_read_iops(const struct client_arguments *args, isula_host_config_t *hostconfig)
+{
+    if (args->custom_conf.blkio_throttle_read_iops_device != NULL) {
+        hostconfig->blkio_throttle_read_iops_device_len =
+            util_array_len((const char **)(args->custom_conf.blkio_throttle_read_iops_device));
+        hostconfig->blkio_throttle_read_iops_device = args->custom_conf.blkio_throttle_read_iops_device;
+    }
+}
+
+static void request_pack_host_device_write_iops(const struct client_arguments *args, isula_host_config_t *hostconfig)
+{
+    if (args->custom_conf.blkio_throttle_write_iops_device != NULL) {
+        hostconfig->blkio_throttle_write_iops_device_len =
+            util_array_len((const char **)(args->custom_conf.blkio_throttle_write_iops_device));
+        hostconfig->blkio_throttle_write_iops_device = args->custom_conf.blkio_throttle_write_iops_device;
+    }
+}
+
 static void request_pack_host_blockio(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     request_pack_host_weight_devices(args, hostconfig);
     request_pack_host_device_read_bps(args, hostconfig);
     request_pack_host_device_write_bps(args, hostconfig);
+    request_pack_host_device_read_iops(args, hostconfig);
+    request_pack_host_device_write_iops(args, hostconfig);
 }
 
 static void request_pack_host_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)

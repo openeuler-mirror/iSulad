@@ -79,10 +79,20 @@ extern "C" {
       &(cmdargs).cr.memory_swap,                                                                       \
       "Swap limit equal to memory plus swap: '-1' to enable unlimited swap",                           \
       command_convert_memswapbytes },                                                                  \
-    {                                                                                                          \
-                                                                                                               CMD_OPT_TYPE_STRING, false, "restart", 0, &(cmdargs).restart,                                          \
-                                                                                                               "Restart policy to apply when a container exits", NULL                                         \
-    }
+    { CMD_OPT_TYPE_STRING,                                                                             \
+      false,                                                                                           \
+      "restart",                                                                                       \
+      0,                                                                                               \
+      &(cmdargs).restart,                                                                              \
+      "Restart policy to apply when a container exits",                                                \
+      NULL },                                                                                          \
+    { CMD_OPT_TYPE_CALLBACK,                                                                           \
+      false,                                                                                           \
+      "blkio-weight",                                                                                  \
+      0,                                                                                               \
+      &(cmdargs).cr.blkio_weight,                                                                      \
+      "Block IO (relative weight), between 10 and 1000, or 0 to disable (default 0)",                  \
+      command_convert_u16 },
 
 extern const char g_cmd_update_desc[];
 extern const char g_cmd_update_usage[];

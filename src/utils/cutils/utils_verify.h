@@ -99,6 +99,8 @@ bool util_valid_short_sha256_id(const char *id);
 
 bool util_valid_exec_suffix(const char *suffix);
 
+bool util_valid_positive_interger(const char *value);
+
 #ifdef __cplusplus
 }
 #endif

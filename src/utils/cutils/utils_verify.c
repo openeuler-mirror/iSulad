@@ -640,3 +640,14 @@ bool util_valid_exec_suffix(const char *suffix)
 
     return util_reg_match(patten, suffix) == 0;
 }
+
+bool util_valid_positive_interger(const char *value)
+{
+    const char *patten = "^[0-9]*$";
+
+    if (value == NULL) {
+        return false;
+    }
+
+    return util_reg_match(patten, value) == 0;
+}
