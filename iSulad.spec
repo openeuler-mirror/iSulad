@@ -1,7 +1,6 @@
-%global _version 2.0.3
-%global _release 20200714.103041.git4c67aa03
+%global _version 2.0.5
+%global _release 20200904.114315.gitff1761c3
 %global is_systemd 1
-%global debug_package %{nil}
 
 Name:      iSulad
 Version:   %{_version}
@@ -9,26 +8,14 @@ Release:   %{_release}
 Summary:   Lightweight Container Runtime Daemon
 License:   Mulan PSL v2
 URL:       https://gitee.com/openeuler/iSulad
-Source:    iSulad-%{version}.tar.gz
+Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
-
-Patch9000:  0001-isulad-shim-fix-probabilistic-bad-fd.patch
-Patch9001:  0002-iSulad-resolve-coredump-of-isula-inspect.patch
-Patch9002:  0003-Add-Pull-Request-Template-And-Issue-Template.patch
-Patch9003:  0004-fix-bug-of-creating-symlink-for-etc-mtab-when-etc-sy.patch
-Patch9004:  0005-fix-label-file-reading-bug.patch
-Patch9005:  0006-CI-add-testcases-use-host-rootfs.patch
-Patch9006:  0007-add-d-disk-param-for-CI.patch
-Patch9007:  0008-events-fix-wrong-format-of-exec-command.patch
-Patch9008:  0009-fix-create-mtab-bug-to-use-lstat.patch
-Patch9009:  0010-init-struct.patch
-Patch9010:  0011-Fix-stuck-problem-caused-by-websocket-traffic-restri.patch
-Patch9011:  0012-build-add-checkout-LTS-tag-for-third-party-software.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
 Provides:       libisula.so()(64bit)
+Provides:       libisulad_img.so()(64bit)
 %endif
 
 %if 0%{?is_systemd}
@@ -44,16 +31,16 @@ Requires(preun): initscripts
 
 BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
-BuildRequires: libcurl libcurl-devel sqlite-devel
+BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
-Requires:      iSulad-img lcr lxc clibcni
+Requires:      lcr lxc clibcni
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp
-Requires:      libcap libselinux libwebsockets
+Requires:      libcap libselinux libwebsockets libarchive device-mapper
 Requires:      systemd
 
 %description
@@ -66,7 +53,7 @@ Runtime Daemon, written by C.
 %build
 mkdir -p build
 cd build
-%cmake -DDEBUG=OFF -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
+%cmake -DDEBUG=ON -DLIB_INSTALL_DIR=%{_libdir} -DCMAKE_INSTALL_PREFIX=/usr ../
 %make_build
 
 %install
@@ -74,7 +61,11 @@ rm -rf %{buildroot}
 cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
-install -m 0644 ./src/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
+chmod +x %{buildroot}/%{_libdir}/libisula.so
+chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
+chmod +x %{buildroot}/%{_libdir}/libisulad_img.so
 
 install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
@@ -85,12 +76,12 @@ install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
-install -m 0644 ../src/libisula.h                        %{buildroot}/%{_includedir}/isulad/libisula.h
-install -m 0644 ../src/connect/client/isula_connect.h    %{buildroot}/%{_includedir}/isulad/isula_connect.h
-install -m 0644 ../src/container_def.h                  %{buildroot}/%{_includedir}/isulad/container_def.h
-install -m 0644 ../src/cutils/types_def.h               %{buildroot}/%{_includedir}/isulad/types_def.h
-install -m 0644 ../src/cutils/error.h                   %{buildroot}/%{_includedir}/isulad/error.h
-install -m 0644 ../src/engines/engine.h                 %{buildroot}/%{_includedir}/isulad/engine.h
+install -m 0644 ../src/client/libisula.h			%{buildroot}/%{_includedir}/isulad/libisula.h
+install -m 0644 ../src/client/connect/isula_connect.h		%{buildroot}/%{_includedir}/isulad/isula_connect.h
+install -m 0644 ../src/utils/cutils/utils_timestamp.h			%{buildroot}/%{_includedir}/isulad/utils_timestamp.h
+install -m 0644 ../src/utils/cutils/error.h				%{buildroot}/%{_includedir}/isulad/error.h
+install -m 0644 ../src/daemon/modules/runtime/engines/engine.h			%{buildroot}/%{_includedir}/isulad/engine.h
+install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
 install -m 0640 ../src/contrib/config/daemon.json           %{buildroot}/%{_sysconfdir}/isulad/daemon.json
@@ -222,3 +213,10 @@ fi
 %else
 %config(noreplace,missingok) %{_initddir}/isulad.init
 %endif
+
+%changelog
+* Fri Sep 04 2020 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.5-20200904.114315.gitff1761c3
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: upgrade from v2.0.3 to v2.0.5
