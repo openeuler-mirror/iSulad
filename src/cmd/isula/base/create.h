@@ -443,7 +443,21 @@ extern "C" {
       0,                                                                                                                                                  \
       &(cmdargs).custom_conf.blkio_throttle_write_iops_device,                                                                                            \
       "Limit write rate (IO per second) to a device (format: <device-path>:<number>),number is unsigned 64 bytes integer.",                               \
-      command_append_array },
+      command_append_array },                                                                                                                             \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "cpu-rt-period",                                                                                                                                    \
+      0,                                                                                                                                                  \
+      &((cmdargs).cr).cpu_rt_period,                                                                                                                      \
+      "Limit CPU real-time period in microseconds.",                                                                                                      \
+      command_convert_llong },                                                                                                                            \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "cpu-rt-runtime",                                                                                                                                   \
+      0,                                                                                                                                                  \
+      &((cmdargs).cr).cpu_rt_runtime,                                                                                                                     \
+      "Limit CPU real-time runtime in microseconds.",                                                                                                     \
+      command_convert_llong },
 
 #define CREATE_EXTEND_OPTIONS(cmdargs)        \
     { CMD_OPT_TYPE_BOOL,                      \

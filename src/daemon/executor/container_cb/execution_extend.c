@@ -853,6 +853,12 @@ static void update_container_cpu(const host_config *hostconfig, host_config *cho
         free(chostconfig->cpuset_mems);
         chostconfig->cpuset_mems = util_strdup_s(hostconfig->cpuset_mems);
     }
+    if (hostconfig->cpu_realtime_period != 0) {
+        chostconfig->cpu_realtime_period = hostconfig->cpu_realtime_period;
+    }
+    if (hostconfig->cpu_realtime_runtime != 0) {
+        chostconfig->cpu_realtime_runtime = hostconfig->cpu_realtime_runtime;
+    }
 }
 
 static int update_container_memory(const char *id, const host_config *hostconfig, host_config *chostconfig)

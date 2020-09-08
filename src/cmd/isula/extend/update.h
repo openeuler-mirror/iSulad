@@ -92,7 +92,21 @@ extern "C" {
       0,                                                                                               \
       &(cmdargs).cr.blkio_weight,                                                                      \
       "Block IO (relative weight), between 10 and 1000, or 0 to disable (default 0)",                  \
-      command_convert_u16 },
+      command_convert_u16 },                                                                           \
+    { CMD_OPT_TYPE_CALLBACK,                                                                           \
+      false,                                                                                           \
+      "cpu-rt-period",                                                                                 \
+      0,                                                                                               \
+      &((cmdargs).cr).cpu_rt_period,                                                                   \
+      "Limit CPU real-time period in microseconds.",                                                   \
+      command_convert_llong },                                                                         \
+    { CMD_OPT_TYPE_CALLBACK,                                                                           \
+      false,                                                                                           \
+      "cpu-rt-runtime",                                                                                \
+      0,                                                                                               \
+      &((cmdargs).cr).cpu_rt_runtime,                                                                  \
+      "Limit CPU real-time runtime in microseconds.",                                                  \
+      command_convert_llong },
 
 extern const char g_cmd_update_desc[];
 extern const char g_cmd_update_usage[];

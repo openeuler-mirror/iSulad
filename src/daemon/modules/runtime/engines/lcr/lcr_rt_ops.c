@@ -518,6 +518,8 @@ static void to_engine_resources(const host_config *hostconfig, struct engine_cgr
     cr->memory_swap = (uint64_t)hostconfig->memory_swap;
     cr->memory_reservation = (uint64_t)hostconfig->memory_reservation;
     cr->kernel_memory_limit = (uint64_t)hostconfig->kernel_memory;
+    cr->cpurt_period = hostconfig->cpu_realtime_period;
+    cr->cpurt_runtime = hostconfig->cpu_realtime_runtime;
 }
 
 int rt_lcr_update(const char *id, const char *runtime, const rt_update_params_t *params)

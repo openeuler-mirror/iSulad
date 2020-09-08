@@ -40,6 +40,8 @@ struct engine_cgroup_resources {
     uint64_t memory_swap;
     uint64_t memory_reservation;
     uint64_t kernel_memory_limit;
+    int64_t cpurt_runtime;
+    int64_t cpurt_period;
 };
 
 typedef struct _engine_start_request_t {

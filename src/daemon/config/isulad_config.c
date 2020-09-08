@@ -223,6 +223,30 @@ free_out:
     return epath;
 }
 
+int conf_get_cgroup_cpu_rt(int64_t *cpu_rt_period, int64_t *cpu_rt_runtime)
+{
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return -1;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL) {
+        (void)isulad_server_conf_unlock();
+        return -1;
+    }
+
+    *cpu_rt_period = conf->json_confs->cpu_rt_period;
+    *cpu_rt_runtime = conf->json_confs->cpu_rt_runtime;
+
+    if (isulad_server_conf_unlock() != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
 /* conf get graph checked flag file path */
 char *conf_get_graph_check_flag_file()
 {
@@ -1200,172 +1224,6 @@ out:
     }
 
     return ret;
-}
-
-/* maybe create cpu realtime file */
-static int maybe_create_cpu_realtime_file(bool present, int64_t value, const char *file, const char *path)
-{
-    int ret;
-    int fd = 0;
-    ssize_t nwrite;
-    char fpath[PATH_MAX] = { 0 };
-    char buf[ISULAD_NUMSTRLEN64] = { 0 };
-
-    if (!present || value == 0) {
-        return 0;
-    }
-
-    ret = util_mkdir_p(path, CONFIG_DIRECTORY_MODE);
-    if (ret != 0) {
-        ERROR("Failed to mkdir: %s", path);
-        return -1;
-    }
-
-    int nret = snprintf(fpath, sizeof(fpath), "%s/%s", path, file);
-    if (nret < 0 || nret >= sizeof(fpath)) {
-        ERROR("Failed to print string");
-        return -1;
-    }
-    nret = snprintf(buf, sizeof(buf), "%lld", (long long int)value);
-    if (nret < 0 || (size_t)nret >= sizeof(buf)) {
-        ERROR("Failed to print string");
-        return -1;
-    }
-
-    fd = util_open(fpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0700);
-    if (fd < 0) {
-        ERROR("Failed to open file: %s: %s", fpath, strerror(errno));
-        isulad_set_error_message("Failed to open file: %s: %s", fpath, strerror(errno));
-        return -1;
-    }
-    nwrite = util_write_nointr(fd, buf, strlen(buf));
-    if (nwrite < 0) {
-        ERROR("Failed to write %s to %s: %s", buf, fpath, strerror(errno));
-        isulad_set_error_message("Failed to write '%s' to '%s': %s", buf, fpath, strerror(errno));
-        close(fd);
-        return -1;
-    }
-    close(fd);
-
-    return 0;
-}
-
-static int get_cgroup_cpu_rt(int64_t *cpu_rt_period, int64_t *cpu_rt_runtime)
-{
-    struct service_arguments *conf = NULL;
-
-    if (isulad_server_conf_rdlock() != 0) {
-        return -1;
-    }
-
-    conf = conf_get_server_conf();
-    if (conf == NULL) {
-        (void)isulad_server_conf_unlock();
-        return -1;
-    }
-
-    *cpu_rt_period = conf->json_confs->cpu_rt_period;
-    *cpu_rt_runtime = conf->json_confs->cpu_rt_runtime;
-
-    if (isulad_server_conf_unlock() != 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-static int recursively_create_cgroup(const char *path, int recursive_depth, int64_t cpu_rt_period,
-                                     int64_t cpu_rt_runtime)
-{
-    int ret = 0;
-    sysinfo_t *sysinfo = NULL;
-    char *dup = NULL;
-    char *dirpath = NULL;
-    char *mnt = NULL;
-    char *root = NULL;
-    char fpath[PATH_MAX] = { 0 };
-
-    dup = util_strdup_s(path);
-    dirpath = dirname(dup);
-    ret = init_cgroups_path(dirpath, (recursive_depth + 1));
-    free(dup);
-    if (ret != 0) {
-        return ret;
-    }
-
-    ret = find_cgroup_mountpoint_and_root("cpu", &mnt, &root);
-    if (ret != 0 || mnt == NULL || root == NULL) {
-        ERROR("Can not find cgroup mnt and root path for subsystem 'cpu'");
-        isulad_set_error_message("Can not find cgroup mnt and root path for subsystem 'cpu'");
-        ret = -1;
-        goto out;
-    }
-
-    // When iSulad is run inside iSulad/docker, the root is based of the host cgroup.
-    // Replace root to "/"
-    if (strncmp(root, "/lxc/", strlen("/lxc/")) != 0) {
-        root[1] = '\0';
-    }
-
-    int nret = snprintf(fpath, sizeof(fpath), "%s/%s/%s", mnt, root, path);
-    if (nret < 0 || (size_t)nret >= sizeof(fpath)) {
-        ERROR("Failed to print string");
-        ret = -1;
-        goto out;
-    }
-
-    sysinfo = get_sys_info(true);
-    if (sysinfo == NULL) {
-        ERROR("Can not get system info");
-        ret = -1;
-        goto out;
-    }
-
-    ret = maybe_create_cpu_realtime_file(sysinfo->cgcpuinfo.cpu_rt_period, cpu_rt_period, "cpu.rt_period_us", fpath);
-    if (ret != 0) {
-        goto out;
-    }
-    ret = maybe_create_cpu_realtime_file(sysinfo->cgcpuinfo.cpu_rt_runtime, cpu_rt_runtime, "cpu.rt_runtime_us", fpath);
-    if (ret != 0) {
-        goto out;
-    }
-out:
-    free(mnt);
-    free(root);
-    free_sysinfo(sysinfo);
-    return ret;
-}
-
-/* init cgroups path */
-int init_cgroups_path(const char *path, int recursive_depth)
-{
-    int64_t cpu_rt_period = 0;
-    int64_t cpu_rt_runtime = 0;
-
-    if ((recursive_depth + 1) > MAX_PATH_DEPTH) {
-        ERROR("Reach the max cgroup depth:%s", path);
-        return -1;
-    }
-
-    if (path == NULL || strcmp(path, "/") == 0 || strcmp(path, ".") == 0) {
-        return 0;
-    }
-
-    if (get_cgroup_cpu_rt(&cpu_rt_period, &cpu_rt_runtime)) {
-        return -1;
-    }
-
-    if (cpu_rt_period == 0 && cpu_rt_runtime == 0) {
-        return 0;
-    }
-
-    // Recursively create cgroup to ensure that the system and all parent cgroups have values set
-    // for the period and runtime as this limits what the children can be set to.
-    if (recursively_create_cgroup(path, recursive_depth, cpu_rt_period, cpu_rt_runtime)) {
-        return -1;
-    }
-
-    return 0;
 }
 
 #define OVERRIDE_STRING_VALUE(dst, src)            \

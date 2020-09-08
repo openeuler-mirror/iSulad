@@ -1398,11 +1398,6 @@ int main(int argc, char **argv)
         goto failure;
     }
 
-    if (init_cgroups_path("/lxc", 0)) {
-        msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path";
-        goto failure;
-    }
-
     if (add_sighandler()) {
         msg = "Failed to add sig handlers";
         goto failure;

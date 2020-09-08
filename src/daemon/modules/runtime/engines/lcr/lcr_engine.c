@@ -94,6 +94,8 @@ static bool lcr_update_container(const char *name, const char *lcrpath, const st
     lcr_cr.memory_swap = cr->memory_swap;
     lcr_cr.memory_reservation = cr->memory_reservation;
     lcr_cr.kernel_memory_limit = cr->kernel_memory_limit;
+    lcr_cr.cpurt_period = cr->cpurt_period;
+    lcr_cr.cpurt_runtime = cr->cpurt_runtime;
 
     return g_lcr_update_op(name, lcrpath, &lcr_cr);
 }
