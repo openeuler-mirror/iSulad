@@ -53,6 +53,7 @@ static char *format_driver_name(const char *driver)
     }
 }
 
+#ifndef LIB_ISULAD_IMG_SO
 static int do_integration_of_images_check(bool image_layer_check, struct storage_module_init_options *opts)
 {
     char *check_file = NULL;
@@ -89,6 +90,7 @@ out:
     free(check_file);
     return ret;
 }
+#endif // LIB_ISULAD_IMG_SO
 
 static int storage_module_init_helper(const isulad_daemon_configs *args)
 {
@@ -130,10 +132,12 @@ static int storage_module_init_helper(const isulad_daemon_configs *args)
         goto out;
     }
 
+#ifndef LIB_ISULAD_IMG_SO
     if (do_integration_of_images_check(args->image_layer_check, storage_opts) != 0) {
         ret = -1;
         goto out;
     }
+#endif // LIB_ISULAD_IMG_SO
 
     if (storage_module_init(storage_opts) != 0) {
         ERROR("Failed to init storage module");
