@@ -79,7 +79,7 @@ ARM machine:
 
 | Configuration | Information   |
 | ------------- | ------------- |
-| OS            | Euleros       |
+| OS            | openEuler       |
 | Kernel        | linux 4.19.90 |
 | CPU           | 64 cores      |
 | Memory        | 196 GB        |
