@@ -21,6 +21,7 @@
 #include <regex.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <ctype.h>
 
 #include "constants.h"
 #include "utils.h"
@@ -550,4 +551,35 @@ int command_convert_swappiness(command_option_t *option, const char *arg)
         return EINVALIDARGS;
     }
     return 0;
+}
+
+int command_convert_nanocpus(command_option_t *option, const char *arg)
+{
+    int ret = 0;
+    char *dup = NULL;
+
+    if (option == NULL) {
+        return -1;
+    }
+
+    if (!isdigit(arg[0])) {
+        COMMAND_ERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
+        return EINVALIDARGS;
+    }
+
+    dup = util_strdup_s(arg);
+    if (dup == NULL) {
+        COMMAND_ERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
+        return EINVALIDARGS;
+    }
+
+    if (util_parse_size_int_and_float(arg, 1e9, option->data)) {
+        COMMAND_ERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
+        ret = EINVALIDARGS;
+        goto out;
+    }
+
+out:
+    free(dup);
+    return ret;
 }

@@ -901,9 +901,38 @@ static int merge_hostname(oci_runtime_spec *oci_spec, const host_config *host_sp
     return 0;
 }
 
+static int merge_nanocpus(oci_runtime_spec *oci_spec, int64_t nanocpus)
+{
+    int ret = 0;
+    uint64_t period = 0;
+    int64_t quota = 0;
+
+    ret = make_sure_oci_spec_linux_resources_cpu(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    period = (uint64_t)(100 * Time_Milli / Time_Micro);
+    quota = nanocpus * (int64_t)period / 1e9;
+
+    oci_spec->linux->resources->cpu->quota = quota;
+    oci_spec->linux->resources->cpu->period = period;
+
+out:
+    return ret;
+}
+
 static int merge_conf_cgroup_cpu_int64(oci_runtime_spec *oci_spec, const host_config *host_spec)
 {
     int ret = 0;
+
+    if (host_spec->nano_cpus > 0) {
+        ret = merge_nanocpus(oci_spec, host_spec->nano_cpus);
+        if (ret != 0) {
+            ERROR("Failed to merge cgroup nano cpus");
+            goto out;
+        }
+    }
 
     /* cpu shares */
     if (host_spec->cpu_shares != 0) {

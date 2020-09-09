@@ -81,9 +81,9 @@ int util_string_array_unique(const char **elements, size_t length, char ***uniqu
 
 int util_parse_bool_string(const char *str, bool *converted);
 
+int util_parse_size_int_and_float(const char *numstr, int64_t mlt, int64_t *converted);
 #ifdef __cplusplus
 }
 #endif
 
 #endif // UTILS_CUTILS_UTILS_STRING_H
-

@@ -220,6 +220,7 @@ struct args_cgroup_resources {
     int64_t memory_reservation;
     int64_t kernel_memory_limit;
     int64_t swappiness;
+    int64_t nano_cpus;
 };
 
 struct client_arguments {

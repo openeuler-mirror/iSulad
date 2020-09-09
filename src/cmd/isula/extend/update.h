@@ -106,7 +106,9 @@ extern "C" {
       0,                                                                                               \
       &((cmdargs).cr).cpu_rt_runtime,                                                                  \
       "Limit CPU real-time runtime in microseconds.",                                                  \
-      command_convert_llong },
+      command_convert_llong },                                                                         \
+    { CMD_OPT_TYPE_CALLBACK,   false, "cpus", 0, &((cmdargs).cr).nano_cpus, "Number of CPUs.",         \
+      command_convert_nanocpus },
 
 extern const char g_cmd_update_desc[];
 extern const char g_cmd_update_usage[];

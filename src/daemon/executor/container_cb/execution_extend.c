@@ -834,8 +834,41 @@ static void host_config_restore_unlocking(container_t *cont, host_config *backup
     }
 }
 
-static void update_container_cpu(const host_config *hostconfig, host_config *chostconfig)
+static int update_container_cpu(const host_config *hostconfig, host_config *chostconfig)
 {
+    int ret = 0;
+
+    if (hostconfig->nano_cpus > 0 && chostconfig->cpu_period > 0) {
+        ERROR("Conflicting options: Nano CPUs cannot be updated as CPU Period has already been set");
+        isulad_set_error_message("Conflicting options: Nano CPUs cannot be updated as CPU Period has already been set");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->nano_cpus > 0 && chostconfig->cpu_quota > 0) {
+        ERROR("Conflicting options: Nano CPUs cannot be updated as CPU Quota has already been set");
+        isulad_set_error_message("Conflicting options: Nano CPUs cannot be updated as CPU Quota has already been set");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->cpu_period > 0 && chostconfig->nano_cpus > 0) {
+        ERROR("Conflicting options: CPU Period cannot be updated as NanoCPUs has already been set");
+        isulad_set_error_message("Conflicting options: CPU Period cannot be updated as NanoCPUs has already been set");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->cpu_quota > 0 && chostconfig->nano_cpus > 0) {
+        ERROR("Conflicting options: CPU Quota cannot be updated as NanoCPUs has already been set");
+        isulad_set_error_message("Conflicting options: CPU Quota cannot be updated as NanoCPUs has already been set");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->nano_cpus != 0) {
+        chostconfig->nano_cpus = hostconfig->nano_cpus;
+    }
     if (hostconfig->cpu_shares != 0) {
         chostconfig->cpu_shares = hostconfig->cpu_shares;
     }
@@ -859,6 +892,9 @@ static void update_container_cpu(const host_config *hostconfig, host_config *cho
     if (hostconfig->cpu_realtime_runtime != 0) {
         chostconfig->cpu_realtime_runtime = hostconfig->cpu_realtime_runtime;
     }
+
+out:
+    return ret;
 }
 
 static int update_container_memory(const char *id, const host_config *hostconfig, host_config *chostconfig)
@@ -932,7 +968,11 @@ static int update_container(const container_t *cont, const host_config *hostconf
         chostconfig->blkio_weight = hostconfig->blkio_weight;
     }
 
-    update_container_cpu(hostconfig, chostconfig);
+    ret = update_container_cpu(hostconfig, chostconfig);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
 
     ret = update_container_memory(id, hostconfig, chostconfig);
     if (ret != 0) {

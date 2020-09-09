@@ -598,6 +598,11 @@ static void pack_cgroup_resources_cpu(host_config *dstconfig, const isula_host_c
         dstconfig->blkio_weight = srcconfig->cr->blkio_weight;
     }
 
+    /* cpus */
+    if (srcconfig->cr->nano_cpus != 0) {
+        dstconfig->nano_cpus = srcconfig->cr->nano_cpus;
+    }
+
     /* cpu shares */
     if (srcconfig->cr->cpu_shares) {
         dstconfig->cpu_shares = srcconfig->cr->cpu_shares;

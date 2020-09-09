@@ -18,6 +18,7 @@
 #include <limits.h>
 #include <dirent.h>
 #include <errno.h>
+#include <sys/sysinfo.h>
 
 #include "err_msg.h"
 #include "sysinfo.h"
@@ -1169,6 +1170,8 @@ sysinfo_t *get_sys_info(bool quiet)
         ret = false;
         goto out;
     }
+
+    sysinfo->ncpus = get_nprocs();
 
     check_cgroup_mem(layers, quiet, &sysinfo->cgmeminfo);
     check_cgroup_cpu(layers, quiet, &sysinfo->cgcpuinfo);
