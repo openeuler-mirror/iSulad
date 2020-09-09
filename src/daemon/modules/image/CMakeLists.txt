@@ -100,5 +100,7 @@ target_link_libraries(${LIB_ISULAD_IMG}
     ${SELINUX_LIBRARY}
     -lpthread -lcrypto -larchive -lz libhttpclient)
 
+target_compile_definitions(${LIB_ISULAD_IMG} PRIVATE LIB_ISULAD_IMG_SO)
+
 install(TARGETS ${LIB_ISULAD_IMG}
     LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
