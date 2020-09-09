@@ -145,6 +145,9 @@ static int request_pack_host_config_cgroup(const struct client_arguments *args, 
     /* blkio weight */
     hostconfig->cr->blkio_weight = args->cr.blkio_weight;
 
+    /* nano cpus */
+    hostconfig->cr->nano_cpus = args->cr.nano_cpus;
+
     /* cpu shares */
     hostconfig->cr->cpu_shares = args->cr.cpu_shares;
 

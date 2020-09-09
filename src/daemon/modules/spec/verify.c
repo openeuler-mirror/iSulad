@@ -1724,9 +1724,57 @@ out:
     return ret;
 }
 
+static int verify_nano_cpus(const sysinfo_t *sysinfo, const host_config *hostconfig)
+{
+    int ret = 0;
+
+    if (hostconfig->nano_cpus == 0) {
+        return 0;
+    }
+
+    if (hostconfig->nano_cpus > 0 && hostconfig->cpu_period > 0) {
+        ERROR("Conflicting options: Nano CPUs and CPU Period cannot both be set.");
+        isulad_set_error_message("Conflicting options: Nano CPUs and CPU Period cannot both be set.");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->nano_cpus > 0 && hostconfig->cpu_quota > 0) {
+        ERROR("Conflicting options: Nano CPUs and CPU Quota cannot both be set.");
+        isulad_set_error_message("Conflicting options: Nano CPUs and CPU Quota cannot both be set.");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->nano_cpus > 0 && (!(sysinfo->cgcpuinfo.cpu_cfs_quota) || !(sysinfo->cgcpuinfo.cpu_cfs_period))) {
+        ERROR("NanoCPUs can not be set, as your kernel does not support CPU cfs period/quota or the cgroup is not mounted.");
+        isulad_set_error_message(
+            "NanoCPUs can not be set, as your kernel does not support CPU cfs period/quota or the cgroup is not mounted.");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->nano_cpus < 0 || (hostconfig->nano_cpus > (sysinfo->ncpus * 1e9))) {
+        ERROR("Range of CPUs is from 0.01 to %d.00, as there are only %d CPUs available", sysinfo->ncpus,
+              sysinfo->ncpus);
+        isulad_set_error_message("Range of CPUs is from 0.01 to %d.00, as there are only %d CPUs available",
+                                 sysinfo->ncpus, sysinfo->ncpus);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 static int host_config_settings_cpu(const sysinfo_t *sysinfo, const host_config *hostconfig)
 {
     int ret = 0;
+
+    ret = verify_nano_cpus(sysinfo, hostconfig);
+    if (ret != 0) {
+        goto out;
+    }
 
     ret = verify_cpu_realtime(sysinfo, hostconfig->cpu_realtime_period, hostconfig->cpu_realtime_runtime);
     if (ret != 0) {

@@ -182,7 +182,7 @@ static int parse_unit_multiple(const char *unit, int64_t *mltpl)
     return -EINVAL;
 }
 
-static int util_parse_size_int_and_float(const char *numstr, int64_t mlt, int64_t *converted)
+int util_parse_size_int_and_float(const char *numstr, int64_t mlt, int64_t *converted)
 {
     long long int_size = 0;
     double float_size = 0;
@@ -824,8 +824,7 @@ bool util_has_suffix(const char *str, const char *suffix)
     return true;
 }
 
-int util_string_array_unique(const char **elements, size_t length, char ***unique_elements,
-                             size_t *unique_elements_len)
+int util_string_array_unique(const char **elements, size_t length, char ***unique_elements, size_t *unique_elements_len)
 {
     int ret = 0;
     size_t i;

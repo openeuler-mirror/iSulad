@@ -112,6 +112,7 @@ typedef struct container_cgroup_resources {
     int64_t files_limit;
     int64_t oom_score_adj;
     int64_t swappiness;
+    int64_t nano_cpus;
 } container_cgroup_resources_t;
 
 typedef struct isula_host_config {

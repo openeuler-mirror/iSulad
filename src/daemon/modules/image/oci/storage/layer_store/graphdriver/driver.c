@@ -8,8 +8,8 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2017-11-22
+ * Author: lifeng
+ * Create: 2020-04-22
  * Description: provide image functions
  ******************************************************************************/
 

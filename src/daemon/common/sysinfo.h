@@ -71,6 +71,7 @@ typedef struct {
 } cgroup_files_info_t;
 
 typedef struct {
+    int ncpus;
     cgroup_mem_info_t cgmeminfo;
     cgroup_cpu_info_t cgcpuinfo;
     cgroup_hugetlb_info_t hugetlbinfo;
@@ -143,4 +144,3 @@ void free_mounts_info(mountinfo_t **minfos);
 #endif
 
 #endif // DAEMON_COMMON_SYSINFO_H
-

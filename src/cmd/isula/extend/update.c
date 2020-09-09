@@ -39,6 +39,8 @@ static int pack_update_request(const struct client_arguments *args, struct isula
 
     request->updateconfig->cr->blkio_weight = args->cr.blkio_weight;
 
+    request->updateconfig->cr->nano_cpus = args->cr.nano_cpus;
+
     request->updateconfig->cr->cpu_shares = args->cr.cpu_shares;
 
     request->updateconfig->cr->cpu_period = args->cr.cpu_period;
