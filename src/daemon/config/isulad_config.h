@@ -49,6 +49,8 @@ char *conf_get_isulad_logdriver();
 int conf_get_daemon_log_config(char **loglevel, char **logdriver, char **engine_log_path);
 char *conf_get_isulad_log_gather_fifo_path();
 
+int conf_get_cgroup_cpu_rt(int64_t *cpu_rt_period, int64_t *cpu_rt_runtime);
+
 char *conf_get_isulad_log_file();
 char *conf_get_engine_log_file();
 char *conf_get_enable_plugins();
@@ -73,8 +75,6 @@ int conf_get_isulad_hooks(oci_runtime_spec_hooks **phooks);
 int conf_get_isulad_default_ulimit(host_config_ulimits_element ***ulimit);
 
 unsigned int conf_get_start_timeout();
-
-int init_cgroups_path(const char *path, int recursive_depth);
 
 char **conf_get_insecure_registry_list();
 
