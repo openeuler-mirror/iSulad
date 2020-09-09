@@ -19,7 +19,6 @@ endif()
 if (GRPC_CONNECTOR)
     list(APPEND CHECKED_INCLUDE_DIRS
         ${GRPC_INCLUDE_DIR}
-        ${CLIBCNI_INCLUDE_DIR}
         ${WEBSOCKET_INCLUDE_DIR}
         )
 else()
@@ -117,6 +116,14 @@ target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} $
 # ------ build isulad -------
 add_subdirectory(daemon)
 
+add_library(clibcni ${LIBTYPE} ${DAEMON_NETWORK_SRCS})
+target_include_directories(clibcni
+    PUBLIC ${DAEMON_NETWORK_INCS}
+    PUBLIC ${ISULA_LIBUTILS_INCLUDE_DIR}
+    )
+target_link_libraries(clibcni ${ISULA_LIBUTILS_LIBRARY})
+
+
 add_executable(isulad
     ${DAEMON_SRCS}
     ${SHARED_SRCS}
@@ -129,6 +136,7 @@ target_include_directories(isulad PUBLIC
     ${SHARED_INCS}
     ${CONNECT_SOCKET_INCS}
     ${ISULAD_INCS}
+    ${DAEMON_NETWORK_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
@@ -149,7 +157,6 @@ if (GRPC_CONNECTOR)
     target_link_libraries(isulad -Wl,--as-needed -lstdc++)
     target_link_libraries(isulad -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(isulad -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
-    target_link_libraries(isulad ${CLIBCNI_LIBRARY})
 else()
     message("Restful iSulad")
     target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
@@ -158,6 +165,8 @@ endif()
 if (GRPC_CONNECTOR AND ENABLE_METRICS)
     target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
 endif()
+
+target_link_libraries(isulad clibcni)
 
 if (ENABLE_OCI_IMAGE)
     target_link_libraries(isulad -Wl,--as-needed -lstdc++)
@@ -177,6 +186,8 @@ endif()
 # ------ install binary --------
 install(TARGETS libisula
   LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+install(TARGETS clibcni
+	LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(TARGETS isula
 	RUNTIME DESTINATION bin PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 install(TARGETS isulad-shim

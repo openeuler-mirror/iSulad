@@ -72,10 +72,6 @@
 #include "volume_api.h"
 #include "opt_log.h"
 
-#ifdef GRPC_CONNECTOR
-#include "clibcni/api.h"
-#endif
-
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
 
@@ -1136,14 +1132,6 @@ static int isulad_server_init_log(const struct service_arguments *args, const ch
         ERROR("Failed to init log");
         goto out;
     }
-
-#ifdef GRPC_CONNECTOR
-    /* init clibcni log */
-    if (cni_log_init(FIFO_DRIVER, fifo_full_path, args->json_confs->log_level) != 0) {
-        ERROR("Failed to init cni log");
-        goto out;
-    }
-#endif
 
     lconf.driver = args->json_confs->log_driver;
     if (init_log_gather_thread(log_full_path, &lconf, args)) {

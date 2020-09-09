@@ -100,6 +100,7 @@ ldconfig
 cd ~
 git clone https://gitee.com/openeuler/lcr.git
 cd lcr
+git checkout origin/network
 sed -i 's/fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO/fd == 0 || fd == 1 || fd == 2 || fd >= 1000/g' ./src/utils.c
 mkdir -p build
 cd build
@@ -146,18 +147,6 @@ replace-with = "local-registry"
 directory = "vendor"
 EOF
 cargo build --release
-make install
-cd -
-ldconfig
-
-# install clibcni
-cd ~
-git clone https://gitee.com/openeuler/clibcni.git
-cd clibcni
-mkdir -p build
-cd build
-cmake  -DLIB_INSTALL_DIR=${builddir}/lib -DCMAKE_INSTALL_PREFIX=${builddir} ../
-make -j $(nproc)
 make install
 cd -
 ldconfig

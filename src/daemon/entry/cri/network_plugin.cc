@@ -19,8 +19,8 @@
 #include <vector>
 #include <map>
 #include <unistd.h>
-#include <clibcni/types.h>
 
+#include "cni/types.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "sysctl_tools.h"
