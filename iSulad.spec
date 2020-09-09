@@ -29,14 +29,14 @@ Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
 
-BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel clibcni-devel
+BuildRequires: cmake gcc-c++ lxc lxc-devel lcr-devel yajl-devel
 BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
 BuildRequires: systemd-devel git
 
-Requires:      lcr lxc clibcni
+Requires:      lcr lxc
 Requires:      grpc protobuf
 Requires:      libcurl
 Requires:      sqlite http-parser libseccomp

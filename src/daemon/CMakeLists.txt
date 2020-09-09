@@ -33,3 +33,12 @@ set(DAEMON_INCS
     ${local_daemon_incs}
     PARENT_SCOPE
     )
+
+set(DAEMON_NETWORK_SRCS
+    ${DAEMON_NETWORK_SRCS}
+    PARENT_SCOPE
+    )
+set(DAEMON_NETWORK_INCS
+    ${DAEMON_NETWORK_INCS}
+    PARENT_SCOPE
+    )
