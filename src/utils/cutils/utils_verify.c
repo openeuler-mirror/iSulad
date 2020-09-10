@@ -651,3 +651,14 @@ bool util_valid_positive_interger(const char *value)
 
     return util_reg_match(patten, value) == 0;
 }
+
+bool util_valid_device_cgroup_rule(const char *value)
+{
+    const char *patten = "^([acb]) ([0-9]+|\\*):([0-9]+|\\*) ([rwm]{1,3})$";
+
+    if (value == NULL) {
+        return false;
+    }
+
+    return util_reg_match(patten, value) == 0;
+}

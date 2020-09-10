@@ -842,7 +842,7 @@ static void request_pack_host_dns(const struct client_arguments *args, isula_hos
     }
 }
 
-static void request_pack_host_ulimit(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_ulimit(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* ulimit options */
     if (args->custom_conf.ulimits != NULL) {
@@ -851,7 +851,8 @@ static void request_pack_host_ulimit(const struct client_arguments *args, isula_
     }
 }
 
-static void request_pack_host_weight_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_weight_devices(const struct client_arguments *args,
+                                                    isula_host_config_t *hostconfig)
 {
     /* blkio weight devices */
     if (args->custom_conf.weight_devices != NULL) {
@@ -860,7 +861,8 @@ static void request_pack_host_weight_devices(const struct client_arguments *args
     }
 }
 
-static void request_pack_host_device_read_bps(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_device_read_bps(const struct client_arguments *args,
+                                                     isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_read_bps_device != NULL) {
         hostconfig->blkio_throttle_read_bps_device_len =
@@ -869,7 +871,8 @@ static void request_pack_host_device_read_bps(const struct client_arguments *arg
     }
 }
 
-static void request_pack_host_device_write_bps(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_device_write_bps(const struct client_arguments *args,
+                                                      isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_write_bps_device != NULL) {
         hostconfig->blkio_throttle_write_bps_device_len =
@@ -878,7 +881,8 @@ static void request_pack_host_device_write_bps(const struct client_arguments *ar
     }
 }
 
-static void request_pack_host_device_read_iops(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_device_read_iops(const struct client_arguments *args,
+                                                      isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_read_iops_device != NULL) {
         hostconfig->blkio_throttle_read_iops_device_len =
@@ -887,7 +891,8 @@ static void request_pack_host_device_read_iops(const struct client_arguments *ar
     }
 }
 
-static void request_pack_host_device_write_iops(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_device_write_iops(const struct client_arguments *args,
+                                                       isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_write_iops_device != NULL) {
         hostconfig->blkio_throttle_write_iops_device_len =
@@ -896,7 +901,16 @@ static void request_pack_host_device_write_iops(const struct client_arguments *a
     }
 }
 
-static void request_pack_host_blockio(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_device_cgroup_rules(const struct client_arguments *args,
+                                                         isula_host_config_t *hostconfig)
+{
+    if (args->custom_conf.device_cgroup_rules != NULL) {
+        hostconfig->device_cgroup_rules_len = util_array_len((const char **)(args->custom_conf.device_cgroup_rules));
+        hostconfig->device_cgroup_rules = args->custom_conf.device_cgroup_rules;
+    }
+}
+
+inline static void request_pack_host_blockio(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     request_pack_host_weight_devices(args, hostconfig);
     request_pack_host_device_read_bps(args, hostconfig);
@@ -905,7 +919,7 @@ static void request_pack_host_blockio(const struct client_arguments *args, isula
     request_pack_host_device_write_iops(args, hostconfig);
 }
 
-static void request_pack_host_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* devices */
     if (args->custom_conf.devices != NULL) {
@@ -914,7 +928,8 @@ static void request_pack_host_devices(const struct client_arguments *args, isula
     }
 }
 
-static void request_pack_host_hugepage_limits(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_hugepage_limits(const struct client_arguments *args,
+                                                     isula_host_config_t *hostconfig)
 {
     /* hugepage limits */
     if (args->custom_conf.hugepage_limits != NULL) {
@@ -923,7 +938,7 @@ static void request_pack_host_hugepage_limits(const struct client_arguments *arg
     }
 }
 
-static void request_pack_host_binds(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_binds(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* volumes to binds */
     if (args->custom_conf.volumes != NULL) {
@@ -932,7 +947,7 @@ static void request_pack_host_binds(const struct client_arguments *args, isula_h
     }
 }
 
-static void request_pack_host_hook_spec(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_hook_spec(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* hook-spec file */
     if (args->custom_conf.hook_spec != NULL) {
@@ -940,7 +955,8 @@ static void request_pack_host_hook_spec(const struct client_arguments *args, isu
     }
 }
 
-static void request_pack_host_restart_policy(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_restart_policy(const struct client_arguments *args,
+                                                    isula_host_config_t *hostconfig)
 {
     if (args->restart != NULL) {
         hostconfig->restart_policy = args->restart;
@@ -970,7 +986,7 @@ static void request_pack_host_namespaces(const struct client_arguments *args, is
     }
 }
 
-static void request_pack_host_security(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static void request_pack_host_security(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* security opt */
     if (args->custom_conf.security != NULL) {
@@ -1061,6 +1077,8 @@ static int request_pack_host_config(const struct client_arguments *args, isula_h
     request_pack_host_namespaces(args, hostconfig);
 
     request_pack_host_security(args, hostconfig);
+
+    request_pack_host_device_cgroup_rules(args, hostconfig);
 
     return ret;
 }

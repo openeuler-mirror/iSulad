@@ -351,6 +351,10 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     hostconfig->blkio_throttle_write_iops_device = NULL;
     hostconfig->blkio_throttle_write_iops_device_len = 0;
 
+    util_free_array_by_len(hostconfig->device_cgroup_rules, hostconfig->device_cgroup_rules_len);
+    hostconfig->device_cgroup_rules = NULL;
+    hostconfig->device_cgroup_rules_len = 0;
+
     container_cgroup_resources_free(hostconfig->cr);
     hostconfig->cr = NULL;
 

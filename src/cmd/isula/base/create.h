@@ -459,7 +459,14 @@ extern "C" {
       "Limit CPU real-time runtime in microseconds.",                                                                                                     \
       command_convert_llong },                                                                                                                            \
     { CMD_OPT_TYPE_CALLBACK,   false, "cpus", 0, &((cmdargs).cr).nano_cpus, "Number of CPUs.",                                                            \
-      command_convert_nanocpus },
+      command_convert_nanocpus },                                                                                                                         \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "device-cgroup-rule",                                                                                                                               \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.device_cgroup_rules,                                                                                                         \
+      "Add a rule to the cgroup allowed devices list.",                                                                                                   \
+      command_convert_device_cgroup_rules },
 
 #define CREATE_EXTEND_OPTIONS(cmdargs)        \
     { CMD_OPT_TYPE_BOOL,                      \

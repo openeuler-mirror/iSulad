@@ -186,6 +186,9 @@ typedef struct isula_host_config {
     char **blkio_throttle_write_iops_device;
     size_t blkio_throttle_write_iops_device_len;
 
+    char **device_cgroup_rules;
+    size_t device_cgroup_rules_len;
+
     bool privileged;
     bool system_container;
     char **ns_change_files;

@@ -1729,6 +1729,30 @@ out:
     return ret;
 }
 
+int generate_device_cgroup_rules(host_config **dstconfig, const isula_host_config_t *srcconfig)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    if (srcconfig->device_cgroup_rules == NULL || srcconfig->device_cgroup_rules_len == 0) {
+        goto out;
+    }
+
+    (*dstconfig)->device_cgroup_rules = util_smart_calloc_s(sizeof(char *), srcconfig->device_cgroup_rules_len);
+    if ((*dstconfig)->device_cgroup_rules == NULL) {
+        ret = -1;
+        goto out;
+    }
+    for (i = 0; i < srcconfig->device_cgroup_rules_len; i++) {
+        (*dstconfig)->device_cgroup_rules[(*dstconfig)->device_cgroup_rules_len] =
+            util_strdup_s(srcconfig->device_cgroup_rules[i]);
+        (*dstconfig)->device_cgroup_rules_len++;
+    }
+
+out:
+    return ret;
+}
+
 int generate_groups(host_config **dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
@@ -1862,6 +1886,13 @@ static int pack_host_config_common(host_config *dstconfig, const isula_host_conf
     if (ret < 0) {
         goto out;
     }
+
+    /* device cgroup rules*/
+    ret = generate_device_cgroup_rules(&dstconfig, srcconfig);
+    if (ret < 0) {
+        goto out;
+    }
+
 out:
     return ret;
 }
