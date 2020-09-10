@@ -67,7 +67,7 @@ static int do_logs(const struct client_arguments *args)
     request->runtime = util_strdup_s(args->runtime);
     request->follow = args->follow;
     request->tail = (int64_t)args->tail;
-
+    request->timestamps = args->timestamps;
     config = get_connect_config(args);
     ret = ops->container.logs(request, response, &config);
     if (ret != 0) {
