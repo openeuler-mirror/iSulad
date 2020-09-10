@@ -106,6 +106,8 @@ int command_convert_swappiness(command_option_t *option, const char *arg);
 
 int command_convert_nanocpus(command_option_t *option, const char *arg);
 
+int command_convert_device_cgroup_rules(command_option_t *option, const char *arg);
+
 #ifdef __cplusplus
 }
 #endif

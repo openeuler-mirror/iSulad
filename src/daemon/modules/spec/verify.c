@@ -1951,6 +1951,25 @@ out:
     return ret;
 }
 
+/* verify device cgroup rule */
+static int verify_host_config_device_cgroup_rules(const host_config *hostconfig)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    for (i = 0; i < hostconfig->device_cgroup_rules_len; i++) {
+        if (!util_valid_device_cgroup_rule(hostconfig->device_cgroup_rules[i])) {
+            ERROR("Invalid device cgroup rule %s", hostconfig->device_cgroup_rules[i]);
+            isulad_set_error_message("Invalid device cgroup rule %s", hostconfig->device_cgroup_rules[i]);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    return ret;
+}
+
 /* verify host config settings */
 int verify_host_config_settings(host_config *hostconfig, bool update)
 {
@@ -1973,6 +1992,11 @@ int verify_host_config_settings(host_config *hostconfig, bool update)
 
     // oom score adj
     ret = verify_oom_score_adj(hostconfig->oom_score_adj);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = verify_host_config_device_cgroup_rules(hostconfig);
     if (ret != 0) {
         goto out;
     }

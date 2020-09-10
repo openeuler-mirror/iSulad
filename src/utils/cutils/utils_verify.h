@@ -101,6 +101,8 @@ bool util_valid_exec_suffix(const char *suffix);
 
 bool util_valid_positive_interger(const char *value);
 
+bool util_valid_device_cgroup_rule(const char *value);
+
 #ifdef __cplusplus
 }
 #endif

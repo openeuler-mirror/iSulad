@@ -203,6 +203,9 @@ struct custom_configs {
 
     /* device write iops */
     char **blkio_throttle_write_iops_device;
+
+    /* device cgroup rules */
+    char **device_cgroup_rules;
 };
 
 struct args_cgroup_resources {

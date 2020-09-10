@@ -583,3 +583,17 @@ out:
     free(dup);
     return ret;
 }
+
+int command_convert_device_cgroup_rules(command_option_t *option, const char *arg)
+{
+    if (option == NULL) {
+        return -1;
+    }
+
+    if (!util_valid_device_cgroup_rule(arg)) {
+        COMMAND_ERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
+        return EINVALIDARGS;
+    }
+
+    return command_append_array(option, arg);
+}

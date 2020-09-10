@@ -1788,6 +1788,194 @@ out:
     return ret;
 }
 
+static int merge_conf_populate_device(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    int ret = 0;
+
+    if (host_spec->privileged) {
+        INFO("Skipped \"--device\" due to conflict with \"--privileged\"");
+        return 0;
+    }
+
+    if (host_spec->devices != NULL && host_spec->devices_len != 0) {
+        /* privileged containers will populate all devices in host */
+        ret = merge_custom_devices(oci_spec, host_spec->devices, host_spec->devices_len);
+        if (ret != 0) {
+            ERROR("Failed to merge custom devices");
+            goto out;
+        }
+    }
+out:
+    return ret;
+}
+
+/* format example: b 7:* rmw */
+static int parse_device_cgroup_rule(defs_device_cgroup *spec_dev_cgroup, const char *rule)
+{
+    int ret = 0;
+    char **parts = NULL;
+    size_t parts_len = 0;
+    char **file_mode = NULL;
+    size_t file_mode_len = 0;
+
+    if (rule == NULL || spec_dev_cgroup == NULL) {
+        return -1;
+    }
+
+    parts = util_string_split(rule, ' ');
+    if (parts == NULL) {
+        ERROR("Failed to split rule %s", rule);
+        ret = -1;
+        goto free_out;
+    }
+
+    parts_len = util_array_len((const char **)parts);
+    if (parts_len != 3) {
+        ERROR("Invalid rule %s", rule);
+        ret = -1;
+        goto free_out;
+    }
+
+    /* fill spec cgroup dev */
+    spec_dev_cgroup->allow = true;
+    spec_dev_cgroup->access = util_strdup_s(parts[2]);
+    spec_dev_cgroup->type = util_strdup_s(parts[0]);
+
+    file_mode = util_string_split(parts[1], ':');
+    if (file_mode == NULL) {
+        ERROR("Invalid rule mode %s", parts[1]);
+        ret = -1;
+        goto free_out;
+    }
+
+    file_mode_len = util_array_len((const char **)file_mode);
+    if (file_mode_len != 2) {
+        ERROR("Invalid rule mode %s", parts[1]);
+        ret = -1;
+        goto free_out;
+    }
+
+    if (strcmp(file_mode[0], "*") == 0) {
+        spec_dev_cgroup->major = -1;
+    } else {
+        if (util_safe_llong(file_mode[0], (long long *)&spec_dev_cgroup->major) != 0) {
+            ERROR("Invalid rule mode %s", file_mode[0]);
+            ret = -1;
+            goto free_out;
+        }
+    }
+
+    if (strcmp(file_mode[1], "*") == 0) {
+        spec_dev_cgroup->minor = -1;
+    } else {
+        if (util_safe_llong(file_mode[1], (long long *)&spec_dev_cgroup->minor) != 0) {
+            ERROR("Invalid rule mode %s", file_mode[1]);
+            ret = -1;
+            goto free_out;
+        }
+    }
+
+free_out:
+    util_free_array(parts);
+    util_free_array(file_mode);
+
+    return ret;
+}
+
+static int make_device_cgroup_rule(defs_device_cgroup **out_spec_dev_cgroup, const char *dev_cgroup_rule)
+{
+    int ret = 0;
+    defs_device_cgroup *spec_dev_cgroup = NULL;
+
+    spec_dev_cgroup = util_common_calloc_s(sizeof(defs_device_cgroup));
+    if (spec_dev_cgroup == NULL) {
+        ERROR("Memory out");
+        ret = -1;
+        goto erro_out;
+    }
+
+    ret = parse_device_cgroup_rule(spec_dev_cgroup, dev_cgroup_rule);
+    if (ret != 0) {
+        ERROR("Failed to parse device cgroup rule %s", dev_cgroup_rule);
+        ret = -1;
+        goto erro_out;
+    }
+
+    *out_spec_dev_cgroup = spec_dev_cgroup;
+    goto out;
+
+erro_out:
+    free_defs_device_cgroup(spec_dev_cgroup);
+out:
+    return ret;
+}
+
+static int do_merge_device_cgroup_rules(oci_runtime_spec *oci_spec, const char **dev_cgroup_rules,
+                                        size_t dev_cgroup_rules_len)
+{
+    int ret = 0;
+    size_t new_size = 0, old_size = 0;
+    size_t i = 0;
+
+    ret = make_sure_oci_spec_linux_resources(oci_spec);
+    if (ret < 0) {
+        goto out;
+    }
+
+    /* malloc for cgroup->device */
+    defs_device_cgroup **spec_cgroup_dev = NULL;
+    if (dev_cgroup_rules_len > SIZE_MAX / sizeof(defs_device_cgroup *) - oci_spec->linux->resources->devices_len) {
+        ERROR("Too many cgroup devices to merge!");
+        ret = -1;
+        goto out;
+    }
+    new_size = (oci_spec->linux->resources->devices_len + dev_cgroup_rules_len) * sizeof(defs_device_cgroup *);
+    old_size = oci_spec->linux->resources->devices_len * sizeof(defs_device_cgroup *);
+    ret = mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    oci_spec->linux->resources->devices = spec_cgroup_dev;
+
+    for (i = 0; i < dev_cgroup_rules_len; i++) {
+        ret = make_device_cgroup_rule(&oci_spec->linux->resources->devices[oci_spec->linux->resources->devices_len],
+                                      dev_cgroup_rules[i]);
+        if (ret != 0) {
+            ERROR("Failed to merge custom device");
+            ret = -1;
+            goto out;
+        }
+        oci_spec->linux->resources->devices_len++;
+    }
+out:
+    return ret;
+}
+
+static int merge_conf_device_cgroup_rule(oci_runtime_spec *oci_spec, host_config *host_spec)
+{
+    int ret = 0;
+
+    if (host_spec->privileged) {
+        INFO("Skipped \"--device-cgroup-rule\" due to conflict with \"--privileged\"");
+        return 0;
+    }
+
+    if (host_spec->device_cgroup_rules == NULL || host_spec->device_cgroup_rules_len == 0) {
+        return 0;
+    }
+
+    ret = do_merge_device_cgroup_rules(oci_spec, (const char **)host_spec->device_cgroup_rules,
+                                       host_spec->device_cgroup_rules_len);
+    if (ret != 0) {
+        ERROR("Failed to merge custom devices cgroup rules");
+        goto out;
+    }
+out:
+    return ret;
+}
+
 int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec)
 {
     int ret = 0;
@@ -1842,17 +2030,15 @@ int merge_conf_device(oci_runtime_spec *oci_spec, host_config *host_spec)
     }
 
     /* devices which will be populated into container */
-    if (host_spec->devices != NULL && host_spec->devices_len != 0) {
-        /* privileged containers will populate all devices in host */
-        if (!host_spec->privileged) {
-            ret = merge_custom_devices(oci_spec, host_spec->devices, host_spec->devices_len);
-            if (ret != 0) {
-                ERROR("Failed to merge custom devices");
-                goto out;
-            }
-        } else {
-            INFO("Skipped \"--device\" due to conflict with \"--privileged\"");
-        }
+    if (merge_conf_populate_device(oci_spec, host_spec)) {
+        ret = -1;
+        goto out;
+    }
+
+    /* device cgroup rules which will be added into container */
+    if (merge_conf_device_cgroup_rule(oci_spec, host_spec)) {
+        ret = -1;
+        goto out;
     }
 
 out:

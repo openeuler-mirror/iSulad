@@ -250,6 +250,9 @@ void client_arguments_free(struct client_arguments *args)
 
     util_free_array(custom_conf->blkio_throttle_write_iops_device);
     custom_conf->blkio_throttle_write_iops_device = NULL;
+
+    util_free_array(custom_conf->device_cgroup_rules);
+    custom_conf->device_cgroup_rules = NULL;
 }
 
 /* print common help */
