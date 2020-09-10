@@ -1,5 +1,5 @@
 %global _version 2.0.5
-%global _release 20200903.171615.gitf8400084
+%global _release 20200910.140350.git72990229
 %global is_systemd 1
 
 Name:      iSulad
@@ -74,6 +74,9 @@ install -d $RPM_BUILD_ROOT/%{_bindir}
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
+chrpath -d ./src/isula
+chrpath -d ./src/isulad-shim
+chrpath -d ./src/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/client/libisula.h			%{buildroot}/%{_includedir}/isulad/libisula.h
@@ -215,6 +218,12 @@ fi
 %endif
 
 %changelog
+* Tue Sep 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.5-20200910.140350.git72990229
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add chrpath
+
 * Mon Aug 03 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.3-20200803.130854.git0c7dc28a
 - Type:enhancement
 - ID:NA
