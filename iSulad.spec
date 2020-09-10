@@ -1,5 +1,5 @@
 %global _version 2.0.5
-%global _release 20200904.114315.gitff1761c3
+%global _release 20200910.171224.git35bbfa0d
 %global is_systemd 1
 
 Name:      iSulad
@@ -74,6 +74,9 @@ install -d $RPM_BUILD_ROOT/%{_bindir}
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
+chrpath -d ./src/isula
+chrpath -d ./src/isulad-shim
+chrpath -d ./src/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/client/libisula.h			%{buildroot}/%{_includedir}/isulad/libisula.h
@@ -215,6 +218,12 @@ fi
 %endif
 
 %changelog
+* Tue Sep 10 2020 YoungJQ <yangjiaqi11@huawei.com> - 2.0.5-20200910.171224.git35bbfa0d
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add chrpath
+
 * Fri Sep 04 2020 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.5-20200904.114315.gitff1761c3
 - Type:enhancement
 - ID:NA
