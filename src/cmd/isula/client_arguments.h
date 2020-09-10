@@ -290,6 +290,7 @@ struct client_arguments {
 
     // logs
     bool follow;
+    bool timestamps;
     /*
      * tail < 0: show all logs
      * tail = 0: do not show log
