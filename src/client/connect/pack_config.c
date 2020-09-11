@@ -1225,25 +1225,10 @@ erro_out:
 }
 static int append_no_new_privileges_to_security_opts(host_config *dstconfig)
 {
-    int ret = 0;
-    size_t new_size, old_size;
-    char **tmp_security_opt = NULL;
+    dstconfig->security_opt[dstconfig->security_opt_len] = util_strdup_s("no-new-privileges");
+    dstconfig->security_opt_len++;
 
-    if (dstconfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
-        COMMAND_ERROR("Out of memory");
-        return -1;
-    }
-    new_size = (dstconfig->security_opt_len + 1) * sizeof(char *);
-    old_size = dstconfig->security_opt_len * sizeof(char *);
-    ret = mem_realloc((void **)(&tmp_security_opt), new_size, (void *)dstconfig->security_opt, old_size);
-    if (ret != 0) {
-        COMMAND_ERROR("Out of memory");
-        return ret;
-    }
-    dstconfig->security_opt = tmp_security_opt;
-    dstconfig->security_opt[dstconfig->security_opt_len++] = util_strdup_s("no-new-privileges");
-
-    return ret;
+    return 0;
 }
 
 static int append_seccomp_to_security_opts(const char *full_opt, const char *seccomp_file, host_config *dstconfig)
@@ -1310,26 +1295,10 @@ out:
 
 static int append_selinux_label_to_security_opts(const char *selinux_label, host_config *dstconfig)
 {
-    int ret = 0;
-    size_t new_size;
-    size_t old_size;
-    char **tmp_security_opt = NULL;
+    dstconfig->security_opt[dstconfig->security_opt_len] = util_strdup_s(selinux_label);
+    dstconfig->security_opt_len++;
 
-    if (dstconfig->security_opt_len > (SIZE_MAX / sizeof(char *)) - 1) {
-        COMMAND_ERROR("Too large security options");
-        return -1;
-    }
-    new_size = (dstconfig->security_opt_len + 1) * sizeof(char *);
-    old_size = dstconfig->security_opt_len * sizeof(char *);
-    ret = mem_realloc((void **)(&tmp_security_opt), new_size, (void *)dstconfig->security_opt, old_size);
-    if (ret != 0) {
-        COMMAND_ERROR("Out of memory");
-        return ret;
-    }
-    dstconfig->security_opt = tmp_security_opt;
-    dstconfig->security_opt[dstconfig->security_opt_len++] = util_strdup_s(selinux_label);
-
-    return ret;
+    return 0;
 }
 
 static int parse_security_opts(const isula_host_config_t *srcconfig, host_config *dstconfig)
