@@ -218,7 +218,7 @@ static int get_containers_from_json()
 
     for (i = 0; i < container_dirs_num; i++) {
         if (util_reg_match(id_patten, container_dirs[i]) != 0) {
-            DEBUG("Container's json is placed inside container's data directory, so skip any other file or directory: %s",
+            WARN("Container's json is placed inside container's data directory, so skip any other file or directory: %s",
                   container_dirs[i]);
             continue;
         }
@@ -227,14 +227,15 @@ static int get_containers_from_json()
         nret = snprintf(container_path, sizeof(container_path), "%s/%s", g_rootfs_store->dir, container_dirs[i]);
         if (nret < 0 || (size_t)nret >= sizeof(container_path)) {
             ERROR("Failed to get container path");
-            ret = -1;
-            goto out;
+            continue;
         }
 
         if (append_container_by_directory(container_path) != 0) {
-            ERROR("Found container path but load json failed: %s", container_dirs[i]);
-            ret = -1;
-            goto out;
+            ERROR("Found container path but load json failed: %s, deleting...", container_path);
+            if (util_recursive_rmdir(container_path, 0) != 0) {
+                ERROR("Failed to delete rootfs directory : %s", container_path);
+            }
+            continue;
         }
     }
 
