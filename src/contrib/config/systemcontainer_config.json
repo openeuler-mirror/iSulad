@@ -49,7 +49,6 @@
 		"path": "rootfs",
 		"readonly": false
 	},
-	"hostname": "ubuntu",
 	"mounts": [
 		{
 			"destination": "/proc",
