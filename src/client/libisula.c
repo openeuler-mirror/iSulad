@@ -512,6 +512,9 @@ void isula_top_response_free(struct isula_top_response *response)
     free(response->titles);
     response->titles = NULL;
 
+    free(response->errmsg);
+    response->errmsg = NULL;
+
     if (response->processes_len && response->processes != NULL) {
         size_t i;
         for (i = 0; i < response->processes_len; i++) {

@@ -25,8 +25,8 @@ extern "C" {
 #endif
 
 #define LOGIN_OPTIONS(cmdargs)                                                                      \
-    { CMD_OPT_TYPE_STRING, false, "username", 'u', &(cmdargs).username, "Username", NULL },         \
-    { CMD_OPT_TYPE_STRING, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
+    { CMD_OPT_TYPE_STRING_DUP, false, "username", 'u', &(cmdargs).username, "Username", NULL },         \
+    { CMD_OPT_TYPE_STRING_DUP, false, "password", 'p', &(cmdargs).password, "Password", NULL }, \
     { CMD_OPT_TYPE_BOOL,                                                                    \
       false,                                                                                \
       "password-stdin",                                                                     \
