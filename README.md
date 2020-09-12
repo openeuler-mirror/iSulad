@@ -25,42 +25,48 @@ You can use direct command to start `iSulad` server：
 $ sudo isulad  # run the server with default socket name and default log level and images manage function
 ```
 ### Operations on containers:
-`iSulad` provides command line `isulad` to talk with server.
-Here are some sample commands to manager containers.
 
-List all containers in your own environment:
-```sh
-# list containers
-$ sudo isula ps -a
-```
+`iSulad` provides two operate interfaces to manager images and containers.
 
-Create a container with busybox named `test`
-```sh
-# create a container 'test' with image busybox
-$ sudo isula create -t -n test busybox
-```
+- CLI, `iSulad` provides `isula` as client CLI
 
-Start this container `test`
-```sh
-# start the container 'test'
-$ sudo isula start test
-```
-Kill the container `test`
-```sh
-# kill the container 'test'
-$ sudo isula kill test
-```
-Remove the container `test`
-```sh
-# remove the container 'test'
-$ sudo isula rm test
-```
+    Here are some sample commands to manager containers.
+
+    List all containers in your own environment:
+    ```sh
+    # list containers
+    $ sudo isula ps -a
+    ```
+
+    Create a container with busybox named `test`
+    ```sh
+    # create a container 'test' with image busybox
+    $ sudo isula create -t -n test busybox
+    ```
+
+    Start this container `test`
+    ```sh
+    # start the container 'test'
+    $ sudo isula start test
+    ```
+    Kill the container `test`
+    ```sh
+    # kill the container 'test'
+    $ sudo isula kill test
+    ```
+    Remove the container `test`
+    ```sh
+    # remove the container 'test'
+    $ sudo isula rm test
+    ```
+
+- CRI interface, `iSulad` can be integrated with `kubernetes` through CRI interface
+
+    How to integrate with `kubernetes` please refer to [integration.md](./docs/integration.md)
+
 
 ### Build from source
 Build requirements for developers are listed in [build_guide](./docs/build_guide.md)
-
-### Integration
-Integrate with `kubernetes` are listed in [integration.md](./docs/integration.md)
 
 ## Performance
 
@@ -79,7 +85,7 @@ ARM machine:
 
 | Configuration | Information   |
 | ------------- | ------------- |
-| OS            | openEuler       |
+| OS            | openEuler     |
 | Kernel        | linux 4.19.90 |
 | CPU           | 64 cores      |
 | Memory        | 196 GB        |
