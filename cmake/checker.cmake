@@ -90,13 +90,15 @@ find_library(CURL_LIBRARY curl
 	HINTS ${PC_CURL_LIBDIR} ${PC_CURL_LIBRARY_DIRS})
 _CHECK(CURL_LIBRARY "CURL_LIBRARY-NOTFOUND" "libcurl.so")
 
-pkg_check_modules(PC_SELINUX "libselinux>=2.0")
-find_path(SELINUX_INCLUDE_DIR "selinux/selinux.h"
-    HINTS ${PC_SELINUX_INCLUDEDIR} ${PC_SELINUX_INCLUDE_DIRS})
-_CHECK(SELINUX_INCLUDE_DIR "SELINUX_INCLUDE_DIR-NOTFOUND" "selinux/selinux.h")
-find_library(SELINUX_LIBRARY selinux
-    HINTS ${PC_SELINUX_LIBDIR} ${PC_SELINUX_LIBRARY_DIRS})
-_CHECK(SELINUX_LIBRARY "SELINUX_LIBRARY-NOTFOUND" "libselinux.so")
+if (ENABLE_SELINUX)
+    pkg_check_modules(PC_SELINUX "libselinux>=2.0")
+    find_path(SELINUX_INCLUDE_DIR "selinux/selinux.h"
+        HINTS ${PC_SELINUX_INCLUDEDIR} ${PC_SELINUX_INCLUDE_DIRS})
+    _CHECK(SELINUX_INCLUDE_DIR "SELINUX_INCLUDE_DIR-NOTFOUND" "selinux/selinux.h")
+    find_library(SELINUX_LIBRARY selinux
+        HINTS ${PC_SELINUX_LIBDIR} ${PC_SELINUX_LIBRARY_DIRS})
+    _CHECK(SELINUX_LIBRARY "SELINUX_LIBRARY-NOTFOUND" "libselinux.so")
+endif()
 
 # check iSula libutils
 pkg_check_modules(PC_ISULA_LIBUTILS REQUIRED "lcr")

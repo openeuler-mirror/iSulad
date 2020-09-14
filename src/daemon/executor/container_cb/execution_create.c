@@ -920,12 +920,13 @@ static int pack_security_config_to_v2_spec(const host_config *host_spec, contain
     v2_spec->seccomp_profile = seccomp_profile;
     seccomp_profile = NULL;
     v2_spec->no_new_privileges = no_new_privileges;
-
+#ifdef ENABLE_SELINUX
     if (init_label((const char **)label_opts, label_opts_len, &process_label, &mount_label) != 0) {
         ERROR("Failed to append label");
         ret = -1;
         goto out;
     }
+#endif
 
     v2_spec->mount_label = mount_label;
     mount_label = NULL;

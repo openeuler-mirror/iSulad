@@ -60,3 +60,10 @@ if (ENABLE_EMBEDDED STREQUAL "ON")
     add_definitions(-DENABLE_EMBEDDED_IMAGE=1)
     set(ENABLE_EMBEDDED_IMAGE 1)
 endif()
+
+option(ENABLE_SELINUX "enable isulad daemon selinux option" ON)
+if (ENABLE_SELINUX STREQUAL "ON")
+    add_definitions(-DENABLE_SELINUX=1)
+    set(ENABLE_SELINUX 1)
+endif()
+

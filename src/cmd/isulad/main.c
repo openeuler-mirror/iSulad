@@ -58,7 +58,9 @@
 #include "log_gather_api.h"
 #include "container_api.h"
 #include "plugin_api.h"
+#ifdef ENABLE_SELINUX
 #include "selinux_label.h"
+#endif
 #include "http.h"
 #include "runtime_api.h"
 #include "daemon_arguments.h"
@@ -747,6 +749,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_SELINUX
 static int overlay_supports_selinux(bool *supported)
 {
 #define KALLSYMS_ITEM_MAX_LEN 100
@@ -820,6 +823,7 @@ static int configure_kernel_security_support(const struct service_arguments *arg
     }
     return 0;
 }
+#endif
 
 static int update_server_args(struct service_arguments *args)
 {
@@ -868,12 +872,14 @@ static int update_server_args(struct service_arguments *args)
         goto out;
     }
 
+#ifdef ENABLE_SELINUX
     // Configure and validate the kernels security support. Note this is a Linux/FreeBSD
     // operation only, so it is safe to pass *just* the runtime OS graphdriver.
     if (configure_kernel_security_support(args)) {
         ret = -1;
         goto out;
     }
+#endif
 
 out:
     return ret;

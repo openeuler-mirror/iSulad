@@ -1516,7 +1516,9 @@ int merge_json_confs_into_global(struct service_arguments *args)
         goto out;
     }
 
+#ifdef ENABLE_SELINUX
     args->json_confs->selinux_enabled = tmp_json_confs->selinux_enabled;
+#endif
 
 out:
     free(err);

@@ -1262,6 +1262,7 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
         tmp = NULL;
     }
 
+#ifdef ENABLE_SELINUX
     if (mount_opts != NULL && mount_opts->mount_label != NULL) {
         tmp = selinux_format_mountlabel(mount_data, mount_opts->mount_label);
         if (tmp == NULL) {
@@ -1271,6 +1272,7 @@ static char *get_abs_mount_opt_data(const char *layer_dir, const char *abs_lower
         mount_data = tmp;
         tmp = NULL;
     }
+#endif
 
     goto out;
 
@@ -1344,6 +1346,7 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
         tmp = NULL;
     }
 
+#ifdef ENABLE_SELINUX
     if (mount_opts != NULL && mount_opts->mount_label != NULL) {
         tmp = selinux_format_mountlabel(mount_data, mount_opts->mount_label);
         if (tmp == NULL) {
@@ -1353,6 +1356,7 @@ static char *get_rel_mount_opt_data(const char *id, const char *rel_lower_dir, c
         mount_data = tmp;
         tmp = NULL;
     }
+#endif
 
     goto out;
 
