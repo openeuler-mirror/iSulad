@@ -1,0 +1,38 @@
+From e350ca3902249f78b374eed05c6a150040797c82 Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Fri, 11 Sep 2020 14:23:53 +0800
+Subject: [PATCH] config: remove unused config
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ src/contrib/config/config.json                 | 1 -
+ src/contrib/config/systemcontainer_config.json | 1 -
+ 2 files changed, 2 deletions(-)
+
+diff --git a/src/contrib/config/config.json b/src/contrib/config/config.json
+index e87420d..b14c4a9 100644
+--- a/src/contrib/config/config.json
++++ b/src/contrib/config/config.json
+@@ -49,7 +49,6 @@
+ 		"path": "rootfs",
+ 		"readonly": false
+ 	},
+-	"hostname": "ubuntu",
+ 	"mounts": [
+ 		{
+ 			"destination": "/proc",
+diff --git a/src/contrib/config/systemcontainer_config.json b/src/contrib/config/systemcontainer_config.json
+index b9e6e8c..c7e2ebd 100644
+--- a/src/contrib/config/systemcontainer_config.json
++++ b/src/contrib/config/systemcontainer_config.json
+@@ -49,7 +49,6 @@
+ 		"path": "rootfs",
+ 		"readonly": false
+ 	},
+-	"hostname": "ubuntu",
+ 	"mounts": [
+ 		{
+ 			"destination": "/proc",
+-- 
+2.25.1
+
