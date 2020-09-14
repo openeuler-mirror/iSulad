@@ -1212,6 +1212,8 @@ static int add_fetch_task(thread_fetch_info *info)
                 goto out;
             }
         }
+        // retry get cached layer after some time of unlock
+        cache = get_cached_layer(info->blob_digest);
     }
 
     ret = add_cached_layer(info->blob_digest, info->file);
