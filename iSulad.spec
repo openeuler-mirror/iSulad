@@ -1,5 +1,5 @@
 %global _version 2.0.5
-%global _release 20200904.114315.gitff1761c3
+%global _release 20200914.172527.gitae86920a
 %global is_systemd 1
 
 Name:      iSulad
@@ -11,6 +11,8 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
+
+Patch6000:	0001-config-remove-unused-config.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -215,6 +217,18 @@ fi
 %endif
 
 %changelog
++* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
++- Type:bugfix
++- ID:NA
++- SUG:NA
++- DESC: remove unused config
+
+* Tue Sep 10 2020  <yangjiaqi11@huawei.com> - 2.0.5-20200910.144345.git71b1055b
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add chrpath
+
 * Fri Sep 04 2020 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.5-20200904.114315.gitff1761c3
 - Type:enhancement
 - ID:NA
