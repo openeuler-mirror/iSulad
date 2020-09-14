@@ -40,7 +40,9 @@
 #include "specs_mount.h"
 #include "specs_extend.h"
 #include "container_api.h"
+#ifdef ENABLE_SELINUX
 #include "selinux_label.h"
+#endif
 #include "err_msg.h"
 #include "utils_array.h"
 #include "utils_file.h"
@@ -2235,7 +2237,9 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
     bool has_hosts_mount = false;
     bool has_resolv_mount = false;
     bool has_hostname_mount = false;
+#ifdef ENABLE_SELINUX
     bool share = is_container(host_spec->network_mode);
+#endif
 
     for (i = 0; i < oci_spec->mounts_len; i++) {
         if (is_mount_destination_hosts(oci_spec->mounts[i]->destination)) {
@@ -2260,11 +2264,13 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
     } else {
         /* add network config files */
         if (!has_hosts_mount) {
+#ifdef ENABLE_SELINUX
             if (relabel(v2_spec->hosts_path, v2_spec->mount_label, share) != 0) {
                 ERROR("Error to relabel hosts path: %s", v2_spec->hosts_path);
                 ret = -1;
                 goto out;
             }
+#endif
             if (!mount_file(oci_spec, v2_spec->hosts_path, ETC_HOSTS)) {
                 ERROR("Merge hosts mount failed");
                 ret = -1;
@@ -2276,11 +2282,13 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
         WARN("ResolvConfPath set to %s, but can't stat this filename skipping", v2_spec->resolv_conf_path);
     } else {
         if (!has_resolv_mount) {
+#ifdef ENABLE_SELINUX
             if (relabel(v2_spec->resolv_conf_path, v2_spec->mount_label, share) != 0) {
                 ERROR("Error to relabel resolv.conf path: %s", v2_spec->resolv_conf_path);
                 ret = -1;
                 goto out;
             }
+#endif
             if (!mount_file(oci_spec, v2_spec->resolv_conf_path, RESOLV_CONF_PATH)) {
                 ERROR("Merge resolv.conf mount failed");
                 ret = -1;
@@ -2293,10 +2301,12 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
         WARN("HostnamePath set to %s, but can't stat this filename; skipping", v2_spec->resolv_conf_path);
     } else {
         if (!has_hostname_mount) {
+#ifdef ENABLE_SELINUX
             if (relabel(v2_spec->hostname_path, v2_spec->mount_label, share) != 0) {
                 ERROR("Error to relabel hostname path: %s", v2_spec->hostname_path);
                 return -1;
             }
+#endif
             if (!mount_file(oci_spec, v2_spec->hostname_path, ETC_HOSTNAME)) {
                 ERROR("Merge hostname mount failed");
                 ret = -1;

@@ -1293,6 +1293,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_SELINUX
 static int append_selinux_label_to_security_opts(const char *selinux_label, host_config *dstconfig)
 {
     dstconfig->security_opt[dstconfig->security_opt_len] = util_strdup_s(selinux_label);
@@ -1300,6 +1301,7 @@ static int append_selinux_label_to_security_opts(const char *selinux_label, host
 
     return 0;
 }
+#endif
 
 static int parse_security_opts(const isula_host_config_t *srcconfig, host_config *dstconfig)
 {
@@ -1318,8 +1320,10 @@ static int parse_security_opts(const isula_host_config_t *srcconfig, host_config
         } else {
             if (strcmp(items[0], "seccomp") == 0) {
                 ret = append_seccomp_to_security_opts(srcconfig->security[i], items[1], dstconfig);
+#ifdef ENABLE_SELINUX
             } else if (strcmp(items[0], "label") == 0) {
                 ret = append_selinux_label_to_security_opts(srcconfig->security[i], dstconfig);
+#endif
             } else {
                 ret = -1;
             }

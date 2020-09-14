@@ -39,7 +39,9 @@
 #include "specs_namespace.h"
 #include "path.h"
 #include "constants.h"
+#ifdef ENABLE_SELINUX
 #include "selinux_label.h"
+#endif
 #include "err_msg.h"
 #include "utils_array.h"
 #include "utils_file.h"
@@ -1780,6 +1782,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_SELINUX
 static int to_host_config_selinux_labels(const char **labels, size_t len, char ***dst, size_t *dst_len)
 {
     int ret = 0;
@@ -1943,17 +1946,20 @@ static int generate_security_opt(host_config *hc)
 
     return handle_connected_container_mode(hc);
 }
+#endif
 
 static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spec,
                                container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
 
+#ifdef ENABLE_SELINUX
     ret = generate_security_opt(host_spec);
     if (ret != 0) {
         ERROR("Failed to generate security opt");
         goto out;
     }
+#endif
 
     ret = merge_caps(oci_spec, (const char **)host_spec->cap_add, host_spec->cap_add_len,
                      (const char **)host_spec->cap_drop, host_spec->cap_drop_len);
@@ -1981,11 +1987,13 @@ static int merge_security_conf(oci_runtime_spec *oci_spec, host_config *host_spe
         goto out;
     }
 
+#ifdef ENABLE_SELINUX
     ret = merge_selinux(oci_spec, v2_spec);
     if (ret != 0) {
         ERROR("Failed to merge selinux config");
         goto out;
     }
+#endif
 
 out:
     return ret;

@@ -2013,6 +2013,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_SELINUX
 static int relabel_mounts_if_needed(defs_mount **mounts, size_t len, const char *mount_label)
 {
     int ret = 0;
@@ -2047,6 +2048,7 @@ static int relabel_mounts_if_needed(defs_mount **mounts, size_t len, const char 
 out:
     return ret;
 }
+#endif
 
 /* verify container settings start */
 int verify_container_settings_start(const oci_runtime_spec *oci_spec)
@@ -2060,11 +2062,13 @@ int verify_container_settings_start(const oci_runtime_spec *oci_spec)
             ret = -1;
             goto out;
         }
+#ifdef ENABLE_SELINUX
         if (relabel_mounts_if_needed(oci_spec->mounts, oci_spec->mounts_len, oci_spec->linux->mount_label) != 0) {
             ERROR("Failed to relabel mount");
             ret = -1;
             goto out;
         }
+#endif
     }
 
 out:

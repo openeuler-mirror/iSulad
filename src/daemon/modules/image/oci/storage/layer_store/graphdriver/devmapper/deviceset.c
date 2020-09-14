@@ -2842,10 +2842,12 @@ free_out:
 static char *generate_mount_options(const struct driver_mount_opts *moptions, const char *dev_options)
 {
     char *res_str = NULL;
-    char *tmp = NULL;
 
     append_mount_options(&res_str, dev_options);
+#ifdef ENABLE_SELINX
     if (moptions != NULL && moptions->mount_label != NULL) {
+        char *tmp = NULL;
+
         tmp = selinux_format_mountlabel(res_str, moptions->mount_label);
         if (tmp == NULL) {
             goto error_out;
@@ -2854,7 +2856,6 @@ static char *generate_mount_options(const struct driver_mount_opts *moptions, co
         res_str = tmp;
         tmp = NULL;
     }
-
     goto out;
 
 error_out:
@@ -2862,6 +2863,7 @@ error_out:
     res_str = NULL;
 
 out:
+#endif
     return res_str;
 }
 

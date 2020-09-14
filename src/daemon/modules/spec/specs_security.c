@@ -849,6 +849,7 @@ out:
     return ret;
 }
 
+#ifdef ENABLE_SELINUX
 int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config *v2_spec)
 {
     if (make_sure_oci_spec_process(oci_spec) < 0) {
@@ -860,6 +861,7 @@ int merge_selinux(oci_runtime_spec *oci_spec, container_config_v2_common_config 
 
     return 0;
 }
+#endif
 
 static int get_adds_cap_for_system_container(const host_config *host_spec, char ***adds, size_t *adds_len)
 {
