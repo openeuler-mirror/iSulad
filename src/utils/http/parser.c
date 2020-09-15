@@ -303,7 +303,7 @@ int parse_http(const char *buf, size_t len, struct parsed_http_message *m,
 
     nparsed = parse(buf, len, parser);
     if (nparsed != len) {
-        ERROR("Failed to parse it, parsed :%ld, intput:%ld \n", nparsed, len);
+        ERROR("Failed to parse it, parsed :%zu, intput:%zu \n", nparsed, len);
         ret = -1;
         goto free_out;
     }
