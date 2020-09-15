@@ -1246,12 +1246,12 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     l = lookup(lid);
     if (l == NULL) {
         ret = -1;
-        goto driver_remove;
+        goto clear_memory;
     }
     l->slayer->incompelte = true;
     if (save_layer(l) != 0) {
         ret = -1;
-        goto driver_remove;
+        goto clear_memory;
     }
 
     ret = apply_diff(l, diff);
