@@ -1338,91 +1338,6 @@ out:
     return im;
 }
 
-char *image_store_create(const char *id, const char **names, size_t names_len, const char *layer, const char *metadata,
-                         const types_timestamp_t *time, const char *searchable_digest)
-{
-    int ret = 0;
-    char *dst_id = NULL;
-    char **unique_names = NULL;
-    size_t unique_names_len = 0;
-    image_t *img = NULL;
-    storage_image *im = NULL;
-
-    if (g_image_store == NULL) {
-        ERROR("Image store is not ready");
-        return NULL;
-    }
-
-    if (!image_store_lock(EXCLUSIVE)) {
-        ERROR("Failed to lock image store with exclusive lock, not allowed to create new images");
-        return NULL;
-    }
-
-    if (id == NULL) {
-        dst_id = generate_random_image_id();
-    } else {
-        dst_id = util_strdup_s(id);
-    }
-
-    if (dst_id == NULL) {
-        ERROR("Out of memory or generate random image id failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (map_search(g_image_store->byid, (void *)dst_id) != NULL) {
-        ERROR("ID is already in use: %s", dst_id);
-        ret = -1;
-        goto out;
-    }
-
-    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
-        ERROR("Failed to unique names");
-        ret = -1;
-        goto out;
-    }
-
-    im = new_storage_image(dst_id, searchable_digest, &unique_names, &unique_names_len, time, layer, metadata);
-    if (im == NULL) {
-        ERROR("Failed to generate new storage image");
-        ret = -1;
-        goto out;
-    }
-
-    img = new_image(im);
-    if (img == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-    im = NULL;
-
-    if (image_store_append_image(dst_id, searchable_digest, img) != 0) {
-        ERROR("Failed to append image to image store");
-        ret = -1;
-        goto out;
-    }
-
-    if (save_image(img->simage) != 0) {
-        ERROR("Failed to save image");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    if (ret != 0) {
-        free(dst_id);
-        dst_id = NULL;
-        free_storage_image(im);
-        im = NULL;
-        free_image_t(img);
-        img = NULL;
-    }
-    util_free_array_by_len(unique_names, unique_names_len);
-    image_store_unlock();
-    return dst_id;
-}
-
 static image_t *get_image_for_store_by_prefix(const char *id)
 {
     bool ret = true;
@@ -1492,40 +1407,6 @@ static image_t *lookup(const char *id)
 found:
     image_ref_inc(value);
     return value;
-}
-
-char *image_store_lookup(const char *id)
-{
-    char *image_id = NULL;
-    image_t *img = NULL;
-
-    if (id == NULL) {
-        ERROR("Invalid input parameter, id is NULL");
-        return NULL;
-    }
-
-    if (g_image_store == NULL) {
-        ERROR("Image store is not ready");
-        return NULL;
-    }
-
-    if (!image_store_lock(SHARED)) {
-        ERROR("Failed to lock image store with shared lock, not allowed to get image id assignments");
-        return NULL;
-    }
-
-    img = lookup(id);
-    if (img == NULL) {
-        ERROR("Image not known");
-        goto out;
-    }
-
-    image_id = util_strdup_s(img->simage->id);
-
-out:
-    image_ref_dec(img);
-    image_store_unlock();
-    return image_id;
 }
 
 static char *get_value_from_json_map_string_string(json_map_string_string *map, const char *key)
@@ -1699,6 +1580,130 @@ static int do_delete_image_info(const char *id)
 out:
     image_ref_dec(img);
     return ret;
+}
+
+char *image_store_create(const char *id, const char **names, size_t names_len, const char *layer, const char *metadata,
+                         const types_timestamp_t *time, const char *searchable_digest)
+{
+    int ret = 0;
+    char *dst_id = NULL;
+    char **unique_names = NULL;
+    size_t unique_names_len = 0;
+    image_t *img = NULL;
+    storage_image *im = NULL;
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return NULL;
+    }
+
+    if (!image_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock image store with exclusive lock, not allowed to create new images");
+        return NULL;
+    }
+
+    if (id == NULL) {
+        dst_id = generate_random_image_id();
+    } else {
+        dst_id = util_strdup_s(id);
+    }
+
+    if (dst_id == NULL) {
+        ERROR("Out of memory or generate random image id failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (map_search(g_image_store->byid, (void *)dst_id) != NULL) {
+        ERROR("ID is already in use: %s", dst_id);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+        ERROR("Failed to unique names");
+        ret = -1;
+        goto out;
+    }
+
+    im = new_storage_image(dst_id, searchable_digest, &unique_names, &unique_names_len, time, layer, metadata);
+    if (im == NULL) {
+        ERROR("Failed to generate new storage image");
+        ret = -1;
+        goto out;
+    }
+
+    img = new_image(im);
+    if (img == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    im = NULL;
+
+    if (image_store_append_image(dst_id, searchable_digest, img) != 0) {
+        ERROR("Failed to append image to image store");
+        ret = -1;
+        goto out;
+    }
+
+    if (save_image(img->simage) != 0) {
+        ERROR("Failed to save image");
+        if (do_delete_image_info(dst_id) != 0) {
+            ERROR("Failed to delete image info");
+        }
+        im = NULL;
+        img = NULL;
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free(dst_id);
+        dst_id = NULL;
+        free_storage_image(im);
+        im = NULL;
+        free_image_t(img);
+        img = NULL;
+    }
+    util_free_array_by_len(unique_names, unique_names_len);
+    image_store_unlock();
+    return dst_id;
+}
+
+char *image_store_lookup(const char *id)
+{
+    char *image_id = NULL;
+    image_t *img = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid input parameter, id is NULL");
+        return NULL;
+    }
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return NULL;
+    }
+
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get image id assignments");
+        return NULL;
+    }
+
+    img = lookup(id);
+    if (img == NULL) {
+        ERROR("Image not known");
+        goto out;
+    }
+
+    image_id = util_strdup_s(img->simage->id);
+
+out:
+    image_ref_dec(img);
+    image_store_unlock();
+    return image_id;
 }
 
 int image_store_delete(const char *id)
