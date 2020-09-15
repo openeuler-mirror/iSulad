@@ -113,6 +113,7 @@ if [ -d ./runc ];then
 fi
 git clone https://gitee.com/src-openeuler/runc.git
 cd runc
+git checkout -q origin/openEuler-20.03-LTS
 ./apply-patch
 mkdir -p .gopath/src/github.com/opencontainers
 export GOPATH=`pwd`/.gopath

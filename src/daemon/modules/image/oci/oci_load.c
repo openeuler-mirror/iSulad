@@ -206,6 +206,19 @@ static void oci_load_free_image(load_image_t *im)
     free(im);
 }
 
+inline static void do_free_load_image(load_image_t *im)
+{
+    if (im == NULL) {
+        return;
+    }
+
+    if (im->layer_of_hold_flag != NULL && storage_set_hold_flag(im->layer_of_hold_flag, false) != 0) {
+        ERROR("clear hold flag failed for layer %s", im->layer_of_hold_flag);
+    }
+
+    oci_load_free_image(im);
+}
+
 static char **str_array_copy(char **arr, size_t len)
 {
     char **str_arr = NULL;
@@ -1033,7 +1046,8 @@ int oci_do_load(const im_load_request *request)
             ret = -1;
             goto out;
         }
-        oci_load_free_image(im);
+
+        do_free_load_image(im);
         im = NULL;
     }
 
@@ -1048,13 +1062,7 @@ out:
     }
     free(manifest);
 
-    if (im != NULL) {
-        if (im->layer_of_hold_flag != NULL && storage_set_hold_flag(im->layer_of_hold_flag, false) != 0) {
-            ERROR("clear hold flag failed for layer %s", im->layer_of_hold_flag);
-        }
-
-        oci_load_free_image(im);
-    }
+    do_free_load_image(im);
 
     if (reader.close != NULL) {
         reader.close(reader.context, NULL);
