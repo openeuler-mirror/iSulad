@@ -728,90 +728,6 @@ out:
     return ret;
 }
 
-char *rootfs_store_create(const char *id, const char **names, size_t names_len, const char *image, const char *layer,
-                          const char *metadata, struct storage_rootfs_options *rootfs_opts)
-{
-    int ret = 0;
-    char *dst_id = NULL;
-    char **unique_names = NULL;
-    size_t unique_names_len = 0;
-    cntrootfs_t *cntr = NULL;
-    storage_rootfs *c = NULL;
-
-    if (g_rootfs_store == NULL) {
-        ERROR("Container store is not ready");
-        return NULL;
-    }
-
-    if (!rootfs_store_lock(EXCLUSIVE)) {
-        ERROR("Failed to lock container store, not allowed to create new containers");
-        return NULL;
-    }
-
-    if (id == NULL) {
-        dst_id = generate_random_container_id();
-    } else {
-        dst_id = util_strdup_s(id);
-    }
-
-    if (dst_id == NULL) {
-        ERROR("Out of memory or generate random container id failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (map_search(g_rootfs_store->byid, (void *)dst_id) != NULL) {
-        ERROR("ID is already in use: %s", dst_id);
-        ret = -1;
-        goto out;
-    }
-
-    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
-        ERROR("Failed to unique names");
-        ret = -1;
-        goto out;
-    }
-
-    c = new_storage_rootfs(dst_id, image, unique_names, unique_names_len, layer, metadata, rootfs_opts);
-    if (c == NULL) {
-        ERROR("Failed to generate new storage container");
-        ret = -1;
-        goto out;
-    }
-
-    cntr = new_rootfs(c);
-    if (cntr == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-    c = NULL;
-
-    if (rootfs_store_append_container_rootfs(dst_id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
-        ERROR("Failed to append container to container store");
-        ret = -1;
-        goto out;
-    }
-
-    if (save_rootfs(cntr) != 0) {
-        ERROR("Failed to save container");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    if (ret != 0) {
-        free(dst_id);
-        dst_id = NULL;
-        free_storage_rootfs(c);
-        c = NULL;
-        free_rootfs_t(cntr);
-        cntr = NULL;
-    }
-    rootfs_store_unlock();
-    return dst_id;
-}
-
 static cntrootfs_t *get_rootfs_for_store_by_prefix(const char *id)
 {
     bool ret = true;
@@ -883,39 +799,6 @@ found:
     return value;
 }
 
-char *rootfs_store_lookup(const char *id)
-{
-    char *container_id = NULL;
-    cntrootfs_t *cntr = NULL;
-
-    if (id == NULL) {
-        ERROR("Invalid input parameter, id is NULL");
-        return NULL;
-    }
-
-    if (g_rootfs_store == NULL) {
-        ERROR("Container store is not ready");
-        return NULL;
-    }
-
-    if (!rootfs_store_lock(SHARED)) {
-        ERROR("Failed to lock rootfs store, not allowed to lookup rootfs id assginments");
-        return NULL;
-    }
-
-    cntr = lookup(id);
-    if (cntr == NULL) {
-        ERROR("Container not known");
-        return NULL;
-    }
-
-    container_id = util_strdup_s(cntr->srootfs->id);
-    rootfs_ref_dec(cntr);
-    rootfs_store_unlock();
-
-    return container_id;
-}
-
 static int remove_rootfs_from_memory(const char *id)
 {
     struct linked_list *item = NULL;
@@ -985,6 +868,166 @@ static int remove_rootfs_dir(const char *id)
     return 0;
 }
 
+static int delete_rootfs_from_store_without_lock(const char *id)
+{
+    int ret = 0;
+    cntrootfs_t *cntr = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid input parameter: empty id");
+        return -1;
+    }
+
+    if (g_rootfs_store == NULL) {
+        ERROR("Rootfs store is not ready");
+        return -1;
+    }
+
+    cntr = lookup(id);
+    if (cntr == NULL) {
+        ERROR("Rootfs %s not known", id);
+        return -1;
+    }
+
+    if (remove_rootfs_from_memory(cntr->srootfs->id) != 0) {
+        ERROR("Failed to remove rootfs from memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (remove_rootfs_dir(cntr->srootfs->id) != 0) {
+        ERROR("Failed to delete rootfs directory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    rootfs_ref_dec(cntr);
+    return ret;
+}
+
+char *rootfs_store_create(const char *id, const char **names, size_t names_len, const char *image, const char *layer,
+                          const char *metadata, struct storage_rootfs_options *rootfs_opts)
+{
+    int ret = 0;
+    char *dst_id = NULL;
+    char **unique_names = NULL;
+    size_t unique_names_len = 0;
+    cntrootfs_t *cntr = NULL;
+    storage_rootfs *c = NULL;
+
+    if (g_rootfs_store == NULL) {
+        ERROR("Container store is not ready");
+        return NULL;
+    }
+
+    if (!rootfs_store_lock(EXCLUSIVE)) {
+        ERROR("Failed to lock container store, not allowed to create new containers");
+        return NULL;
+    }
+
+    if (id == NULL) {
+        dst_id = generate_random_container_id();
+    } else {
+        dst_id = util_strdup_s(id);
+    }
+
+    if (dst_id == NULL) {
+        ERROR("Out of memory or generate random container id failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (map_search(g_rootfs_store->byid, (void *)dst_id) != NULL) {
+        ERROR("ID is already in use: %s", dst_id);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+        ERROR("Failed to unique names");
+        ret = -1;
+        goto out;
+    }
+
+    c = new_storage_rootfs(dst_id, image, unique_names, unique_names_len, layer, metadata, rootfs_opts);
+    if (c == NULL) {
+        ERROR("Failed to generate new storage container");
+        ret = -1;
+        goto out;
+    }
+
+    cntr = new_rootfs(c);
+    if (cntr == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    c = NULL;
+
+    if (rootfs_store_append_container_rootfs(dst_id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
+        ERROR("Failed to append container to container store");
+        ret = -1;
+        goto out;
+    }
+
+    if (save_rootfs(cntr) != 0) {
+        ERROR("Failed to save container");
+        if (delete_rootfs_from_store_without_lock(dst_id) != 0) {
+            ERROR("Failed to delete rootfs from store");
+        }
+        c = NULL;
+        cntr = NULL;
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free(dst_id);
+        dst_id = NULL;
+        free_storage_rootfs(c);
+        c = NULL;
+        free_rootfs_t(cntr);
+        cntr = NULL;
+    }
+    rootfs_store_unlock();
+    return dst_id;
+}
+
+char *rootfs_store_lookup(const char *id)
+{
+    char *container_id = NULL;
+    cntrootfs_t *cntr = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid input parameter, id is NULL");
+        return NULL;
+    }
+
+    if (g_rootfs_store == NULL) {
+        ERROR("Container store is not ready");
+        return NULL;
+    }
+
+    if (!rootfs_store_lock(SHARED)) {
+        ERROR("Failed to lock rootfs store, not allowed to lookup rootfs id assginments");
+        return NULL;
+    }
+
+    cntr = lookup(id);
+    if (cntr == NULL) {
+        ERROR("Container not known");
+        return NULL;
+    }
+
+    container_id = util_strdup_s(cntr->srootfs->id);
+    rootfs_ref_dec(cntr);
+    rootfs_store_unlock();
+
+    return container_id;
+}
+
 int rootfs_store_delete(const char *id)
 {
     cntrootfs_t *cntr = NULL;
@@ -1027,44 +1070,6 @@ int rootfs_store_delete(const char *id)
 out:
     rootfs_ref_dec(cntr);
     rootfs_store_unlock();
-    return ret;
-}
-
-static int delete_rootfs_from_store_without_lock(const char *id)
-{
-    int ret = 0;
-    cntrootfs_t *cntr = NULL;
-
-    if (id == NULL) {
-        ERROR("Invalid input parameter: empty id");
-        return -1;
-    }
-
-    if (g_rootfs_store == NULL) {
-        ERROR("Rootfs store is not ready");
-        return -1;
-    }
-
-    cntr = lookup(id);
-    if (cntr == NULL) {
-        ERROR("Rootfs %s not known", id);
-        return -1;
-    }
-
-    if (remove_rootfs_from_memory(cntr->srootfs->id) != 0) {
-        ERROR("Failed to remove rootfs from memory");
-        ret = -1;
-        goto out;
-    }
-
-    if (remove_rootfs_dir(cntr->srootfs->id) != 0) {
-        ERROR("Failed to delete rootfs directory");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    rootfs_ref_dec(cntr);
     return ret;
 }
 
