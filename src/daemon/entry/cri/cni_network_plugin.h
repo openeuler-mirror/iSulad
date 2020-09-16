@@ -22,7 +22,7 @@
 #include <thread>
 #include <vector>
 
-#include "cni/api.h"
+#include "libcni_api.h"
 
 #include "cri_runtime_service.h"
 #include "errors.h"

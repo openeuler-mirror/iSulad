@@ -25,11 +25,11 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#include "exec.h"
+#include "libcni_exec.h"
 
 #include "utils.h"
-#include "tools.h"
-#include "invoke_errno.h"
+#include "libcni_tools.h"
+#include "libcni_errno.h"
 #include "isula_libutils/log.h"
 
 static int raw_exec(const char *plugin_path, const char *stdin_data, char * const environs[], char **stdout_str,
@@ -62,7 +62,7 @@ static int do_parse_exec_stdout_str(int exec_ret, const char *cni_net_conf_json,
         if (e_err != NULL) {
             *err = str_cni_exec_error(e_err);
         } else {
-            *err = clibcni_util_strdup_s("raw exec fail");
+            *err = util_strdup_s("raw exec fail");
         }
     } else {
         version = cniversion_decode(cni_net_conf_json, err);
@@ -71,7 +71,7 @@ static int do_parse_exec_stdout_str(int exec_ret, const char *cni_net_conf_json,
             ERROR("Decode cni version failed: %s", *err != NULL ? *err : "");
             goto out;
         }
-        if (clibcni_is_null_or_empty(stdout_str)) {
+        if (stdout_str == NULL || strlen(stdout_str) == 0) {
             ERROR("Get empty stdout message");
             goto out;
         }
@@ -108,7 +108,7 @@ int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_js
     if (cniargs != NULL) {
         envs = as_env(cniargs);
         if (envs == NULL) {
-            *err = clibcni_util_strdup_s("As env failed");
+            *err = util_strdup_s("As env failed");
             ret = -1;
             goto out;
         }
@@ -119,7 +119,7 @@ int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_js
     ret = do_parse_exec_stdout_str(ret, cni_net_conf_json, e_err, stdout_str, result, err);
 out:
     free(stdout_str);
-    clibcni_util_free_array(envs);
+    util_free_array(envs);
     free_cni_exec_error(e_err);
     return ret;
 }
@@ -139,7 +139,7 @@ int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf
     if (cniargs != NULL) {
         envs = as_env(cniargs);
         if (envs == NULL) {
-            *err = clibcni_util_strdup_s("As env failed");
+            *err = util_strdup_s("As env failed");
             goto out;
         }
     }
@@ -149,12 +149,12 @@ int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf
         if (e_err != NULL) {
             *err = str_cni_exec_error(e_err);
         } else {
-            *err = clibcni_util_strdup_s("raw exec fail");
+            *err = util_strdup_s("raw exec fail");
         }
     }
     DEBUG("Raw exec \"%s\" result: %d", plugin_path, ret);
 out:
-    clibcni_util_free_array(envs);
+    util_free_array(envs);
     free_cni_exec_error(e_err);
     return ret;
 }
@@ -213,11 +213,11 @@ int raw_get_version_info(const char *plugin_path, struct plugin_info **result, c
     envs = as_env(&args);
     if (envs == NULL) {
         ret = -1;
-        *err = clibcni_util_strdup_s("As env failed");
+        *err = util_strdup_s("As env failed");
         goto free_out;
     }
     len = strlen("{\"cniVersion\":}") + strlen(version) + 1;
-    stdin_data = clibcni_util_common_calloc_s(len);
+    stdin_data = util_common_calloc_s(len);
     if (stdin_data == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -226,7 +226,7 @@ int raw_get_version_info(const char *plugin_path, struct plugin_info **result, c
     ret = snprintf(stdin_data, len, "{\"cniVersion\":%s}", version);
     if (ret < 0 || (size_t)ret >= len) {
         ERROR("Sprintf failed");
-        *err = clibcni_util_strdup_s("Sprintf failed");
+        *err = util_strdup_s("Sprintf failed");
         goto free_out;
     }
     ret = raw_exec(plugin_path, stdin_data, envs, &stdout_str, &e_err);
@@ -242,7 +242,7 @@ int raw_get_version_info(const char *plugin_path, struct plugin_info **result, c
 
 free_out:
     free_cni_exec_error(e_err);
-    clibcni_util_free_array(envs);
+    util_free_array(envs);
     free(stdin_data);
     free(stdout_str);
     return ret;
@@ -304,7 +304,7 @@ static void child_fun(const char *plugin_path, int pipe_stdin, int pipe_stdout, 
     char *argv[2] = { NULL };
     int ecode = 0;
 
-    argv[0] = clibcni_util_strdup_s(plugin_path);
+    argv[0] = util_strdup_s(plugin_path);
 
     ecode = prepare_child(pipe_stdin, pipe_stdout);
     if (ecode != 0) {
@@ -335,7 +335,7 @@ child_err_out:
 
 static inline bool check_prepare_raw_exec_args(const char *plugin_path)
 {
-    return (plugin_path == NULL || clibcni_util_validate_absolute_path(plugin_path));
+    return (plugin_path == NULL || util_validate_absolute_path(plugin_path));
 }
 
 static int prepare_raw_exec(const char *plugin_path, int pipe_stdin[2], int pipe_stdout[2], char *errmsg, size_t len)
@@ -380,7 +380,7 @@ static int write_stdin_data_to_child(int pipe_stdin[2], const char *stdin_data, 
     }
 
     len = strlen(stdin_data);
-    if (clibcni_util_write_nointr(pipe_stdin[1], stdin_data, len) != (ssize_t)len) {
+    if (util_write_nointr(pipe_stdin[1], stdin_data, len) != (ssize_t)len) {
         ret = snprintf(errmsg, errmsg_len, "Write stdin data failed: %s", strerror(errno));
         if (ret < 0 || (size_t)ret >= errmsg_len) {
             ERROR("Sprintf failed");
@@ -401,8 +401,8 @@ static int read_child_stdout_msg(const int pipe_stdout[2], char *errmsg, size_t 
         return 0;
     }
     if (stdout_str != NULL) {
-        char buffer[CLIBCNI_BUFFER_SIZE] = { 0 };
-        ssize_t tmp_len = clibcni_util_read_nointr(pipe_stdout[0], buffer, CLIBCNI_BUFFER_SIZE - 1);
+        char buffer[MAX_BUFFER_SIZE] = { 0 };
+        ssize_t tmp_len = util_read_nointr(pipe_stdout[0], buffer, MAX_BUFFER_SIZE - 1);
         if (tmp_len < 0) {
             ret = snprintf(errmsg, errmsg_len, "%s; read stdout failed: %s", strlen(errmsg) > 0 ? errmsg : "",
                            strerror(errno));
@@ -411,7 +411,7 @@ static int read_child_stdout_msg(const int pipe_stdout[2], char *errmsg, size_t 
             }
             ret = -1;
         } else if (tmp_len > 0) {
-            *stdout_str = clibcni_util_strdup_s(buffer);
+            *stdout_str = util_strdup_s(buffer);
         }
     }
 
@@ -516,12 +516,12 @@ static void make_err_message(const char *plugin_path, char **stdout_str, int ret
 
     get_err_msg = (nret != 0 && *err == NULL && strlen(errmsg) > 0);
     if (get_err_msg) {
-        *err = clibcni_util_common_calloc_s(sizeof(cni_exec_error));
+        *err = util_common_calloc_s(sizeof(cni_exec_error));
         if (*err != NULL) {
             char *tmp_err = NULL;
             nret = asprintf(&tmp_err, "exec \'%s\' failed: %s", plugin_path, errmsg);
             if (nret < 0) {
-                tmp_err = clibcni_util_strdup_s(errmsg);
+                tmp_err = util_strdup_s(errmsg);
             }
             (*err)->msg = tmp_err;
             (*err)->code = 1;
@@ -559,7 +559,7 @@ static int raw_exec(const char *plugin_path, const char *stdin_data, char * cons
     int pipe_stdout[2] = { -1, -1 };
     int pipe_stdin[2] = { -1, -1 };
     pid_t child_pid = 0;
-    char errmsg[CLIBCNI_BUFFER_SIZE] = { 0 };
+    char errmsg[MAX_BUFFER_SIZE] = { 0 };
     bool parse_exec_err = false;
 
     if (prepare_raw_exec(plugin_path, pipe_stdin, pipe_stdout, errmsg, sizeof(errmsg)) != 0) {
@@ -584,7 +584,7 @@ static int raw_exec(const char *plugin_path, const char *stdin_data, char * cons
         pipe_stdout[0] = -1;
 
         size_t envs_len = 0;
-        envs_len = clibcni_util_array_len((const char * const *)environs);
+        envs_len = util_array_len((const char **)environs);
         child_fun(plugin_path, pipe_stdin[0], pipe_stdout[1], environs, envs_len);
         /* exit in child_fun */
     }

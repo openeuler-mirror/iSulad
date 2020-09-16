@@ -15,13 +15,13 @@
 #ifndef CLIBCNI_VERSION_VERSION_H
 #define CLIBCNI_VERSION_VERSION_H
 
-#include "types.h"
+#include "libcni_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CURRENT_VERSION "0.3.1"
+#define CURRENT_VERSION "0.4.0"
 
 struct plugin_info {
     char *cniversion;

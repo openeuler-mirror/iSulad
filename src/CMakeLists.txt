@@ -24,8 +24,8 @@ else()
 endif()
 list(REMOVE_DUPLICATES CHECKED_INCLUDE_DIRS)
 
-add_subdirectory(utils)
 add_subdirectory(common)
+add_subdirectory(utils)
 
 set(SHARED_INCS
 	${CMAKE_CURRENT_SOURCE_DIR}
@@ -35,13 +35,17 @@ set(SHARED_INCS
 	${CHECKED_INCLUDE_DIRS}
     )
 
-set(SHARED_SRCS
-	${UTILS_SRCS}
+add_library(libisulad_tools ${LIBTYPE} ${UTILS_SRCS})
+target_include_directories(libisulad_tools
+    PUBLIC ${SHARED_INCS}
+    PUBLIC ${ISULA_LIBUTILS_INCLUDE_DIR}
     )
+
+set_target_properties(libisulad_tools PROPERTIES PREFIX "")
+target_link_libraries(libisulad_tools ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
 
 # get all c and header files
 list(REMOVE_DUPLICATES SHARED_INCS)
-list(REMOVE_DUPLICATES SHARED_SRCS)
 
 # ------ build libisula ------
 
@@ -52,7 +56,6 @@ endif()
 
 add_library(libisula ${LIBTYPE}
     ${CLIENT_SRCS}
-    ${SHARED_SRCS}
     )
 
 target_include_directories(libisula PUBLIC
@@ -63,14 +66,14 @@ target_include_directories(libisula PUBLIC
 
 # set libisula FLAGS
 set_target_properties(libisula PROPERTIES PREFIX "")
-target_link_libraries(libisula ${LIBYAJL_LIBRARY} ${SELINUX_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
+target_link_libraries(libisula libisulad_tools)
 
 if (GRPC_CONNECTOR)
     target_link_libraries(libisula -Wl,--as-needed -lstdc++)
     target_link_libraries(libisula -Wl,--as-needed ${PROTOBUF_LIBRARY})
     target_link_libraries(libisula -Wl,--no-as-needed ${GRPC_PP_REFLECTION_LIBRARY} ${GRPC_PP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 else()
-    target_link_libraries(libisula ${EVHTP_LIBRARY} ${EVENT_LIBRARY} ${ZLIB_LIBRARY} -ldl libhttpclient)
+    target_link_libraries(libisula ${EVHTP_LIBRARY} ${EVENT_LIBRARY} -ldl libhttpclient)
 endif()
 # ------ build libisula finish -----
 
@@ -95,19 +98,12 @@ target_link_libraries(isulad-shim ${LIBYAJL_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -
 # ------ build isulad -------
 add_subdirectory(daemon)
 
-add_library(clibcni ${LIBTYPE} ${DAEMON_NETWORK_SRCS})
-target_include_directories(clibcni
-    PUBLIC ${DAEMON_NETWORK_INCS}
-    PUBLIC ${ISULA_LIBUTILS_INCLUDE_DIR}
-    )
-target_link_libraries(clibcni ${ISULA_LIBUTILS_LIBRARY})
-
 
 add_executable(isulad
     ${DAEMON_SRCS}
-    ${SHARED_SRCS}
     ${ISULAD_SRCS}
     ${HTTP_SRCS}
+    ${DAEMON_NETWORK_SRCS}
     )
 
 target_include_directories(isulad PUBLIC
@@ -119,8 +115,8 @@ target_include_directories(isulad PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/http
     )
 
-target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${LIBARCHIVE_LIBRARY} ${LIBTAR_LIBRARY} ${WEBSOCKET_LIBRARY} ${CRYPTO_LIBRARY})
-target_link_libraries(isulad -ldl ${ZLIB_LIBRARY} ${ISULA_LIBUTILS_LIBRARY} -lpthread libhttpclient)
+target_link_libraries(isulad ${LIBYAJL_LIBRARY} ${SYSTEMD_LIBRARY} ${SELINUX_LIBRARY} ${WEBSOCKET_LIBRARY})
+target_link_libraries(isulad -ldl -lpthread libhttpclient)
 if (ENABLE_EMBEDDED_IMAGE)
     target_link_libraries(isulad ${SQLITE3_LIBRARY})
 endif()
@@ -135,7 +131,7 @@ else()
     target_link_libraries(isulad ${EVHTP_LIBRARY} ${EVENT_LIBRARY})
 endif()
 
-target_link_libraries(isulad clibcni)
+target_link_libraries(isulad libisulad_tools)
 
 if (ENABLE_OCI_IMAGE)
     target_link_libraries(isulad -Wl,--as-needed -lstdc++)
@@ -153,6 +149,8 @@ endif()
 # ------ build isulad finish -------
 
 # ------ install binary --------
+install(TARGETS libisulad_tools
+	LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(TARGETS libisula
   LIBRARY DESTINATION ${LIB_INSTALL_DIR_DEFAULT} PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 install(TARGETS clibcni

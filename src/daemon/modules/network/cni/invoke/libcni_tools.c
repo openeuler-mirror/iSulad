@@ -13,7 +13,7 @@
  * Description: provide tools functions
  **********************************************************************************/
 #define _GNU_SOURCE
-#include "tools.h"
+#include "libcni_tools.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
@@ -26,7 +26,7 @@
 #include <sys/wait.h>
 
 #include "utils.h"
-#include "invoke_errno.h"
+#include "libcni_errno.h"
 #include "isula_libutils/log.h"
 
 const char * const g_CNI_INVOKE_ERR_MSGS[] = {
@@ -69,7 +69,7 @@ static int do_check_file(const char *plugin, const char *path, char **find_path,
     }
     nret = stat(tmp_path, &rt_stat);
     if (nret == 0 && S_ISREG(rt_stat.st_mode)) {
-        *find_path = clibcni_util_strdup_s(tmp_path);
+        *find_path = util_strdup_s(tmp_path);
         *save_errno = 0;
         return 0;
     } else {
@@ -81,7 +81,7 @@ static int do_check_file(const char *plugin, const char *path, char **find_path,
 static inline bool check_find_in_path_args(const char *plugin, const char * const *paths, size_t len,
                                            char * const *find_path)
 {
-    return (clibcni_is_null_or_empty(plugin) || paths == NULL || len == 0 || find_path == NULL);
+    return (plugin == NULL || strlen(plugin) == 0 || paths == NULL || len == 0 || find_path == NULL);
 }
 
 int find_in_path(const char *plugin, const char * const *paths, size_t len, char **find_path, int *save_errno)
