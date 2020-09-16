@@ -19,17 +19,17 @@
 #include <stdio.h>
 #include <limits.h>
 
-#include "api.h"
+#include "libcni_api.h"
 
-#include "isula_libutils/log.h"
-#include "invoke_errno.h"
-#include "current.h"
-#include "conf.h"
-#include "args.h"
-#include "tools.h"
-#include "exec.h"
 #include "utils.h"
-#include "types.h"
+#include "isula_libutils/log.h"
+#include "libcni_errno.h"
+#include "libcni_current.h"
+#include "libcni_conf.h"
+#include "libcni_args.h"
+#include "libcni_tools.h"
+#include "libcni_exec.h"
+#include "libcni_types.h"
 
 static int add_network_list(const struct network_config_list *list, const struct runtime_conf *rc,
                             const char * const *paths, size_t paths_len, struct result **pret, char **err);
@@ -53,10 +53,10 @@ static int copy_cni_port_mapping(cni_inner_port_mapping *dst, const struct cni_p
         return -1;
     }
     if (src->protocol != NULL) {
-        dst->protocol = clibcni_util_strdup_s(src->protocol);
+        dst->protocol = util_strdup_s(src->protocol);
     }
     if (src->host_ip != NULL) {
-        dst->host_ip = clibcni_util_strdup_s(src->host_ip);
+        dst->host_ip = util_strdup_s(src->host_ip);
     }
     dst->container_port = src->container_port;
     dst->host_port = src->host_port;
@@ -78,27 +78,27 @@ static int inject_cni_port_mapping(const struct runtime_conf *rt, cni_net_conf_r
     }
 
     if (rt->p_mapping_len > (SIZE_MAX / sizeof(cni_inner_port_mapping*))) {
-        *err = clibcni_util_strdup_s("Too many mapping");
+        *err = util_strdup_s("Too many mapping");
         ERROR("Too many mapping");
         return -1;
     }
 
-    rt_config->port_mappings = clibcni_util_common_calloc_s(sizeof(cni_inner_port_mapping*) * (rt->p_mapping_len));
+    rt_config->port_mappings = util_common_calloc_s(sizeof(cni_inner_port_mapping*) * (rt->p_mapping_len));
     if (rt_config->port_mappings == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         return -1;
     }
     for (j = 0; j < rt->p_mapping_len; j++) {
-        rt_config->port_mappings[j] = clibcni_util_common_calloc_s(sizeof(cni_inner_port_mapping));
+        rt_config->port_mappings[j] = util_common_calloc_s(sizeof(cni_inner_port_mapping));
         if (rt_config->port_mappings[j] == NULL) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             return -1;
         }
         (rt_config->port_mappings_len)++;
         if (copy_cni_port_mapping(rt_config->port_mappings[j], rt->p_mapping[j]) != 0) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             return -1;
         }
@@ -114,9 +114,9 @@ static int inject_runtime_config_items(const struct network_config *orig, const 
     int ret = -1;
     size_t i = 0;
 
-    *rt_config = clibcni_util_common_calloc_s(sizeof(cni_net_conf_runtime_config));
+    *rt_config = util_common_calloc_s(sizeof(cni_net_conf_runtime_config));
     if (*rt_config == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         goto free_out;
     }
@@ -150,7 +150,7 @@ static int do_generate_cni_net_conf_json(const struct network_config *orig, char
     *result = cni_net_conf_generate_json(orig->network, &ctx, &jerr);
     if (*result == NULL) {
         if (asprintf(err, "generate json failed: %s", jerr) < 0) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
         }
         ERROR("Generate json: %s", jerr);
@@ -246,9 +246,9 @@ static int build_one_config(const struct network_config_list *list, struct netwo
 
     work = orig->network;
     free(work->name);
-    work->name = clibcni_util_strdup_s(list->list->name);
+    work->name = util_strdup_s(list->list->name);
     free(work->cni_version);
-    work->cni_version = clibcni_util_strdup_s(list->list->cni_version);
+    work->cni_version = util_strdup_s(list->list->cni_version);
 
     if (do_inject_prev_result(prev_result, work, err) != 0) {
         ERROR("Inject pre result failed: %s", *err != NULL ? *err : "");
@@ -263,7 +263,7 @@ static int build_one_config(const struct network_config_list *list, struct netwo
     ret = 0;
 free_out:
     if (ret != 0 && *err == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
     }
     return ret;
 }
@@ -281,7 +281,7 @@ static int do_check_generate_cni_net_conf_json(char **full_conf_bytes, struct ne
         pnet->bytes = cni_net_conf_generate_json(pnet->network, &ctx, &serr);
         if (pnet->bytes == NULL) {
             if (asprintf(err, "Generate json failed: %s", serr) < 0) {
-                *err = clibcni_util_strdup_s("Out of memory");
+                *err = util_strdup_s("Out of memory");
             }
             ERROR("Generate json: %s", serr);
             ret = -1;
@@ -308,7 +308,7 @@ static int run_cni_plugin(const struct network_config_list *list, size_t i, cons
 
     net.network = list->list->plugins[i];
     if (net.network == NULL) {
-        *err = clibcni_util_strdup_s("Empty network");
+        *err = util_strdup_s("Empty network");
         ERROR("Empty network");
         goto free_out;
     }
@@ -316,7 +316,7 @@ static int run_cni_plugin(const struct network_config_list *list, size_t i, cons
     ret = find_in_path(net.network->type, paths, paths_len, &plugin_path, &save_errno);
     if (ret != 0) {
         if (asprintf(err, "find plugin: \"%s\" failed: %s", net.network->type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
         }
         ERROR("find plugin: \"%s\" failed: %s", net.network->type, get_invoke_err_msg(save_errno));
         goto free_out;
@@ -441,7 +441,7 @@ static int add_network(const struct network_config *net, const struct runtime_co
     ret = find_in_path(net->network->type, paths, paths_len, &plugin_path, &save_errno);
     if (ret != 0) {
         if (asprintf(err, "find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
         }
         ERROR("find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno));
         goto free_out;
@@ -489,7 +489,7 @@ static int del_network(const struct network_config *net, const struct runtime_co
     ret = find_in_path(net->network->type, paths, paths_len, &plugin_path, &save_errno);
     if (ret != 0) {
         if (asprintf(err, "find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
         }
         ERROR("find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno));
         goto free_out;
@@ -527,14 +527,14 @@ static int do_copy_plugin_args(const struct runtime_conf *rc, struct cni_args **
         ERROR("Large arguments");
         return -1;
     }
-    (*cargs)->plugin_args = clibcni_util_common_calloc_s((rc->args_len) * sizeof(char *) * 2);
+    (*cargs)->plugin_args = util_common_calloc_s((rc->args_len) * sizeof(char *) * 2);
     if ((*cargs)->plugin_args == NULL) {
         ERROR("Out of memory");
         return -1;
     }
     for (i = 0; i < rc->args_len; i++) {
-        (*cargs)->plugin_args[i][0] = clibcni_util_strdup_s(rc->args[i][0]);
-        (*cargs)->plugin_args[i][1] = clibcni_util_strdup_s(rc->args[i][1]);
+        (*cargs)->plugin_args[i][0] = util_strdup_s(rc->args[i][0]);
+        (*cargs)->plugin_args[i][1] = util_strdup_s(rc->args[i][1]);
         (*cargs)->plugin_args_len = (i + 1);
     }
 
@@ -544,13 +544,13 @@ static int do_copy_plugin_args(const struct runtime_conf *rc, struct cni_args **
 static int copy_args(const struct runtime_conf *rc, struct cni_args **cargs)
 {
     if (rc->container_id != NULL) {
-        (*cargs)->container_id = clibcni_util_strdup_s(rc->container_id);
+        (*cargs)->container_id = util_strdup_s(rc->container_id);
     }
     if (rc->netns != NULL) {
-        (*cargs)->netns = clibcni_util_strdup_s(rc->netns);
+        (*cargs)->netns = util_strdup_s(rc->netns);
     }
     if (rc->ifname != NULL) {
-        (*cargs)->ifname = clibcni_util_strdup_s(rc->ifname);
+        (*cargs)->ifname = util_strdup_s(rc->ifname);
     }
 
     return do_copy_plugin_args(rc, cargs);
@@ -563,9 +563,9 @@ static int do_copy_args_paths(const char * const *paths, size_t paths_len, struc
     }
 
     if (paths_len == 0) {
-        (*cargs)->path = clibcni_util_strdup_s("");
+        (*cargs)->path = util_strdup_s("");
     } else {
-        (*cargs)->path = clibcni_util_string_join(":", paths, paths_len);
+        (*cargs)->path = util_string_join(":", (const char **)paths, paths_len);
         if ((*cargs)->path == NULL) {
             ERROR("Out of memory");
             return -1;
@@ -588,14 +588,14 @@ static int args(const char *action, const struct runtime_conf *rc, const char * 
         ERROR("Empty arguments");
         return ret;
     }
-    *cargs = clibcni_util_common_calloc_s(sizeof(struct cni_args));
+    *cargs = util_common_calloc_s(sizeof(struct cni_args));
     if (*cargs == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         goto free_out;
     }
     if (action != NULL) {
-        (*cargs)->command = clibcni_util_strdup_s(action);
+        (*cargs)->command = util_strdup_s(action);
     }
     if (do_copy_args_paths(paths, paths_len, cargs) != 0) {
         goto free_out;
@@ -607,7 +607,7 @@ free_out:
         free_cni_args(*cargs);
         *cargs = NULL;
         if (*err == NULL) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
         }
     }
     return ret;
@@ -685,7 +685,7 @@ int cni_add_network_list(const char *net_list_conf_str, const struct runtime_con
         return -1;
     }
     if (net_list_conf_str == NULL) {
-        *err = clibcni_util_strdup_s("Empty net list conf argument");
+        *err = util_strdup_s("Empty net list conf argument");
         ERROR("Empty net list conf argument");
         return -1;
     }
@@ -696,7 +696,7 @@ int cni_add_network_list(const char *net_list_conf_str, const struct runtime_con
         return ret;
     }
 
-    len = clibcni_util_array_len((const char * const *)paths);
+    len = util_array_len((const char **)paths);
     ret = add_network_list(list, rc, (const char * const *)paths, len, pret, err);
 
     DEBUG("Add network list return with: %d", ret);
@@ -717,7 +717,7 @@ int cni_add_network(const char *cni_net_conf_str, const struct runtime_conf *rc,
         return -1;
     }
     if (cni_net_conf_str == NULL) {
-        *err = clibcni_util_strdup_s("Empty net conf argument");
+        *err = util_strdup_s("Empty net conf argument");
         ERROR("Empty net conf argument");
         return -1;
     }
@@ -728,7 +728,7 @@ int cni_add_network(const char *cni_net_conf_str, const struct runtime_conf *rc,
         return ret;
     }
 
-    len = clibcni_util_array_len((const char * const *)paths);
+    len = util_array_len((const char **)paths);
     ret = add_network(net, rc, (const char * const *)paths, len, add_result, err);
     free_network_config(net);
     return ret;
@@ -745,7 +745,7 @@ int cni_del_network_list(const char *net_list_conf_str, const struct runtime_con
         return -1;
     }
     if (net_list_conf_str == NULL) {
-        *err = clibcni_util_strdup_s("Empty net list conf argument");
+        *err = util_strdup_s("Empty net list conf argument");
         ERROR("Empty net list conf argument");
         return -1;
     }
@@ -756,7 +756,7 @@ int cni_del_network_list(const char *net_list_conf_str, const struct runtime_con
         return ret;
     }
 
-    len = clibcni_util_array_len((const char * const *)paths);
+    len = util_array_len((const char **)paths);
     ret = del_network_list(list, rc, (const char * const *)paths, len, err);
 
     DEBUG("Delete network list return with: %d", ret);
@@ -775,7 +775,7 @@ int cni_del_network(const char *cni_net_conf_str, const struct runtime_conf *rc,
         return -1;
     }
     if (cni_net_conf_str == NULL) {
-        *err = clibcni_util_strdup_s("Empty net conf argument");
+        *err = util_strdup_s("Empty net conf argument");
         ERROR("Empty net conf argument");
         return -1;
     }
@@ -786,7 +786,7 @@ int cni_del_network(const char *cni_net_conf_str, const struct runtime_conf *rc,
         return ret;
     }
 
-    len = clibcni_util_array_len((const char * const *)paths);
+    len = util_array_len((const char **)paths);
     ret = del_network(net, rc, (const char * const *)paths, len, err);
     free_network_config(net);
     return ret;
@@ -803,11 +803,11 @@ int cni_get_version_info(const char *plugin_type, char **paths, struct plugin_in
         ERROR("Empty err");
         return -1;
     }
-    len = clibcni_util_array_len((const char * const *)paths);
+    len = util_array_len((const char **)paths);
     ret = find_in_path(plugin_type, (const char * const *)paths, len, &plugin_path, &save_errno);
     if (ret != 0) {
         if (asprintf(err, "find plugin: \"%s\" failed: %s", plugin_type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = clibcni_util_strdup_s("Out of memory");
+            *err = util_strdup_s("Out of memory");
         }
         ERROR("find plugin: \"%s\" failed: %s", plugin_type, get_invoke_err_msg(save_errno));
         return ret;
@@ -842,17 +842,17 @@ int cni_conf_from_file(const char *filename, struct cni_network_conf **config, c
         return ret;
     }
 
-    *config = clibcni_util_common_calloc_s(sizeof(struct cni_network_conf));
+    *config = util_common_calloc_s(sizeof(struct cni_network_conf));
     if (*config == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
         ret = -1;
         ERROR("Out of memory");
         goto free_out;
     }
 
     if (netconf != NULL && netconf->network != NULL) {
-        (*config)->type = netconf->network->type ? clibcni_util_strdup_s(netconf->network->type) : NULL;
-        (*config)->name = netconf->network->name ? clibcni_util_strdup_s(netconf->network->name) : NULL;
+        (*config)->type = netconf->network->type ? util_strdup_s(netconf->network->type) : NULL;
+        (*config)->name = netconf->network->name ? util_strdup_s(netconf->network->name) : NULL;
     }
     if (netconf != NULL) {
         (*config)->bytes = netconf->bytes;
@@ -875,13 +875,13 @@ static void json_obj_to_cni_list_conf(struct network_config_list *src, struct cn
     list->bytes = src->bytes;
     src->bytes = NULL;
     if (src->list != NULL) {
-        list->name = src->list->name ? clibcni_util_strdup_s(src->list->name) : NULL;
+        list->name = src->list->name ? util_strdup_s(src->list->name) : NULL;
         list->plugin_len = src->list->plugins_len;
         if (src->list->plugins_len > 0 && src->list->plugins != NULL && src->list->plugins[0] != NULL) {
             list->first_plugin_name = src->list->plugins[0]->name != NULL ?
-                                      clibcni_util_strdup_s(src->list->plugins[0]->name) : NULL;
+                                      util_strdup_s(src->list->plugins[0]->name) : NULL;
             list->first_plugin_type = src->list->plugins[0]->type != NULL ?
-                                      clibcni_util_strdup_s(src->list->plugins[0]->type) : NULL;
+                                      util_strdup_s(src->list->plugins[0]->type) : NULL;
         }
     }
 }
@@ -899,9 +899,9 @@ int cni_conflist_from_bytes(const char *bytes, struct cni_network_list_conf **li
     if (ret != 0) {
         return ret;
     }
-    *list = clibcni_util_common_calloc_s(sizeof(struct cni_network_list_conf));
+    *list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (*list == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
         ret = -1;
         ERROR("Out of memory");
         goto free_out;
@@ -928,9 +928,9 @@ int cni_conflist_from_file(const char *filename, struct cni_network_list_conf **
     if (ret != 0) {
         return ret;
     }
-    *list = clibcni_util_common_calloc_s(sizeof(struct cni_network_list_conf));
+    *list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (*list == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
         ret = -1;
         ERROR("Out of memory");
         goto free_out;
@@ -965,7 +965,7 @@ int cni_conflist_from_conf(const struct cni_network_conf *cni_conf, struct cni_n
 
     invalid_arg = check_cni_conflist_from_conf_args(cni_conf, cni_conf_list);
     if (invalid_arg) {
-        *err = clibcni_util_strdup_s("Empty cni conf or conflist argument");
+        *err = util_strdup_s("Empty cni conf or conflist argument");
         ERROR("Empty cni conf or conflist argument");
         return -1;
     }
@@ -980,9 +980,9 @@ int cni_conflist_from_conf(const struct cni_network_conf *cni_conf, struct cni_n
         goto free_out;
     }
 
-    *cni_conf_list = clibcni_util_common_calloc_s(sizeof(struct cni_network_list_conf));
+    *cni_conf_list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (*cni_conf_list == NULL) {
-        *err = clibcni_util_strdup_s("Out of memory");
+        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         ret = -1;
         goto free_out;

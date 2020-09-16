@@ -10,18 +10,30 @@
  * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2019-04-25
- * Description: provide result function definition
+ * Description: provide exec function definition
  ********************************************************************************/
-#ifndef CLIBCNI_TYPES_CURRENT_H
-#define CLIBCNI_TYPES_CURRENT_H
 
-#include "types.h"
-#include "isula_libutils/cni_result_curr.h"
+#ifndef CLIBCNI_INVOKE_EXEC_H
+#define CLIBCNI_INVOKE_EXEC_H
 
-#define curr_implemented_spec_version "0.3.1"
+#include "libcni_args.h"
+#include "libcni_types.h"
+#include "libcni_version.h"
+#include "isula_libutils/cni_exec_error.h"
 
-struct result *new_curr_result(const char *json_data, char **err);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-cni_result_curr *cni_result_curr_to_json_result(const struct result *src, char **err);
+int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs,
+                            struct result **ret, char **err);
 
+int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs,
+                               char **err);
+
+int raw_get_version_info(const char *plugin_path, struct plugin_info **result, char **err);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -17,7 +17,7 @@
 
 #include <sys/types.h>
 
-#include "version.h"
+#include "libcni_version.h"
 
 #ifdef __cplusplus
 extern "C" {
