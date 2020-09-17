@@ -334,7 +334,7 @@ static int get_quota_stat(const char *backing_fs_blockdev)
 
     ret = quotactl(QCMD(Q_XGETQSTAT, FS_PROJ_QUOTA), backing_fs_blockdev, 0, (caddr_t)&fs_quota_stat_info);
     if (ret != 0) {
-        SYSERROR("Failed to get quota stat on %s", backing_fs_blockdev);
+        SYSWARN("Failed to get quota stat on %s", backing_fs_blockdev);
         return ret;
     }
 

@@ -219,7 +219,7 @@ static int get_containers_from_json()
     for (i = 0; i < container_dirs_num; i++) {
         if (util_reg_match(id_patten, container_dirs[i]) != 0) {
             WARN("Container's json is placed inside container's data directory, so skip any other file or directory: %s",
-                  container_dirs[i]);
+                 container_dirs[i]);
             continue;
         }
 

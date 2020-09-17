@@ -98,7 +98,8 @@ struct graphdriver {
     // options for device mapper
     struct device_set *devset;
 
-    pthread_rwlock_t rwlock; // lock to protect graphdriver between cleanup and other operations
+    // lock to protect graphdriver between cleanup and other operations
+    pthread_rwlock_t rwlock;
 };
 
 int graphdriver_init(const struct storage_module_init_options *opts);

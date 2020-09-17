@@ -275,6 +275,7 @@ int overlay2_init(struct graphdriver *driver, const char *drvier_home, const cha
     char *root_dir = NULL;
 
     if (driver == NULL || drvier_home == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
@@ -874,6 +875,7 @@ int overlay2_create_rw(const char *id, const char *parent, const struct graphdri
     int ret = 0;
 
     if (id == NULL || driver == NULL || create_opts == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
@@ -899,22 +901,17 @@ out:
 int overlay2_create_ro(const char *id, const char *parent, const struct graphdriver *driver,
                        const struct driver_create_opts *create_opts)
 {
-    int ret = 0;
-
     if (id == NULL || driver == NULL || create_opts == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
     if (create_opts->storage_opt != NULL && create_opts->storage_opt->len != 0) {
         ERROR("--storage-opt size is only supported for ReadWrite Layers");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
-    ret = do_create(id, parent, driver, create_opts);
-
-out:
-    return ret;
+    return do_create(id, parent, driver, create_opts);
 }
 
 static char *read_layer_link_file(const char *layer_dir)
@@ -961,6 +958,7 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
     char clean_path[PATH_MAX] = { 0 };
 
     if (id == NULL || driver == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
@@ -1498,6 +1496,7 @@ char *overlay2_mount_layer(const char *id, const struct graphdriver *driver, con
     char *layer_dir = NULL;
 
     if (id == NULL || driver == NULL) {
+        ERROR("Invalid input arguments");
         return NULL;
     }
 
@@ -1530,6 +1529,7 @@ int overlay2_umount_layer(const char *id, const struct graphdriver *driver)
     char *layer_dir = NULL;
 
     if (id == NULL || driver == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
@@ -1819,6 +1819,7 @@ int overlay2_get_driver_status(const struct graphdriver *driver, struct graphdri
     char tmp[MAX_INFO_LENGTH] = { 0 };
 
     if (driver == NULL || status == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
@@ -1860,6 +1861,7 @@ int overlay2_clean_up(struct graphdriver *driver)
     int ret = 0;
 
     if (driver == NULL) {
+        ERROR("Invalid input arguments");
         ret = -1;
         goto out;
     }
@@ -1905,6 +1907,7 @@ int overlay2_repair_lowers(const char *id, const char *parent, const struct grap
     size_t lowers_size = 0;
 
     if (id == NULL || driver == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
@@ -2020,6 +2023,7 @@ int overlay2_get_layer_fs_info(const char *id, const struct graphdriver *driver,
     char *layer_diff = NULL;
 
     if (id == NULL || fs_info == NULL) {
+        ERROR("Invalid input arguments");
         return -1;
     }
 
