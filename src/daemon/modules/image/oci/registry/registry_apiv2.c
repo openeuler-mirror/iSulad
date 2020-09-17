@@ -717,6 +717,7 @@ static void try_log_resp_body(char *path, char *file)
     if (size < LXC_LOG_BUFFER_SIZE) { // Max length not exactly, just avoid too long.
         ERROR("Get %s response message body: %s", path, body);
     }
+    free(body);
     return;
 }
 

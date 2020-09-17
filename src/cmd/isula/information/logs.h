@@ -25,13 +25,16 @@
 extern "C" {
 #endif
 
-#define LOGS_OPTIONS(cmdargs)                                                                                         \
-    { CMD_OPT_TYPE_BOOL, false, "follow", 'f', &(cmdargs).follow, "Follow log output", NULL },                        \
-    {                                                                                                                 \
-     CMD_OPT_TYPE_CALLBACK, false, "tail", 0, &(cmdargs).tail, "Number of lines to show from the end of the logs",    \
-     callback_tail                                                                                                    \
-    },                                                                                                                \
-    { CMD_OPT_TYPE_BOOL, false, "timestamps", 't', &(cmdargs).timestamps, "Show timestamps", NULL }
+#define LOGS_OPTIONS(cmdargs)                                                                  \
+    { CMD_OPT_TYPE_BOOL, false, "follow", 'f', &(cmdargs).follow, "Follow log output", NULL }, \
+    { CMD_OPT_TYPE_CALLBACK,                                                           \
+      false,                                                                           \
+      "tail",                                                                          \
+      0,                                                                               \
+      &(cmdargs).tail,                                                                 \
+      "Number of lines to show from the end of the logs",                              \
+      callback_tail },                                                                 \
+    { CMD_OPT_TYPE_BOOL, false, "timestamps", 't', &(cmdargs).timestamps, "Show timestamps", NULL },
 
 extern const char g_cmd_logs_desc[];
 extern const char g_cmd_logs_usage[];
