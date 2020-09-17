@@ -26,6 +26,8 @@ $ sudo isulad  # run the server with default socket name and default log level a
 ```
 ### Operations on containers:
 
+For more informations on how to use `iSulad`, please refer to the [guide](https://openeuler.org/en/docs/20.03_LTS/docs/Container/isulad-container-engine.html)
+
 `iSulad` provides two operate interfaces to manager images and containers.
 
 - CLI, `iSulad` provides `isula` as client CLI
