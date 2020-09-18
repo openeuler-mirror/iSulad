@@ -9,6 +9,16 @@
 ### Installing
 To install iSulad, you can use `rpm` or `yum` package manager command with `openEuler` repository.
 
+Or write repository file by hand:
+
+```sh
+cat << EOF > /etc/yum.repos.d/openEuler.repo
+[openEuler]
+baseurl=https://repo.openeuler.org/openEuler-20.03-LTS/OS/\$basearch
+enabled=1
+EOF
+```
+
 Install iSulad with yum
 ```sh
 yum install -y iSulad
