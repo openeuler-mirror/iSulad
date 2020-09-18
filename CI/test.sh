@@ -42,6 +42,6 @@ elif [ "x$subcmd" == "xget" ];then
         sleep 2
     done
 else
-    echo "unknwon subcmd $subcmd"
+    echo "unknown subcmd $subcmd"
     exit 1
 fi

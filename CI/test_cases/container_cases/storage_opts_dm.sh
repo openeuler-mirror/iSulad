@@ -84,7 +84,7 @@ function do_test()
 {
     local ret=0
 
-    local test="devicemapper dm.mkfsarg adn dm.mountopt params test => (${FUNCNAME[@]})"
+    local test="devicemapper dm.mkfsarg and dm.mountopt params test => (${FUNCNAME[@]})"
     msg_info "${test} starting..."
 
     isula pull $image_busybox
