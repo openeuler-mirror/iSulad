@@ -39,8 +39,8 @@ function isula_pull()
     isula inspect busybox
     fn_check_eq "$?" "0" "isula inspect busybox"
 
-    isula pull hub-mirror.c.163.com/library/busybox
-    fn_check_eq "$?" "0" "isula pull hub-mirror.c.163.com/library/busybox"
+    isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox
+    fn_check_eq "$?" "0" "isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox"
 
     rm -f /etc/isulad/daemon.json.bak
     cp /etc/isulad/daemon.json /etc/isulad/daemon.json.bak
@@ -59,7 +59,7 @@ function isula_pull()
     cp /etc/isulad/daemon.json.bak /etc/isulad/daemon.json
     rm -f /etc/isulad/daemon.json.bak
 
-    isula rmi hub-mirror.c.163.com/library/busybox
+    isula rmi 3laho3y3.mirror.aliyuncs.com/library/busybox
 
     check_valgrind_log
     fn_check_eq "$?" "0" "stop isulad with check valgrind"
@@ -70,12 +70,12 @@ function isula_pull()
 
 function isula_login()
 {
-    isula login -u test -p test hub-mirror.c.163.com
-    fn_check_eq "$?" "0" "isula login -u test -p test hub-mirror.c.163.com"
+    isula login -u test -p test 3laho3y3.mirror.aliyuncs.com
+    fn_check_eq "$?" "0" "isula login -u test -p test 3laho3y3.mirror.aliyuncs.com"
 
     # double login for memory leak check
-    isula login -u test -p test hub-mirror.c.163.com
-    fn_check_eq "$?" "0" "isula login -u test -p test hub-mirror.c.163.com"
+    isula login -u test -p test 3laho3y3.mirror.aliyuncs.com
+    fn_check_eq "$?" "0" "isula login -u test -p test 3laho3y3.mirror.aliyuncs.com"
 
     # use username/password to pull busybox for memmory leak check
     isula pull busybox
@@ -84,12 +84,12 @@ function isula_login()
 
 function isula_logout()
 {
-    isula logout hub-mirror.c.163.com
-    fn_check_eq "$?" "0" "isula logout hub-mirror.c.163.com"
+    isula logout 3laho3y3.mirror.aliyuncs.com
+    fn_check_eq "$?" "0" "isula logout 3laho3y3.mirror.aliyuncs.com"
 
     # double logout for memory leak check
-    isula logout hub-mirror.c.163.com
-    fn_check_eq "$?" "0" "isula logout hub-mirror.c.163.com"
+    isula logout 3laho3y3.mirror.aliyuncs.com
+    fn_check_eq "$?" "0" "isula logout 3laho3y3.mirror.aliyuncs.com"
 }
 
 function do_test_t()
