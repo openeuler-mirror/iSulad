@@ -78,7 +78,7 @@ TEST_F(ContainerPauseUnitTest, test_cmd_pause_main)
     EXPECT_EXIT(cmd_pause_main(sizeof(argv) / sizeof(argv[0]), const_cast<const char **>(argv)),
                 testing::ExitedWithCode(0), "");
     EXPECT_EXIT(cmd_pause_main(sizeof(argv_failure) / sizeof(argv_failure[0]), const_cast<const char **>(argv_failure)),
-                testing::ExitedWithCode(125), "Unkown flag found");
+                testing::ExitedWithCode(125), "Unknown flag found");
     testing::Mock::VerifyAndClearExpectations(&m_grpcClient);
 }
 

@@ -798,7 +798,7 @@ out:
 
 static bool is_variant_same(char *variant1, char *variant2)
 {
-    // Compatiable with manifests which didn't have variant
+    // Compatible with manifests which didn't have variant
     if (variant1 == NULL || variant2 == NULL) {
         return true;
     }

@@ -930,7 +930,7 @@ out:
     return ret;
 }
 
-/* When inspect none image, we respone following string according hasen's request. */
+/* When inspect none image, we respond following string according hasen's request. */
 #define INSPECT_NONE_IMAGE_RESP \
     "{                                                                            \
     \"ContainerConfig\": {                                                        \

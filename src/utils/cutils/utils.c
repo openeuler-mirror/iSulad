@@ -1429,7 +1429,7 @@ static int util_input(char *buf, size_t maxlen, bool echo_back)
     return ret;
 }
 
-// Get input from stdin, echo back if get any charactor.
+// Get input from stdin, echo back if get any character.
 int util_input_echo(char *buf, size_t maxlen)
 {
     return util_input(buf, maxlen, true);

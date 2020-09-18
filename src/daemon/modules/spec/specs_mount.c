@@ -178,7 +178,7 @@ static bool valid_dirent_info(const char *dir, const struct dirent *info_archivo
         return false;
     }
 
-    // do not map device which name containes ":"
+    // do not map device which name contains ":"
     pdot = strstr(info_archivo->d_name, ":");
     if (pdot != NULL) {
         INFO("Skipping device %s include \":\"", info_archivo->d_name);

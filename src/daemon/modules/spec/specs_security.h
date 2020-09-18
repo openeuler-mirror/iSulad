@@ -25,7 +25,7 @@
 #include "isula_libutils/container_config_v2.h"
 #include "isula_libutils/oci_runtime_spec.h"
 
-int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_capabilities *capabilites);
+int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_capabilities *capabilities);
 int merge_caps(oci_runtime_spec *oci_spec, const char **adds, size_t adds_len, const char **drops, size_t drops_len);
 int refill_oci_process_capabilities(defs_process_capabilities **caps, const char **src_caps, size_t src_caps_len);
 int merge_sysctls(oci_runtime_spec *oci_spec, const json_map_string_string *sysctls);

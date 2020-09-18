@@ -312,7 +312,7 @@ static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
     /* If layer is a directory, digest must be empty */
     if ((int)fmod == S_IFDIR) {
         ERROR("Invalid digest %s, digest must be empty if media type is %s", digest, MediaTypeEmbeddedLayerDir);
-        isulad_try_set_error_message("Invalid content in mainfest: layer digest must be empty if mediaType is %s",
+        isulad_try_set_error_message("Invalid content in manifest: layer digest must be empty if mediaType is %s",
                                      MediaTypeEmbeddedLayerDir);
         return false;
     }
@@ -320,13 +320,13 @@ static bool validate_layer_digest(size_t layer_index, char *path, uint32_t fmod,
     /* check if digest format is valid */
     if (!util_valid_digest(digest)) {
         ERROR("invalid digest %s for layer", digest);
-        isulad_try_set_error_message("Invalid content in mainfest: layer(except first layer) has invalid digest");
+        isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) has invalid digest");
         return false;
     }
 
     /* calc and check digest */
     if (!sha256_valid_digest_file(path, digest)) {
-        isulad_try_set_error_message("Invalid content in mainfest: layer(except first layer) has invalid digest");
+        isulad_try_set_error_message("Invalid content in manifest: layer(except first layer) has invalid digest");
         return false;
     }
 
@@ -386,7 +386,7 @@ static bool validate_image_name(char *image_name)
 {
     if (image_name == NULL) {
         ERROR("image name not exist");
-        isulad_try_set_error_message("Invalid content in manfiest: image name not exist");
+        isulad_try_set_error_message("Invalid content in manifest: image name not exist");
         return false;
     }
 
@@ -399,7 +399,7 @@ static bool validate_image_name(char *image_name)
 
     if (!util_valid_embedded_image_name(image_name)) {
         ERROR("invalid image name %s", image_name);
-        isulad_try_set_error_message("Invalid content in manfiest: invalid image name");
+        isulad_try_set_error_message("Invalid content in manifest: invalid image name");
         return false;
     }
     return true;
@@ -410,7 +410,7 @@ static bool validate_image_layers_number(size_t layers_len)
 {
     if (layers_len > LAYER_NUM_MAX || layers_len < 1) {
         ERROR("invalid layers number %ld maxium is %d", layers_len, LAYER_NUM_MAX);
-        isulad_try_set_error_message("Invalid content in mainfest: layer empty or max depth exceeded");
+        isulad_try_set_error_message("Invalid content in manifest: layer empty or max depth exceeded");
         return false;
     }
     return true;

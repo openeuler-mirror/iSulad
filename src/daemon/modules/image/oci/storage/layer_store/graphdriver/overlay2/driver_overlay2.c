@@ -683,7 +683,7 @@ out:
     return ret;
 }
 
-static int mk_sub_directorys(const char *id, const char *parent, const char *layer_dir, const char *driver_home)
+static int mk_sub_directories(const char *id, const char *parent, const char *layer_dir, const char *driver_home)
 {
     int ret = 0;
     char *lowers = NULL;
@@ -807,7 +807,7 @@ static int do_create(const char *id, const char *parent, const struct graphdrive
         }
     }
 
-    if (mk_sub_directorys(id, parent, layer_dir, driver->home) != 0) {
+    if (mk_sub_directories(id, parent, layer_dir, driver->home) != 0) {
         ret = -1;
         goto err_out;
     }

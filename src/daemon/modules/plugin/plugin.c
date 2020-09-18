@@ -691,7 +691,7 @@ static void *plugin_manager_routine(void *arg)
     // initilize inotify instance
     inotify_fd = inotify_init();
     if (inotify_fd < 0) {
-        ERROR("Failed to initalize inotify instance");
+        ERROR("Failed to initialize inotify instance");
         return NULL;
     }
     // add plugin_dir to watch
@@ -1129,7 +1129,7 @@ static int pm_init_plugin(const plugin_t *plugin)
         }
     }
     /*
-     * add elem to reqs, if no containers availabe add no elem.
+     * add elem to reqs, if no containers available add no elem.
      */
     for (i = 0; i < container_num; i++) {
         ret = pm_prepare_init_reqs(plugin, &reqs, cnames[i]);

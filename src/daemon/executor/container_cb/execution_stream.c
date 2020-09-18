@@ -1079,7 +1079,7 @@ static int64_t do_read_log_file(const char *path, int64_t require_line, long pos
         (*last_pos) += (long)strlen(buffer);
 
         if (do_decode_write_log_entry(buffer, stream) != 0) {
-            /* read a incomplete json object, try agin */
+            /* read a incomplete json object, try again */
             decode_retries++;
             if (decode_retries < MAX_JSON_DECODE_RETRY) {
                 continue;

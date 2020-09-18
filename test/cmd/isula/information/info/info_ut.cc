@@ -144,7 +144,7 @@ TEST_F(InfoUnitTest, test_cmd_info_main_all)
     EXPECT_EXIT(cmd_info_main(sizeof(argv) / sizeof(argv[0]), const_cast<const char **>(argv)),
                 testing::ExitedWithCode(0), "");
     EXPECT_EXIT(cmd_info_main(sizeof(argv_failure) / sizeof(argv_failure[0]), const_cast<const char **>(argv_failure)),
-                testing::ExitedWithCode(125), "Unkown flag found");
+                testing::ExitedWithCode(125), "Unknown flag found");
 
     std::string output = testing::internal::GetCapturedStdout();
     if (output.find("devicemapper") == std::string::npos) {

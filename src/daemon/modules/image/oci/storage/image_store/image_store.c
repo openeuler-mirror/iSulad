@@ -765,7 +765,7 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
         layers[index].empty_layer = v1config->throwaway;
         free_image_manifest_v1_compatibility(v1config);
         v1config = NULL;
-        // Cann't download an empty layer, skip related infomation.
+        // Cann't download an empty layer, skip related information.
         if (layers[index].empty_layer) {
             continue;
         }

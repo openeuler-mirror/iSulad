@@ -106,16 +106,16 @@ rb_tree_t *rbtree_new(key_comparator comparator, key_value_freer kvfreer)
     return tree;
 }
 
-static void rbtree_destory_all(rb_tree_t *tree, rb_node_t *node)
+static void rbtree_destroy_all(rb_tree_t *tree, rb_node_t *node)
 {
     if (node == tree->nil) {
         return;
     }
     if (node->left != tree->nil) {
-        rbtree_destory_all(tree, node->left);
+        rbtree_destroy_all(tree, node->left);
     }
     if (node->right != tree->nil) {
-        rbtree_destory_all(tree, node->right);
+        rbtree_destroy_all(tree, node->right);
     }
     if (tree->kvfreer != NULL) {
         tree->kvfreer(node->key, node->value);
@@ -128,7 +128,7 @@ void rbtree_clear(rb_tree_t *tree)
     if (tree == NULL) {
         return;
     }
-    rbtree_destory_all(tree, tree->root);
+    rbtree_destroy_all(tree, tree->root);
 }
 
 void rbtree_free(rb_tree_t *tree)

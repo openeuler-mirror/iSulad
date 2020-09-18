@@ -245,7 +245,7 @@ static const struct bim_type *bim_query(const char *image_name)
         }
         temp = g_bims[i].ops->resolve_image_name(image_name);
         if (temp == NULL) {
-            isulad_append_error_message("Failed to resovle image name%s", image_name);
+            isulad_append_error_message("Failed to resolve image name%s", image_name);
             return NULL;
         }
         int r = g_bims[i].ops->detect(temp);
@@ -325,7 +325,7 @@ static struct bim *bim_get(const char *image_type, const char *image_name, const
     if (image_name != NULL) {
         bim->image_name = bim->ops->resolve_image_name(image_name);
         if (bim->image_name == NULL) {
-            isulad_append_error_message("Failed to resovle image name%s", image_name);
+            isulad_append_error_message("Failed to resolve image name%s", image_name);
             bim_put(bim);
             return NULL;
         }

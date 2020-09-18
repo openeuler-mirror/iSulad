@@ -73,7 +73,7 @@ typedef struct {
     size_t file_list_len;
 } cached_layer;
 
-// Share infomation of downloading layers to avoid downloading the same layer.
+// Share information of downloading layers to avoid downloading the same layer.
 typedef struct {
     pthread_mutex_t mutex;
     bool mutex_inited;
@@ -135,7 +135,7 @@ static int parse_manifest_schema1(pull_descriptor *desc)
         desc->layers[index].empty_layer = v1config->throwaway;
         free_image_manifest_v1_compatibility(v1config);
         v1config = NULL;
-        // Cann't download an empty layer, skip related infomation.
+        // Cann't download an empty layer, skip related information.
         if (desc->layers[index].empty_layer) {
             continue;
         }

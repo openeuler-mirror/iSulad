@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  * Author: tanyifeng
  * Create: 2017-11-22
- * Description: provide container monitord functions
+ * Description: provide container monitored functions
  ******************************************************************************/
 #define _GNU_SOURCE
 
@@ -33,7 +33,7 @@
 #include "event_type.h"
 #include "utils_file.h"
 
-struct monitord_handler {
+struct monitored_handler {
     struct epoll_descr *pdescr;
     int fifo_fd;
     char *fifo_path;
@@ -61,8 +61,8 @@ out:
     return 0;
 }
 
-/* free monitord */
-static void free_monitord(struct monitord_handler *mhandler)
+/* free monitored */
+static void free_monitored(struct monitored_handler *mhandler)
 {
     if (mhandler->fifo_fd != -1) {
         epoll_loop_del_handler(mhandler->pdescr, mhandler->fifo_fd);
@@ -76,16 +76,16 @@ static void free_monitord(struct monitord_handler *mhandler)
         mhandler->fifo_path = NULL;
     }
 
-    DEBUG("Clean monitord data...");
+    DEBUG("Clean monitored data...");
 }
 
 #define EVENTS_FIFO_SIZE (1024 * 1024)
-/* monitord */
-static void *monitord(void *arg)
+/* monitored */
+static void *monitored(void *arg)
 {
     int ret = 0;
     char *fifo_file_path = NULL;
-    struct monitord_handler mhandler = { 0 };
+    struct monitored_handler mhandler = { 0 };
     struct flock mlock;
     struct monitord_sync_data *msync = arg;
     struct epoll_descr descr;
@@ -97,7 +97,7 @@ static void *monitord(void *arg)
         goto pexit;
     }
 
-    prctl(PR_SET_NAME, "Monitord");
+    prctl(PR_SET_NAME, "Monitored");
 
     ret = epoll_loop_open(&descr);
     if (ret != 0) {
@@ -114,13 +114,13 @@ static void *monitord(void *arg)
     mhandler.fifo_path = fifo_file_path;
 
     if (mknod(fifo_file_path, S_IFIFO | S_IRUSR | S_IWUSR, (dev_t)0) && errno != EEXIST) {
-        ERROR("Create monitord fifo file failed: %s", strerror(errno));
+        ERROR("Create monitored fifo file failed: %s", strerror(errno));
         goto err;
     }
 
     mhandler.fifo_fd = util_open(fifo_file_path, O_RDWR | O_NONBLOCK | O_CLOEXEC, 0);
     if (mhandler.fifo_fd == -1) {
-        ERROR("Open monitord fifo file failed: %s", strerror(errno));
+        ERROR("Open monitored fifo file failed: %s", strerror(errno));
         goto err;
     }
 
@@ -134,7 +134,7 @@ static void *monitord(void *arg)
     mlock.l_start = 0;
     mlock.l_len = 0;
     if (fcntl(mhandler.fifo_fd, F_SETLK, &mlock)) {
-        INFO("Monitord already running on path: %s", fifo_file_path);
+        INFO("Monitored already running on path: %s", fifo_file_path);
         goto err;
     }
 
@@ -146,7 +146,7 @@ static void *monitord(void *arg)
 
     sem_post(msync->monitord_sem);
 
-    /* loop forever except error occured */
+    /* loop forever except error occurred */
     do {
         ret = epoll_loop(&descr, -1);
     } while (ret == 0);
@@ -158,22 +158,22 @@ err:
     *(msync->exit_code) = -1;
     sem_post(msync->monitord_sem);
 err2:
-    free_monitord(&mhandler);
+    free_monitored(&mhandler);
     epoll_loop_close(&descr);
 
 pexit:
     return NULL;
 }
 
-/* new monitord */
+/* new monitored */
 int new_monitord(struct monitord_sync_data *msync)
 {
     int ret = 0;
     char *statedir = NULL;
-    pthread_t monitord_thread;
+    pthread_t monitored_thread;
 
     if (msync == NULL || msync->monitord_sem == NULL) {
-        ERROR("Monitord sem is NULL");
+        ERROR("Monitored sem is NULL");
         ret = -1;
         goto out;
     }
@@ -185,15 +185,15 @@ int new_monitord(struct monitord_sync_data *msync)
         goto out;
     }
 
-    if (setenv("ISULAD_MONITORD_PATH", statedir, 1)) {
-        ERROR("Setenv monitord path failed");
+    if (setenv("ISULAD_MONITORED_PATH", statedir, 1)) {
+        ERROR("Setenv monitored path failed");
         ret = -1;
         goto out;
     }
 
-    INFO("Starting monitord...");
-    if (pthread_create(&monitord_thread, NULL, monitord, msync) != 0) {
-        ERROR("Create monitord thread failed");
+    INFO("Starting monitored...");
+    if (pthread_create(&monitored_thread, NULL, monitored, msync) != 0) {
+        ERROR("Create monitored thread failed");
         ret = -1;
     }
 

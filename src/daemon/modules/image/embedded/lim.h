@@ -33,7 +33,7 @@ struct image_creator {
 struct image_info {
     char *image_name;           /* image name */
     char *image_type;           /* image type. docker or embedded */
-    int64_t size;               /* image sieze */
+    int64_t size;               /* image size */
     char *chain_id;             /* chain id of image's top layer */
     char *config_digest;        /* sha256 digest of image's config */
 };
