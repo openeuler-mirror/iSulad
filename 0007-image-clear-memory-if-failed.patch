@@ -1,0 +1,34 @@
+From 6e56e6d496ec6e28f9371e21a633f820bb95b141 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Tue, 15 Sep 2020 10:52:20 +0800
+Subject: [PATCH 07/10] image: clear memory if failed
+
+create layer failed, to clear memory data
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ .../modules/image/oci/storage/layer_store/layer_store.c       | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+index 934ec35..cf37bf9 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+@@ -1246,12 +1246,12 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
+     l = lookup(lid);
+     if (l == NULL) {
+         ret = -1;
+-        goto driver_remove;
++        goto clear_memory;
+     }
+     l->slayer->incompelte = true;
+     if (save_layer(l) != 0) {
+         ret = -1;
+-        goto driver_remove;
++        goto clear_memory;
+     }
+ 
+     ret = apply_diff(l, diff);
+-- 
+2.25.1
+

@@ -1,0 +1,623 @@
+From 86ccd26287eb9ae8e6e5656d4933ec4518adf24e Mon Sep 17 00:00:00 2001
+From: wujing <Jing.Woo@outlook.com>
+Date: Tue, 15 Sep 2020 12:14:32 +0800
+Subject: [PATCH 09/10] fix coredump when pull image with lock ${driver}-image
+ dir
+
+Signed-off-by: wujing <Jing.Woo@outlook.com>
+---
+ .../oci/storage/image_store/image_store.c     | 243 ++++++++--------
+ .../oci/storage/rootfs_store/rootfs_store.c   | 271 +++++++++---------
+ 2 files changed, 262 insertions(+), 252 deletions(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index 1d4add9..a6da9fe 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -1338,91 +1338,6 @@ out:
+     return im;
+ }
+ 
+-char *image_store_create(const char *id, const char **names, size_t names_len, const char *layer, const char *metadata,
+-                         const types_timestamp_t *time, const char *searchable_digest)
+-{
+-    int ret = 0;
+-    char *dst_id = NULL;
+-    char **unique_names = NULL;
+-    size_t unique_names_len = 0;
+-    image_t *img = NULL;
+-    storage_image *im = NULL;
+-
+-    if (g_image_store == NULL) {
+-        ERROR("Image store is not ready");
+-        return NULL;
+-    }
+-
+-    if (!image_store_lock(EXCLUSIVE)) {
+-        ERROR("Failed to lock image store with exclusive lock, not allowed to create new images");
+-        return NULL;
+-    }
+-
+-    if (id == NULL) {
+-        dst_id = generate_random_image_id();
+-    } else {
+-        dst_id = util_strdup_s(id);
+-    }
+-
+-    if (dst_id == NULL) {
+-        ERROR("Out of memory or generate random image id failed");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    if (map_search(g_image_store->byid, (void *)dst_id) != NULL) {
+-        ERROR("ID is already in use: %s", dst_id);
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+-        ERROR("Failed to unique names");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    im = new_storage_image(dst_id, searchable_digest, &unique_names, &unique_names_len, time, layer, metadata);
+-    if (im == NULL) {
+-        ERROR("Failed to generate new storage image");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    img = new_image(im);
+-    if (img == NULL) {
+-        ERROR("Out of memory");
+-        ret = -1;
+-        goto out;
+-    }
+-    im = NULL;
+-
+-    if (image_store_append_image(dst_id, searchable_digest, img) != 0) {
+-        ERROR("Failed to append image to image store");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    if (save_image(img->simage) != 0) {
+-        ERROR("Failed to save image");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-out:
+-    if (ret != 0) {
+-        free(dst_id);
+-        dst_id = NULL;
+-        free_storage_image(im);
+-        im = NULL;
+-        free_image_t(img);
+-        img = NULL;
+-    }
+-    util_free_array_by_len(unique_names, unique_names_len);
+-    image_store_unlock();
+-    return dst_id;
+-}
+-
+ static image_t *get_image_for_store_by_prefix(const char *id)
+ {
+     bool ret = true;
+@@ -1494,40 +1409,6 @@ found:
+     return value;
+ }
+ 
+-char *image_store_lookup(const char *id)
+-{
+-    char *image_id = NULL;
+-    image_t *img = NULL;
+-
+-    if (id == NULL) {
+-        ERROR("Invalid input parameter, id is NULL");
+-        return NULL;
+-    }
+-
+-    if (g_image_store == NULL) {
+-        ERROR("Image store is not ready");
+-        return NULL;
+-    }
+-
+-    if (!image_store_lock(SHARED)) {
+-        ERROR("Failed to lock image store with shared lock, not allowed to get image id assignments");
+-        return NULL;
+-    }
+-
+-    img = lookup(id);
+-    if (img == NULL) {
+-        ERROR("Image not known");
+-        goto out;
+-    }
+-
+-    image_id = util_strdup_s(img->simage->id);
+-
+-out:
+-    image_ref_dec(img);
+-    image_store_unlock();
+-    return image_id;
+-}
+-
+ static char *get_value_from_json_map_string_string(json_map_string_string *map, const char *key)
+ {
+     size_t i;
+@@ -1701,6 +1582,130 @@ out:
+     return ret;
+ }
+ 
++char *image_store_create(const char *id, const char **names, size_t names_len, const char *layer, const char *metadata,
++                         const types_timestamp_t *time, const char *searchable_digest)
++{
++    int ret = 0;
++    char *dst_id = NULL;
++    char **unique_names = NULL;
++    size_t unique_names_len = 0;
++    image_t *img = NULL;
++    storage_image *im = NULL;
++
++    if (g_image_store == NULL) {
++        ERROR("Image store is not ready");
++        return NULL;
++    }
++
++    if (!image_store_lock(EXCLUSIVE)) {
++        ERROR("Failed to lock image store with exclusive lock, not allowed to create new images");
++        return NULL;
++    }
++
++    if (id == NULL) {
++        dst_id = generate_random_image_id();
++    } else {
++        dst_id = util_strdup_s(id);
++    }
++
++    if (dst_id == NULL) {
++        ERROR("Out of memory or generate random image id failed");
++        ret = -1;
++        goto out;
++    }
++
++    if (map_search(g_image_store->byid, (void *)dst_id) != NULL) {
++        ERROR("ID is already in use: %s", dst_id);
++        ret = -1;
++        goto out;
++    }
++
++    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
++        ERROR("Failed to unique names");
++        ret = -1;
++        goto out;
++    }
++
++    im = new_storage_image(dst_id, searchable_digest, &unique_names, &unique_names_len, time, layer, metadata);
++    if (im == NULL) {
++        ERROR("Failed to generate new storage image");
++        ret = -1;
++        goto out;
++    }
++
++    img = new_image(im);
++    if (img == NULL) {
++        ERROR("Out of memory");
++        ret = -1;
++        goto out;
++    }
++    im = NULL;
++
++    if (image_store_append_image(dst_id, searchable_digest, img) != 0) {
++        ERROR("Failed to append image to image store");
++        ret = -1;
++        goto out;
++    }
++
++    if (save_image(img->simage) != 0) {
++        ERROR("Failed to save image");
++        if (do_delete_image_info(dst_id) != 0) {
++            ERROR("Failed to delete image info");
++        }
++        im = NULL;
++        img = NULL;
++        ret = -1;
++        goto out;
++    }
++
++out:
++    if (ret != 0) {
++        free(dst_id);
++        dst_id = NULL;
++        free_storage_image(im);
++        im = NULL;
++        free_image_t(img);
++        img = NULL;
++    }
++    util_free_array_by_len(unique_names, unique_names_len);
++    image_store_unlock();
++    return dst_id;
++}
++
++char *image_store_lookup(const char *id)
++{
++    char *image_id = NULL;
++    image_t *img = NULL;
++
++    if (id == NULL) {
++        ERROR("Invalid input parameter, id is NULL");
++        return NULL;
++    }
++
++    if (g_image_store == NULL) {
++        ERROR("Image store is not ready");
++        return NULL;
++    }
++
++    if (!image_store_lock(SHARED)) {
++        ERROR("Failed to lock image store with shared lock, not allowed to get image id assignments");
++        return NULL;
++    }
++
++    img = lookup(id);
++    if (img == NULL) {
++        ERROR("Image not known");
++        goto out;
++    }
++
++    image_id = util_strdup_s(img->simage->id);
++
++out:
++    image_ref_dec(img);
++    image_store_unlock();
++    return image_id;
++}
++
+ int image_store_delete(const char *id)
+ {
+     int ret = 0;
+diff --git a/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c b/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
+index acf4c51..070fdff 100644
+--- a/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
++++ b/src/daemon/modules/image/oci/storage/rootfs_store/rootfs_store.c
+@@ -728,90 +728,6 @@ out:
+     return ret;
+ }
+ 
+-char *rootfs_store_create(const char *id, const char **names, size_t names_len, const char *image, const char *layer,
+-                          const char *metadata, struct storage_rootfs_options *rootfs_opts)
+-{
+-    int ret = 0;
+-    char *dst_id = NULL;
+-    char **unique_names = NULL;
+-    size_t unique_names_len = 0;
+-    cntrootfs_t *cntr = NULL;
+-    storage_rootfs *c = NULL;
+-
+-    if (g_rootfs_store == NULL) {
+-        ERROR("Container store is not ready");
+-        return NULL;
+-    }
+-
+-    if (!rootfs_store_lock(EXCLUSIVE)) {
+-        ERROR("Failed to lock container store, not allowed to create new containers");
+-        return NULL;
+-    }
+-
+-    if (id == NULL) {
+-        dst_id = generate_random_container_id();
+-    } else {
+-        dst_id = util_strdup_s(id);
+-    }
+-
+-    if (dst_id == NULL) {
+-        ERROR("Out of memory or generate random container id failed");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    if (map_search(g_rootfs_store->byid, (void *)dst_id) != NULL) {
+-        ERROR("ID is already in use: %s", dst_id);
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
+-        ERROR("Failed to unique names");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    c = new_storage_rootfs(dst_id, image, unique_names, unique_names_len, layer, metadata, rootfs_opts);
+-    if (c == NULL) {
+-        ERROR("Failed to generate new storage container");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    cntr = new_rootfs(c);
+-    if (cntr == NULL) {
+-        ERROR("Out of memory");
+-        ret = -1;
+-        goto out;
+-    }
+-    c = NULL;
+-
+-    if (rootfs_store_append_container_rootfs(dst_id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
+-        ERROR("Failed to append container to container store");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-    if (save_rootfs(cntr) != 0) {
+-        ERROR("Failed to save container");
+-        ret = -1;
+-        goto out;
+-    }
+-
+-out:
+-    if (ret != 0) {
+-        free(dst_id);
+-        dst_id = NULL;
+-        free_storage_rootfs(c);
+-        c = NULL;
+-        free_rootfs_t(cntr);
+-        cntr = NULL;
+-    }
+-    rootfs_store_unlock();
+-    return dst_id;
+-}
+-
+ static cntrootfs_t *get_rootfs_for_store_by_prefix(const char *id)
+ {
+     bool ret = true;
+@@ -883,39 +799,6 @@ found:
+     return value;
+ }
+ 
+-char *rootfs_store_lookup(const char *id)
+-{
+-    char *container_id = NULL;
+-    cntrootfs_t *cntr = NULL;
+-
+-    if (id == NULL) {
+-        ERROR("Invalid input parameter, id is NULL");
+-        return NULL;
+-    }
+-
+-    if (g_rootfs_store == NULL) {
+-        ERROR("Container store is not ready");
+-        return NULL;
+-    }
+-
+-    if (!rootfs_store_lock(SHARED)) {
+-        ERROR("Failed to lock rootfs store, not allowed to lookup rootfs id assginments");
+-        return NULL;
+-    }
+-
+-    cntr = lookup(id);
+-    if (cntr == NULL) {
+-        ERROR("Container not known");
+-        return NULL;
+-    }
+-
+-    container_id = util_strdup_s(cntr->srootfs->id);
+-    rootfs_ref_dec(cntr);
+-    rootfs_store_unlock();
+-
+-    return container_id;
+-}
+-
+ static int remove_rootfs_from_memory(const char *id)
+ {
+     struct linked_list *item = NULL;
+@@ -985,13 +868,13 @@ static int remove_rootfs_dir(const char *id)
+     return 0;
+ }
+ 
+-int rootfs_store_delete(const char *id)
++static int delete_rootfs_from_store_without_lock(const char *id)
+ {
+-    cntrootfs_t *cntr = NULL;
+     int ret = 0;
++    cntrootfs_t *cntr = NULL;
+ 
+     if (id == NULL) {
+-        ERROR("Invalid input parameter, id is NULL");
++        ERROR("Invalid input parameter: empty id");
+         return -1;
+     }
+ 
+@@ -1000,16 +883,10 @@ int rootfs_store_delete(const char *id)
+         return -1;
+     }
+ 
+-    if (!rootfs_store_lock(EXCLUSIVE)) {
+-        ERROR("Failed to lock rootfs store");
+-        return -1;
+-    }
+-
+     cntr = lookup(id);
+     if (cntr == NULL) {
+-        WARN("rootfs %s not exists already, return success", id);
+-        ret = 0;
+-        goto out;
++        ERROR("Rootfs %s not known", id);
++        return -1;
+     }
+ 
+     if (remove_rootfs_from_memory(cntr->srootfs->id) != 0) {
+@@ -1026,17 +903,138 @@ int rootfs_store_delete(const char *id)
+ 
+ out:
+     rootfs_ref_dec(cntr);
+-    rootfs_store_unlock();
+     return ret;
+ }
+ 
+-static int delete_rootfs_from_store_without_lock(const char *id)
++char *rootfs_store_create(const char *id, const char **names, size_t names_len, const char *image, const char *layer,
++                          const char *metadata, struct storage_rootfs_options *rootfs_opts)
+ {
+     int ret = 0;
++    char *dst_id = NULL;
++    char **unique_names = NULL;
++    size_t unique_names_len = 0;
+     cntrootfs_t *cntr = NULL;
++    storage_rootfs *c = NULL;
++
++    if (g_rootfs_store == NULL) {
++        ERROR("Container store is not ready");
++        return NULL;
++    }
++
++    if (!rootfs_store_lock(EXCLUSIVE)) {
++        ERROR("Failed to lock container store, not allowed to create new containers");
++        return NULL;
++    }
+ 
+     if (id == NULL) {
+-        ERROR("Invalid input parameter: empty id");
++        dst_id = generate_random_container_id();
++    } else {
++        dst_id = util_strdup_s(id);
++    }
++
++    if (dst_id == NULL) {
++        ERROR("Out of memory or generate random container id failed");
++        ret = -1;
++        goto out;
++    }
++
++    if (map_search(g_rootfs_store->byid, (void *)dst_id) != NULL) {
++        ERROR("ID is already in use: %s", dst_id);
++        ret = -1;
++        goto out;
++    }
++
++    if (util_string_array_unique(names, names_len, &unique_names, &unique_names_len) != 0) {
++        ERROR("Failed to unique names");
++        ret = -1;
++        goto out;
++    }
++
++    c = new_storage_rootfs(dst_id, image, unique_names, unique_names_len, layer, metadata, rootfs_opts);
++    if (c == NULL) {
++        ERROR("Failed to generate new storage container");
++        ret = -1;
++        goto out;
++    }
++
++    cntr = new_rootfs(c);
++    if (cntr == NULL) {
++        ERROR("Out of memory");
++        ret = -1;
++        goto out;
++    }
++    c = NULL;
++
++    if (rootfs_store_append_container_rootfs(dst_id, layer, (const char **)unique_names, unique_names_len, cntr) != 0) {
++        ERROR("Failed to append container to container store");
++        ret = -1;
++        goto out;
++    }
++
++    if (save_rootfs(cntr) != 0) {
++        ERROR("Failed to save container");
++        if (delete_rootfs_from_store_without_lock(dst_id) != 0) {
++            ERROR("Failed to delete rootfs from store");
++        }
++        c = NULL;
++        cntr = NULL;
++        ret = -1;
++        goto out;
++    }
++
++out:
++    if (ret != 0) {
++        free(dst_id);
++        dst_id = NULL;
++        free_storage_rootfs(c);
++        c = NULL;
++        free_rootfs_t(cntr);
++        cntr = NULL;
++    }
++    rootfs_store_unlock();
++    return dst_id;
++}
++
++char *rootfs_store_lookup(const char *id)
++{
++    char *container_id = NULL;
++    cntrootfs_t *cntr = NULL;
++
++    if (id == NULL) {
++        ERROR("Invalid input parameter, id is NULL");
++        return NULL;
++    }
++
++    if (g_rootfs_store == NULL) {
++        ERROR("Container store is not ready");
++        return NULL;
++    }
++
++    if (!rootfs_store_lock(SHARED)) {
++        ERROR("Failed to lock rootfs store, not allowed to lookup rootfs id assginments");
++        return NULL;
++    }
++
++    cntr = lookup(id);
++    if (cntr == NULL) {
++        ERROR("Container not known");
++        return NULL;
++    }
++
++    container_id = util_strdup_s(cntr->srootfs->id);
++    rootfs_ref_dec(cntr);
++    rootfs_store_unlock();
++
++    return container_id;
++}
++
++int rootfs_store_delete(const char *id)
++{
++    cntrootfs_t *cntr = NULL;
++    int ret = 0;
++
++    if (id == NULL) {
++        ERROR("Invalid input parameter, id is NULL");
+         return -1;
+     }
+ 
+@@ -1045,10 +1043,16 @@ static int delete_rootfs_from_store_without_lock(const char *id)
+         return -1;
+     }
+ 
++    if (!rootfs_store_lock(EXCLUSIVE)) {
++        ERROR("Failed to lock rootfs store");
++        return -1;
++    }
++
+     cntr = lookup(id);
+     if (cntr == NULL) {
+-        ERROR("Rootfs %s not known", id);
+-        return -1;
++        WARN("rootfs %s not exists already, return success", id);
++        ret = 0;
++        goto out;
+     }
+ 
+     if (remove_rootfs_from_memory(cntr->srootfs->id) != 0) {
+@@ -1065,6 +1069,7 @@ static int delete_rootfs_from_store_without_lock(const char *id)
+ 
+ out:
+     rootfs_ref_dec(cntr);
++    rootfs_store_unlock();
+     return ret;
+ }
+ 
+-- 
+2.25.1
+

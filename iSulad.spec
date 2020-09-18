@@ -12,8 +12,17 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch6000:	0001-config-remove-unused-config.patch
-Patch6001:	0002-fix-modify-quota-log-level-to-warning.patch
+Patch6000:	0000-config-remove-unused-config.patch
+Patch6001:	0001-fix-modify-quota-log-level-to-warning.patch
+Patch6002:	0002-fix-memory-leak.patch
+Patch6003:	0003-fix-security-opt-parsing-access-out-of-bounds.patch
+Patch6004:	0004-fix-delete-rootfs-dir-when-rootfs-load-failed.patch
+Patch6005:	0005-fix-code-review.patch
+Patch6006:	0006-fix-pull-failure-caused-by-link-conflict.patch
+Patch6007:	0007-image-clear-memory-if-failed.patch
+Patch6008:	0008-fix-layer-remain-caused-by-hold-flag-not-clean.patch
+Patch6009:	0009-fix-coredump-when-pull-image-with-lock-driver-image-.patch
+Patch6010:	0010-fix-bad-formatting-placeholder-in-http-parse-module.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
