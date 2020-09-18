@@ -307,7 +307,7 @@ out:
     return ret;
 }
 
-static int write_auth_file(char *content)
+static int ensure_auth_dir_exist()
 {
     int ret = 0;
     char *auths_dir = NULL;
@@ -319,17 +319,10 @@ static int write_auth_file(char *content)
         goto out;
     }
 
-    ret = util_mkdir_p(auths_dir, 0700);
+    ret = util_mkdir_p(auths_dir, DEFAULT_AUTH_DIR_MODE);
     if (ret != 0) {
-        ERROR("mkdir for aeskey failed");
+        ERROR("mkdir for auths failed");
         isulad_try_set_error_message("create direcotry for auths failed");
-        goto out;
-    }
-
-    ret = util_atomic_write_file(g_auth_path, content, strlen(content), AUTH_FILE_MODE);
-    if (ret != 0) {
-        ERROR("failed to write auths json to file");
-        isulad_try_set_error_message("failed to write auths json to file");
         goto out;
     }
 
@@ -352,6 +345,11 @@ int auths_save(char *host, char *username, char *password)
     if (host == NULL || username == NULL || password == NULL) {
         ERROR("failed to save auths, host or usernmae or password is NULL");
         return -1;
+    }
+
+    ret = ensure_auth_dir_exist();
+    if (ret != 0) {
+        goto out;
     }
 
     auths = registry_auths_parse_file(g_auth_path, NULL, &err);
@@ -392,7 +390,7 @@ int auths_save(char *host, char *username, char *password)
         goto out;
     }
 
-    ret = write_auth_file(json);
+    ret = util_atomic_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE);
     if (ret != 0) {
         ERROR("failed to write auths json to file");
         goto out;

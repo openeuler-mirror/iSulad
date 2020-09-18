@@ -80,6 +80,8 @@ typedef struct {
     pthread_cond_t cond;
     bool cond_inited;
     map_t *cached_layers;
+    pthread_mutex_t image_mutex;
+    bool image_mutex_inited;
 } registry_global;
 
 static registry_global *g_shared;
@@ -863,6 +865,8 @@ static int register_image(pull_descriptor *desc)
         goto out;
     }
 
+    // lock when create image to make sure image content all exist
+    mutex_lock(&g_shared->image_mutex);
     image_id = without_sha256_prefix(desc->config.digest);
     ret = create_image(desc, image_id, &reuse);
     if (ret != 0) {
@@ -907,6 +911,7 @@ static int register_image(pull_descriptor *desc)
     }
 
 out:
+    mutex_unlock(&g_shared->image_mutex);
 
     if (ret != 0 && image_created) {
         if (storage_img_delete(image_id, true)) {
@@ -1861,6 +1866,13 @@ int registry_init(char *auths_dir, char *certs_dir)
     }
     g_shared->mutex_inited = true;
 
+    ret = pthread_mutex_init(&g_shared->image_mutex, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init image mutex for create image");
+        goto out;
+    }
+    g_shared->image_mutex_inited = true;
+
     ret = pthread_cond_init(&g_shared->cond, NULL);
     if (ret != 0) {
         ERROR("Failed to init cond for download info");
@@ -1883,6 +1895,9 @@ out:
         }
         if (g_shared->mutex_inited) {
             pthread_mutex_destroy(&g_shared->mutex);
+        }
+        if (g_shared->image_mutex_inited) {
+            pthread_mutex_destroy(&g_shared->image_mutex);
         }
         map_free(g_shared->cached_layers);
         g_shared->cached_layers = NULL;
