@@ -19,13 +19,14 @@ enabled=1
 EOF
 ```
 
-Install iSulad with yum
+Install iSulad with yum:
+>>>>>>> README: unify punctuation
 ```sh
 yum install -y iSulad
 ```
 
 ### Run
-We provide `systemd` service to start `iSulad`
+We provide `systemd` service to start `iSulad`:
 ```sh
 systemctl start isulad # run the server with systemd command
 ```
@@ -50,23 +51,23 @@ For more informations on how to use `iSulad`, please refer to the [guide](https:
     $ sudo isula ps -a
     ```
 
-    Create a container with busybox named `test`
+    Create a container with busybox named `test`:
     ```sh
     # create a container 'test' with image busybox
     $ sudo isula create -t -n test busybox
     ```
 
-    Start this container `test`
+    Start this container `test`:
     ```sh
     # start the container 'test'
     $ sudo isula start test
     ```
-    Kill the container `test`
+    Kill the container `test`:
     ```sh
-    # kill the container 'test'
+    # kill the container 'test':
     $ sudo isula kill test
     ```
-    Remove the container `test`
+    Remove the container `test`:
     ```sh
     # remove the container 'test'
     $ sudo isula rm test
