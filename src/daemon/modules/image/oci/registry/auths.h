@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 #define DEFAULT_AUTH_DIR "/root/.isulad"
+#define DEFAULT_AUTH_DIR_MODE 0700
 #define AUTH_FILE_NAME "auths.json"
 #define AUTH_FILE_MODE 0600
 #define MAX_AUTHS_LEN 65536
