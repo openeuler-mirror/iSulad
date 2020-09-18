@@ -1,5 +1,5 @@
 %global _version 2.0.5
-%global _release 20200914.172527.gitae86920a
+%global _release 20200918.112827.git9aea9b75
 %global is_systemd 1
 
 Name:      iSulad
@@ -13,6 +13,7 @@ BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
 Patch6000:	0001-config-remove-unused-config.patch
+Patch6001:	0002-fix-modify-quota-log-level-to-warning.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -220,6 +221,12 @@ fi
 %endif
 
 %changelog
++* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
++- Type:bugfix
++- ID:NA
++- SUG:NA
++- DESC: modify log level to warn
+
 +* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
 +- Type:bugfix
 +- ID:NA
