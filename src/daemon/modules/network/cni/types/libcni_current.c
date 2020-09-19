@@ -612,7 +612,7 @@ static bool copy_interfaces_from_result_to_json(const struct result *src, cni_re
     res->interfaces_len = 0;
 
     res->interfaces = (cni_network_interface **)util_smart_calloc_s(src->interfaces_len,
-                                                                            sizeof(cni_network_interface *));
+                                                                    sizeof(cni_network_interface *));
     if (res->interfaces == NULL) {
         *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");

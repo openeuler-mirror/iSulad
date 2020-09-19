@@ -15,6 +15,7 @@
 #ifndef CLIBCNI_VERSION_VERSION_H
 #define CLIBCNI_VERSION_VERSION_H
 
+#include <stdbool.h>
 #include "libcni_types.h"
 
 #ifdef __cplusplus
@@ -51,6 +52,8 @@ struct result_factories {
 };
 
 struct result *new_result(const char *version, const char *jsonstr, char **err);
+
+int version_greater_than_or_equal_to(const char *first, const char *second, bool *result);
 
 #ifdef __cplusplus
 }

@@ -13,6 +13,8 @@
  * Description: provide exec functions
  *********************************************************************************/
 #define _GNU_SOURCE
+#include "libcni_exec.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -25,14 +27,12 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#include "libcni_exec.h"
-
 #include "utils.h"
 #include "libcni_tools.h"
 #include "libcni_errno.h"
 #include "isula_libutils/log.h"
 
-static int raw_exec(const char *plugin_path, const char *stdin_data, char * const environs[], char **stdout_str,
+static int raw_exec(const char *plugin_path, const char *stdin_data, char** environs, char **stdout_str,
                     cni_exec_error **err);
 
 static char *str_cni_exec_error(const cni_exec_error *e_err)
@@ -55,7 +55,7 @@ static char *str_cni_exec_error(const cni_exec_error *e_err)
 static int do_parse_exec_stdout_str(int exec_ret, const char *cni_net_conf_json, const cni_exec_error *e_err,
                                     const char *stdout_str, struct result **result, char **err)
 {
-    int ret = exec_ret;
+    int ret = 0;
     char *version = NULL;
 
     if (exec_ret != 0) {
@@ -64,22 +64,24 @@ static int do_parse_exec_stdout_str(int exec_ret, const char *cni_net_conf_json,
         } else {
             *err = util_strdup_s("raw exec fail");
         }
-    } else {
-        version = cniversion_decode(cni_net_conf_json, err);
-        if (version == NULL) {
-            ret = -1;
-            ERROR("Decode cni version failed: %s", *err != NULL ? *err : "");
-            goto out;
-        }
-        if (stdout_str == NULL || strlen(stdout_str) == 0) {
-            ERROR("Get empty stdout message");
-            goto out;
-        }
-        *result = new_result(version, stdout_str, err);
-        if (*result == NULL) {
-            ERROR("Parse result failed: %s", *err != NULL ? *err : "");
-            ret = -1;
-        }
+        goto out;
+    }
+
+    version = cniversion_decode(cni_net_conf_json, err);
+    if (version == NULL) {
+        ret = -1;
+        ERROR("Decode cni version failed: %s", *err != NULL ? *err : "");
+        goto out;
+    }
+    if (stdout_str == NULL || strlen(stdout_str) == 0) {
+        ERROR("Get empty stdout message");
+        ret = -1;
+        goto out;
+    }
+    *result = new_result(version, stdout_str, err);
+    if (*result == NULL) {
+        ERROR("Parse result failed: %s", *err != NULL ? *err : "");
+        ret = -1;
     }
 
 out:
@@ -248,365 +250,130 @@ free_out:
     return ret;
 }
 
-static int prepare_child(int pipe_stdin, int pipe_stdout)
+typedef struct _plugin_exec_args_t {
+    const char *path;
+    char **environs;
+} plugin_exec_args_t;
+
+static void child_fun(void *args)
 {
-    sigset_t mask;
-    int ecode = 0;
-    int ret = 0;
-
-    if (pipe_stdin != STDIN_FILENO) {
-        ret = dup2(pipe_stdin, STDIN_FILENO);
-    } else {
-        ret = fcntl(pipe_stdin, F_SETFD, 0);
-    }
-    if (ret != 0) {
-        ecode = EXIT_FAILURE;
-        goto child_err_out;
-    }
-    (void)close(pipe_stdin);
-    pipe_stdin = -1;
-
-    if (pipe_stdout != STDOUT_FILENO) {
-        ret = dup2(pipe_stdout, STDOUT_FILENO);
-    } else {
-        ret = fcntl(pipe_stdout, F_SETFD, 0);
-    }
-    if (ret < 0) {
-        ecode = EXIT_FAILURE;
-        goto child_err_out;
-    }
-    (void)close(pipe_stdout);
-    pipe_stdout = -1;
-
-    {
-        /*
-         * unblock all signal
-         * */
-        ret = sigfillset(&mask);
-        if (ret < 0) {
-            ecode = EXIT_FAILURE;
-            goto child_err_out;
-        }
-        ret = sigprocmask(SIG_UNBLOCK, &mask, NULL);
-        if (ret < 0) {
-            ecode = EXIT_FAILURE;
-            goto child_err_out;
-        }
-    }
-
-child_err_out:
-    return ecode;
-}
-
-static void child_fun(const char *plugin_path, int pipe_stdin, int pipe_stdout, char * const environs[],
-                      size_t envs_len)
-{
+    plugin_exec_args_t *pargs = (plugin_exec_args_t *)args;
     char *argv[2] = { NULL };
     int ecode = 0;
+    size_t envs_len;
 
-    argv[0] = util_strdup_s(plugin_path);
-
-    ecode = prepare_child(pipe_stdin, pipe_stdout);
-    if (ecode != 0) {
-        goto child_err_out;
-    }
+    envs_len = util_array_len((const char **)pargs->environs);
+    argv[0] = util_strdup_s(pargs->path);
 
     if (envs_len > 0) {
-        ecode = execvpe(plugin_path, argv, environs);
+        ecode = execvpe(pargs->path, argv, pargs->environs);
     } else {
-        ecode = execvp(plugin_path, argv);
+        ecode = execvp(pargs->path, argv);
     }
 
-    (void)fprintf(stdout, "Execv: %s failed %s", plugin_path, strerror(errno));
+    (void)fprintf(stderr, "Execv: %s failed %s", pargs->path, strerror(errno));
 
-child_err_out:
     free(argv[0]);
     if (ecode == 0) {
         ecode = 127;
     }
-    if (pipe_stdin != -1) {
-        (void)close(pipe_stdin);
-    }
-    if (pipe_stdout != -1) {
-        (void)close(pipe_stdout);
-    }
     exit(ecode);
 }
 
-static inline bool check_prepare_raw_exec_args(const char *plugin_path)
+static void make_err_message(const char *plugin_path, const char *stdout_str, const char *stderr_msg, cni_exec_error **err)
 {
-    return (plugin_path == NULL || util_validate_absolute_path(plugin_path));
-}
-
-static int prepare_raw_exec(const char *plugin_path, int pipe_stdin[2], int pipe_stdout[2], char *errmsg, size_t len)
-{
-    int ret = 0;
-
-    if (check_prepare_raw_exec_args(plugin_path)) {
-        ret = snprintf(errmsg, len, "Empty or not absolute path: %s", plugin_path);
-        if (ret < 0 || (size_t)ret >= len) {
-            ERROR("Sprintf failed");
-        }
-        return -1;
-    }
-
-    ret = pipe2(pipe_stdin, O_CLOEXEC | O_NONBLOCK);
-    if (ret < 0) {
-        ret = snprintf(errmsg, len, "Pipe stdin failed: %s", strerror(errno));
-        if (ret < 0 || (size_t)ret >= len) {
-            ERROR("Sprintf failed");
-        }
-        return -1;
-    }
-
-    ret = pipe2(pipe_stdout, O_CLOEXEC | O_NONBLOCK);
-    if (ret < 0) {
-        ret = snprintf(errmsg, len, "Pipe stdout failed: %s", strerror(errno));
-        if (ret < 0 || (size_t)ret >= len) {
-            ERROR("Sprintf failed");
-        }
-        return -1;
-    }
-    return 0;
-}
-
-static int write_stdin_data_to_child(int pipe_stdin[2], const char *stdin_data, char *errmsg, size_t errmsg_len)
-{
-    int ret = 0;
-    size_t len = 0;
-
-    if (stdin_data == NULL) {
-        goto close_pipe;
-    }
-
-    len = strlen(stdin_data);
-    if (util_write_nointr(pipe_stdin[1], stdin_data, len) != (ssize_t)len) {
-        ret = snprintf(errmsg, errmsg_len, "Write stdin data failed: %s", strerror(errno));
-        if (ret < 0 || (size_t)ret >= errmsg_len) {
-            ERROR("Sprintf failed");
-        }
-        ret = -1;
-    }
-close_pipe:
-    (void)close(pipe_stdin[1]);
-    pipe_stdin[1] = -1;
-    return ret;
-}
-
-static int read_child_stdout_msg(const int pipe_stdout[2], char *errmsg, size_t errmsg_len, char **stdout_str)
-{
-    int ret = 0;
-
-    if (errmsg == NULL) {
-        return 0;
-    }
     if (stdout_str != NULL) {
-        char buffer[MAX_BUFFER_SIZE] = { 0 };
-        ssize_t tmp_len = util_read_nointr(pipe_stdout[0], buffer, MAX_BUFFER_SIZE - 1);
-        if (tmp_len < 0) {
-            ret = snprintf(errmsg, errmsg_len, "%s; read stdout failed: %s", strlen(errmsg) > 0 ? errmsg : "",
-                           strerror(errno));
-            if (ret < 0 || (size_t)ret >= errmsg_len) {
-                ERROR("Sprintf failed");
-            }
-            ret = -1;
-        } else if (tmp_len > 0) {
-            *stdout_str = util_strdup_s(buffer);
-        }
-    }
-
-    return ret;
-}
-
-static int wait_pid_for_raw_exec_child(pid_t child_pid, const int pipe_stdout[2], char **stdout_str, char *errmsg,
-                                       size_t errmsg_len, bool *parse_exec_err)
-{
-    pid_t wait_pid = 0;
-    int wait_status = 0;
-    int ret = 0;
-
-    if (errmsg == NULL) {
-        return -1;
-    }
-    do {
-        wait_pid = waitpid(child_pid, &wait_status, 0);
-    } while (wait_pid < 0 && errno == EINTR);
-
-    ret = read_child_stdout_msg(pipe_stdout, errmsg, errmsg_len, stdout_str);
-
-    if (wait_pid < 0) {
-        ret = snprintf(errmsg, errmsg_len, "%s; waitpid failed: %s", strlen(errmsg) > 0 ? errmsg : "",
-                       strerror(errno));
-        if (ret < 0 || (size_t)ret >= errmsg_len) {
-            ERROR("Sprintf failed");
-        }
-        ret = -1;
-        goto err_free_out;
-    } else if (WIFEXITED(wait_status) && WEXITSTATUS(wait_status)) {
-        ret = snprintf(errmsg, errmsg_len, "%s; get child status: %d", strlen(errmsg) > 0 ? errmsg : "",
-                       WEXITSTATUS(wait_status));
-        if (ret < 0 || (size_t)ret >= errmsg_len) {
-            ERROR("Sprintf failed");
-        }
-        ret = WEXITSTATUS(wait_status);
-        *parse_exec_err = true;
-        goto err_free_out;
-    } else if (WIFSIGNALED(wait_status)) {
-        ret = snprintf(errmsg, errmsg_len, "%s; child get signal: %d", strlen(errmsg) > 0 ? errmsg : "",
-                       WTERMSIG(wait_status));
-        if (ret < 0 || (size_t)ret >= errmsg_len) {
-            ERROR("Sprintf failed");
-        }
-        ret = INK_ERR_TERM_BY_SIG;
-        *parse_exec_err = true;
-        goto err_free_out;
-    }
-
-err_free_out:
-    return ret;
-}
-
-static void close_raw_exec_pipes(int pipe_stdin[2], int pipe_stdout[2])
-{
-    if (pipe_stdout[0] >= 0) {
-        (void)close(pipe_stdout[0]);
-        pipe_stdout[0] = -1;
-    }
-    if (pipe_stdout[1] >= 0) {
-        (void)close(pipe_stdout[1]);
-        pipe_stdout[1] = -1;
-    }
-    if (pipe_stdin[0] >= 0) {
-        (void)close(pipe_stdin[0]);
-        pipe_stdin[0] = -1;
-    }
-    if (pipe_stdin[1] >= 0) {
-        (void)close(pipe_stdin[1]);
-        pipe_stdin[1] = -1;
-    }
-}
-
-static inline bool check_make_err_message_args(bool parse_exec_err, char * const *stdout_str)
-{
-    return (parse_exec_err && stdout_str != NULL && *stdout_str != NULL);
-}
-
-static void make_err_message(const char *plugin_path, char **stdout_str, int ret, bool parse_exec_err, char *errmsg,
-                             size_t errmsg_len, cni_exec_error **err)
-{
-    int nret = ret;
-    bool get_err_msg = false;
-
-    if (errmsg == NULL) {
-        return;
-    }
-    if (check_make_err_message_args(parse_exec_err, stdout_str)) {
         parser_error json_err = NULL;
-        *err = cni_exec_error_parse_data(*stdout_str, NULL, &json_err);
+        *err = cni_exec_error_parse_data(stdout_str, NULL, &json_err);
         if (*err == NULL) {
-            nret = snprintf(errmsg, errmsg_len, "exec \'%s\': %s; parse failed: %s", plugin_path,
-                            strlen(errmsg) > 0 ? errmsg : "", json_err);
-            if (nret < 0 || (size_t)nret >= errmsg_len) {
-                ERROR("Sprintf failed");
-            }
-            nret = INK_ERR_PARSE_JSON_TO_OBJECT_FAILED;
+            ERROR("parse plugin output failed: %s", json_err);
         }
         free(json_err);
     }
 
-    get_err_msg = (nret != 0 && *err == NULL && strlen(errmsg) > 0);
-    if (get_err_msg) {
-        *err = util_common_calloc_s(sizeof(cni_exec_error));
+    if (stderr_msg != NULL) {
+        // if get error from stdout, just log stderr
         if (*err != NULL) {
-            char *tmp_err = NULL;
-            nret = asprintf(&tmp_err, "exec \'%s\' failed: %s", plugin_path, errmsg);
-            if (nret < 0) {
-                tmp_err = util_strdup_s(errmsg);
-            }
-            (*err)->msg = tmp_err;
-            (*err)->code = 1;
+            ERROR("Run plugin get error: %s", stderr_msg);
+            return;
         }
+
+        *err = util_common_calloc_s(sizeof(cni_exec_error));
+        if (*err == NULL) {
+            ERROR("Out of memory");
+            return;
+        }
+        int nret = 0;
+        char *tmp_err = NULL;
+        nret = asprintf(&tmp_err, "exec \'%s\' failed: %s", plugin_path, stderr_msg);
+        if (nret < 0) {
+            tmp_err = util_strdup_s(stderr_msg);
+        }
+        (*err)->msg = tmp_err;
+        (*err)->code = 1;
     }
 }
 
-static int do_parent_waitpid(int pipe_stdin[2], const int pipe_stdout[2], pid_t child_pid, char *errmsg,
-                             size_t errmsg_len, const char *stdin_data, char **stdout_str, bool *parse_exec_err)
+static bool deal_with_plugin_errcode(int status, char **stderr_msg, size_t errmsg_len)
 {
-    int ret = 0;
+    int signal;
 
-    if (errmsg == NULL) {
-        return -1;
-    }
-    /* write stdin_data into stdin of child process */
-    if (write_stdin_data_to_child(pipe_stdin, stdin_data, errmsg, errmsg_len) != 0) {
-        ERROR("Write stdin data failed: %s", errmsg);
-        ret = -1;
+    if (stderr_msg == NULL) {
+        ERROR("Invalid arguments");
+        return false;
     }
 
-    /* wait child exit, and deal with exitcode */
-    if (wait_pid_for_raw_exec_child(child_pid, pipe_stdout, stdout_str, errmsg, errmsg_len, parse_exec_err) != 0) {
-        ERROR("Wait pid for child failed: %s", errmsg);
-        ret = -1;
+    if (status < 0) {
+        ERROR("Failed to wait exec cmd process");
+        return false;
     }
 
-    return ret;
+    if (WIFEXITED(status)) {
+        if (WEXITSTATUS(status) == 0) {
+            return true;
+        }
+        ERROR("Plugin return error: %s", get_cni_err_msg(WEXITSTATUS(status)));
+    } else if (WIFSIGNALED((unsigned int)status)) {
+        signal = WTERMSIG(status);
+        ERROR("Command exit with signal: %d", signal);
+    } else if (WIFSTOPPED(status)) {
+        signal = WSTOPSIG(status);
+        ERROR("Command stop with signal: %d", signal);
+    } else {
+        ERROR("Command exit with unknown status: %d", status);
+    }
+
+    return false;
 }
 
-static int raw_exec(const char *plugin_path, const char *stdin_data, char * const environs[], char **stdout_str,
+static int raw_exec(const char *plugin_path, const char *stdin_data, char **environs, char **stdout_str,
                     cni_exec_error **err)
 {
     int ret = 0;
-    int pipe_stdout[2] = { -1, -1 };
-    int pipe_stdin[2] = { -1, -1 };
-    pid_t child_pid = 0;
-    char errmsg[MAX_BUFFER_SIZE] = { 0 };
-    bool parse_exec_err = false;
+    char *stderr_msg = NULL;
+    bool nret = false;
+    plugin_exec_args_t p_args = {
+        .path = plugin_path,
+        .environs = environs,
+    };
+    exec_cmd_args cmd_args = {
+        .stdin_msg = stdin_data,
+        .stdout_msg = stdout_str,
+        .stderr_msg = &stderr_msg,
+    };
 
-    if (prepare_raw_exec(plugin_path, pipe_stdin, pipe_stdout, errmsg, sizeof(errmsg)) != 0) {
+    nret = util_raw_exec_cmd(child_fun, (void *)&p_args, deal_with_plugin_errcode, &cmd_args);
+    if (nret) {
         ret = -1;
-        goto err_free_out;
+        goto out;
     }
+    make_err_message(plugin_path, *stdout_str, stderr_msg, err);
 
-    child_pid = fork();
-    if (child_pid < 0) {
-        ret = snprintf(errmsg, sizeof(errmsg), "Fork failed: %s", strerror(errno));
-        if (ret < 0 || (size_t)ret >= sizeof(errmsg)) {
-            ERROR("Sprintf failed");
-        }
-        ret = -1;
-        goto err_free_out;
-    }
+    free(*stdout_str);
+    *stdout_str = NULL;
 
-    if (child_pid == 0) {
-        (void)close(pipe_stdin[1]);
-        pipe_stdin[1] = -1;
-        (void)close(pipe_stdout[0]);
-        pipe_stdout[0] = -1;
-
-        size_t envs_len = 0;
-        envs_len = util_array_len((const char **)environs);
-        child_fun(plugin_path, pipe_stdin[0], pipe_stdout[1], environs, envs_len);
-        /* exit in child_fun */
-    }
-
-    (void)close(pipe_stdout[1]);
-    pipe_stdout[1] = -1;
-    (void)close(pipe_stdin[0]);
-    pipe_stdin[0] = -1;
-
-    ret = do_parent_waitpid(pipe_stdin, pipe_stdout, child_pid, errmsg, sizeof(errmsg), stdin_data, stdout_str,
-                            &parse_exec_err);
-err_free_out:
-    /* parse error json message */
-    make_err_message(plugin_path, stdout_str, ret, parse_exec_err, errmsg, sizeof(errmsg), err);
-
-    if (ret != 0 && stdout_str != NULL) {
-        free(*stdout_str);
-        *stdout_str = NULL;
-    }
-
-    close_raw_exec_pipes(pipe_stdin, pipe_stdout);
-
+out:
+    free(stderr_msg);
     return ret;
 }
 

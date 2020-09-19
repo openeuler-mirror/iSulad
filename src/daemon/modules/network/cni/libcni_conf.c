@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
-#include <regex.h>
 
 #include "utils.h"
 #include "isula_libutils/log.h"
@@ -35,45 +34,6 @@
 #include "isula_libutils/cni_net_conf_list.h"
 #include "libcni_api.h"
 
-static int do_clibcni_util_validate_name(const char *name, regmatch_t *pregmatch)
-{
-    int nret = 0;
-    int status = 0;
-    regex_t preg;
-
-    if (regcomp(&preg, "^([a-z0-9][-a-z0-9.]*)?[a-z0-9]$", REG_NOSUB | REG_EXTENDED) != 0) {
-        nret = -1;
-        goto err_out;
-    }
-
-    status = regexec(&preg, name, 1, pregmatch, 0);
-    regfree(&preg);
-    if (status != 0) {
-        nret = -1;
-        goto err_out;
-    }
-err_out:
-    return nret;
-}
-
-static inline bool check_clibcni_util_validate_name_args(const char *name)
-{
-#define MAX_LEN_NAME 200
-    return (name == NULL || strlen(name) > MAX_LEN_NAME);
-}
-
-static int clibcni_util_validate_name(const char *name)
-{
-    regmatch_t regmatch;
-
-    if (check_clibcni_util_validate_name_args(name)) {
-        return -1;
-    }
-
-    (void)memset(&regmatch, 0, sizeof(regmatch_t));
-
-    return do_clibcni_util_validate_name(name, &regmatch);
-}
 
 static int do_conf_from_bytes(const char *conf_str, struct network_config *config, char **err)
 {
@@ -91,12 +51,9 @@ static int do_conf_from_bytes(const char *conf_str, struct network_config *confi
         ret = -1;
         goto out;
     }
-    if (config->network->name != NULL && clibcni_util_validate_name(config->network->name) != 0) {
-        ret = asprintf(err, "Invalid network name: %s", config->network->name);
-        if (ret < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
-        ERROR("Invalid network name: %s", config->network->name);
+    if (config->network->type != NULL || strlen(config->network->type) == 0) {
+        *err = util_strdup_s("error parsing configuration: missing 'type'");
+        ERROR("error parsing configuration: missing 'type'");
         ret = -1;
         goto out;
     }
@@ -147,9 +104,7 @@ static char *do_get_cni_net_confs_json(const char *filename, char **err)
 
     content = util_read_text_file(filename);
     if (content == NULL) {
-        if (asprintf(err, "Read file %s failed: %s", filename, strerror(errno)) < 0) {
-            *err = util_strdup_s("Read file failed");
-        }
+        *err = util_strdup_s("Read configuration failure");
         ERROR("Read file %s failed: %s", filename, strerror(errno));
     }
 
@@ -199,11 +154,9 @@ static int do_check_cni_net_conf_list_plugins(const cni_net_conf_list *tmp_list,
         return -1;
     }
     for (i = 0; i < tmp_list->plugins_len; i++) {
-        if (tmp_list->plugins[i]->name != NULL && clibcni_util_validate_name(tmp_list->plugins[i]->name) != 0) {
-            if (asprintf(err, "Invalid network name: %s", tmp_list->plugins[i]->name) < 0) {
-                *err = util_strdup_s("Out of memory");
-            }
-            ERROR("Invalid network name: %s", tmp_list->plugins[i]->name);
+        if (tmp_list->plugins[i]->type == NULL || strlen(tmp_list->plugins[i]->type) == 0) {
+            *err = util_strdup_s("failed to parse plugin config");
+            ERROR("failed to parse plugin config: %zd, name: %s", i, tmp_list->plugins[i]->name);
             return -1;
         }
     }
@@ -215,14 +168,6 @@ static int check_cni_net_conf_list(const cni_net_conf_list *tmp_list, char **err
     if (tmp_list->name == NULL) {
         *err = util_strdup_s("Error parsing configuration list: no name");
         ERROR("Name is NULL");
-        return -1;
-    }
-
-    if (clibcni_util_validate_name(tmp_list->name) != 0) {
-        if (asprintf(err, "Invalid network name: %s", tmp_list->name) < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
-        ERROR("Invalid network name: %s", tmp_list->name);
         return -1;
     }
 
@@ -258,10 +203,7 @@ int conflist_from_bytes(const char *json_str, struct network_config_list **list,
     }
     tmp_list = cni_net_conf_list_parse_data(json_str, &ctx, &jerr);
     if (tmp_list == NULL) {
-        ret = asprintf(err, "Error parsing configuration list: %s", jerr);
-        if (ret < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
+        *err = util_strdup_s("Error parsing net conf list");
         ERROR("Error parsing configuration list: %s", jerr);
         ret = -1;
         goto free_out;
@@ -336,77 +278,86 @@ static int get_ext(const char *fname)
     return ret;
 }
 
-static int check_conf_dir(const char *dir, DIR **directory, char **err)
+/*
+ * return 1: check dir success
+ * return 0: dir do not exist
+ * return -1: check dir failed
+ * */
+static int check_conf_dir(const char *dir,  char **err)
 {
-    *directory = opendir(dir);
-    if (*directory == NULL) {
+    DIR *directory = NULL;
+    int ret = 1;
+
+    directory = opendir(dir);
+    if (directory == NULL) {
         if (errno == ENOENT) {
-            return 0;
-        }
-        if (asprintf(err, "Open dir failed: %s", strerror(errno)) < 0) {
-            *err = util_strdup_s("Out of memory");
+            ret = 0;
+            goto out;
         }
         SYSERROR("Open dir failed");
-        return -1;
+        *err = util_strdup_s("check dir failed");
+        ret = -1;
     }
-    return 1;
+out:
+    closedir(directory);
+    return ret;
 }
 
-static int do_check_file_is_valid(const char *fname, int *result, char **err)
+static int do_check_file_is_valid(const char *fname, bool *result, char **err)
 {
     struct stat tmp_fstat;
     int nret = -1;
 
     nret = lstat(fname, &tmp_fstat);
     if (nret != 0) {
-        nret = asprintf(err, "lstat %s failed: %s", fname, strerror(errno));
-        if (nret < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
         SYSERROR("lstat %s failed", fname);
-        *result = -1;
+        *err = util_strdup_s("cannot find config file.");
+        *result = false;
         return -1;
     }
 
     if (S_ISDIR(tmp_fstat.st_mode)) {
         // ignore dir
-        *result = 0;
+        *result = true;
         ERROR("conf file %s is dir", fname);
         return -1;
     }
 
     if (tmp_fstat.st_size > SIZE_MB) {
-        nret = asprintf(err, "Too large config file: %s", fname);
-        if (nret < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
         ERROR("Too large config file: %s", fname);
-        *result = -1;
+        *err = util_strdup_s("Too large config file");
+        *result = false;
         return -1;
     }
 
     return 0;
 }
 
-static int check_conf_file(const char *dir, const char * const *extensions, size_t ext_len,
-                           const struct dirent *pdirent,
-                           size_t *result_size, char ***result, char **err)
+struct search_cb_args {
+    const char * const *extensions;
+    size_t ext_len;
+    char ***result;
+    size_t result_len;
+    char **err;
+};
+
+static bool search_conf_files_cb(const char *dir, const struct dirent *pdirent, void *context)
 {
+    struct search_cb_args *args = (struct search_cb_args *)context;
     char fname[PATH_MAX] = { 0 };
     size_t i = 0;
     const char *ext_name = NULL;
     int nret = -1;
-    int ret = 0;
-    size_t cap = *result_size;
+    bool ret = false;
 
     nret = snprintf(fname, PATH_MAX, "%s/%s", dir, pdirent->d_name);
     if (nret < 0 || nret >= PATH_MAX) {
-        *err = util_strdup_s("Pathname too long");
+        *(args->err) = util_strdup_s("Pathname too long");
         ERROR("Pathname too long");
-        return -1;
+        return ret;
     }
 
-    nret = do_check_file_is_valid(fname, &ret, err);
+    nret = do_check_file_is_valid(fname, &ret, args->err);
     if (nret != 0) {
         return ret;
     }
@@ -415,22 +366,22 @@ static int check_conf_file(const char *dir, const char * const *extensions, size
     nret = get_ext(pdirent->d_name);
     if (nret < 0) {
         // ignore this error
-        return 0;
+        return true;
     }
     ext_name = (pdirent->d_name) + nret;
-    for (i = 0; i < ext_len; i++) {
-        if (extensions[i] != NULL && strcmp(ext_name, extensions[i]) == 0) {
-            if (util_grow_array(result, &cap, (*result_size) + 1, 2) != 0) {
-                *err = util_strdup_s("Out of memory");
+    for (i = 0; i < args->ext_len; i++) {
+        if (args->extensions[i] != NULL && strcmp(ext_name, args->extensions[i]) == 0) {
+            if (util_array_append(args->result, fname) != 0) {
+                *(args->err) = util_strdup_s("Out of memory");
                 ERROR("Out of memory");
-                return -1;
+                return false;
             }
-            (*result)[(*result_size)++] = util_strdup_s(fname);
+            args->result_len += 1;
             break;
         }
     }
 
-    return 0;
+    return true;
 }
 
 static inline bool check_conf_files_args(const char *dir, const char * const *extensions, char ** const *result,
@@ -444,40 +395,30 @@ int conf_files(const char *dir, const char * const *extensions, size_t ext_len, 
 #define MAX_FILES 200
     int ret = -1;
     int nret = -1;
-    DIR *directory = NULL;
-    struct dirent *pdirent = NULL;
-    size_t size = 0;
+    struct search_cb_args s_args = { 0 };
 
     if (check_conf_files_args(dir, extensions, result, err)) {
         ERROR("Invalid arguments");
         return -1;
     }
-    nret = check_conf_dir(dir, &directory, err);
+    nret = check_conf_dir(dir, err);
     if (nret != 1) {
         /* dir is not exist, just ignore, do not return error */
         return nret;
     }
 
-    pdirent = readdir(directory);
-    while (pdirent != NULL) {
-        if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
-            pdirent = readdir(directory);
-            continue;
-        }
-
-        nret = check_conf_file(dir, extensions, ext_len, pdirent, &size, result, err);
-        if (nret < 0) {
-            goto free_out;
-        }
-
-        pdirent = readdir(directory);
+    s_args.extensions = extensions;
+    s_args.ext_len = ext_len;
+    s_args.result = result;
+    s_args.err = err;
+    nret = util_scan_subdirs(dir, search_conf_files_cb, &s_args);
+    if (nret != 0) {
+        ret = -1;
+        goto free_out;
     }
 
-    if (size > MAX_FILES) {
-        nret = asprintf(err, "Too more config files, current support max count of config file is %d.", MAX_FILES);
-        if (nret < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
+    if (s_args.result_len > MAX_FILES) {
+        *err = util_strdup_s("Too more config files!");
         ERROR("Too more config files, current support max count of config file is %d.", MAX_FILES);
         ret = -1;
         goto free_out;
@@ -485,14 +426,6 @@ int conf_files(const char *dir, const char * const *extensions, size_t ext_len, 
 
     ret = 0;
 free_out:
-    nret = closedir(directory);
-    if (nret != 0) {
-        if (*err == NULL) {
-            *err = util_strdup_s("Failed to close directory");
-            SYSERROR("Failed to close directory");
-        }
-        ret = -1;
-    }
     if (ret != 0) {
         util_free_array(*result);
         *result = NULL;
@@ -573,23 +506,17 @@ static int generate_new_conflist(const cni_net_conf_list *list, struct network_c
 
     cni_net_conf_json_str = cni_net_conf_list_generate_json(list, &ctx, &jerr);
     if (cni_net_conf_json_str == NULL) {
-        ret = asprintf(err, "Generate conf list json failed: %s", jerr);
-        if (ret < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
+        *err = util_strdup_s("Generate conf list json failed");
         ERROR("Generate conf list json failed: %s", jerr);
         goto free_out;
     }
-    free(jerr);
-    jerr = NULL;
     (*conf_list)->bytes = cni_net_conf_json_str;
 
+    free(jerr);
+    jerr = NULL;
     (*conf_list)->list = cni_net_conf_list_parse_data(cni_net_conf_json_str, &ctx, &jerr);
     if ((*conf_list)->list == NULL) {
-        ret = asprintf(err, "Parse conf list from json failed: %s", jerr);
-        if (ret < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
+        *err = util_strdup_s("Parse conf list from json failed");
         ERROR("Parse conf list from json failed: %s", jerr);
         goto free_out;
     }
@@ -633,22 +560,19 @@ int conflist_from_conf(const struct network_config *conf, struct network_config_
         ERROR("Out of memory");
         goto free_out;
     }
+    // do not copy network, just use, so need clear after use;
     list->plugins[0] = conf->network;
     list->plugins_len = 1;
 
-    if (conf->network->cni_version != NULL) {
-        list->cni_version = util_strdup_s(conf->network->cni_version);
-    }
-    if (conf->network->name != NULL) {
-        list->name = util_strdup_s(conf->network->name);
-    }
+    list->name = util_strdup_s(conf->network->name);
+    list->cni_version = util_strdup_s(conf->network->cni_version);
+
     ret = generate_new_conflist(list, conf_list, err);
 
+    // clear used network
+    list->plugins_len = 0;
+    list->plugins[0] = NULL;
 free_out:
-    if (list != NULL && list->plugins != NULL) {
-        list->plugins_len = 0;
-        list->plugins[0] = NULL;
-    }
     free_cni_net_conf_list(list);
 
     if (ret != 0) {

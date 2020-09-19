@@ -327,6 +327,14 @@ bool util_process_alive(pid_t pid, unsigned long long start_time);
 int util_wait_for_pid_status(pid_t pid);
 
 typedef void (*exec_func_t)(void *args);
+typedef bool (*exitcode_deal_func_t)(int status, char **stderr_msg, size_t errmsg_len);
+typedef struct _exec_cmd_args_t {
+    const char *stdin_msg;
+    char **stdout_msg;
+    char **stderr_msg;
+} exec_cmd_args;
+
+bool util_raw_exec_cmd(exec_func_t cb_func, void *cb_args, exitcode_deal_func_t exitcode_cb, exec_cmd_args *cmd_args);
 bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char **stdout_msg, char **stderr_msg);
 
 typedef void (*exec_top_func_t)(char **args, const char *pid_args, size_t args_len);
