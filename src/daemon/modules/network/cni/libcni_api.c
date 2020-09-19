@@ -30,18 +30,7 @@
 #include "libcni_tools.h"
 #include "libcni_exec.h"
 #include "libcni_types.h"
-
-static int add_network_list(const struct network_config_list *list, const struct runtime_conf *rc,
-                            const char * const *paths, size_t paths_len, struct result **pret, char **err);
-
-static int del_network_list(const struct network_config_list *list, const struct runtime_conf *rc,
-                            const char * const *paths, size_t paths_len, char **err);
-
-static int add_network(const struct network_config *net, const struct runtime_conf *rc, const char * const *paths,
-                       size_t paths_len, struct result **add_result, char **err);
-
-static int del_network(const struct network_config *net, const struct runtime_conf *rc, const char * const *paths,
-                       size_t paths_len, char **err);
+#include "libcni_utils.h"
 
 static int args(const char *action, const struct runtime_conf *rc, const char * const *paths, size_t paths_len,
                 struct cni_args **cargs, char **err);
@@ -149,11 +138,8 @@ static int do_generate_cni_net_conf_json(const struct network_config *orig, char
     /* generate new json str for injected config */
     *result = cni_net_conf_generate_json(orig->network, &ctx, &jerr);
     if (*result == NULL) {
-        if (asprintf(err, "generate json failed: %s", jerr) < 0) {
-            *err = util_strdup_s("Out of memory");
-            ERROR("Out of memory");
-        }
-        ERROR("Generate json: %s", jerr);
+        *err = util_strdup_s("generate cni net conf failed");
+        ERROR("Generate cni net conf error: %s", jerr);
         ret = -1;
         goto out;
     }
@@ -227,28 +213,28 @@ static int do_inject_prev_result(const struct result *prev_result, cni_net_conf 
     return 0;
 }
 
-static inline bool check_build_one_config(const struct network_config_list *list, const struct network_config *orig,
+static inline bool check_build_one_config(const struct network_config *orig,
                                           const struct runtime_conf *rt, char * const *result, char * const *err)
 {
-    return (list == NULL || orig == NULL || rt == NULL || result == NULL || err == NULL);
+    return (orig == NULL || rt == NULL || result == NULL || err == NULL);
 }
 
-static int build_one_config(const struct network_config_list *list, struct network_config *orig,
+static int build_one_config(const char *name, const char *version, struct network_config *orig,
                             const struct result *prev_result, const struct runtime_conf *rt, char **result, char **err)
 {
     int ret = -1;
     cni_net_conf *work = NULL;
 
-    if (check_build_one_config(list, orig, rt, result, err)) {
+    if (check_build_one_config(orig, rt, result, err)) {
         ERROR("Invalid arguments");
         return ret;
     }
 
     work = orig->network;
     free(work->name);
-    work->name = util_strdup_s(list->list->name);
+    work->name = util_strdup_s(name);
     free(work->cni_version);
-    work->cni_version = util_strdup_s(list->list->cni_version);
+    work->cni_version = util_strdup_s(version);
 
     if (do_inject_prev_result(prev_result, work, err) != 0) {
         ERROR("Inject pre result failed: %s", *err != NULL ? *err : "");
@@ -280,10 +266,8 @@ static int do_check_generate_cni_net_conf_json(char **full_conf_bytes, struct ne
     } else {
         pnet->bytes = cni_net_conf_generate_json(pnet->network, &ctx, &serr);
         if (pnet->bytes == NULL) {
-            if (asprintf(err, "Generate json failed: %s", serr) < 0) {
-                *err = util_strdup_s("Out of memory");
-            }
-            ERROR("Generate json: %s", serr);
+            *err = util_strdup_s("Generate cni net conf failed");
+            ERROR("Generate cni net conf error: %s", serr);
             ret = -1;
             goto out;
         }
@@ -294,9 +278,9 @@ out:
     return ret;
 }
 
-static int run_cni_plugin(const struct network_config_list *list, size_t i, const char *operator,
+static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *version, const char *operator,
                           const struct runtime_conf *rc, const char * const *paths, size_t paths_len,
-                          struct result **pret, char **err)
+                          struct result **pret, bool with_result, char **err)
 {
     int ret = -1;
     struct network_config net = { 0 };
@@ -306,24 +290,17 @@ static int run_cni_plugin(const struct network_config_list *list, size_t i, cons
     struct result *tmp_result = NULL;
     int save_errno = 0;
 
-    net.network = list->list->plugins[i];
-    if (net.network == NULL) {
-        *err = util_strdup_s("Empty network");
-        ERROR("Empty network");
-        goto free_out;
-    }
+    net.network = p_net;
 
     ret = find_in_path(net.network->type, paths, paths_len, &plugin_path, &save_errno);
     if (ret != 0) {
-        if (asprintf(err, "find plugin: \"%s\" failed: %s", net.network->type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
         ERROR("find plugin: \"%s\" failed: %s", net.network->type, get_invoke_err_msg(save_errno));
+        *err = util_strdup_s("Can not found plugin.");
         goto free_out;
     }
 
     tmp_result = pret != NULL ? *pret : NULL;
-    ret = build_one_config(list, &net, tmp_result, rc, &full_conf_bytes, err);
+    ret = build_one_config(name, version, &net, tmp_result, rc, &full_conf_bytes, err);
     if (ret != 0) {
         ERROR("build config failed: %s", *err != NULL ? *err : "");
         goto free_out;
@@ -341,7 +318,7 @@ static int run_cni_plugin(const struct network_config_list *list, size_t i, cons
         goto free_out;
     }
 
-    if (pret == NULL) {
+    if (with_result) {
         ret = exec_plugin_without_result(plugin_path, net.bytes, cargs, err);
     } else {
         free_result(*pret);
@@ -353,6 +330,35 @@ free_out:
     free(plugin_path);
     free(net.bytes);
     return ret;
+}
+
+static inline bool check_add_network_args(const cni_net_conf *net, const struct runtime_conf *rc,
+                                          char * const *err)
+{
+    return (net == NULL || rc == NULL || err == NULL);
+}
+
+static int add_network(cni_net_conf *net, const struct runtime_conf *rc, const char * const *paths,
+                       size_t paths_len, struct result **add_result, char **err)
+{
+    if (check_add_network_args(net, rc, err)) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+    if (!clibcni_util_validate_id(rc->container_id)) {
+        *err = util_strdup_s("invalid container id");
+        return -1;
+    }
+    if (!clibcni_util_validate_name(net->name)) {
+        *err = util_strdup_s("invalid network name");
+        return -1;
+    }
+    if (!clibcni_util_validate_interface(rc->ifname)) {
+        *err = util_strdup_s("invalid interface name");
+        return -1;
+    }
+
+    return run_cni_plugin(net, net->name, net->cni_version, "ADD", rc, paths, paths_len, add_result, true, err);
 }
 
 static inline bool check_add_network_list_args(const struct network_config_list *list, const struct runtime_conf *rc,
@@ -374,7 +380,7 @@ static int add_network_list(const struct network_config_list *list, const struct
     }
 
     for (i = 0; i < list->list->plugins_len; i++) {
-        ret = run_cni_plugin(list, i, "ADD", rc, paths, paths_len, &prev_result, err);
+        ret = add_network(list->list->plugins[i], rc, paths, paths_len, pret, err);
         if (ret != 0) {
             ERROR("Run ADD cni failed: %s", *err != NULL ? *err : "");
             goto free_out;
@@ -388,6 +394,23 @@ free_out:
         free_result(prev_result);
     }
     return ret;
+}
+
+static inline bool check_del_network_args(const cni_net_conf *net, const struct runtime_conf *rc,
+                                          char * const *err)
+{
+    return (net == NULL || rc == NULL || err == NULL);
+}
+
+static int del_network(cni_net_conf *net, const struct runtime_conf *rc, const char * const *paths,
+                       size_t paths_len, struct result **prev_result, char **err)
+{
+    if (check_del_network_args(net, rc, err)) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
+    return run_cni_plugin(net, net->name, net->cni_version, "DEL", rc, paths, paths_len, prev_result, false, err);
 }
 
 static inline bool check_del_network_list_args(const struct network_config_list *list, const struct runtime_conf *rc,
@@ -407,8 +430,9 @@ static int del_network_list(const struct network_config_list *list, const struct
         return -1;
     }
 
+    // TODO: get result from cache
     for (i = list->list->plugins_len; i > 0; i--) {
-        ret = run_cni_plugin(list, (i - 1), "DEL", rc, paths, paths_len, NULL, err);
+        ret = del_network(list->list->plugins[i], rc, paths, paths_len, NULL, err);
         if (ret != 0) {
             ERROR("Run DEL cni failed: %s", *err != NULL ? *err : "");
             goto free_out;
@@ -419,99 +443,50 @@ free_out:
     return ret;
 }
 
-static inline bool check_add_network_args(const struct network_config *net, const struct runtime_conf *rc,
+static inline bool do_check_network_args(const cni_net_conf *net, const struct runtime_conf *rc,
                                           char * const *err)
 {
     return (net == NULL || rc == NULL || err == NULL);
 }
 
-static int add_network(const struct network_config *net, const struct runtime_conf *rc, const char * const *paths,
-                       size_t paths_len, struct result **add_result, char **err)
+static int check_network(cni_net_conf *net, const struct runtime_conf *rc, const char * const *paths,
+                       size_t paths_len, struct result **prev_result, char **err)
 {
-    int ret = 0;
-    char *plugin_path = NULL;
-    char *net_bytes = NULL;
-    struct cni_args *cargs = NULL;
-    int save_errno = 0;
-
-    if (check_add_network_args(net, rc, err)) {
+    if (do_check_network_args(net, rc, err)) {
         ERROR("Empty arguments");
         return -1;
     }
-    ret = find_in_path(net->network->type, paths, paths_len, &plugin_path, &save_errno);
-    if (ret != 0) {
-        if (asprintf(err, "find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
-        ERROR("find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno));
-        goto free_out;
-    }
 
-    ret = inject_runtime_config(net, rc, &net_bytes, err);
-    if (ret != 0) {
-        ERROR("Inject runtime config: %s", *err != NULL ? *err : "");
-        goto free_out;
-    }
-
-    ret = args("ADD", rc, paths, paths_len, &cargs, err);
-    if (ret != 0) {
-        ERROR("Get ADD cni arguments: %s", *err != NULL ? *err : "");
-        goto free_out;
-    }
-
-    ret = exec_plugin_with_result(plugin_path, net_bytes, cargs, add_result, err);
-free_out:
-    free(plugin_path);
-    free(net_bytes);
-    free_cni_args(cargs);
-    return ret;
+    return run_cni_plugin(net, net->name, net->cni_version, "CHECK", rc, paths, paths_len, prev_result, false, err);
 }
 
-static inline bool check_del_network_args(const struct network_config *net, const struct runtime_conf *rc,
-                                          char * const *err)
+static inline bool do_check_network_list_args(const struct network_config_list *list, const struct runtime_conf *rc,
+                                               char * const *err)
 {
-    return (net == NULL || net->network == NULL || rc == NULL || err == NULL);
+    return (list == NULL || list->list == NULL || rc == NULL || err == NULL);
 }
 
-static int del_network(const struct network_config *net, const struct runtime_conf *rc, const char * const *paths,
-                       size_t paths_len, char **err)
+static int check_network_list(const struct network_config_list *list, const struct runtime_conf *rc,
+                            const char * const *paths, size_t paths_len, char **err)
 {
+    size_t i = 0;
     int ret = 0;
-    char *plugin_path = NULL;
-    char *net_bytes = NULL;
-    struct cni_args *cargs = NULL;
-    int save_errno = 0;
 
-    if (check_del_network_args(net, rc, err)) {
+    if (do_check_network_list_args(list, rc, err)) {
         ERROR("Empty arguments");
         return -1;
     }
-    ret = find_in_path(net->network->type, paths, paths_len, &plugin_path, &save_errno);
-    if (ret != 0) {
-        if (asprintf(err, "find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = util_strdup_s("Out of memory");
+
+    // TODO: get result from cache
+    for (i = list->list->plugins_len; i > 0; i--) {
+        ret = check_network(list->list->plugins[i], rc, paths, paths_len, NULL, err);
+        if (ret != 0) {
+            ERROR("Run check cni failed: %s", *err != NULL ? *err : "");
+            goto free_out;
         }
-        ERROR("find plugin: \"%s\" failed: %s", net->network->type, get_invoke_err_msg(save_errno));
-        goto free_out;
     }
 
-    ret = inject_runtime_config(net, rc, &net_bytes, err);
-    if (ret != 0) {
-        ERROR("Inject runtime config: %s", *err != NULL ? *err : "");
-        goto free_out;
-    }
-
-    ret = args("DEL", rc, paths, paths_len, &cargs, err);
-    if (ret != 0) {
-        ERROR("Get DEL cni arguments: %s", *err != NULL ? *err : "");
-        goto free_out;
-    }
-
-    ret = exec_plugin_without_result(plugin_path, net_bytes, cargs, err);
 free_out:
-    free(plugin_path);
-    free(net_bytes);
-    free_cni_args(cargs);
     return ret;
 }
 
@@ -704,36 +679,6 @@ int cni_add_network_list(const char *net_list_conf_str, const struct runtime_con
     return ret;
 }
 
-int cni_add_network(const char *cni_net_conf_str, const struct runtime_conf *rc, char **paths,
-                    struct result **add_result,
-                    char **err)
-{
-    struct network_config *net = NULL;
-    int ret = 0;
-    size_t len = 0;
-
-    if (err == NULL) {
-        ERROR("Empty err");
-        return -1;
-    }
-    if (cni_net_conf_str == NULL) {
-        *err = util_strdup_s("Empty net conf argument");
-        ERROR("Empty net conf argument");
-        return -1;
-    }
-
-    ret = conf_from_bytes(cni_net_conf_str, &net, err);
-    if (ret != 0) {
-        ERROR("Parse conf failed: %s", *err != NULL ? *err : "");
-        return ret;
-    }
-
-    len = util_array_len((const char **)paths);
-    ret = add_network(net, rc, (const char * const *)paths, len, add_result, err);
-    free_network_config(net);
-    return ret;
-}
-
 int cni_del_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, char **paths, char **err)
 {
     struct network_config_list *list = NULL;
@@ -764,9 +709,9 @@ int cni_del_network_list(const char *net_list_conf_str, const struct runtime_con
     return ret;
 }
 
-int cni_del_network(const char *cni_net_conf_str, const struct runtime_conf *rc, char **paths, char **err)
+int cni_check_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, char **paths, char **err)
 {
-    struct network_config *net = NULL;
+    struct network_config_list *list = NULL;
     int ret = 0;
     size_t len = 0;
 
@@ -774,21 +719,24 @@ int cni_del_network(const char *cni_net_conf_str, const struct runtime_conf *rc,
         ERROR("Empty err");
         return -1;
     }
-    if (cni_net_conf_str == NULL) {
-        *err = util_strdup_s("Empty net conf argument");
-        ERROR("Empty net conf argument");
+
+    if (net_list_conf_str == NULL) {
+        *err = util_strdup_s("Empty net list conf argument");
+        ERROR("Empty net list conf argument");
         return -1;
     }
 
-    ret = conf_from_bytes(cni_net_conf_str, &net, err);
+    ret = conflist_from_bytes(net_list_conf_str, &list, err);
     if (ret != 0) {
-        ERROR("Parse conf failed: %s", *err != NULL ? *err : "");
+        ERROR("Parse conf list failed: %s", *err != NULL ? *err : "");
         return ret;
     }
 
     len = util_array_len((const char **)paths);
-    ret = del_network(net, rc, (const char * const *)paths, len, err);
-    free_network_config(net);
+    ret = check_network_list(list, rc, (const char * const *)paths, len, err);
+
+    DEBUG("Check network list return with: %d", ret);
+    free_network_config_list(list);
     return ret;
 }
 
@@ -806,9 +754,7 @@ int cni_get_version_info(const char *plugin_type, char **paths, struct plugin_in
     len = util_array_len((const char **)paths);
     ret = find_in_path(plugin_type, (const char * const *)paths, len, &plugin_path, &save_errno);
     if (ret != 0) {
-        if (asprintf(err, "find plugin: \"%s\" failed: %s", plugin_type, get_invoke_err_msg(save_errno)) < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
+        *err = util_strdup_s("Find plugin failed");
         ERROR("find plugin: \"%s\" failed: %s", plugin_type, get_invoke_err_msg(save_errno));
         return ret;
     }
