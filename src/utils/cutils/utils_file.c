@@ -840,7 +840,7 @@ int64_t util_file_size(const char *filename)
     return (int64_t)st.st_size;
 }
 
-int util_scan_subdirs(const char *directory, subdir_callback_t cb)
+int util_scan_subdirs(const char *directory, subdir_callback_t cb, void *context)
 {
     DIR *dir = NULL;
     struct dirent *direntp = NULL;
@@ -862,7 +862,7 @@ int util_scan_subdirs(const char *directory, subdir_callback_t cb)
             continue;
         }
 
-        if (!cb(directory, direntp)) {
+        if (!cb(directory, direntp, context)) {
             ERROR("Dealwith subdir: %s failed", direntp->d_name);
             ret = -1;
             break;

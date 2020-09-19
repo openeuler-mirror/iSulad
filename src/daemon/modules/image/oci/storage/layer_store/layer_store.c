@@ -1724,7 +1724,7 @@ out:
     return ret;
 }
 
-static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir)
+static bool load_layer_json_cb(const char *path_name, const struct dirent *sub_dir, void *context)
 {
 #define LAYER_NAME_LEN 64
     bool flag = false;
@@ -1814,7 +1814,7 @@ static int load_layers_from_json_files()
         return -1;
     }
 
-    ret = util_scan_subdirs(g_root_dir, load_layer_json_cb);
+    ret = util_scan_subdirs(g_root_dir, load_layer_json_cb, NULL);
     if (ret != 0) {
         goto unlock_out;
     }
