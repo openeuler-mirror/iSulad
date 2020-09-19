@@ -57,14 +57,13 @@ static shim_client_process_state *load_process()
 {
     parser_error err = NULL;
     shim_client_process_state *p_state = NULL;
+
     p_state = shim_client_process_state_parse_file("process.json", NULL, &err);
     if (p_state == NULL) {
         write_message(g_log_fd, ERR_MSG, "parse process state failed");
     }
-
-    if (err != NULL) {
-        free(err);
-    }
+    /* "err" will definitely be allocated memory in the function above */
+    free(err);
 
     return p_state;
 }
@@ -73,7 +72,7 @@ static int open_fifo_noblock(const char *path, mode_t mode)
 {
     int fd = -1;
 
-    // By default, We consider that the file has been created by isulad
+    /* By default, We consider that the file has been created by isulad */
     fd = open_no_inherit(path, mode | O_NONBLOCK, -1);
     if (fd < 0) {
         write_message(g_log_fd, ERR_MSG, "open fifo file failed:%d", SHIM_SYS_ERR(errno));
@@ -99,6 +98,7 @@ static int receive_fd(int sock)
     iov[0].iov_len = sizeof(buf);
 
     struct msghdr msg;
+    (void)memset(&msg, 0, sizeof(struct msghdr));
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
     msg.msg_name = NULL;
@@ -106,10 +106,16 @@ static int receive_fd(int sock)
     msg.msg_control = cmptr;
     msg.msg_controllen = cmsgsize;
 
+    /*
+     * return value:
+     *  0: the peer has performed an orderly shutdown
+     * -1: an error occurred
+     * >0: the number of bytes received
+     */
     int ret = recvmsg(sock, &msg, 0);
-    if (ret == -1) {
-        free(cmptr);
+    if (ret <= 0) {
         write_message(g_log_fd, ERR_MSG, "get console fd failed:%d", SHIM_SYS_ERR(errno));
+        free(cmptr);
         return -1;
     }
 
@@ -140,19 +146,11 @@ static int add_io_dispatch(int epfd, io_thread_t *io_thd, int from, int to)
     }
 
     io_copy_t *ioc = io_thd->ioc;
-    fd_node_t *fn = (fd_node_t *)calloc(1, sizeof(fd_node_t));
-    if (fn == NULL) {
+
+    if (pthread_mutex_lock(&(ioc->mutex)) != 0) {
         return SHIM_ERR;
     }
-    fn->fd = to;
-    fn->is_log = false;
-    if (io_thd->terminal != NULL && to == io_thd->terminal->fd) {
-        fn->is_log = true;
-    }
-    fn->next = NULL;
-
-    pthread_mutex_lock(&(ioc->mutex));
-    // add src fd
+    /* add src fd */
     if (from != -1 && ioc->fd_from == -1) {
         ioc->fd_from = from;
         struct epoll_event ev;
@@ -161,15 +159,27 @@ static int add_io_dispatch(int epfd, io_thread_t *io_thd, int from, int to)
 
         ret = epoll_ctl(epfd, EPOLL_CTL_ADD, from, &ev);
         if (ret != SHIM_OK) {
-            free(fn);
             write_message(g_log_fd, ERR_MSG, "add fd %d to epoll loop failed:%d", from, SHIM_SYS_ERR(errno));
             pthread_mutex_unlock(&(ioc->mutex));
             return SHIM_ERR;
         }
     }
 
-    // add dest fd
+    /* add dest fd */
     if (to != -1) {
+        /* new fd_node_t for dest fd */
+        fd_node_t *fn = (fd_node_t *)calloc(1, sizeof(fd_node_t));
+        if (fn == NULL) {
+            pthread_mutex_unlock(&(ioc->mutex));
+            return SHIM_ERR;
+        }
+        fn->fd = to;
+        fn->is_log = false;
+        if (io_thd->terminal != NULL && to == io_thd->terminal->fd) {
+            fn->is_log = true;
+        }
+        fn->next = NULL;
+
         if (ioc->fd_to == NULL) {
             ioc->fd_to = fn;
         } else {
@@ -192,10 +202,13 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
     }
     io_copy_t *ioc = io_thd->ioc;
 
-    pthread_mutex_lock(&(ioc->mutex));
+    if (pthread_mutex_lock(&(ioc->mutex))) {
+        return;
+    }
+
     fd_node_t *tmp = NULL;
     do {
-        // remove src fd
+        /* remove src fd */
         if (from != -1 && from == ioc->fd_from) {
             struct epoll_event ev;
             ev.events = EPOLLIN;
@@ -203,12 +216,12 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
             (void)epoll_ctl(io_thd->epfd, EPOLL_CTL_DEL, ioc->fd_from, &ev);
         }
 
-        // remove dest fd
+        /* remove dest fd */
         if (ioc->fd_to == NULL) {
             break;
         }
         if (ioc->fd_to->fd == to) {
-            // remove the first fd node
+            /* remove the first fd node */
             tmp = ioc->fd_to;
             ioc->fd_to = ioc->fd_to->next;
             break;
@@ -225,6 +238,7 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
     } while (0);
     if (tmp != NULL) {
         free(tmp);
+        tmp = NULL;
     }
     pthread_mutex_unlock(&(ioc->mutex));
 }
@@ -238,7 +252,7 @@ static void *task_io_copy(void *data)
     io_copy_t *ioc = io_thd->ioc;
     char *buf = calloc(1, DEFAULT_IO_COPY_BUF + 1);
     if (buf == NULL) {
-        _exit(EXIT_FAILURE);
+        return NULL;
     }
 
     for (;;) {
@@ -250,13 +264,12 @@ static void *task_io_copy(void *data)
 
         int r_count = read(ioc->fd_from, buf, DEFAULT_IO_COPY_BUF);
         if (r_count == -1) {
-            // If errno == EAGAIN, that means we have read all data
             if (errno == EAGAIN || errno == EINTR) {
                 continue;
             }
             break;
         } else if (r_count == 0) {
-            // End of file. The remote has closed the connection.
+            /* End of file. The remote has closed the connection */
             break;
         } else {
             fd_node_t *fn = ioc->fd_to;
@@ -265,10 +278,9 @@ static void *task_io_copy(void *data)
                     shim_write_container_log_file(io_thd->terminal, ioc->id == stdid_out ? "stdout" : "stderr", buf,
                                                   r_count);
                 } else {
-                    int w_count = 0;
-                    w_count = write_nointr(fn->fd, buf, r_count);
+                    int w_count = write_nointr(fn->fd, buf, r_count);
                     if (w_count < 0) {
-                        // remove the write fd
+                        /* When any error occurs, remove the write fd */
                         remove_io_dispatch(io_thd, -1, fn->fd);
                     }
                 }
@@ -366,6 +378,7 @@ static int start_io_copy_threads(process_t *p)
     int ret = SHIM_ERR;
     int i;
 
+    /* 3 threads for stdin, stdout and stderr */
     for (i = 0; i < 3; i++) {
         ret = process_io_start(p, i);
         if (ret != SHIM_OK) {
@@ -423,7 +436,7 @@ static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio,
         return add_io_dispatch(p->io_loop_fd, p->io_threads[std_id], *fd_from, *fd_to);
     }
 
-    // if no I/O source is available, the I/O thread nead to be destroyed
+    /* if no I/O source is available, the I/O thread nead to be destroyed */
     destroy_io_thread(p, std_id);
 
     return SHIM_OK;
@@ -448,36 +461,43 @@ static void *task_console_accept(void *data)
         goto out;
     }
 
-    // do console io copy
-    //
-    // p.state.stdin---->runtime.console
+    /* do console io copy */
+
+    /* p.state.stdin---->runtime.console */
     ret = connect_to_isulad(ac->p, stdid_in, ac->p->state->isulad_stdin, recv_fd);
     if (ret != SHIM_OK) {
         goto out;
     }
 
-    // p.state.stdout<------runtime.console
+    /* p.state.stdout<------runtime.console */
     ret = connect_to_isulad(ac->p, stdid_out, ac->p->state->isulad_stdout, recv_fd);
     if (ret != SHIM_OK) {
         goto out;
     }
 
-    // if the terminal is used, we do not need to active the io copy of stderr pipe
+    /*
+     * if the terminal is used, we do not need to active the io copy of stderr pipe,
+     * for stderr and stdout are mixed together
+     */
     destroy_io_thread(ac->p, stdid_err);
 
 out:
-    // release listen socket
+    /* release listen socket at the first time */
     close_fd(&ac->listen_fd);
     if (ac->p->console_sock_path != NULL) {
-        unlink(ac->p->console_sock_path);
+        (void)unlink(ac->p->console_sock_path);
         free(ac->p->console_sock_path);
         ac->p->console_sock_path = NULL;
     }
     free(ac);
     if (ret != SHIM_OK) {
+        /*
+         * When an error occurs during the receiving of the fd , the process
+         * exits directly. The files created in the working directory will be
+         * deleted by its parent process isulad
+         */
         exit(EXIT_FAILURE);
     }
-
     return NULL;
 }
 
@@ -495,8 +515,7 @@ static void *task_io_loop(void *data)
     }
     (void)sem_post(&p->sem_mainloop);
 
-    // begin wait
-    while (1) {
+    for (;;) {
         wait_fds = epoll_wait(p->io_loop_fd, evs, MAX_EVENTS, -1);
         if (wait_fds < 0) {
             if (errno == EINTR) {
@@ -526,7 +545,12 @@ static int new_temp_console_path(process_t *p)
     if (p->console_sock_path == NULL) {
         return SHIM_ERR;
     }
-    snprintf(p->console_sock_path, MAX_CONSOLE_SOCK_LEN, "/run/isulad%s-pty.sock", str_rand);
+    int nret = snprintf(p->console_sock_path, MAX_CONSOLE_SOCK_LEN, "/run/isulad%s-pty.sock", str_rand);
+    if (nret < 0 || nret >= MAX_CONSOLE_SOCK_LEN) {
+        free(p->console_sock_path);
+        p->console_sock_path = NULL;
+        return SHIM_ERR;
+    }
 
     return SHIM_OK;
 }
@@ -548,14 +572,12 @@ static int console_init(process_t *p)
     addr.sun_family = AF_UNIX;
     (void)strcpy(addr.sun_path, p->console_sock_path);
 
-    // bind
     ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (ret < 0) {
         write_message(g_log_fd, ERR_MSG, "bind console fd failed:%d", SHIM_SYS_ERR(errno));
         goto failure;
     }
 
-    // listen
     ret = listen(fd, 2);
     if (ret < 0) {
         write_message(g_log_fd, ERR_MSG, "listen console fd failed:%d", SHIM_SYS_ERR(errno));
@@ -584,17 +606,44 @@ failure:
     close_fd(&fd);
     if (ac != NULL) {
         free(ac);
+        ac = NULL;
     }
-    unlink(p->console_sock_path);
+    (void)unlink(p->console_sock_path);
 
     return SHIM_ERR;
 }
 
+static int stdio_chown(int (*stdio_fd)[2], int uid, int gid)
+{
+    int i, j;
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 2; j++) {
+            int ret = fchown(stdio_fd[i][j], uid, gid);
+            if (ret != SHIM_OK) {
+                return SHIM_ERR;
+            }
+        }
+    }
+    return SHIM_OK;
+}
+
+static void stdio_release(int (*stdio_fd)[2])
+{
+    int i, j;
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 2; j++) {
+            if (stdio_fd[i][j] > 0) {
+                close(stdio_fd[i][j]);
+            }
+        }
+    }
+}
+
 static stdio_t *initialize_io(process_t *p)
 {
-    int ret = SHIM_ERR;
     int stdio_fd[3][2] = { { -1, -1 }, { -1, -1 }, { -1, -1 } };
-    int i, j;
 
     stdio_t *stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
     p->stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
@@ -615,13 +664,8 @@ static stdio_t *initialize_io(process_t *p)
     p->stdio->err = stdio_fd[2][1]; // w
     stdio->err = stdio_fd[2][0]; // r
 
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 2; j++) {
-            ret = fchown(stdio_fd[i][j], p->state->root_uid, p->state->root_gid);
-            if (ret != SHIM_OK) {
-                goto failure;
-            }
-        }
+    if (stdio_chown(stdio_fd, p->state->root_uid, p->state->root_gid) != SHIM_OK) {
+        goto failure;
     }
 
     return stdio;
@@ -635,13 +679,7 @@ failure:
         free(p->stdio);
         p->stdio = NULL;
     }
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 2; j++) {
-            if (stdio_fd[i][j] > 0) {
-                close(stdio_fd[i][j]);
-            }
-        }
-    }
+    stdio_release(stdio_fd);
 
     return NULL;
 }
@@ -656,7 +694,7 @@ static int open_terminal_io(process_t *p)
         return SHIM_ERR;
     }
 
-    // begin listen and accept fd from p->console_sock_path
+    /* begin listen and accept fd from p->console_sock_path */
     return console_init(p);
 }
 
@@ -669,17 +707,17 @@ static int open_generic_io(process_t *p)
         return SHIM_ERR;
     }
     p->shim_io = io;
-    // stdin
+    /* stdin */
     ret = connect_to_isulad(p, stdid_in, p->state->isulad_stdin, io->in);
     if (ret != SHIM_OK) {
         return SHIM_ERR;
     }
-    // stdout
+    /* stdout */
     ret = connect_to_isulad(p, stdid_out, p->state->isulad_stdout, io->out);
     if (ret != SHIM_OK) {
         return SHIM_ERR;
     }
-    // stderr
+    /* stderr */
     ret = connect_to_isulad(p, stdid_err, p->state->isulad_stderr, io->err);
     if (ret != SHIM_OK) {
         return SHIM_ERR;
@@ -690,7 +728,7 @@ static int open_generic_io(process_t *p)
 
 static void adapt_for_isulad_stdin(process_t *p)
 {
-    // iSulad: close stdin pipe if we do not want open_stdin with container stdin just like lxc
+    /* iSulad: close stdin pipe if we do not want open_stdin with container stdin just like lxc */
     if (!p->state->open_stdin && !file_exists(p->state->isulad_stdin)) {
         if (p->shim_io != NULL && p->shim_io->in != -1) {
             close(p->shim_io->in);
@@ -931,7 +969,11 @@ static void process_delete(process_t *p)
         write_message(g_log_fd, ERR_MSG, "get cwd failed when do process delete");
         return;
     }
-    snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
+    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
+    if (nret < 0 || nret >= PATH_MAX) {
+        free(cwd);
+        return;
+    }
 
     params[i++] = p->runtime;
     for (j = 0; j < p->state->runtime_args_len; j++) {
@@ -952,9 +994,66 @@ static void process_delete(process_t *p)
     return;
 }
 
+static void exec_runtime_process(process_t *p, int exec_fd)
+{
+    if (p->shim_io != NULL) {
+        if (p->shim_io->in != -1) {
+            close(p->shim_io->in);
+            p->shim_io->in = -1;
+            dup2(p->stdio->in, 0);
+        }
+        if (p->shim_io->out != -1) {
+            close(p->shim_io->out);
+            p->shim_io->out = -1;
+            dup2(p->stdio->out, 1);
+        }
+        if (p->shim_io->err != -1) {
+            close(p->shim_io->err);
+            p->shim_io->err = -1;
+            dup2(p->stdio->err, 2);
+        }
+    }
+
+    char *cwd = getcwd(NULL, 0);
+    char *log_path = (char *)calloc(1, PATH_MAX);
+    char *pid_path = (char *)calloc(1, PATH_MAX);
+    if (cwd == NULL || log_path == NULL || pid_path == NULL) {
+        (void)dprintf(exec_fd, "memory error: %s", strerror(errno));
+        _exit(EXIT_FAILURE);
+    }
+
+    int nret = snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
+    if (nret < 0 || nret >= PATH_MAX) {
+        _exit(EXIT_FAILURE);
+    }
+    nret = snprintf(pid_path, PATH_MAX, "%s/pid", cwd);
+    if (nret < 0 || nret >= PATH_MAX) {
+        _exit(EXIT_FAILURE);
+    }
+
+    char *process_desc = NULL;
+    if (p->state->exec) {
+        process_desc = (char *)calloc(1, PATH_MAX);
+        if (process_desc == NULL) {
+            (void)dprintf(exec_fd, "memory error: %s", strerror(errno));
+            _exit(EXIT_FAILURE);
+        }
+        nret = snprintf(process_desc, PATH_MAX, "%s/process.json", cwd);
+        if (nret < 0 || nret >= PATH_MAX) {
+            _exit(EXIT_FAILURE);
+        }
+    }
+
+    const char *params[MAX_RUNTIME_ARGS] = { 0 };
+    get_runtime_cmd(p, log_path, pid_path, process_desc, params);
+    execvp(p->runtime, (char * const *)params);
+    (void)dprintf(exec_fd, "fork/exec error: %s", strerror(errno));
+    _exit(EXIT_FAILURE);
+}
+
 int create_process(process_t *p)
 {
-    int ret = -1;
+    int ret = SHIM_ERR;
     char *data = NULL;
     int exec_fd[2] = { -1, -1 };
     char exec_buff[BUFSIZ + 1] = { 0 };
@@ -971,56 +1070,13 @@ int create_process(process_t *p)
         return SHIM_ERR;
     }
 
-    // child:runtime
+    /* child:runtime process */
     if (pid == (pid_t)0) {
         close_fd(&exec_fd[0]);
-        if (p->shim_io != NULL) {
-            if (p->shim_io->in != -1) {
-                close(p->shim_io->in);
-                p->shim_io->in = -1;
-                dup2(p->stdio->in, 0);
-            }
-            if (p->shim_io->out != -1) {
-                close(p->shim_io->out);
-                p->shim_io->out = -1;
-                dup2(p->stdio->out, 1);
-            }
-            if (p->shim_io->err != -1) {
-                close(p->shim_io->err);
-                p->shim_io->err = -1;
-                dup2(p->stdio->err, 2);
-            }
-        }
-
-        char *cwd = getcwd(NULL, 0);
-        char *log_path = (char *)calloc(1, PATH_MAX);
-        char *pid_path = (char *)calloc(1, PATH_MAX);
-        if (cwd == NULL || log_path == NULL || pid_path == NULL) {
-            (void)dprintf(exec_fd[1], "memory error: %s", strerror(errno));
-            _exit(EXIT_FAILURE);
-        }
-
-        snprintf(log_path, PATH_MAX, "%s/log.json", cwd);
-        snprintf(pid_path, PATH_MAX, "%s/pid", cwd);
-
-        char *process_desc = NULL;
-        if (p->state->exec) {
-            process_desc = (char *)calloc(1, PATH_MAX);
-            if (process_desc == NULL) {
-                (void)dprintf(exec_fd[1], "memory error: %s", strerror(errno));
-                _exit(EXIT_FAILURE);
-            }
-            snprintf(process_desc, PATH_MAX, "%s/process.json", cwd);
-        }
-
-        const char *params[MAX_RUNTIME_ARGS] = { 0 };
-        get_runtime_cmd(p, log_path, pid_path, process_desc, params);
-        execvp(p->runtime, (char * const *)params);
-        (void)dprintf(exec_fd[1], "fork/exec error: %s", strerror(errno));
-        _exit(EXIT_FAILURE);
+        exec_runtime_process(p, exec_fd[1]);
     }
 
-    // parent
+    /* parent:isulad-shim process */
     close_fd(&exec_fd[1]);
     if (p->stdio != NULL) {
         close_fd(&p->stdio->in);
@@ -1034,7 +1090,7 @@ int create_process(process_t *p)
         goto out;
     }
 
-    // block to wait pid exit
+    /* block to wait runtime pid exit */
     ret = waitpid(pid, NULL, 0);
     if (ret != pid) {
         write_message(g_log_fd, ERR_MSG, "wait runtime failed:%d", SHIM_SYS_ERR(errno));
@@ -1042,7 +1098,7 @@ int create_process(process_t *p)
         goto out;
     }
 
-    // save pid
+    /* save runtime pid */
     data = read_text_file("pid");
     if (data == NULL) {
         write_message(g_log_fd, ERR_MSG, "read pid of runtime failed");
@@ -1061,6 +1117,7 @@ out:
     close_fd(&exec_fd[0]);
     if (data != NULL) {
         free(data);
+        data = NULL;
     }
 
     return ret;
@@ -1089,7 +1146,7 @@ int process_signal_handle_routine(process_t *p)
                 }
             }
         } else if (ret == SHIM_ERR_WAIT) {
-            // avoid thread entering the infinite loop
+            /* avoid thread entering the infinite loop */
             usleep(1000);
             continue;
         }

@@ -71,7 +71,7 @@ static int parse_args(int argc, char **argv, char **cid, char **bundle, char **r
     *cid = strdup(argv[1]);
     *bundle = strdup(argv[2]);
     *rt_name = strdup(argv[3]);
-    if (*cid == NULL || *bundle == NULL || rt_name == NULL) {
+    if (*cid == NULL || *bundle == NULL || *rt_name == NULL) {
         return SHIM_ERR;
     }
 
@@ -85,7 +85,10 @@ static int parse_args(int argc, char **argv, char **cid, char **bundle, char **r
     return SHIM_OK;
 }
 
-
+/*
+ * Note:
+ * All files created in the working directory are cleared by the parent process isulad
+ */
 int main(int argc, char **argv)
 {
     char *container_id = NULL;
@@ -101,6 +104,10 @@ int main(int argc, char **argv)
         _exit(EXIT_FAILURE);
     }
 
+    /*
+     * The default value of DEFAULT_TIME is 120 seconds,
+     * which is the same as the default value of containerd
+     */
     set_timeout_exit(DEFAULT_TIMEOUT);
 
     ret = set_subreaper();
@@ -121,7 +128,11 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    // open exit pipe
+    /*
+     * Open exit pipe
+     * The exit pipe exists only when the container is started,
+     * and the exec operation does not contain the exit pipe.
+     */
     if (!p->state->exec) {
         if (p->state->exit_fifo != NULL) {
             efd = open_no_inherit("exit_fifo", O_WRONLY, -1);
@@ -133,7 +144,7 @@ int main(int argc, char **argv)
         }
     }
 
-    // create main loop and start epoll
+    /* create main loop and start epoll for io copy */
     ret = process_io_init(p);
     if (ret != SHIM_OK) {
         write_message(g_log_fd, ERR_MSG, "process io init failed:%d", ret);
@@ -147,6 +158,9 @@ int main(int argc, char **argv)
 
     ret = create_process(p);
     if (ret != SHIM_OK) {
+        if (p->console_sock_path != NULL) {
+            (void)unlink(p->console_sock_path);
+        }
         exit(EXIT_FAILURE);
     }
 
