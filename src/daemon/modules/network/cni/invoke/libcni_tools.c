@@ -29,32 +29,6 @@
 #include "libcni_errno.h"
 #include "isula_libutils/log.h"
 
-const char * const g_CNI_INVOKE_ERR_MSGS[] = {
-    "Invalid ERROR code",
-    "Invalid invoke argument",
-    "Call sprintf_s failed",
-    "Terminal by signal",
-    "Parse json string failed",
-    /* new error message add here */
-    "Success"
-};
-
-static inline bool check_get_invoke_err_msg_args(int errcode)
-{
-    return (errcode <= INK_ERR_MIN || errcode >= INK_ERR_MAX);
-}
-
-const char *get_invoke_err_msg(int errcode)
-{
-    if (check_get_invoke_err_msg_args(errcode)) {
-        return NULL;
-    }
-    if (errcode <= INK_SUCCESS) {
-        return g_CNI_INVOKE_ERR_MSGS[errcode - (INK_ERR_MIN)];
-    }
-    return strerror(errcode);
-}
-
 static int do_check_file(const char *plugin, const char *path, char **find_path, int *save_errno)
 {
     int nret = 0;

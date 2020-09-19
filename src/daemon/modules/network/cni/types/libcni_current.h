@@ -18,7 +18,7 @@
 #include "libcni_types.h"
 #include "isula_libutils/cni_result_curr.h"
 
-#define curr_implemented_spec_version "0.3.1"
+#define curr_implemented_spec_version "0.4.0"
 
 struct result *new_curr_result(const char *json_data, char **err);
 

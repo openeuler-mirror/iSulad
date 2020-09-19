@@ -914,7 +914,7 @@ int util_scan_subdirs(const char *directory, subdir_callback_t cb, void *context
 
     direntp = readdir(dir);
     for (; direntp != NULL; direntp = readdir(dir)) {
-        if (strncmp(direntp->d_name, ".", PATH_MAX) == 0 || strncmp(direntp->d_name, "..", PATH_MAX) == 0) {
+        if (strcmp(direntp->d_name, ".") == 0 || strcmp(direntp->d_name, "..") == 0) {
             continue;
         }
 
