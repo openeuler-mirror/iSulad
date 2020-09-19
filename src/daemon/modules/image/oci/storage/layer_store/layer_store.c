@@ -863,7 +863,9 @@ static char *caculate_playload(struct archive *ar)
     int nret = 0;
     const isula_crc_table_t *ctab = NULL;
     uint64_t crc = 0;
+    // max crc bits is 8
     unsigned char sum_data[8] = { 0 };
+    // add \0 at crc bits last, so need a 9 bits array
     unsigned char tmp_data[9] = { 0 };
     bool empty = true;
 
@@ -893,6 +895,7 @@ static char *caculate_playload(struct archive *ar)
     }
 
     isula_crc_sum(crc, sum_data);
+    // max crc bits is 8
     for (r = 0; r < 8; r++) {
         tmp_data[r] = sum_data[r];
     }
@@ -1004,12 +1007,6 @@ out:
 
 static int make_tar_split_file(const char *lid, const struct io_read_wrapper *diff, int64_t *size)
 {
-    /*
-     * step 1: read header;
-     * step 2: build entry json;
-     * step 3: write into tar split;
-     * step 4: gzip tar split, and save file.
-     * */
     int *pfd = (int *)diff->context;
     char *save_fname = NULL;
     char *save_fname_gz = NULL;
@@ -1024,6 +1021,7 @@ static int make_tar_split_file(const char *lid, const struct io_read_wrapper *di
     if (save_fname_gz == NULL) {
         goto out;
     }
+    // step 1: read header;
     tfd = util_open(save_fname, O_WRONLY | O_CREAT, SECURE_CONFIG_FILE_MODE);
     if (tfd == -1) {
         SYSERROR("touch file failed");
@@ -1032,6 +1030,8 @@ static int make_tar_split_file(const char *lid, const struct io_read_wrapper *di
     close(tfd);
     tfd = -1;
 
+    // step 2: build entry json;
+    // step 3: write into tar split;
     ret = foreach_archive_entry(archive_entry_parse, *pfd, save_fname, size);
     if (ret != 0) {
         goto out;
@@ -1042,7 +1042,7 @@ static int make_tar_split_file(const char *lid, const struct io_read_wrapper *di
         goto out;
     }
 
-    // gzip tar split file
+    // step 4: gzip tar split, and save file.
     ret = util_gzip_z(save_fname, save_fname_gz, SECURE_CONFIG_FILE_MODE);
 
     // always remove tmp tar split file, even though gzip failed.
@@ -1968,7 +1968,7 @@ static uint64_t payload_to_crc(char *payload)
     return crc;
 }
 
-static int file_crc(char *file, uint64_t *crc, uint64_t policy)
+static int file_crc64(char *file, uint64_t *crc, uint64_t policy)
 {
 #define BLKSIZE 32768
     int ret = 0;
@@ -2023,7 +2023,7 @@ out:
     return ret;
 }
 
-static int valid_crc(storage_entry *entry, char *rootfs)
+static int valid_crc64(storage_entry *entry, char *rootfs)
 {
     int ret = 0;
     int nret = 0;
@@ -2058,7 +2058,7 @@ static int valid_crc(storage_entry *entry, char *rootfs)
             goto out;
         }
 
-        ret = file_crc(file, &crc, ISO_POLY);
+        ret = file_crc64(file, &crc, ISO_POLY);
         if (ret != 0) {
             ERROR("calc crc of file %s failed", file);
             ret = -1;
@@ -2204,7 +2204,7 @@ static int do_integration_check(layer_t *l, char *rootfs)
     }
     while (entry != NULL) {
         if (entry->type == STORAGE_ENTRY_TYPE_CRC) {
-            ret = valid_crc(entry, rootfs);
+            ret = valid_crc64(entry, rootfs);
             if (ret != 0) {
                 ERROR("integration check failed, layer %s, file %s", l->slayer->id, entry->name);
                 goto out;
