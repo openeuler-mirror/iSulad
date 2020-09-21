@@ -93,7 +93,7 @@ $ sudo -E make install
 $ sudo -E ldconfig
 ```
 
-## Build and install specific versions dependencies from source 
+## Build and install specific versions dependencies from source
 iSulad depend on some specific versions dependencies.
 
 ### build and install lxc
