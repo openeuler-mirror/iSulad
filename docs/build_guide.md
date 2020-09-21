@@ -19,6 +19,10 @@ $ sudo apt install -y libtool automake autoconf cmake make pkg-config libyajl-de
 ## Build and install other dependencies from source
 These dependencies may not be provided by your package manager. So you need to build them from source.
 
+Please use the protobuf and grpc came with your distribution, if not exists then need to build them from source.
+
+Note: grpc-1.22 can not support GCC 9+.
+
 ### set ldconfig and pkgconfig
 ```
 $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
