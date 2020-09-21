@@ -434,8 +434,8 @@ int oci_status_image(im_status_request *request, im_status_response **response)
 
     resolved_name = oci_resolve_image_name(image_ref);
     if (resolved_name == NULL) {
-        ERROR("Failed to reslove image name %s", image_ref);
-        isulad_set_error_message("Failed to reslove image name %s", image_ref);
+        ERROR("Failed to resolve image name %s", image_ref);
+        isulad_set_error_message("Failed to resolve image name %s", image_ref);
         ret = -1;
         goto pack_response;
     }

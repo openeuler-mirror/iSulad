@@ -361,16 +361,16 @@ static bool is_arch_in_seccomp(const docker_seccomp *seccomp, const char *arch)
     return false;
 }
 
-static bool is_cap_in_seccomp(const defs_process_capabilities *capabilites, const char *cap)
+static bool is_cap_in_seccomp(const defs_process_capabilities *capabilities, const char *cap)
 {
     size_t i = 0;
 
-    if (capabilites == NULL) {
+    if (capabilities == NULL) {
         return false;
     }
 
-    for (i = 0; i < capabilites->bounding_len; i++) {
-        if (strcasecmp(capabilites->bounding[i], cap) == 0) {
+    for (i = 0; i < capabilities->bounding_len; i++) {
+        if (strcasecmp(capabilities->bounding[i], cap) == 0) {
             return true;
         }
     }
@@ -378,7 +378,7 @@ static bool is_cap_in_seccomp(const defs_process_capabilities *capabilites, cons
 }
 
 static void meet_include(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                         const defs_process_capabilities *capabilites, bool *meet_include_arch, bool *meet_include_cap)
+                         const defs_process_capabilities *capabilities, bool *meet_include_arch, bool *meet_include_cap)
 {
     size_t i;
 
@@ -401,7 +401,7 @@ static void meet_include(const docker_seccomp *seccomp, const docker_seccomp_sys
         *meet_include_cap = true;
     } else {
         for (i = 0; i < syscall->includes->caps_len; i++) {
-            if (is_cap_in_seccomp(capabilites, syscall->includes->caps[i])) {
+            if (is_cap_in_seccomp(capabilities, syscall->includes->caps[i])) {
                 *meet_include_cap = true;
                 break;
             }
@@ -410,7 +410,7 @@ static void meet_include(const docker_seccomp *seccomp, const docker_seccomp_sys
 }
 
 static void meet_exclude(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                         const defs_process_capabilities *capabilites, bool *meet_exclude_arch, bool *meet_exclude_cap)
+                         const defs_process_capabilities *capabilities, bool *meet_exclude_arch, bool *meet_exclude_cap)
 {
     size_t i;
 
@@ -434,7 +434,7 @@ static void meet_exclude(const docker_seccomp *seccomp, const docker_seccomp_sys
         *meet_exclude_cap = true;
     } else {
         for (i = 0; i < syscall->excludes->caps_len; i++) {
-            if (is_cap_in_seccomp(capabilites, syscall->excludes->caps[i])) {
+            if (is_cap_in_seccomp(capabilities, syscall->excludes->caps[i])) {
                 *meet_exclude_cap = false;
                 break;
             }
@@ -443,15 +443,15 @@ static void meet_exclude(const docker_seccomp *seccomp, const docker_seccomp_sys
 }
 
 static bool meet_filtering_rules(const docker_seccomp *seccomp, const docker_seccomp_syscalls_element *syscall,
-                                 const defs_process_capabilities *capabilites)
+                                 const defs_process_capabilities *capabilities)
 {
     bool meet_include_arch = false;
     bool meet_include_cap = false;
     bool meet_exclude_arch = true;
     bool meet_exclude_cap = true;
 
-    meet_include(seccomp, syscall, capabilites, &meet_include_arch, &meet_include_cap);
-    meet_exclude(seccomp, syscall, capabilites, &meet_exclude_arch, &meet_exclude_cap);
+    meet_include(seccomp, syscall, capabilities, &meet_include_arch, &meet_include_cap);
+    meet_exclude(seccomp, syscall, capabilities, &meet_exclude_arch, &meet_exclude_cap);
 
     return meet_include_arch && meet_include_cap && meet_exclude_arch && meet_exclude_cap;
 }
@@ -530,7 +530,7 @@ static int dup_syscall_args_to_oci_spec(const docker_seccomp_syscalls_element *d
 
 static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
                                    oci_runtime_config_linux_seccomp *oci_seccomp_spec,
-                                   const defs_process_capabilities *capabilites)
+                                   const defs_process_capabilities *capabilities)
 {
     int ret = 0;
     size_t i, j, k;
@@ -550,7 +550,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
         return -1;
     }
     for (i = 0; i < docker_seccomp_spec->syscalls_len; i++) {
-        if (!meet_filtering_rules(docker_seccomp_spec, docker_seccomp_spec->syscalls[i], capabilites)) {
+        if (!meet_filtering_rules(docker_seccomp_spec, docker_seccomp_spec->syscalls[i], capabilities)) {
             continue;
         }
         k = oci_seccomp_spec->syscalls_len;
@@ -593,7 +593,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
 
 static oci_runtime_config_linux_seccomp *
 trans_docker_seccomp_to_oci_format(const docker_seccomp *docker_seccomp_spec,
-                                   const defs_process_capabilities *capabilites)
+                                   const defs_process_capabilities *capabilities)
 {
     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
 
@@ -611,7 +611,7 @@ trans_docker_seccomp_to_oci_format(const docker_seccomp *docker_seccomp_spec,
     }
 
     // syscalls
-    if (dup_syscall_to_oci_spec(docker_seccomp_spec, oci_seccomp_spec, capabilites)) {
+    if (dup_syscall_to_oci_spec(docker_seccomp_spec, oci_seccomp_spec, capabilities)) {
         goto out;
     }
 
@@ -626,7 +626,7 @@ done:
     return oci_seccomp_spec;
 }
 
-int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_capabilities *capabilites)
+int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_capabilities *capabilities)
 {
     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
     docker_seccomp *docker_seccomp_spec = NULL;
@@ -641,7 +641,7 @@ int merge_default_seccomp_spec(oci_runtime_spec *oci_spec, const defs_process_ca
         isulad_set_error_message("failed to parse seccomp file: %s", SECCOMP_DEFAULT_PATH);
         return -1;
     }
-    oci_seccomp_spec = trans_docker_seccomp_to_oci_format(docker_seccomp_spec, capabilites);
+    oci_seccomp_spec = trans_docker_seccomp_to_oci_format(docker_seccomp_spec, capabilities);
     free_docker_seccomp(docker_seccomp_spec);
     if (oci_seccomp_spec == NULL) {
         ERROR("Failed to trans docker format seccomp profile to oci standard");

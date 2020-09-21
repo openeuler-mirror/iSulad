@@ -130,7 +130,7 @@ out:
     return ret;
 }
 
-/* notes: this funciton must be called with gc_containers_lock */
+/* notes: this function must be called with gc_containers_lock */
 static int gc_containers_to_disk()
 {
     int ret = 0;

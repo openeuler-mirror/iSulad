@@ -299,7 +299,7 @@ static int db_save_image_info_sql(struct db_image *image)
     sqlite3_bind_text(stmt, 12, image->config_digest, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 13, image->config_path, -1, SQLITE_STATIC);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
-        ERROR("Insert image info into the image infomation table failed!");
+        ERROR("Insert image info into the image information table failed!");
         ret = DB_FAIL;
     }
 
@@ -373,7 +373,7 @@ int db_save_image(struct db_image *image)
     ret = db_add_image_name_sql(image->image_name,
                                 image->config_digest, image->config_path);
     if (ret) {
-        /* Should not error when add image name. If error occured,
+        /* Should not error when add image name. If error occurred,
          * database is abnormal, so do not rollback. */
         goto out;
     }

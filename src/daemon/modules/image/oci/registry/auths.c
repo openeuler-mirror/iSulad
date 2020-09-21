@@ -322,7 +322,7 @@ static int ensure_auth_dir_exist()
     ret = util_mkdir_p(auths_dir, DEFAULT_AUTH_DIR_MODE);
     if (ret != 0) {
         ERROR("mkdir for auths failed");
-        isulad_try_set_error_message("create direcotry for auths failed");
+        isulad_try_set_error_message("create directory for auths failed");
         goto out;
     }
 

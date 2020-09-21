@@ -29,7 +29,7 @@ void print_common_help();
 void print_version();
 
 // Default help command if implementation doesn't prvide one
-int commmand_default_help(const char * const program_name, int argc, char **argv);
+int command_default_help(const char * const program_name, int argc, char **argv);
 int command_isulad_valid_socket(command_option_t *option, const char *arg);
 int parse_args(struct service_arguments *args, int argc, const char **argv);
 int check_args(struct service_arguments *args);

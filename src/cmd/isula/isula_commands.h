@@ -32,7 +32,7 @@ extern "C" {
 // matches. Receives the argc of the program minus two, and
 // the rest os argv
 // @description: Brief description, will show in help messages
-// @longdesc: Long descripton to show when you run `help <command>`
+// @longdesc: Long description to show when you run `help <command>`
 struct command {
     const char * const name;
     int (*executor)(int, const char **);
@@ -68,7 +68,7 @@ void delete_command_fifo(struct command_fifo_config *fifos);
 const struct command *command_by_name(const struct command *cmds, const char * const name);
 
 // Default help command if implementation doesn't prvide one
-int commmand_default_help(const char * const program_name, struct command *commands, int argc, const char **argv);
+int command_default_help(const char * const program_name, struct command *commands, int argc, const char **argv);
 
 int run_command(struct command *commands, int argc, const char **argv);
 

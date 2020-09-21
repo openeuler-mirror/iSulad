@@ -211,7 +211,7 @@ static int get_containers_from_json()
 
     ret = util_list_all_subdir(g_rootfs_store->dir, &container_dirs);
     if (ret != 0) {
-        ERROR("Failed to get container directorys");
+        ERROR("Failed to get container directories");
         goto out;
     }
     container_dirs_num = util_array_len((const char **)container_dirs);
@@ -368,7 +368,7 @@ static int load_container_to_store_field(cntrootfs_t *cntr)
             should_save = true;
         }
         if (!map_replace(g_rootfs_store->byname, (void *)cntr->srootfs->names[i], (void *)cntr)) {
-            ERROR("Failed to insert containes to name index");
+            ERROR("Failed to insert containers to name index");
             ret = -1;
             goto out;
         }

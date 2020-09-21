@@ -988,15 +988,15 @@ out:
     return ret;
 }
 
-static int start_monitord()
+static int start_monitored()
 {
     int ret = 0;
-    int monitord_exitcode = 0;
+    int monitored_exitcode = 0;
     sem_t monitord_sem;
     struct monitord_sync_data msync = { 0 };
 
     msync.monitord_sem = &monitord_sem;
-    msync.exit_code = &monitord_exitcode;
+    msync.exit_code = &monitored_exitcode;
     if (sem_init(msync.monitord_sem, 0, 0)) {
         isulad_set_error_message("Failed to init monitor sem");
         ret = -1;
@@ -1004,7 +1004,7 @@ static int start_monitord()
     }
 
     if (new_monitord(&msync)) {
-        isulad_set_error_message("Create monitord thread failed");
+        isulad_set_error_message("Create monitored thread failed");
         ret = -1;
         sem_destroy(msync.monitord_sem);
         goto out;
@@ -1012,8 +1012,8 @@ static int start_monitord()
 
     sem_wait(msync.monitord_sem);
     sem_destroy(msync.monitord_sem);
-    if (monitord_exitcode) {
-        isulad_set_error_message("Monitord start failed");
+    if (monitored_exitcode) {
+        isulad_set_error_message("Monitored start failed");
         ret = -1;
         goto out;
     }
@@ -1032,7 +1032,7 @@ int events_module_init(char **msg)
         goto out;
     }
 
-    if (start_monitord()) {
+    if (start_monitored()) {
         *msg = g_isulad_errmsg ? g_isulad_errmsg : "Failed to init cgroups path";
         ret = -1;
         goto out;

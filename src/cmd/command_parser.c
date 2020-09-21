@@ -243,7 +243,7 @@ static int command_get_option_data(command_t *self, command_option_t *option, co
         case CMD_OPT_TYPE_CALLBACK:
             return command_get_callback_option_data(self, option, opt_arg);
         default:
-            COMMAND_ERROR("Unkown command option type:%d", (int)(option->type));
+            COMMAND_ERROR("Unknown command option type:%d", (int)(option->type));
             return -1;
     }
 }
@@ -305,7 +305,7 @@ static int command_parse_short_arg(command_t *self, const char *arg)
     } while (found && opt_arg != NULL);
 
     if (opt_arg != NULL) {
-        COMMAND_ERROR("Unkown flag found:'%c'", opt_arg[0]);
+        COMMAND_ERROR("Unknown flag found:'%c'", opt_arg[0]);
         exit(EINVALIDARGS);
     }
     return 0;
@@ -348,7 +348,7 @@ static int command_parse_long_arg(command_t *self, const char *arg)
         }
         return 0;
     }
-    COMMAND_ERROR("Unkown flag found:'--%s'\n", arg);
+    COMMAND_ERROR("Unknown flag found:'--%s'\n", arg);
     exit(EINVALIDARGS);
 }
 

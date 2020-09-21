@@ -483,7 +483,7 @@ static int register_new_container(const char *id, const char *runtime, host_conf
                                   container_config_v2_common_config **v2_spec)
 {
     int ret = -1;
-    bool registed = false;
+    bool registered = false;
     char *runtime_root = NULL;
     char *runtime_stat = NULL;
     char *image_id = NULL;
@@ -515,8 +515,8 @@ static int register_new_container(const char *id, const char *runtime, host_conf
         goto out;
     }
 
-    registed = containers_store_add(id, cont);
-    if (!registed) {
+    registered = containers_store_add(id, cont);
+    if (!registered) {
         ERROR("Failed to register container '%s'", id);
         goto out;
     }

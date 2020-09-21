@@ -321,7 +321,7 @@ void free_pquota_control(struct pquota_control *ctrl)
     ctrl->backing_fs_device = NULL;
 
     if (pthread_rwlock_destroy(&(ctrl->rwlock)) != 0) {
-        SYSERROR("destory pquota_control rwlock failed");
+        SYSERROR("destroy pquota_control rwlock failed");
     }
     free(ctrl);
 }
