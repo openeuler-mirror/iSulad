@@ -20,7 +20,7 @@ EOF
 ```
 
 Install iSulad with yum:
->>>>>>> README: unify punctuation
+
 ```sh
 yum install -y iSulad
 ```
