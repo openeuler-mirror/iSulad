@@ -3119,6 +3119,14 @@ static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, im
         goto out;
     }
     if (util_safe_llong(user, &converted) == 0) {
+        if (info->uid == NULL) {
+            info->uid = (imagetool_image_uid *)util_common_calloc_s(sizeof(imagetool_image_uid));
+            if (info->uid == NULL) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+        }
         info->uid->value = (int64_t)converted;
     } else {
         info->username = util_strdup_s(user);
