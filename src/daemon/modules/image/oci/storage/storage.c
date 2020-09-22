@@ -103,15 +103,14 @@ static int fill_read_wrapper(const char *layer_data_path, struct io_read_wrapper
     reader_tmp = util_common_calloc_s(sizeof(struct io_read_wrapper));
     if (reader_tmp == NULL) {
         ERROR("Memory out");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     fd_ptr = util_common_calloc_s(sizeof(int));
     if (fd_ptr == NULL) {
         ERROR("Memory out");
         ret = -1;
-        goto out;
+        goto err_out;
     }
 
     *fd_ptr = util_open(layer_data_path, O_RDONLY, 0);
@@ -125,13 +124,14 @@ static int fill_read_wrapper(const char *layer_data_path, struct io_read_wrapper
     reader_tmp->read = layer_archive_io_read;
     reader_tmp->close = layer_archive_io_close;
     *reader = reader_tmp;
-
-    goto out;
+    
+    fd_ptr = NULL;
+    reader_tmp = NULL;
 
 err_out:
     free(fd_ptr);
     free(reader_tmp);
-out:
+
     return ret;
 }
 
