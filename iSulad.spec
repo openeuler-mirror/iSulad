@@ -1,5 +1,5 @@
 %global _version 2.0.5
-%global _release 20200918.112827.git9aea9b75
+%global _release 20200923.094914.git05e545f7
 %global is_systemd 1
 
 Name:      iSulad
@@ -23,6 +23,8 @@ Patch6007:	0007-image-clear-memory-if-failed.patch
 Patch6008:	0008-fix-layer-remain-caused-by-hold-flag-not-clean.patch
 Patch6009:	0009-fix-coredump-when-pull-image-with-lock-driver-image-.patch
 Patch6010:	0010-fix-bad-formatting-placeholder-in-http-parse-module.patch
+Patch6011:	0011-iSulad-fix-memory-leak.patch
+Patch6012:	0012-fix-coredump-when-load-image-with-uid.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -230,6 +232,12 @@ fi
 %endif
 
 %changelog
++* Fri Sep 23 2020  <wujing50@huawei.com> - 2.0.5-20200923.094914.git05e545f7
++- Type:bugfix
++- ID:NA
++- SUG:NA
++- DESC: fix some memory bugs
+
 +* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
 +- Type:bugfix
 +- ID:NA
