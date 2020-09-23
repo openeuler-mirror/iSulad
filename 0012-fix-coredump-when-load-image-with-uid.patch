@@ -1,0 +1,32 @@
+From 514f43054196785e2d40b51592e6691616938f69 Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Tue, 22 Sep 2020 16:22:01 +0800
+Subject: [PATCH 2/2] fix coredump when load image with uid
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ .../modules/image/oci/storage/image_store/image_store.c   | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+index 2d2136ed..f6dd1ef1 100644
+--- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
++++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
+@@ -3119,6 +3119,14 @@ static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, im
+         goto out;
+     }
+     if (util_safe_llong(user, &converted) == 0) {
++        if (info->uid == NULL) {
++            info->uid = (imagetool_image_uid *)util_common_calloc_s(sizeof(imagetool_image_uid));
++            if (info->uid == NULL) {
++                ERROR("Out of memory");
++                ret = -1;
++                goto out;
++            }
++        }
+         info->uid->value = (int64_t)converted;
+     } else {
+         info->username = util_strdup_s(user);
+-- 
+2.25.1
+
