@@ -634,7 +634,7 @@ out:
 
 static int get_top_layer_index(pull_descriptor *desc, size_t *top_layer_index)
 {
-    size_t i = 0;
+    int i = 0;
 
     if (desc == NULL || top_layer_index == NULL) {
         ERROR("Invalid NULL pointer");
