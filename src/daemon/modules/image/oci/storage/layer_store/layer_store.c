@@ -738,7 +738,7 @@ out:
 static int insert_memory_stores(const char *id, const struct layer_opts *opts, layer_t *l)
 {
     int ret = 0;
-    size_t i = 0;
+    int i = 0;
 
     if (!append_layer_into_list(l)) {
         ret = -1;
