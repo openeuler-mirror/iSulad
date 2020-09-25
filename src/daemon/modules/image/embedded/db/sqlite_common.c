@@ -25,10 +25,10 @@
 
 // Waiting at most (10 * 1000ms) when database is busy
 // to avoid concurrent write or read.
-#define SQLITE_BUSY_TIMEOUT 120000
+#define ISULA_SQLITE_BUSY_TIMEOUT 120000
 
-#define SQLITE_PAGECACHE_SIZE 4096
-#define SQLITE_PAGECACHE_NUM 8
+#define ISULA_SQLITE_PAGECACHE_SIZE 4096
+#define ISULA_SQLITE_PAGECACHE_NUM 8
 
 sqlite3 *g_db = NULL;
 
@@ -74,7 +74,7 @@ int db_sqlite_request(const char *stmt)
     char *errmsg = NULL;
     int ret;
 
-    ret = sqlite3_busy_timeout(g_db, SQLITE_BUSY_TIMEOUT);
+    ret = sqlite3_busy_timeout(g_db, ISULA_SQLITE_BUSY_TIMEOUT);
     if (ret != SQLITE_OK) {
         ERROR("Falied to set sqlite busy timeout");
         return ret;
@@ -94,7 +94,7 @@ int db_sqlite_request_callback(const char *stmt,
     char *errmsg = NULL;
     int ret;
 
-    ret = sqlite3_busy_timeout(g_db, SQLITE_BUSY_TIMEOUT);
+    ret = sqlite3_busy_timeout(g_db, ISULA_SQLITE_BUSY_TIMEOUT);
     if (ret != SQLITE_OK) {
         ERROR("Falied to set sqlite busy timeout");
         return ret;
@@ -163,8 +163,8 @@ int db_common_init(const char *rootpath)
         ERROR("Failed to print string");
         return -1;
     }
-    ret = sqlite3_config(SQLITE_CONFIG_PAGECACHE, NULL, SQLITE_PAGECACHE_SIZE,
-                         SQLITE_PAGECACHE_NUM);
+    ret = sqlite3_config(SQLITE_CONFIG_PAGECACHE, NULL, ISULA_SQLITE_PAGECACHE_SIZE,
+                         ISULA_SQLITE_PAGECACHE_NUM);
     if (ret != SQLITE_OK) {
         goto open_new_db;
     }
