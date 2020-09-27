@@ -51,7 +51,7 @@ static int do_conf_from_bytes(const char *conf_str, struct network_config *confi
         ret = -1;
         goto out;
     }
-    if (config->network->type != NULL || strlen(config->network->type) == 0) {
+    if (config->network->type == NULL || strlen(config->network->type) == 0) {
         *err = util_strdup_s("error parsing configuration: missing 'type'");
         ERROR("error parsing configuration: missing 'type'");
         ret = -1;

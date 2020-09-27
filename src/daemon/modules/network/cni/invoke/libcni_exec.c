@@ -280,11 +280,11 @@ static void child_fun(void *args)
     exit(ecode);
 }
 
-static void make_err_message(const char *plugin_path, const char *stdout_str, const char *stderr_msg, cni_exec_error **err)
+static void make_err_message(const char *plugin_path, char **stdout_str, const char *stderr_msg, cni_exec_error **err)
 {
-    if (stdout_str != NULL) {
+    if (stdout_str != NULL && *stdout_str != NULL) {
         parser_error json_err = NULL;
-        *err = cni_exec_error_parse_data(stdout_str, NULL, &json_err);
+        *err = cni_exec_error_parse_data(*stdout_str, NULL, &json_err);
         if (*err == NULL) {
             ERROR("parse plugin output failed: %s", json_err);
         }
@@ -363,14 +363,16 @@ static int raw_exec(const char *plugin_path, const char *stdin_data, char **envi
     };
 
     nret = util_raw_exec_cmd(child_fun, (void *)&p_args, deal_with_plugin_errcode, &cmd_args);
-    if (nret) {
+    if (!nret) {
         ret = -1;
         goto out;
     }
-    make_err_message(plugin_path, *stdout_str, stderr_msg, err);
+    make_err_message(plugin_path, stdout_str, stderr_msg, err);
 
-    free(*stdout_str);
-    *stdout_str = NULL;
+    if (stdout_str != NULL) {
+        free(*stdout_str);
+        *stdout_str = NULL;
+    }
 
 out:
     free(stderr_msg);
