@@ -124,7 +124,7 @@ static int fill_read_wrapper(const char *layer_data_path, struct io_read_wrapper
     reader_tmp->read = layer_archive_io_read;
     reader_tmp->close = layer_archive_io_close;
     *reader = reader_tmp;
-    
+
     fd_ptr = NULL;
     reader_tmp = NULL;
 
@@ -1197,8 +1197,8 @@ int storage_rootfs_umount(const char *container_id, bool force)
 
     rootfs_info = rootfs_store_get_rootfs(container_id);
     if (rootfs_info == NULL) {
-        ERROR("Failed to get rootfs %s info", container_id);
-        ret = -1;
+        ERROR("Failed to get rootfs %s info, skip umount", container_id);
+        ret = 0;
         goto out;
     }
 
