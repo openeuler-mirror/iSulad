@@ -1600,8 +1600,8 @@ int layer_store_umount(const char *id, bool force)
     }
     l = lookup_with_lock(id);
     if (l == NULL) {
-        ERROR("layer not known");
-        return -1;
+        ERROR("layer not known,skip umount");
+        return 0;
     }
     layer_lock(l);
     ret = umount_helper(l, force);
