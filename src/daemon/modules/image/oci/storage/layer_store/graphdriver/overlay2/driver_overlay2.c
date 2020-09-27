@@ -803,7 +803,7 @@ static int do_create(const char *id, const char *parent, const struct graphdrive
         if (set_layer_quota(layer_dir, create_opts->storage_opt, driver) != 0) {
             ERROR("Unable to set layer quota %s", layer_dir);
             ret = -1;
-            goto out;
+            goto err_out;
         }
     }
 
