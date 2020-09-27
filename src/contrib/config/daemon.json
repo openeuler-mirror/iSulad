@@ -1,5 +1,5 @@
 {
-    "group": "isulad",
+    "group": "isula",
     "default-runtime": "lcr",
     "graph": "/var/lib/isulad",
     "state": "/var/run/isulad",

@@ -130,8 +130,8 @@ fi
 fi
 
 %post
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 if [ "$1" = "1" ]; then
@@ -162,8 +162,8 @@ fi
 %endif
 fi
 
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 %preun
