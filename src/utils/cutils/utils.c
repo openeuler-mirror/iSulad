@@ -845,7 +845,11 @@ bool util_raw_exec_cmd(exec_func_t cb_func, void *cb_args, exitcode_deal_func_t 
     close(err_fd[0]);
     close(out_fd[0]);
 out:
-    *(cmd_args->stdout_msg) = stdout_buffer;
+    if (cmd_args->stdout_msg != NULL) {
+        *(cmd_args->stdout_msg) = stdout_buffer;
+        stdout_buffer = NULL;
+    }
+    free(stdout_buffer);
     *(cmd_args->stderr_msg) = stderr_buffer;
     return ret;
 }
