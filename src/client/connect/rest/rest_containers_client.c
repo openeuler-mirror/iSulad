@@ -37,7 +37,7 @@ static int create_request_to_rest(const struct isula_create_request *lc_request,
     }
 
     if (lc_request->host_spec_json != NULL) {
-        crequest->hostconfig = util_strdup_s(lc_request->name);
+        crequest->hostconfig = util_strdup_s(lc_request->host_spec_json);
     }
 
     if (lc_request->container_spec_json != NULL) {
@@ -973,13 +973,9 @@ out:
 static int update_request_to_rest(const struct isula_update_request *lu_request, char **body, size_t *body_len)
 {
     container_update_request *crequest = NULL;
-    isula_host_config_t srcconfig;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error err = NULL;
-    char *srcconfigjson = NULL;
     int ret = 0;
-
-    (void)memset(&srcconfig, 0, sizeof(srcconfig));
 
     crequest = util_common_calloc_s(sizeof(container_update_request));
     if (crequest == NULL) {
