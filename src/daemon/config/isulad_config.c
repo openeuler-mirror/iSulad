@@ -1173,7 +1173,7 @@ static int set_path_group(const char *rpath, const char *group)
             return -1;
         }
     } else {
-        if (strcmp(group, "docker") == 0 || strcmp(group, "isulad") == 0) {
+        if (strcmp(group, "docker") == 0 || strcmp(group, "isula") == 0) {
             DEBUG("Warning: could not change group %s to %s", rpath, group);
         } else {
             ERROR("Group %s not found", group);
