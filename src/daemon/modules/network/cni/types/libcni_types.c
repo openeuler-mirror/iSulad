@@ -388,6 +388,10 @@ static void generate_ip_string(const uint8_t *ip, int e0, int e1, char **result)
         (*result)[j++] = g_HEX_DICT[nret];
         nret = (ip[i] & 0x0f);
         (*result)[j++] = g_HEX_DICT[nret];
+        nret = (ip[i + 1] >> 4);
+        (*result)[j++] = g_HEX_DICT[nret];
+        nret = (ip[i + 1] & 0x0f);
+        (*result)[j++] = g_HEX_DICT[nret];
     }
     return;
 }
@@ -848,7 +852,7 @@ int parse_cidr(const char *cidr_str, struct ipnet **ipnet_val, char **err)
     }
 
     nret = util_safe_uint(mask, &mask_num);
-    if (nret != 0 || (size_t)(mask_num >> 3) > result->ip_len) {
+    if (nret != 0 || (size_t)mask_num > (result->ip_len << 3)) {
         nret = asprintf(err, "Invalid CIDR address %s", cidr_str);
         if (nret < 0) {
             ERROR("Sprintf failed");
