@@ -193,7 +193,7 @@ static int request_pack_host_config_cgroup(const struct client_arguments *args, 
     return 0;
 }
 
-static int request_pack_custom_env(struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_env(const struct client_arguments *args, isula_container_config_t *conf)
 {
     int ret = 0;
     char *pe = NULL;
@@ -347,7 +347,7 @@ out:
     return ret;
 }
 
-static int request_pack_custom_label(struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_label(const struct client_arguments *args, isula_container_config_t *conf)
 {
     int ret = 0;
     size_t i;
@@ -368,8 +368,6 @@ static int request_pack_custom_label(struct client_arguments *args, isula_contai
             goto out;
         }
     }
-    util_free_array(args->custom_conf.label);
-    args->custom_conf.label = conf->label; /* make sure args->custom_conf.label point to valid memory. */
     conf->label_len = util_array_len((const char **)(conf->label));
 
 out:
@@ -466,7 +464,7 @@ out:
 static void request_pack_custom_user(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.user != NULL) {
-        conf->user = args->custom_conf.user;
+        conf->user = util_strdup_s(args->custom_conf.user);
     }
 
     return;
@@ -475,7 +473,7 @@ static void request_pack_custom_user(const struct client_arguments *args, isula_
 static void request_pack_custom_hostname(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.hostname != NULL) {
-        conf->hostname = args->custom_conf.hostname;
+        conf->hostname = util_strdup_s(args->custom_conf.hostname);
     }
 
     return;
@@ -499,39 +497,50 @@ static void request_pack_custom_system_container(const struct client_arguments *
     /* ns change opt */
     if (!args->custom_conf.privileged) {
         if (args->custom_conf.ns_change_opt != NULL) {
-            conf->ns_change_opt = args->custom_conf.ns_change_opt;
+            conf->ns_change_opt = util_strdup_s(args->custom_conf.ns_change_opt);
         }
     }
 
     return;
 }
 
-static void request_pack_custom_mounts(const struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_mounts(const struct client_arguments *args, isula_container_config_t *conf)
 {
-    if (args->custom_conf.mounts != NULL) {
-        conf->mounts_len = util_array_len((const char **)(args->custom_conf.mounts));
-        conf->mounts = args->custom_conf.mounts;
+    if (args->custom_conf.mounts == NULL) {
+        return 0;
     }
-    return;
+
+    if (dup_array_of_strings((const char **)args->custom_conf.mounts,
+                             util_array_len((const char **)(args->custom_conf.mounts)), &conf->mounts,
+                             &conf->mounts_len) != 0) {
+        COMMAND_ERROR("Failed to dup mounts info");
+        return -1;
+    }
+
+    return 0;
 }
 
 static void request_pack_custom_entrypoint(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.entrypoint != NULL) {
-        conf->entrypoint = args->custom_conf.entrypoint;
+        conf->entrypoint = util_strdup_s(args->custom_conf.entrypoint);
     }
 
     return;
 }
 
-static void request_pack_custom_args(const struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_args(const struct client_arguments *args, isula_container_config_t *conf)
 {
-    if (args->argc != 0 && args->argv != NULL) {
-        conf->cmd_len = (size_t)(args->argc);
-        conf->cmd = (char **)args->argv;
+    if (args->argc == 0) {
+        return 0;
     }
 
-    return;
+    if (dup_array_of_strings((const char **)args->argv, args->argc, &conf->cmd, &conf->cmd_len) != 0) {
+        COMMAND_ERROR("Failed to dup command");
+        return -1;
+    }
+
+    return 0;
 }
 
 static void request_pack_custom_log_options(const struct client_arguments *args, isula_container_config_t *conf)
@@ -543,7 +552,7 @@ static void request_pack_custom_work_dir(const struct client_arguments *args, is
 {
     /* work dir in container */
     if (args->custom_conf.workdir != NULL) {
-        conf->workdir = args->custom_conf.workdir;
+        conf->workdir = util_strdup_s(args->custom_conf.workdir);
     }
 
     return;
@@ -563,7 +572,7 @@ static void request_pack_custom_tty(const struct client_arguments *args, isula_c
 static void request_pack_custom_health_check(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.health_cmd != NULL) {
-        conf->health_cmd = args->custom_conf.health_cmd;
+        conf->health_cmd = util_strdup_s(args->custom_conf.health_cmd);
     }
     /* health check */
     conf->health_interval = args->custom_conf.health_interval;
@@ -576,30 +585,57 @@ static void request_pack_custom_health_check(const struct client_arguments *args
     return;
 }
 
-static int request_pack_custom_conf(struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_annotations(const struct client_arguments *args, isula_container_config_t *conf)
 {
-    if (args == NULL) {
+    if (args->annotations == NULL) {
+        return 0;
+    }
+
+    conf->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+    if (conf->annotations == NULL) {
+        COMMAND_ERROR("Out of memory");
         return -1;
+    }
+
+    if (dup_json_map_string_string(args->annotations, conf->annotations) != 0) {
+        COMMAND_ERROR("Failed to dup map");
+        return -1;
+    }
+
+    return 0;
+}
+
+static isula_container_config_t *request_pack_custom_conf(const struct client_arguments *args)
+{
+    isula_container_config_t *conf = NULL;
+
+    if (args == NULL) {
+        return NULL;
+    }
+
+    conf = util_common_calloc_s(sizeof(isula_container_config_t));
+    if (conf == NULL) {
+        return NULL;
     }
 
     /* append environment variables from env file */
     if (request_pack_custom_env_file(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* make sure --env has higher priority than --env-file */
     if (request_pack_custom_env(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* append labels from label file */
     if (request_pack_custom_label_file(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* make sure --label has higher priority than --label-file */
     if (request_pack_custom_label(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* user and group */
@@ -614,19 +650,24 @@ static int request_pack_custom_conf(struct client_arguments *args, isula_contain
     request_pack_custom_system_container(args, conf);
 
     /* mounts to mount filesystem */
-    request_pack_custom_mounts(args, conf);
+    if (request_pack_custom_mounts(args, conf) != 0) {
+        goto error_out;
+    }
 
     /* entrypoint */
     request_pack_custom_entrypoint(args, conf);
 
     /* command args */
-    request_pack_custom_args(args, conf);
+    if (request_pack_custom_args(args, conf) != 0) {
+        goto error_out;
+    }
 
     /* console log options */
     request_pack_custom_log_options(args, conf);
 
-    conf->annotations = args->annotations;
-    args->annotations = NULL;
+    if (request_pack_custom_annotations(args, conf) != 0) {
+        goto error_out;
+    }
 
     /* work dir in container */
     request_pack_custom_work_dir(args, conf);
@@ -635,7 +676,11 @@ static int request_pack_custom_conf(struct client_arguments *args, isula_contain
 
     request_pack_custom_health_check(args, conf);
 
-    return 0;
+    return conf;
+
+error_out:
+    isula_container_config_free(conf);
+    return NULL;
 }
 
 static int request_pack_host_ns_change_files(const struct client_arguments *args, isula_host_config_t *hostconfig)
@@ -1065,19 +1110,6 @@ static void free_alloced_memory_in_host_config(isula_host_config_t *hostconfig)
     isula_host_config_sysctl_free(hostconfig);
 }
 
-static void free_alloced_memory_in_config(isula_container_config_t *custom_conf)
-{
-    if (custom_conf == NULL) {
-        return;
-    }
-
-    free_json_map_string_string(custom_conf->annotations);
-    custom_conf->annotations = NULL;
-
-    free(custom_conf->log_driver);
-    custom_conf->log_driver = NULL;
-}
-
 /*
  * Create a create request message and call RPC
  */
@@ -1086,7 +1118,7 @@ int client_create(struct client_arguments *args)
     int ret = 0;
     struct isula_create_request request = { 0 };
     struct isula_create_response *response = NULL;
-    isula_container_config_t custom_conf = { 0 };
+    isula_container_config_t *container_spec = NULL;
     isula_host_config_t host_config = { 0 };
     container_cgroup_resources_t cr = { 0 };
 
@@ -1096,12 +1128,13 @@ int client_create(struct client_arguments *args)
     request.image = args->image_name;
     host_config.cr = &cr;
 
-    ret = request_pack_custom_conf(args, &custom_conf);
-    if (ret != 0) {
+    container_spec = request_pack_custom_conf(args);
+    if (container_spec == 0) {
+        ret = -1;
         goto out;
     }
 
-    if (generate_container_config(&custom_conf, &request.container_spec_json) != 0) {
+    if (generate_container_config(container_spec, &request.container_spec_json) != 0) {
         ret = -1;
         goto out;
     }
@@ -1131,7 +1164,7 @@ int client_create(struct client_arguments *args)
     }
 out:
     free_alloced_memory_in_host_config(&host_config);
-    free_alloced_memory_in_config(&custom_conf);
+    isula_container_config_free(container_spec);
     isula_create_response_free(response);
     return ret;
 }
