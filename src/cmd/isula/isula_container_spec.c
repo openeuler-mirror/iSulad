@@ -12,7 +12,7 @@
  * Create: 2020-09-28
  * Description: provide generate container spec in client
  ******************************************************************************/
-#include "generate_container_spec.h"
+#include "isula_container_spec.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -452,4 +452,44 @@ out:
     free(err);
 
     return ret;
+}
+
+/* isula container config free */
+void isula_container_config_free(isula_container_config_t *config)
+{
+    if (config == NULL) {
+        return;
+    }
+
+    util_free_array_by_len(config->env, config->env_len);
+    config->env = NULL;
+    config->env_len = 0;
+
+    free(config->hostname);
+    config->hostname = NULL;
+
+    free(config->user);
+    config->user = NULL;
+
+    util_free_array_by_len(config->mounts, config->mounts_len);
+    config->mounts = NULL;
+    config->mounts_len = 0;
+
+    util_free_array_by_len(config->cmd, config->cmd_len);
+    config->cmd = NULL;
+    config->cmd_len = 0;
+
+    free(config->entrypoint);
+    config->entrypoint = NULL;
+
+    free(config->log_driver);
+    config->log_driver = NULL;
+
+    free_json_map_string_string(config->annotations);
+    config->annotations = NULL;
+
+    free(config->workdir);
+    config->workdir = NULL;
+
+    free(config);
 }

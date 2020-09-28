@@ -23,7 +23,7 @@
 #include "isula_connect.h"
 #include "connect.h"
 #include "libisula.h"
-#include "generate_host_spec.h"
+#include "isula_host_spec.h"
 
 const char g_cmd_update_desc[] = "Update configuration of one or more containers";
 const char g_cmd_update_usage[] = "update [OPTIONS] CONTAINER [CONTAINER...]";

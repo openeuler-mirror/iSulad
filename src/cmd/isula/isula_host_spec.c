@@ -12,7 +12,7 @@
  * Create: 2020-09-28
  * Description: provide generate host spec in client
  ******************************************************************************/
-#include "generate_container_spec.h"
+#include "isula_host_spec.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1934,4 +1934,157 @@ out:
     free(err);
     free_host_config(dstconfig);
     return ret;
+}
+
+void isula_ns_change_files_free(isula_host_config_t *hostconfig)
+{
+    if (hostconfig == NULL) {
+        return;
+    }
+
+    util_free_array_by_len(hostconfig->ns_change_files, hostconfig->ns_change_files_len);
+    hostconfig->ns_change_files = NULL;
+    hostconfig->ns_change_files_len = 0;
+}
+
+void isula_host_config_storage_opts_free(isula_host_config_t *hostconfig)
+{
+    if (hostconfig == NULL) {
+        return;
+    }
+
+    free_json_map_string_string(hostconfig->storage_opts);
+    hostconfig->storage_opts = NULL;
+}
+
+void isula_host_config_sysctl_free(isula_host_config_t *hostconfig)
+{
+    if (hostconfig == NULL) {
+        return;
+    }
+
+    free_json_map_string_string(hostconfig->sysctls);
+    hostconfig->sysctls = NULL;
+}
+
+/* container cgroup resources free */
+static void container_cgroup_resources_free(container_cgroup_resources_t *cr)
+{
+    if (cr == NULL) {
+        return;
+    }
+    free(cr->cpuset_cpus);
+    cr->cpuset_cpus = NULL;
+
+    free(cr->cpuset_mems);
+    cr->cpuset_mems = NULL;
+
+    free(cr);
+}
+
+/* isula host config free */
+void isula_host_config_free(isula_host_config_t *hostconfig)
+{
+    if (hostconfig == NULL) {
+        return;
+    }
+
+    util_free_array_by_len(hostconfig->cap_add, hostconfig->cap_add_len);
+    hostconfig->cap_add = NULL;
+    hostconfig->cap_add_len = 0;
+
+    util_free_array_by_len(hostconfig->cap_drop, hostconfig->cap_drop_len);
+    hostconfig->cap_drop = NULL;
+    hostconfig->cap_drop_len = 0;
+
+    free_json_map_string_string(hostconfig->storage_opts);
+    hostconfig->storage_opts = NULL;
+
+    free_json_map_string_string(hostconfig->sysctls);
+    hostconfig->sysctls = NULL;
+
+    util_free_array_by_len(hostconfig->devices, hostconfig->devices_len);
+    hostconfig->devices = NULL;
+    hostconfig->devices_len = 0;
+
+    util_free_array_by_len(hostconfig->ns_change_files, hostconfig->ns_change_files_len);
+    hostconfig->ns_change_files = NULL;
+    hostconfig->ns_change_files_len = 0;
+
+    util_free_array_by_len(hostconfig->hugetlbs, hostconfig->hugetlbs_len);
+    hostconfig->hugetlbs = NULL;
+    hostconfig->hugetlbs_len = 0;
+
+    free(hostconfig->network_mode);
+    hostconfig->network_mode = NULL;
+
+    free(hostconfig->ipc_mode);
+    hostconfig->ipc_mode = NULL;
+
+    free(hostconfig->pid_mode);
+    hostconfig->pid_mode = NULL;
+
+    free(hostconfig->uts_mode);
+    hostconfig->uts_mode = NULL;
+
+    free(hostconfig->userns_mode);
+    hostconfig->userns_mode = NULL;
+
+    free(hostconfig->user_remap);
+    hostconfig->user_remap = NULL;
+
+    util_free_array_by_len(hostconfig->ulimits, hostconfig->ulimits_len);
+    hostconfig->ulimits = NULL;
+    hostconfig->ulimits_len = 0;
+
+    free(hostconfig->restart_policy);
+    hostconfig->restart_policy = NULL;
+
+    free(hostconfig->host_channel);
+    hostconfig->host_channel = NULL;
+
+    free(hostconfig->hook_spec);
+    hostconfig->hook_spec = NULL;
+
+    free(hostconfig->env_target_file);
+    hostconfig->env_target_file = NULL;
+
+    free(hostconfig->cgroup_parent);
+    hostconfig->cgroup_parent = NULL;
+
+    util_free_array_by_len(hostconfig->binds, hostconfig->binds_len);
+    hostconfig->binds = NULL;
+    hostconfig->binds_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_weight_device, hostconfig->blkio_weight_device_len);
+    hostconfig->blkio_weight_device = NULL;
+    hostconfig->blkio_weight_device_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_throttle_read_bps_device, hostconfig->blkio_throttle_read_bps_device_len);
+    hostconfig->blkio_throttle_read_bps_device = NULL;
+    hostconfig->blkio_throttle_read_bps_device_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_throttle_write_bps_device,
+                           hostconfig->blkio_throttle_write_bps_device_len);
+    hostconfig->blkio_throttle_write_bps_device = NULL;
+    hostconfig->blkio_throttle_write_bps_device_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_throttle_read_iops_device,
+                           hostconfig->blkio_throttle_read_iops_device_len);
+    hostconfig->blkio_throttle_read_iops_device = NULL;
+    hostconfig->blkio_throttle_read_iops_device_len = 0;
+
+    util_free_array_by_len(hostconfig->blkio_throttle_write_iops_device,
+                           hostconfig->blkio_throttle_write_iops_device_len);
+    hostconfig->blkio_throttle_write_iops_device = NULL;
+    hostconfig->blkio_throttle_write_iops_device_len = 0;
+
+    util_free_array_by_len(hostconfig->device_cgroup_rules, hostconfig->device_cgroup_rules_len);
+    hostconfig->device_cgroup_rules = NULL;
+    hostconfig->device_cgroup_rules_len = 0;
+
+    container_cgroup_resources_free(hostconfig->cr);
+    hostconfig->cr = NULL;
+
+    free(hostconfig);
 }

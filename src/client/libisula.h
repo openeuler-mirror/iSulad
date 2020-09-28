@@ -22,7 +22,6 @@
 #include "constants.h"
 #include "io_wrapper.h"
 #include "isula_libutils/container_path_stat.h"
-#include "isula_libutils/json_common.h"
 #include "utils_timestamp.h"
 
 #ifdef __cplusplus
@@ -34,182 +33,6 @@ struct isula_filters {
     char **values;
     size_t len;
 };
-
-typedef struct isula_container_config {
-    char **env;
-    size_t env_len;
-
-    char **label;
-    size_t label_len;
-
-    char *hostname;
-
-    char *user;
-
-    bool attach_stdin;
-
-    bool attach_stdout;
-
-    bool attach_stderr;
-
-    bool open_stdin;
-
-    bool tty;
-
-    bool readonly;
-
-    bool all_devices;
-
-    bool system_container;
-    char *ns_change_opt;
-
-    char **mounts;
-    size_t mounts_len;
-
-    char *entrypoint;
-
-    char **cmd;
-    size_t cmd_len;
-
-    char *log_driver;
-
-    json_map_string_string *annotations;
-
-    char *workdir;
-
-    char *health_cmd;
-
-    int64_t health_interval;
-
-    int health_retries;
-
-    int64_t health_timeout;
-
-    int64_t health_start_period;
-
-    bool no_healthcheck;
-
-    bool exit_on_unhealthy;
-
-    char **accel;
-    size_t accel_len;
-} isula_container_config_t;
-
-typedef struct container_cgroup_resources {
-    uint16_t blkio_weight;
-    int64_t cpu_shares;
-    int64_t cpu_period;
-    int64_t cpu_quota;
-    int64_t cpu_realtime_period;
-    int64_t cpu_realtime_runtime;
-    char *cpuset_cpus;
-    char *cpuset_mems;
-    int64_t memory;
-    int64_t memory_swap;
-    int64_t memory_reservation;
-    int64_t kernel_memory;
-    int64_t pids_limit;
-    int64_t files_limit;
-    int64_t oom_score_adj;
-    int64_t swappiness;
-    int64_t nano_cpus;
-} container_cgroup_resources_t;
-
-typedef struct isula_host_config {
-    char **devices;
-    size_t devices_len;
-
-    char **hugetlbs;
-    size_t hugetlbs_len;
-
-    char **group_add;
-    size_t group_add_len;
-
-    char *network_mode;
-
-    char *ipc_mode;
-
-    char *pid_mode;
-
-    char *uts_mode;
-
-    char *userns_mode;
-
-    char *user_remap;
-
-    char **ulimits;
-    size_t ulimits_len;
-
-    char *restart_policy;
-
-    char *host_channel;
-
-    char **cap_add;
-    size_t cap_add_len;
-
-    char **cap_drop;
-    size_t cap_drop_len;
-
-    json_map_string_string *storage_opts;
-
-    json_map_string_string *sysctls;
-
-    char **dns;
-    size_t dns_len;
-
-    char **dns_options;
-    size_t dns_options_len;
-
-    char **dns_search;
-    size_t dns_search_len;
-
-    char **extra_hosts;
-    size_t extra_hosts_len;
-
-    char *hook_spec;
-
-    char **binds;
-    size_t binds_len;
-
-    char **blkio_weight_device;
-    size_t blkio_weight_device_len;
-
-    char **blkio_throttle_read_bps_device;
-    size_t blkio_throttle_read_bps_device_len;
-
-    char **blkio_throttle_write_bps_device;
-    size_t blkio_throttle_write_bps_device_len;
-
-    char **blkio_throttle_read_iops_device;
-    size_t blkio_throttle_read_iops_device_len;
-
-    char **blkio_throttle_write_iops_device;
-    size_t blkio_throttle_write_iops_device_len;
-
-    char **device_cgroup_rules;
-    size_t device_cgroup_rules_len;
-
-    bool privileged;
-    bool system_container;
-    char **ns_change_files;
-    size_t ns_change_files_len;
-    bool auto_remove;
-
-    bool oom_kill_disable;
-
-    int64_t shm_size;
-
-    bool readonly_rootfs;
-
-    char *env_target_file;
-
-    char *cgroup_parent;
-
-    container_cgroup_resources_t *cr;
-
-    char **security;
-    size_t security_len;
-} isula_host_config_t;
 
 struct isula_create_request {
     char *name;
@@ -586,11 +409,6 @@ struct isula_info_response {
     char *errmsg;
 };
 
-typedef struct isula_update_config {
-    char *restart_policy;
-    container_cgroup_resources_t *cr;
-} isula_update_config_t;
-
 struct isula_update_request {
     char *name;
     char *host_spec_json;
@@ -757,8 +575,6 @@ struct isula_resize_response {
     char *errmsg;
 };
 
-void container_cgroup_resources_free(container_cgroup_resources_t *cr);
-
 void container_events_format_free(container_events_format_t *value);
 
 Container_Status isulastastr2sta(const char *state);
@@ -776,16 +592,6 @@ void isula_version_response_free(struct isula_version_response *response);
 void isula_info_request_free(struct isula_info_request *request);
 
 void isula_info_response_free(struct isula_info_response *response);
-
-void isula_ns_change_files_free(isula_host_config_t *hostconfig);
-
-void isula_host_config_storage_opts_free(isula_host_config_t *hostconfig);
-
-void isula_host_config_sysctl_free(isula_host_config_t *hostconfig);
-
-void isula_host_config_free(isula_host_config_t *hostconfig);
-
-void isula_container_config_free(isula_container_config_t *config);
 
 void isula_create_request_free(struct isula_create_request *request);
 
@@ -834,8 +640,6 @@ void isula_resume_response_free(struct isula_resume_response *response);
 void isula_kill_request_free(struct isula_kill_request *request);
 
 void isula_kill_response_free(struct isula_kill_response *response);
-
-void isula_update_config_free(isula_update_config_t *config);
 
 void isula_update_request_free(struct isula_update_request *request);
 
