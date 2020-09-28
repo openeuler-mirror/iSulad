@@ -18,7 +18,6 @@
 #include "isula_libutils/container_copy_to_request.h"
 #include "isula_libutils/container_exec_request.h"
 #include "isulad_tar.h"
-#include "pack_config.h"
 #include "stoppable_thread.h"
 #include "utils.h"
 #include <fstream>
@@ -173,10 +172,6 @@ public:
 
     auto request_to_grpc(const isula_create_request *request, CreateRequest *grequest) -> int override
     {
-        int ret = 0;
-        char *host_json = nullptr;
-        char *config_json = nullptr;
-
         if (request == nullptr) {
             return -1;
         }
@@ -193,23 +188,14 @@ public:
         if (request->runtime != nullptr) {
             grequest->set_runtime(request->runtime);
         }
-        ret = generate_hostconfig(request->hostconfig, &host_json);
-        if (ret != 0) {
-            ERROR("Failed to pack host config");
-            return EINVALIDARGS;
+
+        if (request->container_spec_json != NULL) {
+            grequest->set_customconfig(request->container_spec_json);
         }
-        grequest->set_hostconfig(host_json);
 
-        free(host_json);
-
-        ret = generate_container_config(request->config, &config_json);
-        if (ret != 0) {
-            ERROR("Failed to pack custom config");
-            return EINVALIDARGS;
+        if (request->host_spec_json != NULL) {
+            grequest->set_hostconfig(request->host_spec_json);
         }
-        grequest->set_customconfig(config_json);
-
-        free(config_json);
 
         return 0;
     }
@@ -697,7 +683,6 @@ public:
     }
 };
 
-
 class ContainerRestart : public ClientBase<ContainerService, ContainerService::Stub, isula_restart_request,
     RestartRequest, isula_restart_response, RestartResponse> {
 public:
@@ -1082,8 +1067,8 @@ public:
         return 0;
     }
 
-    auto grpc_call(ClientContext *context, const InspectContainerRequest &req,
-                   InspectContainerResponse *reply) -> Status override
+    auto grpc_call(ClientContext *context, const InspectContainerRequest &req, InspectContainerResponse *reply)
+    -> Status override
     {
         return stub_->Inspect(context, req, reply);
     }
@@ -1186,8 +1171,8 @@ public:
             ERROR("Too many summary info!");
             return -1;
         }
-        response->container_summary = static_cast<struct isula_container_summary_info **>(util_common_calloc_s(
-                                                                                              sizeof(struct isula_container_summary_info *) * static_cast<size_t>(num)));
+        response->container_summary = static_cast<struct isula_container_summary_info **>(
+                                          util_common_calloc_s(sizeof(struct isula_container_summary_info *) * static_cast<size_t>(num)));
         if (response->container_summary == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
@@ -1209,10 +1194,11 @@ public:
     }
 
 private:
-    static auto get_container_summary_from_grpc(isula_list_response *response, ListResponse *gresponse, int index) -> int
+    static auto get_container_summary_from_grpc(isula_list_response *response, ListResponse *gresponse, int index)
+    -> int
     {
-        response->container_summary[index] =
-            static_cast<struct isula_container_summary_info *>(util_common_calloc_s(sizeof(struct isula_container_summary_info)));
+        response->container_summary[index] = static_cast<struct isula_container_summary_info *>(
+                                                 util_common_calloc_s(sizeof(struct isula_container_summary_info)));
         if (response->container_summary[index] == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
@@ -1224,15 +1210,15 @@ private:
         response->container_summary[index]->id = util_strdup_s(id);
         const char *name = !in.name().empty() ? in.name().c_str() : "-";
         response->container_summary[index]->name = util_strdup_s(name);
-        response->container_summary[index]->runtime = !in.runtime().empty() ? util_strdup_s(in.runtime().c_str())
-                                                      : nullptr;
+        response->container_summary[index]->runtime = !in.runtime().empty() ? util_strdup_s(in.runtime().c_str()) :
+                                                      nullptr;
         response->container_summary[index]->has_pid = static_cast<uint32_t>(static_cast<int>(in.pid()) != 0);
         response->container_summary[index]->pid = static_cast<uint32_t>(in.pid());
         response->container_summary[index]->status = static_cast<Container_Status>(in.status());
-        response->container_summary[index]->image = !in.image().empty() ? util_strdup_s(in.image().c_str())
-                                                    : util_strdup_s("none");
-        response->container_summary[index]->command = !in.command().empty() ? util_strdup_s(in.command().c_str())
-                                                      : util_strdup_s("-");
+        response->container_summary[index]->image = !in.image().empty() ? util_strdup_s(in.image().c_str()) :
+                                                    util_strdup_s("none");
+        response->container_summary[index]->command = !in.command().empty() ? util_strdup_s(in.command().c_str()) :
+                                                      util_strdup_s("-");
         const char *starttime = !in.startat().empty() ? in.startat().c_str() : "-";
         response->container_summary[index]->startat = util_strdup_s(starttime);
 
@@ -1246,8 +1232,8 @@ private:
         if (!in.health_state().empty()) {
             healthState = "(" + in.health_state() + ")";
         }
-        response->container_summary[index]->health_state = !healthState.empty() ? util_strdup_s(healthState.c_str())
-                                                           : nullptr;
+        response->container_summary[index]->health_state = !healthState.empty() ? util_strdup_s(healthState.c_str()) :
+                                                           nullptr;
         response->container_num++;
 
         return 0;
@@ -1604,33 +1590,18 @@ public:
     auto request_to_grpc(const isula_update_request *request, UpdateRequest *grequest) -> int override
     {
         int ret = 0;
-        char *json = nullptr;
 
         if (request == nullptr) {
             return -1;
         }
 
-        isula_host_config_t hostconfig;
-        (void)memset(&hostconfig, 0, sizeof(hostconfig));
-
-        if (request->updateconfig != nullptr) {
-            hostconfig.restart_policy = request->updateconfig->restart_policy;
-            hostconfig.cr = request->updateconfig->cr;
+        if (request->host_spec_json != NULL) {
+            grequest->set_hostconfig(request->host_spec_json);
         }
-        ret = generate_hostconfig(&hostconfig, &json);
-        if (ret != 0) {
-            ERROR("Failed to generate hostconfig json");
-            ret = -1;
-            goto cleanup;
-        }
-
-        grequest->set_hostconfig(json);
         if (request->name != nullptr) {
             grequest->set_id(request->name);
         }
 
-cleanup:
-        free(json);
         return ret;
     }
 
@@ -1688,8 +1659,8 @@ public:
     {
         int size = gresponse->containers_size();
         if (size > 0) {
-            response->container_stats =
-                static_cast<isula_container_info *>(util_common_calloc_s(size * sizeof(struct isula_container_info)));
+            response->container_stats = static_cast<isula_container_info *>(
+                                            util_common_calloc_s(size * sizeof(struct isula_container_info)));
             if (response->container_stats == nullptr) {
                 ERROR("Out of memory");
                 return -1;
@@ -1771,7 +1742,8 @@ public:
 
         std::unique_ptr<ClientReader<Event>> reader(stub_->Events(&context, req));
         while (reader->Read(&event)) {
-            isula_event = static_cast<container_events_format_t *>(util_common_calloc_s(sizeof(container_events_format_t)));
+            isula_event =
+                static_cast<container_events_format_t *>(util_common_calloc_s(sizeof(container_events_format_t)));
             if (isula_event == nullptr) {
                 ERROR("Out of memory");
                 response->server_errono = ISULAD_ERR_EXEC;
@@ -1863,7 +1835,7 @@ private:
 struct CopyFromContainerContext {
     CopyFromContainerRequest request;
     ClientContext context;
-    ClientReader<CopyFromContainerResponse> *reader{};
+    ClientReader<CopyFromContainerResponse> *reader {};
 };
 
 // Note: len of buf can not smaller than ARCHIVE_BLOCK_SIZE
@@ -2008,7 +1980,8 @@ public:
     explicit CopyToContainerWriteToServerTask(
         const struct io_read_wrapper *reader,
         std::shared_ptr<ClientReaderWriter<CopyToContainerRequest, CopyToContainerResponse>> stream)
-        : m_reader(reader), m_stream(std::move(std::move(stream)))
+        : m_reader(reader)
+        , m_stream(std::move(std::move(stream)))
     {
     }
     ~CopyToContainerWriteToServerTask() = default;
@@ -2026,7 +1999,7 @@ public:
         while (!stopRequested()) {
             ssize_t have_read_len = m_reader->read(m_reader->context, buf, len);
             CopyToContainerRequest request;
-            request.set_data((const void*)buf, static_cast<size_t>(have_read_len));
+            request.set_data((const void *)buf, static_cast<size_t>(have_read_len));
             if (!m_stream->Write(request)) {
                 DEBUG("Server may be exited, stop send data");
                 break;
@@ -2095,9 +2068,8 @@ out:
         return ret;
     }
 
-    auto run(const struct isula_copy_to_container_request *request,
-             struct isula_copy_to_container_response *response) -> int
-    override
+    auto run(const struct isula_copy_to_container_request *request, struct isula_copy_to_container_response *response)
+    -> int override
     {
         ClientContext context;
         if (set_custom_header_metadata(context, request, response) != 0) {
@@ -2262,4 +2234,3 @@ auto grpc_containers_client_ops_init(isula_connect_ops *ops) -> int
 
     return 0;
 }
-

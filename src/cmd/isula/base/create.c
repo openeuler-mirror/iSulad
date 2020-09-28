@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container create functions
  ******************************************************************************/
+#include "create.h"
 #include <stdio_ext.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -32,7 +33,6 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_string.h"
-#include "create.h"
 #include "isula_connect.h"
 #include "path.h"
 #include "pull.h"
@@ -43,6 +43,8 @@
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "utils_verify.h"
+#include "generate_container_spec.h"
+#include "generate_host_spec.h"
 
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
@@ -1193,17 +1195,25 @@ int client_create(struct client_arguments *args)
     request.rootfs = args->create_rootfs;
     request.runtime = args->runtime;
     request.image = args->image_name;
-    request.hostconfig = &host_config;
-    request.config = &custom_conf;
     host_config.cr = &cr;
 
-    ret = request_pack_custom_conf(args, request.config);
+    ret = request_pack_custom_conf(args, &custom_conf);
     if (ret != 0) {
         goto out;
     }
 
-    ret = request_pack_host_config(args, request.hostconfig);
+    if (generate_container_config(&custom_conf, &request.container_spec_json) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = request_pack_host_config(args, &host_config);
     if (ret != 0) {
+        goto out;
+    }
+
+    if (generate_hostconfig(&host_config, &request.host_spec_json) != 0) {
+        ret = -1;
         goto out;
     }
 
@@ -1221,8 +1231,8 @@ int client_create(struct client_arguments *args)
         goto out;
     }
 out:
-    free_alloced_memory_in_host_config(request.hostconfig);
-    free_alloced_memory_in_config(request.config);
+    free_alloced_memory_in_host_config(&host_config);
+    free_alloced_memory_in_config(&custom_conf);
     isula_create_response_free(response);
     return ret;
 }

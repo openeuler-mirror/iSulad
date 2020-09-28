@@ -18,7 +18,6 @@
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "container.rest.h"
-#include "pack_config.h"
 #include "rest_common.h"
 #include "rest_containers_client.h"
 
@@ -37,18 +36,12 @@ static int create_request_to_rest(const struct isula_create_request *lc_request,
         goto out;
     }
 
-    ret = generate_hostconfig(lc_request->hostconfig, &crequest->hostconfig);
-    if (ret != 0) {
-        ERROR("Failed to pack host config");
-        ret = EINVALIDARGS;
-        goto out;
+    if (lc_request->host_spec_json != NULL) {
+        crequest->hostconfig = util_strdup_s(lc_request->name);
     }
 
-    ret = generate_container_config(lc_request->config, &crequest->customconfig);
-    if (ret != 0) {
-        ERROR("Failed to pack custom config");
-        ret = EINVALIDARGS;
-        goto out;
+    if (lc_request->container_spec_json != NULL) {
+        crequest->customconfig = util_strdup_s(lc_request->container_spec_json);
     }
 
     if (lc_request->name != NULL) {
@@ -402,29 +395,33 @@ static int unpack_container_info_for_list_response(container_list_response *cres
     response->container_num = num;
     response->container_summary = summary_info;
     for (i = 0; i < num; i++) {
-        summary_info[i] =
-            (struct isula_container_summary_info *)util_common_calloc_s(sizeof(struct isula_container_summary_info));
+        summary_info[i] = (struct isula_container_summary_info *)util_common_calloc_s(
+                              sizeof(struct isula_container_summary_info));
         if (summary_info[i] == NULL) {
             ERROR("Out of memory");
             return -1;
         }
-        summary_info[i]->id = cresponse->containers[i]->id ? util_strdup_s(cresponse->containers[i]->id)
-                              : util_strdup_s("-");
-        summary_info[i]->name = cresponse->containers[i]->name ? util_strdup_s(cresponse->containers[i]->name)
-                                : util_strdup_s("-");
-        summary_info[i]->runtime = cresponse->containers[i]->runtime ? util_strdup_s(cresponse->containers[i]->runtime)
-                                   : util_strdup_s("-");
+        summary_info[i]->id = cresponse->containers[i]->id ? util_strdup_s(cresponse->containers[i]->id) :
+                              util_strdup_s("-");
+        summary_info[i]->name = cresponse->containers[i]->name ? util_strdup_s(cresponse->containers[i]->name) :
+                                util_strdup_s("-");
+        summary_info[i]->runtime = cresponse->containers[i]->runtime ?
+                                   util_strdup_s(cresponse->containers[i]->runtime) :
+                                   util_strdup_s("-");
         summary_info[i]->has_pid = cresponse->containers[i]->pid != 0;
         summary_info[i]->pid = cresponse->containers[i]->pid;
         summary_info[i]->status = cresponse->containers[i]->status;
-        summary_info[i]->image = cresponse->containers[i]->image ? util_strdup_s(cresponse->containers[i]->image)
-                                 : util_strdup_s("-");
-        summary_info[i]->command = cresponse->containers[i]->command ? util_strdup_s(cresponse->containers[i]->command)
-                                   : util_strdup_s("-");
-        summary_info[i]->startat = cresponse->containers[i]->startat ? util_strdup_s(cresponse->containers[i]->startat)
-                                   : util_strdup_s("-");
+        summary_info[i]->image = cresponse->containers[i]->image ? util_strdup_s(cresponse->containers[i]->image) :
+                                 util_strdup_s("-");
+        summary_info[i]->command = cresponse->containers[i]->command ?
+                                   util_strdup_s(cresponse->containers[i]->command) :
+                                   util_strdup_s("-");
+        summary_info[i]->startat = cresponse->containers[i]->startat ?
+                                   util_strdup_s(cresponse->containers[i]->startat) :
+                                   util_strdup_s("-");
         summary_info[i]->finishat = cresponse->containers[i]->finishat ?
-                                    util_strdup_s(cresponse->containers[i]->finishat) : util_strdup_s("-");
+                                    util_strdup_s(cresponse->containers[i]->finishat) :
+                                    util_strdup_s("-");
         summary_info[i]->exit_code = cresponse->containers[i]->exit_code;
         summary_info[i]->restart_count = (unsigned int)cresponse->containers[i]->restartcount;
         summary_info[i]->created = cresponse->containers[i]->created;
@@ -675,8 +672,8 @@ out:
 }
 
 /* rest container list */
-static int rest_container_list(const struct isula_list_request *ll_request,
-                               struct isula_list_response *ll_response, void *arg)
+static int rest_container_list(const struct isula_list_request *ll_request, struct isula_list_response *ll_response,
+                               void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -741,8 +738,8 @@ out:
 }
 
 /* rest container wait */
-static int rest_container_wait(const struct isula_wait_request *lw_request,
-                               struct isula_wait_response *lw_response, void *arg)
+static int rest_container_wait(const struct isula_wait_request *lw_request, struct isula_wait_response *lw_response,
+                               void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -842,8 +839,8 @@ out:
 }
 
 /* rest container stop */
-static int rest_container_stop(const struct isula_stop_request *ls_request,
-                               struct isula_stop_response *ls_response, void *arg)
+static int rest_container_stop(const struct isula_stop_request *ls_request, struct isula_stop_response *ls_response,
+                               void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -991,20 +988,12 @@ static int update_request_to_rest(const struct isula_update_request *lu_request,
         goto out;
     }
 
-    if (lu_request->updateconfig != NULL) {
-        srcconfig.restart_policy = lu_request->updateconfig->restart_policy;
-        srcconfig.cr = lu_request->updateconfig->cr;
-    }
-    ret = generate_hostconfig(&srcconfig, &srcconfigjson);
-    if (ret != 0) {
-        ERROR("Failed to generate hostconfig json");
-        ret = -1;
-        goto out;
-    }
-    crequest->host_config = srcconfigjson;
-
     if (lu_request->name != NULL) {
         crequest->name = util_strdup_s(lu_request->name);
+    }
+
+    if (lu_request->host_spec_json != NULL) {
+        crequest->host_config = util_strdup_s(lu_request->host_spec_json);
     }
 
     *body = container_update_request_generate_json(crequest, &ctx, &err);
@@ -1261,8 +1250,8 @@ out:
 }
 
 /* rest container pause */
-static int rest_container_pause(const struct isula_pause_request *lp_request,
-                                struct isula_pause_response *lp_response, void *arg)
+static int rest_container_pause(const struct isula_pause_request *lp_request, struct isula_pause_response *lp_response,
+                                void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1361,8 +1350,8 @@ out:
 }
 
 /* rest container kill */
-static int rest_container_kill(const struct isula_kill_request *lk_request,
-                               struct isula_kill_response *lk_response, void *arg)
+static int rest_container_kill(const struct isula_kill_request *lk_request, struct isula_kill_response *lk_response,
+                               void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1716,8 +1705,8 @@ out:
 }
 
 /* rest container exec */
-static int rest_container_exec(const struct isula_exec_request *le_request,
-                               struct isula_exec_response *le_response, void *arg)
+static int rest_container_exec(const struct isula_exec_request *le_request, struct isula_exec_response *le_response,
+                               void *arg)
 {
     char *body = NULL;
     int ret = 0;
@@ -1773,4 +1762,3 @@ int rest_containers_client_ops_init(isula_connect_ops *ops)
 
     return 0;
 }
-

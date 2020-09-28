@@ -8,12 +8,12 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2018-11-08
- * Description: provide container package configure definition
+ * Author: lifeng
+ * Create: 2020-09-28
+ * Description: provide generate container spec in client
  ******************************************************************************/
-#ifndef CLIENT_CONNECT_PACK_CONFIG_H
-#define CLIENT_CONNECT_PACK_CONFIG_H
+#ifndef CMD_ISULA_GENERATE_CONTAINER_SPEC_H
+#define CMD_ISULA_GENERATE_CONTAINER_SPEC_H
 
 #include "libisula.h"
 
@@ -21,14 +21,10 @@
 extern "C" {
 #endif
 
-int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr);
-
-int generate_container_config(const isula_container_config_t *custom_conf,
-                              char **container_config_str);
+int generate_container_config(const isula_container_config_t *custom_conf, char **container_config_str);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

@@ -420,11 +420,12 @@ void isula_create_request_free(struct isula_create_request *request)
     free(request->runtime);
     request->runtime = NULL;
 
-    isula_host_config_free(request->hostconfig);
-    request->hostconfig = NULL;
+    free(request->container_spec_json);
+    request->container_spec_json = NULL;
 
-    isula_container_config_free(request->config);
-    request->config = NULL;
+    free(request->host_spec_json);
+    request->host_spec_json = NULL;
+
     free(request);
 }
 
@@ -858,8 +859,8 @@ void isula_update_request_free(struct isula_update_request *request)
     free(request->name);
     request->name = NULL;
 
-    isula_update_config_free(request->updateconfig);
-    request->updateconfig = NULL;
+    free(request->host_spec_json);
+    request->host_spec_json = NULL;
 
     free(request);
 }

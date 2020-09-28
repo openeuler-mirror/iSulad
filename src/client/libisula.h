@@ -216,8 +216,8 @@ struct isula_create_request {
     char *rootfs;
     char *image;
     char *runtime;
-    isula_host_config_t *hostconfig;
-    isula_container_config_t *config;
+    char *host_spec_json;
+    char *container_spec_json;
 };
 
 struct isula_create_response {
@@ -593,7 +593,7 @@ typedef struct isula_update_config {
 
 struct isula_update_request {
     char *name;
-    isula_update_config_t *updateconfig;
+    char *host_spec_json;
 };
 
 struct isula_update_response {
