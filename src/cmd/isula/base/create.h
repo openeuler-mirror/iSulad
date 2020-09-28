@@ -27,20 +27,15 @@ extern "C" {
 #endif
 
 #define CREATE_OPTIONS(cmdargs)                                                                                                                                   \
-    { CMD_OPT_TYPE_CALLBACK,                                                                                                                                      \
-        false,                                                                                                                                                      \
-        "accel",                                                                                                                                                    \
-        0,                                                                                                                                                          \
-        &(cmdargs).custom_conf.accel,                                                                                                                               \
-        "Accelerator bindings (format: [<name>=]<runtime>[@<driver>[,<options>]])",                                                                                 \
-        command_append_array },                                                                                                                                     \
-    { CMD_OPT_TYPE_BOOL,                                                                                                                                  \
-      false,                                                                                                                                              \
-      "read-only",                                                                                                                                        \
-      0,                                                                                                                                                  \
-      &(cmdargs).custom_conf.readonly,                                                                                                                    \
-      "Make container rootfs readonly",                                                                                                                   \
-      NULL },                                                                                                                                             \
+    {                                                                                                                                                             \
+        CMD_OPT_TYPE_BOOL,                                                                                                                                        \
+        false,                                                                                                                                                    \
+        "read-only",                                                                                                                                              \
+        0,                                                                                                                                                        \
+        &(cmdargs).custom_conf.readonly,                                                                                                                          \
+        "Make container rootfs readonly",                                                                                                                         \
+        NULL                                                                                                                                                      \
+    },                                                                                                                                                            \
     { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
       false,                                                                                                                                              \
       "cap-add",                                                                                                                                          \

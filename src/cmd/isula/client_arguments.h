@@ -183,9 +183,6 @@ struct custom_configs {
     /* oom kill disable */
     bool oom_kill_disable;
 
-    /* create/run accel options */
-    char **accel;
-
     /* env target file */
     char *env_target_file;
 

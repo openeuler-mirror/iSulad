@@ -80,8 +80,6 @@ typedef struct isula_container_config {
 
     bool exit_on_unhealthy;
 
-    char **accel;
-    size_t accel_len;
 } isula_container_config_t;
 
 int generate_container_config(const isula_container_config_t *custom_conf, char **container_config_str);
