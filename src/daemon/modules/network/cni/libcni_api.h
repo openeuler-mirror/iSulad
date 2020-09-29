@@ -55,26 +55,27 @@ struct cni_network_list_conf {
     char *bytes;
 };
 
-int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, char **paths,
-                         struct result **pret, char **err);
+bool cni_module_init(const char *cache_dir, const char * const *paths, size_t paths_len);
 
-int cni_del_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, char **paths, char **err);
+int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc,
+                         struct result **pret);
 
-int cni_check_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, char **paths, char **err);
+int cni_del_network_list(const char *net_list_conf_str, const struct runtime_conf *rc);
 
-int cni_get_version_info(const char *plugin_type, char **paths, struct plugin_info **pinfo, char **err);
+int cni_check_network_list(const char *net_list_conf_str, const struct runtime_conf *rc);
 
-int cni_conf_files(const char *dir, const char **extensions, size_t ext_len, char ***result, char **err);
+int cni_get_version_info(const char *plugin_type, struct plugin_info **pinfo);
 
-int cni_conf_from_file(const char *filename, struct cni_network_conf **config, char **err);
+int cni_conf_files(const char *dir, const char **extensions, size_t ext_len, char ***result);
 
-int cni_conflist_from_bytes(const char *bytes, struct cni_network_list_conf **list, char **err);
+int cni_conf_from_file(const char *filename, struct cni_network_conf **config);
 
-int cni_conflist_from_file(const char *filename, struct cni_network_list_conf **list, char **err);
+int cni_conflist_from_bytes(const char *bytes, struct cni_network_list_conf **list);
+
+int cni_conflist_from_file(const char *filename, struct cni_network_list_conf **list);
 
 int cni_conflist_from_conf(const struct cni_network_conf *cni_net_conf,
-                           struct cni_network_list_conf **cni_net_conf_list,
-                           char **err);
+                           struct cni_network_list_conf **cni_net_conf_list);
 
 void free_cni_network_conf(struct cni_network_conf *val);
 

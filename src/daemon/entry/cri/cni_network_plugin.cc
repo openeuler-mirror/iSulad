@@ -35,15 +35,11 @@ static auto GetLoNetwork(std::vector<std::string> binDirs) -> std::unique_ptr<CN
     const std::string loNetConfListJson { "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\","
                                           "\"plugins\":[{\"type\": \"loopback\" }]}" };
 
-    char *cerr { nullptr };
     struct cni_network_list_conf *loConf {
         nullptr
     };
-    if (cni_conflist_from_bytes(loNetConfListJson.c_str(), &loConf, &cerr) != 0) {
-        if (cerr != nullptr) {
-            ERROR("invalid lo config: %s", cerr);
-            free(cerr);
-        }
+    if (cni_conflist_from_bytes(loNetConfListJson.c_str(), &loConf) != 0) {
+        ERROR("invalid lo config");
         char **traces = util_get_backtrace();
         if (traces != nullptr) {
             ERROR("show backtrace: ");
@@ -180,15 +176,14 @@ auto CniNetworkPlugin::GetCNIConfFiles(const std::string &pluginDir, std::vector
     std::string usePluginDir { pluginDir };
     const char *exts[] { ".conf", ".conflist", ".json" };
     char **files { nullptr };
-    char *serr { nullptr };
 
     if (usePluginDir.empty()) {
         usePluginDir = DEFAULT_NET_DIR;
     }
 
-    ret = cni_conf_files(usePluginDir.c_str(), exts, sizeof(exts) / sizeof(char *), &files, &serr);
+    ret = cni_conf_files(usePluginDir.c_str(), exts, sizeof(exts) / sizeof(char *), &files);
     if (ret != 0) {
-        err.Errorf("get conf files: %s", serr);
+        err.Errorf("get conf files failed");
         ret = -1;
         goto out;
     }
@@ -202,7 +197,6 @@ auto CniNetworkPlugin::GetCNIConfFiles(const std::string &pluginDir, std::vector
     vect_files = std::vector<std::string>(files, files + util_array_len((const char **)files));
 
 out:
-    free(serr);
     util_free_array(files);
     return ret;
 }
@@ -211,20 +205,19 @@ auto CniNetworkPlugin::LoadCNIConfigFileList(const std::string &elem, struct cni
 {
     int ret { 0 };
     std::size_t found = elem.rfind(".conflist");
-    char *serr { nullptr };
     struct cni_network_conf *n_conf {
         nullptr
     };
 
     if (found != std::string::npos && found + strlen(".conflist") == elem.length()) {
-        if (cni_conflist_from_file(elem.c_str(), n_list, &serr) != 0) {
-            WARN("Error loading CNI config list file %s: %s", elem.c_str(), serr);
+        if (cni_conflist_from_file(elem.c_str(), n_list) != 0) {
+            WARN("Error loading CNI config list file %s", elem.c_str());
             ret = -1;
             goto out;
         }
     } else {
-        if (cni_conf_from_file(elem.c_str(), &n_conf, &serr) != 0) {
-            WARN("Error loading CNI config file %s: %s", elem.c_str(), serr);
+        if (cni_conf_from_file(elem.c_str(), &n_conf) != 0) {
+            WARN("Error loading CNI config file %s", elem.c_str());
             ret = -1;
             goto out;
         }
@@ -233,8 +226,8 @@ auto CniNetworkPlugin::LoadCNIConfigFileList(const std::string &elem, struct cni
             ret = -1;
             goto out;
         }
-        if (cni_conflist_from_conf(n_conf, n_list, &serr) != 0) {
-            WARN("Error converting CNI config file %s to list: %s", elem.c_str(), serr);
+        if (cni_conflist_from_conf(n_conf, n_list) != 0) {
+            WARN("Error converting CNI config file %s to list", elem.c_str());
             ret = -1;
             goto out;
         }
@@ -243,7 +236,6 @@ out:
     if (n_conf != nullptr) {
         free_cni_network_conf(n_conf);
     }
-    free(serr);
     return ret;
 }
 
@@ -364,12 +356,15 @@ void CniNetworkPlugin::Init(const std::string &hairpinMode,
     if (error.NotEmpty()) {
         return;
     }
+
     SyncNetworkConfig();
 
     // start a thread to sync network config from confDir periodically to detect network config updates in every 5 seconds
     m_syncThread = std::thread([&]() {
         UpdateDefaultNetwork();
     });
+free_out:
+    util_free_array(paths);
 }
 
 auto CniNetworkPlugin::Name() const -> const std::string &
@@ -724,22 +719,12 @@ void CniNetworkPlugin::AddToNetwork(CNINetwork *snetwork, const std::string &pod
 
     INFO("About to add CNI network %s (type=%s)", snetwork->GetName().c_str(), snetwork->GetNetworkType().c_str());
 
-    char **paths = snetwork->GetPaths(err);
-    if (paths == nullptr) {
-        ERROR("Empty cni bin path");
-        free_runtime_conf(rc);
-        return;
-    }
-    char *serr = nullptr;
-    int nret = cni_add_network_list(snetwork->GetNetworkConfigJsonStr().c_str(), rc, paths, presult, &serr);
+    int nret = cni_add_network_list(snetwork->GetNetworkConfigJsonStr().c_str(), rc, presult);
     if (nret != 0) {
-        ERROR("Error adding network: %s", serr);
-        err.SetError(serr);
+        err.Errorf("add network: %s failed", snetwork->GetName().c_str());
     }
 
-    util_free_array(paths);
     free_runtime_conf(rc);
-    free(serr);
 }
 
 void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network, const std::string &podName,
@@ -766,22 +751,12 @@ void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network, const std::string 
 
     INFO("About to del CNI network %s (type=%s)", network->GetName().c_str(), network->GetNetworkType().c_str());
 
-    char **paths = network->GetPaths(err);
-    if (paths == nullptr) {
-        free_runtime_conf(rc);
-        ERROR("Empty cni bin path");
-        return;
-    }
-    char *serr = nullptr;
-    int nret = cni_del_network_list(network->GetNetworkConfigJsonStr().c_str(), rc, paths, &serr);
+    int nret = cni_del_network_list(network->GetNetworkConfigJsonStr().c_str(), rc);
     if (nret != 0) {
-        ERROR("Error deleting network: %s", serr);
-        err.Errorf("Error deleting network: %s", serr);
+        err.Errorf("Error deleting network: %s", network->GetName().c_str());
     }
 
-    util_free_array(paths);
     free_runtime_conf(rc);
-    free(serr);
 }
 
 static bool CheckCNIArgValue(const std::string &val)

@@ -96,13 +96,13 @@ void free_dns_type(struct dns *val);
 
 void free_result(struct result *val);
 
-int parse_ip_from_str(const char *addr, uint8_t **ips, size_t *len, char **err);
+int parse_ip_from_str(const char *addr, uint8_t **ips, size_t *len);
 
-int parse_cidr(const char *cidr_str, struct ipnet **ipnet_val, char **err);
+int parse_cidr(const char *cidr_str, struct ipnet **ipnet_val);
 
 /* common tool functions */
 
-char *ipnet_to_string(const struct ipnet *value, char **err);
+char *ipnet_to_string(const struct ipnet *value);
 
 char *ip_to_string(const uint8_t *ip, size_t len);
 
