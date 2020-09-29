@@ -33,25 +33,25 @@ struct plugin_info {
 
 void free_plugin_info(struct plugin_info *pinfo);
 
-struct plugin_info *plugin_supports(const char * const *supported_versions, size_t len, char **errmsg);
+struct plugin_info *plugin_supports(const char * const *supported_versions, size_t len);
 
-struct plugin_info *plugin_info_decode(const char *jsonstr, char **errmsg);
+struct plugin_info *plugin_info_decode(const char *jsonstr);
 
-char *cniversion_decode(const char *jsonstr, char **errmsg);
+char *cniversion_decode(const char *jsonstr);
 
 static inline const char *current()
 {
     return CURRENT_VERSION;
 }
 
-typedef struct result *(*new_result_t)(const char *json_data, char **err);
+typedef struct result *(*new_result_t)(const char *json_data);
 
 struct result_factories {
     const char **supported_versions;
     new_result_t new_result_op;
 };
 
-struct result *new_result(const char *version, const char *jsonstr, char **err);
+struct result *new_result(const char *version, const char *jsonstr);
 
 int version_greater_than_or_equal_to(const char *first, const char *second, bool *result);
 

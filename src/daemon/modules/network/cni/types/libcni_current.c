@@ -22,9 +22,9 @@
 #include "utils.h"
 #include "isula_libutils/log.h"
 
-static struct result *get_result(const cni_result_curr *curr_result, char **err);
+static struct result *get_result(const cni_result_curr *curr_result);
 
-static cni_result_curr *new_curr_result_helper(const char *json_data, char **err)
+static cni_result_curr *new_curr_result_helper(const char *json_data)
 {
     cni_result_curr *result = NULL;
     parser_error errmsg = NULL;
@@ -35,9 +35,6 @@ static cni_result_curr *new_curr_result_helper(const char *json_data, char **err
     }
     result = cni_result_curr_parse_data(json_data, NULL, &errmsg);
     if (result == NULL) {
-        if (asprintf(err, "parse json failed: %s", errmsg) < 0) {
-            *err = util_strdup_s("Out of memory");
-        }
         ERROR("Parse failed: %s", errmsg);
         goto free_out;
     }
@@ -48,48 +45,23 @@ free_out:
     return NULL;
 }
 
-static void do_append_result_errmsg(const struct result *ret, const char *save_err, char **err)
-{
-    char *tmp_err = NULL;
-    int nret = 0;
-
-    if (ret != NULL) {
-        return;
-    }
-
-    tmp_err = *err;
-    *err = NULL;
-    nret = asprintf(err, "parse err: %s, convert err: %s", save_err ? save_err : "", tmp_err ? tmp_err : "");
-    if (nret < 0) {
-        *err = util_strdup_s("Out of memory");
-        ERROR("Out of memory");
-    }
-    free(tmp_err);
-}
-
-struct result *new_curr_result(const char *json_data, char **err)
+struct result *new_curr_result(const char *json_data)
 {
     struct result *ret = NULL;
     cni_result_curr *tmp_result = NULL;
-    char *save_err = NULL;
 
-    if (err == NULL) {
-        ERROR("Invalid argument");
+    if (json_data == NULL) {
+        ERROR("empty result json");
         return NULL;
     }
-    tmp_result = new_curr_result_helper(json_data, err);
+    tmp_result = new_curr_result_helper(json_data);
     if (tmp_result == NULL) {
         return NULL;
     }
-    if (*err != NULL) {
-        save_err = *err;
-        *err = NULL;
-    }
-    ret = get_result(tmp_result, err);
-    do_append_result_errmsg(ret, save_err, err);
+
+    ret = get_result(tmp_result);
 
     free_cni_result_curr(tmp_result);
-    free(save_err);
     return ret;
 }
 
@@ -115,21 +87,21 @@ static struct interface *convert_curr_interface(const cni_network_interface *cur
 }
 
 static int do_parse_ipnet(const char *cidr_str, const char *ip_str, uint8_t **ip, size_t *ip_len,
-                          struct ipnet **ipnet_val, char **err)
+                          struct ipnet **ipnet_val)
 {
     int ret = 0;
 
-    ret = parse_cidr(cidr_str, ipnet_val, err);
+    ret = parse_cidr(cidr_str, ipnet_val);
     if (ret != 0) {
-        ERROR("Parse cidr failed: %s", *err != NULL ? *err : "");
+        ERROR("Parse cidr: %s failed", cidr_str);
         return -1;
     }
     if (ip_str == NULL) {
         return 0;
     }
-    ret = parse_ip_from_str(ip_str, ip, ip_len, err);
+    ret = parse_ip_from_str(ip_str, ip, ip_len);
     if (ret != 0) {
-        ERROR("Parse ip failed: %s", *err != NULL ? *err : "");
+        ERROR("Parse ip: %s failed", ip_str);
         free_ipnet_type(*ipnet_val);
         *ipnet_val = NULL;
         return -1;
@@ -137,7 +109,7 @@ static int do_parse_ipnet(const char *cidr_str, const char *ip_str, uint8_t **ip
     return 0;
 }
 
-static struct ipconfig *convert_curr_ipconfig(const cni_network_ipconfig *curr_ipconfig, char **err)
+static struct ipconfig *convert_curr_ipconfig(const cni_network_ipconfig *curr_ipconfig)
 {
     struct ipconfig *result = NULL;
     struct ipnet *ipnet_val = NULL;
@@ -153,11 +125,10 @@ static struct ipconfig *convert_curr_ipconfig(const cni_network_ipconfig *curr_i
     result = util_common_calloc_s(sizeof(struct ipconfig));
     if (result == NULL) {
         ERROR("Out of memory");
-        *err = util_strdup_s("Out of memory");
         return NULL;
     }
     /* parse address to ipnet */
-    ret = do_parse_ipnet(curr_ipconfig->address, curr_ipconfig->gateway, &gateway, &gateway_len, &ipnet_val, err);
+    ret = do_parse_ipnet(curr_ipconfig->address, curr_ipconfig->gateway, &gateway, &gateway_len, &ipnet_val);
     if (ret != 0) {
         goto err_out;
     }
@@ -170,7 +141,6 @@ static struct ipconfig *convert_curr_ipconfig(const cni_network_ipconfig *curr_i
         result->interface = util_common_calloc_s(sizeof(int32_t));
         if (result->interface == NULL) {
             ERROR("Out of memory");
-            *err = util_strdup_s("Out of memory");
             goto err_out;
         }
         *(result->interface) = *(curr_ipconfig->interface);
@@ -183,7 +153,7 @@ err_out:
     return NULL;
 }
 
-static struct route *convert_curr_route(const cni_network_route *curr_route, char **err)
+static struct route *convert_curr_route(const cni_network_route *curr_route)
 {
     struct route *result = NULL;
     struct ipnet *dst = NULL;
@@ -195,7 +165,7 @@ static struct route *convert_curr_route(const cni_network_route *curr_route, cha
         ERROR("Invalid argument");
         return NULL;
     }
-    ret = do_parse_ipnet(curr_route->dst, curr_route->gw, &gw, &gw_len, &dst, err);
+    ret = do_parse_ipnet(curr_route->dst, curr_route->gw, &gw, &gw_len, &dst);
     if (ret != 0) {
         return NULL;
     }
@@ -205,7 +175,6 @@ static struct route *convert_curr_route(const cni_network_route *curr_route, cha
         ERROR("Out of memory");
         free(gw);
         free_ipnet_type(dst);
-        *err = util_strdup_s("Out of memory");
         return NULL;
     }
 
@@ -216,12 +185,11 @@ static struct route *convert_curr_route(const cni_network_route *curr_route, cha
     return result;
 }
 
-static struct dns *convert_curr_dns(cni_network_dns *curr_dns, char **err)
+static struct dns *convert_curr_dns(cni_network_dns *curr_dns)
 {
     struct dns *result = NULL;
 
     if (curr_dns == NULL) {
-        *err = util_strdup_s("Empty dns argument");
         ERROR("Empty dns argument");
         return NULL;
     }
@@ -229,7 +197,6 @@ static struct dns *convert_curr_dns(cni_network_dns *curr_dns, char **err)
     result = util_common_calloc_s(sizeof(struct dns));
     if (result == NULL) {
         ERROR("Out of memory");
-        *err = util_strdup_s("Out of memory");
         return NULL;
     }
 
@@ -246,13 +213,12 @@ static struct dns *convert_curr_dns(cni_network_dns *curr_dns, char **err)
     return result;
 }
 
-static int copy_result_interface(const cni_result_curr *curr_result, struct result *value, char **err)
+static int copy_result_interface(const cni_result_curr *curr_result, struct result *value)
 {
     value->interfaces_len = curr_result->interfaces_len;
     if (value->interfaces_len > 0) {
         value->interfaces = util_smart_calloc_s(value->interfaces_len, sizeof(struct interface *));
         if (value->interfaces == NULL) {
-            *err = util_strdup_s("Out of memory");
             value->interfaces_len = 0;
             ERROR("Out of memory");
             return -1;
@@ -261,7 +227,6 @@ static int copy_result_interface(const cni_result_curr *curr_result, struct resu
         for (i = 0; i < curr_result->interfaces_len; i++) {
             value->interfaces[i] = convert_curr_interface(curr_result->interfaces[i]);
             if (value->interfaces[i] == NULL) {
-                *err = util_strdup_s("Convert interfaces failed");
                 value->interfaces_len = i;
                 ERROR("Convert interfaces failed");
                 return -1;
@@ -271,7 +236,7 @@ static int copy_result_interface(const cni_result_curr *curr_result, struct resu
     return 0;
 }
 
-static int copy_result_ips(const cni_result_curr *curr_result, struct result *value, char **err)
+static int copy_result_ips(const cni_result_curr *curr_result, struct result *value)
 {
     size_t i = 0;
     value->ips_len = curr_result->ips_len;
@@ -282,16 +247,14 @@ static int copy_result_ips(const cni_result_curr *curr_result, struct result *va
 
     value->ips = util_smart_calloc_s(value->ips_len, sizeof(struct ipconfig *));
     if (value->ips == NULL) {
-        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         value->ips_len = 0;
         return -1;
     }
 
     for (i = 0; i < value->ips_len; i++) {
-        value->ips[i] = convert_curr_ipconfig(curr_result->ips[i], err);
+        value->ips[i] = convert_curr_ipconfig(curr_result->ips[i]);
         if (value->ips[i] == NULL) {
-            ERROR("Convert ips failed: %s", *err != NULL ? *err : "");
             value->ips_len = i;
             return -1;
         }
@@ -299,7 +262,7 @@ static int copy_result_ips(const cni_result_curr *curr_result, struct result *va
     return 0;
 }
 
-static int copy_result_routes(const cni_result_curr *curr_result, struct result *value, char **err)
+static int copy_result_routes(const cni_result_curr *curr_result, struct result *value)
 {
     size_t i = 0;
 
@@ -310,16 +273,14 @@ static int copy_result_routes(const cni_result_curr *curr_result, struct result 
 
     value->routes = util_smart_calloc_s(value->routes_len, sizeof(struct route *));
     if (value->routes == NULL) {
-        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         value->routes_len = 0;
         return -1;
     }
 
     for (i = 0; i < value->routes_len; i++) {
-        value->routes[i] = convert_curr_route(curr_result->routes[i], err);
+        value->routes[i] = convert_curr_route(curr_result->routes[i]);
         if (value->routes[i] == NULL) {
-            ERROR("Convert routes failed: %s", *err != NULL ? *err : "");
             value->routes_len = i;
             return -1;
         }
@@ -327,17 +288,15 @@ static int copy_result_routes(const cni_result_curr *curr_result, struct result 
     return 0;
 }
 
-static struct result *get_result(const cni_result_curr *curr_result, char **err)
+static struct result *get_result(const cni_result_curr *curr_result)
 {
     struct result *value = NULL;
-    bool invalid_arg = (curr_result == NULL || err == NULL);
 
-    if (invalid_arg) {
+    if (curr_result == NULL) {
         return NULL;
     }
     value = util_common_calloc_s(sizeof(struct result));
     if (value == NULL) {
-        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         return NULL;
     }
@@ -346,22 +305,22 @@ static struct result *get_result(const cni_result_curr *curr_result, char **err)
     value->cniversion = util_strdup_s(curr_result->cni_version);
 
     /* copy interfaces */
-    if (copy_result_interface(curr_result, value, err) != 0) {
+    if (copy_result_interface(curr_result, value) != 0) {
         goto free_out;
     }
 
     /* copy ips */
-    if (copy_result_ips(curr_result, value, err) != 0) {
+    if (copy_result_ips(curr_result, value) != 0) {
         goto free_out;
     }
 
     /* copy routes */
-    if (copy_result_routes(curr_result, value, err) != 0) {
+    if (copy_result_routes(curr_result, value) != 0) {
         goto free_out;
     }
 
     /* copy dns */
-    value->my_dns = convert_curr_dns(curr_result->dns, err);
+    value->my_dns = convert_curr_dns(curr_result->dns);
     if (value->my_dns == NULL) {
         goto free_out;
     }
@@ -394,12 +353,12 @@ static cni_network_interface *interface_to_json_interface(const struct interface
     return result;
 }
 
-static int parse_ip_and_gateway(const struct ipconfig *src, cni_network_ipconfig *result, char **err)
+static int parse_ip_and_gateway(const struct ipconfig *src, cni_network_ipconfig *result)
 {
     if (src->address != NULL) {
-        result->address = ipnet_to_string(src->address, err);
+        result->address = ipnet_to_string(src->address);
         if (result->address == NULL) {
-            ERROR("Covert ipnet failed: %s", *err != NULL ? *err : "");
+            ERROR("Covert ipnet failed");
             return -1;
         }
     }
@@ -407,17 +366,14 @@ static int parse_ip_and_gateway(const struct ipconfig *src, cni_network_ipconfig
     if (src->gateway && src->gateway_len > 0) {
         result->gateway = ip_to_string(src->gateway, src->gateway_len);
         if (result->gateway == NULL) {
-            if (asprintf(err, "ip: %s to string failed", src->gateway) < 0) {
-                *err = util_strdup_s("ip to string failed");
-            }
-            ERROR("IP: %s to string failed", src->gateway);
+            ERROR("IP to string failed");
             return -1;
         }
     }
     return 0;
 }
 
-static cni_network_ipconfig *ipconfig_to_json_ipconfig(const struct ipconfig *src, char **err)
+static cni_network_ipconfig *ipconfig_to_json_ipconfig(const struct ipconfig *src)
 {
     cni_network_ipconfig *result = NULL;
     int ret = -1;
@@ -429,13 +385,12 @@ static cni_network_ipconfig *ipconfig_to_json_ipconfig(const struct ipconfig *sr
 
     result = util_common_calloc_s(sizeof(cni_network_ipconfig));
     if (result == NULL) {
-        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         goto out;
     }
 
     /* parse address and ip */
-    if (parse_ip_and_gateway(src, result, err) != 0) {
+    if (parse_ip_and_gateway(src, result) != 0) {
         goto out;
     }
 
@@ -446,7 +401,6 @@ static cni_network_ipconfig *ipconfig_to_json_ipconfig(const struct ipconfig *sr
     if (src->interface != NULL) {
         result->interface = util_common_calloc_s(sizeof(int32_t));
         if (result->interface == NULL) {
-            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             goto out;
         }
@@ -462,7 +416,7 @@ out:
     return result;
 }
 
-static cni_network_route *route_to_json_route(const struct route *src, char **err)
+static cni_network_route *route_to_json_route(const struct route *src)
 {
     cni_network_route *result = NULL;
     int ret = -1;
@@ -474,13 +428,12 @@ static cni_network_route *route_to_json_route(const struct route *src, char **er
 
     result = (cni_network_route *)util_common_calloc_s(sizeof(cni_network_route));
     if (result == NULL) {
-        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         goto out;
     }
 
     if (src->dst != NULL) {
-        result->dst = ipnet_to_string(src->dst, err);
+        result->dst = ipnet_to_string(src->dst);
         if (result->dst == NULL) {
             goto out;
         }
@@ -489,7 +442,6 @@ static cni_network_route *route_to_json_route(const struct route *src, char **er
     if (src->gw != NULL && src->gw_len > 0) {
         result->gw = ip_to_string(src->gw, src->gw_len);
         if (result->gw == NULL) {
-            *err = util_strdup_s("ip to string failed");
             ERROR("ip to string failed");
             goto out;
         }
@@ -504,14 +456,13 @@ out:
     return result;
 }
 
-static int dns_to_json_copy_servers(const struct dns *src, cni_network_dns *result, char **err)
+static int dns_to_json_copy_servers(const struct dns *src, cni_network_dns *result)
 {
     bool need_copy = (src->name_servers != NULL && src->name_servers_len > 0);
 
     if (need_copy) {
         result->nameservers = (char **)util_smart_calloc_s(src->name_servers_len, sizeof(char *));
         if (result->nameservers == NULL) {
-            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             return -1;
         }
@@ -521,14 +472,13 @@ static int dns_to_json_copy_servers(const struct dns *src, cni_network_dns *resu
     return 0;
 }
 
-static int dns_to_json_copy_options(const struct dns *src, cni_network_dns *result, char **err)
+static int dns_to_json_copy_options(const struct dns *src, cni_network_dns *result)
 {
     bool need_copy = (src->options != NULL && src->options_len > 0);
 
     if (need_copy) {
         result->options = (char **)util_smart_calloc_s(src->options_len, sizeof(char *));
         if (result->options == NULL) {
-            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             return -1;
         }
@@ -538,14 +488,13 @@ static int dns_to_json_copy_options(const struct dns *src, cni_network_dns *resu
     return 0;
 }
 
-static int dns_to_json_copy_searchs(const struct dns *src, cni_network_dns *result, char **err)
+static int dns_to_json_copy_searchs(const struct dns *src, cni_network_dns *result)
 {
     bool need_copy = (src->search != NULL && src->search_len > 0);
 
     if (need_copy) {
         result->search = (char **)util_smart_calloc_s(src->search_len, sizeof(char *));
         if (result->search == NULL) {
-            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             return -1;
         }
@@ -555,23 +504,23 @@ static int dns_to_json_copy_searchs(const struct dns *src, cni_network_dns *resu
     return 0;
 }
 
-static int do_copy_dns_configs_to_json(const struct dns *src, cni_network_dns *result, char **err)
+static int do_copy_dns_configs_to_json(const struct dns *src, cni_network_dns *result)
 {
-    if (dns_to_json_copy_servers(src, result, err) != 0) {
+    if (dns_to_json_copy_servers(src, result) != 0) {
         return -1;
     }
 
-    if (dns_to_json_copy_options(src, result, err) != 0) {
+    if (dns_to_json_copy_options(src, result) != 0) {
         return -1;
     }
 
-    if (dns_to_json_copy_searchs(src, result, err) != 0) {
+    if (dns_to_json_copy_searchs(src, result) != 0) {
         return -1;
     }
     return 0;
 }
 
-static cni_network_dns *dns_to_json_dns(const struct dns *src, char **err)
+static cni_network_dns *dns_to_json_dns(const struct dns *src)
 {
     cni_network_dns *result = NULL;
     int ret = -1;
@@ -582,7 +531,6 @@ static cni_network_dns *dns_to_json_dns(const struct dns *src, char **err)
 
     result = (cni_network_dns *)util_common_calloc_s(sizeof(cni_network_dns));
     if (result == NULL) {
-        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         goto out;
     }
@@ -591,7 +539,7 @@ static cni_network_dns *dns_to_json_dns(const struct dns *src, char **err)
         result->domain = util_strdup_s(src->domain);
     }
 
-    ret = do_copy_dns_configs_to_json(src, result, err);
+    ret = do_copy_dns_configs_to_json(src, result);
 out:
     if (ret != 0) {
         free_cni_network_dns(result);
@@ -600,7 +548,7 @@ out:
     return result;
 }
 
-static bool copy_interfaces_from_result_to_json(const struct result *src, cni_result_curr *res, char **err)
+static bool copy_interfaces_from_result_to_json(const struct result *src, cni_result_curr *res)
 {
     size_t i = 0;
     bool empty_src = (src->interfaces == NULL || src->interfaces_len == 0);
@@ -614,7 +562,6 @@ static bool copy_interfaces_from_result_to_json(const struct result *src, cni_re
     res->interfaces = (cni_network_interface **)util_smart_calloc_s(src->interfaces_len,
                                                                     sizeof(cni_network_interface *));
     if (res->interfaces == NULL) {
-        *err = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         return false;
     }
@@ -624,7 +571,6 @@ static bool copy_interfaces_from_result_to_json(const struct result *src, cni_re
         }
         res->interfaces[i] = interface_to_json_interface(src->interfaces[i]);
         if (res->interfaces[i] == NULL) {
-            *err = util_strdup_s("interface to json struct failed");
             ERROR("interface to json struct failed");
             return false;
         }
@@ -633,7 +579,7 @@ static bool copy_interfaces_from_result_to_json(const struct result *src, cni_re
     return true;
 }
 
-static bool copy_ips_from_result_to_json(const struct result *src, cni_result_curr *res, char **err)
+static bool copy_ips_from_result_to_json(const struct result *src, cni_result_curr *res)
 {
     bool need_copy = (src->ips && src->ips_len > 0);
 
@@ -641,15 +587,14 @@ static bool copy_ips_from_result_to_json(const struct result *src, cni_result_cu
     if (need_copy) {
         res->ips = (cni_network_ipconfig **)util_smart_calloc_s(src->ips_len, sizeof(cni_network_ipconfig *));
         if (res->ips == NULL) {
-            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             return false;
         }
         size_t i = 0;
         for (i = 0; i < src->ips_len; i++) {
-            res->ips[i] = ipconfig_to_json_ipconfig(src->ips[i], err);
+            res->ips[i] = ipconfig_to_json_ipconfig(src->ips[i]);
             if (res->ips[i] == NULL) {
-                ERROR("parse ip failed: %s", *err != NULL ? *err : "");
+                ERROR("parse ip failed");
                 return false;
             }
             res->ips_len++;
@@ -658,7 +603,7 @@ static bool copy_ips_from_result_to_json(const struct result *src, cni_result_cu
     return true;
 }
 
-static bool copy_routes_from_result_to_json(const struct result *src, cni_result_curr *res, char **err)
+static bool copy_routes_from_result_to_json(const struct result *src, cni_result_curr *res)
 {
     bool need_copy = (src->routes && src->routes_len > 0);
 
@@ -666,15 +611,14 @@ static bool copy_routes_from_result_to_json(const struct result *src, cni_result
     if (need_copy) {
         res->routes = (cni_network_route **)util_smart_calloc_s(src->routes_len, sizeof(cni_network_route *));
         if (res->routes == NULL) {
-            *err = util_strdup_s("Out of memory");
             ERROR("Out of memory");
             return false;
         }
         size_t i = 0;
         for (i = 0; i < src->routes_len; i++) {
-            res->routes[i] = route_to_json_route(src->routes[i], err);
+            res->routes[i] = route_to_json_route(src->routes[i]);
             if (res->routes[i] == NULL) {
-                ERROR("Parse route failed: %s", *err != NULL ? *err : "");
+                ERROR("Parse route failed");
                 return false;
             }
             res->routes_len++;
@@ -683,26 +627,26 @@ static bool copy_routes_from_result_to_json(const struct result *src, cni_result
     return true;
 }
 
-static int do_result_copy_configs_to_json(const struct result *src, cni_result_curr *res, char **err)
+static int do_result_copy_configs_to_json(const struct result *src, cni_result_curr *res)
 {
     /* copy interfaces */
-    if (!copy_interfaces_from_result_to_json(src, res, err)) {
+    if (!copy_interfaces_from_result_to_json(src, res)) {
         return -1;
     }
 
     /* copy ips */
-    if (!copy_ips_from_result_to_json(src, res, err)) {
+    if (!copy_ips_from_result_to_json(src, res)) {
         return -1;
     }
 
     /* copy routes */
-    if (!copy_routes_from_result_to_json(src, res, err)) {
+    if (!copy_routes_from_result_to_json(src, res)) {
         return -1;
     }
 
     /* copy dns */
     if (src->my_dns != NULL) {
-        res->dns = dns_to_json_dns(src->my_dns, err);
+        res->dns = dns_to_json_dns(src->my_dns);
         if (res->dns == NULL) {
             return -1;
         }
@@ -711,13 +655,12 @@ static int do_result_copy_configs_to_json(const struct result *src, cni_result_c
     return 0;
 }
 
-cni_result_curr *cni_result_curr_to_json_result(const struct result *src, char **err)
+cni_result_curr *cni_result_curr_to_json_result(const struct result *src)
 {
     cni_result_curr *res = NULL;
     int ret = -1;
-    bool invalid_arg = (src == NULL || err == NULL);
 
-    if (invalid_arg) {
+    if (src == NULL) {
         ERROR("Invalid arguments");
         return res;
     }
@@ -725,7 +668,6 @@ cni_result_curr *cni_result_curr_to_json_result(const struct result *src, char *
     res = (cni_result_curr *)util_common_calloc_s(sizeof(cni_result_curr));
     if (res == NULL) {
         ERROR("Out of memory");
-        *err = util_strdup_s("Out of memory");
         goto out;
     }
 
@@ -734,7 +676,7 @@ cni_result_curr *cni_result_curr_to_json_result(const struct result *src, char *
         res->cni_version = util_strdup_s(src->cniversion);
     }
 
-    ret = do_result_copy_configs_to_json(src, res, err);
+    ret = do_result_copy_configs_to_json(src, res);
 out:
     if (ret != 0) {
         free_cni_result_curr(res);

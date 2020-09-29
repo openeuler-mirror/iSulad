@@ -50,11 +50,10 @@ void free_plugin_info(struct plugin_info *pinfo)
     }
 }
 
-static void convert_from_cni_inner_plugin_info(cni_inner_plugin_info *inner, struct plugin_info **result, char **errmsg)
+static void convert_from_cni_inner_plugin_info(cni_inner_plugin_info *inner, struct plugin_info **result)
 {
     *result = util_common_calloc_s(sizeof(struct plugin_info));
     if (*result == NULL) {
-        *errmsg = util_strdup_s("Out of memory");
         ERROR("Out of memory");
         return;
     }
@@ -66,27 +65,25 @@ static void convert_from_cni_inner_plugin_info(cni_inner_plugin_info *inner, str
     inner->supported_versions = NULL;
 }
 
-struct plugin_info *plugin_supports(const char * const *supported_versions, size_t len, char **errmsg)
+struct plugin_info *plugin_supports(const char * const *supported_versions, size_t len)
 {
     struct plugin_info *result = NULL;
     size_t i = 0;
     bool invalid_arg = (supported_versions == NULL || len < 1);
 
     if (invalid_arg) {
-        *errmsg = util_strdup_s("Invalid version argument");
+        ERROR("Invalid arguments");
         return NULL;
     }
 
     result = util_common_calloc_s(sizeof(struct plugin_info));
     if (result == NULL) {
         ERROR("Out of memory");
-        *errmsg = util_strdup_s("Out of memory");
         return NULL;
     }
     result->cniversion = util_strdup_s(current());
 
     if (len > CURR_SUPPORT_VERSION_LEN) {
-        *errmsg = util_strdup_s("Too many versions");
         ERROR("Too many versions");
         goto err_out;
     }
@@ -94,7 +91,6 @@ struct plugin_info *plugin_supports(const char * const *supported_versions, size
     result->supported_versions = util_smart_calloc_s(len + 1, sizeof(char *));
     if (result->supported_versions == NULL) {
         ERROR("Out of memory");
-        *errmsg = util_strdup_s("Out of memory");
         goto err_out;
     }
 
@@ -109,62 +105,43 @@ err_out:
     return NULL;
 }
 
-struct plugin_info *plugin_info_decode(const char *jsonstr, char **errmsg)
+struct plugin_info *plugin_info_decode(const char *jsonstr)
 {
     cni_inner_plugin_info *pinfo = NULL;
     struct plugin_info *result = NULL;
     parser_error err = NULL;
-    int nret = 0;
 
-    if (errmsg == NULL) {
-        return NULL;
-    }
     if (jsonstr == NULL) {
-        *errmsg = util_strdup_s("empty argument");
         ERROR("Invalid arguments");
         goto out;
     }
     pinfo = cni_inner_plugin_info_parse_data(jsonstr, NULL, &err);
     if (pinfo == NULL) {
-        nret = asprintf(errmsg, "decoding version info: %s", err);
-        if (nret < 0) {
-            *errmsg = util_strdup_s("Out of memory");
-        }
         ERROR("decoding version info: %s", err);
         goto out;
     }
     if (pinfo->cni_version == NULL || strlen(pinfo->cni_version) == 0) {
-        *errmsg = util_strdup_s("decoding version info: missing field cniVersion");
         goto out;
     }
     if (pinfo->supported_versions_len == 0) {
-        *errmsg = util_strdup_s("decoding version info: missing field supportedVersions");
         goto out;
     }
 
-    convert_from_cni_inner_plugin_info(pinfo, &result, errmsg);
+    convert_from_cni_inner_plugin_info(pinfo, &result);
 out:
     free(err);
     free_cni_inner_plugin_info(pinfo);
     return result;
 }
 
-char *cniversion_decode(const char *jsonstr, char **errmsg)
+char *cniversion_decode(const char *jsonstr)
 {
     parser_error err = NULL;
     cni_version *conf = NULL;
     char *result = NULL;
-    int nret = 0;
 
-    if (errmsg == NULL) {
-        return NULL;
-    }
     conf = cni_version_parse_data(jsonstr, NULL, &err);
     if (conf == NULL) {
-        nret = asprintf(errmsg, "decoding config \"%s\", failed: %s", jsonstr, err);
-        if (nret < 0) {
-            *errmsg = util_strdup_s("Out of memory");
-        }
         ERROR("decoding config \"%s\", failed: %s", jsonstr, err);
         goto out;
     }
@@ -204,23 +181,16 @@ struct result_factories g_factories[1] = {
     }
 };
 
-struct result *new_result(const char *version, const char *jsonstr, char **err)
+struct result *new_result(const char *version, const char *jsonstr)
 {
     size_t i = 0;
-    int ret = 0;
 
-    if (err == NULL) {
-        return NULL;
-    }
     for (i = 0; i < sizeof(g_factories) / sizeof(struct result_factories); i++) {
         if (check_raw(version, g_factories[i].supported_versions)) {
-            return g_factories[i].new_result_op(jsonstr, err);
+            return g_factories[i].new_result_op(jsonstr);
         }
     }
-    ret = asprintf(err, "unsupported CNI result version \"%s\"", version);
-    if (ret < 0) {
-        *err = util_strdup_s("Out of memory");
-    }
+
     ERROR("unsupported CNI result version \"%s\"", version);
     return NULL;
 }
