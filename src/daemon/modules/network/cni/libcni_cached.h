@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
  * clibcni licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,20 +8,21 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2019-04-25
- * Description: provide result function definition
- ********************************************************************************/
-#ifndef CLIBCNI_TYPES_CURRENT_H
-#define CLIBCNI_TYPES_CURRENT_H
+ * Author: haozi007
+ * Create: 2020-09-28
+ * Description: cached for cni
+ *********************************************************************************/
+#ifndef CLIBCNI_CACHED_H
+#define CLIBCNI_CACHED_H
 
-#include "libcni_types.h"
-#include "isula_libutils/cni_result_curr.h"
 
-#define curr_implemented_spec_version "0.4.0"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-struct result *new_curr_result(const char *json_data);
 
-cni_result_curr *cni_result_curr_to_json_result(const struct result *src);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

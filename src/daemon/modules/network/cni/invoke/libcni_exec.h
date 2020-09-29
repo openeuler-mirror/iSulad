@@ -26,12 +26,11 @@ extern "C" {
 #endif
 
 int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs,
-                            struct result **ret, char **err);
+                            struct result **ret);
 
-int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs,
-                               char **err);
+int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs);
 
-int raw_get_version_info(const char *plugin_path, struct plugin_info **result, char **err);
+int raw_get_version_info(const char *plugin_path, struct plugin_info **result);
 
 #ifdef __cplusplus
 }
