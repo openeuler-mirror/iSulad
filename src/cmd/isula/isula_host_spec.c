@@ -36,6 +36,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "opt_ulimit.h"
 
 static bool parse_restart_policy(const char *policy, host_config_restart_policy **rp)
 {
@@ -427,170 +428,6 @@ erro_out:
     return NULL;
 }
 
-static int check_ulimit_input(const char *val)
-{
-    int ret = 0;
-    if (val == NULL || strcmp(val, "") == 0) {
-        COMMAND_ERROR("ulimit argument can't be empty");
-        ret = -1;
-        goto out;
-    }
-
-    if (val[0] == '=' || val[strlen(val) - 1] == '=') {
-        COMMAND_ERROR("Invalid ulimit argument: \"%s\", delimiter '=' can't"
-                      " be the first or the last character",
-                      val);
-        ret = -1;
-    }
-
-out:
-    return ret;
-}
-
-static void get_ulimit_split_parts(const char *val, char ***parts, size_t *parts_len, char deli)
-{
-    *parts = util_string_split_multi(val, deli);
-    if (*parts == NULL) {
-        COMMAND_ERROR("Out of memory");
-        return;
-    }
-    *parts_len = util_array_len((const char **)(*parts));
-}
-
-static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limitvals_len, int64_t *soft, int64_t *hard)
-{
-    int ret = 0;
-    // parse soft
-    ret = util_safe_llong(limitvals[0], (long long *)soft);
-    if (ret < 0) {
-        COMMAND_ERROR("Invalid ulimit soft value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
-        ret = -1;
-        goto out;
-    }
-
-    // parse hard if exists
-    if (limitvals_len > 1) {
-        ret = util_safe_llong(limitvals[1], (long long *)hard);
-        if (ret < 0) {
-            COMMAND_ERROR("Invalid ulimit hard value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
-            ret = -1;
-            goto out;
-        }
-
-        if (*soft > *hard) {
-            COMMAND_ERROR("Ulimit soft limit must be less than or equal to hard limit: %lld > %lld",
-                          (long long int)(*soft), (long long int)(*hard));
-            ret = -1;
-            goto out;
-        }
-    } else {
-        *hard = *soft; // default to soft in case no hard was set
-    }
-out:
-    return ret;
-}
-
-static int check_ulimit_type(const char *type)
-{
-    int ret = 0;
-    char **tmptype = NULL;
-    char *ulimit_valid_type[] = {
-        // "as", // Disabled since this doesn't seem usable with the way Docker inits a container.
-        "core",   "cpu",   "data", "fsize",  "locks",  "memlock",    "msgqueue", "nice",
-        "nofile", "nproc", "rss",  "rtprio", "rttime", "sigpending", "stack",    NULL
-    };
-
-    for (tmptype = ulimit_valid_type; *tmptype != NULL; tmptype++) {
-        if (strcmp(type, *tmptype) == 0) {
-            break;
-        }
-    }
-
-    if (*tmptype == NULL) {
-        COMMAND_ERROR("Invalid ulimit type: %s", type);
-        ret = -1;
-    }
-    return ret;
-}
-
-static host_config_ulimits_element *parse_ulimit(const char *val)
-{
-    int ret = 0;
-    int64_t soft = 0;
-    int64_t hard = 0;
-    size_t parts_len = 0;
-    size_t limitvals_len = 0;
-    char **parts = NULL;
-    char **limitvals = NULL;
-    host_config_ulimits_element *ulimit = NULL;
-
-    ret = check_ulimit_input(val);
-    if (ret != 0) {
-        return NULL;
-    }
-
-    get_ulimit_split_parts(val, &parts, &parts_len, '=');
-    if (parts == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    } else if (parts_len != 2) {
-        COMMAND_ERROR("Invalid ulimit argument: %s", val);
-        ret = -1;
-        goto out;
-    }
-
-    ret = check_ulimit_type(parts[0]);
-    if (ret != 0) {
-        ret = -1;
-        goto out;
-    }
-
-    if (parts[1][0] == ':' || parts[1][strlen(parts[1]) - 1] == ':') {
-        COMMAND_ERROR("Invalid ulimit value: \"%s\", delimiter ':' can't be the first"
-                      " or the last character",
-                      val);
-        ret = -1;
-        goto out;
-    }
-
-    // parse value
-    get_ulimit_split_parts(parts[1], &limitvals, &limitvals_len, ':');
-    if (limitvals == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    if (limitvals_len > 2) {
-        COMMAND_ERROR("Too many limit value arguments - %s, can only have up to two, `soft[:hard]`", parts[1]);
-        ret = -1;
-        goto out;
-    }
-
-    ret = parse_soft_hard_ulimit(val, limitvals, limitvals_len, &soft, &hard);
-    if (ret < 0) {
-        goto out;
-    }
-
-    ulimit = util_common_calloc_s(sizeof(host_config_ulimits_element));
-    if (ulimit == NULL) {
-        ret = -1;
-        goto out;
-    }
-    ulimit->name = util_strdup_s(parts[0]);
-    ulimit->hard = hard;
-    ulimit->soft = soft;
-
-out:
-    util_free_array(parts);
-    util_free_array(limitvals);
-    if (ret != 0) {
-        free_host_config_ulimits_element(ulimit);
-        ulimit = NULL;
-    }
-
-    return ulimit;
-}
-
 static void pack_cgroup_resources_cpu(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     /* cgroup blkio weight */
@@ -708,7 +545,7 @@ static int pack_hostconfig_ulimits(host_config *dstconfig, const isula_host_conf
         bool exists = false;
         host_config_ulimits_element *tmp = NULL;
 
-        tmp = parse_ulimit(srcconfig->ulimits[i]);
+        tmp = parse_opt_ulimit(srcconfig->ulimits[i]);
         if (tmp == NULL) {
             ret = -1;
             goto out;
