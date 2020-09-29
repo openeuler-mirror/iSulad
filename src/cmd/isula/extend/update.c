@@ -32,11 +32,22 @@ struct client_arguments g_cmd_update_args = {
     .restart = NULL,
 };
 
-static int pack_update_request(const struct client_arguments *args, isula_host_config_t *host_config)
+static isula_host_config_t *pack_update_request(const struct client_arguments *args)
 {
-    int ret = 0;
+    isula_host_config_t *host_config = NULL;
 
-    host_config->restart_policy = args->restart;
+    host_config = util_common_calloc_s(sizeof(isula_host_config_t));
+    if (host_config == NULL) {
+        COMMAND_ERROR("Memeory out");
+        goto error_out;
+    }
+    host_config->restart_policy = util_strdup_s(args->restart);
+
+    host_config->cr = util_common_calloc_s(sizeof(container_cgroup_resources_t));
+    if (host_config->cr == NULL) {
+        COMMAND_ERROR("Memeory out");
+        goto error_out;
+    }
 
     host_config->cr->blkio_weight = args->cr.blkio_weight;
 
@@ -52,9 +63,9 @@ static int pack_update_request(const struct client_arguments *args, isula_host_c
 
     host_config->cr->cpu_realtime_runtime = args->cr.cpu_rt_runtime;
 
-    host_config->cr->cpuset_cpus = args->cr.cpuset_cpus;
+    host_config->cr->cpuset_cpus = util_strdup_s(args->cr.cpuset_cpus);
 
-    host_config->cr->cpuset_mems = args->cr.cpuset_mems;
+    host_config->cr->cpuset_mems = util_strdup_s(args->cr.cpuset_mems);
 
     host_config->cr->memory = args->cr.memory_limit;
 
@@ -64,33 +75,45 @@ static int pack_update_request(const struct client_arguments *args, isula_host_c
 
     host_config->cr->kernel_memory = args->cr.kernel_memory_limit;
 
-    return ret;
+    return host_config;
+
+error_out:
+    isula_host_config_free(host_config);
+    return NULL;
 }
 
 static int client_update(const struct client_arguments *args)
 {
     int ret = 0;
     isula_connect_ops *ops = NULL;
-    isula_host_config_t host_config = { 0 };
-    struct isula_update_request request = { 0 };
+    isula_host_config_t *host_spec = NULL;
+    struct isula_update_request *request = NULL;
     struct isula_update_response *response = NULL;
     client_connect_config_t config = { 0 };
 
-    response = util_common_calloc_s(sizeof(struct isula_update_response));
-    if (response == NULL) {
+    request = util_common_calloc_s(sizeof(struct isula_update_request));
+    if (request == NULL) {
         ERROR("Out of memory");
-        return -1;
-    }
-
-    request.name = args->name;
-
-    ret = pack_update_request(args, &host_config);
-    if (ret) {
         ret = -1;
         goto out;
     }
 
-    if (generate_hostconfig(&host_config, &request.host_spec_json) != 0) {
+    response = util_common_calloc_s(sizeof(struct isula_update_response));
+    if (response == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    request->name = util_strdup_s(args->name);
+
+    host_spec = pack_update_request(args);
+    if (host_spec == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (generate_hostconfig(host_spec, &request->host_spec_json) != 0) {
         ret = -1;
         goto out;
     }
@@ -103,13 +126,15 @@ static int client_update(const struct client_arguments *args)
     }
 
     config = get_connect_config(args);
-    ret = ops->container.update(&request, response, &config);
+    ret = ops->container.update(request, response, &config);
     if (ret) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         goto out;
     }
 
 out:
+    isula_host_config_free(host_spec);
+    isula_update_request_free(request);
     isula_update_response_free(response);
     return ret;
 }
