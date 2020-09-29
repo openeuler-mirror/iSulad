@@ -14,7 +14,6 @@
  ******************************************************************************/
 #include <stdio.h>
 #include <isula_libutils/container_path_stat.h>
-#include <isula_libutils/json_common.h>
 #include <stdlib.h>
 #include <string.h>
 

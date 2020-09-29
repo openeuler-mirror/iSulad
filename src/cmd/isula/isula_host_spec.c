@@ -13,6 +13,7 @@
  * Description: provide generate host spec in client
  ******************************************************************************/
 #include "isula_host_spec.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,7 +31,6 @@
 #include "utils.h"
 #include "isula_libutils/parse_common.h"
 #include "path.h"
-#include "isula_libutils/container_config.h"
 #include "utils_array.h"
 #include "utils_convert.h"
 #include "utils_file.h"

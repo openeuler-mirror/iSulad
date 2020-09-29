@@ -13,26 +13,17 @@
  * Description: provide ulimit options parse function
  ******************************************************************************/
 #include "opt_ulimit.h"
+
 #include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <errno.h>
-#include <isula_libutils/defs.h>
-#include <limits.h>
 #include <stdint.h>
-#include <strings.h>
+#include <isula_libutils/host_config.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "isula_libutils/parse_common.h"
-#include "path.h"
-#include "isula_libutils/container_config.h"
 #include "utils_array.h"
 #include "utils_convert.h"
-#include "utils_file.h"
 #include "utils_string.h"
-#include "utils_verify.h"
 
 static int check_ulimit_input(const char *val)
 {

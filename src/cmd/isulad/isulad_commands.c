@@ -17,7 +17,6 @@
 #include <string.h>
 #include <limits.h>
 #include <isula_libutils/host_config.h>
-#include <stdint.h>
 #include <strings.h>
 
 #include "isulad_commands.h"
@@ -30,7 +29,6 @@
 #include "constants.h"
 #include "isula_libutils/isulad_daemon_configs.h"
 #include "utils_array.h"
-#include "utils_convert.h"
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "opt_ulimit.h"

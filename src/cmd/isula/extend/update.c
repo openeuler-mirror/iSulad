@@ -13,7 +13,7 @@
  * Description: provide container update functions
  ******************************************************************************/
 #include "update.h"
-#include <string.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 
