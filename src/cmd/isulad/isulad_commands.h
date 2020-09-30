@@ -105,7 +105,7 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       "group",                                                                                                    \
       'G',                                                                                                        \
       &(cmdargs)->json_confs->group,                                                                              \
-      "Group for the unix socket(default is isulad)",                                                             \
+      "Group for the unix socket(default is isula)",                                                             \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
