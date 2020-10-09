@@ -182,16 +182,32 @@ out:
     return opts;
 }
 
-int storage_set_hold_flag(const char *layer_id, bool hold)
+int storage_inc_hold_refs(const char *layer_id)
 {
     int ret = 0;
 
     if (!storage_lock(&g_storage_rwlock, true)) {
-        ERROR("Failed to lock image store when reset hold flag for layer %s", layer_id);
+        ERROR("Failed to lock image store when increase hold refs number for layer %s", layer_id);
         return -1;
     }
 
-    ret = layer_set_hold_flag(layer_id, hold);
+    ret = layer_inc_hold_refs(layer_id);
+
+    storage_unlock(&g_storage_rwlock);
+
+    return ret;
+}
+
+int storage_dec_hold_refs(const char *layer_id)
+{
+    int ret = 0;
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock image store when decrease hold refs number for layer %s", layer_id);
+        return -1;
+    }
+
+    ret = layer_dec_hold_refs(layer_id);
 
     storage_unlock(&g_storage_rwlock);
 
@@ -499,7 +515,7 @@ static int do_delete_related_layers(const char *img_id, const char *img_top_laye
     char *layer_id = NULL;
     char *last_deleted_layer_id = NULL;
     struct layer *layer_info = NULL;
-    bool hold = false;
+    int refs_num = 0;
 
     layer_id = util_strdup_s(img_top_layer_id);
     if (layer_id == NULL) {
@@ -509,13 +525,13 @@ static int do_delete_related_layers(const char *img_id, const char *img_top_laye
     }
 
     while (layer_id != NULL) {
-        ret = layer_get_hold_flag(layer_id, &hold);
+        ret = layer_get_hold_refs(layer_id, &refs_num);
         if (ret != 0) {
             break;
         }
-        // if the layer is hold, it means it's pulling/importing/loading or other layer creating actions,
-        // so do not delete it
-        if (hold) {
+        // if the layer's hold refs number not 0, it means it's pulling/importing/loading or
+        // other layer creating actions, so do not delete it
+        if (refs_num > 0) {
             break;
         }
 

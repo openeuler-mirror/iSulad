@@ -1153,28 +1153,32 @@ static int layer_store_remove_layer(const char *id)
     return ret;
 }
 
-int layer_set_hold_flag(const char *layer_id, bool hold)
+int layer_set_hold_refs(const char *layer_id, bool increase)
 {
     layer_t *l = NULL;
     int ret = 0;
 
     if (layer_id == NULL) {
-        ERROR("Invalid NULL layer id when reset hold flag");
+        ERROR("Invalid NULL layer id when set hold refs");
         return -1;
     }
 
     if (!layer_store_lock(true)) {
-        ERROR("Failed to lock layer store, reset hold flag for layer %s failed", layer_id);
+        ERROR("Failed to lock layer store, reset hold refs for layer %s failed", layer_id);
         return -1;
     }
 
     l = map_search(g_metadata.by_id, (void *)layer_id);
     if (l == NULL) {
-        ERROR("layer %s not found when reset hold flag", layer_id);
+        ERROR("layer %s not found when set hold refs", layer_id);
         ret = -1;
         goto out;
     }
-    l->hold = hold;
+    if (increase) {
+        l->hold_refs_num++;
+    } else {
+        l->hold_refs_num--;
+    }
 
 out:
     layer_store_unlock();
@@ -1182,28 +1186,38 @@ out:
     return ret;
 }
 
-int layer_get_hold_flag(const char *layer_id, bool *hold)
+int layer_inc_hold_refs(const char *layer_id)
+{
+    return layer_set_hold_refs(layer_id, true);
+}
+
+int layer_dec_hold_refs(const char *layer_id)
+{
+    return layer_set_hold_refs(layer_id, false);
+}
+
+int layer_get_hold_refs(const char *layer_id, int *refs_num)
 {
     int ret = 0;
     layer_t *l = NULL;
 
-    if (layer_id == NULL || hold == NULL) {
-        ERROR("Invalid NULL param when get hold flag");
+    if (layer_id == NULL || refs_num == NULL) {
+        ERROR("Invalid NULL param when get hold refs");
         return -1;
     }
 
     if (!layer_store_lock(true)) {
-        ERROR("Failed to lock layer store, get hold flag of layer %s failed", layer_id);
+        ERROR("Failed to lock layer store, get hold refs of layer %s failed", layer_id);
         return -1;
     }
 
     l = map_search(g_metadata.by_id, (void *)layer_id);
     if (l == NULL) {
-        ERROR("layer %s not found when reset hold flag", layer_id);
+        ERROR("layer %s not found when get hold refs", layer_id);
         ret = -1;
         goto out;
     }
-    *hold = l->hold;
+    *refs_num = l->hold_refs_num;
 
 out:
     layer_store_unlock();
@@ -1226,10 +1240,10 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
         return -1;
     }
 
-    // If the layer already exist, hold the layer is enough
+    // If the layer already exist, increase refs number to hold the layer is enough
     l = lookup(lid);
     if (l != NULL) {
-        l->hold = true; // mark it as hold, so others can't delete this layer
+        l->hold_refs_num++; // increase refs number, so others can't delete this layer
         goto free_out;
     }
 
@@ -1272,7 +1286,7 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
             *new_id = lid;
             lid = NULL;
         }
-        l->hold = true; // mark it as hold, so others can't delete this layer
+        l->hold_refs_num++; // increase refs number, so others can't delete this layer
         goto free_out;
     }
     ERROR("Save layer failed");

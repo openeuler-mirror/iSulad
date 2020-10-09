@@ -140,8 +140,8 @@ void free_pull_desc(pull_descriptor *desc)
     desc->layers = NULL;
     desc->layers_len = 0;
 
-    free(desc->layer_of_hold_flag);
-    desc->layer_of_hold_flag = NULL;
+    free(desc->layer_of_hold_refs);
+    desc->layer_of_hold_refs = NULL;
 
     free(desc);
 

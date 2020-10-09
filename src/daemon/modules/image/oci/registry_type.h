@@ -105,7 +105,7 @@ typedef struct {
     // This is temporary field. Once http request is performed, it is cleared
     char **headers;
 
-    char *layer_of_hold_flag;
+    char *layer_of_hold_refs;
 
     // Image blobs downloaded
     manifest_blob manifest;
