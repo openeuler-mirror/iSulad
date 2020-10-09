@@ -339,7 +339,7 @@ int registry_pingv2(pull_descriptor *desc, char *protocol)
     // Sending url
     // https://registry.isula.org/v2/
     INFO("sending ping url: %s", url);
-    ret = http_request_buf(desc, url, (const char **)headers, &output, HEAD_ONLY);
+    ret = http_request_buf(desc, url, (const char **)headers, &output, HEAD_BODY);
     if (ret != 0) {
         ERROR("http request failed");
         goto out;
@@ -1202,7 +1202,7 @@ int login_to_registry(pull_descriptor *desc)
         goto out;
     }
 
-    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_ONLY, &errcode);
+    ret = registry_request(desc, path, NULL, NULL, &resp_buffer, HEAD_BODY, &errcode);
     if (ret != 0) {
         ERROR("registry: Get %s failed, resp: %s", path, resp_buffer);
         isulad_try_set_error_message("login to registry for %s failed", desc->host);
