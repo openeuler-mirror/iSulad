@@ -1228,7 +1228,7 @@ out:
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *diff, char **new_id)
 {
     int ret = 0;
-    char *lid = util_strdup_s(id);
+    char *lid = NULL;
     layer_t *l = NULL;
 
     if (opts == NULL) {
@@ -1239,6 +1239,8 @@ int layer_store_create(const char *id, const struct layer_opts *opts, const stru
     if (!layer_store_lock(true)) {
         return -1;
     }
+
+    lid = util_strdup_s(id);
 
     // If the layer already exist, increase refs number to hold the layer is enough
     l = lookup(lid);
