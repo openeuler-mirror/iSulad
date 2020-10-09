@@ -200,8 +200,8 @@ static void oci_load_free_image(load_image_t *im)
 
     free_oci_image_manifest(im->manifest);
 
-    free(im->layer_of_hold_flag);
-    im->layer_of_hold_flag = NULL;
+    free(im->layer_of_hold_refs);
+    im->layer_of_hold_refs = NULL;
 
     free(im);
 }
@@ -212,8 +212,8 @@ inline static void do_free_load_image(load_image_t *im)
         return;
     }
 
-    if (im->layer_of_hold_flag != NULL && storage_set_hold_flag(im->layer_of_hold_flag, false) != 0) {
-        ERROR("clear hold flag failed for layer %s", im->layer_of_hold_flag);
+    if (im->layer_of_hold_refs != NULL && storage_dec_hold_refs(im->layer_of_hold_refs) != 0) {
+        ERROR("decrease hold refs failed for layer %s", im->layer_of_hold_refs);
     }
 
     oci_load_free_image(im);
@@ -366,10 +366,10 @@ static int oci_load_register_layers(load_image_t *desc)
             ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i]->fpath);
             goto out;
         }
-        free(desc->layer_of_hold_flag);
-        desc->layer_of_hold_flag = util_strdup_s(id);
-        if (parent != NULL && storage_set_hold_flag(parent, false) != 0) {
-            ERROR("clear hold flag failed for layer %s", parent);
+        free(desc->layer_of_hold_refs);
+        desc->layer_of_hold_refs = util_strdup_s(id);
+        if (parent != NULL && storage_dec_hold_refs(parent) != 0) {
+            ERROR("decrease hold refs failed for layer %s", parent);
             ret = -1;
             goto out;
         }

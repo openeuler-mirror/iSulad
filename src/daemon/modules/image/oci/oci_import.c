@@ -54,7 +54,7 @@ typedef struct {
     types_timestamp_t now_time;
     char *tag;
     char *layer_file;
-    char *layer_of_hold_flag;
+    char *layer_of_hold_refs;
 } import_desc;
 
 static void free_import_desc(import_desc *desc)
@@ -81,8 +81,8 @@ static void free_import_desc(import_desc *desc)
     desc->uncompressed_digest = NULL;
     free(desc->layer_file);
     desc->layer_file = NULL;
-    free(desc->layer_of_hold_flag);
-    desc->layer_of_hold_flag = NULL;
+    free(desc->layer_of_hold_refs);
+    desc->layer_of_hold_refs = NULL;
 
     free(desc);
 
@@ -114,7 +114,7 @@ static int register_layer(import_desc *desc)
     if (storage_layer_create(id, &copts) != 0) {
         return -1;
     }
-    desc->layer_of_hold_flag = util_strdup_s(id);
+    desc->layer_of_hold_refs = util_strdup_s(id);
 
     return 0;
 }
@@ -374,12 +374,12 @@ static int register_image(import_desc *desc)
     }
 
 out:
-    if (desc->layer_of_hold_flag != NULL &&
-        storage_set_hold_flag(desc->layer_of_hold_flag, false) != 0) {
-        ERROR("clear hold flag failed for layer %s", desc->layer_of_hold_flag);
+    if (desc->layer_of_hold_refs != NULL &&
+        storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
+        ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     } else {
-        free(desc->layer_of_hold_flag);
-        desc->layer_of_hold_flag = NULL;
+        free(desc->layer_of_hold_refs);
+        desc->layer_of_hold_refs = NULL;
     }
 
     if (ret != 0 && image_created) {
@@ -494,9 +494,9 @@ static int do_import(char *file, char *tag)
     }
 
 out:
-    if (desc->layer_of_hold_flag != NULL &&
-        storage_set_hold_flag(desc->layer_of_hold_flag, false) != 0) {
-        ERROR("clear hold flag failed for layer %s", desc->layer_of_hold_flag);
+    if (desc->layer_of_hold_refs != NULL &&
+        storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
+        ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     }
 
     free_import_desc(desc);

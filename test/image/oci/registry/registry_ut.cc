@@ -369,7 +369,12 @@ int invokeStorageLayerCreate(const char *layer_id, storage_layer_create_opts_t *
     return 0;
 }
 
-int invokeStorageSetHoldFlag(const char *layer_id, bool hold)
+int invokeStorageIncHoldRefs(const char *layer_id)
+{
+    return 0;
+}
+
+int invokeStorageDecHoldRefs(const char *layer_id)
 {
     return 0;
 }
@@ -512,8 +517,10 @@ void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock)
     .WillRepeatedly(Invoke(invokeStorageGetImgTopLayer));
     EXPECT_CALL(*mock, StorageLayerCreate(::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeStorageLayerCreate));
-    EXPECT_CALL(*mock, StorageSetHoldFlag(::testing::_, ::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageSetHoldFlag));
+    EXPECT_CALL(*mock, StorageIncHoldRefs(::testing::_))
+    .WillRepeatedly(Invoke(invokeStorageIncHoldRefs));
+    EXPECT_CALL(*mock, StorageDecHoldRefs(::testing::_))
+    .WillRepeatedly(Invoke(invokeStorageDecHoldRefs));
     EXPECT_CALL(*mock, StorageLayerGet(::testing::_))
     .WillRepeatedly(Invoke(invokeStorageLayerGet));
     EXPECT_CALL(*mock, StorageLayerTryRepairLowers(::testing::_, ::testing::_))

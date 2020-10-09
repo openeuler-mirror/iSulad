@@ -137,10 +137,18 @@ void free_layer(struct layer *l)
     return;
 }
 
-int storage_set_hold_flag(const char *layer_id, bool hold)
+int storage_inc_hold_refs(const char *layer_id)
 {
     if (g_storage_mock != NULL) {
-        return g_storage_mock->StorageSetHoldFlag(layer_id, hold);
+        return g_storage_mock->StorageIncHoldRefs(layer_id);
+    }
+    return -1;
+}
+
+int storage_dec_hold_refs(const char *layer_id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageIncHoldRefs(layer_id);
     }
     return -1;
 }

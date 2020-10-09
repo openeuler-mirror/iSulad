@@ -57,8 +57,9 @@ void layer_store_cleanup();
 void remove_layer_list_tail();
 int layer_store_create(const char *id, const struct layer_opts *opts, const struct io_read_wrapper *content,
                        char **new_id);
-int layer_set_hold_flag(const char *layer_id, bool hold);
-int layer_get_hold_flag(const char *layer_id, bool *hold);
+int layer_inc_hold_refs(const char *layer_id);
+int layer_dec_hold_refs(const char *layer_id);
+int layer_get_hold_refs(const char *layer_id, int *ref_num);
 int layer_store_delete(const char *id);
 bool layer_store_exists(const char *id);
 int layer_store_list(struct layer_list *resp);

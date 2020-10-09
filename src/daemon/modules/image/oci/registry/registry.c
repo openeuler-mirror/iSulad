@@ -611,9 +611,9 @@ static int register_layers(pull_descriptor *desc)
             ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i].file);
             goto out;
         }
-        free(desc->layer_of_hold_flag);
-        desc->layer_of_hold_flag = util_strdup_s(id);
-        if (parent != NULL && storage_set_hold_flag(parent, false) != 0) {
+        free(desc->layer_of_hold_refs);
+        desc->layer_of_hold_refs = util_strdup_s(id);
+        if (parent != NULL && storage_dec_hold_refs(parent) != 0) {
             ERROR("clear hold flag failed for layer %s", parent);
             ret = -1;
             goto out;
@@ -1404,13 +1404,13 @@ static int fetch_all(pull_descriptor *desc)
                     (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
                      !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)) &&
                      strcmp(list->layers[j]->uncompressed_digest, list->layers[j]->compressed_digest))) {
-                    // If can't set hold flag, it means it not exist anymore.
-                    if (storage_set_hold_flag(list->layers[j]->id, true) != 0) {
+                    // If can't set hold refs, it means it not exist anymore.
+                    if (storage_inc_hold_refs(list->layers[j]->id) != 0) {
                         continue;
                     }
-                    free(desc->layer_of_hold_flag);
-                    desc->layer_of_hold_flag = util_strdup_s(list->layers[j]->id);
-                    if (parent_chain_id != NULL && storage_set_hold_flag(parent_chain_id, false) != 0) {
+                    free(desc->layer_of_hold_refs);
+                    desc->layer_of_hold_refs = util_strdup_s(list->layers[j]->id);
+                    if (parent_chain_id != NULL && storage_dec_hold_refs(parent_chain_id) != 0) {
                         continue;
                     }
                     desc->layers[i].already_exist = true;
@@ -1802,9 +1802,9 @@ int registry_pull(registry_pull_options *options)
     INFO("Pull images %s success", options->image_name);
 
 out:
-    if (desc->layer_of_hold_flag != NULL &&
-        storage_set_hold_flag(desc->layer_of_hold_flag, false) != 0) {
-        ERROR("clear hold flag failed for layer %s", desc->layer_of_hold_flag);
+    if (desc->layer_of_hold_refs != NULL &&
+        storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
+        ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     }
 
     if (desc->blobpath != NULL) {
