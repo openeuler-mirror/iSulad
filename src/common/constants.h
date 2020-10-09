@@ -113,9 +113,6 @@ extern "C" {
 
 #define AUTH_PLUGIN "authz-broker"
 
-#define ISULAD_ISULA_ADAPTER "isula-adapter"
-#define ISULAD_ISULA_ACCEL_ARGS "isulad.accel.args"
-#define ISULAD_ISULA_ACCEL_ARGS_SEPERATOR ";"
 #define ISULAD_ENABLE_PLUGINS "ISULAD_ENABLE_PLUGINS"
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR ","
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','

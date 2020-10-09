@@ -100,8 +100,6 @@ int command_convert_membytes(command_option_t *option, const char *arg);
 
 int command_convert_memswapbytes(command_option_t *option, const char *arg);
 
-int check_default_ulimit_type(const char *type);
-
 int command_convert_swappiness(command_option_t *option, const char *arg);
 
 int command_convert_nanocpus(command_option_t *option, const char *arg);

@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container create functions
  ******************************************************************************/
+#include "create.h"
 #include <stdio_ext.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -32,7 +33,6 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_string.h"
-#include "create.h"
 #include "isula_connect.h"
 #include "path.h"
 #include "pull.h"
@@ -43,6 +43,8 @@
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "utils_verify.h"
+#include "isula_container_spec.h"
+#include "isula_host_spec.h"
 
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
@@ -142,6 +144,12 @@ static int request_pack_host_config_cgroup(const struct client_arguments *args, 
         return -1;
     }
 
+    hostconfig->cr = util_common_calloc_s(sizeof(container_cgroup_resources_t));
+    if (hostconfig->cr == NULL) {
+        COMMAND_ERROR("Memory out");
+        return -1;
+    }
+
     /* blkio weight */
     hostconfig->cr->blkio_weight = args->cr.blkio_weight;
 
@@ -164,10 +172,10 @@ static int request_pack_host_config_cgroup(const struct client_arguments *args, 
     hostconfig->cr->cpu_realtime_runtime = args->cr.cpu_rt_runtime;
 
     /* cpuset-cpus */
-    hostconfig->cr->cpuset_cpus = args->cr.cpuset_cpus;
+    hostconfig->cr->cpuset_cpus = util_strdup_s(args->cr.cpuset_cpus);
 
     /* cpuset memory */
-    hostconfig->cr->cpuset_mems = args->cr.cpuset_mems;
+    hostconfig->cr->cpuset_mems = util_strdup_s(args->cr.cpuset_mems);
 
     /* oom_score_adj */
     hostconfig->cr->oom_score_adj = args->cr.oom_score_adj;
@@ -191,54 +199,7 @@ static int request_pack_host_config_cgroup(const struct client_arguments *args, 
     return 0;
 }
 
-static int util_env_set_isulad_enable_plugins(char ***penv, const size_t *penv_len, const char *names)
-{
-    size_t env_len;
-    size_t len = 0;
-    char *val = NULL;
-    char *kv = NULL;
-    char **env = NULL;
-    const char *arr[10] = { NULL };
-
-    if (penv == NULL || penv_len == NULL || names == NULL) {
-        return -1;
-    }
-
-    env = *penv;
-    env_len = *penv_len;
-
-    arr[0] = ISULAD_ENABLE_PLUGINS;
-    arr[1] = "=";
-    arr[2] = names;
-    len = 3;
-
-    val = util_env_get_val(env, env_len, ISULAD_ENABLE_PLUGINS, strlen(ISULAD_ENABLE_PLUGINS));
-    if (val != NULL && strlen(val) != 0) {
-        arr[3] = ISULAD_ENABLE_PLUGINS_SEPERATOR;
-        arr[4] = val;
-        len = 5;
-    }
-
-    kv = util_string_join("", arr, len);
-    if (kv == NULL) {
-        goto failed;
-    }
-
-    if (util_env_set_val(penv, penv_len, ISULAD_ENABLE_PLUGINS, strlen(ISULAD_ENABLE_PLUGINS), kv)) {
-        goto failed;
-    }
-
-    free(val);
-    free(kv);
-    return 0;
-
-failed:
-    free(val);
-    free(kv);
-    return -1;
-}
-
-static int request_pack_custom_env(struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_env(const struct client_arguments *args, isula_container_config_t *conf)
 {
     int ret = 0;
     char *pe = NULL;
@@ -264,25 +225,6 @@ static int request_pack_custom_env(struct client_arguments *args, isula_containe
             new_env = NULL;
         }
         conf->env_len = util_array_len((const char **)(conf->env));
-    }
-
-    if (args->custom_conf.accel != NULL) {
-        pe = util_env_get_val(conf->env, conf->env_len, ISULAD_ENABLE_PLUGINS, strlen(ISULAD_ENABLE_PLUGINS));
-        if (pe == NULL) {
-            if (util_array_append(&conf->env, ISULAD_ENABLE_PLUGINS "=")) {
-                COMMAND_ERROR("init env ISULAD_ENABLE_PLUGINS failed");
-                ret = -1;
-                goto out;
-            }
-        }
-        conf->env_len = util_array_len((const char **)(conf->env));
-        conf->accel = args->custom_conf.accel;
-        conf->accel_len = util_array_len((const char **)(args->custom_conf.accel));
-        if (util_env_set_isulad_enable_plugins(&conf->env, &conf->env_len, ISULAD_ISULA_ADAPTER)) {
-            COMMAND_ERROR("init accel env failed");
-            ret = -1;
-            goto out;
-        }
     }
 
 out:
@@ -411,7 +353,7 @@ out:
     return ret;
 }
 
-static int request_pack_custom_label(struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_label(const struct client_arguments *args, isula_container_config_t *conf)
 {
     int ret = 0;
     size_t i;
@@ -432,8 +374,6 @@ static int request_pack_custom_label(struct client_arguments *args, isula_contai
             goto out;
         }
     }
-    util_free_array(args->custom_conf.label);
-    args->custom_conf.label = conf->label; /* make sure args->custom_conf.label point to valid memory. */
     conf->label_len = util_array_len((const char **)(conf->label));
 
 out:
@@ -530,7 +470,7 @@ out:
 static void request_pack_custom_user(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.user != NULL) {
-        conf->user = args->custom_conf.user;
+        conf->user = util_strdup_s(args->custom_conf.user);
     }
 
     return;
@@ -539,7 +479,7 @@ static void request_pack_custom_user(const struct client_arguments *args, isula_
 static void request_pack_custom_hostname(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.hostname != NULL) {
-        conf->hostname = args->custom_conf.hostname;
+        conf->hostname = util_strdup_s(args->custom_conf.hostname);
     }
 
     return;
@@ -563,39 +503,50 @@ static void request_pack_custom_system_container(const struct client_arguments *
     /* ns change opt */
     if (!args->custom_conf.privileged) {
         if (args->custom_conf.ns_change_opt != NULL) {
-            conf->ns_change_opt = args->custom_conf.ns_change_opt;
+            conf->ns_change_opt = util_strdup_s(args->custom_conf.ns_change_opt);
         }
     }
 
     return;
 }
 
-static void request_pack_custom_mounts(const struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_mounts(const struct client_arguments *args, isula_container_config_t *conf)
 {
-    if (args->custom_conf.mounts != NULL) {
-        conf->mounts_len = util_array_len((const char **)(args->custom_conf.mounts));
-        conf->mounts = args->custom_conf.mounts;
+    if (args->custom_conf.mounts == NULL) {
+        return 0;
     }
-    return;
+
+    if (dup_array_of_strings((const char **)args->custom_conf.mounts,
+                             util_array_len((const char **)(args->custom_conf.mounts)), &conf->mounts,
+                             &conf->mounts_len) != 0) {
+        COMMAND_ERROR("Failed to dup mounts info");
+        return -1;
+    }
+
+    return 0;
 }
 
 static void request_pack_custom_entrypoint(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.entrypoint != NULL) {
-        conf->entrypoint = args->custom_conf.entrypoint;
+        conf->entrypoint = util_strdup_s(args->custom_conf.entrypoint);
     }
 
     return;
 }
 
-static void request_pack_custom_args(const struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_args(const struct client_arguments *args, isula_container_config_t *conf)
 {
-    if (args->argc != 0 && args->argv != NULL) {
-        conf->cmd_len = (size_t)(args->argc);
-        conf->cmd = (char **)args->argv;
+    if (args->argc == 0) {
+        return 0;
     }
 
-    return;
+    if (dup_array_of_strings((const char **)args->argv, args->argc, &conf->cmd, &conf->cmd_len) != 0) {
+        COMMAND_ERROR("Failed to dup command");
+        return -1;
+    }
+
+    return 0;
 }
 
 static void request_pack_custom_log_options(const struct client_arguments *args, isula_container_config_t *conf)
@@ -603,42 +554,11 @@ static void request_pack_custom_log_options(const struct client_arguments *args,
     conf->log_driver = util_strdup_s(args->log_driver);
 }
 
-static int request_pack_custom_log_accel(struct client_arguments *args, isula_container_config_t *conf)
-{
-    int ret = 0;
-    char *accargs = NULL;
-
-    if (conf->accel != NULL) {
-        accargs = util_string_join(ISULAD_ISULA_ACCEL_ARGS_SEPERATOR, (const char **)conf->accel, conf->accel_len);
-
-        if (conf->annotations == NULL) {
-            conf->annotations = util_common_calloc_s(sizeof(json_map_string_string));
-            if (conf->annotations == NULL) {
-                COMMAND_ERROR("alloc annotations failed for accel");
-                ret = -1;
-                goto out;
-            }
-        }
-
-        ret = append_json_map_string_string(conf->annotations, ISULAD_ISULA_ACCEL_ARGS, accargs);
-        if (ret != 0) {
-            COMMAND_ERROR("init accel annotations failed accel=%s", accargs);
-            ret = -1;
-            goto out;
-        }
-        UTIL_FREE_AND_SET_NULL(accargs);
-    }
-
-out:
-    free(accargs);
-    return ret;
-}
-
 static void request_pack_custom_work_dir(const struct client_arguments *args, isula_container_config_t *conf)
 {
     /* work dir in container */
     if (args->custom_conf.workdir != NULL) {
-        conf->workdir = args->custom_conf.workdir;
+        conf->workdir = util_strdup_s(args->custom_conf.workdir);
     }
 
     return;
@@ -658,7 +578,7 @@ static void request_pack_custom_tty(const struct client_arguments *args, isula_c
 static void request_pack_custom_health_check(const struct client_arguments *args, isula_container_config_t *conf)
 {
     if (args->custom_conf.health_cmd != NULL) {
-        conf->health_cmd = args->custom_conf.health_cmd;
+        conf->health_cmd = util_strdup_s(args->custom_conf.health_cmd);
     }
     /* health check */
     conf->health_interval = args->custom_conf.health_interval;
@@ -671,30 +591,57 @@ static void request_pack_custom_health_check(const struct client_arguments *args
     return;
 }
 
-static int request_pack_custom_conf(struct client_arguments *args, isula_container_config_t *conf)
+static int request_pack_custom_annotations(const struct client_arguments *args, isula_container_config_t *conf)
 {
-    if (args == NULL) {
+    if (args->annotations == NULL) {
+        return 0;
+    }
+
+    conf->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+    if (conf->annotations == NULL) {
+        COMMAND_ERROR("Out of memory");
         return -1;
+    }
+
+    if (dup_json_map_string_string(args->annotations, conf->annotations) != 0) {
+        COMMAND_ERROR("Failed to dup map");
+        return -1;
+    }
+
+    return 0;
+}
+
+static isula_container_config_t *request_pack_custom_conf(const struct client_arguments *args)
+{
+    isula_container_config_t *conf = NULL;
+
+    if (args == NULL) {
+        return NULL;
+    }
+
+    conf = util_common_calloc_s(sizeof(isula_container_config_t));
+    if (conf == NULL) {
+        return NULL;
     }
 
     /* append environment variables from env file */
     if (request_pack_custom_env_file(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* make sure --env has higher priority than --env-file */
     if (request_pack_custom_env(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* append labels from label file */
     if (request_pack_custom_label_file(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* make sure --label has higher priority than --label-file */
     if (request_pack_custom_label(args, conf) != 0) {
-        return -1;
+        goto error_out;
     }
 
     /* user and group */
@@ -709,22 +656,23 @@ static int request_pack_custom_conf(struct client_arguments *args, isula_contain
     request_pack_custom_system_container(args, conf);
 
     /* mounts to mount filesystem */
-    request_pack_custom_mounts(args, conf);
+    if (request_pack_custom_mounts(args, conf) != 0) {
+        goto error_out;
+    }
 
     /* entrypoint */
     request_pack_custom_entrypoint(args, conf);
 
     /* command args */
-    request_pack_custom_args(args, conf);
+    if (request_pack_custom_args(args, conf) != 0) {
+        goto error_out;
+    }
 
     /* console log options */
     request_pack_custom_log_options(args, conf);
 
-    conf->annotations = args->annotations;
-    args->annotations = NULL;
-
-    if (request_pack_custom_log_accel(args, conf) != 0) {
-        return -1;
+    if (request_pack_custom_annotations(args, conf) != 0) {
+        goto error_out;
     }
 
     /* work dir in container */
@@ -734,7 +682,11 @@ static int request_pack_custom_conf(struct client_arguments *args, isula_contain
 
     request_pack_custom_health_check(args, conf);
 
-    return 0;
+    return conf;
+
+error_out:
+    isula_container_config_free(conf);
+    return NULL;
 }
 
 static int request_pack_host_ns_change_files(const struct client_arguments *args, isula_host_config_t *hostconfig)
@@ -789,218 +741,309 @@ static int request_pack_host_ns_change_files(const struct client_arguments *args
     return ret;
 }
 
-static void request_pack_host_caps(const struct client_arguments *args, isula_host_config_t *hostconfig)
+static int request_pack_host_caps(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* cap add */
     if (args->custom_conf.cap_adds != NULL) {
-        hostconfig->cap_add_len = util_array_len((const char **)(args->custom_conf.cap_adds));
-        hostconfig->cap_add = args->custom_conf.cap_adds;
+        if (dup_array_of_strings((const char **)(args->custom_conf.cap_adds),
+                                 util_array_len((const char **)(args->custom_conf.cap_adds)), &hostconfig->cap_add,
+                                 &hostconfig->cap_add_len) != 0) {
+            COMMAND_ERROR("Failed to dup cap adds");
+            return -1;
+        }
     }
     /* cap drop */
     if (args->custom_conf.cap_drops != NULL) {
-        hostconfig->cap_drop_len = util_array_len((const char **)(args->custom_conf.cap_drops));
-        hostconfig->cap_drop = args->custom_conf.cap_drops;
+        if (dup_array_of_strings((const char **)(args->custom_conf.cap_drops),
+                                 util_array_len((const char **)(args->custom_conf.cap_drops)), &hostconfig->cap_drop,
+                                 &hostconfig->cap_drop_len) != 0) {
+            COMMAND_ERROR("Failed to dup cap drops");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-static void request_pack_host_group_add(const struct client_arguments *args, isula_host_config_t *hostconfig)
+static int request_pack_host_group_add(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* group add */
     if (args->custom_conf.group_add != NULL) {
-        hostconfig->group_add_len = util_array_len((const char **)(args->custom_conf.group_add));
-        hostconfig->group_add = args->custom_conf.group_add;
+        if (dup_array_of_strings((const char **)(args->custom_conf.group_add),
+                                 util_array_len((const char **)(args->custom_conf.group_add)), &hostconfig->group_add,
+                                 &hostconfig->group_add_len) != 0) {
+            COMMAND_ERROR("Failed to dup group adds");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-static void request_pack_host_extra_hosts(const struct client_arguments *args, isula_host_config_t *hostconfig)
+static int request_pack_host_extra_hosts(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* extra hosts */
     if (args->custom_conf.extra_hosts != NULL) {
-        hostconfig->extra_hosts_len = util_array_len((const char **)(args->custom_conf.extra_hosts));
-        hostconfig->extra_hosts = args->custom_conf.extra_hosts;
+        if (dup_array_of_strings((const char **)(args->custom_conf.extra_hosts),
+                                 util_array_len((const char **)(args->custom_conf.extra_hosts)),
+                                 &hostconfig->extra_hosts, &hostconfig->extra_hosts_len) != 0) {
+            COMMAND_ERROR("Failed to dup extra hosts");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-static void request_pack_host_dns(const struct client_arguments *args, isula_host_config_t *hostconfig)
+static int request_pack_host_dns(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* dns */
     if (args->custom_conf.dns != NULL) {
-        hostconfig->dns_len = util_array_len((const char **)(args->custom_conf.dns));
-        hostconfig->dns = args->custom_conf.dns;
+        if (dup_array_of_strings((const char **)(args->custom_conf.dns),
+                                 util_array_len((const char **)(args->custom_conf.dns)), &hostconfig->dns,
+                                 &hostconfig->dns_len) != 0) {
+            COMMAND_ERROR("Failed to dup dns");
+            return -1;
+        }
     }
 
     /* dns options */
     if (args->custom_conf.dns_options != NULL) {
-        hostconfig->dns_options_len = util_array_len((const char **)(args->custom_conf.dns_options));
-        hostconfig->dns_options = args->custom_conf.dns_options;
+        if (dup_array_of_strings((const char **)(args->custom_conf.dns_options),
+                                 util_array_len((const char **)(args->custom_conf.dns_options)),
+                                 &hostconfig->dns_options, &hostconfig->dns_options_len) != 0) {
+            COMMAND_ERROR("Failed to dup dns options");
+            return -1;
+        }
     }
 
     /* dns search */
     if (args->custom_conf.dns_search != NULL) {
-        hostconfig->dns_search_len = util_array_len((const char **)(args->custom_conf.dns_search));
-        hostconfig->dns_search = args->custom_conf.dns_search;
+        if (dup_array_of_strings((const char **)(args->custom_conf.dns_search),
+                                 util_array_len((const char **)(args->custom_conf.dns_search)), &hostconfig->dns_search,
+                                 &hostconfig->dns_search_len) != 0) {
+            COMMAND_ERROR("Failed to dup dns search");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_ulimit(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static int request_pack_host_ulimit(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* ulimit options */
     if (args->custom_conf.ulimits != NULL) {
-        hostconfig->ulimits_len = util_array_len((const char **)(args->custom_conf.ulimits));
-        hostconfig->ulimits = args->custom_conf.ulimits;
+        if (dup_array_of_strings((const char **)(args->custom_conf.ulimits),
+                                 util_array_len((const char **)(args->custom_conf.ulimits)), &hostconfig->ulimits,
+                                 &hostconfig->ulimits_len) != 0) {
+            COMMAND_ERROR("Failed to dup ulimits");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_weight_devices(const struct client_arguments *args,
-                                                    isula_host_config_t *hostconfig)
+inline static int request_pack_host_weight_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* blkio weight devices */
     if (args->custom_conf.weight_devices != NULL) {
-        hostconfig->blkio_weight_device_len = util_array_len((const char **)(args->custom_conf.weight_devices));
-        hostconfig->blkio_weight_device = args->custom_conf.weight_devices;
+        if (dup_array_of_strings((const char **)(args->custom_conf.weight_devices),
+                                 util_array_len((const char **)(args->custom_conf.weight_devices)),
+                                 &hostconfig->blkio_weight_device, &hostconfig->blkio_weight_device_len) != 0) {
+            COMMAND_ERROR("Failed to dup weight devices");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_device_read_bps(const struct client_arguments *args,
-                                                     isula_host_config_t *hostconfig)
+inline static int request_pack_host_device_read_bps(const struct client_arguments *args,
+                                                    isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_read_bps_device != NULL) {
-        hostconfig->blkio_throttle_read_bps_device_len =
-            util_array_len((const char **)(args->custom_conf.blkio_throttle_read_bps_device));
-        hostconfig->blkio_throttle_read_bps_device = args->custom_conf.blkio_throttle_read_bps_device;
+        if (dup_array_of_strings((const char **)(args->custom_conf.blkio_throttle_read_bps_device),
+                                 util_array_len((const char **)(args->custom_conf.blkio_throttle_read_bps_device)),
+                                 &hostconfig->blkio_throttle_read_bps_device,
+                                 &hostconfig->blkio_throttle_read_bps_device_len) != 0) {
+            COMMAND_ERROR("Failed to dup blkio_throttle_read_bps_device");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_device_write_bps(const struct client_arguments *args,
-                                                      isula_host_config_t *hostconfig)
+inline static int request_pack_host_device_write_bps(const struct client_arguments *args,
+                                                     isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_write_bps_device != NULL) {
-        hostconfig->blkio_throttle_write_bps_device_len =
-            util_array_len((const char **)(args->custom_conf.blkio_throttle_write_bps_device));
-        hostconfig->blkio_throttle_write_bps_device = args->custom_conf.blkio_throttle_write_bps_device;
+        if (dup_array_of_strings((const char **)(args->custom_conf.blkio_throttle_write_bps_device),
+                                 util_array_len((const char **)(args->custom_conf.blkio_throttle_write_bps_device)),
+                                 &hostconfig->blkio_throttle_write_bps_device,
+                                 &hostconfig->blkio_throttle_write_bps_device_len) != 0) {
+            COMMAND_ERROR("Failed to dup blkio_throttle_write_bps_device");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_device_read_iops(const struct client_arguments *args,
-                                                      isula_host_config_t *hostconfig)
+inline static int request_pack_host_device_read_iops(const struct client_arguments *args,
+                                                     isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_read_iops_device != NULL) {
-        hostconfig->blkio_throttle_read_iops_device_len =
-            util_array_len((const char **)(args->custom_conf.blkio_throttle_read_iops_device));
-        hostconfig->blkio_throttle_read_iops_device = args->custom_conf.blkio_throttle_read_iops_device;
+        if (dup_array_of_strings((const char **)(args->custom_conf.blkio_throttle_read_iops_device),
+                                 util_array_len((const char **)(args->custom_conf.blkio_throttle_read_iops_device)),
+                                 &hostconfig->blkio_throttle_read_iops_device,
+                                 &hostconfig->blkio_throttle_read_iops_device_len) != 0) {
+            COMMAND_ERROR("Failed to dup blkio_throttle_read_iops_device");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_device_write_iops(const struct client_arguments *args,
-                                                       isula_host_config_t *hostconfig)
+inline static int request_pack_host_device_write_iops(const struct client_arguments *args,
+                                                      isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.blkio_throttle_write_iops_device != NULL) {
-        hostconfig->blkio_throttle_write_iops_device_len =
-            util_array_len((const char **)(args->custom_conf.blkio_throttle_write_iops_device));
-        hostconfig->blkio_throttle_write_iops_device = args->custom_conf.blkio_throttle_write_iops_device;
+        if (dup_array_of_strings((const char **)(args->custom_conf.blkio_throttle_write_iops_device),
+                                 util_array_len((const char **)(args->custom_conf.blkio_throttle_write_iops_device)),
+                                 &hostconfig->blkio_throttle_write_iops_device,
+                                 &hostconfig->blkio_throttle_write_iops_device_len) != 0) {
+            COMMAND_ERROR("Failed to dup blkio_throttle_write_iops_device");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_device_cgroup_rules(const struct client_arguments *args,
-                                                         isula_host_config_t *hostconfig)
+inline static int request_pack_host_device_cgroup_rules(const struct client_arguments *args,
+                                                        isula_host_config_t *hostconfig)
 {
     if (args->custom_conf.device_cgroup_rules != NULL) {
-        hostconfig->device_cgroup_rules_len = util_array_len((const char **)(args->custom_conf.device_cgroup_rules));
-        hostconfig->device_cgroup_rules = args->custom_conf.device_cgroup_rules;
+        if (dup_array_of_strings((const char **)(args->custom_conf.device_cgroup_rules),
+                                 util_array_len((const char **)(args->custom_conf.device_cgroup_rules)),
+                                 &hostconfig->device_cgroup_rules, &hostconfig->device_cgroup_rules_len) != 0) {
+            COMMAND_ERROR("Failed to dup device_cgroup_rules");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_blockio(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static int request_pack_host_blockio(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
-    request_pack_host_weight_devices(args, hostconfig);
-    request_pack_host_device_read_bps(args, hostconfig);
-    request_pack_host_device_write_bps(args, hostconfig);
-    request_pack_host_device_read_iops(args, hostconfig);
-    request_pack_host_device_write_iops(args, hostconfig);
+    return (request_pack_host_weight_devices(args, hostconfig) || request_pack_host_device_read_bps(args, hostconfig) ||
+            request_pack_host_device_write_bps(args, hostconfig) ||
+            request_pack_host_device_read_iops(args, hostconfig) ||
+            request_pack_host_device_write_iops(args, hostconfig));
 }
 
-inline static void request_pack_host_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static int request_pack_host_devices(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* devices */
     if (args->custom_conf.devices != NULL) {
-        hostconfig->devices_len = util_array_len((const char **)(args->custom_conf.devices));
-        hostconfig->devices = args->custom_conf.devices;
+        if (dup_array_of_strings((const char **)(args->custom_conf.devices),
+                                 util_array_len((const char **)(args->custom_conf.devices)), &hostconfig->devices,
+                                 &hostconfig->devices_len) != 0) {
+            COMMAND_ERROR("Failed to dup devices");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_hugepage_limits(const struct client_arguments *args,
-                                                     isula_host_config_t *hostconfig)
+inline static int request_pack_host_hugepage_limits(const struct client_arguments *args,
+                                                    isula_host_config_t *hostconfig)
 {
     /* hugepage limits */
     if (args->custom_conf.hugepage_limits != NULL) {
-        hostconfig->hugetlbs_len = util_array_len((const char **)(args->custom_conf.hugepage_limits));
-        hostconfig->hugetlbs = args->custom_conf.hugepage_limits;
+        if (dup_array_of_strings((const char **)(args->custom_conf.hugepage_limits),
+                                 util_array_len((const char **)(args->custom_conf.hugepage_limits)),
+                                 &hostconfig->hugetlbs, &hostconfig->hugetlbs_len) != 0) {
+            COMMAND_ERROR("Failed to dup hugepage_limits");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-inline static void request_pack_host_binds(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static int request_pack_host_binds(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* volumes to binds */
     if (args->custom_conf.volumes != NULL) {
-        hostconfig->binds_len = (size_t)util_array_len((const char **)(args->custom_conf.volumes));
-        hostconfig->binds = args->custom_conf.volumes;
+        if (dup_array_of_strings((const char **)(args->custom_conf.volumes),
+                                 util_array_len((const char **)(args->custom_conf.volumes)), &hostconfig->binds,
+                                 &hostconfig->binds_len) != 0) {
+            COMMAND_ERROR("Failed to dup volumes");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
 inline static void request_pack_host_hook_spec(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* hook-spec file */
-    if (args->custom_conf.hook_spec != NULL) {
-        hostconfig->hook_spec = args->custom_conf.hook_spec;
-    }
+    hostconfig->hook_spec = util_strdup_s(args->custom_conf.hook_spec);
 }
 
 inline static void request_pack_host_restart_policy(const struct client_arguments *args,
                                                     isula_host_config_t *hostconfig)
 {
-    if (args->restart != NULL) {
-        hostconfig->restart_policy = args->restart;
-    }
+    hostconfig->restart_policy = util_strdup_s(args->restart);
 }
 
 static void request_pack_host_namespaces(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
-    if (args->host_channel != NULL) {
-        hostconfig->host_channel = args->host_channel;
-    }
+    hostconfig->network_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_NET]);
 
-    if (args->custom_conf.share_ns[NAMESPACE_NET] != NULL) {
-        hostconfig->network_mode = args->custom_conf.share_ns[NAMESPACE_NET];
-    }
-    if (args->custom_conf.share_ns[NAMESPACE_IPC] != NULL) {
-        hostconfig->ipc_mode = args->custom_conf.share_ns[NAMESPACE_IPC];
-    }
-    if (args->custom_conf.share_ns[NAMESPACE_USER] != NULL) {
-        hostconfig->userns_mode = args->custom_conf.share_ns[NAMESPACE_USER];
-    }
-    if (args->custom_conf.share_ns[NAMESPACE_UTS] != NULL) {
-        hostconfig->uts_mode = args->custom_conf.share_ns[NAMESPACE_UTS];
-    }
-    if (args->custom_conf.share_ns[NAMESPACE_PID] != NULL) {
-        hostconfig->pid_mode = args->custom_conf.share_ns[NAMESPACE_PID];
-    }
+    hostconfig->ipc_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_IPC]);
+
+    hostconfig->userns_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_USER]);
+
+    hostconfig->uts_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_UTS]);
+
+    hostconfig->pid_mode = util_strdup_s(args->custom_conf.share_ns[NAMESPACE_PID]);
 }
 
-inline static void request_pack_host_security(const struct client_arguments *args, isula_host_config_t *hostconfig)
+inline static int request_pack_host_security(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* security opt */
     if (args->custom_conf.security != NULL) {
-        hostconfig->security_len = util_array_len((const char **)(args->custom_conf.security));
-        hostconfig->security = args->custom_conf.security;
+        if (dup_array_of_strings((const char **)(args->custom_conf.security),
+                                 util_array_len((const char **)(args->custom_conf.security)), &hostconfig->security,
+                                 &hostconfig->security_len) != 0) {
+            COMMAND_ERROR("Failed to dup security");
+            return -1;
+        }
     }
+
+    return 0;
 }
 
-static int request_pack_host_config(const struct client_arguments *args, isula_host_config_t *hostconfig)
+static isula_host_config_t *request_pack_host_config(const struct client_arguments *args)
 {
-    int ret = 0;
+    isula_host_config_t *hostconfig = NULL;
 
     if (args == NULL) {
-        return -1;
+        return NULL;
+    }
+
+    hostconfig = util_common_calloc_s(sizeof(isula_host_config_t));
+    if (hostconfig == NULL) {
+        return NULL;
     }
 
     /* privileged */
@@ -1016,7 +1059,7 @@ static int request_pack_host_config(const struct client_arguments *args, isula_h
     hostconfig->shm_size = args->custom_conf.shm_size;
 
     /* user remap */
-    hostconfig->user_remap = args->custom_conf.user_remap;
+    hostconfig->user_remap = util_strdup_s(args->custom_conf.user_remap);
 
     /* auto remove */
     hostconfig->auto_remove = args->custom_conf.auto_remove;
@@ -1025,50 +1068,64 @@ static int request_pack_host_config(const struct client_arguments *args, isula_h
     hostconfig->readonly_rootfs = args->custom_conf.readonly;
 
     /* env target file */
-    hostconfig->env_target_file = args->custom_conf.env_target_file;
+    hostconfig->env_target_file = util_strdup_s(args->custom_conf.env_target_file);
 
     /* cgroup parent */
-    hostconfig->cgroup_parent = args->custom_conf.cgroup_parent;
+    hostconfig->cgroup_parent = util_strdup_s(args->custom_conf.cgroup_parent);
 
-    ret = request_pack_host_config_cgroup(args, hostconfig);
-    if (ret != 0) {
-        return ret;
+    if (request_pack_host_config_cgroup(args, hostconfig) != 0) {
+        goto error_out;
     }
 
     /* storage options */
-    ret = request_pack_host_config_storage_opts(args, hostconfig);
-    if (ret != 0) {
-        return ret;
+    if (request_pack_host_config_storage_opts(args, hostconfig) != 0) {
+        goto error_out;
     }
 
     /* sysctls */
-    ret = request_pack_host_config_sysctls(args, hostconfig);
-    if (ret != 0) {
-        return ret;
+    if (request_pack_host_config_sysctls(args, hostconfig) != 0) {
+        goto error_out;
     }
 
-    ret = request_pack_host_ns_change_files(args, hostconfig);
-    if (ret != 0) {
-        return ret;
+    if (request_pack_host_ns_change_files(args, hostconfig) != 0) {
+        goto error_out;
     }
 
-    request_pack_host_caps(args, hostconfig);
+    if (request_pack_host_caps(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_group_add(args, hostconfig);
+    if (request_pack_host_group_add(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_extra_hosts(args, hostconfig);
+    if (request_pack_host_extra_hosts(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_dns(args, hostconfig);
+    if (request_pack_host_dns(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_ulimit(args, hostconfig);
+    if (request_pack_host_ulimit(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_blockio(args, hostconfig);
+    if (request_pack_host_blockio(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_devices(args, hostconfig);
+    if (request_pack_host_devices(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_hugepage_limits(args, hostconfig);
+    if (request_pack_host_hugepage_limits(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    request_pack_host_binds(args, hostconfig);
+    if (request_pack_host_binds(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
     request_pack_host_hook_spec(args, hostconfig);
 
@@ -1076,11 +1133,21 @@ static int request_pack_host_config(const struct client_arguments *args, isula_h
 
     request_pack_host_namespaces(args, hostconfig);
 
-    request_pack_host_security(args, hostconfig);
+    hostconfig->host_channel = util_strdup_s(args->host_channel);
 
-    request_pack_host_device_cgroup_rules(args, hostconfig);
+    if (request_pack_host_security(args, hostconfig) != 0) {
+        goto error_out;
+    }
 
-    return ret;
+    if (request_pack_host_device_cgroup_rules(args, hostconfig) != 0) {
+        goto error_out;
+    }
+
+    return hostconfig;
+
+error_out:
+    isula_host_config_free(hostconfig);
+    return NULL;
 }
 
 #define IMAGE_NOT_FOUND_ERROR "No such image"
@@ -1157,57 +1224,52 @@ out:
     return ret;
 }
 
-static void free_alloced_memory_in_host_config(isula_host_config_t *hostconfig)
-{
-    isula_ns_change_files_free(hostconfig);
-    isula_host_config_storage_opts_free(hostconfig);
-    isula_host_config_sysctl_free(hostconfig);
-}
-
-static void free_alloced_memory_in_config(isula_container_config_t *custom_conf)
-{
-    if (custom_conf == NULL) {
-        return;
-    }
-
-    free_json_map_string_string(custom_conf->annotations);
-    custom_conf->annotations = NULL;
-
-    free(custom_conf->log_driver);
-    custom_conf->log_driver = NULL;
-}
-
 /*
  * Create a create request message and call RPC
  */
 int client_create(struct client_arguments *args)
 {
     int ret = 0;
-    struct isula_create_request request = { 0 };
+    struct isula_create_request *request = NULL;
     struct isula_create_response *response = NULL;
-    isula_container_config_t custom_conf = { 0 };
-    isula_host_config_t host_config = { 0 };
-    container_cgroup_resources_t cr = { 0 };
+    isula_container_config_t *container_spec = NULL;
+    isula_host_config_t *host_spec = NULL;
 
-    request.name = args->name;
-    request.rootfs = args->create_rootfs;
-    request.runtime = args->runtime;
-    request.image = args->image_name;
-    request.hostconfig = &host_config;
-    request.config = &custom_conf;
-    host_config.cr = &cr;
-
-    ret = request_pack_custom_conf(args, request.config);
-    if (ret != 0) {
+    request = util_common_calloc_s(sizeof(struct isula_create_request));
+    if (request == NULL) {
+        COMMAND_ERROR("Memery out");
+        ret = -1;
         goto out;
     }
 
-    ret = request_pack_host_config(args, request.hostconfig);
-    if (ret != 0) {
+    request->name = util_strdup_s(args->name);
+    request->rootfs = util_strdup_s(args->create_rootfs);
+    request->runtime = util_strdup_s(args->runtime);
+    request->image = util_strdup_s(args->image_name);
+
+    container_spec = request_pack_custom_conf(args);
+    if (container_spec == 0) {
+        ret = -1;
         goto out;
     }
 
-    ret = client_try_to_create(args, &request, &response);
+    if (generate_container_config(container_spec, &request->container_spec_json) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    host_spec = request_pack_host_config(args);
+    if (host_spec == 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (generate_hostconfig(host_spec, &request->host_spec_json) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = client_try_to_create(args, request, &response);
     if (ret != 0) {
         goto out;
     }
@@ -1221,9 +1283,10 @@ int client_create(struct client_arguments *args)
         goto out;
     }
 out:
-    free_alloced_memory_in_host_config(request.hostconfig);
-    free_alloced_memory_in_config(request.config);
+    isula_host_config_free(host_spec);
+    isula_container_config_free(container_spec);
     isula_create_response_free(response);
+    isula_create_request_free(request);
     return ret;
 }
 

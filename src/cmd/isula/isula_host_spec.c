@@ -8,10 +8,12 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2018-11-08
- * Description: provide container package configure functions
+ * Author: lifeng
+ * Create: 2020-09-28
+ * Description: provide generate host spec in client
  ******************************************************************************/
+#include "isula_host_spec.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,17 +27,16 @@
 #include <strings.h>
 
 #include "isula_libutils/log.h"
-#include "pack_config.h"
 #include "isula_libutils/host_config.h"
 #include "utils.h"
 #include "isula_libutils/parse_common.h"
 #include "path.h"
-#include "isula_libutils/container_config.h"
 #include "utils_array.h"
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "opt_ulimit.h"
 
 static bool parse_restart_policy(const char *policy, host_config_restart_policy **rp)
 {
@@ -427,170 +428,6 @@ erro_out:
     return NULL;
 }
 
-static int check_ulimit_input(const char *val)
-{
-    int ret = 0;
-    if (val == NULL || strcmp(val, "") == 0) {
-        COMMAND_ERROR("ulimit argument can't be empty");
-        ret = -1;
-        goto out;
-    }
-
-    if (val[0] == '=' || val[strlen(val) - 1] == '=') {
-        COMMAND_ERROR("Invalid ulimit argument: \"%s\", delimiter '=' can't"
-                      " be the first or the last character",
-                      val);
-        ret = -1;
-    }
-
-out:
-    return ret;
-}
-
-static void get_ulimit_split_parts(const char *val, char ***parts, size_t *parts_len, char deli)
-{
-    *parts = util_string_split_multi(val, deli);
-    if (*parts == NULL) {
-        COMMAND_ERROR("Out of memory");
-        return;
-    }
-    *parts_len = util_array_len((const char **)(*parts));
-}
-
-static int parse_soft_hard_ulimit(const char *val, char **limitvals, size_t limitvals_len, int64_t *soft, int64_t *hard)
-{
-    int ret = 0;
-    // parse soft
-    ret = util_safe_llong(limitvals[0], (long long *)soft);
-    if (ret < 0) {
-        COMMAND_ERROR("Invalid ulimit soft value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
-        ret = -1;
-        goto out;
-    }
-
-    // parse hard if exists
-    if (limitvals_len > 1) {
-        ret = util_safe_llong(limitvals[1], (long long *)hard);
-        if (ret < 0) {
-            COMMAND_ERROR("Invalid ulimit hard value: \"%s\", parse int64 failed: %s", val, strerror(-ret));
-            ret = -1;
-            goto out;
-        }
-
-        if (*soft > *hard) {
-            COMMAND_ERROR("Ulimit soft limit must be less than or equal to hard limit: %lld > %lld",
-                          (long long int)(*soft), (long long int)(*hard));
-            ret = -1;
-            goto out;
-        }
-    } else {
-        *hard = *soft; // default to soft in case no hard was set
-    }
-out:
-    return ret;
-}
-
-static int check_ulimit_type(const char *type)
-{
-    int ret = 0;
-    char **tmptype = NULL;
-    char *ulimit_valid_type[] = {
-        // "as", // Disabled since this doesn't seem usable with the way Docker inits a container.
-        "core",   "cpu",   "data", "fsize",  "locks",  "memlock",    "msgqueue", "nice",
-        "nofile", "nproc", "rss",  "rtprio", "rttime", "sigpending", "stack",    NULL
-    };
-
-    for (tmptype = ulimit_valid_type; *tmptype != NULL; tmptype++) {
-        if (strcmp(type, *tmptype) == 0) {
-            break;
-        }
-    }
-
-    if (*tmptype == NULL) {
-        COMMAND_ERROR("Invalid ulimit type: %s", type);
-        ret = -1;
-    }
-    return ret;
-}
-
-static host_config_ulimits_element *parse_ulimit(const char *val)
-{
-    int ret = 0;
-    int64_t soft = 0;
-    int64_t hard = 0;
-    size_t parts_len = 0;
-    size_t limitvals_len = 0;
-    char **parts = NULL;
-    char **limitvals = NULL;
-    host_config_ulimits_element *ulimit = NULL;
-
-    ret = check_ulimit_input(val);
-    if (ret != 0) {
-        return NULL;
-    }
-
-    get_ulimit_split_parts(val, &parts, &parts_len, '=');
-    if (parts == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    } else if (parts_len != 2) {
-        COMMAND_ERROR("Invalid ulimit argument: %s", val);
-        ret = -1;
-        goto out;
-    }
-
-    ret = check_ulimit_type(parts[0]);
-    if (ret != 0) {
-        ret = -1;
-        goto out;
-    }
-
-    if (parts[1][0] == ':' || parts[1][strlen(parts[1]) - 1] == ':') {
-        COMMAND_ERROR("Invalid ulimit value: \"%s\", delimiter ':' can't be the first"
-                      " or the last character",
-                      val);
-        ret = -1;
-        goto out;
-    }
-
-    // parse value
-    get_ulimit_split_parts(parts[1], &limitvals, &limitvals_len, ':');
-    if (limitvals == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    if (limitvals_len > 2) {
-        COMMAND_ERROR("Too many limit value arguments - %s, can only have up to two, `soft[:hard]`", parts[1]);
-        ret = -1;
-        goto out;
-    }
-
-    ret = parse_soft_hard_ulimit(val, limitvals, limitvals_len, &soft, &hard);
-    if (ret < 0) {
-        goto out;
-    }
-
-    ulimit = util_common_calloc_s(sizeof(host_config_ulimits_element));
-    if (ulimit == NULL) {
-        ret = -1;
-        goto out;
-    }
-    ulimit->name = util_strdup_s(parts[0]);
-    ulimit->hard = hard;
-    ulimit->soft = soft;
-
-out:
-    util_free_array(parts);
-    util_free_array(limitvals);
-    if (ret != 0) {
-        free_host_config_ulimits_element(ulimit);
-        ulimit = NULL;
-    }
-
-    return ulimit;
-}
-
 static void pack_cgroup_resources_cpu(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     /* cgroup blkio weight */
@@ -708,7 +545,7 @@ static int pack_hostconfig_ulimits(host_config *dstconfig, const isula_host_conf
         bool exists = false;
         host_config_ulimits_element *tmp = NULL;
 
-        tmp = parse_ulimit(srcconfig->ulimits[i]);
+        tmp = parse_opt_ulimit(srcconfig->ulimits[i]);
         if (tmp == NULL) {
             ret = -1;
             goto out;
@@ -1936,418 +1773,155 @@ out:
     return ret;
 }
 
-static int pack_container_custom_config_args(container_config *container_spec,
-                                             const isula_container_config_t *custom_conf)
+void isula_ns_change_files_free(isula_host_config_t *hostconfig)
 {
-    int ret = 0;
-    int i;
-
-    /* entrypoint */
-    if (util_valid_str(custom_conf->entrypoint)) {
-        container_spec->entrypoint = util_common_calloc_s(sizeof(char *));
-        if (container_spec->entrypoint == NULL) {
-            ret = -1;
-            goto out;
-        }
-        container_spec->entrypoint[0] = util_strdup_s(custom_conf->entrypoint);
-        container_spec->entrypoint_len++;
+    if (hostconfig == NULL) {
+        return;
     }
 
-    /* commands */
-    if ((custom_conf->cmd_len != 0 && custom_conf->cmd)) {
-        if (custom_conf->cmd_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("The length of cmd is too long!");
-            ret = -1;
-            goto out;
-        }
-        container_spec->cmd = util_common_calloc_s(custom_conf->cmd_len * sizeof(char *));
-        if (container_spec->cmd == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < (int)custom_conf->cmd_len; i++) {
-            container_spec->cmd[container_spec->cmd_len] = util_strdup_s(custom_conf->cmd[i]);
-            container_spec->cmd_len++;
-        }
-    }
-
-out:
-    return ret;
+    util_free_array_by_len(hostconfig->ns_change_files, hostconfig->ns_change_files_len);
+    hostconfig->ns_change_files = NULL;
+    hostconfig->ns_change_files_len = 0;
 }
 
-static int pack_container_custom_config_mounts(container_config *container_spec,
-                                               const isula_container_config_t *custom_conf)
+void isula_host_config_storage_opts_free(isula_host_config_t *hostconfig)
 {
-    int ret = 0;
-    int i = 0;
-
-    /* mounts to mount filesystem */
-    if (custom_conf->mounts != NULL && custom_conf->mounts_len > 0) {
-        if (custom_conf->mounts_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many mounts to mount filesystem!");
-            ret = -1;
-            goto out;
-        }
-        container_spec->mounts = util_common_calloc_s(custom_conf->mounts_len * sizeof(char *));
-        if (container_spec->mounts == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < (int)custom_conf->mounts_len; i++) {
-            container_spec->mounts[container_spec->mounts_len] = util_strdup_s(custom_conf->mounts[i]);
-            container_spec->mounts_len++;
-        }
+    if (hostconfig == NULL) {
+        return;
     }
-out:
-    return ret;
+
+    free_json_map_string_string(hostconfig->storage_opts);
+    hostconfig->storage_opts = NULL;
 }
 
-static int pack_container_custom_config_array(container_config *container_spec,
-                                              const isula_container_config_t *custom_conf)
+void isula_host_config_sysctl_free(isula_host_config_t *hostconfig)
 {
-    int ret = 0;
-    int i = 0;
-
-    /* environment variables */
-    if (custom_conf->env_len != 0 && custom_conf->env) {
-        if (custom_conf->env_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many environment variables");
-            return -1;
-        }
-        container_spec->env = util_common_calloc_s(custom_conf->env_len * sizeof(char *));
-        if (container_spec->env == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < (int)custom_conf->env_len; i++) {
-            container_spec->env[container_spec->env_len] = util_strdup_s(custom_conf->env[i]);
-            container_spec->env_len++;
-        }
+    if (hostconfig == NULL) {
+        return;
     }
 
-out:
-    return ret;
+    free_json_map_string_string(hostconfig->sysctls);
+    hostconfig->sysctls = NULL;
 }
 
-static int get_label_key_value(const char *label, char **key, char **value)
+/* container cgroup resources free */
+static void container_cgroup_resources_free(container_cgroup_resources_t *cr)
 {
-    int ret = 0;
-    char **arr = util_string_split_n(label, '=', 2);
-    if (arr == NULL) {
-        ERROR("Failed to split input label");
-        ret = -1;
-        goto out;
+    if (cr == NULL) {
+        return;
     }
+    free(cr->cpuset_cpus);
+    cr->cpuset_cpus = NULL;
 
-    *key = util_strdup_s(arr[0]);
-    if (util_array_len((const char **)arr) == 1) {
-        *value = util_strdup_s("");
-    } else {
-        *value = util_strdup_s(arr[1]);
-    }
+    free(cr->cpuset_mems);
+    cr->cpuset_mems = NULL;
 
-out:
-    util_free_array(arr);
-    return ret;
+    free(cr);
 }
 
-static int pack_container_custom_config_labels(container_config *container_spec,
-                                               const isula_container_config_t *custom_conf)
+/* isula host config free */
+void isula_host_config_free(isula_host_config_t *hostconfig)
 {
-    int ret = 0;
-    int i;
-    char *key = NULL;
-    char *value = NULL;
-
-    if (custom_conf->label_len == 0 || custom_conf->label == NULL) {
-        return 0;
+    if (hostconfig == NULL) {
+        return;
     }
 
-    /* labels */
-    container_spec->labels = util_common_calloc_s(sizeof(json_map_string_string));
-    if (container_spec->labels == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
+    util_free_array_by_len(hostconfig->cap_add, hostconfig->cap_add_len);
+    hostconfig->cap_add = NULL;
+    hostconfig->cap_add_len = 0;
 
-    for (i = 0; i < custom_conf->label_len; i++) {
-        if (get_label_key_value(custom_conf->label[i], &key, &value) != 0) {
-            ERROR("Failed to get key and value of label");
-            ret = -1;
-            goto out;
-        }
+    util_free_array_by_len(hostconfig->cap_drop, hostconfig->cap_drop_len);
+    hostconfig->cap_drop = NULL;
+    hostconfig->cap_drop_len = 0;
 
-        if (append_json_map_string_string(container_spec->labels, key, value)) {
-            ERROR("Append map failed");
-            ret = -1;
-            goto out;
-        }
-        free(key);
-        key = NULL;
-        free(value);
-        value = NULL;
-    }
+    free_json_map_string_string(hostconfig->storage_opts);
+    hostconfig->storage_opts = NULL;
 
-out:
-    free(key);
-    free(value);
-    return ret;
-}
+    free_json_map_string_string(hostconfig->sysctls);
+    hostconfig->sysctls = NULL;
 
-static bool have_health_check(const isula_container_config_t *custom_conf)
-{
-    bool have_health_settings = false;
+    util_free_array_by_len(hostconfig->devices, hostconfig->devices_len);
+    hostconfig->devices = NULL;
+    hostconfig->devices_len = 0;
 
-    if ((custom_conf->health_cmd != NULL && strlen(custom_conf->health_cmd) != 0) ||
-        custom_conf->health_interval != 0 || custom_conf->health_timeout != 0 ||
-        custom_conf->health_start_period != 0 || custom_conf->health_retries != 0) {
-        have_health_settings = true;
-    }
+    util_free_array_by_len(hostconfig->ns_change_files, hostconfig->ns_change_files_len);
+    hostconfig->ns_change_files = NULL;
+    hostconfig->ns_change_files_len = 0;
 
-    return have_health_settings;
-}
+    util_free_array_by_len(hostconfig->hugetlbs, hostconfig->hugetlbs_len);
+    hostconfig->hugetlbs = NULL;
+    hostconfig->hugetlbs_len = 0;
 
-static int pack_custom_no_health_check(container_config *container_spec, bool have_health_settings,
-                                       defs_health_check *health_config)
-{
-    int ret = 0;
+    free(hostconfig->network_mode);
+    hostconfig->network_mode = NULL;
 
-    if (have_health_settings) {
-        COMMAND_ERROR("--no-healthcheck conflicts with --health-* options");
-        ret = -1;
-        goto out;
-    }
-    health_config->test = util_common_calloc_s(sizeof(char *));
-    if (health_config->test == NULL) {
-        ret = -1;
-        goto out;
-    }
-    health_config->test[health_config->test_len++] = util_strdup_s("NONE");
-    container_spec->healthcheck = health_config;
+    free(hostconfig->ipc_mode);
+    hostconfig->ipc_mode = NULL;
 
-out:
-    return ret;
-}
+    free(hostconfig->pid_mode);
+    hostconfig->pid_mode = NULL;
 
-static int pack_custom_with_health_check(container_config *container_spec, const isula_container_config_t *custom_conf,
-                                         bool have_health_settings, defs_health_check *health_config)
-{
-    int ret = 0;
+    free(hostconfig->uts_mode);
+    hostconfig->uts_mode = NULL;
 
-    if (custom_conf->health_cmd != NULL && strlen(custom_conf->health_cmd) != 0) {
-        health_config->test = util_common_calloc_s(2 * sizeof(char *));
-        if (health_config->test == NULL) {
-            ret = -1;
-            goto out;
-        }
-        health_config->test[health_config->test_len++] = util_strdup_s("CMD-SHELL");
-        health_config->test[health_config->test_len++] = util_strdup_s(custom_conf->health_cmd);
-    } else {
-        COMMAND_ERROR("--health-cmd required!");
-        ret = -1;
-        goto out;
-    }
-    health_config->interval = custom_conf->health_interval;
-    health_config->timeout = custom_conf->health_timeout;
-    health_config->start_period = custom_conf->health_start_period;
-    health_config->retries = custom_conf->health_retries;
-    health_config->exit_on_unhealthy = custom_conf->exit_on_unhealthy;
-    if (container_spec->healthcheck != NULL) {
-        free_defs_health_check(container_spec->healthcheck);
-    }
-    container_spec->healthcheck = health_config;
+    free(hostconfig->userns_mode);
+    hostconfig->userns_mode = NULL;
 
-out:
-    return ret;
-}
+    free(hostconfig->user_remap);
+    hostconfig->user_remap = NULL;
 
-static int pack_container_custom_config_health(container_config *container_spec,
-                                               const isula_container_config_t *custom_conf)
-{
-    int ret = 0;
-    bool have_health_settings = false;
-    defs_health_check *health_config = NULL;
+    util_free_array_by_len(hostconfig->ulimits, hostconfig->ulimits_len);
+    hostconfig->ulimits = NULL;
+    hostconfig->ulimits_len = 0;
 
-    if (container_spec == NULL || custom_conf == NULL) {
-        return 0;
-    }
+    free(hostconfig->restart_policy);
+    hostconfig->restart_policy = NULL;
 
-    have_health_settings = have_health_check(custom_conf);
+    free(hostconfig->host_channel);
+    hostconfig->host_channel = NULL;
 
-    health_config = util_common_calloc_s(sizeof(defs_health_check));
-    if (health_config == NULL) {
-        ret = -1;
-        goto out;
-    }
+    free(hostconfig->hook_spec);
+    hostconfig->hook_spec = NULL;
 
-    if (custom_conf->no_healthcheck) {
-        ret = pack_custom_no_health_check(container_spec, have_health_settings, health_config);
-        if (ret != 0) {
-            goto out;
-        }
-    } else if (have_health_settings) {
-        ret = pack_custom_with_health_check(container_spec, custom_conf, have_health_settings, health_config);
-        if (ret != 0) {
-            goto out;
-        }
-    } else {
-        goto out;
-    }
+    free(hostconfig->env_target_file);
+    hostconfig->env_target_file = NULL;
 
-    return ret;
+    free(hostconfig->cgroup_parent);
+    hostconfig->cgroup_parent = NULL;
 
-out:
-    free_defs_health_check(health_config);
-    return ret;
-}
+    util_free_array_by_len(hostconfig->binds, hostconfig->binds_len);
+    hostconfig->binds = NULL;
+    hostconfig->binds_len = 0;
 
-static int pack_container_custom_config_annotation(container_config *container_spec,
-                                                   const isula_container_config_t *custom_conf)
-{
-    int ret = 0;
-    size_t j;
+    util_free_array_by_len(hostconfig->blkio_weight_device, hostconfig->blkio_weight_device_len);
+    hostconfig->blkio_weight_device = NULL;
+    hostconfig->blkio_weight_device_len = 0;
 
-    container_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
-    if (container_spec->annotations == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-    if (custom_conf->annotations != NULL) {
-        for (j = 0; j < custom_conf->annotations->len; j++) {
-            if (append_json_map_string_string(container_spec->annotations, custom_conf->annotations->keys[j],
-                                              custom_conf->annotations->values[j])) {
-                ERROR("Append map failed");
-                ret = -1;
-                goto out;
-            }
-        }
-    }
-out:
-    return ret;
-}
+    util_free_array_by_len(hostconfig->blkio_throttle_read_bps_device, hostconfig->blkio_throttle_read_bps_device_len);
+    hostconfig->blkio_throttle_read_bps_device = NULL;
+    hostconfig->blkio_throttle_read_bps_device_len = 0;
 
-static int pack_container_custom_config_pre(container_config *container_spec,
-                                            const isula_container_config_t *custom_conf)
-{
-    int ret = 0;
+    util_free_array_by_len(hostconfig->blkio_throttle_write_bps_device,
+                           hostconfig->blkio_throttle_write_bps_device_len);
+    hostconfig->blkio_throttle_write_bps_device = NULL;
+    hostconfig->blkio_throttle_write_bps_device_len = 0;
 
-    ret = pack_container_custom_config_args(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
+    util_free_array_by_len(hostconfig->blkio_throttle_read_iops_device,
+                           hostconfig->blkio_throttle_read_iops_device_len);
+    hostconfig->blkio_throttle_read_iops_device = NULL;
+    hostconfig->blkio_throttle_read_iops_device_len = 0;
 
-    ret = pack_container_custom_config_mounts(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
+    util_free_array_by_len(hostconfig->blkio_throttle_write_iops_device,
+                           hostconfig->blkio_throttle_write_iops_device_len);
+    hostconfig->blkio_throttle_write_iops_device = NULL;
+    hostconfig->blkio_throttle_write_iops_device_len = 0;
 
-    ret = pack_container_custom_config_array(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
+    util_free_array_by_len(hostconfig->device_cgroup_rules, hostconfig->device_cgroup_rules_len);
+    hostconfig->device_cgroup_rules = NULL;
+    hostconfig->device_cgroup_rules_len = 0;
 
-    ret = pack_container_custom_config_labels(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
+    container_cgroup_resources_free(hostconfig->cr);
+    hostconfig->cr = NULL;
 
-    ret = pack_container_custom_config_health(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
-out:
-    return ret;
-}
-
-/* translate create_custom_config to container_config */
-static int pack_container_custom_config(container_config *container_spec, const isula_container_config_t *custom_conf)
-{
-    int ret = -1;
-
-    if (container_spec == NULL || custom_conf == NULL) {
-        return ret;
-    }
-
-    ret = pack_container_custom_config_pre(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
-
-    if (custom_conf->hostname != NULL) {
-        container_spec->hostname = util_strdup_s(custom_conf->hostname);
-    }
-    container_spec->log_driver = util_strdup_s(custom_conf->log_driver);
-
-    /* console config */
-    container_spec->tty = custom_conf->tty;
-    container_spec->open_stdin = custom_conf->open_stdin;
-    container_spec->attach_stdin = custom_conf->attach_stdin;
-    container_spec->attach_stdout = custom_conf->attach_stdout;
-    container_spec->attach_stderr = custom_conf->attach_stderr;
-
-    /* user and group */
-    if (custom_conf->user != NULL) {
-        container_spec->user = util_strdup_s(custom_conf->user);
-    }
-
-    /* settings for system container */
-    if (custom_conf->system_container) {
-        container_spec->system_container = custom_conf->system_container;
-    }
-
-    if (custom_conf->ns_change_opt != NULL) {
-        container_spec->ns_change_opt = util_strdup_s(custom_conf->ns_change_opt);
-    }
-
-    ret = pack_container_custom_config_annotation(container_spec, custom_conf);
-    if (ret != 0) {
-        goto out;
-    }
-
-    if (custom_conf->workdir != NULL) {
-        container_spec->working_dir = util_strdup_s(custom_conf->workdir);
-    }
-
-out:
-    return ret;
-}
-
-int generate_container_config(const isula_container_config_t *custom_conf, char **container_config_str)
-{
-    int ret = 0;
-    container_config *container_spec = NULL;
-    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
-    parser_error err = NULL;
-
-    /* step 1: malloc the container config */
-    container_spec = util_common_calloc_s(sizeof(container_config));
-    if (container_spec == NULL) {
-        ERROR("Memory out");
-        ret = -1;
-        goto out;
-    }
-
-    /* step 2: pack the container custom config */
-    ret = pack_container_custom_config(container_spec, custom_conf);
-    if (ret != 0) {
-        ERROR("Failed to pack the container custom config");
-        ret = -1;
-        goto out;
-    }
-
-    /* step 3: generate the config string */
-    *container_config_str = container_config_generate_json(container_spec, &ctx, &err);
-    if (*container_config_str == NULL) {
-        ERROR("Failed to generate OCI specification json string");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free_container_config(container_spec);
-    free(err);
-
-    return ret;
+    free(hostconfig);
 }

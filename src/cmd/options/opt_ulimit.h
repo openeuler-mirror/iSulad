@@ -8,27 +8,28 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2018-11-08
- * Description: provide container package configure definition
+ * Author: lifeng
+ * Create: 2020-09-28
+ * Description: provide ulimit options parse function
  ******************************************************************************/
-#ifndef CLIENT_CONNECT_PACK_CONFIG_H
-#define CLIENT_CONNECT_PACK_CONFIG_H
+#ifndef CMD_OPTIONS_ULIMIT_H
+#define CMD_OPTIONS_ULIMIT_H
 
-#include "libisula.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+
+#include "isula_libutils/host_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr);
-
-int generate_container_config(const isula_container_config_t *custom_conf,
-                              char **container_config_str);
+int check_opt_ulimit_type(const char *type);
+host_config_ulimits_element *parse_opt_ulimit(const char *val);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
