@@ -80,32 +80,13 @@ cleanup:
 
 static int pack_host_config_ns_change_files(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    int ret = 0;
-    size_t i = 0;
-
-    if (dstconfig == NULL || srcconfig == NULL) {
+    if (dup_array_of_strings((const char **)srcconfig->ns_change_files, srcconfig->ns_change_files_len,
+                             &dstconfig->ns_change_files, &dstconfig->ns_change_files_len) != 0) {
+        COMMAND_ERROR("Failed to dup ns change files");
         return -1;
     }
 
-    if (srcconfig->ns_change_files_len != 0 && srcconfig->ns_change_files != NULL) {
-        if (srcconfig->ns_change_files_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many capabilities to add!");
-            ret = -1;
-            goto out;
-        }
-        dstconfig->ns_change_files = util_common_calloc_s(srcconfig->ns_change_files_len * sizeof(char *));
-        if (dstconfig->ns_change_files == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < srcconfig->ns_change_files_len; i++) {
-            dstconfig->ns_change_files[dstconfig->ns_change_files_len] = util_strdup_s(srcconfig->ns_change_files[i]);
-            dstconfig->ns_change_files_len++;
-        }
-    }
-
-out:
-    return ret;
+    return 0;
 }
 
 static int pack_host_config_cap_add(host_config *dstconfig, const isula_host_config_t *srcconfig)
@@ -114,21 +95,10 @@ static int pack_host_config_cap_add(host_config *dstconfig, const isula_host_con
     size_t i = 0;
 
     /* cap-add */
-    if (srcconfig->cap_add_len != 0 && srcconfig->cap_add != NULL) {
-        if (srcconfig->cap_add_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many capabilities to add!");
-            ret = -1;
-            goto out;
-        }
-        dstconfig->cap_add = util_common_calloc_s(srcconfig->cap_add_len * sizeof(char *));
-        if (dstconfig->cap_add == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < srcconfig->cap_add_len; i++) {
-            dstconfig->cap_add[dstconfig->cap_add_len] = util_strdup_s(srcconfig->cap_add[i]);
-            dstconfig->cap_add_len++;
-        }
+    if (dup_array_of_strings((const char **)srcconfig->cap_add, srcconfig->cap_add_len, &dstconfig->cap_add,
+                             &dstconfig->cap_add_len) != 0) {
+        COMMAND_ERROR("Failed to dup cap add");
+        return -1;
     }
 
     for (i = 0; i < dstconfig->cap_add_len; i++) {
@@ -153,21 +123,10 @@ static int pack_host_config_cap_drop(host_config *dstconfig, const isula_host_co
     size_t i = 0;
 
     /* cap-drops */
-    if (srcconfig->cap_drop_len != 0 && srcconfig->cap_drop != NULL) {
-        if (srcconfig->cap_drop_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many capabilities to drop!");
-            ret = -1;
-            goto out;
-        }
-        dstconfig->cap_drop = util_common_calloc_s(srcconfig->cap_drop_len * sizeof(char *));
-        if (dstconfig->cap_drop == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < srcconfig->cap_drop_len; i++) {
-            dstconfig->cap_drop[dstconfig->cap_drop_len] = util_strdup_s(srcconfig->cap_drop[i]);
-            dstconfig->cap_drop_len++;
-        }
+    if (dup_array_of_strings((const char **)srcconfig->cap_drop, srcconfig->cap_drop_len, &dstconfig->cap_drop,
+                             &dstconfig->cap_drop_len) != 0) {
+        COMMAND_ERROR("Failed to dup cap drop");
+        return -1;
     }
 
     for (i = 0; i < dstconfig->cap_drop_len; i++) {
@@ -209,118 +168,42 @@ out:
 
 static int pack_host_network_extra_hosts(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    int ret = 0;
-    size_t i = 0;
-
     /* extra hosts */
-    if (srcconfig->extra_hosts_len != 0 && srcconfig->extra_hosts != NULL) {
-        if (srcconfig->extra_hosts_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many extra hosts to add!");
-            ret = -1;
-            goto out;
-        }
-        dstconfig->extra_hosts = util_common_calloc_s(srcconfig->extra_hosts_len * sizeof(char *));
-        if (dstconfig->extra_hosts == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < srcconfig->extra_hosts_len; i++) {
-            dstconfig->extra_hosts[dstconfig->extra_hosts_len] = util_strdup_s(srcconfig->extra_hosts[i]);
-            dstconfig->extra_hosts_len++;
-        }
+    if (dup_array_of_strings((const char **)srcconfig->extra_hosts, srcconfig->extra_hosts_len, &dstconfig->extra_hosts,
+                             &dstconfig->extra_hosts_len) != 0) {
+        COMMAND_ERROR("Failed to dup extra hosts");
+        return -1;
     }
-out:
-    return ret;
+
+    return 0;
 }
 
 static int pack_host_network_dns(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    int ret = 0;
-    size_t i = 0;
-
-    /* dns */
-    if (srcconfig->dns_len != 0 && srcconfig->dns != NULL) {
-        if (srcconfig->dns_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many dns to add!");
-            ret = -1;
-            goto out;
-        }
-        dstconfig->dns = util_common_calloc_s(srcconfig->dns_len * sizeof(char *));
-        if (dstconfig->dns == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < srcconfig->dns_len; i++) {
-            dstconfig->dns[dstconfig->dns_len] = util_strdup_s(srcconfig->dns[i]);
-            dstconfig->dns_len++;
-        }
+    if (dup_array_of_strings((const char **)srcconfig->dns, srcconfig->dns_len, &dstconfig->dns, &dstconfig->dns_len) !=
+        0) {
+        COMMAND_ERROR("Failed to dup dns");
+        return -1;
     }
 
-out:
-    return ret;
-}
-
-static int pack_host_network_dns_options(host_config *dstconfig, const isula_host_config_t *srcconfig)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    /* dns options */
-    if (srcconfig->dns_options_len != 0 && srcconfig->dns_options != NULL) {
-        if (srcconfig->dns_options_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many dns options to add!");
-            ret = -1;
-            goto out;
-        }
-        dstconfig->dns_options = util_common_calloc_s(srcconfig->dns_options_len * sizeof(char *));
-        if (dstconfig->dns_options == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < srcconfig->dns_options_len; i++) {
-            dstconfig->dns_options[dstconfig->dns_options_len] = util_strdup_s(srcconfig->dns_options[i]);
-            dstconfig->dns_options_len++;
-        }
+    if (dup_array_of_strings((const char **)srcconfig->dns_options, srcconfig->dns_options_len, &dstconfig->dns_options,
+                             &dstconfig->dns_options_len) != 0) {
+        COMMAND_ERROR("Failed to dup dns options");
+        return -1;
     }
 
-out:
-    return ret;
-}
-
-static int pack_host_network_dns_search(host_config *dstconfig, const isula_host_config_t *srcconfig)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    /* dns search */
-    if (srcconfig->dns_search_len != 0 && srcconfig->dns_search != NULL) {
-        if (srcconfig->dns_search_len > SIZE_MAX / sizeof(char *)) {
-            COMMAND_ERROR("Too many dns search to add!");
-            ret = -1;
-            goto out;
-        }
-        dstconfig->dns_search = util_common_calloc_s(srcconfig->dns_search_len * sizeof(char *));
-        if (dstconfig->dns_search == NULL) {
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < srcconfig->dns_search_len; i++) {
-            dstconfig->dns_search[dstconfig->dns_search_len] = util_strdup_s(srcconfig->dns_search[i]);
-            dstconfig->dns_search_len++;
-        }
+    if (dup_array_of_strings((const char **)srcconfig->dns_search, srcconfig->dns_search_len, &dstconfig->dns_search,
+                             &dstconfig->dns_search_len) != 0) {
+        COMMAND_ERROR("Failed to dup dns search");
+        return -1;
     }
 
-out:
-    return ret;
+    return 0;
 }
 
 static int pack_host_config_network(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
-
-    if (dstconfig == NULL) {
-        return -1;
-    }
 
     ret = pack_host_network_extra_hosts(dstconfig, srcconfig);
     if (ret != 0) {
@@ -328,16 +211,6 @@ static int pack_host_config_network(host_config *dstconfig, const isula_host_con
     }
 
     ret = pack_host_network_dns(dstconfig, srcconfig);
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = pack_host_network_dns_options(dstconfig, srcconfig);
-    if (ret != 0) {
-        goto out;
-    }
-
-    ret = pack_host_network_dns_search(dstconfig, srcconfig);
     if (ret != 0) {
         goto out;
     }
@@ -1181,60 +1054,55 @@ out:
     return ret;
 }
 
-int generate_storage_opts(host_config **dstconfig, const isula_host_config_t *srcconfig)
+int generate_storage_opts(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
-    size_t j;
 
-    if (srcconfig->storage_opts == NULL || dstconfig == NULL) {
+    if (srcconfig->storage_opts == NULL) {
         goto out;
     }
 
-    (*dstconfig)->storage_opt = util_common_calloc_s(sizeof(json_map_string_string));
-    if ((*dstconfig)->storage_opt == NULL) {
+    dstconfig->storage_opt = util_common_calloc_s(sizeof(json_map_string_string));
+    if (dstconfig->storage_opt == NULL) {
         ret = -1;
         goto out;
     }
-    for (j = 0; j < srcconfig->storage_opts->len; j++) {
-        ret = append_json_map_string_string((*dstconfig)->storage_opt, srcconfig->storage_opts->keys[j],
-                                            srcconfig->storage_opts->values[j]);
-        if (ret != 0) {
-            ERROR("Append map failed");
-            ret = -1;
-            goto out;
-        }
+
+    if (dup_json_map_string_string(srcconfig->storage_opts, dstconfig->storage_opt) != 0) {
+        COMMAND_ERROR("Failed to dup storage opts");
+        ret = -1;
+        goto out;
     }
 
 out:
     return ret;
 }
 
-static int generate_sysctls(host_config **dstconfig, const isula_host_config_t *srcconfig)
+static int generate_sysctls(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
-    size_t j;
 
-    if (srcconfig->sysctls == NULL || dstconfig == NULL) {
+    if (srcconfig->sysctls == NULL) {
         goto out;
     }
 
-    (*dstconfig)->sysctls = util_common_calloc_s(sizeof(json_map_string_string));
-    if ((*dstconfig)->sysctls == NULL) {
+    dstconfig->sysctls = util_common_calloc_s(sizeof(json_map_string_string));
+    if (dstconfig->sysctls == NULL) {
         ret = -1;
         goto out;
     }
-    for (j = 0; j < srcconfig->sysctls->len; j++) {
-        ret = append_json_map_string_string((*dstconfig)->sysctls, srcconfig->sysctls->keys[j],
-                                            srcconfig->sysctls->values[j]);
-        if (ret < 0) {
-            goto out;
-        }
+
+    if (dup_json_map_string_string(srcconfig->sysctls, dstconfig->sysctls) != 0) {
+        COMMAND_ERROR("Failed to dup sysctls");
+        ret = -1;
+        goto out;
     }
+
 out:
     return ret;
 }
 
-int generate_devices(host_config **dstconfig, const isula_host_config_t *srcconfig)
+int generate_devices(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1248,26 +1116,26 @@ int generate_devices(host_config **dstconfig, const isula_host_config_t *srcconf
         ret = -1;
         goto out;
     }
-    (*dstconfig)->devices = util_common_calloc_s(sizeof(host_config_devices_element *) * srcconfig->devices_len);
-    if ((*dstconfig)->devices == NULL) {
+    dstconfig->devices = util_common_calloc_s(sizeof(host_config_devices_element *) * srcconfig->devices_len);
+    if (dstconfig->devices == NULL) {
         ret = -1;
         goto out;
     }
     for (i = 0; i < srcconfig->devices_len; i++) {
-        (*dstconfig)->devices[i] = parse_device(srcconfig->devices[i]);
-        if ((*dstconfig)->devices[i] == NULL) {
+        dstconfig->devices[i] = parse_device(srcconfig->devices[i]);
+        if (dstconfig->devices[i] == NULL) {
             ERROR("Failed to parse devices:%s", srcconfig->devices[i]);
             ret = -1;
             goto out;
         }
 
-        (*dstconfig)->devices_len++;
+        dstconfig->devices_len++;
     }
 out:
     return ret;
 }
 
-static int generate_blkio_weight_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
+static int generate_blkio_weight_device(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1276,169 +1144,153 @@ static int generate_blkio_weight_device(host_config **dstconfig, const isula_hos
         goto out;
     }
 
-    (*dstconfig)->blkio_weight_device =
+    dstconfig->blkio_weight_device =
         util_smart_calloc_s(sizeof(defs_blkio_weight_device *), srcconfig->blkio_weight_device_len);
-    if ((*dstconfig)->blkio_weight_device == NULL) {
+    if (dstconfig->blkio_weight_device == NULL) {
         ret = -1;
         goto out;
     }
 
     for (i = 0; i < srcconfig->blkio_weight_device_len; i++) {
-        (*dstconfig)->blkio_weight_device[(*dstconfig)->blkio_weight_device_len] =
+        dstconfig->blkio_weight_device[dstconfig->blkio_weight_device_len] =
             pack_blkio_weight_devices(srcconfig->blkio_weight_device[i]);
-        if ((*dstconfig)->blkio_weight_device[(*dstconfig)->blkio_weight_device_len] == NULL) {
+        if (dstconfig->blkio_weight_device[dstconfig->blkio_weight_device_len] == NULL) {
             ERROR("Failed to get blkio weight devies");
             ret = -1;
             goto out;
         }
 
-        (*dstconfig)->blkio_weight_device_len++;
+        dstconfig->blkio_weight_device_len++;
     }
 out:
     return ret;
 }
 
-static int generate_blkio_throttle_read_bps_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
+static int generate_blkio_throttle_read_bps_device(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
-
-    if (dstconfig == NULL || *dstconfig == NULL) {
-        goto out;
-    }
 
     if (srcconfig->blkio_throttle_read_bps_device == NULL || srcconfig->blkio_throttle_read_bps_device_len == 0) {
         goto out;
     }
 
-    (*dstconfig)->blkio_device_read_bps =
+    dstconfig->blkio_device_read_bps =
         util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_read_bps_device_len);
-    if ((*dstconfig)->blkio_device_read_bps == NULL) {
+    if (dstconfig->blkio_device_read_bps == NULL) {
         ret = -1;
         goto out;
     }
 
     for (i = 0; i < srcconfig->blkio_throttle_read_bps_device_len; i++) {
-        (*dstconfig)->blkio_device_read_bps[(*dstconfig)->blkio_device_read_bps_len] =
+        dstconfig->blkio_device_read_bps[dstconfig->blkio_device_read_bps_len] =
             pack_throttle_bps_device(srcconfig->blkio_throttle_read_bps_device[i]);
-        if ((*dstconfig)->blkio_device_read_bps[(*dstconfig)->blkio_device_read_bps_len] == NULL) {
+        if (dstconfig->blkio_device_read_bps[dstconfig->blkio_device_read_bps_len] == NULL) {
             ERROR("Failed to get blkio throttle read bps devices");
             ret = -1;
             goto out;
         }
 
-        (*dstconfig)->blkio_device_read_bps_len++;
+        dstconfig->blkio_device_read_bps_len++;
     }
 out:
     return ret;
 }
 
-static int generate_blkio_throttle_write_bps_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
+static int generate_blkio_throttle_write_bps_device(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
-
-    if (dstconfig == NULL || *dstconfig == NULL) {
-        goto out;
-    }
 
     if (srcconfig->blkio_throttle_write_bps_device == NULL || srcconfig->blkio_throttle_write_bps_device_len == 0) {
         goto out;
     }
 
-    (*dstconfig)->blkio_device_write_bps =
+    dstconfig->blkio_device_write_bps =
         util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_write_bps_device_len);
-    if ((*dstconfig)->blkio_device_write_bps == NULL) {
+    if (dstconfig->blkio_device_write_bps == NULL) {
         ret = -1;
         goto out;
     }
 
     for (i = 0; i < srcconfig->blkio_throttle_write_bps_device_len; i++) {
-        (*dstconfig)->blkio_device_write_bps[(*dstconfig)->blkio_device_write_bps_len] =
+        dstconfig->blkio_device_write_bps[dstconfig->blkio_device_write_bps_len] =
             pack_throttle_bps_device(srcconfig->blkio_throttle_write_bps_device[i]);
-        if ((*dstconfig)->blkio_device_write_bps[(*dstconfig)->blkio_device_write_bps_len] == NULL) {
+        if (dstconfig->blkio_device_write_bps[dstconfig->blkio_device_write_bps_len] == NULL) {
             ERROR("Failed to get blkio throttle write bps devices");
             ret = -1;
             goto out;
         }
 
-        (*dstconfig)->blkio_device_write_bps_len++;
+        dstconfig->blkio_device_write_bps_len++;
     }
 out:
     return ret;
 }
 
-static int generate_blkio_throttle_read_iops_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
+static int generate_blkio_throttle_read_iops_device(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
-
-    if (dstconfig == NULL || *dstconfig == NULL) {
-        goto out;
-    }
 
     if (srcconfig->blkio_throttle_read_iops_device == NULL || srcconfig->blkio_throttle_read_iops_device_len == 0) {
         goto out;
     }
 
-    (*dstconfig)->blkio_device_read_iops =
+    dstconfig->blkio_device_read_iops =
         util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_read_iops_device_len);
-    if ((*dstconfig)->blkio_device_read_iops == NULL) {
+    if (dstconfig->blkio_device_read_iops == NULL) {
         ret = -1;
         goto out;
     }
 
     for (i = 0; i < srcconfig->blkio_throttle_read_iops_device_len; i++) {
-        (*dstconfig)->blkio_device_read_iops[(*dstconfig)->blkio_device_read_iops_len] =
+        dstconfig->blkio_device_read_iops[dstconfig->blkio_device_read_iops_len] =
             pack_throttle_iops_device(srcconfig->blkio_throttle_read_iops_device[i]);
-        if ((*dstconfig)->blkio_device_read_iops[(*dstconfig)->blkio_device_read_iops_len] == NULL) {
+        if (dstconfig->blkio_device_read_iops[dstconfig->blkio_device_read_iops_len] == NULL) {
             ERROR("Failed to get blkio throttle read iops devices");
             ret = -1;
             goto out;
         }
 
-        (*dstconfig)->blkio_device_read_iops_len++;
+        dstconfig->blkio_device_read_iops_len++;
     }
 out:
     return ret;
 }
 
-static int generate_blkio_throttle_write_iops_device(host_config **dstconfig, const isula_host_config_t *srcconfig)
+static int generate_blkio_throttle_write_iops_device(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
-
-    if (dstconfig == NULL || *dstconfig == NULL) {
-        goto out;
-    }
 
     if (srcconfig->blkio_throttle_write_iops_device == NULL || srcconfig->blkio_throttle_write_iops_device_len == 0) {
         goto out;
     }
 
-    (*dstconfig)->blkio_device_write_iops =
+    dstconfig->blkio_device_write_iops =
         util_smart_calloc_s(sizeof(defs_blkio_device *), srcconfig->blkio_throttle_write_iops_device_len);
-    if ((*dstconfig)->blkio_device_write_iops == NULL) {
+    if (dstconfig->blkio_device_write_iops == NULL) {
         ret = -1;
         goto out;
     }
 
     for (i = 0; i < srcconfig->blkio_throttle_write_iops_device_len; i++) {
-        (*dstconfig)->blkio_device_write_iops[(*dstconfig)->blkio_device_write_iops_len] =
+        dstconfig->blkio_device_write_iops[dstconfig->blkio_device_write_iops_len] =
             pack_throttle_iops_device(srcconfig->blkio_throttle_write_iops_device[i]);
-        if ((*dstconfig)->blkio_device_write_iops[(*dstconfig)->blkio_device_write_iops_len] == NULL) {
+        if (dstconfig->blkio_device_write_iops[dstconfig->blkio_device_write_iops_len] == NULL) {
             ERROR("Failed to get blkio throttle write iops devices");
             ret = -1;
             goto out;
         }
 
-        (*dstconfig)->blkio_device_write_iops_len++;
+        dstconfig->blkio_device_write_iops_len++;
     }
 out:
     return ret;
 }
 
-static int generate_blkio(host_config **dstconfig, const isula_host_config_t *srcconfig)
+static int generate_blkio(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret;
 
@@ -1476,7 +1328,7 @@ out:
     return ret;
 }
 
-int generate_hugetlb_limits(host_config **dstconfig, const isula_host_config_t *srcconfig)
+int generate_hugetlb_limits(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
     size_t i = 0;
@@ -1491,107 +1343,59 @@ int generate_hugetlb_limits(host_config **dstconfig, const isula_host_config_t *
         goto out;
     }
 
-    (*dstconfig)->hugetlbs = util_common_calloc_s(srcconfig->hugetlbs_len * sizeof(host_config_hugetlbs_element *));
-    if ((*dstconfig)->hugetlbs == NULL) {
+    dstconfig->hugetlbs = util_common_calloc_s(srcconfig->hugetlbs_len * sizeof(host_config_hugetlbs_element *));
+    if (dstconfig->hugetlbs == NULL) {
         ret = -1;
         goto out;
     }
     for (i = 0; i < srcconfig->hugetlbs_len; i++) {
-        (*dstconfig)->hugetlbs[(*dstconfig)->hugetlbs_len] = pase_hugetlb_limit(srcconfig->hugetlbs[i]);
-        if ((*dstconfig)->hugetlbs[(*dstconfig)->hugetlbs_len] == NULL) {
+        dstconfig->hugetlbs[dstconfig->hugetlbs_len] = pase_hugetlb_limit(srcconfig->hugetlbs[i]);
+        if (dstconfig->hugetlbs[dstconfig->hugetlbs_len] == NULL) {
             ERROR("Failed to get hugepage limits");
             ret = -1;
             goto out;
         }
 
-        (*dstconfig)->hugetlbs_len++;
+        dstconfig->hugetlbs_len++;
     }
 out:
     return ret;
 }
 
-int generate_binds(host_config **dstconfig, const isula_host_config_t *srcconfig)
+int generate_binds(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    int ret = 0;
-    size_t i = 0;
-
-    if (srcconfig->binds == NULL || srcconfig->binds_len == 0) {
-        goto out;
+    if (dup_array_of_strings((const char **)srcconfig->binds, srcconfig->binds_len, &dstconfig->binds,
+                             &dstconfig->binds_len) != 0) {
+        COMMAND_ERROR("Failed to dup binds");
+        return -1;
     }
 
-    if (srcconfig->binds_len > SIZE_MAX / sizeof(char *)) {
-        COMMAND_ERROR("Too many binds to mount!");
-        ret = -1;
-        goto out;
-    }
-
-    (*dstconfig)->binds = util_common_calloc_s(srcconfig->binds_len * sizeof(char *));
-    if ((*dstconfig)->binds == NULL) {
-        ret = -1;
-        goto out;
-    }
-    for (i = 0; i < srcconfig->binds_len; i++) {
-        (*dstconfig)->binds[(*dstconfig)->binds_len] = util_strdup_s(srcconfig->binds[i]);
-        (*dstconfig)->binds_len++;
-    }
-
-out:
-    return ret;
+    return 0;
 }
 
-int generate_device_cgroup_rules(host_config **dstconfig, const isula_host_config_t *srcconfig)
+int generate_device_cgroup_rules(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    int ret = 0;
-    size_t i = 0;
-
-    if (srcconfig->device_cgroup_rules == NULL || srcconfig->device_cgroup_rules_len == 0) {
-        goto out;
+    if (dup_array_of_strings((const char **)srcconfig->device_cgroup_rules, srcconfig->device_cgroup_rules_len,
+                             &dstconfig->device_cgroup_rules, &dstconfig->device_cgroup_rules_len) != 0) {
+        COMMAND_ERROR("Failed to dup device cgroup rules");
+        return -1;
     }
 
-    (*dstconfig)->device_cgroup_rules = util_smart_calloc_s(sizeof(char *), srcconfig->device_cgroup_rules_len);
-    if ((*dstconfig)->device_cgroup_rules == NULL) {
-        ret = -1;
-        goto out;
-    }
-    for (i = 0; i < srcconfig->device_cgroup_rules_len; i++) {
-        (*dstconfig)->device_cgroup_rules[(*dstconfig)->device_cgroup_rules_len] =
-            util_strdup_s(srcconfig->device_cgroup_rules[i]);
-        (*dstconfig)->device_cgroup_rules_len++;
-    }
-
-out:
-    return ret;
+    return 0;
 }
 
-int generate_groups(host_config **dstconfig, const isula_host_config_t *srcconfig)
+int generate_groups(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    int ret = 0;
-    size_t i = 0;
-
-    if (srcconfig->group_add == NULL || srcconfig->group_add_len == 0 || dstconfig == NULL) {
-        goto out;
+    if (dup_array_of_strings((const char **)srcconfig->group_add, srcconfig->group_add_len, &dstconfig->group_add,
+                             &dstconfig->group_add_len) != 0) {
+        COMMAND_ERROR("Failed to dup device group add");
+        return -1;
     }
 
-    if (srcconfig->group_add_len > SIZE_MAX / sizeof(char *)) {
-        COMMAND_ERROR("Too many groups to add!");
-        ret = -1;
-        goto out;
-    }
-
-    (*dstconfig)->group_add = util_common_calloc_s(srcconfig->group_add_len * sizeof(char *));
-    if ((*dstconfig)->group_add == NULL) {
-        ret = -1;
-        goto out;
-    }
-    for (i = 0; i < srcconfig->group_add_len; i++) {
-        (*dstconfig)->group_add[(*dstconfig)->group_add_len] = util_strdup_s(srcconfig->group_add[i]);
-        (*dstconfig)->group_add_len++;
-    }
-out:
-    return ret;
+    return 0;
 }
 
-int generate_security(host_config **dstconfig, const isula_host_config_t *srcconfig)
+int generate_security(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
 
@@ -1605,13 +1409,13 @@ int generate_security(host_config **dstconfig, const isula_host_config_t *srccon
         goto out;
     }
 
-    (*dstconfig)->security_opt = util_common_calloc_s(srcconfig->security_len * sizeof(char *));
-    if ((*dstconfig)->security_opt == NULL) {
+    dstconfig->security_opt = util_common_calloc_s(srcconfig->security_len * sizeof(char *));
+    if (dstconfig->security_opt == NULL) {
         ret = -1;
         goto out;
     }
 
-    if (parse_security_opts(srcconfig, (*dstconfig)) != 0) {
+    if (parse_security_opts(srcconfig, dstconfig) != 0) {
         ret = -1;
         goto out;
     }
@@ -1646,12 +1450,12 @@ static int pack_host_config_common(host_config *dstconfig, const isula_host_conf
         goto out;
     }
 
-    ret = generate_storage_opts(&dstconfig, srcconfig);
+    ret = generate_storage_opts(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
 
-    ret = generate_sysctls(&dstconfig, srcconfig);
+    ret = generate_sysctls(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
@@ -1662,43 +1466,43 @@ static int pack_host_config_common(host_config *dstconfig, const isula_host_conf
     }
 
     /* devices which will be populated into container */
-    ret = generate_devices(&dstconfig, srcconfig);
+    ret = generate_devices(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
 
     /* blkio device */
-    ret = generate_blkio(&dstconfig, srcconfig);
+    ret = generate_blkio(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
 
     /* hugepage limits */
-    ret = generate_hugetlb_limits(&dstconfig, srcconfig);
+    ret = generate_hugetlb_limits(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
 
     /* binds to mount */
-    ret = generate_binds(&dstconfig, srcconfig);
+    ret = generate_binds(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
 
     /* groups to add */
-    ret = generate_groups(&dstconfig, srcconfig);
+    ret = generate_groups(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
 
     /* security opt */
-    ret = generate_security(&dstconfig, srcconfig);
+    ret = generate_security(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
 
     /* device cgroup rules*/
-    ret = generate_device_cgroup_rules(&dstconfig, srcconfig);
+    ret = generate_device_cgroup_rules(dstconfig, srcconfig);
     if (ret < 0) {
         goto out;
     }
@@ -1714,7 +1518,7 @@ int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigs
     host_config *dstconfig = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
 
-    dstconfig = util_common_calloc_s(sizeof(*dstconfig));
+    dstconfig = util_common_calloc_s(sizeof(host_config));
     if (dstconfig == NULL) {
         ret = -1;
         goto out;
