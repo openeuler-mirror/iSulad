@@ -306,21 +306,7 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
             failure = 1;
         }
     } else {
-        if (unlink(fname) < 0) {
-            ERROR("Failed to delete %s: %s", fname, strerror(errno));
-            if (*saved_errno == 0) {
-                *saved_errno = errno;
-            }
-
-            if (mark_file_mutable(fname) != 0) {
-                ERROR("Failed to mark file mutable");
-            }
-
-            if (unlink(fname) < 0) {
-                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
-                failure = 1;
-            }
-        }
+        failure = util_remove_file(fname, saved_errno) ? 0 : 1;
     }
 
     return failure;

@@ -611,6 +611,15 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
         netnsPath = "";
     }
 
+    if (m_loNetwork != nullptr) {
+        DeleteFromNetwork(m_loNetwork.get(), name, ns, interfaceName, id, netnsPath, annotations, err);
+    }
+
+    if (err.NotEmpty()) {
+        WARN("Delete lo network get error: %s", err.GetCMessage());
+        err.Clear();
+    }
+
     RLockNetworkMap(err);
     if (err.NotEmpty()) {
         ERROR("%s", err.GetCMessage());
