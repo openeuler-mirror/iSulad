@@ -4,6 +4,7 @@ SET(EXE oci_config_merge_ut)
 
 add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/oci_config_merge.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/image_spec_merge.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_regex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_verify.c
@@ -47,6 +48,7 @@ target_include_directories(${EXE} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/container/health_check
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/events
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/runtime
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image
     ${CMAKE_BINARY_DIR}/conf
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/sha256
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/config

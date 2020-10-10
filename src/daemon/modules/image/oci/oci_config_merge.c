@@ -31,6 +31,7 @@
 #include "err_msg.h"
 #include "utils_array.h"
 #include "utils_string.h"
+#include "image_spec_merge.h"
 
 static void oci_image_merge_working_dir(const char *working_dir, container_config *container_spec)
 {
@@ -44,63 +45,16 @@ static void oci_image_merge_working_dir(const char *working_dir, container_confi
 static int oci_image_merge_env(const oci_image_spec_config *config, container_config *container_spec)
 {
     int ret = 0;
-    size_t new_size = 0;
-    size_t old_size = 0;
-    size_t i = 0;
-    size_t j = 0;
-    char **temp = NULL;
-    char **im_kv = NULL;
-    char **custom_kv = NULL;
 
     if (config->env == NULL || config->env_len == 0) {
         return 0;
     }
 
-    if (config->env_len > LIST_ENV_SIZE_MAX - container_spec->env_len) {
-        ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
-        isulad_set_error_message("The length of envionment variables is too long, the limit is %d", LIST_ENV_SIZE_MAX);
-        ret = -1;
-        goto out;
-    }
-    new_size = (container_spec->env_len + config->env_len) * sizeof(char *);
-    old_size = container_spec->env_len * sizeof(char *);
-    ret = mem_realloc((void **)&temp, new_size, container_spec->env, old_size);
-    if (ret != 0) {
-        ERROR("Failed to realloc memory for envionment variables");
+    if (image_spec_merge_env((const char **)config->env, config->env_len, container_spec) != 0) {
         ret = -1;
         goto out;
     }
 
-    container_spec->env = temp;
-    for (i = 0; i < config->env_len; i++) {
-        bool found = false;
-        im_kv = util_string_split(config->env[i], '=');
-        if (im_kv == NULL) {
-            continue;
-        }
-
-        for (j = 0; j < container_spec->env_len; j++) {
-            custom_kv = util_string_split(container_spec->env[j], '=');
-            if (custom_kv == NULL) {
-                continue;
-            }
-            if (strcmp(im_kv[0], custom_kv[0]) == 0) {
-                found = true;
-            }
-            util_free_array(custom_kv);
-            custom_kv = NULL;
-            if (found) {
-                break;
-            }
-        }
-
-        if (!found) {
-            container_spec->env[container_spec->env_len] = util_strdup_s(config->env[i]);
-            container_spec->env_len++;
-        }
-        util_free_array(im_kv);
-        im_kv = NULL;
-    }
 out:
     return ret;
 }
