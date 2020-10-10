@@ -79,7 +79,7 @@ static int load_certs(const char *path, const char *name, bool use_decrypted_key
         return -1;
     }
 
-    if (*ca_file != NULL && util_has_suffix(name, CA_SUFFIX)) {
+    if (*ca_file == NULL && util_has_suffix(name, CA_SUFFIX)) {
         *ca_file = util_path_join(path, name);
         if (*ca_file == NULL) {
             ret = -1;
@@ -87,7 +87,7 @@ static int load_certs(const char *path, const char *name, bool use_decrypted_key
             goto out;
         }
         goto out;
-    } else if (*cert_file != NULL && *key_file == NULL && util_has_suffix(name, CLIENT_CERT_SUFFIX)) {
+    } else if (*cert_file == NULL && *key_file == NULL && util_has_suffix(name, CLIENT_CERT_SUFFIX)) {
         key_name = corresponding_key_name(name);
         if (key_name == NULL) {
             ERROR("find corresponding key name for cert failed");
