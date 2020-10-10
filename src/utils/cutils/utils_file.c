@@ -250,6 +250,31 @@ out:
     return ret;
 }
 
+bool util_remove_file(const char *fname, int *saved_errno)
+{
+    bool ret = false;
+
+    if (unlink(fname) == 0) {
+        return true;
+    }
+
+    ERROR("Failed to delete %s: %s", fname, strerror(errno));
+    if (*saved_errno == 0) {
+        *saved_errno = errno;
+    }
+
+    if (mark_file_mutable(fname) != 0) {
+        ERROR("Failed to mark file mutable");
+    }
+
+    if (unlink(fname) == 0) {
+        ret = true;
+    }
+    ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
+
+    return ret;
+}
+
 static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int recursive_depth, int *saved_errno,
                                       int failure)
 {
@@ -258,21 +283,7 @@ static int recursive_rmdir_next_depth(struct stat fstat, const char *fname, int 
             failure = 1;
         }
     } else {
-        if (unlink(fname) < 0) {
-            ERROR("Failed to delete %s: %s", fname, strerror(errno));
-            if (*saved_errno == 0) {
-                *saved_errno = errno;
-            }
-
-            if (mark_file_mutable(fname) != 0) {
-                ERROR("Failed to mark file mutable");
-            }
-
-            if (unlink(fname) < 0) {
-                ERROR("Failed to delete \"%s\": %s", fname, strerror(errno));
-                failure = 1;
-            }
-        }
+        failure = util_remove_file(fname, saved_errno) ? 0 : 1;
     }
 
     return failure;

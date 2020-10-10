@@ -17,6 +17,8 @@
 
 #include <sys/types.h>
 
+#include <isula_libutils/cni_bandwidth_entry.h>
+
 #include "libcni_version.h"
 
 #ifdef __cplusplus
@@ -39,6 +41,8 @@ struct runtime_conf {
 
     struct cni_port_mapping **p_mapping;
     size_t p_mapping_len;
+
+    cni_bandwidth_entry *bandwidth;
 };
 
 struct cni_network_conf {
@@ -56,6 +60,11 @@ struct cni_network_list_conf {
 };
 
 bool cni_module_init(const char *cache_dir, const char * const *paths, size_t paths_len);
+
+int cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc,
+                                       struct result **cached_res);
+
+int cni_get_network_list_cached_config(const char *net_list_conf_str, struct runtime_conf *rc, char **config);
 
 int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc,
                          struct result **pret);
