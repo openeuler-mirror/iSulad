@@ -19,10 +19,11 @@
 #include <stdio.h>
 #include <limits.h>
 
-#include "libcni_api.h"
+#include <isula_libutils/log.h>
 
 #include "utils.h"
-#include "isula_libutils/log.h"
+#include "libcni_cached.h"
+#include "libcni_api.h"
 #include "libcni_errno.h"
 #include "libcni_current.h"
 #include "libcni_conf.h"
@@ -60,25 +61,67 @@ bool cni_module_init(const char *cache_dir, const char * const *paths, size_t pa
     return true;
 }
 
-static int args(const char *action, const struct runtime_conf *rc, struct cni_args **cargs);
-
-static int copy_cni_port_mapping(cni_inner_port_mapping *dst, const struct cni_port_mapping *src)
+int cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc,
+                                       struct result **cached_res)
 {
-    bool invalid_arg = (dst == NULL || src == NULL);
-    if (invalid_arg) {
+    struct network_config_list *list = NULL;
+    int ret = 0;
+
+    if (net_list_conf_str == NULL) {
+        ERROR("Empty net list conf argument");
         return -1;
     }
-    if (src->protocol != NULL) {
-        dst->protocol = util_strdup_s(src->protocol);
-    }
-    if (src->host_ip != NULL) {
-        dst->host_ip = util_strdup_s(src->host_ip);
-    }
-    dst->container_port = src->container_port;
-    dst->host_port = src->host_port;
 
-    return 0;
+    ret = conflist_from_bytes(net_list_conf_str, &list);
+    if (ret != 0) {
+        ERROR("Parse conf list failed");
+        return ret;
+    }
+
+    if (list->list == NULL) {
+        ERROR("empty network configs");
+        ret = -1;
+        goto out;
+    }
+
+    ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, cached_res);
+
+out:
+    free_network_config_list(list);
+    return ret;
 }
+
+// note: this function will update runtime config from cached data
+int cni_get_network_list_cached_config(const char *net_list_conf_str, struct runtime_conf *rc, char **config)
+{
+    struct network_config_list *list = NULL;
+    int ret = 0;
+
+    if (net_list_conf_str == NULL) {
+        ERROR("Empty net list conf argument");
+        return -1;
+    }
+
+    ret = conflist_from_bytes(net_list_conf_str, &list);
+    if (ret != 0) {
+        ERROR("Parse conf list failed");
+        return ret;
+    }
+
+    if (list->list == NULL) {
+        ERROR("empty network configs");
+        ret = -1;
+        goto out;
+    }
+
+    ret = cni_get_cached_config(g_module_conf.cache_dir, list->list->name, rc, config);
+
+out:
+    free_network_config_list(list);
+    return ret;
+}
+
+static int args(const char *action, const struct runtime_conf *rc, struct cni_args **cargs);
 
 static int inject_cni_port_mapping(const struct runtime_conf *rt, cni_net_conf_runtime_config *rt_config)
 {
@@ -110,7 +153,7 @@ static int inject_cni_port_mapping(const struct runtime_conf *rt, cni_net_conf_r
             return -1;
         }
         (rt_config->port_mappings_len)++;
-        if (copy_cni_port_mapping(rt_config->port_mappings[j], rt->p_mapping[j]) != 0) {
+        if (copy_cni_port_mapping(rt->p_mapping[j], rt_config->port_mappings[j]) != 0) {
             ERROR("Out of memory");
             return -1;
         }
@@ -398,6 +441,11 @@ static int add_network_list(const struct network_config_list *list, const struct
         }
     }
 
+    ret = cni_cache_add(g_module_conf.cache_dir, *pret, list->bytes, list->list->name, rc);
+    if (ret != 0) {
+        ERROR("failed to set network: %s cached result", list->list->name);
+    }
+
     return ret;
 }
 
@@ -426,22 +474,40 @@ static int del_network_list(const struct network_config_list *list, const struct
 {
     int i = 0;
     int ret = 0;
+    bool greated = false;
+    struct result *prev_result = NULL;
 
     if (check_del_network_list_args(list, rc)) {
         ERROR("Empty arguments");
         return -1;
     }
 
-    // TODO: get result from cache
+    if (version_greater_than_or_equal_to(list->list->cni_version, CURRENT_VERSION, &greated) != 0) {
+        return -1;
+    }
+
+    if (greated) {
+        ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &prev_result);
+        if (ret != 0) {
+            ERROR("failed to get network: %s cached result", list->list->name);
+            goto free_out;
+        }
+    }
+
     for (i = list->list->plugins_len - 1; i >= 0; i--) {
-        ret = del_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, NULL);
+        ret = del_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, &prev_result);
         if (ret != 0) {
             ERROR("Run DEL plugin: %d failed", i);
             goto free_out;
         }
     }
 
+    if (cni_cache_delete(g_module_conf.cache_dir, list->list->name, rc) != 0) {
+        WARN("failed to delete network: %s cached result", list->list->name);
+    }
+
 free_out:
+    free_result(prev_result);
     return ret;
 }
 
@@ -470,15 +536,37 @@ static int check_network_list(const struct network_config_list *list, const stru
 {
     int i = 0;
     int ret = 0;
+    bool greated = false;
+    struct result *prev_result = NULL;
 
     if (do_check_network_list_args(list, rc)) {
         ERROR("Empty arguments");
         return -1;
     }
 
-    // TODO: get result from cache
+    if (version_greater_than_or_equal_to(list->list->cni_version, CURRENT_VERSION, &greated) != 0) {
+        return -1;
+    }
+
+    // CHECK was added in CNI spec version 0.4.0 and higher
+    if (!greated) {
+        ERROR("configuration version %s does not support CHECK", list->list->cni_version);
+        return -1;
+    }
+
+    if (list->list->disable_check) {
+        INFO("network %s disable check command", list->list->name);
+        return 0;
+    }
+
+    ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &prev_result);
+    if (ret != 0) {
+        ERROR("failed to get network: %s cached result", list->list->name);
+        goto free_out;
+    }
+
     for (i = list->list->plugins_len - 1; i >= 0; i--) {
-        ret = check_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, NULL);
+        ret = check_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, &prev_result);
         if (ret != 0) {
             ERROR("Run check plugin: %d failed", i);
             goto free_out;
@@ -486,6 +574,7 @@ static int check_network_list(const struct network_config_list *list, const stru
     }
 
 free_out:
+    free_result(prev_result);
     return ret;
 }
 

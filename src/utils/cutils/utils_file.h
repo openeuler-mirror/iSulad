@@ -113,6 +113,8 @@ int util_list_all_entries(const char *directory, char ***out);
 //       2. If fifo or socket exist in source, this function will return failure.
 int util_copy_dir_recursive(char *copy_dst, char *copy_src);
 
+bool util_remove_file(const char *fname, int *saved_errno);
+
 #ifdef __cplusplus
 }
 #endif

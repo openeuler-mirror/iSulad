@@ -22,8 +22,6 @@
 #include "utils.h"
 #include "isula_libutils/log.h"
 
-static struct result *get_result(const cni_result_curr *curr_result);
-
 static cni_result_curr *new_curr_result_helper(const char *json_data)
 {
     cni_result_curr *result = NULL;
@@ -59,7 +57,7 @@ struct result *new_curr_result(const char *json_data)
         return NULL;
     }
 
-    ret = get_result(tmp_result);
+    ret = copy_result_from_current(tmp_result);
 
     free_cni_result_curr(tmp_result);
     return ret;
@@ -288,7 +286,7 @@ static int copy_result_routes(const cni_result_curr *curr_result, struct result 
     return 0;
 }
 
-static struct result *get_result(const cni_result_curr *curr_result)
+struct result *copy_result_from_current(const cni_result_curr *curr_result)
 {
     struct result *value = NULL;
 

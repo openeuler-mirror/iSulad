@@ -59,6 +59,18 @@ function do_test_help()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
+    ls /var/lib/cni/results/cni-loopback-*
+    if [ $? -ne 0 ];then
+        msg_err "can not found result cached"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    cnt=`ls /var/lib/cni/results/* | wc -l`
+    if [ $cnt -ne 2 ];then
+        msg_err "result cached lose"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
     spid=`isula inspect -f '{{json .State.Pid}}' $sid`
     nsenter -t $spid -n ifconfig eth0
     if [ $? -ne 0 ];then
@@ -139,6 +151,12 @@ function do_test_help()
     crictl stopp $sid
     if [ $? -ne 0 ];then
         msg_err "stop sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    cnt=`ls /var/lib/cni/results/* | wc -l`
+    if [ $cnt -ne 0 ];then
+        msg_err "result cached residual"
         TC_RET_T=$(($TC_RET_T+1))
     fi
 

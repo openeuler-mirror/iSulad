@@ -24,4 +24,6 @@ struct result *new_curr_result(const char *json_data);
 
 cni_result_curr *cni_result_curr_to_json_result(const struct result *src);
 
+struct result *copy_result_from_current(const cni_result_curr *curr_result);
+
 #endif
