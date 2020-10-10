@@ -988,7 +988,7 @@ static int convert_to_v2_image_and_load(const char *path)
         goto out;
     }
 
-    created = created_to_timestamp(config->created);
+    created = to_timestamp_from_str(config->created);
     if (update_image_info(&created, config_digest, img) != 0) {
         ERROR("Failed to update image info");
         ret = -1;

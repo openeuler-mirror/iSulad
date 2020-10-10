@@ -68,10 +68,11 @@ int time_format_duration(const char *in, char *out, size_t len);
 
 int time_format_duration_ago(const char *in, char *out, size_t len);
 
+types_timestamp_t to_timestamp_from_str(const char *str);
+
 int64_t get_now_time_nanos();
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

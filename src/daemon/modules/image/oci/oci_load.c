@@ -237,25 +237,6 @@ static char **str_array_copy(char **arr, size_t len)
     return str_arr;
 }
 
-static types_timestamp_t oci_load_get_timestamp(char *created)
-{
-    int64_t nanos = 0;
-    types_timestamp_t timestamp = { 0 };
-
-    if (to_unix_nanos_from_str(created, &nanos) != 0) {
-        ERROR("Failed to get created time from image config");
-        goto out;
-    }
-
-    timestamp.has_seconds = true;
-    timestamp.seconds = nanos / Time_Second;
-    timestamp.has_nanos = true;
-    timestamp.nanos = nanos % Time_Second;
-
-out:
-    return timestamp;
-}
-
 static char *oci_load_calc_chain_id(char *parent_chain_id, char *diff_id)
 {
     int sret = 0;
@@ -455,7 +436,7 @@ static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
         goto out;
     }
 
-    timestamp = oci_load_get_timestamp(conf->created);
+    timestamp = to_timestamp_from_str(conf->created);
     top_layer_index = desc->layers_len - 1;
     opts.create_time = &timestamp;
     opts.digest = desc->manifest_digest;
