@@ -20,6 +20,8 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <termios.h> // IWYU pragma: keep
+#include <sys/ioctl.h>
 
 #include "command_parser.h"
 #include "isula_libutils/json_common.h"
@@ -33,6 +35,8 @@ extern "C" {
 
 /* max arguments can be specify in client */
 #define MAX_CLIENT_ARGS 1000
+
+#define CLIENT_RUNDIR "/var/run/isula"
 
 struct client_arguments;
 struct custom_configs;
@@ -223,6 +227,10 @@ struct args_cgroup_resources {
     int64_t nano_cpus;
 };
 
+struct client_arguments;
+
+typedef int (*do_resize_call_back_t)(const struct client_arguments *args, unsigned int height, unsigned int width);
+
 struct client_arguments {
     const char *progname; /* main progname name */
     const char *subcommand; /* sub command name */
@@ -333,6 +341,9 @@ struct client_arguments {
     char *ca_file;
     char *cert_file;
     char *key_file;
+
+    do_resize_call_back_t resize_cb;
+    struct winsize s_pre_wsz;
 };
 
 #define LOG_OPTIONS(log) { CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL },

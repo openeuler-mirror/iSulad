@@ -1,5 +1,6 @@
 set(local_client_connect_srcs
     ${CMAKE_CURRENT_SOURCE_DIR}/isula_connect.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/protocol_type.c
     )
 
 set(local_client_connect_incs ${CMAKE_CURRENT_SOURCE_DIR})

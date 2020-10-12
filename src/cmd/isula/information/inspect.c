@@ -25,7 +25,6 @@
 #include "isula_connect.h"
 #include "utils.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_inspect_desc[] = "Return low-level information on a container or image";
 const char g_cmd_inspect_usage[] = "inspect [options] CONTAINER|IMAGE [CONTAINER|IMAGE...]";

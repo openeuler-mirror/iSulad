@@ -23,7 +23,7 @@
 #include "isula_libutils/log.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
+
 #include "utils_verify.h"
 
 const char g_cmd_tag_desc[] = "Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE";

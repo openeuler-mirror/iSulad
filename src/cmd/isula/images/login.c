@@ -24,7 +24,6 @@
 #include "isula_connect.h"
 #include "isula_libutils/log.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_login_desc[] = "Log in to a Docker registry";
 const char g_cmd_login_usage[] = "login [OPTIONS] SERVER";

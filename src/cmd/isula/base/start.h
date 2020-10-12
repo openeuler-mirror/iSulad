@@ -19,7 +19,7 @@
 #include <stdbool.h>
 
 #include "client_arguments.h"
-#include "isula_commands.h"
+#include "client_console.h"
 
 #ifdef __cplusplus
 extern "C" {

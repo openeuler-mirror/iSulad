@@ -25,7 +25,6 @@
 #include "attach.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_top_desc[] = "Display the running processes of a container";
 const char g_cmd_top_usage[] = "top [OPTIONS] CONTAINER [ps OPTIONS]";

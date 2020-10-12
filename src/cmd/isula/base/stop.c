@@ -22,7 +22,6 @@
 #include "utils.h"
 #include "isula_connect.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_stop_desc[] = "Stop one or more containers";
 const char g_cmd_stop_usage[] = "stop [OPTIONS] CONTAINER [CONTAINER...]";

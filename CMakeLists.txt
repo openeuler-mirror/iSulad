@@ -89,16 +89,6 @@ ENDIF(ENABLE_UT)
 # install all files
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc
   DESTINATION ${LIB_INSTALL_DIR_DEFAULT}/pkgconfig PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE)
-install(FILES src/client/libisula.h
-	DESTINATION include/isulad)
-install(FILES src/client/connect/isula_connect.h
-	DESTINATION include/isulad)
-install(FILES src/utils/cutils/utils_timestamp.h
-	DESTINATION include/isulad)
-install(FILES src/utils/cutils/error.h
-	DESTINATION include/isulad)
-install(FILES src/daemon/modules/runtime/engines/engine.h
-	DESTINATION include/isulad)
 install(FILES src/daemon/modules/api/image_api.h
 	DESTINATION include/isulad)
 

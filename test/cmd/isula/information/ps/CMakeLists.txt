@@ -18,7 +18,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/console/console.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/cmd/isula/client_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/common/err_msg.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/client/libisula.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/client/connect/protocol_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/mainloop.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/utils/cutils/error.c

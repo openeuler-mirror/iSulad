@@ -27,7 +27,7 @@
 #include "isula_libutils/log.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
+
 #include "utils_verify.h"
 
 const char g_cmd_import_desc[] = "Import the contents from a tarball to create a filesystem image";

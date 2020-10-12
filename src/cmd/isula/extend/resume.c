@@ -24,7 +24,6 @@
 #include "isula_connect.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_resume_desc[] = "Unpause all processes within one or more containers";
 const char g_cmd_resume_usage[] = "unpause [OPTIONS] CONTAINER [CONTAINER...]";

@@ -23,7 +23,6 @@
 #include "isula_connect.h"
 #include "connect.h"
 #include "constants.h"
-#include "libisula.h"
 
 const char g_cmd_health_check_desc[] = "iSulad health check";
 const char g_cmd_health_check_usage[] = "health [command options]";

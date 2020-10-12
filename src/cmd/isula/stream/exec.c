@@ -12,11 +12,10 @@
  * Create: 2018-11-08
  * Description: provide container exec functions
  ******************************************************************************/
+#include "exec.h"
 #include <semaphore.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <sys/ioctl.h>
-#include <termios.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,7 +23,7 @@
 #include <string.h>
 
 #include "client_arguments.h"
-#include "exec.h"
+#include "client_console.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
@@ -33,7 +32,7 @@
 #include "isula_libutils/container_inspect.h"
 #include "connect.h"
 #include "constants.h"
-#include "libisula.h"
+
 #include "utils_array.h"
 #include "utils_string.h"
 
@@ -151,6 +150,45 @@ out:
     return ret;
 }
 
+static int do_resize_exec_console(const struct client_arguments *args, unsigned int height, unsigned int width)
+{
+    int ret = 0;
+    isula_connect_ops *ops = NULL;
+    struct isula_resize_request request = { 0 };
+    struct isula_resize_response *response = NULL;
+    client_connect_config_t config = { 0 };
+
+    ops = get_connect_client_ops();
+    if (ops == NULL || ops->container.resize == NULL) {
+        ERROR("Unimplemented ops");
+        ret = -1;
+        goto out;
+    }
+
+    request.id = args->name;
+    request.suffix = args->exec_suffix;
+    request.height = height;
+    request.width = width;
+
+    response = util_common_calloc_s(sizeof(struct isula_resize_response));
+    if (response == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    config = get_connect_config(args);
+    ret = ops->container.resize(&request, response, &config);
+    if (ret != 0) {
+        ERROR("Failed to call resize");
+        goto out;
+    }
+
+out:
+    isula_resize_response_free(response);
+    return ret;
+}
+
 static int exec_cmd_init(int argc, const char **argv)
 {
     command_t cmd;
@@ -196,6 +234,8 @@ static int exec_cmd_init(int argc, const char **argv)
         sem_destroy(&g_command_waitopen_sem);
         return ECOMMON;
     }
+
+    g_cmd_exec_args.resize_cb = do_resize_exec_console;
 
     return 0;
 }
@@ -367,98 +407,6 @@ out:
     return exec_suffix;
 }
 
-static int do_resize_exec_console(const struct client_arguments *args, unsigned int height, unsigned int width)
-{
-    int ret = 0;
-    isula_connect_ops *ops = NULL;
-    struct isula_resize_request request = { 0 };
-    struct isula_resize_response *response = NULL;
-    client_connect_config_t config = { 0 };
-
-    ops = get_connect_client_ops();
-    if (ops == NULL || ops->container.resize == NULL) {
-        ERROR("Unimplemented ops");
-        ret = -1;
-        goto out;
-    }
-
-    request.id = args->name;
-    request.suffix = args->exec_suffix;
-    request.height = height;
-    request.width = width;
-
-    response = util_common_calloc_s(sizeof(struct isula_resize_response));
-    if (response == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    config = get_connect_config(args);
-    ret = ops->container.resize(&request, response, &config);
-    if (ret != 0) {
-        ERROR("Failed to call resize");
-        goto out;
-    }
-
-out:
-    isula_resize_response_free(response);
-    return ret;
-}
-
-static void *exec_console_resize_thread(void *arg)
-{
-    int ret = 0;
-    const struct client_arguments *args = arg;
-    static struct winsize s_pre_wsz;
-    struct winsize wsz;
-
-    if (!isatty(STDIN_FILENO)) {
-        goto out;
-    }
-
-    ret = pthread_detach(pthread_self());
-    if (ret != 0) {
-        CRIT("Start: set thread detach fail");
-        goto out;
-    }
-
-    while (true) {
-        sleep(1); // check the windows size per 1s
-        ret = ioctl(STDIN_FILENO, TIOCGWINSZ, &wsz);
-        if (ret < 0) {
-            WARN("Failed to get window size");
-            continue;
-        }
-        if (wsz.ws_row == s_pre_wsz.ws_row && wsz.ws_col == s_pre_wsz.ws_col) {
-            continue;
-        }
-        ret = do_resize_exec_console(args, wsz.ws_row, wsz.ws_col);
-        if (ret != 0) {
-            continue;
-        }
-        s_pre_wsz.ws_row = wsz.ws_row;
-        s_pre_wsz.ws_col = wsz.ws_col;
-    }
-
-out:
-    return NULL;
-}
-
-int exec_client_console_resize_thread(struct client_arguments *args)
-{
-    int res = 0;
-    pthread_t a_thread;
-
-    res = pthread_create(&a_thread, NULL, exec_console_resize_thread, (void *)(args));
-    if (res != 0) {
-        CRIT("Thread creation failed");
-        return -1;
-    }
-
-    return 0;
-}
-
 int cmd_exec_main(int argc, const char **argv)
 {
     int ret = 0;
@@ -503,7 +451,7 @@ int cmd_exec_main(int argc, const char **argv)
 
     if (custom_cfg->tty && isatty(STDIN_FILENO) &&
         (custom_cfg->attach_stdin || custom_cfg->attach_stdout || custom_cfg->attach_stderr)) {
-        (void)exec_client_console_resize_thread(&g_cmd_exec_args);
+        (void)start_client_console_resize_thread(&g_cmd_exec_args);
     }
 
     if (strncmp(g_cmd_exec_args.socket, "tcp://", strlen("tcp://")) == 0) {

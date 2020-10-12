@@ -23,7 +23,6 @@
 #include "isula_libutils/log.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_logout_desc[] = "Log out from a Docker registry";
 const char g_cmd_logout_usage[] = "logout SERVER";

@@ -28,7 +28,7 @@
 #include "isula_libutils/log.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
+
 #include "utils_array.h"
 #include "utils_file.h"
 #include "utils_verify.h"

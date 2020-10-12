@@ -15,7 +15,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <termios.h> // IWYU pragma: keep
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +29,7 @@
 #include "error.h"
 #include "connect.h"
 #include "create.h"
-#include "libisula.h"
+
 #include "start.h"
 #include "wait.h"
 
@@ -175,59 +174,6 @@ out:
     return ret;
 }
 
-static void *run_console_resize_thread(void *arg)
-{
-    int ret = 0;
-    const struct client_arguments *args = arg;
-    static struct winsize s_pre_wsz;
-    struct winsize wsz;
-
-    if (!isatty(STDIN_FILENO)) {
-        goto out;
-    }
-
-    ret = pthread_detach(pthread_self());
-    if (ret != 0) {
-        CRIT("Start: set thread detach fail");
-        goto out;
-    }
-
-    while (true) {
-        sleep(1); // check the windows size per 1s
-        ret = ioctl(STDIN_FILENO, TIOCGWINSZ, &wsz);
-        if (ret < 0) {
-            WARN("Failed to get window size");
-            continue;
-        }
-        if (wsz.ws_row == s_pre_wsz.ws_row && wsz.ws_col == s_pre_wsz.ws_col) {
-            continue;
-        }
-        ret = do_resize_run_console(args, wsz.ws_row, wsz.ws_col);
-        if (ret != 0) {
-            continue;
-        }
-        s_pre_wsz.ws_row = wsz.ws_row;
-        s_pre_wsz.ws_col = wsz.ws_col;
-    }
-
-out:
-    return NULL;
-}
-
-int run_client_console_resize_thread(struct client_arguments *args)
-{
-    int res = 0;
-    pthread_t a_thread;
-
-    res = pthread_create(&a_thread, NULL, run_console_resize_thread, (void *)(args));
-    if (res != 0) {
-        CRIT("Thread creation failed");
-        return -1;
-    }
-
-    return 0;
-}
-
 int cmd_run_main(int argc, const char **argv)
 {
     int ret = 0;
@@ -241,6 +187,7 @@ int cmd_run_main(int argc, const char **argv)
     }
     g_cmd_run_args.custom_conf.attach_stdout = true;
     g_cmd_run_args.custom_conf.attach_stderr = true;
+    g_cmd_run_args.resize_cb = do_resize_run_console;
 
     g_cmd_run_args.progname = argv[0];
     g_cmd_run_args.subcommand = argv[1];
@@ -270,7 +217,7 @@ int cmd_run_main(int argc, const char **argv)
     }
 
     if (g_cmd_run_args.custom_conf.tty && isatty(STDIN_FILENO)) {
-        (void)run_client_console_resize_thread(&g_cmd_run_args);
+        (void)start_client_console_resize_thread(&g_cmd_run_args);
     }
 
     if (strncmp(g_cmd_run_args.socket, "tcp://", strlen("tcp://")) == 0) {

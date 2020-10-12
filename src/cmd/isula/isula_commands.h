@@ -15,7 +15,6 @@
 #ifndef CMD_ISULA_ISULA_COMMANDS_H
 #define CMD_ISULA_ISULA_COMMANDS_H
 
-#include <semaphore.h>
 #include <stdbool.h>
 
 #include "client_arguments.h"
@@ -23,8 +22,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define CLIENT_RUNDIR "/var/run/isula"
 
 // A command is described by:
 // @name: The name which should be passed as a second parameter
@@ -40,26 +37,6 @@ struct command {
     const char * const longdesc;
     struct client_arguments *args;
 };
-
-struct command_fifo_config {
-    char *stdin_path;
-    char *stdout_path;
-    char *stderr_path;
-    char *stdin_name;
-    char *stdout_name;
-    char *stderr_name;
-    sem_t *wait_open;
-    sem_t *wait_exit;
-};
-
-int create_console_fifos(bool attach_stdin, bool attach_stdout, bool attach_stderr, const char *name, const char *type,
-                         struct command_fifo_config **pconsole_fifos);
-
-int start_client_console_thread(struct command_fifo_config *console_fifos, bool tty);
-
-void free_command_fifo_config(struct command_fifo_config *fifos);
-
-void delete_command_fifo(struct command_fifo_config *fifos);
 
 // Gets a pointer to a command, to allow implementing custom behavior
 // returns null if not found.
