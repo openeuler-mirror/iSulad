@@ -189,24 +189,6 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_exists)
     ASSERT_FALSE(rootfs_store_exists(incorrectId.c_str()));
 }
 
-TEST_F(StorageRootfsUnitTest, test_rootfs_store_metadata)
-{
-    std::string incorrectId { "ff67da98ab8540d713209" };
-    char *metadata = NULL;
-
-    metadata = rootfs_store_metadata(ids.at(0).c_str());
-    ASSERT_STREQ(metadata, META_DATA_CONTENT.c_str());
-    free(metadata);
-    metadata = NULL;
-
-    metadata = rootfs_store_metadata(ids.at(1).c_str());
-    ASSERT_STREQ(metadata, "{}");
-    free(metadata);
-    metadata = NULL;
-
-    ASSERT_EQ(rootfs_store_metadata(incorrectId.c_str()), nullptr);
-}
-
 TEST_F(StorageRootfsUnitTest, test_rootfs_store_get_all_rootfs)
 {
     std::string source = std::string(store_real_path) + "/overlay-containers/" + ids.at(0);

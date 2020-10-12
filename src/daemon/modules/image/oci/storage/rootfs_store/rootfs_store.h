@@ -62,9 +62,6 @@ bool rootfs_store_exists(const char *id);
 // Retrieve information about a container given an ID or name.
 storage_rootfs *rootfs_store_get_rootfs(const char *id);
 
-// Reads metadata associated with an item with the specified ID.
-char *rootfs_store_metadata(const char *id);
-
 // Return a slice enumerating the known containers.
 int rootfs_store_get_all_rootfs(struct rootfs_list *all_rootfs);
 

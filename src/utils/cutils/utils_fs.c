@@ -386,6 +386,41 @@ out:
     return bret;
 }
 
+bool util_deal_with_mount_info(mount_info_call_back_t cb, const char *pattern)
+{
+    FILE *fp = NULL;
+    char *line = NULL;
+    char *mountpoint = NULL;
+    size_t length = 0;
+    bool bret = true;
+    int nret = 0;
+
+    fp = util_fopen("/proc/self/mountinfo", "r");
+    if (fp == NULL) {
+        ERROR("Failed opening /proc/self/mountinfo");
+        return false;
+    }
+
+    while (getline(&line, &length, fp) != -1) {
+        mountpoint = get_mtpoint(line);
+        if (mountpoint == NULL) {
+            INFO("Error reading mountinfo: bad line '%s'", line);
+            continue;
+        }
+        nret = cb(mountpoint, pattern);
+        free(mountpoint);
+        if (nret != 0) {
+            bret = false;
+            goto out;
+        }
+    }
+
+out:
+    fclose(fp);
+    free(line);
+    return bret;
+}
+
 // is_remount returns true if either device name or flags identify a remount request, false otherwise.
 static bool is_remount(const char *src, unsigned long mntflags)
 {

@@ -1268,40 +1268,6 @@ out:
     return dup_rootfs;
 }
 
-char *rootfs_store_metadata(const char *id)
-{
-    cntrootfs_t *img = NULL;
-    char *metadata = NULL;
-
-    if (id == NULL) {
-        ERROR("Invalid parameter, id is NULL");
-        return NULL;
-    }
-
-    if (g_rootfs_store == NULL) {
-        ERROR("Rootfs store is not ready");
-        return NULL;
-    }
-
-    if (!rootfs_store_lock(SHARED)) {
-        ERROR("Failed to lock rootfs store with shared lock, not allowed to get rootfs metadata assignments");
-        return NULL;
-    }
-
-    img = lookup(id);
-    if (img == NULL) {
-        ERROR("Rootfs not known");
-        goto out;
-    }
-
-    metadata = util_strdup_s(img->srootfs->metadata);
-
-out:
-    rootfs_ref_dec(img);
-    rootfs_store_unlock();
-    return metadata;
-}
-
 int rootfs_store_get_all_rootfs(struct rootfs_list *all_rootfs)
 {
     int ret = 0;

@@ -36,9 +36,10 @@ int util_force_mount(const char *src, const char *dst, const char *mtype, const 
 bool util_detect_mounted(const char *path);
 int util_ensure_mounted_as(const char *dst, const char *mntopts);
 int util_mount_from(const char *base, const char *src, const char *dst, const char *mtype, const char *mntopts);
+typedef int (*mount_info_call_back_t)(const char *, const char *);
+bool util_deal_with_mount_info(mount_info_call_back_t cb, const char *);
 #ifdef __cplusplus
 }
 #endif
 
 #endif // UTILS_CUTILS_UTILS_FS_H
-
