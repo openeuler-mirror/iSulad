@@ -8,12 +8,12 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2018-11-08
- * Description: provide container isula library definition
+ * Author: lifeng
+ * Create: 2020-10-12
+ * Description: provide container isula protocol definition
  ******************************************************************************/
-#ifndef CLIENT_LIBISULA_H
-#define CLIENT_LIBISULA_H
+#ifndef CLIENT_CONNECT_PROTOCOL_H
+#define CLIENT_CONNECT_PROTOCOL_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -576,8 +576,6 @@ struct isula_resize_response {
 };
 
 void container_events_format_free(container_events_format_t *value);
-
-Container_Status isulastastr2sta(const char *state);
 
 struct isula_filters *isula_filters_parse_args(const char **array, size_t len);
 

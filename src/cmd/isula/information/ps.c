@@ -26,7 +26,7 @@
 #include "isula_connect.h"
 #include "connect.h"
 #include "constants.h"
-#include "libisula.h"
+
 #include "utils_array.h"
 #include "utils_string.h"
 #include "utils_timestamp.h"
@@ -65,8 +65,8 @@ struct lengths {
 };
 
 const char * const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
-                                              "exited",  "paused", "restarting"
-                                            };
+                                             "exited",  "paused", "restarting"
+                                           };
 
 struct filter_field {
     char *name;

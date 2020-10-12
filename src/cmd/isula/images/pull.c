@@ -23,7 +23,6 @@
 #include "isula_libutils/log.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_pull_desc[] = "Pull an image or a repository from a registry";
 const char g_cmd_pull_usage[] = "pull [OPTIONS] NAME[:TAG|@DIGEST]";

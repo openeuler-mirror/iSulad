@@ -15,8 +15,8 @@
 #ifndef CLIENT_CONNECT_ISULA_CONNECT_H
 #define CLIENT_CONNECT_ISULA_CONNECT_H
 
-#include "libisula.h"
 #include "connect.h"
+#include "protocol_type.h"
 
 #ifdef __cplusplus
 extern "C" {

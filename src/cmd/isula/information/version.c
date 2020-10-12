@@ -25,7 +25,6 @@
 #include "command_parser.h"
 #include "connect.h"
 #include "constants.h"
-#include "libisula.h"
 
 const char g_cmd_version_desc[] = "Display information about isula";
 const char g_cmd_version_usage[] = "version";

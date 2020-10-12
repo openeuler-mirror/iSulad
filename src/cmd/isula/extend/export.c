@@ -26,7 +26,6 @@
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_export_desc[] = "export container";
 const char g_cmd_export_usage[] = "export [command options] [ID|NAME]";

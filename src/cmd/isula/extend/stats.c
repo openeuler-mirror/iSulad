@@ -26,7 +26,6 @@
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "connect.h"
-#include "libisula.h"
 
 #define ESC "\033"
 #define TERMCLEAR ESC "[H" ESC "[J"
@@ -140,8 +139,8 @@ static void stats_print(const struct isula_container_info *stats)
 static void stats_print_original_data_header(void)
 {
     printf("%-16s %-10s %-10s %-20s %-20s %-15s %-15s %-15s %-15s %-15s %-15s %-15s %-40s", "ID", "PIDS", "Status",
-           "CpuUseNanos", "CpuSystemUse", "OnlineCpus", "BlkioRead", "BlkioWrite", "MemUsed", "MemLimit",
-           "KmemUsed", "CacheUsage", "NAME");
+           "CpuUseNanos", "CpuSystemUse", "OnlineCpus", "BlkioRead", "BlkioWrite", "MemUsed", "MemLimit", "KmemUsed",
+           "CacheUsage", "NAME");
     printf("\n");
 }
 
@@ -157,8 +156,8 @@ static void stats_print_original_data(const struct isula_container_info *stats)
 
     printf("%-16s %-10llu %-10s %-20lu %-20lu %-15u %-15lu %-15lu %-15lu %-15lu %-15lu %-15lu %-40s", short_id,
            (unsigned long long)stats->pids_current, stats->status, stats->cpu_use_nanos, stats->cpu_system_use,
-           stats->online_cpus, stats->blkio_read, stats->blkio_write, stats->mem_used, stats->mem_limit, stats->kmem_used,
-           stats->cache, stats->name);
+           stats->online_cpus, stats->blkio_read, stats->blkio_write, stats->mem_used, stats->mem_limit,
+           stats->kmem_used, stats->cache, stats->name);
 
     free(short_id);
 }

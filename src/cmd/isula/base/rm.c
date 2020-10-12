@@ -23,7 +23,7 @@
 #include "console.h"
 #include "utils.h"
 #include "connect.h"
-#include "libisula.h"
+
 #include "utils_file.h"
 
 const char g_cmd_delete_desc[] = "Remove one or more containers";

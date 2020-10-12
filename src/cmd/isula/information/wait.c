@@ -23,7 +23,7 @@
 #include "command_parser.h"
 #include "connect.h"
 #include "constants.h"
-#include "libisula.h"
+
 #include "utils.h"
 
 const char g_cmd_wait_desc[] = "Block until one or more containers stop, then print their exit codes";

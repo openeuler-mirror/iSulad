@@ -22,7 +22,6 @@
 #include "isula_connect.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_rename_desc[] = "Rename a container";
 const char g_cmd_rename_usage[] = "rename [OPTIONS] OLD_NAME NEW_NAME";

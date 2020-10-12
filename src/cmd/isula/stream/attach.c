@@ -36,7 +36,6 @@
 #include "command_parser.h"
 #include "connect.h"
 #include "constants.h"
-#include "libisula.h"
 
 const char g_cmd_attach_desc[] = "Attach to a running container";
 const char g_cmd_attach_usage[] = "attach [OPTIONS] CONTAINER";

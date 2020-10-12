@@ -25,7 +25,6 @@
 #include "isula_connect.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_info_desc[] = "Display system-wide information";
 const char g_cmd_info_usage[] = "info";

@@ -32,7 +32,7 @@
 #include "isula_libutils/container_inspect.h"
 #include "connect.h"
 #include "constants.h"
-#include "libisula.h"
+
 #include "utils_array.h"
 #include "utils_string.h"
 

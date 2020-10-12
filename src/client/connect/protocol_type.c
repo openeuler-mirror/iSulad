@@ -8,16 +8,16 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2018-11-08
+ * Author: lifeng
+ * Create: 2020-10-12
  * Description: provide container isula library functions
  ******************************************************************************/
+#include "protocol_type.h"
 #include <stdio.h>
 #include <isula_libutils/container_path_stat.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "libisula.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_array.h"

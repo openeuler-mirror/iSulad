@@ -30,7 +30,6 @@
 #include "isula_commands.h"
 #include "command_parser.h"
 #include "connect.h"
-#include "libisula.h"
 
 const char g_cmd_start_desc[] = "Start one or more stopped containers";
 const char g_cmd_start_usage[] = "start [OPTIONS] CONTAINER [CONTAINER...]";

@@ -22,7 +22,7 @@
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "connect.h"
-#include "libisula.h"
+
 #include "isula_host_spec.h"
 
 const char g_cmd_update_desc[] = "Update configuration of one or more containers";
