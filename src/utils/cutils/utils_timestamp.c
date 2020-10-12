@@ -969,3 +969,22 @@ int to_unix_nanos_from_str(const char *str, int64_t *nanos)
     *nanos = mktime(&tm) * Time_Second + nano;
     return 0;
 }
+
+types_timestamp_t to_timestamp_from_str(const char *str)
+{
+    int64_t nanos = 0;
+    types_timestamp_t timestamp = { 0 };
+
+    if (to_unix_nanos_from_str(str, &nanos) != 0) {
+        ERROR("Failed to get created time from image config");
+        goto out;
+    }
+
+    timestamp.has_seconds = true;
+    timestamp.seconds = nanos / Time_Second;
+    timestamp.has_nanos = true;
+    timestamp.nanos = nanos % Time_Second;
+
+out:
+    return timestamp;
+}

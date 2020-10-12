@@ -563,19 +563,21 @@ defs_mount *parse_mount(const char *mount)
         goto out;
     }
 
+    if (!cleanpath(mount_element->source, dstpath, sizeof(dstpath))) {
+        ERROR("Failed to get clean path");
+        ret = -1;
+        goto out;
+    }
+    free(mount_element->source);
+    mount_element->source = util_strdup_s(dstpath);
+
     if (!cleanpath(mount_element->destination, dstpath, sizeof(dstpath))) {
         ERROR("failed to get clean path");
         ret = EINVALIDARGS;
         goto out;
     }
-
     free(mount_element->destination);
     mount_element->destination = util_strdup_s(dstpath);
-    if (mount_element->destination == NULL) {
-        ERROR("out of memory");
-        ret = -1;
-        goto out;
-    }
 
     /* append default options if it's bind mount */
     ret = append_default_mount_options(mount_element, has_ro, has_pro);
@@ -725,6 +727,14 @@ defs_mount *parse_volume(const char *volume)
         }
     }
 
+    if (!cleanpath(mount_element->source, dstpath, sizeof(dstpath))) {
+        ERROR("Failed to get clean path");
+        ret = -1;
+        goto free_out;
+    }
+    free(mount_element->source);
+    mount_element->source = util_strdup_s(dstpath);
+
     if (!cleanpath(mount_element->destination, dstpath, sizeof(dstpath))) {
         ERROR("Failed to get clean path");
         ret = -1;
@@ -732,9 +742,11 @@ defs_mount *parse_volume(const char *volume)
     }
     free(mount_element->destination);
     mount_element->destination = util_strdup_s(dstpath);
+
     if (label != NULL) {
         options_len++;
     }
+
     mount_element->options = util_common_calloc_s(options_len * sizeof(char *));
     if (mount_element->options == NULL) {
         ERROR("Out of memory");

@@ -961,7 +961,7 @@ static int parse_docker_config(pull_descriptor *desc)
         parent_chain_id = desc->layers[i].chain_id;
     }
 
-    desc->config.create_time = created_to_timestamp(config->created);
+    desc->config.create_time = to_timestamp_from_str(config->created);
 
 out:
 
@@ -1012,7 +1012,7 @@ static int parse_oci_config(pull_descriptor *desc)
         parent_chain_id = desc->layers[i].chain_id;
     }
 
-    desc->config.create_time = created_to_timestamp(config->created);
+    desc->config.create_time = to_timestamp_from_str(config->created);
 
 out:
     free_oci_image_spec(config);
@@ -1548,7 +1548,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
         goto out;
     }
 
-    desc->config.create_time = created_to_timestamp(config->created);
+    desc->config.create_time = to_timestamp_from_str(config->created);
 
     free(err);
     err = NULL;
@@ -1802,8 +1802,7 @@ int registry_pull(registry_pull_options *options)
     INFO("Pull images %s success", options->image_name);
 
 out:
-    if (desc->layer_of_hold_refs != NULL &&
-        storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
+    if (desc->layer_of_hold_refs != NULL && storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
         ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     }
 

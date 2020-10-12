@@ -382,8 +382,8 @@ static char *convert_created_by(image_manifest_v1_compatibility *config)
     return created_by;
 }
 
-int add_rootfs_and_history(const layer_blob *layers, size_t layers_len,
-                           const registry_manifest_schema1 *manifest, docker_image_config_v2 *config)
+int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
+                           docker_image_config_v2 *config)
 {
     int i = 0;
     int ret = 0;
@@ -462,26 +462,6 @@ out:
     v1config = NULL;
 
     return ret;
-}
-
-types_timestamp_t created_to_timestamp(char *created)
-{
-    int64_t nanos = 0;
-    types_timestamp_t timestamp = { 0 };
-
-    if (to_unix_nanos_from_str(created, &nanos) != 0) {
-        ERROR("Failed to get created time from image config");
-        goto out;
-    }
-
-    timestamp.has_seconds = true;
-    timestamp.seconds = nanos / Time_Second;
-    timestamp.has_nanos = true;
-    timestamp.nanos = nanos % Time_Second;
-
-out:
-
-    return timestamp;
 }
 
 bool oci_valid_time(char *time)
