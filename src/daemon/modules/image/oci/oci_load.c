@@ -293,21 +293,31 @@ static char *oci_load_without_sha256_prefix(char *digest)
     return digest + strlen(SHA256_PREFIX);
 }
 
-static int oci_load_set_chain_id(load_image_t *image)
+static int registry_layer_from_tarball(const load_layer_blob_t *layer, const char *id, const char *parent)
 {
-    char *parent_chain_id = "";
-    size_t i = 0;
+    int ret = 0;
 
-    for (; i < image->layers_len; i++) {
-        image->layers[i]->chain_id = oci_load_calc_chain_id(parent_chain_id, image->layers[i]->diff_id);
-        if (image->layers[i]->chain_id == NULL) {
-            ERROR("calc chain id failed, diff id %s, parent chain id %s", image->layers[i]->diff_id, parent_chain_id);
-            return -1;
-        }
-        parent_chain_id = image->layers[i]->chain_id;
+    if (layer == NULL || id == NULL) {
+        ERROR("Invalid input params");
+        return -1;
     }
 
-    return 0;
+    storage_layer_create_opts_t copts = {
+        .parent = parent,
+        .uncompress_digest = layer->diff_id,
+        .compressed_digest = layer->compressed_digest,
+        .writable = false,
+        .layer_data_path = layer->fpath,
+    };
+
+    if (storage_layer_create(id, &copts) != 0) {
+        ERROR("create layer %s failed, parent %s, file %s", id, parent, layer->fpath);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
 }
 
 static int oci_load_register_layers(load_image_t *desc)
@@ -335,18 +345,18 @@ static int oci_load_register_layers(load_image_t *desc)
             goto out;
         }
 
-        storage_layer_create_opts_t copts = {
-            .parent = parent,
-            .uncompress_digest = desc->layers[i]->diff_id,
-            .compressed_digest = desc->layers[i]->compressed_digest,
-            .writable = false,
-            .layer_data_path = desc->layers[i]->fpath,
-        };
-        ret = storage_layer_create(id, &copts);
-        if (ret != 0) {
-            ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i]->fpath);
+        if (desc->layers[i]->alread_exist) {
+            DEBUG("Layer:%s is already exist in storage, no need to registry", desc->layers[i]->fpath);
+            parent = id;
+            continue;
+        }
+
+        if (registry_layer_from_tarball(desc->layers[i], id, parent) != 0) {
+            ERROR("Registry layer:%s from local tarball failed", desc->layers[i]->fpath);
+            ret = -1;
             goto out;
         }
+
         free(desc->layer_of_hold_refs);
         desc->layer_of_hold_refs = util_strdup_s(id);
         if (parent != NULL && storage_dec_hold_refs(parent) != 0) {
@@ -617,12 +627,62 @@ out:
     return ret;
 }
 
+static int check_and_set_digest_from_tarball(load_layer_blob_t *layer, const char *conf_diff_id)
+{
+    int ret = 0;
+    bool gzip = false;
+
+    if (layer == NULL || conf_diff_id == NULL) {
+        ERROR("Invalid input param");
+        return -1;
+    }
+
+    if (!util_file_exists(layer->fpath)) {
+        ERROR("Layer data file:%s is not exist", layer->fpath);
+        isulad_try_set_error_message("%s no such file", layer->fpath);
+        ret = -1;
+        goto out;
+    }
+
+    layer->alread_exist = false;
+    layer->diff_id = oci_calc_diffid(layer->fpath);
+    if (layer->diff_id == NULL) {
+        ERROR("Calc layer:%s diff id failed", layer->fpath);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_gzip_compressed(layer->fpath, &gzip) != 0) {
+        ERROR("Judge layer file gzip attr err");
+        ret = -1;
+        goto out;
+    }
+
+    layer->compressed_digest = gzip ? sha256_full_file_digest(layer->fpath) : util_strdup_s(layer->diff_id);
+    if (layer->compressed_digest == NULL) {
+        ERROR("Calc layer %s compressed digest failed", layer->fpath);
+        ret = -1;
+        goto out;
+    }
+
+    if (strcmp(layer->diff_id, conf_diff_id) != 0) {
+        ERROR("invalid diff id for layer:%s: expected %s, got %s", layer->chain_id, conf_diff_id, layer->diff_id);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items_element *manifest, const char *dstdir)
 {
     int ret = 0;
     size_t i = 0;
-    bool gzip = false;
-    char *layer_fpath = NULL;
+    oci_image_spec *conf = NULL;
+    char *parent_chain_id_sha256 = "";
+    char *id = NULL;
+    char *parent_chain_id = NULL;
 
     if (im == NULL || manifest == NULL || dstdir == NULL) {
         ERROR("Invalid input params image or manifest is null");
@@ -632,12 +692,25 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
     im->layers_len = manifest->layers_len;
     im->layers = util_common_calloc_s(sizeof(load_layer_blob_t *) * manifest->layers_len);
     if (im->layers == NULL) {
-        ret = -1;
         ERROR("Calloc memory failed");
+        ret = -1;
         goto out;
     }
 
-    for (; i < im->layers_len; i++) {
+    conf = load_image_config(im->config_fpath);
+    if (conf == NULL || conf->rootfs == NULL) {
+        ERROR("Load image config file %s failed", im->config_fpath);
+        ret = -1;
+        goto out;
+    }
+
+    if (conf->rootfs->diff_ids_len != im->layers_len) {
+        ERROR("Invalid manifest, layers length mismatch: expected %zu, got %zu", im->layers_len, conf->rootfs->diff_ids_len);
+        ret = -1;
+        goto out;
+    }
+
+    for (; i < conf->rootfs->diff_ids_len; i++) {
         im->layers[i] = util_common_calloc_s(sizeof(load_layer_blob_t));
         if (im->layers[i] == NULL) {
             ERROR("Out of memory");
@@ -645,47 +718,57 @@ static int oci_load_set_layers_info(load_image_t *im, const image_manifest_items
             goto out;
         }
 
-        layer_fpath = util_path_join(dstdir, manifest->layers[i]);
-        if (layer_fpath == NULL) {
+        im->layers[i]->fpath = util_path_join(dstdir, manifest->layers[i]);
+        if (im->layers[i]->fpath == NULL) {
             ERROR("Path join failed");
             ret = -1;
             goto out;
         }
+        // The format is sha256:xxx
+        im->layers[i]->chain_id = oci_load_calc_chain_id(parent_chain_id_sha256, conf->rootfs->diff_ids[i]);
+        if (im->layers[i]->chain_id == NULL) {
+            ERROR("calc chain id failed, diff id %s, parent chain id %s", conf->rootfs->diff_ids[i], parent_chain_id_sha256);
+            ret = -1;
+            goto out;
+        }
+        parent_chain_id_sha256 = im->layers[i]->chain_id;
 
-        if (util_gzip_compressed(layer_fpath, &gzip) != 0) {
-            ERROR("Judge layer file gzip attribute err");
+        id = oci_load_without_sha256_prefix(im->layers[i]->chain_id);
+        if (id == NULL) {
+            ERROR("Wipe out sha256 prefix failed from layer with chain id : %s", im->layers[i]->chain_id);
             ret = -1;
             goto out;
         }
 
-        im->layers[i]->diff_id = oci_calc_diffid(layer_fpath);
-        if (im->layers[i]->diff_id == NULL) {
-            ret = -1;
-            ERROR("Calc layer %s uncompressed digest failed", manifest->layers[i]);
-            goto out;
+        if (storage_inc_hold_refs(id) == 0) {
+            free(im->layer_of_hold_refs);
+            im->layer_of_hold_refs = util_strdup_s(id);
+            if (parent_chain_id != NULL && storage_dec_hold_refs(parent_chain_id) != 0) {
+                ERROR("Decrease hold refs failed for layer with chain id:%s", parent_chain_id);
+                ret = -1;
+                goto out;
+            }
+
+            im->layers[i]->diff_id = util_strdup_s(conf->rootfs->diff_ids[i]);
+            if (im->layers[i]->diff_id == NULL) {
+                ERROR("Dup layer diff id:%s from conf failed", conf->rootfs->diff_ids[i]);
+                ret = -1;
+                goto out;
+            }
+            im->layers[i]->alread_exist = true;
+            parent_chain_id = id;
+            continue;
         }
 
-        im->layers[i]->compressed_digest = gzip ? sha256_full_file_digest(layer_fpath) :
-                                           util_strdup_s(im->layers[i]->diff_id);
-        if (im->layers[i]->compressed_digest == NULL) {
+        if (check_and_set_digest_from_tarball(im->layers[i], conf->rootfs->diff_ids[i]) != 0) {
+            ERROR("Check layer digest failed");
             ret = -1;
-            ERROR("Calc layer %s compressed digest failed", manifest->layers[i]);
             goto out;
         }
-
-        im->layers[i]->fpath = util_strdup_s(layer_fpath);
-        if (im->layers[i]->fpath == NULL) {
-            ret = -1;
-            ERROR("Image layer data file path is NULL");
-            goto out;
-        }
-        UTIL_FREE_AND_SET_NULL(layer_fpath);
     }
 
 out:
-    if (layer_fpath != NULL) {
-        free(layer_fpath);
-    }
+    free_oci_image_spec(conf);
     return ret;
 }
 
@@ -737,11 +820,6 @@ static load_image_t *oci_load_process_manifest(const image_manifest_items_elemen
         goto out;
     }
 
-    if (oci_load_set_chain_id(im) != 0) {
-        ret = -1;
-        ERROR("Calc image chain id failed");
-    }
-
 out:
     free(config_fpath);
     free(image_digest);
@@ -750,6 +828,38 @@ out:
         return NULL;
     }
     return im;
+}
+
+static int64_t get_layer_size_from_storage(char *chain_id_pre)
+{
+    char *id = NULL;
+    struct layer *l = NULL;
+    int64_t size = 0;
+
+    if (chain_id_pre == NULL) {
+        ERROR("Invalid input param");
+        return -1;
+    }
+
+    id = oci_load_without_sha256_prefix(chain_id_pre);
+    if (id == NULL) {
+        ERROR("Get chain id failed from value:%s", chain_id_pre);
+        size = -1;
+        goto out;
+    }
+
+    l = storage_layer_get(id);
+    if (l == NULL) {
+        ERROR("Layer with chain id:%s is not exist in store", id);
+        size = -1;
+        goto out;
+    }
+
+    size = l->compress_size;
+
+out:
+    free_layer(l);
+    return size;
 }
 
 static int oci_load_set_manifest_info(load_image_t *im)
@@ -805,14 +915,24 @@ static int oci_load_set_manifest_info(load_image_t *im)
             ERROR("Out of memory");
             goto out;
         }
+
         im->manifest->layers[i]->media_type = util_strdup_s(MediaTypeDockerSchema2LayerGzip);
         im->manifest->layers[i]->digest = util_strdup_s(im->layers[i]->diff_id);
 
-        size = util_file_size(im->layers[i]->fpath);
-        if (size < 0) {
-            ERROR("Calc image layer %s size error", im->layers[i]->fpath);
-            ret = -1;
-            goto out;
+        if (im->layers[i]->alread_exist) {
+            size = get_layer_size_from_storage(im->layers[i]->chain_id);
+            if (size < 0) {
+                ERROR("Get image layer:%s size error from local store", im->layers[i]->chain_id);
+                ret = -1;
+                goto out;
+            }
+        } else {
+            size = util_file_size(im->layers[i]->fpath);
+            if (size < 0) {
+                ERROR("Calc image layer %s size error", im->layers[i]->fpath);
+                ret = -1;
+                goto out;
+            }
         }
         im->manifest->layers[i]->size = size;
     }
@@ -822,38 +942,6 @@ out:
         free_oci_image_manifest(im->manifest);
         im->manifest = NULL;
     }
-    return ret;
-}
-
-static int oci_load_check_image_layers(load_image_t *im)
-{
-    int ret = 0;
-    size_t i = 0;
-    oci_image_spec *conf = NULL;
-
-    conf = load_image_config(im->config_fpath);
-    if (conf == NULL || conf->rootfs == NULL) {
-        ERROR("Load image config file %s failed", im->config_fpath);
-        ret = -1;
-        goto out;
-    }
-
-    if (conf->rootfs->diff_ids_len != im->layers_len) {
-        ret = -1;
-        ERROR("Config file layer numbers are not equal to with image layer numbers");
-        goto out;
-    }
-
-    for (; i < im->layers_len; i++) {
-        if (strcmp(im->layers[i]->diff_id, conf->rootfs->diff_ids[i]) != 0) {
-            ERROR("Layer diff id %s check err", im->layers[i]->diff_id);
-            ret = -1;
-            goto out;
-        }
-    }
-
-out:
-    free_oci_image_spec(conf);
     return ret;
 }
 
@@ -1008,14 +1096,6 @@ int oci_do_load(const im_load_request *request)
 
         if (oci_load_set_manifest_info(im) != 0) {
             ERROR("Image %s set manifest info err", im->im_id);
-            isulad_try_set_error_message("Image %s set manifest info err", im->im_id);
-            ret = -1;
-            goto out;
-        }
-
-        if (oci_load_check_image_layers(im) != 0) {
-            ERROR("Image %s check err", im->im_id);
-            isulad_try_set_error_message("Image %s check err", im->im_id);
             ret = -1;
             goto out;
         }

@@ -33,8 +33,11 @@ typedef struct {
     char *diff_id;
     // compressed digest
     char *compressed_digest;
+    // with "sha256:" prefix
     char *chain_id;
     char *fpath;
+    // layer already exist in storage
+    bool alread_exist;
 } load_layer_blob_t;
 
 typedef struct {
