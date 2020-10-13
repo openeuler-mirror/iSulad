@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +106,8 @@ int parse_cidr(const char *cidr_str, struct ipnet **ipnet_val);
 char *ipnet_to_string(const struct ipnet *value);
 
 char *ip_to_string(const uint8_t *ip, size_t len);
+
+bool net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const size_t ip_len, bool critical);
 
 #ifdef __cplusplus
 }

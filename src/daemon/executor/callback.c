@@ -22,6 +22,7 @@
 #ifdef ENABLE_METRICS
 #include "metrics_cb.h"
 #endif
+#include "network_cb.h"
 
 service_executor_t g_isulad_service_executor;
 
@@ -163,6 +164,7 @@ int service_callback_init(void)
 #ifdef ENABLE_METRICS
     metrics_callback_init(&g_isulad_service_executor.metrics);
 #endif
+    network_callback_init(&g_isulad_service_executor.network);
     return 0;
 }
 

@@ -17,6 +17,8 @@
 
 #include <stdbool.h>
 
+#define CNI_VALID_NAME_CHARS "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
+
 bool clibcni_util_validate_name(const char *name);
 
 bool clibcni_util_validate_id(const char *id);
