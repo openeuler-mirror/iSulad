@@ -55,6 +55,7 @@
 #include "remove.h"
 #include "prune.h"
 #include "list.h"
+#include "network.h"
 
 // The list of our supported commands
 struct command g_commands[] = {
@@ -200,7 +201,11 @@ struct command g_commands[] = {
         "volume", true, cmd_volume_main, g_cmd_volume_desc, NULL, NULL
     },
 #endif
-    { NULL, false, NULL, NULL, NULL, NULL } // End of the list
+    {
+        // `network` sub-command
+        "network", cmd_network_main, g_cmd_network_desc, NULL, NULL
+    },
+    { NULL, NULL, NULL, NULL, NULL } // End of the list
 };
 
 static int set_locale()

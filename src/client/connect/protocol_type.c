@@ -1385,3 +1385,150 @@ void isula_prune_volume_response_free(struct isula_prune_volume_response *respon
     free(response);
     return;
 }
+
+/* isula network create request free */
+void isula_network_create_request_free(struct isula_network_create_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name);
+    request->name = NULL;
+    free(request->driver);
+    request->driver = NULL;
+    free(request->gateway);
+    request->gateway = NULL;
+    free(request->subnet);
+    request->subnet = NULL;
+
+    free(request);
+}
+
+/* isula network create response free */
+void isula_network_create_response_free(struct isula_network_create_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->path);
+    response->path = NULL;
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+}
+
+/* isula network inspect request free */
+void isula_network_inspect_request_free(struct isula_network_inspect_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name);
+    request->name = NULL;
+
+    free(request);
+}
+
+/* isula network inspect response free */
+void isula_network_inspect_response_free(struct isula_network_inspect_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->json);
+    response->json = NULL;
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+}
+
+/* isula network list request free */
+void isula_network_list_request_free(struct isula_network_list_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    isula_filters_free(request->filters);
+    request->filters = NULL;
+
+    free(request);
+}
+
+/* isula network info free */
+static void isula_network_info_free(struct isula_network_info *info)
+{
+
+    if (info == NULL) {
+        return ;
+    }
+
+    free(info->name);
+    info->name = NULL;
+    free(info->version);
+    info->version = NULL;
+    util_free_array_by_len(info->plugins, info->plugin_num);
+    info->plugins = NULL;
+
+    free(info);
+}
+
+/* isula network list response free */
+void isula_network_list_response_free(struct isula_network_list_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    if (response->network_info != NULL) {
+        size_t i = 0;
+
+        for (i = 0; i < response->network_num; i++) {
+            isula_network_info_free(response->network_info[i]);
+            response->network_info[i] = NULL;
+        }
+        free(response->network_info);
+        response->network_info = NULL;
+    }
+
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+}
+
+/* isula network remove request free */
+void isula_network_remove_request_free(struct isula_network_remove_request *request)
+{
+    if (request == NULL) {
+        return;
+    }
+
+    free(request->name);
+    request->name = NULL;
+
+    free(request);
+}
+
+/* isula network remove response free */
+void isula_network_remove_response_free(struct isula_network_remove_response *response)
+{
+    if (response == NULL) {
+        return;
+    }
+
+    free(response->name);
+    response->name = NULL;
+    util_free_array_by_len(response->containers, response->container_num);
+    response->containers = NULL;
+    free(response->errmsg);
+    response->errmsg = NULL;
+
+    free(response);
+}

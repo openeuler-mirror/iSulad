@@ -216,6 +216,18 @@ struct custom_configs {
 
     /* Signal to stop a container */
     char *stop_signal;
+
+    /* network driver */
+    char *driver;
+
+    /* network gateway */
+    char *gateway;
+
+    /* network internal */
+    bool internal;
+
+    /* network subnet */
+    char *subnet;
 };
 
 struct args_cgroup_resources {
@@ -356,6 +368,9 @@ struct client_arguments {
 
     do_resize_call_back_t resize_cb;
     struct winsize s_pre_wsz;
+
+    // network
+    char *network_name;
 };
 
 #define LOG_OPTIONS(log) { CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL },
