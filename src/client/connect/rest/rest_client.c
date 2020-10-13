@@ -15,6 +15,7 @@
 #include "rest_client.h"
 #include "rest_containers_client.h"
 #include "rest_images_client.h"
+#include "rest_network_client.h"
 
 int rest_ops_init(isula_connect_ops *ops)
 {
@@ -27,6 +28,9 @@ int rest_ops_init(isula_connect_ops *ops)
         return -1;
     }
     if (rest_images_client_ops_init(ops) != 0) {
+        return -1;
+    }
+    if (rest_network_client_ops_init(ops) != 0) {
         return -1;
     }
 
