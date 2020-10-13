@@ -8,36 +8,24 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: lifeng
- * Create: 2018-11-08
- * Description: provide grpc ops functions
+ * Author: zhangxiaoyu
+ * Create: 2020-09-07
+ * Description: provide grpc network client definition
  ******************************************************************************/
+#ifndef CLIENT_CONNECT_GRPC_GRPC_NETWORK_CLIENT_H
+#define CLIENT_CONNECT_GRPC_GRPC_NETWORK_CLIENT_H
 
-#include "grpc_client.h"
-#include "grpc_containers_client.h"
-#include "grpc_images_client.h"
-#include "grpc_volumes_client.h"
-#include "grpc_network_client.h"
+#include "isula_connect.h"
 
-int grpc_ops_init(isula_connect_ops *ops)
-{
-    if (ops == nullptr) {
-        return -1;
-    }
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-    if (grpc_containers_client_ops_init(ops) != 0) {
-        return -1;
-    }
-    if (grpc_images_client_ops_init(ops) != 0) {
-        return -1;
-    }
-    if (grpc_volumes_client_ops_init(ops) != 0) {
-        return -1;
-    }
-    if (grpc_network_client_ops_init(ops)) {
-        return -1;
-    }
+int grpc_network_client_ops_init(isula_connect_ops *ops);
 
-    return 0;
+#ifdef __cplusplus
 }
+#endif
+
+#endif  // CLIENT_CONNECT_GRPC_GRPC_NETWORK_CLIENT_H
 
