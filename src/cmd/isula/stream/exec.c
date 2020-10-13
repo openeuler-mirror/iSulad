@@ -66,8 +66,8 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
 
     request->user = util_strdup_s(args->custom_conf.user);
 
-    if (dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv), (size_t *) & (request->argc)) !=
-        0) {
+    if (util_dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv),
+                                  (size_t *) & (request->argc)) != 0) {
         ERROR("Failed to dup args");
         ret = -1;
         goto out;
@@ -75,7 +75,7 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
 
     /* environment variables */
     for (i = 0; i < util_array_len((const char **)(args->extra_env)); i++) {
-        if (util_validate_env(args->extra_env[i], &new_env) != 0) {
+        if (util_valid_env(args->extra_env[i], &new_env) != 0) {
             ERROR("Invalid environment %s", args->extra_env[i]);
             ret = -1;
             goto out;

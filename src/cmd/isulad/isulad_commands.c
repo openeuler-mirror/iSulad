@@ -202,7 +202,7 @@ static int check_args_graph_path(struct service_arguments *args)
         ret = -1;
         goto out;
     }
-    if (cleanpath(args->json_confs->graph, dstpath, sizeof(dstpath)) == NULL) {
+    if (util_clean_path(args->json_confs->graph, dstpath, sizeof(dstpath)) == NULL) {
         ERROR("failed to get clean path");
         ret = -1;
         goto out;
@@ -225,7 +225,7 @@ static int check_args_state_path(struct service_arguments *args)
         ret = -1;
         goto out;
     }
-    if (cleanpath(args->json_confs->state, dstpath, sizeof(dstpath)) == NULL) {
+    if (util_clean_path(args->json_confs->state, dstpath, sizeof(dstpath)) == NULL) {
         ERROR("failed to get clean path");
         ret = -1;
         goto out;

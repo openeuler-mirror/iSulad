@@ -78,9 +78,9 @@ void free_pull_desc(pull_descriptor *desc)
     free(desc->tag);
     desc->tag = NULL;
 
-    free_sensitive_string(desc->username);
+    util_free_sensitive_string(desc->username);
     desc->username = NULL;
-    free_sensitive_string(desc->password);
+    util_free_sensitive_string(desc->password);
     desc->password = NULL;
     free(desc->auths_dir);
     desc->auths_dir = NULL;

@@ -225,7 +225,7 @@ bool util_valid_cap(const char *cap)
         cret = false;
         goto err_out;
     }
-    if (!strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
+    if (!util_strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
         cret = false;
         goto err_out;
     }
@@ -661,4 +661,81 @@ bool util_valid_device_cgroup_rule(const char *value)
     }
 
     return util_reg_match(patten, value) == 0;
+}
+
+int util_valid_env(const char *env, char **dst)
+{
+    int ret = 0;
+    char *value = NULL;
+
+    char **arr = util_string_split_multi(env, '=');
+    if (arr == NULL) {
+        ERROR("Failed to split env string");
+        return -1;
+    }
+    if (strlen(arr[0]) == 0) {
+        ERROR("Invalid environment variable: %s", env);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_array_len((const char **)arr) > 1) {
+        *dst = util_strdup_s(env);
+        goto out;
+    }
+
+    value = getenv(env);
+    if (value == NULL) {
+        *dst = NULL;
+        goto out;
+    } else {
+        int sret;
+        size_t len = strlen(env) + 1 + strlen(value) + 1;
+        *dst = (char *)util_common_calloc_s(len);
+        if (*dst == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        sret = snprintf(*dst, len, "%s=%s", env, value);
+        if (sret < 0 || (size_t)sret >= len) {
+            ERROR("Failed to compose env string");
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    util_free_array(arr);
+    return ret;
+}
+
+bool util_valid_sysctl(const char *sysctl_key)
+{
+    size_t i = 0;
+    size_t full_keys_len = 0;
+    size_t key_prefixes_len = 0;
+    const char *sysctl_full_keys[] = { "kernel.msgmax", "kernel.msgmnb", "kernel.msgmni", "kernel.sem",
+                                       "kernel.shmall", "kernel.shmmax", "kernel.shmmni", "kernel.shm_rmid_forced"
+                                     };
+    const char *sysctl_key_prefixes[] = { "net.", "fs.mqueue." };
+
+    if (sysctl_key == NULL) {
+        return false;
+    }
+
+    full_keys_len = sizeof(sysctl_full_keys) / sizeof(char *);
+    key_prefixes_len = sizeof(sysctl_key_prefixes) / sizeof(char *);
+
+    for (i = 0; i < full_keys_len; i++) {
+        if (strcmp(sysctl_full_keys[i], sysctl_key) == 0) {
+            return true;
+        }
+    }
+    for (i = 0; i < key_prefixes_len; i++) {
+        if (strncmp(sysctl_key_prefixes[i], sysctl_key, strlen(sysctl_key_prefixes[i])) == 0) {
+            return true;
+        }
+    }
+    return false;
 }

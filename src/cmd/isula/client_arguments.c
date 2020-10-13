@@ -148,8 +148,8 @@ void client_arguments_free(struct client_arguments *args)
         return;
     }
 
-    free_sensitive_string(args->username);
-    free_sensitive_string(args->password);
+    util_free_sensitive_string(args->username);
+    util_free_sensitive_string(args->password);
 
     free(args->name);
     args->name = NULL;

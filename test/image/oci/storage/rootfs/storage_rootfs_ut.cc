@@ -88,7 +88,7 @@ protected:
     {
         struct storage_module_init_options opts;
         std::string dir = GetDirectory() + "/data";
-        ASSERT_STRNE(cleanpath(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
+        ASSERT_STRNE(util_clean_path(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
 
         opts.storage_root = strdup(store_real_path);
         opts.driver_name = strdup("overlay");

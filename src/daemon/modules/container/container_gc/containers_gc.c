@@ -356,7 +356,7 @@ static void apply_restart_policy_after_gc(const char *id)
     exit_code = container_state_get_exitcode(cont->state);
 
     should_restart = restart_manager_should_restart(id, exit_code, cont->common_config->has_been_manually_stopped,
-                                                    time_seconds_since(started_at), &timeout);
+                                                    util_time_seconds_since(started_at), &timeout);
     free(started_at);
 
     if (should_restart) {
@@ -535,7 +535,7 @@ static void *gchandler(void *arg)
         do_gc_container(it);
 
 wait_continue:
-        usleep_nointerupt(100 * 1000); /* wait 100 millisecond to check next gc container */
+        util_usleep_nointerupt(100 * 1000); /* wait 100 millisecond to check next gc container */
     }
 error:
     return NULL;

@@ -224,9 +224,9 @@ static int set_http_get_options(const char *socket, char *request_body, size_t b
 
     options->input_len = body_len;
     raw_socket = socket;
-    unix_raw_socket = str_skip_str(raw_socket, "unix://");
+    unix_raw_socket = util_str_skip_str(raw_socket, "unix://");
     if (unix_raw_socket == NULL) {
-        ERROR("Failed to str_skip_str  raw_socket");
+        ERROR("Failed to util_str_skip_str  raw_socket");
         return -1;
     }
     options->unix_socket_path = util_strdup_s(unix_raw_socket);
@@ -291,4 +291,3 @@ void put_body(char *body)
 {
     free(body);
 }
-

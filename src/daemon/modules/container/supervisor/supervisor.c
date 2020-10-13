@@ -189,7 +189,7 @@ retry:
         }
 
         if (retry_count < max_retry) {
-            usleep_nointerupt(100 * 1000); /* 100 millisecond */
+            util_usleep_nointerupt(100 * 1000); /* 100 millisecond */
             retry_count++;
             goto retry;
         }

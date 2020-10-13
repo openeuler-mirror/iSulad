@@ -247,21 +247,21 @@ static int get_rebase_name(const char *path, const char *real_path,
         return -1;
     }
 
-    if (specify_current_dir(path) && !specify_current_dir(real_path)) {
+    if (util_specify_current_dir(path) && !util_specify_current_dir(real_path)) {
         set_char_to_separator(&resolved[strlen(resolved)]);
         resolved[strlen(resolved)] = '.';
     }
 
-    if (has_trailing_path_separator(path) && !has_trailing_path_separator(resolved)) {
+    if (util_has_trailing_path_separator(path) && !util_has_trailing_path_separator(resolved)) {
         resolved[strlen(resolved)] = '/';
     }
 
-    nret = split_dir_and_base_name(path, NULL, &path_base);
+    nret = util_split_dir_and_base_name(path, NULL, &path_base);
     if (nret != 0) {
         ERROR("split %s failed", path);
         goto cleanup;
     }
-    nret = split_dir_and_base_name(resolved, NULL, &resolved_base);
+    nret = util_split_dir_and_base_name(resolved, NULL, &resolved_base);
     if (nret != 0) {
         ERROR("split %s failed", resolved);
         goto cleanup;
@@ -309,7 +309,7 @@ int resolve_host_source_path(const char *path, bool follow_link,
             return -1;
         }
     } else {
-        nret = filepath_split(path, &dirpath, &basepath);
+        nret = util_filepath_split(path, &dirpath, &basepath);
         if (nret < 0) {
             ERROR("Can not split path %s", path);
             format_errorf(err, "Can not split path %s", path);
@@ -326,19 +326,19 @@ int resolve_host_source_path(const char *path, bool follow_link,
             goto cleanup;
         }
         *resolved_path = util_strdup_s(resolved);
-        nret = split_dir_and_base_name(path, NULL, &tmp_path_base);
+        nret = util_split_dir_and_base_name(path, NULL, &tmp_path_base);
         if (nret != 0) {
             ERROR("split %s failed", path);
             goto cleanup;
         }
 
-        nret = split_dir_and_base_name(resolved, NULL, &tmp_resolved_base);
+        nret = util_split_dir_and_base_name(resolved, NULL, &tmp_resolved_base);
         if (nret != 0) {
             ERROR("split %s failed", resolved);
             goto cleanup;
         }
 
-        if (has_trailing_path_separator(path) && strcmp(tmp_path_base, tmp_resolved_base) != 0) {
+        if (util_has_trailing_path_separator(path) && strcmp(tmp_path_base, tmp_resolved_base) != 0) {
             *rebase_name = tmp_path_base;
             tmp_path_base = NULL;
         }
@@ -413,7 +413,7 @@ static int copy_info_destination_path_ret(struct archive_copy_info *info,
         }
         // is not absolutely path
         if (target[0] != '\0') {
-            if (split_path_dir_entry(iter_path, &parent, NULL) < 0) {
+            if (util_split_path_dir_entry(iter_path, &parent, NULL) < 0) {
                 goto cleanup;
             }
             free(iter_path);
@@ -445,7 +445,7 @@ static int copy_info_destination_path_ret(struct archive_copy_info *info,
             goto cleanup;
         }
 
-        if (split_path_dir_entry(iter_path, &dst_parent, NULL) < 0) {
+        if (util_split_path_dir_entry(iter_path, &dst_parent, NULL) < 0) {
             goto cleanup;
         }
 
@@ -503,7 +503,7 @@ cleanup:
 
 static bool asserts_directory(const char *path)
 {
-    return has_trailing_path_separator(path) || specify_current_dir(path);
+    return util_has_trailing_path_separator(path) || util_specify_current_dir(path);
 }
 
 static char *format_transform_of_tar(const char *srcbase, const char *dstbase)
@@ -555,10 +555,10 @@ char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct
     char *srcbase = NULL;
     char *dstbase = NULL;
 
-    if (split_path_dir_entry(dstinfo->path, &dstdir, &dstbase) < 0) {
+    if (util_split_path_dir_entry(dstinfo->path, &dstdir, &dstbase) < 0) {
         goto cleanup;
     }
-    if (split_path_dir_entry(srcinfo->path, NULL, &srcbase) < 0) {
+    if (util_split_path_dir_entry(srcinfo->path, NULL, &srcbase) < 0) {
         goto cleanup;
     }
 
@@ -867,7 +867,7 @@ int tar_resource_rebase(const char *path, const char *rebase, struct io_read_wra
         format_errorf(err, "lstat %s: %s", path, strerror(errno));
         return -1;
     }
-    if (split_path_dir_entry(path, &srcdir, &srcbase) < 0) {
+    if (util_split_path_dir_entry(path, &srcdir, &srcbase) < 0) {
         ERROR("Can not split path: %s", path);
         goto cleanup;
     }

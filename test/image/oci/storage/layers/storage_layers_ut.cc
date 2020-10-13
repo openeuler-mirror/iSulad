@@ -158,13 +158,13 @@ protected:
         std::string run_dir = isulad_dir + "data/run";
         std::string data_dir = GetDirectory() + "/data";
 
-        ASSERT_STRNE(cleanpath(data_dir.c_str(), data_path, sizeof(data_path)), nullptr);
+        ASSERT_STRNE(util_clean_path(data_dir.c_str(), data_path, sizeof(data_path)), nullptr);
         std::string cp_command = "cp -r " + std::string(data_path) + " " + isulad_dir;
         ASSERT_EQ(system(cp_command.c_str()), 0);
 
-        ASSERT_STRNE(cleanpath(root_dir.c_str(), real_path, sizeof(real_path)), nullptr);
+        ASSERT_STRNE(util_clean_path(root_dir.c_str(), real_path, sizeof(real_path)), nullptr);
         opts.storage_root = strdup(real_path);
-        ASSERT_STRNE(cleanpath(run_dir.c_str(), real_run_path, sizeof(real_run_path)), nullptr);
+        ASSERT_STRNE(util_clean_path(run_dir.c_str(), real_run_path, sizeof(real_run_path)), nullptr);
         opts.storage_run_root = strdup(real_run_path);
         opts.driver_name = strdup("overlay");
 

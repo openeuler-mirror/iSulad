@@ -18,18 +18,18 @@
 
 #include "utils.h"
 
-char *connected_container(const char *mode)
+char *namespace_get_connected_container(const char *mode)
 {
     const char *p = mode != NULL ? (mode + strlen(SHARE_NAMESPACE_PREFIX)) : NULL;
 
-    if (is_container(mode)) {
+    if (namespace_is_container(mode)) {
         return util_strdup_s(p);
     }
 
     return NULL;
 }
 
-char *get_host_namespace_path(const char *type)
+char *namespace_get_host_namespace_path(const char *type)
 {
     if (type == NULL) {
         return NULL;

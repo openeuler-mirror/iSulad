@@ -46,7 +46,7 @@ static int write_hostname_to_file(const char *rootfs, const char *hostname)
         goto out;
     }
 
-    if (realpath_in_scope(rootfs, "/etc/hostname", &file_path) < 0) {
+    if (util_realpath_in_scope(rootfs, "/etc/hostname", &file_path) < 0) {
         SYSERROR("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
         isulad_set_error_message("Failed to get real path '/etc/hostname' under rootfs '%s'", rootfs);
         goto out;
@@ -76,7 +76,7 @@ out:
 
 static int fopen_network(FILE **fp, char **file_path, const char *rootfs, const char *filename)
 {
-    if (realpath_in_scope(rootfs, filename, file_path) < 0) {
+    if (util_realpath_in_scope(rootfs, filename, file_path) < 0) {
         SYSERROR("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         isulad_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         return -1;
@@ -674,7 +674,7 @@ static int chown_network(const char *user_remap, const char *rootfs, const char 
         ret = -1;
         goto out;
     }
-    if (realpath_in_scope(rootfs, filename, &file_path) < 0) {
+    if (util_realpath_in_scope(rootfs, filename, &file_path) < 0) {
         SYSERROR("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         isulad_set_error_message("Failed to get real path '%s' under rootfs '%s'", filename, rootfs);
         ret = -1;
@@ -1004,10 +1004,10 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
                                  container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
-    bool share_host = is_host(hc->network_mode);
+    bool share_host = namespace_is_host(hc->network_mode);
 
     // is container mode
-    if (is_container(hc->network_mode)) {
+    if (namespace_is_container(hc->network_mode)) {
         return init_container_network_confs_container(id, hc, v2_spec);
     }
 

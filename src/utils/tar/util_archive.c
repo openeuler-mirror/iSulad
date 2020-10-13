@@ -292,7 +292,7 @@ child_out:
         }
     }
 
-    ret = wait_for_pid(pid);
+    ret = util_wait_for_pid(pid);
     if (ret != 0) {
         ERROR("Wait archive_untar_handler failed");
     }
@@ -605,7 +605,7 @@ child_out:
         }
     }
 
-    ret = wait_for_pid(pid);
+    ret = util_wait_for_pid(pid);
     if (ret != 0) {
         ERROR("tar failed");
         fcntl(pipe_for_read[0], F_SETFL, O_NONBLOCK);

@@ -598,7 +598,7 @@ out:
 static int check_since_time(const types_timestamp_t *since, const struct isulad_events_format *event)
 {
     if (since != NULL && (since->has_seconds || since->has_nanos)) {
-        if (types_timestamp_cmp(&event->timestamp, since) < 0) {
+        if (util_types_timestamp_cmp(&event->timestamp, since) < 0) {
             return -1;
         }
     }
@@ -608,7 +608,7 @@ static int check_since_time(const types_timestamp_t *since, const struct isulad_
 static int check_util_time(const types_timestamp_t *until, const struct isulad_events_format *event)
 {
     if (until != NULL && (until->has_seconds || until->has_nanos)) {
-        if (types_timestamp_cmp(&event->timestamp, until) > 0) {
+        if (util_types_timestamp_cmp(&event->timestamp, until) > 0) {
             return -1;
         }
     }
@@ -684,7 +684,7 @@ int events_subscribe(const char *name, const types_timestamp_t *since, const typ
 
     if (since != NULL && (since->has_seconds || since->has_nanos) && until != NULL &&
         (until->has_seconds || until->has_nanos)) {
-        if (types_timestamp_cmp(since, until) > 0) {
+        if (util_types_timestamp_cmp(since, until) > 0) {
             ERROR("'since' time cannot be after 'until' time");
             return -1;
         }
@@ -717,7 +717,7 @@ static void events_forward(struct isulad_events_format *r)
         name = context_info->name;
 
         if (context_info->since != NULL) {
-            if (types_timestamp_cmp(&r->timestamp, context_info->since) < 0) {
+            if (util_types_timestamp_cmp(&r->timestamp, context_info->since) < 0) {
                 continue;
             }
         }
@@ -806,7 +806,7 @@ static void *event_should_exit(void *arg)
             t_now.has_nanos = true;
             t_now.nanos = (int32_t)ts_now.tv_nsec;
 
-            if (types_timestamp_cmp(&t_now, context_info->until) > 0) {
+            if (util_types_timestamp_cmp(&t_now, context_info->until) > 0) {
                 INFO("Finish response for RPC, client should exit");
                 linked_list_del(it);
                 sem_post(&context_info->context_sem);

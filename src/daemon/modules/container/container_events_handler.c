@@ -141,7 +141,7 @@ static int container_state_changed(container_t *cont, const struct isulad_events
 
             should_restart = restart_manager_should_restart(id, events->exit_status,
                                                             cont->common_config->has_been_manually_stopped,
-                                                            time_seconds_since(started_at), &timeout);
+                                                            util_time_seconds_since(started_at), &timeout);
             free(started_at);
             started_at = NULL;
 

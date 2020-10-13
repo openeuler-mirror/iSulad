@@ -428,7 +428,7 @@ static int do_diff_symlink(const char *id, char *link_id, const char *driver_hom
         goto out;
     }
 
-    if (cleanpath(link_path, clean_path, sizeof(clean_path)) == NULL) {
+    if (util_clean_path(link_path, clean_path, sizeof(clean_path)) == NULL) {
         ERROR("failed to get clean path %s", link_path);
         ret = -1;
         goto out;
@@ -977,7 +977,7 @@ int overlay2_rm_layer(const char *id, const struct graphdriver *driver)
             ret = -1;
             goto out;
         }
-        if (cleanpath(link_path, clean_path, sizeof(clean_path)) == NULL) {
+        if (util_clean_path(link_path, clean_path, sizeof(clean_path)) == NULL) {
             ERROR("failed to get clean path %s", link_path);
             ret = -1;
             goto out;
@@ -1973,7 +1973,7 @@ static int do_cal_layer_fs_info(const char *layer_diff, imagetool_fs_info *fs_in
         goto out;
     }
 
-    fs_usage_tmp->timestamp = get_now_time_nanos();
+    fs_usage_tmp->timestamp = util_get_now_time_nanos();
 
     fs_usage_tmp->fs_id = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_fs_id));
     if (fs_usage_tmp->fs_id == NULL) {

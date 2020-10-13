@@ -170,7 +170,7 @@ static int shim_json_data_write(log_terminal *terminal, const char *buf, int rea
     return (read_count - ret);
 }
 
-static bool get_time_buffer(struct timespec *timestamp, char *timebuffer, size_t maxsize)
+static bool util_get_time_buffer(struct timespec *timestamp, char *timebuffer, size_t maxsize)
 {
     struct tm tm_utc = { 0 };
     int32_t nanos = 0;
@@ -196,7 +196,7 @@ static bool get_time_buffer(struct timespec *timestamp, char *timebuffer, size_t
     return true;
 }
 
-static bool get_now_time_buffer(char *timebuffer, size_t maxsize)
+static bool util_get_now_time_buffer(char *timebuffer, size_t maxsize)
 {
     int err = 0;
     struct timespec ts;
@@ -206,7 +206,7 @@ static bool get_now_time_buffer(char *timebuffer, size_t maxsize)
         return false;
     }
 
-    return get_time_buffer(&ts, timebuffer, maxsize);
+    return util_get_time_buffer(&ts, timebuffer, maxsize);
 }
 
 static ssize_t shim_logger_write(log_terminal *terminal, const char *type, const char *buf, int read_count)
@@ -236,7 +236,7 @@ static ssize_t shim_logger_write(log_terminal *terminal, const char *type, const
     msg->log_len = read_count;
     msg->stream = type ? safe_strdup(type) : safe_strdup("stdout");
 
-    get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     msg->time = safe_strdup(timebuffer);
     json = logger_json_file_generate_json(msg, &ctx, &err);
     if (!json) {

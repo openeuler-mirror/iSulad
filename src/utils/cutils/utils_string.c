@@ -47,7 +47,7 @@ static struct unit_map_def const g_unit_map[] = {
 
 static size_t const g_unit_map_len = sizeof(g_unit_map) / sizeof(g_unit_map[0]);
 
-bool strings_contains_any(const char *str, const char *substr)
+bool util_strings_contains_any(const char *str, const char *substr)
 {
     size_t i = 0;
     size_t j;
@@ -71,7 +71,7 @@ bool strings_contains_any(const char *str, const char *substr)
     return false;
 }
 
-bool strings_contains_word(const char *str, const char *substr)
+bool util_strings_contains_word(const char *str, const char *substr)
 {
     if (str == NULL || substr == NULL) {
         return false;
@@ -83,7 +83,7 @@ bool strings_contains_word(const char *str, const char *substr)
     return false;
 }
 
-int strings_count(const char *str, unsigned char c)
+int util_strings_count(const char *str, unsigned char c)
 {
     size_t i = 0;
     int res = 0;
@@ -102,9 +102,9 @@ int strings_count(const char *str, unsigned char c)
     return res;
 }
 
-// strings_in_slice tests whether a string is contained in array of strings or not.
+// util_strings_in_slice tests whether a string is contained in array of strings or not.
 // Comparison is case insensitive
-bool strings_in_slice(const char **strarray, size_t alen, const char *str)
+bool util_strings_in_slice(const char **strarray, size_t alen, const char *str)
 {
     size_t i;
 
@@ -123,7 +123,7 @@ bool strings_in_slice(const char **strarray, size_t alen, const char *str)
 
 // Returns a string that is generated after converting
 // all uppercase characters in the str to lowercase.
-char *strings_to_lower(const char *str)
+char *util_strings_to_lower(const char *str)
 {
     char *newstr = NULL;
     char *pos = NULL;
@@ -145,7 +145,7 @@ char *strings_to_lower(const char *str)
 
 // Returns a string that is generated after converting
 // all lowercase characters in the str to uppercase.
-char *strings_to_upper(const char *str)
+char *util_strings_to_upper(const char *str)
 {
     char *newstr = NULL;
     char *pos = NULL;
@@ -461,7 +461,7 @@ err_out:
     return NULL;
 }
 
-const char *str_skip_str(const char *str, const char *skip)
+const char *util_str_skip_str(const char *str, const char *skip)
 {
     if (str == NULL || skip == NULL) {
         return NULL;
@@ -613,7 +613,7 @@ char *util_trim_quotation(char *str)
     return str;
 }
 
-char **str_array_dup(const char **src, size_t len)
+char **util_str_array_dup(const char **src, size_t len)
 {
     size_t i;
     char **dest = NULL;
@@ -710,7 +710,7 @@ char *util_string_append(const char *post, const char *pre)
     return res_string;
 }
 
-int dup_array_of_strings(const char **src, size_t src_len, char ***dst, size_t *dst_len)
+int util_dup_array_of_strings(const char **src, size_t src_len, char ***dst, size_t *dst_len)
 {
     size_t i;
 
@@ -884,21 +884,33 @@ out:
     return ret;
 }
 
-int util_parse_bool_string(const char *str, bool *converted)
+char *util_str_token(char **input, const char *delimiter)
 {
-    int ret = 0;
+    char *str = NULL;
+    char *delimiter_found = NULL;
+    char *tok = NULL;
+    size_t tok_length = 0;
 
-    if (str == NULL || converted == NULL) {
-        return -EINVAL;
+    if (input == NULL || delimiter == NULL) {
+        return NULL;
     }
 
-    if (strcasecmp(str, "true") == 0) {
-        *converted = true;
-    } else if (strcasecmp(str, "false") == 0) {
-        *converted = false;
+    str = *input;
+
+    if (str == NULL) {
+        return NULL;
+    }
+    delimiter_found = strstr(str, delimiter);
+    if (delimiter_found != NULL) {
+        tok_length = delimiter_found - str;
     } else {
-        ret = -EINVAL;
+        tok_length = strlen(str);
     }
-
-    return ret;
+    tok = strndup(str, tok_length);
+    if (tok == NULL) {
+        ERROR("strndup failed");
+        return NULL;
+    }
+    *input = delimiter_found != NULL ? delimiter_found + strlen(delimiter) : NULL;
+    return tok;
 }

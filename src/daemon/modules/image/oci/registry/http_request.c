@@ -431,7 +431,7 @@ static int setup_common_options(pull_descriptor *desc, struct http_get_options *
     }
 
     if (custom_headers != NULL) {
-        options->custom_headers = str_array_dup(custom_headers, util_array_len(custom_headers));
+        options->custom_headers = util_str_array_dup(custom_headers, util_array_len(custom_headers));
         if (options->custom_headers == NULL) {
             ERROR("dup headers failed");
             ret = -1;

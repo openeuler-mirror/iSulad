@@ -249,7 +249,7 @@ static bool validate_layer_path_in_host(size_t layer_index, const char *location
             UTIL_FREE_AND_SET_NULL(tmp_path);
             return false;
         }
-        tmp_path = follow_symlink_in_scope(abs_path, parent_location);
+        tmp_path = util_follow_symlink_in_scope(abs_path, parent_location);
         if (tmp_path == NULL || !strncmp(tmp_path, "..", 2)) {
             ERROR("invalid layer path %s", path_in_host);
             isulad_try_set_error_message("Invalid content in manifest: layer not exists");

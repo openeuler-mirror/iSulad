@@ -341,7 +341,7 @@ static int convert_common_config_info(const map_t *map_labels, const container_c
 
     dup_id_name(common_config, isuladinfo);
     args_err = (common_config->created != NULL &&
-                to_unix_nanos_from_str(common_config->created, &isuladinfo->created) != 0);
+                util_to_unix_nanos_from_str(common_config->created, &isuladinfo->created) != 0);
     if (args_err) {
         ret = -1;
         goto out;
@@ -439,7 +439,7 @@ static int fill_isuladinfo(container_container *isuladinfo, const container_conf
 
     isuladinfo->health_state = container_get_health_state(cont_state);
     if (cont->common_config->created != NULL) {
-        ret = to_unix_nanos_from_str(cont->common_config->created, &created_nanos);
+        ret = util_to_unix_nanos_from_str(cont->common_config->created, &created_nanos);
         if (ret != 0) {
             goto out;
         }

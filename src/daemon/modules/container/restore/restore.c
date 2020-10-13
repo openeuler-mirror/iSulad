@@ -348,7 +348,7 @@ static void restored_restart_container(container_t *cont)
 
     started_at = container_state_get_started_at(cont->state);
     if (restart_manager_should_restart(id, container_state_get_exitcode(cont->state),
-                                       cont->common_config->has_been_manually_stopped, time_seconds_since(started_at),
+                                       cont->common_config->has_been_manually_stopped, util_time_seconds_since(started_at),
                                        &timeout)) {
         cont->common_config->restart_count++;
         INFO("Restart container %s after 5 second", id);

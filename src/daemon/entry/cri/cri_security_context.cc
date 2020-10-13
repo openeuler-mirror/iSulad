@@ -19,8 +19,7 @@
 #include <memory>
 
 namespace CRISecurity {
-static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc,
-                                  container_config *config)
+static void ModifyContainerConfig(const runtime::v1alpha2::LinuxContainerSecurityContext &sc, container_config *config)
 {
     if (sc.has_run_as_user()) {
         free(config->user);
@@ -89,7 +88,7 @@ static void ModifyHostConfigNoNewPrivs(const runtime::v1alpha2::LinuxContainerSe
 
     size_t oldSize = hostConfig->security_opt_len * sizeof(char *);
     size_t newSize = oldSize + sizeof(char *);
-    int ret = mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostConfig->security_opt, oldSize);
+    int ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostConfig->security_opt, oldSize);
     if (ret != 0) {
         error.Errorf("Out of memory");
         return;

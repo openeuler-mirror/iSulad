@@ -80,8 +80,8 @@ cleanup:
 
 static int pack_host_config_ns_change_files(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    if (dup_array_of_strings((const char **)srcconfig->ns_change_files, srcconfig->ns_change_files_len,
-                             &dstconfig->ns_change_files, &dstconfig->ns_change_files_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->ns_change_files, srcconfig->ns_change_files_len,
+                                  &dstconfig->ns_change_files, &dstconfig->ns_change_files_len) != 0) {
         COMMAND_ERROR("Failed to dup ns change files");
         return -1;
     }
@@ -95,8 +95,8 @@ static int pack_host_config_cap_add(host_config *dstconfig, const isula_host_con
     size_t i = 0;
 
     /* cap-add */
-    if (dup_array_of_strings((const char **)srcconfig->cap_add, srcconfig->cap_add_len, &dstconfig->cap_add,
-                             &dstconfig->cap_add_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->cap_add, srcconfig->cap_add_len, &dstconfig->cap_add,
+                                  &dstconfig->cap_add_len) != 0) {
         COMMAND_ERROR("Failed to dup cap add");
         return -1;
     }
@@ -123,8 +123,8 @@ static int pack_host_config_cap_drop(host_config *dstconfig, const isula_host_co
     size_t i = 0;
 
     /* cap-drops */
-    if (dup_array_of_strings((const char **)srcconfig->cap_drop, srcconfig->cap_drop_len, &dstconfig->cap_drop,
-                             &dstconfig->cap_drop_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->cap_drop, srcconfig->cap_drop_len, &dstconfig->cap_drop,
+                                  &dstconfig->cap_drop_len) != 0) {
         COMMAND_ERROR("Failed to dup cap drop");
         return -1;
     }
@@ -169,8 +169,8 @@ out:
 static int pack_host_network_extra_hosts(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     /* extra hosts */
-    if (dup_array_of_strings((const char **)srcconfig->extra_hosts, srcconfig->extra_hosts_len, &dstconfig->extra_hosts,
-                             &dstconfig->extra_hosts_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->extra_hosts, srcconfig->extra_hosts_len,
+                                  &dstconfig->extra_hosts, &dstconfig->extra_hosts_len) != 0) {
         COMMAND_ERROR("Failed to dup extra hosts");
         return -1;
     }
@@ -180,20 +180,20 @@ static int pack_host_network_extra_hosts(host_config *dstconfig, const isula_hos
 
 static int pack_host_network_dns(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    if (dup_array_of_strings((const char **)srcconfig->dns, srcconfig->dns_len, &dstconfig->dns, &dstconfig->dns_len) !=
-        0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->dns, srcconfig->dns_len, &dstconfig->dns,
+                                  &dstconfig->dns_len) != 0) {
         COMMAND_ERROR("Failed to dup dns");
         return -1;
     }
 
-    if (dup_array_of_strings((const char **)srcconfig->dns_options, srcconfig->dns_options_len, &dstconfig->dns_options,
-                             &dstconfig->dns_options_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->dns_options, srcconfig->dns_options_len,
+                                  &dstconfig->dns_options, &dstconfig->dns_options_len) != 0) {
         COMMAND_ERROR("Failed to dup dns options");
         return -1;
     }
 
-    if (dup_array_of_strings((const char **)srcconfig->dns_search, srcconfig->dns_search_len, &dstconfig->dns_search,
-                             &dstconfig->dns_search_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->dns_search, srcconfig->dns_search_len,
+                                  &dstconfig->dns_search, &dstconfig->dns_search_len) != 0) {
         COMMAND_ERROR("Failed to dup dns search");
         return -1;
     }
@@ -791,7 +791,7 @@ static bool parse_host_path(const char *input, const char *token, host_config_ho
         COMMAND_ERROR("Host channel host path should be absolute: %s", token);
         return false;
     }
-    if (cleanpath(token, real_path, sizeof(real_path)) == NULL) {
+    if (util_clean_path(token, real_path, sizeof(real_path)) == NULL) {
         ERROR("Failed to clean path: '%s'", token);
         return false;
     }
@@ -815,7 +815,7 @@ static bool parse_container_path(const char *input, const char *token, host_conf
         COMMAND_ERROR("Host channel container path should be absolute: %s", token);
         return false;
     }
-    if (cleanpath(token, real_path, sizeof(real_path)) == NULL) {
+    if (util_clean_path(token, real_path, sizeof(real_path)) == NULL) {
         ERROR("Failed to clean path: '%s'", token);
         return false;
     }
@@ -1364,8 +1364,8 @@ out:
 
 int generate_binds(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    if (dup_array_of_strings((const char **)srcconfig->binds, srcconfig->binds_len, &dstconfig->binds,
-                             &dstconfig->binds_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->binds, srcconfig->binds_len, &dstconfig->binds,
+                                  &dstconfig->binds_len) != 0) {
         COMMAND_ERROR("Failed to dup binds");
         return -1;
     }
@@ -1375,8 +1375,8 @@ int generate_binds(host_config *dstconfig, const isula_host_config_t *srcconfig)
 
 int generate_device_cgroup_rules(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    if (dup_array_of_strings((const char **)srcconfig->device_cgroup_rules, srcconfig->device_cgroup_rules_len,
-                             &dstconfig->device_cgroup_rules, &dstconfig->device_cgroup_rules_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->device_cgroup_rules, srcconfig->device_cgroup_rules_len,
+                                  &dstconfig->device_cgroup_rules, &dstconfig->device_cgroup_rules_len) != 0) {
         COMMAND_ERROR("Failed to dup device cgroup rules");
         return -1;
     }
@@ -1386,8 +1386,8 @@ int generate_device_cgroup_rules(host_config *dstconfig, const isula_host_config
 
 int generate_groups(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
-    if (dup_array_of_strings((const char **)srcconfig->group_add, srcconfig->group_add_len, &dstconfig->group_add,
-                             &dstconfig->group_add_len) != 0) {
+    if (util_dup_array_of_strings((const char **)srcconfig->group_add, srcconfig->group_add_len, &dstconfig->group_add,
+                                  &dstconfig->group_add_len) != 0) {
         COMMAND_ERROR("Failed to dup device group add");
         return -1;
     }

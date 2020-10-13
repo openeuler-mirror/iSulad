@@ -955,7 +955,7 @@ static int init_log_gather_thread(const char *log_full_path, struct isula_libuti
         return -1;
     }
     while (1) {
-        usleep_nointerupt(1000);
+        util_usleep_nointerupt(1000);
         if (log_gather_exitcode >= 0) {
             break;
         }

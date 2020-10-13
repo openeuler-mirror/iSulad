@@ -155,7 +155,7 @@ static void get_err_message(char *buf, int buf_size, const char *workdir, const 
         if (pline == NULL) {
             break;
         }
-        if (strings_contains_word(pline, "error")) {
+        if (util_strings_contains_word(pline, "error")) {
             if (lines[0] == NULL) {
                 lines[0] = pline;
                 pline = NULL;
@@ -714,7 +714,7 @@ realexec:
         goto out;
     }
 
-    status = wait_for_pid_status(pid);
+    status = util_wait_for_pid_status(pid);
     if (status < 0) {
         ERROR("failed wait shim-parent %d exit %s", pid, strerror(errno));
         ret = -1;
@@ -763,7 +763,7 @@ static int get_container_process_pid(const char *workdir)
         file_read_int(fname, &pid);
         if (!pid) {
             if (shim_alive(workdir)) {
-                usleep_nointerupt(100000);
+                util_usleep_nointerupt(100000);
                 continue;
             }
             ERROR("failed read pid from dead shim %s", workdir);

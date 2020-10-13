@@ -30,6 +30,7 @@
 #include "utils_convert.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "utils_timestamp.h"
 
 void command_help_isulad_head()
 {
@@ -329,7 +330,7 @@ static int command_parse_long_arg(command_t *self, const char *arg)
             continue;
         }
 
-        opt_arg = str_skip_str(arg, opt->large);
+        opt_arg = util_str_skip_str(arg, opt->large);
         if (opt_arg == NULL) {
             continue;
         }
@@ -502,7 +503,7 @@ int command_convert_nanoseconds(command_option_t *option, const char *arg)
     if (option == NULL) {
         return -1;
     }
-    if (util_parse_time_str_to_nanoseconds(arg, option->data)) {
+    if (util_time_str_to_nanoseconds(arg, option->data)) {
         COMMAND_ERROR("Invalid value \"%s\" for flag --%s", arg, option->large);
         return EINVALIDARGS;
     }

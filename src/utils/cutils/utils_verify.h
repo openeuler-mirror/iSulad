@@ -25,6 +25,15 @@
 extern "C" {
 #endif
 
+#define HOST_NAME_REGEXP                                         \
+    "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*" \
+    "([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
+#define __TagPattern "^:([A-Za-z_0-9][A-Za-z_0-9.-]{0,127})$"
+#define __NamePattern                                                                 \
+    "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])"                             \
+    "((\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))+)?(:[0-9]+)?/)?[a-z0-9]" \
+    "+((([._]|__|[-]*)[a-z0-9]+)+)?((/[a-z0-9]+((([._]|__|[-]*)[a-z0-9]+)+)?)+)?$"
+
 extern const char *g_all_caps[];
 
 bool util_valid_cmd_arg(const char *arg);
@@ -102,6 +111,10 @@ bool util_valid_exec_suffix(const char *suffix);
 bool util_valid_positive_interger(const char *value);
 
 bool util_valid_device_cgroup_rule(const char *value);
+
+int util_valid_env(const char *env, char **dst);
+
+bool util_valid_sysctl(const char *sysctl_key);
 
 #ifdef __cplusplus
 }

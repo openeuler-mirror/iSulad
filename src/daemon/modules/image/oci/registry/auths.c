@@ -35,12 +35,12 @@
 #include "utils_file.h"
 #include "utils_string.h"
 
-static char *g_auth_path = DEFAULT_AUTH_DIR"/"AUTH_FILE_NAME ;
+static char *g_auth_path = DEFAULT_AUTH_DIR "/" AUTH_FILE_NAME;
 
 void auths_set_dir(char *auth_dir)
 {
     int sret = 0;
-    char path[PATH_MAX] = {0};
+    char path[PATH_MAX] = { 0 };
 
     if (auth_dir == NULL) {
         return;
@@ -109,9 +109,9 @@ static int decode_auth_aes(char *encoded, char **username, char **password)
     (void)memset(auth_parts[1], 0, strlen(auth_parts[1]));
 
 out:
-    free_sensitive_string((char *)auth);
+    util_free_sensitive_string((char *)auth);
     auth = NULL;
-    free_sensitive_string((char *)decoded);
+    util_free_sensitive_string((char *)decoded);
     decoded = NULL;
     util_free_array(auth_parts);
     auth_parts = NULL;
@@ -164,12 +164,12 @@ static char *encode_auth_aes(char *username, char *password)
 
 out:
     (void)memset(plain_text, 0, strlen(plain_text));
-    free_sensitive_string((char*)aes);
+    util_free_sensitive_string((char *)aes);
     aes = NULL;
-    free_sensitive_string(plain_text_base64);
+    util_free_sensitive_string(plain_text_base64);
     plain_text_base64 = NULL;
     if (ret != 0) {
-        free_sensitive_string(aes_base64);
+        util_free_sensitive_string(aes_base64);
         aes_base64 = NULL;
     }
     return aes_base64;

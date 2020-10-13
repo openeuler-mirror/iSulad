@@ -36,7 +36,7 @@ bool sha256_valid_digest_file(const char *path, const char *digest);
 
 char *sha256_full_digest_str(char *str);
 
-char *without_sha256_prefix(char *digest);
+char *util_without_sha256_prefix(char *digest);
 
 #ifdef __cplusplus
 }

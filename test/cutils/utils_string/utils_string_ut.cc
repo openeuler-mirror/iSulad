@@ -29,59 +29,57 @@ extern "C" {
 
 TEST(utils_string_ut, test_strings_count)
 {
-    ASSERT_EQ(strings_count("aaaaaaaaaaaaaaaaaaaa", 'a'), 20);
-    ASSERT_EQ(strings_count("a", 'a'), 1);
-    ASSERT_EQ(strings_count("", 'a'), 0);
-    ASSERT_EQ(strings_count(nullptr, 'c'), 0);
+    ASSERT_EQ(util_strings_count("aaaaaaaaaaaaaaaaaaaa", 'a'), 20);
+    ASSERT_EQ(util_strings_count("a", 'a'), 1);
+    ASSERT_EQ(util_strings_count("", 'a'), 0);
+    ASSERT_EQ(util_strings_count(nullptr, 'c'), 0);
 }
 
 TEST(utils_string_ut, test_strings_contains_any)
 {
-    ASSERT_EQ(strings_contains_any("1234567890abcdefgh!@", "ijklmnopq#123456789"), true);
-    ASSERT_EQ(strings_contains_any("1234567890abcdefgh!@", "ijklmnopqrstuvw)(*x&-"), false);
-    ASSERT_EQ(strings_contains_any("1234567890abcdefgh!@", ""), false);
-    ASSERT_EQ(strings_contains_any("1234567890abcdefgh!@", nullptr), false);
-    ASSERT_EQ(strings_contains_any("a", "cedefga123415"), true);
-    ASSERT_EQ(strings_contains_any("", "ijklmnopq#123456789"), false);
-    ASSERT_EQ(strings_contains_any(nullptr, "ijklmnopq#123456789"), false);
+    ASSERT_EQ(util_strings_contains_any("1234567890abcdefgh!@", "ijklmnopq#123456789"), true);
+    ASSERT_EQ(util_strings_contains_any("1234567890abcdefgh!@", "ijklmnopqrstuvw)(*x&-"), false);
+    ASSERT_EQ(util_strings_contains_any("1234567890abcdefgh!@", ""), false);
+    ASSERT_EQ(util_strings_contains_any("1234567890abcdefgh!@", nullptr), false);
+    ASSERT_EQ(util_strings_contains_any("a", "cedefga123415"), true);
+    ASSERT_EQ(util_strings_contains_any("", "ijklmnopq#123456789"), false);
+    ASSERT_EQ(util_strings_contains_any(nullptr, "ijklmnopq#123456789"), false);
 }
-
 
 TEST(utils_string_ut, test_strings_to_lower)
 {
     char *result = nullptr;
 
     std::string str = "AB&^%CDE";
-    result = strings_to_lower(str.c_str());
+    result = util_strings_to_lower(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ("ab&^%cde", result);
     free(result);
 
     str = "abcdefg12345*()%^#@";
-    result = strings_to_lower(str.c_str());
+    result = util_strings_to_lower(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ(str.c_str(), result);
     free(result);
 
     str = "aBcDeFg12345*()%^#@";
-    result = strings_to_lower(str.c_str());
+    result = util_strings_to_lower(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ("abcdefg12345*()%^#@", result);
     free(result);
 
     str = "";
-    result = strings_to_lower(str.c_str());
+    result = util_strings_to_lower(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ(str.c_str(), result);
     free(result);
 
-    result = strings_to_lower(nullptr);
+    result = util_strings_to_lower(nullptr);
     ASSERT_STREQ(result, nullptr);
-
 
     MOCK_SET(util_strdup_s, NULL);
     str = "A";
-    result = strings_to_lower(str.c_str());
+    result = util_strings_to_lower(str.c_str());
     ASSERT_STREQ(result, NULL);
     MOCK_CLEAR(util_strdup_s);
 }
@@ -91,39 +89,38 @@ TEST(utils_string_ut, test_strings_to_upper)
     char *result = nullptr;
 
     std::string str = "AB&^%CDE";
-    result = strings_to_upper(str.c_str());
+    result = util_strings_to_upper(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ(str.c_str(), result);
     free(result);
 
     str = "abcdefg12345*()%^#@";
-    result = strings_to_upper(str.c_str());
+    result = util_strings_to_upper(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ("ABCDEFG12345*()%^#@", result);
     free(result);
 
     str = "aBcDeFg12345*()%^#@";
-    result = strings_to_upper(str.c_str());
+    result = util_strings_to_upper(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ("ABCDEFG12345*()%^#@", result);
     free(result);
 
     str = "";
-    result = strings_to_upper(str.c_str());
+    result = util_strings_to_upper(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ(str.c_str(), result);
     free(result);
 
-    result = strings_to_upper(nullptr);
+    result = util_strings_to_upper(nullptr);
     ASSERT_STREQ(result, nullptr);
 
     MOCK_SET(util_strdup_s, nullptr);
     str = "a";
-    result = strings_to_upper(str.c_str());
+    result = util_strings_to_upper(str.c_str());
     ASSERT_STREQ(result, nullptr);
     MOCK_CLEAR(util_strdup_s);
 }
-
 
 TEST(utils_string_ut, test_strings_in_slice)
 {
@@ -133,14 +130,14 @@ TEST(utils_string_ut, test_strings_in_slice)
     const char *array_short[] = { "abcd" };
     size_t array_short_len = sizeof(array_short) / sizeof(array_short[0]);
 
-    ASSERT_TRUE(strings_in_slice(array_long, array_long_len, ""));
-    ASSERT_FALSE(strings_in_slice(array_long, array_long_len, "abc"));
-    ASSERT_FALSE(strings_in_slice(array_long, array_long_len, nullptr));
-    ASSERT_TRUE(strings_in_slice(array_short, array_short_len, "abcd"));
-    ASSERT_FALSE(strings_in_slice(array_short, array_short_len, "bcd"));
-    ASSERT_FALSE(strings_in_slice(array_short, array_short_len, nullptr));
-    ASSERT_FALSE(strings_in_slice(nullptr, 0, "abcd"));
-    ASSERT_FALSE(strings_in_slice(nullptr, 0, nullptr));
+    ASSERT_TRUE(util_strings_in_slice(array_long, array_long_len, ""));
+    ASSERT_FALSE(util_strings_in_slice(array_long, array_long_len, "abc"));
+    ASSERT_FALSE(util_strings_in_slice(array_long, array_long_len, nullptr));
+    ASSERT_TRUE(util_strings_in_slice(array_short, array_short_len, "abcd"));
+    ASSERT_FALSE(util_strings_in_slice(array_short, array_short_len, "bcd"));
+    ASSERT_FALSE(util_strings_in_slice(array_short, array_short_len, nullptr));
+    ASSERT_FALSE(util_strings_in_slice(nullptr, 0, "abcd"));
+    ASSERT_FALSE(util_strings_in_slice(nullptr, 0, nullptr));
 }
 
 TEST(utils_string_ut, test_util_parse_byte_size_string)
@@ -262,7 +259,6 @@ TEST(utils_string_ut, test_util_parse_byte_size_string)
 
     ret = util_parse_byte_size_string("1a.a1kI", &converted);
     ASSERT_NE(ret, 0);
-
 
     ret = util_parse_byte_size_string(nullptr, &converted);
     ASSERT_NE(ret, 0);
@@ -443,25 +439,25 @@ TEST(utils_string_ut, test_str_skip_str)
     const char *substr = "abcdefgh";
     const char *result = nullptr;
 
-    result = str_skip_str(str, substr);
+    result = util_str_skip_str(str, substr);
     ASSERT_STREQ(result, "ij1234567890");
 
-    result = str_skip_str(str, "habc");
+    result = util_str_skip_str(str, "habc");
     ASSERT_STREQ(result, nullptr);
 
-    result = str_skip_str(str, "");
+    result = util_str_skip_str(str, "");
     ASSERT_STREQ(result, str);
 
-    result = str_skip_str(str, nullptr);
+    result = util_str_skip_str(str, nullptr);
     ASSERT_STREQ(result, nullptr);
 
-    result = str_skip_str("a", "a");
+    result = util_str_skip_str("a", "a");
     ASSERT_STREQ(result, "");
 
-    result = str_skip_str("", "");
+    result = util_str_skip_str("", "");
     ASSERT_STREQ(result, "");
 
-    result = str_skip_str(nullptr, "");
+    result = util_str_skip_str(nullptr, "");
     ASSERT_STREQ(result, nullptr);
 }
 
@@ -492,10 +488,10 @@ TEST(utils_string_ut, test_util_string_delchar)
 
 TEST(utils_string_ut, test_util_trim_newline)
 {
-    char s_all[ ] = { '\n', '\n', '\n', '\n', '\0' };
-    char s_tail[ ] = { '\n', 'a', '\n', 'b', '\n', '\0' };
-    char s_not_n[ ] = { 'a', '\n', 'b', 'c', '\0' };
-    char s_empty[ ] = { '\0' };
+    char s_all[] = { '\n', '\n', '\n', '\n', '\0' };
+    char s_tail[] = { '\n', 'a', '\n', 'b', '\n', '\0' };
+    char s_not_n[] = { 'a', '\n', 'b', 'c', '\0' };
+    char s_empty[] = { '\0' };
     char *s_nullptr = nullptr;
 
     util_trim_newline(s_all);
@@ -516,13 +512,13 @@ TEST(utils_string_ut, test_util_trim_newline)
 
 TEST(utils_string_ut, test_util_trim_space)
 {
-    char s_all[ ] = { '\f', '\n', '\r', '\t', '\v', ' ', '\0' };
-    char s_head[ ] = { '\f', '\n', '\r', 'a', 'b', 'c', '\0' };
-    char s_tail[ ] = { 'a', 'b', 'c', '\t', '\v', ' ', '\0' };
-    char s_head_tail[ ] = { '\f', 'a', 'b', 'c', '\v', ' ', '\0' };
-    char s_mid[ ] = { 'a', 'b', '\r', '\t', '\v', 'c', '\0' };
-    char s_not_space[ ] = { 'a', 'a', 'b', 'b', 'c', 'c', '\0' };
-    char s_empty[ ] = { '\0' };
+    char s_all[] = { '\f', '\n', '\r', '\t', '\v', ' ', '\0' };
+    char s_head[] = { '\f', '\n', '\r', 'a', 'b', 'c', '\0' };
+    char s_tail[] = { 'a', 'b', 'c', '\t', '\v', ' ', '\0' };
+    char s_head_tail[] = { '\f', 'a', 'b', 'c', '\v', ' ', '\0' };
+    char s_mid[] = { 'a', 'b', '\r', '\t', '\v', 'c', '\0' };
+    char s_not_space[] = { 'a', 'a', 'b', 'b', 'c', 'c', '\0' };
+    char s_empty[] = { '\0' };
     char *s_nullptr = nullptr;
     char *result = nullptr;
 
@@ -553,14 +549,14 @@ TEST(utils_string_ut, test_util_trim_space)
 
 TEST(utils_string_ut, test_util_trim_quotation)
 {
-    char s_all[ ] = { '"', '"', '"', '\n', '"', '\0' };
-    char s_head[ ] = { '"', '"', 'a', 'b', 'c', '\0' };
-    char s_tail_n[ ] = { 'a', 'b', 'c', '\n', '\n', '\0' };
-    char s_tail_quo[ ] = { 'a', 'b', 'c', '"', '"', '\0' };
-    char s_head_tail[ ] = { '"', '"', 'a', '\n', '"', '\0' };
-    char s_mid[ ] = { 'a', 'b', '"', '\n', 'c', '\0' };
-    char s_not_space[ ] = { 'a', 'b', 'c', 'd', 'e', '\0' };
-    char s_empty[ ] = { '\0' };
+    char s_all[] = { '"', '"', '"', '\n', '"', '\0' };
+    char s_head[] = { '"', '"', 'a', 'b', 'c', '\0' };
+    char s_tail_n[] = { 'a', 'b', 'c', '\n', '\n', '\0' };
+    char s_tail_quo[] = { 'a', 'b', 'c', '"', '"', '\0' };
+    char s_head_tail[] = { '"', '"', 'a', '\n', '"', '\0' };
+    char s_mid[] = { 'a', 'b', '"', '\n', 'c', '\0' };
+    char s_not_space[] = { 'a', 'b', 'c', 'd', 'e', '\0' };
+    char s_empty[] = { '\0' };
     char *s_nullptr = nullptr;
     char *result = nullptr;
 
@@ -602,7 +598,7 @@ TEST(utils_string_ut, test_str_array_dup)
 
     char **result = nullptr;
 
-    result = str_array_dup(array_long, array_long_len);
+    result = util_str_array_dup(array_long, array_long_len);
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result[0], "abcd");
     free(result[0]);
@@ -616,14 +612,14 @@ TEST(utils_string_ut, test_str_array_dup)
     ASSERT_STREQ(result[5], nullptr);
     free(result);
 
-    result = str_array_dup(array_short, array_short_len);
+    result = util_str_array_dup(array_short, array_short_len);
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result[0], "abcd");
     free(result[0]);
     ASSERT_STREQ(result[1], nullptr);
     free(result);
 
-    result = str_array_dup(nullptr, 0);
+    result = util_str_array_dup(nullptr, 0);
     ASSERT_EQ(result, nullptr);
 }
 
@@ -719,7 +715,7 @@ TEST(utils_string_ut, test_dup_array_of_strings)
     size_t result_len = 0;
     int ret;
 
-    ret = dup_array_of_strings(array_long, array_long_len, &result, &result_len);
+    ret = util_dup_array_of_strings(array_long, array_long_len, &result, &result_len);
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(array_long_len, result_len);
     ASSERT_NE(result, nullptr);
@@ -734,13 +730,13 @@ TEST(utils_string_ut, test_dup_array_of_strings)
     free(result[4]);
     free(result);
 
-    ret = dup_array_of_strings(array_long, array_long_len, &result, nullptr);
+    ret = util_dup_array_of_strings(array_long, array_long_len, &result, nullptr);
     ASSERT_NE(ret, 0);
 
-    ret = dup_array_of_strings(array_long, array_long_len, nullptr, &result_len);
+    ret = util_dup_array_of_strings(array_long, array_long_len, nullptr, &result_len);
     ASSERT_NE(ret, 0);
 
-    ret = dup_array_of_strings(array_short, array_short_len, &result, &result_len);
+    ret = util_dup_array_of_strings(array_short, array_short_len, &result, &result_len);
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(array_short_len, result_len);
     ASSERT_NE(result, nullptr);
@@ -748,11 +744,11 @@ TEST(utils_string_ut, test_dup_array_of_strings)
     free(result[0]);
     free(result);
 
-    ret = dup_array_of_strings(nullptr, 0, &result, &result_len);
+    ret = util_dup_array_of_strings(nullptr, 0, &result, &result_len);
     ASSERT_EQ(ret, 0);
 
     MOCK_SET(calloc, nullptr);
-    ret = dup_array_of_strings(array_long, array_long_len, &result, &result_len);
+    ret = util_dup_array_of_strings(array_long, array_long_len, &result, &result_len);
     ASSERT_NE(ret, 0);
     MOCK_CLEAR(calloc);
 }

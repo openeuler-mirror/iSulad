@@ -261,7 +261,7 @@ TEST_F(StorageImagesCompatibilityUnitTest, test_load_v1_image)
     char store_real_path[PATH_MAX] = { 0x00 };
     struct storage_module_init_options opts;
     std::string dir = GetDirectory() + "/data";
-    ASSERT_STRNE(cleanpath(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
+    ASSERT_STRNE(util_clean_path(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
 
     EXPECT_CALL(m_storage_mock, StorageLayersGetByCompressDigest(_))
     .WillRepeatedly(Invoke(invokeStorageLayersGetByCompressDigest));
@@ -283,7 +283,7 @@ protected:
     {
         struct storage_module_init_options opts;
         std::string dir = GetDirectory() + "/data";
-        ASSERT_STRNE(cleanpath(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
+        ASSERT_STRNE(util_clean_path(dir.c_str(), store_real_path, sizeof(store_real_path)), nullptr);
 
         opts.storage_root = strdup(store_real_path);
         opts.driver_name = strdup("overlay");
@@ -409,7 +409,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
         GetDirectory() +
         "/data/resources/ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689/"
         "=c2hhMjU2OmZmYzhlZjc5NjhhMmFjYjc1NDUwMDZiZWQwMjIwMDFhZGRhYTI2MmMwZjc2MDg4MzE0NmM0YTRmYWU1NGU2ODk=";
-    ASSERT_STRNE(cleanpath(config_file.c_str(), real_path, sizeof(real_path)), "manifest");
+    ASSERT_STRNE(util_clean_path(config_file.c_str(), real_path, sizeof(real_path)), "manifest");
 
     std::ifstream t(real_path);
     std::string buffer((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
@@ -432,7 +432,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     std::string manifest_file = GetDirectory() +
                                 "/data/resources/ffc8ef7968a2acb7545006bed022001addaa262c0f760883146c4a4fae54e689/" +
                                 "manifest";
-    ASSERT_STRNE(cleanpath(manifest_file.c_str(), real_path, sizeof(real_path)), nullptr);
+    ASSERT_STRNE(util_clean_path(manifest_file.c_str(), real_path, sizeof(real_path)), nullptr);
 
     std::ifstream manifest_stream(real_path);
     std::string manifest_content((std::istreambuf_iterator<char>(manifest_stream)), std::istreambuf_iterator<char>());

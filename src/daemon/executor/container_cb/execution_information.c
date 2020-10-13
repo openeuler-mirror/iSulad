@@ -183,7 +183,7 @@ static int get_proxy_env(char **proxy, const char *type)
 
     *proxy = getenv(type);
     if (*proxy == NULL) {
-        tmp = strings_to_upper(type);
+        tmp = util_strings_to_upper(type);
         if (tmp == NULL) {
             ERROR("Failed to upper string!");
             ret = -1;
@@ -1007,13 +1007,13 @@ static int dup_container_config_cmd_and_entrypoint(const container_config *src, 
         return 0;
     }
 
-    ret = dup_array_of_strings((const char **)(src->cmd), src->cmd_len, &(dest->cmd), &(dest->cmd_len));
+    ret = util_dup_array_of_strings((const char **)(src->cmd), src->cmd_len, &(dest->cmd), &(dest->cmd_len));
     if (ret != 0) {
         goto out;
     }
 
-    ret = dup_array_of_strings((const char **)(src->entrypoint), src->entrypoint_len, &(dest->entrypoint),
-                               &(dest->entrypoint_len));
+    ret = util_dup_array_of_strings((const char **)(src->entrypoint), src->entrypoint_len, &(dest->entrypoint),
+                                    &(dest->entrypoint_len));
 out:
     return ret;
 }

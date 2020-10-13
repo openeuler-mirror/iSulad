@@ -20,6 +20,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdio.h>
+#include "utils.h"
+
+#define MAX_NUM_STR_LEN 21
 
 static inline bool is_invalid_error_str(const char *err_str, const char *numstr)
 {
@@ -201,4 +205,30 @@ int util_str_to_bool(const char *boolstr, bool *converted)
         return -EINVAL;
     }
     return 0;
+}
+
+char *util_uint_to_string(long long unsigned int data)
+{
+    char numstr[MAX_NUM_STR_LEN] = { 0 };
+    int ret;
+
+    ret = snprintf(numstr, sizeof(numstr), "%llu", data);
+    if (ret < 0 || (size_t)ret >= sizeof(numstr)) {
+        return NULL;
+    }
+
+    return util_strdup_s(numstr);
+}
+
+char *util_int_to_string(long long int data)
+{
+    char numstr[MAX_NUM_STR_LEN] = { 0 };
+    int ret;
+
+    ret = snprintf(numstr, sizeof(numstr), "%lld", data);
+    if (ret < 0 || (size_t)ret >= sizeof(numstr)) {
+        return NULL;
+    }
+
+    return util_strdup_s(numstr);
 }

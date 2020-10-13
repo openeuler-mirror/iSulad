@@ -37,8 +37,7 @@
 #include "url.h"
 #include "ws_server.h"
 
-auto CRIRuntimeServiceImpl::GetRealContainerOrSandboxID(const std::string &id, bool isSandbox,
-                                                        Errors &error) -> std::string
+std::string CRIRuntimeServiceImpl::GetRealContainerOrSandboxID(const std::string &id, bool isSandbox, Errors &error)
 {
     std::string realID;
 
@@ -121,20 +120,20 @@ void CRIRuntimeServiceImpl::GetContainerTimeStamps(container_inspect *inspect, i
         return;
     }
     if (createdAt != nullptr) {
-        if (to_unix_nanos_from_str(inspect->created, createdAt) != 0) {
+        if (util_to_unix_nanos_from_str(inspect->created, createdAt) != 0) {
             err.Errorf("Parse createdAt failed: %s", inspect->created);
             return;
         }
     }
     if (inspect->state != nullptr) {
         if (startedAt != nullptr) {
-            if (to_unix_nanos_from_str(inspect->state->started_at, startedAt) != 0) {
+            if (util_to_unix_nanos_from_str(inspect->state->started_at, startedAt) != 0) {
                 err.Errorf("Parse startedAt failed: %s", inspect->state->started_at);
                 return;
             }
         }
         if (finishedAt != nullptr) {
-            if (to_unix_nanos_from_str(inspect->state->finished_at, finishedAt) != 0) {
+            if (util_to_unix_nanos_from_str(inspect->state->finished_at, finishedAt) != 0) {
                 err.Errorf("Parse finishedAt failed: %s", inspect->state->finished_at);
                 return;
             }
@@ -169,14 +168,15 @@ auto CRIRuntimeServiceImpl::GenerateCreateContainerCustomConfig(
     if (!podSandboxConfig.log_directory().empty() || !containerConfig.log_path().empty()) {
         std::string logpath = podSandboxConfig.log_directory() + "/" + containerConfig.log_path();
         char real_logpath[PATH_MAX] { 0 };
-        if (cleanpath(logpath.c_str(), real_logpath, sizeof(real_logpath)) == nullptr) {
+        if (util_clean_path(logpath.c_str(), real_logpath, sizeof(real_logpath)) == nullptr) {
             ERROR("Failed to clean path: %s", logpath.c_str());
             error.Errorf("Failed to clean path: %s", logpath.c_str());
             goto cleanup;
         }
 
         if (append_json_map_string_string(custom_config->labels,
-                                          CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(), real_logpath) != 0) {
+                                          CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(),
+                                          real_logpath) != 0) {
             error.SetError("Append map string string failed");
             goto cleanup;
         }
@@ -269,7 +269,7 @@ auto CRIRuntimeServiceImpl::PackCreateContainerHostConfigSecurityContext(
         }
         size_t newSize = (hostconfig->security_opt_len + securityOpts.size()) * sizeof(char *);
         size_t oldSize = hostconfig->security_opt_len * sizeof(char *);
-        int ret = mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconfig->security_opt, oldSize);
+        int ret = util_mem_realloc((void **)(&tmp_security_opt), newSize, (void *)hostconfig->security_opt, oldSize);
         if (ret != 0) {
             error.Errorf("Out of memory");
             return -1;
@@ -322,10 +322,11 @@ cleanup:
     return nullptr;
 }
 
-auto CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
-                                                           const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                           const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                                           const std::string &podSandboxRuntime, Errors &error) -> container_create_request *
+container_create_request *
+CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
+                                                      const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                      const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                      const std::string &podSandboxRuntime, Errors &error)
 {
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
@@ -393,10 +394,10 @@ cleanup:
     return request;
 }
 
-auto CRIRuntimeServiceImpl::CreateContainer(const std::string &podSandboxID,
-                                            const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                            const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                            Errors &error) -> std::string
+std::string CRIRuntimeServiceImpl::CreateContainer(const std::string &podSandboxID,
+                                                   const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                   const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                   Errors &error)
 {
     std::string response_id;
     std::string podSandboxRuntime;
@@ -1186,8 +1187,8 @@ void CRIRuntimeServiceImpl::ContainerStatusToGRPC(container_inspect *inspect,
     ConvertMountsToStatus(inspect, contStatus);
 }
 
-auto CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID,
-                                            Errors &error) -> std::unique_ptr<runtime::v1alpha2::ContainerStatus>
+std::unique_ptr<runtime::v1alpha2::ContainerStatus>
+CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID, Errors &error)
 {
     if (containerID.empty()) {
         error.SetError("Empty pod sandbox id");

@@ -45,9 +45,7 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 
-#define MAX_NUM_STR_LEN 21
-
-int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
+int util_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
 {
     void *tmp = NULL;
 
@@ -105,7 +103,7 @@ static int util_read_pipe(int pipe_fd, char **out_buf, size_t *out_buf_size, siz
             }
 
             new_size = old_size + PIPE_BUF + 1;
-            ret = mem_realloc((void *)(&tmp), new_size, (void *)buffer, old_size);
+            ret = util_mem_realloc((void *)(&tmp), new_size, (void *)buffer, old_size);
             if (ret != 0) {
                 ERROR("Memory out");
                 ret = -1;
@@ -244,20 +242,6 @@ int util_sig_parse(const char *sig_name)
     return -1;
 }
 
-bool util_check_signal_valid(int sig)
-{
-    size_t i;
-    const struct signame signames[] = SIGNAL_MAP_DEFAULT;
-
-    for (i = 0; i < sizeof(signames) / sizeof(signames[0]); i++) {
-        if (signames[i].num == sig) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void *util_smart_calloc_s(size_t unit_size, size_t count)
 {
     if (unit_size == 0) {
@@ -296,7 +280,7 @@ char *util_strdup_s(const char *src)
     return dst;
 }
 
-int wait_for_pid(pid_t pid)
+int util_wait_for_pid(pid_t pid)
 {
     int st;
     int nret = 0;
@@ -318,7 +302,7 @@ rep:
     return 0;
 }
 
-int wait_for_pid_status(pid_t pid)
+int util_wait_for_pid_status(pid_t pid)
 {
     int st;
     int nret = 0;
@@ -706,12 +690,12 @@ bool util_exec_top_cmd(exec_top_func_t cb_func, char **args, const char *pid_arg
         if (stdout_close_flag != 0 && stderr_close_flag != 0) {
             break;
         }
-        usleep_nointerupt(1000);
+        util_usleep_nointerupt(1000);
     }
 
     marshal_stderr_msg(&stderr_buffer, &stderr_real_size);
 
-    status = wait_for_pid_status(pid);
+    status = util_wait_for_pid_status(pid);
 
     ret = deal_with_result_of_waitpid(status, &stderr_buffer, stderr_real_size);
 
@@ -840,12 +824,12 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
         if (stdout_close_flag != 0 && stderr_close_flag != 0) {
             break;
         }
-        usleep_nointerupt(1000);
+        util_usleep_nointerupt(1000);
     }
 
     marshal_stderr_msg(&stderr_buffer, &stderr_real_size);
 
-    status = wait_for_pid_status(pid);
+    status = util_wait_for_pid_status(pid);
 
     ret = deal_with_result_of_waitpid(status, &stderr_buffer, stderr_real_size);
 
@@ -857,7 +841,7 @@ out:
     return ret;
 }
 
-char **get_backtrace(void)
+char **util_get_backtrace(void)
 {
 #define BACKTRACE_SIZE 16
     int addr_cnts;
@@ -875,78 +859,6 @@ char **get_backtrace(void)
     }
 
     return syms;
-}
-
-static long long get_time_unit(int unit)
-{
-    long long u[255] = { 0 };
-
-    u['M'] = Time_Milli;
-    u['s'] = Time_Second;
-    u['m'] = Time_Minute;
-    u['h'] = Time_Hour;
-
-    return u[unit];
-}
-
-static int get_time_ns(long long *pns, long long unit)
-{
-    if (unit == 0) {
-        return -1;
-    }
-
-    if (INT64_MAX / *pns >= unit) {
-        *pns *= unit;
-        return 0;
-    }
-
-    return -1;
-}
-
-int util_parse_time_str_to_nanoseconds(const char *value, int64_t *nanoseconds)
-{
-    int ret = 0;
-    long long tmp = 0;
-    char unit = 0;
-    size_t len = 0;
-    char *num_str = NULL;
-
-    if (value == NULL || nanoseconds == NULL) {
-        return -1;
-    }
-
-    if (util_reg_match("^([0-9]+)+(ms|s|m|h)$", value) != 0) {
-        return -1;
-    }
-    num_str = util_strdup_s(value);
-    len = strlen(value);
-
-    if (strstr(value, "ms") == NULL) {
-        unit = *(value + len - 1);
-        *(num_str + len - 1) = '\0';
-    } else {
-        unit = 'M';
-        *(num_str + len - 2) = '\0';
-    }
-    ret = util_safe_llong(num_str, &tmp);
-    if (ret < 0) {
-        ERROR("Illegal unsigned integer: %s", num_str);
-        ret = -1;
-        goto out;
-    }
-    if (tmp == 0) {
-        goto out;
-    }
-
-    ret = get_time_ns(&tmp, get_time_unit(unit));
-    if (ret != 0) {
-        ERROR("failed get nano seconds for %s", num_str);
-    }
-    *nanoseconds = (int64_t)tmp;
-
-out:
-    free(num_str);
-    return ret;
 }
 
 /* isulad: get starttime of process pid */
@@ -1031,7 +943,7 @@ int util_env_insert(char ***penv, size_t *penv_len, const char *key, size_t key_
         return -1;
     }
 
-    ret = mem_realloc((void **)(&temp), (env_len + 1) * sizeof(char *), env, env_len * sizeof(char *));
+    ret = util_mem_realloc((void **)(&temp), (env_len + 1) * sizeof(char *), env, env_len * sizeof(char *));
     if (ret != 0) {
         ERROR("Failed to realloc memory for envionment variables");
         return -1;
@@ -1117,38 +1029,7 @@ out:
     return ret;
 }
 
-char *util_str_token(char **input, const char *delimiter)
-{
-    char *str = NULL;
-    char *delimiter_found = NULL;
-    char *tok = NULL;
-    size_t tok_length = 0;
-
-    if (input == NULL || delimiter == NULL) {
-        return NULL;
-    }
-
-    str = *input;
-
-    if (str == NULL) {
-        return NULL;
-    }
-    delimiter_found = strstr(str, delimiter);
-    if (delimiter_found != NULL) {
-        tok_length = delimiter_found - str;
-    } else {
-        tok_length = strlen(str);
-    }
-    tok = strndup(str, tok_length);
-    if (tok == NULL) {
-        ERROR("strndup failed");
-        return NULL;
-    }
-    *input = delimiter_found != NULL ? delimiter_found + strlen(delimiter) : NULL;
-    return tok;
-}
-
-bool pid_max_kernel_namespaced()
+bool util_check_pid_max_kernel_namespaced()
 {
     bool ret = false;
     FILE *fp = NULL;
@@ -1172,37 +1053,7 @@ out:
     return ret;
 }
 
-bool check_sysctl_valid(const char *sysctl_key)
-{
-    size_t i = 0;
-    size_t full_keys_len = 0;
-    size_t key_prefixes_len = 0;
-    const char *sysctl_full_keys[] = { "kernel.msgmax", "kernel.msgmnb", "kernel.msgmni", "kernel.sem",
-                                       "kernel.shmall", "kernel.shmmax", "kernel.shmmni", "kernel.shm_rmid_forced"
-                                     };
-    const char *sysctl_key_prefixes[] = { "net.", "fs.mqueue." };
-
-    if (sysctl_key == NULL) {
-        return false;
-    }
-
-    full_keys_len = sizeof(sysctl_full_keys) / sizeof(char *);
-    key_prefixes_len = sizeof(sysctl_key_prefixes) / sizeof(char *);
-
-    for (i = 0; i < full_keys_len; i++) {
-        if (strcmp(sysctl_full_keys[i], sysctl_key) == 0) {
-            return true;
-        }
-    }
-    for (i = 0; i < key_prefixes_len; i++) {
-        if (strncmp(sysctl_key_prefixes[i], sysctl_key, strlen(sysctl_key_prefixes[i])) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void free_sensitive_string(char *str)
+void util_free_sensitive_string(char *str)
 {
     if (!util_valid_str(str)) {
         goto out;
@@ -1214,7 +1065,7 @@ out:
     free(str);
 }
 
-void memset_sensitive_string(char *str)
+void util_memset_sensitive_string(char *str)
 {
     if (!util_valid_str(str)) {
         return;
@@ -1334,7 +1185,7 @@ int util_input_noecho(char *buf, size_t maxlen)
     return util_input(buf, maxlen, false);
 }
 
-void usleep_nointerupt(unsigned long usec)
+void util_usleep_nointerupt(unsigned long usec)
 {
 #define SECOND_TO_USECOND_MUTIPLE 1000000
     int ret = 0;
@@ -1383,71 +1234,6 @@ int util_generate_random_str(char *id, size_t len)
     close(fd);
     id[i * 2] = '\0';
     return 0;
-}
-
-void add_array_elem(char **array, size_t total, size_t *pos, const char *elem)
-{
-    if (*pos + 1 >= total - 1) {
-        return;
-    }
-    array[*pos] = util_strdup_s(elem);
-    *pos += 1;
-}
-
-void add_array_kv(char **array, size_t total, size_t *pos, const char *k, const char *v)
-{
-    if (k == NULL || v == NULL) {
-        return;
-    }
-    add_array_elem(array, total, pos, k);
-    add_array_elem(array, total, pos, v);
-}
-
-int util_validate_env(const char *env, char **dst)
-{
-    int ret = 0;
-    char *value = NULL;
-
-    char **arr = util_string_split_multi(env, '=');
-    if (arr == NULL) {
-        ERROR("Failed to split env string");
-        return -1;
-    }
-    if (strlen(arr[0]) == 0) {
-        ERROR("Invalid environment variable: %s", env);
-        ret = -1;
-        goto out;
-    }
-
-    if (util_array_len((const char **)arr) > 1) {
-        *dst = util_strdup_s(env);
-        goto out;
-    }
-
-    value = getenv(env);
-    if (value == NULL) {
-        *dst = NULL;
-        goto out;
-    } else {
-        int sret;
-        size_t len = strlen(env) + 1 + strlen(value) + 1;
-        *dst = (char *)util_common_calloc_s(len);
-        if (*dst == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        sret = snprintf(*dst, len, "%s=%s", env, value);
-        if (sret < 0 || (size_t)sret >= len) {
-            ERROR("Failed to compose env string");
-            ret = -1;
-            goto out;
-        }
-    }
-
-out:
-    util_free_array(arr);
-    return ret;
 }
 
 int util_check_inherited_exclude_fds(bool closeall, int *fds_to_ignore, size_t len_fds)
@@ -1506,42 +1292,6 @@ restart:
     return 0;
 }
 
-int get_cpu_num_cores(void)
-{
-    int ncpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
-    if (ncpus < 1) {
-        ERROR("Cannot determine number of CPUs: assuming 1\n");
-        ncpus = 1;
-    }
-    return ncpus;
-}
-
-char *util_uint_to_string(long long unsigned int data)
-{
-    char numstr[MAX_NUM_STR_LEN] = { 0 };
-    int ret;
-
-    ret = snprintf(numstr, sizeof(numstr), "%llu", data);
-    if (ret < 0 || (size_t)ret >= sizeof(numstr)) {
-        return NULL;
-    }
-
-    return util_strdup_s(numstr);
-}
-
-char *util_int_to_string(long long int data)
-{
-    char numstr[MAX_NUM_STR_LEN] = { 0 };
-    int ret;
-
-    ret = snprintf(numstr, sizeof(numstr), "%lld", data);
-    if (ret < 0 || (size_t)ret >= sizeof(numstr)) {
-        return NULL;
-    }
-
-    return util_strdup_s(numstr);
-}
-
 static char *get_cpu_variant()
 {
     char *variant = NULL;
@@ -1572,7 +1322,7 @@ static char *get_cpu_variant()
     util_trim_newline(start_pos);
     start_pos = util_trim_space(start_pos);
 
-    variant = strings_to_lower(start_pos);
+    variant = util_strings_to_lower(start_pos);
 
 out:
     free(cpuinfo);
@@ -1581,7 +1331,7 @@ out:
     return variant;
 }
 
-int normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
+int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant)
 {
     int ret = 0;
     struct utsname uts;
@@ -1598,7 +1348,7 @@ int normalized_host_os_arch(char **host_os, char **host_arch, char **host_varian
         goto out;
     }
 
-    *host_os = strings_to_lower(uts.sysname);
+    *host_os = util_strings_to_lower(uts.sysname);
 
     if (strcasecmp("i386", uts.machine) == 0) {
         *host_arch = util_strdup_s("386");
@@ -1685,4 +1435,41 @@ out:
     free(proc);
     free(p_proc);
     return ret;
+}
+
+void util_parse_user_group(const char *username, char **user, char **group, char **tmp_dup)
+{
+    char *tmp = NULL;
+    char *pdot = NULL;
+
+    if (user == NULL || group == NULL || tmp_dup == NULL) {
+        return;
+    }
+
+    if (username != NULL) {
+        tmp = util_strdup_s(username);
+
+        // for free tmp in caller
+        *tmp_dup = tmp;
+
+        pdot = strstr(tmp, ":");
+        if (pdot != NULL) {
+            *pdot = '\0';
+            if (pdot != tmp) {
+                // User found
+                *user = tmp;
+            }
+            if (*(pdot + 1) != '\0') {
+                // group found
+                *group = pdot + 1;
+            }
+        } else {
+            // No : found
+            if (*tmp != '\0') {
+                *user = tmp;
+            }
+        }
+    }
+
+    return;
 }

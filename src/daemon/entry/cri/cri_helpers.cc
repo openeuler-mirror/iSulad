@@ -52,18 +52,18 @@ const std::string Constants::SANDBOX_ID_ANNOTATION_KEY { "io.kubernetes.cri.sand
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE { "pod-cidr-change" };
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod-cidr" };
 
-const char *InternalLabelKeys[] = {
-    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
-    CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(),
-    CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str(), nullptr
-};
+const char *InternalLabelKeys[] = { CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
+                                    CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(),
+                                    CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str(), nullptr
+                                  };
 
 auto GetDefaultSandboxImage(Errors &err) -> std::string
 {
     const std::string defaultPodSandboxImageName { "pause" };
     const std::string defaultPodSandboxImageVersion { "3.0" };
     std::string machine;
-    struct utsname uts {};
+    struct utsname uts {
+    };
 
     if (uname(&uts) < 0) {
         err.SetError("Failed to read host arch.");
@@ -85,8 +85,8 @@ auto GetDefaultSandboxImage(Errors &err) -> std::string
     return defaultPodSandboxImageName + "-" + machine + ":" + defaultPodSandboxImageVersion;
 }
 
-auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels,
-                Errors &error) -> json_map_string_string *
+auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels, Errors &error)
+-> json_map_string_string *
 {
     json_map_string_string *labels = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
     if (labels == nullptr) {
@@ -112,8 +112,8 @@ cleanup:
     return nullptr;
 }
 
-auto MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations,
-                     Errors &error) -> json_map_string_string *
+auto MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations, Errors &error)
+-> json_map_string_string *
 {
     json_map_string_string *annotations =
         (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
@@ -386,8 +386,8 @@ auto sha256(const char *val) -> std::string
     return outputBuffer;
 }
 
-auto GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations,
-                                size_t *len, Errors &error) -> cri_pod_network_element **
+auto GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations, size_t *len,
+                                Errors &error) -> cri_pod_network_element **
 {
     auto iter = annotations.find(CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY);
 
@@ -404,8 +404,8 @@ auto GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::st
     return result;
 }
 
-auto CheckpointToSandbox(const std::string &id,
-                         const cri::PodSandboxCheckpoint &checkpoint) -> std::unique_ptr<runtime::v1alpha2::PodSandbox>
+auto CheckpointToSandbox(const std::string &id, const cri::PodSandboxCheckpoint &checkpoint)
+-> std::unique_ptr<runtime::v1alpha2::PodSandbox>
 {
     std::unique_ptr<runtime::v1alpha2::PodSandbox> result(new (std::nothrow) runtime::v1alpha2::PodSandbox);
     if (result == nullptr) {
@@ -507,8 +507,8 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1a
     }
 }
 
-auto GenerateEnvList(
-    const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs) -> std::vector<std::string>
+auto GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs)
+-> std::vector<std::string>
 {
     std::vector<std::string> vect;
     std::for_each(envs.begin(), envs.end(), [&vect](const ::runtime::v1alpha2::KeyValue & elem) {
@@ -568,7 +568,8 @@ auto GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> s
     if (seccompProfile.empty() || seccompProfile == "unconfined") {
         return std::vector<iSuladOpt> { { "seccomp", "unconfined", "" } };
     }
-    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default" || seccompProfile == "runtime/default") {
+    if (seccompProfile == "iSulad/default" || seccompProfile == "docker/default" ||
+        seccompProfile == "runtime/default") {
         // return nil so docker will load the default seccomp profile
         return std::vector<iSuladOpt> {};
     }
@@ -578,7 +579,7 @@ auto GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> s
     }
     std::string fname = seccompProfile.substr(std::string("localhost/").length(), seccompProfile.length());
     char dstpath[PATH_MAX] { 0 };
-    if (cleanpath(fname.c_str(), dstpath, sizeof(dstpath)) == nullptr) {
+    if (util_clean_path(fname.c_str(), dstpath, sizeof(dstpath)) == nullptr) {
         error.Errorf("failed to get clean path");
         return std::vector<iSuladOpt> {};
     }
@@ -609,8 +610,8 @@ auto GetSeccompiSuladOpts(const std::string &seccompProfile, Errors &error) -> s
     return ret;
 }
 
-auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separator,
-                            Errors &error) -> std::vector<std::string>
+auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+-> std::vector<std::string>
 {
     std::vector<iSuladOpt> seccompOpts = GetSeccompiSuladOpts(seccompProfile, error);
     if (error.NotEmpty()) {
@@ -620,8 +621,8 @@ auto GetSeccompSecurityOpts(const std::string &seccompProfile, const char &separ
     return fmtiSuladOpts(seccompOpts, separator);
 }
 
-auto GetSecurityOpts(const std::string &seccompProfile, const char &separator,
-                     Errors &error) -> std::vector<std::string>
+auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+-> std::vector<std::string>
 {
     std::vector<std::string> seccompSecurityOpts = GetSeccompSecurityOpts(seccompProfile, separator, error);
     if (error.NotEmpty()) {

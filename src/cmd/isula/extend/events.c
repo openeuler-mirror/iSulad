@@ -132,7 +132,7 @@ static void print_events_callback(const container_events_format_t *event)
         return;
     }
 
-    if (!get_time_buffer(&(event->timestamp), timebuffer, sizeof(timebuffer))) {
+    if (!util_get_time_buffer(&(event->timestamp), timebuffer, sizeof(timebuffer))) {
         (void)strcpy(timebuffer, "-");
     }
 
@@ -176,13 +176,13 @@ static int client_event(struct client_arguments *args)
         goto out;
     }
 
-    if (args->since && !get_timestamp(args->since, &request.since)) {
+    if (args->since && !util_get_timestamp(args->since, &request.since)) {
         COMMAND_ERROR("Failed to get since timestamp");
         ret = -1;
         goto out;
     }
 
-    if (args->until && !get_timestamp(args->until, &request.until)) {
+    if (args->until && !util_get_timestamp(args->until, &request.until)) {
         COMMAND_ERROR("Failed to get until timestamp");
         ret = -1;
         goto out;

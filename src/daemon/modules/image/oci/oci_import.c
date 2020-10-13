@@ -98,7 +98,7 @@ static int register_layer(import_desc *desc)
         return -1;
     }
 
-    id = without_sha256_prefix(desc->uncompressed_digest);
+    id = util_without_sha256_prefix(desc->uncompressed_digest);
     if (id == NULL) {
         ERROR("Invalid NULL param");
         return -1;
@@ -140,7 +140,7 @@ static int create_config(import_desc *desc)
         return -1;
     }
 
-    ret = normalized_host_os_arch(&host_os, &host_arch, &host_variant);
+    ret = util_normalized_host_os_arch(&host_os, &host_arch, &host_variant);
     if (ret != 0) {
         ERROR("get host os and arch for import failed");
         isulad_try_set_error_message("get host os and arch for import failed");
@@ -178,7 +178,7 @@ static int create_config(import_desc *desc)
         goto out;
     }
 
-    if (!get_time_buffer(&desc->now_time, time_str, TIME_BUF_MAX_LEN)) {
+    if (!util_get_time_buffer(&desc->now_time, time_str, TIME_BUF_MAX_LEN)) {
         ERROR("get time string from timestamp failed");
         isulad_try_set_error_message("get time string from timestamp failed");
         ret = -1;
@@ -319,8 +319,8 @@ static int register_image(import_desc *desc)
     opts.create_time = &desc->now_time;
     opts.digest = desc->manifest_digest;
 
-    image_id = without_sha256_prefix(desc->config_digest);
-    top_layer_id = without_sha256_prefix(desc->uncompressed_digest);
+    image_id = util_without_sha256_prefix(desc->config_digest);
+    top_layer_id = util_without_sha256_prefix(desc->uncompressed_digest);
     ret = storage_img_create(image_id, top_layer_id, NULL, &opts);
     if (ret != 0) {
         pre_top_layer = storage_get_img_top_layer(image_id);
@@ -374,8 +374,7 @@ static int register_image(import_desc *desc)
     }
 
 out:
-    if (desc->layer_of_hold_refs != NULL &&
-        storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
+    if (desc->layer_of_hold_refs != NULL && storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
         ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     } else {
         free(desc->layer_of_hold_refs);
@@ -420,7 +419,7 @@ static import_desc *prepre_import(char *file, char *tag)
         goto out;
     }
 
-    if (!get_now_time_stamp(&desc->now_time)) {
+    if (!util_get_now_time_stamp(&desc->now_time)) {
         ERROR("get time stamp for import failed");
         isulad_try_set_error_message("get time stamp for import failed");
         ret = -1;
@@ -494,8 +493,7 @@ static int do_import(char *file, char *tag)
     }
 
 out:
-    if (desc->layer_of_hold_refs != NULL &&
-        storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
+    if (desc->layer_of_hold_refs != NULL && storage_dec_hold_refs(desc->layer_of_hold_refs) != 0) {
         ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     }
 

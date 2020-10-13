@@ -38,4 +38,3 @@ int auths_delete(char *host);
 #endif
 
 #endif
-

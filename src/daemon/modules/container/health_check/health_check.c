@@ -297,8 +297,8 @@ static int append_last_log_result(defs_health *health, const defs_health_log_ele
         return -1;
     }
 
-    ret = mem_realloc((void **)(&tmp_log), (health->log_len + 1) * sizeof(defs_health_log_element *), health->log,
-                      health->log_len * sizeof(defs_health_log_element *));
+    ret = util_mem_realloc((void **)(&tmp_log), (health->log_len + 1) * sizeof(defs_health_log_element *), health->log,
+                           health->log_len * sizeof(defs_health_log_element *));
     if (ret != 0) {
         ERROR("failed to realloc memory");
         return -1;
@@ -356,12 +356,12 @@ static int handle_unhealthy_case(container_t *cont, const defs_health_log_elemen
                                DEFAULT_START_PERIOD :
                                cont->common_config->config->healthcheck->start_period;
         int64_t first, last;
-        if (to_unix_nanos_from_str(cont->state->state->started_at, &first)) {
+        if (util_to_unix_nanos_from_str(cont->state->state->started_at, &first)) {
             ERROR("Parse container started time failed: %s", cont->state->state->started_at);
             ret = -1;
             goto out;
         }
-        if (to_unix_nanos_from_str(result->start, &last)) {
+        if (util_to_unix_nanos_from_str(result->start, &last)) {
             ERROR("Parse last health check start time failed: %s", result->start);
             ret = -1;
             goto out;
@@ -560,7 +560,7 @@ void *health_check_run(void *arg)
     cmd_slice = NULL;
     EVENT("EVENT: {Object: %s, Type:  Health checking}", cont->common_config->id);
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     result = util_common_calloc_s(sizeof(defs_health_log_element));
     if (result == NULL) {
         ERROR("Out of memory");
@@ -581,7 +581,7 @@ void *health_check_run(void *arg)
         health_check_exec_success_handle(container_res, result, output);
     }
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     result->end = util_strdup_s(timebuffer);
 
     if (handle_probe_result(cont->common_config->id, result) != 0) {
@@ -644,7 +644,7 @@ static int do_monitor_interval(const char *container_id, health_check_manager_t 
         goto out;
     }
     set_monitor_idle_status(health_check);
-    if (get_now_time_stamp(start_timestamp) == false) {
+    if (util_get_now_time_stamp(start_timestamp) == false) {
         ERROR("Failed to get time stamp");
         ret = -1;
         goto out;
@@ -658,12 +658,12 @@ static int do_monitor_default(int64_t probe_interval, health_check_manager_t *he
 {
     int64_t time_interval = 0;
 
-    if (get_now_time_stamp(last_timestamp) == false) {
+    if (util_get_now_time_stamp(last_timestamp) == false) {
         ERROR("Failed to get time stamp");
         return -1;
     }
 
-    if (get_time_interval(*start_timestamp, *last_timestamp, &time_interval)) {
+    if (util_get_time_interval(*start_timestamp, *last_timestamp, &time_interval)) {
         ERROR("Failed to get time interval");
         return -1;
     }
@@ -671,7 +671,7 @@ static int do_monitor_default(int64_t probe_interval, health_check_manager_t *he
     if (time_interval >= probe_interval) {
         set_monitor_interval_timeout_status(health_check);
     }
-    usleep_nointerupt(500);
+    util_usleep_nointerupt(500);
 
     return 0;
 }
@@ -697,7 +697,7 @@ static void *health_check_monitor(void *arg)
         goto out;
     }
 
-    if (get_now_time_stamp(&start_timestamp) == false) {
+    if (util_get_now_time_stamp(&start_timestamp) == false) {
         ERROR("Failed to monitor start time stamp");
         goto out;
     }
