@@ -22,6 +22,7 @@
 #include "utils.h"
 #include "rest_containers_service.h"
 #include "rest_images_service.h"
+#include "rest_network_service.h"
 
 #define REST_PTHREAD_NUM 100
 #define BACKLOG 2048
@@ -54,6 +55,10 @@ static int rest_register_handler(evhtp_t *g_htp)
     }
 
     if (rest_register_images_handler(g_htp) != 0) {
+        return -1;
+    }
+
+    if (rest_register_network_handler(g_htp) != 0) {
         return -1;
     }
 

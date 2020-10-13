@@ -110,10 +110,16 @@ typedef struct {
 } health_ops;
 
 typedef struct {
+    int (*create)(const struct isula_network_create_request *request, struct isula_network_create_response *response,
+                  void *arg);
+} network_ops;
+
+typedef struct {
     container_ops container;
     image_ops image;
     volume_ops volume;
     health_ops health;
+    network_ops network;
 } isula_connect_ops;
 
 int connect_client_ops_init(void);
