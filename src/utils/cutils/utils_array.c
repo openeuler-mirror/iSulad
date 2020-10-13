@@ -131,3 +131,21 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
     return 0;
 }
 
+bool util_array_contain(const char **array, const char *element)
+{
+    size_t len = 0;
+    size_t i = 0;
+
+    if (array == NULL || element == NULL) {
+        return false;
+    }
+
+    len = util_array_len(array);
+    for (i = 0; i < len; i++) {
+        if (strcmp(array[i], element) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}

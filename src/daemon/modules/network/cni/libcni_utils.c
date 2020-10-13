@@ -12,6 +12,8 @@
  * Create: 2019-04-25
  * Description: provide util functions
  *********************************************************************************/
+#include "libcni_utils.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -27,7 +29,6 @@
 
 #include "isula_libutils/log.h"
 
-#define CNI_VALID_NAME_CHARS "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
 #define MAX_INTERFACE_NAME_LENGTH 15
 
 bool clibcni_util_validate_name(const char *name)

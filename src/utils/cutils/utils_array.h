@@ -36,6 +36,8 @@ int util_grow_array(char ***orig_array, size_t *orig_capacity, size_t size,
 
 int util_array_append(char ***array, const char *element);
 
+bool util_array_contain(const char **array, const char *element);
+
 #ifdef __cplusplus
 }
 #endif
