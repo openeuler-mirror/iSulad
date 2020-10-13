@@ -41,43 +41,6 @@
 #define UnixPasswdPath "/etc/passwd"
 #define UnixGroupPath "/etc/group"
 
-static void parse_user_group(const char *username, char **user, char **group, char **tmp_dup)
-{
-    char *tmp = NULL;
-    char *pdot = NULL;
-
-    if (user == NULL || group == NULL || tmp_dup == NULL) {
-        return;
-    }
-
-    if (username != NULL) {
-        tmp = util_strdup_s(username);
-
-        // for free tmp in caller
-        *tmp_dup = tmp;
-
-        pdot = strstr(tmp, ":");
-        if (pdot != NULL) {
-            *pdot = '\0';
-            if (pdot != tmp) {
-                // User found
-                *user = tmp;
-            }
-            if (*(pdot + 1) != '\0') {
-                // group found
-                *group = pdot + 1;
-            }
-        } else {
-            // No : found
-            if (*tmp != '\0') {
-                *user = tmp;
-            }
-        }
-    }
-
-    return;
-}
-
 static void uids_gids_range_err_log()
 {
     ERROR("uids and gids must be in range 0-%lld", MAXUID);
@@ -189,7 +152,7 @@ static int append_additional_gids(gid_t gid, gid_t **additional_gids, size_t *le
         }
     }
 
-    ret = mem_realloc((void **)&new_gids, new_len * sizeof(gid_t), *additional_gids, (*len) * sizeof(gid_t));
+    ret = util_mem_realloc((void **)&new_gids, new_len * sizeof(gid_t), *additional_gids, (*len) * sizeof(gid_t));
     if (ret != 0) {
         ERROR("Out of memory");
         return -1;
@@ -310,7 +273,7 @@ static int append_additional_groups(const struct group *grp, struct group **grou
     struct group *new_groups = NULL;
     size_t new_len = *len + 1;
 
-    ret = mem_realloc((void **)&new_groups, new_len * sizeof(struct group), *groups, (*len) * sizeof(struct group));
+    ret = util_mem_realloc((void **)&new_groups, new_len * sizeof(struct group), *groups, (*len) * sizeof(struct group));
     if (ret != 0) {
         ERROR("Out of memory");
         return -1;
@@ -432,7 +395,7 @@ static int read_user_file(const char *basefs, const char *user_path, FILE **stre
     int64_t filesize = 0;
     char *real_path = NULL;
 
-    if (realpath_in_scope(basefs, user_path, &real_path) < 0) {
+    if (util_realpath_in_scope(basefs, user_path, &real_path) < 0) {
         ERROR("user target file '%s' real path must be under '%s'", user_path, basefs);
         isulad_set_error_message("user target file '%s' real path must be under '%s'", user_path, basefs);
         ret = -1;
@@ -492,7 +455,7 @@ static int get_exec_user(const char *username, FILE *f_passwd, FILE *f_group, de
     char *matched_username = NULL;
 
     // parse user and group by username
-    parse_user_group(username, &user, &group, &tmp);
+    util_parse_user_group(username, &user, &group, &tmp);
 
     // proc by f_passwd
     ret = proc_by_fpasswd(f_passwd, user, puser, &matched_username);

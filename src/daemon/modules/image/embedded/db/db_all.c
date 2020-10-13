@@ -699,8 +699,8 @@ static int read_all_images_info(sqlite3_stmt *stmt, void **data)
     }
     oldsize = (*imagesinfo)->imagesnum * sizeof(struct db_image *);
     newsize = ((*imagesinfo)->imagesnum + 1) * sizeof(struct db_image *);
-    ret = mem_realloc((void **)(&(*imagesinfo)->images_info), newsize,
-                      (*imagesinfo)->images_info, oldsize);
+    ret = util_mem_realloc((void **)(&(*imagesinfo)->images_info), newsize,
+                           (*imagesinfo)->images_info, oldsize);
     if (ret < 0) {
         ERROR("Out of memory!");
         goto cleanup;

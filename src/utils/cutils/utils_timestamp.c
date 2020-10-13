@@ -77,7 +77,7 @@ int types_timestamp_cmp_nanos(const types_timestamp_t *t1, const types_timestamp
 }
 
 /* types timestamp cmp */
-int types_timestamp_cmp(const types_timestamp_t *t1, const types_timestamp_t *t2)
+int util_types_timestamp_cmp(const types_timestamp_t *t1, const types_timestamp_t *t2)
 {
     int ret = 0;
 
@@ -106,7 +106,7 @@ int types_timestamp_cmp(const types_timestamp_t *t1, const types_timestamp_t *t2
 }
 
 /* get timestamp */
-bool get_timestamp(const char *str_time, types_timestamp_t *timestamp)
+bool util_get_timestamp(const char *str_time, types_timestamp_t *timestamp)
 {
     int64_t seconds = 0;
     int32_t nanos = 0;
@@ -118,7 +118,7 @@ bool get_timestamp(const char *str_time, types_timestamp_t *timestamp)
         return false;
     }
 
-    if (!get_tm_from_str(str_time, &tm_day, &nanos)) {
+    if (!util_get_tm_from_str(str_time, &tm_day, &nanos)) {
         return false;
     }
 
@@ -189,12 +189,12 @@ out:
 }
 
 /* get time buffer */
-bool get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize)
+bool util_get_time_buffer(const types_timestamp_t *timestamp, char *timebuffer, size_t maxsize)
 {
     return get_time_buffer_help(timestamp, timebuffer, maxsize, false);
 }
 
-bool get_now_time_stamp(types_timestamp_t *timestamp)
+bool util_get_now_time_stamp(types_timestamp_t *timestamp)
 {
     int err = 0;
     struct timespec ts;
@@ -211,7 +211,7 @@ bool get_now_time_stamp(types_timestamp_t *timestamp)
     return true;
 }
 
-int64_t get_now_time_nanos()
+int64_t util_get_now_time_nanos()
 {
     int err = 0;
     struct timespec ts;
@@ -226,30 +226,30 @@ int64_t get_now_time_nanos()
 }
 
 /* get now time buffer */
-bool get_now_time_buffer(char *timebuffer, size_t maxsize)
+bool util_get_now_time_buffer(char *timebuffer, size_t maxsize)
 {
     types_timestamp_t timestamp;
 
-    if (get_now_time_stamp(&timestamp) == false) {
+    if (util_get_now_time_stamp(&timestamp) == false) {
         return false;
     }
 
-    return get_time_buffer(&timestamp, timebuffer, maxsize);
+    return util_get_time_buffer(&timestamp, timebuffer, maxsize);
 }
 
 /* get now local utc time buffer */
-bool get_now_local_utc_time_buffer(char *timebuffer, size_t maxsize)
+bool util_get_now_local_utc_time_buffer(char *timebuffer, size_t maxsize)
 {
     types_timestamp_t timestamp;
 
-    if (get_now_time_stamp(&timestamp) == false) {
+    if (util_get_now_time_stamp(&timestamp) == false) {
         return false;
     }
 
     return get_time_buffer_help(&timestamp, timebuffer, maxsize, true);
 }
 
-int get_time_interval(types_timestamp_t first, types_timestamp_t last, int64_t *result)
+int util_get_time_interval(types_timestamp_t first, types_timestamp_t last, int64_t *result)
 {
     int64_t seconds_diff = 0;
     int64_t nanos_diff = 0;
@@ -348,7 +348,7 @@ static void parsing_time_data(const char *time, struct tm *tm)
     parsing_time_data_sec(tm, time, &i);
 }
 
-bool parsing_time(const char *format, const char *time, struct tm *tm, int32_t *nanos)
+bool util_parsing_time(const char *format, const char *time, struct tm *tm, int32_t *nanos)
 {
     size_t len_format = 0;
     size_t len_time = 0;
@@ -429,7 +429,7 @@ int get_valid_days(int mon, int year)
     return valid_days;
 }
 
-bool fix_date(struct tm *tm)
+bool util_fix_date(struct tm *tm)
 {
     if (tm == NULL) {
         return false;
@@ -456,7 +456,7 @@ bool fix_date(struct tm *tm)
     return true;
 }
 
-bool get_tm_from_str(const char *str, struct tm *tm, int32_t *nanos)
+bool util_get_tm_from_str(const char *str, struct tm *tm, int32_t *nanos)
 {
     char *format = NULL;
 
@@ -464,10 +464,10 @@ bool get_tm_from_str(const char *str, struct tm *tm, int32_t *nanos)
         return false;
     }
 
-    if (strings_contains_any(str, ".")) {
+    if (util_strings_contains_any(str, ".")) {
         format = rFC339NanoLocal;
-    } else if (strings_contains_any(str, "T")) {
-        int tcolons = strings_count(str, ':');
+    } else if (util_strings_contains_any(str, "T")) {
+        int tcolons = util_strings_count(str, ':');
         switch (tcolons) {
             case 0:
                 format = "2016-01-02T15";
@@ -486,12 +486,12 @@ bool get_tm_from_str(const char *str, struct tm *tm, int32_t *nanos)
         format = dateLocal;
     }
 
-    if (!parsing_time(format, str, tm, nanos)) {
+    if (!util_parsing_time(format, str, tm, nanos)) {
         ERROR("Failed to parse time \"%s\" with format \"%s\"", str, format);
         return false;
     }
 
-    if (!fix_date(tm)) {
+    if (!util_fix_date(tm)) {
         ERROR("\"%s\" is invalid", str);
         return false;
     }
@@ -578,7 +578,7 @@ static bool get_tm_zone_from_str(const char *str, struct tm *tm, int32_t *nanos,
     zonestr = util_strdup_s(zp);
     *zp = '\0';
 
-    if (!get_tm_from_str(tmstr, tm, nanos)) {
+    if (!util_get_tm_from_str(tmstr, tm, nanos)) {
         ERROR("Get tm from str failed");
         goto err_out;
     }
@@ -616,7 +616,7 @@ static int64_t get_minmus_time(struct tm *tm1, struct tm *tm2)
     return result;
 }
 
-int64_t time_seconds_since(const char *in)
+int64_t util_time_seconds_since(const char *in)
 {
     int32_t nanos = 0;
     int64_t result = 0;
@@ -835,7 +835,7 @@ static int time_format_duration_bad(char *out, size_t len)
     return 1; /* format ok with bad data, return 1 */
 }
 
-int time_format_duration(const char *in, char *out, size_t len)
+int util_time_format_duration(const char *in, char *out, size_t len)
 {
     int32_t nanos = 0;
     int64_t result = 0;
@@ -873,9 +873,9 @@ int time_format_duration(const char *in, char *out, size_t len)
     return 0;
 }
 
-int time_format_duration_ago(const char *in, char *out, size_t len)
+int util_time_format_duration_ago(const char *in, char *out, size_t len)
 {
-    if (time_format_duration(in, out, len) != 0) {
+    if (util_time_format_duration(in, out, len) != 0) {
         ERROR("Get format duration");
         return -1;
     }
@@ -908,7 +908,7 @@ static int time_tz_to_seconds_nanos(const char *time_tz, int64_t *seconds, int32
     time_str = util_strdup_s(time_tz);
     time_str[strlen(time_str) - 1] = '\0'; /* strip last 'Z' */
 
-    if (!get_tm_from_str(time_str, &t, &nano)) {
+    if (!util_get_tm_from_str(time_str, &t, &nano)) {
         ERROR("get tm from string %s failed", time_str);
         nret = -1;
         goto err_out;
@@ -927,7 +927,7 @@ err_out:
     return nret;
 }
 
-int to_unix_nanos_from_str(const char *str, int64_t *nanos)
+int util_to_unix_nanos_from_str(const char *str, int64_t *nanos)
 {
     struct tm tm = { 0 };
     struct types_timezone tz;
@@ -970,12 +970,12 @@ int to_unix_nanos_from_str(const char *str, int64_t *nanos)
     return 0;
 }
 
-types_timestamp_t to_timestamp_from_str(const char *str)
+types_timestamp_t util_to_timestamp_from_str(const char *str)
 {
     int64_t nanos = 0;
     types_timestamp_t timestamp = { 0 };
 
-    if (to_unix_nanos_from_str(str, &nanos) != 0) {
+    if (util_to_unix_nanos_from_str(str, &nanos) != 0) {
         ERROR("Failed to get created time from image config");
         goto out;
     }
@@ -987,4 +987,76 @@ types_timestamp_t to_timestamp_from_str(const char *str)
 
 out:
     return timestamp;
+}
+
+static int get_time_ns(long long *pns, long long unit)
+{
+    if (unit == 0) {
+        return -1;
+    }
+
+    if (INT64_MAX / *pns >= unit) {
+        *pns *= unit;
+        return 0;
+    }
+
+    return -1;
+}
+
+static long long get_time_unit(int unit)
+{
+    long long u[255] = { 0 };
+
+    u['M'] = Time_Milli;
+    u['s'] = Time_Second;
+    u['m'] = Time_Minute;
+    u['h'] = Time_Hour;
+
+    return u[unit];
+}
+
+int util_time_str_to_nanoseconds(const char *value, int64_t *nanoseconds)
+{
+    int ret = 0;
+    long long tmp = 0;
+    char unit = 0;
+    size_t len = 0;
+    char *num_str = NULL;
+
+    if (value == NULL || nanoseconds == NULL) {
+        return -1;
+    }
+
+    if (util_reg_match("^([0-9]+)+(ms|s|m|h)$", value) != 0) {
+        return -1;
+    }
+    num_str = util_strdup_s(value);
+    len = strlen(value);
+
+    if (strstr(value, "ms") == NULL) {
+        unit = *(value + len - 1);
+        *(num_str + len - 1) = '\0';
+    } else {
+        unit = 'M';
+        *(num_str + len - 2) = '\0';
+    }
+    ret = util_safe_llong(num_str, &tmp);
+    if (ret < 0) {
+        ERROR("Illegal unsigned integer: %s", num_str);
+        ret = -1;
+        goto out;
+    }
+    if (tmp == 0) {
+        goto out;
+    }
+
+    ret = get_time_ns(&tmp, get_time_unit(unit));
+    if (ret != 0) {
+        ERROR("failed get nano seconds for %s", num_str);
+    }
+    *nanoseconds = (int64_t)tmp;
+
+out:
+    free(num_str);
+    return ret;
 }

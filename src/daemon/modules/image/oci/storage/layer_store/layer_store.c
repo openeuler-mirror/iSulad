@@ -556,7 +556,7 @@ static int update_layer_datas(const char *id, const struct layer_opts *opts, lay
     if (opts->opts != NULL) {
         slayer->mountlabel = util_strdup_s(opts->opts->mount_label);
     }
-    if (!get_now_local_utc_time_buffer(timebuffer, TIME_STR_SIZE)) {
+    if (!util_get_now_local_utc_time_buffer(timebuffer, TIME_STR_SIZE)) {
         ERROR("Get create time failed");
         ret = -1;
         goto free_out;

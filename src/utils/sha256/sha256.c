@@ -308,7 +308,7 @@ char *sha256_full_digest_str(char *str)
     return full_digest;
 }
 
-char *without_sha256_prefix(char *digest)
+char *util_without_sha256_prefix(char *digest)
 {
     if (digest == NULL || !util_has_prefix(digest, SHA256_PREFIX)) {
         ERROR("Invalid digest when strip sha256 prefix");

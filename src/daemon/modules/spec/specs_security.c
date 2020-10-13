@@ -58,7 +58,8 @@ static int append_capability(char ***dstcaps, size_t *dstcaps_len, const char *c
         ret = -1;
         goto out;
     }
-    ret = mem_realloc((void **)&tmp, sizeof(char *) * (*dstcaps_len + 1), *dstcaps, sizeof(char *) * (*dstcaps_len));
+    ret = util_mem_realloc((void **)&tmp, sizeof(char *) * (*dstcaps_len + 1), *dstcaps,
+                           sizeof(char *) * (*dstcaps_len));
     if (ret != 0) {
         ERROR("Out of memory");
         ret = -1;
@@ -108,7 +109,7 @@ static int tweak_drops_capabilities(char ***new_caps, size_t *new_caps_len, char
     size_t i = 0;
     int ret = 0;
 
-    if (strings_in_slice((const char **)drops, drops_len, "all")) {
+    if (util_strings_in_slice((const char **)drops, drops_len, "all")) {
         goto out;
     }
 
@@ -119,7 +120,7 @@ static int tweak_drops_capabilities(char ***new_caps, size_t *new_caps_len, char
         }
 
         // if we don't drop `all`, add back all the non-dropped caps
-        if (!strings_in_slice((const char **)drops, drops_len, basic_caps[i] + strlen("CAP_"))) {
+        if (!util_strings_in_slice((const char **)drops, drops_len, basic_caps[i] + strlen("CAP_"))) {
             ret = append_capability(new_caps, new_caps_len, basic_caps[i]);
             if (ret != 0) {
                 ERROR("Failed to append capabilities");
@@ -155,14 +156,14 @@ static int tweak_adds_capabilities(char ***new_caps, size_t *new_caps_len, const
             ret = -1;
             goto out;
         }
-        if (!strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
+        if (!util_strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
             ERROR("Unknown capability to add: '%s'", tmpcap);
             ret = -1;
             goto out;
         }
 
         // add cap if not already in the list
-        if (!strings_in_slice((const char **)*new_caps, *new_caps_len, tmpcap)) {
+        if (!util_strings_in_slice((const char **)*new_caps, *new_caps_len, tmpcap)) {
             ret = append_capability(new_caps, new_caps_len, tmpcap);
             if (ret != 0) {
                 ERROR("Failed to append capabilities");
@@ -195,7 +196,7 @@ static bool valid_drops_cap(const char **drops, size_t drops_len)
             ERROR("Failed to print string");
             return false;
         }
-        if (!strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
+        if (!util_strings_in_slice(g_all_caps, all_caps_len, tmpcap)) {
             ERROR("Unknown capability to drop: '%s'", drops[i]);
             return false;
         }
@@ -222,7 +223,7 @@ static int tweak_capabilities(char ***caps, size_t *caps_len, const char **adds,
         return -1;
     }
 
-    if (strings_in_slice((const char **)adds, adds_len, "all")) {
+    if (util_strings_in_slice((const char **)adds, adds_len, "all")) {
         ret = copy_capabilities(&basic_caps, &basic_caps_len, g_all_caps, all_caps_len);
     } else {
         ret = copy_capabilities(&basic_caps, &basic_caps_len, (const char **)*caps, *caps_len);
@@ -581,7 +582,7 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
 
     new_size = sizeof(defs_syscall *) * oci_seccomp_spec->syscalls_len;
     old_size = sizeof(defs_syscall *) * docker_seccomp_spec->syscalls_len;
-    ret = mem_realloc((void **)&tmp_syscalls, new_size, oci_seccomp_spec->syscalls, old_size);
+    ret = util_mem_realloc((void **)&tmp_syscalls, new_size, oci_seccomp_spec->syscalls, old_size);
     if (ret < 0) {
         ERROR("Out of memory");
         return -1;
@@ -669,7 +670,7 @@ static int append_systemcall_to_seccomp(oci_runtime_config_linux_seccomp *seccom
     }
     new_size = (seccomp->syscalls_len + 1) * sizeof(defs_syscall *);
     old_size = new_size - sizeof(defs_syscall *);
-    nret = mem_realloc((void **)&tmp_syscalls, new_size, seccomp->syscalls, old_size);
+    nret = util_mem_realloc((void **)&tmp_syscalls, new_size, seccomp->syscalls, old_size);
     if (nret < 0) {
         CRIT("Memory allocation error.");
         return -1;
@@ -882,7 +883,7 @@ static int get_adds_cap_for_system_container(const host_config *host_spec, char 
 
     // if cap_drop in g_system_caps, move it from g_system_caps
     for (i = 0; i < system_caps_len; i++) {
-        if (!strings_in_slice((const char **)drops, drops_len, g_system_caps[i])) {
+        if (!util_strings_in_slice((const char **)drops, drops_len, g_system_caps[i])) {
             ret = append_capability(adds, adds_len, g_system_caps[i]);
             if (ret != 0) {
                 ERROR("Failed to append capabilities");

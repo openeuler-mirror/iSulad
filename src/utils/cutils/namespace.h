@@ -58,7 +58,7 @@ typedef enum {
 #define ETC_HOSTNAME "/etc/hostname"
 #define RESOLV_CONF_PATH "/etc/resolv.conf"
 
-static inline bool is_host(const char *mode)
+static inline bool namespace_is_host(const char *mode)
 {
     if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_HOST) == 0) {
         return true;
@@ -66,7 +66,7 @@ static inline bool is_host(const char *mode)
     return false;
 }
 
-static inline bool is_none(const char *mode)
+static inline bool namespace_is_none(const char *mode)
 {
     if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_NONE) == 0) {
         return true;
@@ -74,7 +74,7 @@ static inline bool is_none(const char *mode)
     return false;
 }
 
-static inline bool is_container(const char *mode)
+static inline bool namespace_is_container(const char *mode)
 {
     if (mode != NULL && strncmp(mode, SHARE_NAMESPACE_PREFIX, strlen(SHARE_NAMESPACE_PREFIX)) == 0) {
         return true;
@@ -82,7 +82,7 @@ static inline bool is_container(const char *mode)
     return false;
 }
 
-static inline bool is_shareable(const char *mode)
+static inline bool namespace_is_shareable(const char *mode)
 {
     if (mode != NULL && strcmp(mode, SHARE_NAMESPACE_SHAREABLE) == 0) {
         return true;
@@ -90,8 +90,8 @@ static inline bool is_shareable(const char *mode)
     return false;
 }
 
-char *connected_container(const char *mode);
-char *get_host_namespace_path(const char *type);
+char *namespace_get_connected_container(const char *mode);
+char *namespace_get_host_namespace_path(const char *type);
 
 #ifdef __cplusplus
 }

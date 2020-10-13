@@ -106,30 +106,10 @@ extern "C" {
 #define SIZE_TB (1024LL * SIZE_GB)
 #define SIZE_PB (1024LL * SIZE_TB)
 
-#define Time_Nano 1LL
-#define Time_Micro (1000LL * Time_Nano)
-#define Time_Milli (1000LL * Time_Micro)
-#define Time_Second (1000LL * Time_Milli)
-#define Time_Minute (60LL * Time_Second)
-#define Time_Hour (60LL * Time_Minute)
-
 /* Max regular file size for isula\isulad to open as same as docker */
 #define REGULAR_FILE_SIZE (10 * SIZE_MB)
 
-#define rFC339Local "2006-01-02T15:04:05"
-#define rFC339NanoLocal "2006-01-02T15:04:05.999999999"
-#define dateLocal "2006-01-02"
-#define defaultContainerTime "0001-01-01T00:00:00Z"
 #define TIME_STR_SIZE 512
-
-#define HOST_NAME_REGEXP                                         \
-    "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*" \
-    "([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
-#define __TagPattern "^:([A-Za-z_0-9][A-Za-z_0-9.-]{0,127})$"
-#define __NamePattern                                                                 \
-    "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])"                             \
-    "((\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))+)?(:[0-9]+)?/)?[a-z0-9]" \
-    "+((([._]|__|[-]*)[a-z0-9]+)+)?((/[a-z0-9]+((([._]|__|[-]*)[a-z0-9]+)+)?)+)?$"
 
 // native umask value
 #define ANNOTATION_UMAKE_KEY "native.umask"
@@ -319,7 +299,7 @@ struct signame {
         }                         \
     } while (0)
 
-int mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize);
+int util_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize);
 
 int util_check_inherited(bool closeall, int fd_to_ignore);
 
@@ -331,7 +311,7 @@ void *util_common_calloc_s(size_t size);
 
 char *util_strdup_s(const char *src);
 
-int wait_for_pid(pid_t pid);
+int util_wait_for_pid(pid_t pid);
 
 void util_contain_errmsg(const char *errmsg, int *exit_code);
 
@@ -343,7 +323,7 @@ proc_t *util_stat2proc(const char *s, size_t len);
 
 bool util_process_alive(pid_t pid, unsigned long long start_time);
 
-int wait_for_pid_status(pid_t pid);
+int util_wait_for_pid_status(pid_t pid);
 
 typedef void (*exec_func_t)(void *args);
 bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char **stdout_msg, char **stderr_msg);
@@ -352,9 +332,7 @@ typedef void (*exec_top_func_t)(char **args, const char *pid_args, size_t args_l
 bool util_exec_top_cmd(exec_top_func_t cb_func, char **args, const char *pid_args, size_t args_len, char **stdout_msg,
                        char **stderr_msg);
 
-char **get_backtrace(void);
-
-int util_parse_time_str_to_nanoseconds(const char *value, int64_t *nanoseconds);
+char **util_get_backtrace(void);
 
 proc_t *util_get_process_proc_info(pid_t pid);
 
@@ -364,43 +342,28 @@ int util_env_insert(char ***penv, size_t *penv_len, const char *key, size_t key_
 int util_env_set_val(char ***penv, const size_t *penv_len, const char *key, size_t key_len, const char *newkv);
 char *util_env_get_val(char **env, size_t env_len, const char *key, size_t key_len);
 
-char *util_str_token(char **input, const char *delimiter);
-bool check_sysctl_valid(const char *sysctl_key);
-bool pid_max_kernel_namespaced();
-void free_sensitive_string(char *str);
-void memset_sensitive_string(char *str);
+bool util_check_pid_max_kernel_namespaced();
+
+void util_free_sensitive_string(char *str);
+void util_memset_sensitive_string(char *str);
 
 int util_input_readall(char *buf, size_t maxlen);
 int util_input_echo(char *buf, size_t maxlen);
 int util_input_noecho(char *buf, size_t maxlen);
 
-bool util_check_signal_valid(int sig);
-
-void usleep_nointerupt(unsigned long usec);
+void util_usleep_nointerupt(unsigned long usec);
 
 int util_generate_random_str(char *id, size_t len);
 
-void add_array_elem(char **array, size_t total, size_t *pos, const char *elem);
-
-void add_array_kv(char **array, size_t total, size_t *pos, const char *k, const char *v);
-
-int util_validate_env(const char *env, char **dst);
-
 int util_check_inherited_exclude_fds(bool closeall, int *fds_to_ignore, size_t len_fds);
 
-int get_cpu_num_cores(void);
+char *util_without_sha256_prefix(char *digest);
 
-char *util_uint_to_string(long long unsigned int data);
-
-char *util_int_to_string(long long int data);
-
-char *without_sha256_prefix(char *digest);
-
-int normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant);
-
-char *util_full_digest_str(char *str);
+int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_variant);
 
 int util_read_pid_ppid_info(uint32_t pid, pid_ppid_info_t *pid_info);
+
+void util_parse_user_group(const char *username, char **user, char **group, char **tmp_dup);
 
 #ifdef __cplusplus
 }

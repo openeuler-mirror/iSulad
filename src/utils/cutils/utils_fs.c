@@ -612,7 +612,7 @@ child_out:
         }
     }
 
-    ret = wait_for_pid(pid);
+    ret = util_wait_for_pid(pid);
     if (ret != 0) {
         ERROR("Wait util_mount_from failed");
     }

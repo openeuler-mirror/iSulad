@@ -777,7 +777,7 @@ static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, l
             for (j = 0; j < list->layers_len; j++) {
                 if ((list->layers[j]->parent == NULL && index == 0) ||
                     (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
-                     !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)))) {
+                     !strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)))) {
                     layers[index].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);
                     layers[i].chain_id = util_string_append(list->layers[j]->id, SHA256_PREFIX);
                     parent_chain_id = layers[i].chain_id;
@@ -830,11 +830,11 @@ static int update_image_info(types_timestamp_t *created, const char *config_dige
     free(img->id);
     img->id = util_strdup_s(config_digest);
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     img->loaded = util_strdup_s(timebuffer);
 
     if (created != NULL && (created->has_seconds || created->has_nanos) &&
-        !get_time_buffer(created, timebuffer, sizeof(timebuffer))) {
+        !util_get_time_buffer(created, timebuffer, sizeof(timebuffer))) {
         ERROR("Failed to get time buffer");
         return -1;
     }
@@ -988,7 +988,7 @@ static int convert_to_v2_image_and_load(const char *path)
         goto out;
     }
 
-    created = to_timestamp_from_str(config->created);
+    created = util_to_timestamp_from_str(config->created);
     if (update_image_info(&created, config_digest, img) != 0) {
         ERROR("Failed to update image info");
         ret = -1;
@@ -1320,10 +1320,10 @@ static storage_image *new_storage_image(const char *id, const char *searchable_d
     im->layer = util_strdup_s(layer);
     im->metadata = util_strdup_s(metadata);
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     im->loaded = util_strdup_s(timebuffer);
     if (time != NULL && (time->has_seconds || time->has_nanos) &&
-        !get_time_buffer(time, timebuffer, sizeof(timebuffer))) {
+        !util_get_time_buffer(time, timebuffer, sizeof(timebuffer))) {
         ERROR("Failed to get time buffer");
         ret = -1;
         goto out;
@@ -1817,7 +1817,7 @@ static int append_big_data_name(storage_image *im, const char *name)
     old_size = im->big_data_names_len * sizeof(char *);
     new_size = old_size + sizeof(char *);
 
-    if (mem_realloc((void **)&tmp_names, new_size, (void *)im->big_data_names, old_size) != 0) {
+    if (util_mem_realloc((void **)&tmp_names, new_size, (void *)im->big_data_names, old_size) != 0) {
         ERROR("Failed to realloc memory");
         return -1;
     }
@@ -2012,7 +2012,7 @@ static int append_name(char ***names, size_t *names_len, const char *name)
     old_size = *names_len * sizeof(char *);
     new_size = old_size + sizeof(char *);
 
-    if (mem_realloc((void **)&tmp_names, new_size, (void *)*names, old_size) != 0) {
+    if (util_mem_realloc((void **)&tmp_names, new_size, (void *)*names, old_size) != 0) {
         ERROR("Failed to realloc memory");
         return -1;
     }
@@ -2057,7 +2057,7 @@ int image_store_add_name(const char *id, const char *name)
         goto out;
     }
 
-    if (dup_array_of_strings((const char **)img->simage->names, img->simage->names_len, &names, &names_len) != 0) {
+    if (util_dup_array_of_strings((const char **)img->simage->names, img->simage->names_len, &names, &names_len) != 0) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
@@ -2239,7 +2239,8 @@ int image_store_get_names(const char *id, char ***names, size_t *names_len)
         goto out;
     }
 
-    ret = dup_array_of_strings((const char **)img->simage->names, img->simage->names_len, &tmp_names, &tmp_names_len);
+    ret = util_dup_array_of_strings((const char **)img->simage->names, img->simage->names_len, &tmp_names,
+                                    &tmp_names_len);
     if (ret != 0) {
         ERROR("Out of memory");
         goto out;
@@ -2327,7 +2328,7 @@ int image_store_set_load_time(const char *id, const types_timestamp_t *time)
         goto out;
     }
 
-    if (!get_time_buffer(time, timebuffer, sizeof(timebuffer))) {
+    if (!util_get_time_buffer(time, timebuffer, sizeof(timebuffer))) {
         ERROR("Failed to get time buffer");
         ret = -1;
         goto out;
@@ -2419,7 +2420,7 @@ char *image_store_big_data(const char *id, const char *key)
         goto out;
     }
 
-    content = isula_utils_read_file(filename);
+    content = util_read_content_from_file(filename);
 
 out:
     image_ref_dec(img);
@@ -2625,8 +2626,8 @@ int image_store_big_data_names(const char *id, char ***names, size_t *names_len)
         goto out;
     }
 
-    if (dup_array_of_strings((const char **)img->simage->big_data_names, img->simage->big_data_names_len, names,
-                             names_len) != 0) {
+    if (util_dup_array_of_strings((const char **)img->simage->big_data_names, img->simage->big_data_names_len, names,
+                                  names_len) != 0) {
         ERROR("Failed to dup image's names");
         ret = -1;
         goto out;
@@ -3019,43 +3020,6 @@ out:
     return ret;
 }
 
-static void parse_user_group(const char *username, char **user, char **group, char **tmp_dup)
-{
-    char *tmp = NULL;
-    char *pdot = NULL;
-
-    if (user == NULL || group == NULL || tmp_dup == NULL) {
-        return;
-    }
-
-    if (username != NULL) {
-        tmp = util_strdup_s(username);
-
-        // for free tmp in caller
-        *tmp_dup = tmp;
-
-        pdot = strstr(tmp, ":");
-        if (pdot != NULL) {
-            *pdot = '\0';
-            if (pdot != tmp) {
-                // User found
-                *user = tmp;
-            }
-            if (*(pdot + 1) != '\0') {
-                // group found
-                *group = pdot + 1;
-            }
-        } else {
-            // No : found
-            if (*tmp != '\0') {
-                *user = tmp;
-            }
-        }
-    }
-
-    return;
-}
-
 static int pack_health_check_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
 {
     int ret = 0;
@@ -3111,7 +3075,7 @@ static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, im
     }
 
     // parse user and group by username
-    parse_user_group(config_v2->config->user, &user, &group, &tmp);
+    util_parse_user_group(config_v2->config->user, &user, &group, &tmp);
 
     if (user == NULL) {
         ERROR("Failed to parse user");
@@ -3379,7 +3343,7 @@ int image_store_get_fs_info(imagetool_fs_info *fs_info)
         goto out;
     }
 
-    fs_usage_tmp->timestamp = get_now_time_nanos();
+    fs_usage_tmp->timestamp = util_get_now_time_nanos();
 
     fs_usage_tmp->fs_id = util_common_calloc_s(sizeof(imagetool_fs_info_image_filesystems_fs_id));
     if (fs_usage_tmp->fs_id == NULL) {

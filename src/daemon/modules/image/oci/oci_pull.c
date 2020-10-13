@@ -63,7 +63,7 @@ static int decode_auth(const char *auth, char **username, char **password)
     (void)memset(auth_parts[1], 0, strlen(auth_parts[1]));
 
 out:
-    free_sensitive_string((char *)decoded);
+    util_free_sensitive_string((char *)decoded);
     decoded = NULL;
     util_free_array(auth_parts);
     auth_parts = NULL;
@@ -194,8 +194,7 @@ int oci_do_pull_image(const im_pull_request *request, im_pull_response *response
     image2 = storage_img_get(request->image);
     if (image == NULL || image2 == NULL) {
         ERROR("get image %s failed after pulling", request->image);
-        isulad_set_error_message("Failed to pull image %s with error: image not found after pulling",
-                                 request->image);
+        isulad_set_error_message("Failed to pull image %s with error: image not found after pulling", request->image);
         ret = -1;
         goto out;
     }

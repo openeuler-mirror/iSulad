@@ -72,7 +72,7 @@ static int get_regex_size_from_wildcard(const char *wildcard, const char *escape
     size_t i, tmp;
 
     for (i = 0; i < escapes_size; i++) {
-        tmp = strings_count(wildcard, escapes[i]);
+        tmp = util_strings_count(wildcard, escapes[i]);
         if (tmp > SIZE_MAX - size) {
             ERROR("Invalid wildcard");
             return -1;
@@ -80,7 +80,7 @@ static int get_regex_size_from_wildcard(const char *wildcard, const char *escape
         size += tmp;
     }
 
-    tmp = strings_count(wildcard, '*');
+    tmp = util_strings_count(wildcard, '*');
     if (tmp > SIZE_MAX - size - strlen(wildcard) - 3) {
         ERROR("Invalid wildcard");
         return -1;
@@ -138,4 +138,3 @@ int util_wildcard_to_regex(const char *wildcard, char **regex)
 
     return 0;
 }
-

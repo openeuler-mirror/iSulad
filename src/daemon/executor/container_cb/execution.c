@@ -403,7 +403,7 @@ static int restart_container(container_t *cont)
         goto out;
     }
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
 
     params.rootpath = rootpath;
 
@@ -706,7 +706,7 @@ static int container_kill_cb(const container_kill_request *request, container_ki
         goto pack_response;
     }
 
-    if (!util_check_signal_valid((int)signal)) {
+    if (!util_valid_signal((int)signal)) {
         isulad_set_error_message("Not supported signal %d", signal);
         ERROR("Not supported signal %d", signal);
         cc = ISULAD_ERR_EXEC;

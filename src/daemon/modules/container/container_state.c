@@ -167,7 +167,7 @@ void container_state_set_running(container_state_t *s, const pid_ppid_info_t *pi
         state->p_start_time = 0;
     }
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     free(state->started_at);
     state->started_at = util_strdup_s(timebuffer);
 
@@ -198,7 +198,7 @@ void container_state_set_stopped(container_state_t *s, int exit_code)
     state->p_pid = 0;
     state->p_start_time = 0;
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     free(state->finished_at);
     state->finished_at = util_strdup_s(timebuffer);
 
@@ -259,7 +259,7 @@ void container_restart_update_start_and_finish_time(container_state_t *s, const 
     state->paused = false;
     state->exit_code = 0;
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     free(state->finished_at);
     state->finished_at = util_strdup_s(finish_at);
     free(state->started_at);
@@ -294,7 +294,7 @@ void container_state_set_restarting(container_state_t *s, int exit_code)
     state->p_start_time = 0;
     state->exit_code = exit_code;
 
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     free(state->finished_at);
     state->finished_at = util_strdup_s(timebuffer);
 

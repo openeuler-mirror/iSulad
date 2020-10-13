@@ -1014,7 +1014,7 @@ static int verify_resources_hugetlbs(const sysinfo_t *sysinfo, defs_resources_hu
         }
         newsize = sizeof(defs_resources_hugepage_limits_element *) * (newlen + 1);
         oldsize = newsize - sizeof(defs_resources_hugepage_limits_element *);
-        ret = mem_realloc((void **)&tmphugetlb, newsize, newhugetlb, oldsize);
+        ret = util_mem_realloc((void **)&tmphugetlb, newsize, newhugetlb, oldsize);
         if (ret < 0) {
             free(pagesize);
             ERROR("Out of memory");
@@ -1133,7 +1133,7 @@ static bool verify_oci_linux_sysctl(const oci_runtime_config_linux *l)
     }
     for (i = 0; i < l->sysctl->len; i++) {
         if (strcmp("kernel.pid_max", l->sysctl->keys[i]) == 0) {
-            if (!pid_max_kernel_namespaced()) {
+            if (!util_check_pid_max_kernel_namespaced()) {
                 isulad_set_error_message("Sysctl '%s' is not kernel namespaced, it cannot be changed",
                                          l->sysctl->keys[i]);
                 return false;
@@ -1141,7 +1141,7 @@ static bool verify_oci_linux_sysctl(const oci_runtime_config_linux *l)
                 return true;
             }
         }
-        if (!check_sysctl_valid(l->sysctl->keys[i])) {
+        if (!util_valid_sysctl(l->sysctl->keys[i])) {
             isulad_set_error_message("Sysctl %s=%s is not whitelist", l->sysctl->keys[i], l->sysctl->values[i]);
             return false;
         }
@@ -1470,7 +1470,7 @@ static int verify_process_env(const defs_process *process)
     char *new_env = NULL;
 
     for (i = 0; i < process->env_len; i++) {
-        if (util_validate_env(process->env[i], &new_env) != 0) {
+        if (util_valid_env(process->env[i], &new_env) != 0) {
             ERROR("Invalid environment %s", process->env[i]);
             isulad_set_error_message("Invalid environment %s", process->env[i]);
             ret = -1;
@@ -1605,7 +1605,7 @@ static int append_hugetlb_array(host_config_hugetlbs_element ***hugetlb, size_t 
 
     newsize = sizeof(host_config_hugetlbs_element *) * (len + 1);
     oldsize = newsize - sizeof(host_config_hugetlbs_element *);
-    ret = mem_realloc((void **)&tmphugetlb, newsize, *hugetlb, oldsize);
+    ret = util_mem_realloc((void **)&tmphugetlb, newsize, *hugetlb, oldsize);
     if (ret < 0) {
         return -1;
     }

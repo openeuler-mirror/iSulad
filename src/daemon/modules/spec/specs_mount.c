@@ -90,7 +90,7 @@ static int append_additional_mounts(oci_runtime_spec *oci_spec, const char *type
     new_size = (oci_spec->mounts_len + files_len) * sizeof(defs_mount *);
     old_size = oci_spec->mounts_len * sizeof(defs_mount *);
 
-    ret = mem_realloc((void **)&spec_mounts, new_size, oci_spec->mounts, old_size);
+    ret = util_mem_realloc((void **)&spec_mounts, new_size, oci_spec->mounts, old_size);
     if (ret != 0) {
         ERROR("Out of memory");
         ret = -1;
@@ -218,7 +218,7 @@ static int pack_devices(const char *fullpath, char ***devices, size_t *device_le
     tmp_length += 1;
     new_size = sizeof(char *) * tmp_length;
 
-    ret = mem_realloc((void **)&tmp_device, new_size, *devices, old_size);
+    ret = util_mem_realloc((void **)&tmp_device, new_size, *devices, old_size);
     if (ret != 0) {
         ERROR("get_devices: Failed to realloc memory");
         ret = -1;
@@ -563,7 +563,7 @@ defs_mount *parse_mount(const char *mount)
         goto out;
     }
 
-    if (!cleanpath(mount_element->source, dstpath, sizeof(dstpath))) {
+    if (!util_clean_path(mount_element->source, dstpath, sizeof(dstpath))) {
         ERROR("Failed to get clean path");
         ret = -1;
         goto out;
@@ -571,7 +571,7 @@ defs_mount *parse_mount(const char *mount)
     free(mount_element->source);
     mount_element->source = util_strdup_s(dstpath);
 
-    if (!cleanpath(mount_element->destination, dstpath, sizeof(dstpath))) {
+    if (!util_clean_path(mount_element->destination, dstpath, sizeof(dstpath))) {
         ERROR("failed to get clean path");
         ret = EINVALIDARGS;
         goto out;
@@ -727,7 +727,7 @@ defs_mount *parse_volume(const char *volume)
         }
     }
 
-    if (!cleanpath(mount_element->source, dstpath, sizeof(dstpath))) {
+    if (!util_clean_path(mount_element->source, dstpath, sizeof(dstpath))) {
         ERROR("Failed to get clean path");
         ret = -1;
         goto free_out;
@@ -735,7 +735,7 @@ defs_mount *parse_volume(const char *volume)
     free(mount_element->source);
     mount_element->source = util_strdup_s(dstpath);
 
-    if (!cleanpath(mount_element->destination, dstpath, sizeof(dstpath))) {
+    if (!util_clean_path(mount_element->destination, dstpath, sizeof(dstpath))) {
         ERROR("Failed to get clean path");
         ret = -1;
         goto free_out;
@@ -1049,7 +1049,7 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
     }
     new_size = (oci_spec->linux->devices_len + devices_len) * sizeof(defs_device *);
     old_size = oci_spec->linux->devices_len * sizeof(defs_device *);
-    ret = mem_realloc((void **)&spec_dev, new_size, oci_spec->linux->devices, old_size);
+    ret = util_mem_realloc((void **)&spec_dev, new_size, oci_spec->linux->devices, old_size);
     if (ret != 0) {
         ERROR("Out of memory");
         ret = -1;
@@ -1066,7 +1066,7 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
     }
     new_size = (oci_spec->linux->resources->devices_len + devices_len) * sizeof(defs_device_cgroup *);
     old_size = oci_spec->linux->resources->devices_len * sizeof(defs_device_cgroup *);
-    ret = mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
+    ret = util_mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
     if (ret != 0) {
         ERROR("Out of memory");
         ret = -1;
@@ -1374,7 +1374,7 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
     }
     new_size = (oci_spec->mounts_len + volumes_len) * sizeof(defs_mount *);
     old_size = oci_spec->mounts_len * sizeof(defs_mount *);
-    ret = mem_realloc((void **)&mounts_temp, new_size, oci_spec->mounts, old_size);
+    ret = util_mem_realloc((void **)&mounts_temp, new_size, oci_spec->mounts, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory volumes");
         ret = -1;
@@ -1398,14 +1398,14 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
         old_mp_val_size =
             common_config->mount_points->len * sizeof(container_config_v2_common_config_mount_points_element *);
 
-        ret = mem_realloc((void **)&mp_key, new_mp_key_size, common_config->mount_points->keys, old_mp_key_size);
+        ret = util_mem_realloc((void **)&mp_key, new_mp_key_size, common_config->mount_points->keys, old_mp_key_size);
         if (ret != 0) {
             ERROR("Failed to realloc memory mount point");
             ret = -1;
             goto out;
         }
         common_config->mount_points->keys = mp_key;
-        ret = mem_realloc((void **)&mp_val, new_mp_val_size, common_config->mount_points->values, old_mp_val_size);
+        ret = util_mem_realloc((void **)&mp_val, new_mp_val_size, common_config->mount_points->values, old_mp_val_size);
         if (ret != 0) {
             ERROR("Failed to realloc memory mount point");
             ret = -1;
@@ -1460,7 +1460,7 @@ static int merge_custom_one_device(oci_runtime_spec *oci_spec, const host_config
     }
     new_size = (oci_spec->linux->devices_len + 1) * sizeof(defs_device *);
     old_size = new_size - sizeof(defs_device *);
-    ret = mem_realloc((void **)&spec_dev, new_size, oci_spec->linux->devices, old_size);
+    ret = util_mem_realloc((void **)&spec_dev, new_size, oci_spec->linux->devices, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for devices");
         ret = -1;
@@ -1478,7 +1478,7 @@ static int merge_custom_one_device(oci_runtime_spec *oci_spec, const host_config
     }
     new_size = (oci_spec->linux->resources->devices_len + 1) * sizeof(defs_device_cgroup *);
     old_size = new_size - sizeof(defs_device_cgroup *);
-    ret = mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
+    ret = util_mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for cgroup devices");
         ret = -1;
@@ -1565,7 +1565,8 @@ static int merge_blkio_weight_device(oci_runtime_spec *oci_spec, defs_blkio_weig
     new_size = (oci_spec->linux->resources->block_io->weight_device_len + blkio_weight_device_len) *
                sizeof(defs_block_io_device_weight *);
     old_size = oci_spec->linux->resources->block_io->weight_device_len * sizeof(defs_block_io_device_weight *);
-    ret = mem_realloc((void **)&weight_device, new_size, oci_spec->linux->resources->block_io->weight_device, old_size);
+    ret = util_mem_realloc((void **)&weight_device, new_size, oci_spec->linux->resources->block_io->weight_device,
+                           old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for weight devices");
         ret = -1;
@@ -1617,8 +1618,8 @@ static int merge_blkio_read_bps_device(oci_runtime_spec *oci_spec, defs_blkio_de
                sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_read_bps_device_len *
                sizeof(defs_block_io_device_throttle *);
-    ret = mem_realloc((void **)&throttle_read_bps_device, new_size,
-                      oci_spec->linux->resources->block_io->throttle_read_bps_device, old_size);
+    ret = util_mem_realloc((void **)&throttle_read_bps_device, new_size,
+                           oci_spec->linux->resources->block_io->throttle_read_bps_device, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for blkio throttle read bps devices");
         ret = -1;
@@ -1670,8 +1671,8 @@ static int merge_blkio_write_bps_device(oci_runtime_spec *oci_spec, defs_blkio_d
                sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_write_bps_device_len *
                sizeof(defs_block_io_device_throttle *);
-    ret = mem_realloc((void **)&throttle_write_bps_device, new_size,
-                      oci_spec->linux->resources->block_io->throttle_write_bps_device, old_size);
+    ret = util_mem_realloc((void **)&throttle_write_bps_device, new_size,
+                           oci_spec->linux->resources->block_io->throttle_write_bps_device, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for throttle write bps devices");
         ret = -1;
@@ -1723,8 +1724,8 @@ static int merge_blkio_read_iops_device(oci_runtime_spec *oci_spec, defs_blkio_d
                sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_read_iops_device_len *
                sizeof(defs_block_io_device_throttle *);
-    ret = mem_realloc((void **)&throttle_read_iops_device, new_size,
-                      oci_spec->linux->resources->block_io->throttle_read_iops_device, old_size);
+    ret = util_mem_realloc((void **)&throttle_read_iops_device, new_size,
+                           oci_spec->linux->resources->block_io->throttle_read_iops_device, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for blkio throttle read iops devices");
         ret = -1;
@@ -1776,8 +1777,8 @@ static int merge_blkio_write_iops_device(oci_runtime_spec *oci_spec, defs_blkio_
                sizeof(defs_block_io_device_throttle *);
     old_size = oci_spec->linux->resources->block_io->throttle_write_iops_device_len *
                sizeof(defs_block_io_device_throttle *);
-    ret = mem_realloc((void **)&throttle_write_iops_device, new_size,
-                      oci_spec->linux->resources->block_io->throttle_write_iops_device, old_size);
+    ret = util_mem_realloc((void **)&throttle_write_iops_device, new_size,
+                           oci_spec->linux->resources->block_io->throttle_write_iops_device, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for throttle write iops devices");
         ret = -1;
@@ -1945,7 +1946,7 @@ static int do_merge_device_cgroup_rules(oci_runtime_spec *oci_spec, const char *
     }
     new_size = (oci_spec->linux->resources->devices_len + dev_cgroup_rules_len) * sizeof(defs_device_cgroup *);
     old_size = oci_spec->linux->resources->devices_len * sizeof(defs_device_cgroup *);
-    ret = mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
+    ret = util_mem_realloc((void **)&spec_cgroup_dev, new_size, oci_spec->linux->resources->devices, old_size);
     if (ret != 0) {
         ERROR("Out of memory");
         ret = -1;
@@ -2068,8 +2069,8 @@ static bool mounts_expand(oci_runtime_spec *container, size_t add_len)
         ERROR("Too many mount elements!");
         return false;
     }
-    ret = mem_realloc((void **)&tmp_mount, (old_len + add_len) * sizeof(defs_mount *), container->mounts,
-                      old_len * sizeof(defs_mount *));
+    ret = util_mem_realloc((void **)&tmp_mount, (old_len + add_len) * sizeof(defs_mount *), container->mounts,
+                           old_len * sizeof(defs_mount *));
     if (ret < 0) {
         ERROR("memory realloc failed for mount array expand");
         return false;
@@ -2187,7 +2188,7 @@ static int change_dev_shm_size(oci_runtime_spec *oci_spec, host_config *host_spe
     char size_opt[MOUNT_PROPERTIES_SIZE] = { 0 };
     char *tmp = NULL;
 
-    if (is_none(host_spec->ipc_mode)) {
+    if (namespace_is_none(host_spec->ipc_mode)) {
         return 0;
     }
 
@@ -2250,7 +2251,7 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
     bool has_resolv_mount = false;
     bool has_hostname_mount = false;
 #ifdef ENABLE_SELINUX
-    bool share = is_container(host_spec->network_mode);
+    bool share = namespace_is_container(host_spec->network_mode);
 #endif
 
     for (i = 0; i < oci_spec->mounts_len; i++) {
@@ -2538,12 +2539,12 @@ static int setup_ipc_dirs(oci_runtime_spec *oci_spec, host_config *host_spec,
         return 0;
     }
     // setup shareable dirs
-    if (host_spec->ipc_mode == NULL || is_shareable(host_spec->ipc_mode)) {
+    if (host_spec->ipc_mode == NULL || namespace_is_shareable(host_spec->ipc_mode)) {
         return prepare_share_shm(oci_spec, host_spec, v2_spec);
     }
 
-    if (is_container(host_spec->ipc_mode)) {
-        tmp_cid = connected_container(host_spec->ipc_mode);
+    if (namespace_is_container(host_spec->ipc_mode)) {
+        tmp_cid = namespace_get_connected_container(host_spec->ipc_mode);
         cont = containers_store_get(tmp_cid);
         if (cont == NULL) {
             ERROR("Invalid share path: %s", host_spec->ipc_mode);
@@ -2552,7 +2553,7 @@ static int setup_ipc_dirs(oci_runtime_spec *oci_spec, host_config *host_spec,
         }
         right_path = util_strdup_s(cont->common_config->shm_path);
         container_unref(cont);
-    } else if (is_host(host_spec->ipc_mode)) {
+    } else if (namespace_is_host(host_spec->ipc_mode)) {
         if (!util_file_exists(SHM_MOUNT_POINT)) {
             ERROR("/dev/shm is not mounted, but must be for --ipc=host");
             ret = -1;

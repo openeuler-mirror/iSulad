@@ -413,7 +413,7 @@ char *util_path_join(const char *dir, const char *file)
         return NULL;
     }
 
-    if (cleanpath(path, cleaned, sizeof(cleaned)) == NULL) {
+    if (util_clean_path(path, cleaned, sizeof(cleaned)) == NULL) {
         ERROR("Failed to clean path: %s", path);
         return NULL;
     }
@@ -567,7 +567,7 @@ int util_open(const char *filename, int flags, mode_t mode)
 {
     char rpath[PATH_MAX] = { 0x00 };
 
-    if (cleanpath(filename, rpath, sizeof(rpath)) == NULL) {
+    if (util_clean_path(filename, rpath, sizeof(rpath)) == NULL) {
         return -1;
     }
     if (mode) {
@@ -589,8 +589,8 @@ FILE *util_fopen(const char *filename, const char *mode)
         return NULL;
     }
 
-    if (cleanpath(filename, rpath, sizeof(rpath)) == NULL) {
-        ERROR("cleanpath failed");
+    if (util_clean_path(filename, rpath, sizeof(rpath)) == NULL) {
+        ERROR("util_clean_path failed");
         return NULL;
     }
     if (strncmp(mode, "a+", 2) == 0) {
@@ -976,7 +976,7 @@ char *look_path(const char *file, char **err)
     }
 
     /* if slash in file, directly use file and do not try PATH. */
-    if (strings_contains_any(file, "/")) {
+    if (util_strings_contains_any(file, "/")) {
         int en = find_executable(file);
         if (en == 0) {
             return util_strdup_s(file);
@@ -1414,7 +1414,7 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
         return 0;
     }
 
-    if (cleanpath(fname, rpath, sizeof(rpath)) == NULL) {
+    if (util_clean_path(fname, rpath, sizeof(rpath)) == NULL) {
         return -1;
     }
 
@@ -1444,7 +1444,7 @@ free_out:
     return ret;
 }
 
-static char *isula_utils_fisula_utils_read_file(FILE *stream, size_t *length)
+static char *do_read_file(FILE *stream, size_t *length)
 {
 #define JSON_MAX_SIZE (10LL * 1024LL * 1024LL)
     char *buf = NULL;
@@ -1504,7 +1504,7 @@ static int do_check_args(const char *path)
     return 0;
 }
 
-char *isula_utils_read_file(const char *path)
+char *util_read_content_from_file(const char *path)
 {
 #define FILE_MODE 0640
     char *buf = NULL;
@@ -1535,12 +1535,12 @@ char *isula_utils_read_file(const char *path)
         return NULL;
     }
 
-    buf = isula_utils_fisula_utils_read_file(fp, &length);
+    buf = do_read_file(fp, &length);
     (void)fclose(fp);
     return buf;
 }
 
-int isula_utils_read_line(FILE *fp, read_line_callback_t cb, void *context)
+int util_proc_file_line_by_line(FILE *fp, read_line_callback_t cb, void *context)
 {
     size_t len = 0;
     char *line = NULL;

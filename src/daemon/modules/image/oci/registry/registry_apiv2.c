@@ -285,7 +285,7 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
         }
     }
 
-    if (!strings_contains_word(version, "registry/2.0")) {
+    if (!util_strings_contains_word(version, "registry/2.0")) {
         ERROR("Docker-Distribution-Api-Version does not contain registry/2.0, it's value is %s."
               "Registry can not support registry API V2",
               version);
@@ -425,7 +425,7 @@ static int registry_request(pull_descriptor *desc, char *path, char **custom_hea
         goto out;
     }
 
-    headers = str_array_dup((const char **)custom_headers, util_array_len((const char **)custom_headers));
+    headers = util_str_array_dup((const char **)custom_headers, util_array_len((const char **)custom_headers));
     if (ret != 0) {
         ERROR("duplicate custom headers failed");
         ret = -1;
@@ -820,7 +820,7 @@ static int select_oci_manifest(oci_image_index *index, char **content_type, char
         return -1;
     }
 
-    ret = normalized_host_os_arch(&host_os, &host_arch, &host_variant);
+    ret = util_normalized_host_os_arch(&host_os, &host_arch, &host_variant);
     if (ret != 0) {
         ret = -1;
         goto out;
@@ -877,7 +877,7 @@ static int select_docker_manifest(registry_manifest_list *manifests, char **cont
         return -1;
     }
 
-    ret = normalized_host_os_arch(&host_os, &host_arch, &host_variant);
+    ret = util_normalized_host_os_arch(&host_os, &host_arch, &host_variant);
     if (ret != 0) {
         ret = -1;
         goto out;

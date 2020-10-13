@@ -22,34 +22,33 @@ extern "C" {
 #endif
 
 /*
- * cleanpath is similar to realpath of glibc, but not expands symbolic links,
+ * util_clean_path is similar to realpath of glibc, but not expands symbolic links,
  * and not check the existence of components of the path.
  */
-char *cleanpath(const char *path, char *realpath, size_t realpath_len);
+char *util_clean_path(const char *path, char *realpath, size_t realpath_len);
 
-bool specify_current_dir(const char *path);
+bool util_specify_current_dir(const char *path);
 
-char *follow_symlink_in_scope(const char *fullpath, const char *rootpath);
+char *util_follow_symlink_in_scope(const char *fullpath, const char *rootpath);
 
-int split_dir_and_base_name(const char *path, char **dir, char **base);
+int util_split_dir_and_base_name(const char *path, char **dir, char **base);
 
-int filepath_split(const char *path, char **dir, char **base);
+int util_filepath_split(const char *path, char **dir, char **base);
 
-char *get_resource_path(const char *rootpath, const char *path);
+char *util_get_resource_path(const char *rootpath, const char *path);
 
-int resolve_path(const char *rootpath, const char *path, char **resolvedpath, char **abspath);
+int util_resolve_path(const char *rootpath, const char *path, char **resolvedpath, char **abspath);
 
-bool has_trailing_path_separator(const char *path);
+bool util_has_trailing_path_separator(const char *path);
 
-char *preserve_trailing_dot_or_separator(const char *cleanedpath, const char *originalpath);
+char *util_preserve_trailing_dot_or_separator(const char *cleanedpath, const char *originalpath);
 
-int split_path_dir_entry(const char *path, char **dir, char **base);
+int util_split_path_dir_entry(const char *path, char **dir, char **base);
 
-int realpath_in_scope(const char *rootfs, const char *path, char **real_path);
+int util_realpath_in_scope(const char *rootfs, const char *path, char **real_path);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

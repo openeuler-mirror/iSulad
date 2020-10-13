@@ -808,7 +808,7 @@ static int append_images_to_response(im_list_response *response, imagetool_image
 
     new_size = (old_num + images_num) * sizeof(imagetool_image *);
     old_size = old_num * sizeof(imagetool_image *);
-    ret = mem_realloc((void **)(&tmp), new_size, response->images->images, old_size);
+    ret = util_mem_realloc((void **)(&tmp), new_size, response->images->images, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for append images");
         ret = -1;
@@ -962,17 +962,17 @@ void free_im_pull_request(im_pull_request *req)
     req->type = NULL;
     free(req->image);
     req->image = NULL;
-    free_sensitive_string(req->username);
+    util_free_sensitive_string(req->username);
     req->username = NULL;
-    free_sensitive_string(req->password);
+    util_free_sensitive_string(req->password);
     req->password = NULL;
-    free_sensitive_string(req->auth);
+    util_free_sensitive_string(req->auth);
     req->auth = NULL;
-    free_sensitive_string(req->server_address);
+    util_free_sensitive_string(req->server_address);
     req->server_address = NULL;
-    free_sensitive_string(req->registry_token);
+    util_free_sensitive_string(req->registry_token);
     req->registry_token = NULL;
-    free_sensitive_string(req->identity_token);
+    util_free_sensitive_string(req->identity_token);
     req->identity_token = NULL;
     free(req);
 }
@@ -1235,16 +1235,16 @@ void free_im_login_request(im_login_request *ptr)
         return;
     }
 
-    free_sensitive_string(ptr->username);
+    util_free_sensitive_string(ptr->username);
     ptr->username = NULL;
 
-    free_sensitive_string(ptr->password);
+    util_free_sensitive_string(ptr->password);
     ptr->password = NULL;
 
     free(ptr->type);
     ptr->type = NULL;
 
-    free_sensitive_string(ptr->server);
+    util_free_sensitive_string(ptr->server);
     ptr->server = NULL;
 
     free(ptr);

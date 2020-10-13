@@ -107,7 +107,7 @@ static int add_null_to_list(void ***list)
     }
     newsize = (index + 2) * sizeof(void **);
     oldsize = index * sizeof(void **);
-    ret = mem_realloc((void **)&newlist, newsize, (*list), oldsize);
+    ret = util_mem_realloc((void **)&newlist, newsize, (*list), oldsize);
     if (ret < 0) {
         ERROR("Out of memory");
         return -1;
@@ -799,7 +799,7 @@ static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_c
         goto error;
     }
 
-    cpusetinfo->cpus = isula_utils_read_file(cpuset_cpus_path);
+    cpusetinfo->cpus = util_read_content_from_file(cpuset_cpus_path);
     if (cpusetinfo->cpus == NULL) {
         ERROR("Failed to read the file: %s", cpuset_cpus_path);
         goto error;
@@ -811,7 +811,7 @@ static void check_cgroup_cpuset_info(struct layer **layers, bool quiet, cgroup_c
         goto error;
     }
 
-    cpusetinfo->mems = isula_utils_read_file(cpuset_mems_path);
+    cpusetinfo->mems = util_read_content_from_file(cpuset_mems_path);
     if (cpusetinfo->mems == NULL) {
         ERROR("Failed to read the file: %s", cpuset_mems_path);
         goto error;

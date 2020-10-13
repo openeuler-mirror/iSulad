@@ -1323,7 +1323,7 @@ void umount_share_shm(container_t *cont)
     if (cont->hostconfig->system_container) {
         return;
     }
-    if (cont->hostconfig->ipc_mode == NULL || is_shareable(cont->hostconfig->ipc_mode)) {
+    if (cont->hostconfig->ipc_mode == NULL || namespace_is_shareable(cont->hostconfig->ipc_mode)) {
         if (cont->common_config == NULL || cont->common_config->shm_path == NULL) {
             return;
         }
@@ -1375,7 +1375,7 @@ static int do_append_process_exec_env(const char **default_env, defs_process *sp
     }
     new_size = (spec->env_len + default_env_len) * sizeof(char *);
     old_size = spec->env_len * sizeof(char *);
-    ret = mem_realloc((void **)&temp, new_size, spec->env, old_size);
+    ret = util_mem_realloc((void **)&temp, new_size, spec->env, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for envionment variables");
         ret = -1;
@@ -1577,7 +1577,7 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
         }
     }
 
-    ret = dup_array_of_strings((const char **)request->argv, request->argv_len, &(spec->args), &(spec->args_len));
+    ret = util_dup_array_of_strings((const char **)request->argv, request->argv_len, &(spec->args), &(spec->args_len));
     if (ret != 0) {
         ERROR("Failed to dup envs for exec process spec");
         goto err_out;

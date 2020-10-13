@@ -34,8 +34,8 @@
 static int embedded_merge_entrypoint(embedded_config *config, container_config *container_spec)
 {
     if (config->entrypoint && container_spec->entrypoint_len == 0) {
-        int ret = dup_array_of_strings((const char **)config->entrypoint, config->entrypoint_len,
-                                       &(container_spec->entrypoint), &(container_spec->entrypoint_len));
+        int ret = util_dup_array_of_strings((const char **)config->entrypoint, config->entrypoint_len,
+                                            &(container_spec->entrypoint), &(container_spec->entrypoint_len));
         if (ret != 0) {
             ERROR("Failed to duplicate entrypoint from manifest");
             return -1;

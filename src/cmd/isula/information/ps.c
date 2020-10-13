@@ -65,8 +65,8 @@ struct lengths {
 };
 
 const char * const g_containerstatusstr[] = { "unknown", "inited", "starting",  "running",
-                                             "exited",  "paused", "restarting"
-                                           };
+                                              "exited",  "paused", "restarting"
+                                            };
 
 struct filter_field {
     char *name;
@@ -121,7 +121,7 @@ static int append_field(struct filters *ff, struct filter_field *field)
     old_size = ff->field_len * sizeof(struct filters);
     new_size = old_size + sizeof(struct filters);
 
-    if (mem_realloc((void **)(&tmp_fields), new_size, ff->fields, old_size) != 0) {
+    if (util_mem_realloc((void **)(&tmp_fields), new_size, ff->fields, old_size) != 0) {
         ERROR("Out of memory");
         return -1;
     }
@@ -209,8 +209,8 @@ static int mix_container_status(const struct isula_container_summary_info *in, c
     char finishat_duration[TIME_DURATION_MAX_LEN] = { 0 };
     char *start_at = NULL;
     char *finish_at = NULL;
-    time_format_duration(in->startat, startat_duration, sizeof(startat_duration));
-    time_format_duration_ago(in->finishat, finishat_duration, sizeof(finishat_duration));
+    util_time_format_duration(in->startat, startat_duration, sizeof(startat_duration));
+    util_time_format_duration_ago(in->finishat, finishat_duration, sizeof(finishat_duration));
     start_at = in->startat ? startat_duration : "-";
     finish_at = in->finishat ? finishat_duration : "-";
 
@@ -344,7 +344,7 @@ static int get_created_time_buffer(int64_t created, char *timebuffer, size_t len
         ERROR("Failed to get timestamp");
         return -1;
     }
-    if (!get_time_buffer(&timestamp, timebuffer, len)) {
+    if (!util_get_time_buffer(&timestamp, timebuffer, len)) {
         ERROR("Failed to get timebuffer from timestamp");
         return -1;
     }
@@ -359,7 +359,7 @@ static void print_created_field(int64_t created, unsigned int length)
     if (get_created_time_buffer(created, timebuffer, MAX_TIMESTAMP_LEN) != 0) {
         return;
     }
-    if (time_format_duration_ago(timebuffer, created_duration, sizeof(created_duration)) != 0) {
+    if (util_time_format_duration_ago(timebuffer, created_duration, sizeof(created_duration)) != 0) {
         return;
     }
     printf("%-*s", (int)length, created_duration);
@@ -405,11 +405,11 @@ static void print_extern_container_info_item(const struct isula_container_summar
         printf("%-*u", (int)length->rscont_length, in->restart_count);
     } else if (strcmp(name, "StartAt") == 0) {
         char startat_duration[TIME_DURATION_MAX_LEN] = { 0 };
-        time_format_duration(in->startat, startat_duration, sizeof(startat_duration));
+        util_time_format_duration(in->startat, startat_duration, sizeof(startat_duration));
         printf("%-*s", (int)length->startat_length, in->startat ? startat_duration : "-");
     } else if (strcmp(name, "FinishAt") == 0) {
         char finishat_duration[TIME_DURATION_MAX_LEN] = { 0 };
-        time_format_duration(in->finishat, finishat_duration, sizeof(finishat_duration));
+        util_time_format_duration(in->finishat, finishat_duration, sizeof(finishat_duration));
         printf("%-*s", (int)length->finishat_length, in->finishat ? finishat_duration : "-");
     } else if (strcmp(name, "Runtime") == 0) {
         printf("%-*s", (int)length->runtime_length, in->runtime ? in->runtime : "lcr");
@@ -531,7 +531,7 @@ static void calculate_time_str_length(const char *str, unsigned int *length)
     size_t len = 0;
     char time_duration[TIME_DURATION_MAX_LEN];
 
-    if (time_format_duration_ago(str, time_duration, sizeof(time_duration)) < 0) {
+    if (util_time_format_duration_ago(str, time_duration, sizeof(time_duration)) < 0) {
         ERROR("Format time duration failed");
     }
 

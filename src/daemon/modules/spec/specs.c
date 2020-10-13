@@ -181,7 +181,7 @@ static int make_annotations_cgroup_dir(const container_config *container_spec, c
     if (path == NULL) {
         path = "/isulad";
     }
-    if (cleanpath(path, cleaned, sizeof(cleaned)) == NULL) {
+    if (util_clean_path(path, cleaned, sizeof(cleaned)) == NULL) {
         ERROR("Failed to clean path: %s", path);
         ret = -1;
         goto out;
@@ -678,7 +678,8 @@ static int merge_hugetlbs(oci_runtime_spec *oci_spec, host_config_hugetlbs_eleme
     old_size = oci_spec->linux->resources->hugepage_limits_len * sizeof(defs_resources_hugepage_limits_element *);
     new_size = (oci_spec->linux->resources->hugepage_limits_len + hugetlbs_len) *
                sizeof(defs_resources_hugepage_limits_element *);
-    ret = mem_realloc((void **)&hugepage_limits_temp, new_size, oci_spec->linux->resources->hugepage_limits, old_size);
+    ret = util_mem_realloc((void **)&hugepage_limits_temp, new_size, oci_spec->linux->resources->hugepage_limits,
+                           old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for hugepage limits");
         ret = -1;
@@ -1322,8 +1323,8 @@ static int replace_entrypoint_cmds_from_spec(const oci_runtime_spec *oci_spec, c
         isulad_set_error_message("No command specified");
         return -1;
     }
-    return dup_array_of_strings((const char **)(oci_spec->process->args), oci_spec->process->args_len,
-                                &(container_spec->cmd), &(container_spec->cmd_len));
+    return util_dup_array_of_strings((const char **)(oci_spec->process->args), oci_spec->process->args_len,
+                                     &(container_spec->cmd), &(container_spec->cmd_len));
 }
 
 static int merge_conf_args(oci_runtime_spec *oci_spec, container_config *container_spec)
@@ -1412,8 +1413,8 @@ static int merge_share_namespace_helper(const oci_runtime_spec *oci_spec, const 
             goto out;
         }
 
-        ret = mem_realloc((void **)&work_ns, (len + 1) * sizeof(defs_namespace_reference *), (void *)work_ns,
-                          len * sizeof(defs_namespace_reference *));
+        ret = util_mem_realloc((void **)&work_ns, (len + 1) * sizeof(defs_namespace_reference *), (void *)work_ns,
+                               len * sizeof(defs_namespace_reference *));
         if (ret != 0) {
             ERROR("Out of memory");
             goto out;
@@ -1689,7 +1690,7 @@ static int split_security_opt(const char *security_opt, char ***items, size_t *i
 {
     int ret = 0;
 
-    if (strings_contains_any(security_opt, "=")) {
+    if (util_strings_contains_any(security_opt, "=")) {
         *items = util_string_split_n(security_opt, '=', 2);
         if (*items == NULL) {
             ERROR("Out of memory");
@@ -1697,7 +1698,7 @@ static int split_security_opt(const char *security_opt, char ***items, size_t *i
             goto out;
         }
         *items_size = util_array_len((const char **)*items);
-    } else if (strings_contains_any(security_opt, ":")) {
+    } else if (util_strings_contains_any(security_opt, ":")) {
         *items = util_string_split_n(security_opt, ':', 2);
         if (*items == NULL) {
             ERROR("Out of memory");
@@ -1869,8 +1870,8 @@ static int handle_connected_container_mode(host_config *hc)
     char **pid_label = NULL;
     size_t pid_label_len = 0;
 
-    char *ipc_container = connected_container(hc->ipc_mode);
-    char *pid_container = connected_container(hc->pid_mode);
+    char *ipc_container = namespace_get_connected_container(hc->ipc_mode);
+    char *pid_container = namespace_get_connected_container(hc->pid_mode);
     if (ipc_container != NULL) {
         char *ipc_process_label = get_container_process_label(ipc_container);
         if (dup_security_opt(ipc_process_label, &ipc_label, &ipc_label_len) != 0) {
@@ -1940,7 +1941,7 @@ static int generate_security_opt(host_config *hc)
         util_free_array(items);
     }
 
-    if (is_host(hc->ipc_mode) || is_host(hc->pid_mode) || hc->privileged) {
+    if (namespace_is_host(hc->ipc_mode) || namespace_is_host(hc->pid_mode) || hc->privileged) {
         return handle_host_or_privileged_mode(hc);
     }
 

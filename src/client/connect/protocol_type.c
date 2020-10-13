@@ -92,7 +92,7 @@ struct isula_filters *isula_filters_parse_args(const char **array, size_t len)
         }
         *valuepos++ = '\0';
         filters->values[filters->len] = util_strdup_s(util_trim_space(valuepos));
-        lowerkey = strings_to_lower(util_trim_space(copy));
+        lowerkey = util_strings_to_lower(util_trim_space(copy));
         free(copy);
         if (lowerkey == NULL) {
             free(filters->values[filters->len]);

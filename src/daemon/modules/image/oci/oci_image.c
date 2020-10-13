@@ -125,8 +125,8 @@ static int storage_module_init_helper(const isulad_daemon_configs *args)
         goto out;
     }
 
-    if (dup_array_of_strings((const char **)args->storage_opts, args->storage_opts_len, &storage_opts->driver_opts,
-                             &storage_opts->driver_opts_len) != 0) {
+    if (util_dup_array_of_strings((const char **)args->storage_opts, args->storage_opts_len, &storage_opts->driver_opts,
+                                  &storage_opts->driver_opts_len) != 0) {
         ERROR("Failed to get storage storage opts");
         ret = -1;
         goto out;

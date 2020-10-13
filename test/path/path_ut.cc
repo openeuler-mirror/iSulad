@@ -48,9 +48,7 @@ static char *getcwd_specify(char *str, size_t size)
     return str;
 }
 
-static int create_tmp_symbolic_link(const char *path,
-                                    const char *path_file,
-                                    const char *path_link)
+static int create_tmp_symbolic_link(const char *path, const char *path_file, const char *path_link)
 {
     if (path == nullptr || path_file == nullptr || path_link == nullptr) {
         return -1;
@@ -93,46 +91,46 @@ TEST(path_ut, test_cleanpath)
     std::string str;
     char realpath[PATH_MAX];
 
-    result = cleanpath(nullptr, realpath, sizeof(realpath));
+    result = util_clean_path(nullptr, realpath, sizeof(realpath));
     ASSERT_STREQ(result, nullptr);
 
     str = "";
-    result = cleanpath(str.c_str(), realpath, sizeof(realpath));
+    result = util_clean_path(str.c_str(), realpath, sizeof(realpath));
     ASSERT_STREQ(result, nullptr);
 
     str = "/home/dir/../file";
-    result = cleanpath(str.c_str(), realpath, sizeof(realpath));
+    result = util_clean_path(str.c_str(), realpath, sizeof(realpath));
     ASSERT_STREQ(result, "/home/file");
 
     str = "/home/dir/./file";
-    result = cleanpath(str.c_str(), realpath, sizeof(realpath));
+    result = util_clean_path(str.c_str(), realpath, sizeof(realpath));
     ASSERT_STREQ(result, "/home/dir/file");
 
     str = "./dir/file";
     MOCK_SET_V(getcwd, getcwd_specify);
-    result = cleanpath(str.c_str(), realpath, sizeof(realpath));
+    result = util_clean_path(str.c_str(), realpath, sizeof(realpath));
     ASSERT_STREQ(result, "/home/dir/file");
     MOCK_CLEAR(getcwd);
 
     str = "/home/file";
-    result = cleanpath(str.c_str(), realpath, PATH_LENGTH_TEST);
+    result = util_clean_path(str.c_str(), realpath, PATH_LENGTH_TEST);
     ASSERT_STREQ(result, nullptr);
 
     str = "/home/file";
-    result = cleanpath(str.c_str(), nullptr, 0);
+    result = util_clean_path(str.c_str(), nullptr, 0);
     ASSERT_STREQ(result, nullptr);
 }
 
 TEST(path_ut, test_specify_current_dir)
 {
-    ASSERT_FALSE(specify_current_dir(nullptr));
-    ASSERT_TRUE(specify_current_dir(""));
-    ASSERT_TRUE(specify_current_dir("/home/."));
-    ASSERT_TRUE(specify_current_dir("."));
-    ASSERT_FALSE(specify_current_dir("/home/file"));
-    ASSERT_FALSE(specify_current_dir("/home/.."));
-    ASSERT_FALSE(specify_current_dir("/home"));
-    ASSERT_FALSE(specify_current_dir("home"));
+    ASSERT_FALSE(util_specify_current_dir(nullptr));
+    ASSERT_TRUE(util_specify_current_dir(""));
+    ASSERT_TRUE(util_specify_current_dir("/home/."));
+    ASSERT_TRUE(util_specify_current_dir("."));
+    ASSERT_FALSE(util_specify_current_dir("/home/file"));
+    ASSERT_FALSE(util_specify_current_dir("/home/.."));
+    ASSERT_FALSE(util_specify_current_dir("/home"));
+    ASSERT_FALSE(util_specify_current_dir("home"));
 }
 
 TEST(path_ut, test_follow_symlink_in_scope)
@@ -140,35 +138,35 @@ TEST(path_ut, test_follow_symlink_in_scope)
     std::string fullpath, rootpath;
     char *res = nullptr;
 
-    res = follow_symlink_in_scope(nullptr, nullptr);
+    res = util_follow_symlink_in_scope(nullptr, nullptr);
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
     fullpath = "";
     rootpath = "";
-    res = follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
+    res = util_follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
     fullpath = "/home/dir/file";
     rootpath = "/home";
-    res = follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
+    res = util_follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
     ASSERT_STREQ(res, "/home/dir/file");
     free(res);
     res = nullptr;
 
     fullpath = "/home/dir/file";
     rootpath = "/home/dir/../file";
-    res = follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
+    res = util_follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
     fullpath = "/home/dir/file";
     rootpath = "/home/dir/../";
-    res = follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
+    res = util_follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
     ASSERT_STREQ(res, "/home/dir/file");
     free(res);
     res = nullptr;
@@ -180,7 +178,7 @@ TEST(path_ut, test_follow_symlink_in_scope)
     const char *path_link = "/tmp/just_for_ut/link";
     ASSERT_EQ(create_tmp_symbolic_link(path, path_file, path_link), 0);
     MOCK_SET_V(readlink, readlink_specify);
-    res = follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
+    res = util_follow_symlink_in_scope(fullpath.c_str(), rootpath.c_str());
     ASSERT_STREQ(res, "/tmp/just_for_ut/dir/file");
     MOCK_CLEAR(readlink);
     ASSERT_EQ(util_recursive_rmdir("/tmp/just_for_ut", 0), 0);
@@ -193,31 +191,31 @@ TEST(path_ut, test_split_dir_and_base_name)
     char *dir = nullptr;
     char *base = nullptr;
 
-    ASSERT_EQ(split_dir_and_base_name(nullptr, &dir, &base), -1);
+    ASSERT_EQ(util_split_dir_and_base_name(nullptr, &dir, &base), -1);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    ASSERT_EQ(split_dir_and_base_name("", &dir, &base), 0);
+    ASSERT_EQ(util_split_dir_and_base_name("", &dir, &base), 0);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    ASSERT_EQ(split_dir_and_base_name("/home/file", &dir, &base), 0);
+    ASSERT_EQ(util_split_dir_and_base_name("/home/file", &dir, &base), 0);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    ASSERT_EQ(split_dir_and_base_name("/home/file", nullptr, nullptr), 0);
+    ASSERT_EQ(util_split_dir_and_base_name("/home/file", nullptr, nullptr), 0);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    split_dir_and_base_name("/home/file", &dir, &base);
+    util_split_dir_and_base_name("/home/file", &dir, &base);
     ASSERT_STREQ(dir, "/home");
     ASSERT_STREQ(base, "file");
     free(dir);
@@ -231,31 +229,31 @@ TEST(path_ut, test_filepath_split)
     char *dir = nullptr;
     char *base = nullptr;
 
-    ASSERT_EQ(filepath_split(nullptr, &dir, &base), -1);
+    ASSERT_EQ(util_filepath_split(nullptr, &dir, &base), -1);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    ASSERT_EQ(filepath_split("", &dir, &base), 0);
+    ASSERT_EQ(util_filepath_split("", &dir, &base), 0);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    ASSERT_EQ(filepath_split("/home/file", &dir, &base), 0);
+    ASSERT_EQ(util_filepath_split("/home/file", &dir, &base), 0);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    ASSERT_EQ(filepath_split("/home/file", nullptr, nullptr), 0);
+    ASSERT_EQ(util_filepath_split("/home/file", nullptr, nullptr), 0);
     free(dir);
     dir = nullptr;
     free(base);
     base = nullptr;
 
-    filepath_split("/home/file", &dir, &base);
+    util_filepath_split("/home/file", &dir, &base);
     ASSERT_STREQ(dir, "/home/");
     ASSERT_STREQ(base, "file");
     free(dir);
@@ -263,7 +261,7 @@ TEST(path_ut, test_filepath_split)
     free(base);
     base = nullptr;
 
-    filepath_split("/home/", &dir, &base);
+    util_filepath_split("/home/", &dir, &base);
     ASSERT_STREQ(dir, "/home/");
     ASSERT_STREQ(base, "");
     free(dir);
@@ -276,32 +274,32 @@ TEST(path_ut, test_get_resource_path)
 {
     char *res = nullptr;
 
-    res = get_resource_path(nullptr, "./test");
+    res = util_get_resource_path(nullptr, "./test");
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
-    res = get_resource_path("", "");
+    res = util_get_resource_path("", "");
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
-    res = get_resource_path("/home", "./test");
+    res = util_get_resource_path("/home", "./test");
     ASSERT_STREQ(res, "/home/test");
     free(res);
     res = nullptr;
 
-    res = get_resource_path("/home/dir", "tmp/.././test");
+    res = util_get_resource_path("/home/dir", "tmp/.././test");
     ASSERT_STREQ(res, "/home/dir/test");
     free(res);
     res = nullptr;
 
-    res = get_resource_path("/home/dir", ".././test");
+    res = util_get_resource_path("/home/dir", ".././test");
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
-    res = get_resource_path("/home////dir", ".///./././test/file");
+    res = util_get_resource_path("/home////dir", ".///./././test/file");
     ASSERT_STREQ(res, "/home/dir/test/file");
     free(res);
     res = nullptr;
@@ -313,7 +311,7 @@ TEST(path_ut, test_resolve_path)
     char *resolvedpath = nullptr;
     char *abspath = nullptr;
 
-    ASSERT_EQ(resolve_path(nullptr, nullptr, &resolvedpath, &abspath), -1);
+    ASSERT_EQ(util_resolve_path(nullptr, nullptr, &resolvedpath, &abspath), -1);
     free(resolvedpath);
     resolvedpath = nullptr;
     free(abspath);
@@ -321,7 +319,7 @@ TEST(path_ut, test_resolve_path)
 
     rootpath = "";
     path = "";
-    ASSERT_EQ(resolve_path(rootpath.c_str(), path.c_str(), &resolvedpath, &abspath), -1);
+    ASSERT_EQ(util_resolve_path(rootpath.c_str(), path.c_str(), &resolvedpath, &abspath), -1);
     free(resolvedpath);
     resolvedpath = nullptr;
     free(abspath);
@@ -329,7 +327,7 @@ TEST(path_ut, test_resolve_path)
 
     rootpath = "/home";
     path = "/home/dir/test";
-    ASSERT_EQ(resolve_path(rootpath.c_str(), path.c_str(), &resolvedpath, &abspath), 0);
+    ASSERT_EQ(util_resolve_path(rootpath.c_str(), path.c_str(), &resolvedpath, &abspath), 0);
     free(resolvedpath);
     resolvedpath = nullptr;
     free(abspath);
@@ -338,10 +336,10 @@ TEST(path_ut, test_resolve_path)
 
 TEST(path_ut, test_has_trailing_path_separator)
 {
-    ASSERT_FALSE(has_trailing_path_separator(nullptr));
-    ASSERT_FALSE(has_trailing_path_separator(""));
-    ASSERT_TRUE(has_trailing_path_separator("/home/"));
-    ASSERT_FALSE(has_trailing_path_separator("/home"));
+    ASSERT_FALSE(util_has_trailing_path_separator(nullptr));
+    ASSERT_FALSE(util_has_trailing_path_separator(""));
+    ASSERT_TRUE(util_has_trailing_path_separator("/home/"));
+    ASSERT_FALSE(util_has_trailing_path_separator("/home"));
 }
 
 TEST(path_ut, test_preserve_trailing_dot_or_separator)
@@ -349,26 +347,26 @@ TEST(path_ut, test_preserve_trailing_dot_or_separator)
     std::string cleanedpath, originalpath;
     char *res = nullptr;
 
-    res = preserve_trailing_dot_or_separator(nullptr, nullptr);
+    res = util_preserve_trailing_dot_or_separator(nullptr, nullptr);
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
-    res = preserve_trailing_dot_or_separator("", "");
+    res = util_preserve_trailing_dot_or_separator("", "");
     ASSERT_STREQ(res, nullptr);
     free(res);
     res = nullptr;
 
     cleanedpath = "/home/test";
     originalpath = "/home/test/.";
-    res = preserve_trailing_dot_or_separator(cleanedpath.c_str(), originalpath.c_str());
+    res = util_preserve_trailing_dot_or_separator(cleanedpath.c_str(), originalpath.c_str());
     ASSERT_STREQ(res, "/home/test/.");
     free(res);
     res = nullptr;
 
     cleanedpath = "/home/test";
     originalpath = "/home/test/";
-    res = preserve_trailing_dot_or_separator(cleanedpath.c_str(), originalpath.c_str());
+    res = util_preserve_trailing_dot_or_separator(cleanedpath.c_str(), originalpath.c_str());
     ASSERT_STREQ(res, "/home/test/");
     free(res);
     res = nullptr;

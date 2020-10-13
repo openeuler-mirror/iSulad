@@ -663,7 +663,7 @@ static storage_rootfs *new_storage_rootfs(const char *id, const char *image, cha
     c->layer = util_strdup_s(layer);
     c->metadata = util_strdup_s(metadata);
 
-    if (!get_now_time_buffer(timebuffer, sizeof(timebuffer))) {
+    if (!util_get_now_time_buffer(timebuffer, sizeof(timebuffer))) {
         ERROR("Failed to get now time string");
         ret = -1;
         goto out;

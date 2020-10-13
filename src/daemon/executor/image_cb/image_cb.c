@@ -596,7 +596,7 @@ static int trans_one_image(image_list_images_response *response, size_t image_in
         int64_t created_nanos = 0;
         types_timestamp_t timestamp;
 
-        if (to_unix_nanos_from_str(im_image->created, &created_nanos) != 0) {
+        if (util_to_unix_nanos_from_str(im_image->created, &created_nanos) != 0) {
             ERROR("Failed to translate created time to nanos");
             ret = -1;
             goto out;

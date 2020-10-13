@@ -24,7 +24,7 @@ void MockNamespace_SetMock(MockNamespace* mock)
     g_namespace_mock = mock;
 }
 
-char *connected_container(const char *mode)
+char *namespace_get_connected_container(const char *mode)
 {
     if (g_namespace_mock != nullptr) {
         return g_namespace_mock->ConnectedContainer(mode);

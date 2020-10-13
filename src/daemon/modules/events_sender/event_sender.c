@@ -59,7 +59,7 @@ static void isulad_monitor_fifo_send(const struct monitord_msg *msg)
     do {
         ret = util_write_nointr(fd, msg, sizeof(struct monitord_msg));
         if (ret != sizeof(struct monitord_msg)) {
-            usleep_nointerupt(1000);
+            util_usleep_nointerupt(1000);
         }
     } while (ret != sizeof(struct monitord_msg));
 

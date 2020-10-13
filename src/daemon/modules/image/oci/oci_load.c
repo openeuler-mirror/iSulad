@@ -446,7 +446,7 @@ static int oci_load_create_image(load_image_t *desc, const char *dst_tag)
         goto out;
     }
 
-    timestamp = to_timestamp_from_str(conf->created);
+    timestamp = util_to_timestamp_from_str(conf->created);
     top_layer_index = desc->layers_len - 1;
     opts.create_time = &timestamp;
     opts.digest = desc->manifest_digest;
@@ -557,7 +557,7 @@ static int oci_load_set_loaded_time(char *image_id)
     int ret = 0;
     types_timestamp_t now = { 0 };
 
-    if (!get_now_time_stamp(&now)) {
+    if (!util_get_now_time_stamp(&now)) {
         ret = -1;
         ERROR("get now time stamp failed");
         goto out;

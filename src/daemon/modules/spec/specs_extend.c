@@ -50,7 +50,7 @@
             }                                                                          \
             old_size = dest->item##_len * sizeof(defs_hook *);                         \
             new_size = (dest->item##_len + src->item##_len + 1) * sizeof(defs_hook *); \
-            ret = mem_realloc((void **)&(item), new_size, dest->item, old_size);       \
+            ret = util_mem_realloc((void **)&(item), new_size, dest->item, old_size);  \
             if (ret != 0) {                                                            \
                 ERROR("Failed to realloc memory for hooks_" #item " variables");       \
                 ret = -1;                                                              \
@@ -360,7 +360,7 @@ static char *get_env_abs_file_path(const oci_runtime_spec *oci_spec, const char 
     if (oci_spec->root == NULL || oci_spec->root->path == NULL) {
         return NULL;
     }
-    if (realpath_in_scope(oci_spec->root->path, env_target_file, &env_path) < 0) {
+    if (util_realpath_in_scope(oci_spec->root->path, env_target_file, &env_path) < 0) {
         ERROR("env target file '%s' real path must be under rootfs '%s'", env_target_file, oci_spec->root->path);
         goto out;
     }
@@ -437,7 +437,7 @@ int merge_env(oci_runtime_spec *oci_spec, const char **env, size_t env_len)
     }
     new_size = (oci_spec->process->env_len + env_len) * sizeof(char *);
     old_size = oci_spec->process->env_len * sizeof(char *);
-    ret = mem_realloc((void **)&temp, new_size, oci_spec->process->env, old_size);
+    ret = util_mem_realloc((void **)&temp, new_size, oci_spec->process->env, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for envionment variables");
         ret = -1;
@@ -547,7 +547,7 @@ int merge_ulimits_pre(oci_runtime_spec *oci_spec, size_t host_ulimits_len)
     }
     old_size = oci_spec->process->rlimits_len * sizeof(defs_process_rlimits_element *);
     new_size = (oci_spec->process->rlimits_len + host_ulimits_len) * sizeof(defs_process_rlimits_element *);
-    ret = mem_realloc((void **)&rlimits_temp, new_size, oci_spec->process->rlimits, old_size);
+    ret = util_mem_realloc((void **)&rlimits_temp, new_size, oci_spec->process->rlimits, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for rlimits");
         ret = -1;
@@ -603,47 +603,49 @@ out:
     return ret;
 }
 
-static int do_merge_one_ulimit(const oci_runtime_spec *oci_spec, defs_process_rlimits_element *rlimit)
+static bool rlimit_already_exists(const oci_runtime_spec *oci_spec, defs_process_rlimits_element *rlimit)
 {
     size_t j;
     bool exists = false;
 
     for (j = 0; j < oci_spec->process->rlimits_len; j++) {
         if (oci_spec->process->rlimits[j]->type == NULL) {
-            ERROR("rlimit type is empty");
-            UTIL_FREE_AND_SET_NULL(rlimit->type);
-            free(rlimit);
-            return -1;
+            continue;
         }
         if (strcmp(oci_spec->process->rlimits[j]->type, rlimit->type) == 0) {
             exists = true;
             break;
         }
     }
-    if (exists) {
-        /* ulimit exist, discard default ulimit */
-        UTIL_FREE_AND_SET_NULL(rlimit->type);
-        free(rlimit);
-    } else {
-        oci_spec->process->rlimits[oci_spec->process->rlimits_len] = rlimit;
-        oci_spec->process->rlimits_len++;
-    }
 
-    return 0;
+    return exists;
 }
 
-static int merge_one_ulimit(const oci_runtime_spec *oci_spec, const host_config_ulimits_element *ulimit)
+static int append_one_ulimit(const oci_runtime_spec *oci_spec, const host_config_ulimits_element *ulimit)
 {
+    int ret = 0;
     defs_process_rlimits_element *rlimit = NULL;
 
     if (trans_ulimit_to_rlimit(&rlimit, ulimit) != 0) {
-        return -1;
+        ret = -1;
+        goto out;
     }
 
-    return do_merge_one_ulimit(oci_spec, rlimit);
+    if (rlimit_already_exists(oci_spec, rlimit)) {
+        ret = 0;
+        goto out;
+    }
+
+    oci_spec->process->rlimits[oci_spec->process->rlimits_len] = rlimit;
+    oci_spec->process->rlimits_len++;
+    rlimit = NULL;
+
+out:
+    free_defs_process_rlimits_element(rlimit);
+    return ret;
 }
 
-static int merge_ulimits(oci_runtime_spec *oci_spec, host_config_ulimits_element **ulimits, size_t ulimits_len)
+static int append_global_ulimits(oci_runtime_spec *oci_spec, host_config_ulimits_element **ulimits, size_t ulimits_len)
 {
     int ret = 0;
     size_t i = 0;
@@ -658,7 +660,7 @@ static int merge_ulimits(oci_runtime_spec *oci_spec, host_config_ulimits_element
     }
 
     for (i = 0; i < ulimits_len; i++) {
-        ret = merge_one_ulimit(oci_spec, ulimits[i]);
+        ret = append_one_ulimit(oci_spec, ulimits[i]);
         if (ret != 0) {
             ret = -1;
             goto out;
@@ -682,7 +684,7 @@ int merge_global_ulimit(oci_runtime_spec *oci_spec)
 
     if (ulimits != NULL) {
         ulimits_len = ulimit_array_len(ulimits);
-        if (merge_ulimits(oci_spec, ulimits, ulimits_len)) {
+        if (append_global_ulimits(oci_spec, ulimits, ulimits_len)) {
             ret = -1;
             goto out;
         }

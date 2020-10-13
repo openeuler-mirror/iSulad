@@ -125,7 +125,7 @@ static int do_image_time_filter(map_itor *itor, bool is_before_filter, int64_t *
         goto out;
     }
 
-    if (to_unix_nanos_from_str(image_info->created, &tmp_nanos) != 0) {
+    if (util_to_unix_nanos_from_str(image_info->created, &tmp_nanos) != 0) {
         ERROR("Failed to get unix nano from string");
         ret = -1;
         goto out;
@@ -176,7 +176,7 @@ static bool image_time_filter(const imagetool_image *src, const struct filters_a
         }
     }
 
-    if (to_unix_nanos_from_str(src->created, &tmp_nanos) != 0) {
+    if (util_to_unix_nanos_from_str(src->created, &tmp_nanos) != 0) {
         ERROR("Failed to get unix nano from string");
         goto out;
     }
@@ -316,7 +316,7 @@ static int dup_oci_image_info_by_filters(const imagetool_image *src, const struc
     new_size = (images_list->images_len + 1) * sizeof(imagetool_image *);
     old_size = images_list->images_len * sizeof(imagetool_image *);
 
-    ret = mem_realloc((void **)(&tmp_images), new_size, images_list->images, old_size);
+    ret = util_mem_realloc((void **)(&tmp_images), new_size, images_list->images, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for append images");
         ret = -1;

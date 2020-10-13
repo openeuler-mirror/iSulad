@@ -215,8 +215,8 @@ int cmd_login_main(int argc, const char **argv)
     }
 
     ret = client_login(&g_cmd_login_args);
-    free_sensitive_string(g_cmd_login_args.username);
-    free_sensitive_string(g_cmd_login_args.password);
+    util_free_sensitive_string(g_cmd_login_args.username);
+    util_free_sensitive_string(g_cmd_login_args.password);
     if (ret != 0) {
         exit(exit_code);
     }

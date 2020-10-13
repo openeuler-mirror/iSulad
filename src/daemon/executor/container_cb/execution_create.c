@@ -580,7 +580,7 @@ out:
 
 static char *get_runtime_from_request(const container_create_request *request)
 {
-    return strings_to_lower(request->runtime);
+    return util_strings_to_lower(request->runtime);
 }
 
 static void pack_create_response(container_create_response *response, const char *id, uint32_t cc)
@@ -949,7 +949,7 @@ static void v2_spec_fill_basic_info(const char *id, const char *name, const char
     v2_spec->name = name ? util_strdup_s(name) : NULL;
     v2_spec->image = image_name ? util_strdup_s(image_name) : util_strdup_s("none");
     v2_spec->image_type = image_type ? util_strdup_s(image_type) : NULL;
-    (void)get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
     free(v2_spec->created);
     v2_spec->created = util_strdup_s(timebuffer);
     v2_spec->config = container_spec;

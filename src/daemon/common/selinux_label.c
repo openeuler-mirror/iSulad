@@ -219,7 +219,7 @@ static int read_con(const char *fpath, char **content)
         return -1;
     }
 
-    tmp = isula_utils_read_file(fpath);
+    tmp = util_read_content_from_file(fpath);
     if (tmp == NULL) {
         ERROR("Failed to read file: %s", fpath);
         ret = -1;

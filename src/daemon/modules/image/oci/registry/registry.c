@@ -566,7 +566,7 @@ static int register_layers(pull_descriptor *desc)
             continue;
         }
 
-        id = without_sha256_prefix(desc->layers[i].chain_id);
+        id = util_without_sha256_prefix(desc->layers[i].chain_id);
         if (id == NULL) {
             ERROR("layer %zu have NULL digest for image %s", i, desc->image_name);
             ret = -1;
@@ -674,7 +674,7 @@ static int create_image(pull_descriptor *desc, char *image_id, bool *reuse)
 
     opts.create_time = &desc->config.create_time;
     opts.digest = desc->manifest.digest;
-    top_layer_id = without_sha256_prefix(desc->layers[top_layer_index].chain_id);
+    top_layer_id = util_without_sha256_prefix(desc->layers[top_layer_index].chain_id);
     if (top_layer_id == NULL) {
         ERROR("NULL top layer id found for image %s", desc->image_name);
         ret = -1;
@@ -787,7 +787,7 @@ static int set_loaded_time(pull_descriptor *desc, char *image_id)
     int ret = 0;
     types_timestamp_t now = { 0 };
 
-    if (!get_now_time_stamp(&now)) {
+    if (!util_get_now_time_stamp(&now)) {
         ret = -1;
         ERROR("get now time stamp failed");
         goto out;
@@ -867,7 +867,7 @@ static int register_image(pull_descriptor *desc)
 
     // lock when create image to make sure image content all exist
     mutex_lock(&g_shared->image_mutex);
-    image_id = without_sha256_prefix(desc->config.digest);
+    image_id = util_without_sha256_prefix(desc->config.digest);
     ret = create_image(desc, image_id, &reuse);
     if (ret != 0) {
         ERROR("create image %s failed", desc->image_name);
@@ -961,7 +961,7 @@ static int parse_docker_config(pull_descriptor *desc)
         parent_chain_id = desc->layers[i].chain_id;
     }
 
-    desc->config.create_time = to_timestamp_from_str(config->created);
+    desc->config.create_time = util_to_timestamp_from_str(config->created);
 
 out:
 
@@ -1012,7 +1012,7 @@ static int parse_oci_config(pull_descriptor *desc)
         parent_chain_id = desc->layers[i].chain_id;
     }
 
-    desc->config.create_time = to_timestamp_from_str(config->created);
+    desc->config.create_time = util_to_timestamp_from_str(config->created);
 
 out:
     free_oci_image_spec(config);
@@ -1402,7 +1402,7 @@ static int fetch_all(pull_descriptor *desc)
             for (j = 0; j < list->layers_len; j++) {
                 if ((list->layers[j]->parent == NULL && i == 0) ||
                     (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
-                     !strcmp(list->layers[j]->parent, without_sha256_prefix(parent_chain_id)) &&
+                     !strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)) &&
                      strcmp(list->layers[j]->uncompressed_digest, list->layers[j]->compressed_digest))) {
                     // If can't set hold refs, it means it not exist anymore.
                     if (storage_inc_hold_refs(list->layers[j]->id) != 0) {
@@ -1548,7 +1548,7 @@ static int create_config_from_v1config(pull_descriptor *desc)
         goto out;
     }
 
-    desc->config.create_time = to_timestamp_from_str(config->created);
+    desc->config.create_time = util_to_timestamp_from_str(config->created);
 
     free(err);
     err = NULL;
@@ -1599,7 +1599,7 @@ static bool reuse_image(pull_descriptor *desc)
         goto out;
     }
 
-    id = without_sha256_prefix(desc->config.digest);
+    id = util_without_sha256_prefix(desc->config.digest);
     if (id == NULL) {
         goto out;
     }
@@ -1957,9 +1957,9 @@ static void free_registry_auth(registry_auth *auth)
     if (auth == NULL) {
         return;
     }
-    free_sensitive_string(auth->username);
+    util_free_sensitive_string(auth->username);
     auth->username = NULL;
-    free_sensitive_string(auth->password);
+    util_free_sensitive_string(auth->password);
     auth->password = NULL;
     return;
 }

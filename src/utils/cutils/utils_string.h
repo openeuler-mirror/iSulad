@@ -24,17 +24,17 @@
 extern "C" {
 #endif
 
-bool strings_contains_any(const char *str, const char *substr);
+bool util_strings_contains_any(const char *str, const char *substr);
 
-bool strings_contains_word(const char *str, const char *substr);
+bool util_strings_contains_word(const char *str, const char *substr);
 
-int strings_count(const char *str, unsigned char c);
+int util_strings_count(const char *str, unsigned char c);
 
-bool strings_in_slice(const char **strarray, size_t alen, const char *str);
+bool util_strings_in_slice(const char **strarray, size_t alen, const char *str);
 
-char *strings_to_lower(const char *str);
+char *util_strings_to_lower(const char *str);
 
-char *strings_to_upper(const char *str);
+char *util_strings_to_upper(const char *str);
 
 int util_parse_byte_size_string(const char *s, int64_t *converted);
 
@@ -50,7 +50,7 @@ char **util_string_split_multi(const char *src_str, char delim);
 
 char **util_string_split_n(const char *src_str, char delim, size_t n);
 
-const char *str_skip_str(const char *str, const char *skip);
+const char *util_str_skip_str(const char *str, const char *skip);
 
 char *util_string_delchar(const char *ss, unsigned char c);
 
@@ -60,13 +60,13 @@ char *util_trim_space(char *str);
 
 char *util_trim_quotation(char *str);
 
-char **str_array_dup(const char **src, size_t len);
+char **util_str_array_dup(const char **src, size_t len);
 
 char *util_string_join(const char *sep, const char **parts, size_t len);
 
 char *util_string_append(const char *post, const char *pre);
 
-int dup_array_of_strings(const char **src, size_t src_len, char ***dst, size_t *dst_len);
+int util_dup_array_of_strings(const char **src, size_t src_len, char ***dst, size_t *dst_len);
 
 char *util_sub_string(const char *source, size_t offset, size_t length);
 
@@ -79,9 +79,9 @@ bool util_has_suffix(const char *str, const char *suffix);
 int util_string_array_unique(const char **elements, size_t length, char ***unique_elements,
                              size_t *unique_elements_len);
 
-int util_parse_bool_string(const char *str, bool *converted);
-
 int util_parse_size_int_and_float(const char *numstr, int64_t mlt, int64_t *converted);
+
+char *util_str_token(char **input, const char *delimiter);
 #ifdef __cplusplus
 }
 #endif

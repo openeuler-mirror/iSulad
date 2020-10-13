@@ -279,7 +279,7 @@ int ulimit_array_append(host_config_ulimits_element ***ulimit_array, const host_
     new_size = (len + 2) * sizeof(host_config_ulimits_element *);
     old_size = len * sizeof(host_config_ulimits_element *);
 
-    ret = mem_realloc((void **)(&new_ulimit_array), new_size, (void *)*ulimit_array, old_size);
+    ret = util_mem_realloc((void **)(&new_ulimit_array), new_size, (void *)*ulimit_array, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for append ulimit");
         return -1;

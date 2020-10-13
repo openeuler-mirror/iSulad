@@ -381,18 +381,18 @@ static int archive_and_send_copy_data(const stream_func_wrapper *stream,
         return -1;
     }
 
-    if (cleanpath(resolvedpath, cleaned, sizeof(cleaned)) == NULL) {
+    if (util_clean_path(resolvedpath, cleaned, sizeof(cleaned)) == NULL) {
         ERROR("Can not clean path: %s", resolvedpath);
         goto cleanup;
     }
 
-    nret = split_dir_and_base_name(cleaned, &srcdir, &srcbase);
+    nret = util_split_dir_and_base_name(cleaned, &srcdir, &srcbase);
     if (nret != 0) {
         ERROR("split %s failed", cleaned);
         goto cleanup;
     }
 
-    nret = split_dir_and_base_name(abspath, NULL, &absbase);
+    nret = util_split_dir_and_base_name(abspath, NULL, &absbase);
     if (nret != 0) {
         ERROR("split %s failed", abspath);
         goto cleanup;
@@ -453,7 +453,7 @@ static container_path_stat *do_container_stat_path(const char *rootpath, const c
 
     if (S_ISLNK(st.st_mode)) {
         char *p = NULL;
-        hostpath = get_resource_path(rootpath, abspath);
+        hostpath = util_get_resource_path(rootpath, abspath);
         if (hostpath == NULL) {
             ERROR("Failed to get resource path");
             goto cleanup;
@@ -481,7 +481,7 @@ static container_path_stat *do_container_stat_path(const char *rootpath, const c
         ERROR("Out of memory");
         goto cleanup;
     }
-    nret = split_dir_and_base_name(abspath, NULL, &stat->name);
+    nret = util_split_dir_and_base_name(abspath, NULL, &stat->name);
     if (nret != 0) {
         ERROR("split %s failed", abspath);
         goto cleanup;
@@ -538,7 +538,7 @@ static container_path_stat *resolve_and_stat_path(const char *rootpath, const ch
     char *abs = NULL;
     container_path_stat *stat = NULL;
 
-    nret = resolve_path(rootpath, srcpath, &resolved, &abs);
+    nret = util_resolve_path(rootpath, srcpath, &resolved, &abs);
     if (nret < 0) {
         ERROR("Can not resolve path: %s", srcpath);
         return NULL;
@@ -844,17 +844,17 @@ static int copy_to_container_resolve_path(const container_t *cont, const char *d
         ERROR("Can not join path");
         return -1;
     }
-    if (cleanpath(joined, cleaned, sizeof(cleaned)) == NULL) {
+    if (util_clean_path(joined, cleaned, sizeof(cleaned)) == NULL) {
         ERROR("Can not clean path: %s", dstdir);
         goto cleanup;
     }
-    *abspath = preserve_trailing_dot_or_separator(cleaned, dstdir);
+    *abspath = util_preserve_trailing_dot_or_separator(cleaned, dstdir);
     if (*abspath == NULL) {
         ERROR("Can not preserve path");
         goto cleanup;
     }
 
-    *resolvedpath = get_resource_path(cont->common_config->base_fs, *abspath);
+    *resolvedpath = util_get_resource_path(cont->common_config->base_fs, *abspath);
     if (*resolvedpath == NULL) {
         ERROR("Can not get resource path");
         goto cleanup;
@@ -1062,7 +1062,7 @@ static int64_t do_read_log_file(const char *path, int64_t require_line, long pos
             break;
         }
         /* fopen is too fast, need wait rename operator finish */
-        usleep_nointerupt(1000);
+        util_usleep_nointerupt(1000);
     }
     if (fp == NULL) {
         ERROR("open file: %s failed: %s", path, strerror(errno));
@@ -1341,7 +1341,7 @@ static int handle_rotate(int fd, int wd, const char *path)
         if (watch_fd >= 0) {
             break;
         }
-        usleep_nointerupt(1000);
+        util_usleep_nointerupt(1000);
     }
     if (watch_fd < 0) {
         SYSERROR("Add watch %s failed", path);
@@ -1509,7 +1509,7 @@ static int do_follow_log_file(const char *cid, stream_func_wrapper *stream, stru
             ret = -1;
             break;
         }
-        usleep_nointerupt(10000);
+        util_usleep_nointerupt(10000);
     }
 
 out:

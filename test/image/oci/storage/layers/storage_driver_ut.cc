@@ -105,7 +105,7 @@ protected:
         std::string data_dir = GetDirectory() + "/data";
         struct storage_module_init_options *opts;
 
-        ASSERT_STRNE(cleanpath(data_dir.c_str(), data_path, sizeof(data_path)), nullptr);
+        ASSERT_STRNE(util_clean_path(data_dir.c_str(), data_path, sizeof(data_path)), nullptr);
         std::string cp_command = "cp -r " + std::string(data_path) + " " + isulad_dir;
         ASSERT_EQ(system(cp_command.c_str()), 0);
 

@@ -881,16 +881,16 @@ out:
     return check_flag;
 }
 
-#define OCI_STR_ARRAY_DUP(src, dest, srclen, destlen, ret)          \
-    do {                                                            \
-        if ((src) != NULL) {                                        \
-            (dest) = str_array_dup((const char **)(src), (srclen)); \
-            if ((dest) == NULL) {                                   \
-                (ret) = -1;                                         \
-                goto out;                                           \
-            }                                                       \
-            (destlen) = (srclen);                                   \
-        }                                                           \
+#define OCI_STR_ARRAY_DUP(src, dest, srclen, destlen, ret)               \
+    do {                                                                 \
+        if ((src) != NULL) {                                             \
+            (dest) = util_str_array_dup((const char **)(src), (srclen)); \
+            if ((dest) == NULL) {                                        \
+                (ret) = -1;                                              \
+                goto out;                                                \
+            }                                                            \
+            (destlen) = (srclen);                                        \
+        }                                                                \
     } while (0)
 
 #define HOOKS_ELEM_DUP_DEF(item)                                                      \
@@ -1073,7 +1073,7 @@ char *conf_get_default_runtime()
         goto out;
     }
 
-    result = strings_to_lower(conf->json_confs->default_runtime);
+    result = util_strings_to_lower(conf->json_confs->default_runtime);
 
 out:
     (void)isulad_server_conf_unlock();

@@ -48,12 +48,12 @@ static char *resolve_local_path(const char *path)
 {
     char abs_path[PATH_MAX] = { 0 };
 
-    if (cleanpath(path, abs_path, sizeof(abs_path)) == NULL) {
+    if (util_clean_path(path, abs_path, sizeof(abs_path)) == NULL) {
         ERROR("Failed to clean path");
         return NULL;
     }
 
-    return preserve_trailing_dot_or_separator(abs_path, path);
+    return util_preserve_trailing_dot_or_separator(abs_path, path);
 }
 
 static void print_copy_from_container_error(const char *ops_err, const char *archive_err, int ret,

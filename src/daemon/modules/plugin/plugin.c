@@ -185,7 +185,7 @@ static char *get_uniq_enable_plugins(const oci_runtime_spec *oci)
     UTIL_FREE_AND_SET_NULL(full);
 
     for (i = 0; i < util_array_len((const char **)raw); i++) {
-        if (strings_in_slice((const char **)arr, util_array_len((const char **)arr), raw[i])) {
+        if (util_strings_in_slice((const char **)arr, util_array_len((const char **)arr), raw[i])) {
             continue;
         }
         if (util_array_append(&arr, raw[i]) != 0) {
@@ -274,7 +274,7 @@ static char **get_enable_plugins(const char *plugins)
     arr_len = util_array_len((const char **)arr);
 
     for (i = 0; i < arr_len; i++) {
-        if (strings_in_slice((const char **)dst, dst_len, arr[i])) {
+        if (util_strings_in_slice((const char **)dst, dst_len, arr[i])) {
             continue;
         }
         if (util_array_append(&dst, arr[i]) != 0) {

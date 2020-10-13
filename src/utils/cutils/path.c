@@ -90,7 +90,7 @@ static int do_clean_path(const char *respath, const char *limit_respath, const c
     return 0;
 }
 
-char *cleanpath(const char *path, char *realpath, size_t realpath_len)
+char *util_clean_path(const char *path, char *realpath, size_t realpath_len)
 {
     char *respath = NULL;
     char *dest = NULL;
@@ -168,7 +168,7 @@ static int do_path_realloc(const char *start, const char *end, char **rpath, cha
     } else {
         new_size += PATH_MAX;
     }
-    nret = mem_realloc((void **)(&new_rpath), new_size, *rpath, PATH_MAX);
+    nret = util_mem_realloc((void **)(&new_rpath), new_size, *rpath, PATH_MAX);
     if (nret) {
         ERROR("Failed to realloc memory for files limit variables");
         return -1;
@@ -363,7 +363,7 @@ static char *eval_symlinks_in_scope(const char *fullpath, const char *rootpath)
         return NULL;
     }
 
-    root = cleanpath(rootpath, resroot, sizeof(resroot));
+    root = util_clean_path(rootpath, resroot, sizeof(resroot));
     if (root == NULL) {
         ERROR("Failed to get cleaned path");
         return NULL;
@@ -418,20 +418,20 @@ out:
     return NULL;
 }
 
-char *follow_symlink_in_scope(const char *fullpath, const char *rootpath)
+char *util_follow_symlink_in_scope(const char *fullpath, const char *rootpath)
 {
     char resfull[PATH_MAX] = { 0 };
     char *full = NULL;
     char resroot[PATH_MAX] = { 0 };
     char *root = NULL;
 
-    full = cleanpath(fullpath, resfull, sizeof(resfull));
+    full = util_clean_path(fullpath, resfull, sizeof(resfull));
     if (full == NULL) {
         ERROR("Failed to get cleaned path");
         return NULL;
     }
 
-    root = cleanpath(rootpath, resroot, sizeof(resroot));
+    root = util_clean_path(rootpath, resroot, sizeof(resroot));
     if (root == NULL) {
         ERROR("Failed to get cleaned path");
         return NULL;
@@ -440,7 +440,7 @@ char *follow_symlink_in_scope(const char *fullpath, const char *rootpath)
     return eval_symlinks_in_scope(full, root);
 }
 
-bool specify_current_dir(const char *path)
+bool util_specify_current_dir(const char *path)
 {
     char *dup = NULL;
     char *base = NULL;
@@ -461,7 +461,7 @@ bool specify_current_dir(const char *path)
     return res;
 }
 
-bool has_trailing_path_separator(const char *path)
+bool util_has_trailing_path_separator(const char *path)
 {
     return path != NULL && strlen(path) > 0 && (path[strlen(path) - 1] == '/');
 }
@@ -471,7 +471,7 @@ static void set_char_to_separator(char *p)
     *p = '/';
 }
 
-char *preserve_trailing_dot_or_separator(const char *cleanedpath, const char *originalpath)
+char *util_preserve_trailing_dot_or_separator(const char *cleanedpath, const char *originalpath)
 {
     int nret;
     char respath[PATH_MAX + 3] = { 0 };
@@ -490,21 +490,21 @@ char *preserve_trailing_dot_or_separator(const char *cleanedpath, const char *or
         return NULL;
     }
 
-    if (!specify_current_dir(cleanedpath) && specify_current_dir(originalpath)) {
-        if (!has_trailing_path_separator(respath)) {
+    if (!util_specify_current_dir(cleanedpath) && util_specify_current_dir(originalpath)) {
+        if (!util_has_trailing_path_separator(respath)) {
             set_char_to_separator(&respath[strlen(respath)]);
         }
         respath[strlen(respath)] = '.';
     }
 
-    if (!has_trailing_path_separator(respath) && has_trailing_path_separator(originalpath)) {
+    if (!util_has_trailing_path_separator(respath) && util_has_trailing_path_separator(originalpath)) {
         set_char_to_separator(&respath[strlen(respath)]);
     }
 
     return util_strdup_s(respath);
 }
 
-int filepath_split(const char *path, char **dir, char **base)
+int util_filepath_split(const char *path, char **dir, char **base)
 {
     ssize_t i;
     char *dup = NULL;
@@ -539,7 +539,7 @@ int filepath_split(const char *path, char **dir, char **base)
     return 0;
 }
 
-int split_dir_and_base_name(const char *path, char **dir, char **base)
+int util_split_dir_and_base_name(const char *path, char **dir, char **base)
 {
     char *dupdir = NULL;
     char *dupbase = NULL;
@@ -561,7 +561,7 @@ int split_dir_and_base_name(const char *path, char **dir, char **base)
     return 0;
 }
 
-char *get_resource_path(const char *rootpath, const char *path)
+char *util_get_resource_path(const char *rootpath, const char *path)
 {
     int nret;
     char tmppath[PATH_MAX] = { 0 };
@@ -572,14 +572,14 @@ char *get_resource_path(const char *rootpath, const char *path)
         return NULL;
     }
 
-    if (cleanpath(tmppath, fullpath, sizeof(fullpath)) == NULL) {
+    if (util_clean_path(tmppath, fullpath, sizeof(fullpath)) == NULL) {
         return NULL;
     }
 
-    return follow_symlink_in_scope(fullpath, rootpath);
+    return util_follow_symlink_in_scope(fullpath, rootpath);
 }
 
-int resolve_path(const char *rootpath, const char *path, char **resolvedpath, char **abspath)
+int util_resolve_path(const char *rootpath, const char *path, char **resolvedpath, char **abspath)
 {
     int ret = -1;
     int nret;
@@ -599,24 +599,24 @@ int resolve_path(const char *rootpath, const char *path, char **resolvedpath, ch
         return -1;
     }
 
-    if (cleanpath(tmppath, cleanedpath, sizeof(cleanedpath)) == NULL) {
+    if (util_clean_path(tmppath, cleanedpath, sizeof(cleanedpath)) == NULL) {
         ERROR("Failed to get cleaned path: %s", tmppath);
         return -1;
     }
 
-    *abspath = preserve_trailing_dot_or_separator(cleanedpath, tmppath);
+    *abspath = util_preserve_trailing_dot_or_separator(cleanedpath, tmppath);
     if (*abspath == NULL) {
         ERROR("Failed to preserve path");
         goto cleanup;
     }
 
-    nret = filepath_split(*abspath, &dirpath, &basepath);
+    nret = util_filepath_split(*abspath, &dirpath, &basepath);
     if (nret < 0) {
         ERROR("Failed to split path");
         goto cleanup;
     }
 
-    resolved_dir_path = get_resource_path(rootpath, dirpath);
+    resolved_dir_path = util_get_resource_path(rootpath, dirpath);
     if (resolved_dir_path == NULL) {
         ERROR("Failed to get resource path");
         goto cleanup;
@@ -648,17 +648,17 @@ cleanup:
     return ret;
 }
 
-int split_path_dir_entry(const char *path, char **dir, char **base)
+int util_split_path_dir_entry(const char *path, char **dir, char **base)
 {
 #define EXTRA_LEN 3
     char cleaned[PATH_MAX + EXTRA_LEN] = { 0 };
     char *dup = NULL;
 
-    if (cleanpath(path, cleaned, PATH_MAX) == NULL) {
+    if (util_clean_path(path, cleaned, PATH_MAX) == NULL) {
         ERROR("Failed to clean path");
         return -1;
     }
-    if (specify_current_dir(path)) {
+    if (util_specify_current_dir(path)) {
         set_char_to_separator(&cleaned[strlen(cleaned)]);
         cleaned[strlen(cleaned)] = '.';
     }
@@ -694,7 +694,7 @@ static char *find_realpath(const char *path)
         }
         // is not absolutely path
         if (target[0] != '\0' && target[0] != '/') {
-            if (split_path_dir_entry(iter_path, &parent, NULL) < 0) {
+            if (util_split_path_dir_entry(iter_path, &parent, NULL) < 0) {
                 goto out;
             }
             free(iter_path);
@@ -721,7 +721,7 @@ out:
     return NULL;
 }
 
-int realpath_in_scope(const char *rootfs, const char *path, char **real_path)
+int util_realpath_in_scope(const char *rootfs, const char *path, char **real_path)
 {
     int ret = 0;
     char full_path[PATH_MAX] = { 0 };
@@ -734,7 +734,7 @@ int realpath_in_scope(const char *rootfs, const char *path, char **real_path)
         ret = -1;
         goto out;
     }
-    if (cleanpath(full_path, cleaned, PATH_MAX) == NULL) {
+    if (util_clean_path(full_path, cleaned, PATH_MAX) == NULL) {
         ERROR("Failed to clean path: %s", full_path);
         ret = -1;
         goto out;

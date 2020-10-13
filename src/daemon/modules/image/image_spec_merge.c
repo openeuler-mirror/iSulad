@@ -42,7 +42,7 @@ int image_spec_merge_env(const char **env, size_t env_len, container_config *con
     }
     new_size = (container_spec->env_len + env_len) * sizeof(char *);
     old_size = container_spec->env_len * sizeof(char *);
-    ret = mem_realloc((void **)&temp, new_size, container_spec->env, old_size);
+    ret = util_mem_realloc((void **)&temp, new_size, container_spec->env, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for envionment variables");
         ret = -1;

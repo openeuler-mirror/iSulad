@@ -63,7 +63,7 @@ char *oci_get_host(const char *name)
     }
 
     parts = util_string_split(name, '/');
-    if ((parts != NULL && *parts != NULL && !strings_contains_any(*parts, ".:") && strcmp(*parts, "localhost")) ||
+    if ((parts != NULL && *parts != NULL && !util_strings_contains_any(*parts, ".:") && strcmp(*parts, "localhost")) ||
         (strstr(name, "/") == NULL)) {
         util_free_array(parts);
         return NULL;
@@ -473,7 +473,7 @@ bool oci_valid_time(char *time)
         return false;
     }
 
-    if (to_unix_nanos_from_str(time, &nanos) != 0) {
+    if (util_to_unix_nanos_from_str(time, &nanos) != 0) {
         ERROR("Failed to translate created time %s to nanos", time);
         return false;
     }

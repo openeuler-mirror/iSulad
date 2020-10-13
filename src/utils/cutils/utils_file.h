@@ -82,7 +82,7 @@ int util_copy_file(const char *src_file, const char *dst_file, mode_t mode);
 
 char *util_path_base(const char *path);
 
-char *isula_utils_read_file(const char *path);
+char *util_read_content_from_file(const char *path);
 
 void util_calculate_dir_size(const char *dirpath, int recursive_depth, int64_t *total_size, int64_t *total_inode);
 
@@ -96,7 +96,7 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
 
 typedef bool (*read_line_callback_t)(const char *, void *context);
 
-int isula_utils_read_line(FILE *fp, read_line_callback_t cb, void *context);
+int util_proc_file_line_by_line(FILE *fp, read_line_callback_t cb, void *context);
 
 #ifdef __cplusplus
 }

@@ -37,7 +37,7 @@ static char *parse_share_namespace_with_prefix(const char *type, const char *pat
     char ns_path[PATH_MAX] = { 0 };
     char *ns_type = NULL;
 
-    tmp_cid = connected_container(path);
+    tmp_cid = namespace_get_connected_container(path);
     if (tmp_cid == NULL) {
         goto out;
     }
@@ -96,14 +96,14 @@ int get_share_namespace_path(const char *type, const char *src_path, char **dest
         return -1;
     }
 
-    if (is_none(src_path)) {
+    if (namespace_is_none(src_path)) {
         *dest_path = NULL;
-    } else if (is_host(src_path)) {
-        *dest_path = get_host_namespace_path(type);
+    } else if (namespace_is_host(src_path)) {
+        *dest_path = namespace_get_host_namespace_path(type);
         if (*dest_path == NULL) {
             ret = -1;
         }
-    } else if (is_container(src_path)) {
+    } else if (namespace_is_container(src_path)) {
         *dest_path = parse_share_namespace_with_prefix(type, src_path);
         if (*dest_path == NULL) {
             ret = -1;
