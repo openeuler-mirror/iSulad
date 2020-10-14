@@ -1,3 +1,65 @@
+2020-10-14 lifeng release 2.0.6
+    - !764 add CI for image load multiplex From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !765 clean code: refact utils and add prefix util_ From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !756 iSulad: isula load support layer reusing From: @gaohuatao Reviewed-by: Signed-off-by:
+    - !762 resize: refact client resize From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !759 clean code: reduce redundant code in isula_host_spec.c From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !760 fix load only part of certs error From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !757 layer: fix memory leak errors From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !755 avoid using HEAD_ONLY option when pulling image From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !754 use reference count to avoid flag be cleared by mistake From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !749 refact: refact client pack config progress From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !750 modify default group value "isulad" to "isula" From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !725 iSulad: add isula group From: @gaohuatao Reviewed-by: @jingxiaolu,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !746 umount: skip umount if rootfs not exist From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !743 remove dir of rw layer while create failed From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !742 fix macro defination conflict with sqlite3.h in openeuler From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !741 iSulad: bugfix, convert size_t type to int From: @zh_xiaoyu Reviewed-by: @duguhaotian,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !740 fix coredump when load image with uid From: @jingwoo Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !739 iSulad: fix memeory out From: @zh_xiaoyu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !737 Docs/build_guide.md: comment gcc version From: @long-dai Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !724 Fix spell issue From: @long-dai Reviewed-by: Signed-off-by:
+    - !738 Readme: remove useless description From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !736 Docs: clean up white noise From: @long-dai Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !735 pass context to uitls scan subdir From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !734 isulad-shim: fix code review issues From: @leizhongkai Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !733 improve code From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !726 CI: fix spell issue From: @long-dai Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !723 README: unify punctuation From: @long-dai Reviewed-by: @lifeng2221dd1,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1,@lifeng2221dd1
+    - !731 CI: update registry from 163 to ali From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !730 fix bugs From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !722 README: add openEuler repository From: @long-dai Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !721 readme: add refer to openeuler guide From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !720 clean code: add more log for invalid input From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !719 fix bad formatting placeholder in http parse module From: @jingwoo Reviewed-by: @duguhaotian,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !718 fix coredump when pull image with lock ${driver}-image dir From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !716 fix layer remain caused by hold flag not clean From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !717 clear invalid data From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !715 add compilation macro isolation for selinux related code From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !714 fix pull failure caused by link conflict From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !713 readme: fix readme From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !712 config: remove unused config From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !711 fix code review From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !710 fix: delete rootfs dir when rootfs load failed From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !708 fix: security-opt parsing access out of bounds From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !709 fix memory leak From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !707 dev_cgroup_rule: add support device cgroup rule Merge pull request !707 from lifeng_isula/blk
+    - !706 iSulad : logs command add option timestamps Merge pull request !706 from YoungJQ/logs
+    - !705 add chrpath Merge pull request !705 from YoungJQ/logs
+    - !704 CI: add testcases for nano CPUs Merge pull request !704 from lifeng_isula/blk
+    - !702 cpus: add support nano cpus Merge pull request !702 from lifeng_isula/blk
+    - !700 cpu_rt: add support cpurt runtime period Merge pull request !700 from lifeng_isula/blk
+    - !701 iSulad: add LIB_ISULAD_IMG_SO for libisulad_img.so to avoid func do_integration_of_images_check() Merge pull request !701 from zhangxiaoyu/master
+    - !699 update readme Merge pull request !699 from haozi007/master
+    - !698 blkio: add support blk read/write iops Merge pull request !698 from lifeng_isula/blk
+    - !697 add testcase for --user option Merge pull request !697 from JingWoo/master
+    - !696 iSulad: initialization buf before readlink() Merge pull request !696 from zhangxiaoyu/master
+    - !695 overlay: fix magic define error Merge pull request !695 from lifeng_isula/master
+
+    dev stats:
+      - 228 files changed, 6526 insertions(+), 5324 deletions(-)
+      - contributors: lifeng68, WangFengTu, wujing, Long Dai, haozi007, gaohuatao, zhangxiaoyu, YoungJQ, leizhongkai
+
 2020-09-03 lifeng release 2.0.5
     - !693 Set mount rootfs highest mode Merge pull request !693 from gaohuatao/update
     - !692 log: fix log level to warn Merge pull request !692 from lifeng_isula/master
