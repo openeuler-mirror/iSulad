@@ -1,5 +1,5 @@
-%global _version 2.0.5
-%global _release 20200923.094914.git05e545f7
+%global _version 2.0.6
+%global _release 20201014.152749.gitc8a43925
 %global is_systemd 1
 
 Name:      iSulad
@@ -11,20 +11,6 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
-
-Patch6000:	0000-config-remove-unused-config.patch
-Patch6001:	0001-fix-modify-quota-log-level-to-warning.patch
-Patch6002:	0002-fix-memory-leak.patch
-Patch6003:	0003-fix-security-opt-parsing-access-out-of-bounds.patch
-Patch6004:	0004-fix-delete-rootfs-dir-when-rootfs-load-failed.patch
-Patch6005:	0005-fix-code-review.patch
-Patch6006:	0006-fix-pull-failure-caused-by-link-conflict.patch
-Patch6007:	0007-image-clear-memory-if-failed.patch
-Patch6008:	0008-fix-layer-remain-caused-by-hold-flag-not-clean.patch
-Patch6009:	0009-fix-coredump-when-pull-image-with-lock-driver-image-.patch
-Patch6010:	0010-fix-bad-formatting-placeholder-in-http-parse-module.patch
-Patch6011:	0011-iSulad-fix-memory-leak.patch
-Patch6012:	0012-fix-coredump-when-load-image-with-uid.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -93,11 +79,6 @@ chrpath -d ./src/isulad-shim
 chrpath -d ./src/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
-install -m 0644 ../src/client/libisula.h			%{buildroot}/%{_includedir}/isulad/libisula.h
-install -m 0644 ../src/client/connect/isula_connect.h		%{buildroot}/%{_includedir}/isulad/isula_connect.h
-install -m 0644 ../src/utils/cutils/utils_timestamp.h			%{buildroot}/%{_includedir}/isulad/utils_timestamp.h
-install -m 0644 ../src/utils/cutils/error.h				%{buildroot}/%{_includedir}/isulad/error.h
-install -m 0644 ../src/daemon/modules/runtime/engines/engine.h			%{buildroot}/%{_includedir}/isulad/engine.h
 install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
@@ -144,8 +125,8 @@ fi
 fi
 
 %post
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 if [ "$1" = "1" ]; then
@@ -176,8 +157,8 @@ fi
 %endif
 fi
 
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 %preun
@@ -232,23 +213,23 @@ fi
 %endif
 
 %changelog
-+* Fri Sep 23 2020  <wujing50@huawei.com> - 2.0.5-20200923.094914.git05e545f7
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: fix some memory bugs
+* Wed Oct 14 2020  lifeng68<lifeng68@huawei.com> - 2.0.6-20201014.152749.gitc8a43925
+- Type: upgrade to v2.0.6
+- ID:NA
+- SUG:NA
+- DESC: upgrade to v2.0.6
 
-+* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: modify log level to warn
+* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: modify log level to warn
 
-+* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: remove unused config
+* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove unused config
 
 * Tue Sep 10 2020  <yangjiaqi11@huawei.com> - 2.0.5-20200910.144345.git71b1055b
 - Type:enhancement
