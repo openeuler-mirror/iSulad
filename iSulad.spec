@@ -198,7 +198,7 @@ fi
 %{_includedir}/isulad/*
 %attr(0755,root,root) %{_libdir}/pkgconfig
 %attr(0640,root,root) %{_libdir}/pkgconfig/isulad.pc
-%defattr(0550,root,root,0750)
+%defattr(0755,root,root,0755)
 %{_bindir}/*
 %{_libdir}/*
 %attr(0640,root,root) %{_sysconfdir}/sysconfig/iSulad
