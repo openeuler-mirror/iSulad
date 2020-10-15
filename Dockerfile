@@ -21,7 +21,7 @@
 #		-t YOUR_IMAGE_NAME -f ./Dockerfile .
 
 
-FROM	centos:7.6.1810
+FROM	centos:7.6.1810 AS build
 MAINTAINER LiFeng <lifeng68@huawei.com>
 
 RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
@@ -60,18 +60,12 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			unzip \
 			tar \
 			wget \
-			gtest \
-			gtest-devel \
-			gmock \
-			gmock-devel \
 			cppcheck \
 			python3 \
 			python3-pip \
 			python \
 			python-pip \
 			device-mapper-devel \
-			libarchive \
-			libarchive-devel \
 			libtar \
 			libtar-devel \
 			libcurl-devel \
@@ -118,7 +112,7 @@ RUN set -x && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/cmake.git && \
 	cd cmake && \
-	git checkout openEuler-20.03-LTS-tag && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf cmake-3.12.1.tar.gz && \
 	cd cmake-3.12.1 && \
 	./bootstrap && make && make install && \
@@ -131,7 +125,7 @@ RUN set -x && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/protobuf.git && \
 	cd protobuf && \
-	git checkout openEuler-20.03-LTS-tag && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf protobuf-all-3.9.0.tar.gz && \
 	cd protobuf-3.9.0 && \
 	./autogen.sh && \
@@ -146,7 +140,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/c-ares.git && \
 	cd c-ares && \
-	git checkout openEuler-20.03-LTS-tag && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf c-ares-1.15.0.tar.gz && \
 	cd c-ares-1.15.0 && \
 	autoreconf -if && \
@@ -161,7 +155,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/grpc.git && \
 	cd grpc && \
-	git checkout openEuler-20.03-LTS-tag && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf grpc-1.22.0.tar.gz && \
 	cd grpc-1.22.0 && \
 	make -j $(nproc) && \
@@ -174,7 +168,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libevent.git && \
 	cd libevent && \
-	git checkout openEuler-20.03-LTS-tag && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf libevent-2.1.11-stable.tar.gz && \
 	cd libevent-2.1.11-stable && \
 	./autogen.sh && \
@@ -189,13 +183,11 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libevhtp.git && \
 	cd libevhtp && \
-	git checkout openEuler-20.03-LTS-tag && \
-	tar -xzvf libevhtp-1.2.18.tar.gz && \
-	cd libevhtp-1.2.18 && \
-	patch -p1 -F1 -s < ../0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch && \
-	patch -p1 -F1 -s < ../0002-evhtp-enable-dynamic-thread-pool.patch && \
-	patch -p1 -F1 -s < ../0003-close-open-ssl.-we-do-NOT-use-it-in-lcrd.patch && \
-	patch -p1 -F1 -s < ../0004-Use-shared-library-instead-static-one.patch && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
+	tar -xzvf libevhtp-1.2.16.tar.gz && \
+	cd libevhtp-1.2.16 && \
+	patch -p1 -F1 -s < ../0001-support-dynamic-threads.patch && \
+	patch -p1 -F1 -s < ../0002-close-openssl.patch && \
 	rm -rf build && \
 	mkdir build && \
 	cd build && \
@@ -210,7 +202,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/http-parser.git && \
 	cd http-parser && \
-	git checkout openEuler-20.03-LTS-tag && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf http-parser-2.9.2.tar.gz && \
 	cd http-parser-2.9.2 && \
 	make -j CFLAGS="-Wno-error" && \
@@ -223,7 +215,7 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	cd ~ && \
 	git clone https://gitee.com/src-openeuler/libwebsockets.git && \
 	cd libwebsockets && \
-	git checkout openEuler-20.03-LTS-tag && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
 	tar -xzvf libwebsockets-2.4.2.tar.gz && \
 	cd libwebsockets-2.4.2 && \
 	patch -p1 -F1 -s < ../libwebsockets-fix-coredump.patch && \
@@ -234,56 +226,74 @@ RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	make install && \
 	ldconfig
 
-# install lxc
+# install gtest/gmock
 RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
 	set -x && \
 	cd ~ && \
-	git clone https://gitee.com/src-openeuler/lxc.git && \
-	cd lxc && \
-	./apply-patches && \
-	cd lxc-4.0.3 && \
-	./autogen.sh && \
-	./configure && \
-	make -j $(nproc) && \
-	make install && \
-	ldconfig
-
-# install lcr
-RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
-	set -x && \
-	cd ~ && \
-	git clone https://gitee.com/openeuler/lcr.git && \
-	cd lcr && \
-	mkdir build && \
+	git clone https://gitee.com/src-openeuler/gtest.git && \
+	cd gtest && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
+	tar xf release-1.8.1.tar.gz && \
+	cd googletest-release-1.8.1 && \
+	patch -p1 -F1 -s < ../gtest-1.8.1-null-pointer.patch && \
+	patch -p1 -F1 -s < ../gtest-PR1839-Fix-Python3-support.patch && \
+	patch -p1 -F1 -s < ../gtest-1.8.1-libversion.patch && \
+	patch -p1 -F1 -s < ../gtest-1.8.1-add-missing-pkgconfig-requires.patch && \
+	mkdir -p build && \
 	cd build && \
-	cmake ../ && \
+	cmake -DBUILD_SHARED_LIBS=ON ../ && \
 	make -j $(nproc) && \
 	make install && \
 	ldconfig
 
-# install clibcni
+# install libarchive
 RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
-	set -x && \
-	cd ~ && \
-	git clone https://gitee.com/openeuler/clibcni.git && \
-	cd clibcni && \
-	mkdir build && \
-	cd build && \
-	cmake ../ && \
-	make -j $(nproc) && \
-	make install && \
-	ldconfig
+        set -x && \
+        cd ~ && \
+        git clone https://gitee.com/src-openeuler/libarchive.git && \
+        cd libarchive && \
+	git checkout -b openEuler-20.03-LTS-tag openEuler-20.03-LTS-tag && \
+        tar -zxvf libarchive-3.4.1.tar.gz && \
+        cd libarchive-3.4.1 && \
+        patch -p1 -F1 -s < ../libarchive-uninitialized-value.patch && \
+        cd build && \
+        cmake -DCMAKE_USE_SYSTEM_LIBRARIES=ON ../ && \
+        make -j $(nproc) && \
+        make install && \
+        ldconfig
 
-# install iSulad-img
 RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH && \
-	set -x && \
-	cd ~ && \
-	git clone https://gitee.com/openeuler/iSulad-img.git && \
-	cd iSulad-img && \
-	./apply-patch && \
-	make -j $(nproc) && \
-	make install && \
-	ldconfig
-	
+        set -x && \
+        cd ~ && \
+        git clone https://gitee.com/openeuler/iSulad/ &&\
+        cd iSulad &&\
+        # git checkout 756c0bdc308c2845971ad9ca0c58760a84288bc0 &&\
+        git checkout v2.0.6 &&\
+        cd CI &&\
+        ./install_depends.sh &&\
+        cd .. &&\
+        mkdir build &&\
+        cd build &&\
+        cmake .. &&\
+        make -j $(nproc) && \
+        make install && \
+        ldconfig
+
+FROM    centos:7.6.1810
+
+COPY --from=build /usr/local/bin /usr/local/bin
+COPY --from=build /usr/local/lib /usr/local/lib
+COPY --from=build /usr/local/lib64 /usr/local/lib64
+COPY --from=build /usr/lib64 /usr/lib64
+COPY --from=build /etc/default/isulad/ /etc/default/isulad/ 
+COPY --from=build /etc/isulad /etc/isulad 
+
+
+
+RUN echo "/usr/lib" >> /etc/ld.so.conf && \
+    echo "/usr/local/lib" >> /etc/ld.so.conf &&\
+    ldconfig
+
+
 VOLUME [ "/sys/fs/cgroup" ]
-CMD ["/usr/sbin/init"]
+CMD ["/usr/local/bin/isulad"]
