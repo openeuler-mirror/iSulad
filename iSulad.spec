@@ -1,5 +1,5 @@
 %global _version 2.0.6
-%global _release 20201014.152749.gitc8a43925
+%global _release 20201015.154058.git4ab9f838
 %global is_systemd 1
 
 Name:      iSulad
@@ -198,7 +198,7 @@ fi
 %{_includedir}/isulad/*
 %attr(0755,root,root) %{_libdir}/pkgconfig
 %attr(0640,root,root) %{_libdir}/pkgconfig/isulad.pc
-%defattr(0550,root,root,0750)
+%defattr(0755,root,root,0755)
 %{_bindir}/*
 %{_libdir}/*
 %attr(0640,root,root) %{_sysconfdir}/sysconfig/iSulad
