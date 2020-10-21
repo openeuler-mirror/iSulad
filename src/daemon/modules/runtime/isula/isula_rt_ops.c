@@ -851,8 +851,13 @@ out:
 int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t *params, pid_ppid_info_t *pid_info)
 {
     char workdir[PATH_MAX] = { 0 };
+    char shim_pid_file_name[PATH_MAX] = { 0 };
     pid_t pid = 0;
+    pid_t shim_pid = -1;
     int ret = 0;
+    int splice_ret = 0;
+    proc_t *proc = NULL;
+    proc_t *p_proc = NULL;
 
     if (id == NULL || runtime == NULL || params == NULL || pid_info == NULL) {
         ERROR("nullptr arguments not allowed");
@@ -863,6 +868,12 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
         return -1;
     }
 
+    splice_ret = snprintf(shim_pid_file_name, sizeof(shim_pid_file_name), "%s/shim-pid", workdir);
+    if (splice_ret < 0 || splice_ret >= sizeof(shim_pid_file_name)) {
+        ERROR("%s: wrong shim workdir", id);
+        return -1;
+    }
+
     pid = get_container_process_pid(workdir);
     if (pid < 0) {
         ret = -1;
@@ -870,11 +881,31 @@ int rt_isula_start(const char *id, const char *runtime, const rt_start_params_t 
         goto out;
     }
 
-    if (util_read_pid_ppid_info(pid, pid_info) != 0) {
+    file_read_int(shim_pid_file_name, &shim_pid);
+    if (shim_pid < 0) {
         ret = -1;
-        ERROR("%s: failed read pid info", id);
+        ERROR("%s: failed to read isulad shim pid", id);
         goto out;
     }
+
+    proc = util_get_process_proc_info(pid);
+    if (proc == NULL) {
+        ret = -1;
+        ERROR("%s: failed to read pidinfo", id);
+        goto out;
+    }
+
+    p_proc = util_get_process_proc_info(shim_pid);
+    if (p_proc == NULL) {
+        ret = -1;
+        ERROR("%s: failed to read isulad shim pidinfo", id);
+        goto out;
+    }
+
+    pid_info->pid = proc->pid;
+    pid_info->start_time = proc->start_time;
+    pid_info->ppid = shim_pid;
+    pid_info->pstart_time = p_proc->start_time;
 
     if (runtime_call_simple(workdir, runtime, "start", NULL, 0, id) != 0) {
         ERROR("call runtime start id failed");
@@ -887,6 +918,9 @@ out:
         show_shim_runtime_errlog(workdir);
         shim_kill_force(workdir);
     }
+
+    free(proc);
+    free(p_proc);
 
     return ret;
 }
