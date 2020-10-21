@@ -32,6 +32,8 @@ function test_tag_image()
 
     msg_info "${test} starting..."
 
+    isula rm -f `isula ps -aq`
+
     isula pull $image_busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image_busybox}" && ((ret++))
 
