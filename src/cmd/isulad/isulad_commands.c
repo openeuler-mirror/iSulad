@@ -195,6 +195,7 @@ static int check_args_graph_path(struct service_arguments *args)
 {
     int ret = 0;
     char dstpath[PATH_MAX] = { 0 };
+    char *real_path = NULL;
 
     ret = util_validate_absolute_path(args->json_confs->graph);
     if (ret) {
@@ -207,8 +208,15 @@ static int check_args_graph_path(struct service_arguments *args)
         ret = -1;
         goto out;
     }
+
+    if (util_realpath_in_scope("/", dstpath, &real_path) != 0) {
+        ERROR("failed to get real path");
+        ret = -1;
+        goto out;
+    }
+
     free(args->json_confs->graph);
-    args->json_confs->graph = util_strdup_s(dstpath);
+    args->json_confs->graph = real_path;
 
 out:
     return ret;
@@ -218,6 +226,7 @@ static int check_args_state_path(struct service_arguments *args)
 {
     int ret = 0;
     char dstpath[PATH_MAX] = { 0 };
+    char *real_path = NULL;
 
     ret = util_validate_absolute_path(args->json_confs->state);
     if (ret != 0) {
@@ -230,8 +239,15 @@ static int check_args_state_path(struct service_arguments *args)
         ret = -1;
         goto out;
     }
+
+    if (util_realpath_in_scope("/", dstpath, &real_path) != 0) {
+        ERROR("failed to get real path");
+        ret = -1;
+        goto out;
+    }
+
     free(args->json_confs->state);
-    args->json_confs->state = util_strdup_s(dstpath);
+    args->json_confs->state = real_path;
 
 out:
     return ret;
