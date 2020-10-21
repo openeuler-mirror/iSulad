@@ -29,6 +29,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <grp.h>
 
 #include "constants.h"
 #include "isula_libutils/log.h"
@@ -1572,5 +1574,39 @@ int util_proc_file_line_by_line(FILE *fp, read_line_callback_t cb, void *context
     }
 out:
     free(line);
+    return ret;
+}
+
+int util_set_file_group(const char *fname, const char *group)
+{
+    int ret = 0;
+    struct group *grp = NULL;
+    gid_t gid;
+
+    if (fname == NULL || group == NULL) {
+        ERROR("Invalid NULL params");
+        return -1;
+    }
+
+    grp = getgrnam(group);
+    if (grp != NULL) {
+        gid = grp->gr_gid;
+        DEBUG("Group %s found, gid: %d", group, gid);
+        if (chown(fname, -1, gid) != 0) {
+            ERROR("Failed to chown %s to gid: %d", fname, gid);
+            ret = -1;
+            goto out;
+        }
+    } else {
+        if (strcmp(group, "docker") == 0 || strcmp(group, "isula") == 0) {
+            DEBUG("Warning: could not change group %s to %s", fname, group);
+        } else {
+            ERROR("Group %s not found", group);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
     return ret;
 }

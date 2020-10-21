@@ -13,7 +13,6 @@
  * Description: provide container configure definition
  ******************************************************************************/
 #include <unistd.h>
-#include <grp.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1157,34 +1156,6 @@ out:
     return ret;
 }
 
-/* set path group */
-static int set_path_group(const char *rpath, const char *group)
-{
-    struct group *grp = NULL;
-    gid_t gid;
-
-    grp = getgrnam(group);
-
-    if (grp != NULL) {
-        gid = grp->gr_gid;
-        DEBUG("Group %s found, gid: %d", group, gid);
-        if (chown(rpath, -1, gid) != 0) {
-            DEBUG("Failed to chown %s to gid: %d", rpath, gid);
-            return -1;
-        }
-    } else {
-        if (strcmp(group, "docker") == 0 || strcmp(group, "isula") == 0) {
-            DEBUG("Warning: could not change group %s to %s", rpath, group);
-        } else {
-            ERROR("Group %s not found", group);
-            isulad_set_error_message("Group %s not found", group);
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
 /* set socket group */
 int set_unix_socket_group(const char *socket, const char *group)
 {
@@ -1205,7 +1176,7 @@ int set_unix_socket_group(const char *socket, const char *group)
         goto out;
     }
     INFO("set socket: %s with group: %s", socket, group);
-    nret = set_path_group(rpath, group);
+    nret = util_set_file_group(rpath, group);
     if (nret < 0) {
         ERROR("set group of the path: %s failed", rpath);
         ret = -1;
