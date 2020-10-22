@@ -76,7 +76,7 @@ static void client_info_server(const struct isula_info_response *response)
         printf("Logging Driver: %s\n", response->logging_driver);
     }
     if (response->cgroup_driver != NULL) {
-        printf("Cgroup Driverr: %s\n", response->cgroup_driver);
+        printf("Cgroup Driver: %s\n", response->cgroup_driver);
     }
     if (response->huge_page_size != NULL) {
         printf("Hugetlb Pagesize: %s\n", response->huge_page_size);
