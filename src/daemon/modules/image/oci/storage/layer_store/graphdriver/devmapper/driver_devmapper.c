@@ -82,7 +82,36 @@ out:
 static int do_create(const char *id, const char *parent, const struct graphdriver *driver,
                      const struct driver_create_opts *create_opts)
 {
-    return add_device(id, parent, driver->devset, create_opts->storage_opt);
+    int ret = 0;
+    char *mnt_parent_dir = NULL;
+    char *mnt_point_dir = NULL;
+
+    mnt_parent_dir = util_path_join(driver->home, "mnt");
+    if (mnt_parent_dir == NULL) {
+        ERROR("Failed to join devmapper mnt dir %s", id);
+        ret = -1;
+        goto out;
+    }
+
+    mnt_point_dir = util_path_join(mnt_parent_dir, id);
+    if (mnt_point_dir == NULL) {
+        ERROR("Failed to join devampper mount point dir %s", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
+        ERROR("Failed to mkdir path:%s", mnt_point_dir);
+        ret = -1;
+        goto out;
+    }
+
+    ret = add_device(id, parent, driver->devset, create_opts->storage_opt);
+
+out:
+    free(mnt_parent_dir);
+    free(mnt_point_dir);
+    return ret;
 }
 
 // devmapper_create_rw creates a layer that is writable for use as a container file system
@@ -182,12 +211,6 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     mnt_point_dir = util_path_join(mnt_parent_dir, id);
     if (mnt_point_dir == NULL) {
         ERROR("Failed to join devampper mount point dir:%s", id);
-        ret = -1;
-        goto out;
-    }
-
-    if (util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
-        ERROR("Failed to mkdir path:%s", mnt_point_dir);
         ret = -1;
         goto out;
     }

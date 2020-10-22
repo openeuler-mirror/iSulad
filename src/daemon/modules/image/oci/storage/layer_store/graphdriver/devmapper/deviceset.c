@@ -1145,9 +1145,10 @@ static int pool_has_free_space(struct device_set *devset)
         ERROR("devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
               "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
               data_total - data_used, min_free_data);
-        isulad_set_error_message("devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
-                                 "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
-                                 data_total - data_used, min_free_data);
+        isulad_set_error_message(
+            "devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
+            "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
+            data_total - data_used, min_free_data);
         ret = -1;
         goto out;
     }
@@ -1163,10 +1164,11 @@ static int pool_has_free_space(struct device_set *devset)
               "which is less than minimum required %lu free metadata blocks. "
               "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
               metadata_total - metadata_used, min_free_metadata);
-        isulad_set_error_message("devmapper: Thin Pool has %lu free metadata blocks "
-                                 "which is less than minimum required %lu free metadata blocks. "
-                                 "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
-                                 metadata_total - metadata_used, min_free_metadata);
+        isulad_set_error_message(
+            "devmapper: Thin Pool has %lu free metadata blocks "
+            "which is less than minimum required %lu free metadata blocks. "
+            "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
+            metadata_total - metadata_used, min_free_metadata);
         ret = -1;
         goto out;
     }
@@ -1652,7 +1654,8 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
     if (dinfo.deferred_remove != 0) {
         nret = cancel_deferred_removal(devset, base_info->hash);
         if (nret != 0) {
-            ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", base_info->hash, dev_strerror(nret));
+            ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", base_info->hash,
+                  dev_strerror(nret));
             if (nret != ERR_ENXIO) {
                 ERROR("devmapper: cancel device(id:%s) deferred remove failed", base_info->hash);
                 ret = -1;
@@ -1721,7 +1724,8 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
 
     nret = cancel_deferred_removal(devset, info->hash);
     if (nret != 0 && nret != ERR_BUSY) {
-        ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", info->hash, dev_strerror(nret));
+        ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", info->hash,
+              dev_strerror(nret));
         ret = -1;
         goto out;
     }
@@ -2563,7 +2567,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
 
     if (major < 4) {
         ERROR("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal", major);
-        isulad_set_error_message("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal", major);
+        isulad_set_error_message("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal",
+                                 major);
         ret = -1;
         goto out;
     }
@@ -2584,7 +2589,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
      */
     if (minor < 27) {
         ERROR("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal", minor);
-        isulad_set_error_message("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal", minor);
+        isulad_set_error_message("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal",
+                                 minor);
         ret = -1;
         goto out;
     }
@@ -2951,17 +2957,10 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
         goto free_out;
     }
 
-    if (util_detect_mounted(mount_path)) {
-        if (umount2(mount_path, MNT_DETACH) < 0 && errno != EINVAL) {
-            ERROR("Failed to umount directory %s:%s", mount_path, strerror(errno));
-            ret = -1;
-            goto free_out;
-        }
-    }
-
-    if (util_path_remove(mount_path) != 0) {
-        DEBUG("devmapper: doing remove on a unmounted device %s failed", mount_path);
+    if (umount2(mount_path, MNT_DETACH) < 0 && errno != EINVAL) {
+        ERROR("Failed to umount directory %s:%s", mount_path, strerror(errno));
         ret = -1;
+        goto free_out;
     }
 
     if (deactivate_device(devset, device_info->info) != 0) {
@@ -3167,7 +3166,6 @@ struct status *device_set_status(struct device_set *devset)
         st->sem_msg = util_strdup_s(msg);
     }
 
-
 free_out:
     (void)pthread_rwlock_unlock(&devset->devmapper_driver_rwlock);
     return st;
@@ -3222,10 +3220,8 @@ static int umount_deactivate_dev_all(struct device_set *devset)
             continue;
         }
 
-        if (util_detect_mounted(fname)) {
-            if (umount2(fname, MNT_DETACH) < 0 && errno != EINVAL) {
-                ERROR("Failed to umount directory %s:%s", fname, strerror(errno));
-            }
+        if (umount2(fname, MNT_DETACH) < 0 && errno != EINVAL) {
+            ERROR("Failed to umount directory %s:%s", fname, strerror(errno));
         }
 
         device_info = lookup_device(devset, entry->d_name);
