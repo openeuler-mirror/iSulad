@@ -1249,24 +1249,24 @@ int client_create(struct client_arguments *args)
     request->image = util_strdup_s(args->image_name);
 
     container_spec = request_pack_custom_conf(args);
-    if (container_spec == 0) {
-        ret = -1;
+    if (container_spec == NULL) {
+        ret = EINVALIDARGS;
         goto out;
     }
 
     if (generate_container_config(container_spec, &request->container_spec_json) != 0) {
-        ret = -1;
+        ret = EINVALIDARGS;
         goto out;
     }
 
     host_spec = request_pack_host_config(args);
-    if (host_spec == 0) {
-        ret = -1;
+    if (host_spec == NULL) {
+        ret = EINVALIDARGS;
         goto out;
     }
 
     if (generate_hostconfig(host_spec, &request->host_spec_json) != 0) {
-        ret = -1;
+        ret = EINVALIDARGS;
         goto out;
     }
 
