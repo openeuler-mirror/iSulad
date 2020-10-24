@@ -16,9 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
+#include <dirent.h>
+#include <limits.h>
 
 #include "isula_libutils/log.h"
 #include "volume.h"
@@ -26,6 +27,9 @@
 #include "map.h"
 #include "path.h"
 #include "err_msg.h"
+#include "utils_file.h"
+#include "utils_string.h"
+#include "utils_verify.h"
 
 #define LOCAL_VOLUME_DRIVER_NAME "local"
 #define LOCAL_VOLUME_ROOT_DIR_MODE 0700

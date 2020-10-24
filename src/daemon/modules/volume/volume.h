@@ -15,6 +15,7 @@
 #ifndef DAEMON_MODULES_VOLUME_VOLUME_H
 #define DAEMON_MODULES_VOLUME_VOLUME_H
 
+#include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

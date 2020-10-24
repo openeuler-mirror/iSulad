@@ -16,17 +16,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <stdint.h>
-#include <errno.h>
 #include <pthread.h>
 
 #include "isula_libutils/log.h"
 #include "volume.h"
 #include "utils.h"
 #include "map.h"
-#include "path.h"
 #include "local.h"
 #include "err_msg.h"
+#include "utils_file.h"
 
 #define LOCAL_VOLUME_ROOT_DIR_NAME "volumes"
 
