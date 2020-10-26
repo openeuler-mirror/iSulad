@@ -56,6 +56,8 @@ public:
 
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE;
     static const std::string NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR;
+    static const std::string CNI_MUTL_NET_EXTENSION_KEY;
+    static const std::string CNI_MUTL_NET_EXTENSION_ARGS_KEY;
 };
 
 auto GetDefaultSandboxImage(Errors &err) -> std::string;

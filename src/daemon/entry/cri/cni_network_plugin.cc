@@ -581,10 +581,11 @@ void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network, const std::string 
 
 static void PrepareRuntimeConf(const std::string &podName, const std::string &podNs, const std::string &interfaceName,
                                const std::string &podSandboxID, const std::string &podNetnsPath,
+                               const std::map<std::string, std::string> &annotations,
                                const std::map<std::string, std::string> &options, struct runtime_conf **cni_rc,
                                Errors &err)
 {
-    const size_t defaultLen = 5;
+    size_t defaultLen = 5;
     if (cni_rc == nullptr) {
         err.Errorf("Invalid arguments");
         ERROR("Invalid arguments");
@@ -595,6 +596,12 @@ static void PrepareRuntimeConf(const std::string &podName, const std::string &po
     std::string podUID;
     if (iter != options.end()) {
         podUID = iter->second;
+    }
+    std::string cniExtentionVal;
+    iter = annotations.find(CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_KEY);
+    if (iter != annotations.end()) {
+        cniExtentionVal = iter->second;
+        defaultLen++;
     }
 
     struct runtime_conf *rt = (struct runtime_conf *)util_common_calloc_s(sizeof(struct runtime_conf));
@@ -625,6 +632,10 @@ static void PrepareRuntimeConf(const std::string &podName, const std::string &po
     rt->args[3][1] = util_strdup_s(podSandboxID.c_str());
     rt->args[4][0] = util_strdup_s("K8S_POD_UID");
     rt->args[4][1] = util_strdup_s(podUID.c_str());
+    if (defaultLen > 5) {
+        rt->args[5][0] = util_strdup_s(CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY.c_str());
+        rt->args[5][1] = util_strdup_s(cniExtentionVal.c_str());
+    }
 
     *cni_rc = rt;
     return;
@@ -639,7 +650,7 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std
                                            const std::map<std::string, std::string> &options,
                                            struct runtime_conf **cni_rc, Errors &err)
 {
-    PrepareRuntimeConf(podName, podNs, interfaceName, podSandboxID, podNetnsPath, options, cni_rc, err);
+    PrepareRuntimeConf(podName, podNs, interfaceName, podSandboxID, podNetnsPath, annotations, options, cni_rc, err);
     if (err.NotEmpty()) {
         return;
     }
