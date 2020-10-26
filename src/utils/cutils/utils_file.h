@@ -98,6 +98,8 @@ typedef bool (*read_line_callback_t)(const char *, void *context);
 
 int util_proc_file_line_by_line(FILE *fp, read_line_callback_t cb, void *context);
 
+int util_set_file_group(const char *fname, const char *group);
+
 #ifdef __cplusplus
 }
 #endif

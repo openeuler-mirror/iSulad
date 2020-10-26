@@ -81,20 +81,30 @@ static int create_client_run_path(const char *group)
 {
     int ret = 0;
     const char *rundir = "/var/run/isula";
+
     if (group == NULL) {
         return -1;
     }
-    ret = util_mkdir_p(rundir, DEFAULT_SECURE_DIRECTORY_MODE);
-    if (ret < 0) {
+
+    if (util_mkdir_p(rundir, ISULA_CLIENT_DIRECTORY_MODE) < 0) {
         ERROR("Unable to create client run directory %s.", rundir);
-        return ret;
+        ret = -1;
+        goto out;
     }
 
-    ret = chmod(rundir, DEFAULT_SECURE_DIRECTORY_MODE);
-    if (ret < 0) {
+    if (chmod(rundir, ISULA_CLIENT_DIRECTORY_MODE) < 0) {
         ERROR("Failed to chmod for client run path: %s", rundir);
+        ret = -1;
+        goto out;
     }
 
+    if (util_set_file_group(rundir, group) != 0) {
+        ERROR("set group of the path: %s failed", rundir);
+        ret = -1;
+        goto out;
+    }
+    
+out:
     return ret;
 }
 
