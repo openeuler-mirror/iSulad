@@ -51,6 +51,8 @@ const std::string Constants::CONTAINER_TYPE_ANNOTATION_SANDBOX { "sandbox" };
 const std::string Constants::SANDBOX_ID_ANNOTATION_KEY { "io.kubernetes.cri.sandbox-id" };
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE { "pod-cidr-change" };
 const std::string Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR { "pod-cidr" };
+const std::string Constants::CNI_MUTL_NET_EXTENSION_KEY { "extension.network.kubernetes.io/cni" };
+const std::string Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY { "CNI_MUTLINET_EXTENSION" };
 
 const char *InternalLabelKeys[] = { CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY.c_str(),
                                     CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str(),
