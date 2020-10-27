@@ -103,7 +103,7 @@ static int create_client_run_path(const char *group)
         ret = -1;
         goto out;
     }
-    
+
 out:
     return ret;
 }

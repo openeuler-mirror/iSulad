@@ -61,7 +61,7 @@ ssize_t read_content(struct archive *a, void *client_data, const void **buff)
     return mydata->content->read(mydata->content->context, mydata->buff, sizeof(mydata->buff));
 }
 
-static bool whiteout_convert_read(struct archive_entry *entry, const char *dst_path)
+static bool overlay_whiteout_convert_read(struct archive_entry *entry, const char *dst_path, map_t *unpacked_path_map)
 {
     bool do_write = true;
     char *base = NULL;
@@ -143,6 +143,149 @@ static int copy_data(struct archive *ar, struct archive *aw)
     }
 }
 
+static int remove_files_in_opq_dir(const char *dirpath, int recursive_depth, map_t *unpacked_path_map)
+{
+    struct dirent *pdirent = NULL;
+    DIR *directory = NULL;
+    int ret = 0;
+    char fname[PATH_MAX] = { 0 };
+
+    if ((recursive_depth + 1) > MAX_PATH_DEPTH) {
+        ERROR("Reach max path depth: %s", dirpath);
+        return -1;
+    }
+
+    directory = opendir(dirpath);
+    if (directory == NULL) {
+        ERROR("Failed to open %s", dirpath);
+        return -1;
+    }
+    pdirent = readdir(directory);
+    for (; pdirent != NULL; pdirent = readdir(directory)) {
+        struct stat fstat;
+        int pathname_len;
+
+        if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
+            continue;
+        }
+
+        (void)memset(fname, 0, sizeof(fname));
+
+        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
+        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
+            ERROR("Pathname too long");
+            ret = -1;
+            continue;
+        }
+
+        // not exist in unpacked paths map, just remove the path
+        if (map_search(unpacked_path_map, (void *)fname) == NULL) {
+            if (util_recursive_remove_path(fname) != 0) {
+                ERROR("Failed to remove path %s", fname);
+                ret = -1;
+            }
+            continue;
+        }
+
+        if (lstat(fname, &fstat) != 0) {
+            ERROR("Failed to stat %s", fname);
+            ret = -1;
+            continue;
+        }
+
+        if (S_ISDIR(fstat.st_mode)) {
+            if (remove_files_in_opq_dir(fname, recursive_depth + 1, unpacked_path_map) != 0) {
+                ret = -1;
+                continue;
+            }
+        }
+    }
+
+    if (closedir(directory) != 0) {
+        ERROR("Failed to close directory %s", dirpath);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static bool remove_whiteout_convert(struct archive_entry *entry, const char *dst_path, map_t *unpacked_path_map)
+{
+    bool do_write = true;
+    char *base = NULL;
+    char *dir = NULL;
+    char *originalpath = NULL;
+
+    base = util_path_base(dst_path);
+    if (base == NULL) {
+        ERROR("Failed to get base of %s", dst_path);
+        goto out;
+    }
+
+    dir = util_path_dir(dst_path);
+    if (dir == NULL) {
+        ERROR("Failed to get dir of %s", dst_path);
+        goto out;
+    }
+
+    if (strcmp(base, WHITEOUT_OPAQUEDIR) == 0) {
+        if (remove_files_in_opq_dir(dir, 0, unpacked_path_map) != 0) {
+            SYSERROR("Failed to remove files in opq dir %s", dir);
+            goto out;
+        }
+        do_write = false;
+        goto out;
+    }
+
+    if (strncmp(base, WHITEOUT_PREFIX, strlen(WHITEOUT_PREFIX)) == 0) {
+        char *origin_base = &base[strlen(WHITEOUT_PREFIX)];
+        originalpath = util_path_join(dir, origin_base);
+        if (originalpath == NULL) {
+            ERROR("Failed to get original path of %s", dst_path);
+            goto out;
+        }
+
+        if (util_recursive_remove_path(originalpath) != 0) {
+            ERROR("Failed to delete original path %s", originalpath);
+            goto out;
+        }
+
+        do_write = false;
+        goto out;
+    }
+
+out:
+    free(base);
+    free(dir);
+    free(originalpath);
+    return do_write;
+}
+
+typedef bool (*whiteout_convert_call_back_t)(struct archive_entry *entry, const char *dst_path,
+                                             map_t *unpacked_path_map);
+
+struct whiteout_convert_map {
+    whiteout_format_type type;
+    whiteout_convert_call_back_t wh_cb;
+};
+
+struct whiteout_convert_map g_wh_cb_map[] = { { OVERLAY_WHITEOUT_FORMATE, overlay_whiteout_convert_read },
+    { REMOVE_WHITEOUT_FORMATE, remove_whiteout_convert }
+};
+
+static whiteout_convert_call_back_t get_whiteout_convert_cb(whiteout_format_type whiteout_type)
+{
+    size_t i = 0;
+
+    for (i = 0; i < sizeof(g_wh_cb_map) / sizeof(g_wh_cb_map[0]); i++) {
+        if (whiteout_type == g_wh_cb_map[i].type) {
+            return g_wh_cb_map[i].wh_cb;
+        }
+    }
+
+    return NULL;
+}
+
 int archive_unpack_handler(const struct io_read_wrapper *content, const char *dstdir,
                            const struct archive_options *options)
 {
@@ -153,6 +296,15 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
     struct archive_entry *entry = NULL;
     char *dst_path = NULL;
     int flags;
+    whiteout_convert_call_back_t wh_handle_cb = NULL;
+    map_t *unpacked_path_map = NULL; // used for hanling opaque dir, marke paths had been unpacked
+
+    unpacked_path_map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (unpacked_path_map == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
 
     mydata = util_common_calloc_s(sizeof(struct archive_content_data));
     if (mydata == NULL) {
@@ -187,6 +339,8 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
         goto out;
     }
 
+    wh_handle_cb = get_whiteout_convert_cb(options->whiteout_format);
+
     for (;;) {
         free(dst_path);
         dst_path = NULL;
@@ -217,28 +371,42 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
             goto out;
         }
 
-        if (options->whiteout_format == OVERLAY_WHITEOUT_FORMATE && !whiteout_convert_read(entry, dst_path)) {
+        if (wh_handle_cb != NULL && !wh_handle_cb(entry, dst_path, unpacked_path_map)) {
             continue;
         }
 
         ret = archive_write_header(ext, entry);
         if (ret != ARCHIVE_OK) {
             ERROR("Fail to handle tar header: %s", archive_error_string(ext));
+            ret = -1;
+            goto out;
         } else if (archive_entry_size(entry) > 0) {
             ret = copy_data(a, ext);
             if (ret != ARCHIVE_OK) {
                 ERROR("Failed to do copy tar data: %s", archive_error_string(ext));
+                ret = -1;
+                goto out;
             }
         }
         ret = archive_write_finish_entry(ext);
         if (ret != ARCHIVE_OK) {
             ERROR("Failed to freeing archive entry: %s\n", archive_error_string(ext));
+            ret = -1;
+            goto out;
+        }
+
+        bool b = true;
+        if (!map_replace(unpacked_path_map, (void *)dst_path, (void *)(&b))) {
+            ERROR("Failed to replace unpacked path map element");
+            ret = -1;
+            goto out;
         }
     }
 
     ret = 0;
 
 out:
+    map_free(unpacked_path_map);
     free(dst_path);
     archive_read_close(a);
     archive_read_free(a);

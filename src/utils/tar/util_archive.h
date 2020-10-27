@@ -30,8 +30,9 @@ extern "C" {
 #endif
 
 typedef enum {
-    NONE_WHITEOUT_FORMATE = 0,
-    OVERLAY_WHITEOUT_FORMATE = 1,
+    NONE_WHITEOUT_FORMATE = 0, // handle whiteouts as normal files
+    OVERLAY_WHITEOUT_FORMATE = 1, // handle whiteouts as the way as overlay
+    REMOVE_WHITEOUT_FORMATE = 2, // handle whiteouts by removing the target files
 } whiteout_format_type;
 
 struct archive_options {

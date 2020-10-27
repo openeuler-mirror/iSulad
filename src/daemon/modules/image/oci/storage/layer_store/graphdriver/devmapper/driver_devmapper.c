@@ -339,7 +339,7 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
         goto out;
     }
 
-    options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
+    options.whiteout_format = REMOVE_WHITEOUT_FORMATE;
     if (archive_unpack(content, layer_fs, &options) != 0) {
         ERROR("devmapper: failed to unpack to :%s", layer_fs);
         ret = -1;
