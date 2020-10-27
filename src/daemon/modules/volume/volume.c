@@ -26,28 +26,9 @@
 #include "err_msg.h"
 #include "utils_file.h"
 
-#define LOCAL_VOLUME_ROOT_DIR_NAME "volumes"
-
 typedef struct {
-    char * (*driver_name)(void);
-
-    int (*init)(char *scope);
-
-    struct volume * (*create)(char *name);
-
-    int (*mount)(char *name);
-
-    int (*umount)(char *name);
-
-    struct volumes * (*list)(void);
-
-    int (*remove)(char *name);
-} volume_driver;
-
-typedef struct {
-    volume_driver driver_local;
-
     pthread_mutex_t mutex;
+    map_t *drivers;
     map_t *name_refs;
 } volume_store;
 
@@ -69,7 +50,137 @@ static void mutex_unlock(pthread_mutex_t *mutex)
 }
 
 // key: name of volume
-// valume: ids map of contianer
+// value: volume driver
+static void drivers_kvfree(void *key, void *value)
+{
+    free(key);
+    free(value);
+    return;
+}
+
+static int valid_driver(volume_driver *driver)
+{
+    if (driver->driver_name == NULL || driver->create == NULL || driver->get == NULL ||
+        driver->mount == NULL || driver->umount == NULL || driver->list == NULL ||
+        driver->remove == NULL) {
+        ERROR("Invalid volume driver, NULL function found");
+        return -1;
+    }
+    return 0;
+}
+
+static volume_driver * lookup_driver(char *name)
+{
+    if (name == NULL) {
+        ERROR("invalid NULL volume driver name");
+        return NULL;
+    }
+    return map_search(g_vs.drivers, name);
+}
+
+static volume_driver * lookup_driver_by_volume_name(char *name)
+{
+    struct volume *vol = NULL;
+    static volume_driver *driver = NULL;
+    map_itor *itor = NULL;
+
+    if (name == NULL) {
+        ERROR("invalid NULL volume name");
+        return NULL;
+    }
+
+    itor = map_itor_new(g_vs.drivers);
+    if (itor == NULL) {
+        ERROR("failed to get volumes's iterator to query volume driver by volume name");
+        goto out;
+    }
+
+    for (; map_itor_valid(itor); map_itor_next(itor)) {
+        driver = map_itor_value(itor);
+        vol = driver->get(name);
+        if (vol != NULL) {
+            free_volume(vol);
+            break;
+        }
+    }
+
+out:
+    map_itor_free(itor);
+
+    return driver;
+}
+
+static volume_driver * dup_driver(volume_driver *driver)
+{
+    volume_driver *d = NULL;
+
+    d = util_common_calloc_s(sizeof(volume_driver));
+    if (d == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    *d = *driver;
+
+    return d;
+}
+
+static int insert_driver(char *name, volume_driver *driver)
+{
+    int ret = 0;
+    volume_driver *d = NULL;
+
+    if (valid_driver(driver) != 0) {
+        return -1;
+    }
+
+    d = dup_driver(driver);
+    if (d == NULL) {
+        return -1;
+    }
+
+    if (!map_insert(g_vs.drivers, name, d)) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free(d);
+        d = NULL;
+    }
+
+    return ret;
+}
+
+int register_driver(char *name, volume_driver *driver)
+{
+    int ret = 0;
+
+    if (name == NULL || driver == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    mutex_lock(&g_vs.mutex);
+
+    if (lookup_driver(name) != NULL) {
+        ERROR("driver %s already exist", name);
+        ret = -1;
+        goto out;
+    }
+
+    ret = insert_driver(name, driver);
+
+out:
+    mutex_unlock(&g_vs.mutex);
+
+    return ret;
+}
+
+// key: name of volume
+// value: ids map of contianer
 static void refs_kvfree(void *key, void *value)
 {
     free(key);
@@ -202,49 +313,41 @@ static int del_name_ref(map_t *name_refs, char *name, char *ref)
     return 0;
 }
 
+static int register_drivers(char *root_dir)
+{
+    // support local volume driver only right now
+    return register_local_volume(root_dir);
+}
+
 int volume_init(char *root_dir)
 {
     int ret = 0;
-    char *local_volume_root_dir = NULL;
 
-    g_vs.driver_local.init = local_volume_init;
-    g_vs.driver_local.driver_name = local_volume_driver_name;
-    g_vs.driver_local.create = local_volume_create;
-    g_vs.driver_local.mount = local_volume_mount;
-    g_vs.driver_local.umount = local_volume_umount;
-    g_vs.driver_local.list = local_volume_list;
-    g_vs.driver_local.remove = local_volume_remove;
-
-    local_volume_root_dir = util_path_join(root_dir, LOCAL_VOLUME_ROOT_DIR_NAME);
-    if (root_dir == NULL) {
+    g_vs.drivers = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, drivers_kvfree);
+    if (g_vs.drivers == NULL) {
         ERROR("out of memory");
-        return -1;
-    }
-
-    if (local_volume_init(local_volume_root_dir) != 0) {
         ret = -1;
         goto out;
     }
 
     g_vs.name_refs = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, refs_kvfree);
     if (g_vs.name_refs == NULL) {
+        ERROR("out of memory");
         ret = -1;
         goto out;
     }
 
+    ret = register_drivers(root_dir);
+
 out:
-    free(local_volume_root_dir);
+    if (ret != 0) {
+        map_free((map_t*)g_vs.drivers);
+        g_vs.drivers = NULL;
+        map_free((map_t*)g_vs.name_refs);
+        g_vs.name_refs = NULL;
+    }
 
     return ret;
-}
-
-static volume_driver * lookup_driver(char *driver)
-{
-    if (driver == NULL || strcmp(driver, VOLUME_DEFAULT_DRIVER_NAME) != 0) {
-        ERROR("invalid volume driver %s", driver);
-        return NULL;
-    }
-    return &g_vs.driver_local;
 }
 
 struct volume * volume_create(char *driver_name, char *name, struct volume_options *opts)
@@ -259,20 +362,23 @@ struct volume * volume_create(char *driver_name, char *name, struct volume_optio
         return NULL;
     }
 
+    mutex_lock(&g_vs.mutex);
     driver = lookup_driver(driver_name);
     if (driver == NULL) {
-        return NULL;
+        ret = -1;
+        ERROR("volume driver %s not found", driver_name);
+        goto out;
     }
 
     if (name == NULL) {
         if (util_generate_random_str(volume_name, VOLUME_DEFAULT_NAME_LEN) != 0) {
             ERROR("generate random string for volume name failed");
-            return NULL;
+            ret = -1;
+            goto out;
         }
         name = (char*)volume_name;
     }
 
-    mutex_lock(&g_vs.mutex);
     vol = driver->create(name);
     if (vol == NULL) {
         ret = -1;
@@ -297,6 +403,7 @@ out:
 
 int volume_mount(char *name)
 {
+    int ret = 0;
     volume_driver *driver = NULL;
 
     if (name == NULL) {
@@ -304,17 +411,23 @@ int volume_mount(char *name)
         return -1;
     }
 
-    driver = lookup_driver(VOLUME_DEFAULT_DRIVER_NAME);
+    mutex_lock(&g_vs.mutex);
+    driver = lookup_driver_by_volume_name(name);
     if (driver == NULL) {
-        return -1;
+        ret = -1;
+        goto out;
     }
+    ret = driver->mount(name);
 
-    return driver->mount(name);
+out:
+    mutex_unlock(&g_vs.mutex);
 
+    return ret;
 }
 
 int volume_umount(char *name)
 {
+    int ret = 0;
     volume_driver *driver = NULL;
 
     if (name == NULL) {
@@ -322,24 +435,125 @@ int volume_umount(char *name)
         return -1;
     }
 
-    driver = lookup_driver(VOLUME_DEFAULT_DRIVER_NAME);
+    mutex_lock(&g_vs.mutex);
+    driver = lookup_driver_by_volume_name(name);
     if (driver == NULL) {
-        return -1;
+        ret = -1;
+        goto out;
+    }
+    ret = driver->umount(name);
+
+out:
+    mutex_unlock(&g_vs.mutex);
+
+    return ret;
+}
+
+static struct volumes * merge_vols(struct volumes *vols1, struct volumes *vols2)
+{
+    struct volumes *vols = NULL;
+    size_t i = 0;
+    size_t size = 0;
+    int ret = 0;
+
+    vols = util_common_calloc_s(sizeof(struct volumes));
+    if (vols == NULL) {
+        ERROR("out of memory");
+        return NULL;
     }
 
-    return driver->umount(name);
+    if (vols1 != NULL) {
+        size += vols1->vols_len;
+    }
+    if (vols2 != NULL) {
+        size += vols2->vols_len;
+    }
+
+    if (size == 0) {
+        return vols;
+    }
+
+    vols->vols = util_common_calloc_s(sizeof(struct volume*)*size);
+    if (vols->vols == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; vols1 != NULL && i < vols1->vols_len; i++) {
+        vols->vols[vols->vols_len] = vols1->vols[i];
+        vols->vols_len++;
+        vols1->vols[i] = NULL;
+    }
+
+    for (i = 0; vols2 != NULL && i < vols2->vols_len; i++) {
+        vols->vols[vols->vols_len] = vols2->vols[i];
+        vols->vols_len++;
+        vols2->vols[i] = NULL;
+    }
+out:
+    if (ret != 0) {
+        free_volumes(vols);
+        vols = NULL;
+    }
+
+    return vols;
+}
+
+static struct volumes * list_all_driver_volumes()
+{
+    int ret = 0;
+    volume_driver *driver = NULL;
+    map_itor *itor = NULL;
+    struct volumes *vols = NULL;
+    struct volumes *vols1 = NULL;
+    struct volumes *vols2 = NULL;
+
+    itor = map_itor_new(g_vs.drivers);
+    if (itor == NULL) {
+        ERROR("failed to get volumes's iterator to list all volumes");
+        ret = -1;
+        goto out;
+    }
+
+    for (; map_itor_valid(itor); map_itor_next(itor)) {
+        driver = map_itor_value(itor);
+        vols2 = driver->list();
+        vols1 = vols;
+        vols = merge_vols(vols1, vols2);
+        if (vols == NULL) {
+            ret = -1;
+            goto out;
+        }
+        free_volumes(vols1);
+        vols1 = NULL;
+        free_volumes(vols2);
+        vols2 = NULL;
+    }
+
+out:
+    map_itor_free(itor);
+    if (ret != 0) {
+        free_volumes(vols);
+        vols = NULL;
+        free_volumes(vols1);
+        vols1 = NULL;
+        free_volumes(vols2);
+        vols2 = NULL;
+    }
+
+    return vols;
 }
 
 struct volumes * volume_list(void)
 {
-    volume_driver *driver = NULL;
+    struct volumes *vols = NULL;
 
-    driver = lookup_driver(VOLUME_DEFAULT_DRIVER_NAME);
-    if (driver == NULL) {
-        return NULL;
-    }
+    mutex_lock(&g_vs.mutex);
+    vols = list_all_driver_volumes();
+    mutex_unlock(&g_vs.mutex);
 
-    return driver->list();
+    return vols;
 }
 
 int volume_add_ref(char *name, char *ref)
@@ -385,12 +599,11 @@ int volume_remove(char *name)
         return -1;
     }
 
-    driver = lookup_driver(VOLUME_DEFAULT_DRIVER_NAME);
+    mutex_lock(&g_vs.mutex);
+    driver = lookup_driver_by_volume_name(name);
     if (driver == NULL) {
         return -1;
     }
-
-    mutex_lock(&g_vs.mutex);
 
     vns = get_name_refs(g_vs.name_refs, name);
     if (vns != NULL && vns->names_len > 0) {

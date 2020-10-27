@@ -32,6 +32,7 @@
 #include "utils_verify.h"
 
 #define LOCAL_VOLUME_DRIVER_NAME "local"
+#define LOCAL_VOLUME_ROOT_DIR_NAME "volumes"
 #define LOCAL_VOLUME_ROOT_DIR_MODE 0700
 #define LOCAL_VOLUME_DATA_DIR_NAME "_data"
 #define LOCAL_VOLUME_DIR_MODE 0755
@@ -80,6 +81,47 @@ void free_volumes_info(struct volumes_info *vols)
     map_free(vols->vols_by_name);
     free(vols);
     return;
+}
+
+static struct volume * dup_volume(char *name, char *path)
+{
+    struct volume *vol = NULL;
+
+    vol = util_common_calloc_s(sizeof(struct volume));
+    if (vol == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    vol->driver = util_strdup_s(LOCAL_VOLUME_DRIVER_NAME);
+    vol->name = util_strdup_s(name);
+    vol->path = util_strdup_s(path);
+    vol->mount_point = util_strdup_s(path);
+
+    return vol;
+}
+
+struct volume * local_volume_get(char *name)
+{
+    struct volume *v = NULL;
+
+    if (!util_valid_volume_name(name)) {
+        ERROR("failed to get volume, invalid volume name %s", name);
+        isulad_try_set_error_message("failed to get volume, invalid volume name %s", name);
+        return NULL;
+    }
+
+    mutex_lock(&g_volumes->mutex);
+    v = map_search(g_volumes->vols_by_name, name);
+    if (v == NULL) {
+        goto out;
+    }
+    v = dup_volume(v->name, v->path);
+
+out:
+    mutex_unlock(&g_volumes->mutex);
+
+    return v;
 }
 
 static struct volumes_info *new_empty_volumes_info()
@@ -179,24 +221,6 @@ out:
     return data_dir;
 }
 
-static struct volume * dup_volume(char *name, char *path)
-{
-    struct volume *vol = NULL;
-
-    vol = util_common_calloc_s(sizeof(struct volume));
-    if (vol == NULL) {
-        ERROR("out of memory");
-        return NULL;
-    }
-
-    vol->driver = util_strdup_s(LOCAL_VOLUME_DRIVER_NAME);
-    vol->name = util_strdup_s(name);
-    vol->path = util_strdup_s(path);
-    vol->mount_point = util_strdup_s(path);
-
-    return vol;
-}
-
 static bool load_volume(const char *root_dir, const struct dirent *dir, void *userdata)
 {
     int ret = 0;
@@ -242,7 +266,7 @@ static int load_volumes(struct volumes_info *vols)
     return util_scan_subdirs((const char*)vols->root_dir, load_volume, vols);
 }
 
-int local_volume_init(char *scope)
+static int local_volume_init(char *scope)
 {
     int ret = 0;
 
@@ -559,3 +583,48 @@ char * local_volume_driver_name(void)
 {
     return util_strdup_s(LOCAL_VOLUME_DRIVER_NAME);
 }
+
+int register_local_volume(char *root_dir)
+{
+    int ret = 0;
+    char *local_volume_root_dir = NULL;
+
+    if (root_dir == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    local_volume_root_dir = util_path_join(root_dir, LOCAL_VOLUME_ROOT_DIR_NAME);
+    if (root_dir == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (local_volume_init(local_volume_root_dir) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    // support local driver only right now
+    volume_driver driver = {
+        .driver_name = local_volume_driver_name,
+        .create = local_volume_create,
+        .get = local_volume_get,
+        .mount = local_volume_mount,
+        .umount = local_volume_umount,
+        .list = local_volume_list,
+        .remove = local_volume_remove,
+    };
+
+    ret = register_driver(LOCAL_VOLUME_DRIVER_NAME, &driver);
+    if (ret != 0) {
+        goto out;
+    }
+
+out:
+    free(local_volume_root_dir);
+
+    return ret;
+}
+
