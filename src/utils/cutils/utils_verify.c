@@ -751,7 +751,7 @@ bool util_valid_sysctl(const char *sysctl_key)
 
 bool util_valid_volume_name(const char *name)
 {
-    char *patten = "^[a-zA-Z0-9][a-zA-Z0-9_.-]+$";
+    char *patten = "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}$";
 
     if (name == NULL) {
         ERROR("invalid NULL param");

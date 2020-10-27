@@ -33,7 +33,7 @@ extern "C" {
     "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])"                             \
     "((\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))+)?(:[0-9]+)?/)?[a-z0-9]" \
     "+((([._]|__|[-]*)[a-z0-9]+)+)?((/[a-z0-9]+((([._]|__|[-]*)[a-z0-9]+)+)?)+)?$"
-#define VALID_VOLUME_NAME "[a-zA-Z0-9][a-zA-Z0-9_.-]"
+#define VALID_VOLUME_NAME "[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}"
 
 extern const char *g_all_caps[];
 
