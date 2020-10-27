@@ -1702,7 +1702,7 @@ static int copy_mode(char *copy_dst, struct stat *src_stat)
         return 0;
     }
 
-    if (chmod(copy_dst, src_stat->st_mode != 0)) {
+    if (chmod(copy_dst, src_stat->st_mode) != 0) {
         ERROR("chmod %s failed: %s", copy_dst, strerror(errno));
         return -1;
     }
