@@ -282,7 +282,7 @@ static int recursive_rmdir_helper(const char *dirpath, int recursive_depth, int 
     struct dirent *pdirent = NULL;
     DIR *directory = NULL;
     int failure = 0;
-    char fname[MAXPATHLEN];
+    char fname[PATH_MAX];
 
     directory = opendir(dirpath);
     if (directory == NULL) {
@@ -300,8 +300,8 @@ static int recursive_rmdir_helper(const char *dirpath, int recursive_depth, int 
 
         (void)memset(fname, 0, sizeof(fname));
 
-        pathname_len = snprintf(fname, MAXPATHLEN, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= MAXPATHLEN) {
+        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
+        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             failure = 1;
             continue;
@@ -1142,7 +1142,7 @@ static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_dep
     struct dirent *pdirent = NULL;
     DIR *directory = NULL;
     struct stat fstat;
-    char fname[MAXPATHLEN];
+    char fname[PATH_MAX];
 
     // cal dir self node and size
     nret = lstat(dirpath, &fstat);
@@ -1169,8 +1169,8 @@ static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_dep
 
         (void)memset(fname, 0, sizeof(fname));
 
-        pathname_len = snprintf(fname, MAXPATHLEN, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= MAXPATHLEN) {
+        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
+        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }
@@ -1239,7 +1239,7 @@ static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath,
     int nret = 0;
     struct dirent *pdirent = NULL;
     DIR *directory = NULL;
-    char fname[MAXPATHLEN];
+    char fname[PATH_MAX];
 
     directory = opendir(dirpath);
     if (directory == NULL) {
@@ -1257,8 +1257,8 @@ static void recursive_cal_dir_size__without_hardlink_helper(const char *dirpath,
 
         (void)memset(fname, 0, sizeof(fname));
 
-        pathname_len = snprintf(fname, MAXPATHLEN, "%s/%s", dirpath, pdirent->d_name);
-        if (pathname_len < 0 || pathname_len >= MAXPATHLEN) {
+        pathname_len = snprintf(fname, PATH_MAX, "%s/%s", dirpath, pdirent->d_name);
+        if (pathname_len < 0 || pathname_len >= PATH_MAX) {
             ERROR("Pathname too long");
             continue;
         }
@@ -1608,5 +1608,16 @@ int util_set_file_group(const char *fname, const char *group)
     }
 
 out:
+    return ret;
+}
+
+int util_recursive_remove_path(const char *path)
+{
+    int ret = 0;
+
+    if (unlink(path) != 0 && errno != ENOENT) {
+        ret = util_recursive_rmdir(path, 0);
+    }
+
     return ret;
 }

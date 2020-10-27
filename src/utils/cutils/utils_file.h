@@ -100,6 +100,9 @@ int util_proc_file_line_by_line(FILE *fp, read_line_callback_t cb, void *context
 
 int util_set_file_group(const char *fname, const char *group);
 
+// try to remove the path, path is file or dir
+int util_recursive_remove_path(const char *path);
+
 #ifdef __cplusplus
 }
 #endif
