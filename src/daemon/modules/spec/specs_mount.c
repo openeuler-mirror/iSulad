@@ -49,9 +49,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
-#ifdef ENABLE_OCI_IMAGE
-#include "storage.h"
-#endif
+#include "image_api.h"
 #include "volume.h"
 
 enum update_rw {
@@ -1630,25 +1628,9 @@ cleanup:
     return NULL;
 }
 
-static char *container_path_in_host(char *id, char *container_path)
+static char *container_path_in_host(char *base_fs, char *container_path)
 {
-    char *path = NULL;
-#ifdef ENABLE_OCI_IMAGE
-    container_inspect_graph_driver *metadata = NULL;
-
-    metadata = storage_get_metadata_by_container_id(id);
-    if (metadata == NULL || metadata->data == NULL || metadata->data->merged_dir == NULL) {
-        ERROR("get metadata by container id %s failed", id);
-        goto out;
-    }
-
-    path = util_path_join(metadata->data->merged_dir, container_path + 1); // +1 means strip prefix "/"
-
-out:
-    free_container_inspect_graph_driver(metadata);
-#endif
-
-    return path;
+    return util_path_join(base_fs, container_path + 1); // +1 means strip prefix "/"
 }
 
 static bool have_nocopy(defs_mount *mnt)
@@ -1662,7 +1644,7 @@ static bool have_nocopy(defs_mount *mnt)
     return false;
 }
 
-static int copy_data_to_volume(char *id, defs_mount *mnt)
+static int copy_data_to_volume(char *base_fs, defs_mount *mnt)
 {
     int ret = 0;
     char *copy_src = NULL;
@@ -1671,17 +1653,13 @@ static int copy_data_to_volume(char *id, defs_mount *mnt)
     char **entries = NULL;
     size_t entry_num = 0;
 
-    if (id == NULL || mnt == NULL) {
+    if (base_fs == NULL || mnt == NULL) {
         ERROR("Invalid NULL param");
         return -1;
     }
 
-#ifndef ENABLE_OCI_IMAGE
-    return 0;
-#endif
-
     // copy data from container volume mount point to host volume directory
-    copy_src = container_path_in_host(id, mnt->destination);
+    copy_src = container_path_in_host(base_fs, mnt->destination);
     copy_dst = mnt->source;
 
     if (stat(copy_src, &st) != 0) {
@@ -1872,7 +1850,7 @@ static int merge_fs_mounts_to_oci_and_spec(oci_runtime_spec *oci_spec, defs_moun
         if (vol != NULL && !have_nocopy(mnt)) {
             /* if mount point have data and it's mounted from volume,
              * we need to copy data from destination mount point to volume */
-            ret = copy_data_to_volume(common_config->id, mnt);
+            ret = copy_data_to_volume(common_config->base_fs, mnt);
             if (ret != 0) {
                 ERROR("Failed to copy data to volume");
                 goto out;
@@ -3290,15 +3268,14 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     container_config *container_spec = v2_spec->config;
     defs_mount **all_fs_mounts = NULL;
     size_t all_fs_mounts_len = 0;
-#ifdef ENABLE_OCI_IMAGE
-    char *merged = NULL;
+    bool mounted = false;
 
-    merged = storage_rootfs_mount(v2_spec->id);
-    if (merged == NULL) {
+    ret = im_mount_container_rootfs(v2_spec->image_type, v2_spec->image, v2_spec->id);
+    if (ret != 0) {
         ERROR("Mount container %s failed when merge mounts", v2_spec->id);
         goto out;
     }
-#endif
+    mounted = true;
 
     ret = merge_all_fs_mounts(host_spec, container_spec, &all_fs_mounts, &all_fs_mounts_len);
     if (ret != 0) {
@@ -3313,11 +3290,8 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
         goto out;
     }
 
-#ifdef ENABLE_OCI_IMAGE
-    (void)storage_rootfs_umount(v2_spec->id, false);
-    free(merged);
-    merged = NULL;
-#endif
+    (void)im_umount_container_rootfs(v2_spec->image_type, v2_spec->image, v2_spec->id);
+    mounted = false;
 
     /* host channel to mount */
     if (host_spec->host_channel != NULL) {
@@ -3362,12 +3336,9 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     qsort(oci_spec->mounts, oci_spec->mounts_len, sizeof(oci_spec->mounts[0]), destination_compare);
 
 out:
-#ifdef ENABLE_OCI_IMAGE
-    if (merged != NULL) {
-        (void)storage_rootfs_umount(v2_spec->id, false);
-        free(merged);
+    if (mounted) {
+        (void)im_umount_container_rootfs(v2_spec->image_type, v2_spec->image, v2_spec->id);
     }
-#endif
 
     free_defs_mounts(all_fs_mounts, all_fs_mounts_len);
 
