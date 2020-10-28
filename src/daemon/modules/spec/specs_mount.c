@@ -50,7 +50,7 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "image_api.h"
-#include "volume.h"
+#include "volume_api.h"
 
 enum update_rw {
     update_rw_untouch,

@@ -44,7 +44,7 @@
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "utils_string.h"
-#include "volume.h"
+#include "volume_api.h"
 
 static int parse_container_log_configs(container_t *cont);
 

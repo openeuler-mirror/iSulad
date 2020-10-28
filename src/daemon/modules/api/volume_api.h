@@ -12,8 +12,8 @@
 * Create: 2020-09-07
 * Description: provide isula volume definition
 *******************************************************************************/
-#ifndef DAEMON_MODULES_VOLUME_VOLUME_H
-#define DAEMON_MODULES_VOLUME_VOLUME_H
+#ifndef DAEMON_MODULES_API_VOLUME_API_H
+#define DAEMON_MODULES_API_VOLUME_API_H
 
 #include <stddef.h>
 #ifdef __cplusplus
@@ -92,4 +92,4 @@ void free_volumes(struct volumes *vols);
 }
 #endif
 
-#endif // DAEMON_MODULES_VOLUME_VOLUME_H
+#endif // DAEMON_MODULES_API_VOLUME_API_H

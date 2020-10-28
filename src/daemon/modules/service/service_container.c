@@ -58,7 +58,7 @@
 #include "utils_fs.h"
 #include "utils_string.h"
 #include "utils_verify.h"
-#include "volume.h"
+#include "volume_api.h"
 
 int set_container_to_removal(const container_t *cont)
 {

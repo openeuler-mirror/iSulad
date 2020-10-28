@@ -22,7 +22,6 @@
 #include <limits.h>
 
 #include "isula_libutils/log.h"
-#include "volume.h"
 #include "utils.h"
 #include "map.h"
 #include "path.h"

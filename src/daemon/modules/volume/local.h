@@ -15,7 +15,7 @@
 #ifndef DAEMON_MODULES_VOLUME_LOCAL_H
 #define DAEMON_MODULES_VOLUME_LOCAL_H
 
-#include "volume.h"
+#include "volume_api.h"
 
 #ifdef __cplusplus
 extern "C" {
