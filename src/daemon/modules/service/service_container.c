@@ -130,6 +130,8 @@ static int create_mtab_link(const oci_runtime_spec *oci_spec)
         goto out;
     }
 
+    (void)unlink(dir);
+
     if (!util_dir_exists(dir)) {
         ret = util_mkdir_p(dir, ETC_FILE_MODE);
         if (ret != 0) {
