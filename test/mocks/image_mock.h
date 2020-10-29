@@ -24,6 +24,10 @@ public:
     virtual ~MockImage() = default;
     MOCK_METHOD1(ImContainerExport, int(const im_export_request *request));
     MOCK_METHOD1(FreeImExportRequest, void(im_export_request *ptr));
+    MOCK_METHOD3(ImMountContainerRootfs, int(const char *image_type, const char *image_name,
+                                             const char *container_id));
+    MOCK_METHOD3(ImUmountContainerRootfs, int(const char *image_type, const char *image_name,
+                                              const char *container_id));
 };
 
 void MockImage_SetMock(MockImage *mock);

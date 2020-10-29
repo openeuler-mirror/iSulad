@@ -34,6 +34,7 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/selinux_label_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/isulad_config_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/storage_mock.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../test/mocks/image_mock.cc
     specs_ut.cc)
 
 target_include_directories(${EXE} PUBLIC

@@ -38,3 +38,19 @@ void free_im_export_request(im_export_request *ptr)
         return g_image_mock->FreeImExportRequest(ptr);
     }
 }
+
+int im_mount_container_rootfs(const char *image_type, const char *image_name, const char *container_id)
+{
+    if (g_image_mock != nullptr) {
+        return g_image_mock->ImMountContainerRootfs(image_type, image_name, container_id);
+    }
+    return 0;
+}
+
+int im_umount_container_rootfs(const char *image_type, const char *image_name, const char *container_id)
+{
+    if (g_image_mock != nullptr) {
+        return g_image_mock->ImUmountContainerRootfs(image_type, image_name, container_id);
+    }
+    return 0;
+}
