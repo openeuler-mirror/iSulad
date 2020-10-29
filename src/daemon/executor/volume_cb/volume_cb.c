@@ -34,7 +34,7 @@
 #include "error.h"
 #include "err_msg.h"
 #include "isula_libutils/log.h"
-#include "volume.h"
+#include "volume_api.h"
 
 /* volume list cb */
 static int volume_list_cb(const volume_list_volume_request *request, volume_list_volume_response **response)

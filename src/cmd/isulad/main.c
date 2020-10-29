@@ -69,7 +69,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
-#include "volume.h"
+#include "volume_api.h"
 
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"
