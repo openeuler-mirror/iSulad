@@ -238,6 +238,48 @@ static int parse_mount_item_nocopy(const char *value, char *mount_str, mount_spe
 }
 #endif
 
+static bool existReadonlyMode(char *mount_str)
+{
+    char tmp_mount_str[PATH_MAX] = {0};
+    int sret = 0;
+
+    // add "," at start and end of mount string to simplize check
+    sret = snprintf(tmp_mount_str, sizeof(tmp_mount_str), ",%s,", mount_str);
+    if (sret < 0 || (size_t)sret >= sizeof(tmp_mount_str)) {
+        return false;
+    }
+
+    if (strstr(tmp_mount_str, ",ro,") != NULL || strstr(tmp_mount_str, ",readonly,") != NULL ||
+        strstr(tmp_mount_str, ",ro=") != NULL || strstr(tmp_mount_str, ",readonly=") != NULL) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool valid_mount_spec_mode(char *mount_str, mount_spec *m, char *errmsg)
+{
+    if (strcmp(m->type, "volume") == 0) {
+        if (m->bind_options != NULL && m->bind_options->propagation != NULL) {
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Propagation must not be specified for type %s",
+                         mount_str, m->type);
+            return false;
+        }
+        if (m->source == NULL && existReadonlyMode(mount_str)) {
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Readonly mode must not be specified "
+                         "for anonymous volume", mount_str);
+            return false;
+        }
+    }
+    if (strcmp(m->type, "bind") == 0 && m->volume_options != NULL) {
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.nocopy must not be specified for type %s",
+                     mount_str, m->type);
+        return false;
+    }
+
+    return true;
+}
+
 // check mount spec valid
 static int check_mount_spec(char *mount_str, mount_spec *m, char *errmsg)
 {
@@ -288,6 +330,10 @@ static int check_mount_spec(char *mount_str, mount_spec *m, char *errmsg)
                          m->source);
             return EINVALIDARGS;
         }
+    }
+
+    if (!valid_mount_spec_mode(mount_str, m, errmsg)) {
+        return -1;
     }
 
     return 0;

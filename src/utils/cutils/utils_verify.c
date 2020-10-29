@@ -511,7 +511,7 @@ bool util_valid_key_selinux(const char *key)
         return false;
     }
 
-    return !strcmp(key, "bind-selinux-opts");
+    return !strcmp(key, "bind-selinux-opts") || !strcmp(key, "selinux-opts");
 }
 
 bool util_valid_key_nocopy(const char *key)

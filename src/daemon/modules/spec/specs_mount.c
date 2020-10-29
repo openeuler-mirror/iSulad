@@ -338,12 +338,14 @@ static int check_mount_source(const defs_mount *m)
     if (strcmp(m->type, "volume") &&
         (m->source == NULL || m->source[0] != '/')) {
         ERROR("Invalid source %s, type %s", m->source, m->type);
+        isulad_set_error_message("Invalid source %s, type %s", m->source, m->type);
         return EINVALIDARGS;
     }
 
     if (m->source != NULL && m->source[0] != '/' &&
         !util_valid_volume_name(m->source)) {
         ERROR("Invalid volume name %s, only \"%s\" are allowed", m->source, VALID_VOLUME_NAME);
+        isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed", m->source, VALID_VOLUME_NAME);
         return EINVALIDARGS;
     }
 
@@ -354,42 +356,64 @@ static int check_mount_dst(const defs_mount *m)
 {
     if (m->destination == NULL) {
         ERROR("destination is requested");
+        isulad_set_error_message("destination is requested");
         return -1;
     }
 
     if (m->destination[0] != '/') {
         ERROR("destination should be absolute path");
+        isulad_set_error_message("destination should be absolute path");
         return -1;
     }
 
     return 0;
 }
 
-static int check_volume_opts(const defs_mount *m)
+static int check_mode(char **valid_modes, size_t valid_modes_len, char *mode)
 {
     size_t i = 0;
 
-    if (strcmp(m->type, "volume")) {
-        return 0;
+    for (i = 0; i < valid_modes_len; i++) {
+        if (strcmp(valid_modes[i], mode) == 0) {
+            return 0;
+        }
     }
 
-    // no option is valid currently if it's anonymous volume
-    if (m->source == NULL && m->options_len != 0) {
-        ERROR("Invalid options found when it's anonymous volume");
-        return -1;
-    } else {
-        // only read mode is valid currently
-        for (i = 0; i < m->options_len; i++) {
-            if (strcmp(m->options[i], "ro") && strcmp(m->options[i], "rw")) {
-                return -1;
-            }
+    return -1;
+}
+
+static int check_modes(const defs_mount *m, const char *volume_str, char **valid_modes, size_t valid_modes_len)
+{
+    size_t i = 0;
+
+    for (i = 0; i < m->options_len; i++) {
+        if (check_mode(valid_modes, valid_modes_len, m->options[i]) != 0) {
+            isulad_set_error_message("Invalid volume specification '%s',Invalid mode %s for type %s",
+                                     volume_str, m->options[i], m->type);
+            return -1;
         }
     }
 
     return 0;
 }
 
-static int check_mount_element(const defs_mount *m)
+static int check_volume_opts(const char *volume_str, const defs_mount *m)
+{
+    char *valid_bind_modes[] = {"ro", "rw", "z", "Z", "private", "rprivate", "slave", "rslave", "shared", "rshared"};
+    char *valid_volume_modes[] = {"ro", "rw", "z", "Z", "nocopy"};
+    int ret = 0;
+
+    if (strcmp(m->type, "bind") == 0) {
+        ret = check_modes(m, volume_str, valid_bind_modes, sizeof(valid_bind_modes) / sizeof(char*));
+    }
+    if (strcmp(m->type, "volume") == 0) {
+        ret = check_modes(m, volume_str, valid_volume_modes, sizeof(valid_volume_modes) / sizeof(char*));
+    }
+
+    return ret;
+}
+
+static int check_mount_element(const char *volume_str, const defs_mount *m)
 {
     int ret = 0;
 
@@ -404,9 +428,9 @@ static int check_mount_element(const defs_mount *m)
         goto out;
     }
 
-    if (strcmp(m->type, "squashfs") && strcmp(m->type, "bind") &&
-        strcmp(m->type, "volume")) {
-        ERROR("invalid type %s, only support squashfs/bind/volume", m->type);
+    if (strcmp(m->type, "bind") && strcmp(m->type, "volume")) {
+        ERROR("invalid type %s, only support bind/volume", m->type);
+        isulad_set_error_message("invalid type %s, only support bind/volume", m->type);
         ret = EINVALIDARGS;
         goto out;
     }
@@ -421,7 +445,7 @@ static int check_mount_element(const defs_mount *m)
         goto out;
     }
 
-    if (check_volume_opts(m) != 0) {
+    if (check_volume_opts(volume_str, m) != 0) {
         ret = EINVALIDARGS;
         goto out;
     }
@@ -876,6 +900,7 @@ static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_elem
             break;
         default:
             ERROR("Invalid volume specification '%s'", volume);
+            isulad_set_error_message("Invalid volume specification '%s'", volume);
             ret = -1;
             break;
     }
@@ -885,12 +910,15 @@ static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_elem
 
     if (mount_element->source[0] != '/' && !util_valid_volume_name(mount_element->source)) {
         ERROR("Invalid volume name %s, only \"%s\" are allowed", mount_element->source, VALID_VOLUME_NAME);
+        isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed",
+                                 mount_element->source, VALID_VOLUME_NAME);
         ret = -1;
         goto free_out;
     }
 
     if (mount_element->destination[0] != '/' || strcmp(mount_element->destination, "/") == 0) {
         ERROR("Invalid volume: path must be absolute, and destination can't be '/'");
+        isulad_set_error_message("Invalid volume: path must be absolute, and destination can't be '/'");
         ret = -1;
         goto free_out;
     }
@@ -988,7 +1016,7 @@ defs_mount *parse_volume(const char *volume)
         }
     }
 
-    ret = check_mount_element(mount_element);
+    ret = check_mount_element(volume, mount_element);
     if (ret != 0) {
         goto free_out;
     }
