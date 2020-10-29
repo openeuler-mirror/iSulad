@@ -33,7 +33,6 @@ using grpc::StatusCode;
 using google::protobuf::Timestamp;
 
 using namespace images;
-using namespace containerd::types;
 
 // Implement of images service
 class ImagesServiceImpl final : public ImagesService::Service {
@@ -55,11 +54,9 @@ public:
 
     Status Inspect(ServerContext *context, const InspectImageRequest *request, InspectImageResponse *reply) override;
 
-    Status Login(ServerContext *context, const LoginRequest *request,
-                 LoginResponse *reply) override;
+    Status Login(ServerContext *context, const LoginRequest *request, LoginResponse *reply) override;
 
-    Status Logout(ServerContext *context, const LogoutRequest *request,
-                  LogoutResponse *reply) override;
+    Status Logout(ServerContext *context, const LogoutRequest *request, LogoutResponse *reply) override;
 
 private:
     template <class T1, class T2>
@@ -99,4 +96,3 @@ private:
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_IMAGES_SERVICE_H
-

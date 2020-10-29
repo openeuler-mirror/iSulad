@@ -1,5 +1,8 @@
 /*
 Copyright 2018 The Kubernetes Authors.
+Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
+    modify descripe: remove unused options for example:
+    remove import "github.com/gogo/protobuf/gogoproto/gogo.proto"
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
