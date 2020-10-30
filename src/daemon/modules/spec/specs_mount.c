@@ -712,18 +712,21 @@ static int parse_volumes_from(char *volume_from, defs_mount ***mnts_out, size_t 
     ret = split_volume_from(volume_from, &id, &mode);
     if (ret != 0) {
         ERROR("failed to split volume-from: %s", volume_from);
+        isulad_set_error_message("failed to split volume-from: %s", volume_from);
         return -1;
     }
 
     ret = parser_volume_from_mode(mode, &update_rw_mode);
     if (ret != 0) {
         ERROR("failed to parser mode %s, volume-from %s", mode, volume_from);
+        isulad_set_error_message("failed to parser mode %s, volume-from %s", mode, volume_from);
         goto out;
     }
 
     cont = containers_store_get(id);
     if (cont == NULL) {
         ERROR("container %s not found when parse volumes-from:%s", id, volume_from);
+        isulad_set_error_message("container %s not found when parse volumes-from:%s", id, volume_from);
         ret = -1;
         goto out;
     }
@@ -1048,6 +1051,7 @@ static defs_mount * parse_anonymous_volume(char *volume)
 
     if (volume == NULL || path[0] != '/' || strcmp(path, "/") == 0) {
         ERROR("invalid anonymous volume %s", volume);
+        isulad_set_error_message("invalid anonymous volume %s", volume);
         return NULL;
     }
 
@@ -3041,14 +3045,6 @@ int destination_compare(const void *p1, const void *p2)
     return strcmp(mount_1->destination, mount_2->destination);
 }
 
-static bool is_anonymous_volume(defs_mount *mnt)
-{
-    if ((mnt->type == NULL || strcmp(mnt->type, "volume") == 0) && mnt->source == NULL) {
-        return true;
-    }
-    return false;
-}
-
 static defs_mount * get_conflict_mount_point(defs_mount **mounts, size_t mounts_len, defs_mount *mnt)
 {
     size_t i = 0;
@@ -3065,74 +3061,7 @@ static defs_mount * get_conflict_mount_point(defs_mount **mounts, size_t mounts_
     return NULL;
 }
 
-// merge rules:
-// 1. non-anonymous conflict with non-anonymous, failed
-// 2. non-anonymous conflict with anonymous, keep non-anonymous, drop anonymous
-// 3. anonymous conflict with anonymous, they are the same volume, keep anyone, drop another one
-static int add_mount(defs_mount **merged_mounts, size_t *merged_mounts_len, defs_mount **anonymous_volumes,
-                     size_t *anonymous_volumes_len, defs_mount *mnt)
-{
-    size_t i = 0;
-    defs_mount *conflict = NULL;
-
-    conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
-    if (conflict != NULL) {
-        // ignore anonymous volume and use the bind mount if anonymous volume conflict.
-        if (is_anonymous_volume(mnt)) {
-            // free mnt if success so that caller do not free mnt if return success
-            free_defs_mount(mnt);
-            return 0;
-        }
-        ERROR("conflict mount point found, %s:%s conflict with %s:%s", mnt->source, mnt->destination,
-              conflict->source, conflict->destination);
-        return -1;
-    }
-
-    if (is_anonymous_volume(mnt)) {
-        conflict = get_conflict_mount_point(anonymous_volumes, *anonymous_volumes_len, mnt);
-        if (conflict == NULL) {
-            anonymous_volumes[*anonymous_volumes_len] = mnt;
-            *anonymous_volumes_len += 1;
-            return 0;
-        }
-        // conflict anonymous volume is the same volume, no need to add again
-        // free mnt if success so that caller do not free mnt if return success
-        free_defs_mount(mnt);
-        return 0;
-    }
-
-    // remove anonymous volume if conflict
-    for (i = 0; i < *anonymous_volumes_len; i++) {
-        if (anonymous_volumes[i] == NULL) {
-            continue;
-        }
-        if (strcmp(anonymous_volumes[i]->destination, mnt->destination) == 0) {
-            free_defs_mount(anonymous_volumes[i]);
-            anonymous_volumes[i] = NULL;
-        }
-    }
-
-    merged_mounts[*merged_mounts_len] = mnt;
-    *merged_mounts_len += 1;
-    return 0;
-}
-
-static void append_anonymous_volumes(defs_mount **merged_mounts, size_t *merged_mounts_len,
-                                     defs_mount **anonymous_volumes, size_t anonymous_volumes_len)
-{
-    size_t i = 0;
-
-    for (i = 0; i < anonymous_volumes_len; i++) {
-        if (anonymous_volumes[i] == NULL) {
-            continue;
-        }
-        merged_mounts[*merged_mounts_len] = anonymous_volumes[i];
-        *merged_mounts_len += 1;
-        anonymous_volumes[i] = NULL;
-    }
-}
-
-static int calc_volumes_from_size(host_config *host_spec, size_t *len)
+static int calc_volumes_from_len(host_config *host_spec, size_t *len)
 {
     char *id = NULL;
     char *mode = NULL;
@@ -3170,63 +3099,34 @@ out:
     return ret;
 }
 
-static int merge_all_fs_mounts(host_config *host_spec, container_config *container_spec,
-                               defs_mount ***all_mounts, size_t *all_mounts_len)
+static int calc_mounts_len(host_config *host_spec, container_config *container_spec, size_t *len)
 {
-    int ret = 0;
-    defs_mount **merged_mounts = NULL;
-    size_t merged_mounts_len = 0;
-    defs_mount **anonymous_volumes = NULL;
-    size_t anonymous_volumes_len = 0;
-    size_t i = 0;
-    size_t j = 0;
-    defs_mount *mnt = NULL;
-    defs_mount **mnts = NULL;
-    size_t mnts_len = 0;
-    size_t size = 0;
     size_t volumes_from_len = 0;
 
-    ret = calc_volumes_from_size(host_spec, &volumes_from_len);
-    if (ret != 0) {
+    if (calc_volumes_from_len(host_spec, &volumes_from_len) != 0) {
         return -1;
     }
 
-    size = host_spec->mounts_len + host_spec->binds_len + volumes_from_len;
+    *len = host_spec->mounts_len + host_spec->binds_len + volumes_from_len;
     if (container_spec->volumes != NULL && container_spec->volumes->len != 0) {
-        size += container_spec->volumes->len;
+        (*len) += container_spec->volumes->len;
     }
 
-    if (size == 0) {
-        return 0;
-    }
+    return 0;
+}
 
-    merged_mounts = util_common_calloc_s(sizeof(defs_mount *) * size);
-    anonymous_volumes = util_common_calloc_s(sizeof(defs_mount *) * size);
-    if (merged_mounts == NULL || anonymous_volumes == NULL) {
-        ERROR("out of memory");
-        ret = -1;
-        goto out;
-    }
+static void add_mount(defs_mount **merged_mounts, size_t *merged_mounts_len, defs_mount *mnt)
+{
+    merged_mounts[*merged_mounts_len] = mnt;
+    *merged_mounts_len += 1;
+}
 
-    // add --volumes-from
-    for (i = 0; i < host_spec->volumes_from_len; i++) {
-        ret = parse_volumes_from(host_spec->volumes_from[i], &mnts, &mnts_len);
-        if (ret != 0) {
-            ERROR("parse mount failed");
-            goto out;
-        }
+static int add_mounts(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
 
-        for (j = 0; j < mnts_len; j++) {
-            ret = add_mount(merged_mounts, &merged_mounts_len, anonymous_volumes, &anonymous_volumes_len, mnts[j]);
-            if (ret != 0) {
-                free_defs_mounts(mnts, mnts_len);
-                goto out;
-            }
-            mnts[j] = NULL;
-        }
-    }
-
-    // add --mounts
     for (i = 0; i < host_spec->mounts_len; i++) {
         mnt = parse_mount(host_spec->mounts[i]);
         if (mnt == NULL) {
@@ -3235,14 +3135,21 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
             goto out;
         }
 
-        ret = add_mount(merged_mounts, &merged_mounts_len, anonymous_volumes, &anonymous_volumes_len, mnt);
-        if (ret != 0) {
-            free_defs_mount(mnt);
-            goto out;
-        }
+        add_mount(merged_mounts, merged_mounts_len, mnt);
     }
 
-    // add --volume
+out:
+
+    return ret;
+}
+
+static int add_volumes(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
+    defs_mount *conflict = NULL;
+
     for (i = 0; i < host_spec->binds_len; i++) {
         mnt = parse_volume(host_spec->binds[i]);
         if (mnt == NULL) {
@@ -3251,14 +3158,73 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
             goto out;
         }
 
-        ret = add_mount(merged_mounts, &merged_mounts_len, anonymous_volumes, &anonymous_volumes_len, mnt);
-        if (ret != 0) {
-            free_defs_mount(mnt);
+        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
+        if (conflict != NULL) {
+            ERROR("Duplicate mount point: %s", conflict->destination);
+            isulad_set_error_message("Duplicate mount point: %s", conflict->destination);
+            ret = -1;
             goto out;
         }
+
+        add_mount(merged_mounts, merged_mounts_len, mnt);
+        mnt = NULL;
     }
 
-    // add anonymous volumes in config
+out:
+    if (ret != 0) {
+        free_defs_mount(mnt);
+    }
+
+    return ret;
+}
+
+static int add_volumes_from(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    size_t j = 0;
+    defs_mount **mnts = NULL;
+    size_t mnts_len = 0;
+    defs_mount *conflict = NULL;
+
+    for (i = 0; i < host_spec->volumes_from_len; i++) {
+        ret = parse_volumes_from(host_spec->volumes_from[i], &mnts, &mnts_len);
+        if (ret != 0) {
+            ERROR("parse mount failed");
+            goto out;
+        }
+
+        for (j = 0; j < mnts_len; j++) {
+            // use user specified config and drop the mount config from other containers if conflict
+            conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnts[j]);
+            if (conflict != NULL) {
+                free_defs_mount(mnts[j]);
+                mnts[j] = NULL;
+                continue;
+            }
+
+            add_mount(merged_mounts, merged_mounts_len, mnts[j]);
+            mnts[j] = NULL;
+        }
+        free_defs_mounts(mnts, mnts_len);
+        mnts = NULL;
+        mnts_len = 0;
+    }
+out:
+
+    free_defs_mounts(mnts, mnts_len);
+
+    return ret;
+}
+
+static int add_image_config_volumes(container_config *container_spec, defs_mount **merged_mounts,
+                                    size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
+    defs_mount *conflict = NULL;
+
     for (i = 0; container_spec->volumes != 0 &&  i < container_spec->volumes->len; i++) {
         mnt = parse_anonymous_volume(container_spec->volumes->keys[i]);
         if (mnt == NULL) {
@@ -3267,15 +3233,75 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
             goto out;
         }
 
-        ret = add_mount(merged_mounts, &merged_mounts_len, anonymous_volumes, &anonymous_volumes_len, mnt);
-        if (ret != 0) {
+        // use user specified config and drop the volume config in image config if conflict
+        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
+        if (conflict != NULL) {
             free_defs_mount(mnt);
-            goto out;
+            mnt = NULL;
+            continue;
         }
+
+        add_mount(merged_mounts, merged_mounts_len, mnt);
+        mnt = NULL;
     }
 
-    // merge anonymous volumes to merged_mounts
-    append_anonymous_volumes(merged_mounts, &merged_mounts_len, anonymous_volumes, anonymous_volumes_len);
+out:
+    free_defs_mount(mnt);
+
+    return ret;
+}
+
+// merge rules:
+// 1. if -v conflict with --mount, fail
+// 2. if --volumes-from conflict with -v/--mount, drop the mount of --volumes-from
+// 3. if anonymous volumes in image config conflict with -v/--mount/--volumes-from,
+//    drop the anonymous volumes in image config
+static int merge_all_fs_mounts(host_config *host_spec, container_config *container_spec,
+                               defs_mount ***all_mounts, size_t *all_mounts_len)
+{
+    int ret = 0;
+    defs_mount **merged_mounts = NULL;
+    size_t merged_mounts_len = 0;
+    size_t len = 0;
+
+    ret = calc_mounts_len(host_spec, container_spec, &len);
+    if (ret != 0) {
+        return -1;
+    }
+    if (len == 0) {
+        return 0;
+    }
+
+    merged_mounts = util_common_calloc_s(sizeof(defs_mount *) * len);
+    if (merged_mounts == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    // add --mounts
+    ret = add_mounts(host_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // add --volume
+    ret = add_volumes(host_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // add --volumes-from
+    ret = add_volumes_from(host_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // add anonymous volumes in image config
+    ret = add_image_config_volumes(container_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
 
     *all_mounts = merged_mounts;
     *all_mounts_len = merged_mounts_len;
@@ -3284,8 +3310,6 @@ out:
     if (ret != 0) {
         free_defs_mounts(merged_mounts, merged_mounts_len);
     }
-    free_defs_mounts(anonymous_volumes, anonymous_volumes_len);
-    free_defs_mounts(mnts, mnts_len);
 
     return ret;
 }
