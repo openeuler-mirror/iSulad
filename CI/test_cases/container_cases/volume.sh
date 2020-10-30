@@ -156,8 +156,14 @@ function test_volume()
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to found volume vol9" && ((ret++))
 
   # test nocopy
+  isula run -ti --rm --mount target=/usr,volume-nocopy=true vol echo hello
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - nocopy parameter of --mount start container failed" && ((ret++))
+
   isula run -ti --rm --mount target=/usr,volume-nocopy=true,bind-selinux-opts=z vol stat /usr/sbin
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - nocopy parameter of --mount take no effect" && ((ret++))
+
+  isula run -ti --rm -v test:/usr:nocopy vol echo hello
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - nocopy parameter of -v start container failed" && ((ret++))
 
   isula run -ti --rm -v test:/usr:nocopy vol stat /usr/sbin
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - nocopy parameter of -v take no effect" && ((ret++))
@@ -230,6 +236,19 @@ function test_volume()
   touch /tmp/volume_test
   isula run -tid -v /tmp/volume_test/:/volume_test busybox sh
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - test -v file with "/" failed" && ((ret++))
+
+  # test invalid modes
+  isula run -tid --rm -v aaa:/aaa:rslave busybox echo hello
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container -v with volume and propagation should fail" && ((ret++))
+
+  isula run -tid --rm -v /home:/aaa:nocopy busybox echo hello
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container -v with bind and nocopy should fail" && ((ret++))
+
+  isula run -tid --rm --mount src=aaa,dst=/aaa,bind-propagation=rslave busybox echo hello
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container --mount with volume and propagation should fail" && ((ret++))
+
+  isula run -tid --rm --mount src=/home,dst=/aaa:nocopy busybox echo hello
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container --mount with bind and nocopy should fail" && ((ret++))
 
   # test clean up
   isula rm -f `isula ps -a -q`
