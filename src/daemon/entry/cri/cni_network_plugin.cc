@@ -579,29 +579,61 @@ void CniNetworkPlugin::DeleteFromNetwork(CNINetwork *network, const std::string 
     free(serr);
 }
 
+static bool CheckCNIArgValue(const std::string &val)
+{
+    if (val.find(';') != std::string::npos) {
+        return false;
+    }
+    if (std::count(val.begin(), val.end(), '=') != 1) {
+        return false;
+    }
+    return true;
+}
+
+static void GetExtensionCNIArgs(const std::map<std::string, std::string> &annotations,
+                                std::map<std::string, std::string> &args)
+{
+    // get cni multinetwork extension
+    auto iter = annotations.find(CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_KEY);
+    if (iter != annotations.end()) {
+        if (!CheckCNIArgValue(iter->second)) {
+            WARN("Ignore: invalid multinetwork cni args: %s", iter->second.c_str());
+        } else {
+            args[CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY] = iter->second;
+        }
+    }
+
+    for (const auto &work : annotations) {
+        if (work.first.find(CRIHelpers::Constants::CNI_ARGS_EXTENSION_PREFIX_KEY) != 0) {
+            continue;
+        }
+        if (!CheckCNIArgValue(work.second)) {
+            WARN("Ignore: invalid extension cni args: %s", work.second.c_str());
+            continue;
+        }
+        auto strs = CXXUtils::Split(work.second, '=');
+        iter = annotations.find(work.first);
+        if (iter != annotations.end()) {
+            WARN("Ignore: Same key cni args: %s", work.first.c_str());
+            continue;
+        }
+        args[strs[0]] = strs[1];
+    }
+}
+
 static void PrepareRuntimeConf(const std::string &podName, const std::string &podNs, const std::string &interfaceName,
                                const std::string &podSandboxID, const std::string &podNetnsPath,
                                const std::map<std::string, std::string> &annotations,
                                const std::map<std::string, std::string> &options, struct runtime_conf **cni_rc,
                                Errors &err)
 {
-    size_t defaultLen = 5;
+    size_t workLen = 5;
+    std::map<std::string, std::string> cniArgs;
+
     if (cni_rc == nullptr) {
         err.Errorf("Invalid arguments");
         ERROR("Invalid arguments");
         return;
-    }
-
-    auto iter = options.find("UID");
-    std::string podUID;
-    if (iter != options.end()) {
-        podUID = iter->second;
-    }
-    std::string cniExtentionVal;
-    iter = annotations.find(CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_KEY);
-    if (iter != annotations.end()) {
-        cniExtentionVal = iter->second;
-        defaultLen++;
     }
 
     struct runtime_conf *rt = (struct runtime_conf *)util_common_calloc_s(sizeof(struct runtime_conf));
@@ -610,37 +642,42 @@ static void PrepareRuntimeConf(const std::string &podName, const std::string &po
         err.SetError("Out of memory");
         return;
     }
-
     rt->container_id = util_strdup_s(podSandboxID.c_str());
     rt->netns = util_strdup_s(podNetnsPath.c_str());
     rt->ifname = util_strdup_s(interfaceName.c_str());
 
-    rt->args = (char *(*)[2])util_common_calloc_s(sizeof(char *) * 2 * defaultLen);
+    auto iter = options.find("UID");
+    std::string podUID;
+    if (iter != options.end()) {
+        podUID = iter->second;
+    }
+
+    cniArgs["K8S_POD_UID"] = podUID;
+    cniArgs["IgnoreUnknown"] = "1";
+    cniArgs["K8S_POD_NAMESPACE"] = podNs;
+    cniArgs["K8S_POD_NAME"] = podName;
+    cniArgs["K8S_POD_INFRA_CONTAINER_ID"] = podSandboxID;
+
+    GetExtensionCNIArgs(annotations, cniArgs);
+    workLen = cniArgs.size();
+
+    rt->args = (char *(*)[2])util_common_calloc_s(sizeof(char *) * 2 * workLen);
     if (rt->args == nullptr) {
         ERROR("Out of memory");
         err.SetError("Out of memory");
-        goto free_out;
+        free_runtime_conf(rt);
+        return;
     }
-    rt->args_len = defaultLen;
-    rt->args[0][0] = util_strdup_s("IgnoreUnknown");
-    rt->args[0][1] = util_strdup_s("1");
-    rt->args[1][0] = util_strdup_s("K8S_POD_NAMESPACE");
-    rt->args[1][1] = util_strdup_s(podNs.c_str());
-    rt->args[2][0] = util_strdup_s("K8S_POD_NAME");
-    rt->args[2][1] = util_strdup_s(podName.c_str());
-    rt->args[3][0] = util_strdup_s("K8S_POD_INFRA_CONTAINER_ID");
-    rt->args[3][1] = util_strdup_s(podSandboxID.c_str());
-    rt->args[4][0] = util_strdup_s("K8S_POD_UID");
-    rt->args[4][1] = util_strdup_s(podUID.c_str());
-    if (defaultLen > 5) {
-        rt->args[5][0] = util_strdup_s(CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY.c_str());
-        rt->args[5][1] = util_strdup_s(cniExtentionVal.c_str());
+    rt->args_len = workLen;
+
+    workLen = 0;
+    for (const auto &work : cniArgs) {
+        rt->args[workLen][0] = util_strdup_s(work.first.c_str());
+        rt->args[workLen][1] = util_strdup_s(work.second.c_str());
+        workLen++;
     }
 
     *cni_rc = rt;
-    return;
-free_out:
-    free_runtime_conf(rt);
 }
 
 void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std::string &podNs,
