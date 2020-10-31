@@ -7,5 +7,10 @@
         "uid": "hdishd83djaidwnduwk28bcsb"
     },
     "linux": {
+    },
+    "annotations": {
+        "extension.network.kubernetes.io/cni": "[multinetwork]",
+        "extension.network.kubernetes.io/cniargs/first": "extension=first",
+        "extension.network.kubernetes.io/cniargs/second": "extension=second"
     }
 }

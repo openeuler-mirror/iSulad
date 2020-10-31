@@ -154,6 +154,61 @@ function new_cni_config()
     do_test_help "10\.2\."
 }
 
+function check_annotation()
+{
+    cp ${data_path}/mock.json /etc/cni/net.d/bridge.json
+    sync;sync;
+    tail $ISUALD_LOG
+    # wait cni updated
+    s=`date "+%s"`
+    for ((i=0;i<30;i++)); do
+        sleep 1
+        cur=`date "+%s"`
+        let "t=cur-s"
+        if [ $t -gt 6 ];then
+            break
+        fi
+    done
+    tail $ISUALD_LOG
+
+    sid=`crictl runp ${data_path}/sandbox-config.json`
+    if [ $? -ne 0 ]; then
+        msg_err "Failed to run sandbox"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    basepath=/tmp/cnilogs/
+    cat ${basepath}/${sid}.env | grep CNI_MUTLINET_EXTENSION
+    if [ $? -ne 0 ];then
+        msg_err "lost extension for mutl network args"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+    cat ${basepath}/${sid}.env | grep "extension=first"
+    if [ $? -ne 0 ];then
+        msg_err "lost extension for first cni args"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+    cat ${basepath}/${sid}.env | grep "extension=second"
+    if [ $? -ne 0 ];then
+        msg_err "lost extension for second cni args"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl stopp $sid
+    if [ $? -ne 0 ];then
+        msg_err "stop sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl rmp $sid
+    if [ $? -ne 0 ];then
+        msg_err "rm sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    return $TC_RET_T
+}
+
 ret=0
 
 do_pre
