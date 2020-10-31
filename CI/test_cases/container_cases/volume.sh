@@ -60,9 +60,9 @@ function test_volume()
   isula rm -f vol2
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove vol2 container" && ((ret++))
 
-  # test mounts destination conflict, non-anonymous with anonymous
+  # test mounts destination conflict condition 1 -v vs image config volume
   isula run -tid --name vol3 -v vol3:/vol vol sh
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run image with conflict volumes" && ((ret++))
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run image with conflict destination should fail condition 1" && ((ret++))
 
   nums=`isula inspect -f "{{.Mounts}}" vol3 | grep _data | wc -l`
   [[ $nums -ne 2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run image with volume" && ((ret++))
@@ -73,19 +73,13 @@ function test_volume()
   isula rm -f vol3
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove vol3 container" && ((ret++))
 
-  # test mounts destination conflict, anonymous with anonymous
-  isula run -tid --name vol4 -v /vol -v /vol --mount type=volume,destination=/vol vol sh
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run image with same anonymous volumes" && ((ret++))
+  # test mounts destination conflict condition 2 -v vs --mount
+  isula run -tid --name vol4 -v /vol --mount type=volume,destination=/vol busybox sh
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run image with conflict destination should fail condition 2" && ((ret++))
 
-  nums=`isula inspect -f "{{.Mounts}}" vol4 | grep _data | wc -l`
-  [[ $nums -ne 2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run image with volume" && ((ret++))
-
-  isula rm -f vol4
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove vol4 container" && ((ret++))
-
-  # test mounts destination conflict, non-anonymous with non-anonymous
-  isula run -tid --name vol5 -v vol5:/vol5 -v /home:/vol5 vol sh
-  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run image with conflict destination success" && ((ret++))
+  # test mounts destination conflict condition 3 -v vs -v
+  isula run -tid --name vol5 -v vol5:/vol5 -v /home:/vol5 busybox sh
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run image with conflict destination should fail condition 3" && ((ret++))
 
   # test --rm can remove anonymous volume but not non-anonymous
   isula run --rm -ti --name vol6 -v vol6:/vol6 vol echo vol6
