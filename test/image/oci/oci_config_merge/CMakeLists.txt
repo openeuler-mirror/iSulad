@@ -28,7 +28,8 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/containers_store_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/namespace_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/container_unix_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec//specs_mount.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec/parse_volume.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec/specs_mount.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/volume/volume.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/volume/local.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../test/mocks/selinux_label_mock.cc

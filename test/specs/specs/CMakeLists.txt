@@ -18,10 +18,11 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/rb_tree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/volume/volume.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/volume/local.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs_mount.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs_extend.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec//specs_security.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec/specs.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec/parse_volume.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec/specs_mount.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec/specs_extend.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/modules/spec/specs_security.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/err_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/daemon/common/sysinfo.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/cmd/command_parser.c
