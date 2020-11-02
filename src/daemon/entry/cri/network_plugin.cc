@@ -65,25 +65,58 @@ static void runGetIP(void *cmdArgs)
     execvp(tmpArgs[0], args);
 }
 
-static std::string GetOnePodIP(std::string nsenterPath, std::string netnsPath, std::string interfaceName,
-                               std::string addrType, Errors &error)
+static std::string ParseIPFromLine(const char *line, const char *stdout_str)
 {
-    char *stderr_str { nullptr };
-    char *stdout_str { nullptr };
-    char *strErr { nullptr };
-    char **lines { nullptr };
+    char *cIP { nullptr };
     char **fields { nullptr };
+    char *strErr { nullptr };
     struct ipnet *ipnet_val {
         nullptr
     };
+    std::string ret;
+
+    fields = util_string_split(line, ' ');
+    if (fields == nullptr) {
+        ERROR("Out of memory");
+        goto out;
+    }
+    if (util_array_len((const char **)fields) < 4) {
+        ERROR("Unexpected address output %s ", line);
+        goto out;
+    }
+
+    if (parse_cidr(fields[3], &ipnet_val, &strErr) != 0) {
+        ERROR("CNI failed to parse ip from output %s due to %s", stdout_str, strErr);
+        goto out;
+    }
+    cIP = ip_to_string(ipnet_val->ip, ipnet_val->ip_len);
+    if (cIP == nullptr) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    ret = cIP;
+out:
+    free(cIP);
+    free(strErr);
+    free_ipnet_type(ipnet_val);
+    util_free_array(fields);
+    return ret;
+}
+
+static void GetOnePodIP(std::string nsenterPath, std::string netnsPath, std::string interfaceName,
+                        std::string addrType, std::vector<std::string> &ips, Errors &error)
+{
+    char *stderr_str { nullptr };
+    char *stdout_str { nullptr };
+    char **lines { nullptr };
     char **args { nullptr };
-    std::string result { "" };
-    char *cIP { nullptr };
+    size_t i;
 
     args = (char **)util_common_calloc_s(sizeof(char *) * 5);
     if (args == nullptr) {
         error.SetError("Out of memory");
-        return result;
+        return;
     }
 
     args[0] = util_strdup_s(nsenterPath.c_str());
@@ -102,52 +135,55 @@ static std::string GetOnePodIP(std::string nsenterPath, std::string netnsPath, s
         error.SetError("Out of memory");
         goto free_out;
     }
-    if (util_array_len((const char **)lines) < 1) {
+
+    if (util_array_len((const char **)lines) == 0) {
         error.Errorf("Unexpected command output %s", stdout_str);
         goto free_out;
     }
 
-    fields = util_string_split(lines[0], ' ');
-    if (fields == nullptr) {
-        error.SetError("Out of memory");
-        goto free_out;
+    for (i = 0; i < util_array_len((const char **)lines); i++) {
+        // ip string min length must bigger than 4
+        if (lines[i] == nullptr || strlen(lines[i]) < 4) {
+            continue;
+        }
+        std::string tIP = ParseIPFromLine(lines[i], stdout_str);
+        if (tIP.empty()) {
+            error.Errorf("parse %s to ip failed", lines[i]);
+            break;
+        }
+        ips.push_back(tIP);
     }
-    if (util_array_len((const char **)fields) < 4) {
-        error.Errorf("Unexpected address output %s ", lines[0]);
-        goto free_out;
-    }
-
-    if (parse_cidr(fields[3], &ipnet_val, &strErr) != 0) {
-        error.Errorf("CNI failed to parse ip from output %s due to %s", stdout_str, strErr);
-        goto free_out;
-    }
-    cIP = ip_to_string(ipnet_val->ip, ipnet_val->ip_len);
-    if (cIP == nullptr) {
-        error.SetError("Out of memory");
-        goto free_out;
-    }
-    result = cIP;
-    free(cIP);
 
 free_out:
-    free_ipnet_type(ipnet_val);
     free(stdout_str);
     free(stderr_str);
     util_free_array(args);
     util_free_array(lines);
-    util_free_array(fields);
-    return result;
 }
 
-std::string GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
-                     Errors &error)
+void GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
+              std::vector<std::string> &getIPs, Errors &error)
 {
-    std::string ip = GetOnePodIP(nsenterPath, netnsPath, interfaceName, "-4", error);
-    if (error.NotEmpty()) {
-        return GetOnePodIP(nsenterPath, netnsPath, interfaceName, "-6", error);
+    Errors tmpErr;
+
+    GetOnePodIP(nsenterPath, netnsPath, interfaceName, "-4", getIPs, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        WARN("Get ipv4 failed: %s", tmpErr.GetCMessage());
     }
 
-    return ip;
+    GetOnePodIP(nsenterPath, netnsPath, interfaceName, "-6", getIPs, error);
+    if (error.NotEmpty()) {
+        WARN("Get ipv6 failed: %s", tmpErr.GetCMessage());
+    }
+
+    if (getIPs.size() > 0) {
+        error.Clear();
+        return;
+    }
+
+    if (tmpErr.NotEmpty()) {
+        error.AppendError(tmpErr.GetMessage());
+    }
 }
 
 void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std::string networkPluginName,
@@ -290,14 +326,14 @@ void PodNetworkStatus::SetAPIVersion(const std::string &version)
     m_apiVersion = version;
 }
 
-const std::string &PodNetworkStatus::GetIP() const
+const std::vector<std::string> &PodNetworkStatus::GetIPs() const
 {
-    return m_ip;
+    return m_ips;
 }
 
-void PodNetworkStatus::SetIP(const std::string &ip)
+void PodNetworkStatus::SetIPs(std::vector<std::string> &ips)
 {
-    m_ip = ip;
+    m_ips = ips;
 }
 
 void PluginManager::Lock(const std::string &fullPodName, Errors &error)

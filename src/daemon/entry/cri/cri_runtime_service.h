@@ -210,9 +210,12 @@ private:
     void ConstructPodSandboxCheckpoint(const runtime::v1alpha2::PodSandboxConfig &config,
                                        cri::PodSandboxCheckpoint &checkpoint);
 
-    auto GetIP(const std::string &podSandboxID, container_inspect *inspect, const std::string &networkInterface,
-               Errors &error) -> std::string;
-    auto GetIPFromPlugin(container_inspect *inspect, const std::string &networkInterface, Errors &error) -> std::string;
+    void GetIPs(const std::string &podSandboxID, container_inspect *inspect, const std::string &networkInterface,
+                std::vector<std::string> &ips, Errors &error);
+    void GetFormatIPsForMultNet(container_inspect *inspect, const std::string &defaultInterface,
+                                const runtime::v1alpha2::PodSandboxMetadata &metadata, std::vector<std::string> &result, Errors &error);
+    auto GetIPsFromPlugin(container_inspect *inspect, const std::string &networkInterface,
+                          Errors &error) -> std::vector<std::string>;
     auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
     void SetNetworkReady(const std::string &podSandboxID, bool ready, Errors &error);
     void ClearNetworkReady(const std::string &podSandboxID);
@@ -247,9 +250,6 @@ private:
 
     void SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &response_id,
                              const std::string &jsonCheckpoint, Errors &error);
-    void SetupUserDefinedNetworkPlane(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &response_id,
-                                      container_inspect *inspect_data, std::map<std::string, std::string> &stdAnnos,
-                                      std::map<std::string, std::string> &options, Errors &error);
     void StartSandboxContainer(const std::string &response_id, Errors &error);
     auto CreateSandboxContainer(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image,
                                 std::string &jsonCheckpoint, const std::string &runtimeHandler,
@@ -273,6 +273,7 @@ private:
     auto ClearCniNetwork(const std::string &realSandboxID, bool hostNetwork, const std::string &ns,
                          const std::string &name, std::vector<std::string> &errlist,
                          std::map<std::string, std::string> &stdAnnos, Errors &error) -> int;
+
     auto RemoveAllContainersInSandbox(const std::string &realSandboxID, std::vector<std::string> &errors) -> int;
     auto DoRemovePodSandbox(const std::string &realSandboxID, std::vector<std::string> &errors) -> int;
     static void MergeSecurityContextToHostConfig(const runtime::v1alpha2::PodSandboxConfig &c, host_config *hc,

@@ -458,44 +458,6 @@ void CRIRuntimeServiceImpl::StartSandboxContainer(const std::string &response_id
     free_container_start_response(start_response);
 }
 
-void CRIRuntimeServiceImpl::SetupUserDefinedNetworkPlane(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                         const std::string &response_id,
-                                                         container_inspect *inspect_data,
-                                                         std::map<std::string, std::string> &stdAnnos,
-                                                         std::map<std::string, std::string> &options, Errors &error)
-{
-    google::protobuf::Map<std::string, std::string> annotations;
-    CRIHelpers::ExtractAnnotations(inspect_data->config->annotations, annotations);
-
-    size_t len = 0;
-    cri_pod_network_element **networks = CRIHelpers::GetNetworkPlaneFromPodAnno(annotations, &len, error);
-    if (error.NotEmpty()) {
-        ERROR("Couldn't get network plane from pod annotations: %s", error.GetCMessage());
-        error.Errorf("Couldn't get network plane from pod annotations: %s", error.GetCMessage());
-        goto cleanup;
-    }
-    for (size_t i = 0; i < len; i++) {
-        if ((networks[i] != nullptr) && (networks[i]->name != nullptr) && (networks[i]->interface != nullptr) &&
-            strcmp(networks[i]->name, Network::DEFAULT_NETWORK_PLANE_NAME.c_str()) != 0) {
-            INFO("SetupPod net: %s", networks[i]->name);
-            m_pluginManager->SetUpPod(config.metadata().namespace_(), config.metadata().name(), networks[i]->interface,
-                                      response_id, stdAnnos, options, error);
-            if (error.Empty()) {
-                continue;
-            }
-            Errors tmpErr;
-            StopContainerHelper(response_id, tmpErr);
-            if (tmpErr.NotEmpty()) {
-                WARN("Failed to stop sandbox container %s for pod %s: %s", response_id.c_str(), networks[i]->name,
-                     tmpErr.GetCMessage());
-            }
-            goto cleanup;
-        }
-    }
-cleanup:
-    free_cri_pod_network(networks, len);
-}
-
 void CRIRuntimeServiceImpl::SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config,
                                                 const std::string &response_id, const std::string &jsonCheckpoint,
                                                 Errors &error)
@@ -682,45 +644,6 @@ auto CRIRuntimeServiceImpl::StopAllContainersInSandbox(const std::string &realSa
 cleanup:
     free_container_list_request(list_request);
     free_container_list_response(list_response);
-    return ret;
-}
-
-auto CRIRuntimeServiceImpl::TearDownPodCniNetwork(const std::string &realSandboxID, std::vector<std::string> &errlist,
-                                                  std::map<std::string, std::string> &stdAnnos, const std::string &ns,
-                                                  const std::string &name, Errors &error) -> int
-{
-    int ret = 0;
-    cri_pod_network_element **networks = nullptr;
-    container_inspect *inspect_data = InspectContainer(realSandboxID, error);
-    if (inspect_data == nullptr) {
-        return -1;
-    }
-
-    google::protobuf::Map<std::string, std::string> annotations;
-    CRIHelpers::ExtractAnnotations(inspect_data->config->annotations, annotations);
-    size_t len = 0;
-
-    networks = CRIHelpers::GetNetworkPlaneFromPodAnno(annotations, &len, error);
-    if (error.NotEmpty()) {
-        ERROR("Couldn't get network plane from pod annotations: %s", error.GetCMessage());
-        error.Errorf("Couldn't get network plane from pod annotations: %s", error.GetCMessage());
-        ret = -1;
-        goto cleanup;
-    }
-    for (size_t i = 0; i < len; i++) {
-        if ((networks[i] != nullptr) && (networks[i]->name != nullptr) && (networks[i]->interface != nullptr) &&
-            strcmp(networks[i]->name, Network::DEFAULT_NETWORK_PLANE_NAME.c_str()) != 0) {
-            Errors tmpErr;
-            m_pluginManager->TearDownPod(ns, name, networks[i]->interface, inspect_data->id, stdAnnos, tmpErr);
-            if (tmpErr.NotEmpty()) {
-                WARN("TearDownPod cni network failed: %s", tmpErr.GetCMessage());
-                errlist.push_back(tmpErr.GetMessage());
-            }
-        }
-    }
-cleanup:
-    free_cri_pod_network(networks, len);
-    free_container_inspect(inspect_data);
     return ret;
 }
 
@@ -966,8 +889,19 @@ void CRIRuntimeServiceImpl::SetSandboxStatusNetwork(container_inspect *inspect, 
                                                     std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus,
                                                     Errors &error)
 {
-    std::string interfaceIP = GetIP(podSandboxID, inspect, Network::DEFAULT_NETWORK_INTERFACE_NAME, error);
-    podStatus->mutable_network()->set_ip(interfaceIP);
+    std::vector<std::string> ips;
+    size_t i;
+
+    GetIPs(podSandboxID, inspect, Network::DEFAULT_NETWORK_INTERFACE_NAME, ips, error);
+    if (ips.size() == 0) {
+        return;
+    }
+    podStatus->mutable_network()->set_ip(ips[0]);
+
+    for (i = 1; i < ips.size(); i++) {
+        auto tPoint = podStatus->mutable_network()->add_additional_ips();
+        tPoint->set_ip(ips[i]);
+    }
 }
 
 void CRIRuntimeServiceImpl::PodSandboxStatusToGRPC(container_inspect *inspect, const std::string &podSandboxID,
@@ -1019,66 +953,126 @@ void CRIRuntimeServiceImpl::PodSandboxStatusToGRPC(container_inspect *inspect, c
     }
 }
 
-auto CRIRuntimeServiceImpl::GetIPFromPlugin(container_inspect *inspect, const std::string &networkInterface,
-                                            Errors &error) -> std::string
+void CRIRuntimeServiceImpl::GetFormatIPsForMultNet(container_inspect *inspect, const std::string &defaultInterface,
+                                                   const runtime::v1alpha2::PodSandboxMetadata &metadata, std::vector<std::string> &result, Errors &error)
 {
-    if (inspect == nullptr || inspect->id == nullptr || inspect->name == nullptr) {
-        error.SetError("Empty arguments");
-        return "";
+    size_t len = 0;
+    cri_pod_network_element **elems { nullptr };
+    parser_error jerr { nullptr };
+
+    if (inspect->config == nullptr || inspect->config->annotations == nullptr) {
+        return;
     }
 
-    runtime::v1alpha2::PodSandboxMetadata metadata;
-    CRINaming::ParseSandboxName(inspect->name, metadata, error);
-    if (error.NotEmpty()) {
-        return "";
+    for (size_t i = 0; i < inspect->config->annotations->len; i++) {
+        if (strcmp(inspect->config->annotations->keys[i], CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY.c_str()) != 0) {
+            continue;
+        }
+        elems = cri_pod_network_parse_data(inspect->config->annotations->values[i], nullptr, &jerr, &len);
+        if (elems == nullptr) {
+            ERROR("parse mutlnetwork config failed: %s", jerr);
+            error.SetError("parse mutlnetwork config failed");
+            goto out;
+        }
+        break;
     }
-    std::string cid = inspect->id;
-    Network::PodNetworkStatus status;
-    if (networkInterface.empty()) {
-        m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(),
-                                             Network::DEFAULT_NETWORK_INTERFACE_NAME, cid, status, error);
-    } else {
-        m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(), networkInterface, cid, status,
+
+    for (size_t i = 0; i < len; i++) {
+        if (elems[i]->interface == nullptr || strcmp(elems[i]->interface, defaultInterface.c_str()) == 0) {
+            continue;
+        }
+        Network::PodNetworkStatus status;
+        m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(), elems[i]->interface, inspect->id, status,
                                              error);
-    }
-    if (error.NotEmpty()) {
-        return "";
-    }
+        if (error.NotEmpty()) {
+            goto out;
+        }
+        // add a sentry to make ips of mutlnetwork store from position 2
+        if (result.size() < 2) {
+            result.push_back("");
+        }
 
-    return status.GetIP();
+        result.push_back(std::string(elems[i]->name) + "@" + std::string(elems[i]->interface) + "@[" + CXXUtils::StringsJoin(
+                             status.GetIPs(), ", ") + "]");
+    }
+out:
+    for (size_t i = 0; i < len; i++) {
+        free_cri_pod_network_element(elems[i]);
+        elems[i] = nullptr;
+    }
+    free(elems);
+    free(jerr);
 }
 
-auto CRIRuntimeServiceImpl::GetIP(const std::string &podSandboxID, container_inspect *inspect,
-                                  const std::string &networkInterface, Errors &error) -> std::string
+auto CRIRuntimeServiceImpl::GetIPsFromPlugin(container_inspect *inspect, const std::string &networkInterface,
+                                             Errors &error) -> std::vector<std::string>
+{
+    std::vector<std::string> ret;
+    runtime::v1alpha2::PodSandboxMetadata metadata;
+    std::string defaultInterface = networkInterface;
+
+    if (inspect == nullptr || inspect->id == nullptr || inspect->name == nullptr) {
+        error.SetError("Empty arguments");
+        return ret;
+    }
+    CRINaming::ParseSandboxName(inspect->name, metadata, error);
+    if (error.NotEmpty()) {
+        return ret;
+    }
+    if (defaultInterface.empty()) {
+        defaultInterface = Network::DEFAULT_NETWORK_INTERFACE_NAME;
+    }
+
+    // step 1: get ips of default network
+    Network::PodNetworkStatus status;
+    m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(), defaultInterface, inspect->id, status,
+                                         error);
+    if (error.NotEmpty()) {
+        return ret;
+    }
+    for (auto &iter : status.GetIPs()) {
+        ret.push_back(iter);
+    }
+
+    // step 2: get ips of mutl networks
+    GetFormatIPsForMultNet(inspect, defaultInterface, metadata, ret, error);
+
+    return ret;
+}
+
+void CRIRuntimeServiceImpl::GetIPs(const std::string &podSandboxID, container_inspect *inspect,
+                                   const std::string &networkInterface, std::vector<std::string> &ips, Errors &error)
 {
     if (inspect == nullptr || inspect->network_settings == nullptr) {
-        return "";
+        return;
     }
     if (SharesHostNetwork(inspect) != 0) {
         // For sandboxes using host network, the shim is not responsible for reporting the IP.
-        return "";
+        return;
     }
 
     bool ready = GetNetworkReady(podSandboxID, error);
     if (error.Empty() && !ready) {
         WARN("Network %s do not ready", podSandboxID.c_str());
-        return "";
+        return;
     }
 
     error.Clear();
-    auto ip = GetIPFromPlugin(inspect, networkInterface, error);
+    auto tmpIPs = GetIPsFromPlugin(inspect, networkInterface, error);
     if (error.Empty()) {
-        return ip;
+        for (const auto &iter : tmpIPs) {
+            ips.push_back(iter);
+        }
+        return;
     }
 
     if (inspect->network_settings->ip_address != nullptr) {
         WARN("Use container inspect ip info: %s", error.GetCMessage());
         error.Clear();
-        return inspect->network_settings->ip_address;
+        ips.push_back(inspect->network_settings->ip_address);
     }
 
     WARN("Failed to read pod IP from plugin/docker: %s", error.GetCMessage());
-    return "";
 }
 
 std::unique_ptr<runtime::v1alpha2::PodSandboxStatus>
