@@ -58,6 +58,8 @@ char *conf_get_isulad_log_file();
 char *conf_get_engine_log_file();
 char *conf_get_enable_plugins();
 char *conf_get_isulad_userns_remap();
+char *conf_get_cni_conf_dir();
+char *conf_get_cni_bin_dir();
 int32_t conf_get_websocket_server_listening_port();
 
 int save_args_to_conf(struct service_arguments *args);

@@ -69,7 +69,7 @@ int network_create(const struct client_arguments *args)
         goto out;
     }
     if (response->errmsg != NULL) {
-        COMMAND_ERROR("%s\n", response->errmsg);
+        COMMAND_ERROR("%s", response->errmsg);
     }
     printf("%s\n", response->path);
 
