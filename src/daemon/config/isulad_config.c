@@ -1156,6 +1156,52 @@ out:
     return plugins;
 }
 
+/* conf get cni config dir */
+char *conf_get_cni_conf_dir()
+{
+    char *dir = NULL;
+    const char *default_conf_dir = "/etc/cni/net.d";
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        ERROR("BUG conf_rdlock failed");
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->cni_conf_dir == NULL) {
+        dir = util_strdup_s(default_conf_dir);
+    } else {
+        dir = util_strdup_s(conf->json_confs->cni_conf_dir);
+    }
+
+    (void)isulad_server_conf_unlock();
+    return dir;
+}
+
+/* conf get cni binary dir */
+char *conf_get_cni_bin_dir()
+{
+    char *dir = NULL;
+    const char *default_bin_dir = "/opt/cni/bin";
+    struct service_arguments *conf = NULL;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        ERROR("BUG conf_rdlock failed");
+        return NULL;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs == NULL || conf->json_confs->cni_bin_dir == NULL) {
+        dir = util_strdup_s(default_bin_dir);
+    } else {
+        dir = util_strdup_s(conf->json_confs->cni_bin_dir);
+    }
+
+    (void)isulad_server_conf_unlock();
+    return dir;
+}
+
 /* conf get websocket server listening port */
 int32_t conf_get_websocket_server_listening_port()
 {
