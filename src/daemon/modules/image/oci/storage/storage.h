@@ -32,7 +32,6 @@
 extern "C" {
 #endif
 
-#define OCI_LOAD_TMP_WORK_DIR "/var/tmp/isulad-oci-load"
 
 struct layer {
     char *id;
@@ -179,6 +178,8 @@ char *storage_rootfs_mount(const char *container_id);
 int storage_rootfs_umount(const char *container_id, bool force);
 
 container_inspect_graph_driver *storage_get_metadata_by_container_id(const char *id);
+
+char *storage_oci_load_work_dir();
 
 #ifdef __cplusplus
 }

@@ -44,7 +44,6 @@
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define OCI_SCHEMA_VERSION 2
-#define OCI_LOAD_TMP_DIR OCI_LOAD_TMP_WORK_DIR "/oci-image-load-XXXXXX"
 
 static image_manifest_items_element **load_manifest(const char *fname, size_t *length)
 {
@@ -1008,6 +1007,47 @@ out:
     return res;
 }
 
+static char *oci_load_path_create()
+{
+    int ret = 0;
+    int nret = 0;
+    char *oci_load_work_dir = NULL;
+    char tmp_dir[PATH_MAX] = { 0 };
+
+    oci_load_work_dir = storage_oci_load_work_dir();
+    if (oci_load_work_dir == NULL) {
+        ERROR("Failed to get oci load work dir");
+        isulad_try_set_error_message("Failed to get oci load work dir");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_mkdir_p(oci_load_work_dir, TEMP_DIRECTORY_MODE) != 0) {
+        ERROR("Unable to create oci image load tmp work dir:%s", oci_load_work_dir);
+        isulad_try_set_error_message("Unable to create oci image load tmp work dir:%s", oci_load_work_dir);
+        ret = -1;
+        goto out;
+    }
+
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/oci-image-load-XXXXXX", oci_load_work_dir);
+    if (nret < 0 || (size_t)nret >= sizeof(tmp_dir)) {
+        ERROR("Path is too long");
+        ret = -1;
+        goto out;
+    }
+
+    if (mkdtemp(tmp_dir) == NULL) {
+        ERROR("make temporary dir failed: %s", strerror(errno));
+        isulad_try_set_error_message("make temporary dir failed: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(oci_load_work_dir);
+    return ret == 0 ? util_strdup_s(tmp_dir) : NULL;
+}
+
 int oci_do_load(const im_load_request *request)
 {
     int ret = 0;
@@ -1019,23 +1059,16 @@ int oci_do_load(const im_load_request *request)
     size_t manifest_len = 0;
     load_image_t *im = NULL;
     char *digest = NULL;
-    char dstdir[] = OCI_LOAD_TMP_DIR;
+    char *dstdir = NULL;
 
     if (request == NULL || request->file == NULL) {
         ERROR("Invalid input arguments, cannot load image");
         return -1;
     }
 
-    if (util_mkdir_p(OCI_LOAD_TMP_WORK_DIR, TEMP_DIRECTORY_MODE) != 0) {
-        ERROR("Unable to create oci image load tmp work dir:%s", OCI_LOAD_TMP_WORK_DIR);
-        isulad_try_set_error_message("Unable to create oci image load tmp work dir:%s", OCI_LOAD_TMP_WORK_DIR);
-        ret = -1;
-        goto out;
-    }
-
-    if (mkdtemp(dstdir) == NULL) {
-        ERROR("make temporary direcory failed: %s", strerror(errno));
-        isulad_try_set_error_message("make temporary direcory failed: %s", strerror(errno));
+    dstdir = oci_load_path_create();
+    if (dstdir == NULL) {
+        ERROR("create temporary direcory failed");
         ret = -1;
         goto out;
     }
@@ -1132,5 +1165,6 @@ out:
     if (util_recursive_rmdir(dstdir, 0)) {
         WARN("failed to remove directory %s", dstdir);
     }
+    free(dstdir);
     return ret;
 }

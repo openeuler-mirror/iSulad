@@ -1682,8 +1682,9 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
 {
     int ret = 0;
     int sret = 0;
-    char blobpath[] = REGISTRY_TMP_DIR;
+    char blobpath[PATH_MAX] = { 0 };
     char scope[PATH_MAX] = { 0 };
+    char *image_tmp_path = NULL;
 
     if (desc == NULL || options == NULL) {
         ERROR("Invalid NULL param");
@@ -1716,6 +1717,20 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     }
 
     update_host(desc);
+
+    image_tmp_path = get_image_tmp_path();
+    if (image_tmp_path == NULL) {
+        ERROR("failed to get image tmp work dir");
+        ret = -1;
+        goto out;
+    }
+
+    sret = snprintf(blobpath, PATH_MAX, "%s/registry-XXXXXX", image_tmp_path);
+    if (sret < 0 || (size_t)sret > PATH_MAX) {
+        ERROR("image tmp work path too long");
+        ret = -1;
+        goto out;
+    }
 
     if (mkdtemp(blobpath) == NULL) {
         ERROR("make temporary direcory failed: %s", strerror(errno));
@@ -1752,7 +1767,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     }
 
 out:
-
+    free(image_tmp_path);
     return ret;
 }
 
@@ -1844,10 +1859,18 @@ static void cached_layers_kvfree(void *key, void *value)
 int registry_init(char *auths_dir, char *certs_dir)
 {
     int ret = 0;
+    char *image_tmp_path = NULL;
 
-    if (util_mkdir_p(IMAGE_TMP_PATH, 0600)) {
-        ERROR("failed to create directory %s", IMAGE_TMP_PATH);
+    image_tmp_path = get_image_tmp_path();
+    if (image_tmp_path == NULL) {
+        ERROR("failed to get image tmp path");
+        return -1;
     }
+
+    if (util_mkdir_p(image_tmp_path, TEMP_DIRECTORY_MODE)) {
+        ERROR("failed to create directory %s", image_tmp_path);
+    }
+    free(image_tmp_path);
 
     auths_set_dir(auths_dir);
     certs_set_dir(certs_dir);

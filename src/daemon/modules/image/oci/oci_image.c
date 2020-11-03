@@ -152,13 +152,22 @@ out:
 
 static void cleanup_image_tmpdir()
 {
-    if (util_recursive_rmdir(IMAGE_TMP_PATH, 0)) {
-        ERROR("failed to remove directory %s", IMAGE_TMP_PATH);
+    char *image_tmp_path = NULL;
+
+    image_tmp_path = get_image_tmp_path();
+    if (image_tmp_path == NULL) {
+        ERROR("failed to get image tmp path");
+        return;
     }
 
-    if (util_mkdir_p(IMAGE_TMP_PATH, 0600)) {
-        ERROR("failed to create directory %s", IMAGE_TMP_PATH);
+    if (util_recursive_rmdir(image_tmp_path, 0)) {
+        ERROR("failed to remove directory %s", image_tmp_path);
     }
+
+    if (util_mkdir_p(image_tmp_path, TEMP_DIRECTORY_MODE)) {
+        ERROR("failed to create directory %s", image_tmp_path);
+    }
+    free(image_tmp_path);
 
     return;
 }

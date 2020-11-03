@@ -39,7 +39,6 @@ extern "C" {
 #define REPO_PREFIX_TO_STRIP "library/"
 #define MAX_ID_BUF_LEN 256
 
-#define IMAGE_TMP_PATH "/var/tmp/isula-image/"
 
 char *oci_get_host(const char *name);
 char *oci_host_from_mirror(const char *mirror);
@@ -54,6 +53,10 @@ void free_items_not_inherit(docker_image_config_v2 *config);
 int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
                            docker_image_config_v2 *config);
 bool oci_valid_time(char *time);
+
+char *oci_get_isulad_tmpdir();
+
+char *get_image_tmp_path();
 
 #ifdef __cplusplus
 }
