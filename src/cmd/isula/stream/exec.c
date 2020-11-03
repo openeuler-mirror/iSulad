@@ -135,7 +135,7 @@ static int client_exec(const struct client_arguments *args, const struct command
 
     config = get_connect_config(args);
     ret = ops->container.exec(request, response, &config);
-    if (ret) {
+    if (ret != 0) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         ret = ECOMMON;
         goto out;
@@ -367,12 +367,12 @@ static int local_cmd_exec(struct client_arguments *args, uint32_t *exit_code)
     struct command_fifo_config *command_fifos = NULL;
 
     ret = exec_prepare_console(&command_fifos, &reset_tty, &oldtios, &args->custom_conf);
-    if (ret) {
+    if (ret != 0) {
         goto out;
     }
 
     ret = client_exec(args, command_fifos, exit_code);
-    if (!ret &&
+    if (ret == 0 &&
         (args->custom_conf.attach_stdin || args->custom_conf.attach_stdout || args->custom_conf.attach_stderr)) {
         sem_wait(&g_command_waitexit_sem);
     }
@@ -415,7 +415,7 @@ int cmd_exec_main(int argc, const char **argv)
     container_inspect *inspect_data = NULL;
 
     ret = exec_cmd_init(argc, argv);
-    if (ret) {
+    if (ret != 0) {
         goto out;
     }
 
