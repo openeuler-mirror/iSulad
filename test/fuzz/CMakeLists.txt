@@ -18,9 +18,41 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 SET(EXE0 im_oci_image_exist_fuzz)
 SET(EXE1 im_config_image_exist_fuzz)
 SET(EXE2 im_get_image_count_fuzz)
+SET(EXE3 mount_spec_fuzz)
+SET(EXE4 parse_volume_fuzz)
 add_executable(${EXE0} im_oci_image_exist_fuzz.cc)
 add_executable(${EXE1} im_config_image_exist_fuzz.cc)
 add_executable(${EXE2} im_get_image_count_fuzz.cc)
+add_executable(${EXE3}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_convert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_mount_spec.c
+    mount_spec_fuzz.cc
+    )
+add_executable(${EXE4}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/path.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/map/rb_tree.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_string.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_array.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_file.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_convert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_regex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/spec/parse_volume.c
+    parse_volume_fuzz.cc
+    )
 
 SET(IMAGE_FUZZ_INCLUDE_DIRS
     ${GTEST_INCLUDE_DIR}
@@ -36,6 +68,10 @@ SET(IMAGE_FUZZ_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/api
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/spec
     )
 
 target_include_directories(${EXE0} PUBLIC
@@ -50,6 +86,14 @@ target_include_directories(${EXE2} PUBLIC
     ${IMAGE_FUZZ_INCLUDE_DIRS}
     )
 
+target_include_directories(${EXE3} PUBLIC
+    ${IMAGE_FUZZ_INCLUDE_DIRS}
+    )
+
+target_include_directories(${EXE4} PUBLIC
+    ${IMAGE_FUZZ_INCLUDE_DIRS}
+    )
+
 set_target_properties(${EXE0} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${EXE0} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
 target_link_libraries(${EXE0} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lisulad_img)
@@ -61,3 +105,11 @@ target_link_libraries(${EXE1} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY
 set_target_properties(${EXE2} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${EXE2} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
 target_link_libraries(${EXE2} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lisulad_img)
+
+set_target_properties(${EXE3} PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(${EXE3} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
+target_link_libraries(${EXE3} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)
+
+set_target_properties(${EXE4} PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(${EXE4} PROPERTIES LINK_FLAGS "-fsanitize=address -fsanitize-coverage=trace-pc")
+target_link_libraries(${EXE4} ${CMAKE_THREAD_LIBS_INIT} ${ISULA_LIBUTILS_LIBRARY} ${LIB_FUZZING_ENGINE} pthread rt -lcrypto -lyajl -lz -lisulad_img -lgcov)

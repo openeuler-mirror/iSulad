@@ -16,6 +16,7 @@
 
 current_dir=$(cd $(dirname $0) && pwd)
 FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/im_oci_image_exist_fuzz.dict -runs=1000000 -max_total_time=3600"
+VOLUME_FUZZ_OPTION="${current_dir}/corpus -dict=${current_dir}/dict/volume_fuzz.dict -runs=1000000 -max_total_time=3600"
 
 find /usr -name "libclang_rt.fuzzer-$(uname -m)*"
 if [ $? != 0 ];then
@@ -31,6 +32,8 @@ fi
 ${current_dir}/im_oci_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_oci_image_exist_fuzz-
 ${current_dir}/im_config_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_config_image_exist_fuzz-
 ${current_dir}/im_get_image_count_fuzz ${FUZZ_OPTION} -artifact_prefix=im_get_image_count_fuzz-
+${current_dir}/mount_spec_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=mount_spec_fuzz-
+${current_dir}/parse_volume_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=parse_volume_fuzz-
 
 # 查找crash文件
 
@@ -44,4 +47,25 @@ else
     echo "all fuzz success."
     rm -f ${current_dir}/corpus/*
     rm -f ${current_dir}/*_fuzz
+fi
+
+if [ x"$1" == x"gcov" ];then
+    umask 0022
+    export GCOV_RESULT_PATH=/tmp/isulad-fuzz-gcov
+    ISULAD_SRC_PATH=$(pwd)/../../
+
+    echo "================================Generate isulad fuzz GCOV data===================================="
+    cd ${ISULAD_SRC_PATH}/build
+    lcov --directory . --capture --output-file coverage.info
+    # Remove std/build files
+    lcov --remove coverage.info '/usr/*' -o coverage.info
+    lcov --remove coverage.info 'build/*' -o coverage.info
+    lcov --remove coverage.info 'test/*' -o coverage.info
+
+    # Generate html
+    genhtml --ignore-errors source -o $GCOV_RESULT_PATH/coverage coverage.info
+
+    tar -zcf $ISULAD_SRC_PATH/isulad-gcov.tar.gz $GCOV_RESULT_PATH
+
+    echo "================================Generate isulad fuzz GCOV finish===================================="
 fi
