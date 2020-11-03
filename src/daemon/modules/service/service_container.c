@@ -129,7 +129,7 @@ static int create_mtab_link(const oci_runtime_spec *oci_spec)
         ret = -1;
         goto out;
     }
-
+    // When dir is symbol link, unlink dir to assure creating dir success following
     (void)unlink(dir);
 
     if (!util_dir_exists(dir)) {

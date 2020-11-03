@@ -1715,10 +1715,18 @@ out:
 int storage_module_init(struct storage_module_init_options *opts)
 {
     int ret = 0;
+    char *oci_load_work_dir = NULL;
 
-    ret = util_recursive_rmdir(OCI_LOAD_TMP_WORK_DIR, 0);
+    oci_load_work_dir = storage_oci_load_work_dir();
+    if (oci_load_work_dir == NULL) {
+        ERROR("Get oci load work dir failed");
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_recursive_rmdir(oci_load_work_dir, 0);
     if (ret != 0) {
-        ERROR("failed to remove dir %s", OCI_LOAD_TMP_WORK_DIR);
+        ERROR("failed to remove dir %s", oci_load_work_dir);
         goto out;
     }
 
@@ -1775,5 +1783,25 @@ int storage_module_init(struct storage_module_init_options *opts)
     }
 
 out:
+    free(oci_load_work_dir);
     return ret;
+}
+
+
+char *storage_oci_load_work_dir()
+{
+    char *isulad_tmp = NULL;
+    char *oci_load_work_dir = NULL;
+
+    isulad_tmp = oci_get_isulad_tmpdir();
+    if (isulad_tmp == NULL) {
+        ERROR("Failed to get isulad tmp dir");
+        goto out;
+    }
+
+    oci_load_work_dir = util_path_join(isulad_tmp, "isulad-oci-load");
+
+out:
+    free(isulad_tmp);
+    return oci_load_work_dir;
 }

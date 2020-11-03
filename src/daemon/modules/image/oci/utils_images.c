@@ -39,6 +39,7 @@
 
 // nanos of 2038-01-19T03:14:07, the max valid linux time
 #define MAX_NANOS 2147483647000000000
+#define ISULAD_DEFAULT_TMP_DIR "/var/tmp"
 
 char *get_last_part(char **parts)
 {
@@ -485,4 +486,38 @@ bool oci_valid_time(char *time)
     }
 
     return true;
+}
+
+
+char *oci_get_isulad_tmpdir()
+{
+    char *isula_tmp = NULL;
+
+    isula_tmp = getenv("ISULAD_TMPDIR");
+    if (util_valid_str(isula_tmp) && !util_dir_exists(isula_tmp)) {
+        if (util_mkdir_p(isula_tmp, TEMP_DIRECTORY_MODE) != 0) {
+            ERROR("make dir:%s failed", isula_tmp);
+            return NULL;
+        }
+    }
+
+    return util_valid_str(isula_tmp) ? util_strdup_s(isula_tmp) : util_strdup_s(ISULAD_DEFAULT_TMP_DIR);
+}
+
+char *get_image_tmp_path()
+{
+    char *isulad_tmp = NULL;
+    char *isula_image = NULL;
+
+    isulad_tmp = oci_get_isulad_tmpdir();
+    if (isulad_tmp == NULL) {
+        ERROR("Failed to get isulad tmp dir");
+        goto out;
+    }
+
+    isula_image = util_path_join(isulad_tmp, "isula-image");
+
+out:
+    free(isulad_tmp);
+    return isula_image;
 }
