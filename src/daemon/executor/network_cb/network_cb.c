@@ -28,7 +28,7 @@
 pthread_rwlock_t network_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 enum lock_type { SHARED = 0, EXCLUSIVE };
 
-static inline bool network_list_lock(enum lock_type type)
+static inline bool network_conflist_lock(enum lock_type type)
 {
     int nret = 0;
 
@@ -45,7 +45,7 @@ static inline bool network_list_lock(enum lock_type type)
     return true;
 }
 
-static inline void network_list_unlock()
+static inline void network_conflist_unlock()
 {
     int nret = 0;
 
@@ -151,22 +151,69 @@ static int network_create_cb(const network_create_request *request, network_crea
         return ret;
     }
 
-    network_list_lock(EXCLUSIVE);
+    network_conflist_lock(EXCLUSIVE);
 
     if (request->driver == NULL || strcmp(request->driver, default_driver) == 0) {
-        ret = bridge_network_config_create(request, response);
+        ret = network_config_bridge_create(request, response);
     }
     // TODO: support macvlan and other network drivers
 
-    network_list_unlock();
+    network_conflist_unlock();
 
     return ret;
 }
 
 static int network_inspect_cb(const network_inspect_request *request, network_inspect_response **response)
 {
-    // TODO
-    return 0;
+    int ret = 0;
+    uint32_t cc = ISULAD_SUCCESS;
+    char *network_json = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = util_common_calloc_s(sizeof(network_inspect_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return ECOMMON;
+    }
+
+    if (request->name == NULL || strlen(request->name) == 0) {
+        ERROR("NULL network name in inspect request");
+        isulad_set_error_message("NULL network name in inspect request");
+        cc = ISULAD_ERR_INPUT;
+        ret = EINVALIDARGS;
+        goto out;
+    }
+
+    if (!network_is_valid_name(request->name)) {
+        cc = ISULAD_ERR_INPUT;
+        ret = EINVALIDARGS;
+        goto out;
+    }
+
+    network_conflist_lock(SHARED);
+
+    ret = network_config_inspect(request->name, &network_json);
+    if (ret != 0) {
+        cc = ISULAD_ERR_EXEC;
+    }
+
+    network_conflist_unlock();
+
+out:
+    (*response)->cc = cc;
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+        DAEMON_CLEAR_ERRMSG();
+    }
+    (*response)->network_json = util_strdup_s(network_json);
+    free(network_json);
+
+    return ret;
 }
 
 static int network_list_cb(const network_list_request *request, network_list_response **response)

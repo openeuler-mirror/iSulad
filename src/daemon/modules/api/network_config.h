@@ -21,6 +21,8 @@
 
 extern const char *default_driver;
 
-int bridge_network_config_create(const network_create_request *request, network_create_response **response);
+int network_config_bridge_create(const network_create_request *request, network_create_response **response);
+
+int network_config_inspect(const char *name, char **network_json);
 
 #endif // DAEMON_MODULES_API_NETWORK_CONFIG_H

@@ -23,68 +23,25 @@
 #include "network.rest.h"
 #include "rest_service_common.h"
 
-struct rest_handle_st {
-    const char *name;
-    void *(*request_parse_data)(const char *jsondata, struct parser_context *ctx, parser_error *err);
-    int (*request_check)(void *reqeust);
-};
-
-/* network create request check */
-static int network_create_request_check(void *req)
+static int network_create_request_from_rest(evhtp_request_t *req, network_create_request **request)
 {
     int ret = 0;
-
-    return ret;
-}
-
-static struct rest_handle_st g_rest_handle[] = {
-    {
-        .name = NetworkServiceCreate,
-        .request_parse_data = (void *)network_create_request_parse_data,
-        .request_check = network_create_request_check,
-    },
-};
-
-static int action_request_from_rest(evhtp_request_t *req, void **request, const char *req_type)
-{
+    size_t body_len = 0;
     char *body = NULL;
-    size_t body_len;
-    int ret = 0;
     parser_error err = NULL;
-    int array_size = 0;
-    int i = 0;
-    struct rest_handle_st *ops = NULL;
 
-    array_size = sizeof(g_rest_handle) / sizeof(g_rest_handle[0]);
-    for (i = 0; i < array_size; i++) {
-        if (strcmp(req_type, g_rest_handle[i].name) == 0) {
-            ops = &g_rest_handle[i];
-            break;
-        }
-    }
-    if (i >= array_size) {
-        ERROR("Unknown action type");
-        return -1;
-    }
-
-    if (get_body(req, &body_len, &body) != 0) {
+    ret = get_body(req, &body_len, &body);
+    if (ret != 0) {
         ERROR("Failed to get body");
         return -1;
     }
 
-    *request = (void *)ops->request_parse_data(body, NULL, &err);
+    *request = network_create_request_parse_data(body, NULL, &err);
     if (*request == NULL) {
         ERROR("Invalid request body:%s", err);
         ret = -1;
-        goto out;
     }
 
-    if (ops->request_check(*request) < 0) {
-        ret = -1;
-        goto out;
-    }
-
-out:
     put_body(body);
     free(err);
     return ret;
@@ -100,7 +57,7 @@ static void evhtp_send_network_create_repsponse(evhtp_request_t *req, network_cr
     if (response == NULL) {
         ERROR("Failed to generate network create response info");
         evhtp_send_reply(req, RESTFUL_RES_ERROR);
-        goto out;
+        return;
     }
 
     responsedata = network_create_response_generate_json(response, &ctx, &err);
@@ -138,7 +95,7 @@ static void rest_network_create_cb(evhtp_request_t *req, void *arg)
         return;
     }
 
-    tret = action_request_from_rest(req, (void **)&request, NetworkServiceCreate);
+    tret = network_create_request_from_rest(req, &request);
     if (tret < 0) {
         ERROR("Bad request");
         evhtp_send_reply(req, RESTFUL_RES_SERVERR);
@@ -154,11 +111,121 @@ out:
     free_network_create_request(request);
 }
 
+/* network inspect request check */
+static int network_inspect_request_check(network_inspect_request *req)
+{
+    if (req->name == NULL) {
+        ERROR("network name required!");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int network_inspect_request_from_rest(evhtp_request_t *req, network_inspect_request **request)
+{
+    int ret = 0;
+    size_t body_len;
+    char *body = NULL;
+    parser_error err = NULL;
+
+    ret = get_body(req, &body_len, &body);
+    if (ret != 0) {
+        ERROR("Failed to get body");
+        return -1;
+    }
+
+    *request = network_inspect_request_parse_data(body, NULL, &err);
+    if (*request == NULL) {
+        ERROR("Invalid request body:%s", err);
+        ret = -1;
+        goto out;
+    }
+
+    ret = network_inspect_request_check(*request);
+
+out:
+    put_body(body);
+    free(err);
+    return ret;
+}
+
+/* evhtp send network inspect repsponse */
+static void evhtp_send_network_inspect_repsponse(evhtp_request_t *req, network_inspect_response *response,
+                                                 int rescode)
+{
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    char *responsedata = NULL;
+
+    if (response == NULL) {
+        ERROR("Failed to generate network inspect response info");
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        return;
+    }
+
+    responsedata = network_inspect_response_generate_json(response, &ctx, &err);
+    if (responsedata == NULL) {
+        ERROR("Failed to generate network inspect json:%s", err);
+        evhtp_send_reply(req, RESTFUL_RES_ERROR);
+        goto out;
+    }
+
+    evhtp_send_response(req, responsedata, rescode);
+
+out:
+    free(err);
+    free(responsedata);
+    return;
+}
+
+/* rest network inspect cb */
+static void rest_network_inspect_cb(evhtp_request_t *req, void *arg)
+{
+    int tret;
+    service_executor_t *cb = NULL;
+    network_inspect_request *request = NULL;
+    network_inspect_response *response = NULL;
+
+    // only deal with POST request
+    if (evhtp_request_get_method(req) != htp_method_POST) {
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+    cb = get_service_executor();
+    if (cb == NULL || cb->network.inspect == NULL) {
+        ERROR("Unimplemented callback");
+        evhtp_send_reply(req, RESTFUL_RES_NOTIMPL);
+        return;
+    }
+
+    tret = network_inspect_request_from_rest(req, &request);
+    if (tret < 0) {
+        ERROR("bad request");
+        evhtp_send_reply(req, RESTFUL_RES_SERVERR);
+        goto out;
+    }
+
+    (void)cb->network.inspect(request, &response);
+
+    evhtp_send_network_inspect_repsponse(req, response, RESTFUL_RES_OK);
+
+out:
+    free_network_inspect_request(request);
+    free_network_inspect_response(response);
+
+    return;
+}
+
 /* rest register network handler */
 int rest_register_network_handler(evhtp_t *htp)
 {
     if (evhtp_set_cb(htp, NetworkServiceCreate, rest_network_create_cb, NULL) == NULL) {
         ERROR("Failed to register create callback");
+        return -1;
+    }
+    if (evhtp_set_cb(htp, NetworkServiceInspect, rest_network_inspect_cb, NULL) == NULL) {
+        ERROR("Failed to register inspect callback");
         return -1;
     }
 

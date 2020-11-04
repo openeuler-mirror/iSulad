@@ -79,6 +79,58 @@ public:
     }
 };
 
+class NetworkInspect : public ClientBase<NetworkService, NetworkService::Stub, isula_network_inspect_request,
+    NetworkInspectRequest, isula_network_inspect_response, NetworkInspectResponse> {
+public:
+    explicit NetworkInspect(void *args)
+        : ClientBase(args)
+    {
+    }
+    ~NetworkInspect() = default;
+
+    auto request_to_grpc(const isula_network_inspect_request *request, NetworkInspectRequest *grequest) -> int override
+    {
+        if (request == nullptr) {
+            return -1;
+        }
+
+        if (request->name != nullptr) {
+            grequest->set_name(request->name);
+        }
+
+        return 0;
+    }
+
+    auto response_from_grpc(NetworkInspectResponse *gresponse, isula_network_inspect_response *response) -> int override
+    {
+        response->server_errono = gresponse->cc();
+        if (!gresponse->networkjson().empty()) {
+            response->json = util_strdup_s(gresponse->networkjson().c_str());
+        }
+        if (!gresponse->errmsg().empty()) {
+            response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+        }
+
+        return 0;
+    }
+
+    auto check_parameter(const NetworkInspectRequest &req) -> int override
+    {
+        if (req.name().empty()) {
+            ERROR("Missing network name in the request");
+            return -1;
+        }
+
+        return 0;
+    }
+
+    auto grpc_call(ClientContext *context, const NetworkInspectRequest &req,
+                   NetworkInspectResponse *reply) -> Status override
+    {
+        return stub_->Inspect(context, req, reply);
+    }
+};
+
 auto grpc_network_client_ops_init(isula_connect_ops *ops) -> int
 {
     if (ops == nullptr) {
@@ -86,7 +138,7 @@ auto grpc_network_client_ops_init(isula_connect_ops *ops) -> int
     }
     // implement following interface
     ops->network.create = container_func<isula_network_create_request, isula_network_create_response, NetworkCreate>;
+    ops->network.inspect = container_func<isula_network_inspect_request, isula_network_inspect_response, NetworkInspect>;
 
     return 0;
 }
-
