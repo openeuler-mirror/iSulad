@@ -21,6 +21,17 @@
 extern "C" {
 #endif
 
+#define NETWORK_INSPECT_OPTIONS(cmdargs)                        \
+    {                                                           \
+        CMD_OPT_TYPE_STRING,                                    \
+        false,                                                  \
+        "format",                                               \
+        'f',                                                    \
+        &(cmdargs).format,                                      \
+        "Format the output using the given go template",        \
+        NULL                                                    \
+    },
+
 extern const char g_cmd_network_inspect_desc[];
 extern const char g_cmd_network_inspect_usage[];
 extern struct client_arguments g_cmd_network_inspect_args;
