@@ -33,7 +33,7 @@
 #define CACHE_ERRMSG_LEN 512
 #define CACHE_ERRMSG(errmsg, fmt, args...)              \
     do {                                         \
-        (void)snprintf(errmsg, CACHE_ERRMSG_LEN, fmt "\n", ##args); \
+        (void)snprintf(errmsg, CACHE_ERRMSG_LEN, fmt, ##args); \
     } while (0)
 
 static int parse_mount_item_type(const char *value, char *mount_str, mount_spec *m, char *errmsg)
