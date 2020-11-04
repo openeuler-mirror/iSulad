@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <dirent.h>
 #include <limits.h>
+#include <sys/stat.h>
 
 #include "isula_libutils/log.h"
 #include "volume_api.h"
@@ -175,6 +176,7 @@ static char *build_and_valid_data_dir(const char *root_dir, const char *name)
     char *data_dir = NULL;
     char *vol_dir = NULL;
     char *tmp_dir = NULL;
+    struct stat st;
 
     if (!util_valid_volume_name(name)) {
         ERROR("Invalid volume dir %s, ignore", name);
@@ -206,6 +208,12 @@ static char *build_and_valid_data_dir(const char *root_dir, const char *name)
     tmp_dir = util_follow_symlink_in_scope(data_dir, vol_dir);
     if (tmp_dir == NULL) {
         ERROR("%s not inside %s", data_dir, root_dir);
+        ret = -1;
+        goto out;
+    }
+
+    if (lstat(tmp_dir, &st) != 0) {
+        ERROR("lstat %s: %s", tmp_dir, strerror(errno));
         ret = -1;
         goto out;
     }
