@@ -612,6 +612,49 @@ static int umount_dev_tmpfs_for_system_container(const container_t *cont)
     return 0;
 }
 
+static int valid_mount_point(container_config_v2_common_config_mount_points_element *mp)
+{
+    struct stat st;
+    // ignore checking nonexist mount point
+    if (mp == NULL) {
+        return 0;
+    }
+
+    // check volumes only currently
+    if (strcmp(mp->type, "volume") != 0) {
+        return 0;
+    }
+
+    if (lstat(mp->source, &st) != 0) {
+        ERROR("lstat %s: %s", mp->source, strerror(errno));
+        isulad_set_error_message("lstat %s: %s", mp->source, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int verify_mounts(const container_t *cont)
+{
+    size_t i = 0;
+    container_config_v2_common_config_mount_points *mount_points = NULL;
+    container_config_v2_common_config_mount_points_element *mp = NULL;
+
+    if (cont->common_config == NULL || cont->common_config->mount_points == NULL) {
+        return 0;
+    }
+
+    mount_points = cont->common_config->mount_points;
+    for (i = 0; i < mount_points->len; i++) {
+        mp = mount_points->values[i];
+        if (valid_mount_point(mp) != 0) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static int do_start_container(container_t *cont, const char *console_fifos[], bool reset_rm, pid_ppid_info_t *pid_info)
 {
     int ret = 0;
@@ -689,6 +732,11 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     nret = create_mtab_link(oci_spec);
     if (nret != 0) {
         ERROR("Failed to create link /etc/mtab for target /proc/mounts");
+        ret = -1;
+        goto close_exit_fd;
+    }
+
+    if (verify_mounts(cont)) {
         ret = -1;
         goto close_exit_fd;
     }
