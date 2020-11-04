@@ -231,7 +231,8 @@ static bool load_volume(const char *root_dir, const struct dirent *dir, void *us
     data_dir = build_and_valid_data_dir(root_dir, dir->d_name);
     if (data_dir == NULL) {
         ERROR("failed to load volume %s", dir->d_name);
-        return false;
+        // always return true so we can walk next subdir but not failed to start isulad
+        return true;
     }
 
     mutex_lock(&g_volumes->mutex);
@@ -258,7 +259,8 @@ out:
         free_volume(vol);
     }
 
-    return ret == 0;
+    // always return true so we can walk next subdir but not failed to start isulad
+    return true;
 }
 
 static int load_volumes(struct volumes_info *vols)
