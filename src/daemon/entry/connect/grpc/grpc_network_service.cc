@@ -51,12 +51,12 @@ int NetworkServiceImpl::create_request_from_grpc(const NetworkCreateRequest *gre
     return 0;
 }
 
-int NetworkServiceImpl::create_response_to_grpc(const network_create_response *response,
-                                                NetworkCreateResponse *gresponse)
+void NetworkServiceImpl::create_response_to_grpc(const network_create_response *response,
+                                                 NetworkCreateResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_EXEC);
-        return 0;
+        return;
     }
     gresponse->set_cc(response->cc);
     if (response->errmsg != nullptr) {
@@ -65,13 +65,13 @@ int NetworkServiceImpl::create_response_to_grpc(const network_create_response *r
     if (response->path != nullptr) {
         gresponse->set_path(response->path);
     }
-    return 0;
+    return;
 }
 
 Status NetworkServiceImpl::Create(ServerContext *context, const NetworkCreateRequest *request,
                                   NetworkCreateResponse *reply)
 {
-    int ret, tret;
+    int tret;
     service_executor_t *cb = nullptr;
     network_create_response *network_res = nullptr;
     network_create_request *network_req = nullptr;
@@ -92,15 +92,82 @@ Status NetworkServiceImpl::Create(ServerContext *context, const NetworkCreateReq
         return Status::OK;
     }
 
-    ret = cb->network.create(network_req, &network_res);
-    tret = create_response_to_grpc(network_res, reply);
+    (void)cb->network.create(network_req, &network_res);
+    create_response_to_grpc(network_res, reply);
 
     free_network_create_request(network_req);
     free_network_create_response(network_res);
-    if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
-        reply->set_cc(ISULAD_ERR_INTERNAL);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+
+    return Status::OK;
+}
+
+int NetworkServiceImpl::inspect_request_from_grpc(const NetworkInspectRequest *grequest,
+                                                  network_inspect_request **request)
+{
+    network_inspect_request *tmpreq = (network_inspect_request *)util_common_calloc_s(
+                                          sizeof(network_inspect_request));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
     }
+
+    if (!grequest->name().empty()) {
+        tmpreq->name = util_strdup_s(grequest->name().c_str());
+    }
+
+    *request = tmpreq;
+    return 0;
+}
+
+void NetworkServiceImpl::inspect_response_to_grpc(const network_inspect_response *response,
+                                                  NetworkInspectResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_EXEC);
+        return;
+    }
+
+    gresponse->set_cc(response->cc);
+    if (response->network_json != nullptr) {
+        gresponse->set_networkjson(response->network_json);
+    }
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+
+    return;
+}
+
+Status NetworkServiceImpl::Inspect(ServerContext *context, const NetworkInspectRequest *request,
+                                   NetworkInspectResponse *reply)
+{
+    int tret;
+    service_executor_t *cb = nullptr;
+    network_inspect_request *network_req = nullptr;
+    network_inspect_response *network_res = nullptr;
+
+    Status status = GrpcServerTlsAuth::auth(context, "network_inspect");
+    if (!status.ok()) {
+        return status;
+    }
+
+    cb = get_service_executor();
+    if (cb == nullptr || cb->network.inspect == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    tret = inspect_request_from_grpc(request, &network_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(ISULAD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    (void)cb->network.inspect(network_req, &network_res);
+    inspect_response_to_grpc(network_res, reply);
+
+    free_network_inspect_request(network_req);
+    free_network_inspect_response(network_res);
+
     return Status::OK;
 }

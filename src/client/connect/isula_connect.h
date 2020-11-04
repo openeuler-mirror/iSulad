@@ -112,6 +112,8 @@ typedef struct {
 typedef struct {
     int (*create)(const struct isula_network_create_request *request, struct isula_network_create_response *response,
                   void *arg);
+    int (*inspect)(const struct isula_network_inspect_request *request, struct isula_network_inspect_response *response,
+                   void *arg);
 } network_ops;
 
 typedef struct {

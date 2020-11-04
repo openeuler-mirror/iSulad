@@ -81,6 +81,19 @@ out:
     return dir;
 }
 
+static void free_cni_list_arr(cni_net_conf_list **list_arr, size_t list_arr_len)
+{
+    size_t i;
+
+    if (list_arr == NULL) {
+        return;
+    }
+    for (i = 0; i < list_arr_len; i++) {
+        free_cni_net_conf_list(list_arr[i]);
+    }
+    free(list_arr);
+}
+
 static int load_cni_list_from_file(const char *file, cni_net_conf_list **list)
 {
     int ret = 0;
@@ -148,7 +161,7 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
         goto out;
     }
 
-    tmp_conflist_arr = util_smart_calloc_s(sizeof(struct cni_net_conf_list *), files_len);
+    tmp_conflist_arr = util_smart_calloc_s(sizeof(cni_net_conf_list *), files_len);
     if (tmp_conflist_arr == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -188,10 +201,8 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
 
 out:
     util_free_array_by_len(files, files_len);
-    for (i = 0; i < tmp_conflist_arr_len; i++) {
-        free_cni_net_conf_list(tmp_conflist_arr[i]);
-    }
-    free(tmp_conflist_arr);
+    free_cni_list_arr(tmp_conflist_arr, tmp_conflist_arr_len);
+
     return ret;
 }
 
@@ -952,7 +963,7 @@ static int do_create_conflist_file(const char *cni_conf_dir, cni_net_conf_list *
         goto out;
     }
 
-    EVENT("Event: {Object: network %s, Type: create}", list->name);
+    EVENT("Network Event: {Object: %s, Type: create}", list->name);
     *path = util_strdup_s(conflist_file);
 
 out:
@@ -1012,20 +1023,7 @@ out:
     return ret;
 }
 
-static void free_cni_list_arr(cni_net_conf_list **list_arr, size_t list_arr_len)
-{
-    size_t i;
-
-    if (list_arr == NULL) {
-        return;
-    }
-    for (i = 0; i < list_arr_len; i++) {
-        free_cni_net_conf_list(list_arr[i]);
-    }
-    free(list_arr);
-}
-
-int bridge_network_config_create(const network_create_request *request, network_create_response **response)
+int network_config_bridge_create(const network_create_request *request, network_create_response **response)
 {
     int ret = 0;
     size_t conflist_arr_len = 0;
@@ -1093,6 +1091,66 @@ out:
         (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
         DAEMON_CLEAR_ERRMSG();
     }
+
+    return ret;
+}
+
+static char *get_conflist_json(const cni_net_conf_list *list)
+{
+    char *json = NULL;
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+
+    json = cni_net_conf_list_generate_json(list, &ctx, &err);
+    if (json == NULL) {
+        ERROR("Failed to generate conf list json: %s", err);
+    }
+
+    free(err);
+    return json;
+}
+
+int network_config_inspect(const char *name, char **network_json)
+{
+    int ret = 0;
+    size_t i;
+    size_t arr_len = 0;
+    char *cni_conf_dir = NULL;
+    cni_net_conf_list **conflist_arr = NULL;
+
+    cni_conf_dir = get_cni_conf_dir();
+    if (cni_conf_dir == NULL) {
+        ERROR("Failed to get cni conf dir");
+        return -1;
+    }
+
+    ret = load_cni_list(cni_conf_dir, &conflist_arr, &arr_len);
+    if (ret != 0) {
+        isulad_set_error_message("Failed to load cni list, maybe the count of network config files is above 200");
+        goto out;
+    }
+
+    EVENT("Network Event: {Object: %s, Type: inspect}", name);
+
+    for (i = 0; i < arr_len; i++) {
+        if (strcmp(conflist_arr[i]->name, name) != 0) {
+            continue;
+        }
+        *network_json = get_conflist_json(conflist_arr[i]);
+        if (*network_json == NULL) {
+            ret = -1;
+            goto out;
+        }
+        // TODO: inspect the linked containers ip info
+        goto out;
+    }
+
+    isulad_set_error_message("No such network %s", name);
+    ret = -1;
+
+out:
+    free(cni_conf_dir);
+    free_cni_list_arr(conflist_arr, arr_len);
 
     return ret;
 }
