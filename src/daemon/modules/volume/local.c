@@ -380,9 +380,9 @@ static struct volume * volume_create_nolock(char *name)
 
 out:
     if (ret != 0) {
+        (void)util_recursive_rmdir(v->path, 0);
         free_volume(v);
         v = NULL;
-        (void)util_recursive_rmdir(v->path, 0);
     }
 
     return v;
