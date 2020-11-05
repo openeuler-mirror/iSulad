@@ -1332,12 +1332,6 @@ void isula_volume_list_free(size_t volumes_len, struct isula_volume_info *volume
     return;
 }
 
-void isula_list_volume_request_free(struct isula_list_volume_request *request)
-{
-    free(request);
-    return;
-}
-
 void isula_list_volume_response_free(struct isula_list_volume_response *response)
 {
     if (response == NULL) {
@@ -1355,18 +1349,6 @@ void isula_list_volume_response_free(struct isula_list_volume_response *response
     return;
 }
 
-void isula_remove_volume_request_free(struct isula_remove_volume_request *request)
-{
-    if (request == NULL) {
-        return;
-    }
-
-    free(request->name);
-    free(request);
-
-    return;
-}
-
 void isula_remove_volume_response_free(struct isula_remove_volume_response *response)
 {
     if (response == NULL) {
@@ -1377,12 +1359,6 @@ void isula_remove_volume_response_free(struct isula_remove_volume_response *resp
     response->errmsg = NULL;
 
     free(response);
-    return;
-}
-
-void isula_prune_volume_request_free(struct isula_prune_volume_request *request)
-{
-    free(request);
     return;
 }
 

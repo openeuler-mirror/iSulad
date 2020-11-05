@@ -762,15 +762,9 @@ void isula_logs_response_free(struct isula_logs_response *response);
 
 void isula_volume_list_free(size_t volumes_num, struct isula_volume_info *volumes);
 
-void isula_list_volume_request_free(struct isula_list_volume_request *request);
-
 void isula_list_volume_response_free(struct isula_list_volume_response *response);
 
-void isula_remove_volume_request_free(struct isula_remove_volume_request *request);
-
 void isula_remove_volume_response_free(struct isula_remove_volume_response *response);
-
-void isula_prune_volume_request_free(struct isula_prune_volume_request *request);
 
 void isula_prune_volume_response_free(struct isula_prune_volume_response *response);
 
