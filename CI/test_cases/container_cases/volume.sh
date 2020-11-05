@@ -31,21 +31,64 @@ function test_volume()
 
   isula rm -f `isula ps -a -q`
 
-  # test reuse volume
+  # test command name of help
+  isula --help | grep volume
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula --help failed" && ((ret++))
+
+  isula volume --help | grep "isula volume"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula volume --help failed" && ((ret++))
+
+  isula volume rm --help | grep "isula volume rm"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula volume rm --help failed" && ((ret++))
+
+  # test anonymous volume
   isula run -tid --name vol1 -v /vol busybox touch /vol/test
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run vol1 container" && ((ret++))
 
   isula rm -f vol1
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove vol1 container" && ((ret++))
 
-  isula run -tid --name vol1 -v /vol busybox cat /vol/test
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to reuse old volume" && ((ret++))
+  # test named volume
+  isula run -tid -v vol:/vol busybox sh
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with named volume" && ((ret++))
 
-  isula rm -f vol1
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove vol1 container" && ((ret++))
+  # test remove volume
+  isula rm -f `isula ps -a -q`
+  isula volume rm vol
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove specified volume" && ((ret++))
+
+  # test volume restore
+  isula run -tid --name restore -v vol_restore:/vol busybox sh
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container for restore volume" && ((ret++))
+
+  isula exec -ti restore touch /vol/restore.txt
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create file for restore volume" && ((ret++))
+
+  check_valgrind_log
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
+
+  start_isulad_with_valgrind
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
+
+  isula exec -ti restore cat /vol/restore.txt
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to restore volume" && ((ret++))
+
+  # test -v readonly
+  isula run -tid --name readonly -v vol:/vol:ro busybox sh
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with -v readonly volume" && ((ret++))
+
+  isula exec -ti readonly dd if=/dev/zero of=/vol/readonly bs=1k count=1
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - dd to -v readonly volume should fail" && ((ret++))
+
+  # test --mount readonly
+  isula run -tid --name readonly2 --mount type=volume,src=vol,dst=/vol,readonly=true busybox sh
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with --mount readonly volume" && ((ret++))
+
+  isula exec -ti readonly2 dd if=/dev/zero of=/vol/readonly bs=1k count=1
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - dd to --mount readonly volume should fail" && ((ret++))
 
   # test anonymous volume in image config
-  isula load -i vol.tar
+  isula load -i test_data/vol.tar
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to load image with volume" && ((ret++))
 
   isula run -tid --name vol2 vol sh
@@ -90,8 +133,7 @@ function test_volume()
 
   # clean up
   isula rm -f `isula ps -a -q`
-
-  isula volume prune -f
+  echo y | isula volume prune
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to prune volumes" && ((ret++))
 
   # test prune can not remove used volume
