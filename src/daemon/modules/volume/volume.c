@@ -602,7 +602,8 @@ int volume_remove(char *name)
     mutex_lock(&g_vs.mutex);
     driver = lookup_driver_by_volume_name(name);
     if (driver == NULL) {
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     vns = get_name_refs(g_vs.name_refs, name);
