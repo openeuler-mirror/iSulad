@@ -781,6 +781,11 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
     container_inspect_request *container_req = nullptr;
     container_inspect_response *container_res = nullptr;
 
+    Status status = GrpcServerTlsAuth::auth(context, "container_inspect");
+    if (!status.ok()) {
+        return status;
+    }
+
     cb = get_service_executor();
     if (cb == nullptr || cb->container.inspect == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
@@ -791,11 +796,6 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
         ERROR("Failed to transform grpc request");
         reply->set_cc(ISULAD_ERR_INPUT);
         return Status::OK;
-    }
-
-    Status status = GrpcServerTlsAuth::auth(context, "container_inspect");
-    if (!status.ok()) {
-        return status;
     }
 
     ret = cb->container.inspect(container_req, &container_res);
