@@ -340,7 +340,6 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
 
     if (sem_init(&sem, 0, 0) != 0) {
         return grpc::Status(grpc::StatusCode::UNKNOWN, "Semaphore initialization failed");
-        ;
     }
 
     int read_pipe_fd[2];
@@ -867,7 +866,6 @@ Status ContainerServiceImpl::AttachInit(ServerContext *context, service_executor
     if (sem_init(sem_stderr, 0, 0) != 0) {
         free_container_attach_request(*req);
         return grpc::Status(grpc::StatusCode::UNKNOWN, "Semaphore initialization failed");
-        ;
     }
 
     if ((pipe2(pipefd, O_NONBLOCK | O_CLOEXEC)) < 0) {
