@@ -32,8 +32,8 @@ fi
 ${current_dir}/im_oci_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_oci_image_exist_fuzz-
 ${current_dir}/im_config_image_exist_fuzz ${FUZZ_OPTION} -artifact_prefix=im_config_image_exist_fuzz-
 ${current_dir}/im_get_image_count_fuzz ${FUZZ_OPTION} -artifact_prefix=im_get_image_count_fuzz-
-${current_dir}/mount_spec_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=mount_spec_fuzz-
-${current_dir}/parse_volume_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=parse_volume_fuzz-
+${current_dir}/test_volume_mount_spec_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=test_volume_mount_spec_fuzz-
+${current_dir}/test_volume_parse_volume_fuzz ${VOLUME_FUZZ_OPTION} -artifact_prefix=test_volume_parse_volume_fuzz-
 
 # 查找crash文件
 

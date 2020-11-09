@@ -18,8 +18,8 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 SET(EXE0 im_oci_image_exist_fuzz)
 SET(EXE1 im_config_image_exist_fuzz)
 SET(EXE2 im_get_image_count_fuzz)
-SET(EXE3 mount_spec_fuzz)
-SET(EXE4 parse_volume_fuzz)
+SET(EXE3 test_volume_mount_spec_fuzz)
+SET(EXE4 test_volume_parse_volume_fuzz)
 add_executable(${EXE0} im_oci_image_exist_fuzz.cc)
 add_executable(${EXE1} im_config_image_exist_fuzz.cc)
 add_executable(${EXE2} im_get_image_count_fuzz.cc)
@@ -36,7 +36,7 @@ add_executable(${EXE3}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_mount_spec.c
-    mount_spec_fuzz.cc
+    test_volume_mount_spec_fuzz.cc
     )
 add_executable(${EXE4}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils.c
@@ -51,7 +51,7 @@ add_executable(${EXE4}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/cutils/utils_verify.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/utils/sha256/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/daemon/modules/spec/parse_volume.c
-    parse_volume_fuzz.cc
+    test_volume_parse_volume_fuzz.cc
     )
 
 SET(IMAGE_FUZZ_INCLUDE_DIRS
