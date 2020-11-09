@@ -30,12 +30,12 @@ int ContainerServiceImpl::version_request_from_grpc(const VersionRequest *greque
     return 0;
 }
 
-int ContainerServiceImpl::version_response_to_grpc(const container_version_response *response,
-                                                   VersionResponse *gresponse)
+void ContainerServiceImpl::version_response_to_grpc(const container_version_response *response,
+                                                    VersionResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
     gresponse->set_cc(response->cc);
     if (response->errmsg != nullptr) {
@@ -54,7 +54,7 @@ int ContainerServiceImpl::version_response_to_grpc(const container_version_respo
         gresponse->set_root_path(response->root_path);
     }
 
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::info_request_from_grpc(const InfoRequest *grequest, host_info_request **request)
@@ -68,11 +68,11 @@ int ContainerServiceImpl::info_request_from_grpc(const InfoRequest *grequest, ho
     return 0;
 }
 
-int ContainerServiceImpl::info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+void ContainerServiceImpl::info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -92,9 +92,8 @@ int ContainerServiceImpl::info_response_to_grpc(const host_info_response *respon
 
     gresponse->set_images_num(response->images_num);
 
-    if (pack_os_info_to_grpc(response, gresponse)) {
-        return -1;
-    }
+
+    pack_os_info_to_grpc(response, gresponse);
 
     if (response->logging_driver != nullptr) {
         gresponse->set_logging_driver(response->logging_driver);
@@ -106,15 +105,11 @@ int ContainerServiceImpl::info_response_to_grpc(const host_info_response *respon
 
     gresponse->set_total_mem(response->total_mem);
 
-    if (pack_proxy_info_to_grpc(response, gresponse)) {
-        return -1;
-    }
+    pack_proxy_info_to_grpc(response, gresponse);
 
-    if (pack_driver_info_to_grpc(response, gresponse)) {
-        return -1;
-    }
+    pack_driver_info_to_grpc(response, gresponse);
 
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::create_request_from_grpc(const CreateRequest *grequest, container_create_request **request)
@@ -151,11 +146,11 @@ int ContainerServiceImpl::create_request_from_grpc(const CreateRequest *grequest
 }
 
 
-int ContainerServiceImpl::create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse)
+void ContainerServiceImpl::create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
     gresponse->set_cc(response->cc);
     if (response->errmsg != nullptr) {
@@ -164,7 +159,7 @@ int ContainerServiceImpl::create_response_to_grpc(const container_create_respons
     if (response->id != nullptr) {
         gresponse->set_id(response->id);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::start_request_from_grpc(const StartRequest *grequest, container_start_request **request)
@@ -234,11 +229,11 @@ int ContainerServiceImpl::top_request_from_grpc(const TopRequest *grequest, cont
     return 0;
 }
 
-int ContainerServiceImpl::top_response_to_grpc(const container_top_response *response, TopResponse *gresponse)
+void ContainerServiceImpl::top_response_to_grpc(const container_top_response *response, TopResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
     gresponse->set_cc(response->cc);
     if (response->errmsg != nullptr) {
@@ -253,7 +248,7 @@ int ContainerServiceImpl::top_response_to_grpc(const container_top_response *res
         gresponse->add_processes(response->processes[i]);
     }
 
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::stop_request_from_grpc(const StopRequest *grequest, container_stop_request **request)
@@ -328,11 +323,11 @@ int ContainerServiceImpl::delete_request_from_grpc(const DeleteRequest *grequest
     return 0;
 }
 
-int ContainerServiceImpl::delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse)
+void ContainerServiceImpl::delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
     gresponse->set_cc(response->cc);
     if (response->id != nullptr) {
@@ -341,7 +336,7 @@ int ContainerServiceImpl::delete_response_to_grpc(const container_delete_respons
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, container_exec_request **request)
@@ -418,11 +413,11 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
     return 0;
 }
 
-int ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse)
+void ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -430,7 +425,7 @@ int ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *r
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::inspect_request_from_grpc(const InspectContainerRequest *grequest,
@@ -454,12 +449,12 @@ int ContainerServiceImpl::inspect_request_from_grpc(const InspectContainerReques
     return 0;
 }
 
-int ContainerServiceImpl::inspect_response_to_grpc(const container_inspect_response *response,
-                                                   InspectContainerResponse *gresponse)
+void ContainerServiceImpl::inspect_response_to_grpc(const container_inspect_response *response,
+                                                    InspectContainerResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -469,7 +464,7 @@ int ContainerServiceImpl::inspect_response_to_grpc(const container_inspect_respo
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::list_request_from_grpc(const ListRequest *grequest, container_list_request **request)
@@ -534,11 +529,11 @@ cleanup:
     return -1;
 }
 
-int ContainerServiceImpl::list_response_to_grpc(const container_list_response *response, ListResponse *gresponse)
+void ContainerServiceImpl::list_response_to_grpc(const container_list_response *response, ListResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -579,7 +574,7 @@ int ContainerServiceImpl::list_response_to_grpc(const container_list_response *r
         }
         container->set_created(response->containers[i]->created);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::pause_request_from_grpc(const PauseRequest *grequest, container_pause_request **request)
@@ -637,12 +632,12 @@ int ContainerServiceImpl::container_rename_request_from_grpc(const RenameRequest
     return 0;
 }
 
-int ContainerServiceImpl::container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
-                                                            RenameResponse *gresponse)
+void ContainerServiceImpl::container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
+                                                             RenameResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -653,7 +648,7 @@ int ContainerServiceImpl::container_rename_response_to_grpc(const struct isulad_
         gresponse->set_id(response->id);
     }
 
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest *grequest,
@@ -682,12 +677,12 @@ int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest
     return 0;
 }
 
-int ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
-                                                            ResizeResponse *gresponse)
+void ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
+                                                             ResizeResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -698,7 +693,7 @@ int ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_
         gresponse->set_id(response->id);
     }
 
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request)
@@ -722,11 +717,11 @@ int ContainerServiceImpl::update_request_from_grpc(const UpdateRequest *grequest
     return 0;
 }
 
-int ContainerServiceImpl::update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse)
+void ContainerServiceImpl::update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -736,7 +731,7 @@ int ContainerServiceImpl::update_response_to_grpc(const container_update_respons
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest, container_stats_request **request)
@@ -766,11 +761,11 @@ int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest, 
     return 0;
 }
 
-int ContainerServiceImpl::stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse)
+void ContainerServiceImpl::stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     if (response->container_stats && response->container_stats_len) {
@@ -803,7 +798,7 @@ int ContainerServiceImpl::stats_response_to_grpc(const container_stats_response 
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request)
@@ -824,11 +819,11 @@ int ContainerServiceImpl::wait_request_from_grpc(const WaitRequest *grequest, co
     return 0;
 }
 
-int ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse)
+void ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -836,7 +831,7 @@ int ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *r
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 int ContainerServiceImpl::events_request_from_grpc(const EventsRequest *grequest,
@@ -1059,11 +1054,11 @@ int ContainerServiceImpl::export_request_from_grpc(const ExportRequest *grequest
     return 0;
 }
 
-int ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+void ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     if (response->kversion != nullptr) {
@@ -1096,14 +1091,14 @@ int ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *respons
         gresponse->set_huge_page_size(response->huge_page_size);
     }
 
-    return 0;
+    return;
 }
 
-int ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+void ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     if (response->http_proxy != nullptr) {
@@ -1118,14 +1113,14 @@ int ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *resp
         gresponse->set_no_proxy(response->no_proxy);
     }
 
-    return 0;
+    return;
 }
 
-int ContainerServiceImpl::pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+void ContainerServiceImpl::pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     if (response->driver_name != nullptr) {
@@ -1136,5 +1131,5 @@ int ContainerServiceImpl::pack_driver_info_to_grpc(const host_info_response *res
         gresponse->set_driver_status(response->driver_status);
     }
 
-    return 0;
+    return;
 }

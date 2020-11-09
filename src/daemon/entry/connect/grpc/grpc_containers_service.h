@@ -106,36 +106,36 @@ public:
 
 private:
     template <class T1, class T2>
-    int response_to_grpc(const T1 *response, T2 *gresponse)
+    void response_to_grpc(const T1 *response, T2 *gresponse)
     {
         if (response == nullptr) {
             gresponse->set_cc(ISULAD_ERR_MEMOUT);
-            return 0;
+            return;
         }
         gresponse->set_cc(response->cc);
         if (response->errmsg != nullptr) {
             gresponse->set_errmsg(response->errmsg);
         }
-        return 0;
+        return;
     }
 
     int version_request_from_grpc(const VersionRequest *grequest, container_version_request **request);
 
-    int version_response_to_grpc(const container_version_response *response, VersionResponse *gresponse);
+    void version_response_to_grpc(const container_version_response *response, VersionResponse *gresponse);
 
     int info_request_from_grpc(const InfoRequest *grequest, host_info_request **request);
 
-    int info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+    void info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
     int create_request_from_grpc(const CreateRequest *grequest, container_create_request **request);
 
-    int create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse);
+    void create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse);
 
     int start_request_from_grpc(const StartRequest *grequest, container_start_request **request);
 
     int top_request_from_grpc(const TopRequest *grequest, container_top_request **request);
 
-    int top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
+    void top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
 
     int stop_request_from_grpc(const StopRequest *grequest, container_stop_request **request);
 
@@ -145,19 +145,19 @@ private:
 
     int delete_request_from_grpc(const DeleteRequest *grequest, container_delete_request **request);
 
-    int delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse);
+    void delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse);
 
     int exec_request_from_grpc(const ExecRequest *grequest, container_exec_request **request);
 
-    int exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse);
+    void exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse);
 
     int inspect_request_from_grpc(const InspectContainerRequest *grequest, container_inspect_request **request);
 
-    int inspect_response_to_grpc(const container_inspect_response *response, InspectContainerResponse *gresponse);
+    void inspect_response_to_grpc(const container_inspect_response *response, InspectContainerResponse *gresponse);
 
     int list_request_from_grpc(const ListRequest *grequest, container_list_request **request);
 
-    int list_response_to_grpc(const container_list_response *response, ListResponse *gresponse);
+    void list_response_to_grpc(const container_list_response *response, ListResponse *gresponse);
 
     int pause_request_from_grpc(const PauseRequest *grequest, container_pause_request **request);
 
@@ -166,26 +166,26 @@ private:
     int container_rename_request_from_grpc(const RenameRequest *grequest,
                                            struct isulad_container_rename_request **request);
 
-    int container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
-                                          RenameResponse *gresponse);
+    void container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
+                                           RenameResponse *gresponse);
 
     int container_resize_request_from_grpc(const ResizeRequest *grequest,
                                            struct isulad_container_resize_request **request);
 
-    int container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
-                                          ResizeResponse *gresponse);
+    void container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
+                                           ResizeResponse *gresponse);
 
     int update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request);
 
-    int update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse);
+    void update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse);
 
     int stats_request_from_grpc(const StatsRequest *grequest, container_stats_request **request);
 
-    int stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse);
+    void stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse);
 
     int wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request);
 
-    int wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
+    void wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
 
     int events_request_from_grpc(const EventsRequest *grequest, struct isulad_events_request **request);
 
@@ -211,11 +211,11 @@ private:
 
     int export_request_from_grpc(const ExportRequest *grequest, container_export_request **request);
 
-    int pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+    void pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
-    int pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+    void pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
-    int pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+    void pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
 
     int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
 };

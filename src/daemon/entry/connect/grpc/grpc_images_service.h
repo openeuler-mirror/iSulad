@@ -60,21 +60,21 @@ public:
 
 private:
     template <class T1, class T2>
-    int response_to_grpc(const T1 *response, T2 *gresponse)
+    void response_to_grpc(const T1 *response, T2 *gresponse)
     {
         if (response == nullptr) {
             gresponse->set_cc(ISULAD_ERR_MEMOUT);
-            return 0;
+            return;
         }
         gresponse->set_cc(response->cc);
         if (response->errmsg != nullptr) {
             gresponse->set_errmsg(response->errmsg);
         }
-        return 0;
+        return;
     }
     int image_list_request_from_grpc(const ListImagesRequest *grequest, image_list_images_request **request);
 
-    int image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse);
+    void image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse);
 
     int image_remove_request_from_grpc(const DeleteImageRequest *grequest, image_delete_image_request **request);
 
@@ -82,13 +82,13 @@ private:
 
     int image_import_request_from_grpc(const ImportRequest *grequest, image_import_request **request);
 
-    int import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse);
+    void import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse);
 
     int image_load_request_from_grpc(const LoadImageRequest *grequest, image_load_image_request **request);
 
     int inspect_request_from_grpc(const InspectImageRequest *grequest, image_inspect_request **request);
 
-    int inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse);
+    void inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse);
 
     int image_login_request_from_grpc(const LoginRequest *grequest, image_login_request **request);
 

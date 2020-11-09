@@ -88,11 +88,11 @@ cleanup:
     return -1;
 }
 
-int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse)
+void ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -109,7 +109,8 @@ int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *r
         target = new (std::nothrow) Descriptor;
         if (target == nullptr) {
             ERROR("Out of memory");
-            return -1;
+            gresponse->set_cc(ISULAD_ERR_MEMOUT);
+            return;
         }
         if (response->images[i]->target->digest != nullptr) {
             target->set_digest(response->images[i]->target->digest);
@@ -117,8 +118,8 @@ int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *r
         Timestamp *timestamp = image->mutable_created_at();
         if (timestamp == nullptr) {
             delete target;
-            ERROR("Out of memory");
-            return -1;
+            gresponse->set_cc(ISULAD_ERR_MEMOUT);
+            return;
         }
         timestamp->set_seconds(response->images[i]->created_at->seconds);
         timestamp->set_nanos(response->images[i]->created_at->nanos);
@@ -129,7 +130,7 @@ int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *r
         image->set_allocated_target(target);
     }
 
-    return 0;
+    return;
 }
 
 int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *grequest,
@@ -232,11 +233,12 @@ int ImagesServiceImpl::inspect_request_from_grpc(const InspectImageRequest *greq
     return 0;
 }
 
-int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse)
+void ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *response,
+                                                 InspectImageResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -246,7 +248,7 @@ int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *re
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *request, ListImagesResponse *reply)
@@ -269,16 +271,12 @@ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *
     }
 
     image_list_images_response *image_res = nullptr;
-    int ret = cb->image.list(image_req, &image_res);
-    tret = image_list_response_to_grpc(image_res, reply);
+    (void)cb->image.list(image_req, &image_res);
+    image_list_response_to_grpc(image_res, reply);
 
     free_image_list_images_request(image_req);
     free_image_list_images_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
-        reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
+
     return Status::OK;
 }
 
@@ -302,16 +300,12 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
     }
 
     image_delete_image_response *image_res = nullptr;
-    int ret = cb->image.remove(image_req, &image_res);
-    tret = response_to_grpc(image_res, reply);
+    (void)cb->image.remove(image_req, &image_res);
+    response_to_grpc(image_res, reply);
 
     free_image_delete_image_request(image_req);
     free_image_delete_image_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
-        reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
+
     return Status::OK;
 }
 
@@ -335,24 +329,20 @@ Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *req
     }
 
     image_tag_image_response *image_res = nullptr;
-    int ret = cb->image.tag(image_req, &image_res);
-    tret = response_to_grpc(image_res, reply);
+    (void)cb->image.tag(image_req, &image_res);
+    response_to_grpc(image_res, reply);
 
     free_image_tag_image_request(image_req);
     free_image_tag_image_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
-        reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
+
     return Status::OK;
 }
 
-int ImagesServiceImpl::import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse)
+void ImagesServiceImpl::import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse)
 {
     if (response == nullptr) {
         gresponse->set_cc(ISULAD_ERR_MEMOUT);
-        return 0;
+        return;
     }
 
     gresponse->set_cc(response->cc);
@@ -362,7 +352,7 @@ int ImagesServiceImpl::import_response_to_grpc(const image_import_response *resp
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    return 0;
+    return;
 }
 
 Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply)
@@ -385,16 +375,11 @@ Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *re
     }
 
     image_import_response *image_res = nullptr;
-    int ret = cb->image.import(image_req, &image_res);
-    tret = import_response_to_grpc(image_res, reply);
+    (void)cb->image.import(image_req, &image_res);
+    import_response_to_grpc(image_res, reply);
 
     free_image_import_request(image_req);
     free_image_import_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
-        reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
 
     return Status::OK;
 }
@@ -419,16 +404,11 @@ Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *r
     }
 
     image_load_image_response *image_res = nullptr;
-    int ret = cb->image.load(image_req, &image_res);
-    tret = response_to_grpc(image_res, reply);
+    (void)cb->image.load(image_req, &image_res);
+    response_to_grpc(image_res, reply);
 
     free_image_load_image_request(image_req);
     free_image_load_image_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
-        reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
 
     return Status::OK;
 }
@@ -436,7 +416,7 @@ Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *r
 Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequest *request,
                                   InspectImageResponse *reply)
 {
-    int ret, tret;
+    int tret;
     service_executor_t *cb = nullptr;
     image_inspect_request *image_req = nullptr;
     image_inspect_response *image_res = nullptr;
@@ -458,16 +438,12 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
         return Status::OK;
     }
 
-    ret = cb->image.inspect(image_req, &image_res);
-    tret = inspect_response_to_grpc(image_res, reply);
+    (void)cb->image.inspect(image_req, &image_res);
+    inspect_response_to_grpc(image_res, reply);
 
     free_image_inspect_request(image_req);
     free_image_inspect_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
-        reply->set_cc(ISULAD_ERR_INTERNAL);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
+
     return Status::OK;
 }
 
@@ -535,16 +511,11 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
     }
 
     image_login_response *image_res = nullptr;
-    int ret = cb->image.login(image_req, &image_res);
-    tret = response_to_grpc(image_res, reply);
+    (void)cb->image.login(image_req, &image_res);
+    response_to_grpc(image_res, reply);
 
     free_image_login_request(image_req);
     free_image_login_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
-        reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
 
     return Status::OK;
 }
@@ -569,16 +540,11 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
     }
 
     image_logout_response *image_res = nullptr;
-    int ret = cb->image.logout(image_req, &image_res);
-    tret = response_to_grpc(image_res, reply);
+    (void)cb->image.logout(image_req, &image_res);
+    response_to_grpc(image_res, reply);
 
     free_image_logout_request(image_req);
     free_image_logout_response(image_res);
-    if (tret != 0) {
-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
-        reply->set_cc(ISULAD_ERR_INPUT);
-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
-    }
 
     return Status::OK;
 }
