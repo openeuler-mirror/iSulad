@@ -965,7 +965,6 @@ out:
 static int write_default_resolve(const char *file_path)
 {
     const char *default_ipv4_dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";
-    ;
 
     return util_write_file(file_path, default_ipv4_dns, strlen(default_ipv4_dns), NETWORK_MOUNT_FILE_MODE);
 }
