@@ -146,6 +146,9 @@ private:
     void RLockNetworkMap(Errors &error);
     void WLockNetworkMap(Errors &error);
     void UnlockNetworkMap(Errors &error);
+
+    void UpdateMutlNetworks(std::vector<std::unique_ptr<CNINetwork>> &multNets, std::vector<std::string> &binDirs,
+                            Errors &err);
     void SetDefaultNetwork(std::unique_ptr<CNINetwork> network, std::vector<std::string> &binDirs, Errors &err);
     void SetPodCidr(const std::string &podCidr);
     static auto GetCNIConfFiles(const std::string &pluginDir, std::vector<std::string> &vect_files, Errors &err) -> int;
@@ -155,10 +158,19 @@ private:
     void ResetCNINetwork(std::map<std::string, std::unique_ptr<CNINetwork>> &newNets, Errors &err);
     void UpdateDefaultNetwork();
 
+    bool SetupMultNetworks(const std::string &ns, const std::string &defaultInterface, const std::string &name,
+                           const std::string &netnsPath, const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
+                           const std::map<std::string, std::string> &options, Errors &err);
+
+    bool TearDownMultNetworks(const std::string &ns, const std::string &defaultInterface, const std::string &name,
+                              const std::string &netnsPath, const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
+                              Errors &err);
+
     NoopNetworkPlugin m_noop;
     std::unique_ptr<CNINetwork> m_loNetwork { nullptr };
-
     std::unique_ptr<CNINetwork> m_defaultNetwork { nullptr };
+    std::map<std::string, std::unique_ptr<CNINetwork>> m_mutlNetworks;
+
     CRIRuntimeServiceImpl *m_criImpl { nullptr };
     std::string m_nsenterPath;
     std::string m_confDir;

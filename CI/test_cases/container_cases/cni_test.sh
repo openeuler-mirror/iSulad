@@ -53,7 +53,7 @@ function do_test_help()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    sid=`crictl runp ${data_path}/sandbox-config.json`
+    sid=`crictl runp ${data_path}/$1`
     if [ $? -ne 0 ]; then
         msg_err "Failed to run sandbox"
         TC_RET_T=$(($TC_RET_T+1))
@@ -66,7 +66,7 @@ function do_test_help()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    cid=`crictl create $sid ${data_path}/container-config.json ${data_path}/sandbox-config.json`
+    cid=`crictl create $sid ${data_path}/container-config.json ${data_path}/$1`
     if [ $? -ne 0 ];then
         msg_err "create container failed"
         TC_RET_T=$(($TC_RET_T+1))
@@ -96,11 +96,32 @@ function do_test_help()
         nsenter -t $con_pid -n ifconfig eth0
         TC_RET_T=$(($TC_RET_T+1))
     fi
-    nsenter -t $pod_pid -n ifconfig eth0 | grep "$1"
+    nsenter -t $pod_pid -n ifconfig eth0 | grep "$2"
     if [ $? -ne 0 ];then
         msg_err "expect ip: $1, get: "
         nsenter -t $pod_pid -n ifconfig eth0
         TC_RET_T=$(($TC_RET_T+1))
+    fi
+    crictl inspectp $sid | grep "$2"
+    if [ $? -ne 0 ];then
+        msg_err "inspectp: expect ip: $1, get: "
+        crictl inspectp $sid
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    if [ "x$3" != "x" ];then
+        nsenter -t $pod_pid -n ifconfig eth1 | grep "$3"
+        if [ $? -ne 0 ];then
+            msg_err "expect ip: $2, get: "
+            nsenter -t $pod_pid -n ifconfig eth1
+            TC_RET_T=$(($TC_RET_T+1))
+        fi
+        crictl inspectp $sid | grep "$3"
+        if [ $? -ne 0 ];then
+            msg_err "inspectp expect ip: $2, get: "
+            crictl inspectp $sid
+            TC_RET_T=$(($TC_RET_T+1))
+        fi
     fi
 
     crictl stop $cid
@@ -132,7 +153,7 @@ function do_test_help()
 
 function default_cni_config()
 {
-    do_test_help "10\.1\."
+    do_test_help "sandbox-config.json" "10\.1\."
 }
 
 function new_cni_config()
@@ -151,7 +172,7 @@ function new_cni_config()
         fi
     done
     tail $ISUALD_LOG
-    do_test_help "10\.2\."
+    do_test_help "mutlnet_pod.json" "10\.2\." "10\.1\."
 }
 
 function check_annotation()

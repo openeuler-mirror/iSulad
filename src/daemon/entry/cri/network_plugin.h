@@ -82,13 +82,13 @@ public:
     void SetKind(const std::string &kind);
     const std::string &GetAPIVersion() const;
     void SetAPIVersion(const std::string &version);
-    const std::string &GetIP() const;
-    void SetIP(const std::string &ip);
+    const std::vector<std::string> &GetIPs() const;
+    void SetIPs(std::vector<std::string> &ips);
 
 private:
     std::string m_kind;
     std::string m_apiVersion;
-    std::string m_ip;
+    std::vector<std::string> m_ips;
 };
 
 class NetworkPlugin {
@@ -227,8 +227,8 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
 void ProbeNetworkPlugins(const std::string &pluginDir, const std::string &binDir,
                          std::vector<std::shared_ptr<NetworkPlugin>> *plugins);
 
-std::string GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
-                     Errors &error);
+void GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, const std::string &interfaceName,
+              std::vector<std::string> &getIPs, Errors &error);
 
 const std::string &GetInterfaceName();
 } // namespace Network

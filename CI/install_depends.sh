@@ -38,10 +38,13 @@ mkdir -p ${builddir}/systemd/system
 function make_crictl()
 {
     cd ~
-    git clone -b release-1.14 https://gitee.com/duguhaotian/cri-tools.git
+    git clone https://gitee.com/duguhaotian/cri-tools.git
+    go version
     cd cri-tools
+    git checkout v1.18.0
     make -j $nproc
-    cp ./_output/bin/crictl ${builddir}/bin/
+    echo "make cri-tools: $?"
+    cp ./_output/crictl ${builddir}/bin/
 }
 
 #install cni plugins

@@ -389,7 +389,7 @@ auto sha256(const char *val) -> std::string
     return outputBuffer;
 }
 
-auto GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::string> &annotations, size_t *len,
+auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, size_t *len,
                                 Errors &error) -> cri_pod_network_element **
 {
     auto iter = annotations.find(CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY);
@@ -399,7 +399,7 @@ auto GetNetworkPlaneFromPodAnno(const google::protobuf::Map<std::string, std::st
         parser_error err = nullptr;
         result = cri_pod_network_parse_data(iter->second.c_str(), nullptr, &err, len);
         if (result == nullptr) {
-            error.Errorf("parse pod network json failed: %s", err);
+            error.Errorf("parse pod network json: %s failed: %s", iter->second.c_str(), err);
         }
         free(err);
     }
