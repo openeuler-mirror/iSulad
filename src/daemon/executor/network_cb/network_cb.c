@@ -81,7 +81,7 @@ static int check_parameter(const network_create_request *request)
         return EINVALIDARGS;
     }
 
-    if (request->driver != NULL && strcmp(request->driver, default_driver) != 0) {
+    if (request->driver != NULL && strcmp(request->driver, g_default_driver) != 0) {
         isulad_set_error_message("Cannot support driver:%s", request->driver);
         return EINVALIDARGS;
     }
@@ -153,7 +153,7 @@ static int network_create_cb(const network_create_request *request, network_crea
 
     network_conflist_lock(EXCLUSIVE);
 
-    if (request->driver == NULL || strcmp(request->driver, default_driver) == 0) {
+    if (request->driver == NULL || strcmp(request->driver, g_default_driver) == 0) {
         ret = network_config_bridge_create(request, response);
     }
     // TODO: support macvlan and other network drivers
