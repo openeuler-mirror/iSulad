@@ -19,7 +19,7 @@
 #include "isula_libutils/network_create_request.h"
 #include "isula_libutils/network_create_response.h"
 
-extern const char *default_driver;
+extern const char *g_default_driver;
 
 int network_config_bridge_create(const network_create_request *request, network_create_response **response);
 

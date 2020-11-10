@@ -29,13 +29,25 @@
 #include "libcni_types.h"
 #include "libcni_utils.h"
 
-// TODO: specify default subnet in daemon.json
-const char *default_subnet = "192.201.1.0/24";
-const char *network_config_exts[] = { ".conf", ".conflist", ".json" };
-const char *file_prefix = "isulacni-";
-const char *bridge_name_prefix = "isula-br";
-const char *default_driver = "bridge";
-const char *bridge_plugins[] = { "bridge", "portmap", "firewall", NULL };
+const char *g_network_config_exts[] = { ".conf", ".conflist", ".json" };
+const char *g_file_prefix = "isulacni-";
+const char *g_bridge_name_prefix = "isula-br";
+const char *g_default_driver = "bridge";
+const char *g_bridge_plugins[] = { "bridge", "portmap", "firewall", NULL };
+
+struct subnet_scope {
+    char *begin;
+    char *end;
+};
+/* Reserved IPv4 address ranges for private networks */
+const struct subnet_scope g_private_networks[] = {
+    /* Class C network 192.168.0.0/16 */
+    {"192.168.0.0/24", "192.168.255.0/24"},
+    /* Class B network 172.16.0.0/12 */
+    {"172.16.0.0/24", "172.31.255.0/24"},
+    /* Class A network 10.0.0.0/8 */
+    {"10.0.0.0/24", "10.255.255.0/24"},
+};
 
 static char *get_cni_conf_dir()
 {
@@ -149,7 +161,7 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
     cni_net_conf_list **tmp_conflist_arr = NULL;
     cni_net_conf_list *li = NULL;
 
-    ret = conf_files(cni_conf_dir, network_config_exts, sizeof(network_config_exts) / sizeof(char *), &files);
+    ret = conf_files(cni_conf_dir, g_network_config_exts, sizeof(g_network_config_exts) / sizeof(char *), &files);
     if (ret != 0) {
         ERROR("Failed to get conf files");
         ret = -1;
@@ -228,7 +240,7 @@ static int get_config_bridge_name(const cni_net_conf_list *list, char ***arr)
     }
     for (i = 0; i < list->plugins_len; i++) {
         plugin = list->plugins[i];
-        if (plugin == NULL || strcmp(plugin->type, default_driver) != 0 || plugin->bridge == NULL) {
+        if (plugin == NULL || strcmp(plugin->type, g_default_driver) != 0 || plugin->bridge == NULL) {
             continue;
         }
         nret = util_array_append(arr, plugin->bridge);
@@ -557,7 +569,7 @@ static char *find_bridge_name(const cni_net_conf_list **conflist_arr, const size
         if (num == NULL) {
             goto out;
         }
-        name = util_string_append(num, bridge_name_prefix);
+        name = util_string_append(num, g_bridge_name_prefix);
         if (name == NULL) {
             goto out;
         }
@@ -584,7 +596,7 @@ out:
     return name;
 }
 
-static char *find_next_subnet(char *subnet)
+static char *find_private_network(char *subnet)
 {
     int nret = 0;
     int i = 0;
@@ -592,9 +604,16 @@ static char *find_next_subnet(char *subnet)
     uint32_t mask = 0;
     struct ipnet *ipnet = NULL;
     char *nx = NULL;
+    size_t len = sizeof(g_private_networks) / sizeof(g_private_networks[0]);
 
     if (subnet == NULL) {
-        return NULL;
+        return util_strdup_s(g_private_networks[0].begin);
+    }
+
+    for (i = 0; i < len - 1; i++) {
+        if (strcmp(subnet, g_private_networks[i].end) == 0) {
+            return util_strdup_s(g_private_networks[i + 1].begin);
+        }
     }
 
     nret = parse_cidr(subnet, &ipnet);
@@ -625,11 +644,12 @@ static char *find_next_subnet(char *subnet)
 static char *find_subnet(const cni_net_conf_list **conflist_arr, const size_t conflist_arr_len)
 {
     int nret = 0;
-    size_t i;
     char *subnet = NULL;
-    char *nx_subnet = NULL;
     char **config_subnet = NULL;
     char **hostIP = NULL;
+
+    size_t len = sizeof(g_private_networks) / sizeof(g_private_networks[0]);
+    const char *end = g_private_networks[len - 1].end;
 
     nret = get_cni_config(conflist_arr, conflist_arr_len, get_config_subnet, &config_subnet);
     if (nret != 0) {
@@ -641,28 +661,30 @@ static char *find_subnet(const cni_net_conf_list **conflist_arr, const size_t co
         goto out;
     }
 
-    subnet = util_strdup_s(default_subnet);
-    for (i = 0; i < MAX_SUBNET_INCREASE; i++) {
-        nret = check_subnet_available(subnet, (const char **)config_subnet, (const char **)hostIP);
-        if (nret == 0) {
-            goto out;
-        }
-        if (nret != 1) {
-            free(subnet);
-            subnet = NULL;
-            goto out;
-        }
-
-        nx_subnet = find_next_subnet(subnet);
+    do {
+        char *nx_subnet = find_private_network(subnet);
         if (nx_subnet == NULL) {
             free(subnet);
             subnet = NULL;
             goto out;
+        } else {
+            free(subnet);
+            subnet = nx_subnet;
         }
+
+        nret = check_subnet_available(subnet, (const char **)config_subnet, (const char **)hostIP);
+        if (nret == 0) {
+            goto out;
+        }
+        if (nret == 1) {
+            continue;
+        }
+        // error
         free(subnet);
-        subnet = nx_subnet;
-        nx_subnet = NULL;
-    }
+        subnet = NULL;
+        goto out;
+    } while (strcmp(subnet, end) != 0);
+
     free(subnet);
     subnet = NULL;
     isulad_set_error_message("Cannot find avaliable subnet by default");
@@ -775,7 +797,7 @@ static cni_net_conf *conf_bridge_plugin(const network_create_request *request, c
     }
 
     if (request->driver == NULL) {
-        plugin->type = util_strdup_s(default_driver);
+        plugin->type = util_strdup_s(g_default_driver);
     } else {
         plugin->type = util_strdup_s(request->driver);
     }
@@ -874,7 +896,7 @@ static cni_net_conf_list *conf_bridge_conflist(const network_create_request *req
         return NULL;
     }
 
-    len = util_array_len(bridge_plugins);
+    len = util_array_len(g_bridge_plugins);
     list->plugins = (cni_net_conf **)util_smart_calloc_s(sizeof(cni_net_conf *), len);
     if (list->plugins == NULL) {
         ERROR("Out of memory");
@@ -937,7 +959,7 @@ static int do_create_conflist_file(const char *cni_conf_dir, cni_net_conf_list *
         }
     }
 
-    nret = snprintf(conflist_file, sizeof(conflist_file), "%s/%s%s.conflist", cni_conf_dir, file_prefix, list->name);
+    nret = snprintf(conflist_file, sizeof(conflist_file), "%s/%s%s.conflist", cni_conf_dir, g_file_prefix, list->name);
     if ((size_t)nret >= sizeof(conflist_file) || nret < 0) {
         ERROR("Failed to snprintf conflist_file");
         return -1;
@@ -985,15 +1007,15 @@ static int cni_bin_detect(const char *cni_bin_dir)
         return 0;
     }
 
-    len = util_array_len(bridge_plugins);
+    len = util_array_len(g_bridge_plugins);
     for (i = 0; i < len; i++) {
-        plugin_file = util_path_join(cni_bin_dir, bridge_plugins[i]);
+        plugin_file = util_path_join(cni_bin_dir, g_bridge_plugins[i]);
         if (plugin_file == NULL) {
             ret = -1;
             goto out;
         }
         if (!util_file_exists(plugin_file)) {
-            ret = util_array_append(&missing_file, bridge_plugins[i]);
+            ret = util_array_append(&missing_file, g_bridge_plugins[i]);
             if (ret != 0) {
                 free(plugin_file);
                 ERROR("Out of memory");
