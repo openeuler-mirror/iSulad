@@ -1403,6 +1403,39 @@ out:
     return result;
 }
 
+static int do_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode)
+{
+    int ret = 0;
+    int dst_fd = -1;
+    ssize_t len = 0;
+
+    dst_fd = util_open(fname, O_WRONLY | O_CREAT | O_TRUNC, mode);
+    if (dst_fd < 0) {
+        ERROR("Creat file: %s, failed: %s", fname, strerror(errno));
+        ret = -1;
+        goto free_out;
+    }
+
+    len = util_write_nointr(dst_fd, content, content_len);
+    if (len < 0 || ((size_t)len) != content_len) {
+        ret = -1;
+        ERROR("Write file failed: %s", strerror(errno));
+        goto free_out;
+    }
+
+    if (fdatasync(dst_fd) != 0) {
+        ret = -1;
+        SYSERROR("Failed to sync data of file:%s", fname);
+        goto free_out;
+    }
+
+free_out:
+    if (dst_fd >= 0) {
+        close(dst_fd);
+    }
+    return ret;
+}
+
 int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode)
 {
     int ret = 0;
@@ -1427,7 +1460,7 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
         goto free_out;
     }
 
-    ret = util_write_file(tmp_file, content, content_len, mode);
+    ret = do_atomic_write_file(tmp_file, content, content_len, mode);
     if (ret != 0) {
         ERROR("Failed to write content to tmp file for %s", tmp_file);
         ret = -1;
