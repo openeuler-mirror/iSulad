@@ -25,6 +25,8 @@
 #include "libcni_types.h"
 #include "libcni_utils.h"
 
+const char *g_accept_network_filter[] = { "name", "plugin", NULL };
+
 pthread_rwlock_t network_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 enum lock_type { SHARED = 0, EXCLUSIVE };
 
@@ -216,10 +218,105 @@ out:
     return ret;
 }
 
+static int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value,
+                          struct filters_args *filters)
+{
+    size_t i;
+
+    for (i = 0; i < filter_value->len; i++) {
+        if (strcmp(filter_key, "name") == 0) {
+            if (!network_is_valid_name(filter_value->keys[i])) {
+                ERROR("Unrecognised filter value for name: %s", filter_value->keys[i]);
+                isulad_set_error_message("Unrecognised filter value for name: %s", filter_value->keys[i]);
+                return -1;
+            }
+        }
+        if (!filters_args_add(filters, filter_key, filter_value->keys[i])) {
+            ERROR("Add filter args failed");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int fold_filter(const network_list_request *request, struct filters_args **filters)
+{
+    size_t i;
+    struct filters_args *tmp_filters = NULL;
+
+    if (request->filters == NULL) {
+        return 0;
+    }
+    tmp_filters = filters_args_new();
+    if (tmp_filters == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < request->filters->len; i++) {
+        if (!filters_args_valid_key(g_accept_network_filter, sizeof(g_accept_network_filter) / sizeof(char *),
+                                    request->filters->keys[i])) {
+            ERROR("Invalid filter '%s'", request->filters->keys[i]);
+            isulad_set_error_message("Invalid filter '%s'", request->filters->keys[i]);
+            goto error_out;
+        }
+        if (do_add_filters(request->filters->keys[i], request->filters->values[i], tmp_filters) != 0) {
+            goto error_out;
+        }
+    }
+    *filters = tmp_filters;
+    return 0;
+
+error_out:
+    filters_args_free(tmp_filters);
+    return -1;
+}
+
 static int network_list_cb(const network_list_request *request, network_list_response **response)
 {
-    // TODO
-    return 0;
+    int ret = 0;
+    uint32_t cc = ISULAD_SUCCESS;
+    struct filters_args *filters = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = util_common_calloc_s(sizeof(network_list_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return ECOMMON;
+    }
+
+    ret = fold_filter(request, &filters);
+    if (ret != 0) {
+        ERROR("Failed to fold filters");
+        cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+
+    network_conflist_lock(SHARED);
+
+    ret = network_config_list(filters, &(*response)->networks, &(*response)->networks_len);
+    if (ret != 0) {
+        cc = ISULAD_ERR_EXEC;
+        ERROR("Failed to list network");
+    }
+
+    network_conflist_unlock();
+
+out:
+    (*response)->cc = cc;
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+        DAEMON_CLEAR_ERRMSG();
+    }
+    filters_args_free(filters);
+
+    return ret;
 }
 
 static int network_remove_cb(const network_remove_request *request, network_remove_response **response)
