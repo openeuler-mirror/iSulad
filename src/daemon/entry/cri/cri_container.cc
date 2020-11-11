@@ -788,6 +788,12 @@ void CRIRuntimeServiceImpl::ListContainersFromGRPC(const runtime::v1alpha2::Cont
         error.SetError("Out of memory");
         return;
     }
+    // Add filter to get only non-sandbox containers
+    if (CRIHelpers::FiltersAddLabel((*request)->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
+                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
+        error.SetError("Failed to add filter");
+        return;
+    }
 
     if (filter != nullptr) {
         if (!filter->id().empty()) {
@@ -811,12 +817,6 @@ void CRIRuntimeServiceImpl::ListContainersFromGRPC(const runtime::v1alpha2::Cont
             }
         }
 
-        // Add some label
-        if (CRIHelpers::FiltersAddLabel((*request)->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
-                                        CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
-            error.SetError("Failed to add filter");
-            return;
-        }
         for (auto &iter : filter->label_selector()) {
             if (CRIHelpers::FiltersAddLabel((*request)->filters, iter.first, iter.second) != 0) {
                 error.SetError("Failed to add filter");
