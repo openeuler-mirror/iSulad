@@ -69,7 +69,6 @@ static std::string ParseIPFromLine(const char *line, const char *stdout_str)
 {
     char *cIP { nullptr };
     char **fields { nullptr };
-    char *strErr { nullptr };
     struct ipnet *ipnet_val {
         nullptr
     };
@@ -85,8 +84,8 @@ static std::string ParseIPFromLine(const char *line, const char *stdout_str)
         goto out;
     }
 
-    if (parse_cidr(fields[3], &ipnet_val, &strErr) != 0) {
-        ERROR("CNI failed to parse ip from output %s due to %s", stdout_str, strErr);
+    if (parse_cidr(fields[3], &ipnet_val) != 0) {
+        ERROR("CNI failed to parse ip from output %s", stdout_str);
         goto out;
     }
     cIP = ip_to_string(ipnet_val->ip, ipnet_val->ip_len);
@@ -98,7 +97,6 @@ static std::string ParseIPFromLine(const char *line, const char *stdout_str)
     ret = cIP;
 out:
     free(cIP);
-    free(strErr);
     free_ipnet_type(ipnet_val);
     util_free_array(fields);
     return ret;

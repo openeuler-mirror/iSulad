@@ -66,7 +66,12 @@ function do_test_help()
     fi
 
     cnt=`ls /var/lib/cni/results/* | wc -l`
-    if [ $cnt -ne 2 ];then
+    target_cnt=2
+    if [ "x$3" != "x" ];then
+        target_cnt=3
+    fi
+
+    if [ $cnt -ne $target_cnt ];then
         msg_err "result cached lose"
         TC_RET_T=$(($TC_RET_T+1))
     fi
