@@ -27,7 +27,7 @@ int NetworkServiceImpl::create_request_from_grpc(const NetworkCreateRequest *gre
 {
     network_create_request *tmpreq = nullptr;
 
-    tmpreq = (network_create_request *)util_common_calloc_s(sizeof(network_create_request));
+    tmpreq = static_cast<network_create_request *>(util_common_calloc_s(sizeof(network_create_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -104,8 +104,8 @@ Status NetworkServiceImpl::Create(ServerContext *context, const NetworkCreateReq
 int NetworkServiceImpl::inspect_request_from_grpc(const NetworkInspectRequest *grequest,
                                                   network_inspect_request **request)
 {
-    network_inspect_request *tmpreq = (network_inspect_request *)util_common_calloc_s(
-                                          sizeof(network_inspect_request));
+    network_inspect_request *tmpreq = static_cast<network_inspect_request *>(util_common_calloc_s(
+                                                                                 sizeof(network_inspect_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -168,6 +168,129 @@ Status NetworkServiceImpl::Inspect(ServerContext *context, const NetworkInspectR
 
     free_network_inspect_request(network_req);
     free_network_inspect_response(network_res);
+
+    return Status::OK;
+}
+
+int NetworkServiceImpl::list_request_from_grpc(const NetworkListRequest *grequest, network_list_request **request)
+{
+    size_t len = 0;
+    network_list_request *tmpreq = static_cast<network_list_request *>(util_common_calloc_s(
+                                                                           sizeof(network_list_request)));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    len = (size_t)grequest->filters_size();
+    if (len == 0) {
+        *request = tmpreq;
+        return 0;
+    }
+
+    tmpreq->filters = static_cast<defs_filters *>(util_common_calloc_s(sizeof(defs_filters)));
+    if (tmpreq->filters == nullptr) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+
+    tmpreq->filters->keys = static_cast<char **>(util_smart_calloc_s(sizeof(char *), len));
+    if (tmpreq->filters->keys == nullptr) {
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+    tmpreq->filters->values = static_cast<json_map_string_bool **>(util_smart_calloc_s(sizeof(json_map_string_bool *),
+                                                                                       len));
+    if (tmpreq->filters->values == nullptr) {
+        free(tmpreq->filters->keys);
+        tmpreq->filters->keys = nullptr;
+        ERROR("Out of memory");
+        goto cleanup;
+    }
+
+    for (auto &iter : grequest->filters()) {
+        tmpreq->filters->values[tmpreq->filters->len] = static_cast<json_map_string_bool *>
+                                                        (util_common_calloc_s(sizeof(json_map_string_bool)));
+        if (tmpreq->filters->values[tmpreq->filters->len] == nullptr) {
+            ERROR("Out of memory");
+            goto cleanup;
+        }
+        if (append_json_map_string_bool(tmpreq->filters->values[tmpreq->filters->len],
+                                        iter.second.empty() ? "" : iter.second.c_str(), true)) {
+            free(tmpreq->filters->values[tmpreq->filters->len]);
+            tmpreq->filters->values[tmpreq->filters->len] = nullptr;
+            ERROR("Append failed");
+            goto cleanup;
+        }
+        tmpreq->filters->keys[tmpreq->filters->len] = util_strdup_s(iter.first.empty() ? "" : iter.first.c_str());
+        tmpreq->filters->len++;
+    }
+
+    *request = tmpreq;
+    return 0;
+
+cleanup:
+    free_network_list_request(tmpreq);
+    return -1;
+}
+
+void NetworkServiceImpl::list_response_to_grpc(const network_list_response *response, NetworkListResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_EXEC);
+        return;
+    }
+
+    gresponse->set_cc(response->cc);
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+    for (size_t i = 0; i < response->networks_len; i++) {
+        NetworkInfo *network = gresponse->add_networks();
+        if (response->networks[i]->name != nullptr) {
+            network->set_name(response->networks[i]->name);
+        }
+        if (response->networks[i]->version != nullptr) {
+            network->set_version(response->networks[i]->version);
+        }
+        if (response->networks[i]->plugins == nullptr) {
+            continue;
+        }
+        for (size_t j = 0; j < response->networks[i]->plugins_len; j++) {
+            network->add_plugins(response->networks[i]->plugins[j]);
+        }
+    }
+    return;
+}
+
+Status NetworkServiceImpl::List(ServerContext *context, const NetworkListRequest *request, NetworkListResponse *reply)
+{
+    int tret;
+    service_executor_t *cb = nullptr;
+    network_list_request *network_req = nullptr;
+    network_list_response *network_res = nullptr;
+
+    auto status = GrpcServerTlsAuth::auth(context, "network_list");
+    if (!status.ok()) {
+        return status;
+    }
+    cb = get_service_executor();
+    if (cb == nullptr || cb->network.list == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    tret = list_request_from_grpc(request, &network_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(ISULAD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    (void)cb->network.list(network_req, &network_res);
+    list_response_to_grpc(network_res, reply);
+
+    free_network_list_request(network_req);
+    free_network_list_response(network_res);
 
     return Status::OK;
 }

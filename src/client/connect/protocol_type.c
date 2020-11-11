@@ -1465,11 +1465,11 @@ void isula_network_list_request_free(struct isula_network_list_request *request)
 }
 
 /* isula network info free */
-static void isula_network_info_free(struct isula_network_info *info)
+void isula_network_info_free(struct isula_network_info *info)
 {
 
     if (info == NULL) {
-        return ;
+        return;
     }
 
     free(info->name);
@@ -1490,7 +1490,7 @@ void isula_network_list_response_free(struct isula_network_list_response *respon
     }
 
     if (response->network_info != NULL) {
-        size_t i = 0;
+        size_t i;
 
         for (i = 0; i < response->network_num; i++) {
             isula_network_info_free(response->network_info[i]);

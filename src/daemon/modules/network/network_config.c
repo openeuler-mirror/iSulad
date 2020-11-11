@@ -155,10 +155,10 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
 {
     int ret = 0;
     size_t i, old_size, new_size;
-    size_t tmp_conflist_arr_len = 0;
+    size_t tmp_len = 0;
     size_t files_len = 0;
     char **files = NULL;
-    cni_net_conf_list **tmp_conflist_arr = NULL;
+    cni_net_conf_list **tmp_arr = NULL;
     cni_net_conf_list *li = NULL;
 
     ret = conf_files(cni_conf_dir, g_network_config_exts, sizeof(g_network_config_exts) / sizeof(char *), &files);
@@ -173,8 +173,8 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
         goto out;
     }
 
-    tmp_conflist_arr = util_smart_calloc_s(sizeof(cni_net_conf_list *), files_len);
-    if (tmp_conflist_arr == NULL) {
+    tmp_arr = util_smart_calloc_s(sizeof(cni_net_conf_list *), files_len);
+    if (tmp_arr == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
@@ -188,32 +188,32 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
         if (li == NULL) {
             continue;
         }
-        tmp_conflist_arr[tmp_conflist_arr_len] = li;
-        tmp_conflist_arr_len++;
+        tmp_arr[tmp_len] = li;
+        tmp_len++;
         li = NULL;
     }
 
-    if (files_len != tmp_conflist_arr_len) {
-        if (tmp_conflist_arr_len == 0) {
+    if (files_len != tmp_len) {
+        if (tmp_len == 0) {
             goto out;
         }
 
         old_size = files_len * sizeof(cni_net_conf_list *);
-        new_size = tmp_conflist_arr_len * sizeof(cni_net_conf_list *);
-        ret = util_mem_realloc((void **)&tmp_conflist_arr, new_size, tmp_conflist_arr, old_size);
+        new_size = tmp_len * sizeof(cni_net_conf_list *);
+        ret = util_mem_realloc((void **)&tmp_arr, new_size, tmp_arr, old_size);
         if (ret != 0) {
             ERROR("Out of memory");
             goto out;
         }
     }
-    *conflist_arr = tmp_conflist_arr;
-    tmp_conflist_arr = NULL;
-    *conflist_arr_len = tmp_conflist_arr_len;
-    tmp_conflist_arr_len = 0;
+    *conflist_arr = tmp_arr;
+    tmp_arr = NULL;
+    *conflist_arr_len = tmp_len;
+    tmp_len = 0;
 
 out:
     util_free_array_by_len(files, files_len);
-    free_cni_list_arr(tmp_conflist_arr, tmp_conflist_arr_len);
+    free_cni_list_arr(tmp_arr, tmp_len);
 
     return ret;
 }
@@ -951,6 +951,8 @@ static int do_create_conflist_file(const char *cni_conf_dir, cni_net_conf_list *
     char *conflist_json = NULL;
     parser_error err = NULL;
 
+    EVENT("Network Event: {Object: %s, Type: Creating}", list->name);
+
     if (!util_dir_exists(cni_conf_dir)) {
         ret = util_mkdir_p(cni_conf_dir, CONFIG_DIRECTORY_MODE);
         if (ret != 0) {
@@ -985,7 +987,7 @@ static int do_create_conflist_file(const char *cni_conf_dir, cni_net_conf_list *
         goto out;
     }
 
-    EVENT("Network Event: {Object: %s, Type: create}", list->name);
+    EVENT("Network Event: {Object: %s, Type: Created}", list->name);
     *path = util_strdup_s(conflist_file);
 
 out:
@@ -1152,7 +1154,7 @@ int network_config_inspect(const char *name, char **network_json)
         goto out;
     }
 
-    EVENT("Network Event: {Object: %s, Type: inspect}", name);
+    EVENT("Network Event: {Object: %s, Type: Inspecting}", name);
 
     for (i = 0; i < arr_len; i++) {
         if (strcmp(conflist_arr[i]->name, name) != 0) {
@@ -1174,5 +1176,145 @@ out:
     free(cni_conf_dir);
     free_cni_list_arr(conflist_arr, arr_len);
 
+    return ret;
+}
+
+static bool network_info_match_filter(const cni_net_conf_list *list, const struct filters_args *filters)
+{
+    size_t i;
+    size_t len = list->plugins_len;
+
+    if (!filters_args_match(filters, "name", list->name)) {
+        return false;
+    }
+
+    for (i = 0; i < len; i++) {
+        if (filters_args_match(filters, "plugin", list->plugins[i]->type)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static network_network_info *get_network_info(const cni_net_conf_list *list)
+{
+    size_t i;
+    int nret = 0;
+    network_network_info *net_info = NULL;
+
+    net_info = (network_network_info *)util_common_calloc_s(sizeof(network_network_info));
+    if (net_info == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    net_info->name = util_strdup_s(list->name);
+    net_info->version = util_strdup_s(list->cni_version);
+    net_info->plugins_len = 0;
+    if (list->plugins_len == 0) {
+        return net_info;
+    }
+
+    for (i = 0; i < list->plugins_len; i++) {
+        if (list->plugins[i]->type == NULL) {
+            continue;
+        }
+        nret = util_array_append(&net_info->plugins, list->plugins[i]->type);
+        if (nret != 0) {
+            ERROR("Failed to append network plugins array");
+            goto err_out;
+        }
+        net_info->plugins_len++;
+    }
+    return net_info;
+
+err_out:
+    free_network_network_info(net_info);
+    return NULL;
+}
+
+static void free_network_info_arr(network_network_info **networks, size_t len)
+{
+    size_t i;
+
+    if (networks == NULL) {
+        return;
+    }
+    for (i = 0; i < len; i++) {
+        free_network_network_info(networks[i]);
+    }
+    free(networks);
+}
+
+int network_config_list(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len)
+{
+    int ret = 0;
+    size_t i, old_size, new_size;
+    char *cni_conf_dir = NULL;
+    cni_net_conf_list **list_arr = NULL;
+    size_t list_arr_len = 0;
+    network_network_info **nets = NULL;
+    size_t nets_len = 0;
+    network_network_info *net_info = NULL;
+
+    cni_conf_dir = get_cni_conf_dir();
+    if (cni_conf_dir == NULL) {
+        return -1;
+    }
+
+    ret = load_cni_list(cni_conf_dir, &list_arr, &list_arr_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    if (list_arr_len == 0) {
+        goto out;
+    }
+
+    nets = util_common_calloc_s(sizeof(network_network_info *) * list_arr_len);
+    if (nets == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    EVENT("Network Event: {Object: network, Type: List}");
+
+    for (i = 0; i < list_arr_len; i++) {
+        if (filters != NULL && !network_info_match_filter(list_arr[i], filters)) {
+            continue;
+        }
+        net_info = get_network_info(list_arr[i]);
+        if (net_info == NULL) {
+            ret = -1;
+            goto out;
+        }
+        nets[nets_len] = net_info;
+        net_info = NULL;
+        nets_len++;
+    }
+    if (list_arr_len != nets_len) {
+        if (nets_len == 0) {
+            goto out;
+        }
+
+        old_size = list_arr_len * sizeof(network_network_info *);
+        new_size = nets_len * sizeof(network_network_info *);
+        ret = util_mem_realloc((void **)&nets, new_size, nets, old_size);
+        if (ret != 0) {
+            ERROR("Out of memory");
+            goto out;
+        }
+    }
+    *networks = nets;
+    nets = NULL;
+    *networks_len = nets_len;
+    nets_len = 0;
+
+out:
+    free(cni_conf_dir);
+    free_cni_list_arr(list_arr, list_arr_len);
+    free_network_info_arr(nets, nets_len);
     return ret;
 }
