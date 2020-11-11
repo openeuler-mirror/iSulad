@@ -1,5 +1,5 @@
 %global _version 2.0.5
-%global _release 20200923.100941.git261ebe8f
+%global _release 20201111.024530.git760a1366
 %global is_systemd 1
 
 Name:      iSulad
@@ -25,6 +25,7 @@ Patch6009:	0009-fix-coredump-when-pull-image-with-lock-driver-image-.patch
 Patch6010:	0010-fix-bad-formatting-placeholder-in-http-parse-module.patch
 Patch6011:	0011-iSulad-fix-memory-leak.patch
 Patch6012:	0012-fix-coredump-when-load-image-with-uid.patch
+Patch6013:	0013-add-filter-to-get-only-non-sandbox-containers.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -229,6 +230,12 @@ fi
 %endif
 
 %changelog
++* Wed Nov 11 2020  <gaohuatao@huawei.com> - 2.0.5-20201111.024530.git760a1366
++- Type:bugfix
++- ID:NA
++- SUG:NA
++- DESC: fix list containers filter bug
+
 +* Fri Sep 23 2020  <wujing50@huawei.com> - 2.0.5-20200923.100941.git261ebe8f
 +- Type:bugfix
 +- ID:NA

@@ -1,0 +1,43 @@
+From 1a01070d00c9bf9ff65308522486edcfe16ed46c Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Wed, 11 Nov 2020 11:10:36 +0800
+Subject: [PATCH] add filter to get only non-sandbox containers
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ src/daemon/entry/cri/cri_container.cc | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/daemon/entry/cri/cri_container.cc b/src/daemon/entry/cri/cri_container.cc
+index c6d95998..e23e59ef 100644
+--- a/src/daemon/entry/cri/cri_container.cc
++++ b/src/daemon/entry/cri/cri_container.cc
+@@ -788,6 +788,12 @@ void CRIRuntimeServiceImpl::ListContainersFromGRPC(const runtime::v1alpha2::Cont
+         error.SetError("Out of memory");
+         return;
+     }
++    // Add filter to get only non-sandbox containers
++    if (CRIHelpers::FiltersAddLabel((*request)->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
++                                    CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
++        error.SetError("Failed to add filter");
++        return;
++    }
+ 
+     if (filter != nullptr) {
+         if (!filter->id().empty()) {
+@@ -811,12 +817,6 @@ void CRIRuntimeServiceImpl::ListContainersFromGRPC(const runtime::v1alpha2::Cont
+             }
+         }
+ 
+-        // Add some label
+-        if (CRIHelpers::FiltersAddLabel((*request)->filters, CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY,
+-                                        CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER) != 0) {
+-            error.SetError("Failed to add filter");
+-            return;
+-        }
+         for (auto &iter : filter->label_selector()) {
+             if (CRIHelpers::FiltersAddLabel((*request)->filters, iter.first, iter.second) != 0) {
+                 error.SetError("Failed to add filter");
+-- 
+2.26.2
+
