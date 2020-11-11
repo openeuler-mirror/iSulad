@@ -43,6 +43,8 @@ public:
 
     Status Inspect(ServerContext *context, const NetworkInspectRequest *request, NetworkInspectResponse *reply) override;
 
+    Status List(ServerContext *context, const NetworkListRequest *request, NetworkListResponse *reply) override;
+
 private:
     template <class T1, class T2>
     int response_to_grpc(const T1 *response, T2 *gresponse)
@@ -65,6 +67,10 @@ private:
     int inspect_request_from_grpc(const NetworkInspectRequest *grequest, network_inspect_request **request);
 
     void inspect_response_to_grpc(const network_inspect_response *response, NetworkInspectResponse *gresponse);
+
+    int list_request_from_grpc(const NetworkListRequest *grequest, network_list_request **request);
+
+    void list_response_to_grpc(const network_list_response *response, NetworkListResponse *gresponse);
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_NETWORK_SERVICE_H

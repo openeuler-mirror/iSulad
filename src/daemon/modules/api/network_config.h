@@ -16,13 +16,17 @@
 #ifndef DAEMON_MODULES_API_NETWORK_CONFIG_H
 #define DAEMON_MODULES_API_NETWORK_CONFIG_H
 
+#include "filters.h"
 #include "isula_libutils/network_create_request.h"
 #include "isula_libutils/network_create_response.h"
+#include "isula_libutils/network_network_info.h"
 
 extern const char *g_default_driver;
 
 int network_config_bridge_create(const network_create_request *request, network_create_response **response);
 
 int network_config_inspect(const char *name, char **network_json);
+
+int network_config_list(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len);
 
 #endif // DAEMON_MODULES_API_NETWORK_CONFIG_H

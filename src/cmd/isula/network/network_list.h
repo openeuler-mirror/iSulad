@@ -21,6 +21,26 @@
 extern "C" {
 #endif
 
+#define NETWORK_LIST_OPTIONS(cmdargs)                           \
+    {                                                           \
+        CMD_OPT_TYPE_BOOL,                                      \
+        false,                                                  \
+        "quiet",                                                \
+        'q',                                                    \
+        &(cmdargs).dispname,                                    \
+        "Only display network names",                           \
+        NULL                                                    \
+    },                                                          \
+    {                                                           \
+                                                                CMD_OPT_TYPE_CALLBACK,                                  \
+                                                                false,                                                  \
+                                                                "filter",                                               \
+                                                                'f',                                                    \
+                                                                &(cmdargs).filters,                                     \
+                                                                "Filter output based on conditions provided",           \
+                                                                command_append_array                                    \
+    },
+
 extern const char g_cmd_network_list_desc[];
 extern const char g_cmd_network_list_usage[];
 extern struct client_arguments g_cmd_network_list_args;
