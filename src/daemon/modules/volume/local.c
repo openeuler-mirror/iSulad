@@ -588,11 +588,6 @@ int local_volume_remove(char *name)
     return ret;
 }
 
-char * local_volume_driver_name(void)
-{
-    return util_strdup_s(LOCAL_VOLUME_DRIVER_NAME);
-}
-
 int register_local_volume(char *root_dir)
 {
     int ret = 0;
@@ -617,7 +612,6 @@ int register_local_volume(char *root_dir)
 
     // support local driver only right now
     volume_driver driver = {
-        .driver_name = local_volume_driver_name,
         .create = local_volume_create,
         .get = local_volume_get,
         .mount = local_volume_mount,

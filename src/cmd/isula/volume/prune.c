@@ -65,10 +65,12 @@ static int client_volume_prune(const struct client_arguments *args, char ***volu
         }
         goto out;
     }
-    *volumes = response->volumes;
-    response->volumes = NULL;
-    *volumes_len = response->volumes_len;
-    response->volumes_len = 0;
+
+    ret = util_dup_array_of_strings((const char **)response->volumes, response->volumes_len, volumes, volumes_len);
+    if (ret != 0) {
+        COMMAND_ERROR("dup volumes failed");
+        goto out;
+    }
 
 out:
     isula_prune_volume_response_free(response);

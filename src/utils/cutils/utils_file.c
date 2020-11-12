@@ -1678,20 +1678,17 @@ static int copy_own(char *copy_dst, struct stat *src_stat)
     int ret = 0;
     struct stat dst_stat = {0};
 
-    ret = lchown(copy_dst, src_stat->st_uid, src_stat->st_gid);
-    if (ret != 0) {
-        if (ret == EPERM) {
-            if (lstat(copy_dst, &dst_stat) != 0) {
-                ERROR("lstat %s failed: %s", copy_dst, strerror(errno));
-                return -1;
-            } else if (src_stat->st_uid == dst_stat.st_uid && src_stat->st_gid == dst_stat.st_gid) {
-                return 0;
-            }
-        } else {
-            ERROR("lchown %s failed: %s", copy_dst, strerror(errno));
-            return -1;
-        }
+    if (lstat(copy_dst, &dst_stat) != 0) {
+        ERROR("lstat %s failed: %s", copy_dst, strerror(errno));
+        return -1;
     }
+
+    ret = lchown(copy_dst, src_stat->st_uid, src_stat->st_gid);
+    if (ret == 0 || (ret == EPERM && src_stat->st_uid == dst_stat.st_uid && src_stat->st_gid == dst_stat.st_gid)) {
+        return 0;
+    }
+
+    ERROR("lchown %s failed: %s", copy_dst, strerror(errno));
 
     return ret;
 }

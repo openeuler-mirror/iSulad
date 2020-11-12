@@ -25,8 +25,6 @@ extern "C" {
 #define VOLUME_ERR_NOT_EXIST -2
 
 typedef struct {
-    char * (*driver_name)(void);
-
     struct volume * (*create)(char *name);
 
     struct volume * (*get)(char *name);

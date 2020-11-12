@@ -587,12 +587,7 @@ static defs_mount *parse_mount(mount_spec *spec)
         return NULL;
     }
 
-    if (spec->type != NULL) {
-        m->type = util_strdup_s(spec->type);
-    } else {
-        m->type = util_strdup_s(DefaultMountType);
-    }
-
+    m->type = util_strdup_s(spec->type);
     m->source = util_strdup_s(spec->source);
     m->destination = util_strdup_s(spec->target);
     if (strcmp(m->type, "volume") == 0 && m->source != NULL) {
@@ -2683,6 +2678,7 @@ static int calc_volumes_from_len(host_config *host_spec, size_t *len)
     int ret = 0;
     int i = 0;
 
+    *len = 0;
     for (i = 0; i < host_spec->volumes_from_len; i++) {
         ret = split_volume_from(host_spec->volumes_from[i], &id, &mode);
         if (ret != 0) {
@@ -2697,10 +2693,7 @@ static int calc_volumes_from_len(host_config *host_spec, size_t *len)
             goto out;
         }
 
-        // no mount point
-        if (cont->common_config == NULL || cont->common_config->mount_points == NULL) {
-            *len = 0;
-        } else {
+        if (cont->common_config != NULL && cont->common_config->mount_points != NULL) {
             *len += cont->common_config->mount_points->len;
         }
     }

@@ -49,20 +49,10 @@ static void mutex_unlock(pthread_mutex_t *mutex)
     }
 }
 
-// key: name of volume
-// value: volume driver
-static void drivers_kvfree(void *key, void *value)
-{
-    free(key);
-    free(value);
-    return;
-}
-
 static int valid_driver(volume_driver *driver)
 {
-    if (driver->driver_name == NULL || driver->create == NULL || driver->get == NULL ||
-        driver->mount == NULL || driver->umount == NULL || driver->list == NULL ||
-        driver->remove == NULL) {
+    if (driver->create == NULL || driver->get == NULL || driver->mount == NULL ||
+        driver->umount == NULL || driver->list == NULL || driver->remove == NULL) {
         ERROR("Invalid volume driver, NULL function found");
         return -1;
     }
@@ -323,7 +313,7 @@ int volume_init(char *root_dir)
 {
     int ret = 0;
 
-    g_vs.drivers = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, drivers_kvfree);
+    g_vs.drivers = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     if (g_vs.drivers == NULL) {
         ERROR("out of memory");
         ret = -1;
@@ -449,65 +439,12 @@ out:
     return ret;
 }
 
-static struct volumes * merge_vols(struct volumes *vols1, struct volumes *vols2)
-{
-    struct volumes *vols = NULL;
-    size_t i = 0;
-    size_t size = 0;
-    int ret = 0;
-
-    vols = util_common_calloc_s(sizeof(struct volumes));
-    if (vols == NULL) {
-        ERROR("out of memory");
-        return NULL;
-    }
-
-    if (vols1 != NULL) {
-        size += vols1->vols_len;
-    }
-    if (vols2 != NULL) {
-        size += vols2->vols_len;
-    }
-
-    if (size == 0) {
-        return vols;
-    }
-
-    vols->vols = util_common_calloc_s(sizeof(struct volume*)*size);
-    if (vols->vols == NULL) {
-        ERROR("out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; vols1 != NULL && i < vols1->vols_len; i++) {
-        vols->vols[vols->vols_len] = vols1->vols[i];
-        vols->vols_len++;
-        vols1->vols[i] = NULL;
-    }
-
-    for (i = 0; vols2 != NULL && i < vols2->vols_len; i++) {
-        vols->vols[vols->vols_len] = vols2->vols[i];
-        vols->vols_len++;
-        vols2->vols[i] = NULL;
-    }
-out:
-    if (ret != 0) {
-        free_volumes(vols);
-        vols = NULL;
-    }
-
-    return vols;
-}
-
 static struct volumes * list_all_driver_volumes()
 {
     int ret = 0;
     volume_driver *driver = NULL;
     map_itor *itor = NULL;
     struct volumes *vols = NULL;
-    struct volumes *vols1 = NULL;
-    struct volumes *vols2 = NULL;
 
     itor = map_itor_new(g_vs.drivers);
     if (itor == NULL) {
@@ -518,17 +455,9 @@ static struct volumes * list_all_driver_volumes()
 
     for (; map_itor_valid(itor); map_itor_next(itor)) {
         driver = map_itor_value(itor);
-        vols2 = driver->list();
-        vols1 = vols;
-        vols = merge_vols(vols1, vols2);
-        if (vols == NULL) {
-            ret = -1;
-            goto out;
-        }
-        free_volumes(vols1);
-        vols1 = NULL;
-        free_volumes(vols2);
-        vols2 = NULL;
+        vols = driver->list();
+        // only one driver currently
+        break;
     }
 
 out:
@@ -536,10 +465,6 @@ out:
     if (ret != 0) {
         free_volumes(vols);
         vols = NULL;
-        free_volumes(vols1);
-        vols1 = NULL;
-        free_volumes(vols2);
-        vols2 = NULL;
     }
 
     return vols;

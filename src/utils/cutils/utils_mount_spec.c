@@ -44,7 +44,7 @@ static int parse_mount_item_type(const char *value, char *mount_str, mount_spec 
     }
 
     if (value == NULL || value[0] == 0) {
-        m->type = util_strdup_s(DEFAULT_MOUNT_TYPE);
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Type is required", mount_str);
         return EINVALIDARGS;
     }
 
@@ -238,7 +238,7 @@ static int parse_mount_item_nocopy(const char *value, char *mount_str, mount_spe
 }
 #endif
 
-static bool existReadonlyMode(char *mount_str)
+static bool exist_readonly_mode(char *mount_str)
 {
     char tmp_mount_str[PATH_MAX] = {0};
     int sret = 0;
@@ -265,7 +265,7 @@ static bool valid_mount_spec_mode(char *mount_str, mount_spec *m, char *errmsg)
                          mount_str, m->type);
             return false;
         }
-        if (m->source == NULL && existReadonlyMode(mount_str)) {
+        if (exist_readonly_mode(mount_str) && m->source == NULL) {
             CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Readonly mode must not be specified "
                          "for anonymous volume", mount_str);
             return false;

@@ -780,20 +780,6 @@ static int restore_volumes(container_config_v2_common_config_mount_points *mount
         }
     }
 
-    if (ret != 0) {
-        // rollback or volume cannot remove
-        for (i = mount_points->len - 1; i >= 0; i--) {
-            // only volume have name
-            if (mount_points->values[i]->name == NULL) {
-                continue;
-            }
-            if (volume_del_ref(mount_points->values[i]->name, id) != 0) {
-                ERROR("rollback failed due to delete reference %s to volume %s failed",
-                      id, mount_points->values[i]->name);
-            }
-        }
-    }
-
     return ret;
 }
 

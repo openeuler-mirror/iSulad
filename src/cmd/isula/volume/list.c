@@ -64,21 +64,6 @@ static void list_print_table(const struct isula_list_volume_response *resp, cons
     }
 }
 
-/* list field width */
-static void list_field_width(const struct isula_list_volume_response *resp, struct lengths *l)
-{
-    size_t i = 0;
-
-    for (i = 0; i < resp->volumes_len; i++) {
-        if (strlen(resp->volumes[i].driver) > l->driver_length) {
-            l->driver_length = (unsigned int)strlen(resp->volumes[i].driver);
-        }
-        if (strlen(resp->volumes[i].name) > l->driver_length) {
-            l->name_length = (unsigned int)strlen(resp->volumes[i].name);
-        }
-    }
-}
-
 /*
  * list all volume from isulad
  */
@@ -89,7 +74,6 @@ static void volume_info_print(const struct isula_list_volume_response *response)
         .name_length = 10,
     };
 
-    list_field_width(response, &max_len);
     list_print_table(response, &max_len);
 }
 

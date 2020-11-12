@@ -151,7 +151,6 @@ bool valid_subname(const struct command *cmds, const char *name)
 int command_default_help(const char * const name, const char * const subname, struct command *commands,
                          int argc, const char **argv)
 {
-    const struct command *command = NULL;
     char cmd_name[PATH_MAX] = { 0 };
     const char *lastname = NULL;
 
@@ -214,17 +213,6 @@ int command_default_help(const char * const name, const char * const subname, st
         return 1;
     }
 
-    command = command_by_args(commands, argc, argv);
-
-    if (command == NULL) {
-        printf("%s: sub-command \"%s\" not found\n", cmd_name, argv[0]);
-        printf("run `%s --help` for a list of sub-commands\n", cmd_name);
-        return 1;
-    }
-
-    if (command->longdesc != NULL) {
-        printf("%s\n", command->longdesc);
-    }
     return 0;
 }
 
