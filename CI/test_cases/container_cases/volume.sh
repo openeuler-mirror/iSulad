@@ -42,6 +42,9 @@ function test_volume_help()
   isula volume rm --help | grep "isula volume rm"
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula volume rm --help failed" && ((ret++))
 
+  isula volume nonexist
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula volume noexist should failed" && ((ret++))
+
   return ${ret}
 }
 
@@ -50,6 +53,9 @@ function test_volume_ls()
   local ret=0
 
   cleanup_containers_and_volumes
+
+  isula run -tid busybox sh
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container without volume" && ((ret++))
 
   isula run -tid -v vol:/vol:ro busybox sh
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with volume" && ((ret++))
@@ -89,7 +95,7 @@ function test_volume_prune_cannot_remove()
 
   cleanup_containers_and_volumes
 
-  isula run -ti --name vol -v vol:/vol vol echo vol
+  isula run -ti --name vol -v vol:/vol:z vol echo vol
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run image with volume failed" && ((ret++))
 
   isula volume prune -f
@@ -144,7 +150,7 @@ function test_volume_volumes_from()
 
   cleanup_containers_and_volumes
 
-  isula run -tid --name vol1 -v volumes_from:/volumes_from vol sh
+  isula run -tid --name vol1 -v volumes_from:/volumes_from --mount type=bind,source=/home,target=/vol3,bind-selinux-opts=z,bind-propagation=rprivate vol sh
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container for volumes-from failed" && ((ret++))
 
   isula run -tid --name vol2 --volumes-from vol1 busybox sh
@@ -219,7 +225,7 @@ function test_volume_mount()
   isula run -tid --name vol1 --mount dst=/vol1 busybox touch /vol1/test
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run first container" && ((ret++))
 
-  isula run -tid --name vol2 --mount src=vol2,dst=/vol2 busybox touch /vol2/test
+  isula run -tid --name vol2 --mount src=vol2,dst=/vol2,ro=false busybox touch /vol2/test
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run second container" && ((ret++))
 
   isula run -tid --name vol3 --mount type=bind,source=/home,target=/vol3,bind-selinux-opts=z,bind-propagation=rprivate busybox touch /vol3/test
@@ -358,6 +364,29 @@ function test_volume_invalid_modes()
   return ${ret}
 }
 
+function test_volume_init_fail()
+{
+  local ret=0
+
+  cleanup_containers_and_volumes
+
+  check_valgrind_log
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
+
+  rm -rf /var/lib/isulad/volumes
+  touch /var/lib/isulad/volumes
+
+  start_isulad_with_valgrind
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad should fail" && ((ret++))
+
+  rm -f /var/lib/isulad/volumes
+
+  start_isulad_with_valgrind
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
+
+  return ${ret}
+}
+
 function prepare_test_volume()
 {
   local ret=0
@@ -382,6 +411,7 @@ msg_info "${test} starting..."
 prepare_test_volume || ((ans++))
 
 test_volume_help || ((ans++))
+test_volume_init_fail || ((ans++))
 test_volume_ls || ((ans++))
 test_volume_prune_remove || ((ans++))
 test_volume_prune_cannot_remove || ((ans++))
