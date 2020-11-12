@@ -1,0 +1,41 @@
+From e5df207d89c8467971fd0e0529703a782bca8dfa Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Sat, 7 Nov 2020 09:57:27 +0800
+Subject: [PATCH 21/28] iSulad: fix memory leak in inspect grpc service
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ .../entry/connect/grpc/grpc_containers_service.cc      | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service.cc b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+index 54417c6..60b1e44 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service.cc
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+@@ -781,6 +781,11 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
+     container_inspect_request *container_req = nullptr;
+     container_inspect_response *container_res = nullptr;
+ 
++    Status status = GrpcServerTlsAuth::auth(context, "container_inspect");
++    if (!status.ok()) {
++        return status;
++    }
++
+     cb = get_service_executor();
+     if (cb == nullptr || cb->container.inspect == nullptr) {
+         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+@@ -793,11 +798,6 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
+         return Status::OK;
+     }
+ 
+-    Status status = GrpcServerTlsAuth::auth(context, "container_inspect");
+-    if (!status.ok()) {
+-        return status;
+-    }
+-
+     ret = cb->container.inspect(container_req, &container_res);
+     tret = inspect_response_to_grpc(container_res, reply);
+ 
+-- 
+2.20.1
+

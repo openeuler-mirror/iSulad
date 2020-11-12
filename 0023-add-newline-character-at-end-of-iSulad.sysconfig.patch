@@ -1,0 +1,24 @@
+From 3260ec3e2b95e93618d5650b0b9874c65521e6b2 Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Mon, 9 Nov 2020 17:14:34 +0800
+Subject: [PATCH 23/28] add newline character at end of iSulad.sysconfig
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ src/contrib/config/iSulad.sysconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/contrib/config/iSulad.sysconfig b/src/contrib/config/iSulad.sysconfig
+index 5d222f9..43ba7cb 100644
+--- a/src/contrib/config/iSulad.sysconfig
++++ b/src/contrib/config/iSulad.sysconfig
+@@ -23,4 +23,4 @@
+ 
+ # Location used for temporary files, such as those created by isula load and pull operations.
+ # Default is /var/tmp. Can be overridden by setting the following env variable.
+-# ISULAD_TMPDIR=/var/tmp
+\ No newline at end of file
++# ISULAD_TMPDIR=/var/tmp
+-- 
+2.20.1
+
