@@ -1,0 +1,240 @@
+From cc721f53f64e9ec7e6329beaf24b2df2a3d1ff4e Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Wed, 21 Oct 2020 10:21:04 +0800
+Subject: [PATCH 04/28] Realpath: add get realpath for root and state dir
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ src/cmd/isulad/isulad_commands.c              | 20 +++++++-
+ .../graphdriver/devmapper/deviceset.c         | 48 +++++++++----------
+ .../graphdriver/devmapper/driver_devmapper.c  | 37 +++++++++++---
+ 3 files changed, 70 insertions(+), 35 deletions(-)
+
+diff --git a/src/cmd/isulad/isulad_commands.c b/src/cmd/isulad/isulad_commands.c
+index 2826aae..90fc51a 100644
+--- a/src/cmd/isulad/isulad_commands.c
++++ b/src/cmd/isulad/isulad_commands.c
+@@ -195,6 +195,7 @@ static int check_args_graph_path(struct service_arguments *args)
+ {
+     int ret = 0;
+     char dstpath[PATH_MAX] = { 0 };
++    char *real_path = NULL;
+ 
+     ret = util_validate_absolute_path(args->json_confs->graph);
+     if (ret) {
+@@ -207,8 +208,15 @@ static int check_args_graph_path(struct service_arguments *args)
+         ret = -1;
+         goto out;
+     }
++
++    if (util_realpath_in_scope("/", dstpath, &real_path) != 0) {
++        ERROR("failed to get real path");
++        ret = -1;
++        goto out;
++    }
++
+     free(args->json_confs->graph);
+-    args->json_confs->graph = util_strdup_s(dstpath);
++    args->json_confs->graph = real_path;
+ 
+ out:
+     return ret;
+@@ -218,6 +226,7 @@ static int check_args_state_path(struct service_arguments *args)
+ {
+     int ret = 0;
+     char dstpath[PATH_MAX] = { 0 };
++    char *real_path = NULL;
+ 
+     ret = util_validate_absolute_path(args->json_confs->state);
+     if (ret != 0) {
+@@ -230,8 +239,15 @@ static int check_args_state_path(struct service_arguments *args)
+         ret = -1;
+         goto out;
+     }
++
++    if (util_realpath_in_scope("/", dstpath, &real_path) != 0) {
++        ERROR("failed to get real path");
++        ret = -1;
++        goto out;
++    }
++
+     free(args->json_confs->state);
+-    args->json_confs->state = util_strdup_s(dstpath);
++    args->json_confs->state = real_path;
+ 
+ out:
+     return ret;
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+index fb2f502..cadb061 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+@@ -1145,9 +1145,10 @@ static int pool_has_free_space(struct device_set *devset)
+         ERROR("devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
+               "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
+               data_total - data_used, min_free_data);
+-        isulad_set_error_message("devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
+-                                 "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
+-                                 data_total - data_used, min_free_data);
++        isulad_set_error_message(
++            "devmapper: Thin Pool has %lu free data blocks which is less than minimum required "
++            "%lu free data blocks. Create more free space in thin pool or use dm.min_free_space option to change behavior",
++            data_total - data_used, min_free_data);
+         ret = -1;
+         goto out;
+     }
+@@ -1163,10 +1164,11 @@ static int pool_has_free_space(struct device_set *devset)
+               "which is less than minimum required %lu free metadata blocks. "
+               "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
+               metadata_total - metadata_used, min_free_metadata);
+-        isulad_set_error_message("devmapper: Thin Pool has %lu free metadata blocks "
+-                                 "which is less than minimum required %lu free metadata blocks. "
+-                                 "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
+-                                 metadata_total - metadata_used, min_free_metadata);
++        isulad_set_error_message(
++            "devmapper: Thin Pool has %lu free metadata blocks "
++            "which is less than minimum required %lu free metadata blocks. "
++            "Create more free metadata space in thin pool or use dm.min_free_space option to change behavior",
++            metadata_total - metadata_used, min_free_metadata);
+         ret = -1;
+         goto out;
+     }
+@@ -1652,7 +1654,8 @@ static int take_snapshot(struct device_set *devset, const char *hash, image_devm
+     if (dinfo.deferred_remove != 0) {
+         nret = cancel_deferred_removal(devset, base_info->hash);
+         if (nret != 0) {
+-            ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", base_info->hash, dev_strerror(nret));
++            ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", base_info->hash,
++                  dev_strerror(nret));
+             if (nret != ERR_ENXIO) {
+                 ERROR("devmapper: cancel device(id:%s) deferred remove failed", base_info->hash);
+                 ret = -1;
+@@ -1721,7 +1724,8 @@ static int cancel_deferred_removal_if_needed(struct device_set *devset, image_de
+ 
+     nret = cancel_deferred_removal(devset, info->hash);
+     if (nret != 0 && nret != ERR_BUSY) {
+-        ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", info->hash, dev_strerror(nret));
++        ERROR("devmapper: cancel deferred remove for device with hash:%s failed, err:%s", info->hash,
++              dev_strerror(nret));
+         ret = -1;
+         goto out;
+     }
+@@ -2563,7 +2567,8 @@ static int determine_driver_capabilities(const char *version, struct device_set
+ 
+     if (major < 4) {
+         ERROR("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal", major);
+-        isulad_set_error_message("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal", major);
++        isulad_set_error_message("devicamapper driver version:(%ld.xxx) < 4.27.0, do not surpport deferred removal",
++                                 major);
+         ret = -1;
+         goto out;
+     }
+@@ -2584,7 +2589,8 @@ static int determine_driver_capabilities(const char *version, struct device_set
+      */
+     if (minor < 27) {
+         ERROR("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal", minor);
+-        isulad_set_error_message("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal", minor);
++        isulad_set_error_message("devicamapper driver version (4.%ld) < 4.27.0, , do not surpport deferred removal",
++                                 minor);
+         ret = -1;
+         goto out;
+     }
+@@ -2951,17 +2957,10 @@ int unmount_device(const char *hash, const char *mount_path, struct device_set *
+         goto free_out;
+     }
+ 
+-    if (util_detect_mounted(mount_path)) {
+-        if (umount2(mount_path, MNT_DETACH) < 0 && errno != EINVAL) {
+-            ERROR("Failed to umount directory %s:%s", mount_path, strerror(errno));
+-            ret = -1;
+-            goto free_out;
+-        }
+-    }
+-
+-    if (util_path_remove(mount_path) != 0) {
+-        DEBUG("devmapper: doing remove on a unmounted device %s failed", mount_path);
++    if (umount2(mount_path, MNT_DETACH) < 0 && errno != EINVAL) {
++        ERROR("Failed to umount directory %s:%s", mount_path, strerror(errno));
+         ret = -1;
++        goto free_out;
+     }
+ 
+     if (deactivate_device(devset, device_info->info) != 0) {
+@@ -3167,7 +3166,6 @@ struct status *device_set_status(struct device_set *devset)
+         st->sem_msg = util_strdup_s(msg);
+     }
+ 
+-
+ free_out:
+     (void)pthread_rwlock_unlock(&devset->devmapper_driver_rwlock);
+     return st;
+@@ -3222,10 +3220,8 @@ static int umount_deactivate_dev_all(struct device_set *devset)
+             continue;
+         }
+ 
+-        if (util_detect_mounted(fname)) {
+-            if (umount2(fname, MNT_DETACH) < 0 && errno != EINVAL) {
+-                ERROR("Failed to umount directory %s:%s", fname, strerror(errno));
+-            }
++        if (umount2(fname, MNT_DETACH) < 0 && errno != EINVAL) {
++            ERROR("Failed to umount directory %s:%s", fname, strerror(errno));
+         }
+ 
+         device_info = lookup_device(devset, entry->d_name);
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
+index 1043c6c..ec337a8 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/driver_devmapper.c
+@@ -82,7 +82,36 @@ out:
+ static int do_create(const char *id, const char *parent, const struct graphdriver *driver,
+                      const struct driver_create_opts *create_opts)
+ {
+-    return add_device(id, parent, driver->devset, create_opts->storage_opt);
++    int ret = 0;
++    char *mnt_parent_dir = NULL;
++    char *mnt_point_dir = NULL;
++
++    mnt_parent_dir = util_path_join(driver->home, "mnt");
++    if (mnt_parent_dir == NULL) {
++        ERROR("Failed to join devmapper mnt dir %s", id);
++        ret = -1;
++        goto out;
++    }
++
++    mnt_point_dir = util_path_join(mnt_parent_dir, id);
++    if (mnt_point_dir == NULL) {
++        ERROR("Failed to join devampper mount point dir %s", id);
++        ret = -1;
++        goto out;
++    }
++
++    if (util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
++        ERROR("Failed to mkdir path:%s", mnt_point_dir);
++        ret = -1;
++        goto out;
++    }
++
++    ret = add_device(id, parent, driver->devset, create_opts->storage_opt);
++
++out:
++    free(mnt_parent_dir);
++    free(mnt_point_dir);
++    return ret;
+ }
+ 
+ // devmapper_create_rw creates a layer that is writable for use as a container file system
+@@ -186,12 +215,6 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
+         goto out;
+     }
+ 
+-    if (util_mkdir_p(mnt_point_dir, DEFAULT_SECURE_DIRECTORY_MODE) != 0) {
+-        ERROR("Failed to mkdir path:%s", mnt_point_dir);
+-        ret = -1;
+-        goto out;
+-    }
+-
+     if (mount_device(id, mnt_point_dir, mount_opts, driver->devset) != 0) {
+         ERROR("Mount device:%s to path:%s failed", id, mnt_parent_dir);
+         ret = -1;
+-- 
+2.20.1
+
