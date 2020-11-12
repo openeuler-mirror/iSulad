@@ -1,0 +1,476 @@
+From 8eaec71c30695317bb91c881824e201c4009db67 Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Thu, 29 Oct 2020 14:43:36 +0800
+Subject: [PATCH 13/28] iSulad: internal change
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ cmake/protoc.cmake                            | 20 +----
+ src/api/services/cri/api.proto                |  3 +
+ src/api/services/health/health.proto          | 54 ------------
+ src/api/services/images/images.proto          | 88 +++----------------
+ src/api/types/descriptor.proto                | 49 -----------
+ src/client/connect/CMakeLists.txt             |  4 +-
+ src/daemon/entry/connect/CMakeLists.txt       |  4 +-
+ .../entry/connect/grpc/grpc_images_service.h  |  8 +-
+ .../graphdriver/quota/project_quota.h         | 56 +++++-------
+ 9 files changed, 43 insertions(+), 243 deletions(-)
+ delete mode 100644 src/api/services/health/health.proto
+ delete mode 100644 src/api/types/descriptor.proto
+
+diff --git a/cmake/protoc.cmake b/cmake/protoc.cmake
+index 352c0db..c10d4c3 100644
+--- a/cmake/protoc.cmake
++++ b/cmake/protoc.cmake
+@@ -1,22 +1,11 @@
+ set(PROTOS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/api/services)
+-set(TYPES_PROTOS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/api/types)
+ 
+ set(GRPC_OUT_PRE_PATH ${CMAKE_BINARY_DIR}/grpc)
+-set(TYPES_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/types)
+ set(CONTAINER_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/containers)
+ set(IMAGE_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/images)
+ set(CRI_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/services/cri)
+ set(IMAGE_SERVICE_PROTOS_OUT_PATH ${GRPC_OUT_PRE_PATH}/src/api/image_client)
+ 
+-execute_process(COMMAND mkdir -p ${TYPES_PROTOS_OUT_PATH})
+-
+-execute_process(COMMAND ${CMD_PROTOC} -I ${TYPES_PROTOS_PATH} --cpp_out=${TYPES_PROTOS_OUT_PATH} 
+-    ${TYPES_PROTOS_PATH}/descriptor.proto ERROR_VARIABLE types_err)
+-if (types_err)
+-    message("Parse types.proto failed: ")
+-    message(FATAL_ERROR ${types_err})
+-endif()
+-
+ if (GRPC_CONNECTOR)
+     message("---------------Generate GRPC proto-----------------------")
+     execute_process(COMMAND mkdir -p ${CONTAINER_PROTOS_OUT_PATH})
+@@ -29,22 +18,19 @@ if (GRPC_CONNECTOR)
+         message(FATAL_ERROR ${containers_err})
+     endif()
+ 
+-    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/containers --grpc_out=${CONTAINER_PROTOS_OUT_PATH} 
+-        --plugin=protoc-gen-grpc=${CMD_GRPC_CPP_PLUGIN} ${PROTOS_PATH}/containers/container.proto ERROR_VARIABLE containers_err)
++    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/containers --grpc_out=${CONTAINER_PROTOS_OUT_PATH} --plugin=protoc-gen-grpc=${CMD_GRPC_CPP_PLUGIN} ${PROTOS_PATH}/containers/container.proto ERROR_VARIABLE containers_err)
+     if (containers_err)
+         message("Parse containers.proto plugin failed: ")
+         message(FATAL_ERROR ${containers_err})
+     endif()
+ 
+-    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/images -I ${TYPES_PROTOS_PATH} 
+-        --cpp_out=${IMAGE_PROTOS_OUT_PATH} ${PROTOS_PATH}/images/images.proto ERROR_VARIABLE images_err)
++    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/images --cpp_out=${IMAGE_PROTOS_OUT_PATH} ${PROTOS_PATH}/images/images.proto ERROR_VARIABLE images_err)
+     if (images_err)
+         message("Parse images.proto failed: ")
+         message(FATAL_ERROR ${images_err})
+     endif()
+ 
+-    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/images -I ${TYPES_PROTOS_PATH} --grpc_out=${IMAGE_PROTOS_OUT_PATH} 
+-        --plugin=protoc-gen-grpc=${CMD_GRPC_CPP_PLUGIN} ${PROTOS_PATH}/images/images.proto ERROR_VARIABLE images_err)
++    execute_process(COMMAND ${CMD_PROTOC} -I ${PROTOS_PATH}/images --grpc_out=${IMAGE_PROTOS_OUT_PATH} --plugin=protoc-gen-grpc=${CMD_GRPC_CPP_PLUGIN} ${PROTOS_PATH}/images/images.proto ERROR_VARIABLE images_err)
+     if (images_err)
+         message("Parse images.proto plugin failed: ")
+         message(FATAL_ERROR ${images_err})
+diff --git a/src/api/services/cri/api.proto b/src/api/services/cri/api.proto
+index 022fa51..8aba0d3 100644
+--- a/src/api/services/cri/api.proto
++++ b/src/api/services/cri/api.proto
+@@ -1,5 +1,8 @@
+ /*
+ Copyright 2018 The Kubernetes Authors.
++Copyright (C) Huawei Technologies., Ltd. 2019. All rights reserved.
++    modify descripe: remove unused options for example:
++    remove import "github.com/gogo/protobuf/gogoproto/gogo.proto"
+ 
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+diff --git a/src/api/services/health/health.proto b/src/api/services/health/health.proto
+deleted file mode 100644
+index a3d3537..0000000
+--- a/src/api/services/health/health.proto
++++ /dev/null
+@@ -1,54 +0,0 @@
+-// #######################################################################
+-// ##- @Copyright (C) Huawei Technologies., Ltd. 2019-2020. All rights reserved.
+-// # - iSulad licensed under the Mulan PSL v2.
+-// # - You can use this software according to the terms and conditions of the Mulan PSL v2.
+-// # - You may obtain a copy of Mulan PSL v2 at:
+-// # -     http://license.coscl.org.cn/MulanPSL2
+-// # - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+-// # - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+-// # - PURPOSE.
+-// # - See the Mulan PSL v2 for more details.
+-// ##- @Description: generate grpc
+-// ##- @Author: tanyifeng
+-// ##- @Create: 2020-01-16
+-// #######################################################################
+-//
+-// Since some of this code is derived from grpc, their copyright
+-// is retained here....
+-//
+-// Copyright 2015 The gRPC Authors
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-// The canonical version of this proto can be found at
+-// https://github.com/grpc/grpc-proto/blob/master/grpc/health/v1/health.proto
+-
+-syntax = "proto3";
+-option optimize_for = CODE_SIZE;
+-
+-message HealthCheckRequest {
+-  string service = 1;
+-}
+-
+-message HealthCheckResponse {
+-  enum ServingStatus {
+- 	UNKNOWN = 0;
+-	SERVING = 1;
+-	NOT_SERVING = 2;
+-  }
+-  ServingStatus status = 1;
+-}
+-
+-service HealthService{
+-  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+-} 
+diff --git a/src/api/services/images/images.proto b/src/api/services/images/images.proto
+index bdec2f8..71cce22 100644
+--- a/src/api/services/images/images.proto
++++ b/src/api/services/images/images.proto
+@@ -9,109 +9,43 @@
+ // # - PURPOSE.
+ // # - See the Mulan PSL v2 for more details.
+ // ##- @Description: generate grpc
+-// ##- @Author: wujing
+-// ##- @Create: 2020-01-16
++// ##- @Author: lifeng
++// ##- @Create: 2019-04-25
+ // #######################################################################
+ 
+-
+-/*
+-Since some of this code is derived from containerd, their copyright
+-is retained here....
+-
+-Copyright 2013-2016 Docker, Inc.
+-
+-Licensed under the Apache License, Version 2.0 (the "License");
+-you may not use this file except in compliance with the License.
+-You may obtain a copy of the License at
+-
+-    http://www.apache.org/licenses/LICENSE-2.0
+-
+-Unless required by applicable law or agreed to in writing, software
+-distributed under the License is distributed on an "AS IS" BASIS,
+-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-See the License for the specific language governing permissions and
+-limitations under the License.
+-*/
+-
+ syntax = "proto3";
+ option optimize_for = CODE_SIZE;
+ 
+ import "google/protobuf/timestamp.proto";
+-import "descriptor.proto";
+ 
+ package images;
+ 
+-// Images is a service that allows one to register images with containerd.
+-//
+-// In containerd, an image is merely the mapping of a name to a content root,
+-// described by a descriptor. The behavior and state of image is purely
+-// dictated by the type of the descriptor.
+-//
+-// From the perspective of this service, these references are mostly shallow,
+-// in that the existence of the required content won't be validated until
+-// required by consuming services.
+-//
+-// As such, this can really be considered a "metadata service".
+ service ImagesService {
+-	// List returns a list of all images known to containerd.
+ 	rpc List(ListImagesRequest) returns (ListImagesResponse);
+-
+-	// Delete deletes the image by name.
+ 	rpc Delete(DeleteImageRequest) returns (DeleteImageResponse);
+-
+-	// load image from archive.
+ 	rpc Load(LoadImageRequest) returns (LoadImageResponse);
+-
+-	//inspect image
+ 	rpc Inspect(InspectImageRequest) returns (InspectImageResponse);
+-
+-	// Login to a Docker registry
+ 	rpc Login(LoginRequest) returns (LoginResponse);
+-
+-	// Logout from a Docker registry
+ 	rpc Logout(LogoutRequest) returns (LogoutResponse);
+-
+-	// Add a tag to the image
+ 	rpc Tag(TagImageRequest) returns (TagImageResponse);
+-
+-	// Import rootfs to be image
+ 	rpc Import(ImportRequest) returns (ImportResponse);
+ }
+ 
++message Descriptor {
++	string media_type = 1;
++	string digest = 2;
++	int64 size = 3;
++}
++
+ message Image {
+-	// Name provides a unique name for the image.
+-	//
+-	// Containerd treats this as the primary identifier.
+ 	string name = 1;
+-
+-	// Labels provides free form labels for the image. These are runtime only
+-	// and do not get inherited into the package image in any way.
+-	//
+-	// Labels may be updated using the field mask.
+-	// The combined size of a key/value pair cannot exceed 4096 bytes.
+ 	map<string, string> labels = 2;
+-
+-	// Target describes the content entry point of the image.
+-	containerd.types.Descriptor target = 3;
+-
+-	// CreatedAt is the time the image was first created.
+-	google.protobuf.Timestamp created_at = 7;
+-
+-	// UpdatedAt is the last time the image was mutated.
+-	google.protobuf.Timestamp updated_at = 8;
++	Descriptor target = 3;
++	google.protobuf.Timestamp created_at = 4;
++	google.protobuf.Timestamp updated_at = 5;
+ }
+ 
+ message ListImagesRequest {
+-	// Filters contains one or more filters using the syntax defined in the
+-	// containerd filter package.
+-	//
+-	// The returned result will be those that match any of the provided
+-	// filters. Expanded, images that match the following will be
+-	// returned:
+-	//
+-	//   filters[0] or filters[1] or ... or filters[n-1] or filters[n]
+-	//
+-	// If filters is zero-length or nil, all items will be returned.
+ 	map<string, string>  filters = 1;
+ }
+ 
+diff --git a/src/api/types/descriptor.proto b/src/api/types/descriptor.proto
+deleted file mode 100644
+index 38b9d19..0000000
+--- a/src/api/types/descriptor.proto
++++ /dev/null
+@@ -1,49 +0,0 @@
+-// #######################################################################
+-// ##- @Copyright (C) Huawei Technologies., Ltd. 2019-2020. All rights reserved.
+-// # - iSulad licensed under the Mulan PSL v2.
+-// # - You can use this software according to the terms and conditions of the Mulan PSL v2.
+-// # - You may obtain a copy of Mulan PSL v2 at:
+-// # -     http://license.coscl.org.cn/MulanPSL2
+-// # - THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+-// # - IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+-// # - PURPOSE.
+-// # - See the Mulan PSL v2 for more details.
+-// ##- @Description: generate grpc
+-// ##- @Author: wujing
+-// ##- @Create: 2019-01-16
+-// #######################################################################
+-
+-/*
+-Since some of this code is derived from containerd, their copyright
+-is retained here....
+-
+-Copyright 2013-2016 Docker, Inc.
+-
+-Licensed under the Apache License, Version 2.0 (the "License");
+-you may not use this file except in compliance with the License.
+-You may obtain a copy of the License at
+-
+-    http://www.apache.org/licenses/LICENSE-2.0
+-
+-Unless required by applicable law or agreed to in writing, software
+-distributed under the License is distributed on an "AS IS" BASIS,
+-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-See the License for the specific language governing permissions and
+-limitations under the License.
+-*/
+-
+-syntax = "proto3";
+-option optimize_for = CODE_SIZE;
+-
+-package containerd.types;
+-
+-// Descriptor describes a blob in a content store.
+-//
+-// This descriptor can be used to reference content from an
+-// oci descriptor found in a manifest.
+-// See https://godoc.org/github.com/opencontainers/image-spec/specs-go/v1#Descriptor
+-message Descriptor {
+-	string media_type = 1;
+-	string digest = 2;
+-	int64 size = 3;
+-}
+diff --git a/src/client/connect/CMakeLists.txt b/src/client/connect/CMakeLists.txt
+index 60a3429..1097d16 100644
+--- a/src/client/connect/CMakeLists.txt
++++ b/src/client/connect/CMakeLists.txt
+@@ -9,16 +9,14 @@ add_subdirectory(grpc)
+ 
+ if (GRPC_CONNECTOR)
+     list(APPEND local_client_connect_srcs ${CLIENT_GRPC_SRCS})
+-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/types CONNECT_API_TYPES)
+     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/containers CONNECT_API_CONTAINERS)
+     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/images CONNECT_API_IMAGES)
+     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri CONNECT_API_CRI)
+-    set(CONNECT_API ${CONNECT_API_TYPES} ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI})
++    set(CONNECT_API ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI})
+     list(APPEND local_client_connect_srcs ${CONNECT_API})
+ 
+     list(APPEND local_client_connect_incs ${CMAKE_CURRENT_SOURCE_DIR}/grpc)
+     list(APPEND local_client_connect_incs
+-	    ${CMAKE_BINARY_DIR}/grpc/src/api/types
+ 	    ${CMAKE_BINARY_DIR}/grpc/src/api/services/containers
+ 	    ${CMAKE_BINARY_DIR}/grpc/src/api/services/images
+ 	    ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
+diff --git a/src/daemon/entry/connect/CMakeLists.txt b/src/daemon/entry/connect/CMakeLists.txt
+index 0220319..3b174df 100644
+--- a/src/daemon/entry/connect/CMakeLists.txt
++++ b/src/daemon/entry/connect/CMakeLists.txt
+@@ -15,15 +15,13 @@ endif()
+ 
+ if (GRPC_CONNECTOR)
+      # GRPC
+-    aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/types CONNECT_API_TYPES)
+     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/containers CONNECT_API_CONTAINERS)
+     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/images CONNECT_API_IMAGES)
+     aux_source_directory(${CMAKE_BINARY_DIR}/grpc/src/api/services/cri CONNECT_API_CRI)
+-    set(CONNECT_API ${CONNECT_API_TYPES} ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI})
++    set(CONNECT_API ${CONNECT_API_CONTAINERS} ${CONNECT_API_IMAGES} ${CONNECT_API_CRI})
+     list(APPEND local_server_connect_srcs ${CONNECT_API})
+ 
+     list(APPEND local_server_connect_incs
+-        ${CMAKE_BINARY_DIR}/grpc/src/api/types
+         ${CMAKE_BINARY_DIR}/grpc/src/api/services/containers
+         ${CMAKE_BINARY_DIR}/grpc/src/api/services/images
+         ${CMAKE_BINARY_DIR}/grpc/src/api/services/cri
+diff --git a/src/daemon/entry/connect/grpc/grpc_images_service.h b/src/daemon/entry/connect/grpc/grpc_images_service.h
+index 3c498f4..921d64f 100644
+--- a/src/daemon/entry/connect/grpc/grpc_images_service.h
++++ b/src/daemon/entry/connect/grpc/grpc_images_service.h
+@@ -33,7 +33,6 @@ using grpc::StatusCode;
+ using google::protobuf::Timestamp;
+ 
+ using namespace images;
+-using namespace containerd::types;
+ 
+ // Implement of images service
+ class ImagesServiceImpl final : public ImagesService::Service {
+@@ -55,11 +54,9 @@ public:
+ 
+     Status Inspect(ServerContext *context, const InspectImageRequest *request, InspectImageResponse *reply) override;
+ 
+-    Status Login(ServerContext *context, const LoginRequest *request,
+-                 LoginResponse *reply) override;
++    Status Login(ServerContext *context, const LoginRequest *request, LoginResponse *reply) override;
+ 
+-    Status Logout(ServerContext *context, const LogoutRequest *request,
+-                  LogoutResponse *reply) override;
++    Status Logout(ServerContext *context, const LogoutRequest *request, LogoutResponse *reply) override;
+ 
+ private:
+     template <class T1, class T2>
+@@ -99,4 +96,3 @@ private:
+ };
+ 
+ #endif // DAEMON_ENTRY_CONNECT_GRPC_GRPC_IMAGES_SERVICE_H
+-
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.h b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.h
+index d88ac30..2aae6bc 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.h
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/quota/project_quota.h
+@@ -44,46 +44,34 @@
+ extern "C" {
+ #endif
+ 
+-/*
+- * Check whether we have to define FS_IOC_FS[GS]ETXATTR ourselves. These
+- * are a copy of the definitions moved to linux/uapi/fs.h in the 4.5 kernel,
+- * so this is purely for supporting builds against old kernel headers.
+- */
+ #if !defined FS_IOC_FSGETXATTR
++// if did not define the fsxattr, define by ourself
+ struct fsxattr {
+-    __u32		fsx_xflags;	/* xflags field value (get/set) */
+-    __u32		fsx_extsize;	/* extsize field value (get/set)*/
+-    __u32		fsx_nextents;	/* nextents field value (get)	*/
+-    __u32		fsx_projid;	/* project identifier (get/set) */
+-    __u32		fsx_cowextsize;	/* cow extsize field value (get/set) */
+-    unsigned char	fsx_pad[8];
++    __u32 fsx_xflags, fsx_extsize, fsx_nextents, fsx_projid, fsx_cowextsize;
++    unsigned char fsx_pad[8];
+ };
+ #endif
+ 
+ #ifndef FS_IOC_FSGETXATTR
+-/*
+- * Flags for the fsx_xflags field
+- */
+-#define FS_XFLAG_REALTIME	0x00000001	/* data in realtime volume */
+-#define FS_XFLAG_PREALLOC	0x00000002	/* preallocated file extents */
+-#define FS_XFLAG_IMMUTABLE	0x00000008	/* file cannot be modified */
+-#define FS_XFLAG_APPEND		0x00000010	/* all writes append */
+-#define FS_XFLAG_SYNC		0x00000020	/* all writes synchronous */
+-#define FS_XFLAG_NOATIME	0x00000040	/* do not update access time */
+-#define FS_XFLAG_NODUMP		0x00000080	/* do not include in backups */
+-#define FS_XFLAG_RTINHERIT	0x00000100	/* create with rt bit set */
+-#define FS_XFLAG_PROJINHERIT	0x00000200	/* create with parents projid */
+-#define FS_XFLAG_NOSYMLINKS	0x00000400	/* disallow symlink creation */
+-#define FS_XFLAG_EXTSIZE	0x00000800	/* extent size allocator hint */
+-#define FS_XFLAG_EXTSZINHERIT	0x00001000	/* inherit inode extent size */
+-#define FS_XFLAG_NODEFRAG	0x00002000	/* do not defragment */
+-#define FS_XFLAG_FILESTREAM	0x00004000	/* use filestream allocator */
+-#define FS_XFLAG_DAX		0x00008000	/* use DAX for IO */
+-#define FS_XFLAG_HASATTR	0x80000000	/* no DIFLAG for this	*/
+-
+-#define FS_IOC_FSGETXATTR     _IOR ('X', 31, struct fsxattr)
+-#define FS_IOC_FSSETXATTR     _IOW ('X', 32, struct fsxattr)
+-
++// if did not define the FSGETXATTR, define by ourself
++#define FS_XFLAG_REALTIME 0x00000001
++#define FS_XFLAG_PREALLOC 0x00000002
++#define FS_XFLAG_IMMUTABLE 0x00000008
++#define FS_XFLAG_APPEND 0x00000010
++#define FS_XFLAG_SYNC 0x00000020
++#define FS_XFLAG_NOATIME 0x00000040
++#define FS_XFLAG_NODUMP 0x00000080
++#define FS_XFLAG_RTINHERIT 0x00000100
++#define FS_XFLAG_PROJINHERIT 0x00000200
++#define FS_XFLAG_NOSYMLINKS 0x00000400
++#define FS_XFLAG_EXTSIZE 0x00000800
++#define FS_XFLAG_EXTSZINHERIT 0x00001000
++#define FS_XFLAG_NODEFRAG 0x00002000
++#define FS_XFLAG_FILESTREAM 0x00004000
++#define FS_XFLAG_DAX 0x00008000
++#define FS_XFLAG_HASATTR 0x80000000
++#define FS_IOC_FSGETXATTR _IOR('X', 31, struct fsxattr)
++#define FS_IOC_FSSETXATTR _IOW('X', 32, struct fsxattr)
+ #endif
+ 
+ struct pquota_control {
+-- 
+2.20.1
+
