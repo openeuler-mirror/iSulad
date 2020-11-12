@@ -1,0 +1,1424 @@
+From c85763f9327bf3aa76d14580eb04876901aea936 Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Sat, 7 Nov 2020 11:11:14 +0800
+Subject: [PATCH 22/28] clean code: remove unused code in connect
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ .../connect/grpc/grpc_containers_service.cc   | 252 ++++++------------
+ .../connect/grpc/grpc_containers_service.h    |  42 +--
+ .../grpc/grpc_containers_service_private.cc   | 117 ++++----
+ .../entry/connect/grpc/grpc_images_service.cc | 104 +++-----
+ .../entry/connect/grpc/grpc_images_service.h  |  12 +-
+ 5 files changed, 204 insertions(+), 323 deletions(-)
+
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service.cc b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+index 60b1e44..4e8f55d 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service.cc
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service.cc
+@@ -149,7 +149,7 @@ bool grpc_copy_to_container_read_function(void *reader, void *data)
+ 
+ Status ContainerServiceImpl::Version(ServerContext *context, const VersionRequest *request, VersionResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_version_request *container_req = nullptr;
+     container_version_response *container_res = nullptr;
+@@ -170,22 +170,18 @@ Status ContainerServiceImpl::Version(ServerContext *context, const VersionReques
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.version(container_req, &container_res);
+-    tret = version_response_to_grpc(container_res, reply);
++    (void)cb->container.version(container_req, &container_res);
++    version_response_to_grpc(container_res, reply);
+ 
+     free_container_version_request(container_req);
+     free_container_version_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *request, InfoResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     host_info_request *container_req = nullptr;
+     host_info_response *container_res = nullptr;
+@@ -206,22 +202,18 @@ Status ContainerServiceImpl::Info(ServerContext *context, const InfoRequest *req
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.info(container_req, &container_res);
+-    tret = info_response_to_grpc(container_res, reply);
++    (void)cb->container.info(container_req, &container_res);
++    info_response_to_grpc(container_res, reply);
+ 
+     free_host_info_request(container_req);
+     free_host_info_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest *request, CreateResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_create_response *container_res = nullptr;
+     container_create_request *container_req = nullptr;
+@@ -242,22 +234,18 @@ Status ContainerServiceImpl::Create(ServerContext *context, const CreateRequest
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.create(container_req, &container_res);
+-    tret = create_response_to_grpc(container_res, reply);
++    (void)cb->container.create(container_req, &container_res);
++    create_response_to_grpc(container_res, reply);
+ 
+     free_container_create_request(container_req);
+     free_container_create_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *request, StartResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_start_request *req = nullptr;
+     container_start_response *res = nullptr;
+@@ -278,16 +266,12 @@ Status ContainerServiceImpl::Start(ServerContext *context, const StartRequest *r
+         return Status::CANCELLED;
+     }
+ 
+-    ret = cb->container.start(req, &res, -1, nullptr, nullptr);
+-    tret = response_to_grpc(res, reply);
++    (void)cb->container.start(req, &res, -1, nullptr, nullptr);
++    response_to_grpc(res, reply);
+ 
+     free_container_start_request(req);
+     free_container_start_response(res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+@@ -415,7 +399,7 @@ Status ContainerServiceImpl::RemoteStart(ServerContext *context,
+ 
+ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *request, TopResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_top_request *req = nullptr;
+     container_top_response *res = nullptr;
+@@ -436,22 +420,18 @@ Status ContainerServiceImpl::Top(ServerContext *context, const TopRequest *reque
+         return Status::CANCELLED;
+     }
+ 
+-    ret = cb->container.top(req, &res);
+-    tret = top_response_to_grpc(res, reply);
++    (void)cb->container.top(req, &res);
++    top_response_to_grpc(res, reply);
+ 
+     free_container_top_request(req);
+     free_container_top_response(res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *request, StopResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_stop_request *container_req = nullptr;
+     container_stop_response *container_res = nullptr;
+@@ -472,22 +452,18 @@ Status ContainerServiceImpl::Stop(ServerContext *context, const StopRequest *req
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.stop(container_req, &container_res);
+-    tret = response_to_grpc(container_res, reply);
++    (void)cb->container.stop(container_req, &container_res);
++    response_to_grpc(container_res, reply);
+ 
+     free_container_stop_request(container_req);
+     free_container_stop_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartRequest *request, RestartResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_restart_request *container_req = nullptr;
+     container_restart_response *container_res = nullptr;
+@@ -508,22 +484,18 @@ Status ContainerServiceImpl::Restart(ServerContext *context, const RestartReques
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.restart(container_req, &container_res);
+-    tret = response_to_grpc(container_res, reply);
++    (void)cb->container.restart(container_req, &container_res);
++    response_to_grpc(container_res, reply);
+ 
+     free_container_restart_request(container_req);
+     free_container_restart_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *request, KillResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_kill_request *container_req = nullptr;
+     container_kill_response *container_res = nullptr;
+@@ -544,22 +516,18 @@ Status ContainerServiceImpl::Kill(ServerContext *context, const KillRequest *req
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.kill(container_req, &container_res);
+-    tret = response_to_grpc(container_res, reply);
++    (void)cb->container.kill(container_req, &container_res);
++    response_to_grpc(container_res, reply);
+ 
+     free_container_kill_request(container_req);
+     free_container_kill_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest *request, DeleteResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_delete_request *container_req = nullptr;
+     container_delete_response *container_res = nullptr;
+@@ -580,22 +548,18 @@ Status ContainerServiceImpl::Delete(ServerContext *context, const DeleteRequest
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.remove(container_req, &container_res);
+-    tret = delete_response_to_grpc(container_res, reply);
++    (void)cb->container.remove(container_req, &container_res);
++    delete_response_to_grpc(container_res, reply);
+ 
+     free_container_delete_request(container_req);
+     free_container_delete_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *request, ExecResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_exec_request *container_req = nullptr;
+     container_exec_response *container_res = nullptr;
+@@ -616,16 +580,12 @@ Status ContainerServiceImpl::Exec(ServerContext *context, const ExecRequest *req
+         return Status::CANCELLED;
+     }
+ 
+-    ret = cb->container.exec(container_req, &container_res, -1, nullptr, nullptr);
+-    tret = exec_response_to_grpc(container_res, reply);
++    (void)cb->container.exec(container_req, &container_res, -1, nullptr, nullptr);
++    exec_response_to_grpc(container_res, reply);
+ 
+     free_container_exec_request(container_req);
+     free_container_exec_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+@@ -776,7 +736,7 @@ Status ContainerServiceImpl::RemoteExec(ServerContext *context,
+ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContainerRequest *request,
+                                      InspectContainerResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_inspect_request *container_req = nullptr;
+     container_inspect_response *container_res = nullptr;
+@@ -798,22 +758,18 @@ Status ContainerServiceImpl::Inspect(ServerContext *context, const InspectContai
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.inspect(container_req, &container_res);
+-    tret = inspect_response_to_grpc(container_res, reply);
++    (void)cb->container.inspect(container_req, &container_res);
++    inspect_response_to_grpc(container_res, reply);
+ 
+     free_container_inspect_request(container_req);
+     free_container_inspect_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *request, ListResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_list_request *container_req = nullptr;
+     container_list_response *container_res = nullptr;
+@@ -834,16 +790,12 @@ Status ContainerServiceImpl::List(ServerContext *context, const ListRequest *req
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.list(container_req, &container_res);
+-    tret = list_response_to_grpc(container_res, reply);
++    (void)cb->container.list(container_req, &container_res);
++    list_response_to_grpc(container_res, reply);
+ 
+     free_container_list_request(container_req);
+     free_container_list_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+@@ -990,7 +942,7 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
+ 
+ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *request, PauseResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_pause_request *container_req = nullptr;
+     container_pause_response *container_res = nullptr;
+@@ -1011,22 +963,18 @@ Status ContainerServiceImpl::Pause(ServerContext *context, const PauseRequest *r
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.pause(container_req, &container_res);
+-    tret = response_to_grpc(container_res, reply);
++    (void)cb->container.pause(container_req, &container_res);
++    response_to_grpc(container_res, reply);
+ 
+     free_container_pause_request(container_req);
+     free_container_pause_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest *request, ResumeResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_resume_request *container_req = nullptr;
+     container_resume_response *container_res = nullptr;
+@@ -1047,22 +995,18 @@ Status ContainerServiceImpl::Resume(ServerContext *context, const ResumeRequest
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.resume(container_req, &container_res);
+-    tret = response_to_grpc(container_res, reply);
++    (void)cb->container.resume(container_req, &container_res);
++    response_to_grpc(container_res, reply);
+ 
+     free_container_resume_request(container_req);
+     free_container_resume_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest *request, ExportResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_export_request *container_req = nullptr;
+     container_export_response *container_res = nullptr;
+@@ -1083,22 +1027,18 @@ Status ContainerServiceImpl::Export(ServerContext *context, const ExportRequest
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.export_rootfs(container_req, &container_res);
+-    tret = response_to_grpc(container_res, reply);
++    (void)cb->container.export_rootfs(container_req, &container_res);
++    response_to_grpc(container_res, reply);
+ 
+     free_container_export_request(container_req);
+     free_container_export_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest *request, RenameResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     struct isulad_container_rename_request *isuladreq = nullptr;
+     struct isulad_container_rename_response *isuladres = nullptr;
+@@ -1120,22 +1060,18 @@ Status ContainerServiceImpl::Rename(ServerContext *context, const RenameRequest
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.rename(isuladreq, &isuladres);
+-    tret = container_rename_response_to_grpc(isuladres, reply);
++    (void)cb->container.rename(isuladreq, &isuladres);
++    container_rename_response_to_grpc(isuladres, reply);
+ 
+     isulad_container_rename_request_free(isuladreq);
+     isulad_container_rename_response_free(isuladres);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest *request, ResizeResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     struct isulad_container_resize_request *isuladreq = nullptr;
+     struct isulad_container_resize_response *isuladres = nullptr;
+@@ -1157,22 +1093,18 @@ Status ContainerServiceImpl::Resize(ServerContext *context, const ResizeRequest
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.resize(isuladreq, &isuladres);
+-    tret = container_resize_response_to_grpc(isuladres, reply);
++    (void)cb->container.resize(isuladreq, &isuladres);
++    container_resize_response_to_grpc(isuladres, reply);
+ 
+     isulad_container_resize_request_free(isuladreq);
+     isulad_container_resize_response_free(isuladres);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest *request, UpdateResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_update_request *container_req = nullptr;
+     container_update_response *container_res = nullptr;
+@@ -1193,22 +1125,18 @@ Status ContainerServiceImpl::Update(ServerContext *context, const UpdateRequest
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.update(container_req, &container_res);
+-    tret = update_response_to_grpc(container_res, reply);
++    (void)cb->container.update(container_req, &container_res);
++    update_response_to_grpc(container_res, reply);
+ 
+     free_container_update_request(container_req);
+     free_container_update_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *request, StatsResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_stats_request *container_req = nullptr;
+     container_stats_response *container_res = nullptr;
+@@ -1229,22 +1157,18 @@ Status ContainerServiceImpl::Stats(ServerContext *context, const StatsRequest *r
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.stats(container_req, &container_res);
+-    tret = stats_response_to_grpc(container_res, reply);
++    (void)cb->container.stats(container_req, &container_res);
++    stats_response_to_grpc(container_res, reply);
+ 
+     free_container_stats_request(container_req);
+     free_container_stats_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *request, WaitResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     container_wait_request *container_req = nullptr;
+     container_wait_response *container_res = nullptr;
+@@ -1265,22 +1189,18 @@ Status ContainerServiceImpl::Wait(ServerContext *context, const WaitRequest *req
+         return Status::OK;
+     }
+ 
+-    ret = cb->container.wait(container_req, &container_res);
+-    tret = wait_response_to_grpc(container_res, reply);
++    (void)cb->container.wait(container_req, &container_res);
++    wait_response_to_grpc(container_res, reply);
+ 
+     free_container_wait_request(container_req);
+     free_container_wait_response(container_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest *request, ServerWriter<Event> *writer)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     isulad_events_request *isuladreq = nullptr;
+     stream_func_wrapper stream = { 0 };
+@@ -1305,9 +1225,9 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest
+     stream.write_func = &grpc_event_write_function;
+     stream.writer = (void *)writer;
+ 
+-    ret = cb->container.events(isuladreq, &stream);
++    tret = cb->container.events(isuladreq, &stream);
+     isulad_events_request_free(isuladreq);
+-    if (ret != 0) {
++    if (tret != 0) {
+         return Status(StatusCode::INTERNAL, "Failed to execute events callback");
+     }
+ 
+@@ -1317,7 +1237,7 @@ Status ContainerServiceImpl::Events(ServerContext *context, const EventsRequest
+ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const CopyFromContainerRequest *request,
+                                                ServerWriter<CopyFromContainerResponse> *writer)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     isulad_copy_from_container_request *isuladreq = nullptr;
+ 
+@@ -1344,11 +1264,11 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
+     stream.writer = (void *)writer;
+ 
+     char *err = nullptr;
+-    ret = cb->container.copy_from_container(isuladreq, &stream, &err);
++    tret = cb->container.copy_from_container(isuladreq, &stream, &err);
+     isulad_copy_from_container_request_free(isuladreq);
+     std::string errmsg = (err != nullptr) ? err : "Failed to execute copy_from_container callback";
+     free(err);
+-    if (ret != 0) {
++    if (tret != 0) {
+         return Status(StatusCode::UNKNOWN, errmsg);
+     }
+     return Status::OK;
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service.h b/src/daemon/entry/connect/grpc/grpc_containers_service.h
+index 30de091..4865c41 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service.h
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service.h
+@@ -106,36 +106,36 @@ public:
+ 
+ private:
+     template <class T1, class T2>
+-    int response_to_grpc(const T1 *response, T2 *gresponse)
++    void response_to_grpc(const T1 *response, T2 *gresponse)
+     {
+         if (response == nullptr) {
+             gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-            return 0;
++            return;
+         }
+         gresponse->set_cc(response->cc);
+         if (response->errmsg != nullptr) {
+             gresponse->set_errmsg(response->errmsg);
+         }
+-        return 0;
++        return;
+     }
+ 
+     int version_request_from_grpc(const VersionRequest *grequest, container_version_request **request);
+ 
+-    int version_response_to_grpc(const container_version_response *response, VersionResponse *gresponse);
++    void version_response_to_grpc(const container_version_response *response, VersionResponse *gresponse);
+ 
+     int info_request_from_grpc(const InfoRequest *grequest, host_info_request **request);
+ 
+-    int info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
++    void info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+ 
+     int create_request_from_grpc(const CreateRequest *grequest, container_create_request **request);
+ 
+-    int create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse);
++    void create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse);
+ 
+     int start_request_from_grpc(const StartRequest *grequest, container_start_request **request);
+ 
+     int top_request_from_grpc(const TopRequest *grequest, container_top_request **request);
+ 
+-    int top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
++    void top_response_to_grpc(const container_top_response *response, TopResponse *gresponse);
+ 
+     int stop_request_from_grpc(const StopRequest *grequest, container_stop_request **request);
+ 
+@@ -145,19 +145,19 @@ private:
+ 
+     int delete_request_from_grpc(const DeleteRequest *grequest, container_delete_request **request);
+ 
+-    int delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse);
++    void delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse);
+ 
+     int exec_request_from_grpc(const ExecRequest *grequest, container_exec_request **request);
+ 
+-    int exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse);
++    void exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse);
+ 
+     int inspect_request_from_grpc(const InspectContainerRequest *grequest, container_inspect_request **request);
+ 
+-    int inspect_response_to_grpc(const container_inspect_response *response, InspectContainerResponse *gresponse);
++    void inspect_response_to_grpc(const container_inspect_response *response, InspectContainerResponse *gresponse);
+ 
+     int list_request_from_grpc(const ListRequest *grequest, container_list_request **request);
+ 
+-    int list_response_to_grpc(const container_list_response *response, ListResponse *gresponse);
++    void list_response_to_grpc(const container_list_response *response, ListResponse *gresponse);
+ 
+     int pause_request_from_grpc(const PauseRequest *grequest, container_pause_request **request);
+ 
+@@ -166,26 +166,26 @@ private:
+     int container_rename_request_from_grpc(const RenameRequest *grequest,
+                                            struct isulad_container_rename_request **request);
+ 
+-    int container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
+-                                          RenameResponse *gresponse);
++    void container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
++                                           RenameResponse *gresponse);
+ 
+     int container_resize_request_from_grpc(const ResizeRequest *grequest,
+                                            struct isulad_container_resize_request **request);
+ 
+-    int container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
+-                                          ResizeResponse *gresponse);
++    void container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
++                                           ResizeResponse *gresponse);
+ 
+     int update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request);
+ 
+-    int update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse);
++    void update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse);
+ 
+     int stats_request_from_grpc(const StatsRequest *grequest, container_stats_request **request);
+ 
+-    int stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse);
++    void stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse);
+ 
+     int wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request);
+ 
+-    int wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
++    void wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse);
+ 
+     int events_request_from_grpc(const EventsRequest *grequest, struct isulad_events_request **request);
+ 
+@@ -211,11 +211,11 @@ private:
+ 
+     int export_request_from_grpc(const ExportRequest *grequest, container_export_request **request);
+ 
+-    int pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
++    void pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+ 
+-    int pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
++    void pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+ 
+-    int pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
++    void pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse);
+ 
+     int logs_request_from_grpc(const LogsRequest *grequest, struct isulad_logs_request **request);
+ };
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc b/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
+index 4d1f657..c09021c 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
+@@ -30,12 +30,12 @@ int ContainerServiceImpl::version_request_from_grpc(const VersionRequest *greque
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::version_response_to_grpc(const container_version_response *response,
+-                                                   VersionResponse *gresponse)
++void ContainerServiceImpl::version_response_to_grpc(const container_version_response *response,
++                                                    VersionResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+     gresponse->set_cc(response->cc);
+     if (response->errmsg != nullptr) {
+@@ -54,7 +54,7 @@ int ContainerServiceImpl::version_response_to_grpc(const container_version_respo
+         gresponse->set_root_path(response->root_path);
+     }
+ 
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::info_request_from_grpc(const InfoRequest *grequest, host_info_request **request)
+@@ -68,11 +68,11 @@ int ContainerServiceImpl::info_request_from_grpc(const InfoRequest *grequest, ho
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse)
++void ContainerServiceImpl::info_response_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -92,9 +92,8 @@ int ContainerServiceImpl::info_response_to_grpc(const host_info_response *respon
+ 
+     gresponse->set_images_num(response->images_num);
+ 
+-    if (pack_os_info_to_grpc(response, gresponse)) {
+-        return -1;
+-    }
++
++    pack_os_info_to_grpc(response, gresponse);
+ 
+     if (response->logging_driver != nullptr) {
+         gresponse->set_logging_driver(response->logging_driver);
+@@ -106,15 +105,11 @@ int ContainerServiceImpl::info_response_to_grpc(const host_info_response *respon
+ 
+     gresponse->set_total_mem(response->total_mem);
+ 
+-    if (pack_proxy_info_to_grpc(response, gresponse)) {
+-        return -1;
+-    }
++    pack_proxy_info_to_grpc(response, gresponse);
+ 
+-    if (pack_driver_info_to_grpc(response, gresponse)) {
+-        return -1;
+-    }
++    pack_driver_info_to_grpc(response, gresponse);
+ 
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::create_request_from_grpc(const CreateRequest *grequest, container_create_request **request)
+@@ -151,11 +146,11 @@ int ContainerServiceImpl::create_request_from_grpc(const CreateRequest *grequest
+ }
+ 
+ 
+-int ContainerServiceImpl::create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse)
++void ContainerServiceImpl::create_response_to_grpc(const container_create_response *response, CreateResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+     gresponse->set_cc(response->cc);
+     if (response->errmsg != nullptr) {
+@@ -164,7 +159,7 @@ int ContainerServiceImpl::create_response_to_grpc(const container_create_respons
+     if (response->id != nullptr) {
+         gresponse->set_id(response->id);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::start_request_from_grpc(const StartRequest *grequest, container_start_request **request)
+@@ -234,11 +229,11 @@ int ContainerServiceImpl::top_request_from_grpc(const TopRequest *grequest, cont
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::top_response_to_grpc(const container_top_response *response, TopResponse *gresponse)
++void ContainerServiceImpl::top_response_to_grpc(const container_top_response *response, TopResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+     gresponse->set_cc(response->cc);
+     if (response->errmsg != nullptr) {
+@@ -253,7 +248,7 @@ int ContainerServiceImpl::top_response_to_grpc(const container_top_response *res
+         gresponse->add_processes(response->processes[i]);
+     }
+ 
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::stop_request_from_grpc(const StopRequest *grequest, container_stop_request **request)
+@@ -328,11 +323,11 @@ int ContainerServiceImpl::delete_request_from_grpc(const DeleteRequest *grequest
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse)
++void ContainerServiceImpl::delete_response_to_grpc(const container_delete_response *response, DeleteResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+     gresponse->set_cc(response->cc);
+     if (response->id != nullptr) {
+@@ -341,7 +336,7 @@ int ContainerServiceImpl::delete_response_to_grpc(const container_delete_respons
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, container_exec_request **request)
+@@ -418,11 +413,11 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse)
++void ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *response, ExecResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -430,7 +425,7 @@ int ContainerServiceImpl::exec_response_to_grpc(const container_exec_response *r
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::inspect_request_from_grpc(const InspectContainerRequest *grequest,
+@@ -454,12 +449,12 @@ int ContainerServiceImpl::inspect_request_from_grpc(const InspectContainerReques
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::inspect_response_to_grpc(const container_inspect_response *response,
+-                                                   InspectContainerResponse *gresponse)
++void ContainerServiceImpl::inspect_response_to_grpc(const container_inspect_response *response,
++                                                    InspectContainerResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -469,7 +464,7 @@ int ContainerServiceImpl::inspect_response_to_grpc(const container_inspect_respo
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::list_request_from_grpc(const ListRequest *grequest, container_list_request **request)
+@@ -534,11 +529,11 @@ cleanup:
+     return -1;
+ }
+ 
+-int ContainerServiceImpl::list_response_to_grpc(const container_list_response *response, ListResponse *gresponse)
++void ContainerServiceImpl::list_response_to_grpc(const container_list_response *response, ListResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -579,7 +574,7 @@ int ContainerServiceImpl::list_response_to_grpc(const container_list_response *r
+         }
+         container->set_created(response->containers[i]->created);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::pause_request_from_grpc(const PauseRequest *grequest, container_pause_request **request)
+@@ -637,12 +632,12 @@ int ContainerServiceImpl::container_rename_request_from_grpc(const RenameRequest
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
+-                                                            RenameResponse *gresponse)
++void ContainerServiceImpl::container_rename_response_to_grpc(const struct isulad_container_rename_response *response,
++                                                             RenameResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -653,7 +648,7 @@ int ContainerServiceImpl::container_rename_response_to_grpc(const struct isulad_
+         gresponse->set_id(response->id);
+     }
+ 
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest *grequest,
+@@ -682,12 +677,12 @@ int ContainerServiceImpl::container_resize_request_from_grpc(const ResizeRequest
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
+-                                                            ResizeResponse *gresponse)
++void ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_container_resize_response *response,
++                                                             ResizeResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -698,7 +693,7 @@ int ContainerServiceImpl::container_resize_response_to_grpc(const struct isulad_
+         gresponse->set_id(response->id);
+     }
+ 
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::update_request_from_grpc(const UpdateRequest *grequest, container_update_request **request)
+@@ -722,11 +717,11 @@ int ContainerServiceImpl::update_request_from_grpc(const UpdateRequest *grequest
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse)
++void ContainerServiceImpl::update_response_to_grpc(const container_update_response *response, UpdateResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -736,7 +731,7 @@ int ContainerServiceImpl::update_response_to_grpc(const container_update_respons
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest, container_stats_request **request)
+@@ -766,11 +761,11 @@ int ContainerServiceImpl::stats_request_from_grpc(const StatsRequest *grequest,
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse)
++void ContainerServiceImpl::stats_response_to_grpc(const container_stats_response *response, StatsResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     if (response->container_stats && response->container_stats_len) {
+@@ -803,7 +798,7 @@ int ContainerServiceImpl::stats_response_to_grpc(const container_stats_response
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::wait_request_from_grpc(const WaitRequest *grequest, container_wait_request **request)
+@@ -824,11 +819,11 @@ int ContainerServiceImpl::wait_request_from_grpc(const WaitRequest *grequest, co
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse)
++void ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *response, WaitResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -836,7 +831,7 @@ int ContainerServiceImpl::wait_response_to_grpc(const container_wait_response *r
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ int ContainerServiceImpl::events_request_from_grpc(const EventsRequest *grequest,
+@@ -1059,11 +1054,11 @@ int ContainerServiceImpl::export_request_from_grpc(const ExportRequest *grequest
+     return 0;
+ }
+ 
+-int ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
++void ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     if (response->kversion != nullptr) {
+@@ -1096,14 +1091,14 @@ int ContainerServiceImpl::pack_os_info_to_grpc(const host_info_response *respons
+         gresponse->set_huge_page_size(response->huge_page_size);
+     }
+ 
+-    return 0;
++    return;
+ }
+ 
+-int ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
++void ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     if (response->http_proxy != nullptr) {
+@@ -1118,14 +1113,14 @@ int ContainerServiceImpl::pack_proxy_info_to_grpc(const host_info_response *resp
+         gresponse->set_no_proxy(response->no_proxy);
+     }
+ 
+-    return 0;
++    return;
+ }
+ 
+-int ContainerServiceImpl::pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
++void ContainerServiceImpl::pack_driver_info_to_grpc(const host_info_response *response, InfoResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     if (response->driver_name != nullptr) {
+@@ -1136,5 +1131,5 @@ int ContainerServiceImpl::pack_driver_info_to_grpc(const host_info_response *res
+         gresponse->set_driver_status(response->driver_status);
+     }
+ 
+-    return 0;
++    return;
+ }
+diff --git a/src/daemon/entry/connect/grpc/grpc_images_service.cc b/src/daemon/entry/connect/grpc/grpc_images_service.cc
+index 533467c..57a51ee 100644
+--- a/src/daemon/entry/connect/grpc/grpc_images_service.cc
++++ b/src/daemon/entry/connect/grpc/grpc_images_service.cc
+@@ -88,11 +88,11 @@ cleanup:
+     return -1;
+ }
+ 
+-int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse)
++void ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -109,7 +109,8 @@ int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *r
+         target = new (std::nothrow) Descriptor;
+         if (target == nullptr) {
+             ERROR("Out of memory");
+-            return -1;
++            gresponse->set_cc(ISULAD_ERR_MEMOUT);
++            return;
+         }
+         if (response->images[i]->target->digest != nullptr) {
+             target->set_digest(response->images[i]->target->digest);
+@@ -117,8 +118,8 @@ int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *r
+         Timestamp *timestamp = image->mutable_created_at();
+         if (timestamp == nullptr) {
+             delete target;
+-            ERROR("Out of memory");
+-            return -1;
++            gresponse->set_cc(ISULAD_ERR_MEMOUT);
++            return;
+         }
+         timestamp->set_seconds(response->images[i]->created_at->seconds);
+         timestamp->set_nanos(response->images[i]->created_at->nanos);
+@@ -129,7 +130,7 @@ int ImagesServiceImpl::image_list_response_to_grpc(image_list_images_response *r
+         image->set_allocated_target(target);
+     }
+ 
+-    return 0;
++    return;
+ }
+ 
+ int ImagesServiceImpl::image_remove_request_from_grpc(const DeleteImageRequest *grequest,
+@@ -232,11 +233,12 @@ int ImagesServiceImpl::inspect_request_from_grpc(const InspectImageRequest *greq
+     return 0;
+ }
+ 
+-int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse)
++void ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *response,
++                                                 InspectImageResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -246,7 +248,7 @@ int ImagesServiceImpl::inspect_response_to_grpc(const image_inspect_response *re
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *request, ListImagesResponse *reply)
+@@ -269,16 +271,12 @@ Status ImagesServiceImpl::List(ServerContext *context, const ListImagesRequest *
+     }
+ 
+     image_list_images_response *image_res = nullptr;
+-    int ret = cb->image.list(image_req, &image_res);
+-    tret = image_list_response_to_grpc(image_res, reply);
++    (void)cb->image.list(image_req, &image_res);
++    image_list_response_to_grpc(image_res, reply);
+ 
+     free_image_list_images_request(image_req);
+     free_image_list_images_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+-        reply->set_cc(ISULAD_ERR_INPUT);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+@@ -302,16 +300,12 @@ Status ImagesServiceImpl::Delete(ServerContext *context, const DeleteImageReques
+     }
+ 
+     image_delete_image_response *image_res = nullptr;
+-    int ret = cb->image.remove(image_req, &image_res);
+-    tret = response_to_grpc(image_res, reply);
++    (void)cb->image.remove(image_req, &image_res);
++    response_to_grpc(image_res, reply);
+ 
+     free_image_delete_image_request(image_req);
+     free_image_delete_image_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+-        reply->set_cc(ISULAD_ERR_INPUT);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+@@ -335,24 +329,20 @@ Status ImagesServiceImpl::Tag(ServerContext *context, const TagImageRequest *req
+     }
+ 
+     image_tag_image_response *image_res = nullptr;
+-    int ret = cb->image.tag(image_req, &image_res);
+-    tret = response_to_grpc(image_res, reply);
++    (void)cb->image.tag(image_req, &image_res);
++    response_to_grpc(image_res, reply);
+ 
+     free_image_tag_image_request(image_req);
+     free_image_tag_image_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+-        reply->set_cc(ISULAD_ERR_INPUT);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+-int ImagesServiceImpl::import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse)
++void ImagesServiceImpl::import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse)
+ {
+     if (response == nullptr) {
+         gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-        return 0;
++        return;
+     }
+ 
+     gresponse->set_cc(response->cc);
+@@ -362,7 +352,7 @@ int ImagesServiceImpl::import_response_to_grpc(const image_import_response *resp
+     if (response->errmsg != nullptr) {
+         gresponse->set_errmsg(response->errmsg);
+     }
+-    return 0;
++    return;
+ }
+ 
+ Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *request, ImportResponse *reply)
+@@ -385,16 +375,11 @@ Status ImagesServiceImpl::Import(ServerContext *context, const ImportRequest *re
+     }
+ 
+     image_import_response *image_res = nullptr;
+-    int ret = cb->image.import(image_req, &image_res);
+-    tret = import_response_to_grpc(image_res, reply);
++    (void)cb->image.import(image_req, &image_res);
++    import_response_to_grpc(image_res, reply);
+ 
+     free_image_import_request(image_req);
+     free_image_import_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+-        reply->set_cc(ISULAD_ERR_INPUT);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
+ 
+     return Status::OK;
+ }
+@@ -419,16 +404,11 @@ Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *r
+     }
+ 
+     image_load_image_response *image_res = nullptr;
+-    int ret = cb->image.load(image_req, &image_res);
+-    tret = response_to_grpc(image_res, reply);
++    (void)cb->image.load(image_req, &image_res);
++    response_to_grpc(image_res, reply);
+ 
+     free_image_load_image_request(image_req);
+     free_image_load_image_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+-        reply->set_cc(ISULAD_ERR_INPUT);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
+ 
+     return Status::OK;
+ }
+@@ -436,7 +416,7 @@ Status ImagesServiceImpl::Load(ServerContext *context, const LoadImageRequest *r
+ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequest *request,
+                                   InspectImageResponse *reply)
+ {
+-    int ret, tret;
++    int tret;
+     service_executor_t *cb = nullptr;
+     image_inspect_request *image_req = nullptr;
+     image_inspect_response *image_res = nullptr;
+@@ -458,16 +438,12 @@ Status ImagesServiceImpl::Inspect(ServerContext *context, const InspectImageRequ
+         return Status::OK;
+     }
+ 
+-    ret = cb->image.inspect(image_req, &image_res);
+-    tret = inspect_response_to_grpc(image_res, reply);
++    (void)cb->image.inspect(image_req, &image_res);
++    inspect_response_to_grpc(image_res, reply);
+ 
+     free_image_inspect_request(image_req);
+     free_image_inspect_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(errno_to_error_message(ISULAD_ERR_INTERNAL));
+-        reply->set_cc(ISULAD_ERR_INTERNAL);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
++
+     return Status::OK;
+ }
+ 
+@@ -535,16 +511,11 @@ Status ImagesServiceImpl::Login(ServerContext *context, const LoginRequest *requ
+     }
+ 
+     image_login_response *image_res = nullptr;
+-    int ret = cb->image.login(image_req, &image_res);
+-    tret = response_to_grpc(image_res, reply);
++    (void)cb->image.login(image_req, &image_res);
++    response_to_grpc(image_res, reply);
+ 
+     free_image_login_request(image_req);
+     free_image_login_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+-        reply->set_cc(ISULAD_ERR_INPUT);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
+ 
+     return Status::OK;
+ }
+@@ -569,16 +540,11 @@ Status ImagesServiceImpl::Logout(ServerContext *context, const LogoutRequest *re
+     }
+ 
+     image_logout_response *image_res = nullptr;
+-    int ret = cb->image.logout(image_req, &image_res);
+-    tret = response_to_grpc(image_res, reply);
++    (void)cb->image.logout(image_req, &image_res);
++    response_to_grpc(image_res, reply);
+ 
+     free_image_logout_request(image_req);
+     free_image_logout_response(image_res);
+-    if (tret != 0) {
+-        reply->set_errmsg(util_strdup_s(errno_to_error_message(ISULAD_ERR_INTERNAL)));
+-        reply->set_cc(ISULAD_ERR_INPUT);
+-        ERROR("Failed to translate response to grpc, operation is %s", ret ? "failed" : "success");
+-    }
+ 
+     return Status::OK;
+ }
+diff --git a/src/daemon/entry/connect/grpc/grpc_images_service.h b/src/daemon/entry/connect/grpc/grpc_images_service.h
+index 921d64f..92334b5 100644
+--- a/src/daemon/entry/connect/grpc/grpc_images_service.h
++++ b/src/daemon/entry/connect/grpc/grpc_images_service.h
+@@ -60,21 +60,21 @@ public:
+ 
+ private:
+     template <class T1, class T2>
+-    int response_to_grpc(const T1 *response, T2 *gresponse)
++    void response_to_grpc(const T1 *response, T2 *gresponse)
+     {
+         if (response == nullptr) {
+             gresponse->set_cc(ISULAD_ERR_MEMOUT);
+-            return 0;
++            return;
+         }
+         gresponse->set_cc(response->cc);
+         if (response->errmsg != nullptr) {
+             gresponse->set_errmsg(response->errmsg);
+         }
+-        return 0;
++        return;
+     }
+     int image_list_request_from_grpc(const ListImagesRequest *grequest, image_list_images_request **request);
+ 
+-    int image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse);
++    void image_list_response_to_grpc(image_list_images_response *response, ListImagesResponse *gresponse);
+ 
+     int image_remove_request_from_grpc(const DeleteImageRequest *grequest, image_delete_image_request **request);
+ 
+@@ -82,13 +82,13 @@ private:
+ 
+     int image_import_request_from_grpc(const ImportRequest *grequest, image_import_request **request);
+ 
+-    int import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse);
++    void import_response_to_grpc(const image_import_response *response, ImportResponse *gresponse);
+ 
+     int image_load_request_from_grpc(const LoadImageRequest *grequest, image_load_image_request **request);
+ 
+     int inspect_request_from_grpc(const InspectImageRequest *grequest, image_inspect_request **request);
+ 
+-    int inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse);
++    void inspect_response_to_grpc(const image_inspect_response *response, InspectImageResponse *gresponse);
+ 
+     int image_login_request_from_grpc(const LoginRequest *grequest, image_login_request **request);
+ 
+-- 
+2.20.1
+
