@@ -1,0 +1,26 @@
+From c4980da3192c4ee2d8a2251c520cec6ea857523a Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Thu, 29 Oct 2020 21:29:04 +0800
+Subject: [PATCH 14/28] unlink etc dir when link exists
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ src/daemon/modules/service/service_container.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index 4e830d3..cc4e85e 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -130,6 +130,8 @@ static int create_mtab_link(const oci_runtime_spec *oci_spec)
+         goto out;
+     }
+ 
++    (void)unlink(dir);
++
+     if (!util_dir_exists(dir)) {
+         ret = util_mkdir_p(dir, ETC_FILE_MODE);
+         if (ret != 0) {
+-- 
+2.20.1
+
