@@ -1,5 +1,5 @@
 %global _version 2.0.6
-%global _release 20201015.154058.git4ab9f838
+%global _release 20201112.193005.git8a6b73c8
 %global is_systemd 1
 
 Name:      iSulad
@@ -11,6 +11,35 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
+
+Patch6001: 0001-iSulad-modify-defattr-to-755-in-spec.patch
+Patch6002: 0002-Dockerfile-update-dockerfile-to-isulad-v2.0.6-use-mu.patch
+Patch6003: 0003-isulad-rt_isula_start-should-read-the-isulad-shim-pi.patch
+Patch6004: 0004-Realpath-add-get-realpath-for-root-and-state-dir.patch
+Patch6005: 0005-CI-add-testcase-for-root-and-run-dir-realpath.patch
+Patch6006: 0006-info-fix-typo-driverr-to-driver.patch
+Patch6007: 0007-create-fix-wrong-ret-code.patch
+Patch6008: 0008-add-iSulad-s-build-guide-for-RISC-V.patch
+Patch6009: 0009-add-non-root-group.patch
+Patch6010: 0010-add-nonroot-execute-CI.patch
+Patch6011: 0011-cni-support-extension-data-transmission.patch
+Patch6012: 0012-unpack-add-remove-target-file-in-handle-.wh.patch
+Patch6013: 0013-iSulad-internal-change.patch
+Patch6014: 0014-unlink-etc-dir-when-link-exists.patch
+Patch6015: 0015-support-variable-extension-cni-args.patch
+Patch6016: 0016-CI-for-support-variable-extension-cni-args.patch
+Patch6017: 0017-add-unlink-dir-comments.patch
+Patch6018: 0018-iSulad-add-ISULAD_TMPDIR-env-variable.patch
+Patch6019: 0019-CI-remove-test-data-from-iSulad-repo.patch
+Patch6020: 0020-add-ISULAD_TMPDIR-env-CI.patch
+Patch6021: 0021-iSulad-fix-memory-leak-in-inspect-grpc-service.patch
+Patch6022: 0022-clean-code-remove-unused-code-in-connect.patch
+Patch6023: 0023-add-newline-character-at-end-of-iSulad.sysconfig.patch
+Patch6024: 0024-clean-code-remove-unused-in-code.patch
+Patch6025: 0025-utils-add-fdatasync-when-do-atomic-write-file.patch
+Patch6026: 0026-network-support-mutlnetworks.patch
+Patch6027: 0027-add-testcases-for-mutl-networks.patch
+Patch6028: 0028-add-filter-to-get-only-non-sandbox-containers.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -213,6 +242,12 @@ fi
 %endif
 
 %changelog
+* Thu Nov 12 2020  gaohuatao<gaohuatao@huawei.com> - 2.0.6-20201112.193005.git8a6b73c8
+- Type: update from openeuler
+- ID:NA
+- SUG:NA
+- DESC: update from openeuler
+
 * Wed Oct 14 2020  lifeng68<lifeng68@huawei.com> - 2.0.6-20201014.152749.gitc8a43925
 - Type: upgrade to v2.0.6
 - ID:NA
