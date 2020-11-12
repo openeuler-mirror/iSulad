@@ -1,5 +1,5 @@
 %global _version 2.0.5
-%global _release 20200923.100553.gitdeb4ece4
+%global _release 20201112.192302.gitedce3879
 %global is_systemd 1
 
 Name:      iSulad
@@ -12,19 +12,35 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch6000:	0000-config-remove-unused-config.patch
-Patch6001:	0001-fix-modify-quota-log-level-to-warning.patch
-Patch6002:	0002-fix-memory-leak.patch
-Patch6003:	0003-fix-security-opt-parsing-access-out-of-bounds.patch
-Patch6004:	0004-fix-delete-rootfs-dir-when-rootfs-load-failed.patch
-Patch6005:	0005-fix-code-review.patch
-Patch6006:	0006-fix-pull-failure-caused-by-link-conflict.patch
-Patch6007:	0007-image-clear-memory-if-failed.patch
-Patch6008:	0008-fix-layer-remain-caused-by-hold-flag-not-clean.patch
-Patch6009:	0009-fix-coredump-when-pull-image-with-lock-driver-image-.patch
-Patch6010:	0010-fix-bad-formatting-placeholder-in-http-parse-module.patch
-Patch6011:	0011-iSulad-fix-memory-leak.patch
-Patch6012:	0012-fix-coredump-when-load-image-with-uid.patch
+Patch6000: 0000-update-from-v2.0.5-to-v2.0.6.patch
+Patch6001: 0001-iSulad-modify-defattr-to-755-in-spec.patch
+Patch6002: 0002-Dockerfile-update-dockerfile-to-isulad-v2.0.6-use-mu.patch
+Patch6003: 0003-isulad-rt_isula_start-should-read-the-isulad-shim-pi.patch
+Patch6004: 0004-Realpath-add-get-realpath-for-root-and-state-dir.patch
+Patch6005: 0005-CI-add-testcase-for-root-and-run-dir-realpath.patch
+Patch6006: 0006-info-fix-typo-driverr-to-driver.patch
+Patch6007: 0007-create-fix-wrong-ret-code.patch
+Patch6008: 0008-add-iSulad-s-build-guide-for-RISC-V.patch
+Patch6009: 0009-add-non-root-group.patch
+Patch6010: 0010-add-nonroot-execute-CI.patch
+Patch6011: 0011-cni-support-extension-data-transmission.patch
+Patch6012: 0012-unpack-add-remove-target-file-in-handle-.wh.patch
+Patch6013: 0013-iSulad-internal-change.patch
+Patch6014: 0014-unlink-etc-dir-when-link-exists.patch
+Patch6015: 0015-support-variable-extension-cni-args.patch
+Patch6016: 0016-CI-for-support-variable-extension-cni-args.patch
+Patch6017: 0017-add-unlink-dir-comments.patch
+Patch6018: 0018-iSulad-add-ISULAD_TMPDIR-env-variable.patch
+Patch6019: 0019-CI-remove-test-data-from-iSulad-repo.patch
+Patch6020: 0020-add-ISULAD_TMPDIR-env-CI.patch
+Patch6021: 0021-iSulad-fix-memory-leak-in-inspect-grpc-service.patch
+Patch6022: 0022-clean-code-remove-unused-code-in-connect.patch
+Patch6023: 0023-add-newline-character-at-end-of-iSulad.sysconfig.patch
+Patch6024: 0024-clean-code-remove-unused-in-code.patch
+Patch6025: 0025-utils-add-fdatasync-when-do-atomic-write-file.patch
+Patch6026: 0026-network-support-mutlnetworks.patch
+Patch6027: 0027-add-testcases-for-mutl-networks.patch
+Patch6028: 0028-add-filter-to-get-only-non-sandbox-containers.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -88,7 +104,7 @@ install -d $RPM_BUILD_ROOT/%{_bindir}
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
-chrpath -d ./src/isula 
+chrpath -d ./src/isula
 chrpath -d ./src/isulad-shim
 chrpath -d ./src/isulad
 
@@ -232,17 +248,11 @@ fi
 %endif
 
 %changelog
-+* Fri Sep 23 2020  <wujing50@huawei.com> - 2.0.5-20200923.100553.gitdeb4ece4
-+- Type:bugfix
++* Thu Nov 12 2020  <gaohuatao@huawei.com> - 2.0.5-20201112.192302.gitedce3879
++- Type:update from openeuler
 +- ID:NA
 +- SUG:NA
-+- DESC: fix some memory bugs
-
-+* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: modify log level to warn
++- DESC: update from openeuler
 
 +* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
 +- Type:bugfix
