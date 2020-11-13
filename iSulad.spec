@@ -109,11 +109,6 @@ chrpath -d ./src/isulad-shim
 chrpath -d ./src/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
-install -m 0644 ../src/client/libisula.h			%{buildroot}/%{_includedir}/isulad/libisula.h
-install -m 0644 ../src/client/connect/isula_connect.h		%{buildroot}/%{_includedir}/isulad/isula_connect.h
-install -m 0644 ../src/utils/cutils/utils_timestamp.h			%{buildroot}/%{_includedir}/isulad/utils_timestamp.h
-install -m 0644 ../src/utils/cutils/error.h				%{buildroot}/%{_includedir}/isulad/error.h
-install -m 0644 ../src/daemon/modules/runtime/engines/engine.h			%{buildroot}/%{_includedir}/isulad/engine.h
 install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
@@ -160,8 +155,8 @@ fi
 fi
 
 %post
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 if [ "$1" = "1" ]; then
@@ -192,8 +187,8 @@ fi
 %endif
 fi
 
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 %preun
@@ -233,7 +228,7 @@ fi
 %{_includedir}/isulad/*
 %attr(0755,root,root) %{_libdir}/pkgconfig
 %attr(0640,root,root) %{_libdir}/pkgconfig/isulad.pc
-%defattr(0550,root,root,0750)
+%defattr(0755,root,root,0755)
 %{_bindir}/*
 %{_libdir}/*
 %attr(0640,root,root) %{_sysconfdir}/sysconfig/iSulad
