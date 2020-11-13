@@ -344,6 +344,7 @@ static int container_wait_rm_cond_wait(container_t *cont, int timeout)
 int container_wait_rm_locking(container_t *cont, int timeout)
 {
     int ret = 0;
+    container_t *cont_tmp = NULL;
 
     if (cont == NULL) {
         return -1;
@@ -351,8 +352,17 @@ int container_wait_rm_locking(container_t *cont, int timeout)
 
     container_lock(cont);
 
+    /* check if container was deregistered by previous rm already */
+    cont_tmp = containers_store_get(cont->common_config->id);
+    if (cont_tmp == NULL) {
+        ret = 0;
+        goto unlock;
+    }
+    container_unref(cont_tmp);
+
     ret = container_wait_rm_cond_wait(cont, timeout);
 
+unlock:
     container_unlock(cont);
 
     return ret;
