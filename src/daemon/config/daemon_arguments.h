@@ -31,38 +31,40 @@ extern "C" {
 typedef void (*service_arguments_help_t)(void);
 
 struct service_arguments {
-    char *progname;
     service_arguments_help_t print_help;
 
-    bool quiet;
-    bool help;
-    bool version;
-    char **hosts;
-    size_t hosts_len;
+    struct { /* common args */
+        char *progname;
+        bool quiet;
+        bool help;
+        bool version;
+        char **hosts;
+        size_t hosts_len;
+        unsigned int websocket_server_listening_port;
+    };
 
-    // struct service_arguments *server_conf;
+    struct { /* default configs for container */
+        // daemon hooks config
+        oci_runtime_spec_hooks *hooks;
+
+        host_config_ulimits_element **default_ulimit;
+        size_t default_ulimit_len;
+
+        unsigned int start_timeout;
+    };
+
+    struct { /* daemon log configs */
+        unsigned int log_file_mode;
+        char *logpath;
+        int64_t max_size;
+        int max_file;
+    };
+
+    // store all daemon.json configs
     isulad_daemon_configs *json_confs;
-
-    /* parsed configs */
-    oci_runtime_spec_hooks *hooks;
-
-    unsigned int start_timeout;
-    unsigned int image_opt_timeout;
-
-    /* log-opts */
-    unsigned int log_file_mode;
-    char *logpath;
-    int64_t max_size;
-    int max_file;
-
-    /* default configs */
-    host_config_ulimits_element **default_ulimit;
-    size_t default_ulimit_len;
-    unsigned int websocket_server_listening_port;
 
     // remaining arguments
     char * const *argv;
-
     int argc;
 };
 

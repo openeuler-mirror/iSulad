@@ -137,6 +137,14 @@ int service_arguments_init(struct service_arguments *args)
     args->max_file = 7;
     args->max_size = 1024 * 1024;
 
+    // init container log configs
+    args->json_confs->container_log = (isulad_daemon_configs_container_log *)util_common_calloc_s(sizeof(
+                                                                                                      isulad_daemon_configs_container_log));
+    if (args->json_confs->container_log == NULL) {
+        ERROR("Out of memory");
+        goto free_out;
+    }
+
     args->json_confs->pidfile = util_strdup_s("/var/run/isulad.pid");
     args->json_confs->storage_driver = util_strdup_s("overlay2");
     args->json_confs->native_umask = util_strdup_s(UMASK_SECURE);
@@ -149,7 +157,6 @@ int service_arguments_init(struct service_arguments *args)
     *(args->json_confs->use_decrypted_key) = true;
     args->json_confs->insecure_skip_verify_enforce = false;
 
-    args->image_opt_timeout = 5 * 60; // default image operation timeout 300s
     if (set_daemon_default_tls_options(args) != 0) {
         goto free_out;
     }
@@ -241,6 +248,7 @@ int server_log_opt_parser(struct service_arguments *args, const char *option)
         ret = append_json_map_string_string(args->json_confs->log_opts, key, value);
     }
 
+    tmp[len] = '=';
 out:
     free(tmp);
     return ret;

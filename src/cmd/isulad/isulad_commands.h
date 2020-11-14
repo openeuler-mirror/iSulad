@@ -37,14 +37,14 @@ int update_hosts(struct service_arguments *args);
 int update_default_ulimit(struct service_arguments *args);
 int command_default_ulimit_append(command_option_t *option, const char *arg);
 
-#define ISULAD_OPTIONS(cmdargs)                                                                                           \
-    { CMD_OPT_TYPE_CALLBACK,                                                                                              \
-        false,                                                                                                              \
-        "host",                                                                                                             \
-        'H',                                                                                                                \
-        &(cmdargs)->hosts,                                                                                                  \
-        "The socket name used to create gRPC server",                                                                       \
-        command_valid_socket_append_array },                                                                                \
+#define ISULAD_OPTIONS(cmdargs)                                                                                   \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                      \
+        false,                                                                                                    \
+        "host",                                                                                                   \
+        'H',                                                                                                      \
+        &(cmdargs)->hosts,                                                                                        \
+        "The socket name used to create gRPC server",                                                             \
+        command_valid_socket_append_array },                                                                      \
     { CMD_OPT_TYPE_STRING_DUP,   false, "pidfile", 'p', &(cmdargs)->json_confs->pidfile,                          \
       "Save pid into this file", NULL },                                                                          \
     { CMD_OPT_TYPE_BOOL, false, "help", 0, &(cmdargs)->help, "Show help", NULL },                                 \
@@ -99,13 +99,27 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       (cmdargs),                                                                                                  \
       "Set daemon log driver options, such as: log-path=/tmp/logs/ to set directory where to store daemon logs",  \
       server_callback_log_opt },                                                                                  \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                  \
+      false,                                                                                                                  \
+      "container-log-driver",                                                                                                 \
+      0,                                                                                                                      \
+      (cmdargs),                                                                                                              \
+      "Set default container log driver, such as: json-file",                                                                 \
+      server_callback_container_log_driver },                                                                                 \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                  \
+      false,                                                                                                                  \
+      "container-log-opts",                                                                                                   \
+      0,                                                                                                                      \
+      (cmdargs),                                                                                                              \
+      "Set default container log driver options, such as: max-file=7 to set max number of container log files",               \
+      server_callback_container_log },                                                                                        \
     { CMD_OPT_TYPE_BOOL, false, "version", 'V', &(cmdargs)->version, "Print the version", NULL },                 \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
       "group",                                                                                                    \
       'G',                                                                                                        \
       &(cmdargs)->json_confs->group,                                                                              \
-      "Group for the unix socket(default is isula)",                                                             \
+      "Group for the unix socket(default is isula)",                                                              \
       NULL },                                                                                                     \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                    \
       false,                                                                                                      \
@@ -249,9 +263,9 @@ int command_default_ulimit_append(command_option_t *option, const char *arg);
       &(cmdargs)->json_confs->websocket_server_listening_port,                                                    \
       "CRI websocket streaming service listening port (default 10350)",                                           \
       command_convert_uint },                                                                                     \
-    {                                                                                                                     \
-                                                                                                                          CMD_OPT_TYPE_BOOL, false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled,                          \
-                                                                                                                          "Enable selinux support", NULL                                                                            \
+    { CMD_OPT_TYPE_BOOL,                                                                                          \
+      false, "selinux-enabled", 0, &(cmdargs)->json_confs->selinux_enabled,                                       \
+      "Enable selinux support", NULL                                                                              \
     }
 
 #ifdef __cplusplus

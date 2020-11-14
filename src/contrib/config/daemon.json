@@ -13,6 +13,9 @@
         "max-size": "30KB"
     },
     "log-driver": "stdout",
+    "container-log": {
+        "driver": "json-file"
+    },
     "hook-spec": "/etc/default/isulad/hooks/default.json",
     "start-timeout": "2m",
     "storage-driver": "overlay2",

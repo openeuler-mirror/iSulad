@@ -123,7 +123,6 @@ int client_arguments_init(struct client_arguments *args)
     } else {
         args->socket = util_strdup_s(DEFAULT_UNIX_SOCKET);
     }
-    args->log_driver = util_strdup_s("json-file");
 
     (void)memset(&args->custom_conf, 0, sizeof(struct custom_configs));
     (void)memset(&args->cr, 0, sizeof(struct args_cgroup_resources));

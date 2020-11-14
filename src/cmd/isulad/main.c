@@ -70,6 +70,7 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "volume_api.h"
+#include "opt_log.h"
 
 #ifdef GRPC_CONNECTOR
 #include "clibcni/api.h"
@@ -836,6 +837,73 @@ static int configure_kernel_security_support(const struct service_arguments *arg
 }
 #endif
 
+static int use_default_log_opts_for_json_file(bool rotate_found, bool size_found,
+                                              isulad_daemon_configs_container_log *conf)
+{
+    int nret = 0;
+
+    if (conf->opts == NULL) {
+        conf->opts = util_common_calloc_s(sizeof(json_map_string_string));
+    }
+    if (conf->opts == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!rotate_found) {
+        nret = append_json_map_string_string(conf->opts, CONTAINER_LOG_CONFIG_KEY_ROTATE, "7");
+        if (nret != 0) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    if (!size_found) {
+        nret = append_json_map_string_string(conf->opts, CONTAINER_LOG_CONFIG_KEY_SIZE, "1MB");
+        if (nret != 0) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int update_container_log_configs(isulad_daemon_configs_container_log *conf)
+{
+    bool rotate_found = false;
+    bool size_found = false;
+    size_t i;
+
+    if (conf->driver == NULL) {
+        conf->driver = util_strdup_s(CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER);
+    }
+
+    if (!parse_container_log_opts(&conf->opts)) {
+        return -1;
+    }
+
+    /* validate daemon container log configs */
+    for (i = 0; conf->opts != NULL && i < conf->opts->len; i++) {
+        if (!check_opt_container_log_opt(conf->driver, conf->opts->keys[i])) {
+            return -1;
+        }
+
+        if (strcmp(CONTAINER_LOG_CONFIG_KEY_ROTATE, conf->opts->keys[i]) == 0) {
+            rotate_found = true;
+        } else if (strcmp(CONTAINER_LOG_CONFIG_KEY_SIZE, conf->opts->keys[i]) == 0) {
+            size_found = true;
+        }
+    }
+
+    // set default log opts for json file driver
+    if (strcmp(conf->driver, CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER) == 0) {
+        return use_default_log_opts_for_json_file(rotate_found, size_found, conf);
+    }
+
+    return 0;
+}
+
 static int update_server_args(struct service_arguments *args)
 {
     int ret = 0;
@@ -856,6 +924,11 @@ static int update_server_args(struct service_arguments *args)
     }
 
     if (update_default_ulimit(args) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (update_container_log_configs(args->json_confs->container_log) != 0) {
         ret = -1;
         goto out;
     }
