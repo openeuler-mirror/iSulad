@@ -40,6 +40,7 @@
 #include "utils_fs.h"
 #include "utils_regex.h"
 #include "utils_verify.h"
+#include "isula_libutils/defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -364,6 +365,8 @@ int util_normalized_host_os_arch(char **host_os, char **host_arch, char **host_v
 int util_read_pid_ppid_info(uint32_t pid, pid_ppid_info_t *pid_info);
 
 void util_parse_user_group(const char *username, char **user, char **group, char **tmp_dup);
+
+defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src);
 
 #ifdef __cplusplus
 }

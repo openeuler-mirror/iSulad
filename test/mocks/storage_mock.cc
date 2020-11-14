@@ -152,3 +152,27 @@ int storage_dec_hold_refs(const char *layer_id)
     }
     return -1;
 }
+
+char *storage_rootfs_mount(const char *container_id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageRootfsMount(container_id);
+    }
+    return NULL;
+}
+
+int storage_rootfs_umount(const char *container_id, bool force)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageRootfsUmount(container_id, force);
+    }
+    return -1;
+}
+
+container_inspect_graph_driver *storage_get_metadata_by_container_id(const char *id)
+{
+    if (g_storage_mock != NULL) {
+        return g_storage_mock->StorageGetMetadataByContainerId(id);
+    }
+    return NULL;
+}

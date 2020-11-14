@@ -31,6 +31,7 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <grp.h>
+#include <sys/xattr.h>
 
 #include "constants.h"
 #include "isula_libutils/log.h"
@@ -40,6 +41,7 @@
 #include "utils_array.h"
 #include "utils_string.h"
 
+int copy_dir_recursive(char *copy_dst, char *copy_src, map_t *inodes);
 static void do_calculate_dir_size_without_hardlink(const char *dirpath, int recursive_depth, int64_t *total_size,
                                                    int64_t *total_inode, map_t *map);
 
@@ -860,7 +862,7 @@ int util_scan_subdirs(const char *directory, subdir_callback_t cb, void *context
 
     direntp = readdir(dir);
     for (; direntp != NULL; direntp = readdir(dir)) {
-        if (strncmp(direntp->d_name, ".", 1) == 0) {
+        if (strncmp(direntp->d_name, ".", PATH_MAX) == 0 || strncmp(direntp->d_name, "..", PATH_MAX) == 0) {
             continue;
         }
 
@@ -894,7 +896,7 @@ int util_list_all_subdir(const char *directory, char ***out)
     }
     direntp = readdir(dir);
     for (; direntp != NULL; direntp = readdir(dir)) {
-        if (strncmp(direntp->d_name, ".", 1) == 0) {
+        if (strncmp(direntp->d_name, ".", PATH_MAX) == 0 || strncmp(direntp->d_name, "..", PATH_MAX) == 0) {
             continue;
         }
 
@@ -1651,6 +1653,394 @@ int util_recursive_remove_path(const char *path)
     if (unlink(path) != 0 && errno != ENOENT) {
         ret = util_recursive_rmdir(path, 0);
     }
+
+    return ret;
+}
+
+static bool list_entries(const char *path, const struct dirent *entry, void *context)
+{
+    char ***names = (char ***)context;
+
+    if (util_array_append(names, entry->d_name) != 0) {
+        ERROR("out of memory");
+        return false;
+    }
+    return true;
+}
+
+int util_list_all_entries(const char *directory, char ***out)
+{
+    return util_scan_subdirs(directory, list_entries, out);
+}
+
+static int copy_own(char *copy_dst, struct stat *src_stat)
+{
+    int ret = 0;
+    struct stat dst_stat = {0};
+
+    if (lstat(copy_dst, &dst_stat) != 0) {
+        ERROR("lstat %s failed: %s", copy_dst, strerror(errno));
+        return -1;
+    }
+
+    ret = lchown(copy_dst, src_stat->st_uid, src_stat->st_gid);
+    if (ret == 0 || (ret == EPERM && src_stat->st_uid == dst_stat.st_uid && src_stat->st_gid == dst_stat.st_gid)) {
+        return 0;
+    }
+
+    ERROR("lchown %s failed: %s", copy_dst, strerror(errno));
+
+    return ret;
+}
+
+static int copy_mode(char *copy_dst, struct stat *src_stat)
+{
+    if (S_ISLNK(src_stat->st_mode)) {
+        return 0;
+    }
+
+    if (chmod(copy_dst, src_stat->st_mode) != 0) {
+        ERROR("chmod %s failed: %s", copy_dst, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int copy_time(char *copy_dst, struct stat *src_stat)
+{
+    const struct timespec tm[] = {{src_stat->st_atime}, {src_stat->st_mtime}};
+
+    // copy_dst is absolute path, so first argment is ignored.
+    if (utimensat(0, copy_dst, tm, AT_SYMLINK_NOFOLLOW) != 0) {
+        ERROR("failed to set time of %s: %s", copy_dst, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int set_one_xattr(char *copy_dst, char *key, char *value, ssize_t size)
+{
+    if (lsetxattr(copy_dst, key, value, size, 0) != 0) {
+        if (errno == ENOTSUP) {
+            DEBUG("ignore copy xattr %s of %s: %s", key, copy_dst, strerror(errno));
+            return 0;
+        }
+        ERROR("failed to set xattr %s of %s: %s", key, copy_dst, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int do_copy_xattrs(char *copy_dst, char *copy_src, char *xattrs, ssize_t xattrs_len)
+{
+    char *key = NULL;
+    ssize_t size = 0;
+    char *value = NULL;
+    int ret = 0;
+
+    for (key = xattrs; key < xattrs + xattrs_len; key += strlen(key) + 1) {
+        if (*key == '\0') {
+            break;
+        }
+
+        size = lgetxattr(copy_src, key, NULL, 0);
+        if (size < 0) {
+            if (errno == ENOTSUP) {
+                DEBUG("ignore copy xattr %s of %s: %s", key, copy_src, strerror(errno));
+                continue;
+            }
+            ERROR("failed to get xattr %s of %s: %s", key, copy_src, strerror(errno));
+            ret = -1;
+            goto out;
+        }
+
+        // no value
+        if (size == 0) {
+            DEBUG("no value for key %s", key);
+            continue;
+        }
+
+        free(value);
+        value = util_common_calloc_s(size);
+        if (value == NULL) {
+            ERROR("out of memory");
+            ret = -1;
+            goto out;
+        }
+
+        if (lgetxattr(copy_src, key, value, size) < 0) {
+            if (errno == ENOTSUP) {
+                DEBUG("ignore copy xattr %s of %s: %s", key, copy_src, strerror(errno));
+                continue;
+            }
+            ERROR("failed to get xattr %s of %s: %s", key, copy_src, strerror(errno));
+            ret = -1;
+            goto out;
+        }
+
+        ret = set_one_xattr(copy_dst, key, value, size);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+
+out:
+    free(value);
+
+    return ret;
+}
+
+static int copy_xattrs(char *copy_dst, char *copy_src)
+{
+    ssize_t xattrs_len = 0;
+    char *xattrs = NULL;
+    int ret = 0;
+
+    xattrs_len = llistxattr(copy_src, NULL, 0);
+    if (xattrs_len < 0) {
+        if (errno == ENOTSUP) {
+            DEBUG("ignore copy xattrs of %s: %s", copy_src, strerror(errno));
+            return 0;
+        }
+        ERROR("failed to get xattrs length of %s: %s", copy_src, strerror(errno));
+        return -1;
+    }
+
+    // no xattrs
+    if (xattrs_len == 0) {
+        return 0;
+    }
+
+    xattrs = util_common_calloc_s(xattrs_len);
+    if (xattrs == NULL) {
+        ERROR("out of memory");
+        return -1;
+    }
+
+    if (llistxattr(copy_src, xattrs, xattrs_len) < 0) {
+        if (errno == ENOTSUP) {
+            DEBUG("ignore copy xattrs of %s: %s", copy_src, strerror(errno));
+            goto out;
+        }
+        ERROR("failed to list xattrs of %s: %s", copy_src, strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    ret = do_copy_xattrs(copy_dst, copy_src, xattrs, xattrs_len);
+
+out:
+    free(xattrs);
+
+    return ret;
+}
+
+static int copy_infos(char *copy_dst, char *copy_src, struct stat *src_stat)
+{
+    int ret = 0;
+
+    ret = copy_own(copy_dst, src_stat);
+    if (ret != 0) {
+        return -1;
+    }
+
+    ret = copy_mode(copy_dst, src_stat);
+    if (ret != 0) {
+        return -1;
+    }
+
+    ret = copy_time(copy_dst, src_stat);
+    if (ret != 0) {
+        return -1;
+    }
+
+    ret = copy_xattrs(copy_dst, copy_src);
+    if (ret != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int copy_folder(char *copy_dst, char *copy_src)
+{
+    struct stat src_stat = {0};
+    struct stat dst_stat = {0};
+
+    if (lstat(copy_src, &src_stat) != 0) {
+        ERROR("stat %s failed: %s", copy_src, strerror(errno));
+        return -1;
+    }
+    if (!S_ISDIR(src_stat.st_mode)) {
+        ERROR("copy source %s is not directory", copy_src);
+        return -1;
+    }
+
+    if (lstat(copy_dst, &dst_stat) != 0) {
+        if (mkdir(copy_dst, src_stat.st_mode) != 0) {
+            ERROR("failed to mkdir %s: %s", copy_dst, strerror(errno));
+            return -1;
+        }
+    } else if (!S_ISDIR(dst_stat.st_mode)) {
+        ERROR("copy destination %s is not directory", copy_dst);
+        return -1;
+    } else {
+        if (chmod(copy_dst, src_stat.st_mode) != 0) {
+            ERROR("failed to chmod %s: %s", copy_dst, strerror(errno));
+            return -1;
+        }
+    }
+
+    return copy_infos(copy_dst, copy_src, &src_stat);
+}
+
+static int copy_regular(char *copy_dst, char *copy_src, struct stat *src_stat, map_t *inodes)
+{
+    char *target = NULL;
+
+    if (src_stat->st_nlink > 1) {
+        // target hard link file exist, try link it
+        target = map_search(inodes, (void *)(&(src_stat->st_ino)));
+        if (target != NULL) {
+            if (link(target, copy_dst) != 0) {
+                ERROR("failed to link %s to %s: %s", target, copy_dst, strerror(errno));
+                return -1;
+            }
+            return 0;
+        }
+        if (!map_insert(inodes, (void*)(&src_stat->st_ino), (void*)copy_dst)) {
+            ERROR("out of memory");
+            return -1;
+        }
+    }
+
+    // no same file exist, try copy it
+    return util_copy_file(copy_src, copy_dst, src_stat->st_mode);
+}
+
+static int copy_symbolic(char *copy_dst, char *copy_src)
+{
+    char link[PATH_MAX] = {0};
+
+    if (readlink(copy_src, link, sizeof(link)) < 0) {
+        ERROR("readlink of %s failed: %s", copy_src, strerror(errno));
+        return -1;
+    }
+
+    if (symlink(link, copy_dst) != 0) {
+        ERROR("create symbolic %s failed: %s", copy_dst, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int copy_device(char *copy_dst, char *copy_src, struct stat *src_stat)
+{
+    if (mknod(copy_dst, src_stat->st_mode, src_stat->st_dev) != 0) {
+        ERROR("mknod %s failed: %s", copy_dst, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+static int copy_file(char *copy_dst, char *copy_src, struct stat *src_stat, map_t *inodes)
+{
+    int ret = 0;
+
+    if (S_ISREG(src_stat->st_mode)) {
+        ret = copy_regular(copy_dst, copy_src, src_stat, inodes);
+    } else if (S_ISLNK(src_stat->st_mode)) {
+        ret = copy_symbolic(copy_dst, copy_src);
+    } else if (S_ISCHR(src_stat->st_mode) || S_ISBLK(src_stat->st_mode)) {
+        ret = copy_device(copy_dst, copy_src, src_stat);
+    } else { // fifo and socket
+        ERROR("copy %s failed, unsupported type %d", copy_src, src_stat->st_mode);
+        return -1;
+    }
+    if (ret != 0) {
+        return -1;
+    }
+
+    return copy_infos(copy_dst, copy_src, src_stat);
+}
+
+int util_copy_dir_recursive(char *copy_dst, char *copy_src)
+{
+    int ret = 0;
+    map_t *inodes = NULL;
+
+    // key: source inode, value: target file path
+    inodes = map_new(MAP_INT_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (inodes == NULL) {
+        ERROR("out of memory");
+        return -1;
+    }
+
+    ret = copy_dir_recursive(copy_dst, copy_src, inodes);
+
+    map_free(inodes);
+
+    return ret;
+}
+
+int copy_dir_recursive(char *copy_dst, char *copy_src, map_t *inodes)
+{
+    char **entries = NULL;
+    size_t entry_num = 0;
+    int ret = 0;
+    struct stat st = {0};
+    size_t i = 0;
+    char *src = NULL;
+    char *dst = NULL;
+
+    ret = copy_folder(copy_dst, copy_src);
+    if (ret != 0) {
+        return -1;
+    }
+
+    ret = util_list_all_entries(copy_src, &entries);
+    if (ret != 0) {
+        ERROR("list entries of %s failed", copy_src);
+        return -1;
+    }
+    entry_num = util_array_len((const char **)entries);
+
+    for (i = 0; i < entry_num; i++) {
+        src = util_path_join(copy_src, entries[i]);
+        dst = util_path_join(copy_dst, entries[i]);
+        if (src == NULL || dst == NULL) {
+            ERROR("join path failed");
+            ret = -1;
+            goto out;
+        }
+
+        ret = lstat(src, &st);
+        if (ret != 0) {
+            goto out;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            ret = copy_dir_recursive(dst, src, inodes);
+        } else {
+            ret = copy_file(dst, src, &st, inodes);
+        }
+        if (ret != 0) {
+            goto out;
+        }
+        free(src);
+        src = NULL;
+        free(dst);
+        dst = NULL;
+    }
+
+out:
+    util_free_array(entries);
+    free(src);
+    free(dst);
 
     return ret;
 }

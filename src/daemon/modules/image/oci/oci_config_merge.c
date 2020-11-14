@@ -191,6 +191,28 @@ out:
     return ret;
 }
 
+static int oci_image_merge_anonymous_volumes(const oci_image_spec_config *config, container_config *container_spec)
+{
+    if (container_spec == NULL) {
+        ERROR("Invalid NULL container spec");
+        return -1;
+    }
+
+    // no image config found
+    if (config == NULL || config->volumes == NULL || config->volumes->len == 0) {
+        return 0;
+    }
+
+    // container's config contains image's anonymous volumes only right now, so just dump.
+    container_spec->volumes = dup_map_string_empty_object(config->volumes);
+    if (container_spec->volumes == NULL) {
+        ERROR("dup anonymous volumes failed");
+        return -1;
+    }
+
+    return 0;
+}
+
 static void oci_image_merge_user(const char *user, container_config *container_spec)
 {
     if (container_spec->user != NULL) {
@@ -331,7 +353,12 @@ int oci_image_merge_config(imagetool_image *image_conf, container_config *contai
             goto out;
         }
 
-        // ignore volumes now
+        // Merge image's anonymous volumes to container_spec, here we do not check conflict.
+        // We will check conflict after all volumes/binds merged.
+        if (oci_image_merge_anonymous_volumes(image_conf->spec->config, container_spec) != 0) {
+            ret = -1;
+            goto out;
+        }
     }
 
     if (oci_image_merge_health_check(image_conf->healthcheck, container_spec) != 0) {

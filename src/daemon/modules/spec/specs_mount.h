@@ -28,15 +28,6 @@
 
 int adapt_settings_for_mounts(oci_runtime_spec *oci_spec, container_config *container_spec);
 
-typedef defs_mount *(*parse_mount_cb)(const char *mount);
-
-int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len,
-                  container_config_v2_common_config *common_config, parse_mount_cb parse_mount);
-
-defs_mount *parse_mount(const char *mount);
-
-defs_mount *parse_volume(const char *volume);
-
 int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
                       container_config_v2_common_config *common_config);
 

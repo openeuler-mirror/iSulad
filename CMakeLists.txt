@@ -60,7 +60,7 @@ IF(ENABLE_COVERAGE)
         message(WARNING "Debugging mode should be turned on when generating code coverage reports, otherwise coverage may be inaccurate")
     ENDIF()
     MESSAGE(STATUS "Enable coverage compile option")
-    SET(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-inline-functions")
+    SET(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-static-functions -fkeep-inline-functions")
     SET(COVERAGE_CXX_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage")
 ENDIF(ENABLE_COVERAGE)
 
@@ -85,6 +85,10 @@ IF(ENABLE_UT)
     enable_testing()
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 ENDIF(ENABLE_UT)
+
+IF(ENABLE_FUZZ)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+ENDIF(ENABLE_FUZZ)
 
 # install all files
 install(FILES ${CMAKE_BINARY_DIR}/conf/isulad.pc

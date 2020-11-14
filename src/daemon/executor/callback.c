@@ -18,6 +18,7 @@
 
 #include "image_cb.h"
 #include "execution.h"
+#include "volume_cb.h"
 
 service_executor_t g_isulad_service_executor;
 
@@ -155,6 +156,7 @@ int service_callback_init(void)
 {
     container_callback_init(&g_isulad_service_executor.container);
     image_callback_init(&g_isulad_service_executor.image);
+    volume_callback_init(&g_isulad_service_executor.volume);
     return 0;
 }
 

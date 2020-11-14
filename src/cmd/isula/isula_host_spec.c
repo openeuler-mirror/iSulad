@@ -1362,6 +1362,17 @@ out:
     return ret;
 }
 
+int generate_volumes_from(host_config *dstconfig, const isula_host_config_t *srcconfig)
+{
+    if (util_dup_array_of_strings((const char **)srcconfig->volumes_from, srcconfig->volumes_from_len,
+                                  &dstconfig->volumes_from, &dstconfig->volumes_from_len) != 0) {
+        COMMAND_ERROR("Failed to dup volumes-from");
+        return -1;
+    }
+
+    return 0;
+}
+
 int generate_binds(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     if (util_dup_array_of_strings((const char **)srcconfig->binds, srcconfig->binds_len, &dstconfig->binds,
@@ -1382,6 +1393,83 @@ int generate_device_cgroup_rules(host_config *dstconfig, const isula_host_config
     }
 
     return 0;
+}
+
+static mount_spec *dup_mount_spec(mount_spec *spec)
+{
+    int ret = 0;
+    mount_spec *m = NULL;
+
+    m = util_common_calloc_s(sizeof(mount_spec));
+    if (m == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    m->type = util_strdup_s(spec->type);
+    m->source = util_strdup_s(spec->source);
+    m->target = util_strdup_s(spec->target);
+    m->readonly = spec->readonly;
+    m->consistency = util_strdup_s(spec->consistency);
+    if (spec->bind_options != NULL) {
+        m->bind_options = util_common_calloc_s(sizeof(bind_options));
+        if (m->bind_options == NULL) {
+            ret = -1;
+            goto out;
+        }
+        m->bind_options->propagation = util_strdup_s(spec->bind_options->propagation);
+        m->bind_options->selinux_opts = util_strdup_s(spec->bind_options->selinux_opts);
+    }
+    if (spec->volume_options != NULL) {
+        m->volume_options = util_common_calloc_s(sizeof(volume_options));
+        if (m->volume_options == NULL) {
+            ret = -1;
+            goto out;
+        }
+        m->volume_options->no_copy = spec->volume_options->no_copy;
+    }
+
+out:
+    if (ret != 0) {
+        free_mount_spec(m);
+        m = NULL;
+    }
+
+    return m;
+}
+
+static int generate_mounts(host_config *dstconfig, const isula_host_config_t *srcconfig)
+{
+    int ret = 0;
+    int i = 0;
+
+    if (srcconfig->mounts == NULL || srcconfig->mounts_len == 0) {
+        goto out;
+    }
+
+    if (srcconfig->mounts_len > SIZE_MAX / sizeof(char *)) {
+        COMMAND_ERROR("Too many mounts to mount!");
+        ret = -1;
+        goto out;
+    }
+
+    dstconfig->mounts = util_common_calloc_s(srcconfig->mounts_len * sizeof(mount_spec*));
+    if (dstconfig->mounts == NULL) {
+        ret = -1;
+        goto out;
+    }
+    for (i = 0; i < srcconfig->mounts_len; i++) {
+        dstconfig->mounts[dstconfig->mounts_len] = dup_mount_spec(srcconfig->mounts[i]);
+        if (dstconfig->mounts[dstconfig->mounts_len] == NULL) {
+            ret = -1;
+            goto out;
+        }
+        dstconfig->mounts_len++;
+    }
+
+out:
+
+    return ret;
 }
 
 int generate_groups(host_config *dstconfig, const isula_host_config_t *srcconfig)
@@ -1483,9 +1571,21 @@ static int pack_host_config_common(host_config *dstconfig, const isula_host_conf
         goto out;
     }
 
-    /* binds to mount */
+    /* --volumes-from parameters */
+    ret = generate_volumes_from(dstconfig, srcconfig);
+    if (ret != 0) {
+        goto out;
+    }
+
+    /* -v parameters */
     ret = generate_binds(dstconfig, srcconfig);
     if (ret < 0) {
+        goto out;
+    }
+
+    /* --mount parameters */
+    ret = generate_mounts(dstconfig, srcconfig);
+    if (ret != 0) {
         goto out;
     }
 
@@ -1626,6 +1726,8 @@ static void container_cgroup_resources_free(container_cgroup_resources_t *cr)
 /* isula host config free */
 void isula_host_config_free(isula_host_config_t *hostconfig)
 {
+    size_t i = 0;
+
     if (hostconfig == NULL) {
         return;
     }
@@ -1696,6 +1798,14 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     util_free_array_by_len(hostconfig->binds, hostconfig->binds_len);
     hostconfig->binds = NULL;
     hostconfig->binds_len = 0;
+
+    for (i = 0; i < hostconfig->mounts_len; i++) {
+        free_mount_spec(hostconfig->mounts[i]);
+        hostconfig->mounts[i] = NULL;
+    }
+    free(hostconfig->mounts);
+    hostconfig->mounts = NULL;
+    hostconfig->mounts_len = 0;
 
     util_free_array_by_len(hostconfig->blkio_weight_device, hostconfig->blkio_weight_device_len);
     hostconfig->blkio_weight_device = NULL;

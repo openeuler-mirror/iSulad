@@ -39,6 +39,9 @@ public:
     MOCK_METHOD1(FreeLayer, void(struct layer *l));
     MOCK_METHOD1(StorageIncHoldRefs, int (const char *layer_id));
     MOCK_METHOD1(StorageDecHoldRefs, int (const char *layer_id));
+    MOCK_METHOD1(StorageRootfsMount, char *(const char *container_id));
+    MOCK_METHOD2(StorageRootfsUmount, int (const char *container_id, bool force));
+    MOCK_METHOD1(StorageGetMetadataByContainerId, container_inspect_graph_driver * (const char *id));
 };
 
 void MockStorage_SetMock(MockStorage* mock);

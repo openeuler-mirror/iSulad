@@ -33,6 +33,7 @@
 #include "isula_libutils/log.h"
 #include "isula_libutils/oci_runtime_spec.h"
 #include "isula_libutils/host_config.h"
+#include "isula_libutils/container_inspect.h"
 #include "utils.h"
 #include "path.h"
 #include "isulad_config.h"
@@ -48,6 +49,15 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "image_api.h"
+#include "volume_api.h"
+#include "parse_volume.h"
+
+enum update_rw {
+    update_rw_untouch,
+    update_rw_readonly,
+    update_rw_readwrite,
+};
 
 static int get_devices(const char *dir, char ***devices, size_t *device_len, int recursive_depth);
 
@@ -318,389 +328,340 @@ static int get_devices(const char *dir, char ***devices, size_t *device_len, int
     return 0;
 }
 
-#define DefaultPropagationMode "rprivate"
-#define DefaultROMode "rw"
-#define DefaultRBind "rbind"
-
-static int fill_mounts_readonly_item(const char *value, defs_mount *mount_element)
+int split_volume_from(char *volume_from, char **id, char **mode)
 {
-    char *romode = DefaultROMode;
-
-    if (mount_element == NULL) {
-        return 2;
-    }
-
-    if (value != NULL) {
-        if (util_valid_value_true(value)) {
-            romode = "ro";
-        } else if (util_valid_value_false(value)) {
-            /* use default value rw */
-        } else {
-            ERROR("invalid value for readonly: %s", value);
-            return 2;
-        }
-    }
-
-    if (util_array_append(&mount_element->options, romode)) {
-        ERROR("append ro mode to array failed");
-        return 2;
-    }
-    mount_element->options_len++;
-
-    return 0;
-}
-
-/*
- * 0: success
- * 1: ignore this item, continue
- * 2: failed
- */
-static int fill_mounts_item(const char *key, const char *value, defs_mount *mount_element, bool *has_ro, bool *has_pro)
-{
-    if (value == NULL && !util_valid_key_ro(key)) {
-        ERROR("unsupported item %s", key);
-        return 1;
-    }
-
-    if (util_valid_key_type(key)) {
-        free(mount_element->type);
-        mount_element->type = util_strdup_s(value);
-    } else if (util_valid_key_src(key)) {
-        free(mount_element->source);
-        mount_element->source = util_strdup_s(value);
-    } else if (util_valid_key_dst(key)) {
-        free(mount_element->destination);
-        mount_element->destination = util_strdup_s(value);
-    } else if (util_valid_key_ro(key)) {
-        int ret = fill_mounts_readonly_item(value, mount_element);
-        if (ret != 0) {
-            return ret;
-        }
-
-        *has_ro = true;
-    } else if (util_valid_key_propagation(key)) {
-        if (!util_valid_propagation_mode(value)) {
-            ERROR("invalid propagation mode %s", value);
-            return 2;
-        }
-
-        if (util_array_append(&mount_element->options, value)) {
-            ERROR("append bind propagation to array failed");
-            return 2;
-        }
-        mount_element->options_len++;
-        *has_pro = true;
-    } else if (util_valid_key_selinux(key)) {
-        if (!util_valid_label_mode(value)) {
-            ERROR("invalid bind selinux opts %s", value);
-            return 2;
-        }
-
-        /* This option is not supported currently. Hasen does't want to modify
-         * code if it's supported in future, so we support it in interface but
-         * not implement it currently.
-         */
-        WARN("Valid bind selinux opts %s found but not configured for now", value);
-    } else {
-        ERROR("unsupported item %s", key);
-        return 2;
-    }
-
-    return 0;
-}
-
-static int check_mount_element(const defs_mount *mount_element)
-{
+    char **parts = NULL;
+    size_t size = 0;
     int ret = 0;
 
-    if (mount_element == NULL) {
-        ret = EINVALIDARGS;
-        goto out;
-    }
-
-    if (mount_element->type == NULL) {
-        ERROR("type is requested");
-        ret = EINVALIDARGS;
-        goto out;
-    }
-
-    if (strcmp(mount_element->type, "squashfs") && strcmp(mount_element->type, "bind")) {
-        ERROR("invalid type %s, only support squashfs and bind", mount_element->type);
-        ret = EINVALIDARGS;
-        goto out;
-    }
-
-    if (mount_element->source == NULL) {
-        ERROR("source is requested");
-        ret = EINVALIDARGS;
-        goto out;
-    }
-
-    if (mount_element->source[0] != '/') {
-        ERROR("source should be absolute path");
-        ret = EINVALIDARGS;
-        goto out;
-    }
-
-    if (mount_element->destination == NULL) {
-        ERROR("destination is requested");
-        ret = EINVALIDARGS;
-        goto out;
-    }
-
-    if (mount_element->destination[0] != '/') {
-        ERROR("destination should be absolute path");
-        ret = EINVALIDARGS;
-        goto out;
-    }
-out:
-    return ret;
-}
-
-static int append_default_mount_options(defs_mount *mount_element, bool has_ro, bool has_pro)
-{
-    int ret = 0;
-
-    if (mount_element == NULL) {
+    parts = util_string_split(volume_from, ':');
+    size = util_array_len((const char **)parts);
+    if (size == 0 || size > 2) {
         ret = -1;
         goto out;
     }
 
-    if (strcmp(mount_element->type, "bind") == 0) {
-        if (!has_ro) {
-            ret = util_array_append(&mount_element->options, DefaultROMode);
-            if (ret != 0) {
-                ERROR("append default ro mode to array failed");
-                ret = -1;
-                goto out;
-            }
-            mount_element->options_len++;
-        }
-
-        if (!has_pro) {
-            ret = util_array_append(&mount_element->options, DefaultPropagationMode);
-            if (ret != 0) {
-                ERROR("append default propagation mode to array failed");
-                ret = -1;
-                goto out;
-            }
-            mount_element->options_len++;
-        }
-
-        ret = util_array_append(&mount_element->options, DefaultRBind);
-        if (ret != 0) {
-            ERROR("append default rbind to array failed");
-            ret = -1;
-            goto out;
-        }
-        mount_element->options_len++;
+    *id = util_strdup_s(parts[0]);
+    if (size == 2) {
+        *mode = util_strdup_s(parts[1]);
     }
 
 out:
+    util_free_array(parts);
+
     return ret;
 }
 
-defs_mount *parse_mount(const char *mount)
+static defs_mount *mount_point_to_defs_mnt(container_config_v2_common_config_mount_points_element *mp,
+                                           enum update_rw update_rw_mode)
 {
-    char **items = NULL;
-    defs_mount *mount_element = NULL;
+    defs_mount *mnt = NULL;
+    char **parts = NULL;
+    size_t options_len = 0;
     int ret = 0;
-    size_t items_len = 0;
     size_t i = 0;
-    char **kv = NULL;
     bool has_ro = false;
     bool has_pro = false;
-    char dstpath[PATH_MAX] = { 0 };
+    bool has_sel = false;
 
-    if (mount == NULL) {
-        ERROR("invalid NULL param");
-        ret = EINVALIDARGS;
-        goto out;
-    }
-    if (!mount[0]) {
-        ERROR("mount can't be empty");
-        ret = EINVALIDARGS;
-        goto out;
-    }
+    parts = util_string_split(mp->relabel, ',');
+    options_len = util_array_len((const char **)parts);
 
-    mount_element = util_common_calloc_s(sizeof(defs_mount));
-    if (mount_element == NULL) {
+    mnt = util_common_calloc_s(sizeof(defs_mount));
+    if (mnt == NULL) {
         ERROR("Out of memory");
         return NULL;
     }
-
-    items = util_string_split(mount, ',');
-    if (items == NULL) {
-        ERROR("split mount %s failed", mount);
+    mnt->options = util_common_calloc_s(sizeof(char *) * (options_len + 3)); // +2 for readonly/propagation/selinux_relabel
+    if (mnt->options == NULL) {
+        ERROR("Out of memory");
         ret = -1;
         goto out;
     }
 
-    items_len = util_array_len((const char **)items);
-
-    for (i = 0; i < items_len; i++) {
-        kv = util_string_split(items[i], '=');
-        if (kv == NULL) {
-            continue;
-        }
-
-        ret = fill_mounts_item(kv[0], kv[1], mount_element, &has_ro, &has_pro);
-        if (ret == 1) { /* ignore this item */
-            ret = 0;
-            util_free_array(kv);
-            kv = NULL;
-            continue;
-        } else if (ret == 2) { /* invalid args */
-            ret = EINVALIDARGS;
-            goto out;
-        }
-        util_free_array(kv);
-        kv = NULL;
+    mnt->type = util_strdup_s(mp->type);
+    if (strcmp(mnt->type, "volume") == 0) {
+        mnt->source = util_strdup_s(mp->name);
+        mnt->named = mp->named;
+    } else {
+        mnt->source = util_strdup_s(mp->source);
+    }
+    mnt->destination = util_strdup_s(mp->destination);
+    if (update_rw_mode == update_rw_readonly || (update_rw_mode == update_rw_untouch && !mp->rw)) {
+        has_ro = true;
+    }
+    if (mp->propagation != NULL) {
+        mnt->options[mnt->options_len++] = util_strdup_s(mp->propagation);
+        has_pro = true;
     }
 
-    ret = check_mount_element(mount_element);
+    for (i = 0; i < options_len; i++) {
+        if (strcmp(parts[i], "ro") == 0 || strcmp(parts[i], "rw") == 0) {
+            continue;
+        }
+        mnt->options[mnt->options_len++] = util_strdup_s(parts[i]);
+        if (util_valid_label_mode(parts[i])) {
+            has_sel = true;
+        }
+    }
+
+    if (has_ro) {
+        mnt->options[mnt->options_len++] = util_strdup_s("ro");
+    }
+
+    ret = append_default_mount_options(mnt, has_ro, has_pro, has_sel);
     if (ret != 0) {
         goto out;
     }
 
-    if (!util_clean_path(mount_element->source, dstpath, sizeof(dstpath))) {
-        ERROR("Failed to get clean path");
+out:
+    util_free_array(parts);
+    if (ret != 0) {
+        free_defs_mount(mnt);
+        mnt = NULL;
+    }
+
+    return mnt;
+}
+
+void free_defs_mounts(defs_mount **mnts, size_t mnts_len)
+{
+    size_t i = 0;
+
+    for (i = 0; i < mnts_len; i++) {
+        free_defs_mount(mnts[i]);
+        mnts[i] = NULL;
+    }
+    free(mnts);
+
+    return;
+}
+
+static int mount_points_to_defs_mnts(container_config_v2_common_config_mount_points *mount_points,
+                                     enum update_rw update_rw_mode, defs_mount ***mnts_out, size_t *mnts_len_out)
+{
+    defs_mount **mnts = NULL;
+    size_t mnts_len = 0;
+    int ret = 0;
+    size_t i = 0;
+
+    mnts = util_common_calloc_s(sizeof(defs_mount *) * mount_points->len);
+    if (mnts == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < mount_points->len; i++) {
+        if (strcmp(mount_points->values[i]->type, "volume") != 0 &&
+            strcmp(mount_points->values[i]->type, "bind") != 0) {
+            continue;
+        }
+
+        mnts[mnts_len] = mount_point_to_defs_mnt(mount_points->values[i], update_rw_mode);
+        if (mnts[i] == NULL) {
+            ret = -1;
+            goto out;
+        }
+        mnts_len++;
+    }
+
+    *mnts_out = mnts;
+    *mnts_len_out = mnts_len;
+out:
+    if (ret != 0) {
+        free_defs_mounts(mnts, mnts_len);
+    }
+
+    return ret;
+}
+
+static int parser_volume_from_mode(char *mode, enum update_rw *rw)
+{
+    char **parts = NULL;
+    int ret = 0;
+    size_t i = 0;
+    *rw = update_rw_untouch; // default to use the same readonly mode
+
+    if (mode == NULL) {
+        return 0;
+    }
+
+    if (!util_valid_mount_mode(mode)) {
+        ERROR("invalid mode %s found", mode);
+        return -1;
+    }
+
+    parts = util_string_split(mode, ',');
+    if (parts == NULL) {
         ret = -1;
         goto out;
     }
-    free(mount_element->source);
-    mount_element->source = util_strdup_s(dstpath);
 
-    if (!util_clean_path(mount_element->destination, dstpath, sizeof(dstpath))) {
-        ERROR("failed to get clean path");
-        ret = EINVALIDARGS;
+    for (i = 0; i < util_array_len((const char **)parts); i++) {
+        if (util_valid_propagation_mode(parts[i]) || util_valid_copy_mode(parts[i])) {
+            ret = -1;
+            goto out;
+        }
+
+        if (util_valid_rw_mode(parts[i])) {
+            if (strcmp(mode, "rw") == 0) {
+                *rw = update_rw_readwrite;
+            } else if (strcmp(mode, "ro") == 0) {
+                *rw = update_rw_readonly;
+            }
+        }
+    }
+
+out:
+    util_free_array(parts);
+
+    return ret;
+}
+
+static int parse_volumes_from(char *volume_from, defs_mount ***mnts_out, size_t *mnts_len_out)
+{
+    char *id = NULL;
+    char *mode = NULL;
+    container_t *cont = NULL;
+    defs_mount **mnts = NULL;
+    size_t mnts_len = 0;
+    int ret = 0;
+    enum update_rw update_rw_mode = update_rw_untouch;
+
+    ret = split_volume_from(volume_from, &id, &mode);
+    if (ret != 0) {
+        ERROR("failed to split volume-from: %s", volume_from);
+        isulad_set_error_message("failed to split volume-from: %s", volume_from);
+        return -1;
+    }
+
+    ret = parser_volume_from_mode(mode, &update_rw_mode);
+    if (ret != 0) {
+        ERROR("failed to parser mode %s, volume-from %s", mode, volume_from);
+        isulad_set_error_message("failed to parser mode %s, volume-from %s", mode, volume_from);
         goto out;
     }
-    free(mount_element->destination);
-    mount_element->destination = util_strdup_s(dstpath);
 
-    /* append default options if it's bind mount */
-    ret = append_default_mount_options(mount_element, has_ro, has_pro);
+    cont = containers_store_get(id);
+    if (cont == NULL) {
+        ERROR("container %s not found when parse volumes-from:%s", id, volume_from);
+        isulad_set_error_message("container %s not found when parse volumes-from:%s", id, volume_from);
+        ret = -1;
+        goto out;
+    }
+
+    // no mount point
+    if (cont->common_config == NULL || cont->common_config->mount_points == NULL) {
+        goto out;
+    }
+
+    ret = mount_points_to_defs_mnts(cont->common_config->mount_points, update_rw_mode, &mnts, &mnts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    *mnts_out = mnts;
+    *mnts_len_out = mnts_len;
+
+out:
+    container_unref(cont);
+    free(id);
+    free(mode);
+    if (ret != 0) {
+        free_defs_mounts(mnts, mnts_len);
+    }
+
+    return ret;
+}
+
+static defs_mount *parse_mount(mount_spec *spec)
+{
+    int ret = 0;
+    defs_mount *m = NULL;
+    bool has_pro = false;
+    bool has_sel = false;
+
+    m = util_common_calloc_s(sizeof(defs_mount));
+    if (m == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    m->type = util_strdup_s(spec->type);
+    m->source = util_strdup_s(spec->source);
+    m->destination = util_strdup_s(spec->target);
+    if (strcmp(m->type, "volume") == 0 && m->source != NULL) {
+        m->named = true;
+    }
+
+    if (spec->readonly) {
+        if (util_array_append(&m->options, "ro")) {
+            ERROR("append ro mode to array failed");
+            ret = -1;
+            goto out;
+        }
+        m->options_len++;
+    }
+
+    if (spec->bind_options != NULL) {
+        if (spec->bind_options->propagation != NULL) {
+            if (util_array_append(&m->options, spec->bind_options->propagation)) {
+                ERROR("append propagation to array failed");
+                ret = -1;
+                goto out;
+            }
+            m->options_len++;
+            has_pro = true;
+        }
+        if (spec->bind_options->selinux_opts != NULL) {
+            if (util_array_append(&m->options, spec->bind_options->selinux_opts)) {
+                ERROR("append selinux opts to array failed");
+                ret = -1;
+                goto out;
+            }
+            m->options_len++;
+            has_sel = true;
+        }
+    }
+
+    if (spec->volume_options != NULL && spec->volume_options->no_copy) {
+        if (util_array_append(&m->options, "nocopy")) {
+            ERROR("append nocopy to array failed");
+            ret = -1;
+            goto out;
+        }
+        m->options_len++;
+    }
+
+    ret = append_default_mount_options(m, true, has_pro, has_sel);
     if (ret != 0) {
         goto out;
     }
 
 out:
     if (ret != 0) {
-        free_defs_mount(mount_element);
-        mount_element = NULL;
+        free_defs_mount(m);
+        m = NULL;
     }
 
-    util_free_array(kv);
-    util_free_array(items);
-
-    return mount_element;
+    return m;
 }
 
-static int check_volume_element(const char *volume)
+static defs_mount * parse_anonymous_volume(char *volume)
 {
     int ret = 0;
-
-    if (volume == NULL || !strcmp(volume, "")) {
-        ERROR("Volume can't be empty");
-        ret = -1;
-        return ret;
-    }
-
-    if (volume[0] == ':' || volume[strlen(volume) - 1] == ':') {
-        ERROR("Delimiter ':' can't be the first or the last character");
-        ret = -1;
-        return ret;
-    }
-
-    return ret;
-}
-
-static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_element, char ***modes)
-{
-    int ret = 0;
-    size_t alen = 0;
-    char **array = NULL;
-
-    // split volume to src:dest:mode
-    array = util_string_split(volume, ':');
-    if (array == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto free_out;
-    }
-
-    alen = util_array_len((const char **)array);
-    switch (alen) {
-        case 1:
-            ERROR("Not supported volume format '%s'", volume);
-            ret = -1;
-            break;
-        case 2:
-            if (util_valid_mount_mode(array[1])) {
-                // Destination + Mode is not a valid volume - volumes
-                // cannot include a mode. eg /foo:rw
-                ERROR("Invalid volume specification '%s'", volume);
-                isulad_set_error_message("Invalid volume specification '%s',Invalid mode:%s", volume, array[1]);
-                ret = -1;
-                break;
-            }
-            mount_element->source = util_strdup_s(array[0]);
-            mount_element->destination = util_strdup_s(array[1]);
-            break;
-        case 3:
-            mount_element->source = util_strdup_s(array[0]);
-            mount_element->destination = util_strdup_s(array[1]);
-            if (!util_valid_mount_mode(array[2])) {
-                ERROR("Invalid volume specification '%s'", volume);
-                isulad_set_error_message("Invalid volume specification '%s'.Invalid mode:%s", volume, array[2]);
-                ret = -1;
-                break;
-            }
-            *modes = util_string_split(array[2], ',');
-            if (*modes == NULL) {
-                ERROR("Out of memory");
-                ret = -1;
-                break;
-            }
-
-            break;
-        default:
-            ERROR("Invalid volume specification '%s'", volume);
-            ret = -1;
-            break;
-    }
-    if (ret != 0) {
-        goto free_out;
-    }
-
-    if (mount_element->source[0] != '/' || mount_element->destination[0] != '/' ||
-        strcmp(mount_element->destination, "/") == 0) {
-        ERROR("Invalid volume: path must be absolute, and destination can't be '/'");
-        ret = -1;
-        goto free_out;
-    }
-
-free_out:
-    util_free_array(array);
-    return ret;
-}
-
-defs_mount *parse_volume(const char *volume)
-{
-    int ret = 0;
-    size_t i = 0, mlen = 0;
+    char path[PATH_MAX] = {0};
     defs_mount *mount_element = NULL;
-    char **modes = NULL;
-    char dstpath[PATH_MAX] = { 0x00 };
-    char *rw = "rw";
-    char *pro = DefaultPropagationMode;
-    char *label = NULL;
-    size_t options_len = 3;
 
-    ret = check_volume_element(volume);
-    if (ret != 0) {
-        goto free_out;
+    if (!util_clean_path(volume, path, sizeof(path))) {
+        ERROR("Failed to get clean path %s", volume);
+        return NULL;
+    }
+
+    if (volume == NULL || path[0] != '/' || strcmp(path, "/") == 0) {
+        ERROR("invalid anonymous volume %s", volume);
+        isulad_set_error_message("invalid anonymous volume %s", volume);
+        return NULL;
     }
 
     mount_element = util_common_calloc_s(sizeof(defs_mount));
@@ -709,62 +670,16 @@ defs_mount *parse_volume(const char *volume)
         return NULL;
     }
 
-    ret = get_src_dst_mode_by_volume(volume, mount_element, &modes);
+    mount_element->type = util_strdup_s("volume");
+    mount_element->source = NULL;
+    mount_element->destination = util_strdup_s(path);
+    mount_element->named = false;
+    ret = append_default_mount_options(mount_element, false, false, false);
     if (ret != 0) {
-        goto free_out;
+        goto out;
     }
 
-    mlen = util_array_len((const char **)modes);
-    for (i = 0; i < mlen; i++) {
-        if (util_valid_rw_mode(modes[i])) {
-            rw = modes[i];
-        } else if (util_valid_propagation_mode(modes[i])) {
-            pro = modes[i];
-        } else if (util_valid_label_mode(modes[i])) {
-            label = modes[i];
-        } else if (util_valid_copy_mode(modes[i])) {
-            WARN("Valid mode '%s' found but not configured for now", modes[i]);
-        }
-    }
-
-    if (!util_clean_path(mount_element->source, dstpath, sizeof(dstpath))) {
-        ERROR("Failed to get clean path");
-        ret = -1;
-        goto free_out;
-    }
-    free(mount_element->source);
-    mount_element->source = util_strdup_s(dstpath);
-
-    if (!util_clean_path(mount_element->destination, dstpath, sizeof(dstpath))) {
-        ERROR("Failed to get clean path");
-        ret = -1;
-        goto free_out;
-    }
-    free(mount_element->destination);
-    mount_element->destination = util_strdup_s(dstpath);
-
-    if (label != NULL) {
-        options_len++;
-    }
-
-    mount_element->options = util_common_calloc_s(options_len * sizeof(char *));
-    if (mount_element->options == NULL) {
-        ERROR("Out of memory");
-        mount_element->options_len = 0;
-        ret = -1;
-        goto free_out;
-    }
-    mount_element->options[0] = util_strdup_s(rw);
-    mount_element->options[1] = util_strdup_s(pro);
-    mount_element->options[2] = util_strdup_s("rbind");
-    if (options_len >= 4) {
-        mount_element->options[3] = util_strdup_s(label);
-    }
-    mount_element->options_len = options_len;
-    mount_element->type = util_strdup_s("bind");
-
-free_out:
-    util_free_array(modes);
+out:
     if (ret != 0) {
         free_defs_mount(mount_element);
         mount_element = NULL;
@@ -1310,6 +1225,7 @@ static container_config_v2_common_config_mount_points_element *defs_mnt_to_mount
         ERROR("Out of memory");
         return NULL;
     }
+    mp->type = util_strdup_s(mnt->type);
     mp->source = util_strdup_s(mnt->source);
     mp->destination = util_strdup_s(mnt->destination);
     mp->rw = true;
@@ -1320,6 +1236,7 @@ static container_config_v2_common_config_mount_points_element *defs_mnt_to_mount
         if (util_valid_propagation_mode(mnt->options[i])) {
             free(mp->propagation);
             mp->propagation = util_strdup_s(mnt->options[i]);
+            continue;
         }
         if (strstr(mnt->options[i], "bind") != NULL) {
             continue;
@@ -1352,8 +1269,117 @@ cleanup:
     return NULL;
 }
 
-int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len,
-                  container_config_v2_common_config *common_config, parse_mount_cb parse_mount)
+static char *container_path_in_host(char *base_fs, char *container_path)
+{
+    return util_path_join(base_fs, container_path + 1); // +1 means strip prefix "/"
+}
+
+static bool have_nocopy(defs_mount *mnt)
+{
+    size_t i = 0;
+    for (i = 0; i < mnt->options_len; i++) {
+        if (strcmp(mnt->options[i], "nocopy") == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int copy_data_to_volume(char *base_fs, defs_mount *mnt)
+{
+    int ret = 0;
+    char *copy_src = NULL;
+    char *copy_dst = NULL;
+    struct stat st;
+    char **entries = NULL;
+    size_t entry_num = 0;
+
+    if (base_fs == NULL || mnt == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    // copy data from container volume mount point to host volume directory
+    copy_src = container_path_in_host(base_fs, mnt->destination);
+    copy_dst = mnt->source;
+
+    if (stat(copy_src, &st) != 0) {
+        if (errno == ENOENT) {
+            goto out;
+        }
+        ERROR("stat for copy data to volume failed: %s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+    if (!S_ISDIR(st.st_mode)) {
+        ERROR("mount point %s in container is not direcotry", mnt->destination);
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_list_all_entries(copy_dst, &entries);
+    if (ret != 0) {
+        ERROR("list entries of %s failed", copy_src);
+        goto out;
+    }
+    entry_num = util_array_len((const char **)entries);
+    if (entry_num != 0) {
+        // ignore copy nonempty directory
+        goto out;
+    }
+
+    ret = util_copy_dir_recursive(copy_dst, copy_src);
+
+out:
+    util_free_array(entries);
+    free(copy_src);
+
+    return ret;
+}
+
+#ifdef ENABLE_SELINUX
+static int relabel_volume(struct volume *vol, defs_mount *mnt, char *mount_label)
+{
+    int ret = 0;
+    bool need_relabel = false;
+    bool is_shared = false;
+    size_t i = 0;
+
+    if (vol == NULL || mnt == NULL) {
+        ERROR("Invalid NULL param");
+        return -1;
+    }
+
+    for (i = 0; i < mnt->options_len; i++) {
+        if (strcmp(mnt->options[i], "Z") == 0) {
+            need_relabel = true;
+            is_shared = false;
+        } else if (strcmp(mnt->options[i], "z") == 0) {
+            need_relabel = true;
+            is_shared = true;
+        }
+    }
+
+    ret = volume_mount(vol->name);
+    if (ret != 0) {
+        goto out;
+    }
+
+    if (need_relabel && relabel(vol->mount_point, mount_label, is_shared) != 0) {
+        ERROR("Error setting label on mount source '%s'", mnt->source);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    (void)volume_umount(vol->name);
+
+    return ret;
+}
+#endif
+
+static int merge_fs_mounts_to_oci_and_spec(oci_runtime_spec *oci_spec, defs_mount **mounts, size_t mounts_len,
+                                           container_config_v2_common_config *common_config)
 {
     int ret = 0;
     size_t new_size = 0, old_size = 0;
@@ -1362,21 +1388,27 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
     char **mp_key = NULL;
     container_config_v2_common_config_mount_points_element **mp_val = NULL;
     defs_mount **mounts_temp = NULL;
+    struct volume *vol = NULL;
+
+    if (mounts_len == 0) {
+        return 0;
+    }
+
     if (oci_spec == NULL) {
         ret = -1;
         goto out;
     }
-    if (volumes_len > LIST_SIZE_MAX - oci_spec->mounts_len) {
-        ERROR("Too many volumes to merge, the limit is %lld", LIST_SIZE_MAX);
-        isulad_set_error_message("Too many volumes to merge, the limit is %d", LIST_SIZE_MAX);
+    if (mounts_len > LIST_SIZE_MAX - oci_spec->mounts_len) {
+        ERROR("Too many mounts to merge, the limit is %lld", LIST_SIZE_MAX);
+        isulad_set_error_message("Too many mounts to merge, the limit is %d", LIST_SIZE_MAX);
         ret = -1;
         goto out;
     }
-    new_size = (oci_spec->mounts_len + volumes_len) * sizeof(defs_mount *);
+    new_size = (oci_spec->mounts_len + mounts_len) * sizeof(defs_mount *);
     old_size = oci_spec->mounts_len * sizeof(defs_mount *);
     ret = util_mem_realloc((void **)&mounts_temp, new_size, oci_spec->mounts, old_size);
     if (ret != 0) {
-        ERROR("Failed to realloc memory volumes");
+        ERROR("Failed to realloc memory mounts");
         ret = -1;
         goto out;
     }
@@ -1391,9 +1423,9 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
                 goto out;
             }
         }
-        new_mp_key_size = (common_config->mount_points->len + volumes_len) * sizeof(char *);
+        new_mp_key_size = (common_config->mount_points->len + mounts_len) * sizeof(char *);
         old_mp_key_size = common_config->mount_points->len * sizeof(char *);
-        new_mp_val_size = (common_config->mount_points->len + volumes_len) *
+        new_mp_val_size = (common_config->mount_points->len + mounts_len) *
                           sizeof(container_config_v2_common_config_mount_points_element *);
         old_mp_val_size =
             common_config->mount_points->len * sizeof(container_config_v2_common_config_mount_points_element *);
@@ -1414,15 +1446,31 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
         common_config->mount_points->values = mp_val;
     }
 
-    for (i = 0; i < volumes_len; i++) {
-        defs_mount *mnt = parse_mount(volumes[i]);
-        if (mnt == NULL) {
-            ERROR("Failed to parse volume: %s", volumes[i]);
-            ret = -1;
-            goto out;
+    for (i = 0; i < mounts_len; i++) {
+        defs_mount *mnt = mounts[i];
+        if (strcmp(mnt->type, "volume") == 0) {
+            struct volume_options opts = {.ref = common_config->id};
+            // support local volume only currently.
+            vol = volume_create(VOLUME_DEFAULT_DRIVER_NAME, mnt->source, &opts);
+            if (vol == NULL) {
+                ERROR("Failed to create volume");
+                ret = -1;
+                goto out;
+            }
+            free(mnt->source);
+            mnt->source = util_strdup_s(vol->path);
+
+#ifdef ENABLE_SELINUX
+            if (oci_spec->linux != NULL) {
+                ret = relabel_volume(vol, mnt, oci_spec->linux->mount_label);
+                if (ret != 0) {
+                    ERROR("Failed to relabel volume");
+                    ret = -1;
+                    goto out;
+                }
+            }
+#endif
         }
-        oci_spec->mounts[oci_spec->mounts_len] = mnt;
-        oci_spec->mounts_len++;
 
         if (common_config != NULL) {
             common_config->mount_points->values[common_config->mount_points->len] = defs_mnt_to_mount_point(mnt);
@@ -1431,12 +1479,41 @@ int merge_volumes(oci_runtime_spec *oci_spec, char **volumes, size_t volumes_len
                 ret = -1;
                 goto out;
             }
+            if (vol != NULL) {
+                common_config->mount_points->values[common_config->mount_points->len]->name = util_strdup_s(vol->name);
+                common_config->mount_points->values[common_config->mount_points->len]->driver = util_strdup_s(vol->driver);
+            }
+            common_config->mount_points->values[common_config->mount_points->len]->named = mnt->named;
             common_config->mount_points->keys[common_config->mount_points->len] = util_strdup_s(mnt->destination);
             common_config->mount_points->len++;
         }
+
+        if (vol != NULL && !have_nocopy(mnt)) {
+            /* if mount point have data and it's mounted from volume,
+             * we need to copy data from destination mount point to volume */
+            ret = copy_data_to_volume(common_config->base_fs, mnt);
+            if (ret != 0) {
+                ERROR("Failed to copy data to volume");
+                goto out;
+            }
+        }
+
+        // mount -t have no type volume, use bind in oci spec
+        if (strcmp(mnt->type, "volume") == 0) {
+            free(mnt->type);
+            mnt->type = util_strdup_s("bind");
+        }
+        oci_spec->mounts[oci_spec->mounts_len] = mnt;
+        oci_spec->mounts_len++;
+        mounts[i] = NULL;
+
+        free_volume(vol);
+        vol = NULL;
     }
 
 out:
+    free_volume(vol);
+
     return ret;
 }
 
@@ -2577,28 +2654,303 @@ int destination_compare(const void *p1, const void *p2)
     return strcmp(mount_1->destination, mount_2->destination);
 }
 
+static defs_mount * get_conflict_mount_point(defs_mount **mounts, size_t mounts_len, defs_mount *mnt)
+{
+    size_t i = 0;
+
+    for (i = 0; i < mounts_len; i++) {
+        if (mounts[i] == NULL) {
+            continue;
+        }
+        if (strcmp(mounts[i]->destination, mnt->destination) == 0) {
+            return mounts[i];
+        }
+    }
+
+    return NULL;
+}
+
+static int calc_volumes_from_len(host_config *host_spec, size_t *len)
+{
+    char *id = NULL;
+    char *mode = NULL;
+    container_t *cont = NULL;
+    int ret = 0;
+    int i = 0;
+
+    *len = 0;
+    for (i = 0; i < host_spec->volumes_from_len; i++) {
+        ret = split_volume_from(host_spec->volumes_from[i], &id, &mode);
+        if (ret != 0) {
+            ERROR("failed to split volume-from: %s", host_spec->volumes_from[i]);
+            goto out;
+        }
+
+        cont = containers_store_get(id);
+        if (cont == NULL) {
+            ERROR("container %s not found when calc volumes from len, volumes-from:%s", id, host_spec->volumes_from[i]);
+            ret = -1;
+            goto out;
+        }
+
+        if (cont->common_config != NULL && cont->common_config->mount_points != NULL) {
+            *len += cont->common_config->mount_points->len;
+        }
+    }
+
+out:
+    free(id);
+    free(mode);
+    container_unref(cont);
+
+    return ret;
+}
+
+static int calc_mounts_len(host_config *host_spec, container_config *container_spec, size_t *len)
+{
+    size_t volumes_from_len = 0;
+
+    if (calc_volumes_from_len(host_spec, &volumes_from_len) != 0) {
+        return -1;
+    }
+
+    *len = host_spec->mounts_len + host_spec->binds_len + volumes_from_len;
+    if (container_spec->volumes != NULL && container_spec->volumes->len != 0) {
+        (*len) += container_spec->volumes->len;
+    }
+
+    return 0;
+}
+
+static void add_mount(defs_mount **merged_mounts, size_t *merged_mounts_len, defs_mount *mnt)
+{
+    merged_mounts[*merged_mounts_len] = mnt;
+    *merged_mounts_len += 1;
+}
+
+static int add_mounts(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
+
+    for (i = 0; i < host_spec->mounts_len; i++) {
+        mnt = parse_mount(host_spec->mounts[i]);
+        if (mnt == NULL) {
+            ERROR("parse mount failed");
+            ret = -1;
+            goto out;
+        }
+
+        add_mount(merged_mounts, merged_mounts_len, mnt);
+    }
+
+out:
+
+    return ret;
+}
+
+static int add_volumes(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
+    defs_mount *conflict = NULL;
+
+    for (i = 0; i < host_spec->binds_len; i++) {
+        mnt = parse_volume(host_spec->binds[i]);
+        if (mnt == NULL) {
+            ERROR("parse binds %s failed", host_spec->binds[i]);
+            ret = -1;
+            goto out;
+        }
+
+        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
+        if (conflict != NULL) {
+            ERROR("Duplicate mount point: %s", conflict->destination);
+            isulad_set_error_message("Duplicate mount point: %s", conflict->destination);
+            ret = -1;
+            goto out;
+        }
+
+        add_mount(merged_mounts, merged_mounts_len, mnt);
+        mnt = NULL;
+    }
+
+out:
+    if (ret != 0) {
+        free_defs_mount(mnt);
+    }
+
+    return ret;
+}
+
+static int add_volumes_from(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    size_t j = 0;
+    defs_mount **mnts = NULL;
+    size_t mnts_len = 0;
+    defs_mount *conflict = NULL;
+
+    for (i = 0; i < host_spec->volumes_from_len; i++) {
+        ret = parse_volumes_from(host_spec->volumes_from[i], &mnts, &mnts_len);
+        if (ret != 0) {
+            ERROR("parse mount failed");
+            goto out;
+        }
+
+        for (j = 0; j < mnts_len; j++) {
+            // use user specified config and drop the mount config from other containers if conflict
+            conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnts[j]);
+            if (conflict != NULL) {
+                free_defs_mount(mnts[j]);
+                mnts[j] = NULL;
+                continue;
+            }
+
+            add_mount(merged_mounts, merged_mounts_len, mnts[j]);
+            mnts[j] = NULL;
+        }
+        free_defs_mounts(mnts, mnts_len);
+        mnts = NULL;
+        mnts_len = 0;
+    }
+out:
+
+    free_defs_mounts(mnts, mnts_len);
+
+    return ret;
+}
+
+static int add_image_config_volumes(container_config *container_spec, defs_mount **merged_mounts,
+                                    size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
+    defs_mount *conflict = NULL;
+
+    for (i = 0; container_spec->volumes != 0 &&  i < container_spec->volumes->len; i++) {
+        mnt = parse_anonymous_volume(container_spec->volumes->keys[i]);
+        if (mnt == NULL) {
+            ERROR("parse binds %s failed", container_spec->volumes->keys[i]);
+            ret = -1;
+            goto out;
+        }
+
+        // use user specified config and drop the volume config in image config if conflict
+        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
+        if (conflict != NULL) {
+            free_defs_mount(mnt);
+            mnt = NULL;
+            continue;
+        }
+
+        add_mount(merged_mounts, merged_mounts_len, mnt);
+        mnt = NULL;
+    }
+
+out:
+    free_defs_mount(mnt);
+
+    return ret;
+}
+
+// merge rules:
+// 1. if -v conflict with --mount, fail
+// 2. if --volumes-from conflict with -v/--mount, drop the mount of --volumes-from
+// 3. if anonymous volumes in image config conflict with -v/--mount/--volumes-from,
+//    drop the anonymous volumes in image config
+static int merge_all_fs_mounts(host_config *host_spec, container_config *container_spec,
+                               defs_mount ***all_mounts, size_t *all_mounts_len)
+{
+    int ret = 0;
+    defs_mount **merged_mounts = NULL;
+    size_t merged_mounts_len = 0;
+    size_t len = 0;
+
+    ret = calc_mounts_len(host_spec, container_spec, &len);
+    if (ret != 0) {
+        return -1;
+    }
+    if (len == 0) {
+        return 0;
+    }
+
+    merged_mounts = util_common_calloc_s(sizeof(defs_mount *) * len);
+    if (merged_mounts == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    // add --mounts
+    ret = add_mounts(host_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // add --volume
+    ret = add_volumes(host_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // add --volumes-from
+    ret = add_volumes_from(host_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // add anonymous volumes in image config
+    ret = add_image_config_volumes(container_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    *all_mounts = merged_mounts;
+    *all_mounts_len = merged_mounts_len;
+
+out:
+    if (ret != 0) {
+        free_defs_mounts(merged_mounts, merged_mounts_len);
+    }
+
+    return ret;
+}
+
 int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     container_config *container_spec = v2_spec->config;
+    defs_mount **all_fs_mounts = NULL;
+    size_t all_fs_mounts_len = 0;
+    bool mounted = false;
+
+    ret = im_mount_container_rootfs(v2_spec->image_type, v2_spec->image, v2_spec->id);
+    if (ret != 0) {
+        ERROR("Mount container %s failed when merge mounts", v2_spec->id);
+        goto out;
+    }
+    mounted = true;
+
+    ret = merge_all_fs_mounts(host_spec, container_spec, &all_fs_mounts, &all_fs_mounts_len);
+    if (ret != 0) {
+        ERROR("Failed to merge all mounts");
+        goto out;
+    }
 
     /* mounts to mount filesystem */
-    if (container_spec->mounts && container_spec->mounts_len) {
-        ret = merge_volumes(oci_spec, container_spec->mounts, container_spec->mounts_len, v2_spec, parse_mount);
-        if (ret) {
-            ERROR("Failed to merge mounts");
-            goto out;
-        }
+    ret = merge_fs_mounts_to_oci_and_spec(oci_spec, all_fs_mounts, all_fs_mounts_len, v2_spec);
+    if (ret) {
+        ERROR("Failed to merge mounts");
+        goto out;
     }
 
-    /* volumes to mount */
-    if (host_spec->binds != NULL && host_spec->binds_len) {
-        ret = merge_volumes(oci_spec, host_spec->binds, host_spec->binds_len, v2_spec, parse_volume);
-        if (ret) {
-            ERROR("Failed to merge volumes");
-            goto out;
-        }
-    }
+    (void)im_umount_container_rootfs(v2_spec->image_type, v2_spec->image, v2_spec->id);
+    mounted = false;
 
     /* host channel to mount */
     if (host_spec->host_channel != NULL) {
@@ -2643,6 +2995,12 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     qsort(oci_spec->mounts, oci_spec->mounts_len, sizeof(oci_spec->mounts[0]), destination_compare);
 
 out:
+    if (mounted) {
+        (void)im_umount_container_rootfs(v2_spec->image_type, v2_spec->image, v2_spec->id);
+    }
+
+    free_defs_mounts(all_fs_mounts, all_fs_mounts_len);
+
     return ret;
 }
 

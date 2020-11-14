@@ -103,6 +103,14 @@ int util_set_file_group(const char *fname, const char *group);
 // try to remove the path, path is file or dir
 int util_recursive_remove_path(const char *path);
 
+// list only current directory's entries, not list recursive subdirs
+int util_list_all_entries(const char *directory, char ***out);
+
+// note: 1. If xattrs not support in src or dst filesystem, this function will ignore copying xattrs
+//          and will NOT error out.
+//       2. If fifo or socket exist in source, this function will return failure.
+int util_copy_dir_recursive(char *copy_dst, char *copy_src);
+
 #ifdef __cplusplus
 }
 #endif

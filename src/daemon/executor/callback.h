@@ -79,6 +79,12 @@
 #include "isula_libutils/image_login_response.h"
 #include "isula_libutils/image_logout_request.h"
 #include "isula_libutils/image_logout_response.h"
+#include "isula_libutils/volume_list_volume_request.h"
+#include "isula_libutils/volume_list_volume_response.h"
+#include "isula_libutils/volume_remove_volume_request.h"
+#include "isula_libutils/volume_remove_volume_response.h"
+#include "isula_libutils/volume_prune_volume_request.h"
+#include "isula_libutils/volume_prune_volume_response.h"
 #include "events_format.h"
 #include "stream_wrapper.h"
 #include "utils_timestamp.h"
@@ -259,8 +265,17 @@ typedef struct {
 } service_image_callback_t;
 
 typedef struct {
+    int (*list)(const volume_list_volume_request *request, volume_list_volume_response **response);
+
+    int (*remove)(const volume_remove_volume_request *request, volume_remove_volume_response **response);
+
+    int (*prune)(const volume_prune_volume_request *request, volume_prune_volume_response **response);
+} service_volume_callback_t;
+
+typedef struct {
     service_container_callback_t container;
     service_image_callback_t image;
+    service_volume_callback_t volume;
 } service_executor_t;
 
 int service_callback_init(void);

@@ -309,6 +309,9 @@ extern "C" {
       "UTS namespace to use",  NULL },                                                                                                                    \
     { CMD_OPT_TYPE_CALLBACK, false, "volume", 'v', &(cmdargs).custom_conf.volumes, "Bind mount a volume",                                                 \
       command_append_array },                                                                                                                             \
+    { CMD_OPT_TYPE_CALLBACK, false, "volumes-from", 0, &(cmdargs).custom_conf.volumes_from,                                                               \
+      "Mount volumes from the specified container(s)",                                                                                                     \
+      command_append_array },                                                                                                                             \
     { CMD_OPT_TYPE_CALLBACK, false, "annotation", 0, &(cmdargs), "Set annotations on a container",                                                        \
       callback_annotation },                                                                                                                              \
     { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \

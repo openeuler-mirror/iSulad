@@ -44,6 +44,7 @@
 #include "utils_convert.h"
 #include "utils_file.h"
 #include "utils_string.h"
+#include "volume_api.h"
 
 static int parse_container_log_configs(container_t *cont);
 
@@ -750,6 +751,38 @@ out:
     return ret;
 }
 
+static int restore_volumes(container_config_v2_common_config_mount_points *mount_points, char *id)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    // no mount point is valid
+    if (mount_points == NULL || mount_points->len == 0) {
+        return 0;
+    }
+
+    if (id == NULL) {
+        ERROR("invalid null container id found when restore volumes");
+        return -1;
+    }
+
+    for (i = 0; i < mount_points->len; i++) {
+        // only volume have name
+        if (mount_points->values[i]->name == NULL) {
+            continue;
+        }
+
+        // add reference to this volume
+        if (volume_add_ref(mount_points->values[i]->name, id) != 0) {
+            ERROR("add reference %s to volume %s failed", id, mount_points->values[i]->name);
+            ret = -1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
 /* container load */
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id)
 {
@@ -758,6 +791,7 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     host_config *hostconfig = NULL;
     const char *image_id = NULL;
     container_t *cont = NULL;
+    container_config_v2_common_config_mount_points *mount_points = NULL;
 
     if (rootpath == NULL || statepath == NULL || id == NULL || runtime == NULL) {
         return NULL;
@@ -780,6 +814,9 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
         goto error_out;
     }
 
+    if (v2config->common_config != NULL) {
+        mount_points = v2config->common_config->mount_points;
+    }
     common_config = v2config->common_config;
     v2config->common_config = NULL;
     image_id = v2config->image;
@@ -787,6 +824,10 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     cont = container_new(runtime, rootpath, statepath, image_id, &hostconfig, &common_config);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
+        goto error_out;
+    }
+
+    if (restore_volumes(mount_points, (char*)id) != 0) {
         goto error_out;
     }
 

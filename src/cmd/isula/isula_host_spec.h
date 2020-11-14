@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "isula_libutils/json_common.h"
+#include "isula_libutils/mount_spec.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,8 +98,14 @@ typedef struct isula_host_config {
 
     char *hook_spec;
 
+    char **volumes_from;
+    size_t volumes_from_len;
+
     char **binds;
     size_t binds_len;
+
+    mount_spec **mounts;
+    size_t mounts_len;
 
     char **blkio_weight_device;
     size_t blkio_weight_device_len;
