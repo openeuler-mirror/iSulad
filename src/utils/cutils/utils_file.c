@@ -551,13 +551,13 @@ char *util_human_size_decimal(int64_t val)
     char out[16] = { 0 }; /* 16 is enough, format like: 123.456 MB */
 
     if (val >= gb) {
-        nret = snprintf(out, sizeof(out), "%.3lf GB", ((double)val / gb));
+        nret = snprintf(out, sizeof(out), "%.3lfGB", ((double)val / gb));
     } else if (val >= mb) {
-        nret = snprintf(out, sizeof(out), "%.3lf MB", ((double)val / mb));
+        nret = snprintf(out, sizeof(out), "%.3lfMB", ((double)val / mb));
     } else if (val >= kb) {
-        nret = snprintf(out, sizeof(out), "%.3lf KB", ((double)val / kb));
+        nret = snprintf(out, sizeof(out), "%.3lfKB", ((double)val / kb));
     } else {
-        nret = snprintf(out, sizeof(out), "%lld B", (long long int)val);
+        nret = snprintf(out, sizeof(out), "%lldB", (long long int)val);
     }
     if (nret < 0 || nret >= sizeof(out)) {
         ERROR("Failed to print string");
