@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container gc functions
  ******************************************************************************/
+#include "containers_gc.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,7 +28,6 @@
 #include <sys/prctl.h>
 
 #include "constants.h"
-#include "containers_gc.h"
 #include "isulad_config.h"
 #include "isula_libutils/container_garbage_config.h"
 #include "isula_libutils/log.h"

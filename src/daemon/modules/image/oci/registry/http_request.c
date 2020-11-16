@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "http_request.h"
 #include <stdio.h>
 #include <string.h>
 #include <isula_libutils/json_common.h>
@@ -26,7 +27,6 @@
 #include "isula_libutils/log.h"
 #include "buffer.h"
 #include "http.h"
-#include "http_request.h"
 #include "utils.h"
 #include "utils_images.h"
 #include "certs.h"

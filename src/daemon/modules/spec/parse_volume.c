@@ -12,6 +12,7 @@
  * Create: 2020-11-04
  * Description: provide parse volume functions
  ******************************************************************************/
+#include "parse_volume.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,7 +23,6 @@
 #include "utils.h"
 #include "path.h"
 #include "err_msg.h"
-#include "parse_volume.h"
 
 #define DefaultPropagationMode "rprivate"
 #define DefaultROMode "rw"

@@ -14,11 +14,11 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "aes.h"
 #include <stdio.h>
 #include <stdbool.h>
 
 #include "isula_libutils/log.h"
-#include "aes.h"
 #include "utils_aes.h"
 #include "utils.h"
 

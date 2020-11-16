@@ -13,11 +13,11 @@
  * Description: provide tar functions
  ********************************************************************************/
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "util_gzip.h"
 #include <zlib.h>
 #include <sys/stat.h>
 
 #include "utils.h"
-#include "util_gzip.h"
 #include "isula_libutils/log.h"
 #include "utils_file.h"
 

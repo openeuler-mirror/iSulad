@@ -12,6 +12,7 @@
  * Create: 2018-11-08
  * Explanation: provide image functions
  ******************************************************************************/
+#include "embedded_image.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -23,7 +24,6 @@
 
 #include "image_rootfs_handler.h"
 #include "isula_libutils/log.h"
-#include "embedded_image.h"
 #include "lim.h"
 #include "embedded_config_merge.h"
 #include "db_all.h"

@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container state functions
  ******************************************************************************/
+#include "container_state.h"
 #include <stdlib.h>
 #include <string.h>
 #include <isula_libutils/container_config_v2.h>
@@ -20,7 +21,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "container_state.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "constants.h"

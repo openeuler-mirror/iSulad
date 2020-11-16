@@ -13,6 +13,7 @@
  * Description: provide tar functions
  ********************************************************************************/
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "util_archive.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,7 +28,6 @@
 #include <stdint.h>
 
 #include "stdbool.h"
-#include "util_archive.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "io_wrapper.h"

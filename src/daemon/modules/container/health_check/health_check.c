@@ -13,6 +13,7 @@
  * Description: provide health check functions
  *********************************************************************************/
 #define _GNU_SOURCE
+#include "health_check.h"
 #include <string.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -27,7 +28,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "health_check.h"
 #include "service_container_api.h"
 #include "log_gather_api.h"
 #include "container_state.h"

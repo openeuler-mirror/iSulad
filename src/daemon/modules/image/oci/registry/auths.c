@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "auths.h"
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -25,7 +26,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "auths.h"
 #include "aes.h"
 #include "isula_libutils/registry_auths.h"
 #include "err_msg.h"

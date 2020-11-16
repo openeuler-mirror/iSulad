@@ -14,6 +14,7 @@
  *******************************************************************************/
 
 #define _GNU_SOURCE
+#include "utils_images.h"
 #include <stdlib.h>
 #include <string.h>
 #include <isula_libutils/docker_image_config_v2.h>
@@ -29,7 +30,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "utils_images.h"
 #include "sha256.h"
 #include "utils_array.h"
 #include "utils_base64.h"

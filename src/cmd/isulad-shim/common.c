@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE
+#include "common.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -25,8 +26,6 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <stdarg.h>
-
-#include "common.h"
 
 extern int g_log_fd;
 
@@ -122,7 +121,7 @@ int cmd_combined_output(const char *binary, const char *params[], void *output, 
     }
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         return SHIM_ERR;
     }
 
@@ -254,10 +253,8 @@ char *read_text_file(const char *path)
 
     readlen = fread(buf, 1, (size_t)len, filp);
     if (((readlen < (size_t)len) && (!feof(filp))) || (readlen > (size_t)len)) {
-        if (buf != NULL) {
-            free(buf);
-            buf = NULL;
-        }
+        free(buf);
+        buf = NULL;
         goto err_out;
     }
 
@@ -298,4 +295,3 @@ int open_no_inherit(const char *path, int flag, mode_t mode)
 
     return fd;
 }
-

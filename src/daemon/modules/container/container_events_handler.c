@@ -12,6 +12,7 @@
  * Create: 2020-06-22
  * Description: provide container events handler definition
  ******************************************************************************/
+#include "container_events_handler.h"
 #include <stdlib.h>
 #include <pthread.h>
 #include <isula_libutils/container_config_v2.h>
@@ -21,7 +22,6 @@
 #include <sys/prctl.h>
 
 #include "isula_libutils/log.h"
-#include "container_events_handler.h"
 #include "utils.h"
 #include "container_api.h"
 #include "service_container_api.h"

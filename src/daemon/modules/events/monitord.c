@@ -13,7 +13,7 @@
  * Description: provide container monitored functions
  ******************************************************************************/
 #define _GNU_SOURCE
-
+#include "monitord.h"
 #include <sys/stat.h>
 #include <malloc.h>
 #include <unistd.h>
@@ -26,7 +26,6 @@
 #include <sys/prctl.h>
 
 #include "isula_libutils/log.h"
-#include "monitord.h"
 #include "mainloop.h"
 #include "isulad_config.h"
 #include "events_collector_api.h"

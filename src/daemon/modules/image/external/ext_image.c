@@ -12,6 +12,7 @@
  * Create: 2018-11-08
  * Description: provide image functions
  ******************************************************************************/
+#include "ext_image.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "ext_image.h"
 #include "image_rootfs_handler.h"
 #include "err_msg.h"
 #include "utils_file.h"

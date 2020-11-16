@@ -15,6 +15,9 @@
 #ifndef UTILS_TAR_UTIL_GZIP_H
 #define UTILS_TAR_UTIL_GZIP_H
 
+#include <stdio.h>
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

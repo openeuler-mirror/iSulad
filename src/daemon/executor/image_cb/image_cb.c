@@ -12,7 +12,7 @@
  * Create: 2018-11-1
  * Description: provide image functions
  *********************************************************************************/
-
+#include "image_cb.h"
 #include <stdio.h>
 #include <malloc.h>
 #include <isula_libutils/defs.h>
@@ -41,7 +41,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "image_cb.h"
 #include "utils.h"
 #include "error.h"
 #include "err_msg.h"

@@ -13,6 +13,7 @@
  * Description: provide container supervisor functions
  ******************************************************************************/
 #define _GNU_SOURCE
+#include "supervisor.h"
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
@@ -29,7 +30,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "supervisor.h"
 #include "mainloop.h"
 #include "err_msg.h"
 #include "events_sender_api.h"

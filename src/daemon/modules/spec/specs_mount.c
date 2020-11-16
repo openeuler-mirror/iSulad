@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container specs functions
  ******************************************************************************/
+#include "specs_mount.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,7 +39,6 @@
 #include "path.h"
 #include "isulad_config.h"
 #include "namespace.h"
-#include "specs_mount.h"
 #include "specs_extend.h"
 #include "container_api.h"
 #ifdef ENABLE_SELINUX

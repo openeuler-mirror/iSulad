@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container unix functions
  ******************************************************************************/
+#include "container_unix.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -28,7 +29,6 @@
 #include <time.h>
 
 #include "constants.h"
-#include "container_unix.h"
 #include "isula_libutils/log.h"
 #include "container_state.h"
 #include "restartmanager.h"
