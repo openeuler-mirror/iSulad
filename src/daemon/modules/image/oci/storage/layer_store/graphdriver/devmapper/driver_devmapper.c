@@ -477,12 +477,15 @@ static void status_append(const char *name, const char *value, uint64_t u_data, 
                 free(human_size);
             } else {
                 // If unsigned long int is bigger than LONG_MAX, just print directly with Byte unit
-                nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %lu B\n", name, u_data);
+                nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %luB\n", name, u_data);
             }
             break;
         case INT:
             nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %d\n", name, integer_data);
             break;
+        case UINT64_NONE:
+            // Print without unit
+            nret = snprintf(tmp, MAX_INFO_LENGTH, "%s: %lu\n", name, u_data);
         default:
             break;
     }
@@ -534,7 +537,7 @@ char *status_to_str(const struct status *st)
         status_append("Deferred Deletion Enabled", "false", 0, 0, &str, STRING);
     }
 
-    status_append("Deferred Deleted Device Count", NULL, st->deferred_deleted_device_count, 0, &str, UINT64_T);
+    status_append("Deferred Deleted Device Count", NULL, st->deferred_deleted_device_count, 0, &str, UINT64_NONE);
     status_append("Library Version", st->library_version, 0, 0, &str, STRING);
     status_append("Semaphore Set Used", NULL, 0, st->semusz, &str, INT);
     status_append("Semaphore Set Total", NULL, 0, st->semmni, &str, INT);
