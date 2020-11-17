@@ -6,3 +6,4 @@ Content-Length: 2
 Connection: keep-alive
 Docker-Distribution-Api-Version: registry/2.0
 
+{"errors":[{"code":"UNAUTHORIZED","message":"Unauthorized access."}]}
