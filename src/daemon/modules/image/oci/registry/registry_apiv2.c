@@ -45,12 +45,22 @@
 #define MAX_ACCEPT_LEN 128
 // retry 5 times
 #define RETRY_TIMES 5
+#define BODY_DELIMITER "\r\n\r\n"
+
+static void set_body_null_if_exist(char *message)
+{
+    char *body = NULL;
+
+    body = strstr(message, BODY_DELIMITER);
+    if (body != NULL) {
+        *(body + strlen(BODY_DELIMITER)) = 0;
+    }
+}
 
 static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http_message *message)
 {
     char *real_message = NULL;
     int ret = 0;
-    size_t real_len = 0;
 
     if (resp_buf == NULL || message == NULL) {
         ERROR("Invalid NULL param");
@@ -64,8 +74,9 @@ static int parse_http_header(char *resp_buf, size_t buf_size, struct parsed_http
         goto out;
     }
 
-    real_len = buf_size - (real_message - resp_buf);
-    ret = parse_http(real_message, real_len, message, HTTP_RESPONSE);
+    set_body_null_if_exist(real_message);
+
+    ret = parse_http(real_message, strlen(real_message), message, HTTP_RESPONSE);
     if (ret != 0) {
         ERROR("Failed to parse response: %s", real_message);
         ret = -1;
