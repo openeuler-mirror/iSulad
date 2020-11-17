@@ -291,11 +291,6 @@ static int check_mount_spec(char *mount_str, mount_spec *m, char *errmsg)
 
     if (strcmp(m->type, "volume") != 0) {
         if (m->source == NULL || m->source[0] != '/') {
-            CACHE_ERRMSG(errmsg, "source is requested for type %s", m->type);
-            return -1;
-        }
-
-        if (m->source == NULL || m->source[0] != '/') {
             CACHE_ERRMSG(errmsg, "source %s should be absolute path for type %s", m->source, m->type);
             return -1;
         }
