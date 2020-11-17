@@ -102,7 +102,8 @@ static int check_mount_source(const defs_mount *m)
     if (m->source != NULL && m->source[0] != '/' &&
         !util_valid_volume_name(m->source)) {
         ERROR("Invalid volume name %s, only \"%s\" are allowed", m->source, VALID_VOLUME_NAME);
-        isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed", m->source, VALID_VOLUME_NAME);
+        isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed. If you intended to pass "
+                                 "a host directory, use absolute path.", m->source, VALID_VOLUME_NAME);
         return EINVALIDARGS;
     }
 
@@ -266,8 +267,8 @@ static int get_src_dst_mode_by_volume(const char *volume, defs_mount *mount_elem
 
     if (mount_element->source[0] != '/' && !util_valid_volume_name(mount_element->source)) {
         ERROR("Invalid volume name %s, only \"%s\" are allowed", mount_element->source, VALID_VOLUME_NAME);
-        isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed",
-                                 mount_element->source, VALID_VOLUME_NAME);
+        isulad_set_error_message("Invalid volume name %s, only \"%s\" are allowed. If you intended to pass "
+                                 "a host directory, use absolute path.", mount_element->source, VALID_VOLUME_NAME);
         ret = -1;
         goto free_out;
     }
