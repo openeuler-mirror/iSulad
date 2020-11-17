@@ -12,6 +12,7 @@
  * Create: 2018-11-08
  * Description: provide container path functions
  ******************************************************************************/
+#include "path.h"
 #include <unistd.h>
 #include <limits.h>
 #include <sys/param.h>
@@ -24,7 +25,6 @@
 #include <stdio.h>
 
 #include "isula_libutils/log.h"
-#include "path.h"
 #include "utils.h"
 #include "utils_file.h"
 

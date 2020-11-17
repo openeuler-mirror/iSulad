@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "registry_apiv2.h"
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -26,7 +27,6 @@
 #include "registry_type.h"
 #include "isula_libutils/log.h"
 #include "http.h"
-#include "registry_apiv2.h"
 #include "http_request.h"
 #include "utils.h"
 #include "parser.h"

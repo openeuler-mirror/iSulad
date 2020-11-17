@@ -12,12 +12,12 @@
  * Create: 2018-11-08
  * Description: provide container kill functions
  ******************************************************************************/
+#include "kill.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "client_arguments.h"
-#include "kill.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "connect.h"

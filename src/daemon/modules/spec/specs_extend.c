@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container specs functions
  ******************************************************************************/
+#include "specs_extend.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,7 +28,6 @@
 #include "utils.h"
 #include "path.h"
 #include "isulad_config.h"
-#include "specs_extend.h"
 #include "daemon_arguments.h"
 #include "err_msg.h"
 #include "utils_array.h"

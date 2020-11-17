@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "registry.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -30,7 +31,6 @@
 
 #include "mediatype.h"
 #include "isula_libutils/log.h"
-#include "registry.h"
 #include "utils.h"
 #include "registry_apiv2.h"
 #include "certs.h"

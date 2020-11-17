@@ -15,6 +15,9 @@
 #ifndef __DB_ALL_H_
 #define __DB_ALL_H_
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 #include "db_common.h"
 
 struct db_sninfo {

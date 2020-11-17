@@ -15,6 +15,7 @@
 
 #define _GNU_SOURCE
 
+#include "isula_rt_ops.h"
 #include <unistd.h>
 #include <sys/wait.h>
 #include <limits.h>
@@ -33,7 +34,6 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "isula_rt_ops.h"
 #include "isula_libutils/log.h"
 #include "runtime_api.h"
 #include "constants.h"

@@ -12,6 +12,7 @@
  * Create: 2018-11-08
  * Description: provide container restful functions
  ******************************************************************************/
+#include "rest_containers_client.h"
 #include <unistd.h>
 #include "error.h"
 
@@ -19,7 +20,6 @@
 #include "isula_connect.h"
 #include "container.rest.h"
 #include "rest_common.h"
-#include "rest_containers_client.h"
 
 /* create request to rest */
 static int create_request_to_rest(const struct isula_create_request *lc_request, char **body, size_t *body_len)

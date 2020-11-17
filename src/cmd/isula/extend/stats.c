@@ -13,6 +13,7 @@
  * Description: provide container stats functions
  ******************************************************************************/
 #define __STDC_FORMAT_MACROS /* Required for PRIu64 to work. */
+#include "stats.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +22,6 @@
 #include <string.h>
 
 #include "client_arguments.h"
-#include "stats.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"

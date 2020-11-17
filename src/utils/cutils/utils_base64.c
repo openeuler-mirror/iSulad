@@ -14,6 +14,7 @@
  *******************************************************************************/
 
 #define _GNU_SOURCE
+#include "utils_base64.h"
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/buffer.h>
@@ -21,7 +22,6 @@
 #include <openssl/ossl_typ.h>
 
 #include "isula_libutils/log.h"
-#include "utils_base64.h"
 #include "openssl/bio.h"
 #include "utils.h"
 

@@ -13,6 +13,7 @@
  * Description: container logs ops
  ******************************************************************************/
 #define _GNU_SOURCE
+#include "terminal.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -28,7 +29,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "terminal.h"
 #include "common.h"
 
 #define BUF_CACHE_SIZE (16 * 1024)

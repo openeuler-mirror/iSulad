@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container commands functions
  ******************************************************************************/
+#include "isulad_commands.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +20,6 @@
 #include <isula_libutils/host_config.h>
 #include <strings.h>
 
-#include "isulad_commands.h"
 #include "config.h"
 #include "isula_libutils/log.h"
 #include "path.h"

@@ -37,13 +37,13 @@
  * IN THE SOFTWARE.
  */
 
+#include "parser.h"
 #include <http_parser.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#include "parser.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 

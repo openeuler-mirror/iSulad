@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide system information functions
  ******************************************************************************/
+#include "sysinfo.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,7 +22,6 @@
 #include <sys/sysinfo.h>
 
 #include "err_msg.h"
-#include "sysinfo.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_array.h"

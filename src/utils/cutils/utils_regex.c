@@ -14,6 +14,7 @@
  ********************************************************************************/
 
 #define _GNU_SOURCE
+#include "utils_regex.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -22,7 +23,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "utils_regex.h"
 #include "utils_string.h"
 
 /*

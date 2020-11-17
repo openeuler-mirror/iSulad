@@ -13,6 +13,7 @@
  * Description: provide container list callback function definition
  ********************************************************************************/
 
+#include "list.h"
 #include <stdio.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/container_config_v2.h>
@@ -26,7 +27,6 @@
 
 #include "isula_libutils/log.h"
 #include "container_api.h"
-#include "list.h"
 #include "filters.h"
 #include "utils.h"
 #include "error.h"

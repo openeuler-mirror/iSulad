@@ -13,6 +13,7 @@
  * Description: provide container information callback function definition
  *********************************************************************************/
 
+#include "execution_information.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
@@ -49,7 +50,6 @@
 #include "image_api.h"
 #include "isula_libutils/container_inspect.h"
 #include "container_api.h"
-#include "execution_information.h"
 #include "sysinfo.h"
 #include "runtime_api.h"
 #include "list.h"

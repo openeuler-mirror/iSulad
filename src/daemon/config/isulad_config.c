@@ -12,6 +12,7 @@
  * Create: 2018-11-08
  * Description: provide container configure definition
  ******************************************************************************/
+#include "isulad_config.h"
 #include <unistd.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -30,7 +31,6 @@
 #include "constants.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "isulad_config.h"
 #include "sysinfo.h"
 #include "err_msg.h"
 #include "daemon_arguments.h"

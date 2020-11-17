@@ -12,6 +12,7 @@
  * Create: 2018-11-07
  * Description: provide image functions
  ******************************************************************************/
+#include "db_all.h"
 #include <limits.h>
 #include <pthread.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 #include "utils.h"
 #include "db_common.h"
 #include "sqlite_common.h"
-#include "db_all.h"
 
 
 #define IMAGE_INFO_TABLE_COLUMS_NUM 11

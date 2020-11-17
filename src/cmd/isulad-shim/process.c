@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #define _GNU_SOURCE
+#include "process.h"
 #include <sys/epoll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -35,7 +36,6 @@
 #include <stdio.h>
 
 #include "common.h"
-#include "process.h"
 #include "terminal.h"
 
 #define MAX_EVENTS 100

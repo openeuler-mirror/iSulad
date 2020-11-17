@@ -12,6 +12,7 @@
  * Create: 2017-11-22
  * Description: provide container attach functions
  ******************************************************************************/
+#include "attach.h"
 #include <semaphore.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -32,7 +33,6 @@
 #include "isula_connect.h"
 #include "console.h"
 #include "utils.h"
-#include "attach.h"
 #include "command_parser.h"
 #include "connect.h"
 #include "constants.h"

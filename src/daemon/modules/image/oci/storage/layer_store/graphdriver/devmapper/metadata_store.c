@@ -12,11 +12,10 @@
  * Create: 2020-06-12
  * Description: provide devicemapper metadata store function definition
  ******************************************************************************/
-
+#include "metadata_store.h"
 #include <isula_libutils/image_devmapper_device_info.h>
 #include <stdlib.h>
 
-#include "metadata_store.h"
 #include "utils.h"
 #include "isula_libutils/log.h"
 #include "util_atomic.h"

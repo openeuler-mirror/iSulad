@@ -12,6 +12,7 @@
  * Create: 2018-11-08
  * Description: provide console definition
  ******************************************************************************/
+#include "console.h"
 #include <unistd.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -23,7 +24,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "console.h"
 #include "mainloop.h"
 #include "isula_libutils/log.h"
 #include "utils.h"

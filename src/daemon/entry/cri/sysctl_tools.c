@@ -15,13 +15,13 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#include "sysctl_tools.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <limits.h>
 
-#include "sysctl_tools.h"
 #include "utils.h"
 
 int get_sysctl(const char *sysctl, char **err)

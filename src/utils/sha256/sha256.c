@@ -14,6 +14,7 @@
  *******************************************************************************/
 
 #define _GNU_SOURCE /* See feature_test_macros(7) */
+#include "sha256.h"
 #include <fcntl.h> /* Obtain O_* constant definitions */
 #include <unistd.h>
 #include <stdlib.h>
@@ -21,7 +22,6 @@
 #include <errno.h>
 #include <openssl/sha.h>
 
-#include "sha256.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "utils_file.h"

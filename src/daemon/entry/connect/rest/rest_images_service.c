@@ -12,13 +12,13 @@
  * Create: 2018-11-08
  * Description: provide image restful service functions
  ******************************************************************************/
+#include "rest_images_service.h"
 #include <unistd.h>
 
 #include "isula_libutils/log.h"
 #include "callback.h"
 #include "image.rest.h"
 #include "rest_service_common.h"
-#include "rest_images_service.h"
 
 /* image load request check */
 static int image_load_request_check(image_load_image_request *req)

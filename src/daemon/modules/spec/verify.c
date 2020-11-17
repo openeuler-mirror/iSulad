@@ -16,6 +16,7 @@
 #define _GNU_SOURCE
 #endif
 
+#include "verify.h"
 #include <sys/utsname.h>
 #include <libgen.h>
 #include <limits.h>
@@ -38,7 +39,6 @@
 #include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "sysinfo.h"
-#include "verify.h"
 #include "selinux_label.h"
 #include "image_api.h"
 #include "utils.h"

@@ -12,6 +12,7 @@
  * Create: 2018-11-08
  * Description: provide container restful service functions
  ******************************************************************************/
+#include "rest_containers_service.h"
 #include <unistd.h>
 #include <string.h>
 
@@ -21,7 +22,6 @@
 #include "callback.h"
 #include "container.rest.h"
 #include "rest_service_common.h"
-#include "rest_containers_service.h"
 
 struct rest_handle_st {
     const char *name;

@@ -13,6 +13,7 @@
  * Description: provide tar functions
  ********************************************************************************/
 #define _GNU_SOURCE             /* See feature_test_macros(7) */
+#include "isulad_tar.h"
 #include <fcntl.h>              /* Obtain O_* constant definitions */
 #include <unistd.h>
 #include <stdio.h>
@@ -25,7 +26,6 @@
 #include <errno.h>
 
 #include "stdbool.h"
-#include "isulad_tar.h"
 #include "utils.h"
 #include "path.h"
 #include "isula_libutils/log.h"

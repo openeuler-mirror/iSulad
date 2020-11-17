@@ -12,11 +12,11 @@
  * Create: 2018-11-08
  * Description: provide container remove functions
  ******************************************************************************/
+#include "rm.h"
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "rm.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"

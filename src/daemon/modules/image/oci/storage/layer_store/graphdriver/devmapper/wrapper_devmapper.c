@@ -13,6 +13,7 @@
 * Description: wrap libdevmapper function to manuplite devicemapper
 ******************************************************************************/
 #define _GNU_SOURCE
+#include "wrapper_devmapper.h"
 #include <sys/time.h>
 #include <stdio.h>
 #include <limits.h>
@@ -23,7 +24,6 @@
 #include <sys/ipc.h>
 #include <sys/sem.h>
 
-#include "wrapper_devmapper.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 #include "err_msg.h"

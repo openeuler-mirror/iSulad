@@ -12,10 +12,10 @@
  * Create: 2018-11-08
  * Description: provide container restart functions
  ******************************************************************************/
+#include "restart.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "restart.h"
 #include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "utils.h"

@@ -14,6 +14,7 @@
  *******************************************************************************/
 
 #define _GNU_SOURCE
+#include "utils.h"
 #include <errno.h>
 #include <execinfo.h>
 #include <stdint.h>
@@ -35,7 +36,6 @@
 #include <strings.h>
 #include <time.h>
 
-#include "utils.h"
 #include "isula_libutils/log.h"
 #include "isula_libutils/json_common.h"
 #include "utils_array.h"

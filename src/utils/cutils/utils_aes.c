@@ -14,6 +14,7 @@
  *******************************************************************************/
 
 #define _GNU_SOURCE
+#include "utils_aes.h"
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
@@ -23,7 +24,6 @@
 
 #include "isula_libutils/log.h"
 #include "utils.h"
-#include "utils_aes.h"
 #include "openssl/aes.h"
 #include "openssl/evp.h"
 #include "utils_file.h"
