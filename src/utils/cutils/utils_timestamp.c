@@ -144,6 +144,7 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
     int32_t nanos;
     int nret = 0;
     time_t seconds;
+    size_t tmp_size = 0;
 
     if (timebuffer == NULL || maxsize == 0 || !timestamp->has_seconds) {
         return false;
@@ -159,8 +160,10 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
         nanos = 0;
     }
 
+    tmp_size = maxsize - strlen(timebuffer);
+
     if (local_utc) {
-        nret = snprintf(timebuffer + strlen(timebuffer), maxsize - strlen(timebuffer), ".%09dZ", nanos);
+        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09dZ", nanos);
         goto out;
     }
 
@@ -173,14 +176,14 @@ bool get_time_buffer_help(const types_timestamp_t *timestamp, char *timebuffer, 
     }
 
     if (tm_zone >= 0) {
-        nret = snprintf(timebuffer + strlen(timebuffer), maxsize - strlen(timebuffer), ".%09d+%02d:00", nanos, tm_zone);
+        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d+%02d:00", nanos, tm_zone);
     } else {
-        nret = snprintf(timebuffer + strlen(timebuffer), maxsize - strlen(timebuffer), ".%09d-%02d:00", nanos,
+        nret = snprintf(timebuffer + strlen(timebuffer), tmp_size, ".%09d-%02d:00", nanos,
                         -tm_zone);
     }
 
 out:
-    if (nret < 0 || nret >= maxsize - strlen(timebuffer)) {
+    if (nret < 0 || (size_t)nret >= tmp_size) {
         ERROR("sprintf timebuffer failed");
         return false;
     }

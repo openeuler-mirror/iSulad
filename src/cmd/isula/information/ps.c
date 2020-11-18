@@ -36,7 +36,6 @@ const char g_cmd_list_usage[] = "ps [command options]";
 
 #define COMMAND_LENGTH_MAX 22
 #define TIME_DURATION_MAX_LEN 32
-#define MAX_TIMESTAMP_LEN 128
 
 struct client_arguments g_cmd_list_args = {
     .dispname = false,
@@ -353,10 +352,10 @@ static int get_created_time_buffer(int64_t created, char *timebuffer, size_t len
 }
 static void print_created_field(int64_t created, unsigned int length)
 {
-    char timebuffer[MAX_TIMESTAMP_LEN] = { 0 };
+    char timebuffer[TIME_STR_SIZE] = { 0 };
     char created_duration[TIME_DURATION_MAX_LEN] = { 0 };
 
-    if (get_created_time_buffer(created, timebuffer, MAX_TIMESTAMP_LEN) != 0) {
+    if (get_created_time_buffer(created, timebuffer, TIME_STR_SIZE) != 0) {
         return;
     }
     if (util_time_format_duration_ago(timebuffer, created_duration, sizeof(created_duration)) != 0) {
@@ -543,9 +542,9 @@ static void calculate_time_str_length(const char *str, unsigned int *length)
 
 static void calculate_created_str_length(int64_t created, unsigned int *length)
 {
-    char timebuffer[MAX_TIMESTAMP_LEN] = { 0 };
+    char timebuffer[TIME_STR_SIZE] = { 0 };
 
-    if (get_created_time_buffer(created, timebuffer, MAX_TIMESTAMP_LEN) != 0) {
+    if (get_created_time_buffer(created, timebuffer, TIME_STR_SIZE) != 0) {
         return;
     }
 

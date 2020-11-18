@@ -2301,10 +2301,9 @@ out:
 
 int image_store_set_load_time(const char *id, const types_timestamp_t *time)
 {
-#define MAX_TIMESTAMP_LEN 128
     int ret = 0;
     image_t *img = NULL;
-    char timebuffer[MAX_TIMESTAMP_LEN] = { 0x00 };
+    char timebuffer[TIME_STR_SIZE] = { 0x00 };
 
     if (id == NULL || time == NULL) {
         ERROR("Invalid input paratemers");
