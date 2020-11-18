@@ -616,7 +616,7 @@ static int valid_mount_point(container_config_v2_common_config_mount_points_elem
 {
     struct stat st;
     // ignore checking nonexist mount point
-    if (mp == NULL) {
+    if (mp == NULL || mp->type == NULL || mp->source == NULL) {
         return 0;
     }
 
