@@ -2850,7 +2850,7 @@ static char *generate_mount_options(const struct driver_mount_opts *moptions, co
     char *res_str = NULL;
 
     append_mount_options(&res_str, dev_options);
-#ifdef ENABLE_SELINX
+#ifdef ENABLE_SELINUX
     if (moptions != NULL && moptions->mount_label != NULL) {
         char *tmp = NULL;
 
