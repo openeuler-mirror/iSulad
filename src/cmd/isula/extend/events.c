@@ -124,7 +124,7 @@ err_out:
 
 static void print_events_callback(const container_events_format_t *event)
 {
-    char timebuffer[512] = { 0 };
+    char timebuffer[TIME_STR_SIZE] = { 0 };
     char *msg = NULL;
     size_t msg_len = 0;
 

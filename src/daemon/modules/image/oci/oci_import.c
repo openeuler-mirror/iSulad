@@ -41,7 +41,6 @@
 #define IMPORT_COMMENT "Imported from tarball"
 #define ROOTFS_TYPE "layers"
 #define MANIFEST_BIG_DATA_KEY "manifest"
-#define TIME_BUF_MAX_LEN 128
 
 typedef struct {
     char *manifest;
@@ -127,7 +126,7 @@ static int create_config(import_desc *desc)
     char *host_arch = NULL;
     char *host_variant = NULL;
     parser_error err = NULL;
-    char time_str[TIME_BUF_MAX_LEN] = { 0 };
+    char time_str[TIME_STR_SIZE] = { 0 };
 
     if (desc == NULL || desc->uncompressed_digest == NULL) {
         ERROR("Invalid NULL param");
@@ -178,7 +177,7 @@ static int create_config(import_desc *desc)
         goto out;
     }
 
-    if (!util_get_time_buffer(&desc->now_time, time_str, TIME_BUF_MAX_LEN)) {
+    if (!util_get_time_buffer(&desc->now_time, time_str, TIME_STR_SIZE)) {
         ERROR("get time string from timestamp failed");
         isulad_try_set_error_message("get time string from timestamp failed");
         ret = -1;
