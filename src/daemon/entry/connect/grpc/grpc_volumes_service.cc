@@ -29,7 +29,7 @@ int VolumeServiceImpl::volume_list_request_from_grpc(const ListVolumeRequest *gr
                                                      volume_list_volume_request **request)
 {
     volume_list_volume_request *tmpreq =
-        (volume_list_volume_request *)util_common_calloc_s(sizeof(volume_list_volume_request));
+        static_cast<volume_list_volume_request *>(util_common_calloc_s(sizeof(volume_list_volume_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -52,8 +52,8 @@ int VolumeServiceImpl::volume_list_response_to_grpc(volume_list_volume_response 
         gresponse->set_errmsg(response->errmsg);
     }
 
-    for (size_t i = 0; i < response->volumes_len; i++) {
-        Volume *volume = gresponse->add_volumes();
+    for (size_t i {}; i < response->volumes_len; i++) {
+        auto volume = gresponse->add_volumes();
         if (response->volumes[i]->driver != nullptr) {
             volume->set_driver(response->volumes[i]->driver);
         }
@@ -69,7 +69,7 @@ int VolumeServiceImpl::volume_remove_request_from_grpc(const RemoveVolumeRequest
                                                        volume_remove_volume_request **request)
 {
     volume_remove_volume_request *tmpreq =
-        (volume_remove_volume_request *)util_common_calloc_s(sizeof(volume_remove_volume_request));
+        static_cast<volume_remove_volume_request *>(util_common_calloc_s(sizeof(volume_remove_volume_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -87,7 +87,7 @@ int VolumeServiceImpl::volume_prune_request_from_grpc(const PruneVolumeRequest *
                                                       volume_prune_volume_request **request)
 {
     volume_prune_volume_request *tmpreq =
-        (volume_prune_volume_request *)util_common_calloc_s(sizeof(volume_prune_volume_request));
+        static_cast<volume_prune_volume_request *>(util_common_calloc_s(sizeof(volume_prune_volume_request)));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         return -1;
@@ -110,7 +110,7 @@ int VolumeServiceImpl::volume_prune_response_to_grpc(volume_prune_volume_respons
         gresponse->set_errmsg(response->errmsg);
     }
 
-    for (size_t i = 0; i < response->volumes_len; i++) {
+    for (size_t i {}; i < response->volumes_len; i++) {
         gresponse->add_volumes(response->volumes[i]);
     }
 
@@ -124,7 +124,7 @@ Status VolumeServiceImpl::List(ServerContext *context, const ListVolumeRequest *
     if (!status.ok()) {
         return status;
     }
-    service_executor_t *cb = get_service_executor();
+    auto cb = get_service_executor();
     if (cb == nullptr || cb->volume.list == nullptr) {
         return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
     }

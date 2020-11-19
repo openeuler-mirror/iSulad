@@ -24,13 +24,13 @@ int grpc_ops_init(isula_connect_ops *ops)
         return -1;
     }
 
-    if (grpc_containers_client_ops_init(ops)) {
+    if (grpc_containers_client_ops_init(ops) != 0) {
         return -1;
     }
-    if (grpc_images_client_ops_init(ops)) {
+    if (grpc_images_client_ops_init(ops) != 0) {
         return -1;
     }
-    if (grpc_volumes_client_ops_init(ops)) {
+    if (grpc_volumes_client_ops_init(ops) != 0) {
         return -1;
     }
 

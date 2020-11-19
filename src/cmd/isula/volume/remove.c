@@ -51,20 +51,21 @@ static int client_volume_rm(const struct client_arguments *args)
     request.name = args->name;
 
     ops = get_connect_client_ops();
-    if (ops == NULL || !ops->volume.remove) {
+    if (ops == NULL || ops->volume.remove == NULL) {
         ERROR("Unimplemented ops");
         ret = -1;
         goto out;
     }
     config = get_connect_config(args);
     ret = ops->volume.remove(&request, response, &config);
-    if (ret) {
+    if (ret != 0) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         if (response->server_errono) {
             ret = ESERVERERROR;
         }
         goto out;
     }
+
 out:
     isula_remove_volume_response_free(response);
     return ret;

@@ -34,18 +34,12 @@ public:
     {
     }
     ~VolumeList() = default;
-
-    auto request_to_grpc(const isula_list_volume_request *request, ListVolumeRequest *grequest) -> int override
-    {
-        return 0;
-    }
+    VolumeList(const VolumeList &) = delete;
+    VolumeList &operator=(const VolumeList &) = delete;
 
     auto response_from_grpc(ListVolumeResponse *gresponse, isula_list_volume_response *response) -> int override
     {
-        struct isula_volume_info *volumes = nullptr;
-        int i = 0;
         int num = gresponse->volumes_size();
-
         if (num <= 0) {
             response->volumes = nullptr;
             response->volumes_len = 0;
@@ -58,19 +52,20 @@ public:
 
         response->volumes_len = 0;
 
-        if ((size_t)num > SIZE_MAX / sizeof(struct isula_volume_info)) {
+        if (static_cast<size_t>(num) > SIZE_MAX / sizeof(struct isula_volume_info)) {
             ERROR("Too many volume");
             response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
-        volumes = (struct isula_volume_info *)util_common_calloc_s(sizeof(struct isula_volume_info) * (size_t)num);
+        auto volumes = static_cast<struct isula_volume_info *>(
+                           util_common_calloc_s(sizeof(struct isula_volume_info) * static_cast<size_t>(num)));
         if (volumes == nullptr) {
             ERROR("out of memory");
             response->cc = ISULAD_ERR_MEMOUT;
             return -1;
         }
 
-        for (i = 0; i < num; i++) {
+        for (int i {}; i < num; i++) {
             const Volume &volume = gresponse->volumes(i);
             const char *driver = !volume.driver().empty() ? volume.driver().c_str() : "-";
             volumes[i].driver = util_strdup_s(driver);
@@ -79,7 +74,7 @@ public:
         }
 
         response->volumes = volumes;
-        response->volumes_len = (size_t)num;
+        response->volumes_len = static_cast<size_t>(num);
         response->server_errono = gresponse->cc();
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
@@ -103,6 +98,8 @@ public:
     {
     }
     ~VolumeRemove() = default;
+    VolumeRemove(const VolumeRemove &) = delete;
+    VolumeRemove &operator=(const VolumeRemove &) = delete;
 
     auto request_to_grpc(const isula_remove_volume_request *request, RemoveVolumeRequest *grequest) -> int override
     {
@@ -119,7 +116,7 @@ public:
 
     auto response_from_grpc(RemoveVolumeResponse *gresponse, isula_remove_volume_response *response) -> int override
     {
-        response->server_errono = (uint32_t)gresponse->cc();
+        response->server_errono = static_cast<uint32_t>(gresponse->cc());
 
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
@@ -153,40 +150,30 @@ public:
     {
     }
     ~VolumePrune() = default;
-
-    auto request_to_grpc(const isula_prune_volume_request *request, PruneVolumeRequest *grequest) -> int override
-    {
-        return 0;
-    }
+    VolumePrune(const VolumePrune &) = delete;
+    VolumePrune &operator=(const VolumePrune &) = delete;
 
     auto response_from_grpc(PruneVolumeResponse *gresponse, isula_prune_volume_response *response) -> int override
     {
-        size_t i = 0;
-        size_t size = gresponse->volumes_size();
-
+        auto size = gresponse->volumes_size();
         if (size != 0) {
-            response->volumes = (char **)util_common_calloc_s(sizeof(char *) * size);
+            response->volumes = static_cast<char **>(util_common_calloc_s(sizeof(char *) * size));
             if (response->volumes == NULL) {
                 return -1;
             }
 
-            for (i = 0; i < size; i++) {
+            for (int i {}; i < size; i++) {
                 response->volumes[i] = util_strdup_s(gresponse->volumes(i).c_str());
                 response->volumes_len++;
             }
         }
 
-        response->server_errono = (uint32_t)gresponse->cc();
+        response->server_errono = static_cast<uint32_t>(gresponse->cc());
 
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
         }
 
-        return 0;
-    }
-
-    auto check_parameter(const PruneVolumeRequest &req) -> int override
-    {
         return 0;
     }
 

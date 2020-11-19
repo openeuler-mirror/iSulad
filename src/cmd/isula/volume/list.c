@@ -161,7 +161,7 @@ int cmd_volume_ls_main(int argc, const char **argv)
         exit(exit_code);
     }
 
-    if (list_volume(&g_cmd_volume_ls_args)) {
+    if (list_volume(&g_cmd_volume_ls_args) != 0) {
         ERROR("Can not list any volume");
         exit(exit_code);
     }
