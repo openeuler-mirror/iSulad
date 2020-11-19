@@ -71,26 +71,36 @@ out:
     return dir;
 }
 
-static char *get_cni_bin_dir()
+static int get_cni_bin_dir(char ***dst)
 {
-    char *dir = NULL;
-    char *tmp = NULL;
+    int i, len;
+    char **dir = NULL;
+    char **tmp = NULL;
     char cleaned[PATH_MAX] = { 0 };
 
-    tmp = conf_get_cni_bin_dir();
-    if (tmp == NULL) {
-        return NULL;
+    len = conf_get_cni_bin_dir(&tmp);
+    if (len <= 0) {
+        return len;
     }
 
-    if (util_clean_path(tmp, cleaned, sizeof(cleaned)) == NULL) {
-        ERROR("Can not clean path: %s", tmp);
-        goto out;
+    for (i = 0; i < len; i++) {
+        if (util_clean_path(tmp[i], cleaned, sizeof(cleaned)) == NULL) {
+            ERROR("Can not clean path: %s", tmp[i]);
+            goto free_out;
+        }
+        if (util_array_append(&dir, cleaned) != 0) {
+            goto free_out;
+        }
     }
-    dir = util_strdup_s(cleaned);
 
-out:
-    free(tmp);
-    return dir;
+    *dst = dir;
+    util_free_array(tmp);
+    return len;
+
+free_out:
+    util_free_array(dir);
+    util_free_array(tmp);
+    return -1;
 }
 
 static void free_cni_list_arr(cni_net_conf_list **list_arr, size_t list_arr_len)
@@ -996,64 +1006,83 @@ out:
     return ret;
 }
 
-static int cni_bin_detect(const char *cni_bin_dir)
+static int do_cni_bin_detect(const char **cni_bin_dir, const int bin_dir_len, const char *file, char ***absence)
+{
+    size_t i;
+    char *path = NULL;
+
+    for (i = 0; i < bin_dir_len; i++) {
+        path = util_path_join(cni_bin_dir[i], file);
+        if (path == NULL) {
+            return -1;
+        }
+
+        if (util_file_exists(path)) {
+            free(path);
+            return 0;
+        }
+
+        free(path);
+        path = NULL;
+    }
+
+    return util_array_append(absence, file);
+}
+
+static int cni_bin_detect(const char **cni_bin_dir, int bin_dir_len)
 {
     int ret = 0;
     size_t i, len;
-    char *plugin_file = NULL;
-    char **missing_file = NULL;
-    char *str = NULL;
-
-    if (!util_dir_exists(cni_bin_dir)) {
-        isulad_set_error_message("WARN:cni plugin dir \"%s\" doesn't exist", cni_bin_dir);
-        return 0;
-    }
+    char **absence = NULL;
+    char *file_str = NULL;
+    char *dir_str = NULL;
 
     len = util_array_len(g_bridge_plugins);
     for (i = 0; i < len; i++) {
-        plugin_file = util_path_join(cni_bin_dir, g_bridge_plugins[i]);
-        if (plugin_file == NULL) {
-            ret = -1;
+        ret = do_cni_bin_detect(cni_bin_dir, bin_dir_len, g_bridge_plugins[i], &absence);
+        if (ret != 0) {
+            ERROR("Failed to do cni bin detect for plugin %s", g_bridge_plugins[i]);
             goto out;
         }
-        if (!util_file_exists(plugin_file)) {
-            ret = util_array_append(&missing_file, g_bridge_plugins[i]);
-            if (ret != 0) {
-                free(plugin_file);
-                ERROR("Out of memory");
-                goto out;
-            }
-        }
-        free(plugin_file);
-        plugin_file = NULL;
     }
 
-    if (missing_file == NULL) {
+    if (absence == NULL) {
         return ret;
     }
 
-    len = util_array_len((const char **)missing_file);
-    str = util_string_join(", ", (const char **)missing_file, len);
-    if (str == NULL) {
+    len = util_array_len((const char **)absence);
+    file_str = util_string_join(",", (const char **)absence, len);
+    if (file_str == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
-    isulad_set_error_message("WARN:missing cni plugin \"%s\" in dir %s", str, cni_bin_dir);
-    free(str);
+
+    dir_str = util_string_join(",", (const char **)cni_bin_dir, bin_dir_len);
+    if (dir_str == NULL) {
+        ERROR("Out of memory");
+        free(file_str);
+        ret = -1;
+        goto out;
+    }
+
+    isulad_set_error_message("WARN:cannot find cni plugin \"%s\" in dir \"%s\"", file_str, dir_str);
+    free(file_str);
+    free(dir_str);
 
 out:
-    util_free_array(missing_file);
+    util_free_array(absence);
     return ret;
 }
 
 int network_config_bridge_create(const network_create_request *request, network_create_response **response)
 {
     int ret = 0;
+    int bin_dir_len = 0;
     size_t conflist_arr_len = 0;
     uint32_t cc = ISULAD_SUCCESS;
     char *cni_conf_dir = NULL;
-    char *cni_bin_dir = NULL;
+    char **cni_bin_dir = NULL;
     cni_net_conf_list *bridge_list = NULL;
     cni_net_conf_list **conflist_arr = NULL;
 
@@ -1091,22 +1120,22 @@ int network_config_bridge_create(const network_create_request *request, network_
         goto out;
     }
 
-    cni_bin_dir = get_cni_bin_dir();
-    if (cni_bin_dir == NULL) {
+    bin_dir_len = get_cni_bin_dir(&cni_bin_dir);
+    if (bin_dir_len <= 0) {
         ERROR("Failed to get cni bin dir");
         cc = ISULAD_ERR_EXEC;
         ret = -1;
         goto out;
     }
 
-    ret = cni_bin_detect(cni_bin_dir);
+    ret = cni_bin_detect((const char **)cni_bin_dir, bin_dir_len);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
     }
 
 out:
-    free(cni_bin_dir);
     free(cni_conf_dir);
+    util_free_array(cni_bin_dir);
     free_cni_net_conf_list(bridge_list);
     free_cni_list_arr(conflist_arr, conflist_arr_len);
 
