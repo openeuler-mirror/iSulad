@@ -310,6 +310,7 @@
 			"/proc/pagealloc_statistics",
 			"/proc/pagealloc_module",
 			"/proc/pagealloc_bt",
+			"/proc/pin_memory",
 			"/proc/slaballoc_statistics",
 			"/proc/slaballoc_module",
 			"/proc/slaballoc_bt",
