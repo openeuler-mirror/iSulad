@@ -22,14 +22,8 @@
 #include "callback.h"
 #include "error.h"
 
-using grpc::Server;
-using grpc::ServerBuilder;
 using grpc::ServerContext;
-using grpc::ServerReader;
-using grpc::ServerReaderWriter;
-using grpc::ServerWriter;
 using grpc::Status;
-using grpc::StatusCode;
 
 using namespace volume;
 

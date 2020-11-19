@@ -1984,6 +1984,7 @@ static bool check_mounts_conf_valid(const char *mount_str)
 
     if (!util_valid_mount_spec(mount_str, &errmsg)) {
         COMMAND_ERROR("%s", errmsg);
+        free(errmsg);
         return false;
     }
     return true;

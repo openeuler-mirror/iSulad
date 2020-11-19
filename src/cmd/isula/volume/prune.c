@@ -51,14 +51,14 @@ static int client_volume_prune(const struct client_arguments *args, char ***volu
     }
 
     ops = get_connect_client_ops();
-    if (ops == NULL || !ops->volume.prune) {
+    if (ops == NULL || ops->volume.prune == NULL) {
         ERROR("Unimplemented ops");
         ret = -1;
         goto out;
     }
     config = get_connect_config(args);
     ret = ops->volume.prune(&request, response, &config);
-    if (ret) {
+    if (ret != 0) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         if (response->server_errono) {
             ret = ESERVERERROR;
@@ -120,8 +120,7 @@ int cmd_volume_prune_main(int argc, const char **argv)
         }
     }
 
-    int ret = client_volume_prune(&g_cmd_volume_prune_args, &volumes, &volumes_len);
-    if (ret != 0) {
+    if (client_volume_prune(&g_cmd_volume_prune_args, &volumes, &volumes_len) != 0) {
         ERROR("Prune volumes failed");
         exit(exit_code);
     }
