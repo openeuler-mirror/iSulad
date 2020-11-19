@@ -1204,26 +1204,36 @@ char *conf_get_cni_conf_dir()
 }
 
 /* conf get cni binary dir */
-char *conf_get_cni_bin_dir()
+int conf_get_cni_bin_dir(char ***dst)
 {
-    char *dir = NULL;
+    char **dir = NULL;
     const char *default_bin_dir = "/opt/cni/bin";
     struct service_arguments *conf = NULL;
 
     if (isulad_server_conf_rdlock() != 0) {
         ERROR("BUG conf_rdlock failed");
-        return NULL;
+        return -1;
     }
 
     conf = conf_get_server_conf();
     if (conf == NULL || conf->json_confs == NULL || conf->json_confs->cni_bin_dir == NULL) {
-        dir = util_strdup_s(default_bin_dir);
+        (void)util_array_append(&dir, default_bin_dir);
     } else {
-        dir = util_strdup_s(conf->json_confs->cni_bin_dir);
+        dir = util_string_split(conf->json_confs->cni_bin_dir, ',');
+        if (dir == NULL) {
+            ERROR("String split failed");
+            return -1;
+        }
     }
 
-    (void)isulad_server_conf_unlock();
-    return dir;
+    if (isulad_server_conf_unlock() != 0) {
+        ERROR("BUG conf_unlock failed");
+        util_free_array(dir);
+        return -1;
+    }
+
+    *dst = dir;
+    return util_array_len((const char **)dir);
 }
 
 /* conf get websocket server listening port */
