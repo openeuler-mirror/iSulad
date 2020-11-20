@@ -92,17 +92,17 @@ void print_options(int options_len, const command_option_t *options)
 
 void command_help(command_t *self)
 {
-    char cmd_name[PATH_MAX] = { 0 };
-
-    if (get_cmd_name(self->name, self->subname, cmd_name, sizeof(cmd_name)) != 0) {
-        fprintf(stdout, "Failed to sprintf command name: %s\n", strerror(errno));
-        return;
+    const char *progname = strrchr(self->name, '/');
+    if (progname == NULL) {
+        progname = self->name;
+    } else {
+        progname++;
     }
 
     if (self->type != NULL && strcmp(self->type, "isulad") == 0) {
         command_help_isulad_head();
     }
-    fprintf(stdout, "\nUsage:  %s %s\n\n", cmd_name, self->usage);
+    fprintf(stdout, "\nUsage:  %s %s\n\n", progname, self->usage);
     fprintf(stdout, "%s\n\n", self->description);
     qsort(self->options, (size_t)self->option_count, sizeof(self->options[0]), compare_options);
     print_options(self->option_count, self->options);
@@ -134,8 +134,7 @@ void subcommand_init(command_t *self, command_option_t *opts, int opts_len, int 
                      const char *description, const char *usage)
 {
     (void)memset(self, 0, sizeof(command_t));
-    self->name = argv[0];
-    self->subname = argv[1];
+    self->name = util_string_join(" ", argv, 2);
     self->argc = argc - 3;
     self->argv = argv + 3;
     self->usage = usage;
@@ -611,28 +610,4 @@ int command_convert_device_cgroup_rules(command_option_t *option, const char *ar
     }
 
     return command_append_array(option, arg);
-}
-
-int get_cmd_name(const char * const name, const char * const subname, char *cmd_name, size_t cmd_name_buf_len)
-{
-    int sret = 0;
-    const char *progname = NULL;
-
-    progname = strrchr(name, '/');
-    if (progname == NULL) {
-        progname = name;
-    } else {
-        progname++;
-    }
-
-    if (subname != NULL) {
-        sret = snprintf(cmd_name, cmd_name_buf_len, "%s %s", progname, subname);
-    } else {
-        sret = snprintf(cmd_name, cmd_name_buf_len, "%s", progname);
-    }
-    if (sret < 0 || (size_t)sret >= cmd_name_buf_len) {
-        return -1;
-    }
-
-    return 0;
 }

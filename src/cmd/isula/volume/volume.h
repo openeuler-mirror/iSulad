@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 extern const char g_cmd_volume_desc[];
+int cmd_volume_main(int argc, const char **argv);
 
 #ifdef __cplusplus
 }
