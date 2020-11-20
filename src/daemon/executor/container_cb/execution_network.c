@@ -163,14 +163,28 @@ static int write_content_to_file(const char *file_path, const char *content)
     return ret;
 }
 
+static bool is_exist_in_map(const char *key, const json_map_string_bool *map)
+{
+    bool is_exist = false;
+    size_t j;
+
+    for (j = 0; j < map->len; j++) {
+        if (strcmp(key, map->keys[j]) == 0) {
+            is_exist = true;
+            break;
+        }
+    }
+
+    return is_exist;
+}
+
 static int merge_hosts_content(const host_config *host_spec, char **content, json_map_string_bool *hosts_map)
 {
-    size_t i, j;
+    size_t i;
     char *tmp = NULL;
     char *saveptr = NULL;
 
     for (i = 0; i < host_spec->extra_hosts_len; i++) {
-        bool need_to_add = true;
         char *host_name = NULL;
         char *host_ip = NULL;
         char *hosts = NULL;
@@ -193,13 +207,7 @@ static int merge_hosts_content(const host_config *host_spec, char **content, jso
             ERROR("Out of memory");
             return -1;
         }
-        for (j = 0; j < hosts_map->len; j++) {
-            if (strcmp(host_key, hosts_map->keys[j]) == 0) {
-                need_to_add = false;
-                break;
-            }
-        }
-        if (need_to_add) {
+        if (!is_exist_in_map(host_key, hosts_map)) {
             tmp = util_string_append(host_ip, *content);
             free(*content);
             *content = tmp;
@@ -267,7 +275,7 @@ error_out:
 static int merge_dns_search(const host_config *host_spec, char **content, const char *token, char *saveptr)
 {
     int ret = 0;
-    size_t i, j;
+    size_t i;
     size_t content_len = strlen(*content);
     char *tmp = NULL;
     json_map_string_bool *dns_search_map = NULL;
@@ -289,14 +297,7 @@ static int merge_dns_search(const host_config *host_spec, char **content, const 
         }
     }
     for (i = 0; i < host_spec->dns_search_len; i++) {
-        bool need_to_add = true;
-        for (j = 0; j < dns_search_map->len; j++) {
-            if (strcmp(host_spec->dns_search[i], dns_search_map->keys[j]) == 0) {
-                need_to_add = false;
-                break;
-            }
-        }
-        if (need_to_add) {
+        if (!is_exist_in_map(host_spec->dns_search[i], dns_search_map)) {
             if (strlen(*content) > 0) {
                 (*content)[strlen(*content) - 1] = ' ';
             }
@@ -325,7 +326,7 @@ error_out:
 static int merge_dns_options(const host_config *host_spec, char **content, const char *token, char *saveptr)
 {
     int ret = 0;
-    size_t i, j;
+    size_t i;
     size_t content_len = strlen(*content);
     char *tmp = NULL;
     json_map_string_bool *dns_options_map = NULL;
@@ -347,14 +348,7 @@ static int merge_dns_options(const host_config *host_spec, char **content, const
         }
     }
     for (i = 0; i < host_spec->dns_options_len; i++) {
-        bool need_to_add = true;
-        for (j = 0; j < dns_options_map->len; j++) {
-            if (strcmp(host_spec->dns_options[i], dns_options_map->keys[j]) == 0) {
-                need_to_add = false;
-                break;
-            }
-        }
-        if (need_to_add) {
+        if (!is_exist_in_map(host_spec->dns_options[i], dns_options_map)) {
             if (strlen(*content) > 0) {
                 (*content)[strlen(*content) - 1] = ' ';
             }
@@ -382,18 +376,11 @@ error_out:
 
 static int merge_dns(const host_config *host_spec, char **content, json_map_string_bool *dns_map)
 {
-    size_t i, j;
+    size_t i;
     char *tmp = NULL;
 
     for (i = 0; i < host_spec->dns_len; i++) {
-        bool need_to_add = true;
-        for (j = 0; j < dns_map->len; j++) {
-            if (strcmp(host_spec->dns[i], dns_map->keys[j]) == 0) {
-                need_to_add = false;
-                break;
-            }
-        }
-        if (need_to_add) {
+        if (!is_exist_in_map(host_spec->dns[i], dns_map)) {
             tmp = util_string_append("nameserver ", *content);
             free(*content);
             *content = tmp;
@@ -412,92 +399,103 @@ static int merge_dns(const host_config *host_spec, char **content, json_map_stri
     return 0;
 }
 
-static bool is_need_add(const char *dns_search, const json_map_string_bool *dns_search_map)
-{
-    bool need_to_add = true;
-    size_t j;
-
-    for (j = 0; j < dns_search_map->len; j++) {
-        if (strcmp(dns_search, dns_search_map->keys[j]) == 0) {
-            need_to_add = false;
-            break;
-        }
-    }
-
-    return need_to_add;
-}
-
-static int generate_new_search(const host_config *host_spec, json_map_string_bool *dns_search_map, char **content,
-                               bool search)
+static int do_append_host_spec_search_to_content(const host_config *host_spec, json_map_string_bool *dns_search_map,
+                                                 char **content)
 {
     char *tmp = NULL;
+    size_t i;
 
-    if (!search && host_spec->dns_search_len > 0) {
-        size_t i;
-        tmp = util_string_append("search ", *content);
+    tmp = util_string_append("search ", *content);
+    free(*content);
+    *content = tmp;
+    for (i = 0; i < host_spec->dns_search_len; i++) {
+        if (is_exist_in_map(host_spec->dns_search[i], dns_search_map)) {
+            continue;
+        }
+        if (append_json_map_string_bool(dns_search_map, host_spec->dns_search[i], true)) {
+            ERROR("append data to dns search map failed");
+            return -1;
+        }
+        tmp = util_string_append(host_spec->dns_search[i], *content);
         free(*content);
         *content = tmp;
-        for (i = 0; i < host_spec->dns_search_len; i++) {
-            if (!is_need_add(host_spec->dns_search[i], dns_search_map)) {
-                continue;
-            }
-
-            if (append_json_map_string_bool(dns_search_map, host_spec->dns_search[i], true)) {
-                ERROR("append data to dns search map failed");
-                return -1;
-            }
-            tmp = util_string_append(host_spec->dns_search[i], *content);
-            free(*content);
-            *content = tmp;
-            tmp = util_string_append(" ", *content);
-            free(*content);
-            *content = tmp;
-        }
-        tmp = util_string_append("\n", *content);
+        tmp = util_string_append(" ", *content);
         free(*content);
         *content = tmp;
     }
+    tmp = util_string_append("\n", *content);
+    free(*content);
+    *content = tmp;
+
     return 0;
 }
 
-static int generate_new_options(const host_config *host_spec, json_map_string_bool *dns_options_map, char **content,
-                                bool options)
+static int do_append_host_spec_options_to_content(const host_config *host_spec, json_map_string_bool *dns_options_map,
+                                                  char **content)
 {
     char *tmp = NULL;
+    size_t i;
 
-    if (!options && host_spec->dns_options_len > 0) {
-        size_t i;
-        tmp = util_string_append("options ", *content);
+    tmp = util_string_append("options ", *content);
+    free(*content);
+    *content = tmp;
+    for (i = 0; i < host_spec->dns_options_len; i++) {
+        if (is_exist_in_map(host_spec->dns_options[i], dns_options_map)) {
+            continue;
+        }
+
+        if (append_json_map_string_bool(dns_options_map, host_spec->dns_options[i], true)) {
+            ERROR("append data to dns options map failed");
+            return -1;
+        }
+        tmp = util_string_append(host_spec->dns_options[i], *content);
         free(*content);
         *content = tmp;
-        for (i = 0; i < host_spec->dns_options_len; i++) {
-            if (!is_need_add(host_spec->dns_options[i], dns_options_map)) {
-                continue;
-            }
-
-            if (append_json_map_string_bool(dns_options_map, host_spec->dns_options[i], true)) {
-                ERROR("append data to dns options map failed");
-                return -1;
-            }
-            tmp = util_string_append(host_spec->dns_options[i], *content);
-            free(*content);
-            *content = tmp;
-            tmp = util_string_append(" ", *content);
-            free(*content);
-            *content = tmp;
-        }
-        tmp = util_string_append("\n", *content);
+        tmp = util_string_append(" ", *content);
         free(*content);
         *content = tmp;
     }
+    tmp = util_string_append("\n", *content);
+    free(*content);
+    *content = tmp;
+
     return 0;
 }
 
-static int generate_new_search_and_options(const host_config *host_spec, char **content, bool search, bool options)
+static int append_host_spec_options_to_content(const host_config *host_spec, char **content)
+{
+    int ret = 0;
+    json_map_string_bool *dns_options_map = NULL;
+
+    if (host_spec->dns_options_len == 0) {
+        return 0;
+    }
+
+    dns_options_map = (json_map_string_bool *)util_common_calloc_s(sizeof(json_map_string_bool));
+    if (dns_options_map == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto error_out;
+    }
+
+    ret = do_append_host_spec_options_to_content(host_spec, dns_options_map, content);
+    if (ret) {
+        goto error_out;
+    }
+
+error_out:
+    free_json_map_string_bool(dns_options_map);
+    return ret;
+}
+
+static int append_host_spec_search_to_content(const host_config *host_spec, char **content)
 {
     int ret = 0;
     json_map_string_bool *dns_search_map = NULL;
-    json_map_string_bool *dns_options_map = NULL;
+
+    if (host_spec->dns_search_len == 0) {
+        return 0;
+    }
 
     dns_search_map = (json_map_string_bool *)util_common_calloc_s(sizeof(json_map_string_bool));
     if (dns_search_map == NULL) {
@@ -505,24 +503,14 @@ static int generate_new_search_and_options(const host_config *host_spec, char **
         ret = -1;
         goto error_out;
     }
-    dns_options_map = (json_map_string_bool *)util_common_calloc_s(sizeof(json_map_string_bool));
-    if (dns_options_map == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto error_out;
-    }
-    ret = generate_new_search(host_spec, dns_search_map, content, search);
-    if (ret) {
-        goto error_out;
-    }
-    ret = generate_new_options(host_spec, dns_options_map, content, options);
+
+    ret = do_append_host_spec_search_to_content(host_spec, dns_search_map, content);
     if (ret) {
         goto error_out;
     }
 
 error_out:
     free_json_map_string_bool(dns_search_map);
-    free_json_map_string_bool(dns_options_map);
     return ret;
 }
 
@@ -603,8 +591,8 @@ static int merge_resolv(const host_config *host_spec, const char *rootfs, const 
 {
     int ret = 0;
     size_t length = 0;
-    bool search = false;
-    bool options = false;
+    bool handle_search = false;
+    bool handle_options = false;
     char *pline = NULL;
     char *content = NULL;
     char *file_path = NULL;
@@ -628,19 +616,39 @@ static int merge_resolv(const host_config *host_spec, const char *rootfs, const 
             ret = -1;
             goto error_out;
         }
-        ret = resolve_handle_content(pline, host_spec, &content, dns_map, &search, &options);
+        char *tmp_content = util_strdup_s(content);
+        ret = resolve_handle_content(pline, host_spec, &tmp_content, dns_map, &handle_search, &handle_options);
         if (ret != 0) {
-            goto error_out;
+            WARN("Failed to handle resolv config %s, skip", pline);
+            free(tmp_content);
+            ret = 0;
+        } else {
+            free(content);
+            content = tmp_content;
         }
     }
+
     ret = merge_dns(host_spec, &content, dns_map);
     if (ret) {
         goto error_out;
     }
-    ret = generate_new_search_and_options(host_spec, &content, search, options);
-    if (ret) {
-        goto error_out;
+
+    // if we handle search aleady in resolve_handle_content, skip append_host_spec_search_to_content
+    if (!handle_search) {
+        if (append_host_spec_search_to_content(host_spec, &content) != 0) {
+            ret = -1;
+            goto error_out;
+        }
     }
+
+    // if we handle options aleady in resolve_handle_content, skip append_host_spec_options_to_content
+    if (!handle_options) {
+        if (append_host_spec_options_to_content(host_spec, &content) != 0) {
+            ret = -1;
+            goto error_out;
+        }
+    }
+
     ret = write_content_to_file(file_path, content);
     if (ret) {
         goto error_out;
