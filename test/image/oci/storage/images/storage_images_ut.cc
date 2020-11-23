@@ -33,6 +33,7 @@
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_image.h"
 #include "storage_mock.h"
+#include "isulad_config_mock.h"
 
 using ::testing::Args;
 using ::testing::ByRef;

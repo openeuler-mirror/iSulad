@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include "isula_libutils/log.h"
 #include "utils.h"
@@ -36,10 +37,10 @@
 #include "utils_file.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "isulad_config.h"
 
 // nanos of 2038-01-19T03:14:07, the max valid linux time
 #define MAX_NANOS 2147483647000000000
-#define ISULAD_DEFAULT_TMP_DIR "/var/tmp"
 
 char *get_last_part(char **parts)
 {
@@ -488,36 +489,101 @@ bool oci_valid_time(char *time)
     return true;
 }
 
-
-char *oci_get_isulad_tmpdir()
+static int makesure_path_is_dir(char *path)
 {
-    char *isula_tmp = NULL;
+    struct stat st = {0};
 
-    isula_tmp = getenv("ISULAD_TMPDIR");
-    if (util_valid_str(isula_tmp) && !util_dir_exists(isula_tmp)) {
-        if (util_mkdir_p(isula_tmp, TEMP_DIRECTORY_MODE) != 0) {
-            ERROR("make dir:%s failed", isula_tmp);
-            return NULL;
+    if (lstat(path, &st) != 0) {
+        if (errno == ENOENT) {
+            return util_mkdir_p(path, TEMP_DIRECTORY_MODE);
+        }
+        ERROR("lstat %s failed: %s", path, strerror(errno));
+        return -1;
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        if (util_recursive_rmdir(path, 0)) {
+            ERROR("failed to remove directory %s", path);
+            return -1;
         }
     }
 
-    return util_valid_str(isula_tmp) ? util_strdup_s(isula_tmp) : util_strdup_s(ISULAD_DEFAULT_TMP_DIR);
+    if (util_mkdir_p(path, TEMP_DIRECTORY_MODE) != 0) {
+        ERROR("make dir:%s failed", path);
+        return -1;
+    }
+
+    return 0;
 }
 
-char *get_image_tmp_path()
+char *oci_get_isulad_tmpdir()
 {
-    char *isulad_tmp = NULL;
-    char *isula_image = NULL;
+    char *isulad_tmpdir = NULL;
+    char *isulad_root_dir = NULL;
+    char *env_dir = NULL;
+    int ret = 0;
 
-    isulad_tmp = oci_get_isulad_tmpdir();
-    if (isulad_tmp == NULL) {
-        ERROR("Failed to get isulad tmp dir");
+    isulad_root_dir = conf_get_isulad_rootdir();
+    if (isulad_root_dir == NULL) {
+        ERROR("get isulad root dir failed");
+        return NULL;
+    }
+
+    env_dir = getenv("ISULAD_TMPDIR");
+    if (util_valid_str(env_dir)) {
+        isulad_tmpdir = util_path_join(env_dir, "isulad_tmpdir");
+    } else {
+        isulad_tmpdir = util_path_join(isulad_root_dir, "isulad_tmpdir");
+    }
+    if (isulad_tmpdir == NULL) {
+        ERROR("join temporary directory failed");
+        ret = -1;
         goto out;
     }
 
-    isula_image = util_path_join(isulad_tmp, "isula-image");
+out:
+    free(isulad_root_dir);
+    if (ret != 0) {
+        free(isulad_tmpdir);
+        isulad_tmpdir = NULL;
+    }
+
+    return isulad_tmpdir;
+}
+
+int makesure_isulad_tmpdir_perm_right()
+{
+    struct stat st = {0};
+    char *isulad_tmpdir = NULL;
+    int ret = 0;
+
+    isulad_tmpdir = oci_get_isulad_tmpdir();
+    if (isulad_tmpdir == NULL) {
+        return -1;
+    }
+
+    ret = makesure_path_is_dir(isulad_tmpdir);
+    if (ret != 0) {
+        goto out;
+    }
+
+    if (lstat(isulad_tmpdir, &st) != 0) {
+        ERROR("lstat %s failed: %s", isulad_tmpdir, strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    // chown to root
+    ret = lchown(isulad_tmpdir, 0, 0);
+    if (ret == 0 || (ret == EPERM && st.st_uid == 0 && st.st_gid == 0)) {
+        ret = 0;
+        goto out;
+    } else {
+        ERROR("lchown %s failed: %s", isulad_tmpdir, strerror(errno));
+    }
 
 out:
-    free(isulad_tmp);
-    return isula_image;
+    free(isulad_tmpdir);
+
+    return ret;
 }

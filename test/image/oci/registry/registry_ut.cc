@@ -43,6 +43,7 @@
 #include "aes.h"
 #include "auths.h"
 #include "oci_image_mock.h"
+#include "isulad_config_mock.h"
 
 using ::testing::Args;
 using ::testing::ByRef;
@@ -79,17 +80,21 @@ protected:
         MockHttp_SetMock(&m_http_mock);
         MockStorage_SetMock(&m_storage_mock);
         MockOciImage_SetMock(&m_oci_image_mock);
+        MockIsuladConf_SetMock(&m_isulad_conf_mock);
     }
 
     void TearDown() override
     {
         MockHttp_SetMock(nullptr);
         MockStorage_SetMock(nullptr);
+        MockOciImage_SetMock(nullptr);
+        MockIsuladConf_SetMock(nullptr);
     }
 
     NiceMock<MockHttp> m_http_mock;
     NiceMock<MockStorage> m_storage_mock;
     NiceMock<MockOciImage> m_oci_image_mock;
+    NiceMock<MockIsuladConf> m_isulad_conf_mock;
 };
 
 int invokeHttpRequestV1(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
@@ -497,7 +502,12 @@ static int init_log()
     return 0;
 }
 
-void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock)
+static char *invokeConfGetISuladRootDir()
+{
+    return util_strdup_s(get_dir().c_str());
+}
+
+void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock, MockIsuladConf *isulad_conf_mock)
 {
     EXPECT_CALL(*mock, StorageImgCreate(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeStorageImgCreate));
@@ -531,6 +541,8 @@ void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock)
     .WillRepeatedly(Invoke(invokeFreeLayer));
     EXPECT_CALL(*oci_image_mock, OciValidTime(::testing::_))
     .WillRepeatedly(Invoke(invokeOciValidTime));
+    EXPECT_CALL(*isulad_conf_mock, ConfGetISuladRootDir())
+    .WillRepeatedly(Invoke(invokeConfGetISuladRootDir));
     return;
 }
 
@@ -588,7 +600,7 @@ TEST_F(RegistryUnitTest, test_pull_v1_image)
 
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV1));
-    mockCommonAll(&m_storage_mock, &m_oci_image_mock);
+    mockCommonAll(&m_storage_mock, &m_oci_image_mock, &m_isulad_conf_mock);
     ASSERT_EQ(registry_pull(&options), 0);
 
     ASSERT_EQ(registry_pull(&options), 0);
@@ -648,7 +660,7 @@ TEST_F(RegistryUnitTest, test_pull_v2_image)
 
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV2));
-    mockCommonAll(&m_storage_mock, &m_oci_image_mock);
+    mockCommonAll(&m_storage_mock, &m_oci_image_mock, &m_isulad_conf_mock);
 
     // test retry success
     ASSERT_EQ(registry_pull(&options), 0);
@@ -682,7 +694,7 @@ TEST_F(RegistryUnitTest, test_pull_oci_image)
     options->insecure_registry = false;
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestOCI));
-    mockCommonAll(&m_storage_mock, &m_oci_image_mock);
+    mockCommonAll(&m_storage_mock, &m_oci_image_mock, &m_isulad_conf_mock);
     ASSERT_EQ(registry_pull(options), 0);
 
     free_registry_pull_options(options);
@@ -700,7 +712,7 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
 
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV2));
-    mockCommonAll(&m_storage_mock, &m_oci_image_mock);
+    mockCommonAll(&m_storage_mock, &m_oci_image_mock, &m_isulad_conf_mock);
     EXPECT_CALL(m_storage_mock, StorageLayerGet(::testing::_))
     .WillRepeatedly(Invoke(invokeStorageLayerGet1));
     ASSERT_EQ(registry_pull(&options), 0);
