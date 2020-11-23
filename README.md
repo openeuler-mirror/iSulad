@@ -25,6 +25,27 @@ Install iSulad with yum:
 yum install -y iSulad
 ```
 
+if you found this error 
+```
+Repository 'openEuler' is missing name in configuration, using id.
+
+You have enabled checking of packages via GPG keys. This is a good thing.
+However, you do not have any GPG public keys installed. You need to download
+the keys for packages you wish to install and install them.
+You can do that by running the command:
+    rpm --import public.gpg.key
+
+
+Alternatively you can specify the url to the key you would like to use
+for a repository in the 'gpgkey' option in a repository section and YUM
+will install it for you.
+
+For more information contact your distribution or package provider.
+
+```
+
+you should run `rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler` first
+
 ### Run
 We provide `systemd` service to start `iSulad`:
 ```sh
