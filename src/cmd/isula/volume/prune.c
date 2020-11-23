@@ -95,9 +95,10 @@ int cmd_volume_prune_main(int argc, const char **argv)
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
-    g_cmd_volume_prune_args.progname = argv[0];
+    g_cmd_volume_prune_args.progname = util_string_join(" ", argv, 2);
     subcommand_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_volume_prune_desc,
                     g_cmd_volume_prune_usage);
+
     if (command_parse_args(&cmd, &g_cmd_volume_prune_args.argc, &g_cmd_volume_prune_args.argv)) {
         exit(exit_code);
     }

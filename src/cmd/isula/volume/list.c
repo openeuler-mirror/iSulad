@@ -140,7 +140,7 @@ int cmd_volume_ls_main(int argc, const char **argv)
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
-    g_cmd_volume_ls_args.progname = argv[0];
+    g_cmd_volume_ls_args.progname = util_string_join(" ", argv, 2);
     struct command_option options[] = { LOG_OPTIONS(lconf) VOLUME_OPTIONS(g_cmd_volume_ls_args)
         COMMON_OPTIONS(g_cmd_volume_ls_args)
     };

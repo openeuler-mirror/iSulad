@@ -99,7 +99,7 @@ int compare_commands(const void *s1, const void *s2)
     return strcmp((*(const struct command *)s1).name, (*(const struct command *)s2).name);
 }
 
-const struct command *command_by_args(const struct command *cmds, int argc, const char **argv)
+const struct command *command_by_name(const struct command *cmds, const char * const name)
 {
     size_t i = 0;
 
@@ -112,35 +112,8 @@ const struct command *command_by_args(const struct command *cmds, int argc, cons
             return NULL;
         }
 
-        if (strcmp(cmds[i].name, argv[1]) == 0) {
-            if (cmds[i].subname == NULL) {
-                return cmds + i;
-            } else {
-                if (argc > 2 && strcmp(cmds[i].subname, argv[2]) == 0) {
-                    return cmds + i;
-                }
-            }
-        }
-
-        ++i;
-    }
-}
-
-bool valid_subname(const struct command *cmds, const char *name)
-{
-    size_t i = 0;
-
-    if (cmds == NULL || name == NULL) {
-        return false;
-    }
-
-    while (1) {
-        if (cmds[i].name == NULL) {
-            return false;
-        }
-
-        if (strcmp(cmds[i].name, name) == 0 && cmds[i].subname != NULL) {
-            return true;
+        if (strcmp(cmds[i].name, name) == 0) {
+            return cmds + i;
         }
 
         ++i;
@@ -148,18 +121,11 @@ bool valid_subname(const struct command *cmds, const char *name)
 }
 
 // Default help command if implementation doesn't provide one
-int command_default_help(const char * const name, const char * const subname, struct command *commands,
-                         int argc, const char **argv)
+int command_default_help(const char * const program_name, struct command *all_commands, int argc, const char **argv)
 {
-    char cmd_name[PATH_MAX] = { 0 };
-    const char *lastname = NULL;
+    const struct command *current_command = NULL;
 
-    if (commands == NULL) {
-        return 1;
-    }
-
-    if (get_cmd_name(name, subname, cmd_name, sizeof(cmd_name)) != 0) {
-        printf("Failed to sprintf command name: %s\n", strerror(errno));
+    if (all_commands == NULL) {
         return 1;
     }
 
@@ -167,81 +133,115 @@ int command_default_help(const char * const name, const char * const subname, st
         size_t i = 0;
         size_t max_size = 0;
         printf("USAGE:\n");
-        printf("\t%s <command> [args...]\n", cmd_name);
+        printf("\t%s <command> [args...]\n", program_name);
         printf("\n");
 
-        for (i = 0; commands[i].name != NULL; i++) {
-            size_t cmd_size = strlen(commands[i].name);
+        for (i = 0; all_commands[i].name != NULL; i++) {
+            size_t cmd_size = strlen(all_commands[i].name);
             if (cmd_size > max_size) {
                 max_size = cmd_size;
             }
         }
-        qsort(commands, i, sizeof(commands[0]), compare_commands);
+        qsort(all_commands, i, sizeof(all_commands[0]), compare_commands);
 
-        if (subname == NULL) {
-            printf("MANAGEMENT COMMANDS:\n");
-            for (i = 0; commands[i].name != NULL; i++) {
-                if (commands[i].subname != NULL &&
-                    (lastname == NULL || strcmp(lastname, commands[i].name) != 0)) {
-                    printf("\t%*s\t%s\n", -(int)max_size, commands[i].name, commands[i].description);
-                    lastname = commands[i].name;
-                }
+        printf("MANAGEMENT COMMANDS:\n");
+        for (i = 0; all_commands[i].name != NULL; i++) {
+            if (!all_commands[i].have_subcmd) {
+                continue;
             }
-            printf("\n");
+            printf("\t%*s\t%s\n", -(int)max_size, all_commands[i].name, all_commands[i].description);
         }
+        printf("\n");
 
         printf("COMMANDS:\n");
-        for (i = 0; commands[i].name != NULL; i++) {
-            if (subname != NULL) {
-                if (commands[i].subname != NULL && commands[i].subdescription != NULL) {
-                    printf("\t%*s\t%s\n", -(int)max_size, commands[i].subname, commands[i].subdescription);
-                }
-            } else {
-                if (commands[i].subname == NULL) {
-                    printf("\t%*s\t%s\n", -(int)max_size, commands[i].name, commands[i].description);
-                }
+        for (i = 0; all_commands[i].name != NULL; i++) {
+            if (all_commands[i].have_subcmd) {
+                continue;
             }
+            printf("\t%*s\t%s\n", -(int)max_size, all_commands[i].name, all_commands[i].description);
         }
 
         printf("\n");
-        if (subname == NULL) {
-            print_common_help();
-        }
+        print_common_help();
         return 0;
     } else if (argc > 1) {
-        printf("%s: unrecognized argument: \"%s\"\n", cmd_name, argv[1]);
+        printf("%s: unrecognized argument: \"%s\"\n", program_name, argv[1]);
         return 1;
     }
 
+    current_command = command_by_name(all_commands, argv[0]);
+    if (current_command == NULL) {
+        printf("%s: sub-command \"%s\" not found\n", program_name, argv[0]);
+        printf("run `isula --help` for a list of sub-commands\n");
+        return 1;
+    }
+
+    if (current_command->longdesc != NULL) {
+        printf("%s\n", current_command->longdesc);
+    }
+    return 0;
+}
+
+int command_subcmd_help(const char * const program_name, struct command *all_commands, int argc, const char **argv)
+{
+    const struct command *current_command = NULL;
+
+    if (all_commands == NULL) {
+        return 1;
+    }
+
+    if (argc == 0) {
+        size_t i = 0;
+        size_t max_size = 0;
+        printf("USAGE:\n");
+        printf("\t%s <command> [args...]\n", program_name);
+        printf("\n");
+        printf("COMMANDS:\n");
+        for (i = 0; all_commands[i].name != NULL; i++) {
+            size_t cmd_size = strlen(all_commands[i].name);
+            if (cmd_size > max_size) {
+                max_size = cmd_size;
+            }
+        }
+        qsort(all_commands, i, sizeof(all_commands[0]), compare_commands);
+        for (i = 0; all_commands[i].name != NULL; i++) {
+            printf("\t%*s\t%s\n", -(int)max_size, all_commands[i].name, all_commands[i].description);
+        }
+
+        printf("\n");
+        printf("Run %s COMMAND --help for more information on the COMMAND", program_name);
+        printf("\n");
+        return 0;
+    } else if (argc > 1) {
+        printf("%s: unrecognized command: \"%s\"\n", program_name, argv[1]);
+        return 1;
+    }
+
+    current_command = command_by_name(all_commands, argv[0]);
+    if (current_command == NULL) {
+        printf("%s: sub-command \"%s\" not found\n", program_name, argv[0]);
+        printf("Run `%s --help` for a list of sub-commands\n", program_name);
+        return 1;
+    }
+
+    if (current_command->longdesc != NULL) {
+        printf("%s\n", current_command->longdesc);
+    }
     return 0;
 }
 
 /* run command */
-int run_command(struct command *commands, int argc, const char **argv)
+int run_command(struct command *all_commands, int argc, const char **argv)
 {
-    const struct command *command = NULL;
-    size_t name_num = 1;
-    const char *subname = NULL;
-    char cmd_name[PATH_MAX] = {0};
+    const struct command *current_command = NULL;
 
     if (argc == 1) {
-        return command_default_help(argv[0], NULL, commands,
-                                    argc - 1, (const char **)(argv + 1));
+        return command_default_help(argv[0], all_commands, argc - 1, (const char **)(argv + 1));
     }
 
-    if (argc >= 2 && valid_subname(commands, argv[1])) {
-        subname = argv[1];
-        name_num++;
-    }
-
-    if (argc == name_num) {
-        return command_default_help(argv[0], subname, commands,
-                                    argc - name_num, (const char **)(argv + name_num));
-    }
-
-    if (argc > name_num && strcmp(argv[name_num], "--help") == 0) {
-        return command_default_help(argv[0], subname, commands,
-                                    argc - name_num - 1, (const char **)(argv + name_num + 1));
+    if (strcmp(argv[1], "--help") == 0) {
+        // isula help command format: isula --help args
+        return command_default_help(argv[0], all_commands, argc - 2, (const char **)(argv + 2));
     }
 
     if (strcmp(argv[1], "--version") == 0) {
@@ -249,18 +249,13 @@ int run_command(struct command *commands, int argc, const char **argv)
         return 0;
     }
 
-    command = command_by_args(commands, argc, argv);
-    if (command != NULL) {
+    current_command = command_by_name(all_commands, argv[1]);
+    if (current_command != NULL) {
         send_msg_to_syslog(argc, argv);
-        return command->executor(argc, (const char **)argv);
+        return current_command->executor(argc, (const char **)argv);
     }
 
-    if (get_cmd_name(argv[0], subname, cmd_name, sizeof(cmd_name)) != 0) {
-        printf("Failed to sprintf command name: %s\n", strerror(errno));
-        return 1;
-    }
-
-    printf("%s: command \"%s\" not found\n", cmd_name, argv[name_num]);
-    printf("run `%s --help` for a list of sub-commands\n", cmd_name);
+    printf("%s: command \"%s\" not found\n", argv[0], argv[1]);
+    printf("run `%s --help` for a list of sub-commands\n", argv[0]);
     return 1;
 }
