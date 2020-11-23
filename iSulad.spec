@@ -1,5 +1,5 @@
-%global _version 2.0.6
-%global _release 20201014.143412.git375d5989
+%global _version 2.0.7
+%global _release 20201123.145029.gitb2a75048
 %global is_systemd 1
 
 Name:      iSulad
