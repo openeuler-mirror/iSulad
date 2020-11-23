@@ -1,3 +1,46 @@
+2020-11-23 lifeng release 2.0.7
+    - !834 refactor subcommand help implementation From: @wangfengtu Reviewed-by: @zh_xiaoyu,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !833 network: add filter with invalid resolv.conf content From: @lifeng2221dd1 Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !831 mask pin memory dev From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !828 coding standards for volume From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !827 fix segmentfault From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !826 Fix the container cannot be run under the device mapper storage driver From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !825 time: use the same timebuffer size macro From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !824 CI: add mount options check From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !823 strip body when pass response to http-parser From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !822 print more detail error message From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !821 clean code: remove unused health.c/h and move head files From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !818 erase space in human size From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !817 sync support local volume feature from branch volume to master From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !816 wait: add check whether had beed deleted when wait rm From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by:
+    - !810 add filter to get only non-sandbox containers From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !796 network: support dualstack for cni ipstatus From: @duguhaotian Reviewed-by: Signed-off-by:
+    - !808 utils: add fdatasync when do atomic write file From: @lifeng2221dd1 Reviewed-by: @duguhaotian,@duguhaotian,@duguhaotian Signed-off-by: @duguhaotian,@duguhaotian,@duguhaotian
+    - !806 clean code: remove unused ";" in code From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !805 add newline character at end of iSulad.sysconfig From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !804 clean code: remove unused code in connect From: @lifeng2221dd1 Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !803 iSulad: fix memory leak in inspect grpc service From: @zh_xiaoyu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !801 add ISULAD_TMPDIR env CI From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !800 CI: remove test data from iSulad repo From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !794 add ISULAD_TMPDIR env variable and unlink dir comments From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !793 support variable extension cni args From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !790 unlink etc dir when link exists From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !789 iSulad: internal change From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !781 unpack: add remove target file in handle .wh From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !779 support extension data transmission to cni plugin From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !770 iSulad: modify isula fifo mode to execute non-root From: @gaohuatao Reviewed-by: @lifeng2221dd1,@lifeng2221dd1,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !758 为iSulad在RISC-V架构提供构建文档 From: @shentalon Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !776 create：fix wrong ret code From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !775 info: fix typo driverr to driver From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !774 Realpath: add get realpath for root and state dir From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !773 isulad: rt_isula_start should read the isulad-shim pidinfo From: @holyfei Reviewed-by: @duguhaotian,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !769 Dockerfile: bugfix and update dockerfile to isulad v2.0.6; use multi-stage to decrease the size of image From: @Les1ie_1 Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !767 iSulad: modify defattr to 755 in spec From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+
+    dev stats:
+      - 210 files changed, 9537 insertions(+), 2097 deletions(-)
+      - contributors: WangFengTu, lifeng68, gaohuatao, haozi007, wujing, Les1ie, holyfei, shentalon, zhangxiaoyu
+
 2020-10-14 lifeng release 2.0.6
     - !764 add CI for image load multiplex From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
     - !765 clean code: refact utils and add prefix util_ From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
