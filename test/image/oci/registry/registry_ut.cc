@@ -73,6 +73,8 @@ std::string get_dir()
     return static_cast<std::string>(abs_path) +  "../../../../../test/image/oci/registry";
 }
 
+void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock, MockIsuladConf *isulad_conf_mock);
+
 class RegistryUnitTest : public testing::Test {
 protected:
     void SetUp() override
@@ -81,6 +83,7 @@ protected:
         MockStorage_SetMock(&m_storage_mock);
         MockOciImage_SetMock(&m_oci_image_mock);
         MockIsuladConf_SetMock(&m_isulad_conf_mock);
+        mockCommonAll(&m_storage_mock, &m_oci_image_mock, &m_isulad_conf_mock);
     }
 
     void TearDown() override
@@ -507,6 +510,11 @@ static char *invokeConfGetISuladRootDir()
     return util_strdup_s(get_dir().c_str());
 }
 
+static bool invokeConfGetUseDecryptedKeyFlag()
+{
+    return true;
+}
+
 void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock, MockIsuladConf *isulad_conf_mock)
 {
     EXPECT_CALL(*mock, StorageImgCreate(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -543,6 +551,8 @@ void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock, MockIsuladCo
     .WillRepeatedly(Invoke(invokeOciValidTime));
     EXPECT_CALL(*isulad_conf_mock, ConfGetISuladRootDir())
     .WillRepeatedly(Invoke(invokeConfGetISuladRootDir));
+    EXPECT_CALL(*isulad_conf_mock, ConfGetUseDecryptedKeyFlag())
+    .WillRepeatedly(Invoke(invokeConfGetUseDecryptedKeyFlag));
     return;
 }
 
