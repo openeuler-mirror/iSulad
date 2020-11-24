@@ -52,7 +52,7 @@ private:
     static std::mutex m_mutex;
     static std::atomic<RequestCache *> m_instance;
     const size_t MaxInFlight { 1000 };
-    const size_t TokenLen { 8 };
+    const size_t TokenLen { 64 };
 };
 
 #endif // DAEMON_ENTRY_CRI_REQUEST_CACHE_H

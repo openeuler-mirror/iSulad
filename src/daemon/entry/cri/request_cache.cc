@@ -86,11 +86,13 @@ std::string RequestCache::UniqueToken()
     std::default_random_engine e1(r());
     std::uniform_int_distribution<int> uniform_dist(1, 254);
     // Number of bytes to be TokenLen when base64 encoded.
-    const int tokenSize { 16 };
-    char rawToken[tokenSize + 1] { 0 };
+    const int tokenSize = ceil(static_cast<double>(TokenLen) * 6 / 8);
+    char rawToken[tokenSize + 1];
+    (void)memset(rawToken, 0, sizeof(rawToken));
     for (int i {}; i < maxTries; ++i) {
-        char buf[40] { 0 };
-        for (size_t j {}; j < tokenSize; ++j) {
+        char buf[TokenLen + 1];
+        (void)memset(buf, 0, sizeof(buf));
+        for (int j {}; j < tokenSize; ++j) {
             rawToken[j] = (char)uniform_dist(e1);
         }
         lws_b64_encode_string(rawToken, (int)strlen(rawToken), buf, (int)sizeof(buf));
