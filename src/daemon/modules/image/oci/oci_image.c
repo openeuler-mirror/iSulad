@@ -150,26 +150,34 @@ out:
     return ret;
 }
 
-static void cleanup_image_tmpdir()
+static int recreate_image_tmpdir()
 {
     char *image_tmp_path = NULL;
+    int ret = 0;
 
-    image_tmp_path = get_image_tmp_path();
+    image_tmp_path = oci_get_isulad_tmpdir();
     if (image_tmp_path == NULL) {
         ERROR("failed to get image tmp path");
-        return;
+        ret = -1;
+        goto out;
     }
 
     if (util_recursive_rmdir(image_tmp_path, 0)) {
         ERROR("failed to remove directory %s", image_tmp_path);
+        ret = -1;
+        goto out;
     }
 
     if (util_mkdir_p(image_tmp_path, TEMP_DIRECTORY_MODE)) {
         ERROR("failed to create directory %s", image_tmp_path);
+        ret = -1;
+        goto out;
     }
+
+out:
     free(image_tmp_path);
 
-    return;
+    return ret;
 }
 
 int oci_init(const isulad_daemon_configs *args)
@@ -181,7 +189,10 @@ int oci_init(const isulad_daemon_configs *args)
         return ret;
     }
 
-    cleanup_image_tmpdir();
+    ret = recreate_image_tmpdir();
+    if (ret != 0) {
+        goto out;
+    }
 
     ret = registry_init(NULL, NULL);
     if (ret != 0) {

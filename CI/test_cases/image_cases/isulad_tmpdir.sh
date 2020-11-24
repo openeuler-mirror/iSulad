@@ -58,8 +58,8 @@ function test_isulad_tmpdir()
     export ISULAD_TMPDIR="/var/isula/tmp"
     restart_isulad
     load_pull_test
-    test -d /var/isula/tmp/isula-image
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula-image not exist in ISULAD_TMPDIR" && ((ret++))
+    test -d /var/isula/tmp/isulad_tmpdir
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad_tmpdir not exist in ISULAD_TMPDIR" && ((ret++))
 
     # The scene of ISULAD_TMPDIR dir is symbol link that it refers to dir exists
     rm -rf /var/isula/tmp
@@ -69,8 +69,8 @@ function test_isulad_tmpdir()
     export ISULAD_TMPDIR="/var/isula/tmpdir"
     restart_isulad
     load_pull_test
-    test -d /var/isula/tmpdir/isula-image
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula-image not exist in ISULAD_TMPDIR" && ((ret++))
+    test -d /var/isula/tmpdir/isulad_tmpdir
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad_tmpdir not exist in ISULAD_TMPDIR" && ((ret++))
 
     # rm dest dir of symbol link
     rm -rf /var/tmpdir
@@ -86,8 +86,8 @@ function test_isulad_tmpdir()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     load_pull_test
-    test -d /var/tmp/isula-image
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula-image not exist in /var/tmp" && ((ret++))
+    test -d /var/lib/isulad/isulad_tmpdir
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad_tmpdir not exist in /var/lib/isulad" && ((ret++))
 
     msg_info "${test} finished with return ${ret}..."
     return ${ret}

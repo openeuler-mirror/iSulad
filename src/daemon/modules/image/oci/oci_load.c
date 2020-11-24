@@ -1011,25 +1011,23 @@ static char *oci_load_path_create()
 {
     int ret = 0;
     int nret = 0;
-    char *oci_load_work_dir = NULL;
+    char *image_tmp_path = NULL;
     char tmp_dir[PATH_MAX] = { 0 };
 
-    oci_load_work_dir = storage_oci_load_work_dir();
-    if (oci_load_work_dir == NULL) {
-        ERROR("Failed to get oci load work dir");
-        isulad_try_set_error_message("Failed to get oci load work dir");
+    ret = makesure_isulad_tmpdir_perm_right();
+    if (ret != 0) {
+        ERROR("failed to make sure permission of image tmp work dir");
+        goto out;
+    }
+
+    image_tmp_path = oci_get_isulad_tmpdir();
+    if (image_tmp_path == NULL) {
+        ERROR("failed to get image tmp work dir");
         ret = -1;
         goto out;
     }
 
-    if (util_mkdir_p(oci_load_work_dir, TEMP_DIRECTORY_MODE) != 0) {
-        ERROR("Unable to create oci image load tmp work dir:%s", oci_load_work_dir);
-        isulad_try_set_error_message("Unable to create oci image load tmp work dir:%s", oci_load_work_dir);
-        ret = -1;
-        goto out;
-    }
-
-    nret = snprintf(tmp_dir, PATH_MAX, "%s/oci-image-load-XXXXXX", oci_load_work_dir);
+    nret = snprintf(tmp_dir, PATH_MAX, "%s/oci-image-load-XXXXXX", image_tmp_path);
     if (nret < 0 || (size_t)nret >= sizeof(tmp_dir)) {
         ERROR("Path is too long");
         ret = -1;
@@ -1044,7 +1042,7 @@ static char *oci_load_path_create()
     }
 
 out:
-    free(oci_load_work_dir);
+    free(image_tmp_path);
     return ret == 0 ? util_strdup_s(tmp_dir) : NULL;
 }
 

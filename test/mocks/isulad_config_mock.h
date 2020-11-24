@@ -34,6 +34,8 @@ public:
     MOCK_METHOD1(GetSystemCpuUsage, int(uint64_t *val));
     MOCK_METHOD0(ConfGetIsuladStorageDriverBackingFs, char *());
     MOCK_METHOD0(GetMonitordPath, char *(void));
+    MOCK_METHOD0(ConfGetISuladRootDir, char *(void));
+    MOCK_METHOD0(ConfGetUseDecryptedKeyFlag, bool (void));
 };
 
 void MockIsuladConf_SetMock(MockIsuladConf *mock);

@@ -30,6 +30,7 @@
 #include "utils.h"
 #include "path.h"
 #include "storage.h"
+#include "isulad_config_mock.h"
 
 std::string META_DATA_CONTENT = "metadata test";
 

@@ -136,3 +136,19 @@ char *conf_get_isulad_storage_driver_backing_fs()
     }
     return nullptr;
 }
+
+char *conf_get_isulad_rootdir()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetISuladRootDir();
+    }
+    return nullptr;
+}
+
+bool conf_get_use_decrypted_key_flag()
+{
+    if (g_isulad_conf_mock != nullptr) {
+        return g_isulad_conf_mock->ConfGetUseDecryptedKeyFlag();
+    }
+    return true;
+}

@@ -55,8 +55,7 @@ int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const re
 bool oci_valid_time(char *time);
 
 char *oci_get_isulad_tmpdir();
-
-char *get_image_tmp_path();
+int makesure_isulad_tmpdir_perm_right();
 
 #ifdef __cplusplus
 }

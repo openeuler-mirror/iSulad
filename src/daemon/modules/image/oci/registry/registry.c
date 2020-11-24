@@ -1718,7 +1718,13 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
 
     update_host(desc);
 
-    image_tmp_path = get_image_tmp_path();
+    ret = makesure_isulad_tmpdir_perm_right();
+    if (ret != 0) {
+        ERROR("failed to make sure permission of image tmp work dir");
+        goto out;
+    }
+
+    image_tmp_path = oci_get_isulad_tmpdir();
     if (image_tmp_path == NULL) {
         ERROR("failed to get image tmp work dir");
         ret = -1;
@@ -1859,18 +1865,6 @@ static void cached_layers_kvfree(void *key, void *value)
 int registry_init(char *auths_dir, char *certs_dir)
 {
     int ret = 0;
-    char *image_tmp_path = NULL;
-
-    image_tmp_path = get_image_tmp_path();
-    if (image_tmp_path == NULL) {
-        ERROR("failed to get image tmp path");
-        return -1;
-    }
-
-    if (util_mkdir_p(image_tmp_path, TEMP_DIRECTORY_MODE)) {
-        ERROR("failed to create directory %s", image_tmp_path);
-    }
-    free(image_tmp_path);
 
     auths_set_dir(auths_dir);
     certs_set_dir(certs_dir);
