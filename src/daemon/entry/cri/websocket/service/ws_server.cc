@@ -106,12 +106,10 @@ void WebsocketServer::EmitLog(int level, const char *line)
 
 int WebsocketServer::CreateContext()
 {
-    unsigned int opts = 0;
     int limited;
     struct lws_context_creation_info info;
     struct rlimit oldLimit, newLimit;
     const size_t WS_ULIMIT_FDS = 1024;
-    char interface[] = "127.0.0.1";
 
     m_url.SetScheme("ws");
     m_url.SetHost("localhost:" + std::to_string(m_listenPort));
@@ -120,13 +118,13 @@ int WebsocketServer::CreateContext()
     lws_set_log_level(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_DEBUG, WebsocketServer::EmitLog);
 
     info.port = m_listenPort;
-    info.iface = interface;
+    info.iface = "127.0.0.1";
     info.protocols = m_protocols;
     info.ssl_cert_filepath = nullptr;
     info.ssl_private_key_filepath = nullptr;
     info.gid = -1;
     info.uid = -1;
-    info.options = opts | LWS_SERVER_OPTION_VALIDATE_UTF8;
+    info.options = LWS_SERVER_OPTION_VALIDATE_UTF8 | LWS_SERVER_OPTION_DISABLE_IPV6;
     info.max_http_header_pool = MAX_HTTP_HEADER_POOL;
     info.extensions = nullptr;
 
