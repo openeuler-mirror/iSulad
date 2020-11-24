@@ -59,8 +59,8 @@
 #define IMAGE_JSON "images.json"
 
 #define MAX_IMAGE_NAME_LENGTH 72
-#define DIGIST_PREFIX "@sha256:"
-#define MAX_IMAGE_DIGST_LENGTH 64
+#define DIGEST_PREFIX "@sha256:"
+#define MAX_IMAGE_DIGEST_LENGTH 64
 
 typedef struct digest_image {
     struct linked_list images_list;
@@ -2757,10 +2757,10 @@ static int resort_image_names(const char **names, size_t names_len, char **first
         size_t len = strlen(names[i]);
         if (strlen(names[i]) > MAX_IMAGE_NAME_LENGTH) {
             prefix = util_sub_string(names[i], len - MAX_IMAGE_NAME_LENGTH,
-                                     MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGST_LENGTH);
+                                     MAX_IMAGE_NAME_LENGTH - MAX_IMAGE_DIGEST_LENGTH);
         }
 
-        if (prefix != NULL && strcmp(prefix, DIGIST_PREFIX) == 0) {
+        if (prefix != NULL && strcmp(prefix, DIGEST_PREFIX) == 0) {
             if (util_array_append(image_digests, names[i]) != 0) {
                 ERROR("Failed to append image to digest: %s", names[i]);
                 ret = -1;
