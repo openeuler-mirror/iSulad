@@ -1,0 +1,50 @@
+From 3a15d0174b16207915ab5736ee45f5018472b251 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Tue, 24 Nov 2020 14:51:57 +0800
+Subject: [PATCH 4/7] adapt CI ISULAD_TMPDIR testcases
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ CI/test_cases/image_cases/isulad_tmpdir.sh | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/CI/test_cases/image_cases/isulad_tmpdir.sh b/CI/test_cases/image_cases/isulad_tmpdir.sh
+index 22a6ad4..46849ae 100644
+--- a/CI/test_cases/image_cases/isulad_tmpdir.sh
++++ b/CI/test_cases/image_cases/isulad_tmpdir.sh
+@@ -58,8 +58,8 @@ function test_isulad_tmpdir()
+     export ISULAD_TMPDIR="/var/isula/tmp"
+     restart_isulad
+     load_pull_test
+-    test -d /var/isula/tmp/isula-image
+-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula-image not exist in ISULAD_TMPDIR" && ((ret++))
++    test -d /var/isula/tmp/isulad_tmpdir
++    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad_tmpdir not exist in ISULAD_TMPDIR" && ((ret++))
+ 
+     # The scene of ISULAD_TMPDIR dir is symbol link that it refers to dir exists
+     rm -rf /var/isula/tmp
+@@ -69,8 +69,8 @@ function test_isulad_tmpdir()
+     export ISULAD_TMPDIR="/var/isula/tmpdir"
+     restart_isulad
+     load_pull_test
+-    test -d /var/isula/tmpdir/isula-image
+-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula-image not exist in ISULAD_TMPDIR" && ((ret++))
++    test -d /var/isula/tmpdir/isulad_tmpdir
++    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad_tmpdir not exist in ISULAD_TMPDIR" && ((ret++))
+ 
+     # rm dest dir of symbol link
+     rm -rf /var/tmpdir
+@@ -86,8 +86,8 @@ function test_isulad_tmpdir()
+     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
+ 
+     load_pull_test
+-    test -d /var/tmp/isula-image
+-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isula-image not exist in /var/tmp" && ((ret++))
++    test -d /var/lib/isulad/isulad_tmpdir
++    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad_tmpdir not exist in /var/lib/isulad" && ((ret++))
+ 
+     msg_info "${test} finished with return ${ret}..."
+     return ${ret}
+-- 
+2.25.1
+
