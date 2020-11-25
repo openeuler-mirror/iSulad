@@ -1,5 +1,5 @@
 %global _version 2.0.6
-%global _release 20201112.193005.git8a6b73c8
+%global _release 20201125.160534.git9fb5e75d
 %global is_systemd 1
 
 Name:      iSulad
@@ -63,7 +63,7 @@ BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
-BuildRequires: systemd-devel git
+BuildRequires: systemd-devel git chrpath
 
 Requires:      lcr lxc clibcni
 Requires:      grpc protobuf
@@ -91,6 +91,7 @@ cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
 install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+chrpath -d ./src/daemon/modules/image/libisulad_img.so
 install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 chmod +x %{buildroot}/%{_libdir}/libisula.so
 chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
@@ -100,12 +101,11 @@ install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
 
 install -d $RPM_BUILD_ROOT/%{_bindir}
+chrpath -d ./src/isula
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
-install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
-chrpath -d ./src/isula
-chrpath -d ./src/isulad-shim 
 chrpath -d ./src/isulad
+install -m 0755 ./src/isulad                 %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
@@ -242,6 +242,12 @@ fi
 %endif
 
 %changelog
+* Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.6-20201125.160534.git9fb5e75d
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix rpath not work
+
 * Thu Nov 12 2020  gaohuatao<gaohuatao@huawei.com> - 2.0.6-20201112.193005.git8a6b73c8
 - Type: update from openeuler
 - ID:NA
