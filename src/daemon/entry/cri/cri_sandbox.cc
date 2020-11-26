@@ -978,7 +978,7 @@ void CRIRuntimeServiceImpl::GetFormatIPsForMultNet(container_inspect *inspect, c
     }
 
     for (size_t i = 0; i < len; i++) {
-        if (elems[i]->interface == nullptr || strcmp(elems[i]->interface, defaultInterface.c_str()) == 0) {
+        if (elems[i]->interface == nullptr) {
             continue;
         }
         Network::PodNetworkStatus status;
