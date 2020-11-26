@@ -18,7 +18,7 @@
 #include "utils.h"
 
 const char g_cmd_network_list_desc[] = "List networks";
-const char g_cmd_network_list_usage[] = "ls [flags]";
+const char g_cmd_network_list_usage[] = "ls [OPTIONS]";
 
 struct client_arguments g_cmd_network_list_args = { 0 };
 /* keep track of field widths for printing. */
@@ -191,9 +191,8 @@ int cmd_network_list_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_network_list_args.progname = util_string_join(" ", argv, 2);
-    command_network_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
-                         g_cmd_network_list_desc,
-                         g_cmd_network_list_usage);
+    subcommand_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
+                    g_cmd_network_list_desc, g_cmd_network_list_usage);
     if (command_parse_args(&cmd, &g_cmd_network_list_args.argc, &g_cmd_network_list_args.argv)) {
         exit(EINVALIDARGS);
     }

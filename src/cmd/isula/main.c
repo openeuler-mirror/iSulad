@@ -202,7 +202,7 @@ struct command g_commands[] = {
 #endif
     {
         // `network` sub-command
-        "network", cmd_network_main, g_cmd_network_desc, NULL, NULL
+        "network", true, cmd_network_main, g_cmd_network_desc, NULL, NULL
     },
     { NULL, NULL, NULL, NULL, NULL } // End of the list
 };
