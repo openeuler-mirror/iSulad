@@ -15,7 +15,7 @@
 #include "network_remove.h"
 
 const char g_cmd_network_remove_desc[] = "Remove networks";
-const char g_cmd_networ_remove_usage[] = "rm [flags] NETWORK [NETWORK...]";
+const char g_cmd_networ_remove_usage[] = "rm [OPTIONS] NETWORK [NETWORK...]";
 
 struct client_arguments g_cmd_network_remove_args = {};
 

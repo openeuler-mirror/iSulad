@@ -19,7 +19,7 @@
 #include "utils.h"
 
 const char g_cmd_network_inspect_desc[] = "Inspect networks";
-const char g_cmd_network_inspect_usage[] = "inspect [flags] NETWORK [NETWORK...]";
+const char g_cmd_network_inspect_usage[] = "inspect [OPTIONS] NETWORK [NETWORK...]";
 
 struct client_arguments g_cmd_network_inspect_args = {
     .format = NULL,
@@ -99,9 +99,8 @@ int cmd_network_inspect_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_network_inspect_args.progname = util_string_join(" ", argv, 2);
-    command_network_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
-                         g_cmd_network_inspect_desc,
-                         g_cmd_network_inspect_usage);
+    subcommand_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
+                    g_cmd_network_inspect_desc, g_cmd_network_inspect_usage);
     if (command_parse_args(&cmd, &g_cmd_network_inspect_args.argc, &g_cmd_network_inspect_args.argv)) {
         exit(EINVALIDARGS);
     }
