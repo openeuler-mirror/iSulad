@@ -7,12 +7,12 @@ If you intend to contribute on iSulad. Thanks for your effort. Every contributio
 These dependencies are required for build:
 
 ### install basic dependencies based on Centos distribution
-```sh
+```bash
 $ sudo yum --enablerepo='*' install -y automake autoconf libtool cmake make libcap libcap-devel libselinux libselinux-devel libseccomp libseccomp-devel yajl-devel git libcgroup tar python3 python3-pip device-mapper-devel libarchive libarchive-devel libcurl-devel zlib-devel glibc-headers openssl-devel gcc gcc-c++ systemd-devel systemd-libs golang libtar libtar-devel
 ```
 
 ### install basic dependencies based on Ubuntu distribution
-```sh
+```bash
 $ sudo apt install -y libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux-dev libseccomp-dev libcap-dev libsystemd-dev git libcurl4-gnutls-dev openssl libdevmapper-dev golang python3 libtar libtar-dev
 ```
 
@@ -24,13 +24,13 @@ Please use the protobuf and grpc came with your distribution, if not exists then
 Note: grpc-1.22 can not support GCC 9+.
 
 ### set ldconfig and pkgconfig
-```
+```bash
 $ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 $ export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:$LD_LIBRARY_PATH
 $ sudo -E echo "/usr/local/lib" >> /etc/ld.so.conf
 ```
 ### build and install protobuf
-```
+```bash
 $ git clone https://gitee.com/src-openeuler/protobuf.git
 $ cd protobuf
 $ git checkout openEuler-20.03-LTS-tag
@@ -44,7 +44,7 @@ $ sudo -E ldconfig
 ```
 
 ### build and install c-ares
-```
+```bash
 $ git clone https://gitee.com/src-openeuler/c-ares.git
 $ cd c-ares
 $ git checkout openEuler-20.03-LTS-tag
@@ -58,7 +58,7 @@ $ sudo -E ldconfig
 ```
 
 ### build and install grpc
-```
+```bash
 $ git clone https://gitee.com/src-openeuler/grpc.git
 $ cd grpc
 $ git checkout openEuler-20.03-LTS-tag
@@ -70,7 +70,7 @@ $ sudo -E ldconfig
 ```
 
 ### build and install http-parser
-```
+```bash
 $ git clone https://gitee.com/src-openeuler/http-parser.git
 $ cd http-parser
 $ git checkout openEuler-20.03-LTS-tag
@@ -82,7 +82,7 @@ $ sudo -E ldconfig
 ```
 
 ### build and install libwebsockets
-```
+```bash
 $ git clone https://gitee.com/src-openeuler/libwebsockets.git
 $ cd libwebsockets
 $ git checkout openEuler-20.03-LTS-tag
@@ -101,7 +101,7 @@ $ sudo -E ldconfig
 iSulad depend on some specific versions dependencies.
 
 ### build and install lxc
-```
+```bash
 $ git clone https://gitee.com/src-openeuler/lxc.git
 $ cd lxc
 $ tar -zxf lxc-4.0.3.tar.gz
@@ -114,7 +114,7 @@ $ sudo -E make install
 ```
 
 ### build and install lcr
-```
+```bash
 $ git clone https://gitee.com/openeuler/lcr.git
 $ cd lcr
 $ mkdir build
@@ -125,7 +125,7 @@ $ sudo -E make install
 ```
 
 ### build and install clibcni
-```
+```bash
 $ git clone https://gitee.com/openeuler/clibcni.git
 $ cd clibcni
 $ mkdir build

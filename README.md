@@ -4,9 +4,16 @@
 
 `iSulad` is a lightweight container runtime daemon which is designed for IOT and Cloud infrastructure.`iSulad` has the characteristics of light, fast and not limited by hardware specifications and architecture, and can be applied more widely.
 
+## Documentation
+
+- [en build guide](./docs/build_guide.md)
+- [cn build guide](./docs/build_guide_zh.md)
+- [more usage guide](https://openeuler.org/zh/docs/20.09/docs/Container/iSula%E5%AE%B9%E5%99%A8%E5%BC%95%E6%93%8E.html)
+
 ## Getting Started
 
 ### Installing
+
 To install iSulad, you can use `rpm` or `yum` package manager command with `openEuler` repository.
 
 Or write repository file by hand:
