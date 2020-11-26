@@ -9,7 +9,7 @@ Signed-off-by: WangFengTu <wangfengtu@huawei.com>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/CI/test_cases/image_cases/isulad_tmpdir.sh b/CI/test_cases/image_cases/isulad_tmpdir.sh
-index 22a6ad4..46849ae 100644
+index 22a6ad42..46849ae7 100644
 --- a/CI/test_cases/image_cases/isulad_tmpdir.sh
 +++ b/CI/test_cases/image_cases/isulad_tmpdir.sh
 @@ -58,8 +58,8 @@ function test_isulad_tmpdir()
@@ -46,5 +46,5 @@ index 22a6ad4..46849ae 100644
      msg_info "${test} finished with return ${ret}..."
      return ${ret}
 -- 
-2.25.1
+2.20.1
 

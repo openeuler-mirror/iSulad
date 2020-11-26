@@ -24,7 +24,7 @@ Signed-off-by: WangFengTu <wangfengtu@huawei.com>
  15 files changed, 160 insertions(+), 92 deletions(-)
 
 diff --git a/src/daemon/modules/image/oci/oci_image.c b/src/daemon/modules/image/oci/oci_image.c
-index f0ba19c..f4fa1e8 100644
+index f0ba19cb..f4fa1e88 100644
 --- a/src/daemon/modules/image/oci/oci_image.c
 +++ b/src/daemon/modules/image/oci/oci_image.c
 @@ -150,26 +150,34 @@ out:
@@ -79,7 +79,7 @@ index f0ba19c..f4fa1e8 100644
      ret = registry_init(NULL, NULL);
      if (ret != 0) {
 diff --git a/src/daemon/modules/image/oci/oci_load.c b/src/daemon/modules/image/oci/oci_load.c
-index 073ad55..97cff34 100644
+index 073ad55b..97cff34b 100644
 --- a/src/daemon/modules/image/oci/oci_load.c
 +++ b/src/daemon/modules/image/oci/oci_load.c
 @@ -1011,25 +1011,23 @@ static char *oci_load_path_create()
@@ -126,7 +126,7 @@ index 073ad55..97cff34 100644
  }
  
 diff --git a/src/daemon/modules/image/oci/registry/registry.c b/src/daemon/modules/image/oci/registry/registry.c
-index 2656b9b..a94d10b 100644
+index 2656b9b2..a94d10b1 100644
 --- a/src/daemon/modules/image/oci/registry/registry.c
 +++ b/src/daemon/modules/image/oci/registry/registry.c
 @@ -1718,7 +1718,13 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
@@ -164,7 +164,7 @@ index 2656b9b..a94d10b 100644
      auths_set_dir(auths_dir);
      certs_set_dir(certs_dir);
 diff --git a/src/daemon/modules/image/oci/storage/storage.c b/src/daemon/modules/image/oci/storage/storage.c
-index f15531b..0d83707 100644
+index f15531be..0d837079 100644
 --- a/src/daemon/modules/image/oci/storage/storage.c
 +++ b/src/daemon/modules/image/oci/storage/storage.c
 @@ -1715,20 +1715,6 @@ out:
@@ -216,7 +216,7 @@ index f15531b..0d83707 100644
 -}
 \ No newline at end of file
 diff --git a/src/daemon/modules/image/oci/storage/storage.h b/src/daemon/modules/image/oci/storage/storage.h
-index b030a3a..f214192 100644
+index b030a3a5..f2141924 100644
 --- a/src/daemon/modules/image/oci/storage/storage.h
 +++ b/src/daemon/modules/image/oci/storage/storage.h
 @@ -179,8 +179,6 @@ int storage_rootfs_umount(const char *container_id, bool force);
@@ -229,7 +229,7 @@ index b030a3a..f214192 100644
  }
  #endif
 diff --git a/src/daemon/modules/image/oci/utils_images.c b/src/daemon/modules/image/oci/utils_images.c
-index de0eb32..7eddd25 100644
+index de0eb324..7eddd25c 100644
 --- a/src/daemon/modules/image/oci/utils_images.c
 +++ b/src/daemon/modules/image/oci/utils_images.c
 @@ -27,6 +27,7 @@
@@ -372,7 +372,7 @@ index de0eb32..7eddd25 100644
 +    return ret;
  }
 diff --git a/src/daemon/modules/image/oci/utils_images.h b/src/daemon/modules/image/oci/utils_images.h
-index 5dedd56..cebcc79 100644
+index 5dedd569..cebcc796 100644
 --- a/src/daemon/modules/image/oci/utils_images.h
 +++ b/src/daemon/modules/image/oci/utils_images.h
 @@ -55,8 +55,7 @@ int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const re
@@ -386,7 +386,7 @@ index 5dedd56..cebcc79 100644
  #ifdef __cplusplus
  }
 diff --git a/test/image/oci/registry/CMakeLists.txt b/test/image/oci/registry/CMakeLists.txt
-index 9e34103..36e7cab 100644
+index 9e34103c..36e7cab8 100644
 --- a/test/image/oci/registry/CMakeLists.txt
 +++ b/test/image/oci/registry/CMakeLists.txt
 @@ -24,7 +24,6 @@ add_executable(${EXE}
@@ -406,7 +406,7 @@ index 9e34103..36e7cab 100644
  
  target_include_directories(${EXE} PUBLIC
 diff --git a/test/image/oci/registry/registry_ut.cc b/test/image/oci/registry/registry_ut.cc
-index f656a49..25ddf69 100644
+index f656a49d..25ddf694 100644
 --- a/test/image/oci/registry/registry_ut.cc
 +++ b/test/image/oci/registry/registry_ut.cc
 @@ -43,6 +43,7 @@
@@ -499,7 +499,7 @@ index f656a49..25ddf69 100644
      .WillRepeatedly(Invoke(invokeStorageLayerGet1));
      ASSERT_EQ(registry_pull(&options), 0);
 diff --git a/test/image/oci/storage/images/CMakeLists.txt b/test/image/oci/storage/images/CMakeLists.txt
-index 82ad468..b00c5a0 100644
+index 82ad4680..b00c5a0e 100644
 --- a/test/image/oci/storage/images/CMakeLists.txt
 +++ b/test/image/oci/storage/images/CMakeLists.txt
 @@ -22,6 +22,7 @@ add_executable(${EXE}
@@ -519,7 +519,7 @@ index 82ad468..b00c5a0 100644
      ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
      ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/image_store
 diff --git a/test/image/oci/storage/images/storage_images_ut.cc b/test/image/oci/storage/images/storage_images_ut.cc
-index 4115e91..234ab74 100644
+index 4115e911..234ab742 100644
 --- a/test/image/oci/storage/images/storage_images_ut.cc
 +++ b/test/image/oci/storage/images/storage_images_ut.cc
 @@ -33,6 +33,7 @@
@@ -531,7 +531,7 @@ index 4115e91..234ab74 100644
  using ::testing::Args;
  using ::testing::ByRef;
 diff --git a/test/image/oci/storage/rootfs/CMakeLists.txt b/test/image/oci/storage/rootfs/CMakeLists.txt
-index 3ba56bb..8da8196 100644
+index 3ba56bb9..8da8196b 100644
 --- a/test/image/oci/storage/rootfs/CMakeLists.txt
 +++ b/test/image/oci/storage/rootfs/CMakeLists.txt
 @@ -21,6 +21,7 @@ add_executable(${EXE}
@@ -553,7 +553,7 @@ index 3ba56bb..8da8196 100644
      ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage
      ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/daemon/modules/image/oci/storage/rootfs_store
 diff --git a/test/image/oci/storage/rootfs/storage_rootfs_ut.cc b/test/image/oci/storage/rootfs/storage_rootfs_ut.cc
-index a4864da..9cf91fa 100644
+index a4864dad..9cf91fa9 100644
 --- a/test/image/oci/storage/rootfs/storage_rootfs_ut.cc
 +++ b/test/image/oci/storage/rootfs/storage_rootfs_ut.cc
 @@ -30,6 +30,7 @@
@@ -565,7 +565,7 @@ index a4864da..9cf91fa 100644
  std::string META_DATA_CONTENT = "metadata test";
  
 diff --git a/test/mocks/isulad_config_mock.cc b/test/mocks/isulad_config_mock.cc
-index 9d99315..88a74a4 100644
+index 9d993157..88a74a41 100644
 --- a/test/mocks/isulad_config_mock.cc
 +++ b/test/mocks/isulad_config_mock.cc
 @@ -136,3 +136,19 @@ char *conf_get_isulad_storage_driver_backing_fs()
@@ -589,7 +589,7 @@ index 9d99315..88a74a4 100644
 +    return true;
 +}
 diff --git a/test/mocks/isulad_config_mock.h b/test/mocks/isulad_config_mock.h
-index fdf27cd..03af3cc 100644
+index fdf27cdb..03af3cc9 100644
 --- a/test/mocks/isulad_config_mock.h
 +++ b/test/mocks/isulad_config_mock.h
 @@ -34,6 +34,8 @@ public:
@@ -602,5 +602,5 @@ index fdf27cd..03af3cc 100644
  
  void MockIsuladConf_SetMock(MockIsuladConf *mock);
 -- 
-2.25.1
+2.20.1
 

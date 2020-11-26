@@ -10,7 +10,7 @@ Signed-off-by: wujing <wujing50@huawei.com>
  2 files changed, 6 insertions(+), 8 deletions(-)
 
 diff --git a/src/daemon/entry/cri/websocket/service/ws_server.cc b/src/daemon/entry/cri/websocket/service/ws_server.cc
-index 43cecb8..735f278 100644
+index 43cecb88..735f2780 100644
 --- a/src/daemon/entry/cri/websocket/service/ws_server.cc
 +++ b/src/daemon/entry/cri/websocket/service/ws_server.cc
 @@ -106,12 +106,10 @@ void WebsocketServer::EmitLog(int level, const char *line)
@@ -43,7 +43,7 @@ index 43cecb8..735f278 100644
      info.extensions = nullptr;
  
 diff --git a/src/daemon/modules/image/oci/storage/image_store/image_store.c b/src/daemon/modules/image/oci/storage/image_store/image_store.c
-index 0f613dd..af8573a 100644
+index 0f613dd2..af8573ad 100644
 --- a/src/daemon/modules/image/oci/storage/image_store/image_store.c
 +++ b/src/daemon/modules/image/oci/storage/image_store/image_store.c
 @@ -59,8 +59,8 @@
@@ -71,5 +71,5 @@ index 0f613dd..af8573a 100644
                  ERROR("Failed to append image to digest: %s", names[i]);
                  ret = -1;
 -- 
-2.25.1
+2.20.1
 

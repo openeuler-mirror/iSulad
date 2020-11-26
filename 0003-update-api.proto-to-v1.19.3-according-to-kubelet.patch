@@ -10,7 +10,7 @@ Signed-off-by: gaohuatao <gaohuatao@huawei.com>
  2 files changed, 38 insertions(+)
 
 diff --git a/src/api/services/cri/api.proto b/src/api/services/cri/api.proto
-index 67e5527..dc0cfeb 100644
+index 67e5527e..dc0cfeb9 100644
 --- a/src/api/services/cri/api.proto
 +++ b/src/api/services/cri/api.proto
 @@ -219,6 +219,13 @@ enum NamespaceMode {
@@ -80,7 +80,7 @@ index 67e5527..dc0cfeb 100644
  
  message ListImagesResponse {
 diff --git a/src/daemon/entry/cri/cri_security_context.cc b/src/daemon/entry/cri/cri_security_context.cc
-index 634e53a..1d33226 100644
+index 634e53ad..1d332261 100644
 --- a/src/daemon/entry/cri/cri_security_context.cc
 +++ b/src/daemon/entry/cri/cri_security_context.cc
 @@ -179,6 +179,13 @@ static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOp
@@ -98,5 +98,5 @@ index 634e53a..1d33226 100644
      ModifyCommonNamespaceOptions(nsOpts, hostConfig);
      /* modify host network option for container */
 -- 
-2.25.1
+2.20.1
 

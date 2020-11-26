@@ -1,5 +1,5 @@
-%global _version 2.0.5
-%global _release 20201125.170623.git98ee627e
+%global _version 2.0.7
+%global _release 20201125.165149.git7d150c3c
 %global is_systemd 1
 
 Name:      iSulad
@@ -12,7 +12,6 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch6000: 0000-update-from-2.0.5-to-2.0.7.patch
 Patch6001: 0001-Add-a-solution-to-the-gpgkey-problem.patch
 Patch6002: 0002-change-default-tmp-directory-from-var-tmp-to-var-lib.patch
 Patch6003: 0003-update-api.proto-to-v1.19.3-according-to-kubelet.patch
@@ -83,10 +82,9 @@ install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/
 install -d $RPM_BUILD_ROOT/%{_bindir}
 chrpath -d ./src/isula
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
-chrpath -d ./src/isulad-shim
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
 chrpath -d ./src/isulad
-install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
+install -m 0755 ./src/isulad                 %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
@@ -223,23 +221,41 @@ fi
 %endif
 
 %changelog
-+* Wed Nov 25 2020  <lifeng68@huawei.com> - 2.0.5-20201125.170623.git98ee627e
-+- Type:update from openeuler
-+- ID:NA
-+- SUG:NA
-+- DESC: update from openeuler
+* Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.7-20201125.165149.git7d150c3c
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: update from openeuler
 
-+* Thu Nov 12 2020  <gaohuatao@huawei.com> - 2.0.5-20201112.192302.gitedce3879
-+- Type:update from openeuler
-+- ID:NA
-+- SUG:NA
-+- DESC: update from openeuler
+* Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.6-20201125.160534.git9fb5e75d
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix rpath not work
 
-+* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: remove unused config
+* Thu Nov 12 2020  gaohuatao<gaohuatao@huawei.com> - 2.0.6-20201112.193005.git8a6b73c8
+- Type: update from openeuler
+- ID:NA
+- SUG:NA
+- DESC: update from openeuler
+
+* Wed Oct 14 2020  lifeng68<lifeng68@huawei.com> - 2.0.6-20201014.152749.gitc8a43925
+- Type: upgrade to v2.0.6
+- ID:NA
+- SUG:NA
+- DESC: upgrade to v2.0.6
+
+* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: modify log level to warn
+
+* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove unused config
 
 * Tue Sep 10 2020  <yangjiaqi11@huawei.com> - 2.0.5-20200910.144345.git71b1055b
 - Type:enhancement
@@ -252,3 +268,9 @@ fi
 - ID:NA
 - SUG:NA
 - DESC: upgrade from v2.0.3 to v2.0.5
+
+* Wed Sep 02 2020 YoungJQ <yangjiaqi11@huawei.com> - 2.0.3-20200902.114727.git6d945f26
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: modify source0 address

@@ -11,7 +11,7 @@ Signed-off-by: wujing <wujing50@huawei.com>
  2 files changed, 7 insertions(+), 5 deletions(-)
 
 diff --git a/src/daemon/entry/cri/request_cache.cc b/src/daemon/entry/cri/request_cache.cc
-index 5209bca..a3cb377 100644
+index 5209bcaf..a3cb3771 100644
 --- a/src/daemon/entry/cri/request_cache.cc
 +++ b/src/daemon/entry/cri/request_cache.cc
 @@ -86,11 +86,13 @@ std::string RequestCache::UniqueToken()
@@ -33,7 +33,7 @@ index 5209bca..a3cb377 100644
          }
          lws_b64_encode_string(rawToken, (int)strlen(rawToken), buf, (int)sizeof(buf));
 diff --git a/src/daemon/entry/cri/request_cache.h b/src/daemon/entry/cri/request_cache.h
-index b0b7f49..024f3ba 100644
+index b0b7f491..024f3ba7 100644
 --- a/src/daemon/entry/cri/request_cache.h
 +++ b/src/daemon/entry/cri/request_cache.h
 @@ -52,7 +52,7 @@ private:
@@ -46,5 +46,5 @@ index b0b7f49..024f3ba 100644
  
  #endif // DAEMON_ENTRY_CRI_REQUEST_CACHE_H
 -- 
-2.25.1
+2.20.1
 

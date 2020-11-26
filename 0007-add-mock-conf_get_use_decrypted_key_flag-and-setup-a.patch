@@ -10,7 +10,7 @@ Signed-off-by: WangFengTu <wangfengtu@huawei.com>
  1 file changed, 10 insertions(+)
 
 diff --git a/test/image/oci/registry/registry_ut.cc b/test/image/oci/registry/registry_ut.cc
-index 25ddf69..4b26442 100644
+index 25ddf694..4b264424 100644
 --- a/test/image/oci/registry/registry_ut.cc
 +++ b/test/image/oci/registry/registry_ut.cc
 @@ -73,6 +73,8 @@ std::string get_dir()
@@ -52,5 +52,5 @@ index 25ddf69..4b26442 100644
  }
  
 -- 
-2.25.1
+2.20.1
 
