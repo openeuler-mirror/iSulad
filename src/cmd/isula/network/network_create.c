@@ -18,7 +18,7 @@
 #include "utils.h"
 
 const char g_cmd_network_create_desc[] = "Create a network";
-const char g_cmd_network_create_usage[] = "create [flags] [NETWORK]";
+const char g_cmd_network_create_usage[] = "create [OPTIONS] [NETWORK]";
 
 struct client_arguments g_cmd_network_create_args = {
     .custom_conf.driver = "bridge",
@@ -93,9 +93,8 @@ int cmd_network_create_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_network_create_args.progname = util_string_join(" ", argv, 2);
-    command_network_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
-                         g_cmd_network_create_desc,
-                         g_cmd_network_create_usage);
+    subcommand_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv,
+                    g_cmd_network_create_desc, g_cmd_network_create_usage);
     if (command_parse_args(&cmd, &g_cmd_network_create_args.argc, &g_cmd_network_create_args.argv)) {
         exit(EINVALIDARGS);
     }
