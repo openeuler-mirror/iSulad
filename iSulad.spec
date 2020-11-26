@@ -1,5 +1,5 @@
-%global _version 2.0.6
-%global _release 20201112.193005.git8a6b73c8
+%global _version 2.0.7
+%global _release 20201125.165149.git7d150c3c
 %global is_systemd 1
 
 Name:      iSulad
@@ -12,34 +12,13 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch6001: 0001-iSulad-modify-defattr-to-755-in-spec.patch
-Patch6002: 0002-Dockerfile-update-dockerfile-to-isulad-v2.0.6-use-mu.patch
-Patch6003: 0003-isulad-rt_isula_start-should-read-the-isulad-shim-pi.patch
-Patch6004: 0004-Realpath-add-get-realpath-for-root-and-state-dir.patch
-Patch6005: 0005-CI-add-testcase-for-root-and-run-dir-realpath.patch
-Patch6006: 0006-info-fix-typo-driverr-to-driver.patch
-Patch6007: 0007-create-fix-wrong-ret-code.patch
-Patch6008: 0008-add-iSulad-s-build-guide-for-RISC-V.patch
-Patch6009: 0009-add-non-root-group.patch
-Patch6010: 0010-add-nonroot-execute-CI.patch
-Patch6011: 0011-cni-support-extension-data-transmission.patch
-Patch6012: 0012-unpack-add-remove-target-file-in-handle-.wh.patch
-Patch6013: 0013-iSulad-internal-change.patch
-Patch6014: 0014-unlink-etc-dir-when-link-exists.patch
-Patch6015: 0015-support-variable-extension-cni-args.patch
-Patch6016: 0016-CI-for-support-variable-extension-cni-args.patch
-Patch6017: 0017-add-unlink-dir-comments.patch
-Patch6018: 0018-iSulad-add-ISULAD_TMPDIR-env-variable.patch
-Patch6019: 0019-CI-remove-test-data-from-iSulad-repo.patch
-Patch6020: 0020-add-ISULAD_TMPDIR-env-CI.patch
-Patch6021: 0021-iSulad-fix-memory-leak-in-inspect-grpc-service.patch
-Patch6022: 0022-clean-code-remove-unused-code-in-connect.patch
-Patch6023: 0023-add-newline-character-at-end-of-iSulad.sysconfig.patch
-Patch6024: 0024-clean-code-remove-unused-in-code.patch
-Patch6025: 0025-utils-add-fdatasync-when-do-atomic-write-file.patch
-Patch6026: 0026-network-support-mutlnetworks.patch
-Patch6027: 0027-add-testcases-for-mutl-networks.patch
-Patch6028: 0028-add-filter-to-get-only-non-sandbox-containers.patch
+Patch6001: 0001-Add-a-solution-to-the-gpgkey-problem.patch
+Patch6002: 0002-change-default-tmp-directory-from-var-tmp-to-var-lib.patch
+Patch6003: 0003-update-api.proto-to-v1.19.3-according-to-kubelet.patch
+Patch6004: 0004-adapt-CI-ISULAD_TMPDIR-testcases.patch
+Patch6005: 0005-listening-127.0.0.1-port-in-cri-stream-websocket-ser.patch
+Patch6006: 0006-using-64-bit-unique-token-in-CRI-websockets-server-R.patch
+Patch6007: 0007-add-mock-conf_get_use_decrypted_key_flag-and-setup-a.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -63,7 +42,7 @@ BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
-BuildRequires: systemd-devel git
+BuildRequires: systemd-devel git chrpath
 
 Requires:      lcr lxc clibcni
 Requires:      grpc protobuf
@@ -91,6 +70,7 @@ cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
 install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+chrpath -d ./src/daemon/modules/image/libisulad_img.so
 install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 chmod +x %{buildroot}/%{_libdir}/libisula.so
 chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
@@ -100,12 +80,11 @@ install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
 
 install -d $RPM_BUILD_ROOT/%{_bindir}
+chrpath -d ./src/isula
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
-install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
-chrpath -d ./src/isula
-chrpath -d ./src/isulad-shim 
 chrpath -d ./src/isulad
+install -m 0755 ./src/isulad                 %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
 install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
@@ -242,6 +221,18 @@ fi
 %endif
 
 %changelog
+* Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.7-20201125.165149.git7d150c3c
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: update from openeuler
+
+* Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.6-20201125.160534.git9fb5e75d
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix rpath not work
+
 * Thu Nov 12 2020  gaohuatao<gaohuatao@huawei.com> - 2.0.6-20201112.193005.git8a6b73c8
 - Type: update from openeuler
 - ID:NA
