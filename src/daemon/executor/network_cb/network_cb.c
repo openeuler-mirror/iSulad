@@ -321,8 +321,44 @@ out:
 
 static int network_remove_cb(const network_remove_request *request, network_remove_response **response)
 {
-    // TODO
-    return 0;
+    int ret = 0;
+    uint32_t cc = ISULAD_SUCCESS;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return EINVALIDARGS;
+    }
+
+    DAEMON_CLEAR_ERRMSG();
+    *response = (network_remove_response *)util_common_calloc_s(sizeof(network_remove_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return ECOMMON;
+    }
+
+    if (!network_is_valid_name(request->name)) {
+        cc = ISULAD_ERR_INPUT;
+        ret = EINVALIDARGS;
+        goto out;
+    }
+
+    network_conflist_lock(EXCLUSIVE);
+
+    ret = network_config_remove(request->name, &(*response)->name);
+    if (ret != 0) {
+        cc = ISULAD_ERR_EXEC;
+    }
+
+    network_conflist_unlock();
+
+out:
+    (*response)->cc = cc;
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+        DAEMON_CLEAR_ERRMSG();
+    }
+
+    return ret;
 }
 
 void network_callback_init(service_network_callback_t *cb)

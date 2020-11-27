@@ -294,3 +294,76 @@ Status NetworkServiceImpl::List(ServerContext *context, const NetworkListRequest
 
     return Status::OK;
 }
+
+int NetworkServiceImpl::remove_request_from_grpc(const NetworkRemoveRequest *grequest, network_remove_request **request)
+{
+    network_remove_request *tmpreq = static_cast<network_remove_request *>(util_common_calloc_s(sizeof(
+                                                                                                    network_remove_request)));
+    if (tmpreq == nullptr) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (!grequest->name().empty()) {
+        tmpreq->name = util_strdup_s(grequest->name().c_str());
+    }
+    tmpreq->force = grequest->force();
+
+    *request = tmpreq;
+    return 0;
+}
+
+void NetworkServiceImpl::remove_response_to_grpc(const network_remove_response *response,
+                                                 NetworkRemoveResponse *gresponse)
+{
+    if (response == nullptr) {
+        gresponse->set_cc(ISULAD_ERR_EXEC);
+        return;
+    }
+    gresponse->set_cc(response->cc);
+    if (response->name != nullptr) {
+        gresponse->set_name(response->name);
+    }
+    if (response->errmsg != nullptr) {
+        gresponse->set_errmsg(response->errmsg);
+    }
+    if (response->containers != nullptr) {
+        for (size_t i = 0; i < response->containers_len; i++) {
+            gresponse->add_containers(response->containers[i]);
+        }
+    }
+    return;
+}
+
+Status NetworkServiceImpl::Remove(ServerContext *context, const NetworkRemoveRequest *request,
+                                  NetworkRemoveResponse *reply)
+{
+    int tret;
+    service_executor_t *cb = nullptr;
+    network_remove_request *network_req = nullptr;
+    network_remove_response *network_res = nullptr;
+
+    auto status = GrpcServerTlsAuth::auth(context, "network_remove");
+    if (!status.ok()) {
+        return status;
+    }
+    cb = get_service_executor();
+    if (cb == nullptr || cb->network.remove == nullptr) {
+        return Status(StatusCode::UNIMPLEMENTED, "Unimplemented callback");
+    }
+
+    tret = remove_request_from_grpc(request, &network_req);
+    if (tret != 0) {
+        ERROR("Failed to transform grpc request");
+        reply->set_cc(ISULAD_ERR_INPUT);
+        return Status::OK;
+    }
+
+    (void)cb->network.remove(network_req, &network_res);
+    remove_response_to_grpc(network_res, reply);
+
+    free_network_remove_request(network_req);
+    free_network_remove_response(network_res);
+
+    return Status::OK;
+}

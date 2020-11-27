@@ -239,6 +239,74 @@ private:
     }
 };
 
+class NetworkRemove : public
+    ClientBase<NetworkService, NetworkService::Stub, isula_network_remove_request, NetworkRemoveRequest,
+    isula_network_remove_response, NetworkRemoveResponse> {
+public:
+    explicit NetworkRemove(void *args)
+        : ClientBase(args)
+    {
+    }
+    ~NetworkRemove() = default;
+
+    auto request_to_grpc(const isula_network_remove_request *request, NetworkRemoveRequest *grequest) -> int override
+    {
+        if (request == nullptr) {
+            return -1;
+        }
+
+        if (request->name != nullptr) {
+            grequest->set_name(request->name);
+        }
+        grequest->set_force(request->force);
+
+        return 0;
+    }
+
+    auto response_from_grpc(NetworkRemoveResponse *gresponse, isula_network_remove_response *response) -> int override
+    {
+        int i;
+        int num = gresponse->containers_size();
+
+        response->server_errono = gresponse->cc();
+        if (!gresponse->name().empty()) {
+            response->name = util_strdup_s(gresponse->name().c_str());
+        }
+        if (!gresponse->errmsg().empty()) {
+            response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
+        }
+
+        if (num <= 0) {
+            response->containers = nullptr;
+            response->container_num = 0;
+            return 0;
+        }
+        response->containers = static_cast<char **>(util_smart_calloc_s(static_cast<size_t>(num), sizeof(char *)));
+        for (i = 0; i < num; i++) {
+            response->containers[i] = !gresponse->containers(i).empty() ? util_strdup_s(gresponse->containers(i).c_str())
+                                      : nullptr;
+        }
+        response->container_num = num;
+
+        return 0;
+    }
+
+    auto check_parameter(const NetworkRemoveRequest &req) -> int override
+    {
+        if (req.name().empty()) {
+            ERROR("Missing network name in the request");
+            return -1;
+        }
+
+        return 0;
+    }
+
+    auto grpc_call(ClientContext *context, const NetworkRemoveRequest &req, NetworkRemoveResponse *reply) -> Status override
+    {
+        return stub_->Remove(context, req, reply);
+    }
+};
+
 auto grpc_network_client_ops_init(isula_connect_ops *ops) -> int
 {
     if (ops == nullptr) {
@@ -248,6 +316,7 @@ auto grpc_network_client_ops_init(isula_connect_ops *ops) -> int
     ops->network.create = container_func<isula_network_create_request, isula_network_create_response, NetworkCreate>;
     ops->network.inspect = container_func<isula_network_inspect_request, isula_network_inspect_response, NetworkInspect>;
     ops->network.list = container_func<isula_network_list_request, isula_network_list_response, NetworkList>;
+    ops->network.remove = container_func<isula_network_remove_request, isula_network_remove_response, NetworkRemove>;
 
     return 0;
 }
