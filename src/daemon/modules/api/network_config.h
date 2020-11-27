@@ -29,4 +29,6 @@ int network_config_inspect(const char *name, char **network_json);
 
 int network_config_list(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len);
 
+int network_config_remove(const char *name, char **res_name);
+
 #endif // DAEMON_MODULES_API_NETWORK_CONFIG_H

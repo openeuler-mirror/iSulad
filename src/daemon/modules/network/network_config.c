@@ -17,6 +17,7 @@
 
 #include <ifaddrs.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "utils.h"
 #include "path.h"
@@ -48,6 +49,39 @@ const struct subnet_scope g_private_networks[] = {
     /* Class A network 10.0.0.0/8 */
     {"10.0.0.0/24", "10.255.255.0/24"},
 };
+
+struct cni_conflist {
+    cni_net_conf_list *conflist;
+    char *path;
+};
+
+static void free_cni_conflist(struct cni_conflist *conflist)
+{
+    if (conflist == NULL) {
+        return;
+    }
+
+    free_cni_net_conf_list(conflist->conflist);
+    conflist->conflist = NULL;
+    free(conflist->path);
+    conflist->path = NULL;
+
+    free(conflist);
+}
+
+static void free_cni_conflist_arr(struct cni_conflist **conflist_arr, size_t arr_len)
+{
+    size_t i;
+
+    if (conflist_arr == NULL) {
+        return;
+    }
+    for (i = 0; i < arr_len; i++) {
+        free_cni_conflist(conflist_arr[i]);
+        conflist_arr[i] = NULL;
+    }
+    free(conflist_arr);
+}
 
 static char *get_cni_conf_dir()
 {
@@ -103,19 +137,6 @@ free_out:
     return -1;
 }
 
-static void free_cni_list_arr(cni_net_conf_list **list_arr, size_t list_arr_len)
-{
-    size_t i;
-
-    if (list_arr == NULL) {
-        return;
-    }
-    for (i = 0; i < list_arr_len; i++) {
-        free_cni_net_conf_list(list_arr[i]);
-    }
-    free(list_arr);
-}
-
 static int load_cni_list_from_file(const char *file, cni_net_conf_list **list)
 {
     int ret = 0;
@@ -161,14 +182,14 @@ out:
     return ret;
 }
 
-static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist_arr, size_t *conflist_arr_len)
+static int load_cni_conflist(const char *cni_conf_dir, struct cni_conflist ***conflist_arr, size_t *arr_len)
 {
     int ret = 0;
     size_t i, old_size, new_size;
     size_t tmp_len = 0;
     size_t files_len = 0;
     char **files = NULL;
-    cni_net_conf_list **tmp_arr = NULL;
+    struct cni_conflist **tmp_arr = NULL;
     cni_net_conf_list *li = NULL;
 
     ret = conf_files(cni_conf_dir, g_network_config_exts, sizeof(g_network_config_exts) / sizeof(char *), &files);
@@ -183,7 +204,7 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
         goto out;
     }
 
-    tmp_arr = util_smart_calloc_s(sizeof(cni_net_conf_list *), files_len);
+    tmp_arr = (struct cni_conflist **)util_smart_calloc_s(sizeof(struct cni_conflist *), files_len);
     if (tmp_arr == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -193,14 +214,24 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
     for (i = 0; i < files_len; i++) {
         ret = load_cni_list_from_file(files[i], &li);
         if (ret != 0) {
+            ERROR("Failed to load cni list from file %s", files[i]);
             goto out;
         }
         if (li == NULL) {
             continue;
         }
-        tmp_arr[tmp_len] = li;
-        tmp_len++;
+
+        tmp_arr[tmp_len] = (struct cni_conflist *)util_common_calloc_s(sizeof(struct cni_conflist));
+        if (tmp_arr[tmp_len] == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+
+        tmp_arr[tmp_len]->conflist = li;
         li = NULL;
+        tmp_arr[tmp_len]->path = util_strdup_s(files[i]);
+        tmp_len++;
     }
 
     if (files_len != tmp_len) {
@@ -208,8 +239,8 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
             goto out;
         }
 
-        old_size = files_len * sizeof(cni_net_conf_list *);
-        new_size = tmp_len * sizeof(cni_net_conf_list *);
+        old_size = files_len * sizeof(struct cni_conflist *);
+        new_size = tmp_len * sizeof(struct cni_conflist *);
         ret = util_mem_realloc((void **)&tmp_arr, new_size, tmp_arr, old_size);
         if (ret != 0) {
             ERROR("Out of memory");
@@ -218,12 +249,13 @@ static int load_cni_list(const char *cni_conf_dir, cni_net_conf_list ***conflist
     }
     *conflist_arr = tmp_arr;
     tmp_arr = NULL;
-    *conflist_arr_len = tmp_len;
+    *arr_len = tmp_len;
     tmp_len = 0;
 
 out:
     util_free_array_by_len(files, files_len);
-    free_cni_list_arr(tmp_arr, tmp_len);
+    free_cni_conflist_arr(tmp_arr, tmp_len);
+    free_cni_net_conf_list(li);
 
     return ret;
 }
@@ -286,22 +318,22 @@ static int get_config_subnet(const cni_net_conf_list *list, char ***arr)
     return 0;
 }
 
-static int get_cni_config(const cni_net_conf_list **conflist_arr, const size_t conflist_arr_len,
+static int get_cni_config(const struct cni_conflist **conflist_arr, const size_t arr_len,
                           get_config_callback cb, char ***arr)
 {
     int nret = 0;
     size_t i;
 
-    if (conflist_arr == NULL || conflist_arr_len == 0) {
+    if (conflist_arr == NULL || arr_len == 0) {
         return 0;
     }
 
-    for (i = 0; i < conflist_arr_len; i++) {
-        if (conflist_arr[i] == NULL) {
+    for (i = 0; i < arr_len; i++) {
+        if (conflist_arr[i] == NULL || conflist_arr[i]->conflist == NULL) {
             continue;
         }
 
-        nret = cb(conflist_arr[i], arr);
+        nret = cb(conflist_arr[i]->conflist, arr);
         if (nret != 0) {
             util_free_array(*arr);
             *arr = NULL;
@@ -312,7 +344,7 @@ static int get_cni_config(const cni_net_conf_list **conflist_arr, const size_t c
     return 0;
 }
 
-static int get_host_net_name(char ***host_net_names)
+static int get_interface_name(char ***interface_names)
 {
     int ret = 0;
     struct ifaddrs *ifaddr = NULL;
@@ -329,7 +361,7 @@ static int get_host_net_name(char ***host_net_names)
         if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_PACKET) {
             continue;
         }
-        ret = util_array_append(host_net_names, ifa->ifa_name);
+        ret = util_array_append(interface_names, ifa->ifa_name);
         if (ret != 0) {
             goto out;
         }
@@ -497,8 +529,8 @@ out:
     return ret;
 }
 
-static int check_conflict(const network_create_request *request, const cni_net_conf_list **conflist_arr,
-                          const size_t conflist_arr_len)
+static int check_conflict(const network_create_request *request, const struct cni_conflist **conflist_arr,
+                          const size_t arr_len)
 {
     int ret = 0;
     char **net_names = NULL;
@@ -506,7 +538,7 @@ static int check_conflict(const network_create_request *request, const cni_net_c
     char **hostIP = NULL;
 
     if (request->name != NULL) {
-        ret = get_cni_config(conflist_arr, conflist_arr_len, get_config_net_name, &net_names);
+        ret = get_cni_config(conflist_arr, arr_len, get_config_net_name, &net_names);
         if (ret != 0) {
             goto out;
         }
@@ -521,7 +553,7 @@ static int check_conflict(const network_create_request *request, const cni_net_c
         goto out;
     }
 
-    ret = get_cni_config(conflist_arr, conflist_arr_len, get_config_subnet, &subnets);
+    ret = get_cni_config(conflist_arr, arr_len, get_config_subnet, &subnets);
     if (ret != 0) {
         goto out;
     }
@@ -544,7 +576,7 @@ out:
     return ret;
 }
 
-static char *find_bridge_name(const cni_net_conf_list **conflist_arr, const size_t conflist_arr_len)
+static char *find_bridge_name(const struct cni_conflist **conflist_arr, const size_t arr_len)
 {
     int nret = 0;
     int i = 0;
@@ -554,17 +586,17 @@ static char *find_bridge_name(const cni_net_conf_list **conflist_arr, const size
     char **bridge_names = NULL;
     char **host_net_names = NULL;
 
-    nret = get_cni_config(conflist_arr, conflist_arr_len, get_config_net_name, &net_names);
+    nret = get_cni_config(conflist_arr, arr_len, get_config_net_name, &net_names);
     if (nret != 0) {
         return NULL;
     }
 
-    nret = get_cni_config(conflist_arr, conflist_arr_len, get_config_bridge_name, &bridge_names);
+    nret = get_cni_config(conflist_arr, arr_len, get_config_bridge_name, &bridge_names);
     if (nret != 0) {
         goto out;
     }
 
-    nret = get_host_net_name(&host_net_names);
+    nret = get_interface_name(&host_net_names);
     if (nret != 0) {
         goto out;
     }
@@ -651,7 +683,7 @@ static char *find_private_network(char *subnet)
     return nx;
 }
 
-static char *find_subnet(const cni_net_conf_list **conflist_arr, const size_t conflist_arr_len)
+static char *find_subnet(const struct cni_conflist **conflist_arr, const size_t arr_len)
 {
     int nret = 0;
     char *subnet = NULL;
@@ -661,7 +693,7 @@ static char *find_subnet(const cni_net_conf_list **conflist_arr, const size_t co
     size_t len = sizeof(g_private_networks) / sizeof(g_private_networks[0]);
     const char *end = g_private_networks[len - 1].end;
 
-    nret = get_cni_config(conflist_arr, conflist_arr_len, get_config_subnet, &config_subnet);
+    nret = get_cni_config(conflist_arr, arr_len, get_config_subnet, &config_subnet);
     if (nret != 0) {
         return NULL;
     }
@@ -743,8 +775,8 @@ out:
 }
 
 static cni_net_conf_ipam *conf_bridge_ipam(const network_create_request *request,
-                                           const cni_net_conf_list **conflist_arr,
-                                           const size_t conflist_arr_len)
+                                           const struct cni_conflist **conflist_arr,
+                                           const size_t arr_len)
 {
     cni_net_conf_ipam *ipam = NULL;
 
@@ -771,7 +803,7 @@ static cni_net_conf_ipam *conf_bridge_ipam(const network_create_request *request
     if (request->subnet != NULL) {
         ipam->subnet = util_strdup_s(request->subnet);
     } else {
-        ipam->subnet = find_subnet(conflist_arr, conflist_arr_len);
+        ipam->subnet = find_subnet(conflist_arr, arr_len);
         if (ipam->subnet == NULL) {
             ERROR("Failed to find available subnet");
             goto err_out;
@@ -795,8 +827,8 @@ err_out:
     return NULL;
 }
 
-static cni_net_conf *conf_bridge_plugin(const network_create_request *request, const cni_net_conf_list **conflist_arr,
-                                        const size_t conflist_arr_len)
+static cni_net_conf *conf_bridge_plugin(const network_create_request *request, const struct cni_conflist **conflist_arr,
+                                        const size_t arr_len)
 {
     cni_net_conf *plugin = NULL;
 
@@ -812,7 +844,7 @@ static cni_net_conf *conf_bridge_plugin(const network_create_request *request, c
         plugin->type = util_strdup_s(request->driver);
     }
 
-    plugin->bridge = find_bridge_name(conflist_arr, conflist_arr_len);
+    plugin->bridge = find_bridge_name(conflist_arr, arr_len);
     if (plugin->bridge == NULL) {
         ERROR("Failed to find avaliable bridge name");
         goto err_out;
@@ -827,7 +859,7 @@ static cni_net_conf *conf_bridge_plugin(const network_create_request *request, c
     }
     plugin->hairpin_mode = true;
 
-    plugin->ipam = conf_bridge_ipam(request, conflist_arr, conflist_arr_len);
+    plugin->ipam = conf_bridge_ipam(request, conflist_arr, arr_len);
     if (plugin->ipam == NULL) {
         ERROR("Failed to config bridge ipam");
         goto err_out;
@@ -893,8 +925,8 @@ static cni_net_conf *conf_firewall_plugin(const network_create_request *request)
 }
 
 static cni_net_conf_list *conf_bridge_conflist(const network_create_request *request,
-                                               const cni_net_conf_list **conflist_arr,
-                                               const size_t conflist_arr_len)
+                                               const struct cni_conflist **conflist_arr,
+                                               const size_t arr_len)
 {
     size_t len;
     cni_net_conf *plugin = NULL;
@@ -914,7 +946,7 @@ static cni_net_conf_list *conf_bridge_conflist(const network_create_request *req
     }
 
     list->plugins_len = 0;
-    plugin = conf_bridge_plugin(request, conflist_arr, conflist_arr_len);
+    plugin = conf_bridge_plugin(request, conflist_arr, arr_len);
     if (plugin == NULL) {
         ERROR("Failed to config bridge plugin");
         goto err_out;
@@ -1079,12 +1111,12 @@ int network_config_bridge_create(const network_create_request *request, network_
 {
     int ret = 0;
     int bin_dir_len = 0;
-    size_t conflist_arr_len = 0;
+    size_t arr_len = 0;
     uint32_t cc = ISULAD_SUCCESS;
     char *cni_conf_dir = NULL;
     char **cni_bin_dir = NULL;
     cni_net_conf_list *bridge_list = NULL;
-    cni_net_conf_list **conflist_arr = NULL;
+    struct cni_conflist **conflist_arr = NULL;
 
     cni_conf_dir = get_cni_conf_dir();
     if (cni_conf_dir == NULL) {
@@ -1094,20 +1126,20 @@ int network_config_bridge_create(const network_create_request *request, network_
         goto out;
     }
 
-    ret = load_cni_list(cni_conf_dir, &conflist_arr, &conflist_arr_len);
+    ret = load_cni_conflist(cni_conf_dir, &conflist_arr, &arr_len);
     if (ret != 0) {
         isulad_set_error_message("Failed to load cni list, maybe the count of network config files is above 200");
         cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
-    ret = check_conflict(request, (const cni_net_conf_list **)conflist_arr, conflist_arr_len);
+    ret = check_conflict(request, (const struct cni_conflist **)conflist_arr, arr_len);
     if (ret != 0) {
         cc = ISULAD_ERR_INPUT;
         goto out;
     }
 
-    bridge_list = conf_bridge_conflist(request, (const cni_net_conf_list **)conflist_arr, conflist_arr_len);
+    bridge_list = conf_bridge_conflist(request, (const struct cni_conflist **)conflist_arr, arr_len);
     if (bridge_list == NULL) {
         cc = ISULAD_ERR_EXEC;
         ret = -1;
@@ -1137,7 +1169,7 @@ out:
     free(cni_conf_dir);
     util_free_array(cni_bin_dir);
     free_cni_net_conf_list(bridge_list);
-    free_cni_list_arr(conflist_arr, conflist_arr_len);
+    free_cni_conflist_arr(conflist_arr, arr_len);
 
     (*response)->cc = cc;
     if (g_isulad_errmsg != NULL) {
@@ -1169,7 +1201,7 @@ int network_config_inspect(const char *name, char **network_json)
     size_t i;
     size_t arr_len = 0;
     char *cni_conf_dir = NULL;
-    cni_net_conf_list **conflist_arr = NULL;
+    struct cni_conflist **conflist_arr = NULL;
 
     cni_conf_dir = get_cni_conf_dir();
     if (cni_conf_dir == NULL) {
@@ -1177,7 +1209,7 @@ int network_config_inspect(const char *name, char **network_json)
         return -1;
     }
 
-    ret = load_cni_list(cni_conf_dir, &conflist_arr, &arr_len);
+    ret = load_cni_conflist(cni_conf_dir, &conflist_arr, &arr_len);
     if (ret != 0) {
         isulad_set_error_message("Failed to load cni list, maybe the count of network config files is above 200");
         goto out;
@@ -1186,10 +1218,10 @@ int network_config_inspect(const char *name, char **network_json)
     EVENT("Network Event: {Object: %s, Type: Inspecting}", name);
 
     for (i = 0; i < arr_len; i++) {
-        if (strcmp(conflist_arr[i]->name, name) != 0) {
+        if (conflist_arr[i]->conflist->name == NULL || strcmp(conflist_arr[i]->conflist->name, name) != 0) {
             continue;
         }
-        *network_json = get_conflist_json(conflist_arr[i]);
+        *network_json = get_conflist_json(conflist_arr[i]->conflist);
         if (*network_json == NULL) {
             ret = -1;
             goto out;
@@ -1203,7 +1235,7 @@ int network_config_inspect(const char *name, char **network_json)
 
 out:
     free(cni_conf_dir);
-    free_cni_list_arr(conflist_arr, arr_len);
+    free_cni_conflist_arr(conflist_arr, arr_len);
 
     return ret;
 }
@@ -1281,27 +1313,29 @@ int network_config_list(const struct filters_args *filters, network_network_info
     int ret = 0;
     size_t i, old_size, new_size;
     char *cni_conf_dir = NULL;
-    cni_net_conf_list **list_arr = NULL;
-    size_t list_arr_len = 0;
+    struct cni_conflist **conflist_arr = NULL;
+    size_t arr_len = 0;
     network_network_info **nets = NULL;
     size_t nets_len = 0;
     network_network_info *net_info = NULL;
 
     cni_conf_dir = get_cni_conf_dir();
     if (cni_conf_dir == NULL) {
+        ERROR("Failed to get cni conf dir");
         return -1;
     }
 
-    ret = load_cni_list(cni_conf_dir, &list_arr, &list_arr_len);
+    ret = load_cni_conflist(cni_conf_dir, &conflist_arr, &arr_len);
     if (ret != 0) {
+        isulad_set_error_message("Failed to load cni list, maybe the count of network config files is above 200");
         goto out;
     }
 
-    if (list_arr_len == 0) {
+    if (arr_len == 0) {
         goto out;
     }
 
-    nets = util_common_calloc_s(sizeof(network_network_info *) * list_arr_len);
+    nets = (network_network_info **)util_common_calloc_s(sizeof(network_network_info *) * arr_len);
     if (nets == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -1310,11 +1344,11 @@ int network_config_list(const struct filters_args *filters, network_network_info
 
     EVENT("Network Event: {Object: network, Type: List}");
 
-    for (i = 0; i < list_arr_len; i++) {
-        if (filters != NULL && !network_info_match_filter(list_arr[i], filters)) {
+    for (i = 0; i < arr_len; i++) {
+        if (filters != NULL && !network_info_match_filter(conflist_arr[i]->conflist, filters)) {
             continue;
         }
-        net_info = get_network_info(list_arr[i]);
+        net_info = get_network_info(conflist_arr[i]->conflist);
         if (net_info == NULL) {
             ret = -1;
             goto out;
@@ -1323,12 +1357,12 @@ int network_config_list(const struct filters_args *filters, network_network_info
         net_info = NULL;
         nets_len++;
     }
-    if (list_arr_len != nets_len) {
+    if (arr_len != nets_len) {
         if (nets_len == 0) {
             goto out;
         }
 
-        old_size = list_arr_len * sizeof(network_network_info *);
+        old_size = arr_len * sizeof(network_network_info *);
         new_size = nets_len * sizeof(network_network_info *);
         ret = util_mem_realloc((void **)&nets, new_size, nets, old_size);
         if (ret != 0) {
@@ -1343,7 +1377,176 @@ int network_config_list(const struct filters_args *filters, network_network_info
 
 out:
     free(cni_conf_dir);
-    free_cni_list_arr(list_arr, list_arr_len);
+    free_cni_conflist_arr(conflist_arr, arr_len);
     free_network_info_arr(nets, nets_len);
+    return ret;
+}
+
+static struct cni_conflist *get_network_by_name(const char *name)
+{
+    int nret = 0;
+    size_t i;
+    char *cni_conf_dir = NULL;
+    size_t arr_len = 0;
+    struct cni_conflist **conflist_arr = NULL;
+    struct cni_conflist *res = NULL;
+
+    cni_conf_dir = get_cni_conf_dir();
+    if (cni_conf_dir == NULL) {
+        ERROR("Failed to get cni conf dir");
+        return NULL;
+    }
+
+    nret = load_cni_conflist(cni_conf_dir, &conflist_arr, &arr_len);
+    if (nret != 0) {
+        isulad_set_error_message("Failed to load cni list, maybe the count of network config files is above 200");
+        goto out;
+    }
+
+    for (i = 0; i < arr_len; i++) {
+        if (conflist_arr[i]->conflist->name == NULL || strcmp(conflist_arr[i]->conflist->name, name) != 0) {
+            continue;
+        }
+
+        res = (struct cni_conflist *)util_common_calloc_s(sizeof(struct cni_conflist));
+        if (res == NULL) {
+            ERROR("Out of memory");
+            goto out;
+        }
+
+        res->conflist = conflist_arr[i]->conflist;
+        conflist_arr[i]->conflist = NULL;
+        res->path = util_strdup_s(conflist_arr[i]->path);
+
+        goto out;
+    }
+
+    isulad_set_error_message("Cannot find network \"%s\" in cni conf dir \"%s\"", name, cni_conf_dir);
+
+out:
+    free(cni_conf_dir);
+    free_cni_conflist_arr(conflist_arr, arr_len);
+    return res;
+}
+
+static char *get_bridge_name(cni_net_conf_list *list)
+{
+    size_t i;
+    cni_net_conf *plugin = NULL;
+
+    if (list->plugins == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < list->plugins_len; i++) {
+        plugin = list->plugins[i];
+        if (plugin == NULL || strcmp(plugin->type, g_default_driver) != 0 || plugin->bridge == NULL) {
+            continue;
+        }
+        return util_strdup_s(plugin->bridge);
+    }
+
+    return NULL;
+}
+
+static void run_delete_device(void *args)
+{
+    char **tmp_args = (char **)args;
+    const size_t CMD_ARGS_NUM = 4;
+
+    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
+        COMMAND_ERROR(" delete device need four args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static int remove_interface(const char *ifa)
+{
+    int ret = 0;
+    size_t i = 0;;
+    const size_t args_len = 4;
+    char **args = NULL;
+    char **interfaces = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
+
+    ret = get_interface_name(&interfaces);
+    if (ret != 0) {
+        ERROR("Failed to get interface names");
+        return -1;
+    }
+
+    if (util_array_len((const char **)interfaces) == 0) {
+        return 0;
+    }
+
+    if (!util_array_contain((const char **)interfaces, ifa)) {
+        goto out;
+    }
+
+    args = (char **)util_smart_calloc_s(sizeof(char *), args_len);
+    if (args == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    args[i++] = util_strdup_s("ip");
+    args[i++] = util_strdup_s("link");
+    args[i++] = util_strdup_s("delete");
+    args[i] = util_strdup_s(ifa);
+
+    if (!util_exec_cmd(run_delete_device, args, NULL, &stdout_msg, &stderr_msg)) {
+        ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
+        ret = -1;
+    }
+
+out:
+    util_free_array(interfaces);
+    util_free_array(args);
+    free(stdout_msg);
+    free(stderr_msg);
+    return ret;
+}
+
+int network_config_remove(const char *name, char **res_name)
+{
+    int ret = 0;
+    int get_err = 0;
+    char *bridge = NULL;
+    struct cni_conflist *network = NULL;
+
+    network = get_network_by_name(name);
+    if (network == NULL) {
+        ERROR("Failed to get network");
+        return -1;
+    }
+
+    EVENT("Event: {Object: network %s, Type: remove}", name);
+
+    // TODO: find the linked containers
+    // TODO: remove containers if request->force is true,else return error
+
+    bridge = get_bridge_name(network->conflist);
+    if (bridge != NULL) {
+        ret = remove_interface(bridge);
+        if (ret != 0) {
+            ERROR("Failed to remove bridge %s", bridge);
+            goto out;
+        }
+    }
+
+    if (!util_remove_file(network->path, &get_err)) {
+        ERROR("Failed to delete %s, error: %s", network->path, strerror(get_err));
+        ret = -1;
+        goto out;
+    }
+    *res_name = util_strdup_s(network->conflist->name);
+
+out:
+    free_cni_conflist(network);
+    free(bridge);
     return ret;
 }
