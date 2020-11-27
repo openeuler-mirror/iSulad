@@ -33,20 +33,16 @@ struct cni_manager {
     // The network namespace path of the sandbox
     char *netns_path;
     char *ifname;
-
-    cni_bandwidth_entry *bandwidth;
-    struct cni_port_mapping **p_mapping;
-    size_t p_mapping_len;
-    // key can be ip or mac that is a static value to be specified in the network
+    // key can be IP or portMappings and so on
     map_t *annotations;
 };
+
+int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
+                           size_t bin_paths_len);
 
 int cni_update_confist_from_dir();
 
 int cni_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len);
-
-int cni_manager_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths, size_t bin_paths_len,
-                     const char *default_name);
 
 int attach_loopback(const char *id, const char *netns);
 

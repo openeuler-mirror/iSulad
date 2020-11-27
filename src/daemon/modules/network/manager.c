@@ -22,34 +22,121 @@
 #include "isula_libutils/cni_net_conf_list.h"
 #include "utils.h"
 #include "libcni_utils.h"
+#include "libcni_types.h"
 
 #define LO_IFNAME "lo"
-#define LO_NETNAME "cni-loopback"
-#define ANNO_IP "IP"
-#define ANNO_MAC "MAC"
 #define CNI_CONF_ARGS_DEFAULT_LEN 4
+#define MAC_ADDR_VALID_CHARS "^([a-f0-9A-F]{2}[:-]){5}(a-f0-9A-F]{2})$"
 
-typedef struct cni_manager_t {
-    char *default_name;
+typedef int (*annotation_add_args_t)(const char *, const char *, size_t, struct runtime_conf *);
+typedef int (*annotation_add_json_t)(const char *, char **);
+
+struct anno_registry_conf_args {
+    char *name;
+    annotation_add_args_t ops;
+};
+
+struct anno_registry_conf_json {
+    char *name;
+    annotation_add_json_t ops;
+};
+
+typedef struct cni_manager_store_t {
     char *conf_path;
     char **bin_paths;
     size_t bin_paths_len;
     char *cache_dir;
     char *loopback_conf_str;
-} cni_manager_t;
+} cni_manager_store_t;
 
 typedef struct cni_manager_network_conf_list_t {
     struct cni_network_list_conf **conflist;
     size_t conflist_len;
-
     pthread_rwlock_t rwlock;
 } cni_manager_network_conf_list_t;
 
-static cni_manager_t g_cni_manager = {
+static cni_manager_store_t g_cni_manager = {
     .loopback_conf_str = "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\","
     "\"plugins\":[{\"type\": \"loopback\" }]}",
 };
+
 static cni_manager_network_conf_list_t g_conflists;
+
+static int ip_inject(const char *key, const char *value, size_t cnt, struct runtime_conf *rt)
+{
+    uint8_t *ip = NULL;
+    size_t ip_len = 0;
+    int ret = 0;
+    int nret = 0;
+
+    if (rt == NULL || key == NULL || value == NULL) {
+        return -1;
+    }
+
+    nret = parse_ip_from_str(value, &ip, &ip_len);
+    if (nret != 0 || ip == NULL || ip_len == 0) {
+        ERROR("Parse IP %s failed", value);
+        ret = -1;
+        goto out;
+    }
+
+    rt->args[cnt][0] = util_strdup_s(key);
+    rt->args[cnt][1] = util_strdup_s(value);
+
+out:
+    free(ip);
+    return ret;
+}
+
+static int mac_inject(const char *key, const char *value, size_t cnt, struct runtime_conf *rt)
+{
+    int ret = 0;
+
+    if (rt == NULL || key == NULL || value == NULL) {
+        return -1;
+    }
+
+    if (util_reg_match(MAC_ADDR_VALID_CHARS, value) != 0) {
+        ERROR("MAC addr: %s is not valid", value);
+        ret = -1;
+        goto out;
+    }
+
+    rt->args[cnt][0] = util_strdup_s(key);
+    rt->args[cnt][1] = util_strdup_s(value);
+
+out:
+    return ret;
+}
+
+static int bandwidth_inject(const char *key, const char *value, size_t cnt, struct runtime_conf *rt)
+{
+    return 0;
+}
+
+static int port_mappings_inject(const char *key, const char *value, size_t cnt, struct runtime_conf *rt)
+{
+    return 0;
+}
+
+static int ip_ranges_inject(const char *key, const char *value, size_t cnt, struct runtime_conf *rt)
+{
+    return 0;
+}
+
+static struct anno_registry_conf_args g_registrant_args[] = {
+    {.name = "IP", .ops = ip_inject},
+    {.name = "MAC", .ops = mac_inject},
+    {.name = "bandwidth", .ops = bandwidth_inject},
+    {.name = "portMappings", .ops = port_mappings_inject},
+    {.name = "ipRanges", .ops = ip_ranges_inject}
+};
+
+static struct anno_registry_conf_json g_registrant_json[] = {
+};
+
+static const size_t g_numregistrants_args = sizeof(g_registrant_args) / sizeof(struct anno_registry_conf_args);
+static const size_t g_numregistrants_json = sizeof(g_registrant_json) / sizeof(struct anno_registry_conf_json);
 
 static inline bool conflists_wrlock()
 {
@@ -87,12 +174,12 @@ static inline void conflists_unlock()
     }
 }
 
-int cni_manager_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths, size_t bin_paths_len,
-                     const char *default_name)
+int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
+                           size_t bin_paths_len)
 {
     int ret = 0;
-    if (conf_path == NULL || default_name == NULL) {
-        ERROR("Invalid input params");
+    if (conf_path == NULL) {
+        ERROR("Invalid input param");
         return -1;
     }
 
@@ -110,7 +197,6 @@ int cni_manager_init(const char *cache_dir, const char *conf_path, const char* c
 
     g_cni_manager.conf_path = util_strdup_s(conf_path);
     g_cni_manager.cache_dir = util_strdup_s(cache_dir);
-    g_cni_manager.default_name = util_strdup_s(default_name);
 
 out:
     return ret;
@@ -377,11 +463,72 @@ out:
     return rt;
 }
 
+// inject runtime_conf args from annotation
+static int inject_annotations_args(map_t *annotations, struct runtime_conf *rt)
+{
+    int ret = 0;
+    size_t i = 0;
+    size_t cnt = CNI_CONF_ARGS_DEFAULT_LEN;
+    char *value = NULL;
+
+    if (annotations == NULL) {
+        return -1;
+    }
+
+    for (i = 0; i < g_numregistrants_args && cnt < rt->args_len; i++) {
+        value = map_search(annotations, (void *)g_registrant_args[i].name);
+        if (value == NULL) {
+            DEBUG("This key:%s is not surpported", g_registrant_args[i].name);
+            continue;
+        }
+
+        if (g_registrant_args[i].ops(g_registrant_args[i].name, value, cnt, rt) != 0) {
+            ERROR("The format of annotation is not right with key:%s, value:%s", g_registrant_args[i].name, value);
+            ret = -1;
+            goto out;
+        }
+        cnt++;
+    }
+
+out:
+    return ret;
+}
+
+// inject cni net conflist json from annotation
+static int inject_annotations_json(map_t *annotations, char **net_list_conf_str)
+{
+    int ret = 0;
+    size_t i = 0;
+    char *value = NULL;
+
+    if (annotations == NULL || net_list_conf_str == NULL) {
+        ERROR("Invalid input param");
+        return -1;
+    }
+
+    for (i = 0; i < g_numregistrants_json; i++) {
+        value = map_search(annotations, (void *)g_registrant_json[i].name);
+        if (value == NULL) {
+            DEBUG("This key:%s is not surpported", g_registrant_json[i].name);
+            continue;
+        }
+
+        if (g_registrant_json[i].ops(value, net_list_conf_str) != 0) {
+            ERROR("The format of annotation is not right with key:%s, value:%s", g_registrant_json[i].name, value);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    return ret;
+}
+
 static struct runtime_conf *build_cni_runtime_conf(struct cni_manager *manager)
 {
     struct runtime_conf *rt = NULL;
     size_t args_len = CNI_CONF_ARGS_DEFAULT_LEN;
-    size_t cnt = CNI_CONF_ARGS_DEFAULT_LEN;
+    size_t anno_len = 0;
 
     rt = (struct runtime_conf *)util_smart_calloc_s(sizeof(struct runtime_conf), 1);
     if (rt == NULL) {
@@ -393,7 +540,13 @@ static struct runtime_conf *build_cni_runtime_conf(struct cni_manager *manager)
     rt->netns = util_strdup_s(manager->netns_path);
     rt->ifname = util_strdup_s(manager->ifname);
 
-    args_len += map_size(manager->annotations);
+    anno_len = map_size(manager->annotations);
+    if (anno_len > g_numregistrants_args) {
+        ERROR("The annotation numbers is too larger, expecting max numbers:%zu", g_numregistrants_args);
+        goto free_out;
+    }
+
+    args_len += anno_len;
     rt->args = (char *(*)[2])util_smart_calloc_s(sizeof(char *) * 2 * args_len, 1);
     if (rt->args == NULL) {
         ERROR("Out of memory");
@@ -410,32 +563,10 @@ static struct runtime_conf *build_cni_runtime_conf(struct cni_manager *manager)
     rt->args[3][0] = util_strdup_s("K8S_POD_INFRA_CONTAINER_ID");
     rt->args[3][1] = util_strdup_s(manager->id);
 
-    if (manager->annotations != NULL) {
-        map_itor *itor = map_itor_new(manager->annotations);
-        if (itor == NULL) {
-            ERROR("Out of memory");
-            goto free_out;
-        }
-
-        for (; map_itor_valid(itor); map_itor_next(itor)) {
-            void *key = map_itor_key(itor);
-            const char *value = map_itor_value(itor);
-
-            if (key == NULL || value == NULL) {
-                DEBUG("The key or value is NULL in annotations");
-                continue;
-            }
-
-            rt->args[cnt][0] = util_strdup_s(key);
-            rt->args[cnt][1] = util_strdup_s(value);
-            cnt++;
-        }
-        map_itor_free(itor);
+    if (inject_annotations_args(manager->annotations, rt) != 0) {
+        ERROR("Inject annotations failed");
+        goto free_out;
     }
-
-    rt->p_mapping = manager->p_mapping;
-    rt->p_mapping_len = manager->p_mapping_len;
-    rt->bandwidth = manager->bandwidth;
 
     return rt;
 
@@ -483,15 +614,29 @@ int attach_network_plane(struct cni_manager *manager, const char *net_list_conf_
     int ret = 0;
     struct runtime_conf *rc = NULL;
     struct result *net_result = NULL;
+    char *net_list_conf_str_var = NULL;
 
-    if (manager == NULL || net_list_conf_str == NULL) {
+    if (manager == NULL) {
         ERROR("Invalid input params");
         return -1;
+    }
+
+    net_list_conf_str_var = util_strdup_s(net_list_conf_str);
+    if (net_list_conf_str_var == NULL) {
+        ERROR("Dup net list conf str failed");
+        ret = -1;
+        goto out;
     }
 
     rc = build_cni_runtime_conf(manager);
     if (rc == NULL) {
         ERROR("Error building CNI runtime config");
+        ret = -1;
+        goto out;
+    }
+
+    if (inject_annotations_json(manager->annotations, &net_list_conf_str_var) != 0) {
+        ERROR("Inject annotations to net conf json failed");
         ret = -1;
         goto out;
     }
@@ -510,18 +655,31 @@ out:
 
 int detach_network_plane(struct cni_manager *manager, const char *net_list_conf_str)
 {
-
     int ret = 0;
     struct runtime_conf *rc = NULL;
+    char *net_list_conf_str_var = NULL;
 
-    if (manager == NULL || net_list_conf_str == NULL) {
+    if (manager == NULL) {
         ERROR("Invalid input params");
         return -1;
+    }
+
+    net_list_conf_str_var = util_strdup_s(net_list_conf_str);
+    if (net_list_conf_str_var == NULL) {
+        ERROR("Dup net list conf str failed");
+        ret = -1;
+        goto out;
     }
 
     rc = build_cni_runtime_conf(manager);
     if (rc == NULL) {
         ERROR("Error building CNI runtime config");
+        ret = -1;
+        goto out;
+    }
+
+    if (inject_annotations_json(manager->annotations, &net_list_conf_str_var) != 0) {
+        ERROR("Inject annotations to net conf json failed");
         ret = -1;
         goto out;
     }
@@ -570,8 +728,6 @@ out:
 
 void free_cni_manager(struct cni_manager *manager)
 {
-    size_t i = 0;
-
     if (manager == NULL) {
         return;
     }
@@ -583,16 +739,6 @@ void free_cni_manager(struct cni_manager *manager)
     UTIL_FREE_AND_SET_NULL(manager->netns_path);
     map_free(manager->annotations);
     manager->annotations = NULL;
-
-    for (i = 0; i < manager->p_mapping_len; i++) {
-        free_cni_port_mapping(manager->p_mapping[i]);
-        manager->p_mapping[i] = NULL;
-    }
-    free(manager->p_mapping);
-    manager->p_mapping = NULL;
-
-    free_cni_bandwidth_entry(manager->bandwidth);
-    manager->bandwidth = NULL;
 
     free(manager);
 }
