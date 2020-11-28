@@ -48,22 +48,27 @@
 
 static image_manifest_items_element **load_manifest(const char *fname, size_t *length)
 {
+    image_manifest_items_container *tmp_items = NULL;
     image_manifest_items_element **manifest = NULL;
     parser_error err = NULL;
-    size_t len = 0;
 
     if (fname == NULL || length == NULL) {
         return NULL;
     }
 
-    manifest = image_manifest_items_parse_file(fname, NULL, &err, &len);
-    if (manifest == NULL) {
-        len = 0;
+    tmp_items = image_manifest_items_container_parse_file(fname, NULL, &err);
+    if (tmp_items == NULL) {
         ERROR("Parse manifest %s err:%s", fname, err);
+        goto out;
     }
 
-    *length = len;
+    *length = tmp_items->len;
+    manifest = tmp_items->items;
+    tmp_items->len = 0;
+    tmp_items->items = NULL;
+out:
     free(err);
+    free_image_manifest_items_container(tmp_items);
     return manifest;
 }
 
