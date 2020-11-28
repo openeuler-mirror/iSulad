@@ -1,5 +1,5 @@
-%global _version 2.0.5
-%global _release 20200923.100811.git275398ce
+%global _version 2.0.7
+%global _release 20201128.095506.git1e1623a5
 %global is_systemd 1
 
 Name:      iSulad
@@ -12,19 +12,16 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch6000:	0000-config-remove-unused-config.patch
-Patch6001:	0001-fix-modify-quota-log-level-to-warning.patch
-Patch6002:	0002-fix-memory-leak.patch
-Patch6003:	0003-fix-security-opt-parsing-access-out-of-bounds.patch
-Patch6004:	0004-fix-delete-rootfs-dir-when-rootfs-load-failed.patch
-Patch6005:	0005-fix-code-review.patch
-Patch6006:	0006-fix-pull-failure-caused-by-link-conflict.patch
-Patch6007:	0007-image-clear-memory-if-failed.patch
-Patch6008:	0008-fix-layer-remain-caused-by-hold-flag-not-clean.patch
-Patch6009:	0009-fix-coredump-when-pull-image-with-lock-driver-image-.patch
-Patch6010:	0010-fix-bad-formatting-placeholder-in-http-parse-module.patch
-Patch6011:	0011-iSulad-fix-memory-leak.patch
-Patch6012:	0012-fix-coredump-when-load-image-with-uid.patch
+Patch0001: 0001-Add-a-solution-to-the-gpgkey-problem.patch
+Patch0002: 0002-change-default-tmp-directory-from-var-tmp-to-var-lib.patch
+Patch0003: 0003-update-api.proto-to-v1.19.3-according-to-kubelet.patch
+Patch0004: 0004-adapt-CI-ISULAD_TMPDIR-testcases.patch
+Patch0005: 0005-listening-127.0.0.1-port-in-cri-stream-websocket-ser.patch
+Patch0006: 0006-using-64-bit-unique-token-in-CRI-websockets-server-R.patch
+Patch0007: 0007-add-mock-conf_get_use_decrypted_key_flag-and-setup-a.patch
+Patch0008: 0008-show-all-mutl-network-ips.patch
+Patch0009: 0009-iSulad-only-qsort-the-configed-mounts.patch
+Patch0010: 0010-CI-add-testcases-for-bind-proc-and-sys-fs.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -48,7 +45,7 @@ BuildRequires: grpc grpc-plugins grpc-devel protobuf-devel
 BuildRequires: libcurl libcurl-devel sqlite-devel libarchive-devel device-mapper-devel
 BuildRequires: http-parser-devel
 BuildRequires: libseccomp-devel libcap-devel libselinux-devel libwebsockets libwebsockets-devel
-BuildRequires: systemd-devel git
+BuildRequires: systemd-devel git chrpath
 
 Requires:      lcr lxc clibcni
 Requires:      grpc protobuf
@@ -76,6 +73,7 @@ cd build
 install -d $RPM_BUILD_ROOT/%{_libdir}
 install -m 0644 ./src/libisula.so             %{buildroot}/%{_libdir}/libisula.so
 install -m 0644 ./src/utils/http/libhttpclient.so  %{buildroot}/%{_libdir}/libhttpclient.so
+chrpath -d ./src/daemon/modules/image/libisulad_img.so
 install -m 0644 ./src/daemon/modules/image/libisulad_img.so   %{buildroot}/%{_libdir}/libisulad_img.so
 chmod +x %{buildroot}/%{_libdir}/libisula.so
 chmod +x %{buildroot}/%{_libdir}/libhttpclient.so
@@ -85,19 +83,13 @@ install -d $RPM_BUILD_ROOT/%{_libdir}/pkgconfig
 install -m 0640 ./conf/isulad.pc              %{buildroot}/%{_libdir}/pkgconfig/isulad.pc
 
 install -d $RPM_BUILD_ROOT/%{_bindir}
+chrpath -d ./src/isula
 install -m 0755 ./src/isula                  %{buildroot}/%{_bindir}/isula
 install -m 0755 ./src/isulad-shim            %{buildroot}/%{_bindir}/isulad-shim
-install -m 0755 ./src/isulad                  %{buildroot}/%{_bindir}/isulad
-chrpath -d ./src/isula
-chrpath -d ./src/isulad-shim
 chrpath -d ./src/isulad
+install -m 0755 ./src/isulad                 %{buildroot}/%{_bindir}/isulad
 
 install -d $RPM_BUILD_ROOT/%{_includedir}/isulad
-install -m 0644 ../src/client/libisula.h			%{buildroot}/%{_includedir}/isulad/libisula.h
-install -m 0644 ../src/client/connect/isula_connect.h		%{buildroot}/%{_includedir}/isulad/isula_connect.h
-install -m 0644 ../src/utils/cutils/utils_timestamp.h			%{buildroot}/%{_includedir}/isulad/utils_timestamp.h
-install -m 0644 ../src/utils/cutils/error.h				%{buildroot}/%{_includedir}/isulad/error.h
-install -m 0644 ../src/daemon/modules/runtime/engines/engine.h			%{buildroot}/%{_includedir}/isulad/engine.h
 install -m 0644 ../src/daemon/modules/api/image_api.h         %{buildroot}/%{_includedir}/isulad/image_api.h
 
 install -d $RPM_BUILD_ROOT/%{_sysconfdir}/isulad
@@ -144,8 +136,8 @@ fi
 fi
 
 %post
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 if [ "$1" = "1" ]; then
@@ -176,8 +168,8 @@ fi
 %endif
 fi
 
-if ! getent group isulad > /dev/null; then
-    groupadd --system isulad
+if ! getent group isula > /dev/null; then
+    groupadd --system isula
 fi
 
 %preun
@@ -217,7 +209,7 @@ fi
 %{_includedir}/isulad/*
 %attr(0755,root,root) %{_libdir}/pkgconfig
 %attr(0640,root,root) %{_libdir}/pkgconfig/isulad.pc
-%defattr(0550,root,root,0750)
+%defattr(0755,root,root,0755)
 %{_bindir}/*
 %{_libdir}/*
 %attr(0640,root,root) %{_sysconfdir}/sysconfig/iSulad
@@ -232,23 +224,51 @@ fi
 %endif
 
 %changelog
-+* Fri Sep 23 2020  <wujing50@huawei.com> - 2.0.5-20200923.100811.git275398ce
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: fix some memory bugs
+* Sat Nov 28 2020 lifeng<lifeng68@huawei.com> - 2.0.7-20201128.095506.git1e1623a5
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: Mounts: only qsort the configed mounts and make possible to bind mount /proc and /sys/fs.
+- related lxc PR fixed:
+- 1.add check whether have /proc mounts entry, if has, skip the auto
+- 2.mount cgroup before do mount entrys
+- 3.pass if the mount on top of /proc and the source of the mount is a proc filesystem
 
-+* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: modify log level to warn
+* Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.7-20201125.165149.git7d150c3c
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: update from openeuler
 
-+* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
-+- Type:bugfix
-+- ID:NA
-+- SUG:NA
-+- DESC: remove unused config
+* Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.6-20201125.160534.git9fb5e75d
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix rpath not work
+
+* Thu Nov 12 2020  gaohuatao<gaohuatao@huawei.com> - 2.0.6-20201112.193005.git8a6b73c8
+- Type: update from openeuler
+- ID:NA
+- SUG:NA
+- DESC: update from openeuler
+
+* Wed Oct 14 2020  lifeng68<lifeng68@huawei.com> - 2.0.6-20201014.152749.gitc8a43925
+- Type: upgrade to v2.0.6
+- ID:NA
+- SUG:NA
+- DESC: upgrade to v2.0.6
+
+* Fri Sep 18 2020  <lifeng68@huawei.com> - 2.0.5-20200918.112827.git9aea9b75
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: modify log level to warn
+
+* Mon Sep 14 2020  <lifeng68@huawei.com> - 2.0.5-20200914.172527.gitae86920a
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove unused config
 
 * Tue Sep 10 2020  <yangjiaqi11@huawei.com> - 2.0.5-20200910.144345.git71b1055b
 - Type:enhancement
@@ -261,3 +281,9 @@ fi
 - ID:NA
 - SUG:NA
 - DESC: upgrade from v2.0.3 to v2.0.5
+
+* Wed Sep 02 2020 YoungJQ <yangjiaqi11@huawei.com> - 2.0.3-20200902.114727.git6d945f26
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: modify source0 address
