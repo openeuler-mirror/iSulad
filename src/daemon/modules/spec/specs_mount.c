@@ -372,7 +372,8 @@ static defs_mount *mount_point_to_defs_mnt(container_config_v2_common_config_mou
         ERROR("Out of memory");
         return NULL;
     }
-    mnt->options = util_common_calloc_s(sizeof(char *) * (options_len + 3)); // +2 for readonly/propagation/selinux_relabel
+    mnt->options =
+        util_common_calloc_s(sizeof(char *) * (options_len + 3)); // +2 for readonly/propagation/selinux_relabel
     if (mnt->options == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -647,10 +648,10 @@ out:
     return m;
 }
 
-static defs_mount * parse_anonymous_volume(char *volume)
+static defs_mount *parse_anonymous_volume(char *volume)
 {
     int ret = 0;
-    char path[PATH_MAX] = {0};
+    char path[PATH_MAX] = { 0 };
     defs_mount *mount_element = NULL;
 
     if (!util_clean_path(volume, path, sizeof(path))) {
@@ -1378,17 +1379,12 @@ out:
 }
 #endif
 
-static int merge_fs_mounts_to_oci_and_spec(oci_runtime_spec *oci_spec, defs_mount **mounts, size_t mounts_len,
-                                           container_config_v2_common_config *common_config)
+static int merge_fs_mounts_to_oci_spec(oci_runtime_spec *oci_spec, defs_mount **mounts, size_t mounts_len)
 {
     int ret = 0;
     size_t new_size = 0, old_size = 0;
-    size_t new_mp_key_size, new_mp_val_size, old_mp_key_size, old_mp_val_size;
     size_t i = 0;
-    char **mp_key = NULL;
-    container_config_v2_common_config_mount_points_element **mp_val = NULL;
     defs_mount **mounts_temp = NULL;
-    struct volume *vol = NULL;
 
     if (mounts_len == 0) {
         return 0;
@@ -1414,42 +1410,66 @@ static int merge_fs_mounts_to_oci_and_spec(oci_runtime_spec *oci_spec, defs_moun
     }
     oci_spec->mounts = mounts_temp;
 
-    if (common_config != NULL) {
-        if (common_config->mount_points == NULL) {
-            common_config->mount_points = util_common_calloc_s(sizeof(container_config_v2_common_config_mount_points));
-            if (common_config->mount_points == NULL) {
+    for (i = 0; i < mounts_len; i++) {
+        defs_mount *mnt = mounts[i];
+        oci_spec->mounts[oci_spec->mounts_len] = mnt;
+        oci_spec->mounts_len++;
+        mounts[i] = NULL;
+    }
+
+out:
+    return ret;
+}
+
+static int merge_fs_mounts_to_v2_spec(defs_mount **mounts, size_t mounts_len,
+                                      container_config_v2_common_config *v2_spec)
+{
+    int ret = 0;
+    size_t new_mp_key_size, new_mp_val_size, old_mp_key_size, old_mp_val_size;
+    size_t i = 0;
+    char **mp_key = NULL;
+    container_config_v2_common_config_mount_points_element **mp_val = NULL;
+    struct volume *vol = NULL;
+
+    if (mounts_len == 0) {
+        return 0;
+    }
+
+    if (v2_spec != NULL) {
+        if (v2_spec->mount_points == NULL) {
+            v2_spec->mount_points = util_common_calloc_s(sizeof(container_config_v2_common_config_mount_points));
+            if (v2_spec->mount_points == NULL) {
                 ERROR("Out of memory");
                 ret = -1;
                 goto out;
             }
         }
-        new_mp_key_size = (common_config->mount_points->len + mounts_len) * sizeof(char *);
-        old_mp_key_size = common_config->mount_points->len * sizeof(char *);
-        new_mp_val_size = (common_config->mount_points->len + mounts_len) *
+        new_mp_key_size = (v2_spec->mount_points->len + mounts_len) * sizeof(char *);
+        old_mp_key_size = v2_spec->mount_points->len * sizeof(char *);
+        new_mp_val_size = (v2_spec->mount_points->len + mounts_len) *
                           sizeof(container_config_v2_common_config_mount_points_element *);
-        old_mp_val_size =
-            common_config->mount_points->len * sizeof(container_config_v2_common_config_mount_points_element *);
+        old_mp_val_size = v2_spec->mount_points->len * sizeof(container_config_v2_common_config_mount_points_element *);
 
-        ret = util_mem_realloc((void **)&mp_key, new_mp_key_size, common_config->mount_points->keys, old_mp_key_size);
+        ret = util_mem_realloc((void **)&mp_key, new_mp_key_size, v2_spec->mount_points->keys, old_mp_key_size);
         if (ret != 0) {
             ERROR("Failed to realloc memory mount point");
             ret = -1;
             goto out;
         }
-        common_config->mount_points->keys = mp_key;
-        ret = util_mem_realloc((void **)&mp_val, new_mp_val_size, common_config->mount_points->values, old_mp_val_size);
+        v2_spec->mount_points->keys = mp_key;
+        ret = util_mem_realloc((void **)&mp_val, new_mp_val_size, v2_spec->mount_points->values, old_mp_val_size);
         if (ret != 0) {
             ERROR("Failed to realloc memory mount point");
             ret = -1;
             goto out;
         }
-        common_config->mount_points->values = mp_val;
+        v2_spec->mount_points->values = mp_val;
     }
 
     for (i = 0; i < mounts_len; i++) {
         defs_mount *mnt = mounts[i];
         if (strcmp(mnt->type, "volume") == 0) {
-            struct volume_options opts = {.ref = common_config->id};
+            struct volume_options opts = { .ref = v2_spec->id };
             // support local volume only currently.
             vol = volume_create(VOLUME_DEFAULT_DRIVER_NAME, mnt->source, &opts);
             if (vol == NULL) {
@@ -1461,8 +1481,8 @@ static int merge_fs_mounts_to_oci_and_spec(oci_runtime_spec *oci_spec, defs_moun
             mnt->source = util_strdup_s(vol->path);
 
 #ifdef ENABLE_SELINUX
-            if (oci_spec->linux != NULL) {
-                ret = relabel_volume(vol, mnt, oci_spec->linux->mount_label);
+            if (v2_spec->mount_label != NULL) {
+                ret = relabel_volume(vol, mnt, v2_spec->mount_label);
                 if (ret != 0) {
                     ERROR("Failed to relabel volume");
                     ret = -1;
@@ -1472,41 +1492,37 @@ static int merge_fs_mounts_to_oci_and_spec(oci_runtime_spec *oci_spec, defs_moun
 #endif
         }
 
-        if (common_config != NULL) {
-            common_config->mount_points->values[common_config->mount_points->len] = defs_mnt_to_mount_point(mnt);
-            if (common_config->mount_points->values[common_config->mount_points->len] == NULL) {
+        if (v2_spec != NULL) {
+            v2_spec->mount_points->values[v2_spec->mount_points->len] = defs_mnt_to_mount_point(mnt);
+            if (v2_spec->mount_points->values[v2_spec->mount_points->len] == NULL) {
                 ERROR("Failed to transform to mount point");
                 ret = -1;
                 goto out;
             }
             if (vol != NULL) {
-                common_config->mount_points->values[common_config->mount_points->len]->name = util_strdup_s(vol->name);
-                common_config->mount_points->values[common_config->mount_points->len]->driver = util_strdup_s(vol->driver);
+                v2_spec->mount_points->values[v2_spec->mount_points->len]->name = util_strdup_s(vol->name);
+                v2_spec->mount_points->values[v2_spec->mount_points->len]->driver = util_strdup_s(vol->driver);
             }
-            common_config->mount_points->values[common_config->mount_points->len]->named = mnt->named;
-            common_config->mount_points->keys[common_config->mount_points->len] = util_strdup_s(mnt->destination);
-            common_config->mount_points->len++;
+            v2_spec->mount_points->values[v2_spec->mount_points->len]->named = mnt->named;
+            v2_spec->mount_points->keys[v2_spec->mount_points->len] = util_strdup_s(mnt->destination);
+            v2_spec->mount_points->len++;
         }
 
         if (vol != NULL && !have_nocopy(mnt)) {
             /* if mount point have data and it's mounted from volume,
              * we need to copy data from destination mount point to volume */
-            ret = copy_data_to_volume(common_config->base_fs, mnt);
+            ret = copy_data_to_volume(v2_spec->base_fs, mnt);
             if (ret != 0) {
                 ERROR("Failed to copy data to volume");
                 goto out;
             }
         }
 
-        // mount -t have no type volume, use bind in oci spec
+        // mount -t have no type volume, trans volume to bind
         if (strcmp(mnt->type, "volume") == 0) {
             free(mnt->type);
             mnt->type = util_strdup_s("bind");
         }
-        oci_spec->mounts[oci_spec->mounts_len] = mnt;
-        oci_spec->mounts_len++;
-        mounts[i] = NULL;
-
         free_volume(vol);
         vol = NULL;
     }
@@ -2137,39 +2153,36 @@ out:
     return ret;
 }
 
-static bool mounts_expand(oci_runtime_spec *container, size_t add_len)
+static bool mounts_expand(defs_mount ***all_mounts, size_t *all_mounts_len, size_t add_len)
 {
     defs_mount **tmp_mount = NULL;
     int ret = 0;
-    size_t old_len = container->mounts_len;
+    defs_mount **old_mount = *all_mounts;
+    size_t old_len = *all_mounts_len;
+
     if (add_len > SIZE_MAX / sizeof(defs_mount *) - old_len) {
         ERROR("Too many mount elements!");
         return false;
     }
-    ret = util_mem_realloc((void **)&tmp_mount, (old_len + add_len) * sizeof(defs_mount *), container->mounts,
+    ret = util_mem_realloc((void **)&tmp_mount, (old_len + add_len) * sizeof(defs_mount *), old_mount,
                            old_len * sizeof(defs_mount *));
     if (ret < 0) {
         ERROR("memory realloc failed for mount array expand");
         return false;
     }
-    container->mounts = tmp_mount;
-    container->mounts_len = old_len + add_len;
+    *all_mounts = tmp_mount;
+    *all_mounts_len = old_len + add_len;
 
     return true;
 }
 
-static bool mount_file(oci_runtime_spec *container, const char *src_path, const char *dst_path)
+static bool mount_file(defs_mount ***all_mounts, size_t *all_mounts_len, const char *src_path, const char *dst_path)
 {
     char **options = NULL;
     size_t options_len = 2;
     bool ret = false;
     defs_mount *tmp_mounts = NULL;
 
-    /* mount options */
-    if (options_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("Options len is too long!");
-        goto out_free;
-    }
     options = util_common_calloc_s(options_len * sizeof(char *));
     if (options == NULL) {
         ERROR("Out of memory");
@@ -2192,11 +2205,12 @@ static bool mount_file(oci_runtime_spec *container, const char *src_path, const 
     options = NULL;
 
     /* expand mount array */
-    if (!mounts_expand(container, 1)) {
+    if (!mounts_expand(all_mounts, all_mounts_len, 1)) {
         goto out_free;
     }
+
     /* add a new mount node */
-    container->mounts[container->mounts_len - 1] = tmp_mounts;
+    (*all_mounts)[(*all_mounts_len) - 1] = tmp_mounts;
 
     ret = true;
 out_free:
@@ -2208,17 +2222,14 @@ out_free:
     return ret;
 }
 
-static bool add_host_channel_mount(oci_runtime_spec *container, const host_config_host_channel *host_channel)
+static bool add_host_channel_mount(defs_mount ***all_mounts, size_t *all_mounts_len,
+                                   const host_config_host_channel *host_channel)
 {
     char **options = NULL;
     size_t options_len = 3;
     bool ret = false;
     defs_mount *tmp_mounts = NULL;
 
-    if (options_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("Invalid option size");
-        return ret;
-    }
     options = util_common_calloc_s(options_len * sizeof(char *));
     if (options == NULL) {
         ERROR("Out of memory");
@@ -2242,15 +2253,14 @@ static bool add_host_channel_mount(oci_runtime_spec *container, const host_confi
     options = NULL;
 
     /* expand mount array */
-    if (!mounts_expand(container, 1)) {
+    if (!mounts_expand(all_mounts, all_mounts_len, 1)) {
         goto out_free;
     }
-    /* add a new mount node */
-    container->mounts[container->mounts_len - 1] = tmp_mounts;
+
+    (*all_mounts)[(*all_mounts_len) - 1] = tmp_mounts;
 
     ret = true;
 out_free:
-
     if (!ret) {
         util_free_array_by_len(options, options_len);
         free_defs_mount(tmp_mounts);
@@ -2319,7 +2329,7 @@ static inline bool is_mount_destination_hostname(const char *destination)
  * if not exists: append mounts to ocispec by v2_spec
  * if exists: replace the source in v2_spec
  */
-static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *host_spec,
+static int append_network_files_mounts(defs_mount ***all_mounts, size_t *all_mounts_len, host_config *host_spec,
                                        container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
@@ -2327,25 +2337,27 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
     bool has_hosts_mount = false;
     bool has_resolv_mount = false;
     bool has_hostname_mount = false;
+    defs_mount **old_mounts = *all_mounts;
+    size_t old_mounts_len = *all_mounts_len;
 #ifdef ENABLE_SELINUX
     bool share = namespace_is_container(host_spec->network_mode);
 #endif
 
-    for (i = 0; i < oci_spec->mounts_len; i++) {
-        if (is_mount_destination_hosts(oci_spec->mounts[i]->destination)) {
+    for (i = 0; i < old_mounts_len; i++) {
+        if (is_mount_destination_hosts(old_mounts[i]->destination)) {
             has_hosts_mount = true;
             free(v2_spec->hosts_path);
-            v2_spec->hosts_path = util_strdup_s(oci_spec->mounts[i]->source);
+            v2_spec->hosts_path = util_strdup_s(old_mounts[i]->source);
         }
-        if (is_mount_destination_resolv(oci_spec->mounts[i]->destination)) {
+        if (is_mount_destination_resolv(old_mounts[i]->destination)) {
             has_resolv_mount = true;
             free(v2_spec->resolv_conf_path);
-            v2_spec->resolv_conf_path = util_strdup_s(oci_spec->mounts[i]->source);
+            v2_spec->resolv_conf_path = util_strdup_s(old_mounts[i]->source);
         }
-        if (is_mount_destination_hostname(oci_spec->mounts[i]->destination)) {
+        if (is_mount_destination_hostname(old_mounts[i]->destination)) {
             has_hostname_mount = true;
             free(v2_spec->hostname_path);
-            v2_spec->hostname_path = util_strdup_s(oci_spec->mounts[i]->source);
+            v2_spec->hostname_path = util_strdup_s(old_mounts[i]->source);
         }
     }
 
@@ -2361,7 +2373,7 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
                 goto out;
             }
 #endif
-            if (!mount_file(oci_spec, v2_spec->hosts_path, ETC_HOSTS)) {
+            if (!mount_file(all_mounts, all_mounts_len, v2_spec->hosts_path, ETC_HOSTS)) {
                 ERROR("Merge hosts mount failed");
                 ret = -1;
                 goto out;
@@ -2379,7 +2391,7 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
                 goto out;
             }
 #endif
-            if (!mount_file(oci_spec, v2_spec->resolv_conf_path, RESOLV_CONF_PATH)) {
+            if (!mount_file(all_mounts, all_mounts_len, v2_spec->resolv_conf_path, RESOLV_CONF_PATH)) {
                 ERROR("Merge resolv.conf mount failed");
                 ret = -1;
                 goto out;
@@ -2397,7 +2409,7 @@ static int append_network_files_mounts(oci_runtime_spec *oci_spec, host_config *
                 return -1;
             }
 #endif
-            if (!mount_file(oci_spec, v2_spec->hostname_path, ETC_HOSTNAME)) {
+            if (!mount_file(all_mounts, all_mounts_len, v2_spec->hostname_path, ETC_HOSTNAME)) {
                 ERROR("Merge hostname mount failed");
                 ret = -1;
                 goto out;
@@ -2497,8 +2509,7 @@ out:
     return ret;
 }
 
-static int prepare_share_shm(oci_runtime_spec *oci_spec, host_config *host_spec,
-                             container_config_v2_common_config *v2_spec)
+static int prepare_share_shm(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
 #define MAX_PROPERTY_LEN 64
     char shmproperty[MAX_PROPERTY_LEN] = { 0 };
@@ -2551,17 +2562,13 @@ out:
     return ret;
 }
 
-static bool add_shm_mount(oci_runtime_spec *container, const char *shm_path)
+static bool add_shm_mount(defs_mount ***all_mounts, size_t *all_mounts_len, const char *shm_path)
 {
     char **options = NULL;
     size_t options_len = 3;
     bool ret = false;
     defs_mount *tmp_mounts = NULL;
 
-    if (options_len > SIZE_MAX / sizeof(char *)) {
-        ERROR("Invalid option size");
-        return ret;
-    }
     options = util_common_calloc_s(options_len * sizeof(char *));
     if (options == NULL) {
         ERROR("Out of memory");
@@ -2586,11 +2593,11 @@ static bool add_shm_mount(oci_runtime_spec *container, const char *shm_path)
     options = NULL;
 
     /* expand mount array */
-    if (!mounts_expand(container, 1)) {
+    if (!mounts_expand(all_mounts, all_mounts_len, 1)) {
         goto out_free;
     }
-    /* add a new mount node */
-    container->mounts[container->mounts_len - 1] = tmp_mounts;
+
+    (*all_mounts)[(*all_mounts_len) - 1] = tmp_mounts;
 
     ret = true;
 out_free:
@@ -2603,8 +2610,7 @@ out_free:
 }
 
 #define SHM_MOUNT_POINT "/dev/shm"
-static int setup_ipc_dirs(oci_runtime_spec *oci_spec, host_config *host_spec,
-                          container_config_v2_common_config *v2_spec)
+static int setup_ipc_dirs(host_config *host_spec, container_config_v2_common_config *v2_spec)
 {
     int ret = 0;
     container_t *cont = NULL;
@@ -2617,7 +2623,7 @@ static int setup_ipc_dirs(oci_runtime_spec *oci_spec, host_config *host_spec,
     }
     // setup shareable dirs
     if (host_spec->ipc_mode == NULL || namespace_is_shareable(host_spec->ipc_mode)) {
-        return prepare_share_shm(oci_spec, host_spec, v2_spec);
+        return prepare_share_shm(host_spec, v2_spec);
     }
 
     if (namespace_is_container(host_spec->ipc_mode)) {
@@ -2654,7 +2660,7 @@ int destination_compare(const void *p1, const void *p2)
     return strcmp(mount_1->destination, mount_2->destination);
 }
 
-static defs_mount * get_conflict_mount_point(defs_mount **mounts, size_t mounts_len, defs_mount *mnt)
+static defs_mount *get_conflict_mount_point(defs_mount **mounts, size_t mounts_len, defs_mount *mnt)
 {
     size_t i = 0;
 
@@ -2832,7 +2838,7 @@ static int add_image_config_volumes(container_config *container_spec, defs_mount
     defs_mount *mnt = NULL;
     defs_mount *conflict = NULL;
 
-    for (i = 0; container_spec->volumes != 0 &&  i < container_spec->volumes->len; i++) {
+    for (i = 0; container_spec->volumes != 0 && i < container_spec->volumes->len; i++) {
         mnt = parse_anonymous_volume(container_spec->volumes->keys[i]);
         if (mnt == NULL) {
             ERROR("parse binds %s failed", container_spec->volumes->keys[i]);
@@ -2863,8 +2869,8 @@ out:
 // 2. if --volumes-from conflict with -v/--mount, drop the mount of --volumes-from
 // 3. if anonymous volumes in image config conflict with -v/--mount/--volumes-from,
 //    drop the anonymous volumes in image config
-static int merge_all_fs_mounts(host_config *host_spec, container_config *container_spec,
-                               defs_mount ***all_mounts, size_t *all_mounts_len)
+static int merge_all_fs_mounts(host_config *host_spec, container_config *container_spec, defs_mount ***all_mounts,
+                               size_t *all_mounts_len)
 {
     int ret = 0;
     defs_mount **merged_mounts = NULL;
@@ -2943,9 +2949,9 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     }
 
     /* mounts to mount filesystem */
-    ret = merge_fs_mounts_to_oci_and_spec(oci_spec, all_fs_mounts, all_fs_mounts_len, v2_spec);
+    ret = merge_fs_mounts_to_v2_spec(all_fs_mounts, all_fs_mounts_len, v2_spec);
     if (ret) {
-        ERROR("Failed to merge mounts");
+        ERROR("Failed to merge mounts in to v2 spec");
         goto out;
     }
 
@@ -2954,7 +2960,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
 
     /* host channel to mount */
     if (host_spec->host_channel != NULL) {
-        if (!add_host_channel_mount(oci_spec, host_spec->host_channel)) {
+        if (!add_host_channel_mount(&all_fs_mounts, &all_fs_mounts_len, host_spec->host_channel)) {
             ERROR("Failed to merge host channel mount");
             goto out;
         }
@@ -2965,7 +2971,7 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     }
 
     /* setup ipc dir */
-    if (setup_ipc_dirs(oci_spec, host_spec, v2_spec) != 0) {
+    if (setup_ipc_dirs(host_spec, v2_spec) != 0) {
         ret = -1;
         goto out;
     }
@@ -2973,7 +2979,23 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
     /* add ipc mount */
     if (v2_spec->shm_path != NULL) {
         // check whether duplication
-        add_shm_mount(oci_spec, v2_spec->shm_path);
+        add_shm_mount(&all_fs_mounts, &all_fs_mounts_len, v2_spec->shm_path);
+    }
+
+    if (!host_spec->system_container) {
+        ret = append_network_files_mounts(&all_fs_mounts, &all_fs_mounts_len, host_spec, v2_spec);
+        if (ret) {
+            ERROR("Failed to append network mounts");
+            goto out;
+        }
+    }
+
+    qsort(all_fs_mounts, all_fs_mounts_len, sizeof(all_fs_mounts[0]), destination_compare);
+
+    ret = merge_fs_mounts_to_oci_spec(oci_spec, all_fs_mounts, all_fs_mounts_len);
+    if (ret) {
+        ERROR("Failed to merge all mounts in to oci spec");
+        goto out;
     }
 
     if (!has_mount_shm(host_spec, v2_spec) && host_spec->shm_size > 0) {
@@ -2983,16 +3005,6 @@ int merge_conf_mounts(oci_runtime_spec *oci_spec, host_config *host_spec, contai
             goto out;
         }
     }
-
-    if (!host_spec->system_container) {
-        ret = append_network_files_mounts(oci_spec, host_spec, v2_spec);
-        if (ret) {
-            ERROR("Failed to append network mounts");
-            goto out;
-        }
-    }
-
-    qsort(oci_spec->mounts, oci_spec->mounts_len, sizeof(oci_spec->mounts[0]), destination_compare);
 
 out:
     if (mounted) {
