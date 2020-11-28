@@ -1,0 +1,26 @@
+From cd9d3524c53ee2090f6d3c8f079ad7905ca4bd41 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 26 Nov 2020 09:30:05 +0800
+Subject: [PATCH 08/10] show all mutl network ips
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/daemon/entry/cri/cri_sandbox.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/daemon/entry/cri/cri_sandbox.cc b/src/daemon/entry/cri/cri_sandbox.cc
+index b44c86c..772638a 100644
+--- a/src/daemon/entry/cri/cri_sandbox.cc
++++ b/src/daemon/entry/cri/cri_sandbox.cc
+@@ -978,7 +978,7 @@ void CRIRuntimeServiceImpl::GetFormatIPsForMultNet(container_inspect *inspect, c
+     }
+ 
+     for (size_t i = 0; i < len; i++) {
+-        if (elems[i]->interface == nullptr || strcmp(elems[i]->interface, defaultInterface.c_str()) == 0) {
++        if (elems[i]->interface == nullptr) {
+             continue;
+         }
+         Network::PodNetworkStatus status;
+-- 
+2.25.1
+
