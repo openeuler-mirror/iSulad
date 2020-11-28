@@ -1,5 +1,5 @@
 %global _version 2.0.7
-%global _release 20201125.165149.git7d150c3c
+%global _release 20201128.095506.git1e1623a5
 %global is_systemd 1
 
 Name:      iSulad
@@ -12,13 +12,16 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch6001: 0001-Add-a-solution-to-the-gpgkey-problem.patch
-Patch6002: 0002-change-default-tmp-directory-from-var-tmp-to-var-lib.patch
-Patch6003: 0003-update-api.proto-to-v1.19.3-according-to-kubelet.patch
-Patch6004: 0004-adapt-CI-ISULAD_TMPDIR-testcases.patch
-Patch6005: 0005-listening-127.0.0.1-port-in-cri-stream-websocket-ser.patch
-Patch6006: 0006-using-64-bit-unique-token-in-CRI-websockets-server-R.patch
-Patch6007: 0007-add-mock-conf_get_use_decrypted_key_flag-and-setup-a.patch
+Patch0001: 0001-Add-a-solution-to-the-gpgkey-problem.patch
+Patch0002: 0002-change-default-tmp-directory-from-var-tmp-to-var-lib.patch
+Patch0003: 0003-update-api.proto-to-v1.19.3-according-to-kubelet.patch
+Patch0004: 0004-adapt-CI-ISULAD_TMPDIR-testcases.patch
+Patch0005: 0005-listening-127.0.0.1-port-in-cri-stream-websocket-ser.patch
+Patch0006: 0006-using-64-bit-unique-token-in-CRI-websockets-server-R.patch
+Patch0007: 0007-add-mock-conf_get_use_decrypted_key_flag-and-setup-a.patch
+Patch0008: 0008-show-all-mutl-network-ips.patch
+Patch0009: 0009-iSulad-only-qsort-the-configed-mounts.patch
+Patch0010: 0010-CI-add-testcases-for-bind-proc-and-sys-fs.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -221,6 +224,16 @@ fi
 %endif
 
 %changelog
+* Sat Nov 28 2020 lifeng<lifeng68@huawei.com> - 2.0.7-20201128.095506.git1e1623a5
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: Mounts: only qsort the configed mounts and make possible to bind mount /proc and /sys/fs.
+- related lxc PR fixed:
+- 1.add check whether have /proc mounts entry, if has, skip the auto
+- 2.mount cgroup before do mount entrys
+- 3.pass if the mount on top of /proc and the source of the mount is a proc filesystem
+
 * Wed Nov 25 2020  wangfengtu<wangfengtu@huawei.com> - 2.0.7-20201125.165149.git7d150c3c
 - Type: bugfix
 - ID:NA
