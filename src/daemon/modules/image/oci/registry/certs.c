@@ -26,9 +26,11 @@
 #include "utils.h"
 #include "utils_file.h"
 #include "utils_string.h"
+#include "err_msg.h"
 
 #define DEFAULT_ISULAD_CERTD "/etc/isulad/certs.d"
 #define CLIENT_CERT_SUFFIX ".cert"
+#define CLIENT_KEY_SUFFIX ".key"
 #define CA_SUFFIX ".crt"
 
 static char *g_certs_dir = DEFAULT_ISULAD_CERTD;
@@ -68,18 +70,117 @@ static char *corresponding_key_name(const char *cert_name)
     return key_name;
 }
 
+static char *corresponding_cert_name(const char *key_name)
+{
+    char cert_name[PATH_MAX] = {0};
+    char *tmp_key_name = NULL;
+    int sret = 0;
+
+    if (key_name == NULL) {
+        ERROR("Invalid NULL pointer");
+        return NULL;
+    }
+
+    if (strlen(key_name) <= strlen(CLIENT_KEY_SUFFIX)) {
+        ERROR("Invalid key name too short");
+        return NULL;
+    }
+
+    tmp_key_name = util_strdup_s(key_name);
+    tmp_key_name[strlen(tmp_key_name) - strlen(CLIENT_KEY_SUFFIX)] = 0; // strip suffix .key
+
+    sret = snprintf(cert_name, sizeof(cert_name), "%s.cert", tmp_key_name);
+    if (sret < 0 || (size_t)sret >= sizeof(cert_name)) {
+        ERROR("Failed to sprintf cert name");
+        free(tmp_key_name);
+        return NULL;
+    }
+
+    return util_strdup_s(cert_name);
+}
+
+static int get_path_by_cert_name(const char *path, const char *cert_name, char **cert_path, char **key_path)
+{
+    int ret = 0;
+    char *key_name = NULL;
+    char *tmp_key_path = NULL;
+    char *tmp_cert_path = NULL;
+
+    key_name = corresponding_key_name(cert_name);
+    if (key_name == NULL) {
+        ERROR("find corresponding key name for cert failed");
+        ret = -1;
+        goto out;
+    }
+    tmp_key_path = util_path_join(path, key_name);
+    tmp_cert_path = util_path_join(path, cert_name);
+    if (tmp_cert_path == NULL || tmp_key_path == NULL) {
+        ret = -1;
+        ERROR("error join path");
+        goto out;
+    }
+
+    *cert_path = util_strdup_s(tmp_cert_path);
+    *key_path = util_strdup_s(tmp_key_path);
+
+out:
+    free(key_name);
+    free(tmp_cert_path);
+    free(tmp_key_path);
+
+    return ret;
+}
+
+static int get_path_by_key_name(const char *path, const char *key_name, char **cert_path, char **key_path)
+{
+    int ret = 0;
+    char *cert_name = NULL;
+    char *tmp_key_path = NULL;
+    char *tmp_cert_path = NULL;
+
+    cert_name = corresponding_cert_name(key_name);
+    if (cert_name == NULL) {
+        ERROR("find corresponding key name for cert failed");
+        ret = -1;
+        goto out;
+    }
+    tmp_key_path = util_path_join(path, key_name);
+    tmp_cert_path = util_path_join(path, cert_name);
+    if (tmp_cert_path == NULL || tmp_key_path == NULL) {
+        ret = -1;
+        ERROR("error join path");
+        goto out;
+    }
+
+    *cert_path = util_strdup_s(tmp_cert_path);
+    *key_path = util_strdup_s(tmp_key_path);
+
+out:
+    free(cert_name);
+    free(tmp_cert_path);
+    free(tmp_key_path);
+
+    return ret;
+}
+
 static int load_certs(const char *path, const char *name, bool use_decrypted_key, char **ca_file, char **cert_file,
                       char **key_file)
 {
     int ret = 0;
     char *key_name = NULL;
+    char *tmp_key_file = NULL;
+    char *tmp_cert_file = NULL;
 
-    if (path == NULL || ca_file == NULL || cert_file == NULL || key_file == NULL) {
+    if (path == NULL || ca_file == NULL || cert_file == NULL || key_file == NULL || name == NULL) {
         ERROR("Invalid NULL pointer");
         return -1;
     }
 
-    if (*ca_file == NULL && util_has_suffix(name, CA_SUFFIX)) {
+    if (util_has_suffix(name, CA_SUFFIX)) {
+        if (*ca_file != NULL) {
+            ERROR("more than one ca file found, support only one ca file currently, continue to try");
+            goto out;
+        }
         *ca_file = util_path_join(path, name);
         if (*ca_file == NULL) {
             ret = -1;
@@ -87,20 +188,43 @@ static int load_certs(const char *path, const char *name, bool use_decrypted_key
             goto out;
         }
         goto out;
-    } else if (*cert_file == NULL && *key_file == NULL && util_has_suffix(name, CLIENT_CERT_SUFFIX)) {
-        key_name = corresponding_key_name(name);
-        if (key_name == NULL) {
-            ERROR("find corresponding key name for cert failed");
-            ret = -1;
+    } else if (util_has_suffix(name, CLIENT_CERT_SUFFIX)) {
+        ret = get_path_by_cert_name(path, name, &tmp_cert_file, &tmp_key_file);
+        if (ret != 0) {
+            ERROR("get path of cert and key by cert name failed");
+            isulad_try_set_error_message("get path of cert and key by cert name failed");
             goto out;
         }
-        *key_file = util_path_join(path, key_name);
-        *cert_file = util_path_join(path, name);
-        if (*cert_file == NULL || *key_file == NULL) {
+        if (!util_file_exists(tmp_key_file)) {
             ret = -1;
-            ERROR("error join key name");
+            ERROR("lack corresponding key file for tls cert");
+            isulad_try_set_error_message("lack corresponding key file for tls cert");
             goto out;
         }
+        if (*cert_file != NULL) {
+            ERROR("more than one cert file found, support only one cert file currently, continue to try");
+            goto out;
+        }
+        *cert_file = util_strdup_s(tmp_cert_file);
+        goto out;
+    } else if (util_has_suffix(name, CLIENT_KEY_SUFFIX)) {
+        ret = get_path_by_key_name(path, name, &tmp_cert_file, &tmp_key_file);
+        if (ret != 0) {
+            ERROR("get path of cert and key by key name failed");
+            isulad_try_set_error_message("get path of cert and key by key name failed");
+            goto out;
+        }
+        if (!util_file_exists(tmp_cert_file)) {
+            ret = -1;
+            ERROR("lack corresponding cert file for tls key");
+            isulad_try_set_error_message("lack corresponding cert file for tls key");
+            goto out;
+        }
+        if (*key_file != NULL) {
+            ERROR("more than one key file found, support only one key file currently, continue to try");
+            goto out;
+        }
+        *key_file = util_strdup_s(tmp_key_file);
         goto out;
     } else {
         goto out;
@@ -109,6 +233,8 @@ static int load_certs(const char *path, const char *name, bool use_decrypted_key
 out:
     free(key_name);
     key_name = NULL;
+    free(tmp_cert_file);
+    free(tmp_key_file);
 
     if (ret != 0) {
         free(*ca_file);
@@ -120,6 +246,15 @@ out:
     }
 
     return ret;
+}
+
+static bool valid_certs(char *ca_file, char *cert_file, char *key_file)
+{
+    if ((ca_file == NULL && cert_file == NULL && key_file == NULL) ||
+        (ca_file != NULL && cert_file != NULL && key_file != NULL)) {
+        return true;
+    }
+    return false;
 }
 
 int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_file, char **key_file)
@@ -170,8 +305,10 @@ int certs_load(char *host, bool use_decrypted_key, char **ca_file, char **cert_f
         entry = readdir(dir);
     }
 
-    if (*ca_file == NULL || *cert_file == NULL || *key_file == NULL) {
-        ERROR("Loaded only part of certs, continue to try");
+    if (!valid_certs(*ca_file, *cert_file, *key_file)) {
+        ERROR("failed to load all certs");
+        isulad_try_set_error_message("failed to load all certs");
+        ret = -1;
     }
 
 out:
