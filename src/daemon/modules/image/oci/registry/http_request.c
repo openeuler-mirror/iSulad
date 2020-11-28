@@ -118,7 +118,7 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
         }
     }
 
-    if (options->ca_file != NULL) {
+    if (!desc->insecure_registry) {
         options->ssl_verify_peer = true;
     }
 
