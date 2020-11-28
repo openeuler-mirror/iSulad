@@ -94,8 +94,7 @@ auto IsImageNotFoundError(const std::string &err) -> bool;
 
 auto sha256(const char *val) -> std::string;
 
-auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, size_t *len, Errors &error)
--> cri_pod_network_element **;
+auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, Errors &error) -> cri_pod_network_container *;
 
 auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
 -> std::unique_ptr<runtime::v1alpha2::PodSandbox>;
