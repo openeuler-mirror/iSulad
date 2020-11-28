@@ -858,7 +858,7 @@ static int inspect_container_helper(const char *id, int timeout, char **containe
     int ret = 0;
     container_inspect *inspect = NULL;
     parser_error err = NULL;
-    struct parser_context ctx = { OPT_GEN_KAY_VALUE | OPT_GEN_SIMPLIFY, 0 };
+    struct parser_context ctx = { OPT_GEN_KEY_VALUE | OPT_GEN_SIMPLIFY, 0 };
 
     inspect = inspect_container(id, timeout, true);
     if (inspect == NULL) {
