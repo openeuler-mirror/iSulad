@@ -67,8 +67,6 @@ add_library(${LIB_ISULAD_IMG} ${LIBTYPE}
     ${CMAKE_SOURCE_DIR}/src/utils/buffer/buffer.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/err_msg.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/selinux_label.c
-    ${CMAKE_SOURCE_DIR}/src/daemon/config/isulad_config.c
-    ${CMAKE_SOURCE_DIR}/src/daemon/config/daemon_arguments.c
     ${CMAKE_SOURCE_DIR}/src/daemon/common/sysinfo.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/isulad_tar.c
     ${CMAKE_SOURCE_DIR}/src/utils/tar/util_archive.c

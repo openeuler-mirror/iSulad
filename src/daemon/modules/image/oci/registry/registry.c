@@ -52,6 +52,7 @@
 #include "utils_string.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#include "oci_image.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define MAX_CONCURRENT_DOWNLOAD_NUM 5
@@ -1685,6 +1686,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     char blobpath[PATH_MAX] = { 0 };
     char scope[PATH_MAX] = { 0 };
     char *image_tmp_path = NULL;
+    struct oci_image_module_data *oci_image_data = NULL;
 
     if (desc == NULL || options == NULL) {
         ERROR("Invalid NULL param");
@@ -1718,13 +1720,14 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
 
     update_host(desc);
 
-    ret = makesure_isulad_tmpdir_perm_right();
+    oci_image_data = get_oci_image_data();
+    ret = makesure_isulad_tmpdir_perm_right(oci_image_data->root_dir);
     if (ret != 0) {
         ERROR("failed to make sure permission of image tmp work dir");
         goto out;
     }
 
-    image_tmp_path = oci_get_isulad_tmpdir();
+    image_tmp_path = oci_get_isulad_tmpdir(oci_image_data->root_dir);
     if (image_tmp_path == NULL) {
         ERROR("failed to get image tmp work dir");
         ret = -1;
@@ -1755,7 +1758,7 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
     desc->blobpath = util_strdup_s(blobpath);
-    desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
+    desc->use_decrypted_key = oci_image_data->use_decrypted_key;
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->insecure_registry = options->insecure_registry;
     desc->cancel = false;
@@ -1928,6 +1931,7 @@ int registry_login(registry_login_options *options)
 {
     int ret = 0;
     pull_descriptor *desc = NULL;
+    struct oci_image_module_data *oci_image_data = NULL;
 
     if (options == NULL || options->host == NULL || options->auth.username == NULL || options->auth.password == NULL ||
         strlen(options->auth.username) == 0 || strlen(options->auth.password) == 0) {
@@ -1942,9 +1946,11 @@ int registry_login(registry_login_options *options)
         goto out;
     }
 
+    oci_image_data = get_oci_image_data();
+
     desc->host = util_strdup_s(options->host);
     update_host(desc);
-    desc->use_decrypted_key = conf_get_use_decrypted_key_flag();
+    desc->use_decrypted_key = oci_image_data->use_decrypted_key;
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->insecure_registry = options->insecure_registry;
     desc->username = util_strdup_s(options->auth.username);

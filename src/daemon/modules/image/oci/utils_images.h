@@ -39,7 +39,6 @@ extern "C" {
 #define REPO_PREFIX_TO_STRIP "library/"
 #define MAX_ID_BUF_LEN 256
 
-
 char *oci_get_host(const char *name);
 char *oci_host_from_mirror(const char *mirror);
 char *oci_default_tag(const char *name);
@@ -54,8 +53,8 @@ int add_rootfs_and_history(const layer_blob *layers, size_t layers_len, const re
                            docker_image_config_v2 *config);
 bool oci_valid_time(char *time);
 
-char *oci_get_isulad_tmpdir();
-int makesure_isulad_tmpdir_perm_right();
+char *oci_get_isulad_tmpdir(const char *root_dir);
+int makesure_isulad_tmpdir_perm_right(const char *root_dir);
 
 #ifdef __cplusplus
 }

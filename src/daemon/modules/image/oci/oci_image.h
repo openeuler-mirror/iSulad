@@ -27,6 +27,19 @@
 extern "C" {
 #endif
 
+struct oci_image_module_data {
+    char *root_dir;
+    bool use_decrypted_key;
+    bool insecure_skip_verify_enforce;
+
+    char **registry_mirrors;
+    size_t registry_mirrors_len;
+
+    char **insecure_registries;
+    size_t insecure_registries_len;
+};
+struct oci_image_module_data *get_oci_image_data(void);
+
 int oci_init(const isulad_daemon_configs *args);
 void oci_exit();
 

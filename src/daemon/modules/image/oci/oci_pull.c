@@ -29,6 +29,7 @@
 #include "utils_array.h"
 #include "utils_base64.h"
 #include "utils_string.h"
+#include "oci_image.h"
 
 static int decode_auth(const char *auth, char **username, char **password)
 {
@@ -95,6 +96,7 @@ static int pull_image(const im_pull_request *request, char **name)
     char **mirror = NULL;
     char *host = NULL;
     char *with_tag = NULL;
+    struct oci_image_module_data *oci_image_data = NULL;
 
     options = (registry_pull_options *)util_common_calloc_s(sizeof(registry_pull_options));
     if (options == NULL) {
@@ -113,8 +115,9 @@ static int pull_image(const im_pull_request *request, char **name)
         options->auth.password = util_strdup_s(request->password);
     }
 
-    options->skip_tls_verify = conf_get_skip_insecure_verify_flag();
-    insecure_registries = conf_get_insecure_registry_list();
+    oci_image_data = get_oci_image_data();
+    options->skip_tls_verify = oci_image_data->insecure_skip_verify_enforce;
+    insecure_registries = oci_image_data->insecure_registries;
 
     host = oci_get_host(request->image);
     if (host != NULL) {
@@ -127,7 +130,7 @@ static int pull_image(const im_pull_request *request, char **name)
             goto out;
         }
     } else {
-        registry_mirrors = conf_get_registry_list();
+        registry_mirrors = oci_image_data->registry_mirrors;
         if (registry_mirrors == NULL) {
             ERROR("Invalid image name %s, no host found", request->image);
             isulad_try_set_error_message("Invalid image name, no host found");
@@ -160,10 +163,6 @@ static int pull_image(const im_pull_request *request, char **name)
 out:
     free(host);
     host = NULL;
-    util_free_array(registry_mirrors);
-    registry_mirrors = NULL;
-    util_free_array(insecure_registries);
-    insecure_registries = NULL;
     free_registry_pull_options(options);
     options = NULL;
 
