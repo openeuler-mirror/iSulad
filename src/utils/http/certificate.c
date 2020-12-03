@@ -24,6 +24,65 @@
 #include "isula_libutils/log.h"
 #include "utils_file.h"
 
+static const char * const g_weak_algos[] = {
+    "sha1WithRSAEncryption",
+    "md5WithRSAEncryption",
+    "md2WithRSAEncryption",
+    "ecdsaWithSHA1",
+    "dsaWithSHA1"
+};
+
+static void check_algo(X509 *cert)
+{
+    size_t i = 0;
+    size_t len = sizeof(g_weak_algos) / sizeof(char *);
+    char sigalgo_name[ALGO_NAME_LEN] = { 0 };
+    X509_ALGOR *sig_type = cert->sig_alg;
+
+    if (sig_type == NULL) {
+        ERROR("Failed to get cert signature type");
+        return;
+    }
+    if (i2t_ASN1_OBJECT(sigalgo_name, ALGO_NAME_LEN - 1, sig_type->algorithm) <= 0) {
+        ERROR("Failed to extract signature algorithm name");
+        return;
+    }
+
+    for (i = 0; i < len; i++) {
+        if (strcmp(g_weak_algos[i], sigalgo_name) == 0) {
+            WARN("Weak signature algorithm is used: %s", sigalgo_name);
+            return;
+        }
+    }
+}
+
+static void check_pub_key(X509 *cert)
+{
+    EVP_PKEY *pkey = X509_get_pubkey(cert);
+
+    if (pkey == NULL) {
+        ERROR("Failed to get public key");
+        return;
+    }
+
+    switch (pkey->type) {
+        case EVP_PKEY_RSA:
+            if (EVP_PKEY_bits(pkey) < RSA_PKEY_MIN_LEN) {
+                WARN("PublicKey's length is less then RSA suggested minimum length");
+            }
+            break;
+        case EVP_PKEY_EC:
+            if (EVP_PKEY_bits(pkey) < ECC_PKEY_MIN_LEN) {
+                WARN("PublicKey's length is less then ECC suggested minimum length");
+            }
+            break;
+        default:
+            break;
+    }
+
+    EVP_PKEY_free(pkey);
+}
+
 int get_common_name_from_tls_cert(const char *cert_path, char *value, size_t len)
 {
     int ret = 0;
@@ -46,6 +105,11 @@ int get_common_name_from_tls_cert(const char *cert_path, char *value, size_t len
         ret = -1;
         goto out;
     }
+
+    // check signature algorithm and public key length
+    check_algo(cert);
+    check_pub_key(cert);
+
     subject_name = X509_get_subject_name(cert);
     if (subject_name == NULL) {
         ERROR("Failed to get subject name in: %s\n", cert_path);
