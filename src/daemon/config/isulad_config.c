@@ -27,9 +27,9 @@
 #include <isula_libutils/isulad_daemon_configs.h>
 #include <isula_libutils/json_common.h>
 #include <isula_libutils/oci_runtime_spec.h>
+#include <isula_libutils/log.h>
 
 #include "constants.h"
-#include "isula_libutils/log.h"
 #include "utils.h"
 #include "sysinfo.h"
 #include "err_msg.h"
@@ -815,6 +815,61 @@ out:
     return logdriver;
 }
 
+/* conf get default container log opts */
+int conf_get_container_log_opts(isulad_daemon_configs_container_log **opts)
+{
+    struct service_arguments *conf = NULL;
+    isulad_daemon_configs_container_log *result = NULL;
+    isulad_daemon_configs_container_log *work = NULL;
+    size_t i;
+    int ret = 0;
+
+    if (isulad_server_conf_rdlock() != 0) {
+        return -1;
+    }
+
+    conf = conf_get_server_conf();
+    if (conf == NULL || conf->json_confs->container_log == NULL) {
+        goto out;
+    }
+    work = conf->json_confs->container_log;
+
+    result = util_common_calloc_s(sizeof(isulad_daemon_configs_container_log));
+    if (result == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    result->driver = util_strdup_s(work->driver);
+    if (work->opts == NULL) {
+        *opts = result;
+        result = NULL;
+        goto out;
+    }
+    if (work->opts->len > 0) {
+        result->opts = util_common_calloc_s(sizeof(json_map_string_string));
+        if (result->opts == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+    }
+    for (i = 0; i < work->opts->len; i++) {
+        if (append_json_map_string_string(result->opts, work->opts->keys[i], work->opts->values[i]) != 0) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    *opts = result;
+    result = NULL;
+out:
+    (void)isulad_server_conf_unlock();
+    free_isulad_daemon_configs_container_log(result);
+    return ret;
+}
+
 /* conf get image layer check flag */
 bool conf_get_image_layer_check_flag()
 {
@@ -1311,7 +1366,7 @@ static int merge_hosts_conf_into_global(struct service_arguments *args, const is
     return 0;
 }
 
-static int merge_logs_conf_into_global(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
+static int do_merge_daemon_logs_conf(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
 {
     size_t i;
 
@@ -1332,6 +1387,31 @@ static int merge_logs_conf_into_global(struct service_arguments *args, isulad_da
     }
 
     return 0;
+}
+
+// just mask isulad config to args
+static int do_merge_container_logs_conf(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
+{
+    if (tmp_json_confs->container_log == NULL) {
+        return 0;
+    }
+
+    // do not check valid of json log opts at here;
+    // while all config ready to do check.
+    free_isulad_daemon_configs_container_log(args->json_confs->container_log);
+    args->json_confs->container_log = tmp_json_confs->container_log;
+    tmp_json_confs->container_log = NULL;
+
+    return 0;
+}
+
+static int merge_logs_conf_into_global(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)
+{
+    if (do_merge_daemon_logs_conf(args, tmp_json_confs)) {
+        return -1;
+    }
+
+    return do_merge_container_logs_conf(args, tmp_json_confs);
 }
 
 static int merge_authorization_conf_into_global(struct service_arguments *args, isulad_daemon_configs *tmp_json_confs)

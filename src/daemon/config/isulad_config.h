@@ -51,6 +51,8 @@ char *conf_get_isulad_log_gather_fifo_path();
 
 int conf_get_cgroup_cpu_rt(int64_t *cpu_rt_period, int64_t *cpu_rt_runtime);
 
+int conf_get_container_log_opts(isulad_daemon_configs_container_log **opts);
+
 char *conf_get_isulad_log_file();
 char *conf_get_engine_log_file();
 char *conf_get_enable_plugins();

@@ -32,6 +32,7 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "opt_ulimit.h"
+#include "opt_log.h"
 
 const char isulad_desc[] = "GLOBAL OPTIONS:";
 const char isulad_usage[] = "[global options]";
@@ -100,6 +101,89 @@ int server_callback_log_opt(command_option_t *option, const char *value)
     }
 
 out:
+    return ret;
+}
+
+int server_callback_container_log_driver(command_option_t *option, const char *value)
+{
+    int ret = 0;
+    struct service_arguments *args = NULL;
+
+    if (option == NULL || value == NULL) {
+        COMMAND_ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+    if (!check_opt_container_log_driver(value)) {
+        ret = -1;
+        goto out;
+    }
+
+    args = (struct service_arguments *)option->data;
+
+    free(args->json_confs->container_log->driver);
+    args->json_confs->container_log->driver = util_strdup_s(value);
+
+out:
+    return ret;
+}
+
+int server_callback_container_log(command_option_t *option, const char *value)
+{
+    int ret = 0;
+    struct service_arguments *args = NULL;
+    json_map_string_string *log_opts = NULL;
+    char **split_opts = NULL;
+    size_t i;
+
+    if (option == NULL || value == NULL) {
+        COMMAND_ERROR("Invalid input arguments");
+        ret = -1;
+        goto out;
+    }
+    split_opts = util_string_split_multi(value, '=');
+    // value must be format of 'key = value'
+    if (util_array_len((const char **)split_opts) != 2) {
+        COMMAND_ERROR("Invalid input arguments: %s", value);
+        ret = -1;
+        goto out;
+    }
+
+    if (!check_raw_log_opt(split_opts[0])) {
+        COMMAND_ERROR("Unsupport container log key: %s", split_opts[0]);
+        ret = -1;
+        goto out;
+    }
+
+    args = (struct service_arguments *)option->data;
+    if (args->json_confs->container_log->opts == NULL) {
+        args->json_confs->container_log->opts = util_common_calloc_s(sizeof(json_map_string_string));
+    }
+    log_opts = args->json_confs->container_log->opts;
+    if (log_opts == NULL) {
+        COMMAND_ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < log_opts->len; i++) {
+        // just update found key-value
+        if (strcmp(split_opts[0], log_opts->keys[i]) == 0) {
+            free(log_opts->values[i]);
+            log_opts->values[i] = util_strdup_s(split_opts[1]);
+            goto out;
+        }
+    }
+
+    ret = append_json_map_string_string(log_opts, split_opts[0], split_opts[1]);
+    if (ret != 0) {
+        COMMAND_ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    util_free_array(split_opts);
     return ret;
 }
 

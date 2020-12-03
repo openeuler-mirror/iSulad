@@ -770,6 +770,7 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
+
     create_params.bundle = bundle;
     create_params.state = cont->state_path;
     create_params.oci_config_data = oci_spec;

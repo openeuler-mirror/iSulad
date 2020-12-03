@@ -57,6 +57,7 @@
 #include "utils_timestamp.h"
 #include "utils_verify.h"
 #include "selinux_label.h"
+#include "opt_log.h"
 
 static int do_init_cpurt_cgroups_path(const char *path, int recursive_depth, const char *mnt_root,
                                       int64_t cpu_rt_period, int64_t cpu_rt_runtime);
@@ -213,20 +214,110 @@ static container_config *get_container_spec_from_request(const container_create_
     return container_spec;
 }
 
-static int add_default_log_config_to_container_spec(const char *id, const char *runtime_root,
-                                                    container_config *container_spec)
+static void set_container_log_config_driver(isulad_daemon_configs_container_log *opts, container_config *container_spec)
 {
-    int ret = 0;
-    int i = 0;
-    bool file_found = false;
-    bool rotate_found = false;
-    bool size_found = false;
+    if (container_spec->log_driver != NULL) {
+        return;
+    }
 
-    /* generate default log path */
-    if (container_spec->log_driver != NULL &&
-        strcmp(CONTAINER_LOG_CONFIG_SYSLOG_DRIVER, container_spec->log_driver) == 0) {
+    // use daemon container log driver
+    container_spec->log_driver = util_strdup_s(opts->driver);
+    if (container_spec->log_driver != NULL) {
+        return;
+    }
+
+    // use default container log driver
+    container_spec->log_driver = util_strdup_s(CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER);
+}
+
+static int merge_container_log_config_opts(const char *daemon_driver, const json_map_string_string *daemon_opts,
+                                           container_config *spec)
+{
+    size_t i, j;
+
+    if (daemon_driver == NULL || strcmp(daemon_driver, spec->log_driver) != 0) {
+        // daemon driver different with spec, just ignore log opts of daemon
         return 0;
     }
+
+    // merge daemon container log opts into spec
+    for (i = 0; daemon_opts != NULL && i < daemon_opts->len; i++) {
+        for (j = 0; j < spec->annotations->len; j++) {
+            if (strcmp(spec->annotations->keys[j], daemon_opts->keys[i]) == 0) {
+                break;
+            }
+        }
+        if (j == spec->annotations->len &&
+            append_json_map_string_string(spec->annotations, daemon_opts->keys[i], daemon_opts->values[i]) != 0) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int do_set_default_log_path_for_json_file(const char *id, const char *root, bool file_found,
+                                                 container_config *spec)
+{
+    int nret = 0;
+    char default_path[PATH_MAX] = { 0 };
+
+    nret = snprintf(default_path, PATH_MAX, "%s/%s/console.log", root, id);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Create default log path for container %s failed", id);
+        return -1;
+    }
+    nret = append_json_map_string_string(spec->annotations, CONTAINER_LOG_CONFIG_KEY_FILE, default_path);
+    if (nret != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int do_check_container_log_config_opts(const char *id, const char *root, container_config *spec)
+{
+    size_t i;
+    bool file_found = false;
+
+    // check log opts is support by driver
+    for (i = 0; i < spec->annotations->len; i++) {
+        const char *tmp_key = spec->annotations->keys[i];
+        if (strncmp(tmp_key, CONTAINER_LOG_CONFIG_KEY_PREFIX, strlen(CONTAINER_LOG_CONFIG_KEY_PREFIX)) != 0) {
+            // ignore other configs
+            continue;
+        }
+        DEBUG("check log opt key: %s for driver: %s", tmp_key, spec->log_driver);
+        if (!check_opt_container_log_opt(spec->log_driver, tmp_key)) {
+            isulad_set_error_message("container log driver: %s, unsupport: %s", spec->log_driver, tmp_key);
+            return -1;
+        }
+
+        if (strcmp(CONTAINER_LOG_CONFIG_KEY_FILE, tmp_key) == 0) {
+            file_found = true;
+        }
+    }
+
+    if (!file_found && strcmp(spec->log_driver, CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER) == 0) {
+        return do_set_default_log_path_for_json_file(id, root, file_found, spec);
+    }
+
+    return 0;
+}
+
+static int set_container_log_config_to_container_spec(const char *id, const char *runtime_root,
+                                                      container_config *container_spec)
+{
+    int ret = 0;
+    isulad_daemon_configs_container_log *daemon_container_opts = NULL;
+
+    if (conf_get_container_log_opts(&daemon_container_opts) != 0) {
+        return -1;
+    }
+
+    set_container_log_config_driver(daemon_container_opts, container_spec);
 
     if (container_spec->annotations == NULL) {
         container_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
@@ -237,43 +328,14 @@ static int add_default_log_config_to_container_spec(const char *id, const char *
         goto out;
     }
 
-    for (; i < container_spec->annotations->len; i++) {
-        const char *tmp_key = container_spec->annotations->keys[i];
-        if (strcmp(CONTAINER_LOG_CONFIG_KEY_FILE, tmp_key) == 0) {
-            file_found = true;
-        } else if (strcmp(CONTAINER_LOG_CONFIG_KEY_ROTATE, tmp_key) == 0) {
-            rotate_found = true;
-        } else if (strcmp(CONTAINER_LOG_CONFIG_KEY_SIZE, tmp_key) == 0) {
-            size_found = true;
-        }
+    ret = merge_container_log_config_opts(daemon_container_opts->driver, daemon_container_opts->opts, container_spec);
+    if (ret != 0) {
+        goto out;
     }
-    if (!file_found) {
-        char default_path[PATH_MAX] = { 0 };
-        int nret = snprintf(default_path, PATH_MAX, "%s/%s/console.log", runtime_root, id);
-        if (nret < 0 || nret >= PATH_MAX) {
-            ERROR("Create default log path for container %s failed", id);
-            ret = -1;
-            goto out;
-        }
-        ret = append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_FILE, default_path);
-        if (ret != 0) {
-            goto out;
-        }
-    }
-    if (!rotate_found) {
-        ret = append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_ROTATE, "7");
-        if (ret != 0) {
-            goto out;
-        }
-    }
-    if (!size_found) {
-        ret = append_json_map_string_string(container_spec->annotations, CONTAINER_LOG_CONFIG_KEY_SIZE, "30KB");
-        if (ret != 0) {
-            goto out;
-        }
-    }
+    ret = do_check_container_log_config_opts(id, runtime_root, container_spec);
 
 out:
+    free_isulad_daemon_configs_container_log(daemon_container_opts);
     return ret;
 }
 
@@ -287,7 +349,7 @@ static container_config *get_container_spec(const char *id, const char *runtime_
         return NULL;
     }
 
-    if (add_default_log_config_to_container_spec(id, runtime_root, container_spec)) {
+    if (set_container_log_config_to_container_spec(id, runtime_root, container_spec)) {
         goto error_out;
     }
 

@@ -82,6 +82,8 @@ extern "C" {
 
 #define CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER "json-file"
 #define CONTAINER_LOG_CONFIG_SYSLOG_DRIVER "syslog"
+
+#define CONTAINER_LOG_CONFIG_KEY_PREFIX "log.console."
 #define CONTAINER_LOG_CONFIG_KEY_DRIVER "log.console.driver"
 #define CONTAINER_LOG_CONFIG_KEY_FILE "log.console.file"
 #define CONTAINER_LOG_CONFIG_KEY_ROTATE "log.console.filerotate"
@@ -120,6 +122,8 @@ extern "C" {
 #define ISULAD_ENABLE_PLUGINS_SEPERATOR_CHAR ','
 
 #define MAX_HOSTS 10
+
+#define OPT_MAX_LEN 255
 
 #define EVENT_ARGS_MAX 255
 #define EVENT_EXTRA_ANNOTATION_MAX 255

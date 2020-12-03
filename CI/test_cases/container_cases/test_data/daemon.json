@@ -14,7 +14,7 @@
     },
     "log-driver": "stdout",
     "container-log": {
-        "driver": "json-file"
+        "driver": "syslog"
     },
     "hook-spec": "/etc/default/isulad/hooks/default.json",
     "start-timeout": "2m",
