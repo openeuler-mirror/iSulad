@@ -1,7 +1,7 @@
 From 9ad5a2da26efc2a1a15564ddbb72059a1142ec85 Mon Sep 17 00:00:00 2001
 From: lifeng68 <lifeng68@huawei.com>
 Date: Fri, 27 Nov 2020 16:57:00 +0800
-Subject: [PATCH 10/10] CI: add testcases for bind /proc and /sys/fs
+Subject: [PATCH 10/17] CI: add testcases for bind /proc and /sys/fs
 
 Signed-off-by: lifeng68 <lifeng68@huawei.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: lifeng68 <lifeng68@huawei.com>
 
 diff --git a/CI/test_cases/container_cases/bind_special_dir.sh b/CI/test_cases/container_cases/bind_special_dir.sh
 new file mode 100644
-index 0000000..0e61e34
+index 00000000..0e61e348
 --- /dev/null
 +++ b/CI/test_cases/container_cases/bind_special_dir.sh
 @@ -0,0 +1,56 @@
