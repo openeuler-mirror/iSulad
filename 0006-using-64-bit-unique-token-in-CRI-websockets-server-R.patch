@@ -1,7 +1,7 @@
 From 7b59f3cead750d00bafe406ab2150f3abd189acb Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Tue, 24 Nov 2020 17:09:08 +0800
-Subject: [PATCH 6/7] using 64 bit unique token in CRI websockets server
+Subject: [PATCH 06/17] using 64 bit unique token in CRI websockets server
  Request Cache
 
 Signed-off-by: wujing <wujing50@huawei.com>
@@ -46,5 +46,5 @@ index b0b7f491..024f3ba7 100644
  
  #endif // DAEMON_ENTRY_CRI_REQUEST_CACHE_H
 -- 
-2.20.1
+2.25.1
 

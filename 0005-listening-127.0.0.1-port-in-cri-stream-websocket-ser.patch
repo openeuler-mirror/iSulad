@@ -1,7 +1,7 @@
 From f3f2765e074a489ceeb2364fbb941a40d3232ff5 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Tue, 24 Nov 2020 15:13:05 +0800
-Subject: [PATCH 5/7] listening 127.0.0.1:port in cri stream websocket server
+Subject: [PATCH 05/17] listening 127.0.0.1:port in cri stream websocket server
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -71,5 +71,5 @@ index 0f613dd2..af8573ad 100644
                  ERROR("Failed to append image to digest: %s", names[i]);
                  ret = -1;
 -- 
-2.20.1
+2.25.1
 

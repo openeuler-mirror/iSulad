@@ -1,0 +1,34 @@
+From ff793d00c408810e2f434800fa3811f5ba2501a7 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Thu, 3 Dec 2020 10:32:57 +0800
+Subject: [PATCH 14/17] error out if unpack layer failed
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ .../modules/image/oci/storage/layer_store/layer_store.c      | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+index 704dbd63..87e49d07 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/layer_store.c
+@@ -1061,14 +1061,13 @@ static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
+ {
+     int64_t size = 0;
+     int ret = 0;
+-    int nret = 0;
+ 
+     if (diff == NULL) {
+         return 0;
+     }
+ 
+-    nret = graphdriver_apply_diff(l->slayer->id, diff);
+-    if (nret != 0) {
++    ret = graphdriver_apply_diff(l->slayer->id, diff);
++    if (ret != 0) {
+         goto out;
+     }
+ 
+-- 
+2.25.1
+
