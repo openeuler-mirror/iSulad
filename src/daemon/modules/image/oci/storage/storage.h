@@ -152,6 +152,9 @@ char *storage_img_get_image_id(const char *img_name);
 /* layer operations */
 int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *opts);
 
+/* delete the layer and the parent layer if not used recursively */
+int storage_layer_chain_delete(const char *layer_id);
+
 int storage_inc_hold_refs(const char *layer_id);
 
 int storage_dec_hold_refs(const char *layer_id);

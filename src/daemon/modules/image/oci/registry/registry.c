@@ -56,6 +56,7 @@
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define MAX_CONCURRENT_DOWNLOAD_NUM 5
+#define DEFAULT_WAIT_TIMEOUT 15
 
 typedef struct {
     pull_descriptor *desc;
@@ -63,13 +64,19 @@ typedef struct {
     char *blob_digest;
     char *file;
     bool use;
+    bool notified;
+    char *diffid;
 } thread_fetch_info;
+
+typedef struct {
+    char *file;
+    thread_fetch_info *info; // file related fetch info
+} file_elem;
 
 typedef struct {
     pthread_mutex_t mutex;
     int result;
     bool complete;
-    char *diffid;
     struct linked_list file_list;
     size_t file_list_len;
 } cached_layer;
@@ -86,6 +93,15 @@ typedef struct {
 } registry_global;
 
 static registry_global *g_shared;
+
+static void free_file_elem(file_elem *elem)
+{
+    if (elem != NULL) {
+        free(elem->file);
+        elem->file = NULL;
+    }
+    free(elem);
+}
 
 static int parse_manifest_schema1(pull_descriptor *desc)
 {
@@ -344,9 +360,9 @@ static void del_cached_layer(char *blob_digest, char *file)
     }
     if (cache->file_list_len != 0) {
         linked_list_for_each_safe(item, &(cache->file_list), next) {
-            if (!strcmp((char *)item->elem, file)) {
+            if (!strcmp(((file_elem *)item->elem)->file, file)) {
                 linked_list_del(item);
-                free((char *)item->elem);
+                free_file_elem(item->elem);
                 free(item);
                 item = NULL;
                 cache->file_list_len--;
@@ -367,12 +383,14 @@ static void del_cached_layer(char *blob_digest, char *file)
     return;
 }
 
-static int add_cached_layer(char *blob_digest, char *file)
+static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *info)
 {
     int ret = 0;
     cached_layer *cache = NULL;
     struct linked_list *node = NULL;
     char *src_file = NULL;
+    file_elem *elem = {NULL};
+    pull_descriptor *desc = info->desc;
 
     cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
     if (cache == NULL) {
@@ -403,42 +421,57 @@ static int add_cached_layer(char *blob_digest, char *file)
     // Newlay added cached layer need to do a hard link to let
     // the layer exist in the downloader's directory if the layer
     // is already downloaded.
-    if (cache->complete && cache->result == 0) {
-        src_file = linked_list_first_elem(&cache->file_list);
-        if (src_file == NULL) {
-            ERROR("Failed to add cache, list's first element is NULL");
-            ret = -1;
-            goto out;
-        }
+    if (cache->complete) {
+        if (cache->result == 0) {
+            elem = linked_list_first_elem(&cache->file_list);
+            if (elem == NULL) {
+                ERROR("Failed to add cache, list's first element is NULL");
+                ret = -1;
+                goto out;
+            }
+            src_file = ((file_elem*)elem)->file;
 
-        if (link(src_file, file) != 0) {
-            ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
+            if (link(src_file, file) != 0) {
+                ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
+                ret = -1;
+                goto out;
+            }
+            // As layer have already downloaded, set this flag to let register thread to do register
+            info->notified = true;
+        } else {
+            ERROR("cached layer have result %d", cache->result);
             ret = -1;
             goto out;
         }
     }
 
     node = util_common_calloc_s(sizeof(struct linked_list));
-    if (node == NULL) {
+    elem = util_common_calloc_s(sizeof(file_elem));
+    if (node == NULL || elem == NULL) {
         ERROR("Failed to malloc for linked_list");
         ret = -1;
         goto out;
     }
+    elem->file = util_strdup_s(file);
+    elem->info = info;
     linked_list_init(node);
-    linked_list_add_elem(node, util_strdup_s(file));
+    linked_list_add_elem(node, elem);
+    elem = NULL;
     linked_list_add_tail(&cache->file_list, node);
     node = NULL;
     cache->file_list_len++;
 
 out:
     if (ret != 0) {
+        desc->cancel = true;
         del_cached_layer(blob_digest, file);
         if (node != NULL) {
-            free(node->elem);
+            free_file_elem(node->elem);
             node->elem = NULL;
         }
         free(node);
         node = NULL;
+        free_file_elem(elem);
     }
 
     return ret;
@@ -493,63 +526,53 @@ out:
     return full_digest;
 }
 
-static int set_cached_info_to_desc(thread_fetch_info *infos, size_t infos_len, pull_descriptor *desc)
+static int set_cached_info_to_desc(thread_fetch_info *info)
 {
-    size_t i = 0;
-    cached_layer *cache = NULL;
-    char *parent_chain_id = "";
+    size_t i = info->index;
+    pull_descriptor *desc = info->desc;
 
-    for (i = 0; i < infos_len; i++) {
-        if (infos[i].use) {
-            cache = (cached_layer *)map_search(g_shared->cached_layers, infos[i].blob_digest);
-            if (cache == NULL) {
-                ERROR("no cached layer found error, this should never happen");
-                return -1;
-            }
-
-            if (desc->layers[i].diff_id == NULL) {
-                desc->layers[i].diff_id = util_strdup_s(cache->diffid);
-            }
-
-            if (desc->layers[i].file == NULL) {
-                desc->layers[i].file = util_strdup_s(infos[i].file);
-            }
-        }
-
-        if (desc->layers[i].empty_layer) {
-            continue;
-        }
-
-        if (desc->layers[i].already_exist) {
-            parent_chain_id = desc->layers[i].chain_id;
-            continue;
-        }
-
+    if (info->use) {
         if (desc->layers[i].diff_id == NULL) {
-            ERROR("layer %zu of image %s have invalid NULL diffid", i, desc->image_name);
+            desc->layers[i].diff_id = util_strdup_s(info->diffid);
+        }
+
+        if (desc->layers[i].file == NULL) {
+            desc->layers[i].file = util_strdup_s(info->file);
+        }
+    }
+
+    if (desc->layers[i].empty_layer) {
+        return 0;
+    }
+
+    if (desc->layers[i].already_exist) {
+        desc->parent_chain_id = desc->layers[i].chain_id;
+        return 0;
+    }
+
+    if (desc->layers[i].diff_id == NULL) {
+        ERROR("layer %zu of image %s have invalid NULL diffid, info->use=%d, info->diffid=%s",
+              i, desc->image_name, info->use, info->diffid);
+        return -1;
+    }
+
+    if (desc->layers[i].chain_id == NULL) {
+        desc->layers[i].chain_id = calc_chain_id(desc->parent_chain_id, desc->layers[i].diff_id);
+        if (desc->layers[i].chain_id == NULL) {
+            ERROR("calc chain id failed, diff id %s, parent chain id %s",
+                  desc->layers[i].diff_id, desc->parent_chain_id);
             return -1;
         }
-
-        if (desc->layers[i].chain_id == NULL) {
-            desc->layers[i].chain_id = calc_chain_id(parent_chain_id, desc->layers[i].diff_id);
-            if (desc->layers[i].chain_id == NULL) {
-                ERROR("calc chain id failed, diff id %s, parent chain id %s", desc->layers[i].diff_id, parent_chain_id);
-                return -1;
-            }
-        }
-        parent_chain_id = desc->layers[i].chain_id;
     }
+    desc->parent_chain_id = desc->layers[i].chain_id;
 
     return 0;
 }
 
-static int register_layers(pull_descriptor *desc)
+static int register_layer(pull_descriptor *desc, size_t i)
 {
-    int ret = 0;
-    size_t i = 0;
     struct layer *l = NULL;
     char *id = NULL;
-    char *parent = NULL;
     cached_layer *cached = NULL;
 
     if (desc == NULL) {
@@ -557,80 +580,61 @@ static int register_layers(pull_descriptor *desc)
         return -1;
     }
 
-    if (desc->layers_len == 0) {
-        ERROR("No layer found failed");
+    if (desc->layers[i].empty_layer) {
+        return 0;
+    }
+
+    id = util_without_sha256_prefix(desc->layers[i].chain_id);
+    if (id == NULL) {
+        ERROR("layer %zu have NULL digest for image %s", i, desc->image_name);
         return -1;
     }
 
-    for (i = 0; i < desc->layers_len; i++) {
-        if (desc->layers[i].empty_layer) {
-            continue;
-        }
-
-        id = util_without_sha256_prefix(desc->layers[i].chain_id);
-        if (id == NULL) {
-            ERROR("layer %zu have NULL digest for image %s", i, desc->image_name);
-            ret = -1;
-            goto out;
-        }
-
-        if (desc->layers[i].already_exist) {
-            l = storage_layer_get(id);
-            if (l != NULL) {
-                free_layer(l);
-                l = NULL;
-                ret = storage_layer_try_repair_lowers(id, parent);
-                if (ret != 0) {
-                    ERROR("try to repair lowers for layer %s failed", id);
-                }
-                parent = id;
-                continue;
+    if (desc->layers[i].already_exist) {
+        l = storage_layer_get(id);
+        if (l != NULL) {
+            free_layer(l);
+            l = NULL;
+            if (storage_layer_try_repair_lowers(id, desc->parent_layer_id) != 0) {
+                ERROR("try to repair lowers for layer %s failed", id);
             }
-            ERROR("Pull image failed, maybe layer %zu %s has be deleted when pulling image", i, id);
-            ret = -1;
-            goto out;
+            desc->parent_layer_id = id;
+            return 0;
         }
-
-        mutex_lock(&g_shared->mutex);
-        cached = get_cached_layer(desc->layers[i].digest);
-        mutex_unlock(&g_shared->mutex);
-        if (cached == NULL) {
-            ERROR("get cached layer %s failed, this should never happen", desc->layers[i].digest);
-            ret = -1;
-            goto out;
-        }
-
-        storage_layer_create_opts_t copts = {
-            .parent = parent,
-            .uncompress_digest = desc->layers[i].diff_id,
-            .compressed_digest = desc->layers[i].digest,
-            .writable = false,
-            .layer_data_path = desc->layers[i].file,
-        };
-        ret = storage_layer_create(id, &copts);
-        if (ret != 0) {
-            ERROR("create layer %s failed, parent %s, file %s", id, parent, desc->layers[i].file);
-            goto out;
-        }
-        free(desc->layer_of_hold_refs);
-        desc->layer_of_hold_refs = util_strdup_s(id);
-        if (parent != NULL && storage_dec_hold_refs(parent) != 0) {
-            ERROR("clear hold flag failed for layer %s", parent);
-            ret = -1;
-            goto out;
-        }
-
-        parent = id;
+        ERROR("Pull image failed, maybe layer %zu %s has be deleted when pulling image", i, id);
+        return -1;
     }
 
-out:
-    for (i = 0; i < desc->layers_len; i++) {
-        mutex_lock(&g_shared->mutex);
-        del_cached_layer(desc->layers[i].digest, desc->layers[i].file);
-        mutex_unlock(&g_shared->mutex);
+    mutex_lock(&g_shared->mutex);
+    cached = get_cached_layer(desc->layers[i].digest);
+    mutex_unlock(&g_shared->mutex);
+    if (cached == NULL) {
+        ERROR("get cached layer %s failed, this should never happen", desc->layers[i].digest);
+        return -1;
     }
 
-    return ret;
+    storage_layer_create_opts_t copts = {
+        .parent = desc->parent_layer_id,
+        .uncompress_digest = desc->layers[i].diff_id,
+        .compressed_digest = desc->layers[i].digest,
+        .writable = false,
+        .layer_data_path = desc->layers[i].file,
+    };
+    if (storage_layer_create(id, &copts) != 0) {
+        ERROR("create layer %s failed, parent %s, file %s", id, desc->parent_layer_id, desc->layers[i].file);
+        return -1;
+    }
+    desc->layers[i].registered = true;
+    free(desc->layer_of_hold_refs);
+    desc->layer_of_hold_refs = util_strdup_s(id);
+    if (desc->parent_layer_id != NULL && storage_dec_hold_refs(desc->parent_layer_id) != 0) {
+        ERROR("clear hold flag failed for layer %s", desc->parent_layer_id);
+        return -1;
+    }
+
+    desc->parent_layer_id = id;
+
+    return 0;
 }
 
 static int get_top_layer_index(pull_descriptor *desc, size_t *top_layer_index)
@@ -855,17 +859,6 @@ static int register_image(pull_descriptor *desc)
         return -1;
     }
 
-    if (check_time_valid(desc) != 0) {
-        return -1;
-    }
-
-    ret = register_layers(desc);
-    if (ret != 0) {
-        ERROR("register layers for image %s failed", desc->image_name);
-        isulad_try_set_error_message("register layers failed");
-        goto out;
-    }
-
     // lock when create image to make sure image content all exist
     mutex_lock(&g_shared->image_mutex);
     image_id = util_without_sha256_prefix(desc->config.digest);
@@ -881,6 +874,9 @@ static int register_image(pull_descriptor *desc)
         goto out;
     }
 
+    // associated layers with image already if run to here, so no need to
+    // rollback layers manually on failure, delete image will delete all layers.
+    desc->rollback_layers_on_failure = false;
     image_created = true;
 
     ret = set_config(desc, image_id);
@@ -1110,15 +1106,14 @@ static void set_cached_layers_info(char *blob_digest, char *diffid, int result, 
     cached_layer *cache = NULL;
     struct linked_list *item = NULL;
     struct linked_list *next = NULL;
-    char *file = NULL;
+    file_elem *elem = NULL;
+    thread_fetch_info *info = NULL;
 
     cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
     if (cache == NULL) {
         ERROR("can't get cache for %s, this should never happen", blob_digest);
         return;
     }
-    free(cache->diffid);
-    cache->diffid = util_strdup_s(diffid);
     cache->result = result;
     cache->complete = true;
 
@@ -1126,25 +1121,62 @@ static void set_cached_layers_info(char *blob_digest, char *diffid, int result, 
         return;
     }
 
-    // Do hard links to let the layer exist in every downloader's directory.
+    // Do hard links to let the layer exist in every downloader's directory, and
+    // fill necessary item fields to do layer register.
     linked_list_for_each_safe(item, &cache->file_list, next) {
-        file = (char *)item->elem;
-        if (!strcmp(src_file, file)) {
+        elem = (file_elem *)item->elem;
+        info = elem->info;
+        if (info->diffid == NULL) {
+            info->diffid = util_strdup_s(diffid);
+        }
+        if (!strcmp(src_file, elem->file)) {
             continue;
         }
-        if (link(src_file, file) != 0) {
-            ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
-            cache->result = -1;
-            return;
+        if (link(src_file, elem->file) != 0) {
+            ERROR("link %s to %s failed: %s", src_file, elem->file, strerror(errno));
+            info->desc->cancel = true;
+            continue;
         }
     }
 
     return;
 }
 
+// broadcast to notify unpack thread to register completed layers
+static void register_layer_notify(pull_descriptor *desc)
+{
+    mutex_lock(&desc->mutex);
+    if (pthread_cond_broadcast(&desc->cond)) {
+        ERROR("Failed to broadcast");
+    }
+    mutex_unlock(&desc->mutex);
+}
+
+static void notify_cached_descs(char *blob_digest)
+{
+    cached_layer *cache = NULL;
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+    thread_fetch_info *info = NULL;
+
+    cache = (cached_layer *)map_search(g_shared->cached_layers, blob_digest);
+    if (cache == NULL) {
+        ERROR("can't get cache for %s, this should never happen", blob_digest);
+        return;
+    }
+
+    // notify all related register threads to do register
+    linked_list_for_each_safe(item, &cache->file_list, next) {
+        info = ((file_elem*)item->elem)->info;
+        info->notified = true;
+        register_layer_notify(info->desc);
+    }
+}
+
 static void *fetch_layer_in_thread(void *arg)
 {
     thread_fetch_info *info = (thread_fetch_info *)arg;
+    pull_descriptor *desc = info->desc;
     int ret = 0;
     char *diffid = NULL;
 
@@ -1156,7 +1188,7 @@ static void *fetch_layer_in_thread(void *arg)
 
     prctl(PR_SET_NAME, "fetch_layer");
 
-    if (fetch_layer(info->desc, info->index) != 0) {
+    if (fetch_layer(desc, info->index) != 0) {
         ERROR("fetch layer %zu failed", info->index);
         ret = -1;
         goto out;
@@ -1166,7 +1198,7 @@ static void *fetch_layer_in_thread(void *arg)
     // no diff id so we need to calc it. schema v2 have
     // diff id in config and we do not want to calc it again
     // as it cost too much time.
-    if (is_manifest_schemav1(info->desc->manifest.media_type)) {
+    if (is_manifest_schemav1(desc->manifest.media_type)) {
         diffid = oci_calc_diffid(info->file);
         if (diffid == NULL) {
             ERROR("calc diffid for layer %zu failed", info->index);
@@ -1179,14 +1211,16 @@ out:
     // notify to continue downloading
     mutex_lock(&g_shared->mutex);
     if (ret != 0) {
-        info->desc->cancel = true;
-        if (info->desc->errmsg == NULL && g_isulad_errmsg != NULL) {
-            info->desc->errmsg = util_strdup_s(g_isulad_errmsg);
+        desc->cancel = true;
+        if (desc->errmsg == NULL && g_isulad_errmsg != NULL) {
+            desc->errmsg = util_strdup_s(g_isulad_errmsg);
         }
     }
     DAEMON_CLEAR_ERRMSG();
-    info->desc->pulling_number--;
+    desc->pulling_number--;
     set_cached_layers_info(info->blob_digest, diffid, ret, info->file);
+    notify_cached_descs(info->blob_digest);
+    // notify to continue pull
     if (pthread_cond_broadcast(&g_shared->cond)) {
         ERROR("Failed to broadcast");
     }
@@ -1205,14 +1239,16 @@ static int add_fetch_task(thread_fetch_info *info)
     pthread_t tid = 0;
     bool cached_layers_added = true;
     cached_layer *cache = NULL;
+    struct timespec ts = {0};
 
     mutex_lock(&g_shared->mutex);
     cache = get_cached_layer(info->blob_digest);
     if (cache == NULL) {
         // If there are too many download threads, wait until anyone completed.
         while (info->desc->pulling_number >= MAX_CONCURRENT_DOWNLOAD_NUM) {
-            cond_ret = pthread_cond_wait(&g_shared->cond, &g_shared->mutex);
-            if (cond_ret != 0) {
+            ts.tv_sec = time(NULL) + DEFAULT_WAIT_TIMEOUT; // avoid wait forever
+            cond_ret = pthread_cond_timedwait(&g_shared->cond, &g_shared->mutex, &ts);
+            if (cond_ret != 0 && cond_ret != ETIMEDOUT) {
                 ERROR("condition wait failed, ret %d", cond_ret);
                 ret = -1;
                 goto out;
@@ -1222,7 +1258,7 @@ static int add_fetch_task(thread_fetch_info *info)
         cache = get_cached_layer(info->blob_digest);
     }
 
-    ret = add_cached_layer(info->blob_digest, info->file);
+    ret = add_cached_layer(info->blob_digest, info->file, info);
     if (ret != 0) {
         ERROR("add fetch info failed, ret %d", cond_ret);
         ret = -1;
@@ -1257,15 +1293,13 @@ static void free_thread_fetch_info(thread_fetch_info *info)
     info->blob_digest = NULL;
     free(info->file);
     info->file = NULL;
+    free(info->diffid);
+    info->diffid = NULL;
     return;
 }
 
-static bool all_fetch_complete(thread_fetch_info *infos, pull_descriptor *desc, int *result)
+static bool all_fetch_complete(pull_descriptor *desc, int *result)
 {
-    size_t i = 0;
-    cached_layer *cache = NULL;
-    size_t infos_len = desc->layers_len;
-
     if (!desc->config.complete) {
         return false;
     }
@@ -1276,24 +1310,12 @@ static bool all_fetch_complete(thread_fetch_info *infos, pull_descriptor *desc, 
         *result = desc->config.result;
     }
 
-    for (i = 0; i < infos_len; i++) {
-        if (!infos[i].use) {
-            continue;
-        }
+    if (!desc->register_layers_complete) {
+        return false;
+    }
 
-        cache = (cached_layer *)map_search(g_shared->cached_layers, infos[i].blob_digest);
-        if (cache == NULL) {
-            ERROR("no cached layer found for %s error, this should never happen", infos[i].blob_digest);
-            return true;
-        }
-
-        if (!cache->complete) {
-            return false;
-        }
-
-        if (cache->result != 0) {
-            *result = cache->result;
-        }
+    if (desc->cancel) {
+        *result = -1;
     }
 
     return true;
@@ -1330,6 +1352,90 @@ out:
     DAEMON_CLEAR_ERRMSG();
     desc->config.complete = true;
     desc->config.result = ret;
+    register_layer_notify(desc);
+    if (pthread_cond_broadcast(&g_shared->cond)) {
+        ERROR("Failed to broadcast");
+    }
+    mutex_unlock(&g_shared->mutex);
+
+    return NULL;
+}
+
+static bool wait_fetch_complete(thread_fetch_info *info)
+{
+    pull_descriptor *desc = info->desc;
+
+    if (desc->cancel) {
+        return false;
+    }
+
+    if (!desc->config.complete) {
+        return true;
+    }
+
+    if (!info->use || info->notified) {
+        return false;
+    }
+
+    return true;
+}
+
+static void *register_layers_in_thread(void *arg)
+{
+    thread_fetch_info *infos = (thread_fetch_info *)arg;
+    pull_descriptor *desc = infos[0].desc;
+    int ret = 0;
+    int cond_ret = 0;
+    size_t i = 0;
+    struct timespec ts = {0};
+
+    for (i = 0; i < desc->layers_len; i++) {
+        mutex_lock(&desc->mutex);
+        while (wait_fetch_complete(&infos[i])) {
+            ts.tv_sec = time(NULL) + DEFAULT_WAIT_TIMEOUT; // avoid wait forever
+            cond_ret = pthread_cond_timedwait(&desc->cond, &desc->mutex, &ts);
+            if (cond_ret != 0 && cond_ret != ETIMEDOUT) {
+                // here we can't just break and cleanup resources because threads are running.
+                // desc is freed if we break and then isulad crash. sleep some time
+                // instead to avoid cpu full running and then retry.
+                ERROR("condition wait for layer %zu to complete failed, ret %d, error: %s",
+                      i, cond_ret, strerror(errno));
+                sleep(10);
+                continue;
+            }
+        }
+        mutex_unlock(&desc->mutex);
+
+        if (desc->cancel) {
+            ret = -1;
+            goto out;
+        }
+
+        ret = set_cached_info_to_desc(&infos[i]);
+        if (ret != 0) {
+            ERROR("set cached infos to desc failed");
+            goto out;
+        }
+
+        // register layer
+        ret = register_layer(desc, i);
+        if (ret != 0) {
+            ERROR("register layers for image %s failed", desc->image_name);
+            isulad_try_set_error_message("register layers failed");
+            goto out;
+        }
+    }
+
+out:
+    mutex_lock(&g_shared->mutex);
+    if (ret != 0) {
+        desc->cancel = true;
+        if (desc->errmsg == NULL && g_isulad_errmsg != NULL) {
+            desc->errmsg = util_strdup_s(g_isulad_errmsg);
+        }
+    }
+    DAEMON_CLEAR_ERRMSG();
+    desc->register_layers_complete = true;
     if (pthread_cond_broadcast(&g_shared->cond)) {
         ERROR("Failed to broadcast");
     }
@@ -1370,6 +1476,8 @@ static int fetch_all(pull_descriptor *desc)
     int result = 0;
     char *parent_chain_id = NULL;
     struct layer_list *list = NULL;
+    pthread_t tid = 0;
+    struct timespec ts = {0};
 
     if (desc == NULL) {
         ERROR("Invalid NULL param");
@@ -1392,6 +1500,8 @@ static int fetch_all(pull_descriptor *desc)
 
     // fetch layers
     for (i = 0; i < desc->layers_len; i++) {
+        infos[i].desc = desc;
+        infos[i].index = i;
         // Skip empty layer
         if (desc->layers[i].empty_layer) {
             continue;
@@ -1442,8 +1552,6 @@ static int fetch_all(pull_descriptor *desc)
             break;
         }
 
-        infos[i].desc = desc;
-        infos[i].index = i;
         infos[i].use = true;
         infos[i].file = util_strdup_s(file);
         infos[i].blob_digest = util_strdup_s(desc->layers[i].digest);
@@ -1456,16 +1564,29 @@ static int fetch_all(pull_descriptor *desc)
     }
     if (ret != 0) {
         desc->cancel = true;
+        desc->register_layers_complete = true;
+    } else {
+        // create layers unpack thread
+        if (pthread_create(&tid, NULL, register_layers_in_thread, infos)) {
+            ERROR("failed to start thread to unpack layers");
+            ret = -1;
+            desc->register_layers_complete = true;
+        }
     }
 
     // wait until all pulled or cancelled
     mutex_lock(&g_shared->mutex);
-    while (!all_fetch_complete(infos, desc, &result)) {
-        cond_ret = pthread_cond_wait(&g_shared->cond, &g_shared->mutex);
-        if (cond_ret != 0) {
-            ERROR("condition wait for all layers to complete failed, ret %d", cond_ret);
-            ret = -1;
-            break;
+    while (!all_fetch_complete(desc, &result)) {
+        ts.tv_sec = time(NULL) + DEFAULT_WAIT_TIMEOUT; // avoid wait forever
+        cond_ret = pthread_cond_timedwait(&g_shared->cond, &g_shared->mutex, &ts);
+        if (cond_ret != 0 && cond_ret != ETIMEDOUT) {
+            // here we can't just break and cleanup resources because threads are running.
+            // desc is freed if we break and then isulad crash. sleep some time
+            // instead to avoid cpu full running and then retry.
+            ERROR("condition wait for all layers to complete failed, ret %d, error: %s",
+                  cond_ret, strerror(errno));
+            sleep(10);
+            continue;
         }
     }
 
@@ -1473,11 +1594,7 @@ static int fetch_all(pull_descriptor *desc)
         ret = result;
     }
 
-    if (ret == 0) {
-        if (set_cached_info_to_desc(infos, desc->layers_len, desc) != 0) {
-            ERROR("set cached infos to desc failed");
-        }
-    } else if (desc->errmsg != NULL) {
+    if (ret != 0 && desc->errmsg != NULL) {
         ERROR("pull image %s failed: %s", desc->image_name, desc->errmsg);
         isulad_try_set_error_message(desc->errmsg);
     }
@@ -1485,7 +1602,7 @@ static int fetch_all(pull_descriptor *desc)
     mutex_unlock(&g_shared->mutex);
 
     for (i = 0; i < desc->layers_len; i++) {
-        if (ret != 0 && infos[i].use) {
+        if (infos[i].use) {
             mutex_lock(&g_shared->mutex);
             del_cached_layer(infos[i].blob_digest, infos[i].file);
             mutex_unlock(&g_shared->mutex);
@@ -1657,6 +1774,11 @@ static int registry_fetch(pull_descriptor *desc, bool *reuse)
         }
     }
 
+    if (check_time_valid(desc) != 0) {
+        ret = -1;
+        goto out;
+    }
+
 out:
 
     return ret;
@@ -1754,6 +1876,20 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
         goto out;
     }
 
+    ret = pthread_mutex_init(&desc->mutex, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init mutex for pull");
+        goto out;
+    }
+    desc->mutex_inited = true;
+
+    ret = pthread_cond_init(&desc->cond, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init cond for pull");
+        goto out;
+    }
+    desc->cond_inited = true;
+
     desc->image_name = util_strdup_s(options->image_name);
     desc->dest_image_name = util_strdup_s(options->dest_image_name);
     desc->scope = util_strdup_s(scope);
@@ -1762,6 +1898,8 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     desc->skip_tls_verify = options->skip_tls_verify;
     desc->insecure_registry = options->insecure_registry;
     desc->cancel = false;
+    desc->parent_chain_id = "";
+    desc->rollback_layers_on_failure = true;
 
     if (options->auth.username != NULL && options->auth.password != NULL) {
         desc->username = util_strdup_s(options->auth.username);
@@ -1778,6 +1916,49 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
 out:
     free(image_tmp_path);
     return ret;
+}
+
+static int find_rollback_layer_index(pull_descriptor *desc)
+{
+    int i = 0;
+
+    if (!desc->rollback_layers_on_failure) {
+        return -1;
+    }
+
+    if (desc->layers_len == 0) {
+        return -1;
+    }
+
+    for (i = (int)desc->layers_len - 1; i >= 0; i--) {
+        if (!desc->layers[i].registered) {
+            continue;
+        }
+        break;
+    }
+
+    return i;
+}
+
+static void try_rollback_layers(pull_descriptor *desc)
+{
+    int i = 0;
+    char *id = NULL;
+
+    i = find_rollback_layer_index(desc);
+    if (i < 0 || i >= desc->layers_len) {
+        return;
+    }
+
+    id = util_without_sha256_prefix(desc->layers[i].chain_id);
+    if (id == NULL) {
+        ERROR("this should never happen, layer %d have NULL digest for image %s", i, desc->image_name);
+        return;
+    }
+
+    if (storage_layer_chain_delete(id) != 0) {
+        ERROR("rollback layer %d failed for image %s, layerid %s", i, desc->image_name, id);
+    }
 }
 
 int registry_pull(registry_pull_options *options)
@@ -1830,6 +2011,10 @@ out:
         ERROR("decrease hold refs failed for layer %s", desc->layer_of_hold_refs);
     }
 
+    if (ret != 0) {
+        try_rollback_layers(desc);
+    }
+
     if (desc->blobpath != NULL) {
         if (util_recursive_rmdir(desc->blobpath, 0)) {
             WARN("failed to remove directory %s", desc->blobpath);
@@ -1850,14 +2035,12 @@ static void cached_layers_kvfree(void *key, void *value)
     if (cache != NULL) {
         linked_list_for_each_safe(item, &(cache->file_list), next) {
             linked_list_del(item);
-            free((char *)item->elem);
+            free_file_elem(item->elem);
             free(item);
             item = NULL;
         }
         cache->file_list_len = 0;
 
-        free(cache->diffid);
-        cache->diffid = NULL;
         free(cache);
         cache = NULL;
     }
