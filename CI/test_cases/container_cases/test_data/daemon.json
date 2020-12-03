@@ -1,0 +1,37 @@
+{
+    "group": "isula",
+    "default-runtime": "lcr",
+    "graph": "/var/lib/isulad",
+    "state": "/var/run/isulad",
+    "engine": "lcr",
+    "log-level": "ERROR",
+    "pidfile": "/var/run/isulad.pid",
+    "log-opts": {
+        "log-file-mode": "0600",
+        "log-path": "/var/lib/isulad",
+        "max-file": "1",
+        "max-size": "30KB"
+    },
+    "log-driver": "stdout",
+    "container-log": {
+        "driver": "syslog"
+    },
+    "hook-spec": "/etc/default/isulad/hooks/default.json",
+    "start-timeout": "2m",
+    "storage-driver": "overlay2",
+    "storage-opts": [
+        "overlay2.override_kernel_check=true"
+    ],
+    "registry-mirrors": [
+    ],
+    "insecure-registries": [
+    ],
+    "pod-sandbox-image": "",
+    "native.umask": "secure",
+    "network-plugin": "",
+    "cni-bin-dir": "",
+    "cni-conf-dir": "",
+    "image-layer-check": false,
+    "use-decrypted-key": true,
+    "insecure-skip-verify-enforce": false
+}
