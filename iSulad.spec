@@ -1,5 +1,5 @@
 %global _version 2.0.7
-%global _release 20201128.095506.git1e1623a5
+%global _release 20201203.191812.gitab7e0035
 %global is_systemd 1
 
 Name:      iSulad
@@ -22,6 +22,14 @@ Patch0007: 0007-add-mock-conf_get_use_decrypted_key_flag-and-setup-a.patch
 Patch0008: 0008-show-all-mutl-network-ips.patch
 Patch0009: 0009-iSulad-only-qsort-the-configed-mounts.patch
 Patch0010: 0010-CI-add-testcases-for-bind-proc-and-sys-fs.patch
+Patch0011: 0011-verify-peer-if-it-s-secure-registry.patch
+Patch0012: 0012-make-sure-all-certs-load-success-if-any-provided.patch
+Patch0013: 0013-add-ch-docs-for-install-iSulad.patch
+Patch0014: 0014-error-out-if-unpack-layer-failed.patch
+Patch0015: 0015-ignore-get-ip-error-for-mutlnetwork.patch
+Patch0016: 0016-support-default-container-log-options.patch
+Patch0017: 0017-add-testcase-for-default-container-log-configs.patch
+
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -224,6 +232,12 @@ fi
 %endif
 
 %changelog
+* Thu Dec 3 2020 haozi007 <liuhao27@huawei.com> - 2.0.7-20201203.191812.gitab7e0035
+- Type:update from master
+- ID:NA
+- SUG:NA
+- DESC: update from master
+
 * Sat Nov 28 2020 lifeng<lifeng68@huawei.com> - 2.0.7-20201128.095506.git1e1623a5
 - Type: bugfix
 - ID:NA
