@@ -1,7 +1,7 @@
 From c84953295a615da574aa1b42348a6f60105d5482 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Tue, 24 Nov 2020 20:00:42 +0800
-Subject: [PATCH 7/7] add mock conf_get_use_decrypted_key_flag and setup all
+Subject: [PATCH 07/17] add mock conf_get_use_decrypted_key_flag and setup all
  common mocks
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
@@ -52,5 +52,5 @@ index 25ddf694..4b264424 100644
  }
  
 -- 
-2.20.1
+2.25.1
 
