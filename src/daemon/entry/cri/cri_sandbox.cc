@@ -985,7 +985,8 @@ void CRIRuntimeServiceImpl::GetFormatIPsForMultNet(container_inspect *inspect, c
         m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(), elems[i]->interface, inspect->id, status,
                                              error);
         if (error.NotEmpty()) {
-            goto out;
+            WARN("get status for network: %s failed: %s", elems[i]->name, error.GetCMessage());
+            error.Clear();
         }
         // add a sentry to make ips of mutlnetwork store from position 2
         if (result.size() < 2) {
