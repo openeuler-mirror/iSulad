@@ -1,7 +1,7 @@
 From e17d4ea9e2e6ec5555429cbc0363748e33170dea Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Mon, 23 Nov 2020 16:52:56 +0800
-Subject: [PATCH 2/7] change default tmp directory from /var/tmp to
+Subject: [PATCH 02/17] change default tmp directory from /var/tmp to
  /var/lib/isulad/tmp
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
@@ -602,5 +602,5 @@ index fdf27cdb..03af3cc9 100644
  
  void MockIsuladConf_SetMock(MockIsuladConf *mock);
 -- 
-2.20.1
+2.25.1
 

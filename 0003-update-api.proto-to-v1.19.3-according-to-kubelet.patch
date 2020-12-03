@@ -1,7 +1,7 @@
 From 5720b90e9515a698b5f9cde21a99194848f2c66a Mon Sep 17 00:00:00 2001
 From: gaohuatao <gaohuatao@huawei.com>
 Date: Fri, 13 Nov 2020 03:21:16 -0500
-Subject: [PATCH 3/7] update api.proto to v1.19.3 according to kubelet
+Subject: [PATCH 03/17] update api.proto to v1.19.3 according to kubelet
 
 Signed-off-by: gaohuatao <gaohuatao@huawei.com>
 ---
@@ -98,5 +98,5 @@ index 634e53ad..1d332261 100644
      ModifyCommonNamespaceOptions(nsOpts, hostConfig);
      /* modify host network option for container */
 -- 
-2.20.1
+2.25.1
 
