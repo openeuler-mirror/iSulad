@@ -1061,14 +1061,13 @@ static int apply_diff(layer_t *l, const struct io_read_wrapper *diff)
 {
     int64_t size = 0;
     int ret = 0;
-    int nret = 0;
 
     if (diff == NULL) {
         return 0;
     }
 
-    nret = graphdriver_apply_diff(l->slayer->id, diff);
-    if (nret != 0) {
+    ret = graphdriver_apply_diff(l->slayer->id, diff);
+    if (ret != 0) {
         goto out;
     }
 
