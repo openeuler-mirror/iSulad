@@ -1,7 +1,7 @@
 From 25465336f77be1332c4536f90eb6ebd8edfd71de Mon Sep 17 00:00:00 2001
 From: lifeng68 <lifeng68@huawei.com>
 Date: Fri, 27 Nov 2020 11:29:58 +0800
-Subject: [PATCH 09/10] iSulad: only qsort the configed mounts
+Subject: [PATCH 09/17] iSulad: only qsort the configed mounts
 
 Signed-off-by: lifeng68 <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: lifeng68 <lifeng68@huawei.com>
  2 files changed, 114 insertions(+), 103 deletions(-)
 
 diff --git a/src/daemon/entry/cri/cri_security_context.cc b/src/daemon/entry/cri/cri_security_context.cc
-index 1d33226..cf5b300 100644
+index 1d332261..cf5b300e 100644
 --- a/src/daemon/entry/cri/cri_security_context.cc
 +++ b/src/daemon/entry/cri/cri_security_context.cc
 @@ -179,7 +179,6 @@ static void ModifyContainerNamespaceOptions(const runtime::v1alpha2::NamespaceOp
@@ -22,7 +22,7 @@ index 1d33226..cf5b300 100644
          std::string targetPidNsMode = "container:" + nsOpts.target_id();
          free(hostConfig->pid_mode);
 diff --git a/src/daemon/modules/spec/specs_mount.c b/src/daemon/modules/spec/specs_mount.c
-index db7e4fd..6099a91 100644
+index db7e4fd8..6099a918 100644
 --- a/src/daemon/modules/spec/specs_mount.c
 +++ b/src/daemon/modules/spec/specs_mount.c
 @@ -372,7 +372,8 @@ static defs_mount *mount_point_to_defs_mnt(container_config_v2_common_config_mou

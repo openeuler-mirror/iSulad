@@ -1,0 +1,27 @@
+From b0b1bc36bf4672ce45c0dd2be877083894b62350 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 3 Dec 2020 15:44:27 +0800
+Subject: [PATCH 15/17] ignore get ip error for mutlnetwork
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/daemon/entry/cri/cri_sandbox.cc | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/entry/cri/cri_sandbox.cc b/src/daemon/entry/cri/cri_sandbox.cc
+index 772638a1..2d623097 100644
+--- a/src/daemon/entry/cri/cri_sandbox.cc
++++ b/src/daemon/entry/cri/cri_sandbox.cc
+@@ -985,7 +985,8 @@ void CRIRuntimeServiceImpl::GetFormatIPsForMultNet(container_inspect *inspect, c
+         m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(), elems[i]->interface, inspect->id, status,
+                                              error);
+         if (error.NotEmpty()) {
+-            goto out;
++            WARN("get status for network: %s failed: %s", elems[i]->name, error.GetCMessage());
++            error.Clear();
+         }
+         // add a sentry to make ips of mutlnetwork store from position 2
+         if (result.size() < 2) {
+-- 
+2.25.1
+
