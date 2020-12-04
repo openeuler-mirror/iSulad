@@ -1,7 +1,7 @@
 From 3a15d0174b16207915ab5736ee45f5018472b251 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Tue, 24 Nov 2020 14:51:57 +0800
-Subject: [PATCH 4/7] adapt CI ISULAD_TMPDIR testcases
+Subject: [PATCH 04/17] adapt CI ISULAD_TMPDIR testcases
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
@@ -46,5 +46,5 @@ index 22a6ad42..46849ae7 100644
      msg_info "${test} finished with return ${ret}..."
      return ${ret}
 -- 
-2.20.1
+2.25.1
 
