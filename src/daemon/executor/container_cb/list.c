@@ -311,44 +311,73 @@ static void dup_id_name(const container_config_v2_common_config *common_config, 
     }
 }
 
-static int convert_common_config_info(const map_t *map_labels, const container_config_v2_common_config *common_config,
+static void dup_container_labels(const map_t *map_labels, const container_config_v2_common_config *common_config,
+                                 container_container *isuladinfo)
+{
+    int ret = 0;
+
+    if (common_config->config == NULL) {
+        return;
+    }
+
+    if (common_config->config->labels != NULL && common_config->config->labels->len != 0) {
+        json_map_string_string *labels = common_config->config->labels;
+
+        ret = replace_labels(isuladinfo, labels, map_labels);
+        if (ret != 0) {
+            ERROR("Failed to dup container %s labels", common_config->id);
+        }
+    }
+
+    return;
+}
+
+static void dup_container_annotations(const container_config_v2_common_config *common_config,
                                       container_container *isuladinfo)
 {
     int ret = 0;
-    bool args_err = false;
 
+    if (common_config->config == NULL) {
+        return;
+    }
+
+    ret = replace_annotations(common_config, isuladinfo);
+    if (ret != 0) {
+        ERROR("Failed to dup container %s annotations", common_config->id);
+    }
+
+    return;
+}
+
+static void dup_container_created_time(const container_config_v2_common_config *common_config,
+                                       container_container *isuladinfo)
+{
+    if (common_config->created != NULL &&
+        util_to_unix_nanos_from_str(common_config->created, &isuladinfo->created) != 0) {
+        ERROR("Failed to dup container %s created time", common_config->id);
+    }
+
+    return;
+}
+
+static int convert_common_config_info(const map_t *map_labels, const container_config_v2_common_config *common_config,
+                                      container_container *isuladinfo)
+{
     if (map_labels == NULL || common_config == NULL || isuladinfo == NULL) {
         return -1;
     }
 
-    if (common_config->config == NULL) {
-        return 0;
-    }
-    args_err = (common_config->config->labels != NULL && common_config->config->labels->len != 0);
-    if (args_err) {
-        json_map_string_string *labels = common_config->config->labels;
-
-        ret = replace_labels(isuladinfo, labels, map_labels);
-        if (ret == -1) {
-            goto out;
-        }
-    }
-
-    ret = replace_annotations(common_config, isuladinfo);
-    if (ret == -1) {
-        goto out;
-    }
-
     dup_id_name(common_config, isuladinfo);
-    args_err = (common_config->created != NULL &&
-                util_to_unix_nanos_from_str(common_config->created, &isuladinfo->created) != 0);
-    if (args_err) {
-        ret = -1;
-        goto out;
-    }
+
     isuladinfo->restartcount = (uint64_t)common_config->restart_count;
-out:
-    return ret;
+
+    dup_container_labels(map_labels, common_config, isuladinfo);
+
+    dup_container_annotations(common_config, isuladinfo);
+
+    dup_container_created_time(common_config, isuladinfo);
+
+    return 0;
 }
 
 static int container_info_match(const struct list_context *ctx, const map_t *map_labels,
@@ -413,7 +442,6 @@ static int fill_isuladinfo(container_container *isuladinfo, const container_conf
     char *image = NULL;
     char *timestr = NULL;
     char *defvalue = "-";
-    int64_t created_nanos = 0;
 
     ret = convert_common_config_info(map_labels, cont->common_config, isuladinfo);
     if (ret != 0) {
@@ -438,14 +466,6 @@ static int fill_isuladinfo(container_container *isuladinfo, const container_conf
     isuladinfo->runtime = cont->runtime ? util_strdup_s(cont->runtime) : util_strdup_s("none");
 
     isuladinfo->health_state = container_get_health_state(cont_state);
-    if (cont->common_config->created != NULL) {
-        ret = util_to_unix_nanos_from_str(cont->common_config->created, &created_nanos);
-        if (ret != 0) {
-            goto out;
-        }
-    }
-
-    isuladinfo->created = created_nanos;
 
 out:
     return ret;
