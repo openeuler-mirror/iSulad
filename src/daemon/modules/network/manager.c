@@ -771,7 +771,7 @@ int isula_detach_network_plane(const struct cni_manager *manager, const char *ne
         ERROR("Invalid input params");
         return -1;
     }
-    
+
     net_list_conf_str = map_search(g_conflists.map_isula_net_conf, (void *)net_name);
     if (net_list_conf_str == NULL) {
         ERROR("Invalid network name:%s, search cni network conflist NULL", net_name);
