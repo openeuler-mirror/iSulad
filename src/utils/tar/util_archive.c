@@ -375,6 +375,13 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
             continue;
         }
 
+        // if path in archive is absolute, we need to translate it to relative because
+        // libarchive can not support absolute path when unpack
+        pathname = archive_entry_pathname(entry);
+        if (pathname != NULL && pathname[0] == '/') {
+            archive_entry_set_pathname(entry, pathname + 1);
+        }
+
         ret = archive_write_header(ext, entry);
         if (ret != ARCHIVE_OK) {
             ERROR("Fail to handle tar header: %s", archive_error_string(ext));
