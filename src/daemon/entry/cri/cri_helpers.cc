@@ -398,7 +398,8 @@ auto sha256(const char *val) -> std::string
     return outputBuffer;
 }
 
-auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, Errors &error) -> cri_pod_network_container *
+auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations,
+                                Errors &error) -> cri_pod_network_container *
 {
     auto iter = annotations.find(CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY);
 

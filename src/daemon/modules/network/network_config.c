@@ -1032,7 +1032,8 @@ static int do_create_conflist_file(const char *cni_conf_dir, cni_net_conf_list *
         }
     }
 
-    nret = snprintf(conflist_file, sizeof(conflist_file), "%s/%s%s.conflist", cni_conf_dir, ISULAD_CNI_NETWORK_CONF_FILE_PRE, list->name);
+    nret = snprintf(conflist_file, sizeof(conflist_file), "%s/%s%s.conflist", cni_conf_dir,
+                    ISULAD_CNI_NETWORK_CONF_FILE_PRE, list->name);
     if ((size_t)nret >= sizeof(conflist_file) || nret < 0) {
         ERROR("Failed to snprintf conflist_file");
         return -1;
