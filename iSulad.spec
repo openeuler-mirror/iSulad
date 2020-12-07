@@ -1,5 +1,5 @@
 %global _version 2.0.7
-%global _release 20201203.191812.gitab7e0035
+%global _release 20201205.145752.gita461cc51
 %global is_systemd 1
 
 Name:      iSulad
@@ -29,6 +29,7 @@ Patch0014: 0014-error-out-if-unpack-layer-failed.patch
 Patch0015: 0015-ignore-get-ip-error-for-mutlnetwork.patch
 Patch0016: 0016-support-default-container-log-options.patch
 Patch0017: 0017-add-testcase-for-default-container-log-configs.patch
+Patch0018: 0018-clean-code-ignore-list-containers-error.patch
 
 
 %ifarch x86_64 aarch64
@@ -232,6 +233,12 @@ fi
 %endif
 
 %changelog
+* Sat Dec 5 2020 lifeng <lifeng68@huawei.com> - 2.0.7-20201205.145752.gita461cc51
+- Type: bugfix
+- ID:NA
+- SUG:NA
+- DESC: ignore list containers errors
+
 * Thu Dec 3 2020 haozi007 <liuhao27@huawei.com> - 2.0.7-20201203.191812.gitab7e0035
 - Type:update from master
 - ID:NA
