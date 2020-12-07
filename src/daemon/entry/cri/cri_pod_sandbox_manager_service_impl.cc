@@ -1007,7 +1007,8 @@ void PodSandboxManagerServiceImpl::GetFormatIPsForMultNet(const container_inspec
             result.push_back("");
         }
 
-        result.push_back(std::string(networks->items[i]->name) + "@" + std::string(networks->items[i]->interface) + "@[" + CXXUtils::StringsJoin(
+        result.push_back(std::string(networks->items[i]->name) + "@" + std::string(networks->items[i]->interface) + "@[" +
+                         CXXUtils::StringsJoin(
                              status.GetIPs(), ", ") + "]");
     }
 out:
