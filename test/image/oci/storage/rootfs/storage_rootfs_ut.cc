@@ -38,7 +38,7 @@ std::string GetDirectory()
 {
     char abs_path[PATH_MAX] { 0x00 };
     int ret = readlink("/proc/self/exe", abs_path, sizeof(abs_path));
-    if (ret < 0 || (size_t)ret >= sizeof(abs_path)) {
+    if (ret < 0 || static_cast<size_t>(ret) >= sizeof(abs_path)) {
         return "";
     }
 
@@ -54,8 +54,8 @@ std::string GetDirectory()
 
 bool dirExists(const char *path)
 {
-    DIR *dp = NULL;
-    if ((dp = opendir(path)) == NULL) {
+    DIR *dp = nullptr;
+    if ((dp = opendir(path)) == nullptr) {
         return false;
     }
 
@@ -67,17 +67,17 @@ static void free_rootfs_list(struct rootfs_list *list)
 {
     size_t i;
 
-    if (list == NULL) {
+    if (list == nullptr) {
         return;
     }
 
     for (i = 0; i < list->rootfs_len; i++) {
         free_storage_rootfs(list->rootfs[i]);
-        list->rootfs[i] = NULL;
+        list->rootfs[i] = nullptr;
     }
 
     free(list->rootfs);
-    list->rootfs = NULL;
+    list->rootfs = nullptr;
     list->rootfs_len = 0;
 
     free(list);
@@ -113,8 +113,8 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_load)
     std::string source = std::string(store_real_path) + "/overlay-containers/" + ids.at(0);
     std::string backup = std::string(store_real_path) + "/overlay-containers/" + ids.at(0) + ".bak";
     std::string cp_command = "cp -r " + source + " " + backup;
-    storage_rootfs *cntr = NULL;
-    storage_rootfs *cntr_tmp = NULL;
+    storage_rootfs *cntr = nullptr;
+    storage_rootfs *cntr_tmp = nullptr;
     cntrootfs_t cnrf;
 
     cntr = rootfs_store_get_rootfs(ids.at(0).c_str());
@@ -170,9 +170,10 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_lookup)
     std::string truncatedId { "28a8e1311d71" };
     std::string incorrectId { "89jfl9hds13k" };
 
-    char *value = NULL;
+    char *value = nullptr;
     ASSERT_STREQ((value = rootfs_store_lookup(name.c_str())), id.c_str());
     free(value);
+    value = nullptr;
     ASSERT_STREQ((value = rootfs_store_lookup(truncatedId.c_str())), id.c_str());
     free(value);
     ASSERT_EQ(rootfs_store_lookup(incorrectId.c_str()), nullptr);
@@ -196,9 +197,9 @@ TEST_F(StorageRootfsUnitTest, test_rootfs_store_get_all_rootfs)
     std::string backup = std::string(store_real_path) + "/overlay-containers/" + ids.at(0) + ".bak";
     std::string rm_command = "rm -rf " + source;
     std::string mv_command = "mv " + backup + " " + source;
-    rootfs_list *rf_list = NULL;
-    char *digest = NULL;
-    char **names = NULL;
+    rootfs_list *rf_list = nullptr;
+    char *digest = nullptr;
+    char **names = nullptr;
     size_t names_len = 0;
 
     rf_list = (rootfs_list *)util_common_calloc_s(sizeof(rootfs_list));

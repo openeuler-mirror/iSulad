@@ -16,7 +16,7 @@
 #include "container_unix_mock.h"
 
 namespace {
-MockContainerUnix *g_container_unix_mock = NULL;
+MockContainerUnix *g_container_unix_mock = nullptr;
 }
 
 void MockContainerUnix_SetMock(MockContainerUnix *mock)

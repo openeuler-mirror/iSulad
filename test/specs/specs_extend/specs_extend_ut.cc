@@ -46,49 +46,49 @@ using namespace std;
 
 TEST(make_sure_oci_spec_linux_ut, test_make_sure_oci_spec_linux)
 {
-    oci_runtime_spec *oci_spec = NULL;
+    oci_runtime_spec *oci_spec = nullptr;
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     ASSERT_EQ(make_sure_oci_spec_linux(oci_spec), 0);
-    ASSERT_TRUE(oci_spec->linux != NULL);
+    ASSERT_TRUE(oci_spec->linux != nullptr);
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(make_sure_oci_spec_process_ut, test_make_sure_oci_spec_process)
 {
-    oci_runtime_spec *oci_spec = NULL;
+    oci_runtime_spec *oci_spec = nullptr;
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     ASSERT_EQ(make_sure_oci_spec_process(oci_spec), 0);
-    ASSERT_TRUE(oci_spec->process != NULL);
+    ASSERT_TRUE(oci_spec->process != nullptr);
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(make_sure_oci_spec_linux_resources_ut, test_make_sure_oci_spec_linux_resources)
 {
-    oci_runtime_spec *oci_spec = NULL;
+    oci_runtime_spec *oci_spec = nullptr;
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     ASSERT_EQ(make_sure_oci_spec_linux_resources(oci_spec), 0);
-    ASSERT_TRUE(oci_spec->linux != NULL);
-    ASSERT_TRUE(oci_spec->linux->resources != NULL);
+    ASSERT_TRUE(oci_spec->linux != nullptr);
+    ASSERT_TRUE(oci_spec->linux->resources != nullptr);
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(make_sure_oci_spec_linux_resources_blkio_ut, test_make_sure_oci_spec_linux_resources_blkio)
 {
-    oci_runtime_spec *oci_spec = NULL;
+    oci_runtime_spec *oci_spec = nullptr;
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     ASSERT_EQ(make_sure_oci_spec_linux_resources_blkio(oci_spec), 0);
-    ASSERT_TRUE(oci_spec->linux != NULL);
-    ASSERT_TRUE(oci_spec->linux->resources != NULL);
-    ASSERT_TRUE(oci_spec->linux->resources->block_io != NULL);
+    ASSERT_TRUE(oci_spec->linux != nullptr);
+    ASSERT_TRUE(oci_spec->linux->resources != nullptr);
+    ASSERT_TRUE(oci_spec->linux->resources->block_io != nullptr);
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(merge_hooks_ut, test_merge_hooks_invalid)
@@ -98,82 +98,82 @@ TEST(merge_hooks_ut, test_merge_hooks_invalid)
 
 TEST(merge_hooks_ut, test_merge_hooks_ut_2)
 {
-    oci_runtime_spec *oci_spec = NULL;
+    oci_runtime_spec *oci_spec = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
-    ASSERT_NE(merge_hooks(oci_spec->hooks, NULL), 0);
+    ASSERT_NE(merge_hooks(oci_spec->hooks, nullptr), 0);
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(merge_hooks_ut, test_merge_hooks_ut_3)
 {
-    char *hooks_config_file = NULL;
-    oci_runtime_spec_hooks *hooks_spec = NULL;
-    char *err = NULL;
+    char *hooks_config_file = nullptr;
+    oci_runtime_spec_hooks *hooks_spec = nullptr;
+    char *err = nullptr;
 
     hooks_config_file = json_path(HOOKS_CONFIG_FILE);
-    ASSERT_TRUE(hooks_config_file != NULL);
-    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, NULL, &err);
-    ASSERT_TRUE(hooks_spec != NULL);
+    ASSERT_TRUE(hooks_config_file != nullptr);
+    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, nullptr, &err);
+    ASSERT_TRUE(hooks_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(hooks_config_file);
-    hooks_config_file = NULL;
-    ASSERT_NE(merge_hooks(NULL, hooks_spec), 0);
+    hooks_config_file = nullptr;
+    ASSERT_NE(merge_hooks(nullptr, hooks_spec), 0);
     free_oci_runtime_spec_hooks(hooks_spec);
-    hooks_spec = NULL;
+    hooks_spec = nullptr;
 }
 
 TEST(merge_hooks_ut, test_merge_hooks_ut_4)
 {
-    char *hooks_config_file = NULL;
-    oci_runtime_spec_hooks *hooks_spec = NULL;
-    oci_runtime_spec *oci_spec = NULL;
-    char *err = NULL;
+    char *hooks_config_file = nullptr;
+    oci_runtime_spec_hooks *hooks_spec = nullptr;
+    oci_runtime_spec *oci_spec = nullptr;
+    char *err = nullptr;
 
     // All parameter correct
     hooks_config_file = json_path(HOOKS_CONFIG_FILE);
-    ASSERT_TRUE(hooks_config_file != NULL);
-    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, NULL, &err);
-    ASSERT_TRUE(hooks_spec != NULL);
+    ASSERT_TRUE(hooks_config_file != nullptr);
+    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, nullptr, &err);
+    ASSERT_TRUE(hooks_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(hooks_config_file);
-    hooks_config_file = NULL;
+    hooks_config_file = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
 
     free_oci_runtime_spec_hooks(hooks_spec);
-    hooks_spec = NULL;
+    hooks_spec = nullptr;
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 TEST(merge_hooks_ut, test_merge_hooks_ut_prestart)
 {
-    char *hooks_config_file = NULL;
-    oci_runtime_spec_hooks *hooks_spec = NULL;
-    oci_runtime_spec *oci_spec = NULL;
-    char *err = NULL;
+    char *hooks_config_file = nullptr;
+    oci_runtime_spec_hooks *hooks_spec = nullptr;
+    oci_runtime_spec *oci_spec = nullptr;
+    char *err = nullptr;
 
     // All parameter correct
     hooks_config_file = json_path(HOOKS_CONFIG_FILE);
-    ASSERT_TRUE(hooks_config_file != NULL);
-    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, NULL, &err);
-    ASSERT_TRUE(hooks_spec != NULL);
+    ASSERT_TRUE(hooks_config_file != nullptr);
+    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, nullptr, &err);
+    ASSERT_TRUE(hooks_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(hooks_config_file);
-    hooks_config_file = NULL;
+    hooks_config_file = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
@@ -188,30 +188,30 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_prestart)
     ASSERT_EQ(oci_spec->hooks->prestart[0]->timeout, 40);
 
     free_oci_runtime_spec_hooks(hooks_spec);
-    hooks_spec = NULL;
+    hooks_spec = nullptr;
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(merge_hooks_ut, test_merge_hooks_ut_poststart)
 {
-    char *hooks_config_file = NULL;
-    oci_runtime_spec_hooks *hooks_spec = NULL;
-    oci_runtime_spec *oci_spec = NULL;
-    char *err = NULL;
+    char *hooks_config_file = nullptr;
+    oci_runtime_spec_hooks *hooks_spec = nullptr;
+    oci_runtime_spec *oci_spec = nullptr;
+    char *err = nullptr;
 
     // All parameter correct
     hooks_config_file = json_path(HOOKS_CONFIG_FILE);
-    ASSERT_TRUE(hooks_config_file != NULL);
-    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, NULL, &err);
-    ASSERT_TRUE(hooks_spec != NULL);
+    ASSERT_TRUE(hooks_config_file != nullptr);
+    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, nullptr, &err);
+    ASSERT_TRUE(hooks_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(hooks_config_file);
-    hooks_config_file = NULL;
+    hooks_config_file = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
@@ -235,30 +235,30 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_poststart)
     ASSERT_EQ(oci_spec->hooks->poststart[1]->timeout, 61);
 
     free_oci_runtime_spec_hooks(hooks_spec);
-    hooks_spec = NULL;
+    hooks_spec = nullptr;
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(merge_hooks_ut, test_merge_hooks_ut_poststop)
 {
-    char *hooks_config_file = NULL;
-    oci_runtime_spec_hooks *hooks_spec = NULL;
-    oci_runtime_spec *oci_spec = NULL;
-    char *err = NULL;
+    char *hooks_config_file = nullptr;
+    oci_runtime_spec_hooks *hooks_spec = nullptr;
+    oci_runtime_spec *oci_spec = nullptr;
+    char *err = nullptr;
 
     // All parameter correct
     hooks_config_file = json_path(HOOKS_CONFIG_FILE);
-    ASSERT_TRUE(hooks_config_file != NULL);
-    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, NULL, &err);
-    ASSERT_TRUE(hooks_spec != NULL);
+    ASSERT_TRUE(hooks_config_file != nullptr);
+    hooks_spec = oci_runtime_spec_hooks_parse_file(hooks_config_file, nullptr, &err);
+    ASSERT_TRUE(hooks_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(hooks_config_file);
-    hooks_config_file = NULL;
+    hooks_config_file = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
     oci_spec->hooks = (oci_runtime_spec_hooks *)util_common_calloc_s(sizeof(oci_runtime_spec_hooks));
 
     ASSERT_EQ(merge_hooks(oci_spec->hooks, hooks_spec), 0);
@@ -282,7 +282,7 @@ TEST(merge_hooks_ut, test_merge_hooks_ut_poststop)
     ASSERT_EQ(oci_spec->hooks->poststop[1]->timeout, 62);
 
     free_oci_runtime_spec_hooks(hooks_spec);
-    hooks_spec = NULL;
+    hooks_spec = nullptr;
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }

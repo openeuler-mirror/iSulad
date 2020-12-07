@@ -45,7 +45,7 @@ std::string GetDirectory()
 {
     char abs_path[PATH_MAX] { 0x00 };
     int ret = readlink("/proc/self/exe", abs_path, sizeof(abs_path));
-    if (ret < 0 || (size_t)ret >= sizeof(abs_path)) {
+    if (ret < 0 || static_cast<size_t>(ret) >= sizeof(abs_path)) {
         return "";
     }
 
@@ -61,8 +61,8 @@ std::string GetDirectory()
 
 bool dirExists(const char *path)
 {
-    DIR *dp = NULL;
-    if ((dp = opendir(path)) == NULL) {
+    DIR *dp = nullptr;
+    if ((dp = opendir(path)) == nullptr) {
         return false;
     }
 
@@ -72,35 +72,35 @@ bool dirExists(const char *path)
 
 void free_layer(struct layer *ptr)
 {
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return;
     }
     free(ptr->id);
-    ptr->id = NULL;
+    ptr->id = nullptr;
     free(ptr->parent);
-    ptr->parent = NULL;
+    ptr->parent = nullptr;
     free(ptr->mount_point);
-    ptr->mount_point = NULL;
+    ptr->mount_point = nullptr;
     free(ptr->compressed_digest);
-    ptr->compressed_digest = NULL;
+    ptr->compressed_digest = nullptr;
     free(ptr->uncompressed_digest);
-    ptr->uncompressed_digest = NULL;
+    ptr->uncompressed_digest = nullptr;
     free(ptr);
 }
 
 void free_layer_list(struct layer_list *ptr)
 {
     size_t i = 0;
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return;
     }
 
     for (; i < ptr->layers_len; i++) {
         free_layer(ptr->layers[i]);
-        ptr->layers[i] = NULL;
+        ptr->layers[i] = nullptr;
     }
     free(ptr->layers);
-    ptr->layers = NULL;
+    ptr->layers = nullptr;
     free(ptr);
 }
 

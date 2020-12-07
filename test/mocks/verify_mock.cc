@@ -16,7 +16,7 @@
 #include "verify_mock.h"
 
 namespace {
-MockVerify *g_verify_mock = NULL;
+MockVerify *g_verify_mock = nullptr;
 }
 
 void MockVerify_SetMock(MockVerify *mock)

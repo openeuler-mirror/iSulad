@@ -20,7 +20,7 @@
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     std::string testData(reinterpret_cast<const char *>(data), size);
-    char *errmsg = NULL;
+    char *errmsg = nullptr;
     if (testData == "empty") {
         util_valid_mount_spec(nullptr, &errmsg);
     } else {

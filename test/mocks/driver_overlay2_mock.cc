@@ -16,7 +16,7 @@
 #include "driver_overlay2_mock.h"
 
 namespace {
-MockDriverOverlay2 *g_driver_overlay2_mock = NULL;
+MockDriverOverlay2 *g_driver_overlay2_mock = nullptr;
 }
 
 void MockDriverOverlay2_SetMock(MockDriverOverlay2* mock)

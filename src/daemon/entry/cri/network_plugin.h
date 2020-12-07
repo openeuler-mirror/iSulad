@@ -37,13 +37,13 @@ public:
                       const std::string &pluginBinDir = "/opt/cni/bin", const std::string &pluginName = "",
                       const std::string &hairpinMode = "hairpin-veth", const std::string &nonMasqueradeCIDR = "",
                       int32_t mtu = 1460)
-        : m_dockershimRootDirectory(dockershimRootDirectory)
-        , m_pluginConfDir(pluginConfDir)
-        , m_pluginBinDir(pluginBinDir)
-        , m_pluginName(pluginName)
-        , m_hairpinMode(hairpinMode)
-        , m_nonMasqueradeCIDR(nonMasqueradeCIDR)
-        , m_mtu(mtu)
+        : m_dockershimRootDirectory(dockershimRootDirectory),
+          m_pluginConfDir(pluginConfDir),
+          m_pluginBinDir(pluginBinDir),
+          m_pluginName(pluginName),
+          m_hairpinMode(hairpinMode),
+          m_nonMasqueradeCIDR(nonMasqueradeCIDR),
+          m_mtu(mtu)
     {
     }
     ~NetworkPluginConf() = default;

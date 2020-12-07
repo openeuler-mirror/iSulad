@@ -16,7 +16,7 @@
 #include "image_mock.h"
 
 namespace {
-MockImage *g_image_mock = NULL;
+MockImage *g_image_mock = nullptr;
 }
 
 void MockImage_SetMock(MockImage* mock)

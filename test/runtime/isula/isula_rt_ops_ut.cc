@@ -59,8 +59,8 @@ public:
 
 TEST(isula_rt_ops_ut, test_rt_isula_detect)
 {
-    // All parameter NULL
-    ASSERT_FALSE(rt_isula_detect(NULL));
+    // All parameter nullptr
+    ASSERT_FALSE(rt_isula_detect(nullptr));
 
     ASSERT_TRUE(rt_isula_detect("kata-runtime"));
 

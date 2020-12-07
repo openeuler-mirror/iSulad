@@ -22,8 +22,7 @@ class Errors {
 public:
     Errors();
     Errors(const Errors &copy)
-        : m_message(copy.m_message)
-        , m_code(copy.m_code)
+        : m_message(copy.m_message), m_code(copy.m_code)
     {
     }
     Errors &operator=(const Errors &);

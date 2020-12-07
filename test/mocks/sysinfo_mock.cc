@@ -16,7 +16,7 @@
 #include "sysinfo_mock.h"
 
 namespace {
-MockSysinfo *g_sysinfo_mock = NULL;
+MockSysinfo *g_sysinfo_mock = nullptr;
 }
 
 void MockSysinfo_SetMock(MockSysinfo *mock)

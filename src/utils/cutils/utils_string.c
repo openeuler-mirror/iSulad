@@ -642,7 +642,7 @@ static char *do_string_join(const char *sep, const char **parts, size_t parts_le
     char *res_string = NULL;
     size_t iter;
 
-    res_string = calloc(result_len + 1, 1);
+    res_string = util_smart_calloc_s(sizeof(char), result_len + 1);
     if (res_string == NULL) {
         return NULL;
     }

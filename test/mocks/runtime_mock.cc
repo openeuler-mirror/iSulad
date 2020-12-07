@@ -16,7 +16,7 @@
 #include "runtime_mock.h"
 
 namespace {
-MockRuntime *g_runtime_mock = NULL;
+MockRuntime *g_runtime_mock = nullptr;
 }
 
 void MockRuntime_SetMock(MockRuntime *mock)

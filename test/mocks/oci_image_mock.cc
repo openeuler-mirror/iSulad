@@ -16,7 +16,7 @@
 #include "oci_image_mock.h"
 
 namespace {
-MockOciImage *g_oci_image_mock = NULL;
+MockOciImage *g_oci_image_mock = nullptr;
 }
 
 void MockOciImage_SetMock(MockOciImage* mock)

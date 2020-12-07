@@ -16,7 +16,7 @@
 #include "collector_mock.h"
 
 namespace {
-MockCollector *g_collector_mock = NULL;
+MockCollector *g_collector_mock = nullptr;
 }
 
 void MockCollector_SetMock(MockCollector *mock)

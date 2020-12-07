@@ -16,7 +16,7 @@
 #include "syscall_mock.h"
 
 namespace {
-MockSyscall *g_syscall_mock = NULL;
+MockSyscall *g_syscall_mock = nullptr;
 }
 
 void Syscall_SetMock(MockSyscall* mock)

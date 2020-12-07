@@ -69,7 +69,7 @@ string generate_random_string(int length)
     string result;
     result.resize(length);
 
-    srand(time(NULL));
+    srand(time(nullptr));
     for (int i = 0; i < length; i++) {
         static default_random_engine e(time(0));
         static uniform_int_distribution<unsigned> u(0, chset.size() - 1);

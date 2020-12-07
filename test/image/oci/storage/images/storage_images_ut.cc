@@ -50,7 +50,7 @@ std::string GetDirectory()
 {
     char abs_path[PATH_MAX] { 0x00 };
     int ret = readlink("/proc/self/exe", abs_path, sizeof(abs_path));
-    if (ret < 0 || (size_t)ret >= sizeof(abs_path)) {
+    if (ret < 0 || static_cast<size_t>(ret) >= sizeof(abs_path)) {
         return "";
     }
 
@@ -66,8 +66,8 @@ std::string GetDirectory()
 
 bool dirExists(const char *path)
 {
-    DIR *dp = NULL;
-    if ((dp = opendir(path)) == NULL) {
+    DIR *dp = nullptr;
+    if ((dp = opendir(path)) == nullptr) {
         return false;
     }
 
@@ -225,35 +225,35 @@ struct layer_list *invokeStorageLayersGetByCompressDigest(const char *digest)
 
 void free_image_layer(struct layer *ptr)
 {
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return;
     }
     free(ptr->id);
-    ptr->id = NULL;
+    ptr->id = nullptr;
     free(ptr->parent);
-    ptr->parent = NULL;
+    ptr->parent = nullptr;
     free(ptr->mount_point);
-    ptr->mount_point = NULL;
+    ptr->mount_point = nullptr;
     free(ptr->compressed_digest);
-    ptr->compressed_digest = NULL;
+    ptr->compressed_digest = nullptr;
     free(ptr->uncompressed_digest);
-    ptr->uncompressed_digest = NULL;
+    ptr->uncompressed_digest = nullptr;
     free(ptr);
 }
 
 void invokeFreeLayerList(struct layer_list *ptr)
 {
     size_t i = 0;
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return;
     }
 
     for (; i < ptr->layers_len; i++) {
         free_image_layer(ptr->layers[i]);
-        ptr->layers[i] = NULL;
+        ptr->layers[i] = nullptr;
     }
     free(ptr->layers);
-    ptr->layers = NULL;
+    ptr->layers = nullptr;
     free(ptr);
 }
 
@@ -476,7 +476,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
 
     free_imagetool_image(image);
 
-    char *toplayer = NULL;
+    char *toplayer = nullptr;
     ASSERT_STREQ((toplayer = image_store_top_layer(id.c_str())),
                  "6194458b07fcf01f1483d96cd6c34302ffff7f382bb151a6d023c4e80ba3050a");
     free(toplayer);
@@ -494,7 +494,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     ASSERT_STREQ(image->repo_tags[1], "isula.org/library/test:latest");
     free_imagetool_image(image);
 
-    char **img_names = NULL;
+    char **img_names = nullptr;
     img_names = (char **)util_common_calloc_s(2 * sizeof(char *));
     img_names[0] = util_strdup_s("busybox:latest");
     img_names[1] = util_strdup_s("centos:3.0");
@@ -507,7 +507,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_create)
     free_imagetool_image(image);
 
     ASSERT_EQ(image_store_set_metadata(id.c_str(), "{metadata}"), 0);
-    char *manifest_val = NULL;
+    char *manifest_val = nullptr;
     ASSERT_STREQ((manifest_val = image_store_metadata(id.c_str())), "{metadata}");
     free(manifest_val);
 
@@ -548,9 +548,10 @@ TEST_F(StorageImagesUnitTest, test_image_store_lookup)
     std::string truncatedId { "e4db68de4ff27" };
     std::string incorrectId { "4db68de4ff27" };
 
-    char *value = NULL;
+    char *value = nullptr;
     ASSERT_STREQ((value = image_store_lookup(name.c_str())), id.c_str());
     free(value);
+    value = nullptr;
     ASSERT_STREQ((value = image_store_lookup(truncatedId.c_str())), id.c_str());
     free(value);
     ASSERT_EQ(image_store_lookup(incorrectId.c_str()), nullptr);
@@ -583,7 +584,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_metadata)
 
 TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
 {
-    imagetool_images_list *images_list = NULL;
+    imagetool_images_list *images_list = nullptr;
 
     images_list = (imagetool_images_list *)util_common_calloc_s(sizeof(imagetool_images_list));
     ASSERT_NE(images_list, nullptr);
@@ -612,7 +613,7 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
 
 TEST_F(StorageImagesUnitTest, test_image_store_get_something)
 {
-    char **names = NULL;
+    char **names = nullptr;
     size_t names_len = 0;
     imagetool_fs_info *fs_info = (imagetool_fs_info *)util_common_calloc_s(sizeof(imagetool_fs_info));
     ASSERT_NE(fs_info, nullptr);

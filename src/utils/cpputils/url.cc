@@ -122,10 +122,11 @@ int UnescapeDealWithPercentSign(size_t &i, std::string &s, const EncodeMode &mod
         return -1;
     }
     if (mode == EncodeMode::ENCODE_ZONE) {
-        char v = (char)(((unsigned char)s1 << 4) | (unsigned char)s2);
-        if (std::string(s.begin() + (long)i, s.begin() + (long)i + 3) != "%25" &&
+        char v = static_cast<char>((static_cast<unsigned char>(s1) << 4) | static_cast<unsigned char>(s2));
+        if (std::string(s.begin() + static_cast<long>(i), s.begin() + static_cast<long>(i) + 3) != "%25" &&
             v != ' ' && ShouldEscape(v, EncodeMode::ENCODE_HOST)) {
-            ERROR("invalid URL escape %s", std::string(s.begin() + (long)i, s.begin() + (long)i + 3).c_str());
+            ERROR("invalid URL escape %s", std::string(s.begin() + static_cast<long>(i),
+                                                       s.begin() + static_cast<long>(i) + 3).c_str());
             return -1;
         }
     }

@@ -16,7 +16,7 @@
 #include "engine_mock.h"
 
 namespace {
-MockEngine *g_engine_mock = NULL;
+MockEngine *g_engine_mock = nullptr;
 }
 
 void MockEngine_SetMock(MockEngine* mock)

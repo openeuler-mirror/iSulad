@@ -52,7 +52,7 @@ public:
     UserInfo(const std::string &u, const std::string &p, bool b) : m_username(u), m_password(p),
         m_passwordSet(b) {}
     ~UserInfo() = default;
-    std::string String() const ;
+    std::string String() const;
     std::string Username() const;
     std::string Password(bool &set) const;
 
@@ -68,7 +68,7 @@ public:
     ~URLDatum();
     std::string EscapedPath();
     std::string String();
-    bool IsAbs() const ;
+    bool IsAbs() const;
     std::unique_ptr<URLDatum> UrlParse(const std::string &ref);
     std::unique_ptr<URLDatum> ResolveReference(URLDatum *ref);
     auto Query()->std::map<std::string, std::vector<std::string>>;

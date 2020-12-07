@@ -59,7 +59,7 @@ std::string get_dir()
 {
     char abs_path[PATH_MAX] { 0x00 };
     int ret = readlink("/proc/self/exe", abs_path, sizeof(abs_path));
-    if (ret < 0 || (size_t)ret >= sizeof(abs_path)) {
+    if (ret < 0 || static_cast<size_t>(ret) >= sizeof(abs_path)) {
         return "";
     }
 
@@ -123,7 +123,7 @@ protected:
 int invokeHttpRequestV1(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
 {
     std::string file;
-    char *data = NULL;
+    char *data = nullptr;
     static int ping_count = 0;
     static int token_count = 0;
     Buffer *output_buffer = (Buffer *)options->output;
@@ -156,7 +156,7 @@ int invokeHttpRequestV1(const char *url, struct http_get_options *options, long 
         data = util_strdup_s("test");
     } else {
         data = util_read_text_file(file.c_str());
-        if (data == NULL) {
+        if (data == nullptr) {
             ERROR("read file %s failed", file.c_str());
             return -1;
         }
@@ -182,7 +182,7 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
 #define COUNT_TEST_NOT_FOUND 3
 #define COUNT_TEST_SERVER_ERROR 4
     std::string file;
-    char *data = NULL;
+    char *data = nullptr;
     int64_t size = 0;
     Buffer *output_buffer = (Buffer *)options->output;
     static bool retry = true;
@@ -245,7 +245,7 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
     }
 
     data = util_read_text_file(file.c_str());
-    if (data == NULL) {
+    if (data == nullptr) {
         ERROR("read file %s failed", file.c_str());
         return -1;
     }
@@ -268,7 +268,7 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
 int invokeHttpRequestOCI(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
 {
     std::string file;
-    char *data = NULL;
+    char *data = nullptr;
     int64_t size = 0;
     Buffer *output_buffer = (Buffer *)options->output;
 
@@ -295,7 +295,7 @@ int invokeHttpRequestOCI(const char *url, struct http_get_options *options, long
     }
 
     data = util_read_text_file(file.c_str());
-    if (data == NULL) {
+    if (data == nullptr) {
         ERROR("read file %s failed", file.c_str());
         return -1;
     }
@@ -318,7 +318,7 @@ int invokeHttpRequestOCI(const char *url, struct http_get_options *options, long
 int invokeHttpRequestLogin(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
 {
     std::string file;
-    char *data = NULL;
+    char *data = nullptr;
     Buffer *output_buffer = (Buffer *)options->output;
 
     std::string data_path = get_dir() + "/data/v2/";
@@ -330,7 +330,7 @@ int invokeHttpRequestLogin(const char *url, struct http_get_options *options, lo
     }
 
     data = util_read_text_file(file.c_str());
-    if (data == NULL) {
+    if (data == nullptr) {
         ERROR("read file %s failed", file.c_str());
         return -1;
     }
@@ -359,7 +359,7 @@ int invokeStorageImgCreate(const char *id, const char *parent_id, const char *me
 
 imagetool_image * invokeStorageImgGet(const char *img_id)
 {
-    return NULL;
+    return nullptr;
 }
 
 int invokeStorageImgSetBigData(const char *img_id, const char *key, const char *val)
@@ -409,29 +409,29 @@ int invokeStorageDecHoldRefs(const char *layer_id)
 
 struct layer * invokeStorageLayerGet(const char *layer_id)
 {
-    return NULL;
+    return nullptr;
 }
 
 struct layer_list *invokeStorageLayersGetByCompressDigest(const char *digest)
 {
     int ret = 0;
-    struct layer_list *list = NULL;
+    struct layer_list *list = nullptr;
 
     list = (struct layer_list*)util_common_calloc_s(sizeof(struct layer_list));
-    if (list == NULL) {
+    if (list == nullptr) {
         ERROR("out of memory");
-        return NULL;
+        return nullptr;
     }
 
     list->layers = (struct layer **)util_common_calloc_s(sizeof(struct layer*) * 1);
-    if (list->layers == NULL) {
+    if (list->layers == nullptr) {
         ERROR("out of memory");
         ret = -1;
         goto out;
     }
 
     list->layers[0] = (struct layer *)util_common_calloc_s(sizeof(struct layer));
-    if (list->layers[0] == NULL) {
+    if (list->layers[0] == nullptr) {
         ERROR("out of memory");
         ret = -1;
         goto out;
@@ -441,12 +441,12 @@ struct layer_list *invokeStorageLayersGetByCompressDigest(const char *digest)
     list->layers[0]->uncompressed_digest =
         util_strdup_s("sha256:50761fe126b6e4d90fa0b7a6e195f6030fe250c016c2fc860ac40f2e8d2f2615");
     list->layers[0]->id = util_strdup_s("sha256:50761fe126b6e4d90fa0b7a6e195f6030fe250c016c2fc860ac40f2e8d2f2615");
-    list->layers[0]->parent = NULL;
+    list->layers[0]->parent = nullptr;
 
 out:
     if (ret != 0) {
         free_layer_list(list);
-        list = NULL;
+        list = nullptr;
     }
 
     return list;
@@ -454,12 +454,12 @@ out:
 
 struct layer * invokeStorageLayerGet1(const char *layer_id)
 {
-    struct layer *l = NULL;
+    struct layer *l = nullptr;
 
     l = (struct layer *)util_common_calloc_s(sizeof(struct layer));
-    if (l == NULL) {
+    if (l == nullptr) {
         ERROR("out of memory");
-        return NULL;
+        return nullptr;
     }
 
     return l;
@@ -473,34 +473,34 @@ int invokeStorageLayerTryRepairLowers(const char *layer_id, const char *last_lay
 void invokeFreeLayerList(struct layer_list *ptr)
 {
     size_t i = 0;
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return;
     }
 
     for (; i < ptr->layers_len; i++) {
         free_layer(ptr->layers[i]);
-        ptr->layers[i] = NULL;
+        ptr->layers[i] = nullptr;
     }
     free(ptr->layers);
-    ptr->layers = NULL;
+    ptr->layers = nullptr;
     free(ptr);
 }
 
 void invokeFreeLayer(struct layer *ptr)
 {
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return;
     }
     free(ptr->id);
-    ptr->id = NULL;
+    ptr->id = nullptr;
     free(ptr->parent);
-    ptr->parent = NULL;
+    ptr->parent = nullptr;
     free(ptr->mount_point);
-    ptr->mount_point = NULL;
+    ptr->mount_point = nullptr;
     free(ptr->compressed_digest);
-    ptr->compressed_digest = NULL;
+    ptr->compressed_digest = nullptr;
     free(ptr->uncompressed_digest);
-    ptr->uncompressed_digest = NULL;
+    ptr->uncompressed_digest = nullptr;
     free(ptr);
 }
 
@@ -514,7 +514,7 @@ static int init_log()
     struct isula_libutils_log_config lconf = { 0 };
 
     lconf.name = "registry_unit_test";
-    lconf.file = NULL;
+    lconf.file = nullptr;
     lconf.priority = "ERROR";
     lconf.driver = "stdout";
     if (isula_libutils_log_enable(&lconf)) {
@@ -653,7 +653,7 @@ TEST_F(RegistryUnitTest, test_login)
 
 TEST_F(RegistryUnitTest, test_logout)
 {
-    char *auth_data = NULL;
+    char *auth_data = nullptr;
     std::string auths_file = get_dir() + "/auths/" + AUTH_FILE_NAME;
 
     ASSERT_EQ(registry_logout((char*)"test2.com"), 0);
@@ -661,7 +661,7 @@ TEST_F(RegistryUnitTest, test_logout)
     auth_data = util_read_text_file(auths_file.c_str());
     ASSERT_NE(strstr(auth_data, "hub-mirror.c.163.com"), nullptr);
     free(auth_data);
-    auth_data = NULL;
+    auth_data = nullptr;
 }
 
 TEST_F(RegistryUnitTest, test_pull_v2_image)
@@ -699,15 +699,15 @@ TEST_F(RegistryUnitTest, test_pull_v2_image)
 
 TEST_F(RegistryUnitTest, test_pull_oci_image)
 {
-    registry_pull_options *options = NULL;
+    registry_pull_options *options = nullptr;
 
     options = (registry_pull_options *)util_common_calloc_s(sizeof(registry_pull_options));
     ASSERT_NE(options, nullptr);
 
     options->image_name = util_strdup_s("hub-mirror.c.163.com/library/busybox:latest");
     options->dest_image_name = util_strdup_s("isula.org/library/busybox:latest");
-    options->auth.username = NULL;
-    options->auth.password = NULL;
+    options->auth.username = nullptr;
+    options->auth.password = nullptr;
     options->skip_tls_verify = false;
     options->insecure_registry = false;
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -721,10 +721,10 @@ TEST_F(RegistryUnitTest, test_pull_oci_image)
 TEST_F(RegistryUnitTest, test_pull_already_exist)
 {
     registry_pull_options options;
-    options.image_name = (char*)"hub-mirror.c.163.com/library/busybox:latest";
-    options.dest_image_name = (char*)"isula.org/library/busybox:latest";
-    options.auth.username = (char*)"test";
-    options.auth.password = (char*)"test";
+    options.image_name = (char *)"hub-mirror.c.163.com/library/busybox:latest";
+    options.dest_image_name = (char *)"isula.org/library/busybox:latest";
+    options.auth.username = (char *)"test";
+    options.auth.password = (char *)"test";
     options.skip_tls_verify = true;
     options.insecure_registry = true;
 
@@ -735,7 +735,7 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
     .WillRepeatedly(Invoke(invokeStorageLayerGet1));
     ASSERT_EQ(registry_pull(&options), 0);
 
-    options.image_name = (char*)"quay.io/coreos/etcd:v3.3.17-arm64";
+    options.image_name = (char *)"quay.io/coreos/etcd:v3.3.17-arm64";
     options.dest_image_name = (char*)"quay.io/coreos/etcd:v3.3.17-arm64";
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV1));
@@ -749,8 +749,8 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
 TEST_F(RegistryUnitTest, test_aes)
 {
     char *text = (char*)"test";
-    unsigned char *encoded = NULL;
-    char *decoded = NULL;
+    unsigned char *encoded = nullptr;
+    char *decoded = nullptr;
     ASSERT_EQ(aes_encode((unsigned char *)text, strlen(text), &encoded), 0);
     ASSERT_EQ(aes_decode(encoded, AES_256_CFB_IV_LEN + strlen(text), (unsigned char **)&decoded), 0);
     ASSERT_STREQ(decoded, text);

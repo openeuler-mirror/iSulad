@@ -37,7 +37,7 @@ TEST(utils_array, test_util_array_len)
 
 TEST(utils_array, test_util_free_array)
 {
-    char **array = NULL;
+    char **array = nullptr;
 
     array = (char **)util_common_calloc_s(4 * sizeof(char *));
     ASSERT_NE(array, nullptr);
@@ -157,8 +157,8 @@ TEST(utils_array, test_util_grow_array)
 
 TEST(utils_array, test_util_array_append)
 {
-    char **array = NULL;
-    char **array_three = NULL;
+    char **array = nullptr;
+    char **array_three = nullptr;
     int ret;
 
     ret = util_array_append(&array, "1234567890");

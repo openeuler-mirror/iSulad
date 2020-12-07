@@ -60,96 +60,96 @@ public:
 
 TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_1)
 {
-    // All parameter NULL
-    ASSERT_NE(merge_conf_cgroup(NULL, NULL), 0);
+    // All parameter nullptr
+    ASSERT_NE(merge_conf_cgroup(nullptr, nullptr), 0);
 }
 
 TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_2)
 {
-    oci_runtime_spec *oci_spec = NULL;
+    oci_runtime_spec *oci_spec = nullptr;
 
-    // Parameter host_spec is NULL
+    // Parameter host_spec is nullptr
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
-    ASSERT_NE(merge_conf_cgroup(oci_spec, NULL), 0);
+    ASSERT_TRUE(oci_spec != nullptr);
+    ASSERT_NE(merge_conf_cgroup(oci_spec, nullptr), 0);
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_3)
 {
-    char *host_config_file = NULL;
-    host_config *host_spec = NULL;
-    char *err = NULL;
+    char *host_config_file = nullptr;
+    host_config *host_spec = nullptr;
+    char *err = nullptr;
 
-    // Parameter oci_spec is NULL
+    // Parameter oci_spec is nullptr
     host_config_file = json_path(HOST_CONFIG_FILE);
-    ASSERT_TRUE(host_config_file != NULL);
-    host_spec = host_config_parse_file(host_config_file, NULL, &err);
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_config_file != nullptr);
+    host_spec = host_config_parse_file(host_config_file, nullptr, &err);
+    ASSERT_TRUE(host_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(host_config_file);
-    host_config_file = NULL;
-    ASSERT_NE(merge_conf_cgroup(NULL, host_spec), 0);
+    host_config_file = nullptr;
+    ASSERT_NE(merge_conf_cgroup(nullptr, host_spec), 0);
     free_host_config(host_spec);
-    host_spec = NULL;
+    host_spec = nullptr;
 }
 
 TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup)
 {
-    char *host_config_file = NULL;
-    host_config *host_spec = NULL;
-    oci_runtime_spec *oci_spec = NULL;
-    char *err = NULL;
+    char *host_config_file = nullptr;
+    host_config *host_spec = nullptr;
+    oci_runtime_spec *oci_spec = nullptr;
+    char *err = nullptr;
 
     // All parameter correct
     host_config_file = json_path(HOST_CONFIG_FILE);
-    ASSERT_TRUE(host_config_file != NULL);
-    host_spec = host_config_parse_file(host_config_file, NULL, &err);
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_config_file != nullptr);
+    host_spec = host_config_parse_file(host_config_file, nullptr, &err);
+    ASSERT_TRUE(host_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(host_config_file);
-    host_config_file = NULL;
+    host_config_file = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
 
     ASSERT_EQ(merge_conf_cgroup(oci_spec, host_spec), 0);
 
     free_host_config(host_spec);
-    host_spec = NULL;
+    host_spec = nullptr;
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_cpu)
 {
-    char *host_config_file = NULL;
-    host_config *host_spec = NULL;
-    char *oci_config_file = NULL;
-    oci_runtime_spec *oci_spec = NULL;
-    char *err = NULL;
+    char *host_config_file = nullptr;
+    host_config *host_spec = nullptr;
+    char *oci_config_file = nullptr;
+    oci_runtime_spec *oci_spec = nullptr;
+    char *err = nullptr;
 
     // cpu
     host_config_file = json_path(HOST_CONFIG_FILE);
-    ASSERT_TRUE(host_config_file != NULL);
-    host_spec = host_config_parse_file(host_config_file, NULL, &err);
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_config_file != nullptr);
+    host_spec = host_config_parse_file(host_config_file, nullptr, &err);
+    ASSERT_TRUE(host_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(host_config_file);
-    host_config_file = NULL;
+    host_config_file = nullptr;
 
     oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
-    ASSERT_TRUE(oci_config_file != NULL);
-    oci_spec = oci_runtime_spec_parse_file(oci_config_file, NULL, &err);
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_config_file != nullptr);
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(oci_config_file);
-    oci_config_file = NULL;
+    oci_config_file = nullptr;
 
     host_spec->cpu_period = 123;
     host_spec->cpu_quota = 234;
@@ -172,40 +172,40 @@ TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_cpu)
     ASSERT_STREQ(oci_spec->linux->resources->cpu->mems, "0");
 
     free_host_config(host_spec);
-    host_spec = NULL;
+    host_spec = nullptr;
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_mem)
 {
-    char *host_config_file = NULL;
-    host_config *host_spec = NULL;
-    char *oci_config_file = NULL;
-    oci_runtime_spec *oci_spec = NULL;
-    char *err = NULL;
+    char *host_config_file = nullptr;
+    host_config *host_spec = nullptr;
+    char *oci_config_file = nullptr;
+    oci_runtime_spec *oci_spec = nullptr;
+    char *err = nullptr;
 
     // mem
     // int64_t kernel_memory;
     // int64_t memory_reservation;
     // int64_t memory_swap;
     host_config_file = json_path(HOST_CONFIG_FILE);
-    ASSERT_TRUE(host_config_file != NULL);
-    host_spec = host_config_parse_file(host_config_file, NULL, &err);
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_config_file != nullptr);
+    host_spec = host_config_parse_file(host_config_file, nullptr, &err);
+    ASSERT_TRUE(host_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(host_config_file);
-    host_config_file = NULL;
+    host_config_file = nullptr;
 
     oci_config_file = json_path(OCI_RUNTIME_SPEC_FILE);
-    ASSERT_TRUE(oci_config_file != NULL);
-    oci_spec = oci_runtime_spec_parse_file(oci_config_file, NULL, &err);
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_config_file != nullptr);
+    oci_spec = oci_runtime_spec_parse_file(oci_config_file, nullptr, &err);
+    ASSERT_TRUE(oci_spec != nullptr);
     free(err);
-    err = NULL;
+    err = nullptr;
     free(oci_config_file);
-    oci_config_file = NULL;
+    oci_config_file = nullptr;
 
     host_spec->kernel_memory = 123;
     host_spec->memory_reservation = 234;
@@ -218,9 +218,9 @@ TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_mem)
     ASSERT_EQ(oci_spec->linux->resources->memory->swap, 456);
 
     free_host_config(host_spec);
-    host_spec = NULL;
+    host_spec = nullptr;
     free_oci_runtime_spec(oci_spec);
-    oci_spec = NULL;
+    oci_spec = nullptr;
 }
 
 /* conf get routine rootdir */
@@ -246,10 +246,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_2)
     host_config *host_spec = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_spec != nullptr);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent_null));
 
@@ -269,10 +269,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_3)
     host_config *host_spec = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_spec != nullptr);
 
     host_spec->cgroup_parent = util_strdup_s("/test");
 
@@ -294,10 +294,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_4)
     host_config *host_spec = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_spec != nullptr);
 
     EXPECT_CALL(m_isulad_conf, GetCgroupParent()).WillRepeatedly(Invoke(invoke_conf_get_isulad_cgroup_parent));
 
@@ -317,10 +317,10 @@ TEST_F(SpecsUnitTest, test_merge_oci_cgroups_path_5)
     host_config *host_spec = nullptr;
 
     oci_spec = (oci_runtime_spec *)util_common_calloc_s(sizeof(oci_runtime_spec));
-    ASSERT_TRUE(oci_spec != NULL);
+    ASSERT_TRUE(oci_spec != nullptr);
 
     host_spec = (host_config *)util_common_calloc_s(sizeof(host_config));
-    ASSERT_TRUE(host_spec != NULL);
+    ASSERT_TRUE(host_spec != nullptr);
 
     host_spec->cgroup_parent = util_strdup_s("/test");
 

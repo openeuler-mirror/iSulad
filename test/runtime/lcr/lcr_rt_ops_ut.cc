@@ -59,8 +59,8 @@ public:
 
 TEST(lcr_rt_ops_ut, test_rt_lcr_detect)
 {
-    // All parameter NULL
-    ASSERT_FALSE(rt_lcr_detect(NULL));
+    // All parameter nullptr
+    ASSERT_FALSE(rt_lcr_detect(nullptr));
 
     ASSERT_TRUE(rt_lcr_detect("lcr"));
 
@@ -258,15 +258,15 @@ TEST_F(LcrRtOpsUnitTest, test_rt_lcr_create)
 static char *get_absolute_path(const char *file)
 {
     char base_path[PATH_MAX] = { 0 };
-    char *json_file = NULL;
+    char *json_file = nullptr;
 
-    if (getcwd(base_path, PATH_MAX) == NULL) {
-        return NULL;
+    if (getcwd(base_path, PATH_MAX) == nullptr) {
+        return nullptr;
     }
 
     json_file = util_path_join(base_path, file);
-    if (json_file == NULL) {
-        return NULL;
+    if (json_file == nullptr) {
+        return nullptr;
     }
 
     return json_file;

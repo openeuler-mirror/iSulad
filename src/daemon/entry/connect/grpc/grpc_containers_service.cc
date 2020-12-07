@@ -299,7 +299,7 @@ ssize_t WriteStartResponseToRemoteClient(void *context, const void *data, size_t
         return 0;
     }
 
-    return (ssize_t)len;
+    return static_cast<ssize_t>(len);
 }
 
 int grpc_start_stream_close(void *context, char **err)
@@ -600,7 +600,7 @@ ssize_t WriteExecStdoutResponseToRemoteClient(void *context, const void *data, s
         ERROR("Failed to write request to grpc client");
         return -1;
     }
-    return (ssize_t)len;
+    return static_cast<ssize_t>(len);
 }
 
 ssize_t WriteExecStderrResponseToRemoteClient(void *context, const void *data, size_t len)
@@ -615,15 +615,14 @@ ssize_t WriteExecStderrResponseToRemoteClient(void *context, const void *data, s
         ERROR("Failed to write request to grpc client");
         return -1;
     }
-    return (ssize_t)len;
+    return static_cast<ssize_t>(len);
 }
 
 class RemoteExecReceiveFromClientTask : public StoppableThread {
 public:
     RemoteExecReceiveFromClientTask() = default;
     RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream, int read_pipe_fd)
-        : m_stream(stream)
-        , m_read_pipe_fd(read_pipe_fd)
+        : m_stream(stream), m_read_pipe_fd(read_pipe_fd)
     {
     }
     ~RemoteExecReceiveFromClientTask() = default;
@@ -821,7 +820,7 @@ ssize_t WriteAttachResponseToRemoteClient(void *context, const void *data, size_
         ERROR("Failed to write request to grpc client");
         return 0;
     }
-    return (ssize_t)len;
+    return static_cast<ssize_t>(len);
 }
 
 int grpc_attach_stream_close(void *context, char **err)
