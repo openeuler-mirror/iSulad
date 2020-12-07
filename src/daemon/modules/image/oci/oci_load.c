@@ -41,6 +41,7 @@
 #include "utils_array.h"
 #include "utils_file.h"
 #include "utils_verify.h"
+#include "oci_image.h"
 
 #define MANIFEST_BIG_DATA_KEY "manifest"
 #define OCI_SCHEMA_VERSION 2
@@ -1013,14 +1014,16 @@ static char *oci_load_path_create()
     int nret = 0;
     char *image_tmp_path = NULL;
     char tmp_dir[PATH_MAX] = { 0 };
+    struct oci_image_module_data *oci_image_data = NULL;
 
-    ret = makesure_isulad_tmpdir_perm_right();
+    oci_image_data = get_oci_image_data();
+    ret = makesure_isulad_tmpdir_perm_right(oci_image_data->root_dir);
     if (ret != 0) {
         ERROR("failed to make sure permission of image tmp work dir");
         goto out;
     }
 
-    image_tmp_path = oci_get_isulad_tmpdir();
+    image_tmp_path = oci_get_isulad_tmpdir(oci_image_data->root_dir);
     if (image_tmp_path == NULL) {
         ERROR("failed to get image tmp work dir");
         ret = -1;

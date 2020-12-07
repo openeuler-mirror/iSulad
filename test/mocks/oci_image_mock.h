@@ -23,6 +23,7 @@ class MockOciImage {
 public:
     virtual ~MockOciImage() = default;
     MOCK_METHOD1(OciValidTime, bool(char *time));
+    MOCK_METHOD0(GetOciImageData, struct oci_image_module_data * ());
 };
 
 void MockOciImage_SetMock(MockOciImage *mock);

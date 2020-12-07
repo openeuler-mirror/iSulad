@@ -23,6 +23,7 @@
 #include "isulad_config.h"
 #include "utils_array.h"
 #include "utils_string.h"
+#include "oci_image.h"
 
 static int is_valid_arguments(const char *server, const char *username, const char *password)
 {
@@ -47,6 +48,7 @@ int oci_do_login(const char *server, const char *username, const char *password)
     char **registry = NULL;
     char *host = NULL;
     char **parts = NULL;
+    struct oci_image_module_data *oci_image_data = NULL;
 
     if (is_valid_arguments(server, username, password) != 0) {
         ERROR("Invalid arguments");
@@ -60,8 +62,10 @@ int oci_do_login(const char *server, const char *username, const char *password)
     }
     host = parts[0];
 
-    options.skip_tls_verify = conf_get_skip_insecure_verify_flag();
-    insecure_registries = conf_get_insecure_registry_list();
+    oci_image_data = get_oci_image_data();
+    options.skip_tls_verify = oci_image_data->insecure_skip_verify_enforce;
+
+    insecure_registries = oci_image_data->insecure_registries;
     for (registry = insecure_registries; (registry != NULL) && (*registry != NULL); registry++) {
         if (!strcmp(*registry, host)) {
             options.insecure_registry = true;
@@ -81,8 +85,6 @@ int oci_do_login(const char *server, const char *username, const char *password)
 out:
     util_free_array(parts);
     parts = NULL;
-    util_free_array(insecure_registries);
-    insecure_registries = NULL;
 
     return ret;
 }

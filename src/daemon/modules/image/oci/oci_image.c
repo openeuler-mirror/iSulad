@@ -39,6 +39,90 @@
 
 #define IMAGE_NOT_KNOWN_ERR "image not known"
 
+struct oci_image_module_data g_oci_image_module_data = { 0 };
+
+static void free_oci_image_data(void)
+{
+    free(g_oci_image_module_data.root_dir);
+    g_oci_image_module_data.root_dir = NULL;
+
+    g_oci_image_module_data.use_decrypted_key = false;
+    g_oci_image_module_data.insecure_skip_verify_enforce = false;
+
+    util_free_array_by_len(g_oci_image_module_data.registry_mirrors, g_oci_image_module_data.registry_mirrors_len);
+    g_oci_image_module_data.registry_mirrors = NULL;
+    g_oci_image_module_data.registry_mirrors_len = 0;
+
+    util_free_array_by_len(g_oci_image_module_data.insecure_registries, g_oci_image_module_data.insecure_registries_len);
+    g_oci_image_module_data.insecure_registries = NULL;
+    g_oci_image_module_data.insecure_registries_len = 0;
+}
+
+static int oci_image_data_init(const isulad_daemon_configs *args)
+{
+    int nret = 0;
+    size_t i;
+    char *p = NULL;
+
+    if (args->graph == NULL) {
+        ERROR("args graph NULL");
+        return -1;
+    }
+    g_oci_image_module_data.root_dir = util_strdup_s(args->graph);
+
+    g_oci_image_module_data.use_decrypted_key = args->use_decrypted_key;
+    g_oci_image_module_data.insecure_skip_verify_enforce = args->insecure_skip_verify_enforce;
+
+    if (util_array_len((const char **)args->registry_mirrors) != args->registry_mirrors_len) {
+        ERROR("registry_mirrors_len is not the length of registry_mirrors");
+        goto free_out;
+    }
+    if (args->registry_mirrors_len != 0) {
+        for (i = 0; i < args->registry_mirrors_len; i++) {
+            p = args->registry_mirrors[i];
+            if (p == NULL) {
+                break;
+            }
+            nret = util_array_append(&g_oci_image_module_data.registry_mirrors, p);
+            if (nret != 0) {
+                ERROR("Out of memory");
+                goto free_out;
+            }
+            g_oci_image_module_data.registry_mirrors_len++;
+        }
+    }
+
+    if (util_array_len((const char **)args->insecure_registries) != args->insecure_registries_len) {
+        ERROR("insecure_registries_len is not the length of insecure_registries");
+        goto free_out;
+    }
+    if (args->insecure_registries_len != 0) {
+        for (i = 0; i < args->insecure_registries_len; i++) {
+            p = args->insecure_registries[i];
+            if (p == NULL) {
+                break;
+            }
+            nret = util_array_append(&g_oci_image_module_data.insecure_registries, p);
+            if (nret != 0) {
+                ERROR("Out of memory");
+                goto free_out;
+            }
+            g_oci_image_module_data.insecure_registries_len++;
+        }
+    }
+
+    return 0;
+
+free_out:
+    free_oci_image_data();
+    return -1;
+}
+
+struct oci_image_module_data *get_oci_image_data(void)
+{
+    return &g_oci_image_module_data;
+}
+
 // only use overlay as the driver name if specify overlay2 or overlay
 static char *format_driver_name(const char *driver)
 {
@@ -155,7 +239,7 @@ static int recreate_image_tmpdir()
     char *image_tmp_path = NULL;
     int ret = 0;
 
-    image_tmp_path = oci_get_isulad_tmpdir();
+    image_tmp_path = oci_get_isulad_tmpdir(g_oci_image_module_data.root_dir);
     if (image_tmp_path == NULL) {
         ERROR("failed to get image tmp path");
         ret = -1;
@@ -189,6 +273,12 @@ int oci_init(const isulad_daemon_configs *args)
         return ret;
     }
 
+    ret = oci_image_data_init(args);
+    if (ret != 0) {
+        ERROR("Failed to init oci image");
+        goto out;
+    }
+
     ret = recreate_image_tmpdir();
     if (ret != 0) {
         goto out;
@@ -213,6 +303,7 @@ out:
 void oci_exit()
 {
     storage_module_exit();
+    free_oci_image_data();
 }
 
 int oci_pull_rf(const im_pull_request *request, im_pull_response *response)

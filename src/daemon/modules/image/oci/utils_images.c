@@ -516,16 +516,13 @@ static int makesure_path_is_dir(char *path)
     return 0;
 }
 
-char *oci_get_isulad_tmpdir()
+char *oci_get_isulad_tmpdir(const char *root_dir)
 {
     char *isulad_tmpdir = NULL;
-    char *isulad_root_dir = NULL;
     char *env_dir = NULL;
-    int ret = 0;
 
-    isulad_root_dir = conf_get_isulad_rootdir();
-    if (isulad_root_dir == NULL) {
-        ERROR("get isulad root dir failed");
+    if (root_dir == NULL) {
+        ERROR("root dir is NULL");
         return NULL;
     }
 
@@ -533,31 +530,23 @@ char *oci_get_isulad_tmpdir()
     if (util_valid_str(env_dir)) {
         isulad_tmpdir = util_path_join(env_dir, "isulad_tmpdir");
     } else {
-        isulad_tmpdir = util_path_join(isulad_root_dir, "isulad_tmpdir");
+        isulad_tmpdir = util_path_join(root_dir, "isulad_tmpdir");
     }
     if (isulad_tmpdir == NULL) {
         ERROR("join temporary directory failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(isulad_root_dir);
-    if (ret != 0) {
-        free(isulad_tmpdir);
-        isulad_tmpdir = NULL;
+        return NULL;
     }
 
     return isulad_tmpdir;
 }
 
-int makesure_isulad_tmpdir_perm_right()
+int makesure_isulad_tmpdir_perm_right(const char *root_dir)
 {
     struct stat st = {0};
     char *isulad_tmpdir = NULL;
     int ret = 0;
 
-    isulad_tmpdir = oci_get_isulad_tmpdir();
+    isulad_tmpdir = oci_get_isulad_tmpdir(root_dir);
     if (isulad_tmpdir == NULL) {
         return -1;
     }

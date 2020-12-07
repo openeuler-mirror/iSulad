@@ -19,7 +19,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_timestamp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/image/oci/utils_images.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/daemon_arguments.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/http/parser.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/buffer/buffer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_aes.c
@@ -36,7 +35,6 @@ add_executable(${EXE}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/storage_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/oci_image_mock.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/http_mock.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../mocks/isulad_config_mock.cc
     registry_ut.cc)
 
 target_include_directories(${EXE} PUBLIC
