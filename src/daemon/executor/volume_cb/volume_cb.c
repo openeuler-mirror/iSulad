@@ -70,7 +70,7 @@ static int volume_list_cb(const volume_list_volume_request *request, volume_list
         goto out;
     }
 
-    (*response)->volumes = util_common_calloc_s(sizeof(volume_volume *) * list->vols_len);
+    (*response)->volumes = util_smart_calloc_s(sizeof(volume_volume *), list->vols_len);
     if ((*response)->volumes == NULL) {
         ERROR("out of memory");
         cc = ISULAD_ERR_MEMOUT;

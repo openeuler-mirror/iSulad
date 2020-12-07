@@ -268,9 +268,10 @@ void shim_write_container_log_file(log_terminal *terminal, const char *type, cha
     }
 
     if (buf != NULL && read_count > 0) {
-        upto = size + read_count;
-        if (upto > BUF_CACHE_SIZE) {
+        if (read_count > (BUF_CACHE_SIZE - size)) {
             upto = BUF_CACHE_SIZE;
+        } else {
+            upto = size + read_count;
         }
 
         if (upto > size) {
