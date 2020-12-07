@@ -1,0 +1,44 @@
+From f28afb0aeea9ff6465400825a64a3d28f83f187a Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Mon, 7 Dec 2020 14:48:05 +0800
+Subject: [PATCH] clean code: fix check error in terminal.c and volume_cb.c
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ src/cmd/isulad-shim/terminal.c            | 5 +++--
+ src/daemon/executor/volume_cb/volume_cb.c | 2 +-
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/cmd/isulad-shim/terminal.c b/src/cmd/isulad-shim/terminal.c
+index 9b7d55e6..f803b634 100644
+--- a/src/cmd/isulad-shim/terminal.c
++++ b/src/cmd/isulad-shim/terminal.c
+@@ -268,9 +268,10 @@ void shim_write_container_log_file(log_terminal *terminal, const char *type, cha
+     }
+ 
+     if (buf != NULL && read_count > 0) {
+-        upto = size + read_count;
+-        if (upto > BUF_CACHE_SIZE) {
++        if (read_count > (BUF_CACHE_SIZE - size)) {
+             upto = BUF_CACHE_SIZE;
++        } else {
++            upto = size + read_count;
+         }
+ 
+         if (upto > size) {
+diff --git a/src/daemon/executor/volume_cb/volume_cb.c b/src/daemon/executor/volume_cb/volume_cb.c
+index 8efddad9..13f99517 100644
+--- a/src/daemon/executor/volume_cb/volume_cb.c
++++ b/src/daemon/executor/volume_cb/volume_cb.c
+@@ -70,7 +70,7 @@ static int volume_list_cb(const volume_list_volume_request *request, volume_list
+         goto out;
+     }
+ 
+-    (*response)->volumes = util_common_calloc_s(sizeof(volume_volume *) * list->vols_len);
++    (*response)->volumes = util_smart_calloc_s(sizeof(volume_volume *), list->vols_len);
+     if ((*response)->volumes == NULL) {
+         ERROR("out of memory");
+         cc = ISULAD_ERR_MEMOUT;
+-- 
+2.25.1
+
