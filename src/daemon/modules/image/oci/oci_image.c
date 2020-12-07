@@ -70,7 +70,12 @@ static int oci_image_data_init(const isulad_daemon_configs *args)
     }
     g_oci_image_module_data.root_dir = util_strdup_s(args->graph);
 
-    g_oci_image_module_data.use_decrypted_key = args->use_decrypted_key;
+    if (args->use_decrypted_key == NULL) {
+        g_oci_image_module_data.use_decrypted_key = true;
+    } else {
+        g_oci_image_module_data.use_decrypted_key = *(args->use_decrypted_key);
+    }
+
     g_oci_image_module_data.insecure_skip_verify_enforce = args->insecure_skip_verify_enforce;
 
     if (util_array_len((const char **)args->registry_mirrors) != args->registry_mirrors_len) {
