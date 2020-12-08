@@ -138,6 +138,10 @@ TEST(SELinuxLabelUnitTestWithoutMock, test_dup_security_opt)
 
 class SELinuxRelabelUnitTest : public testing::Test {
 protected:
+    std::string m_testDir { "./test_dir" };
+    std::string m_testFile { m_testDir + "/file" };
+
+protected:
     void SetUp() override
     {
         CreateTestedObjects();
@@ -168,10 +172,6 @@ private:
         remove(m_testFile.c_str());
         rmdir(m_testDir.c_str());
     }
-
-protected:
-    std::string m_testDir { "./test_dir" };
-    std::string m_testFile { m_testDir + "/file" };
 };
 
 TEST_F(SELinuxRelabelUnitTest, test_relabel_normal)

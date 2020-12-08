@@ -55,18 +55,21 @@ TEST(utils_string_ut, test_strings_to_lower)
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ("ab&^%cde", result);
     free(result);
+    result = nullptr;
 
     str = "abcdefg12345*()%^#@";
     result = util_strings_to_lower(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ(str.c_str(), result);
     free(result);
+    result = nullptr;
 
     str = "aBcDeFg12345*()%^#@";
     result = util_strings_to_lower(str.c_str());
     ASSERT_STRNE(result, nullptr);
     ASSERT_STREQ("abcdefg12345*()%^#@", result);
     free(result);
+    result = nullptr;
 
     str = "";
     result = util_strings_to_lower(str.c_str());
@@ -729,6 +732,7 @@ TEST(utils_string_ut, test_dup_array_of_strings)
     ASSERT_STREQ(result[4], "&^%abc");
     free(result[4]);
     free(result);
+    result = nullptr;
 
     ret = util_dup_array_of_strings(array_long, array_long_len, &result, nullptr);
     ASSERT_NE(ret, 0);
@@ -743,6 +747,7 @@ TEST(utils_string_ut, test_dup_array_of_strings)
     ASSERT_STREQ(result[0], "abcd");
     free(result[0]);
     free(result);
+    result = nullptr;
 
     ret = util_dup_array_of_strings(nullptr, 0, &result, &result_len);
     ASSERT_EQ(ret, 0);

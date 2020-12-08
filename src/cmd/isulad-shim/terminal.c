@@ -261,7 +261,9 @@ void shim_write_container_log_file(log_terminal *terminal, const char *type, cha
     static char cache[BUF_CACHE_SIZE];
     static int size = 0;
     int upto, index;
-    int begin = 0, buf_readed = 0, buf_left = 0;
+    int begin = 0;
+    int buf_readed = 0;
+    int buf_left = 0;
 
     if (terminal == NULL) {
         return;

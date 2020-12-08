@@ -592,9 +592,8 @@ static int dup_syscall_to_oci_spec(const docker_seccomp *docker_seccomp_spec,
     return 0;
 }
 
-static oci_runtime_config_linux_seccomp *
-trans_docker_seccomp_to_oci_format(const docker_seccomp *docker_seccomp_spec,
-                                   const defs_process_capabilities *capabilities)
+static oci_runtime_config_linux_seccomp *trans_docker_seccomp_to_oci_format(const docker_seccomp *docker_seccomp_spec,
+                                                                            const defs_process_capabilities *capabilities)
 {
     oci_runtime_config_linux_seccomp *oci_seccomp_spec = NULL;
 

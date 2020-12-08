@@ -350,10 +350,9 @@ error_out:
     return nullptr;
 }
 
-container_create_request *
-CRIRuntimeServiceImpl::GenerateSandboxCreateContainerRequest(const runtime::v1alpha2::PodSandboxConfig &config,
-                                                             const std::string &image, std::string &jsonCheckpoint,
-                                                             const std::string &runtimeHandler, Errors &error)
+container_create_request *CRIRuntimeServiceImpl::GenerateSandboxCreateContainerRequest(
+    const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image, std::string &jsonCheckpoint,
+    const std::string &runtimeHandler, Errors &error)
 {
     container_create_request *create_request = nullptr;
     host_config *hostconfig = nullptr;
@@ -1076,8 +1075,8 @@ void CRIRuntimeServiceImpl::GetIPs(const std::string &podSandboxID, container_in
     WARN("Failed to read pod IP from plugin/docker: %s", error.GetCMessage());
 }
 
-std::unique_ptr<runtime::v1alpha2::PodSandboxStatus>
-CRIRuntimeServiceImpl::PodSandboxStatus(const std::string &podSandboxID, Errors &error)
+std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> CRIRuntimeServiceImpl::PodSandboxStatus(
+    const std::string &podSandboxID, Errors &error)
 {
     container_inspect *inspect { nullptr };
     std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> podStatus(new runtime::v1alpha2::PodSandboxStatus);

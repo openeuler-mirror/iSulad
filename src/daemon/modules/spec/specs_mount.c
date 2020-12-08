@@ -214,7 +214,9 @@ static bool valid_dirent_info(const char *dir, const struct dirent *info_archivo
 static int pack_devices(const char *fullpath, char ***devices, size_t *device_len)
 {
     int ret = 0;
-    size_t tmp_length, new_size = 0, old_size = 0;
+    size_t tmp_length;
+    size_t new_size = 0;
+    size_t old_size = 0;
     char **tmp_device = NULL;
 
     tmp_length = *device_len;
@@ -947,7 +949,8 @@ static int merge_all_devices(oci_runtime_spec *oci_spec, host_config_devices_ele
                              const char *permissions)
 {
     int ret = 0;
-    size_t new_size = 0, old_size = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
     size_t i = 0;
     defs_device **spec_dev = NULL;
 
@@ -1382,7 +1385,8 @@ out:
 static int merge_fs_mounts_to_oci_spec(oci_runtime_spec *oci_spec, defs_mount **mounts, size_t mounts_len)
 {
     int ret = 0;
-    size_t new_size = 0, old_size = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
     size_t i = 0;
     defs_mount **mounts_temp = NULL;
 
@@ -2022,7 +2026,8 @@ static int do_merge_device_cgroup_rules(oci_runtime_spec *oci_spec, const char *
                                         size_t dev_cgroup_rules_len)
 {
     int ret = 0;
-    size_t new_size = 0, old_size = 0;
+    size_t new_size = 0;
+    size_t old_size = 0;
     size_t i = 0;
 
     ret = make_sure_oci_spec_linux_resources(oci_spec);

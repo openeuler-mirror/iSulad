@@ -338,7 +338,6 @@ cleanup:
 
 static int set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags)
 {
-    // int dm_task_set_cookie(struct dm_task *dmt, uint32_t *cookie, uint16_t flags);
     int ret = 0;
 
     if (cookie == NULL) {
