@@ -1,5 +1,5 @@
 %global _version 2.0.7
-%global _release 20201205.145752.gita461cc51
+%global _release 20201207.151847.gita1fce123
 %global is_systemd 1
 
 Name:      iSulad
@@ -30,6 +30,11 @@ Patch0015: 0015-ignore-get-ip-error-for-mutlnetwork.patch
 Patch0016: 0016-support-default-container-log-options.patch
 Patch0017: 0017-add-testcase-for-default-container-log-configs.patch
 Patch0018: 0018-clean-code-ignore-list-containers-error.patch
+Patch0019: 0019-add-g_oci_image_module_data-in-oci-image-module.patch
+Patch0020: 0020-translate-absolute-path-to-relative-path-when-unpack.patch
+Patch0021: 0021-clean-code-fix-check-error-in-terminal.c-and-volume_.patch
+Patch0022: 0022-iSulad-bugfix-args-use_decrypted_key-is-a-pointer.patch
+Patch0023: 0023-verify-peer-only-if-CA-configed.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -232,6 +237,12 @@ fi
 %endif
 
 %changelog
+* Mon Dec 7 2020 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.7-20201207.151847.gita1fce123
+- Type: update
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Sat Dec 5 2020 lifeng <lifeng68@huawei.com> - 2.0.7-20201205.145752.gita461cc51
 - Type: bugfix
 - ID:NA
