@@ -1,0 +1,31 @@
+From e744a909cdb3a88ca4cbbe92385e70bf29c690a0 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Mon, 7 Dec 2020 16:28:19 +0800
+Subject: [PATCH] iSulad: bugfix, args->use_decrypted_key is a pointer
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/daemon/modules/image/oci/oci_image.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/image/oci/oci_image.c b/src/daemon/modules/image/oci/oci_image.c
+index 461fbf10..773803fa 100644
+--- a/src/daemon/modules/image/oci/oci_image.c
++++ b/src/daemon/modules/image/oci/oci_image.c
+@@ -70,7 +70,12 @@ static int oci_image_data_init(const isulad_daemon_configs *args)
+     }
+     g_oci_image_module_data.root_dir = util_strdup_s(args->graph);
+ 
+-    g_oci_image_module_data.use_decrypted_key = args->use_decrypted_key;
++    if (args->use_decrypted_key == NULL) {
++        g_oci_image_module_data.use_decrypted_key = true;
++    } else {
++        g_oci_image_module_data.use_decrypted_key = *(args->use_decrypted_key);
++    }
++
+     g_oci_image_module_data.insecure_skip_verify_enforce = args->insecure_skip_verify_enforce;
+ 
+     if (util_array_len((const char **)args->registry_mirrors) != args->registry_mirrors_len) {
+-- 
+2.25.1
+
