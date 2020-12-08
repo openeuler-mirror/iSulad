@@ -1,0 +1,31 @@
+From 8dca81df2e93e7b91b53213adfcd469d4fbb84e8 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Mon, 7 Dec 2020 14:49:34 +0800
+Subject: [PATCH] translate absolute path to relative path when unpack
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/utils/tar/util_archive.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/utils/tar/util_archive.c b/src/utils/tar/util_archive.c
+index 85f75c7f..581503fd 100644
+--- a/src/utils/tar/util_archive.c
++++ b/src/utils/tar/util_archive.c
+@@ -375,6 +375,13 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
+             continue;
+         }
+ 
++        // if path in archive is absolute, we need to translate it to relative because
++        // libarchive can not support absolute path when unpack
++        pathname = archive_entry_pathname(entry);
++        if (pathname != NULL && pathname[0] == '/') {
++            archive_entry_set_pathname(entry, pathname + 1);
++        }
++
+         ret = archive_write_header(ext, entry);
+         if (ret != ARCHIVE_OK) {
+             ERROR("Fail to handle tar header: %s", archive_error_string(ext));
+-- 
+2.25.1
+
