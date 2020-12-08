@@ -28,13 +28,13 @@ int execvp_success(const char *file, char * const argv[])
 
 char **single_array_from_string(const char *value)
 {
-    char **arr = NULL;
+    char **arr = nullptr;
     int ret = 0;
 
     ret = util_array_append(&arr, value);
     if (ret != 0) {
         util_free_array(arr);
-        return NULL;
+        return nullptr;
     }
 
     return arr;
@@ -68,15 +68,15 @@ char **conf_get_insecure_registry_list_success()
 char *json_path(const char *file)
 {
     char base_path[PATH_MAX] = { 0 };
-    char *json_file = NULL;
+    char *json_file = nullptr;
 
-    if (getcwd(base_path, PATH_MAX) == NULL) {
-        return NULL;
+    if (getcwd(base_path, PATH_MAX) == nullptr) {
+        return nullptr;
     }
 
     json_file = util_path_join(base_path, file);
-    if (json_file == NULL) {
-        return NULL;
+    if (json_file == nullptr) {
+        return nullptr;
     }
 
     return json_file;

@@ -21,10 +21,10 @@
 
 TEST(utils_base64, test_util_base64)
 {
-    char *plain_text = (char*)
-                       "^cvdgfdgghaswere3575676y&*`~cx,xfdgdvcvdfd][';./?.,<>|\\!@#$%^&*()_+=-090wvvs3sdfel33cxvdf***$";
-    char *encoded = NULL;
-    char *decoded = NULL;
+    char *plain_text =
+        (char *)"^cvdgfdgghaswere3575676y&*`~cx,xfdgdvcvdfd][';./?.,<>|\\!@#$%^&*()_+=-090wvvs3sdfel33cxvdf***$";
+    char *encoded = nullptr;
+    char *decoded = nullptr;
     size_t decoded_len = 0;
 
     // check long base64 encode/decode
@@ -36,9 +36,9 @@ TEST(utils_base64, test_util_base64)
     ASSERT_EQ(strlen(plain_text), decoded_len);
 
     free(encoded);
-    encoded = NULL;
+    encoded = nullptr;
     free(decoded);
-    decoded = NULL;
+    decoded = nullptr;
 
     // check base64 decode with suffix '\0'
     ASSERT_EQ(util_base64_decode((const char*)"MQ==", strlen("MQ=="), (unsigned char**)&decoded, &decoded_len), 0);

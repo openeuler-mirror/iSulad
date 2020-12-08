@@ -492,7 +492,7 @@ void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1a
             attrs.push_back("Z");
         }
         if (mounts[i].propagation() == runtime::v1alpha2::PROPAGATION_PRIVATE) {
-            ; // noop, private is default
+            DEBUG("noop, private is default");
         } else if (mounts[i].propagation() == runtime::v1alpha2::PROPAGATION_BIDIRECTIONAL) {
             attrs.push_back("rshared");
         } else if (mounts[i].propagation() == runtime::v1alpha2::PROPAGATION_HOST_TO_CONTAINER) {

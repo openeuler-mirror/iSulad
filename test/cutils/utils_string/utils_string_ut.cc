@@ -77,10 +77,10 @@ TEST(utils_string_ut, test_strings_to_lower)
     result = util_strings_to_lower(nullptr);
     ASSERT_STREQ(result, nullptr);
 
-    MOCK_SET(util_strdup_s, NULL);
+    MOCK_SET(util_strdup_s, nullptr);
     str = "A";
     result = util_strings_to_lower(str.c_str());
-    ASSERT_STREQ(result, NULL);
+    ASSERT_STREQ(result, nullptr);
     MOCK_CLEAR(util_strdup_s);
 }
 

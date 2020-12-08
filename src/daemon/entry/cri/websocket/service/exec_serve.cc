@@ -73,7 +73,7 @@ int ExecServe::Execute(struct lws *wsi, const std::string &token, int read_pipe_
         request = nullptr;
     }
 
-    (void)closeWsConnect((void *)wsi, nullptr);
+    (void)closeWsConnect((void*)wsi, nullptr);
 
     return ret;
 }

@@ -16,7 +16,7 @@
 #include "selinux_label_mock.h"
 
 namespace {
-MockSelinuxLabel *g_selinux_label_mock = NULL;
+MockSelinuxLabel *g_selinux_label_mock = nullptr;
 }
 
 void SelinuxLabel_SetMock(MockSelinuxLabel* mock)

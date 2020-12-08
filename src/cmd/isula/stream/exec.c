@@ -67,7 +67,7 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
     request->user = util_strdup_s(args->custom_conf.user);
 
     if (util_dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv),
-                                  (size_t *) & (request->argc)) != 0) {
+                                  (size_t *)(&request->argc)) != 0) {
         ERROR("Failed to dup args");
         ret = -1;
         goto out;

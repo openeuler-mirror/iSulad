@@ -16,7 +16,7 @@
 #include "container_state_mock.h"
 
 namespace {
-MockContainerState *g_container_state_mock = NULL;
+MockContainerState *g_container_state_mock = nullptr;
 }
 
 void MockContainerState_SetMock(MockContainerState *mock)

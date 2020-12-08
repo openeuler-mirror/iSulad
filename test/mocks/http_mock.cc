@@ -16,7 +16,7 @@
 #include "http_mock.h"
 
 namespace {
-MockHttp *g_http_mock = NULL;
+MockHttp *g_http_mock = nullptr;
 }
 
 void MockHttp_SetMock(MockHttp *mock)
@@ -26,7 +26,7 @@ void MockHttp_SetMock(MockHttp *mock)
 
 int http_request(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
 {
-    if (g_http_mock != NULL) {
+    if (g_http_mock != nullptr) {
         return g_http_mock->HttpRequest(url, options, response_code, recursive_len);
     }
 

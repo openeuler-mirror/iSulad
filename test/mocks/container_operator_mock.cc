@@ -16,7 +16,7 @@
 #include "container_operator_mock.h"
 
 namespace {
-MockContainersOperator *g_containers_operator_mock = NULL;
+MockContainersOperator *g_containers_operator_mock = nullptr;
 }
 
 void MockContainersOperator_SetMock(MockContainersOperator *mock)

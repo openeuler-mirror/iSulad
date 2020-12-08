@@ -16,7 +16,7 @@
 #include "namespace_mock.h"
 
 namespace {
-MockNamespace *g_namespace_mock = NULL;
+MockNamespace *g_namespace_mock = nullptr;
 }
 
 void MockNamespace_SetMock(MockNamespace* mock)

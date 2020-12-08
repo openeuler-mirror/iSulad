@@ -28,7 +28,7 @@ TEST(utils_convert, test_util_safe_u16)
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(converted, 255);
 
-    ret = util_safe_u16("255", NULL);
+    ret = util_safe_u16("255", nullptr);
     ASSERT_NE(ret, 0);
 
     ret = util_safe_u16("-1", &converted);
@@ -47,7 +47,7 @@ TEST(utils_convert, test_util_safe_u16)
     ret = util_safe_u16(std::to_string((long long)UINT16_MAX + 1).c_str(), &converted);
     ASSERT_NE(ret, 0);
 
-    ret = util_safe_u16("NULL", &converted);
+    ret = util_safe_u16("nullptr", &converted);
     ASSERT_NE(ret, 0);
 }
 
@@ -59,7 +59,7 @@ TEST(utils_convert, test_util_safe_int)
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(converted, 123456);
 
-    ret = util_safe_int("123456", NULL);
+    ret = util_safe_int("123456", nullptr);
     ASSERT_NE(ret, 0);
 
     ret = util_safe_int("-123456", &converted);
@@ -82,7 +82,7 @@ TEST(utils_convert, test_util_safe_int)
     ret = util_safe_int(std::to_string((long long)INT_MAX + 1).c_str(), &converted);
     ASSERT_NE(ret, 0);
 
-    ret = util_safe_int("NULL", &converted);
+    ret = util_safe_int("nullptr", &converted);
     ASSERT_NE(ret, 0);
 }
 
@@ -94,7 +94,7 @@ TEST(utils_convert, test_util_safe_uint)
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(converted, 123456);
 
-    ret = util_safe_uint("123456", NULL);
+    ret = util_safe_uint("123456", nullptr);
     ASSERT_NE(ret, 0);
 
     ret = util_safe_uint("-123456", &converted);
@@ -113,7 +113,7 @@ TEST(utils_convert, test_util_safe_uint)
     ret = util_safe_uint(std::to_string((long long)UINT_MAX + 1).c_str(), &converted);
     ASSERT_NE(ret, 0);
 
-    ret = util_safe_uint("NULL", &converted);
+    ret = util_safe_uint("nullptr", &converted);
     ASSERT_NE(ret, 0);
 }
 
@@ -125,7 +125,7 @@ TEST(utils_convert, test_util_safe_llong)
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(converted, 123456);
 
-    ret = util_safe_llong("123456", NULL);
+    ret = util_safe_llong("123456", nullptr);
     ASSERT_NE(ret, 0);
 
     ret = util_safe_llong("-123456", &converted);
@@ -148,7 +148,7 @@ TEST(utils_convert, test_util_safe_llong)
     ret = util_safe_llong("9223372036854775808", &converted);
     ASSERT_NE(ret, 0);
 
-    ret = util_safe_llong("NULL", &converted);
+    ret = util_safe_llong("nullptr", &converted);
     ASSERT_NE(ret, 0);
 }
 
@@ -160,7 +160,7 @@ TEST(utils_convert, test_util_safe_strtod)
     ASSERT_EQ(ret, 0);
     ASSERT_DOUBLE_EQ(converted, 123456);
 
-    ret = util_safe_strtod("123456", NULL);
+    ret = util_safe_strtod("123456", nullptr);
     ASSERT_NE(ret, 0);
 
     ret = util_safe_strtod("-123456", &converted);
@@ -178,7 +178,7 @@ TEST(utils_convert, test_util_safe_strtod)
     ret = util_safe_strtod("1x", &converted);
     ASSERT_NE(ret, 0);
 
-    ret = util_safe_strtod("NULL", &converted);
+    ret = util_safe_strtod("nullptr", &converted);
     ASSERT_NE(ret, 0);
 }
 
@@ -190,7 +190,7 @@ TEST(utils_convert, test_util_str_to_bool)
     ASSERT_EQ(ret, 0);
     ASSERT_TRUE(converted);
 
-    ret = util_str_to_bool("1", NULL);
+    ret = util_str_to_bool("1", nullptr);
     ASSERT_NE(ret, 0);
 
     ret = util_str_to_bool("t", &converted);
@@ -236,6 +236,6 @@ TEST(utils_convert, test_util_str_to_bool)
     ret = util_str_to_bool("x", &converted);
     ASSERT_NE(ret, 0);
 
-    ret = util_str_to_bool("NULL", &converted);
+    ret = util_str_to_bool("nullptr", &converted);
     ASSERT_NE(ret, 0);
 }

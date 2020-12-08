@@ -46,7 +46,7 @@ TEST_F(IsuladShimUnitTest, test_new_process)
     string runtime = "kata-runtime";
 
     process_t *p = new_process((char*)id.c_str(), (char*)bundle.c_str(), (char*)runtime.c_str());
-    ASSERT_TRUE(p == NULL);
+    ASSERT_TRUE(p == nullptr);
 }
 
 TEST_F(IsuladShimUnitTest, test_open_no_inherit)
@@ -73,9 +73,9 @@ TEST_F(IsuladShimUnitTest, test_read_write_nointr)
     int nwrite = -1;
     int nread = -1;
 
-    EXPECT_EQ(read_nointr(-1, NULL, 32), -1);
-    EXPECT_EQ(read_nointr(0, NULL, 32), -1);
-    EXPECT_EQ(read_nointr(1, NULL, 32), -1);
+    EXPECT_EQ(read_nointr(-1, nullptr, 32), -1);
+    EXPECT_EQ(read_nointr(0, nullptr, 32), -1);
+    EXPECT_EQ(read_nointr(1, nullptr, 32), -1);
 
     fd_wr = open_no_inherit(test_file.c_str(), O_CREAT | O_RDWR | O_APPEND | O_SYNC, 0640);
     EXPECT_GT(fd_wr, 0);
@@ -110,7 +110,7 @@ TEST_F(IsuladShimUnitTest, test_combined_output)
 {
     string exist_cmd = "ls";
     string non_cmd = "aaa";
-    const char *params[MAX_RUNTIME_ARGS] = { NULL };
+    const char *params[MAX_RUNTIME_ARGS] = { nullptr };
     char output[BUFSIZ] = { 0 };
     int output_len = BUFSIZ;
 

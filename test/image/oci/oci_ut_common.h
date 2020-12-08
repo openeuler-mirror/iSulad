@@ -64,8 +64,7 @@ extern "C" {
         MOCK_CLEAR(conf_get_registry_list);          \
         MOCK_CLEAR(conf_get_insecure_registry_list); \
     }                                                \
-    while (0)                                        \
-        ;
+    while (0);
 
 char *json_path(const char *file);
 int execvp_success(const char *file, char * const argv[]);

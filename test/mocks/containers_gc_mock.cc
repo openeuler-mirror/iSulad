@@ -16,7 +16,7 @@
 #include "containers_gc_mock.h"
 
 namespace {
-MockContainersGc *g_containers_gc_mock = NULL;
+MockContainersGc *g_containers_gc_mock = nullptr;
 }
 
 void MockContainersGc_SetMock(MockContainersGc *mock)

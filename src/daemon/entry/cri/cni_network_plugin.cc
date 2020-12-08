@@ -66,8 +66,7 @@ static auto GetLoNetwork(std::vector<std::string> binDirs) -> std::unique_ptr<CN
 }
 
 CNINetwork::CNINetwork(const std::string &name, struct cni_network_list_conf *list)
-    : m_name(name)
-    , m_networkConfig(list)
+    : m_name(name), m_networkConfig(list)
 {
 }
 
@@ -146,10 +145,7 @@ void CniNetworkPlugin::UpdateMutlNetworks(std::vector<std::unique_ptr<CNINetwork
 
 CniNetworkPlugin::CniNetworkPlugin(std::vector<std::string> &binDirs, const std::string &confDir,
                                    const std::string &podCidr)
-    : m_confDir(confDir)
-    , m_binDirs(binDirs)
-    , m_podCidr(podCidr)
-    , m_needFinish(false)
+    : m_confDir(confDir), m_binDirs(binDirs), m_podCidr(podCidr), m_needFinish(false)
 {
 }
 

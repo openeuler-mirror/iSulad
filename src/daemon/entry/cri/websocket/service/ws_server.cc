@@ -144,7 +144,7 @@ int WebsocketServer::CreateContext()
         return -1;
     }
     if (limited == 0) {
-        if (setrlimit((int)RLIMIT_NOFILE, &oldLimit) != 0) {
+        if (setrlimit(static_cast<int>(RLIMIT_NOFILE), &oldLimit) != 0) {
             WARN("Can not set ulimit of RLIMIT_NOFILE: %s", strerror(errno));
         }
     }
@@ -245,7 +245,7 @@ int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
             continue;
         }
         len = lws_hdr_total_length(wsi, (lws_token_indexes)n);
-        if (len == 0 || ((size_t)len > sizeof(buf) - 1)) {
+        if (len == 0 || (static_cast<size_t>(len) > sizeof(buf) - 1)) {
             n++;
             continue;
         }
@@ -439,7 +439,7 @@ ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len)
         std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
     }
     it->second.SetProcessingStatus(false);
-    return (ssize_t)len;
+    return static_cast<ssize_t>(len);
 }
 
 ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len)
@@ -485,7 +485,7 @@ ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len)
         std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
     }
     it->second.SetProcessingStatus(false);
-    return (ssize_t)len;
+    return static_cast<ssize_t>(len);
 }
 
 int closeWsConnect(void *context, char **err)

@@ -16,7 +16,7 @@
 #include "selinux_mock.h"
 
 namespace {
-MockSelinux *g_selinux_mock = NULL;
+MockSelinux *g_selinux_mock = nullptr;
 }
 
 void Selinux_SetMock(MockSelinux* mock)

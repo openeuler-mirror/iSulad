@@ -21,7 +21,7 @@
 #include "cri_image_service.h"
 
 // Implement of runtime RuntimeService
-class RuntimeImageServiceImpl: public
+class RuntimeImageServiceImpl : public
     runtime::v1alpha2::ImageService::Service {
 public:
     grpc::Status PullImage(grpc::ServerContext *context,

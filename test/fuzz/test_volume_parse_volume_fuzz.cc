@@ -20,7 +20,7 @@
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     std::string testData(reinterpret_cast<const char *>(data), size);
-    defs_mount *mnt = NULL;
+    defs_mount *mnt = nullptr;
     if (testData == "empty") {
         mnt = parse_volume(nullptr);
     } else {

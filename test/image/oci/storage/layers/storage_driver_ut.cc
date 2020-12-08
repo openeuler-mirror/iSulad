@@ -60,8 +60,8 @@ std::string GetDirectory()
 
 bool dirExists(const char *path)
 {
-    DIR *dp = NULL;
-    if ((dp = opendir(path)) == NULL) {
+    DIR *dp = nullptr;
+    if ((dp = opendir(path)) == nullptr) {
         return false;
     }
 

@@ -16,7 +16,7 @@
 #include "driver_quota_mock.h"
 
 namespace {
-MockDriverQuota *g_driver_quota_mock = NULL;
+MockDriverQuota *g_driver_quota_mock = nullptr;
 }
 
 void MockDriverQuota_SetMock(MockDriverQuota* mock)

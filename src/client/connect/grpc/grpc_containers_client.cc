@@ -1980,8 +1980,7 @@ public:
     explicit CopyToContainerWriteToServerTask(
         const struct io_read_wrapper *reader,
         std::shared_ptr<ClientReaderWriter<CopyToContainerRequest, CopyToContainerResponse>> stream)
-        : m_reader(reader)
-        , m_stream(std::move(std::move(stream)))
+        : m_reader(reader), m_stream(std::move(std::move(stream)))
     {
     }
     ~CopyToContainerWriteToServerTask() = default;

@@ -16,7 +16,7 @@
 #include "health_check_mock.h"
 
 namespace {
-MockHealthCheck *g_health_check_mock = NULL;
+MockHealthCheck *g_health_check_mock = nullptr;
 }
 
 void MockHealthCheck_SetMock(MockHealthCheck *mock)

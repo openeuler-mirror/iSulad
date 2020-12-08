@@ -16,7 +16,7 @@
 #include "grpc_client_mock.h"
 
 namespace {
-MockGrpcClient *g_grpc_client_mock = NULL;
+MockGrpcClient *g_grpc_client_mock = nullptr;
 }
 
 void GrpcClient_SetMock(MockGrpcClient* mock)

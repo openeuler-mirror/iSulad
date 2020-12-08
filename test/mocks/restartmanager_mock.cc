@@ -16,7 +16,7 @@
 #include "restartmanager_mock.h"
 
 namespace {
-MockRestartmanager *g_restartmanager_mock = NULL;
+MockRestartmanager *g_restartmanager_mock = nullptr;
 }
 
 void MockRestartmanager_SetMock(MockRestartmanager *mock)

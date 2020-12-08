@@ -79,16 +79,16 @@ int Info(const struct isula_info_request *request,
     response->kversion = util_strdup_s("4.19.36-vhulk1904.3.1.h226.eulerosv2r8.aarch64");
     response->os_type = util_strdup_s("Linux");
     response->architecture = util_strdup_s("aarch64");
-    response->nodename = NULL;
+    response->nodename = nullptr;
     response->operating_system = util_strdup_s("EulerOS 2.0 (SP8)");
     response->cgroup_driver = util_strdup_s("cgroupfs");
     response->logging_driver = util_strdup_s("json-file");
     response->huge_page_size = util_strdup_s("2MB");
     response->isulad_root_dir = util_strdup_s("/var/lib/isulad");
-    response->http_proxy = NULL;
-    response->https_proxy = NULL;
-    response->no_proxy = NULL;
-    response->errmsg = NULL;
+    response->http_proxy = nullptr;
+    response->https_proxy = nullptr;
+    response->no_proxy = nullptr;
+    response->errmsg = nullptr;
 
     return 0;
 }

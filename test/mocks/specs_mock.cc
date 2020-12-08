@@ -16,7 +16,7 @@
 #include "specs_mock.h"
 
 namespace {
-MockSpecs *g_specs_mock = NULL;
+MockSpecs *g_specs_mock = nullptr;
 }
 
 void MockSpecs_SetMock(MockSpecs *mock)
