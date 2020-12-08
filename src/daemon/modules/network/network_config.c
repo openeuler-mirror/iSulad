@@ -298,6 +298,7 @@ static int get_config_subnet(const cni_net_conf_list *list, char ***arr)
 {
     size_t i;
     int nret = 0;
+    bool condition = false;
     cni_net_conf *plugin = NULL;
 
     if (list->plugins == NULL) {
@@ -306,10 +307,14 @@ static int get_config_subnet(const cni_net_conf_list *list, char ***arr)
 
     for (i = 0; i < list->plugins_len; i++) {
         plugin = list->plugins[i];
-        if (plugin == NULL || plugin->ipam == NULL || plugin->ipam->subnet == NULL) {
+        condition = plugin == NULL || plugin->ipam == NULL || plugin->ipam->ranges == NULL || plugin->ipam->ranges_len == 0 ||
+                    plugin->ipam->ranges[0] == NULL || plugin->ipam->ranges_item_lens == NULL ||
+                    plugin->ipam->ranges_item_lens[0] == 0 || plugin->ipam->ranges[0][0] == NULL ||
+                    plugin->ipam->ranges[0][0]->subnet == NULL;
+        if (condition) {
             continue;
         }
-        nret = util_array_append(arr, plugin->ipam->subnet);
+        nret = util_array_append(arr, plugin->ipam->ranges[0][0]->subnet);
         if (nret != 0) {
             return -1;
         }
@@ -800,21 +805,45 @@ static cni_net_conf_ipam *conf_bridge_ipam(const network_create_request *request
     ipam->routes_len++;
     ipam->routes[0]->dst = util_strdup_s("0.0.0.0/0");
 
+    ipam->ranges = (cni_net_conf_ipam_ranges_element ***)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element **));
+    if (ipam->ranges == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+    ipam->ranges_item_lens = (size_t *)util_common_calloc_s(sizeof(size_t));
+    if (ipam->ranges_item_lens == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+
+    ipam->ranges[0] = (cni_net_conf_ipam_ranges_element **)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element *));
+    if (ipam->ranges[0] == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+    ipam->ranges_len++;
+    ipam->ranges[0][0] = (cni_net_conf_ipam_ranges_element *)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element));
+    if (ipam->ranges[0][0] == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+    (ipam->ranges_item_lens)[0]++;
+
     if (request->subnet != NULL) {
-        ipam->subnet = util_strdup_s(request->subnet);
+        ipam->ranges[0][0]->subnet = util_strdup_s(request->subnet);
     } else {
-        ipam->subnet = find_subnet(conflist_arr, arr_len);
-        if (ipam->subnet == NULL) {
+        ipam->ranges[0][0]->subnet = find_subnet(conflist_arr, arr_len);
+        if (ipam->ranges[0][0]->subnet == NULL) {
             ERROR("Failed to find available subnet");
             goto err_out;
         }
     }
 
     if (request->gateway != NULL) {
-        ipam->gateway = util_strdup_s(request->gateway);
+        ipam->ranges[0][0]->gateway = util_strdup_s(request->gateway);
     } else {
-        ipam->gateway = find_gateway(ipam->subnet);
-        if (ipam->gateway == NULL) {
+        ipam->ranges[0][0]->gateway = find_gateway(ipam->ranges[0][0]->subnet);
+        if (ipam->ranges[0][0]->gateway == NULL) {
             ERROR("Failed to find gateway");
             goto err_out;
         }
