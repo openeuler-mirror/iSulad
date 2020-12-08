@@ -307,7 +307,8 @@ static int check_volume_element(const char *volume)
 defs_mount *parse_volume(const char *volume)
 {
     int ret = 0;
-    size_t i = 0, mlen = 0;
+    size_t i = 0;
+    size_t mlen = 0;
     defs_mount *mount_element = NULL;
     char **modes = NULL;
     char path[PATH_MAX] = { 0x00 };

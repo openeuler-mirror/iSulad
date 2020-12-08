@@ -71,7 +71,6 @@ int image_store_set_load_time(const char *id, const types_timestamp_t *time);
 bool image_store_exists(const char *id);
 
 // Retrieve information about an image given an ID or name.
-// const storage_image *image_store_get_image(const char *id);
 imagetool_image *image_store_get_image(const char *id);
 
 // Retrieves a (potentially large) piece of data associated with this ID, if it has previously been set.

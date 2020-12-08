@@ -84,7 +84,8 @@ static int proc_by_fpasswd(FILE *f_passwd, const char *user, defs_process_user *
     bool userfound = false;
     long long n_user = 0;
     char buf[BUFSIZ];
-    struct passwd pw, *pwbufp = NULL;
+    struct passwd pw;
+    struct passwd *pwbufp = NULL;
 
     if (f_passwd != NULL) {
         errval = fgetpwent_r(f_passwd, &pw, buf, sizeof(buf), &pwbufp);
@@ -204,7 +205,8 @@ static int do_proc_by_froup(FILE *f_group, const char *group, defs_process_user 
     int errval = 0;
     char buf[BUFSIZ] = { 0 };
     bool groupfound = false;
-    struct group grp, *gbufp = NULL;
+    struct group grp;
+    struct group *gbufp = NULL;
 
     if (f_group == NULL) {
         return 0;

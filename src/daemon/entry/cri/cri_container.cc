@@ -322,11 +322,9 @@ cleanup:
     return nullptr;
 }
 
-container_create_request *
-CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
-                                                      const runtime::v1alpha2::ContainerConfig &containerConfig,
-                                                      const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                                      const std::string &podSandboxRuntime, Errors &error)
+container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
+                                                                                const runtime::v1alpha2::ContainerConfig &containerConfig, const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                                                const std::string &podSandboxRuntime, Errors &error)
 {
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
@@ -1187,8 +1185,8 @@ void CRIRuntimeServiceImpl::ContainerStatusToGRPC(container_inspect *inspect,
     ConvertMountsToStatus(inspect, contStatus);
 }
 
-std::unique_ptr<runtime::v1alpha2::ContainerStatus>
-CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID, Errors &error)
+std::unique_ptr<runtime::v1alpha2::ContainerStatus> CRIRuntimeServiceImpl::ContainerStatus(
+    const std::string &containerID, Errors &error)
 {
     if (containerID.empty()) {
         error.SetError("Empty pod sandbox id");

@@ -41,7 +41,6 @@ struct command {
 
 // Gets a pointer to a command, to allow implementing custom behavior
 // returns null if not found.
-//
 // NOTE: Command arrays must end in a command with all member is NULL
 const struct command *command_by_name(const struct command *cmds, const char * const name);
 

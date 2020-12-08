@@ -1271,9 +1271,8 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
     return Status::OK;
 }
 
-Status
-ContainerServiceImpl::CopyToContainer(ServerContext *context,
-                                      ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream)
+Status ContainerServiceImpl::CopyToContainer(ServerContext *context,
+                                             ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream)
 
 {
     int ret;

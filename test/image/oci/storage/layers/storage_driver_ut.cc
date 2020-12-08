@@ -44,7 +44,7 @@ std::string GetDirectory()
 {
     char abs_path[PATH_MAX] { 0x00 };
     int ret = readlink("/proc/self/exe", abs_path, sizeof(abs_path));
-    if (ret < 0 || (size_t)ret >= sizeof(abs_path)) {
+    if (ret < 0 || static_cast<size_t>(ret) >= sizeof(abs_path)) {
         return "";
     }
 

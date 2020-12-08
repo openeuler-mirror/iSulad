@@ -262,17 +262,19 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
         return -1;
     }
 
-    // Response data:
-    // HTTP/1.0 200 Connection established
-    // HTTP/1.1 401 Unauthorized
-    // Content-Type: application/json
-    // Docker-Distribution-Api-Version: registry/2.0
-    // Www-Authenticate: Bearer realm="https://auth.isula.org/token",service="registry.isula.org"
-    // Date: Mon, 16 Mar 2020 01:16:09 GMT
-    // Content-Length: 87
-    // Strict-Transport-Security: max-age=31536000
-    //
-    // {"errors":[{"code":"UNAUTHORIZED","message":"authentication required","detail":null}]}
+    /*
+        Response data:
+        HTTP/1.0 200 Connection established
+        HTTP/1.1 401 Unauthorized
+        Content-Type: application/json
+        Docker-Distribution-Api-Version: registry/2.0
+        Www-Authenticate: Bearer realm="https://auth.isula.org/token",service="registry.isula.org"
+        Date: Mon, 16 Mar 2020 01:16:09 GMT
+        Content-Length: 87
+        Strict-Transport-Security: max-age=31536000
+
+        {"errors":[{"code":"UNAUTHORIZED","message":"authentication required","detail":null}]}
+    */
     message = get_parsed_message(http_head);
     if (message == NULL) {
         ERROR("Get parsed message failed. http response size %zu, response:%s", strlen(http_head), http_head);

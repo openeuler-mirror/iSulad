@@ -118,11 +118,6 @@ public:
 };
 
 class NoopNetworkPlugin : public NetworkPlugin {
-private:
-    std::string SYSCTL_BRIDGE_CALL_IPTABLES = "net/bridge/bridge-nf-call-iptables";
-    std::string SYSCTL_BRIDGE_CALL_IP6TABLES = "net/bridge/bridge-nf-call-ip6tables";
-    std::string DEFAULT_PLUGIN_NAME = "kubernetes.io/no-op";
-
 public:
     NoopNetworkPlugin() = default;
 
@@ -150,6 +145,11 @@ public:
                              const std::string &podSandboxID, PodNetworkStatus &status, Errors &error) override;
 
     void Status(Errors &error) override;
+
+private:
+    std::string SYSCTL_BRIDGE_CALL_IPTABLES = "net/bridge/bridge-nf-call-iptables";
+    std::string SYSCTL_BRIDGE_CALL_IP6TABLES = "net/bridge/bridge-nf-call-ip6tables";
+    std::string DEFAULT_PLUGIN_NAME = "kubernetes.io/no-op";
 };
 
 class PodLock {

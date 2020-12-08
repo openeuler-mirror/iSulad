@@ -185,10 +185,6 @@ TEST(merge_conf_cgroup_ut, test_merge_conf_cgroup_mem)
     oci_runtime_spec *oci_spec = nullptr;
     char *err = nullptr;
 
-    // mem
-    // int64_t kernel_memory;
-    // int64_t memory_reservation;
-    // int64_t memory_swap;
     host_config_file = json_path(HOST_CONFIG_FILE);
     ASSERT_TRUE(host_config_file != nullptr);
     host_spec = host_config_parse_file(host_config_file, nullptr, &err);

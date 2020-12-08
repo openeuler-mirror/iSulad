@@ -27,8 +27,6 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-extern int g_log_fd;
-
 int set_fd_no_inherited(int fd)
 {
     int ret = SHIM_ERR;
