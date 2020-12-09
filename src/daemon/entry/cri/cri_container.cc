@@ -602,6 +602,17 @@ cleanup:
     free_container_start_response(response);
 }
 
+static int32_t to_int32_timeout(int64_t timeout)
+{
+    if (timeout > INT32_MAX) {
+        return INT32_MAX;
+    } else if (timeout < INT32_MIN) {
+        return INT32_MIN;
+    }
+
+    return (int32_t)timeout;
+}
+
 void CRIRuntimeServiceImpl::StopContainer(const std::string &containerID, int64_t timeout, Errors &error)
 {
     if (containerID.empty()) {
@@ -627,7 +638,8 @@ void CRIRuntimeServiceImpl::StopContainer(const std::string &containerID, int64_
         goto cleanup;
     }
     request->id = util_strdup_s(realContainerID.c_str());
-    request->timeout = (int32_t)timeout;
+    // int32 is enough for timeout
+    request->timeout = to_int32_timeout(timeout);
 
     if (m_cb->container.stop(request, &response) != 0) {
         if (response != nullptr && response->errmsg != nullptr) {

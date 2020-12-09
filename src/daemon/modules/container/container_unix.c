@@ -985,6 +985,9 @@ restart_manager_t *get_restart_manager(container_t *cont)
 
     if (cont->rm == NULL) {
         cont->rm = restart_manager_new(cont->hostconfig->restart_policy, cont->common_config->restart_count);
+        if (cont->rm == NULL) {
+            return NULL;
+        }
     }
     restart_manager_refinc(cont->rm);
     return cont->rm;
@@ -1001,6 +1004,9 @@ void container_update_restart_manager(container_t *cont, const host_config_resta
     }
 
     rm = get_restart_manager(cont);
+    if (rm == NULL) {
+        return;
+    }
     (void)restart_manager_set_policy(rm, policy);
     restart_manager_unref(rm);
 }

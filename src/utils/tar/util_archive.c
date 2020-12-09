@@ -325,10 +325,20 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const char *ds
     flags |= ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS;
 
     a = archive_read_new();
+    if (a == NULL) {
+        ERROR("archive read new failed");
+        ret = -1;
+        goto out;
+    }
     archive_read_support_filter_all(a);
     archive_read_support_format_all(a);
 
     ext = archive_write_disk_new();
+    if (ext == NULL) {
+        ERROR("archive write disk new failed");
+        ret = -1;
+        goto out;
+    }
     archive_write_disk_set_options(ext, flags);
     archive_write_disk_set_standard_lookup(ext);
 
@@ -677,6 +687,10 @@ static int tar_all(int fd)
     int ret = ARCHIVE_OK;
 
     r = archive_read_disk_new();
+    if (r == NULL) {
+        ERROR("archive read disk new failed");
+        return -1;
+    }
     archive_read_disk_set_standard_lookup(r);
     archive_read_disk_set_symlink_physical(r);
     archive_read_disk_set_behavior(r, ARCHIVE_READDISK_NO_TRAVERSE_MOUNTS);
@@ -688,6 +702,11 @@ static int tar_all(int fd)
     }
 
     w = archive_write_new();
+    if (w == NULL) {
+        ERROR("archive write new failed");
+        ret = ARCHIVE_FAILED;
+        goto out;
+    }
     archive_write_set_format_pax(w);
     archive_write_set_options(w, "xattrheader=SCHILY");
     ret = archive_write_open_fd(w, fd);

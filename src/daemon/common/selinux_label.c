@@ -555,6 +555,9 @@ static void update_process_and_mount_label_range(char **process_label, char **fi
 {
 #define MCS_MAX_LEN 20
     context_t scon = context_new(*process_label);
+    if (scon == NULL) {
+        return;
+    }
 
     if (context_range_get(scon) != NULL) {
         char mcs[MCS_MAX_LEN] = { 0x00 };
@@ -565,6 +568,10 @@ static void update_process_and_mount_label_range(char **process_label, char **fi
         *process_label = util_strdup_s(context_str(scon));
 
         context_t mcon = context_new(*file_label);
+        if (mcon == NULL) {
+            context_free(scon);
+            return;
+        }
         context_range_set(mcon, mcs);
         free(*file_label);
         *file_label = util_strdup_s(context_str(mcon));
@@ -657,6 +664,10 @@ static int release_label(const char *label)
     }
 
     context_t tmp = context_new(label);
+    if (tmp == NULL) {
+        ERROR("context new failed");
+        return -1;
+    }
     range = context_range_get(tmp);
     if (range != NULL) {
         if (!mcs_delete(range)) {
@@ -682,6 +693,10 @@ static int reserve_label(const char *label)
     }
 
     context_t tmp = context_new(label);
+    if (tmp == NULL) {
+        ERROR("context new failed");
+        return -1;
+    }
     range = context_range_get(tmp);
     if (range != NULL) {
         if (!mcs_add(range)) {
@@ -773,7 +788,17 @@ int init_label(const char **label_opts, size_t label_opts_len, char **dst_proces
     if (process_label != NULL) {
         size_t i;
         pcon = context_new(process_label);
+        if (pcon == NULL) {
+            ERROR("context new failed");
+            ret = -1;
+            goto out;
+        }
         mcon = context_new(mount_label);
+        if (mcon == NULL) {
+            ERROR("context new failed");
+            ret = -1;
+            goto out;
+        }
         for (i = 0; i < label_opts_len; i++) {
             if (strcmp(label_opts[i], "disable") == 0) {
                 goto out;
@@ -964,6 +989,11 @@ int relabel(const char *path, const char *file_label, bool shared)
 
     if (shared) {
         context_t c = context_new(file_label);
+        if (c == NULL) {
+            ERROR("context new failed");
+            ret = -1;
+            goto out;
+        }
         context_range_set(c, "s0");
         free(tmp_file_label);
         tmp_file_label = util_strdup_s(context_str(c));
@@ -1024,6 +1054,10 @@ int dup_security_opt(const char *src, char ***dst, size_t *len)
     }
 
     context_t con = context_new(src);
+    if (con == NULL) {
+        ERROR("context new failed");
+        return -1;
+    }
     if (context_user_get(con) == NULL || context_role_get(con) == NULL || context_type_get(con) == NULL) {
         return 0;
     }
