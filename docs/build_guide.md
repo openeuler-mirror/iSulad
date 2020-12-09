@@ -13,7 +13,7 @@ $ sudo yum --enablerepo='*' install -y automake autoconf libtool cmake make libc
 
 ### install basic dependencies based on Ubuntu distribution
 ```bash
-$ sudo apt install -y libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux-dev libseccomp-dev libcap-dev libsystemd-dev git libcurl4-gnutls-dev openssl libdevmapper-dev golang python3 libtar libtar-dev
+$ sudo apt install -y g++ libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux-dev libseccomp-dev libcap-dev libsystemd-dev git libcurl4-gnutls-dev openssl libdevmapper-dev golang python3 libtar libtar-dev
 ```
 
 ## Build and install other dependencies from source
