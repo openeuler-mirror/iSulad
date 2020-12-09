@@ -33,24 +33,24 @@ struct cni_manager {
     // The network namespace path of the sandbox
     char *netns_path;
     char *ifname;
-    // key can be IP or portMappings and so on
+    json_map_string_string *cni_args;
+
+    // map str str to append to cni_network_list_conf
     map_t *annotations;
 };
 
 int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
                            size_t bin_paths_len);
 
-int cni_update_confist_from_dir();
-
-int cni_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len);
+int cni_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, bool is_cri);
 
 int attach_loopback(const char *id, const char *netns);
 
-int attach_network_plane(struct cni_manager *manager, const char *net_list_conf_str);
+int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
 
-int detach_network_plane(struct cni_manager *manager, const char *net_list_conf_str);
+int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str);
 
-int detach_loopback(struct cni_manager *manager);
+int detach_loopback(const char *id, const char *netns);
 
 void free_cni_manager(struct cni_manager *manager);
 
