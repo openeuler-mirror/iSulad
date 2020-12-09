@@ -116,6 +116,11 @@ int util_aes_encode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     const EVP_CIPHER *cipher = EVP_aes_256_cfb();
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
+    if (ctx == NULL || cipher == NULL) {
+        ERROR("EVP init failed");
+        return -1;
+    }
+
     *out = util_common_calloc_s(util_aes_encode_buf_len(len) + 1);
     if (*out == NULL) {
         ERROR("out of memory");
@@ -181,6 +186,11 @@ int util_aes_decode(unsigned char *aeskey, unsigned char *bytes, size_t len, uns
     unsigned char *iv = NULL;
     const EVP_CIPHER *cipher = EVP_aes_256_cfb();
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+    if (ctx == NULL || cipher == NULL) {
+        ERROR("EVP init failed");
+        return -1;
+    }
 
     if (len <= AES_256_CFB_IV_LEN) {
         ERROR("Invalid aes length, it must be larger than %d", AES_256_CFB_IV_LEN);
