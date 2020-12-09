@@ -318,6 +318,7 @@ int ContainerServiceImpl::delete_request_from_grpc(const DeleteRequest *grequest
         tmpreq->id = util_strdup_s(grequest->id().c_str());
     }
     tmpreq->force = grequest->force();
+    tmpreq->volumes = grequest->volumes();
 
     *request = tmpreq;
     return 0;

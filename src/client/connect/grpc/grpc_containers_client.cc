@@ -1093,6 +1093,7 @@ public:
             grequest->set_id(request->name);
         }
         grequest->set_force(request->force);
+        grequest->set_volumes(request->volumes);
 
         return 0;
     }

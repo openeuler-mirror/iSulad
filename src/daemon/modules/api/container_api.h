@@ -93,6 +93,7 @@ typedef struct _container_t_ {
     restart_manager_t *rm;
     container_events_handler_t *handler;
     health_check_manager_t *health_check;
+    bool rm_anonymous_volumes;
 
     /* log configs of container */
     char *log_driver;

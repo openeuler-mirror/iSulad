@@ -31,7 +31,7 @@ const char g_cmd_delete_usage[] = "rm [OPTIONS] CONTAINER [CONTAINER...]";
 
 struct client_arguments g_cmd_delete_args = {
     .force = false,
-    .volume = false,
+    .volumes = false,
 };
 /*
 * Create a rm request message and call RPC
@@ -52,6 +52,7 @@ static int client_delete(const struct client_arguments *args)
 
     request.name = args->name;
     request.force = args->force;
+    request.volumes = args->volumes;
 
     ops = get_connect_client_ops();
     if (ops == NULL || !ops->container.remove) {

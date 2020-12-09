@@ -269,7 +269,7 @@ struct client_arguments {
     int time;
 
     // delete
-    bool volume;
+    bool volumes;
 
     // events
     char *since;

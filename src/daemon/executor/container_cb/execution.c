@@ -817,6 +817,7 @@ static int container_delete_cb(const container_delete_request *request, containe
         goto pack_response;
     }
 
+    cont->rm_anonymous_volumes = request->volumes;
     if (delete_container(cont, force)) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
