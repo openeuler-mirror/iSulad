@@ -169,13 +169,13 @@ static int embedded_images_to_imagetool_images(struct db_all_images *all_images,
         goto out;
     }
 
-    if (images_num >= (SIZE_MAX / sizeof(imagetool_image *))) {
+    if (images_num >= (SIZE_MAX / sizeof(imagetool_image_summary *))) {
         ERROR("Too many images, out of memory");
         ret = -1;
         isulad_try_set_error_message("Get too many images info, out of memory");
         goto out;
     }
-    list->images = util_common_calloc_s(sizeof(imagetool_image *) * images_num);
+    list->images = util_common_calloc_s(sizeof(imagetool_image_summary *) * images_num);
     if (list->images == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -185,7 +185,7 @@ static int embedded_images_to_imagetool_images(struct db_all_images *all_images,
     for (i = 0; i < images_num; i++) {
         tmp_embedded = all_images->images_info[i];
 
-        list->images[i] = util_common_calloc_s(sizeof(imagetool_image));
+        list->images[i] = util_common_calloc_s(sizeof(imagetool_image_summary));
         if (list->images[i] == NULL) {
             ERROR("Out of memory");
             ret = -1;

@@ -35,12 +35,11 @@
 #include "utils_array.h"
 #include "utils_string.h"
 #include "utils_regex.h"
-#include "isula_libutils/oci_image_spec.h"
 #include "isula_libutils/defs.h"
 #include "map.h"
 #include "utils_convert.h"
 #include "isula_libutils/imagetool_image.h"
-#include "isula_libutils/docker_image_config_v2.h"
+#include "isula_libutils/imagetool_image_summary.h"
 #include "isula_libutils/registry_manifest_schema1.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/oci_image_manifest.h"
@@ -487,7 +486,7 @@ static int do_append_image(storage_image *im)
     image_t *img = NULL;
     struct linked_list *item = NULL;
 
-    img = new_image(im);
+    img = new_image(im, g_image_store->dir);
     if (img == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -1633,7 +1632,7 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
         goto out;
     }
 
-    img = new_image(im);
+    img = new_image(im, g_image_store->dir);
     if (img == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -1986,6 +1985,10 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
         ERROR("Failed to update image big data");
         ret = -1;
         goto out;
+    }
+
+    if (img->spec == NULL) {
+        (void)try_fill_image_spec(img, image_id, g_image_store->dir);
     }
 
     if (save && save_image(img->simage) != 0) {
@@ -3019,14 +3022,13 @@ out:
     return ret;
 }
 
-static int pack_health_check_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
+static int pack_health_check_from_image(const oci_image_spec *spec, imagetool_image *info)
 {
     int ret = 0;
     size_t i;
     defs_health_check *healthcheck = NULL;
 
-    if (config_v2->config == NULL || config_v2->config->healthcheck == NULL ||
-        config_v2->config->healthcheck->test_len == 0) {
+    if (spec->config == NULL || spec->config->healthcheck == NULL || spec->config->healthcheck->test_len == 0) {
         return 0;
     }
 
@@ -3037,21 +3039,21 @@ static int pack_health_check_from_image(const docker_image_config_v2 *config_v2,
         goto out;
     }
 
-    healthcheck->test = util_common_calloc_s(sizeof(char *) * config_v2->config->healthcheck->test_len);
+    healthcheck->test = util_common_calloc_s(sizeof(char *) * spec->config->healthcheck->test_len);
     if (healthcheck->test == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
-    for (i = 0; i < config_v2->config->healthcheck->test_len; i++) {
-        healthcheck->test[i] = util_strdup_s(config_v2->config->healthcheck->test[i]);
+    for (i = 0; i < spec->config->healthcheck->test_len; i++) {
+        healthcheck->test[i] = util_strdup_s(spec->config->healthcheck->test[i]);
     }
-    healthcheck->test_len = config_v2->config->healthcheck->test_len;
-    healthcheck->interval = config_v2->config->healthcheck->interval;
-    healthcheck->retries = config_v2->config->healthcheck->retries;
-    healthcheck->start_period = config_v2->config->healthcheck->start_period;
-    healthcheck->timeout = config_v2->config->healthcheck->timeout;
-    healthcheck->exit_on_unhealthy = config_v2->config->healthcheck->exit_on_unhealthy;
+    healthcheck->test_len = spec->config->healthcheck->test_len;
+    healthcheck->interval = spec->config->healthcheck->interval;
+    healthcheck->retries = spec->config->healthcheck->retries;
+    healthcheck->start_period = spec->config->healthcheck->start_period;
+    healthcheck->timeout = spec->config->healthcheck->timeout;
+    healthcheck->exit_on_unhealthy = spec->config->healthcheck->exit_on_unhealthy;
 
     info->healthcheck = healthcheck;
     healthcheck = NULL;
@@ -3061,7 +3063,7 @@ out:
     return ret;
 }
 
-static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
+static int pack_user_info_from_image(const oci_image_spec *spec, imagetool_image *info)
 {
     int ret = 0;
     char *tmp = NULL;
@@ -3069,12 +3071,12 @@ static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, im
     char *group = NULL;
     long long converted;
 
-    if (config_v2->config == NULL || config_v2->config->user == NULL || strlen(config_v2->config->user) == 0) {
+    if (spec->config == NULL || spec->config->user == NULL || strlen(spec->config->user) == 0) {
         return 0;
     }
 
     // parse user and group by username
-    util_parse_user_group(config_v2->config->user, &user, &group, &tmp);
+    util_parse_user_group(spec->config->user, &user, &group, &tmp);
 
     if (user == NULL) {
         ERROR("Failed to parse user");
@@ -3100,34 +3102,29 @@ out:
     return ret;
 }
 
-static int pack_image_summary_item(const char *filename, imagetool_image *info)
+static int pack_image_summary_item(oci_image_spec *spec, imagetool_image *info)
 {
     int ret = 0;
-    docker_image_config_v2 *config_v2 = NULL;
-    parser_error err = NULL;
 
-    config_v2 = docker_image_config_v2_parse_file(filename, NULL, &err);
-    if (config_v2 == NULL) {
-        ERROR("Failed to parse docker image config v2 : %s", filename);
+    if (spec == NULL) {
+        ERROR("Invalid oci image spec");
         ret = -1;
         goto out;
     }
 
-    if (pack_health_check_from_image(config_v2, info) != 0) {
+    if (pack_health_check_from_image(spec, info) != 0) {
         ERROR("Failed to pack health check config");
         ret = -1;
         goto out;
     }
 
-    if (pack_user_info_from_image(config_v2, info) != 0) {
+    if (pack_user_info_from_image(spec, info) != 0) {
         ERROR("Failed to pack health check config");
         ret = -1;
         goto out;
     }
 
 out:
-    free_docker_image_config_v2(config_v2);
-    free(err);
     return ret;
 }
 
@@ -3173,7 +3170,7 @@ static imagetool_image *get_image_info(image_t *img)
         goto out;
     }
 
-    if (pack_image_summary_item(config_file, info) != 0) {
+    if (pack_image_summary_item(img->spec, info) != 0) {
         ERROR("Failed to pack image summary item from image config");
         ret = -1;
         goto out;
@@ -3199,6 +3196,150 @@ out:
     free(base_name);
     free(config_file);
     free(sha256_key);
+
+    return info;
+}
+
+static int pack_user_info_for_image_summary(const oci_image_spec *spec, imagetool_image_summary *info)
+{
+    int ret = 0;
+    char *tmp = NULL;
+    char *user = NULL;
+    char *group = NULL;
+    long long converted;
+
+    if (spec == NULL || spec->config == NULL || spec->config->user == NULL || strlen(spec->config->user) == 0) {
+        return 0;
+    }
+
+    // parse user and group by username
+    util_parse_user_group(spec->config->user, &user, &group, &tmp);
+
+    if (user == NULL) {
+        ERROR("Failed to parse user");
+        ret = -1;
+        goto out;
+    }
+    if (util_safe_llong(user, &converted) == 0) {
+        if (info->uid == NULL) {
+            info->uid = (imagetool_image_summary_uid *)util_common_calloc_s(sizeof(imagetool_image_summary_uid));
+            if (info->uid == NULL) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+        }
+        info->uid->value = (int64_t)converted;
+    } else {
+        info->username = util_strdup_s(user);
+    }
+
+out:
+    free(tmp);
+    return ret;
+}
+
+static int pack_image_tags_and_repo_digest_for_summary(image_t *img, imagetool_image_summary *info)
+{
+    int ret = 0;
+    char *name = NULL;
+    char **tags = NULL;
+    char **digests = NULL;
+    char *image_digest = NULL;
+    char **repo_digests = NULL;
+
+    if (resort_image_names((const char **)img->simage->names, img->simage->names_len, &name, &tags, &digests) != 0) {
+        ERROR("Failed to resort image names");
+        ret = -1;
+        goto out;
+    }
+
+    if (get_image_repo_digests(&digests, tags, img, &image_digest, &repo_digests) != 0) {
+        ERROR("Failed to get image repo digests");
+        ret = -1;
+        goto out;
+    }
+    info->repo_tags = tags;
+    info->repo_tags_len = util_array_len((const char **)tags);
+    tags = NULL;
+    info->repo_digests = repo_digests;
+    info->repo_digests_len = util_array_len((const char **)repo_digests);
+    repo_digests = NULL;
+
+out:
+    free(name);
+    free(image_digest);
+    util_free_array(tags);
+    util_free_array(digests);
+    util_free_array(repo_digests);
+    return ret;
+}
+
+static int pack_image_labels_for_image_summary(const oci_image_spec *spec, imagetool_image_summary *info)
+{
+    int ret = 0;
+
+    if (spec == NULL || spec->config == NULL || spec->config->labels == NULL) {
+        return 0;
+    }
+
+    info->labels = util_common_calloc_s(sizeof(json_map_string_string));
+    if (info->labels == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_json_map_string_string(spec->config->labels, info->labels) != 0) {
+        ERROR("Failed to dup image labels");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static imagetool_image_summary *get_image_summary(image_t *img)
+{
+    int ret = 0;
+    imagetool_image_summary *info = NULL;
+
+    info = util_common_calloc_s(sizeof(imagetool_image_summary));
+    if (info == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    info->id = util_strdup_s(img->simage->id);
+    info->created = util_strdup_s(img->simage->created);
+    info->loaded = util_strdup_s(img->simage->loaded);
+    info->size = img->simage->size;
+    info->top_layer = util_strdup_s(img->simage->layer);
+
+    if (pack_user_info_for_image_summary(img->spec, info) != 0) {
+        ERROR("Failed to pack image user info for image summary");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_image_tags_and_repo_digest_for_summary(img, info) != 0) {
+        ERROR("Failed to pack image tags and repo digest");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_image_labels_for_image_summary(img->spec, info) != 0) {
+        ERROR("Failed to pack image labels");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free_imagetool_image_summary(info);
+        info = NULL;
+    }
 
     return info;
 }
@@ -3246,6 +3387,49 @@ out:
     return imginfo;
 }
 
+imagetool_image_summary *image_store_get_image_summary(const char *id)
+{
+    image_t *img = NULL;
+    imagetool_image_summary *img_summary = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid paratemer, id is NULL");
+        return NULL;
+    }
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return NULL;
+    }
+
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get the known image");
+        return NULL;
+    }
+
+    img = lookup(id);
+    if (img == NULL) {
+        WARN("Image not known");
+        goto unlock;
+    }
+
+    img_summary = get_image_summary(img);
+    if (img_summary == NULL) {
+        ERROR("Delete image %s due to: Get image information failed, image may be damaged", img->simage->id);
+        image_store_unlock();
+        if (image_store_delete(img->simage->id) != 0) {
+            ERROR("Failed to delete image, please delete residual file manually");
+        }
+        goto out;
+    }
+
+unlock:
+    image_store_unlock();
+out:
+    image_ref_dec(img);
+    return img_summary;
+}
+
 int image_store_get_all_images(imagetool_images_list *images_list)
 {
     int ret = 0;
@@ -3279,9 +3463,9 @@ int image_store_get_all_images(imagetool_images_list *images_list)
     }
 
     linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
-        imagetool_image *imginfo = NULL;
+        imagetool_image_summary *imginfo = NULL;
         image_t *img = (image_t *)item->elem;
-        imginfo = get_image_info(img);
+        imginfo = get_image_summary(img);
         if (imginfo == NULL) {
             ERROR("Delete image %s due to: Get image information failed, image may be damaged", img->simage->id);
             if (do_delete_image_info(img->simage->id) != 0) {

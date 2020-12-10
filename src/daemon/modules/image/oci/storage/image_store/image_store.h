@@ -28,6 +28,7 @@
 #include "image_type.h"
 #include "isula_libutils/imagetool_image.h"
 #include "isula_libutils/imagetool_images_list.h"
+#include "isula_libutils/imagetool_image_summary.h"
 
 struct storage_module_init_options;
 
@@ -105,6 +106,8 @@ int image_store_get_fs_info(imagetool_fs_info *fs_info);
 
 // Free memory of image store, but will not delete the persisted files
 void image_store_free();
+
+imagetool_image_summary *image_store_get_image_summary(const char *id);
 
 #ifdef __cplusplus
 }

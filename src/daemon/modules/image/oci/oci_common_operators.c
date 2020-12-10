@@ -71,7 +71,7 @@ static int oci_list_all_images(imagetool_images_list *images_list)
     return storage_get_all_images(images_list);
 }
 
-static bool image_meet_dangling_filter(const imagetool_image *src, const struct filters_args *filters)
+static bool image_meet_dangling_filter(const imagetool_image_summary *src, const struct filters_args *filters)
 {
     bool ret = false;
     map_t *field_values_map = NULL;
@@ -111,7 +111,7 @@ static int do_image_time_filter(map_itor *itor, bool is_before_filter, int64_t *
 {
     int ret = 0;
     int64_t tmp_nanos = 0;
-    imagetool_image *image_info = NULL;
+    imagetool_image_summary *image_summary = NULL;
 
     char *tmp = oci_resolve_image_name(map_itor_key(itor));
     if (tmp == NULL) {
@@ -119,13 +119,13 @@ static int do_image_time_filter(map_itor *itor, bool is_before_filter, int64_t *
         goto out;
     }
 
-    image_info = storage_img_get(tmp);
-    if (image_info == NULL) {
+    image_summary = storage_img_get_summary(tmp);
+    if (image_summary == NULL) {
         ret = -1;
         goto out;
     }
 
-    if (util_to_unix_nanos_from_str(image_info->created, &tmp_nanos) != 0) {
+    if (util_to_unix_nanos_from_str(image_summary->created, &tmp_nanos) != 0) {
         ERROR("Failed to get unix nano from string");
         ret = -1;
         goto out;
@@ -142,12 +142,12 @@ static int do_image_time_filter(map_itor *itor, bool is_before_filter, int64_t *
     }
 
 out:
-    free_imagetool_image(image_info);
+    free_imagetool_image_summary(image_summary);
     free(tmp);
     return ret;
 }
 
-static bool image_time_filter(const imagetool_image *src, const struct filters_args *filters, const char *field)
+static bool image_time_filter(const imagetool_image_summary *src, const struct filters_args *filters, const char *field)
 {
     bool ret = false;
     map_t *field_values_map = NULL;
@@ -196,17 +196,17 @@ out:
     return ret;
 }
 
-static bool image_meet_before_filter(const imagetool_image *src, const struct filters_args *filters)
+static bool image_meet_before_filter(const imagetool_image_summary *src, const struct filters_args *filters)
 {
     return image_time_filter(src, filters, "before");
 }
 
-static bool image_meet_since_filter(const imagetool_image *src, const struct filters_args *filters)
+static bool image_meet_since_filter(const imagetool_image_summary *src, const struct filters_args *filters)
 {
     return image_time_filter(src, filters, "since");
 }
 
-static bool image_meet_label_filter(const imagetool_image *src, const struct filters_args *filters)
+static bool image_meet_label_filter(const imagetool_image_summary *src, const struct filters_args *filters)
 {
     bool ret = false;
     map_t *field_values_map = NULL;
@@ -219,7 +219,7 @@ static bool image_meet_label_filter(const imagetool_image *src, const struct fil
         return true;
     }
 
-    if (src->spec->config == NULL || src->spec->config->labels == NULL) {
+    if (src->labels == NULL) {
         return false;
     }
 
@@ -236,8 +236,8 @@ static bool image_meet_label_filter(const imagetool_image *src, const struct fil
             ret = false;
             goto out;
         }
-        for (i = 0; i < src->spec->config->labels->len; i++) {
-            if (strcmp(tmp_key, src->spec->config->labels->keys[i]) == 0) {
+        for (i = 0; i < src->labels->len; i++) {
+            if (strcmp(tmp_key, src->labels->keys[i]) == 0) {
                 ret = true;
                 goto out;
             }
@@ -249,7 +249,7 @@ out:
     return ret;
 }
 
-static bool image_meet_reference_filter(const imagetool_image *src, const struct filters_args *filters)
+static bool image_meet_reference_filter(const imagetool_image_summary *src, const struct filters_args *filters)
 {
     size_t i;
     size_t len = src->repo_tags_len;
@@ -268,21 +268,21 @@ static bool image_meet_reference_filter(const imagetool_image *src, const struct
     return false;
 }
 
-static bool image_meet_filters(const imagetool_image *src, const struct filters_args *filters)
+static bool image_meet_filters(const imagetool_image_summary *src, const struct filters_args *filters)
 {
     return image_meet_dangling_filter(src, filters) && image_meet_before_filter(src, filters) &&
            image_meet_since_filter(src, filters) && image_meet_label_filter(src, filters) &&
            image_meet_reference_filter(src, filters);
 }
 
-static int dup_oci_image_info_by_filters(const imagetool_image *src, const struct filters_args *filters,
+static int dup_oci_image_info_by_filters(const imagetool_image_summary *src, const struct filters_args *filters,
                                          imagetool_images_list *images_list)
 {
     int ret = 0;
     char *json = NULL;
     parser_error err = NULL;
-    imagetool_image **tmp_images = NULL;
-    imagetool_image *tmp_image = NULL;
+    imagetool_image_summary **tmp_images = NULL;
+    imagetool_image_summary *tmp_image = NULL;
     size_t new_size, old_size;
 
     if (src == NULL) {
@@ -293,28 +293,28 @@ static int dup_oci_image_info_by_filters(const imagetool_image *src, const struc
         goto out;
     }
 
-    json = imagetool_image_generate_json(src, NULL, &err);
+    json = imagetool_image_summary_generate_json(src, NULL, &err);
     if (json == NULL) {
         ERROR("Failed to generate json: %s", err);
         ret = -1;
         goto out;
     }
 
-    tmp_image = imagetool_image_parse_data(json, NULL, &err);
+    tmp_image = imagetool_image_summary_parse_data(json, NULL, &err);
     if (tmp_image == NULL) {
         ERROR("Failed to parse json: %s", err);
         ret = -1;
         goto out;
     }
 
-    if (images_list->images_len > SIZE_MAX / sizeof(imagetool_image *) - 1) {
+    if (images_list->images_len > SIZE_MAX / sizeof(imagetool_image_summary *) - 1) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
 
-    new_size = (images_list->images_len + 1) * sizeof(imagetool_image *);
-    old_size = images_list->images_len * sizeof(imagetool_image *);
+    new_size = (images_list->images_len + 1) * sizeof(imagetool_image_summary *);
+    old_size = images_list->images_len * sizeof(imagetool_image_summary *);
 
     ret = util_mem_realloc((void **)(&tmp_images), new_size, images_list->images, old_size);
     if (ret != 0) {
@@ -332,7 +332,7 @@ static int dup_oci_image_info_by_filters(const imagetool_image *src, const struc
 out:
     free(err);
     free(json);
-    free_imagetool_image(tmp_image);
+    free_imagetool_image_summary(tmp_image);
     return ret;
 }
 
@@ -403,7 +403,55 @@ size_t oci_get_images_count(void)
     return storage_get_img_count();
 }
 
-int oci_status_image(im_status_request *request, im_status_response **response)
+int oci_summary_image(im_summary_request *request, im_summary_response *response)
+{
+    int ret = 0;
+    imagetool_image_summary *image_summary = NULL;
+    char *image_ref = NULL;
+    char *resolved_name = NULL;
+
+    if (response == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    image_ref = request->image.image;
+    if (image_ref == NULL) {
+        ERROR("Inspect image requires image ref");
+        isulad_set_error_message("Inspect image requires image ref");
+        ret = -1;
+        goto pack_response;
+    }
+
+    resolved_name = oci_resolve_image_name(image_ref);
+    if (resolved_name == NULL) {
+        ERROR("Failed to resolve image name %s", image_ref);
+        isulad_set_error_message("Failed to resolve image name %s", image_ref);
+        ret = -1;
+        goto pack_response;
+    }
+
+    EVENT("Event: {Object: %s, Type: statusing image summary}", resolved_name);
+
+    image_summary = storage_img_get_summary(resolved_name);
+    if (image_summary == NULL) {
+        ERROR("No such image:%s", resolved_name);
+        isulad_set_error_message("No such image:%s", resolved_name);
+        ret = -1;
+        goto pack_response;
+    }
+
+    response->image_summary = image_summary;
+    image_summary = NULL;
+
+    EVENT("Event: {Object: %s, Type: statused image summary}", resolved_name);
+
+pack_response:
+    free(resolved_name);
+    return ret;
+}
+
+int oci_status_image(im_status_request *request, im_status_response *response)
 {
     int ret = 0;
     imagetool_image_status *image_status = NULL;
@@ -411,7 +459,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
     char *image_ref = NULL;
     char *resolved_name = NULL;
 
-    if (*response == NULL) {
+    if (response == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }
@@ -422,7 +470,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
         ret = -1;
         goto pack_response;
     }
-    (*response)->image_info = image_status;
+    response->image_info = image_status;
 
     image_ref = request->image.image;
     if (image_ref == NULL) {
@@ -450,7 +498,7 @@ int oci_status_image(im_status_request *request, im_status_response **response)
         goto pack_response;
     }
 
-    (*response)->image_info->image = image_info;
+    response->image_info->image = image_info;
     image_info = NULL;
 
     EVENT("Event: {Object: %s, Type: statused image}", resolved_name);
@@ -483,7 +531,7 @@ int oci_inspect_image(const im_inspect_request *im_request, char **inspected_jso
         goto out;
     }
 
-    ret = oci_status_image(&request, &response);
+    ret = oci_status_image(&request, response);
     if (ret != 0) {
         goto out;
     }

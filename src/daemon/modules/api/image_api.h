@@ -28,6 +28,7 @@
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_fs_info.h"
 #include "isula_libutils/imagetool_image_status.h"
+#include "isula_libutils/imagetool_image_summary.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +62,18 @@ typedef struct {
     imagetool_image_status *image_info;
     char *errmsg;
 } im_status_response;
+
+typedef struct {
+    // Spec of the image.
+    image_spec image;
+    // Verbose indicates whether to return extra information about the image.
+    bool verbose;
+} im_summary_request;
+
+typedef struct {
+    imagetool_image_summary *image_summary;
+    char *errmsg;
+} im_summary_response;
 
 typedef struct {
     image_filter filter;
@@ -290,7 +303,11 @@ void free_im_logout_request(im_logout_request *ptr);
 
 void free_im_logout_response(im_logout_response *ptr);
 
-int im_image_status(im_status_request *request, im_status_response **response);
+int im_image_summary(im_summary_request *request, im_summary_response **response);
+
+void free_im_summary_request(im_summary_request *req);
+
+void free_im_summary_response(im_summary_response *resp);
 
 void free_im_status_request(im_status_request *req);
 

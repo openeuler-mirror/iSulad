@@ -322,9 +322,11 @@ cleanup:
     return nullptr;
 }
 
-container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
-                                                                                const runtime::v1alpha2::ContainerConfig &containerConfig, const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                                                                const std::string &podSandboxRuntime, Errors &error)
+container_create_request *
+CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
+                                                      const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                      const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                      const std::string &podSandboxRuntime, Errors &error)
 {
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
@@ -762,17 +764,17 @@ void CRIRuntimeServiceImpl::ListContainersToGRPC(container_list_response *respon
         if (response->containers[i]->image != nullptr) {
             runtime::v1alpha2::ImageSpec *image = container->mutable_image();
             image->set_image(response->containers[i]->image);
-            imagetool_image *ir = CRIHelpers::InspectImageByID(response->containers[i]->image, error);
+            imagetool_image_summary *ir = CRIHelpers::InspectImageByID(response->containers[i]->image, error);
             if (error.NotEmpty() || ir == nullptr) {
                 error.Errorf("unable to inspect image %s while inspecting container %s: %s",
                              response->containers[i]->image, response->containers[i]->id,
                              error.Empty() ? "Unknown" : error.GetMessage().c_str());
-                free_imagetool_image(ir);
+                free_imagetool_image_summary(ir);
                 return;
             }
             std::string imageID = CRIHelpers::ToPullableImageID(response->containers[i]->image, ir);
             container->set_image_ref(imageID);
-            free_imagetool_image(ir);
+            free_imagetool_image_summary(ir);
         }
 
         runtime::v1alpha2::ContainerState state =
@@ -1069,15 +1071,15 @@ auto CRIRuntimeServiceImpl::PackContainerImageToStatus(container_inspect *inspec
         return 0;
     }
     contStatus->mutable_image()->set_image(inspect->config->image);
-    imagetool_image *ir = CRIHelpers::InspectImageByID(inspect->config->image, error);
+    imagetool_image_summary *ir = CRIHelpers::InspectImageByID(inspect->config->image, error);
     if (error.NotEmpty() || ir == nullptr) {
         error.Errorf("unable to inspect image %s while inspecting container %s: %s", inspect->config->image,
                      inspect->name, error.Empty() ? "Unknown" : error.GetMessage().c_str());
-        free_imagetool_image(ir);
+        free_imagetool_image_summary(ir);
         return -1;
     }
     contStatus->set_image_ref(CRIHelpers::ToPullableImageID(inspect->config->image, ir));
-    free_imagetool_image(ir);
+    free_imagetool_image_summary(ir);
     return 0;
 }
 
@@ -1197,8 +1199,8 @@ void CRIRuntimeServiceImpl::ContainerStatusToGRPC(container_inspect *inspect,
     ConvertMountsToStatus(inspect, contStatus);
 }
 
-std::unique_ptr<runtime::v1alpha2::ContainerStatus> CRIRuntimeServiceImpl::ContainerStatus(
-    const std::string &containerID, Errors &error)
+std::unique_ptr<runtime::v1alpha2::ContainerStatus>
+CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID, Errors &error)
 {
     if (containerID.empty()) {
         error.SetError("Empty pod sandbox id");

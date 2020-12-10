@@ -453,49 +453,49 @@ out:
     return id;
 }
 
-static int inspect_image(const char *image, imagetool_image **result)
+static int inspect_image(const char *image, imagetool_image_summary **result)
 {
     int ret = 0;
-    im_status_request *request = NULL;
-    im_status_response *response = NULL;
+    im_summary_request *request = NULL;
+    im_summary_response *response = NULL;
 
     if (image == NULL) {
         ERROR("Empty image name or id");
         return -1;
     }
 
-    request = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
+    request = (im_summary_request *)util_common_calloc_s(sizeof(im_summary_request));
     if (request == NULL) {
         ERROR("Out of memory");
         return -1;
     }
     request->image.image = util_strdup_s(image);
 
-    if (im_image_status(request, &response) != 0) {
+    if (im_image_summary(request, &response) != 0) {
         if (response != NULL && response->errmsg != NULL) {
-            ERROR("failed to inspect inspect image info: %s", response->errmsg);
+            ERROR("failed to inspect inspect image summary: %s", response->errmsg);
         } else {
-            ERROR("Failed to call status image");
+            ERROR("Failed to call summary image");
         }
         ret = -1;
         goto cleanup;
     }
 
-    if (response->image_info != NULL) {
-        *result = response->image_info->image;
-        response->image_info->image = NULL;
+    if (response->image_summary != NULL) {
+        *result = response->image_summary;
+        response->image_summary = NULL;
     }
 
 cleanup:
-    free_im_status_request(request);
-    free_im_status_response(response);
+    free_im_summary_request(request);
+    free_im_summary_response(response);
     return ret;
 }
 
 static int conf_get_image_id(const char *image, char **id)
 {
     int ret = 0;
-    imagetool_image *ir = NULL;
+    imagetool_image_summary *ir = NULL;
     size_t len = 0;
     char *image_id = NULL;
 
@@ -535,7 +535,7 @@ static int conf_get_image_id(const char *image, char **id)
     image_id = NULL;
 
 out:
-    free_imagetool_image(ir);
+    free_imagetool_image_summary(ir);
     free(image_id);
     return ret;
 }

@@ -61,7 +61,7 @@ std::string GetDirectory()
         }
     }
 
-    return static_cast<std::string>(abs_path) +  "../../../../../../test/image/oci/storage/images";
+    return static_cast<std::string>(abs_path) + "../../../../../../test/image/oci/storage/images";
 }
 
 bool dirExists(const char *path)
@@ -266,8 +266,7 @@ TEST_F(StorageImagesCompatibilityUnitTest, test_load_v1_image)
 
     EXPECT_CALL(m_storage_mock, StorageLayersGetByCompressDigest(_))
     .WillRepeatedly(Invoke(invokeStorageLayersGetByCompressDigest));
-    EXPECT_CALL(m_storage_mock, FreeLayerList(_))
-    .WillRepeatedly(Invoke(invokeFreeLayerList));
+    EXPECT_CALL(m_storage_mock, FreeLayerList(_)).WillRepeatedly(Invoke(invokeFreeLayerList));
     opts.storage_root = strdup(store_real_path);
     opts.driver_name = strdup("overlay");
     ASSERT_EQ(image_store_init(&opts), 0);
@@ -597,14 +596,8 @@ TEST_F(StorageImagesUnitTest, test_image_store_get_all_images)
         if (std::string(images_list->images[i]->id) == ids.at(0)) {
             ASSERT_STREQ(img->created, "2017-07-10T12:46:57.770791248Z");
             ASSERT_STREQ(img->loaded, "2020-03-16T03:46:12.172621513Z");
-            ASSERT_EQ(img->healthcheck, nullptr);
             ASSERT_EQ(img->username, nullptr);
             ASSERT_EQ(img->size, 0);
-            ASSERT_EQ(img->spec->config->env_len, 1);
-            ASSERT_STREQ(img->spec->config->env[0],
-                         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
-            ASSERT_EQ(img->spec->config->cmd_len, 1);
-            ASSERT_STREQ(img->spec->config->cmd[0], "/bin/bash");
         }
     }
 
@@ -642,7 +635,6 @@ TEST_F(StorageImagesUnitTest, test_image_store_delete)
 
     Restore();
 }
-
 
 TEST_F(StorageImagesUnitTest, test_image_store_remove_single_name)
 {

@@ -553,8 +553,8 @@ static bool valid_repo_tags(char * const * const repo_tags, size_t repo_index)
     return false;
 }
 
-static int trans_one_image(image_list_images_response *response, size_t image_index, const imagetool_image *im_image,
-                           size_t repo_index)
+static int trans_one_image(image_list_images_response *response, size_t image_index,
+                           const imagetool_image_summary *im_image, size_t repo_index)
 {
     int ret = 0;
     image_image *out_image = NULL;
@@ -620,7 +620,7 @@ static size_t calc_images_display_num(const imagetool_images_list *images)
 {
     size_t images_num = 0;
     size_t i = 0;
-    const imagetool_image *im_image = NULL;
+    const imagetool_image_summary *im_image = NULL;
 
     for (i = 0; i < images->images_len; i++) {
         size_t j = 0;
@@ -641,7 +641,7 @@ static int trans_im_list_images(const im_list_response *im_list, image_list_imag
     size_t images_num = 0;
     size_t images_display_num = 0;
     size_t image_index = 0;
-    imagetool_image *im_image = NULL;
+    imagetool_image_summary *im_image = NULL;
 
     if (im_list == NULL || im_list->images == NULL) {
         return -1;

@@ -30,7 +30,7 @@
 #include "service_image_api.h"
 #include "utils.h"
 
-static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
+static void conv_image_to_grpc(const imagetool_image_summary *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {
     if (element == nullptr) {
         return;
@@ -66,7 +66,6 @@ static void conv_image_to_grpc(const imagetool_image *element, std::unique_ptr<r
     if (element->username != nullptr) {
         image->set_username(element->username);
     }
-
 }
 
 auto CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
@@ -114,8 +113,7 @@ auto CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageS
 }
 
 auto CRIImageServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter,
-                                                 im_list_request **request,
-                                                 Errors &error) -> int
+                                                 im_list_request **request, Errors &error) -> int
 {
     im_list_request *tmpreq = (im_list_request *)util_common_calloc_s(sizeof(im_list_request));
     if (tmpreq == nullptr) {
@@ -149,7 +147,7 @@ void CRIImageServiceImpl::list_images_to_grpc(im_list_response *response,
             return;
         }
 
-        imagetool_image *element = list_images->images[i];
+        imagetool_image_summary *element = list_images->images[i];
         conv_image_to_grpc(element, image);
         images->push_back(move(image));
     }
@@ -185,9 +183,9 @@ cleanup:
 }
 
 auto CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
-                                                   im_status_request **request, Errors &error) -> int
+                                                   im_summary_request **request, Errors &error) -> int
 {
-    im_status_request *tmpreq = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
+    im_summary_request *tmpreq = (im_summary_request *)util_common_calloc_s(sizeof(im_summary_request));
     if (tmpreq == nullptr) {
         ERROR("Out of memory");
         error.SetError("Out of memory");
@@ -203,16 +201,11 @@ auto CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::Imag
     return 0;
 }
 
-auto CRIImageServiceImpl::status_image_to_grpc(im_status_response *response,
-                                               Errors & /*error*/) -> std::unique_ptr<runtime::v1alpha2::Image>
+auto CRIImageServiceImpl::status_image_to_grpc(im_summary_response *response, Errors & /*error*/)
+        -> std::unique_ptr<runtime::v1alpha2::Image>
 {
-    imagetool_image_status *image_info = response->image_info;
+    imagetool_image_summary *image_info = response->image_summary;
     if (image_info == nullptr) {
-        return nullptr;
-    }
-
-    imagetool_image *element = image_info->image;
-    if (element == nullptr) {
         return nullptr;
     }
 
@@ -221,16 +214,16 @@ auto CRIImageServiceImpl::status_image_to_grpc(im_status_response *response,
         ERROR("Out of memory");
         return nullptr;
     }
-    conv_image_to_grpc(element, image);
+    conv_image_to_grpc(image_info, image);
 
     return image;
 }
 
-auto CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
-                                      Errors &error) -> std::unique_ptr<runtime::v1alpha2::Image>
+auto CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image, Errors &error)
+        -> std::unique_ptr<runtime::v1alpha2::Image>
 {
-    im_status_request *request { nullptr };
-    im_status_response *response { nullptr };
+    im_summary_request *request { nullptr };
+    im_summary_response *response { nullptr };
     std::unique_ptr<runtime::v1alpha2::Image> out { nullptr };
 
     int ret = status_request_from_grpc(&image, &request, error);
@@ -238,7 +231,7 @@ auto CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
         goto cleanup;
     }
 
-    ret = im_image_status(request, &response);
+    ret = im_image_summary(request, &response);
     if (ret != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             error.SetError(response->errmsg);
@@ -252,8 +245,8 @@ auto CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
 
 cleanup:
     DAEMON_CLEAR_ERRMSG();
-    free_im_status_request(request);
-    free_im_status_response(response);
+    free_im_summary_request(request);
+    free_im_summary_response(response);
     return out;
 }
 

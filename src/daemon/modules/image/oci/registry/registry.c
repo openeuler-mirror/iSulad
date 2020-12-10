@@ -1590,12 +1590,12 @@ out:
 
 static bool reuse_image(pull_descriptor *desc)
 {
-    imagetool_image *image = NULL;
+    imagetool_image_summary *image = NULL;
     bool reuse = false;
     char *id = NULL;
 
     // If the image already exist, do not pull it again.
-    image = storage_img_get(desc->dest_image_name);
+    image = storage_img_get_summary(desc->dest_image_name);
     if (image == NULL || desc->config.digest == NULL || image->id == NULL) {
         goto out;
     }
@@ -1611,7 +1611,7 @@ static bool reuse_image(pull_descriptor *desc)
     }
 
 out:
-    free_imagetool_image(image);
+    free_imagetool_image_summary(image);
     image = NULL;
 
     return reuse;

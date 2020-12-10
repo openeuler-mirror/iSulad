@@ -1163,6 +1163,8 @@ static void recursive_cal_dir_size_helper(const char *dirpath, int recursive_dep
     }
     pdirent = readdir(directory);
     for (; pdirent != NULL; pdirent = readdir(directory)) {
+        util_usleep_nointerupt(1000); // sleep 1ms
+
         int pathname_len;
 
         if (!strcmp(pdirent->d_name, ".") || !strcmp(pdirent->d_name, "..")) {
