@@ -1182,10 +1182,10 @@ out:
     return ret;
 }
 
-static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint32_t signal)
+static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint32_t stop_signal, uint32_t signal)
 {
     if (util_process_alive(pid, start_time) == false) {
-        if (signal == SIGTERM || signal == SIGKILL) {
+        if (signal == stop_signal || signal == SIGKILL) {
             WARN("Process %d is not alive", pid);
             return 0;
         } else {
@@ -1203,11 +1203,27 @@ static int send_signal_to_process(pid_t pid, unsigned long long start_time, uint
     return 0;
 }
 
+static int container_stop_signal(container_t *cont)
+{
+    int signal = 0;
+
+    if (cont->common_config->config != NULL && cont->common_config->config->stop_signal != NULL) {
+        signal = util_sig_parse(cont->common_config->config->stop_signal);
+    }
+
+    if (signal <= 0) {
+        signal = SIGTERM;
+    }
+
+    return signal;
+}
+
 static int kill_with_signal(container_t *cont, uint32_t signal)
 {
     int ret = 0;
     int nret = 0;
     const char *id = cont->common_config->id;
+    int stop_signal = container_stop_signal(cont);
     bool need_unpause = container_is_paused(cont->state);
     rt_resume_params_t params = { 0 };
     char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };
@@ -1233,7 +1249,7 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
 
     container_stop_health_checks(id);
 
-    ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, signal);
+    ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, stop_signal, signal);
     if (ret != 0) {
         ERROR("Failed to send signal to container %s with signal %u", id, signal);
     }
@@ -1264,6 +1280,7 @@ static int force_kill(container_t *cont)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
+    int stop_signal = container_stop_signal(cont);
 
     ret = kill_with_signal(cont, SIGKILL);
     if (ret != 0) {
@@ -1272,7 +1289,7 @@ static int force_kill(container_t *cont)
     ret = container_wait_stop(cont, 90);
     if (ret != 0) {
         WARN("Container(%s) stuck for 90 seconds, try to kill the monitor of container", id);
-        ret = send_signal_to_process(cont->state->state->p_pid, cont->state->state->p_start_time, SIGKILL);
+        ret = send_signal_to_process(cont->state->state->p_pid, cont->state->state->p_start_time, stop_signal, SIGKILL);
         if (ret != 0) {
             ERROR("Container stuck for 90 seconds and failed to kill the monitor of container, "
                   "please check the config");
@@ -1290,6 +1307,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
 {
     int ret = 0;
     char *id = NULL;
+    int stop_signal = 0;
 
     if (cont == NULL) {
         ERROR("Invalid input arguments");
@@ -1312,8 +1330,10 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
         cont->hostconfig->auto_remove = false;
     }
 
+    stop_signal = container_stop_signal(cont);
+
     if (!force) {
-        ret = kill_with_signal(cont, SIGTERM);
+        ret = kill_with_signal(cont, stop_signal);
         if (ret) {
             ERROR("Failed to grace shutdown container %s", id);
         }

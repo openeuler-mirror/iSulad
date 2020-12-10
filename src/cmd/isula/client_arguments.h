@@ -210,6 +210,9 @@ struct custom_configs {
 
     /* device cgroup rules */
     char **device_cgroup_rules;
+
+    /* Signal to stop a container */
+    char *stop_signal;
 };
 
 struct args_cgroup_resources {

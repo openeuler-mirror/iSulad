@@ -371,6 +371,10 @@ static int pack_container_custom_config(container_config *container_spec, const 
         container_spec->working_dir = util_strdup_s(custom_conf->workdir);
     }
 
+    if (custom_conf->stop_signal != NULL) {
+        container_spec->stop_signal = util_strdup_s(custom_conf->stop_signal);
+    }
+
 out:
     return ret;
 }
@@ -445,6 +449,9 @@ void isula_container_config_free(isula_container_config_t *config)
 
     free(config->workdir);
     config->workdir = NULL;
+
+    free(config->stop_signal);
+    config->stop_signal = NULL;
 
     free(config);
 }

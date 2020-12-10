@@ -2080,7 +2080,7 @@ static inline bool is_less_than_one_second(int64_t timeout)
     return timeout != 0 && timeout < Time_Second;
 }
 
-int verify_health_check_parameter(const container_config *container_spec)
+static int verify_health_check_parameter(const container_config *container_spec)
 {
     int ret = 0;
 
@@ -2109,6 +2109,46 @@ int verify_health_check_parameter(const container_config *container_spec)
     if (container_spec->healthcheck->retries < 0) {
         ERROR("--health-retries cannot be negative");
         isulad_set_error_message("--health-retries cannot be negative");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int verify_stop_signal(const container_config *container_spec)
+{
+    int ret = 0;
+    int signal = -1;
+
+    if (container_spec->stop_signal == NULL) {
+        return 0;
+    }
+
+    signal = util_sig_parse(container_spec->stop_signal);
+
+    if (!util_valid_signal(signal)) {
+        ERROR("Invalid signal: %s", container_spec->stop_signal);
+        isulad_set_error_message("Invalid signal: %s", container_spec->stop_signal);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+int verify_container_config(const container_config *container_spec)
+{
+    int ret = 0;
+
+    if (verify_health_check_parameter(container_spec) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (verify_stop_signal(container_spec) != 0) {
         ret = -1;
         goto out;
     }
