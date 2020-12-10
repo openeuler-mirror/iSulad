@@ -42,13 +42,17 @@ struct cni_manager {
 int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
                            size_t bin_paths_len);
 
-int cni_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, bool is_cri);
+int cni_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len);
+
+int cri_update_confist_from_dir();
+
+int isula_update_confist_from_dir();
 
 int attach_loopback(const char *id, const char *netns);
 
 int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
 
-int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str);
+int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
 
 int detach_loopback(const char *id, const char *netns);
 
