@@ -21,13 +21,21 @@
 #include "isula_libutils/log.h"
 #include "isula_libutils/cni_net_conf.h"
 #include "isula_libutils/cni_net_conf_list.h"
+#include "isula_libutils/cni_anno_port_mappings.h"
 #include "utils.h"
 #include "libcni_utils.h"
 #include "libcni_types.h"
 
 #define LO_IFNAME "lo"
 #define MAC_ADDR_VALID_CHARS "^([a-f0-9A-F]{2}[:-]){5}(a-f0-9A-F]{2})$"
-typedef int (*annotation_add_json_t)(const char *, char **);
+
+typedef int (*annotation_add_cap_t)(const char *value, struct runtime_conf *);
+typedef int (*annotation_add_json_t)(const char *value, char **bytes);
+
+struct anno_registry_conf_rt {
+    char *name;
+    annotation_add_cap_t ops;
+};
 
 struct anno_registry_conf_json {
     char *name;
@@ -55,8 +63,142 @@ static cni_manager_store_t g_cni_manager = {
 
 static cni_manager_network_conf_list_t g_conflists;
 
-static struct anno_registry_conf_json g_registrant_json[] = {
+
+static int bandwidth_inject(const char *value, struct runtime_conf *rt)
+{
+    int ret = -1;
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    cni_bandwidth_entry *bwith = NULL;
+
+    if (value == NULL || rt == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    bwith = cni_bandwidth_entry_parse_data(value, &ctx, &err);
+    if (bwith == NULL) {
+        ERROR("Failed to parse bandwidth datas from value:%s, err:%s", value, err);
+        ret = -1;
+        goto out;
+    }
+
+    rt->bandwidth = bwith;
+    bwith = NULL;
+
+out:
+    free(err);
+    return ret;
+}
+
+static int copy_port_mapping_from_anno(const cni_anno_port_mappings_element *src, struct cni_port_mapping *dst)
+{
+    if (src == NULL) {
+        ERROR("Invalid param");
+        return -1;
+    }
+
+    if (src->protocol != NULL) {
+        dst->protocol = util_strdup_s(src->protocol);
+    }
+    if (src->host_ip != NULL) {
+        dst->host_ip = util_strdup_s(src->host_ip);
+    }
+    dst->container_port = src->container_port;
+    dst->host_port = src->host_port;
+
+    return 0;
+}
+
+static int port_mappings_inject(const char *value, struct runtime_conf *rt)
+{
+    int ret = 0;
+    size_t i = 0;
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    cni_anno_port_mappings_container *anno_p = NULL;
+    struct cni_port_mapping **new_p = NULL;
+    size_t new_len = 0;
+
+    if (value == NULL || rt == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    anno_p = cni_anno_port_mappings_container_parse_data(value, &ctx, &err);
+    if (anno_p == NULL) {
+        ERROR("Failed to parse port mapping datas from value:%s, err:%s", value, err);
+        ret = -1;
+        goto out;
+    }
+
+    if (anno_p->len == 0) {
+        WARN("No port mapping found, just do nothing");
+        goto out;
+    }
+
+    new_p = (struct cni_port_mapping **)util_smart_calloc_s(sizeof(struct cni_port_mapping*), anno_p->len);
+    if (new_p == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < anno_p->len; i++) {
+        new_p[i] = (struct cni_port_mapping *)util_smart_calloc_s(sizeof(struct cni_port_mapping), 1);
+        if (new_p[i] == NULL) {
+            ERROR("Out of memory, calloc failed");
+            ret = -1;
+            goto free_out;
+        }
+        new_len++;
+
+        if (copy_port_mapping_from_anno(anno_p->items[i], new_p[i]) != 0) {
+            ERROR("Copy port mapping from annotations failed");
+            ret = -1;
+            goto free_out;
+        }
+    }
+
+    rt->p_mapping = new_p;
+    new_p = NULL;
+    rt->p_mapping_len = new_len;
+    new_len = 0;
+
+free_out:
+    for (i = 0; i < new_len; i++) {
+        free_cni_port_mapping(new_p[i]);
+        new_p[i] = NULL;
+    }
+    free(new_p);
+
+out:
+    free(err);
+    free_cni_anno_port_mappings_container(anno_p);
+    return ret;
+}
+
+static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
+{
+    if (value == NULL || rt == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    return 0;
+}
+
+static struct anno_registry_conf_rt g_registrant_rt[] = {
+    {.name = "bandwidth", .ops = bandwidth_inject},
+    {.name = "portMappings", .ops = port_mappings_inject},
+    {.name = "ipRanges", .ops = ip_ranges_inject}
 };
+
+static struct anno_registry_conf_json g_registrant_json[] = {
+    // Whitelist of appending to net_list_conf_str
+};
+
+static const size_t g_numregistrants_rt = sizeof(g_registrant_rt) / sizeof(struct anno_registry_conf_rt);
 static const size_t g_numregistrants_json = sizeof(g_registrant_json) / sizeof(struct anno_registry_conf_json);
 
 static inline bool conflists_wrlock()
@@ -524,6 +666,40 @@ out:
     return rt;
 }
 
+// inject runtime_conf args from annotation
+static int inject_annotations_runtime_conf(map_t *annotations, struct runtime_conf *rt)
+{
+    int ret = 0;
+    size_t i = 0;
+    char *value = NULL;
+
+    if (rt == NULL) {
+        ERROR("Invalid input param");
+        return -1;
+    }
+    if (annotations == NULL) {
+        DEBUG("No annotations data to parse");
+        goto out;
+    }
+
+    for (i = 0; i < g_numregistrants_rt; i++) {
+        value = map_search(annotations, (void *)g_registrant_rt[i].name);
+        if (value == NULL) {
+            DEBUG("This key:%s is not found", g_registrant_rt[i].name);
+            continue;
+        }
+
+        if (g_registrant_rt[i].ops(value, rt) != 0) {
+            ERROR("The format of annotation is not right with key:%s, value:%s", g_registrant_rt[i].name, value);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    return ret;
+}
+
 // inject cni net conflist json from annotation
 static int inject_annotations_json(map_t *annotations, char **net_list_conf_str)
 {
@@ -587,6 +763,12 @@ static struct runtime_conf *build_cni_runtime_conf(const struct cni_manager *man
     for (i = 0; i < manager->cni_args->len; i++) {
         rt->args[i][0] = util_strdup_s(manager->cni_args->keys[i]);
         rt->args[i][1] = util_strdup_s(manager->cni_args->values[i]);
+    }
+
+    if (inject_annotations_runtime_conf(manager->annotations, rt) != 0) {
+        ERROR("Inject annotations to runtime conf failed");
+        ret = -1;
+        goto out;
     }
 
 out:
