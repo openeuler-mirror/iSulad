@@ -1405,7 +1405,7 @@ out:
     return result;
 }
 
-static int do_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode)
+static int do_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode, bool sync)
 {
     int ret = 0;
     int dst_fd = -1;
@@ -1425,7 +1425,7 @@ static int do_atomic_write_file(const char *fname, const char *content, size_t c
         goto free_out;
     }
 
-    if (fdatasync(dst_fd) != 0) {
+    if (sync && (fdatasync(dst_fd) != 0)) {
         ret = -1;
         SYSERROR("Failed to sync data of file:%s", fname);
         goto free_out;
@@ -1438,7 +1438,7 @@ free_out:
     return ret;
 }
 
-int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode)
+int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode, bool sync)
 {
     int ret = 0;
     char *tmp_file = NULL;
@@ -1462,7 +1462,7 @@ int util_atomic_write_file(const char *fname, const char *content, size_t conten
         goto free_out;
     }
 
-    ret = do_atomic_write_file(tmp_file, content, content_len, mode);
+    ret = do_atomic_write_file(tmp_file, content, content_len, mode, sync);
     if (ret != 0) {
         ERROR("Failed to write content to tmp file for %s", tmp_file);
         ret = -1;
@@ -1676,7 +1676,7 @@ int util_list_all_entries(const char *directory, char ***out)
 static int copy_own(char *copy_dst, struct stat *src_stat)
 {
     int ret = 0;
-    struct stat dst_stat = {0};
+    struct stat dst_stat = { 0 };
 
     if (lstat(copy_dst, &dst_stat) != 0) {
         ERROR("lstat %s failed: %s", copy_dst, strerror(errno));
@@ -1709,7 +1709,7 @@ static int copy_mode(char *copy_dst, struct stat *src_stat)
 
 static int copy_time(char *copy_dst, struct stat *src_stat)
 {
-    const struct timespec tm[] = {{src_stat->st_atime}, {src_stat->st_mtime}};
+    const struct timespec tm[] = { { src_stat->st_atime }, { src_stat->st_mtime } };
 
     // copy_dst is absolute path, so first argment is ignored.
     if (utimensat(0, copy_dst, tm, AT_SYMLINK_NOFOLLOW) != 0) {
@@ -1867,8 +1867,8 @@ static int copy_infos(char *copy_dst, char *copy_src, struct stat *src_stat)
 
 static int copy_folder(char *copy_dst, char *copy_src)
 {
-    struct stat src_stat = {0};
-    struct stat dst_stat = {0};
+    struct stat src_stat = { 0 };
+    struct stat dst_stat = { 0 };
 
     if (lstat(copy_src, &src_stat) != 0) {
         ERROR("stat %s failed: %s", copy_src, strerror(errno));
@@ -1911,7 +1911,7 @@ static int copy_regular(char *copy_dst, char *copy_src, struct stat *src_stat, m
             }
             return 0;
         }
-        if (!map_insert(inodes, (void*)(&src_stat->st_ino), (void*)copy_dst)) {
+        if (!map_insert(inodes, (void *)(&src_stat->st_ino), (void *)copy_dst)) {
             ERROR("out of memory");
             return -1;
         }
@@ -1923,7 +1923,7 @@ static int copy_regular(char *copy_dst, char *copy_src, struct stat *src_stat, m
 
 static int copy_symbolic(char *copy_dst, char *copy_src)
 {
-    char link[PATH_MAX] = {0};
+    char link[PATH_MAX] = { 0 };
 
     if (readlink(copy_src, link, sizeof(link)) < 0) {
         ERROR("readlink of %s failed: %s", copy_src, strerror(errno));
@@ -1992,7 +1992,7 @@ int copy_dir_recursive(char *copy_dst, char *copy_src, map_t *inodes)
     char **entries = NULL;
     size_t entry_num = 0;
     int ret = 0;
-    struct stat st = {0};
+    struct stat st = { 0 };
     size_t i = 0;
     char *src = NULL;
     char *dst = NULL;

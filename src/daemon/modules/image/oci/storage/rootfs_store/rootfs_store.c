@@ -327,7 +327,7 @@ static int save_rootfs(cntrootfs_t *cntr)
         goto out;
     }
 
-    if (util_atomic_write_file(container_path, json_data, strlen(json_data), SECURE_CONFIG_FILE_MODE) != 0) {
+    if (util_atomic_write_file(container_path, json_data, strlen(json_data), SECURE_CONFIG_FILE_MODE, false) != 0) {
         ERROR("Failed to save container json file");
         ret = -1;
         goto out;

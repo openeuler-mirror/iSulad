@@ -485,7 +485,7 @@ static int save_json_config_file(const char *id, const char *rootpath, const cha
         goto out;
     }
 
-    nret = util_atomic_write_file(filename, json_data, strlen(json_data), CONFIG_FILE_MODE);
+    nret = util_atomic_write_file(filename, json_data, strlen(json_data), CONFIG_FILE_MODE, false);
     if (nret != 0) {
         ERROR("Write file %s failed: %s", filename, strerror(errno));
         isulad_set_error_message("Write file '%s' failed: %s", filename, strerror(errno));
@@ -604,7 +604,7 @@ static int container_save_config_v2(const container_t *cont)
     int ret = 0;
     char *json_v2 = NULL;
     parser_error err = NULL;
-    container_config_v2 config_v2 = {0};
+    container_config_v2 config_v2 = { 0 };
 
     if (cont == NULL) {
         return -1;
@@ -827,7 +827,7 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
         goto error_out;
     }
 
-    if (restore_volumes(mount_points, (char*)id) != 0) {
+    if (restore_volumes(mount_points, (char *)id) != 0) {
         goto error_out;
     }
 

@@ -390,7 +390,7 @@ int auths_save(char *host, char *username, char *password)
         goto out;
     }
 
-    ret = util_atomic_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE);
+    ret = util_atomic_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE, true);
     if (ret != 0) {
         ERROR("failed to write auths json to file");
         goto out;
@@ -494,7 +494,7 @@ int auths_delete(char *host)
         goto out;
     }
 
-    ret = util_atomic_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE);
+    ret = util_atomic_write_file(g_auth_path, json, strlen(json), AUTH_FILE_MODE, true);
     if (ret != 0) {
         ERROR("failed to write auths json to file");
         isulad_try_set_error_message("failed to write auths json to file");
