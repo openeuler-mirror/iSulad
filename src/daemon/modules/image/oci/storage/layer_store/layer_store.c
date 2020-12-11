@@ -992,7 +992,7 @@ static int foreach_archive_entry(archive_entry_cb_t cb, int fd, const char *dist
         }
         position++;
     }
-    nret = util_atomic_write_file(dist, json_buf->contents, json_buf->bytes_used, SECURE_CONFIG_FILE_MODE);
+    nret = util_atomic_write_file(dist, json_buf->contents, json_buf->bytes_used, SECURE_CONFIG_FILE_MODE, true);
     if (nret != 0) {
         ERROR("save tar split failed");
         goto out;

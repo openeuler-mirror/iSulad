@@ -92,7 +92,7 @@ typedef bool (*subdir_callback_t)(const char *, const struct dirent *, void *con
 
 int util_scan_subdirs(const char *directory, subdir_callback_t cb, void *context);
 
-int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode);
+int util_atomic_write_file(const char *fname, const char *content, size_t content_len, mode_t mode, bool sync);
 
 typedef bool (*read_line_callback_t)(const char *, void *context);
 

@@ -1203,7 +1203,7 @@ static int save_metadata(struct device_set *devset, image_devmapper_device_info 
         goto out;
     }
 
-    if (util_atomic_write_file(fname, metadata_json, strlen(metadata_json), DEFAULT_SECURE_FILE_MODE) != 0) {
+    if (util_atomic_write_file(fname, metadata_json, strlen(metadata_json), DEFAULT_SECURE_FILE_MODE, true) != 0) {
         ERROR("failed write process.json");
         ret = -1;
         goto out;
@@ -1238,7 +1238,7 @@ static int save_transaction_metadata(struct device_set *devset)
         goto out;
     }
 
-    if (util_atomic_write_file(fname, trans_json, strlen(trans_json), DEFAULT_SECURE_FILE_MODE) != 0) {
+    if (util_atomic_write_file(fname, trans_json, strlen(trans_json), DEFAULT_SECURE_FILE_MODE, true) != 0) {
         ERROR("failed write process.json");
         ret = -1;
         goto out;
@@ -1283,7 +1283,7 @@ static int save_deviceset_matadata(struct device_set *devset)
         goto free_out;
     }
 
-    if (util_atomic_write_file(fname, metadata_json, strlen(metadata_json), DEFAULT_SECURE_FILE_MODE) != 0) {
+    if (util_atomic_write_file(fname, metadata_json, strlen(metadata_json), DEFAULT_SECURE_FILE_MODE, true) != 0) {
         ERROR("failed write process.json");
         ret = -1;
         goto free_out;

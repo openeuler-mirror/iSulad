@@ -172,7 +172,7 @@ int save_layer(layer_t *layer)
         goto out;
     }
 
-    ret = util_atomic_write_file(layer->layer_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE);
+    ret = util_atomic_write_file(layer->layer_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE, false);
     if (ret != 0) {
         ERROR("Atomic write layer: %s failed", layer->slayer->id);
     }
@@ -198,7 +198,7 @@ int save_mount_point(layer_t *layer)
         goto out;
     }
 
-    ret = util_atomic_write_file(layer->mount_point_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE);
+    ret = util_atomic_write_file(layer->mount_point_json_path, jstr, strlen(jstr), SECURE_CONFIG_FILE_MODE, false);
 out:
     free(jstr);
     free(jerr);

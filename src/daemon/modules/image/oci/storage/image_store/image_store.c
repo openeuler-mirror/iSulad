@@ -207,7 +207,7 @@ static int save_image(storage_image *img)
         goto out;
     }
 
-    if (util_atomic_write_file(image_path, json_data, strlen(json_data), SECURE_CONFIG_FILE_MODE) != 0) {
+    if (util_atomic_write_file(image_path, json_data, strlen(json_data), SECURE_CONFIG_FILE_MODE, true) != 0) {
         ERROR("Failed to save image json file");
         ret = -1;
         goto out;
@@ -1976,7 +1976,7 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
         goto out;
     }
 
-    if (util_atomic_write_file(big_data_file, data, strlen(data), SECURE_CONFIG_FILE_MODE) != 0) {
+    if (util_atomic_write_file(big_data_file, data, strlen(data), SECURE_CONFIG_FILE_MODE, true) != 0) {
         ERROR("Failed to save big data file: %s", big_data_file);
         ret = -1;
         goto out;

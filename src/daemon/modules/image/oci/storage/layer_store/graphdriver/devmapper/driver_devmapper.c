@@ -239,7 +239,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
 
     id_file = util_path_join(mnt_point_dir, "id");
     if (!util_file_exists(id_file)) {
-        if (util_atomic_write_file(id_file, id, strlen(id), SECURE_CONFIG_FILE_MODE) != 0) {
+        if (util_atomic_write_file(id_file, id, strlen(id), SECURE_CONFIG_FILE_MODE, true) != 0) {
             if (unmount_device(id, mnt_point_dir, driver->devset) != 0) {
                 DEBUG("devmapper: unmount %s failed", mnt_point_dir);
             }
