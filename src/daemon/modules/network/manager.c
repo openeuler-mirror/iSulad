@@ -257,10 +257,7 @@ static int judge_cri_conf(const char *fpath, bool *res)
         return -1;
     }
 
-    *res = true;
-    if (!util_has_prefix(name, ISULAD_CNI_NETWORK_CONF_FILE_PRE)) {
-        *res = false;
-    }
+    *res = util_has_prefix(name, ISULAD_CNI_NETWORK_CONF_FILE_PRE);
 
     free(name);
     return 0;
@@ -380,7 +377,7 @@ static int get_conf_files(char ***files, size_t *length)
         goto out;
     }
 
-    *length = util_array_len((const char **)files);
+    *length = util_array_len((const char **)*files);
     if (*length == 0) {
         ERROR("No network conf files found");
         ret = -1;
@@ -479,7 +476,7 @@ out:
     return ret;
 }
 
-int cni_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len)
+int cri_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len)
 {
     int ret = 0;
 
@@ -634,7 +631,7 @@ out:
     return ret;
 }
 
-int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
+int cri_attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
@@ -644,8 +641,6 @@ int attach_network_plane(const struct cni_manager *manager, const char *net_list
         ERROR("Invalid input params");
         return -1;
     }
-
-    // TODO process isula network
 
     net_list_conf_str_var = util_strdup_s(net_list_conf_str);
     if (net_list_conf_str_var == NULL) {
@@ -674,11 +669,56 @@ int attach_network_plane(const struct cni_manager *manager, const char *net_list
     }
 
 out:
+    free(net_list_conf_str_var);
     free_runtime_conf(rc);
     return ret;
 }
 
-int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
+int isula_attach_network_plane(const struct cni_manager *manager, const char *net_name, struct result **result)
+{
+    int ret = 0;
+    struct runtime_conf *rc = NULL;
+    char *net_list_conf_str = NULL;
+
+    if (manager == NULL || net_name == NULL || result == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    net_list_conf_str = map_search(g_conflists.map_isula_net_conf, (void *)net_name);
+    if (net_list_conf_str == NULL) {
+        ERROR("Invalid network name:%s, search cni network conflist NULL", net_name);
+        ret = -1;
+        goto out;
+    }
+
+    rc = build_cni_runtime_conf(manager);
+    if (rc == NULL) {
+        ERROR("Error building CNI runtime config");
+        ret = -1;
+        goto out;
+    }
+
+    if (inject_annotations_json(manager->annotations, &net_list_conf_str) != 0) {
+        ERROR("Inject annotations to net conf json failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (cni_add_network_list(net_list_conf_str, rc, result) != 0) {
+        ERROR("Add CNI network failed");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(net_list_conf_str);
+    free_runtime_conf(rc);
+    return ret;
+
+}
+
+int cri_detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
@@ -716,8 +756,53 @@ int detach_network_plane(const struct cni_manager *manager, const char *net_list
     }
 
 out:
+    free(net_list_conf_str_var);
     free_runtime_conf(rc);
     return ret;
+}
+
+int isula_detach_network_plane(const struct cni_manager *manager, const char *net_name, struct result **result)
+{
+    int ret = 0;
+    struct runtime_conf *rc = NULL;
+    char *net_list_conf_str = NULL;
+
+    if (manager == NULL || net_name == NULL || result == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+    
+    net_list_conf_str = map_search(g_conflists.map_isula_net_conf, (void *)net_name);
+    if (net_list_conf_str == NULL) {
+        ERROR("Invalid network name:%s, search cni network conflist NULL", net_name);
+        ret = -1;
+        goto out;
+    }
+
+    rc = build_cni_runtime_conf(manager);
+    if (rc == NULL) {
+        ERROR("Error building CNI runtime config");
+        ret = -1;
+        goto out;
+    }
+
+    if (inject_annotations_json(manager->annotations, &net_list_conf_str) != 0) {
+        ERROR("Inject annotations to net conf json failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (cni_del_network_list(net_list_conf_str, rc) != 0) {
+        ERROR("Error deleting network: %s", manager->name);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(net_list_conf_str);
+    free_runtime_conf(rc);
+    return ret;
+
 }
 
 int detach_loopback(const char *id, const char *netns)
