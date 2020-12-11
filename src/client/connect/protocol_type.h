@@ -120,6 +120,7 @@ struct isula_kill_response {
 struct isula_delete_request {
     char *name;
     bool force;
+    bool volumes;
 };
 
 struct isula_delete_response {

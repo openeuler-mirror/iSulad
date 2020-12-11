@@ -1458,7 +1458,7 @@ umount_channel:
 umount_shm:
     umount_shm_by_configs(host_spec, v2_spec);
 
-    (void)release_volumes(v2_spec->mount_points, id, false);
+    (void)release_volumes(v2_spec->mount_points, id, true);
 
 clean_rootfs:
     (void)im_remove_container_rootfs(image_type, id);

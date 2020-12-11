@@ -219,6 +219,7 @@ message KillResponse {
 message DeleteRequest {
 	string id = 1;
 	bool force = 2;
+	bool volumes = 3;
 }
 
 message DeleteResponse {

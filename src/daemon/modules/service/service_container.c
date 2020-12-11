@@ -1051,7 +1051,7 @@ static int do_delete_container(container_t *cont)
     statepath = cont->state_path;
     runtime = cont->runtime;
     rootpath = cont->root_path;
-    rm_anonymous_volumes = (cont->hostconfig != NULL) && cont->hostconfig->auto_remove;
+    rm_anonymous_volumes = cont->rm_anonymous_volumes || ((cont->hostconfig != NULL) && cont->hostconfig->auto_remove);
 
     /* check if container was deregistered by previous rm already */
     cont_tmp = containers_store_get(id);

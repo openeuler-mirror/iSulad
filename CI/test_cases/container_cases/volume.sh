@@ -387,6 +387,26 @@ function test_volume_init_fail()
   return ${ret}
 }
 
+function test_volume_container_rmv()
+{
+
+  local ret=0
+
+  cleanup_containers_and_volumes
+
+  # test container remove with argument -v
+  isula run -tid -n volume_rmv -v aaa:/aaa -v /bbb busybox sh
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container fail" && ((ret++))
+
+  isula rm -f -v volume_rmv
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove container with --volume fail" && ((ret++))
+
+  n=`isula volume ls | wc -l`
+  [[ $n -ne 2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to list volume" && ((ret++))
+
+  return ${ret}
+}
+
 function prepare_test_volume()
 {
   local ret=0
@@ -426,6 +446,7 @@ test_volume_reuse || ((ans++))
 test_volume_copy || ((ans++))
 test_volume_conflict || ((ans++))
 test_volume_invalid_modes || ((ans++))
+test_volume_container_rmv || ((ans++))
 
 post_test_volume
 

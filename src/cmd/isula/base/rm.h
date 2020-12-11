@@ -37,8 +37,8 @@ extern "C" {
       false,                                              \
       "volumes",                                          \
       'v',                                                \
-      &(cmdargs).volume,                                  \
-      "Remove the volumes associated with the container", \
+      &(cmdargs).volumes,                                  \
+      "Remove anonymous volumes associated with the container", \
       NULL },
 
 extern const char g_cmd_delete_desc[];
