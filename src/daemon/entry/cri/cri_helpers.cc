@@ -341,13 +341,13 @@ cleanup:
     return image;
 }
 
-auto ToPullableImageID(const std::string &id, imagetool_image_summary *image) -> std::string
+auto ToPullableImageID(const std::string &image_name, const std::string &image_ref) -> std::string
 {
     // Default to the image ID, but if RepoDigests is not empty, use
     // the first digest instead.
-    std::string imageID = Constants::DOCKER_IMAGEID_PREFIX + id;
-    if (image != nullptr && image->repo_digests != nullptr && image->repo_digests_len > 0) {
-        imageID = Constants::DOCKER_PULLABLE_IMAGEID_PREFIX + std::string(image->repo_digests[0]);
+    std::string imageID = Constants::DOCKER_IMAGEID_PREFIX + image_name;
+    if (!image_ref.empty()) {
+        imageID = Constants::DOCKER_PULLABLE_IMAGEID_PREFIX + image_ref;
     }
     return imageID;
 }

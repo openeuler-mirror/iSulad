@@ -764,17 +764,9 @@ void CRIRuntimeServiceImpl::ListContainersToGRPC(container_list_response *respon
         if (response->containers[i]->image != nullptr) {
             runtime::v1alpha2::ImageSpec *image = container->mutable_image();
             image->set_image(response->containers[i]->image);
-            imagetool_image_summary *ir = CRIHelpers::InspectImageByID(response->containers[i]->image, error);
-            if (error.NotEmpty() || ir == nullptr) {
-                error.Errorf("unable to inspect image %s while inspecting container %s: %s",
-                             response->containers[i]->image, response->containers[i]->id,
-                             error.Empty() ? "Unknown" : error.GetMessage().c_str());
-                free_imagetool_image_summary(ir);
-                return;
-            }
-            std::string imageID = CRIHelpers::ToPullableImageID(response->containers[i]->image, ir);
+            std::string imageID =
+                CRIHelpers::ToPullableImageID(response->containers[i]->image, response->containers[i]->image_ref);
             container->set_image_ref(imageID);
-            free_imagetool_image_summary(ir);
         }
 
         runtime::v1alpha2::ContainerState state =
@@ -1071,15 +1063,7 @@ auto CRIRuntimeServiceImpl::PackContainerImageToStatus(container_inspect *inspec
         return 0;
     }
     contStatus->mutable_image()->set_image(inspect->config->image);
-    imagetool_image_summary *ir = CRIHelpers::InspectImageByID(inspect->config->image, error);
-    if (error.NotEmpty() || ir == nullptr) {
-        error.Errorf("unable to inspect image %s while inspecting container %s: %s", inspect->config->image,
-                     inspect->name, error.Empty() ? "Unknown" : error.GetMessage().c_str());
-        free_imagetool_image_summary(ir);
-        return -1;
-    }
-    contStatus->set_image_ref(CRIHelpers::ToPullableImageID(inspect->config->image, ir));
-    free_imagetool_image_summary(ir);
+    contStatus->set_image_ref(CRIHelpers::ToPullableImageID(inspect->config->image, inspect->config->image_ref));
     return 0;
 }
 

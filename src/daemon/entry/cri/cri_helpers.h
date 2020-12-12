@@ -86,7 +86,7 @@ auto StringVectorToCharArray(std::vector<std::string> &path) -> char **;
 
 auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image_summary *;
 
-auto ToPullableImageID(const std::string &id, imagetool_image_summary *image) -> std::string;
+auto ToPullableImageID(const std::string &image_name, const std::string &image_ref) -> std::string;
 
 auto IsContainerNotFoundError(const std::string &err) -> bool;
 

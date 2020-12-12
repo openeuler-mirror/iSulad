@@ -360,6 +360,18 @@ static void dup_container_created_time(const container_config_v2_common_config *
     return;
 }
 
+static void dup_container_image_ref(const container_config_v2_common_config *common_config,
+                                    container_container *isuladinfo)
+{
+    if (common_config->config == NULL) {
+        return;
+    }
+
+    isuladinfo->image_ref = util_strdup_s(common_config->config->image_ref);
+
+    return;
+}
+
 static int convert_common_config_info(const map_t *map_labels, const container_config_v2_common_config *common_config,
                                       container_container *isuladinfo)
 {
@@ -370,6 +382,8 @@ static int convert_common_config_info(const map_t *map_labels, const container_c
     dup_id_name(common_config, isuladinfo);
 
     isuladinfo->restartcount = (uint64_t)common_config->restart_count;
+
+    dup_container_image_ref(common_config, isuladinfo);
 
     dup_container_labels(map_labels, common_config, isuladinfo);
 
