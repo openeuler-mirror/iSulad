@@ -168,7 +168,7 @@ void CRIRuntimeServiceImpl::MergeSecurityContextToHostConfig(const runtime::v1al
 
     const char securityOptSep = '=';
     std::vector<std::string> securityOpts =
-            CRIHelpers::GetSecurityOpts(c.linux().security_context().seccomp_profile_path(), securityOptSep, error);
+        CRIHelpers::GetSecurityOpts(c.linux().security_context().seccomp_profile_path(), securityOptSep, error);
     if (error.NotEmpty()) {
         error.Errorf("failed to generate security options for sandbox %s", c.metadata().name().c_str());
         return;
@@ -242,7 +242,7 @@ void CRIRuntimeServiceImpl::MakeSandboxIsuladConfig(const runtime::v1alpha2::Pod
     // Security Opts
     if (c.linux().has_security_context()) {
         std::vector<std::string> securityOpts =
-                CRIHelpers::GetSecurityOpts(c.linux().security_context().seccomp_profile_path(), securityOptSep, error);
+            CRIHelpers::GetSecurityOpts(c.linux().security_context().seccomp_profile_path(), securityOptSep, error);
         if (error.NotEmpty()) {
             error.Errorf("failed to generate security options for sandbox %s", c.metadata().name().c_str());
             return;
@@ -310,13 +310,13 @@ void CRIRuntimeServiceImpl::SetupSandboxFiles(const std::string &resolvPath,
 }
 
 container_create_request *CRIRuntimeServiceImpl::PackCreateContainerRequest(
-        const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image, host_config *hostconfig,
-        container_config *custom_config, const std::string &runtimeHandler, Errors &error)
+    const runtime::v1alpha2::PodSandboxConfig &config, const std::string &image, host_config *hostconfig,
+    container_config *custom_config, const std::string &runtimeHandler, Errors &error)
 {
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     parser_error perror = nullptr;
     container_create_request *create_request =
-            (container_create_request *)util_common_calloc_s(sizeof(*create_request));
+        (container_create_request *)util_common_calloc_s(sizeof(*create_request));
     if (create_request == nullptr) {
         error.Errorf("Out of memory");
         return nullptr;
@@ -415,7 +415,7 @@ auto CRIRuntimeServiceImpl::CreateSandboxContainer(const runtime::v1alpha2::PodS
 {
     std::string response_id;
     container_create_request *create_request =
-            GenerateSandboxCreateContainerRequest(config, image, jsonCheckpoint, runtimeHandler, error);
+        GenerateSandboxCreateContainerRequest(config, image, jsonCheckpoint, runtimeHandler, error);
     if (error.NotEmpty()) {
         return response_id;
     }
@@ -439,7 +439,7 @@ cleanup:
 void CRIRuntimeServiceImpl::StartSandboxContainer(const std::string &response_id, Errors &error)
 {
     container_start_request *start_request =
-            (container_start_request *)util_common_calloc_s(sizeof(container_start_request));
+        (container_start_request *)util_common_calloc_s(sizeof(container_start_request));
     if (start_request == nullptr) {
         error.SetError("Out of memory");
         return;
@@ -506,6 +506,7 @@ auto CRIRuntimeServiceImpl::RunPodSandbox(const runtime::v1alpha2::PodSandboxCon
 {
     std::string response_id;
     std::string jsonCheckpoint;
+
     if (m_cb == nullptr || m_cb->container.create == nullptr || m_cb->container.start == nullptr) {
         error.SetError("Unimplemented callback");
         return response_id;

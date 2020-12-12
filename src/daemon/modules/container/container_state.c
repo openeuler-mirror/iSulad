@@ -488,9 +488,9 @@ container_config_v2_state *container_state_to_v2_state(container_state_t *s)
     state->exit_code = s->state->exit_code;
 
     state->started_at = s->state->started_at ? util_strdup_s(s->state->started_at) :
-                                               util_strdup_s(defaultContainerTime);
+                        util_strdup_s(defaultContainerTime);
     state->finished_at = s->state->finished_at ? util_strdup_s(s->state->finished_at) :
-                                                 util_strdup_s(defaultContainerTime);
+                         util_strdup_s(defaultContainerTime);
     state->error = s->state->error ? util_strdup_s(s->state->error) : NULL;
 
     if (container_dup_health_check_status(&state->health, s->state->health) != 0) {
@@ -528,9 +528,9 @@ container_inspect_state *container_state_to_inspect_state(container_state_t *s)
 
     state->exit_code = s->state->exit_code;
     state->started_at = s->state->started_at ? util_strdup_s(s->state->started_at) :
-                                               util_strdup_s(defaultContainerTime);
+                        util_strdup_s(defaultContainerTime);
     state->finished_at = s->state->finished_at ? util_strdup_s(s->state->finished_at) :
-                                                 util_strdup_s(defaultContainerTime);
+                         util_strdup_s(defaultContainerTime);
     state->error = s->state->error ? util_strdup_s(s->state->error) : NULL;
 
     if (container_dup_health_check_status(&state->health, s->state->health) != 0) {

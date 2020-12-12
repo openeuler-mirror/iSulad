@@ -131,13 +131,13 @@ static int dup_health_check_config(const container_config *src, container_inspec
             dest->health_check->test_len++;
         }
         dest->health_check->interval = (src->healthcheck->interval == 0) ? DEFAULT_PROBE_INTERVAL :
-                                                                           src->healthcheck->interval;
+                                       src->healthcheck->interval;
         dest->health_check->start_period = (src->healthcheck->start_period == 0) ? DEFAULT_START_PERIOD :
-                                                                                   src->healthcheck->start_period;
+                                           src->healthcheck->start_period;
         dest->health_check->timeout = (src->healthcheck->timeout == 0) ? DEFAULT_PROBE_TIMEOUT :
-                                                                         src->healthcheck->timeout;
+                                      src->healthcheck->timeout;
         dest->health_check->retries = (src->healthcheck->retries != 0) ? src->healthcheck->retries :
-                                                                         DEFAULT_PROBE_RETRIES;
+                                      DEFAULT_PROBE_RETRIES;
 
         dest->health_check->exit_on_unhealthy = src->healthcheck->exit_on_unhealthy;
     }

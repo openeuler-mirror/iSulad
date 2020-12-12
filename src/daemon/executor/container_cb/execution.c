@@ -642,8 +642,8 @@ static int container_stop_cb(const container_stop_request *request, container_st
         goto pack_response;
     }
 
-    INFO("Stoped Container:%s", id);
     (void)isulad_monitor_send_container_event(id, STOP, -1, 0, NULL, NULL);
+    EVENT("Event: {Object: %s, Type: Stopped}", id);
 
 pack_response:
     pack_stop_response(*response, cc, id);

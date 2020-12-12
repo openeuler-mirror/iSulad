@@ -30,8 +30,7 @@
 #include "network_plugin.h"
 #include "utils.h"
 
-namespace CRIRuntimeService
-{
+namespace CRIRuntimeService {
 std::string Constants::namespaceModeHost { "host" };
 std::string Constants::nameDelimiter { "_" };
 char Constants::nameDelimiterChar { '_' };
@@ -114,7 +113,7 @@ void CRIRuntimeServiceImpl::UpdateRuntimeConfig(const runtime::v1alpha2::Runtime
     if (m_pluginManager != nullptr && config.has_network_config() && !(config.network_config().pod_cidr().empty())) {
         std::map<std::string, std::string> events;
         events[CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR] =
-                config.network_config().pod_cidr();
+            config.network_config().pod_cidr();
         m_pluginManager->Event(CRIHelpers::Constants::NET_PLUGIN_EVENT_POD_CIDR_CHANGE, events);
     }
 }
