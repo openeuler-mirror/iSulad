@@ -201,8 +201,8 @@ auto CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::Imag
     return 0;
 }
 
-auto CRIImageServiceImpl::status_image_to_grpc(im_summary_response *response, Errors & /*error*/)
-        -> std::unique_ptr<runtime::v1alpha2::Image>
+std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::status_image_to_grpc(im_summary_response *response,
+                                                                                    Errors & /*error*/)
 {
     imagetool_image_summary *image_info = response->image_summary;
     if (image_info == nullptr) {
@@ -219,8 +219,8 @@ auto CRIImageServiceImpl::status_image_to_grpc(im_summary_response *response, Er
     return image;
 }
 
-auto CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image, Errors &error)
-        -> std::unique_ptr<runtime::v1alpha2::Image>
+std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
+                                                                           Errors &error)
 {
     im_summary_request *request { nullptr };
     im_summary_response *response { nullptr };

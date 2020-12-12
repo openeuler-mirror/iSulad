@@ -143,8 +143,8 @@ void CRIRuntimeServiceImpl::GetContainerTimeStamps(container_inspect *inspect, i
 }
 
 auto CRIRuntimeServiceImpl::GenerateCreateContainerCustomConfig(
-        const std::string &realPodSandboxID, const runtime::v1alpha2::ContainerConfig &containerConfig,
-        const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error) -> container_config *
+    const std::string &realPodSandboxID, const runtime::v1alpha2::ContainerConfig &containerConfig,
+    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error) -> container_config *
 {
     container_config *custom_config = (container_config *)util_common_calloc_s(sizeof(container_config));
     if (custom_config == nullptr) {
@@ -213,7 +213,7 @@ cleanup:
 }
 
 auto CRIRuntimeServiceImpl::PackCreateContainerHostConfigDevices(
-        const runtime::v1alpha2::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
+    const runtime::v1alpha2::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
 {
     int ret { 0 };
 
@@ -233,7 +233,7 @@ auto CRIRuntimeServiceImpl::PackCreateContainerHostConfigDevices(
     }
     for (int i = 0; i < containerConfig.devices_size(); i++) {
         hostconfig->devices[i] =
-                (host_config_devices_element *)util_common_calloc_s(sizeof(host_config_devices_element));
+            (host_config_devices_element *)util_common_calloc_s(sizeof(host_config_devices_element));
         if (hostconfig->devices[i] == nullptr) {
             ret = -1;
             goto out;
@@ -248,7 +248,7 @@ out:
 }
 
 auto CRIRuntimeServiceImpl::PackCreateContainerHostConfigSecurityContext(
-        const runtime::v1alpha2::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
+    const runtime::v1alpha2::ContainerConfig &containerConfig, host_config *hostconfig, Errors &error) -> int
 {
     if (!containerConfig.linux().has_security_context()) {
         return 0;
@@ -257,7 +257,7 @@ auto CRIRuntimeServiceImpl::PackCreateContainerHostConfigSecurityContext(
     // New version '=' , old version ':', iSulad cri is based on v18.09, so iSulad cri use new version separator
     const char securityOptSep { '=' };
     std::vector<std::string> securityOpts = CRIHelpers::GetSecurityOpts(
-            containerConfig.linux().security_context().seccomp_profile_path(), securityOptSep, error);
+                                                containerConfig.linux().security_context().seccomp_profile_path(), securityOptSep, error);
     if (error.NotEmpty()) {
         error.Errorf("failed to generate security options for container %s", containerConfig.metadata().name().c_str());
         return -1;
@@ -512,7 +512,7 @@ void CRIRuntimeServiceImpl::GetContainerLogPath(const std::string &containerID, 
     if (info->config != nullptr && (info->config->labels != nullptr)) {
         for (size_t i = 0; i < info->config->labels->len; i++) {
             if (strcmp(info->config->labels->keys[i], CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str()) ==
-                        0 &&
+                0 &&
                 strcmp(info->config->labels->values[i], "") != 0) {
                 *path = util_strdup_s(info->config->labels->values[i]);
                 break;
@@ -702,7 +702,7 @@ void CRIRuntimeServiceImpl::RemoveContainer(const std::string &containerID, Erro
 
     container_delete_response *response { nullptr };
     container_delete_request *request =
-            (container_delete_request *)util_common_calloc_s(sizeof(container_delete_request));
+        (container_delete_request *)util_common_calloc_s(sizeof(container_delete_request));
     if (request == nullptr) {
         error.SetError("Out of memory");
         goto cleanup;
@@ -766,12 +766,12 @@ void CRIRuntimeServiceImpl::ListContainersToGRPC(container_list_response *respon
             runtime::v1alpha2::ImageSpec *image = container->mutable_image();
             image->set_image(response->containers[i]->image);
             std::string imageID =
-                    CRIHelpers::ToPullableImageID(response->containers[i]->image, response->containers[i]->image_ref);
+                CRIHelpers::ToPullableImageID(response->containers[i]->image, response->containers[i]->image_ref);
             container->set_image_ref(imageID);
         }
 
         runtime::v1alpha2::ContainerState state =
-                CRIHelpers::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
+            CRIHelpers::ContainerStatusToRuntime(Container_Status(response->containers[i]->status));
         container->set_state(state);
 
         pods->push_back(move(container));
@@ -879,7 +879,7 @@ void CRIRuntimeServiceImpl::PackContainerStatsAttributes(const char *id,
 
     if (status->has_metadata()) {
         std::unique_ptr<runtime::v1alpha2::ContainerMetadata> metadata(
-                new (std::nothrow) runtime::v1alpha2::ContainerMetadata(status->metadata()));
+            new (std::nothrow) runtime::v1alpha2::ContainerMetadata(status->metadata()));
         if (metadata == nullptr) {
             error.SetError("Out of memory");
             ERROR("Out of memory");
@@ -909,19 +909,19 @@ static void SetFsUsage(const imagetool_fs_info *fs_usage, std::unique_ptr<runtim
         container->mutable_writable_layer()->mutable_used_bytes()->set_value(0);
     } else {
         container->mutable_writable_layer()->mutable_used_bytes()->set_value(
-                fs_usage->image_filesystems[0]->used_bytes->value);
+            fs_usage->image_filesystems[0]->used_bytes->value);
     }
 
     if (fs_usage->image_filesystems[0]->inodes_used == nullptr) {
         container->mutable_writable_layer()->mutable_inodes_used()->set_value(0);
     } else {
         container->mutable_writable_layer()->mutable_inodes_used()->set_value(
-                fs_usage->image_filesystems[0]->inodes_used->value);
+            fs_usage->image_filesystems[0]->inodes_used->value);
     }
 }
 
 void CRIRuntimeServiceImpl::PackContainerStatsFilesystemUsage(
-        const char *id, const char *image_type, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
+    const char *id, const char *image_type, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
 {
     if (id == nullptr || image_type == nullptr) {
         return;
@@ -937,8 +937,8 @@ void CRIRuntimeServiceImpl::PackContainerStatsFilesystemUsage(
 }
 
 void CRIRuntimeServiceImpl::ContainerStatsToGRPC(
-        container_stats_response *response,
-        std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
+    container_stats_response *response,
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
 {
     if (response == nullptr) {
         return;
@@ -965,7 +965,7 @@ void CRIRuntimeServiceImpl::ContainerStatsToGRPC(
 
         if (response->container_stats[i]->cpu_use_nanos != 0u) {
             container->mutable_cpu()->mutable_usage_core_nano_seconds()->set_value(
-                    response->container_stats[i]->cpu_use_nanos);
+                response->container_stats[i]->cpu_use_nanos);
             container->mutable_cpu()->set_timestamp((int64_t)(response->container_stats[i]->cpu_system_use));
         }
 
@@ -1011,8 +1011,8 @@ auto CRIRuntimeServiceImpl::PackContainerStatsFilter(const runtime::v1alpha2::Co
 }
 
 void CRIRuntimeServiceImpl::ListContainerStats(
-        const runtime::v1alpha2::ContainerStatsFilter *filter,
-        std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
+    const runtime::v1alpha2::ContainerStatsFilter *filter,
+    std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> *containerstats, Errors &error)
 {
     if (m_cb == nullptr || m_cb->container.stats == nullptr) {
         error.SetError("Unimplemented callback");
@@ -1518,12 +1518,11 @@ void CRIRuntimeServiceImpl::Attach(const runtime::v1alpha2::AttachRequest &req, 
     resp->set_url(url);
 }
 
-auto CRIRuntimeServiceImpl::InspectContainer(const std::string &containerID, Errors &err, bool with_host_config)
-        -> container_inspect *
+container_inspect *CRIRuntimeServiceImpl::InspectContainer(const std::string &Id, Errors &err, bool with_host_config)
 {
     container_inspect *inspect_data { nullptr };
 
-    inspect_data = inspect_container((const char *)containerID.c_str(), 0, with_host_config);
+    inspect_data = inspect_container((const char *)Id.c_str(), 0, with_host_config);
     if (inspect_data == nullptr) {
         err.Errorf("Failed to call inspect service %s");
     }
@@ -1531,12 +1530,11 @@ auto CRIRuntimeServiceImpl::InspectContainer(const std::string &containerID, Err
     return inspect_data;
 }
 
-auto CRIRuntimeServiceImpl::InspectContainerState(const std::string &containerID, Errors &err)
-        -> container_inspect_state *
+auto CRIRuntimeServiceImpl::InspectContainerState(const std::string &Id, Errors &err) -> container_inspect_state *
 {
     container_inspect_state *inspect_data { nullptr };
 
-    inspect_data = inspect_container_state((const char *)containerID.c_str(), 0);
+    inspect_data = inspect_container_state((const char *)Id.c_str(), 0);
     if (inspect_data == nullptr) {
         err.Errorf("Failed to call inspect service %s");
     }

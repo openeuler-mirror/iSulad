@@ -157,7 +157,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainers(grpc::ServerContext *cont
     for (auto iter = containers.begin(); iter != containers.end(); ++iter) {
         runtime::v1alpha2::Container *container = reply->add_containers();
         if (container == nullptr) {
-            ERROR("Object: CRI, Type: Failed to list all containers: out or memory");
+            ERROR("Object: CRI, Type: Failed to list all containers: out of memory");
             return grpc::Status(grpc::StatusCode::UNKNOWN, "Out of memory");
         }
         *container = *(iter->get());

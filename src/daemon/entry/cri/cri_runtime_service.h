@@ -70,7 +70,7 @@ public:
 
     auto GetContainerOrSandboxRuntime(const std::string &realID, Errors &error) -> std::string;
 
-    auto InspectContainer(const std::string &containerID, Errors &err, bool with_host_config) -> container_inspect *;
+    container_inspect *InspectContainer(const std::string &containerID, Errors &err, bool with_host_config);
     auto InspectContainerState(const std::string &containerID, Errors &err) -> container_inspect_state *;
 
     auto GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string;
