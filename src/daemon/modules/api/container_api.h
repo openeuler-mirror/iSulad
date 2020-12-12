@@ -16,11 +16,12 @@
 #define DAEMON_MODULES_API_CONTAINER_API_H
 
 #include <pthread.h>
+#include <isula_libutils/container_config_v2.h>
+#include <isula_libutils/host_config.h>
+#include <isula_libutils/oci_runtime_spec.h>
+#include <isula_libutils/container_inspect.h>
 
 #include "util_atomic.h"
-#include "isula_libutils/container_config_v2.h"
-#include "isula_libutils/host_config.h"
-#include "isula_libutils/oci_runtime_spec.h"
 #include "linked_list.h"
 #include "map.h"
 #include "utils.h"
@@ -172,6 +173,8 @@ int container_wait_rm_locking(container_t *cont, int timeout);
 bool container_has_mount_for(container_t *cont, const char *mpath);
 
 container_config_v2_state *container_state_to_v2_state(container_state_t *s);
+
+container_inspect_state *container_state_to_inspect_state(container_state_t *s);
 
 void container_restart_update_start_and_finish_time(container_state_t *s, const char *finish_at);
 
