@@ -53,7 +53,7 @@ typedef struct health_check_manager {
 
 typedef struct _container_state_t_ {
     pthread_mutex_t mutex;
-    container_config_v2_state *state;
+    container_state *state;
 } container_state_t;
 
 typedef struct _restart_manager_t {
@@ -135,13 +135,18 @@ void container_refinc(container_t *cont);
 void container_unref(container_t *cont);
 
 container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
-                           host_config **hostconfig, container_config_v2_common_config **common_config);
+                           host_config *hostconfig, container_config_v2_common_config *common_config,
+                           container_state *state);
 
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id);
 
 int container_to_disk(const container_t *cont);
 
 int container_to_disk_locking(container_t *cont);
+
+int container_state_to_disk(const container_t *cont);
+
+int container_state_to_disk_locking(container_t *cont);
 
 void container_lock(container_t *cont);
 
@@ -172,7 +177,7 @@ int container_wait_rm_locking(container_t *cont, int timeout);
 
 bool container_has_mount_for(container_t *cont, const char *mpath);
 
-container_config_v2_state *container_state_to_v2_state(container_state_t *s);
+container_state *container_dup_state(container_state_t *s);
 
 container_inspect_state *container_state_to_inspect_state(container_state_t *s);
 
@@ -193,6 +198,18 @@ void container_state_reset_paused(container_state_t *s);
 
 void container_state_set_dead(container_state_t *s);
 
+void container_state_increase_restart_count(container_state_t *s);
+
+void container_state_reset_restart_count(container_state_t *s);
+
+int container_state_get_restart_count(container_state_t *s);
+
+bool container_state_get_has_been_manual_stopped(container_state_t *s);
+
+void container_state_set_has_been_manual_stopped(container_state_t *s);
+
+void container_state_reset_has_been_manual_stopped(container_state_t *s);
+
 // container_state_set_removal_in_progress sets the container state as being removed.
 // It returns true if the container was already in that state
 bool container_state_set_removal_in_progress(container_state_t *s);
@@ -201,7 +218,7 @@ void container_state_reset_removal_in_progress(container_state_t *s);
 
 const char *container_state_to_string(Container_Status cs);
 
-Container_Status container_state_judge_status(const container_config_v2_state *state);
+Container_Status container_state_judge_status(const container_state *state);
 
 Container_Status container_state_get_status(container_state_t *s);
 

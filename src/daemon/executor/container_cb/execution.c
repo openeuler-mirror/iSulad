@@ -296,7 +296,7 @@ static int container_start_prepare(container_t *cont, const container_start_requ
 {
     const char *id = cont->common_config->id;
 
-    if (container_to_disk_locking(cont)) {
+    if (container_state_to_disk_locking(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         isulad_set_error_message("Failed to save container \"%s\" to disk", id);
         return -1;
@@ -416,7 +416,7 @@ static int restart_container(container_t *cont)
         container_restart_update_start_and_finish_time(cont->state, timebuffer);
     }
 
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", cont->common_config->id);
         ret = -1;
         goto out;
@@ -442,7 +442,7 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
 
     /* begin start container */
     container_state_set_starting(cont->state);
-    if (container_to_disk_locking(cont)) {
+    if (container_state_to_disk_locking(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         cc = ISULAD_ERR_EXEC;
         isulad_set_error_message("Failed to save container \"%s\" to disk", id);

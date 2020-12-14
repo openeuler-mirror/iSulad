@@ -457,7 +457,7 @@ static int handle_probe_result(const char *container_id, const defs_health_log_e
         // note: event
         EVENT("EVENT: {Object: %s, health_status: %s}", cont->common_config->id, current);
     }
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", cont->common_config->id);
         ret = -1;
     }
@@ -827,7 +827,7 @@ void container_init_health_monitor(const char *id)
         set_health_status(cont->state, HEALTH_STARTING);
     }
 
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         goto out;
     }

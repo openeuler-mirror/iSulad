@@ -542,8 +542,8 @@ static int do_resume_container(container_t *cont)
 
     container_update_health_monitor(cont->common_config->id);
 
-    if (container_to_disk(cont)) {
-        ERROR("Failed to save container \"%s\" to disk", id);
+    if (container_state_to_disk(cont)) {
+        ERROR("Failed to save container state \"%s\" to disk", id);
         ret = -1;
         goto out;
     }
@@ -726,7 +726,7 @@ static int do_pause_container(container_t *cont)
 
     container_update_health_monitor(cont->common_config->id);
 
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         ret = -1;
         goto out;

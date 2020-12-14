@@ -338,6 +338,7 @@ static void apply_restart_policy_after_gc(const char *id)
     bool should_restart = false;
     uint64_t timeout;
     uint32_t exit_code;
+    bool has_been_manually_stopped = false;
 
     cont = containers_store_get(id);
     if (cont == NULL) {
@@ -354,17 +355,18 @@ static void apply_restart_policy_after_gc(const char *id)
 
     started_at = container_state_get_started_at(cont->state);
     exit_code = container_state_get_exitcode(cont->state);
+    has_been_manually_stopped = container_state_get_has_been_manual_stopped(cont->state);
 
-    should_restart = restart_manager_should_restart(id, exit_code, cont->common_config->has_been_manually_stopped,
+    should_restart = restart_manager_should_restart(id, exit_code, has_been_manually_stopped,
                                                     util_time_seconds_since(started_at), &timeout);
     free(started_at);
 
     if (should_restart) {
-        cont->common_config->restart_count++;
+        container_state_increase_restart_count(cont->state);
         container_state_set_restarting(cont->state, (int)exit_code);
         INFO("Try to restart container %s after %.2fs", id, (double)timeout / Time_Second);
         (void)container_restart_in_thread(id, timeout, (int)exit_code);
-        if (container_to_disk(cont)) {
+        if (container_state_to_disk(cont)) {
             ERROR("Failed to save container \"%s\" to disk", id);
             goto unlock_out;
         }
@@ -413,7 +415,7 @@ static int do_runtime_resume_container(const container_t *cont)
 
     container_state_reset_paused(cont->state);
 
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         ret = -1;
         goto out;

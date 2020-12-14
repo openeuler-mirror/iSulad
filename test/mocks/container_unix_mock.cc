@@ -49,6 +49,14 @@ int container_to_disk(const container_t *cont)
     return 0;
 }
 
+int container_state_to_disk(const container_t *cont)
+{
+    if (g_container_unix_mock != nullptr) {
+        return g_container_unix_mock->ContainerStateToDisk(cont);
+    }
+    return 0;
+}
+
 void container_unlock(container_t *cont)
 {
     if (g_container_unix_mock != nullptr) {

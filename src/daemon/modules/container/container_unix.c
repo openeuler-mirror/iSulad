@@ -82,23 +82,15 @@ out:
 
 /* notes: hostconfig and common_config will be free in this function on error */
 container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
-                           host_config **hostconfig, container_config_v2_common_config **common_config)
+                           host_config *hostconfig, container_config_v2_common_config *common_config,
+                           container_state *state)
 {
     int ret = 0;
     container_t *cont = NULL;
-    host_config *tmp_host_config = NULL;
-    container_config_v2_common_config *tmp_common_config = NULL;
 
-    if (common_config == NULL || *common_config == NULL || rootpath == NULL || statepath == NULL ||
-        hostconfig == NULL || *hostconfig == NULL || runtime == NULL) {
+    if (common_config == NULL || rootpath == NULL || statepath == NULL || hostconfig == NULL || runtime == NULL) {
         return NULL;
     }
-
-    tmp_host_config = *hostconfig;
-    tmp_common_config = *common_config;
-
-    *hostconfig = NULL;
-    *common_config = NULL;
 
     cont = util_common_calloc_s(sizeof(container_t));
     if (cont == NULL) {
@@ -107,8 +99,9 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     }
 
     atomic_int_set(&cont->refcnt, 1);
-    cont->common_config = tmp_common_config;
-    cont->hostconfig = tmp_host_config;
+
+    cont->common_config = common_config;
+    cont->hostconfig = hostconfig;
 
     ret = init_container_mutex(cont);
     if (ret != 0) {
@@ -124,13 +117,19 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     cont->root_path = util_strdup_s(rootpath);
     cont->state_path = util_strdup_s(statepath);
     cont->image_id = image_id != NULL ? util_strdup_s(image_id) : NULL;
+
     cont->state = container_state_new();
     if (cont->state == NULL) {
         ERROR("Out of memory");
         goto error_out;
     }
 
-    cont->rm = restart_manager_new(tmp_host_config->restart_policy, tmp_common_config->restart_count);
+    if (state != NULL) {
+        free_container_state(cont->state->state);
+        cont->state->state = state;
+    }
+
+    cont->rm = restart_manager_new(cont->hostconfig->restart_policy, cont->state->state->restart_count);
     if (cont->rm == NULL) {
         ERROR("Out of memory");
         goto error_out;
@@ -146,10 +145,12 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
 
 error_out:
     if (cont != NULL) {
-        *common_config = cont->common_config;
-        *hostconfig = cont->hostconfig;
+        // release these memory by the caller
         cont->common_config = NULL;
         cont->hostconfig = NULL;
+        if (cont->state != NULL && cont->state->state == state) {
+            cont->state->state = NULL;
+        }
     }
     container_unref(cont);
     return NULL;
@@ -605,16 +606,15 @@ static int container_save_config_v2(const container_t *cont)
     char *json_v2 = NULL;
     parser_error err = NULL;
     container_config_v2 config_v2 = { 0 };
+    container_state tmp_state = { 0 };
 
     if (cont == NULL) {
         return -1;
     }
 
-    container_state_lock(cont->state);
+    config_v2.state = &tmp_state;
 
     config_v2.common_config = cont->common_config;
-
-    config_v2.state = cont->state->state;
 
     config_v2.image = cont->image_id;
 
@@ -635,7 +635,74 @@ static int container_save_config_v2(const container_t *cont)
 out:
     free(json_v2);
     free(err);
+    return ret;
+}
+
+#define CONTAINERSTATEJSON "container_state.json"
+/* save host config */
+int save_container_state_config(const char *id, const char *rootpath, const char *state_configstr)
+{
+    if (rootpath == NULL || id == NULL || state_configstr == NULL) {
+        return -1;
+    }
+    return save_json_config_file(id, rootpath, state_configstr, CONTAINERSTATEJSON);
+}
+
+static container_state *read_container_state_config(const char *rootpath, const char *id)
+{
+    int nret;
+    char filename[PATH_MAX] = { 0x00 };
+    parser_error err = NULL;
+    container_state *state = NULL;
+
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, id, CONTAINERSTATEJSON);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
+        ERROR("Failed to print string");
+        goto out;
+    }
+
+    state = container_state_parse_file(filename, NULL, &err);
+    if (state == NULL) {
+        ERROR("Failed to parse state config file:%s", err);
+        goto out;
+    }
+out:
+    free(err);
+    return state;
+}
+
+/* container save container state config */
+static int container_save_container_state_config(const container_t *cont)
+{
+    int ret = 0;
+    parser_error err = NULL;
+    char *json_container_state = NULL;
+
+    if (cont == NULL) {
+        return -1;
+    }
+
+    container_state_lock(cont->state);
+
+    json_container_state = container_state_generate_json(cont->state->state, NULL, &err);
+    if (json_container_state == NULL) {
+        ERROR("Failed to generate container state json string:%s", err ? err : " ");
+        ret = -1;
+        goto out;
+    }
+
+    ret = save_container_state_config(cont->common_config->id, cont->root_path, json_container_state);
+    if (ret != 0) {
+        ERROR("Failed to save container state json to file");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(json_container_state);
+    free(err);
     container_state_unlock(cont->state);
+
     return ret;
 }
 
@@ -658,6 +725,11 @@ int container_to_disk(const container_t *cont)
         return ret;
     }
 
+    ret = container_save_container_state_config(cont);
+    if (ret != 0) {
+        return ret;
+    }
+
     return ret;
 }
 
@@ -673,6 +745,40 @@ int container_to_disk_locking(container_t *cont)
     container_lock(cont);
 
     ret = container_to_disk(cont);
+
+    container_unlock(cont);
+    return ret;
+}
+
+/* container state to disk */
+int container_state_to_disk(const container_t *cont)
+{
+    int ret = 0;
+
+    if (cont == NULL) {
+        return -1;
+    }
+
+    ret = container_save_container_state_config(cont);
+    if (ret != 0) {
+        return ret;
+    }
+
+    return ret;
+}
+
+/* container state to disk locking */
+int container_state_to_disk_locking(container_t *cont)
+{
+    int ret = 0;
+
+    if (cont == NULL) {
+        return -1;
+    }
+
+    container_lock(cont);
+
+    ret = container_state_to_disk(cont);
 
     container_unlock(cont);
     return ret;
@@ -722,7 +828,7 @@ out:
 }
 
 // cp old container config file "ociconfig.json" to "config.json"
-static int update_v1_config_to_v2(const char *rootpath, const char *id)
+static int update_OCI_config_v1_to_v2(const char *rootpath, const char *id)
 {
     int ret = 0;
     int nret = 0;
@@ -792,6 +898,7 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     const char *image_id = NULL;
     container_t *cont = NULL;
     container_config_v2_common_config_mount_points *mount_points = NULL;
+    container_state *state = NULL;
 
     if (rootpath == NULL || statepath == NULL || id == NULL || runtime == NULL) {
         return NULL;
@@ -809,7 +916,20 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
         goto error_out;
     }
 
-    if (update_v1_config_to_v2(rootpath, id) != 0) {
+    state = read_container_state_config(rootpath, id);
+    if (state == NULL) {
+        WARN("Failed to read container state config file for container: %s, the container may be created by old version, use the state in v2 config",
+             id);
+        state = v2config->state;
+        v2config->state = NULL;
+    }
+
+    if (state == NULL) {
+        ERROR("Failed to read container state for container: %s", id);
+        goto error_out;
+    }
+
+    if (update_OCI_config_v1_to_v2(rootpath, id) != 0) {
         ERROR("Failed to update config to v2 for container: %s", id);
         goto error_out;
     }
@@ -821,21 +941,19 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     v2config->common_config = NULL;
     image_id = v2config->image;
 
-    cont = container_new(runtime, rootpath, statepath, image_id, &hostconfig, &common_config);
+    cont = container_new(runtime, rootpath, statepath, image_id, hostconfig, common_config, state);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
         goto error_out;
     }
 
+    hostconfig = NULL;
+    common_config = NULL;
+    state = NULL;
+
     if (restore_volumes(mount_points, (char *)id) != 0) {
         goto error_out;
     }
-
-    /* replace cont->state->state with v2config->state */
-    free_container_config_v2_state(cont->state->state);
-
-    cont->state->state = v2config->state;
-    v2config->state = NULL;
 
     free_container_config_v2(v2config);
 
@@ -845,6 +963,7 @@ error_out:
     free_container_config_v2_common_config(common_config);
     free_host_config(hostconfig);
     free_container_config_v2(v2config);
+    free_container_state(state);
     container_unref(cont);
     return NULL;
 }
@@ -938,21 +1057,6 @@ char *container_get_image(const container_t *cont)
     return tmp;
 }
 
-/* container reset manually stopped */
-void container_reset_manually_stopped(container_t *cont)
-{
-    if (cont == NULL) {
-        return;
-    }
-
-    container_lock(cont);
-
-    cont->common_config->has_been_manually_stopped = false;
-
-    container_unlock(cont);
-    return;
-}
-
 /* reset restart manager */
 bool container_reset_restart_manager(container_t *cont, bool reset_count)
 {
@@ -969,7 +1073,7 @@ bool container_reset_restart_manager(container_t *cont, bool reset_count)
         restart_manager_unref(cont->rm);
     }
     if (reset_count) {
-        cont->common_config->restart_count = 0;
+        container_state_reset_restart_count(cont->state);
     }
     cont->rm = NULL;
     return true;
@@ -978,13 +1082,16 @@ bool container_reset_restart_manager(container_t *cont, bool reset_count)
 /* get restart manager */
 restart_manager_t *get_restart_manager(container_t *cont)
 {
+    int failue_count = 0;
+
     if (cont == NULL) {
         ERROR("Invalid input arguments");
         return NULL;
     }
 
     if (cont->rm == NULL) {
-        cont->rm = restart_manager_new(cont->hostconfig->restart_policy, cont->common_config->restart_count);
+        failue_count = container_state_get_restart_count(cont->state);
+        cont->rm = restart_manager_new(cont->hostconfig->restart_policy, failue_count);
         if (cont->rm == NULL) {
             return NULL;
         }

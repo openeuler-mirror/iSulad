@@ -59,7 +59,7 @@ container_state_t *container_state_new(void)
         goto error_out;
     }
 
-    s->state = util_common_calloc_s(sizeof(container_config_v2_state));
+    s->state = util_common_calloc_s(sizeof(container_state));
     if (s->state == NULL) {
         ERROR("Out of memory");
         goto error_out;
@@ -81,7 +81,7 @@ void container_state_free(container_state_t *state)
         return;
     }
 
-    free_container_config_v2_state(state->state);
+    free_container_state(state->state);
     state->state = NULL;
 
     pthread_mutex_destroy(&state->mutex);
@@ -133,7 +133,7 @@ void container_state_reset_starting(container_state_t *s)
 /* state set running */
 void container_state_set_running(container_state_t *s, const pid_ppid_info_t *pid_info, bool initial)
 {
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
 
     if (s == NULL) {
@@ -177,7 +177,7 @@ void container_state_set_running(container_state_t *s, const pid_ppid_info_t *pi
 /* state reset stopped */
 void container_state_set_stopped(container_state_t *s, int exit_code)
 {
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
 
     if (s == NULL) {
@@ -208,7 +208,7 @@ void container_state_set_stopped(container_state_t *s, int exit_code)
 /* state set paused */
 void container_state_set_paused(container_state_t *s)
 {
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
 
     if (s == NULL) {
         return;
@@ -225,7 +225,7 @@ void container_state_set_paused(container_state_t *s)
 /* state reset paused */
 void container_state_reset_paused(container_state_t *s)
 {
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
 
     if (s == NULL) {
         return;
@@ -242,7 +242,7 @@ void container_state_reset_paused(container_state_t *s)
 /* update start and finish time */
 void container_restart_update_start_and_finish_time(container_state_t *s, const char *finish_at)
 {
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
 
     if (s == NULL) {
@@ -273,7 +273,7 @@ void container_restart_update_start_and_finish_time(container_state_t *s, const 
 /* state set restarting */
 void container_state_set_restarting(container_state_t *s, int exit_code)
 {
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
     char timebuffer[TIME_STR_SIZE] = { 0 };
 
     if (s == NULL) {
@@ -301,6 +301,56 @@ void container_state_set_restarting(container_state_t *s, int exit_code)
     container_state_unlock(s);
 
     return;
+}
+
+/* increase */
+void container_state_increase_restart_count(container_state_t *s)
+{
+    if (s == NULL) {
+        return;
+    }
+
+    container_state_lock(s);
+
+    s->state->restart_count++;
+
+    container_state_unlock(s);
+
+    return;
+}
+
+/* reset */
+void container_state_reset_restart_count(container_state_t *s)
+{
+    if (s == NULL) {
+        return;
+    }
+
+    container_state_lock(s);
+
+    s->state->restart_count = 0;
+
+    container_state_unlock(s);
+
+    return;
+}
+
+/* get */
+int container_state_get_restart_count(container_state_t *s)
+{
+    int count = 0;
+
+    if (s == NULL) {
+        return 0;
+    }
+
+    container_state_lock(s);
+
+    count = s->state->restart_count;
+
+    container_state_unlock(s);
+
+    return count;
 }
 
 // container_state_set_removal_in_progress sets the container state as being removed.
@@ -354,7 +404,7 @@ void container_state_set_error(container_state_t *s, const char *err)
 }
 
 /* state judge status */
-Container_Status container_state_judge_status(const container_config_v2_state *state)
+Container_Status container_state_judge_status(const container_state *state)
 {
     if (state == NULL) {
         return CONTAINER_STATUS_UNKNOWN;
@@ -462,15 +512,15 @@ error:
 }
 
 /* state get info */
-container_config_v2_state *container_state_to_v2_state(container_state_t *s)
+container_state *container_dup_state(container_state_t *s)
 {
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
 
     if (s == NULL) {
         return NULL;
     }
 
-    state = util_common_calloc_s(sizeof(container_config_v2_state));
+    state = util_common_calloc_s(sizeof(container_state));
     if (state == NULL) {
         return NULL;
     }
@@ -495,10 +545,14 @@ container_config_v2_state *container_state_to_v2_state(container_state_t *s)
 
     if (container_dup_health_check_status(&state->health, s->state->health) != 0) {
         ERROR("Failed to dup health check info");
-        free_container_config_v2_state(state);
+        free_container_state(state);
         state = NULL;
+        goto out;
     }
 
+    state->restart_count = s->state->restart_count;
+
+out:
     container_state_unlock(s);
 
     return state;
@@ -548,7 +602,7 @@ container_inspect_state *container_state_to_inspect_state(container_state_t *s)
 uint32_t container_state_get_exitcode(container_state_t *s)
 {
     uint32_t exit_code = 0;
-    container_config_v2_state *state = NULL;
+    container_state *state = NULL;
 
     if (s == NULL) {
         return exit_code;
@@ -730,4 +784,54 @@ bool container_is_valid_state_string(const char *state)
         return false;
     }
     return true;
+}
+
+/* state get has been manual stopped */
+bool container_state_get_has_been_manual_stopped(container_state_t *s)
+{
+    bool ret = false;
+
+    if (s == NULL) {
+        return false;
+    }
+
+    container_state_lock(s);
+
+    ret = s->state->has_been_manually_stopped;
+
+    container_state_unlock(s);
+
+    return ret;
+}
+
+/* state set has been manual stopped */
+void container_state_set_has_been_manual_stopped(container_state_t *s)
+{
+    if (s == NULL) {
+        return;
+    }
+
+    container_state_lock(s);
+
+    s->state->has_been_manually_stopped = true;
+
+    container_state_unlock(s);
+
+    return;
+}
+
+/* state reset has been manual stopped */
+void container_state_reset_has_been_manual_stopped(container_state_t *s)
+{
+    if (s == NULL) {
+        return;
+    }
+
+    container_state_lock(s);
+
+    s->state->has_been_manually_stopped = false;
+
+    container_state_unlock(s);
+
+    return;
 }

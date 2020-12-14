@@ -149,6 +149,11 @@ int invokeContainerToDisk(const container_t *cont)
     return 0;
 }
 
+int invokeContainerStateToDisk(const container_t *cont)
+{
+    return 0;
+}
+
 void invokeContainerUnlock(container_t *cont)
 {
     return;
@@ -214,6 +219,7 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_pause)
     EXPECT_CALL(m_containerState, IsPaused(_)).WillRepeatedly(Invoke(invokeIsPaused));
     EXPECT_CALL(m_containerState, IsRestarting(_)).WillRepeatedly(Invoke(invokeIsRestarting));
     EXPECT_CALL(m_containerUnix, ContainerToDisk(_)).WillRepeatedly(Invoke(invokeContainerToDisk));
+    EXPECT_CALL(m_containerUnix, ContainerStateToDisk(_)).WillRepeatedly(Invoke(invokeContainerStateToDisk));
     container_extend_callback_init(&cb);
     ASSERT_EQ(cb.pause(request, &response), 0);
     testing::Mock::VerifyAndClearExpectations(&m_runtime);

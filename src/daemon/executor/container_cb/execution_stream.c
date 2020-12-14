@@ -574,7 +574,7 @@ static int pause_container(const container_t *cont)
 
     container_state_set_paused(cont->state);
 
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         ret = -1;
         goto out;
@@ -600,7 +600,7 @@ static int resume_container(const container_t *cont)
 
     container_state_reset_paused(cont->state);
 
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
         ret = -1;
         goto out;
