@@ -18,6 +18,7 @@
 #include "manager.h"
 #include "utils.h"
 #include "map.h"
+#include "libcni_types.h"
 
 // do not need lock;
 // because cri can make sure do not concurrent to call these apis
@@ -80,14 +81,7 @@ int adaptor_cni_update_confs()
     }
 
     for (i = 0; i < tmp_net_list_len; i++) {
-        int *tmp_idx = util_common_calloc_s(sizeof(int));
-        if (tmp_idx == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        *tmp_idx = i;
-        if (!map_replace(work, (void *)tmp_net_list[i]->name, (void *)tmp_idx)) {
+        if (!map_replace(work, (void *)tmp_net_list[i]->name, (void *)&i)) {
             ERROR("add net failed");
             ret = -1;
             goto out;
@@ -215,6 +209,9 @@ int adaptor_cni_setup(const adaptor_cni_config *conf)
         return -1;
     }
 
+    // TODO: just free result now
+    free_result(result);
+
     return 0;
 }
 
@@ -274,12 +271,14 @@ void free_adaptor_cni_config(adaptor_cni_config *conf)
     conf->pod_id = NULL;
     free(conf->netns_path);
     conf->netns_path = NULL;
+    free(conf->default_interface);
+    conf->default_interface = NULL;
     free_json_map_string_string(conf->args);
     conf->args = NULL;
     map_free(conf->annotations);
     conf->annotations = NULL;
     for (i = 0; i < conf->extral_nets_len; i++) {
-        free(conf->extral_nets[i]);
+        free_attach_net_conf(conf->extral_nets[i]);
     }
     free(conf->extral_nets);
     conf->extral_nets = NULL;
