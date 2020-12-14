@@ -108,7 +108,7 @@ void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &h
     // TODO: how to init network modules
     if (!adaptor_cni_init(NULL, m_confDir.c_str(), paths, m_binDirs.size())) {
         error.SetError("init cni manager failed");
-        return;
+        goto out;
     }
 
     m_criImpl = criImpl;
@@ -118,6 +118,8 @@ void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &h
     m_syncThread = std::thread([&]() {
         UpdateDefaultNetwork();
     });
+out:
+    util_free_array(paths);
 }
 
 auto CniNetworkPlugin::Name() const -> const std::string &
