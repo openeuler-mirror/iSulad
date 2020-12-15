@@ -395,97 +395,90 @@ void WebsocketServer::Wait()
     lws_context_destroy(m_context);
 }
 
+namespace {
+    auto PrepareWsiSession(struct lws *wsi) -> session_data *
+    {
+        WebsocketServer *server = WebsocketServer::GetInstance();
+        server->LockAllWsSession();
+
+        auto itor = server->GetWsisData().find(wsi);
+        if (itor == server->GetWsisData().end()) {
+            ERROR("invalid session!");
+            server->UnlockAllWsSession();
+            return nullptr;
+        }
+        itor->second.SetProcessingStatus(true);
+        server->UnlockAllWsSession();
+        server->SetLwsSendedFlag(wsi, false);
+
+        return &itor->second;
+    }
+
+    void DoWriteToClient(struct lws *wsi, session_data *session,
+                               const void *data, size_t len, WebsocketChannel channel)
+    {
+        session->buf_mutex->lock();
+        // Determine if it is standard output channel or error channel
+        (void)memset(session->buf, 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
+        session->buf[LWS_PRE] = channel;
+
+        (void)memcpy(&session->buf[LWS_PRE + 1], (void *)data, len);
+
+        lws_callback_on_writable(wsi);
+
+        session->buf_mutex->unlock();
+    }
+
+    void EnsureWrited(struct lws *wsi, session_data *session)
+    {
+        const int RETRIES = 10;
+        const int CHECK_PERIOD_SECOND = 1;
+        const int TRIGGER_PERIOD_MS = 1;
+        auto start = std::chrono::system_clock::now();
+        int count = 0;
+
+        while (!session->sended && count < RETRIES) {
+            auto end = std::chrono::system_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            double spend_time = static_cast<double>(duration.count()) * std::chrono::microseconds::period::num /
+                                std::chrono::microseconds::period::den;
+            if (spend_time > CHECK_PERIOD_SECOND) {
+                lws_callback_on_writable(wsi);
+                std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
+                start = std::chrono::system_clock::now();
+                count++;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
+        }
+
+        session->SetProcessingStatus(false);
+    }
+
+    ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
+    {
+        struct lws *wsi = static_cast<struct lws *>(context);
+
+        session_data *session = PrepareWsiSession(wsi);
+        if (session == nullptr) {
+            return 0;
+        }
+
+        DoWriteToClient(wsi, session, data, len, channel);
+
+        EnsureWrited(wsi, session);
+
+        return static_cast<ssize_t>(len);
+    }
+};
 
 ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len)
 {
-    const int RETRIES = 10;
-    const int CHECK_PERIOD_SECOND = 1;
-    const int TRIGGER_PERIOD_MS = 100;
-
-    struct lws *wsi = static_cast<struct lws *>(context);
-    WebsocketServer *server = WebsocketServer::GetInstance();
-    server->LockAllWsSession();
-    auto it = server->GetWsisData().find(wsi);
-    if (it == server->GetWsisData().end()) {
-        ERROR("invalid session!");
-        server->UnlockAllWsSession();
-        return 0;
-    }
-    it->second.SetProcessingStatus(true);
-    server->UnlockAllWsSession();
-    server->SetLwsSendedFlag(wsi, false);
-    it->second.buf_mutex->lock();
-    auto &buf = it->second.buf;
-    // Determine if it is standard output channel or error channel?
-    (void)memset(buf, 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
-    buf[LWS_PRE] = STDOUTCHANNEL;
-
-    (void)memcpy(&buf[LWS_PRE + 1], (void *)data, len);
-    auto start = std::chrono::system_clock::now();
-    lws_callback_on_writable(wsi);
-    it->second.buf_mutex->unlock();
-    int count = 0;
-    while (!it->second.sended && count < RETRIES) {
-        auto end = std::chrono::system_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        double spend_time = static_cast<double>(duration.count()) * std::chrono::microseconds::period::num /
-                            std::chrono::microseconds::period::den;
-        if (spend_time > CHECK_PERIOD_SECOND) {
-            lws_callback_on_writable(wsi);
-            std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
-            start = std::chrono::system_clock::now();
-            count++;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
-    }
-    it->second.SetProcessingStatus(false);
-    return static_cast<ssize_t>(len);
+    return WsWriteToClient(context, data, len, STDOUTCHANNEL);
 }
 
 ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len)
 {
-    const int RETRIES = 10;
-    const int CHECK_PERIOD_SECOND = 1;
-    const int TRIGGER_PERIOD_MS = 100;
-
-    struct lws *wsi = static_cast<struct lws *>(context);
-    WebsocketServer *server = WebsocketServer::GetInstance();
-    server->LockAllWsSession();
-    auto it = server->GetWsisData().find(wsi);
-    if (it == server->GetWsisData().end()) {
-        ERROR("invalid session!");
-        server->UnlockAllWsSession();
-        return 0;
-    }
-    it->second.SetProcessingStatus(true);
-    server->UnlockAllWsSession();
-    server->SetLwsSendedFlag(wsi, false);
-    it->second.buf_mutex->lock();
-    auto &buf = it->second.buf;
-    // Determine if it is standard output channel or error channel?
-    (void)memset(buf, 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
-    buf[LWS_PRE] = STDERRCHANNEL;
-
-    (void)memcpy(&buf[LWS_PRE + 1], (void *)data, len);
-    auto start = std::chrono::system_clock::now();
-    lws_callback_on_writable(wsi);
-    it->second.buf_mutex->unlock();
-    int count = 0;
-    while (!it->second.sended && count < RETRIES) {
-        auto end = std::chrono::system_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        double spend_time = static_cast<double>(duration.count()) * std::chrono::microseconds::period::num /
-                            std::chrono::microseconds::period::den;
-        if (spend_time > CHECK_PERIOD_SECOND) {
-            lws_callback_on_writable(wsi);
-            std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
-            start = std::chrono::system_clock::now();
-            count++;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
-    }
-    it->second.SetProcessingStatus(false);
-    return static_cast<ssize_t>(len);
+    return WsWriteToClient(context, data, len, STDERRCHANNEL);
 }
 
 int closeWsConnect(void *context, char **err)
