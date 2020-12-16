@@ -572,12 +572,12 @@ static devmapper_device_info_t *lookup_device(struct device_set *devset, const c
         image_devmapper_device_info *info = NULL;
         info = load_metadata(devset, hash);
         if (info == NULL) {
-            ERROR("devmapper: Unknown device %s", hash);
+            WARN("No such device file:%s in metadata dir, stop to lookup", hash);
             goto out;
         }
 
         if (!metadata_store_add(hash, info, devset->meta_store)) {
-            ERROR("devmapper: store device %s failed", hash);
+            ERROR("devmapper: add device %s to local store map failed", hash);
             free_image_devmapper_device_info(info);
             goto out;
         }
@@ -682,7 +682,7 @@ static int device_file_walk(struct device_set *devset)
 
         device_info = lookup_device(devset, entry->d_name);
         if (device_info == NULL) {
-            ERROR("devmapper: Error looking up device %s", entry->d_name);
+            ERROR("Lookup device file:%s error, please check the file", entry->d_name);
             ret = -1;
             goto out;
         }
@@ -759,7 +759,7 @@ static void construct_device_id_map(struct device_set *devset)
     for (i = 0; i < dev_arr_len; i++) {
         device_info = lookup_device(devset, dev_arr[i]);
         if (device_info == NULL) {
-            WARN("devmapper: get device %s from store failed", dev_arr[i]);
+            WARN("devmapper: lookup device %s failed, just skip", dev_arr[i]);
             continue;
         }
         mark_device_id_used(devset, device_info->info->device_id);
@@ -781,7 +781,7 @@ static void count_deleted_devices(struct device_set *devset)
     for (i = 0; i < dev_arr_len; i++) {
         device_info = lookup_device(devset, dev_arr[i]);
         if (device_info == NULL) {
-            WARN("devmapper: get device %s from store failed", dev_arr[i]);
+            WARN("Lookup device %s failed, just skip marking deleted", dev_arr[i]);
             continue;
         }
         if (device_info->info->deleted) {
@@ -985,7 +985,7 @@ static void cleanup_deleted_devices(struct device_set *devset)
 
         device_info = lookup_device(devset, idsarray[i]);
         if (device_info == NULL || device_info->info == NULL) {
-            ERROR("devmapper: no such device with hash(%s)", idsarray[i]);
+            DEBUG("devmapper: no such device with hash(%s), just skip cleanup", idsarray[i]);
             continue;
         }
 
@@ -2281,7 +2281,7 @@ static int do_delete_device(struct device_set *devset, const char *hash, bool sy
 
     device_info = lookup_device(devset, hash);
     if (device_info == NULL) {
-        ERROR("devmapper: lookup device failed");
+        ERROR("Delete device error with lookuping device with hash(%s) failed", hash);
         return -1;
     }
 
@@ -2781,7 +2781,7 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
 
     base_device_info = lookup_device(devset, util_valid_str(base_hash) ? base_hash : "base");
     if (base_device_info == NULL) {
-        ERROR("devmapper: lookup device %s failed", util_valid_str(base_hash) ? base_hash : "base");
+        ERROR("Lookup device %s failed", util_valid_str(base_hash) ? base_hash : "base");
         ret = -1;
         goto free_out;
     }
