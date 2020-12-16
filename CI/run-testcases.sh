@@ -48,6 +48,7 @@ function wait_isulad_running() {
         if [ $? -eq 0 ];then
             break
         fi
+        tail -n 50 /var/lib/isulad/isulad.log
         waitcnt=$(($waitcnt+1))
         maxcnt=60
         if [ $waitcnt -gt $maxcnt ];then
