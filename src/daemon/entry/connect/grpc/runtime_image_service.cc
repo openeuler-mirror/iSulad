@@ -26,11 +26,18 @@ grpc::Status RuntimeImageServiceImpl::PullImage(grpc::ServerContext *context,
                                                 runtime::v1alpha2::PullImageResponse *reply)
 {
     Errors error;
+
+    EVENT("Event: {Object: CRI, Type: Pulling image %s}", request->image().image().c_str());
+
     std::string imageRef = rService.PullImage(request->image(), request->auth(), error);
     if (!error.Empty() || imageRef.empty()) {
+        ERROR("{Object: CRI, Type: Failed to pull image %s}", request->image().image().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
     reply->set_image_ref(imageRef);
+
+    EVENT("Event: {Object: CRI, Type: Pulled image %s with ref %s}", request->image().image().c_str(),
+          imageRef.c_str());
     return grpc::Status::OK;
 }
 
@@ -41,8 +48,11 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
     std::vector<std::unique_ptr<runtime::v1alpha2::Image>> images;
     Errors error;
 
+    EVENT("Event: {Object: CRI, Type: Listing all images}");
+
     rService.ListImages(request->filter(), &images, error);
     if (!error.Empty()) {
+        ERROR("{Object: CRI, Type: Failed to list all images: %s}", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
 
@@ -53,6 +63,9 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
         }
         *image = *(iter->get());
     }
+
+    EVENT("Event: {Object: CRI, Type: Listed all images}");
+
     return grpc::Status::OK;
 }
 
@@ -63,8 +76,12 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
     std::unique_ptr<runtime::v1alpha2::Image> image_info = nullptr;
     Errors error;
 
+    EVENT("Event: {Object: CRI, Type: Statusing image %s}", request->image().image().c_str());
+
     image_info = rService.ImageStatus(request->image(), error);
     if (!error.Empty() && !CRIHelpers::IsImageNotFoundError(error.GetMessage())) {
+        ERROR("{Object: CRI, Type: Failed to status image: %s due to %s}", request->image().image().c_str(),
+              error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
 
@@ -72,6 +89,8 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
         runtime::v1alpha2::Image *image = reply->mutable_image();
         *image = *image_info;
     }
+
+    EVENT("Event: {Object: CRI, Type: Statused image %s}", request->image().image().c_str());
 
     return grpc::Status::OK;
 }
@@ -83,18 +102,24 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
     std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> usages;
     Errors error;
 
+    EVENT("Event: {Object: CRI, Type: Statusing image fs info}");
+
     rService.ImageFsInfo(&usages, error);
     if (!error.Empty()) {
+        ERROR("{Object: CRI, Type: Failed to status image fs info: %s}", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
 
     for (auto iter = usages.begin(); iter != usages.end(); ++iter) {
         runtime::v1alpha2::FilesystemUsage *fs_info = reply->add_image_filesystems();
         if (fs_info == nullptr) {
+            ERROR("{Object: CRI, Type: Failed to status image fs info: Out of memory}");
             return grpc::Status(grpc::StatusCode::UNKNOWN, "Out of memory");
         }
         *fs_info = *(iter->get());
     }
+
+    EVENT("Event: {Object: CRI, Type: Statused image fs info}");
     return grpc::Status::OK;
 }
 
@@ -104,11 +129,15 @@ grpc::Status RuntimeImageServiceImpl::RemoveImage(grpc::ServerContext *context,
 {
     Errors error;
 
+    EVENT("Event: {Object: CRI, Type: Removing image %s}", request->image().image().c_str());
+
     rService.RemoveImage(request->image(), error);
     if (!error.Empty()) {
+        ERROR("{Object: CRI, Type: Failed to remove image %s due to: %s}", request->image().image().c_str(),
+              error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
+
+    EVENT("Event: {Object: CRI, Type: Removed image %s}", request->image().image().c_str());
     return grpc::Status::OK;
 }
-
-

@@ -23,6 +23,7 @@
 
 #include "utils_timestamp.h"
 #include "isula_libutils/storage_image.h"
+#include "isula_libutils/imagetool_image_summary.h"
 #include "isula_libutils/storage_rootfs.h"
 #include "isula_libutils/imagetool_images_list.h"
 #include "isula_libutils/imagetool_fs_info.h"
@@ -31,7 +32,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 struct layer {
     char *id;
@@ -121,6 +121,8 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
 
 imagetool_image *storage_img_get(const char *img_id);
 
+imagetool_image_summary *storage_img_get_summary(const char *img_id);
+
 int storage_img_set_big_data(const char *img_id, const char *key, const char *val);
 
 int storage_img_add_name(const char *img_id, const char *img_name);
@@ -166,8 +168,7 @@ void free_layer_list(struct layer_list *ptr);
 
 /* container rootfs operations */
 int storage_rootfs_create(const char *container_id, const char *image, const char *mount_label,
-                          json_map_string_string *storage_opts,
-                          char **mountpoint);
+                          json_map_string_string *storage_opts, char **mountpoint);
 
 int storage_rootfs_delete(const char *container_id);
 

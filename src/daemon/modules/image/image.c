@@ -70,7 +70,7 @@ struct bim_ops {
 
     int (*container_fs_usage)(const im_container_fs_usage_request *request, imagetool_fs_info **fs_usage);
 
-    int (*image_status)(im_status_request *request, im_status_response **response);
+    int (*image_status)(im_status_request *request, im_status_response *response);
 
     int (*get_filesystem_info)(im_fs_info_response **response);
 
@@ -91,6 +91,9 @@ struct bim_ops {
 
     /* Add a tag to the image */
     int (*tag_image)(const im_tag_request *request);
+
+    /* Get summary of the image */
+    int (*image_summary)(im_summary_request *request, im_summary_response *response);
 };
 
 struct bim {
@@ -148,6 +151,7 @@ static const struct bim_ops g_embedded_ops = {
     .logout = NULL,
     .tag_image = NULL,
     .import = NULL,
+    .image_summary = NULL,
 };
 #endif
 
@@ -180,6 +184,7 @@ static const struct bim_ops g_oci_ops = {
     .logout = oci_logout,
     .tag_image = oci_tag,
     .import = oci_import,
+    .image_summary = oci_summary_image,
 };
 #endif
 
@@ -212,6 +217,7 @@ static const struct bim_ops g_ext_ops = {
     .logout = ext_logout,
     .tag_image = NULL,
     .import = NULL,
+    .image_summary = NULL,
 };
 
 static const struct bim_type g_bims[] = {
@@ -773,7 +779,7 @@ static int append_images_to_response(im_list_response *response, imagetool_image
     int ret = 0;
     size_t images_num = 0;
     size_t old_num = 0;
-    imagetool_image **tmp = NULL;
+    imagetool_image_summary **tmp = NULL;
     size_t i = 0;
     size_t new_size = 0;
     size_t old_size = 0;
@@ -798,7 +804,7 @@ static int append_images_to_response(im_list_response *response, imagetool_image
     if (images_num == 0) {
         goto out;
     }
-    if (images_num > SIZE_MAX / sizeof(imagetool_image *) - response->images->images_len) {
+    if (images_num > SIZE_MAX / sizeof(imagetool_image_summary *) - response->images->images_len) {
         ERROR("Too many images to append!");
         ret = -1;
         goto out;
@@ -806,8 +812,8 @@ static int append_images_to_response(im_list_response *response, imagetool_image
 
     old_num = response->images->images_len;
 
-    new_size = (old_num + images_num) * sizeof(imagetool_image *);
-    old_size = old_num * sizeof(imagetool_image *);
+    new_size = (old_num + images_num) * sizeof(imagetool_image_summary *);
+    old_size = old_num * sizeof(imagetool_image_summary *);
     ret = util_mem_realloc((void **)(&tmp), new_size, response->images->images, old_size);
     if (ret != 0) {
         ERROR("Failed to realloc memory for append images");
@@ -1361,65 +1367,6 @@ void free_im_logout_response(im_logout_response *ptr)
     free(ptr);
 }
 
-int im_image_status(im_status_request *request, im_status_response **response)
-{
-    int ret = -1;
-    char *image_ref = NULL;
-    const struct bim_type *bim_type = NULL;
-    struct bim *bim = NULL;
-
-    if (request == NULL || response == NULL) {
-        ERROR("Invalid input arguments");
-        return -1;
-    }
-
-    *response = (im_status_response *)util_common_calloc_s(sizeof(im_status_response));
-    if (*response == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    if (request->image.image == NULL) {
-        ERROR("get image status requires image ref");
-        isulad_set_error_message("get image status requires image ref");
-        goto pack_response;
-    }
-
-    image_ref = util_strdup_s(request->image.image);
-
-    bim_type = bim_query(image_ref);
-    if (bim_type == NULL) {
-        ERROR("No such image:%s", image_ref);
-        isulad_set_error_message("No such image:%s", image_ref);
-        goto pack_response;
-    }
-
-    bim = bim_get(bim_type->image_type, image_ref, NULL, NULL);
-    if (bim == NULL) {
-        ERROR("Failed to init bim for image %s", image_ref);
-        goto pack_response;
-    }
-    if (bim->ops->image_status == NULL) {
-        ERROR("Unimplements image status in %s", bim->type);
-        goto pack_response;
-    }
-
-    ret = bim->ops->image_status(request, response);
-    if (ret != 0) {
-        ERROR("Failed to get status of image %s", image_ref);
-        ret = -1;
-    }
-
-pack_response:
-    if (g_isulad_errmsg != NULL) {
-        free((*response)->errmsg);
-        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
-    }
-    free(image_ref);
-    bim_put(bim);
-    return ret;
-}
-
 int im_rm_image(const im_rmi_request *request, im_remove_response **response)
 {
     int ret = -1;
@@ -1895,6 +1842,30 @@ void free_im_status_response(im_status_response *req)
     free(req);
 }
 
+void free_im_summary_request(im_summary_request *req)
+{
+    if (req == NULL) {
+        return;
+    }
+    free(req->image.image);
+    req->image.image = NULL;
+
+    free(req);
+}
+
+void free_im_summary_response(im_summary_response *res)
+{
+    if (res == NULL) {
+        return;
+    }
+    free_imagetool_image_summary(res->image_summary);
+    res->image_summary = NULL;
+    free(res->errmsg);
+    res->errmsg = NULL;
+
+    free(res);
+}
+
 void free_im_fs_info_response(im_fs_info_response *ptr)
 {
     if (ptr == NULL) {
@@ -1996,6 +1967,65 @@ int im_prepare_container_rootfs(const im_prepare_request *request, char **real_r
           request->image_name ? request->image_name : "none");
 
 out:
+    bim_put(bim);
+    return ret;
+}
+
+int im_image_summary(im_summary_request *request, im_summary_response **response)
+{
+    int ret = -1;
+    char *image_ref = NULL;
+    const struct bim_type *bim_type = NULL;
+    struct bim *bim = NULL;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid input arguments");
+        return -1;
+    }
+
+    *response = (im_summary_response *)util_common_calloc_s(sizeof(im_summary_response));
+    if (*response == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (request->image.image == NULL) {
+        ERROR("get image summary requires image ref");
+        isulad_set_error_message("get image summary requires image ref");
+        goto pack_response;
+    }
+
+    image_ref = util_strdup_s(request->image.image);
+
+    bim_type = bim_query(image_ref);
+    if (bim_type == NULL) {
+        ERROR("No such image:%s", image_ref);
+        isulad_set_error_message("No such image:%s", image_ref);
+        goto pack_response;
+    }
+
+    bim = bim_get(bim_type->image_type, image_ref, NULL, NULL);
+    if (bim == NULL) {
+        ERROR("Failed to init bim for image %s", image_ref);
+        goto pack_response;
+    }
+    if (bim->ops->image_summary == NULL) {
+        ERROR("Unimplements image status in %s", bim->type);
+        goto pack_response;
+    }
+
+    ret = bim->ops->image_summary(request, *response);
+    if (ret != 0) {
+        ERROR("Failed to get summary of image %s", image_ref);
+        ret = -1;
+    }
+
+pack_response:
+    if (g_isulad_errmsg != NULL) {
+        free((*response)->errmsg);
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+    }
+    free(image_ref);
     bim_put(bim);
     return ret;
 }

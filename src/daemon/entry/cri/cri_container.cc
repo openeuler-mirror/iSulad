@@ -33,6 +33,7 @@
 #include "utils.h"
 
 #include "cri_runtime_service.h"
+#include "service_container_api.h"
 #include "request_cache.h"
 #include "url.h"
 #include "ws_server.h"
@@ -112,8 +113,8 @@ cleanup:
     return runtime;
 }
 
-void CRIRuntimeServiceImpl::GetContainerTimeStamps(container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
-                                                   int64_t *finishedAt, Errors &err)
+void CRIRuntimeServiceImpl::GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
+                                                   int64_t *startedAt, int64_t *finishedAt, Errors &err)
 {
     if (inspect == nullptr) {
         err.SetError("Invalid arguments");
@@ -322,9 +323,11 @@ cleanup:
     return nullptr;
 }
 
-container_create_request *CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
-                                                                                const runtime::v1alpha2::ContainerConfig &containerConfig, const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-                                                                                const std::string &podSandboxRuntime, Errors &error)
+container_create_request *
+CRIRuntimeServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
+                                                      const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                      const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                      const std::string &podSandboxRuntime, Errors &error)
 {
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
@@ -500,7 +503,7 @@ void CRIRuntimeServiceImpl::MakeContainerConfig(const runtime::v1alpha2::Contain
 void CRIRuntimeServiceImpl::GetContainerLogPath(const std::string &containerID, char **path, char **realPath,
                                                 Errors &error)
 {
-    container_inspect *info = InspectContainer(containerID, error);
+    container_inspect *info = InspectContainer(containerID, error, false);
     if (info == nullptr || error.NotEmpty()) {
         error.Errorf("failed to inspect container %s: %s", containerID.c_str(), error.GetCMessage());
         return;
@@ -742,37 +745,33 @@ void CRIRuntimeServiceImpl::ListContainersToGRPC(container_list_response *respon
 
         container->set_created_at(response->containers[i]->created);
 
-        CRINaming::ParseContainerName(response->containers[i]->name, container->mutable_metadata(), error);
-        if (error.NotEmpty()) {
-            return;
+        if (response->containers[i]->name != nullptr) {
+            CRINaming::ParseContainerName(response->containers[i]->name, container->mutable_metadata(), error);
+            if (error.NotEmpty()) {
+                return;
+            }
         }
 
         CRIHelpers::ExtractLabels(response->containers[i]->labels, *container->mutable_labels());
 
         CRIHelpers::ExtractAnnotations(response->containers[i]->annotations, *container->mutable_annotations());
 
-        for (size_t j = 0; j < response->containers[i]->labels->len; j++) {
-            if (strcmp(response->containers[i]->labels->keys[j], CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str()) ==
-                0) {
-                container->set_pod_sandbox_id(response->containers[i]->labels->values[j]);
-                break;
+        if (response->containers[i]->labels != nullptr) {
+            for (size_t j = 0; j < response->containers[i]->labels->len; j++) {
+                if (strcmp(response->containers[i]->labels->keys[j],
+                           CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str()) == 0) {
+                    container->set_pod_sandbox_id(response->containers[i]->labels->values[j]);
+                    break;
+                }
             }
         }
 
         if (response->containers[i]->image != nullptr) {
             runtime::v1alpha2::ImageSpec *image = container->mutable_image();
             image->set_image(response->containers[i]->image);
-            imagetool_image *ir = CRIHelpers::InspectImageByID(response->containers[i]->image, error);
-            if (error.NotEmpty() || ir == nullptr) {
-                error.Errorf("unable to inspect image %s while inspecting container %s: %s",
-                             response->containers[i]->image, response->containers[i]->id,
-                             error.Empty() ? "Unknown" : error.GetMessage().c_str());
-                free_imagetool_image(ir);
-                return;
-            }
-            std::string imageID = CRIHelpers::ToPullableImageID(response->containers[i]->image, ir);
+            std::string imageID =
+                CRIHelpers::ToPullableImageID(response->containers[i]->image, response->containers[i]->image_ref);
             container->set_image_ref(imageID);
-            free_imagetool_image(ir);
         }
 
         runtime::v1alpha2::ContainerState state =
@@ -1061,24 +1060,20 @@ cleanup:
     free_container_stats_response(response);
 }
 
-auto CRIRuntimeServiceImpl::PackContainerImageToStatus(container_inspect *inspect,
+void CRIRuntimeServiceImpl::PackContainerImageToStatus(container_inspect *inspect,
                                                        std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus,
-                                                       Errors &error) -> int
+                                                       Errors &error)
 {
-    if (inspect->image == nullptr) {
-        return 0;
+    if (inspect->config == nullptr) {
+        return;
     }
-    contStatus->mutable_image()->set_image(inspect->config->image);
-    imagetool_image *ir = CRIHelpers::InspectImageByID(inspect->config->image, error);
-    if (error.NotEmpty() || ir == nullptr) {
-        error.Errorf("unable to inspect image %s while inspecting container %s: %s", inspect->config->image,
-                     inspect->name, error.Empty() ? "Unknown" : error.GetMessage().c_str());
-        free_imagetool_image(ir);
-        return -1;
+
+    if (inspect->config->image != nullptr) {
+        contStatus->mutable_image()->set_image(inspect->config->image);
     }
-    contStatus->set_image_ref(CRIHelpers::ToPullableImageID(inspect->config->image, ir));
-    free_imagetool_image(ir);
-    return 0;
+
+    contStatus->set_image_ref(CRIHelpers::ToPullableImageID(inspect->config->image, inspect->config->image_ref));
+    return;
 }
 
 void CRIRuntimeServiceImpl::UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt,
@@ -1189,16 +1184,14 @@ void CRIRuntimeServiceImpl::ContainerStatusToGRPC(container_inspect *inspect,
             return;
         }
     }
-    if (PackContainerImageToStatus(inspect, contStatus, error) != 0) {
-        return;
-    }
+    PackContainerImageToStatus(inspect, contStatus, error);
     UpdateBaseStatusFromInspect(inspect, createdAt, startedAt, finishedAt, contStatus);
     PackLabelsToStatus(inspect, contStatus);
     ConvertMountsToStatus(inspect, contStatus);
 }
 
-std::unique_ptr<runtime::v1alpha2::ContainerStatus> CRIRuntimeServiceImpl::ContainerStatus(
-    const std::string &containerID, Errors &error)
+std::unique_ptr<runtime::v1alpha2::ContainerStatus>
+CRIRuntimeServiceImpl::ContainerStatus(const std::string &containerID, Errors &error)
 {
     if (containerID.empty()) {
         error.SetError("Empty pod sandbox id");
@@ -1212,7 +1205,7 @@ std::unique_ptr<runtime::v1alpha2::ContainerStatus> CRIRuntimeServiceImpl::Conta
         return nullptr;
     }
 
-    container_inspect *inspect = InspectContainer(realContainerID, error);
+    container_inspect *inspect = InspectContainer(realContainerID, error, false);
     if (error.NotEmpty()) {
         return nullptr;
     }
@@ -1418,15 +1411,15 @@ auto CRIRuntimeServiceImpl::ValidateExecRequest(const runtime::v1alpha2::ExecReq
         return -1;
     }
 
-    container_inspect *status = CRIRuntimeServiceImpl::InspectContainer(realContainerID, error);
+    container_inspect_state *state = CRIRuntimeServiceImpl::InspectContainerState(realContainerID, error);
     if (error.NotEmpty()) {
-        ERROR("Failed to inspect container id %s: %s", req.container_id().c_str(), error.GetCMessage());
-        error.Errorf("Failed to inspect container id %s: %s", req.container_id().c_str(), error.GetCMessage());
+        ERROR("Failed to inspect container id %s: %s state", req.container_id().c_str(), error.GetCMessage());
+        error.Errorf("Failed to inspect container id %s: %s state", req.container_id().c_str(), error.GetCMessage());
         return -1;
     }
-    bool running = status->state != nullptr && status->state->running;
-    bool paused = status->state != nullptr && status->state->paused;
-    free_container_inspect(status);
+    bool running = state != nullptr && state->running;
+    bool paused = state != nullptr && state->paused;
+    free_container_inspect_state(state);
     if (!running) {
         ERROR("Container is not running: %s", req.container_id().c_str());
         error.Errorf("Container is not running: %s", req.container_id().c_str());
@@ -1531,43 +1524,26 @@ void CRIRuntimeServiceImpl::Attach(const runtime::v1alpha2::AttachRequest &req, 
     resp->set_url(url);
 }
 
-auto CRIRuntimeServiceImpl::InspectContainer(const std::string &containerID, Errors &err) -> container_inspect *
+container_inspect *CRIRuntimeServiceImpl::InspectContainer(const std::string &Id, Errors &err, bool with_host_config)
 {
     container_inspect *inspect_data { nullptr };
-    container_inspect_response *resp { nullptr };
-    parser_error perr { nullptr };
 
-    if (m_cb == nullptr || m_cb->container.inspect == nullptr) {
-        err.SetError("Umimplements inspect");
-        return inspect_data;
+    inspect_data = inspect_container((const char *)Id.c_str(), 0, with_host_config);
+    if (inspect_data == nullptr) {
+        err.Errorf("Failed to call inspect service %s", Id.c_str());
     }
 
-    container_inspect_request *req =
-        (container_inspect_request *)util_common_calloc_s(sizeof(container_inspect_request));
-    if (req == nullptr) {
-        err.SetError("Out of memory");
-        goto cleanup;
+    return inspect_data;
+}
+
+auto CRIRuntimeServiceImpl::InspectContainerState(const std::string &Id, Errors &err) -> container_inspect_state *
+{
+    container_inspect_state *inspect_data { nullptr };
+
+    inspect_data = inspect_container_state((const char *)Id.c_str(), 0);
+    if (inspect_data == nullptr) {
+        err.Errorf("Failed to call inspect service %s", Id.c_str());
     }
-    req->id = util_strdup_s(containerID.c_str());
-    if (m_cb->container.inspect(req, &resp) != 0) {
-        if (resp != nullptr && resp->errmsg != nullptr) {
-            err.SetError(resp->errmsg);
-        } else {
-            err.Errorf("Failed to call inspect callback");
-        }
-        goto cleanup;
-    }
-    /* parse oci container json */
-    if (resp != nullptr && (resp->container_json != nullptr)) {
-        inspect_data = container_inspect_parse_data(resp->container_json, nullptr, &perr);
-        if (inspect_data == nullptr) {
-            err.Errorf("Parse container json failed: %s", perr);
-            goto cleanup;
-        }
-    }
-cleanup:
-    free_container_inspect_request(req);
-    free_container_inspect_response(resp);
-    free(perr);
+
     return inspect_data;
 }

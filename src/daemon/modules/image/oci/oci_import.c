@@ -505,7 +505,7 @@ out:
 int oci_do_import(char *file, char *tag, char **id)
 {
     int ret = 0;
-    imagetool_image *image = NULL;
+    imagetool_image_summary *image = NULL;
 
     if (file == NULL || tag == NULL || id == NULL) {
         ERROR("Invalid NULL param");
@@ -525,7 +525,7 @@ int oci_do_import(char *file, char *tag, char **id)
         goto out;
     }
 
-    image = storage_img_get(tag);
+    image = storage_img_get_summary(tag);
     if (image == NULL) {
         ERROR("get image %s failed after import", tag);
         isulad_try_set_error_message("get image %s failed after import", tag);
@@ -536,7 +536,7 @@ int oci_do_import(char *file, char *tag, char **id)
     *id = util_strdup_s(image->id);
 
 out:
-    free_imagetool_image(image);
+    free_imagetool_image_summary(image);
     if (ret != 0) {
         isulad_set_error_message("Import image %s failed: %s", file, g_isulad_errmsg);
     }

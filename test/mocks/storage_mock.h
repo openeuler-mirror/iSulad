@@ -27,23 +27,24 @@ public:
     MOCK_METHOD4(StorageImgCreate, int(const char *id, const char *parent_id, const char *metadata,
                                        struct storage_img_create_options *opts));
     MOCK_METHOD1(StorageImgGet, imagetool_image * (const char *img_id));
+    MOCK_METHOD1(StorageImgGetSummary, imagetool_image_summary * (const char *img_id));
     MOCK_METHOD3(StorageImgSetBigData, int(const char *img_id, const char *key, const char *val));
     MOCK_METHOD2(StorageImgAddName, int(const char *img_id, const char *img_name));
     MOCK_METHOD2(StorageImgDelete, int(const char *img_id, bool commit));
     MOCK_METHOD2(StorageImgSetLoadedTime, int(const char *img_id, types_timestamp_t *loaded_time));
     MOCK_METHOD1(StorageImgSetImageSize, int(const char *image_id));
-    MOCK_METHOD1(StorageGetImgTopLayer, char * (const char *id));
+    MOCK_METHOD1(StorageGetImgTopLayer, char *(const char *id));
     MOCK_METHOD2(StorageLayerCreate, int(const char *layer_id, storage_layer_create_opts_t *opts));
     MOCK_METHOD1(StorageLayerGet, struct layer * (const char *layer_id));
     MOCK_METHOD2(StorageLayerTryRepairLowers, int(const char *layer_id, const char *last_layer_id));
     MOCK_METHOD1(FreeLayer, void(struct layer *l));
-    MOCK_METHOD1(StorageIncHoldRefs, int (const char *layer_id));
-    MOCK_METHOD1(StorageDecHoldRefs, int (const char *layer_id));
+    MOCK_METHOD1(StorageIncHoldRefs, int(const char *layer_id));
+    MOCK_METHOD1(StorageDecHoldRefs, int(const char *layer_id));
     MOCK_METHOD1(StorageRootfsMount, char *(const char *container_id));
-    MOCK_METHOD2(StorageRootfsUmount, int (const char *container_id, bool force));
+    MOCK_METHOD2(StorageRootfsUmount, int(const char *container_id, bool force));
     MOCK_METHOD1(StorageGetMetadataByContainerId, container_inspect_graph_driver * (const char *id));
 };
 
-void MockStorage_SetMock(MockStorage* mock);
+void MockStorage_SetMock(MockStorage *mock);
 
 #endif // _ISULAD_TEST_MOCKS_STORAGE_MOCK_H

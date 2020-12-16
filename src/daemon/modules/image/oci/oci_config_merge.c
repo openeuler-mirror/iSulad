@@ -324,6 +324,15 @@ out:
     return ret;
 }
 
+static void oci_image_merge_image_ref(imagetool_image *image_conf, container_config *container_spec)
+{
+    if (image_conf->repo_digests_len > 0) {
+        container_spec->image_ref = util_strdup_s(image_conf->repo_digests[0]);
+    } else {
+        container_spec->image_ref = util_strdup_s(image_conf->id);
+    }
+}
+
 int oci_image_merge_config(imagetool_image *image_conf, container_config *container_spec)
 {
     int ret = 0;
@@ -365,6 +374,8 @@ int oci_image_merge_config(imagetool_image *image_conf, container_config *contai
         ret = -1;
         goto out;
     }
+
+    oci_image_merge_image_ref(image_conf, container_spec);
 
 out:
     return ret;

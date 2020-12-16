@@ -35,12 +35,11 @@
 #include "utils_array.h"
 #include "utils_string.h"
 #include "utils_regex.h"
-#include "isula_libutils/oci_image_spec.h"
 #include "isula_libutils/defs.h"
 #include "map.h"
 #include "utils_convert.h"
 #include "isula_libutils/imagetool_image.h"
-#include "isula_libutils/docker_image_config_v2.h"
+#include "isula_libutils/imagetool_image_summary.h"
 #include "isula_libutils/registry_manifest_schema1.h"
 #include "isula_libutils/registry_manifest_schema2.h"
 #include "isula_libutils/oci_image_manifest.h"
@@ -299,816 +298,6 @@ static digest_image_t *create_empty_digest_images()
     return digest_images;
 }
 
-static void free_digest_image(digest_image_t *ptr)
-{
-    struct linked_list *item = NULL;
-    struct linked_list *next = NULL;
-
-    if (ptr == NULL) {
-        return;
-    }
-
-    linked_list_for_each_safe(item, &(ptr->images_list), next) {
-        linked_list_del(item);
-        free(item);
-        item = NULL;
-    }
-
-    ptr->images_list_len = 0;
-    free(ptr);
-}
-
-static int append_image_to_digest_images(digest_image_t *digest_images, image_t *img)
-{
-    struct linked_list *item = NULL;
-
-    if (digest_images == NULL) {
-        ERROR("Empty digest images");
-        return -1;
-    }
-
-    if (img == NULL) {
-        return 0;
-    }
-
-    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
-    if (item == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    linked_list_add_elem(item, img);
-    linked_list_add_tail(&digest_images->images_list, item);
-    digest_images->images_list_len++;
-
-    return 0;
-}
-
-static int append_image_according_to_digest(map_t *digest, const char *searchable_digest, image_t *img)
-{
-    int ret = 0;
-    digest_image_t *digest_images = NULL;
-
-    if (searchable_digest == NULL) {
-        return 0;
-    }
-
-    digest_images = (digest_image_t *)map_search(digest, (void *)searchable_digest);
-    if (digest_images != NULL) {
-        if (append_image_to_digest_images(digest_images, img) != 0) {
-            ERROR("Failed to append image to digest images");
-            return -1;
-        }
-    } else {
-        digest_images = create_empty_digest_images();
-        if (digest_images == NULL) {
-            ERROR("Failed to create empty digest images");
-            ret = -1;
-            goto out;
-        }
-
-        if (append_image_to_digest_images(digest_images, img) != 0) {
-            ERROR("Failed to append image to digest images");
-            ret = -1;
-            goto out;
-        }
-
-        if (!map_insert(digest, (void *)searchable_digest, digest_images)) {
-            ERROR("Failed to append image to digest index");
-            ret = -1;
-            goto out;
-        }
-    }
-    digest_images = NULL;
-
-out:
-    free_digest_image(digest_images);
-    return ret;
-}
-
-static int implicit_digest(map_t *digests, image_t *img)
-{
-    size_t index = 0;
-
-    if (img->simage->big_data_digests == NULL) {
-        return 0;
-    }
-
-    if (get_index_by_key((const char **)img->simage->big_data_digests->keys, img->simage->big_data_digests->len,
-                         IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
-        return 0;
-    }
-
-    if (append_image_according_to_digest(digests, img->simage->big_data_digests->values[index], img) != 0) {
-        ERROR("Failed to appaned image to image store digest index");
-        return -1;
-    }
-
-    return 0;
-}
-
-static int explicit_digest(map_t *digests, image_t *img)
-{
-    size_t index = 0;
-    char *value = NULL;
-
-    if (img->simage->big_data_digests == NULL) {
-        return 0;
-    }
-
-    if (get_index_by_key((const char **)img->simage->big_data_digests->keys, img->simage->big_data_digests->len,
-                         IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
-        value = img->simage->big_data_digests->values[index];
-    }
-
-    if (img->simage->digest == NULL) {
-        img->simage->digest = (value != NULL ? util_strdup_s(value) : NULL);
-    } else if (value == NULL || (value != NULL && strcmp(img->simage->digest, value) != 0)) {
-        if (append_image_according_to_digest(digests, img->simage->digest, img) != 0) {
-            ERROR("Failed to appaned image to image store digest index");
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-static int load_image_to_store_field(image_t *img)
-{
-    int ret = 0;
-    bool should_save = false;
-    size_t i;
-
-    if (!map_replace(g_image_store->byid, (void *)img->simage->id, (void *)img)) {
-        ERROR("Failed to insert image to ids");
-        return -1;
-    }
-
-    for (i = 0; i < img->simage->names_len; i++) {
-        image_t *conflict_image = (image_t *)map_search(g_image_store->byname, (void *)img->simage->names[i]);
-        if (conflict_image != NULL) {
-            if (remove_name(conflict_image, img->simage->names[i]) != 0) {
-                ERROR("Failed to remove name from conflict image");
-                ret = -1;
-                goto out;
-            }
-            should_save = true;
-        }
-        if (!map_replace(g_image_store->byname, (void *)img->simage->names[i], (void *)img)) {
-            ERROR("Failed to insert image to names");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    if (should_save && save_image(img->simage) != 0) {
-        ERROR("Failed to save image");
-        ret = -1;
-        goto out;
-    }
-
-    if (implicit_digest(g_image_store->bydigest, img) != 0) {
-        ERROR("Implicit digest failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (explicit_digest(g_image_store->bydigest, img) != 0) {
-        ERROR("Explicit digest failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
-static int do_append_image(storage_image *im)
-{
-    image_t *img = NULL;
-    struct linked_list *item = NULL;
-
-    img = new_image(im);
-    if (img == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
-    if (item == NULL) {
-        ERROR("Out of memory");
-        free_image_t(img);
-        return -1;
-    }
-
-    linked_list_add_elem(item, img);
-    linked_list_add_tail(&g_image_store->images_list, item);
-    g_image_store->images_list_len++;
-
-    if (load_image_to_store_field(img) != 0) {
-        ERROR("Failed to load image to store field");
-        // free memory by g_image_store
-        return -1;
-    }
-
-    return 0;
-}
-
-static void strip_dockerio_prefix(char **name)
-{
-    char *new_image_name = NULL;
-
-    new_image_name = oci_strip_dockerio_prefix(*name);
-    if (new_image_name == NULL) {
-        return;
-    }
-
-    free(*name);
-    *name = new_image_name;
-
-    return;
-}
-
-static int strip_default_hostname(storage_image *im)
-{
-    int ret = 0;
-    size_t i = 0;
-    bool striped = false;
-
-    for (i = 0; i < im->names_len; i++) {
-        if (util_has_prefix(im->names[i], HOSTNAME_TO_STRIP) || util_has_prefix(im->names[i], REPO_PREFIX_TO_STRIP)) {
-            strip_dockerio_prefix(&im->names[i]);
-            striped = true;
-        }
-    }
-
-    if (striped) {
-        ret = save_image(im);
-    }
-
-    return ret;
-}
-
-static int append_image_by_directory(const char *image_dir)
-{
-    int ret = 0;
-    int nret;
-    char image_path[PATH_MAX] = { 0x00 };
-    storage_image *im = NULL;
-    parser_error err = NULL;
-
-    nret = snprintf(image_path, sizeof(image_path), "%s/%s", image_dir, IMAGE_JSON);
-    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
-        ERROR("Failed to get image path");
-        return -1;
-    }
-
-    im = storage_image_parse_file(image_path, NULL, &err);
-    if (im == NULL) {
-        ERROR("Failed to parse images path: %s", err);
-        return -1;
-    }
-
-    ret = strip_default_hostname(im);
-    if (ret != 0) {
-        ERROR("Failed to strip default hostname");
-        goto out;
-    }
-
-    if (do_append_image(im) != 0) {
-        ERROR("Failed to append images");
-        ret = -1;
-        goto out;
-    }
-
-    im = NULL;
-
-out:
-    free_storage_image(im);
-    free(err);
-    return ret;
-}
-
-static int with_valid_converted_config(const char *path, bool *valid)
-{
-    int ret = 0;
-    int nret;
-    char image_path[PATH_MAX] = { 0x00 };
-    char config_path[PATH_MAX] = { 0x00 };
-    char *base_name = NULL;
-    char *sha256_key = NULL;
-    storage_image *img = NULL;
-    parser_error err = NULL;
-    docker_image_config_v2 *v2_config = NULL;
-
-    *valid = false;
-
-    nret = snprintf(image_path, sizeof(image_path), "%s/%s", path, IMAGE_JSON);
-    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
-        ERROR("Failed to get image path");
-        ret = -1;
-        goto out;
-    }
-
-    img = storage_image_parse_file(image_path, NULL, &err);
-    if (img == NULL) {
-        ERROR("Failed to parse image json file : %s", err);
-        ret = -1;
-        goto out;
-    }
-
-    sha256_key = util_full_digest(img->id);
-    if (sha256_key == NULL) {
-        ERROR("Failed to get sha256 key");
-        ret = -1;
-        goto out;
-    }
-
-    base_name = make_big_data_base_name(sha256_key);
-    if (base_name == NULL) {
-        ERROR("Failed to retrieve oci image spec file's base name");
-        ret = -1;
-        goto out;
-    }
-
-    nret = snprintf(config_path, sizeof(config_path), "%s/%s", path, base_name);
-    if (nret < 0 || (size_t)nret >= sizeof(config_path)) {
-        ERROR("Failed to get big data config path");
-        ret = -1;
-        goto out;
-    }
-
-    if (!util_file_exists(config_path)) {
-        DEBUG("version 1 format image");
-        goto out;
-    }
-
-    free(err);
-    err = NULL;
-    v2_config = docker_image_config_v2_parse_file(config_path, NULL, &err);
-    if (v2_config == NULL) {
-        ERROR("Invalid config big data : %s", err);
-        ret = -1;
-        goto out;
-    }
-
-    *valid = true;
-
-out:
-    free(err);
-    free_docker_image_config_v2(v2_config);
-    free_storage_image(img);
-    free(base_name);
-    free(sha256_key);
-    return ret;
-}
-
-static int validate_manifest_schema_version_1(const char *path, bool *valid)
-{
-    int ret = 0;
-    int nret;
-    registry_manifest_schema1 *manifest_v1 = NULL;
-    registry_manifest_schema2 *manifest_v2 = NULL;
-    oci_image_manifest *manifest_oci = NULL;
-    parser_error err = NULL;
-    char manifest_path[PATH_MAX] = { 0x00 };
-    bool valid_v2_config = false;
-
-    *valid = false;
-    nret = snprintf(manifest_path, sizeof(manifest_path), "%s/%s", path, IMAGE_DIGEST_BIG_DATA_KEY);
-    if (nret < 0 || (size_t)nret >= sizeof(manifest_path)) {
-        ERROR("Failed to get big data manifest path");
-        ret = -1;
-        goto out;
-    }
-
-    manifest_v2 = registry_manifest_schema2_parse_file(manifest_path, NULL, &err);
-    if (manifest_v2 != NULL) {
-        goto out;
-    }
-
-    free(err);
-    err = NULL;
-
-    manifest_oci = oci_image_manifest_parse_file(manifest_path, NULL, &err);
-    if (manifest_oci != NULL) {
-        goto out;
-    }
-
-    free(err);
-    err = NULL;
-
-    manifest_v1 = registry_manifest_schema1_parse_file(manifest_path, NULL, &err);
-    if (manifest_v1 == NULL) {
-        ERROR("Invalid manifest format");
-        ret = -1;
-        goto out;
-    }
-
-    if (with_valid_converted_config(path, &valid_v2_config) != 0) {
-        ERROR("Failed to valite converted config");
-        ret = -1;
-        goto out;
-    }
-
-    *valid = (manifest_v1->schema_version == 1) && !valid_v2_config;
-
-out:
-    free(err);
-    free_registry_manifest_schema1(manifest_v1);
-    free_registry_manifest_schema2(manifest_v2);
-    free_oci_image_manifest(manifest_oci);
-    return ret;
-}
-
-static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, layer_blob **ls, size_t *len)
-{
-    int ret = 0;
-    int i = 0;
-    int index = 0;
-    layer_blob *layers = NULL;
-    parser_error err = NULL;
-    image_manifest_v1_compatibility *v1config = NULL;
-    struct layer_list *list = NULL;
-    char *parent_chain_id = NULL;
-    size_t j = 0;
-
-    if (manifest->fs_layers_len > MAX_LAYER_NUM || manifest->fs_layers_len == 0) {
-        ERROR("Invalid layer number %ld, maxium is %d and it can't be 0", manifest->fs_layers_len, MAX_LAYER_NUM);
-        ret = -1;
-        goto out;
-    }
-
-    if (manifest->fs_layers_len != manifest->history_len) {
-        ERROR("Invalid layer number %ld do not match history number %ld", manifest->fs_layers_len,
-              manifest->history_len);
-        ret = -1;
-        goto out;
-    }
-
-    layers = util_common_calloc_s(sizeof(layer_blob) * manifest->fs_layers_len);
-    if (layers == NULL) {
-        ERROR("out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    for (i = (int)manifest->fs_layers_len - 1, index = 0; i >= 0; i--, index++) {
-        free(err);
-        err = NULL;
-        v1config = image_manifest_v1_compatibility_parse_data(manifest->history[i]->v1compatibility, NULL, &err);
-        if (v1config == NULL) {
-            ERROR("parse v1 compatibility %d failed, err: %s", i, err);
-            ret = -1;
-            goto out;
-        }
-
-        layers[index].empty_layer = v1config->throwaway;
-        free_image_manifest_v1_compatibility(v1config);
-        v1config = NULL;
-        // Cann't download an empty layer, skip related information.
-        if (layers[index].empty_layer) {
-            continue;
-        }
-
-        layers[index].media_type = util_strdup_s(DOCKER_IMAGE_LAYER_TAR_GZIP);
-        layers[index].digest = util_strdup_s(manifest->fs_layers[i]->blob_sum);
-        list = storage_layers_get_by_compress_digest(layers[index].digest);
-        if (list != NULL) {
-            for (j = 0; j < list->layers_len; j++) {
-                if ((list->layers[j]->parent == NULL && index == 0) ||
-                    (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
-                     !strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)))) {
-                    layers[index].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);
-                    layers[i].chain_id = util_string_append(list->layers[j]->id, SHA256_PREFIX);
-                    parent_chain_id = layers[i].chain_id;
-                    break;
-                }
-            }
-            free_layer_list(list);
-            list = NULL;
-        }
-    }
-
-    *ls = layers;
-    *len = manifest->fs_layers_len;
-    layers = NULL;
-    index = 0;
-
-out:
-    for (i = 0; i < index; i++) {
-        free_layer_blob(&layers[i]);
-    }
-    free(layers);
-    layers = NULL;
-    free_image_manifest_v1_compatibility(v1config);
-    v1config = NULL;
-    free(err);
-    err = NULL;
-
-    return ret;
-}
-
-static int update_config_file(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
-                              docker_image_config_v2 *config)
-{
-    // Delete items that do not want to inherit
-    free_items_not_inherit(config);
-
-    // Add rootfs and history
-    if (add_rootfs_and_history(layers, layers_len, manifest, config) != 0) {
-        ERROR("Add rootfs and history to config failed");
-        return -1;
-    }
-
-    return 0;
-}
-
-static int update_image_info(types_timestamp_t *created, const char *config_digest, storage_image *img)
-{
-    char timebuffer[TIME_STR_SIZE] = { 0x00 };
-
-    free(img->id);
-    img->id = util_strdup_s(config_digest);
-
-    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
-    img->loaded = util_strdup_s(timebuffer);
-
-    if (created != NULL && (created->has_seconds || created->has_nanos) &&
-        !util_get_time_buffer(created, timebuffer, sizeof(timebuffer))) {
-        ERROR("Failed to get time buffer");
-        return -1;
-    }
-
-    free(img->created);
-    img->created = util_strdup_s(timebuffer);
-
-    return 0;
-}
-
-static int append_converted_image_to_store(const storage_image *img)
-{
-    int nret;
-    char image_path[PATH_MAX] = { 0x00 };
-
-    nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, img->id);
-    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
-        ERROR("Failed to get image path");
-        return -1;
-    }
-
-    if (append_image_by_directory(image_path) != 0) {
-        ERROR("Found image path but load json failed: %s", img->id);
-        return -1;
-    }
-
-    return 0;
-}
-
-static int set_big_data_for_converted_image(const char *id, const char *config_digest, const char *path,
-                                            const char *json)
-{
-    int ret = 0;
-    int nret;
-    char manifest_path[PATH_MAX] = { 0x00 };
-    char *manifest_str = NULL;
-    char *full_config_digest = NULL;
-
-    full_config_digest = util_full_digest(config_digest);
-    if (full_config_digest == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    if (image_store_set_big_data(id, full_config_digest, json) != 0) {
-        ERROR("Failed to set config big data");
-        ret = -1;
-        goto out;
-    }
-
-    nret = snprintf(manifest_path, sizeof(manifest_path), "%s/%s", path, IMAGE_DIGEST_BIG_DATA_KEY);
-    if (nret < 0 || (size_t)nret >= sizeof(manifest_path)) {
-        ERROR("Failed to get image manifest path");
-        ret = -1;
-        goto out;
-    }
-    manifest_str = util_read_text_file(manifest_path);
-    if (manifest_str == NULL) {
-        ERROR("read file %s content failed", manifest_path);
-        ret = -1;
-        goto out;
-    }
-
-    if (image_store_set_big_data(id, IMAGE_DIGEST_BIG_DATA_KEY, manifest_str) != 0) {
-        ERROR("Failed to set manifest big data");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(full_config_digest);
-    free(manifest_str);
-    return ret;
-}
-
-static int convert_to_v2_image_and_load(const char *path)
-{
-    int ret = 0;
-    int sret = 0;
-    parser_error err = NULL;
-    docker_image_config_v2 *config = NULL;
-    registry_manifest_schema1 *manifest = NULL;
-    layer_blob *layers = NULL;
-    size_t layers_len = 0;
-    char *config_json = NULL;
-    char image_file[PATH_MAX] = { 0x00 };
-    char manifest_path[PATH_MAX] = { 0x00 };
-    char *config_digest = NULL;
-    storage_image *img = NULL;
-    size_t i;
-    types_timestamp_t created;
-
-    sret = snprintf(manifest_path, sizeof(manifest_path), "%s/%s", path, IMAGE_DIGEST_BIG_DATA_KEY);
-    if (sret < 0 || (size_t)sret >= sizeof(manifest_path)) {
-        ERROR("Failed to receive manifest path");
-        return -1;
-    }
-
-    manifest = registry_manifest_schema1_parse_file(manifest_path, NULL, &err);
-    if (manifest == NULL) {
-        ERROR("parse manifest schema1 failed, err: %s", err);
-        ret = -1;
-        goto out;
-    }
-
-    if (get_layers_from_manifest(manifest, &layers, &layers_len) != 0) {
-        ERROR("Failed to get layers info from manifest");
-        ret = -1;
-        goto out;
-    }
-
-    free(err);
-    err = NULL;
-
-    config = docker_image_config_v2_parse_data(manifest->history[0]->v1compatibility, NULL, &err);
-    if (config == NULL) {
-        ERROR("parse image config v2 failed, err: %s", err);
-        ret = -1;
-        goto out;
-    }
-
-    if (update_config_file(layers, layers_len, manifest, config) != 0) {
-        ERROR("Failed to update config");
-        ret = -1;
-        goto out;
-    }
-
-    free(err);
-    err = NULL;
-    config_json = docker_image_config_v2_generate_json(config, NULL, &err);
-    if (config_json == NULL) {
-        ret = -1;
-        ERROR("generate json from config failed in %s", path);
-        goto out;
-    }
-
-    config_digest = sha256_digest_str(config_json);
-    sret = snprintf(image_file, sizeof(image_file), "%s/%s", path, IMAGE_JSON);
-    if (sret < 0 || (size_t)sret >= sizeof(image_file)) {
-        ERROR("Failed to sprintf file for image");
-        ret = -1;
-        goto out;
-    }
-
-    free(err);
-    err = NULL;
-    img = storage_image_parse_file(image_file, NULL, &err);
-    if (img == NULL) {
-        ERROR("Failed to parse image json file");
-        ret = -1;
-        goto out;
-    }
-
-    created = util_to_timestamp_from_str(config->created);
-    if (update_image_info(&created, config_digest, img) != 0) {
-        ERROR("Failed to update image info");
-        ret = -1;
-        goto out;
-    }
-
-    if (save_image(img) != 0) {
-        ERROR("Failed to save image");
-        ret = -1;
-        goto out;
-    }
-
-    // append image to store
-    if (append_converted_image_to_store(img) != 0) {
-        ERROR("Failed to append converted image to store");
-        ret = -1;
-        goto out;
-    }
-
-    // set big data - config / manifest
-    if (set_big_data_for_converted_image(img->id, config_digest, path, config_json) != 0) {
-        ERROR("Failed to set big data file for converted image");
-        ret = -1;
-        goto out;
-    }
-
-    // delete the directory of old v1 image
-    if (util_recursive_rmdir(path, 0) != 0) {
-        ERROR("Failed to delete image directory : %s", path);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(err);
-    free_registry_manifest_schema1(manifest);
-    free_docker_image_config_v2(config);
-    for (i = 0; i < layers_len; i++) {
-        free_layer_blob(&layers[i]);
-    }
-    free(layers);
-    free(config_json);
-    free(config_digest);
-    free_storage_image(img);
-    return ret;
-}
-
-static int get_images_from_json()
-{
-    int ret = 0;
-    int nret;
-    char **image_dirs = NULL;
-    size_t image_dirs_num = 0;
-    size_t i;
-    char *id_patten = "^[a-f0-9]{64}$";
-    char image_path[PATH_MAX] = { 0x00 };
-
-    ret = util_list_all_subdir(g_image_store->dir, &image_dirs);
-    if (ret != 0) {
-        ERROR("Failed to get images directory");
-        goto out;
-    }
-    image_dirs_num = util_array_len((const char **)image_dirs);
-
-    for (i = 0; i < image_dirs_num; i++) {
-        bool valid_v1_image = false;
-
-        if (util_reg_match(id_patten, image_dirs[i]) != 0) {
-            DEBUG("Image's json is placed inside image's data directory, so skip any other file or directory: %s",
-                  image_dirs[i]);
-            continue;
-        }
-
-        DEBUG("Restore the images:%s", image_dirs[i]);
-        nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, image_dirs[i]);
-        if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
-            ERROR("Failed to get image path");
-            continue;
-        }
-
-        if (validate_manifest_schema_version_1(image_path, &valid_v1_image) != 0) {
-            ERROR("Failed to validate manifest schema version 1 format");
-            continue;
-        }
-
-        if (!valid_v1_image) {
-            if (append_image_by_directory(image_path) != 0) {
-                ERROR("Found image path but load json failed: %s", image_dirs[i]);
-                continue;
-            }
-        } else {
-            if (convert_to_v2_image_and_load(image_path) != 0) {
-                ERROR("Failed to convert image to v2 format image and load to store");
-                continue;
-            }
-        }
-    }
-
-out:
-    util_free_array(image_dirs);
-    return ret;
-}
-
-static int image_store_load()
-{
-    if (g_image_store->loaded) {
-        DEBUG("Do not need reload if daemon");
-        return 0;
-    }
-
-    if (get_images_from_json() != 0) {
-        ERROR("Failed to get images from json");
-        return -1;
-    }
-
-    g_image_store->loaded = true;
-
-    return 0;
-}
-
 static char *get_image_store_root_path(const struct storage_module_init_options *opts)
 {
     int nret = 0;
@@ -1131,133 +320,6 @@ static char *get_image_store_root_path(const struct storage_module_init_options 
     }
 
     return root_dir;
-}
-
-int image_store_init(struct storage_module_init_options *opts)
-{
-    int ret = 0;
-    char *root_dir = NULL;
-
-    if (g_image_store != NULL) {
-        ERROR("Image store has already been initialized");
-        return -1;
-    }
-
-    root_dir = get_image_store_root_path(opts);
-    if (root_dir == NULL) {
-        return ret;
-    }
-
-    ret = util_mkdir_p(root_dir, IMAGE_STORE_PATH_MODE);
-    if (ret < 0) {
-        ERROR("Unable to create image store directory %s.", root_dir);
-        ret = -1;
-        goto out;
-    }
-
-    g_image_store = (image_store_t *)util_common_calloc_s(sizeof(image_store_t));
-    if (g_image_store == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    ret = pthread_rwlock_init(&(g_image_store->rwlock), NULL);
-    if (ret != 0) {
-        ERROR("Failed to init image store rwlock");
-        ret = -1;
-        goto out;
-    }
-
-    g_image_store->dir = root_dir;
-    root_dir = NULL;
-
-    g_image_store->images_list_len = 0;
-    linked_list_init(&g_image_store->images_list);
-
-    g_image_store->byid = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, image_store_field_kvfree);
-    if (g_image_store->byid == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    g_image_store->byname = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, image_store_field_kvfree);
-    if (g_image_store->byname == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    g_image_store->bydigest = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, image_store_digest_field_kvfree);
-    if (g_image_store->bydigest == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    ret = image_store_load();
-    if (ret != 0) {
-        ERROR("Failed to load image store");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    if (ret != 0) {
-        free_image_store(g_image_store);
-        g_image_store = NULL;
-    }
-    free(root_dir);
-    return ret;
-}
-
-static int image_store_append_image(const char *id, const char *searchable_digest, image_t *img)
-{
-    int ret = 0;
-    size_t i = 0;
-    struct linked_list *item = NULL;
-
-    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
-    if (item == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    linked_list_add_elem(item, img);
-    linked_list_add_tail(&g_image_store->images_list, item);
-    g_image_store->images_list_len++;
-
-    if (!map_insert(g_image_store->byid, (void *)id, (void *)img)) {
-        ERROR("Failed to insert image to image store");
-        ret = -1;
-        goto out;
-    }
-
-    if (append_image_according_to_digest(g_image_store->bydigest, searchable_digest, img) != 0) {
-        ERROR("Failed to insert image to image store digest index");
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < img->simage->names_len; i++) {
-        if (map_search(g_image_store->byname, (void *)img->simage->names[i]) != NULL) {
-            ERROR("Image name is already in use : %s", img->simage->names[i]);
-            ret = -1;
-            goto out;
-        }
-        if (!map_insert(g_image_store->byname, (void *)img->simage->names[i], (void *)img)) {
-            ERROR("Failed to insert image to image store's byname");
-            ret = -1;
-            goto out;
-        }
-    }
-
-out:
-    if (ret != 0) {
-        linked_list_del(item);
-        free(item);
-    }
-    return ret;
 }
 
 static char *generate_random_image_id()
@@ -1582,6 +644,140 @@ out:
     return ret;
 }
 
+static int append_image_to_digest_images(digest_image_t *digest_images, image_t *img)
+{
+    struct linked_list *item = NULL;
+
+    if (digest_images == NULL) {
+        ERROR("Empty digest images");
+        return -1;
+    }
+
+    if (img == NULL) {
+        return 0;
+    }
+
+    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
+    if (item == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    linked_list_add_elem(item, img);
+    linked_list_add_tail(&digest_images->images_list, item);
+    digest_images->images_list_len++;
+
+    return 0;
+}
+
+static void free_digest_image(digest_image_t *ptr)
+{
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+
+    if (ptr == NULL) {
+        return;
+    }
+
+    linked_list_for_each_safe(item, &(ptr->images_list), next) {
+        linked_list_del(item);
+        free(item);
+        item = NULL;
+    }
+
+    ptr->images_list_len = 0;
+    free(ptr);
+}
+
+static int append_image_according_to_digest(map_t *digest, const char *searchable_digest, image_t *img)
+{
+    int ret = 0;
+    digest_image_t *digest_images = NULL;
+
+    if (searchable_digest == NULL) {
+        return 0;
+    }
+
+    digest_images = (digest_image_t *)map_search(digest, (void *)searchable_digest);
+    if (digest_images != NULL) {
+        if (append_image_to_digest_images(digest_images, img) != 0) {
+            ERROR("Failed to append image to digest images");
+            return -1;
+        }
+    } else {
+        digest_images = create_empty_digest_images();
+        if (digest_images == NULL) {
+            ERROR("Failed to create empty digest images");
+            ret = -1;
+            goto out;
+        }
+
+        if (append_image_to_digest_images(digest_images, img) != 0) {
+            ERROR("Failed to append image to digest images");
+            ret = -1;
+            goto out;
+        }
+
+        if (!map_insert(digest, (void *)searchable_digest, digest_images)) {
+            ERROR("Failed to append image to digest index");
+            ret = -1;
+            goto out;
+        }
+    }
+    digest_images = NULL;
+
+out:
+    free_digest_image(digest_images);
+    return ret;
+}
+
+static int image_store_append_image(const char *id, const char *searchable_digest, image_t *img)
+{
+    int ret = 0;
+    size_t i = 0;
+    struct linked_list *item = NULL;
+
+    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
+    if (item == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    linked_list_add_elem(item, img);
+    linked_list_add_tail(&g_image_store->images_list, item);
+    g_image_store->images_list_len++;
+
+    if (!map_insert(g_image_store->byid, (void *)id, (void *)img)) {
+        ERROR("Failed to insert image to image store");
+        ret = -1;
+        goto out;
+    }
+
+    if (append_image_according_to_digest(g_image_store->bydigest, searchable_digest, img) != 0) {
+        ERROR("Failed to insert image to image store digest index");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < img->simage->names_len; i++) {
+        if (map_search(g_image_store->byname, (void *)img->simage->names[i]) != NULL) {
+            ERROR("Image name is already in use : %s", img->simage->names[i]);
+            ret = -1;
+            goto out;
+        }
+        if (!map_insert(g_image_store->byname, (void *)img->simage->names[i], (void *)img)) {
+            ERROR("Failed to insert image to image store's byname");
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    if (ret != 0) {
+        linked_list_del(item);
+        free(item);
+    }
+    return ret;
+}
+
 char *image_store_create(const char *id, const char **names, size_t names_len, const char *layer, const char *metadata,
                          const types_timestamp_t *time, const char *searchable_digest)
 {
@@ -1633,7 +829,7 @@ char *image_store_create(const char *id, const char **names, size_t names_len, c
         goto out;
     }
 
-    img = new_image(im);
+    img = new_image(im, g_image_store->dir);
     if (img == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -1986,6 +1182,10 @@ int image_store_set_big_data(const char *id, const char *key, const char *data)
         ERROR("Failed to update image big data");
         ret = -1;
         goto out;
+    }
+
+    if (img->spec == NULL) {
+        (void)try_fill_image_spec(img, image_id, g_image_store->dir);
     }
 
     if (save && save_image(img->simage) != 0) {
@@ -3019,14 +2219,13 @@ out:
     return ret;
 }
 
-static int pack_health_check_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
+static int pack_health_check_from_image(const oci_image_spec *spec, imagetool_image *info)
 {
     int ret = 0;
     size_t i;
     defs_health_check *healthcheck = NULL;
 
-    if (config_v2->config == NULL || config_v2->config->healthcheck == NULL ||
-        config_v2->config->healthcheck->test_len == 0) {
+    if (spec->config == NULL || spec->config->healthcheck == NULL || spec->config->healthcheck->test_len == 0) {
         return 0;
     }
 
@@ -3037,21 +2236,21 @@ static int pack_health_check_from_image(const docker_image_config_v2 *config_v2,
         goto out;
     }
 
-    healthcheck->test = util_common_calloc_s(sizeof(char *) * config_v2->config->healthcheck->test_len);
+    healthcheck->test = util_common_calloc_s(sizeof(char *) * spec->config->healthcheck->test_len);
     if (healthcheck->test == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
-    for (i = 0; i < config_v2->config->healthcheck->test_len; i++) {
-        healthcheck->test[i] = util_strdup_s(config_v2->config->healthcheck->test[i]);
+    for (i = 0; i < spec->config->healthcheck->test_len; i++) {
+        healthcheck->test[i] = util_strdup_s(spec->config->healthcheck->test[i]);
     }
-    healthcheck->test_len = config_v2->config->healthcheck->test_len;
-    healthcheck->interval = config_v2->config->healthcheck->interval;
-    healthcheck->retries = config_v2->config->healthcheck->retries;
-    healthcheck->start_period = config_v2->config->healthcheck->start_period;
-    healthcheck->timeout = config_v2->config->healthcheck->timeout;
-    healthcheck->exit_on_unhealthy = config_v2->config->healthcheck->exit_on_unhealthy;
+    healthcheck->test_len = spec->config->healthcheck->test_len;
+    healthcheck->interval = spec->config->healthcheck->interval;
+    healthcheck->retries = spec->config->healthcheck->retries;
+    healthcheck->start_period = spec->config->healthcheck->start_period;
+    healthcheck->timeout = spec->config->healthcheck->timeout;
+    healthcheck->exit_on_unhealthy = spec->config->healthcheck->exit_on_unhealthy;
 
     info->healthcheck = healthcheck;
     healthcheck = NULL;
@@ -3061,7 +2260,7 @@ out:
     return ret;
 }
 
-static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, imagetool_image *info)
+static int pack_user_info_from_image(const oci_image_spec *spec, imagetool_image *info)
 {
     int ret = 0;
     char *tmp = NULL;
@@ -3069,12 +2268,12 @@ static int pack_user_info_from_image(const docker_image_config_v2 *config_v2, im
     char *group = NULL;
     long long converted;
 
-    if (config_v2->config == NULL || config_v2->config->user == NULL || strlen(config_v2->config->user) == 0) {
+    if (spec->config == NULL || spec->config->user == NULL || strlen(spec->config->user) == 0) {
         return 0;
     }
 
     // parse user and group by username
-    util_parse_user_group(config_v2->config->user, &user, &group, &tmp);
+    util_parse_user_group(spec->config->user, &user, &group, &tmp);
 
     if (user == NULL) {
         ERROR("Failed to parse user");
@@ -3100,34 +2299,29 @@ out:
     return ret;
 }
 
-static int pack_image_summary_item(const char *filename, imagetool_image *info)
+static int pack_image_summary_item(oci_image_spec *spec, imagetool_image *info)
 {
     int ret = 0;
-    docker_image_config_v2 *config_v2 = NULL;
-    parser_error err = NULL;
 
-    config_v2 = docker_image_config_v2_parse_file(filename, NULL, &err);
-    if (config_v2 == NULL) {
-        ERROR("Failed to parse docker image config v2 : %s", filename);
+    if (spec == NULL) {
+        ERROR("Invalid oci image spec");
         ret = -1;
         goto out;
     }
 
-    if (pack_health_check_from_image(config_v2, info) != 0) {
+    if (pack_health_check_from_image(spec, info) != 0) {
         ERROR("Failed to pack health check config");
         ret = -1;
         goto out;
     }
 
-    if (pack_user_info_from_image(config_v2, info) != 0) {
+    if (pack_user_info_from_image(spec, info) != 0) {
         ERROR("Failed to pack health check config");
         ret = -1;
         goto out;
     }
 
 out:
-    free_docker_image_config_v2(config_v2);
-    free(err);
     return ret;
 }
 
@@ -3173,7 +2367,7 @@ static imagetool_image *get_image_info(image_t *img)
         goto out;
     }
 
-    if (pack_image_summary_item(config_file, info) != 0) {
+    if (pack_image_summary_item(img->spec, info) != 0) {
         ERROR("Failed to pack image summary item from image config");
         ret = -1;
         goto out;
@@ -3199,6 +2393,150 @@ out:
     free(base_name);
     free(config_file);
     free(sha256_key);
+
+    return info;
+}
+
+static int pack_user_info_for_image_summary(const oci_image_spec *spec, imagetool_image_summary *info)
+{
+    int ret = 0;
+    char *tmp = NULL;
+    char *user = NULL;
+    char *group = NULL;
+    long long converted;
+
+    if (spec == NULL || spec->config == NULL || spec->config->user == NULL || strlen(spec->config->user) == 0) {
+        return 0;
+    }
+
+    // parse user and group by username
+    util_parse_user_group(spec->config->user, &user, &group, &tmp);
+
+    if (user == NULL) {
+        ERROR("Failed to parse user");
+        ret = -1;
+        goto out;
+    }
+    if (util_safe_llong(user, &converted) == 0) {
+        if (info->uid == NULL) {
+            info->uid = (imagetool_image_summary_uid *)util_common_calloc_s(sizeof(imagetool_image_summary_uid));
+            if (info->uid == NULL) {
+                ERROR("Out of memory");
+                ret = -1;
+                goto out;
+            }
+        }
+        info->uid->value = (int64_t)converted;
+    } else {
+        info->username = util_strdup_s(user);
+    }
+
+out:
+    free(tmp);
+    return ret;
+}
+
+static int pack_image_tags_and_repo_digest_for_summary(image_t *img, imagetool_image_summary *info)
+{
+    int ret = 0;
+    char *name = NULL;
+    char **tags = NULL;
+    char **digests = NULL;
+    char *image_digest = NULL;
+    char **repo_digests = NULL;
+
+    if (resort_image_names((const char **)img->simage->names, img->simage->names_len, &name, &tags, &digests) != 0) {
+        ERROR("Failed to resort image names");
+        ret = -1;
+        goto out;
+    }
+
+    if (get_image_repo_digests(&digests, tags, img, &image_digest, &repo_digests) != 0) {
+        ERROR("Failed to get image repo digests");
+        ret = -1;
+        goto out;
+    }
+    info->repo_tags = tags;
+    info->repo_tags_len = util_array_len((const char **)tags);
+    tags = NULL;
+    info->repo_digests = repo_digests;
+    info->repo_digests_len = util_array_len((const char **)repo_digests);
+    repo_digests = NULL;
+
+out:
+    free(name);
+    free(image_digest);
+    util_free_array(tags);
+    util_free_array(digests);
+    util_free_array(repo_digests);
+    return ret;
+}
+
+static int pack_image_labels_for_image_summary(const oci_image_spec *spec, imagetool_image_summary *info)
+{
+    int ret = 0;
+
+    if (spec == NULL || spec->config == NULL || spec->config->labels == NULL) {
+        return 0;
+    }
+
+    info->labels = util_common_calloc_s(sizeof(json_map_string_string));
+    if (info->labels == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_json_map_string_string(spec->config->labels, info->labels) != 0) {
+        ERROR("Failed to dup image labels");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static imagetool_image_summary *get_image_summary(image_t *img)
+{
+    int ret = 0;
+    imagetool_image_summary *info = NULL;
+
+    info = util_common_calloc_s(sizeof(imagetool_image_summary));
+    if (info == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    info->id = util_strdup_s(img->simage->id);
+    info->created = util_strdup_s(img->simage->created);
+    info->loaded = util_strdup_s(img->simage->loaded);
+    info->size = img->simage->size;
+    info->top_layer = util_strdup_s(img->simage->layer);
+
+    if (pack_user_info_for_image_summary(img->spec, info) != 0) {
+        ERROR("Failed to pack image user info for image summary");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_image_tags_and_repo_digest_for_summary(img, info) != 0) {
+        ERROR("Failed to pack image tags and repo digest");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_image_labels_for_image_summary(img->spec, info) != 0) {
+        ERROR("Failed to pack image labels");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free_imagetool_image_summary(info);
+        info = NULL;
+    }
 
     return info;
 }
@@ -3231,19 +2569,52 @@ imagetool_image *image_store_get_image(const char *id)
 
     imginfo = get_image_info(img);
     if (imginfo == NULL) {
-        ERROR("Delete image %s due to: Get image information failed, image may be damaged", img->simage->id);
-        image_store_unlock();
-        if (image_store_delete(img->simage->id) != 0) {
-            ERROR("Failed to delete image, please delete residual file manually");
-        }
-        goto out;
+        ERROR("Failed to get detail info of image: %s", img->simage->id);
+        goto unlock;
     }
 
 unlock:
     image_store_unlock();
-out:
     image_ref_dec(img);
     return imginfo;
+}
+
+imagetool_image_summary *image_store_get_image_summary(const char *id)
+{
+    image_t *img = NULL;
+    imagetool_image_summary *img_summary = NULL;
+
+    if (id == NULL) {
+        ERROR("Invalid paratemer, id is NULL");
+        return NULL;
+    }
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready");
+        return NULL;
+    }
+
+    if (!image_store_lock(SHARED)) {
+        ERROR("Failed to lock image store with shared lock, not allowed to get the known image");
+        return NULL;
+    }
+
+    img = lookup(id);
+    if (img == NULL) {
+        WARN("Image not known");
+        goto unlock;
+    }
+
+    img_summary = get_image_summary(img);
+    if (img_summary == NULL) {
+        ERROR("Failed to get summary of image %s", img->simage->id);
+        goto unlock;
+    }
+
+unlock:
+    image_store_unlock();
+    image_ref_dec(img);
+    return img_summary;
 }
 
 int image_store_get_all_images(imagetool_images_list *images_list)
@@ -3279,14 +2650,11 @@ int image_store_get_all_images(imagetool_images_list *images_list)
     }
 
     linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
-        imagetool_image *imginfo = NULL;
+        imagetool_image_summary *imginfo = NULL;
         image_t *img = (image_t *)item->elem;
-        imginfo = get_image_info(img);
+        imginfo = get_image_summary(img);
         if (imginfo == NULL) {
-            ERROR("Delete image %s due to: Get image information failed, image may be damaged", img->simage->id);
-            if (do_delete_image_info(img->simage->id) != 0) {
-                ERROR("Failed to delete image, please delete residual file manually");
-            }
+            ERROR("Failed to get summary info of image: %s", img->simage->id);
             continue;
         }
         images_list->images[images_list->images_len++] = imginfo;
@@ -3382,5 +2750,835 @@ int image_store_get_fs_info(imagetool_fs_info *fs_info)
 
 out:
     free_imagetool_fs_info_image_filesystems_element(fs_usage_tmp);
+    return ret;
+}
+
+static int implicit_digest(map_t *digests, image_t *img)
+{
+    size_t index = 0;
+
+    if (img->simage->big_data_digests == NULL) {
+        return 0;
+    }
+
+    if (get_index_by_key((const char **)img->simage->big_data_digests->keys, img->simage->big_data_digests->len,
+                         IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
+        return 0;
+    }
+
+    if (append_image_according_to_digest(digests, img->simage->big_data_digests->values[index], img) != 0) {
+        ERROR("Failed to appaned image to image store digest index");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int explicit_digest(map_t *digests, image_t *img)
+{
+    size_t index = 0;
+    char *value = NULL;
+
+    if (img->simage->big_data_digests == NULL) {
+        return 0;
+    }
+
+    if (get_index_by_key((const char **)img->simage->big_data_digests->keys, img->simage->big_data_digests->len,
+                         IMAGE_DIGEST_BIG_DATA_KEY, &index)) {
+        value = img->simage->big_data_digests->values[index];
+    }
+
+    if (img->simage->digest == NULL) {
+        img->simage->digest = (value != NULL ? util_strdup_s(value) : NULL);
+    } else if (value == NULL || (value != NULL && strcmp(img->simage->digest, value) != 0)) {
+        if (append_image_according_to_digest(digests, img->simage->digest, img) != 0) {
+            ERROR("Failed to appaned image to image store digest index");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int load_image_to_store_field(image_t *img)
+{
+    int ret = 0;
+    bool should_save = false;
+    size_t i;
+
+    if (!map_replace(g_image_store->byid, (void *)img->simage->id, (void *)img)) {
+        ERROR("Failed to insert image to ids");
+        return -1;
+    }
+
+    for (i = 0; i < img->simage->names_len; i++) {
+        image_t *conflict_image = (image_t *)map_search(g_image_store->byname, (void *)img->simage->names[i]);
+        if (conflict_image != NULL) {
+            if (remove_name(conflict_image, img->simage->names[i]) != 0) {
+                ERROR("Failed to remove name from conflict image");
+                ret = -1;
+                goto out;
+            }
+            should_save = true;
+        }
+        if (!map_replace(g_image_store->byname, (void *)img->simage->names[i], (void *)img)) {
+            ERROR("Failed to insert image to names");
+            ret = -1;
+            goto out;
+        }
+    }
+
+    if (should_save && save_image(img->simage) != 0) {
+        ERROR("Failed to save image");
+        ret = -1;
+        goto out;
+    }
+
+    if (implicit_digest(g_image_store->bydigest, img) != 0) {
+        ERROR("Implicit digest failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (explicit_digest(g_image_store->bydigest, img) != 0) {
+        ERROR("Explicit digest failed");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int do_append_image(storage_image *im)
+{
+    image_t *img = NULL;
+    struct linked_list *item = NULL;
+
+    img = new_image(im, g_image_store->dir);
+    if (img == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    item = util_smart_calloc_s(sizeof(struct linked_list), 1);
+    if (item == NULL) {
+        ERROR("Out of memory");
+        free_image_t(img);
+        return -1;
+    }
+
+    linked_list_add_elem(item, img);
+    linked_list_add_tail(&g_image_store->images_list, item);
+    g_image_store->images_list_len++;
+
+    if (load_image_to_store_field(img) != 0) {
+        ERROR("Failed to load image to store field");
+        // free memory by g_image_store
+        return -1;
+    }
+
+    return 0;
+}
+
+static void strip_dockerio_prefix(char **name)
+{
+    char *new_image_name = NULL;
+
+    new_image_name = oci_strip_dockerio_prefix(*name);
+    if (new_image_name == NULL) {
+        return;
+    }
+
+    free(*name);
+    *name = new_image_name;
+
+    return;
+}
+
+static int strip_default_hostname(storage_image *im)
+{
+    int ret = 0;
+    size_t i = 0;
+    bool striped = false;
+
+    for (i = 0; i < im->names_len; i++) {
+        if (util_has_prefix(im->names[i], HOSTNAME_TO_STRIP) || util_has_prefix(im->names[i], REPO_PREFIX_TO_STRIP)) {
+            strip_dockerio_prefix(&im->names[i]);
+            striped = true;
+        }
+    }
+
+    if (striped) {
+        ret = save_image(im);
+    }
+
+    return ret;
+}
+
+static int append_image_by_directory(const char *image_dir)
+{
+    int ret = 0;
+    int nret;
+    char image_path[PATH_MAX] = { 0x00 };
+    storage_image *im = NULL;
+    parser_error err = NULL;
+
+    nret = snprintf(image_path, sizeof(image_path), "%s/%s", image_dir, IMAGE_JSON);
+    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
+        ERROR("Failed to get image path");
+        return -1;
+    }
+
+    im = storage_image_parse_file(image_path, NULL, &err);
+    if (im == NULL) {
+        ERROR("Failed to parse images path: %s", err);
+        return -1;
+    }
+
+    ret = strip_default_hostname(im);
+    if (ret != 0) {
+        ERROR("Failed to strip default hostname");
+        goto out;
+    }
+
+    if (do_append_image(im) != 0) {
+        ERROR("Failed to append images");
+        ret = -1;
+        goto out;
+    }
+
+    im = NULL;
+
+out:
+    free_storage_image(im);
+    free(err);
+    return ret;
+}
+
+static int with_valid_converted_config(const char *path, bool *valid)
+{
+    int ret = 0;
+    int nret;
+    char image_path[PATH_MAX] = { 0x00 };
+    char config_path[PATH_MAX] = { 0x00 };
+    char *base_name = NULL;
+    char *sha256_key = NULL;
+    storage_image *img = NULL;
+    parser_error err = NULL;
+    docker_image_config_v2 *v2_config = NULL;
+
+    *valid = false;
+
+    nret = snprintf(image_path, sizeof(image_path), "%s/%s", path, IMAGE_JSON);
+    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
+        ERROR("Failed to get image path");
+        ret = -1;
+        goto out;
+    }
+
+    img = storage_image_parse_file(image_path, NULL, &err);
+    if (img == NULL) {
+        ERROR("Failed to parse image json file : %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    sha256_key = util_full_digest(img->id);
+    if (sha256_key == NULL) {
+        ERROR("Failed to get sha256 key");
+        ret = -1;
+        goto out;
+    }
+
+    base_name = make_big_data_base_name(sha256_key);
+    if (base_name == NULL) {
+        ERROR("Failed to retrieve oci image spec file's base name");
+        ret = -1;
+        goto out;
+    }
+
+    nret = snprintf(config_path, sizeof(config_path), "%s/%s", path, base_name);
+    if (nret < 0 || (size_t)nret >= sizeof(config_path)) {
+        ERROR("Failed to get big data config path");
+        ret = -1;
+        goto out;
+    }
+
+    if (!util_file_exists(config_path)) {
+        DEBUG("version 1 format image");
+        goto out;
+    }
+
+    free(err);
+    err = NULL;
+    v2_config = docker_image_config_v2_parse_file(config_path, NULL, &err);
+    if (v2_config == NULL) {
+        ERROR("Invalid config big data : %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    *valid = true;
+
+out:
+    free(err);
+    free_docker_image_config_v2(v2_config);
+    free_storage_image(img);
+    free(base_name);
+    free(sha256_key);
+    return ret;
+}
+
+static int validate_manifest_schema_version_1(const char *path, bool *valid)
+{
+    int ret = 0;
+    int nret;
+    registry_manifest_schema1 *manifest_v1 = NULL;
+    registry_manifest_schema2 *manifest_v2 = NULL;
+    oci_image_manifest *manifest_oci = NULL;
+    parser_error err = NULL;
+    char manifest_path[PATH_MAX] = { 0x00 };
+    bool valid_v2_config = false;
+
+    *valid = false;
+    nret = snprintf(manifest_path, sizeof(manifest_path), "%s/%s", path, IMAGE_DIGEST_BIG_DATA_KEY);
+    if (nret < 0 || (size_t)nret >= sizeof(manifest_path)) {
+        ERROR("Failed to get big data manifest path");
+        ret = -1;
+        goto out;
+    }
+
+    manifest_v2 = registry_manifest_schema2_parse_file(manifest_path, NULL, &err);
+    if (manifest_v2 != NULL) {
+        goto out;
+    }
+
+    free(err);
+    err = NULL;
+
+    manifest_oci = oci_image_manifest_parse_file(manifest_path, NULL, &err);
+    if (manifest_oci != NULL) {
+        goto out;
+    }
+
+    free(err);
+    err = NULL;
+
+    manifest_v1 = registry_manifest_schema1_parse_file(manifest_path, NULL, &err);
+    if (manifest_v1 == NULL) {
+        ERROR("Invalid manifest format");
+        ret = -1;
+        goto out;
+    }
+
+    if (with_valid_converted_config(path, &valid_v2_config) != 0) {
+        ERROR("Failed to valite converted config");
+        ret = -1;
+        goto out;
+    }
+
+    *valid = (manifest_v1->schema_version == 1) && !valid_v2_config;
+
+out:
+    free(err);
+    free_registry_manifest_schema1(manifest_v1);
+    free_registry_manifest_schema2(manifest_v2);
+    free_oci_image_manifest(manifest_oci);
+    return ret;
+}
+
+static int get_layers_from_manifest(const registry_manifest_schema1 *manifest, layer_blob **ls, size_t *len)
+{
+    int ret = 0;
+    int i = 0;
+    int index = 0;
+    layer_blob *layers = NULL;
+    parser_error err = NULL;
+    image_manifest_v1_compatibility *v1config = NULL;
+    struct layer_list *list = NULL;
+    char *parent_chain_id = NULL;
+    size_t j = 0;
+
+    if (manifest->fs_layers_len > MAX_LAYER_NUM || manifest->fs_layers_len == 0) {
+        ERROR("Invalid layer number %ld, maxium is %d and it can't be 0", manifest->fs_layers_len, MAX_LAYER_NUM);
+        ret = -1;
+        goto out;
+    }
+
+    if (manifest->fs_layers_len != manifest->history_len) {
+        ERROR("Invalid layer number %ld do not match history number %ld", manifest->fs_layers_len,
+              manifest->history_len);
+        ret = -1;
+        goto out;
+    }
+
+    layers = util_common_calloc_s(sizeof(layer_blob) * manifest->fs_layers_len);
+    if (layers == NULL) {
+        ERROR("out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = (int)manifest->fs_layers_len - 1, index = 0; i >= 0; i--, index++) {
+        free(err);
+        err = NULL;
+        v1config = image_manifest_v1_compatibility_parse_data(manifest->history[i]->v1compatibility, NULL, &err);
+        if (v1config == NULL) {
+            ERROR("parse v1 compatibility %d failed, err: %s", i, err);
+            ret = -1;
+            goto out;
+        }
+
+        layers[index].empty_layer = v1config->throwaway;
+        free_image_manifest_v1_compatibility(v1config);
+        v1config = NULL;
+        // Cann't download an empty layer, skip related information.
+        if (layers[index].empty_layer) {
+            continue;
+        }
+
+        layers[index].media_type = util_strdup_s(DOCKER_IMAGE_LAYER_TAR_GZIP);
+        layers[index].digest = util_strdup_s(manifest->fs_layers[i]->blob_sum);
+        list = storage_layers_get_by_compress_digest(layers[index].digest);
+        if (list != NULL) {
+            for (j = 0; j < list->layers_len; j++) {
+                if ((list->layers[j]->parent == NULL && index == 0) ||
+                    (parent_chain_id != NULL && list->layers[j]->parent != NULL &&
+                     !strcmp(list->layers[j]->parent, util_without_sha256_prefix(parent_chain_id)))) {
+                    layers[index].diff_id = util_strdup_s(list->layers[j]->uncompressed_digest);
+                    layers[i].chain_id = util_string_append(list->layers[j]->id, SHA256_PREFIX);
+                    parent_chain_id = layers[i].chain_id;
+                    break;
+                }
+            }
+            free_layer_list(list);
+            list = NULL;
+        }
+    }
+
+    *ls = layers;
+    *len = manifest->fs_layers_len;
+    layers = NULL;
+    index = 0;
+
+out:
+    for (i = 0; i < index; i++) {
+        free_layer_blob(&layers[i]);
+    }
+    free(layers);
+    layers = NULL;
+    free_image_manifest_v1_compatibility(v1config);
+    v1config = NULL;
+    free(err);
+    err = NULL;
+
+    return ret;
+}
+
+static int update_config_file(const layer_blob *layers, size_t layers_len, const registry_manifest_schema1 *manifest,
+                              docker_image_config_v2 *config)
+{
+    // Delete items that do not want to inherit
+    free_items_not_inherit(config);
+
+    // Add rootfs and history
+    if (add_rootfs_and_history(layers, layers_len, manifest, config) != 0) {
+        ERROR("Add rootfs and history to config failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int update_image_info(types_timestamp_t *created, const char *config_digest, storage_image *img)
+{
+    char timebuffer[TIME_STR_SIZE] = { 0x00 };
+
+    free(img->id);
+    img->id = util_strdup_s(config_digest);
+
+    (void)util_get_now_time_buffer(timebuffer, sizeof(timebuffer));
+    img->loaded = util_strdup_s(timebuffer);
+
+    if (created != NULL && (created->has_seconds || created->has_nanos) &&
+        !util_get_time_buffer(created, timebuffer, sizeof(timebuffer))) {
+        ERROR("Failed to get time buffer");
+        return -1;
+    }
+
+    free(img->created);
+    img->created = util_strdup_s(timebuffer);
+
+    return 0;
+}
+
+static int append_converted_image_to_store(const storage_image *img)
+{
+    int nret;
+    char image_path[PATH_MAX] = { 0x00 };
+
+    nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, img->id);
+    if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
+        ERROR("Failed to get image path");
+        return -1;
+    }
+
+    if (append_image_by_directory(image_path) != 0) {
+        ERROR("Found image path but load json failed: %s", img->id);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int set_big_data_for_converted_image(const char *id, const char *config_digest, const char *path,
+                                            const char *json)
+{
+    int ret = 0;
+    int nret;
+    char manifest_path[PATH_MAX] = { 0x00 };
+    char *manifest_str = NULL;
+    char *full_config_digest = NULL;
+
+    full_config_digest = util_full_digest(config_digest);
+    if (full_config_digest == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_set_big_data(id, full_config_digest, json) != 0) {
+        ERROR("Failed to set config big data");
+        ret = -1;
+        goto out;
+    }
+
+    nret = snprintf(manifest_path, sizeof(manifest_path), "%s/%s", path, IMAGE_DIGEST_BIG_DATA_KEY);
+    if (nret < 0 || (size_t)nret >= sizeof(manifest_path)) {
+        ERROR("Failed to get image manifest path");
+        ret = -1;
+        goto out;
+    }
+    manifest_str = util_read_text_file(manifest_path);
+    if (manifest_str == NULL) {
+        ERROR("read file %s content failed", manifest_path);
+        ret = -1;
+        goto out;
+    }
+
+    if (image_store_set_big_data(id, IMAGE_DIGEST_BIG_DATA_KEY, manifest_str) != 0) {
+        ERROR("Failed to set manifest big data");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(full_config_digest);
+    free(manifest_str);
+    return ret;
+}
+
+static int convert_to_v2_image_and_load(const char *path)
+{
+    int ret = 0;
+    int sret = 0;
+    parser_error err = NULL;
+    docker_image_config_v2 *config = NULL;
+    registry_manifest_schema1 *manifest = NULL;
+    layer_blob *layers = NULL;
+    size_t layers_len = 0;
+    char *config_json = NULL;
+    char image_file[PATH_MAX] = { 0x00 };
+    char manifest_path[PATH_MAX] = { 0x00 };
+    char *config_digest = NULL;
+    storage_image *img = NULL;
+    size_t i;
+    types_timestamp_t created;
+
+    sret = snprintf(manifest_path, sizeof(manifest_path), "%s/%s", path, IMAGE_DIGEST_BIG_DATA_KEY);
+    if (sret < 0 || (size_t)sret >= sizeof(manifest_path)) {
+        ERROR("Failed to receive manifest path");
+        return -1;
+    }
+
+    manifest = registry_manifest_schema1_parse_file(manifest_path, NULL, &err);
+    if (manifest == NULL) {
+        ERROR("parse manifest schema1 failed, err: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (get_layers_from_manifest(manifest, &layers, &layers_len) != 0) {
+        ERROR("Failed to get layers info from manifest");
+        ret = -1;
+        goto out;
+    }
+
+    free(err);
+    err = NULL;
+
+    config = docker_image_config_v2_parse_data(manifest->history[0]->v1compatibility, NULL, &err);
+    if (config == NULL) {
+        ERROR("parse image config v2 failed, err: %s", err);
+        ret = -1;
+        goto out;
+    }
+
+    if (update_config_file(layers, layers_len, manifest, config) != 0) {
+        ERROR("Failed to update config");
+        ret = -1;
+        goto out;
+    }
+
+    free(err);
+    err = NULL;
+    config_json = docker_image_config_v2_generate_json(config, NULL, &err);
+    if (config_json == NULL) {
+        ret = -1;
+        ERROR("generate json from config failed in %s", path);
+        goto out;
+    }
+
+    config_digest = sha256_digest_str(config_json);
+    sret = snprintf(image_file, sizeof(image_file), "%s/%s", path, IMAGE_JSON);
+    if (sret < 0 || (size_t)sret >= sizeof(image_file)) {
+        ERROR("Failed to sprintf file for image");
+        ret = -1;
+        goto out;
+    }
+
+    free(err);
+    err = NULL;
+    img = storage_image_parse_file(image_file, NULL, &err);
+    if (img == NULL) {
+        ERROR("Failed to parse image json file");
+        ret = -1;
+        goto out;
+    }
+
+    created = util_to_timestamp_from_str(config->created);
+    if (update_image_info(&created, config_digest, img) != 0) {
+        ERROR("Failed to update image info");
+        ret = -1;
+        goto out;
+    }
+
+    if (save_image(img) != 0) {
+        ERROR("Failed to save image");
+        ret = -1;
+        goto out;
+    }
+
+    // append image to store
+    if (append_converted_image_to_store(img) != 0) {
+        ERROR("Failed to append converted image to store");
+        ret = -1;
+        goto out;
+    }
+
+    // set big data - config / manifest
+    if (set_big_data_for_converted_image(img->id, config_digest, path, config_json) != 0) {
+        ERROR("Failed to set big data file for converted image");
+        ret = -1;
+        goto out;
+    }
+
+    // delete the directory of old v1 image
+    if (util_recursive_rmdir(path, 0) != 0) {
+        ERROR("Failed to delete image directory : %s", path);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(err);
+    free_registry_manifest_schema1(manifest);
+    free_docker_image_config_v2(config);
+    for (i = 0; i < layers_len; i++) {
+        free_layer_blob(&layers[i]);
+    }
+    free(layers);
+    free(config_json);
+    free(config_digest);
+    free_storage_image(img);
+    return ret;
+}
+
+static int get_images_from_json()
+{
+    int ret = 0;
+    int nret;
+    char **image_dirs = NULL;
+    size_t image_dirs_num = 0;
+    size_t i;
+    char *id_patten = "^[a-f0-9]{64}$";
+    char image_path[PATH_MAX] = { 0x00 };
+
+    ret = util_list_all_subdir(g_image_store->dir, &image_dirs);
+    if (ret != 0) {
+        ERROR("Failed to get images directory");
+        goto out;
+    }
+    image_dirs_num = util_array_len((const char **)image_dirs);
+
+    for (i = 0; i < image_dirs_num; i++) {
+        bool valid_v1_image = false;
+
+        if (util_reg_match(id_patten, image_dirs[i]) != 0) {
+            DEBUG("Image's json is placed inside image's data directory, so skip any other file or directory: %s",
+                  image_dirs[i]);
+            continue;
+        }
+
+        DEBUG("Restore the images:%s", image_dirs[i]);
+        nret = snprintf(image_path, sizeof(image_path), "%s/%s", g_image_store->dir, image_dirs[i]);
+        if (nret < 0 || (size_t)nret >= sizeof(image_path)) {
+            ERROR("Failed to get image path");
+            continue;
+        }
+
+        if (validate_manifest_schema_version_1(image_path, &valid_v1_image) != 0) {
+            ERROR("Failed to validate manifest schema version 1 format");
+            continue;
+        }
+
+        if (!valid_v1_image) {
+            if (append_image_by_directory(image_path) != 0) {
+                ERROR("Found image path but load json failed: %s", image_dirs[i]);
+                continue;
+            }
+        } else {
+            if (convert_to_v2_image_and_load(image_path) != 0) {
+                ERROR("Failed to convert image to v2 format image and load to store");
+                continue;
+            }
+        }
+    }
+
+out:
+    util_free_array(image_dirs);
+    return ret;
+}
+
+static void image_store_check_all_images()
+{
+    struct linked_list *item = NULL;
+    struct linked_list *next = NULL;
+
+    if (g_image_store == NULL) {
+        ERROR("Image store is not ready!");
+        return;
+    }
+
+    if (g_image_store->images_list_len == 0) {
+        return;
+    }
+
+    linked_list_for_each_safe(item, &(g_image_store->images_list), next) {
+        image_t *img = (image_t *)item->elem;
+        if (img->spec == NULL) {
+            ERROR("Failed to check spec info of image: %s, try to delete", img->simage->id);
+            if (do_delete_image_info(img->simage->id) != 0) {
+                ERROR("Failed to delete image %s, please delete residual file manually", img->simage->id);
+            }
+        }
+    }
+}
+
+static int image_store_load()
+{
+    if (g_image_store->loaded) {
+        DEBUG("Do not need reload if daemon");
+        return 0;
+    }
+
+    if (get_images_from_json() != 0) {
+        ERROR("Failed to get images from json");
+        return -1;
+    }
+
+    image_store_check_all_images();
+
+    g_image_store->loaded = true;
+
+    return 0;
+}
+
+int image_store_init(struct storage_module_init_options *opts)
+{
+    int ret = 0;
+    char *root_dir = NULL;
+
+    if (g_image_store != NULL) {
+        ERROR("Image store has already been initialized");
+        return -1;
+    }
+
+    root_dir = get_image_store_root_path(opts);
+    if (root_dir == NULL) {
+        return ret;
+    }
+
+    ret = util_mkdir_p(root_dir, IMAGE_STORE_PATH_MODE);
+    if (ret < 0) {
+        ERROR("Unable to create image store directory %s.", root_dir);
+        ret = -1;
+        goto out;
+    }
+
+    g_image_store = (image_store_t *)util_common_calloc_s(sizeof(image_store_t));
+    if (g_image_store == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    ret = pthread_rwlock_init(&(g_image_store->rwlock), NULL);
+    if (ret != 0) {
+        ERROR("Failed to init image store rwlock");
+        ret = -1;
+        goto out;
+    }
+
+    g_image_store->dir = root_dir;
+    root_dir = NULL;
+
+    g_image_store->images_list_len = 0;
+    linked_list_init(&g_image_store->images_list);
+
+    g_image_store->byid = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, image_store_field_kvfree);
+    if (g_image_store->byid == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    g_image_store->byname = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, image_store_field_kvfree);
+    if (g_image_store->byname == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    g_image_store->bydigest = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, image_store_digest_field_kvfree);
+    if (g_image_store->bydigest == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    ret = image_store_load();
+    if (ret != 0) {
+        ERROR("Failed to load image store");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    if (ret != 0) {
+        free_image_store(g_image_store);
+        g_image_store = NULL;
+    }
+    free(root_dir);
     return ret;
 }

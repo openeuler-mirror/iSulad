@@ -770,7 +770,6 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
-
     create_params.bundle = bundle;
     create_params.state = cont->state_path;
     create_params.oci_config_data = oci_spec;
@@ -995,8 +994,7 @@ out:
     return ret;
 }
 
-int release_volumes(container_config_v2_common_config_mount_points *mount_points,
-                    char *id, bool rm_anonymous_volumes)
+int release_volumes(container_config_v2_common_config_mount_points *mount_points, char *id, bool rm_anonymous_volumes)
 {
     int ret = 0;
     size_t i = 0;
@@ -1526,7 +1524,7 @@ static int append_necessary_process_env(bool tty, const container_config *contai
         goto out;
     }
 
-    if (container_spec->hostname != NULL) {
+    if (container_spec != NULL && container_spec->hostname != NULL) {
         nret = snprintf(host_name_str, sizeof(host_name_str), "HOSTNAME=%s", container_spec->hostname);
         if (nret < 0 || (size_t)nret >= sizeof(host_name_str)) {
             ERROR("hostname is too long");
@@ -1559,6 +1557,10 @@ static int merge_exec_from_container_env(defs_process *spec, const container_con
 {
     int ret = 0;
     size_t i = 0;
+
+    if (container_spec == NULL) {
+        return 0;
+    }
 
     if (container_spec->env_len > LIST_ENV_SIZE_MAX - spec->env_len) {
         ERROR("The length of envionment variables is too long, the limit is %lld", LIST_ENV_SIZE_MAX);
@@ -1687,7 +1689,12 @@ static defs_process *make_exec_process_spec(const container_config *container_sp
     }
 
     spec->terminal = request->tty;
-    spec->cwd = util_strdup_s(util_valid_str(container_spec->working_dir) ? container_spec->working_dir : "/");
+
+    if (container_spec != NULL && util_valid_str(container_spec->working_dir)) {
+        spec->cwd = util_strdup_s(container_spec->working_dir);
+    } else {
+        spec->cwd = util_strdup_s("/");
+    }
 
     return spec;
 
@@ -1925,7 +1932,7 @@ int exec_container(const container_t *cont, const container_exec_request *reques
             goto pack_response;
         }
     } else {
-        if (cont->common_config->config->user != NULL) {
+        if (cont->common_config->config != NULL && cont->common_config->config->user != NULL) {
             if (get_exec_user_info(cont, cont->common_config->config->user, &puser) != 0) {
                 cc = ISULAD_ERR_EXEC;
                 goto pack_response;

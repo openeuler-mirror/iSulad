@@ -379,6 +379,27 @@ imagetool_image *storage_img_get(const char *img_id)
     return image_info;
 }
 
+imagetool_image_summary *storage_img_get_summary(const char *img_id)
+{
+    char *normalized_name = NULL;
+    imagetool_image_summary *image_summary = NULL;
+
+    if (img_id == NULL) {
+        ERROR("Invalid arguments for image get summary");
+        return NULL;
+    }
+
+    if (util_valid_short_sha256_id(img_id) && image_store_exists(img_id)) {
+        image_summary = image_store_get_image_summary(img_id);
+    } else {
+        normalized_name = oci_normalize_image_name(img_id);
+        image_summary = image_store_get_image_summary(normalized_name);
+    }
+
+    free(normalized_name);
+    return image_summary;
+}
+
 int storage_img_set_big_data(const char *img_id, const char *key, const char *val)
 {
     int ret = 0;
@@ -677,7 +698,7 @@ static int do_storage_img_delete(const char *img_id, bool commit)
 {
     int ret = 0;
     bool in_using = false;
-    imagetool_image *image_info = NULL;
+    imagetool_image_summary *image_info = NULL;
 
     if (!image_store_exists(img_id)) {
         WARN("Image %s not exists", img_id);
@@ -685,7 +706,7 @@ static int do_storage_img_delete(const char *img_id, bool commit)
         goto out;
     }
 
-    image_info = image_store_get_image(img_id);
+    image_info = image_store_get_image_summary(img_id);
     if (image_info == NULL) {
         ERROR("Failed to get image %s info", img_id);
         ret = -1;
@@ -717,7 +738,7 @@ static int do_storage_img_delete(const char *img_id, bool commit)
     }
 
 out:
-    free_imagetool_image(image_info);
+    free_imagetool_image_summary(image_info);
     return ret;
 }
 
@@ -1027,7 +1048,7 @@ int storage_rootfs_create(const char *container_id, const char *image, const cha
 {
     int ret = 0;
     char *rootfs_id = NULL;
-    imagetool_image *image_info = NULL;
+    imagetool_image_summary *image_summary = NULL;
     struct layer *layer_info = NULL;
 
     if (container_id == NULL || image == NULL) {
@@ -1042,21 +1063,21 @@ int storage_rootfs_create(const char *container_id, const char *image, const cha
         goto out;
     }
 
-    image_info = storage_img_get(image);
-    if (image_info == NULL) {
+    image_summary = storage_img_get_summary(image);
+    if (image_summary == NULL) {
         ERROR("No such image:%s", image);
         ret = -1;
         goto unlock_out;
     }
 
     // note: we use container id as the layer id of the container
-    if (do_create_container_rw_layer(container_id, image_info->top_layer, mount_label, storage_opts) != 0) {
+    if (do_create_container_rw_layer(container_id, image_summary->top_layer, mount_label, storage_opts) != 0) {
         ERROR("Failed to do create rootfs layer");
         ret = -1;
         goto unlock_out;
     }
 
-    rootfs_id = rootfs_store_create(container_id, NULL, 0, image_info->id, container_id, NULL, NULL);
+    rootfs_id = rootfs_store_create(container_id, NULL, 0, image_summary->id, container_id, NULL, NULL);
     if (rootfs_id == NULL) {
         ERROR("Failed to create rootfs");
         ret = -1;
@@ -1085,7 +1106,7 @@ unlock_out:
     storage_unlock(&g_storage_rwlock);
 out:
     free(rootfs_id);
-    free_imagetool_image(image_info);
+    free_imagetool_image_summary(image_summary);
     free_layer(layer_info);
     return ret;
 }

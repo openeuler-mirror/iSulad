@@ -504,6 +504,46 @@ container_config_v2_state *container_state_to_v2_state(container_state_t *s)
     return state;
 }
 
+/* state get info */
+container_inspect_state *container_state_to_inspect_state(container_state_t *s)
+{
+    container_inspect_state *state = NULL;
+
+    if (s == NULL) {
+        return NULL;
+    }
+
+    state = util_common_calloc_s(sizeof(container_inspect_state));
+    if (state == NULL) {
+        return NULL;
+    }
+
+    container_state_lock(s);
+
+    state->status = util_strdup_s(container_state_to_string(container_state_judge_status(s->state)));
+    state->running = s->state->running;
+    state->paused = s->state->paused;
+    state->restarting = s->state->restarting;
+    state->pid = s->state->pid;
+
+    state->exit_code = s->state->exit_code;
+    state->started_at = s->state->started_at ? util_strdup_s(s->state->started_at) :
+                        util_strdup_s(defaultContainerTime);
+    state->finished_at = s->state->finished_at ? util_strdup_s(s->state->finished_at) :
+                         util_strdup_s(defaultContainerTime);
+    state->error = s->state->error ? util_strdup_s(s->state->error) : NULL;
+
+    if (container_dup_health_check_status(&state->health, s->state->health) != 0) {
+        ERROR("Failed to dup health check info");
+        free_container_inspect_state(state);
+        state = NULL;
+    }
+
+    container_state_unlock(s);
+
+    return state;
+}
+
 /* state get exitcode */
 uint32_t container_state_get_exitcode(container_state_t *s)
 {

@@ -49,10 +49,18 @@ int storage_img_create(const char *id, const char *parent_id, const char *metada
     return -1;
 }
 
-imagetool_image * storage_img_get(const char *img_id)
+imagetool_image *storage_img_get(const char *img_id)
 {
     if (g_storage_mock != nullptr) {
         return g_storage_mock->StorageImgGet(img_id);
+    }
+    return nullptr;
+}
+
+imagetool_image_summary *storage_img_get_summary(const char *img_id)
+{
+    if (g_storage_mock != nullptr) {
+        return g_storage_mock->StorageImgGetSummary(img_id);
     }
     return nullptr;
 }
@@ -97,7 +105,7 @@ int storage_img_set_image_size(const char *image_id)
     return -1;
 }
 
-char * storage_get_img_top_layer(const char *id)
+char *storage_get_img_top_layer(const char *id)
 {
     if (g_storage_mock != nullptr) {
         return g_storage_mock->StorageGetImgTopLayer(id);
@@ -113,7 +121,7 @@ int storage_layer_create(const char *layer_id, storage_layer_create_opts_t *opts
     return -1;
 }
 
-struct layer * storage_layer_get(const char *layer_id)
+struct layer *storage_layer_get(const char *layer_id)
 {
     if (g_storage_mock != nullptr) {
         return g_storage_mock->StorageLayerGet(layer_id);

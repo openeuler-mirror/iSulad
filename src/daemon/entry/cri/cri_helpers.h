@@ -63,11 +63,11 @@ public:
 
 auto GetDefaultSandboxImage(Errors &err) -> std::string;
 
-auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels,
-                Errors &error) -> json_map_string_string *;
+auto MakeLabels(const google::protobuf::Map<std::string, std::string> &mapLabels, Errors &error)
+-> json_map_string_string *;
 
-auto MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations,
-                     Errors &error) -> json_map_string_string *;
+auto MakeAnnotations(const google::protobuf::Map<std::string, std::string> &mapAnnotations, Errors &error)
+-> json_map_string_string *;
 
 void ExtractLabels(json_map_string_string *input, google::protobuf::Map<std::string, std::string> &labels);
 
@@ -84,9 +84,9 @@ auto ContainerStatusToRuntime(Container_Status status) -> runtime::v1alpha2::Con
 
 auto StringVectorToCharArray(std::vector<std::string> &path) -> char **;
 
-auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image *;
+auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image_summary *;
 
-auto ToPullableImageID(const std::string &id, imagetool_image *image) -> std::string;
+auto ToPullableImageID(const char *image_name, const char *image_ref) -> std::string;
 
 auto IsContainerNotFoundError(const std::string &err) -> bool;
 
@@ -94,11 +94,11 @@ auto IsImageNotFoundError(const std::string &err) -> bool;
 
 auto sha256(const char *val) -> std::string;
 
-auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations,
-                                size_t *len, Errors &error) -> cri_pod_network_element **;
+auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, size_t *len, Errors &error)
+-> cri_pod_network_element **;
 
-auto CheckpointToSandbox(const std::string &id,
-                         const cri::PodSandboxCheckpoint &checkpoint) -> std::unique_ptr<runtime::v1alpha2::PodSandbox>;
+auto CheckpointToSandbox(const std::string &id, const cri::PodSandboxCheckpoint &checkpoint)
+-> std::unique_ptr<runtime::v1alpha2::PodSandbox>;
 
 auto StringsJoin(const std::vector<std::string> &vec, const std::string &sep) -> std::string;
 
@@ -109,15 +109,15 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
 void GenerateMountBindings(const google::protobuf::RepeatedPtrField<runtime::v1alpha2::Mount> &mounts,
                            host_config *hostconfig, Errors &err);
 
-auto GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs) ->
-std::vector<std::string>;
+auto GenerateEnvList(const ::google::protobuf::RepeatedPtrField<::runtime::v1alpha2::KeyValue> &envs)
+-> std::vector<std::string>;
 
 auto ValidateCheckpointKey(const std::string &key, Errors &error) -> bool;
 
 auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state) -> std::string;
 
-auto GetSecurityOpts(const std::string &seccompProfile, const char &separator,
-                     Errors &error) -> std::vector<std::string>;
+auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
+-> std::vector<std::string>;
 
 auto CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
 

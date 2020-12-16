@@ -302,18 +302,18 @@ auto StringVectorToCharArray(std::vector<std::string> &path) -> char **
     return result;
 }
 
-auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image *
+auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_image_summary *
 {
-    im_status_request *request { nullptr };
-    im_status_response *response { nullptr };
-    imagetool_image *image { nullptr };
+    im_summary_request *request { nullptr };
+    im_summary_response *response { nullptr };
+    imagetool_image_summary *image { nullptr };
 
     if (imageID.empty()) {
         err.SetError("Empty image ID");
         return nullptr;
     }
 
-    request = (im_status_request *)util_common_calloc_s(sizeof(im_status_request));
+    request = (im_summary_request *)util_common_calloc_s(sizeof(im_summary_request));
     if (request == nullptr) {
         ERROR("Out of memory");
         err.SetError("Out of memory");
@@ -321,34 +321,41 @@ auto InspectImageByID(const std::string &imageID, Errors &err) -> imagetool_imag
     }
     request->image.image = util_strdup_s(imageID.c_str());
 
-    if (im_image_status(request, &response) != 0) {
+    if (im_image_summary(request, &response) != 0) {
         if (response != nullptr && response->errmsg != nullptr) {
             err.SetError(response->errmsg);
         } else {
-            err.SetError("Failed to call status image");
+            err.SetError("Failed to call summary image");
         }
         goto cleanup;
     }
 
-    if (response->image_info != nullptr) {
-        image = response->image_info->image;
-        response->image_info->image = nullptr;
+    if (response->image_summary != nullptr) {
+        image = response->image_summary;
+        response->image_summary = nullptr;
     }
 
 cleanup:
-    free_im_status_request(request);
-    free_im_status_response(response);
+    free_im_summary_request(request);
+    free_im_summary_response(response);
     return image;
 }
 
-auto ToPullableImageID(const std::string &id, imagetool_image *image) -> std::string
+auto ToPullableImageID(const char *image_name, const char *image_ref) -> std::string
 {
     // Default to the image ID, but if RepoDigests is not empty, use
     // the first digest instead.
-    std::string imageID = Constants::DOCKER_IMAGEID_PREFIX + id;
-    if (image != nullptr && image->repo_digests != nullptr && image->repo_digests_len > 0) {
-        imageID = Constants::DOCKER_PULLABLE_IMAGEID_PREFIX + std::string(image->repo_digests[0]);
+
+    std::string imageID;
+
+    if (image_name != nullptr) {
+        imageID = Constants::DOCKER_IMAGEID_PREFIX + image_name;
     }
+
+    if (image_ref != nullptr) {
+        imageID = Constants::DOCKER_PULLABLE_IMAGEID_PREFIX + image_ref;
+    }
+
     return imageID;
 }
 
@@ -389,8 +396,8 @@ auto sha256(const char *val) -> std::string
     return outputBuffer;
 }
 
-auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, size_t *len,
-                                Errors &error) -> cri_pod_network_element **
+auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, size_t *len, Errors &error)
+-> cri_pod_network_element **
 {
     auto iter = annotations.find(CRIHelpers::Constants::POD_NETWORK_ANNOTATION_KEY);
 

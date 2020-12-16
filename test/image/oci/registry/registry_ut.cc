@@ -70,7 +70,7 @@ std::string get_dir()
         }
     }
 
-    return static_cast<std::string>(abs_path) +  "../../../../../test/image/oci/registry";
+    return static_cast<std::string>(abs_path) + "../../../../../test/image/oci/registry";
 }
 
 void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock);
@@ -209,7 +209,7 @@ int invokeHttpRequestV2(const char *url, struct http_get_options *options, long 
     } else if (util_has_prefix(url, "http://hub-mirror.c.163.com/v2/library/busybox/blobs/sha256:c7c37e47")) {
         file = data_path + "config";
         if (count == COUNT_TEST_CANCEL) {
-            bool *cancel = (bool*)options->progressinfo;
+            bool *cancel = (bool *)options->progressinfo;
             while (!(*cancel)) {
                 sleep(1); // schedule out to let cancel variable set to be true
             }
@@ -357,7 +357,12 @@ int invokeStorageImgCreate(const char *id, const char *parent_id, const char *me
     return 0;
 }
 
-imagetool_image * invokeStorageImgGet(const char *img_id)
+imagetool_image *invokeStorageImgGet(const char *img_id)
+{
+    return nullptr;
+}
+
+imagetool_image_summary *invokeStorageImgGetSummary(const char *img_id)
 {
     return nullptr;
 }
@@ -387,9 +392,9 @@ int invokeStorageImgSetImageSize(const char *image_id)
     return 0;
 }
 
-char * invokeStorageGetImgTopLayer(const char *id)
+char *invokeStorageGetImgTopLayer(const char *id)
 {
-    return util_strdup_s((char*)"382dfd1b0f139f3fa6a7b14d4b18ad49a8bd86e4b303264088b39b020556da73");
+    return util_strdup_s((char *)"382dfd1b0f139f3fa6a7b14d4b18ad49a8bd86e4b303264088b39b020556da73");
 }
 
 int invokeStorageLayerCreate(const char *layer_id, storage_layer_create_opts_t *opts)
@@ -407,7 +412,7 @@ int invokeStorageDecHoldRefs(const char *layer_id)
     return 0;
 }
 
-struct layer * invokeStorageLayerGet(const char *layer_id)
+struct layer *invokeStorageLayerGet(const char *layer_id)
 {
     return nullptr;
 }
@@ -417,13 +422,13 @@ struct layer_list *invokeStorageLayersGetByCompressDigest(const char *digest)
     int ret = 0;
     struct layer_list *list = nullptr;
 
-    list = (struct layer_list*)util_common_calloc_s(sizeof(struct layer_list));
+    list = (struct layer_list *)util_common_calloc_s(sizeof(struct layer_list));
     if (list == nullptr) {
         ERROR("out of memory");
         return nullptr;
     }
 
-    list->layers = (struct layer **)util_common_calloc_s(sizeof(struct layer*) * 1);
+    list->layers = (struct layer **)util_common_calloc_s(sizeof(struct layer *) * 1);
     if (list->layers == nullptr) {
         ERROR("out of memory");
         ret = -1;
@@ -452,7 +457,7 @@ out:
     return list;
 }
 
-struct layer * invokeStorageLayerGet1(const char *layer_id)
+struct layer *invokeStorageLayerGet1(const char *layer_id)
 {
     struct layer *l = nullptr;
 
@@ -529,38 +534,26 @@ void mockCommonAll(MockStorage *mock, MockOciImage *oci_image_mock)
 {
     EXPECT_CALL(*mock, StorageImgCreate(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeStorageImgCreate));
-    EXPECT_CALL(*mock, StorageImgGet(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageImgGet));
+    EXPECT_CALL(*mock, StorageImgGet(::testing::_)).WillRepeatedly(Invoke(invokeStorageImgGet));
+    EXPECT_CALL(*mock, StorageImgGetSummary(::testing::_)).WillRepeatedly(Invoke(invokeStorageImgGetSummary));
     EXPECT_CALL(*mock, StorageImgSetBigData(::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeStorageImgSetBigData));
-    EXPECT_CALL(*mock, StorageImgAddName(::testing::_, ::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageImgAddName));
-    EXPECT_CALL(*mock, StorageImgDelete(::testing::_, ::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageImgDelete));
+    EXPECT_CALL(*mock, StorageImgAddName(::testing::_, ::testing::_)).WillRepeatedly(Invoke(invokeStorageImgAddName));
+    EXPECT_CALL(*mock, StorageImgDelete(::testing::_, ::testing::_)).WillRepeatedly(Invoke(invokeStorageImgDelete));
     EXPECT_CALL(*mock, StorageImgSetLoadedTime(::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeStorageImgSetLoadedTime));
-    EXPECT_CALL(*mock, StorageImgSetImageSize(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageImgSetImageSize));
-    EXPECT_CALL(*mock, StorageGetImgTopLayer(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageGetImgTopLayer));
-    EXPECT_CALL(*mock, StorageLayerCreate(::testing::_, ::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageLayerCreate));
-    EXPECT_CALL(*mock, StorageIncHoldRefs(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageIncHoldRefs));
-    EXPECT_CALL(*mock, StorageDecHoldRefs(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageDecHoldRefs));
-    EXPECT_CALL(*mock, StorageLayerGet(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageLayerGet));
+    EXPECT_CALL(*mock, StorageImgSetImageSize(::testing::_)).WillRepeatedly(Invoke(invokeStorageImgSetImageSize));
+    EXPECT_CALL(*mock, StorageGetImgTopLayer(::testing::_)).WillRepeatedly(Invoke(invokeStorageGetImgTopLayer));
+    EXPECT_CALL(*mock, StorageLayerCreate(::testing::_, ::testing::_)).WillRepeatedly(Invoke(invokeStorageLayerCreate));
+    EXPECT_CALL(*mock, StorageIncHoldRefs(::testing::_)).WillRepeatedly(Invoke(invokeStorageIncHoldRefs));
+    EXPECT_CALL(*mock, StorageDecHoldRefs(::testing::_)).WillRepeatedly(Invoke(invokeStorageDecHoldRefs));
+    EXPECT_CALL(*mock, StorageLayerGet(::testing::_)).WillRepeatedly(Invoke(invokeStorageLayerGet));
     EXPECT_CALL(*mock, StorageLayerTryRepairLowers(::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeStorageLayerTryRepairLowers));
-    EXPECT_CALL(*mock, FreeLayerList(::testing::_))
-    .WillRepeatedly(Invoke(invokeFreeLayerList));
-    EXPECT_CALL(*mock, FreeLayer(::testing::_))
-    .WillRepeatedly(Invoke(invokeFreeLayer));
-    EXPECT_CALL(*oci_image_mock, OciValidTime(::testing::_))
-    .WillRepeatedly(Invoke(invokeOciValidTime));
-    EXPECT_CALL(*oci_image_mock, GetOciImageData())
-    .WillRepeatedly(Invoke(invokeGetOciImageData));
+    EXPECT_CALL(*mock, FreeLayerList(::testing::_)).WillRepeatedly(Invoke(invokeFreeLayerList));
+    EXPECT_CALL(*mock, FreeLayer(::testing::_)).WillRepeatedly(Invoke(invokeFreeLayer));
+    EXPECT_CALL(*oci_image_mock, OciValidTime(::testing::_)).WillRepeatedly(Invoke(invokeOciValidTime));
+    EXPECT_CALL(*oci_image_mock, GetOciImageData()).WillRepeatedly(Invoke(invokeGetOciImageData));
     return;
 }
 
@@ -571,8 +564,7 @@ int create_certs(std::string &dir)
     std::string key = dir + "/tls.key";
 
     // content of file is meaningless
-    if (util_write_file(ca.c_str(), "1", 1, 0600) != 0 ||
-        util_write_file(cert.c_str(), "1", 1, 0600) != 0 ||
+    if (util_write_file(ca.c_str(), "1", 1, 0600) != 0 || util_write_file(cert.c_str(), "1", 1, 0600) != 0 ||
         util_write_file(key.c_str(), "1", 1, 0600) != 0) {
         ERROR("write certs file failed");
         return -1;
@@ -587,8 +579,7 @@ int remove_certs(std::string &dir)
     std::string cert = dir + "/tls.cert";
     std::string key = dir + "/tls.key";
 
-    if (util_path_remove(ca.c_str()) != 0 ||
-        util_path_remove(cert.c_str()) != 0 ||
+    if (util_path_remove(ca.c_str()) != 0 || util_path_remove(cert.c_str()) != 0 ||
         util_path_remove(key.c_str()) != 0) {
         ERROR("remove certs file failed");
         return -1;
@@ -600,10 +591,10 @@ int remove_certs(std::string &dir)
 TEST_F(RegistryUnitTest, test_pull_v1_image)
 {
     registry_pull_options options;
-    options.image_name = (char*)"quay.io/coreos/etcd:v3.3.17-arm64";
-    options.dest_image_name = (char*)"quay.io/coreos/etcd:v3.3.17-arm64";
-    options.auth.username = (char*)"test";
-    options.auth.password = (char*)"test";
+    options.image_name = (char *)"quay.io/coreos/etcd:v3.3.17-arm64";
+    options.dest_image_name = (char *)"quay.io/coreos/etcd:v3.3.17-arm64";
+    options.auth.username = (char *)"test";
+    options.auth.password = (char *)"test";
     options.skip_tls_verify = false;
     options.insecure_registry = false;
 
@@ -628,26 +619,26 @@ TEST_F(RegistryUnitTest, test_pull_v1_image)
 
 TEST_F(RegistryUnitTest, test_login)
 {
-    registry_login_options options = {0};
+    registry_login_options options = { 0 };
 
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestLogin));
 
-    options.host = (char*)"test2.com";
-    options.auth.username = (char*)"test2";
-    options.auth.password = (char*)"test2";
+    options.host = (char *)"test2.com";
+    options.auth.username = (char *)"test2";
+    options.auth.password = (char *)"test2";
     options.skip_tls_verify = true;
     options.insecure_registry = true;
     ASSERT_EQ(registry_login(&options), 0);
 
-    options.host = (char*)"hub-mirror.c.163.com";
-    options.auth.username = (char*)"test";
-    options.auth.password = (char*)"test";
+    options.host = (char *)"hub-mirror.c.163.com";
+    options.auth.username = (char *)"test";
+    options.auth.password = (char *)"test";
     ASSERT_EQ(registry_login(&options), 0);
 
-    options.host = (char*)"hub-mirror.c.163.com";
-    options.auth.username = (char*)"test3";
-    options.auth.password = (char*)"test3";
+    options.host = (char *)"hub-mirror.c.163.com";
+    options.auth.username = (char *)"test3";
+    options.auth.password = (char *)"test3";
     ASSERT_EQ(registry_login(&options), 0);
 }
 
@@ -656,7 +647,7 @@ TEST_F(RegistryUnitTest, test_logout)
     char *auth_data = nullptr;
     std::string auths_file = get_dir() + "/auths/" + AUTH_FILE_NAME;
 
-    ASSERT_EQ(registry_logout((char*)"test2.com"), 0);
+    ASSERT_EQ(registry_logout((char *)"test2.com"), 0);
 
     auth_data = util_read_text_file(auths_file.c_str());
     ASSERT_NE(strstr(auth_data, "hub-mirror.c.163.com"), nullptr);
@@ -669,8 +660,8 @@ TEST_F(RegistryUnitTest, test_pull_v2_image)
     struct timespec start_time;
     struct timespec end_time;
     registry_pull_options options { 0x00 };
-    options.image_name = (char*)"hub-mirror.c.163.com/library/busybox:latest";
-    options.dest_image_name = (char*)"isula.org/library/busybox:latest";
+    options.image_name = (char *)"hub-mirror.c.163.com/library/busybox:latest";
+    options.dest_image_name = (char *)"isula.org/library/busybox:latest";
     options.skip_tls_verify = true;
     options.insecure_registry = true;
 
@@ -731,16 +722,14 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV2));
     mockCommonAll(&m_storage_mock, &m_oci_image_mock);
-    EXPECT_CALL(m_storage_mock, StorageLayerGet(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageLayerGet1));
+    EXPECT_CALL(m_storage_mock, StorageLayerGet(::testing::_)).WillRepeatedly(Invoke(invokeStorageLayerGet1));
     ASSERT_EQ(registry_pull(&options), 0);
 
     options.image_name = (char *)"quay.io/coreos/etcd:v3.3.17-arm64";
-    options.dest_image_name = (char*)"quay.io/coreos/etcd:v3.3.17-arm64";
+    options.dest_image_name = (char *)"quay.io/coreos/etcd:v3.3.17-arm64";
     EXPECT_CALL(m_http_mock, HttpRequest(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(Invoke(invokeHttpRequestV1));
-    EXPECT_CALL(m_storage_mock, StorageLayerGet(::testing::_))
-    .WillRepeatedly(Invoke(invokeStorageLayerGet));
+    EXPECT_CALL(m_storage_mock, StorageLayerGet(::testing::_)).WillRepeatedly(Invoke(invokeStorageLayerGet));
     EXPECT_CALL(m_storage_mock, StorageLayersGetByCompressDigest(::testing::_))
     .WillRepeatedly(Invoke(invokeStorageLayersGetByCompressDigest));
     ASSERT_NE(registry_pull(&options), 0);
@@ -748,7 +737,7 @@ TEST_F(RegistryUnitTest, test_pull_already_exist)
 
 TEST_F(RegistryUnitTest, test_aes)
 {
-    char *text = (char*)"test";
+    char *text = (char *)"test";
     unsigned char *encoded = nullptr;
     char *decoded = nullptr;
     ASSERT_EQ(aes_encode((unsigned char *)text, strlen(text), &encoded), 0);

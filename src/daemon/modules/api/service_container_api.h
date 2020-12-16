@@ -16,8 +16,9 @@
 #define DAEMON_MODULES_API_SERVICE_CONTAINER_API_H
 #include "container_api.h"
 #include "io_wrapper.h"
-#include "isula_libutils/container_exec_request.h"
-#include "isula_libutils/container_exec_response.h"
+#include <isula_libutils/container_exec_request.h>
+#include <isula_libutils/container_exec_response.h>
+#include <isula_libutils/container_inspect.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,8 +36,7 @@ void umount_host_channel(const host_config_host_channel *host_channel);
 
 void umount_share_shm(container_t *cont);
 
-int release_volumes(container_config_v2_common_config_mount_points *mount_points,
-                    char *id, bool rm_anonymous_volumes);
+int release_volumes(container_config_v2_common_config_mount_points *mount_points, char *id, bool rm_anonymous_volumes);
 
 int kill_container(container_t *cont, uint32_t signal);
 
@@ -46,6 +46,9 @@ int delete_container(container_t *cont, bool force);
 
 int exec_container(const container_t *cont, const container_exec_request *request, container_exec_response *response,
                    int stdinfd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler);
+
+container_inspect *inspect_container(const char *id, int timeout, bool with_host_config);
+container_inspect_state *inspect_container_state(const char *id, int timeout);
 
 #ifdef __cplusplus
 }

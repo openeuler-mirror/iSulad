@@ -165,7 +165,7 @@ auto CRIRuntimeServiceImpl::GetNetNS(const std::string &podSandboxID, Errors &er
     std::string result;
     const std::string NetNSFmt { "/proc/%d/ns/net" };
 
-    container_inspect *inspect_data = InspectContainer(podSandboxID, err);
+    container_inspect *inspect_data = InspectContainer(podSandboxID, err, false);
     if (inspect_data == nullptr) {
         goto cleanup;
     }

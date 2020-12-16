@@ -172,8 +172,8 @@ out:
 int oci_do_pull_image(const im_pull_request *request, im_pull_response *response)
 {
     int ret = 0;
-    imagetool_image *image = NULL;
-    imagetool_image *image2 = NULL;
+    imagetool_image_summary *image = NULL;
+    imagetool_image_summary *image2 = NULL;
     char *dest_image_name = NULL;
 
     if (request == NULL || request->image == NULL || response == NULL) {
@@ -189,8 +189,8 @@ int oci_do_pull_image(const im_pull_request *request, im_pull_response *response
         goto out;
     }
 
-    image = storage_img_get(dest_image_name);
-    image2 = storage_img_get(request->image);
+    image = storage_img_get_summary(dest_image_name);
+    image2 = storage_img_get_summary(request->image);
     if (image == NULL || image2 == NULL) {
         ERROR("get image %s failed after pulling", request->image);
         isulad_set_error_message("Failed to pull image %s with error: image not found after pulling", request->image);
@@ -201,8 +201,8 @@ int oci_do_pull_image(const im_pull_request *request, im_pull_response *response
     response->image_ref = util_strdup_s(image->id);
 
 out:
-    free_imagetool_image(image);
-    free_imagetool_image(image2);
+    free_imagetool_image_summary(image);
+    free_imagetool_image_summary(image2);
     free(dest_image_name);
     return ret;
 }
