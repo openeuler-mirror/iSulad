@@ -123,8 +123,6 @@ typedef int (*net_op_t)(const struct cni_manager *manager, const char *net_list_
 static void prepare_cni_manager(const adaptor_cni_config *conf, struct cni_manager *manager)
 {
     manager->annotations = conf->annotations;
-    manager->name = conf->name;
-    manager->namespace = conf->ns;
     manager->id = conf->pod_id;
     manager->netns_path = conf->netns_path;
     manager->cni_args = conf->args;

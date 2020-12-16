@@ -29,13 +29,7 @@ extern "C" {
 
 // cni_manager holds cniNetworkPlugin and podNetwork infos
 struct cni_manager {
-    // The name of the sandbox
-    char *name;
-    // The namespace of the sandbox
-    char *namespace;
-    // id of the sandbox container
     char *id;
-    // The network namespace path of the sandbox
     char *netns_path;
     char *ifname;
     json_map_string_string *cni_args;
