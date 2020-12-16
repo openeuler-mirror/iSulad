@@ -521,8 +521,7 @@ static int get_conf_files(char ***files, size_t *length)
 
     *length = util_array_len((const char **)*files);
     if (*length == 0) {
-        ERROR("No network conf files found");
-        ret = -1;
+        WARN("No network conf files found");
         goto out;
     }
 
@@ -541,6 +540,10 @@ int cri_update_confist_from_dir()
     if (get_conf_files(&files, &length) != 0) {
         ERROR("Get cni conf files in ascending order failed");
         ret = -1;
+        goto out;
+    }
+
+    if (length == 0) {
         goto out;
     }
 

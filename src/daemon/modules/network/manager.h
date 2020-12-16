@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-// The key of cni_args map in struct cni_manager 
+// The key of cni_args map in struct cni_manager
 #define CNI_ARGS_BANDWIDTH_KEY "bandwidth"
 #define CNI_ARGS_PORTMAPPING_KEY "portMappings"
 #define CNI_ARGS_IPRANGES_KEY "ipRanges"

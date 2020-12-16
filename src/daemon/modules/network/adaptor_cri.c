@@ -12,7 +12,7 @@
  * Create: 2020-12-05
  * Description: provide cni network functions
  *********************************************************************************/
-#include "adaptor_cni.h"
+#include "network_api.h"
 
 #include<isula_libutils/log.h>
 #include "manager.h"
@@ -32,17 +32,7 @@ typedef struct network_store_t {
 
 static network_store g_net_store = { 0 };
 
-bool adaptor_cni_init(const char *cache_dir, const char *conf_dir, const char* const *bin_paths, size_t bin_paths_len)
-{
-    if (cni_manager_store_init(cache_dir, conf_dir, bin_paths, bin_paths_len) != 0) {
-        ERROR("init cni manager failed");
-        return false;
-    }
-
-    return adaptor_cni_update_confs() == 0;
-}
-
-bool check_cni_inited()
+bool adaptor_cni_check_inited()
 {
     return g_net_store.conflist_len > 0;
 }
@@ -120,7 +110,7 @@ out:
 //int attach_network_plane(struct cni_manager *manager, const char *net_list_conf_str);
 typedef int (*net_op_t)(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
 
-static void prepare_cni_manager(const adaptor_cni_config *conf, struct cni_manager *manager)
+static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager *manager)
 {
     manager->annotations = conf->annotations;
     manager->id = conf->pod_id;
@@ -128,13 +118,66 @@ static void prepare_cni_manager(const adaptor_cni_config *conf, struct cni_manag
     manager->cni_args = conf->args;
 }
 
-static int do_foreach_network_op(const adaptor_cni_config *conf, net_op_t op, struct result **result)
+static int do_append_cni_result(const char *name, const char *interface, const struct result *cni_result,
+                                network_api_result_list *result)
+{
+    struct network_api_result *work = NULL;
+    int ret = 0;
+
+    if (cni_result == NULL || result == NULL) {
+        return 0;
+    }
+
+    if (result->len == result->cap) {
+        ERROR("Out of capability of result");
+        return -1;
+    }
+
+    work = util_common_calloc_s(sizeof(struct network_api_result));
+    if (work == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    if (cni_result->ips_len > 0) {
+        size_t i;
+        work->ips = util_smart_calloc_s(sizeof(char *), cni_result->ips_len);
+        if (work->ips == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        for (i = 0; i < cni_result->ips_len; i++) {
+            work->ips[work->ips_len] = ipnet_to_string(cni_result->ips[i]->address);
+            if (work->ips[work->ips_len] == NULL) {
+                WARN("parse cni result ip: %zu failed", i);
+                continue;
+            }
+            work->ips_len += 1;
+        }
+    }
+
+    work->name = util_strdup_s(name);
+    work->interface = util_strdup_s(interface);
+    if (cni_result->interfaces_len > 0) {
+        work->mac = util_strdup_s(cni_result->interfaces[0]->mac);
+    }
+
+    result->items[result->len] = work;
+    result->len += 1;
+    work = NULL;
+out:
+    free_network_api_result(work);
+    return ret;
+}
+
+static int do_foreach_network_op(const network_api_conf *conf, net_op_t op, network_api_result_list *result)
 {
     int ret = 0;
     size_t i;
-    bool need_do_default_net = true;
+    int default_idx = 0;
     struct cni_manager manager = { 0 };
     const char *default_interface = DEFAULT_NETWORK_INTERFACE;
+    struct result *cni_result = NULL;
 
     if (conf->default_interface != NULL) {
         default_interface = conf->default_interface;
@@ -159,32 +202,52 @@ static int do_foreach_network_op(const adaptor_cni_config *conf, net_op_t op, st
         // update interface
         manager.ifname = conf->extral_nets[i]->interface;
         if (strcmp(default_interface, manager.ifname) == 0) {
-            need_do_default_net = false;
+            default_idx = *tmp_idx;
+            continue;
         }
-        if (op(&manager, g_net_store.conflist[*tmp_idx]->bytes, result) != 0) {
+
+        // clear cni result
+        free_result(cni_result);
+        cni_result = NULL;
+
+        if (op(&manager, g_net_store.conflist[*tmp_idx]->bytes, &cni_result) != 0) {
             ERROR("Do op on net: %s failed", conf->extral_nets[i]->name);
+            ret = -1;
+            goto out;
+        }
+        if (do_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, result) != 0) {
+            ERROR("parse cni result failed");
             ret = -1;
             goto out;
         }
     }
 
-    if (need_do_default_net && g_net_store.conflist_len > 0) {
+    if (g_net_store.conflist_len > 0) {
+        free_result(cni_result);
+        cni_result = NULL;
+
         manager.ifname = (char *)default_interface;
-        ret = op(&manager, g_net_store.conflist[0]->bytes, result);
+        ret = op(&manager, g_net_store.conflist[default_idx]->bytes, &cni_result);
         if (ret != 0) {
-            ERROR("Do op on default net: %s failed", g_net_store.conflist[0]->name);
+            ERROR("Do op on default net: %s failed", g_net_store.conflist[default_idx]->name);
+            goto out;
+        }
+
+        if (do_append_cni_result(g_net_store.conflist[default_idx]->name, manager.ifname, cni_result, result) != 0) {
+            ERROR("parse cni result failed");
+            ret = -1;
             goto out;
         }
     }
 
 out:
+    free_result(cni_result);
     return ret;
 }
 
-int adaptor_cni_setup(const adaptor_cni_config *conf)
+int adaptor_cni_setup(const network_api_conf *conf, network_api_result_list *result)
 {
     int ret = 0;
-    struct result *result = NULL;
 
     if (conf == NULL) {
         ERROR("Invalid argument");
@@ -202,18 +265,15 @@ int adaptor_cni_setup(const adaptor_cni_config *conf)
         return -1;
     }
 
-    ret = do_foreach_network_op(conf, cri_attach_network_plane, &result);
+    ret = do_foreach_network_op(conf, cri_attach_network_plane, result);
     if (ret != 0) {
         return -1;
     }
 
-    // TODO: just free result now
-    free_result(result);
-
     return 0;
 }
 
-int adaptor_cni_teardown(const adaptor_cni_config *conf)
+int adaptor_cni_teardown(const network_api_conf *conf, network_api_result_list *result)
 {
     int ret = 0;
 
@@ -233,7 +293,7 @@ int adaptor_cni_teardown(const adaptor_cni_config *conf)
         return -1;
     }
 
-    ret = do_foreach_network_op(conf, cri_detach_network_plane, NULL);
+    ret = do_foreach_network_op(conf, cri_detach_network_plane, result);
     if (ret != 0) {
         return -1;
     }
@@ -241,46 +301,3 @@ int adaptor_cni_teardown(const adaptor_cni_config *conf)
     return 0;
 }
 
-void free_attach_net_conf(struct attach_net_conf *ptr)
-{
-    if (ptr == NULL) {
-        return;
-    }
-
-    free(ptr->name);
-    ptr->name = NULL;
-    free(ptr->interface);
-    ptr->interface = NULL;
-    free(ptr);
-}
-
-void free_adaptor_cni_config(adaptor_cni_config *conf)
-{
-    size_t i;
-
-    if (conf == NULL) {
-        return;
-    }
-    free(conf->name);
-    conf->name = NULL;
-    free(conf->ns);
-    conf->ns = NULL;
-    free(conf->pod_id);
-    conf->pod_id = NULL;
-    free(conf->netns_path);
-    conf->netns_path = NULL;
-    free(conf->default_interface);
-    conf->default_interface = NULL;
-    free_json_map_string_string(conf->args);
-    conf->args = NULL;
-    map_free(conf->annotations);
-    conf->annotations = NULL;
-    for (i = 0; i < conf->extral_nets_len; i++) {
-        free_attach_net_conf(conf->extral_nets[i]);
-    }
-    free(conf->extral_nets);
-    conf->extral_nets = NULL;
-    conf->extral_nets_len = 0;
-
-    free(conf);
-}

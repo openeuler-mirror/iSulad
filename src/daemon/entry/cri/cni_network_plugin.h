@@ -22,8 +22,6 @@
 #include <thread>
 #include <vector>
 
-#include "libcni_api.h"
-
 #include "cri_runtime_service.h"
 #include "errors.h"
 #include "network_plugin.h"
@@ -35,53 +33,6 @@ namespace Network {
 static const std::string CNI_PLUGIN_NAME { "cni" };
 static const std::string DEFAULT_NET_DIR { "/etc/cni/net.d" };
 static const std::string DEFAULT_CNI_DIR { "/opt/cni/bin" };
-
-class CNINetwork {
-public:
-    CNINetwork() = delete;
-    CNINetwork(const CNINetwork &) = delete;
-    auto operator=(const CNINetwork &) -> CNINetwork & = delete;
-    CNINetwork(const std::string &name, struct cni_network_list_conf *netList);
-    ~CNINetwork();
-    auto GetName() const -> const std::string &
-    {
-        return m_name;
-    }
-    void SetName(const std::string &name)
-    {
-        m_name = name;
-    }
-    void SetPaths(std::vector<std::string> &binDirs)
-    {
-        m_path = binDirs;
-    }
-    auto GetNetworkConfigJsonStr() -> std::string
-    {
-        return m_networkConfig->bytes != nullptr ? m_networkConfig->bytes : "";
-    }
-    auto GetNetworkType() const -> std::string
-    {
-        return m_networkConfig->first_plugin_type != nullptr ? m_networkConfig->first_plugin_type : "";
-    }
-    auto GetNetworkName() const -> std::string
-    {
-        return m_networkConfig->first_plugin_name != nullptr ? m_networkConfig->first_plugin_name : "";
-    }
-    auto UpdateCNIConfList(struct cni_network_list_conf *newConf) -> struct cni_network_list_conf * {
-        struct cni_network_list_conf *result = m_networkConfig;
-        m_networkConfig = newConf;
-        return result;
-    }
-
-    auto GetPaths(Errors &err) -> char **;
-
-private:
-    std::string m_name;
-    std::vector<std::string> m_path;
-    struct cni_network_list_conf *m_networkConfig {
-        nullptr
-    };
-};
 
 class CniNetworkPlugin : public NetworkPlugin {
 public:
