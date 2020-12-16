@@ -189,9 +189,9 @@ static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
 }
 
 static struct anno_registry_conf_rt g_registrant_rt[] = {
-    {.name = "bandwidth", .ops = bandwidth_inject},
-    {.name = "portMappings", .ops = port_mappings_inject},
-    {.name = "ipRanges", .ops = ip_ranges_inject}
+    {.name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject},
+    {.name = CNI_ARGS_PORTMAPPING_KEY, .ops = port_mappings_inject},
+    {.name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject}
 };
 
 static struct anno_registry_conf_json g_registrant_json[] = {
