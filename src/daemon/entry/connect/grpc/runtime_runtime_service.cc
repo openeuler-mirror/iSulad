@@ -186,7 +186,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainerStats(grpc::ServerContext *
     for (auto iter = containers.begin(); iter != containers.end(); ++iter) {
         runtime::v1alpha2::ContainerStats *container = reply->add_stats();
         if (container == nullptr) {
-            ERROR("Object: CRI, Type: Failed to list all containers stats: out or memory");
+            ERROR("Object: CRI, Type: Failed to list all containers stats: out of memory");
             return grpc::Status(grpc::StatusCode::UNKNOWN, "Out of memory");
         }
         *container = *(iter->get());

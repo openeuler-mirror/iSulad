@@ -133,10 +133,10 @@ private:
     void VersionResponseToGRPC(container_version_response *response, runtime::v1alpha2::VersionResponse *gResponse);
 
     static auto IsDefaultNetworkPlane(cri_pod_network_element *network) -> bool;
-    void SetSandboxStatusNetwork(container_inspect *inspect, const std::string &podSandboxID,
+    void SetSandboxStatusNetwork(const container_inspect *inspect, const std::string &podSandboxID,
                                  std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error);
 
-    void PodSandboxStatusToGRPC(container_inspect *inspect, const std::string &podSandboxID,
+    void PodSandboxStatusToGRPC(const container_inspect *inspect, const std::string &podSandboxID,
                                 std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error);
 
     static void ListPodSandboxToGRPC(container_list_response *response,
@@ -194,12 +194,12 @@ private:
     void modifyContainerNamespaceOptions(bool hasOpts, const runtime::v1alpha2::NamespaceOption &nsOpts, const char *ID,
                                          host_config *hconf, Errors &err);
 
-    static auto SharesHostNetwork(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
-    static auto SharesHostPid(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
-    static auto SharesHostIpc(container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
+    static auto SharesHostNetwork(const container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
+    static auto SharesHostPid(const container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
+    static auto SharesHostIpc(const container_inspect *inspect) -> runtime::v1alpha2::NamespaceMode;
 
-    void GetContainerTimeStamps(container_inspect *inspect, int64_t *createdAt, int64_t *startedAt, int64_t *finishedAt,
-                                Errors &err);
+    void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
+                                int64_t *finishedAt, Errors &err);
     auto ValidateExecRequest(const runtime::v1alpha2::ExecRequest &req, Errors &error) -> int;
 
     auto BuildURL(const std::string &method, const std::string &token) -> std::string;
@@ -211,12 +211,12 @@ private:
     void ConstructPodSandboxCheckpoint(const runtime::v1alpha2::PodSandboxConfig &config,
                                        cri::PodSandboxCheckpoint &checkpoint);
 
-    void GetIPs(const std::string &podSandboxID, container_inspect *inspect, const std::string &networkInterface,
+    void GetIPs(const std::string &podSandboxID, const container_inspect *inspect, const std::string &networkInterface,
                 std::vector<std::string> &ips, Errors &error);
-    void GetFormatIPsForMultNet(container_inspect *inspect, const std::string &defaultInterface,
+    void GetFormatIPsForMultNet(const container_inspect *inspect, const std::string &defaultInterface,
                                 const runtime::v1alpha2::PodSandboxMetadata &metadata, std::vector<std::string> &result,
                                 Errors &error);
-    auto GetIPsFromPlugin(container_inspect *inspect, const std::string &networkInterface, Errors &error)
+    auto GetIPsFromPlugin(const container_inspect *inspect, const std::string &networkInterface, Errors &error)
     -> std::vector<std::string>;
     auto GetNetworkReady(const std::string &podSandboxID, Errors &error) -> bool;
     void SetNetworkReady(const std::string &podSandboxID, bool ready, Errors &error);
@@ -240,9 +240,8 @@ private:
                                              const runtime::v1alpha2::ContainerConfig &containerConfig,
                                              const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig, Errors &error)
     -> container_config *;
-    auto PackContainerImageToStatus(container_inspect *inspect,
-                                    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error)
-    -> int;
+    void PackContainerImageToStatus(container_inspect *inspect,
+                                    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error);
     void UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt, int64_t &startedAt,
                                      int64_t &finishedAt,
                                      std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus);

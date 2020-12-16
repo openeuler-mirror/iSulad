@@ -166,7 +166,7 @@ int util_check_inherited(bool closeall, int fd_to_ignore)
 restart:
     directory = opendir("/proc/self/fd");
     if (directory == NULL) {
-        WARN("Failed to open directory: %m.");
+        WARN("Failed to open directory: /proc/self/fd.");
         return -1;
     }
 
@@ -1246,7 +1246,7 @@ int util_check_inherited_exclude_fds(bool closeall, int *fds_to_ignore, size_t l
 restart:
     directory = opendir("/proc/self/fd");
     if (directory == NULL) {
-        WARN("Failed to open directory: %m.");
+        WARN("Failed to open directory: /proc/self/fd.");
         return -1;
     }
 
@@ -1474,7 +1474,7 @@ void util_parse_user_group(const char *username, char **user, char **group, char
     return;
 }
 
-defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src)
+defs_map_string_object *dup_map_string_empty_object(defs_map_string_object *src)
 {
     int ret = 0;
     size_t i = 0;
@@ -1491,8 +1491,8 @@ defs_map_string_object * dup_map_string_empty_object(defs_map_string_object *src
         return NULL;
     }
 
-    dst->keys = util_common_calloc_s(src->len * sizeof(char*));
-    dst->values = util_common_calloc_s(src->len * sizeof(defs_map_string_object_element*));
+    dst->keys = util_common_calloc_s(src->len * sizeof(char *));
+    dst->values = util_common_calloc_s(src->len * sizeof(defs_map_string_object_element *));
     if (dst->keys == NULL || dst->values == NULL) {
         ERROR("Out of memory");
         ret = -1;

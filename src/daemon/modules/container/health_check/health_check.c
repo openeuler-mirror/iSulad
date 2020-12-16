@@ -792,7 +792,8 @@ void container_init_health_monitor(const char *id)
         return;
     }
 
-    if (cont->common_config->config->healthcheck == NULL || cont->common_config->config->healthcheck->test == NULL) {
+    if (cont->common_config->config == NULL || cont->common_config->config->healthcheck == NULL ||
+        cont->common_config->config->healthcheck->test == NULL) {
         goto out;
     }
 

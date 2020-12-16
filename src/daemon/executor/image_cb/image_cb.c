@@ -470,7 +470,7 @@ static int tag_image(const char *src_name, const char *dest_name)
             isulad_try_set_error_message("Tag image %s to %s failed:%s", src_name, dest_name, im_response->errmsg);
         } else {
             ERROR("Tag image %s to %s failed", src_name, dest_name);
-            isulad_try_set_error_message("Tag image %s to %s failed");
+            isulad_try_set_error_message("Tag image %s to %s failed", src_name, dest_name);
         }
         ret = -1;
         goto out;

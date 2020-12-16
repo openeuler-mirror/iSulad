@@ -449,49 +449,40 @@ static int get_cnt_state(const struct list_context *ctx, const container_config_
     return 0;
 }
 
-static int fill_isuladinfo(container_container *isuladinfo, const container_config_v2_state *cont_state,
-                           const map_t *map_labels, const container_t *cont)
+static int fill_container_info(container_container *container_info, const container_config_v2_state *cont_state,
+                               const map_t *map_labels, const container_t *cont)
 {
     int ret = 0;
     char *image = NULL;
     char *timestr = NULL;
     char *defvalue = "-";
 
-    ret = convert_common_config_info(map_labels, cont->common_config, isuladinfo);
+    ret = convert_common_config_info(map_labels, cont->common_config, container_info);
     if (ret != 0) {
         goto out;
     }
 
-    isuladinfo->pid = (int32_t)cont_state->pid;
+    container_info->pid = (int32_t)cont_state->pid;
 
-    isuladinfo->status = (int)container_state_judge_status(cont_state);
+    container_info->status = (int)container_state_judge_status(cont_state);
 
-    isuladinfo->command = container_get_command(cont);
+    container_info->command = container_get_command(cont);
     image = container_get_image(cont);
-    isuladinfo->image = image ? image : util_strdup_s("none");
+    container_info->image = image ? image : util_strdup_s("none");
 
-    isuladinfo->exit_code = (uint32_t)(cont_state->exit_code);
+    container_info->exit_code = (uint32_t)(cont_state->exit_code);
     timestr = cont_state->started_at ? cont_state->started_at : defvalue;
-    isuladinfo->startat = util_strdup_s(timestr);
+    container_info->startat = util_strdup_s(timestr);
 
     timestr = cont_state->finished_at ? cont_state->finished_at : defvalue;
-    isuladinfo->finishat = util_strdup_s(timestr);
+    container_info->finishat = util_strdup_s(timestr);
 
-    isuladinfo->runtime = cont->runtime ? util_strdup_s(cont->runtime) : util_strdup_s("none");
+    container_info->runtime = cont->runtime ? util_strdup_s(cont->runtime) : util_strdup_s("none");
 
-    isuladinfo->health_state = container_get_health_state(cont_state);
+    container_info->health_state = container_get_health_state(cont_state);
 
 out:
     return ret;
-}
-
-static void free_isulad_info(container_container **isuladinfo, int ret)
-{
-    if (ret != 0) {
-        free_container_container(*isuladinfo);
-        *isuladinfo = NULL;
-    }
-    return;
 }
 
 static void unref_cont(container_t *cont)
@@ -505,7 +496,7 @@ static void unref_cont(container_t *cont)
 static container_container *get_container_info(const char *name, const struct list_context *ctx)
 {
     int ret = 0;
-    container_container *isuladinfo = NULL;
+    container_container *container_info = NULL;
     container_t *cont = NULL;
     container_config_v2_state *cont_state = NULL;
     map_t *map_labels = NULL;
@@ -529,19 +520,19 @@ static container_container *get_container_info(const char *name, const struct li
         goto cleanup;
     }
 
-    isuladinfo = util_common_calloc_s(sizeof(container_container));
-    if (isuladinfo == NULL) {
+    container_info = util_common_calloc_s(sizeof(container_container));
+    if (container_info == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto cleanup;
     }
 
-    ret = fill_isuladinfo(isuladinfo, cont_state, map_labels, cont);
+    ret = fill_container_info(container_info, cont_state, map_labels, cont);
     if (ret != 0) {
         goto cleanup;
     }
 
-    ret = container_info_match(ctx, map_labels, isuladinfo, cont_state);
+    ret = container_info_match(ctx, map_labels, container_info, cont_state);
     if (ret != 0) {
         goto cleanup;
     }
@@ -550,8 +541,11 @@ cleanup:
     unref_cont(cont);
     map_free(map_labels);
     free_container_config_v2_state(cont_state);
-    free_isulad_info(&isuladinfo, ret);
-    return isuladinfo;
+    if (ret != 0) {
+        free_container_container(container_info);
+        container_info = NULL;
+    }
+    return container_info;
 }
 
 static int do_add_filters(const char *filter_key, const json_map_string_bool *filter_value, struct list_context *ctx)

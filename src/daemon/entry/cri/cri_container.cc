@@ -113,8 +113,8 @@ cleanup:
     return runtime;
 }
 
-void CRIRuntimeServiceImpl::GetContainerTimeStamps(container_inspect *inspect, int64_t *createdAt, int64_t *startedAt,
-                                                   int64_t *finishedAt, Errors &err)
+void CRIRuntimeServiceImpl::GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
+                                                   int64_t *startedAt, int64_t *finishedAt, Errors &err)
 {
     if (inspect == nullptr) {
         err.SetError("Invalid arguments");
@@ -745,20 +745,24 @@ void CRIRuntimeServiceImpl::ListContainersToGRPC(container_list_response *respon
 
         container->set_created_at(response->containers[i]->created);
 
-        CRINaming::ParseContainerName(response->containers[i]->name, container->mutable_metadata(), error);
-        if (error.NotEmpty()) {
-            return;
+        if (response->containers[i]->name != nullptr) {
+            CRINaming::ParseContainerName(response->containers[i]->name, container->mutable_metadata(), error);
+            if (error.NotEmpty()) {
+                return;
+            }
         }
 
         CRIHelpers::ExtractLabels(response->containers[i]->labels, *container->mutable_labels());
 
         CRIHelpers::ExtractAnnotations(response->containers[i]->annotations, *container->mutable_annotations());
 
-        for (size_t j = 0; j < response->containers[i]->labels->len; j++) {
-            if (strcmp(response->containers[i]->labels->keys[j], CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str()) ==
-                0) {
-                container->set_pod_sandbox_id(response->containers[i]->labels->values[j]);
-                break;
+        if (response->containers[i]->labels != nullptr) {
+            for (size_t j = 0; j < response->containers[i]->labels->len; j++) {
+                if (strcmp(response->containers[i]->labels->keys[j],
+                           CRIHelpers::Constants::SANDBOX_ID_LABEL_KEY.c_str()) == 0) {
+                    container->set_pod_sandbox_id(response->containers[i]->labels->values[j]);
+                    break;
+                }
             }
         }
 
@@ -1056,16 +1060,20 @@ cleanup:
     free_container_stats_response(response);
 }
 
-auto CRIRuntimeServiceImpl::PackContainerImageToStatus(container_inspect *inspect,
+void CRIRuntimeServiceImpl::PackContainerImageToStatus(container_inspect *inspect,
                                                        std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus,
-                                                       Errors &error) -> int
+                                                       Errors &error)
 {
-    if (inspect->image == nullptr) {
-        return 0;
+    if (inspect->config == nullptr) {
+        return;
     }
-    contStatus->mutable_image()->set_image(inspect->config->image);
+
+    if (inspect->config->image != nullptr) {
+        contStatus->mutable_image()->set_image(inspect->config->image);
+    }
+
     contStatus->set_image_ref(CRIHelpers::ToPullableImageID(inspect->config->image, inspect->config->image_ref));
-    return 0;
+    return;
 }
 
 void CRIRuntimeServiceImpl::UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt,
@@ -1176,9 +1184,7 @@ void CRIRuntimeServiceImpl::ContainerStatusToGRPC(container_inspect *inspect,
             return;
         }
     }
-    if (PackContainerImageToStatus(inspect, contStatus, error) != 0) {
-        return;
-    }
+    PackContainerImageToStatus(inspect, contStatus, error);
     UpdateBaseStatusFromInspect(inspect, createdAt, startedAt, finishedAt, contStatus);
     PackLabelsToStatus(inspect, contStatus);
     ConvertMountsToStatus(inspect, contStatus);
@@ -1524,7 +1530,7 @@ container_inspect *CRIRuntimeServiceImpl::InspectContainer(const std::string &Id
 
     inspect_data = inspect_container((const char *)Id.c_str(), 0, with_host_config);
     if (inspect_data == nullptr) {
-        err.Errorf("Failed to call inspect service %s");
+        err.Errorf("Failed to call inspect service %s", Id.c_str());
     }
 
     return inspect_data;
@@ -1536,7 +1542,7 @@ auto CRIRuntimeServiceImpl::InspectContainerState(const std::string &Id, Errors 
 
     inspect_data = inspect_container_state((const char *)Id.c_str(), 0);
     if (inspect_data == nullptr) {
-        err.Errorf("Failed to call inspect service %s");
+        err.Errorf("Failed to call inspect service %s", Id.c_str());
     }
 
     return inspect_data;

@@ -492,55 +492,47 @@ out:
     return ret;
 }
 
-static int pack_inspect_data(const container_t *cont, container_inspect **out_inspect, bool with_host_config)
+static container_inspect *pack_inspect_data(const container_t *cont, bool with_host_config)
 {
-    int ret = 0;
     container_inspect *inspect = NULL;
 
     inspect = util_common_calloc_s(sizeof(container_inspect));
     if (inspect == NULL) {
         ERROR("Out of memory");
-        ret = -1;
         goto out;
     }
 
     if (pack_inspect_general_data(cont, inspect) != 0) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
+        ERROR("Failed to pack inspect general data, continue to pack other information");
     }
 
     if (pack_inspect_container_state(cont, inspect) != 0) {
-        ret = -1;
-        goto out;
+        ERROR("Failed to pack inspect state data, continue to pack other information");
     }
 
+    inspect->restart_count = cont->common_config->restart_count;
+
     if (with_host_config && pack_inspect_host_config(cont, inspect) != 0) {
-        ret = -1;
-        goto out;
+        ERROR("Failed to pack inspect host config data, continue to pack other information");
     }
 
     if (merge_default_ulimit_with_ulimit(inspect) != 0) {
-        ret = -1;
-        goto out;
+        ERROR("Failed to pack default ulimit data, continue to pack other information");
     }
 
     if (pack_inspect_config(cont, inspect) != 0) {
-        ret = -1;
-        goto out;
+        ERROR("Failed to pack container config data, continue to pack other information");
     }
 
-    if (!strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI)) {
+    if (strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI) == 0) {
         inspect->graph_driver = im_graphdriver_get_metadata_by_container_id(cont->common_config->id);
         if (inspect->graph_driver == NULL) {
-            ret = -1;
-            goto out;
+            ERROR("Failed to pack container graph driver data, continue to pack other information");
         }
     }
 
 out:
-    *out_inspect = inspect;
-    return ret;
+    return inspect;
 }
 
 container_inspect *inspect_container(const char *id, int timeout, bool with_host_config)
@@ -570,18 +562,12 @@ container_inspect *inspect_container(const char *id, int timeout, bool with_host
         goto out;
     }
 
-    if (pack_inspect_data(cont, &inspect, with_host_config) != 0) {
-        ret = -1;
-        goto unlock;
-    }
-
+    inspect = pack_inspect_data(cont, with_host_config);
     ret = 0;
-
-unlock:
     container_unlock(cont);
+
 out:
     container_unref(cont);
-
     if (ret != 0) {
         free_container_inspect(inspect);
         inspect = NULL;
