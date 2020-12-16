@@ -888,7 +888,7 @@ int isula_attach_network_plane(const struct cni_manager *manager, const char *ne
     }
 
     if (cni_add_network_list(net_list_conf_str, rc, result) != 0) {
-        ERROR("Add CNI network failed");
+        ERROR("Add CNI network:%s failed", net_name);
         ret = -1;
         goto out;
     }
@@ -932,7 +932,7 @@ int cri_detach_network_plane(const struct cni_manager *manager, const char *net_
     }
 
     if (cni_del_network_list(net_list_conf_str, rc) != 0) {
-        ERROR("Error deleting network: %s", manager->name);
+        ERROR("Error deleting network");
         ret = -1;
         goto out;
     }
@@ -975,7 +975,7 @@ int isula_detach_network_plane(const struct cni_manager *manager, const char *ne
     }
 
     if (cni_del_network_list(net_list_conf_str, rc) != 0) {
-        ERROR("Error deleting network: %s", manager->name);
+        ERROR("Error deleting network: %s", net_name);
         ret = -1;
         goto out;
     }
@@ -1021,8 +1021,6 @@ void free_cni_manager(struct cni_manager *manager)
 
     UTIL_FREE_AND_SET_NULL(manager->id);
     UTIL_FREE_AND_SET_NULL(manager->ifname);
-    UTIL_FREE_AND_SET_NULL(manager->name);
-    UTIL_FREE_AND_SET_NULL(manager->namespace);
     UTIL_FREE_AND_SET_NULL(manager->netns_path);
     map_free(manager->annotations);
     manager->annotations = NULL;
