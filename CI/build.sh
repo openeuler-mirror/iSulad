@@ -360,6 +360,8 @@ do
     echo_success "Run container ${CONTAINER_NAME}_${suffix} success"
 done
 
+# disable devmapper for network branch
+disk=NULL
 if [[ "x$disk" != "xNULL" ]] && [[ "x${enable_gcov}" != "xON" ]] ; then
     # start container to test devicemapper
     devmappercontainer=${CONTAINER_NAME}_devmapper

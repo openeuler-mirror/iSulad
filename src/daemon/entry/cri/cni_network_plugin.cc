@@ -31,7 +31,7 @@
 #include "service_container_api.h"
 #include "network_namespace_api.h"
 
-#include "adaptor_cni.h"
+#include "network_api.h"
 
 namespace Network {
 
@@ -79,7 +79,7 @@ void CniNetworkPlugin::SyncNetworkConfig()
         return;
     }
 
-    if (adaptor_cni_update_confs() != 0) {
+    if (network_module_update(NETWOKR_API_TYPE_CRI) != 0) {
         err.SetError("update cni conf list failed");
     }
 
@@ -104,13 +104,6 @@ void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &h
     if (error.NotEmpty()) {
         return;
     }
-    char **paths = CRIHelpers::StringVectorToCharArray(m_binDirs);
-
-    // TODO: how to init network modules
-    if (!adaptor_cni_init(NULL, m_confDir.c_str(), paths, m_binDirs.size())) {
-        error.SetError("init cni manager failed");
-        goto out;
-    }
 
     m_criImpl = criImpl;
     SyncNetworkConfig();
@@ -119,8 +112,6 @@ void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &h
     m_syncThread = std::thread([&]() {
         UpdateDefaultNetwork();
     });
-out:
-    util_free_array(paths);
 }
 
 auto CniNetworkPlugin::Name() const -> const std::string &
@@ -135,7 +126,7 @@ void CniNetworkPlugin::CheckInitialized(Errors &err)
         return;
     }
 
-    if (!check_cni_inited()) {
+    if (!network_module_check(NETWOKR_API_TYPE_CRI)) {
         err.SetError("cni config uninitialized");
     }
 
@@ -194,7 +185,7 @@ static void GetExtensionCNIArgs(const std::map<std::string, std::string> &annota
 
 static void PrepareAdaptorArgs(const std::string &podName, const std::string &podNs, const std::string &podSandboxID,
                                const std::map<std::string, std::string> &annotations, const std::map<std::string, std::string> &options,
-                               adaptor_cni_config *config, Errors &err)
+                               network_api_conf *config, Errors &err)
 {
     size_t workLen;
     std::map<std::string, std::string> cniArgs;
@@ -239,11 +230,11 @@ static void PrepareAdaptorArgs(const std::string &podName, const std::string &po
     }
     return;
 err_out:
-    err.SetError("prepare adaptor cni config failed");
+    err.SetError("prepare network api config failed");
 }
 
 static void PrepareAdaptorAttachNetworks(const std::map<std::string, std::string> &annotations,
-                                         adaptor_cni_config *config, Errors &err)
+                                         network_api_conf *config, Errors &err)
 {
     cri_pod_network_container *networks = CRIHelpers::GetNetworkPlaneFromPodAnno(annotations, err);
     if (err.NotEmpty()) {
@@ -280,7 +271,7 @@ free_out:
     free_cri_pod_network_container(networks);
 }
 
-static void PrepareAdaptorAnnotations(const std::map<std::string, std::string> &annos, adaptor_cni_config *config,
+static void PrepareAdaptorAnnotations(const std::map<std::string, std::string> &annos, network_api_conf *config,
                                       Errors &err)
 {
     if (config->annotations == nullptr) {
@@ -347,11 +338,8 @@ static void PrepareAdaptorAnnotations(const std::map<std::string, std::string> &
         cni_pms->len += 1;
     }
     tmpVal = cni_anno_port_mappings_container_generate_json(cni_pms, nullptr, &jerr);
-    if (tmpVal != nullptr) {
-        // TODO: wait commonkey
-        if (!map_replace(config->annotations, (void *)"portmappings", (void *)tmpVal)) {
-            err.SetError("add portmappings failed");
-        }
+    if (network_module_insert_portmapping(tmpVal, config) != 0) {
+        err.SetError("add portmappings failed");
     }
     free(tmpVal);
 
@@ -363,11 +351,11 @@ free_out:
 void BuildAdaptorCNIConfig(const std::string &ns, const std::string &defaultInterface, const std::string &name,
                            const std::string &netnsPath, const std::string &podSandboxID,
                            const std::map<std::string, std::string> &annotations,
-                           const std::map<std::string, std::string> &options, adaptor_cni_config **adaptor_conf, Errors &err)
+                           const std::map<std::string, std::string> &options, network_api_conf **api_conf, Errors &err)
 {
-    adaptor_cni_config *config = nullptr;
+    network_api_conf *config = nullptr;
 
-    config = (adaptor_cni_config *)util_common_calloc_s(sizeof(adaptor_cni_config));
+    config = (network_api_conf *)util_common_calloc_s(sizeof(network_api_conf));
     if (config == nullptr) {
         ERROR("Out of memory");
         err.SetError("Out of memory");
@@ -399,12 +387,12 @@ void BuildAdaptorCNIConfig(const std::string &ns, const std::string &defaultInte
         config->default_interface = util_strdup_s(defaultInterface.c_str());
     }
 
-    *adaptor_conf = config;
+    *api_conf = config;
     config = nullptr;
     return;
 err_out:
     err.AppendError("BuildAdaptorCNIConfig failed");
-    free_adaptor_cni_config(config);
+    free_network_api_conf(config);
 }
 
 auto CniNetworkPlugin::GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string
@@ -455,10 +443,10 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         return;
     }
 
-    adaptor_cni_config *config = nullptr;
+    network_api_conf *config = nullptr;
     BuildAdaptorCNIConfig(ns, interfaceName, name, netnsPath, id, annotations, options, &config, err);
     if (err.NotEmpty()) {
-        ERROR("build adaptor cni config failed");
+        ERROR("build network api config failed");
         return;
     }
 
@@ -468,12 +456,15 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         return;
     }
 
-    if (adaptor_cni_setup(config) != 0) {
+    // TODO: parse result of attach
+    network_api_result_list *result = nullptr;
+    if (network_module_attach(config, NETWOKR_API_TYPE_CRI, &result) != 0) {
         err.Errorf("setup cni for container: %s failed", id.c_str());
     }
 
     UnlockNetworkMap(err);
-    free_adaptor_cni_config(config);
+    free_network_api_result_list(result);
+    free_network_api_conf(config);
 }
 
 void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
@@ -504,10 +495,10 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
     }
 
     std::map<std::string, std::string> tmpOpts;
-    adaptor_cni_config *config = nullptr;
+    network_api_conf *config = nullptr;
     BuildAdaptorCNIConfig(ns, interfaceName, name, netnsPath, id, annotations, tmpOpts, &config, err);
     if (err.NotEmpty()) {
-        ERROR("build adaptor cni config failed");
+        ERROR("build network api config failed");
         return;
     }
 
@@ -517,12 +508,12 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
         return;
     }
 
-    if (adaptor_cni_teardown(config) != 0) {
+    if (network_module_detach(config, NETWOKR_API_TYPE_CRI) != 0) {
         err.Errorf("teardown cni for container: %s failed", id.c_str());
     }
 
     UnlockNetworkMap(err);
-    free_adaptor_cni_config(config);
+    free_network_api_conf(config);
 }
 
 auto CniNetworkPlugin::Capabilities() -> std::map<int, bool> *

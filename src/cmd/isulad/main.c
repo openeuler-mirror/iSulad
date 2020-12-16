@@ -71,6 +71,7 @@
 #include "utils_verify.h"
 #include "volume_api.h"
 #include "opt_log.h"
+#include "network_api.h"
 
 sem_t g_daemon_shutdown_sem;
 sem_t g_daemon_wait_shutdown_sem;
@@ -1232,6 +1233,12 @@ static int isulad_server_init_common()
 
     if (image_module_init(args->json_confs) != 0) {
         ERROR("Failed to init image manager");
+        goto out;
+    }
+
+    if (!network_module_init(args->json_confs->network_plugin, NULL, args->json_confs->cni_conf_dir,
+                             args->json_confs->cni_bin_dir)) {
+        ERROR("Failed to init network module");
         goto out;
     }
 

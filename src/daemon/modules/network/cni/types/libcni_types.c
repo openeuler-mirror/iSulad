@@ -609,6 +609,9 @@ char *ipnet_to_string(const struct ipnet *value)
     int nret = 0;
     size_t res_len = 0;
 
+    if (value == NULL) {
+        return NULL;
+    }
     iplen = try_to_ipv4(value, &ip);
     if (iplen == 0) {
         goto free_out;
