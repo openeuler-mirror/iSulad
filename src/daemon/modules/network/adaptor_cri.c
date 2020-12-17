@@ -65,8 +65,7 @@ int adaptor_cni_update_confs()
         goto out;
     }
     if (tmp_net_list_len == 0) {
-        ret = -1;
-        ERROR("No cni config list found");
+        WARN("No cni config list found");
         goto out;
     }
 
@@ -103,6 +102,7 @@ out:
     for (i = 0; i < tmp_net_list_len; i++) {
         free_cni_network_list_conf(tmp_net_list[i]);
     }
+    free(tmp_net_list);
     map_free(work);
     return ret;
 }
