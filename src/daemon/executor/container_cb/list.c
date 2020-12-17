@@ -247,7 +247,7 @@ cleanup:
     return filtered_ids;
 }
 
-char *container_get_health_state(const container_config_v2_state *cont_state)
+char *container_get_health_state(const container_state *cont_state)
 {
     if (cont_state == NULL || cont_state->health == NULL || cont_state->health->status == NULL) {
         return NULL;
@@ -381,8 +381,6 @@ static int convert_common_config_info(const map_t *map_labels, const container_c
 
     dup_id_name(common_config, isuladinfo);
 
-    isuladinfo->restartcount = (uint64_t)common_config->restart_count;
-
     dup_container_image_ref(common_config, isuladinfo);
 
     dup_container_labels(map_labels, common_config, isuladinfo);
@@ -395,7 +393,7 @@ static int convert_common_config_info(const map_t *map_labels, const container_c
 }
 
 static int container_info_match(const struct list_context *ctx, const map_t *map_labels,
-                                const container_container *isuladinfo, const container_config_v2_state *cont_state)
+                                const container_container *isuladinfo, const container_state *cont_state)
 {
     int ret = 0;
     Container_Status cs;
@@ -436,7 +434,7 @@ out:
     return ret;
 }
 
-static int get_cnt_state(const struct list_context *ctx, const container_config_v2_state *cont_state, const char *name)
+static int get_cnt_state(const struct list_context *ctx, const container_state *cont_state, const char *name)
 {
     if (cont_state == NULL) {
         ERROR("Failed to read %s state", name);
@@ -449,7 +447,7 @@ static int get_cnt_state(const struct list_context *ctx, const container_config_
     return 0;
 }
 
-static int fill_container_info(container_container *container_info, const container_config_v2_state *cont_state,
+static int fill_container_info(container_container *container_info, const container_state *cont_state,
                                const map_t *map_labels, const container_t *cont)
 {
     int ret = 0;
@@ -481,6 +479,8 @@ static int fill_container_info(container_container *container_info, const contai
 
     container_info->health_state = container_get_health_state(cont_state);
 
+    container_info->restartcount = (uint64_t)cont_state->restart_count;
+
 out:
     return ret;
 }
@@ -498,7 +498,7 @@ static container_container *get_container_info(const char *name, const struct li
     int ret = 0;
     container_container *container_info = NULL;
     container_t *cont = NULL;
-    container_config_v2_state *cont_state = NULL;
+    container_state *cont_state = NULL;
     map_t *map_labels = NULL;
 
     cont = containers_store_get(name);
@@ -506,7 +506,7 @@ static container_container *get_container_info(const char *name, const struct li
         ERROR("Container '%s' already removed", name);
         return NULL;
     }
-    cont_state = container_state_to_v2_state(cont->state);
+    cont_state = container_dup_state(cont->state);
 
     if (get_cnt_state(ctx, cont_state, name) != 0) {
         ret = -1;
@@ -540,7 +540,7 @@ static container_container *get_container_info(const char *name, const struct li
 cleanup:
     unref_cont(cont);
     map_free(map_labels);
-    free_container_config_v2_state(cont_state);
+    free_container_state(cont_state);
     if (ret != 0) {
         free_container_container(container_info);
         container_info = NULL;

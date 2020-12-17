@@ -540,8 +540,8 @@ out:
     return ret;
 }
 
-static int register_new_container(const char *id, const char *runtime, host_config **host_spec,
-                                  container_config_v2_common_config **v2_spec)
+static int register_new_container(const char *id, const char *runtime, host_config *host_spec,
+                                  container_config_v2_common_config *v2_spec)
 {
     int ret = -1;
     bool registered = false;
@@ -560,12 +560,12 @@ static int register_new_container(const char *id, const char *runtime, host_conf
         goto out;
     }
 
-    if (strcmp((*v2_spec)->image_type, IMAGE_TYPE_OCI) == 0) {
-        if (conf_get_image_id((*v2_spec)->image, &image_id) != 0) {
+    if (strcmp(v2_spec->image_type, IMAGE_TYPE_OCI) == 0) {
+        if (conf_get_image_id(v2_spec->image, &image_id) != 0) {
             goto out;
         }
     }
-    cont = container_new(runtime, runtime_root, runtime_stat, image_id, host_spec, v2_spec);
+    cont = container_new(runtime, runtime_root, runtime_stat, image_id, host_spec, v2_spec, NULL);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
         goto out;
@@ -583,12 +583,18 @@ static int register_new_container(const char *id, const char *runtime, host_conf
     }
 
     ret = 0;
+
 out:
     free(runtime_root);
     free(runtime_stat);
     free(image_id);
     if (ret != 0) {
-        container_unref(cont);
+        /* fail, do not use the input v2 spec and host spec, the memeory will be free by caller*/
+        if (cont != NULL) {
+            cont->common_config = NULL;
+            cont->hostconfig = NULL;
+            container_unref(cont);
+        }
     }
     return ret;
 }
@@ -1022,7 +1028,7 @@ static int create_v2_config_json(const char *id, const char *runtime_root, conta
     char *v2_json = NULL;
     parser_error err = NULL;
     container_config_v2 config_v2 = { 0 };
-    container_config_v2_state state = { 0 };
+    container_state state = { 0 };
 
     config_v2.common_config = v2_spec;
     config_v2.state = &state;
@@ -1443,11 +1449,13 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_channel;
     }
 
-    if (register_new_container(id, runtime, &host_spec, &v2_spec)) {
+    if (register_new_container(id, runtime, host_spec, v2_spec)) {
         ERROR("Failed to register new container");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
     }
+    host_spec = NULL;
+    v2_spec = NULL;
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
     (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);

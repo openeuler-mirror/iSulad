@@ -205,7 +205,7 @@ static void restore_running_container(Container_Status status, container_t *cont
     nret = util_read_pid_ppid_info(info->pid, &pid_info);
     if (nret == 0) {
         try_to_set_container_running(status, cont, &pid_info);
-        container_reset_manually_stopped(cont);
+        container_state_reset_has_been_manual_stopped(cont->state);
     } else {
         ERROR("Failed to restore container:%s due to unable to read container pid information", id);
         nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
@@ -231,7 +231,7 @@ static void restore_paused_container(Container_Status status, container_t *cont,
     nret = util_read_pid_ppid_info(info->pid, &pid_info);
     if (nret == 0) {
         try_to_set_paused_container_pid(status, cont, &pid_info);
-        container_reset_manually_stopped(cont);
+        container_state_reset_has_been_manual_stopped(cont->state);
     } else {
         ERROR("Failed to restore container:%s due to unable to read container pid information", id);
         nret = post_stopped_container_to_gc(id, cont->runtime, cont->state_path, 0);
@@ -281,7 +281,7 @@ static void restore_state(container_t *cont)
         container_state_reset_removal_in_progress(cont->state);
         need_save = true;
     }
-    if (need_save && container_to_disk(cont) != 0) {
+    if (need_save && container_state_to_disk(cont) != 0) {
         ERROR("Failed to re-save container \"%s\" to disk", id);
     }
 }
@@ -347,9 +347,9 @@ static void restored_restart_container(container_t *cont)
 
     started_at = container_state_get_started_at(cont->state);
     if (restart_manager_should_restart(id, container_state_get_exitcode(cont->state),
-                                       cont->common_config->has_been_manually_stopped, util_time_seconds_since(started_at),
-                                       &timeout)) {
-        cont->common_config->restart_count++;
+                                       container_state_get_has_been_manual_stopped(cont->state),
+                                       util_time_seconds_since(started_at), &timeout)) {
+        container_state_increase_restart_count(cont->state);
         INFO("Restart container %s after 5 second", id);
         (void)container_restart_in_thread(id, 5ULL * Time_Second, (int)container_state_get_exitcode(cont->state));
     }

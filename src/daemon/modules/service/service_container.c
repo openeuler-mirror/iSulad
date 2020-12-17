@@ -877,7 +877,7 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
         goto set_stopped;
     } else {
         container_state_set_running(cont->state, &pid_info, true);
-        cont->common_config->has_been_manually_stopped = false;
+        container_state_reset_has_been_manual_stopped(cont->state);
         container_init_health_monitor(cont->common_config->id);
         goto save_container;
     }
@@ -892,7 +892,7 @@ set_stopped:
     }
 
 save_container:
-    if (container_to_disk(cont)) {
+    if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", cont->common_config->id);
         ret = -1;
         goto out;
@@ -1059,7 +1059,7 @@ static int do_delete_container(container_t *cont)
     }
     container_unref(cont_tmp);
 
-    (void)container_to_disk(cont);
+    (void)container_state_to_disk(cont);
 
     if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot remove container %s in garbage collector progress.", id);
@@ -1217,8 +1217,8 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
         ret = -1;
         goto out;
     }
-    cont->common_config->has_been_manually_stopped = true;
-    (void)container_to_disk(cont);
+    container_state_set_has_been_manual_stopped(cont->state);
+    (void)container_state_to_disk(cont);
 
     if (!container_is_running(cont->state)) {
         INFO("Container %s is already stopped", id);

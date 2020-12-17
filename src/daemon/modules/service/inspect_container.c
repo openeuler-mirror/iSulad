@@ -351,6 +351,8 @@ static int pack_inspect_container_state(const container_t *cont, container_inspe
         goto out;
     }
 
+    inspect->restart_count = container_state_get_restart_count(cont->state);
+
     inspect->state = container_state_to_inspect_state(cont->state);
     if (inspect->state == NULL) {
         ERROR("Failed to get container state %s", cont->common_config->id);
@@ -509,8 +511,6 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
     if (pack_inspect_container_state(cont, inspect) != 0) {
         ERROR("Failed to pack inspect state data, continue to pack other information");
     }
-
-    inspect->restart_count = cont->common_config->restart_count;
 
     if (with_host_config && pack_inspect_host_config(cont, inspect) != 0) {
         ERROR("Failed to pack inspect host config data, continue to pack other information");

@@ -111,6 +111,7 @@ static int container_state_changed(container_t *cont, const struct isulad_events
     char *started_at = NULL;
     bool should_restart = false;
     bool auto_remove = false;
+    bool has_been_manually_stopped = false;
 
     /* only handle Exit event */
     if (events->type != EVENTS_TYPE_STOPPED1) {
@@ -138,15 +139,15 @@ static int container_state_changed(container_t *cont, const struct isulad_events
             }
 
             started_at = container_state_get_started_at(cont->state);
+            has_been_manually_stopped = container_state_get_has_been_manual_stopped(cont->state);
 
-            should_restart = restart_manager_should_restart(id, events->exit_status,
-                                                            cont->common_config->has_been_manually_stopped,
+            should_restart = restart_manager_should_restart(id, events->exit_status, has_been_manually_stopped,
                                                             util_time_seconds_since(started_at), &timeout);
             free(started_at);
             started_at = NULL;
 
             if (should_restart) {
-                cont->common_config->restart_count++;
+                container_state_increase_restart_count(cont->state);
                 container_state_set_restarting(cont->state, (int)events->exit_status);
                 container_wait_stop_cond_broadcast(cont);
                 INFO("Try to restart container %s after %.2fs", id, (double)timeout / Time_Second);
@@ -166,7 +167,7 @@ static int container_state_changed(container_t *cont, const struct isulad_events
                 }
             }
 
-            if (container_to_disk(cont)) {
+            if (container_state_to_disk(cont)) {
                 container_unlock(cont);
                 ERROR("Failed to save container \"%s\" to disk", id);
                 ret = -1;
