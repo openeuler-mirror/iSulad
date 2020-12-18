@@ -15,7 +15,7 @@
 #include "network_api.h"
 
 #include <isula_libutils/log.h>
-#include "manager.h"
+#include "cni_operate.h"
 #include "utils.h"
 #include "map.h"
 #include "utils_network.h"
@@ -37,6 +37,15 @@ bool adaptor_cni_check_inited()
     return g_net_store.conflist_len > 0;
 }
 
+static bool is_cri_config_file(const char *filename)
+{
+    if (filename == NULL) {
+        return false;
+    }
+
+    return strncmp(ISULAD_CNI_NETWORK_CONF_FILE_PRE, filename, strlen(ISULAD_CNI_NETWORK_CONF_FILE_PRE)) != 0;
+}
+
 int adaptor_cni_update_confs()
 {
     int ret = 0;
@@ -47,11 +56,6 @@ int adaptor_cni_update_confs()
     char message[MAX_BUFFER_SIZE] = { 0 };
     int pos = 0;
 
-    if (cri_update_confist_from_dir() != 0) {
-        ERROR("update cni manager module failed");
-        return -1;
-    }
-
     work = map_new(MAP_STR_INT, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
     if (work == NULL) {
         ERROR("Out of memory");
@@ -59,7 +63,7 @@ int adaptor_cni_update_confs()
     }
 
     // get new conflist data
-    ret = cri_get_conflist_from_dir(&tmp_net_list, &tmp_net_list_len);
+    ret = get_net_conflist_from_dir(&tmp_net_list, &tmp_net_list_len, is_cri_config_file);
     if (ret != 0) {
         ERROR("Update new config list failed");
         goto out;
@@ -267,7 +271,7 @@ int adaptor_cni_setup(const network_api_conf *conf, network_api_result_list *res
         return -1;
     }
 
-    ret = do_foreach_network_op(conf, cri_attach_network_plane, result);
+    ret = do_foreach_network_op(conf, attach_network_plane, result);
     if (ret != 0) {
         return -1;
     }
@@ -295,7 +299,7 @@ int adaptor_cni_teardown(const network_api_conf *conf, network_api_result_list *
         return -1;
     }
 
-    ret = do_foreach_network_op(conf, cri_detach_network_plane, result);
+    ret = do_foreach_network_op(conf, detach_network_plane, result);
     if (ret != 0) {
         return -1;
     }
