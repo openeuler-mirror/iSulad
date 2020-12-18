@@ -17,7 +17,7 @@
 #include<isula_libutils/log.h>
 
 #include "adaptor_cri.h"
-#include "manager.h"
+#include "cni_operate.h"
 #include "utils_string.h"
 #include "utils_array.h"
 #include "utils.h"

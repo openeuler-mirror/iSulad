@@ -275,7 +275,7 @@ out:
     return ret;
 }
 
-static int do_check_file_is_valid(const char *fname, bool *result)
+static int do_check_file_is_valid(const char *fname)
 {
     struct stat tmp_fstat;
     int nret = -1;
@@ -283,20 +283,16 @@ static int do_check_file_is_valid(const char *fname, bool *result)
     nret = lstat(fname, &tmp_fstat);
     if (nret != 0) {
         SYSERROR("lstat %s failed", fname);
-        *result = false;
         return -1;
     }
 
     if (S_ISDIR(tmp_fstat.st_mode)) {
-        // ignore dir
-        *result = true;
         ERROR("conf file %s is dir", fname);
         return -1;
     }
 
     if (tmp_fstat.st_size > SIZE_MB) {
         ERROR("Too large config file: %s", fname);
-        *result = false;
         return -1;
     }
 
@@ -312,22 +308,28 @@ struct search_cb_args {
 
 static bool search_conf_files_cb(const char *dir, const struct dirent *pdirent, void *context)
 {
+#define MAX_FILES 200
     struct search_cb_args *args = (struct search_cb_args *)context;
     char fname[PATH_MAX] = { 0 };
     size_t i = 0;
     const char *ext_name = NULL;
     int nret = -1;
-    bool ret = false;
+
+    if (args->result_len > MAX_FILES) {
+        ERROR("Too more config files, current support max count of config file is %d, so just ignore others.", MAX_FILES);
+        return false;
+    }
 
     nret = snprintf(fname, PATH_MAX, "%s/%s", dir, pdirent->d_name);
     if (nret < 0 || nret >= PATH_MAX) {
         ERROR("Pathname too long");
-        return ret;
+        return false;
     }
 
-    nret = do_check_file_is_valid(fname, &ret);
+    nret = do_check_file_is_valid(fname);
     if (nret != 0) {
-        return ret;
+        // ignore invalid file
+        return true;
     }
 
     /* compare extension */
@@ -358,7 +360,6 @@ static inline bool check_conf_files_args(const char *dir, const char * const *ex
 
 int conf_files(const char *dir, const char * const *extensions, size_t ext_len, char ***result)
 {
-#define MAX_FILES 200
     int ret = -1;
     int nret = -1;
     struct search_cb_args s_args = { 0 };
@@ -370,7 +371,7 @@ int conf_files(const char *dir, const char * const *extensions, size_t ext_len, 
     nret = check_conf_dir(dir);
     if (nret != 1) {
         /* dir is not exist, just ignore, do not return error */
-        return nret;
+        return 0;
     }
 
     s_args.extensions = extensions;
@@ -378,12 +379,6 @@ int conf_files(const char *dir, const char * const *extensions, size_t ext_len, 
     s_args.result = result;
     nret = util_scan_subdirs(dir, search_conf_files_cb, &s_args);
     if (nret != 0) {
-        ret = -1;
-        goto free_out;
-    }
-
-    if (s_args.result_len > MAX_FILES) {
-        ERROR("Too more config files, current support max count of config file is %d.", MAX_FILES);
         ret = -1;
         goto free_out;
     }
@@ -427,7 +422,7 @@ int load_conf(const char *dir, const char *name, struct network_config **conf)
     }
     len = util_array_len((const char **)files);
     if (len == 0) {
-        ERROR("no net configurations found in %s", dir);
+        WARN("no net configurations found in %s", dir);
         goto free_out;
     }
 

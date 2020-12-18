@@ -22,7 +22,7 @@
 #include "isula_libutils/cni_net_conf_list.h"
 #include "isula_libutils/cni_anno_port_mappings.h"
 #include "utils.h"
-#include "libcni_utils.h"
+#include "utils_network.h"
 #include "libcni_types.h"
 
 #define LO_IFNAME "lo"
@@ -233,7 +233,7 @@ out:
 
 // Try my best to load file, when error occured, just skip and continue
 static int update_conflist_from_files(struct cni_network_list_conf **conflists, const char **files,
-                                          size_t files_num, size_t *nets_num, cni_conf_filter_t *filter_ops)
+                                      size_t files_num, size_t *nets_num, cni_conf_filter_t filter_ops)
 {
     size_t i = 0;
     int ret = 0;
@@ -344,7 +344,7 @@ out:
 }
 
 
-int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, cni_conf_filter_t *filter_ops)
+int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, cni_conf_filter_t filter_ops)
 {
     int ret = 0;
     size_t files_num = 0;
@@ -366,7 +366,7 @@ int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res
     if (files_num == 0) {
         goto out;
     }
- 
+
     tmp_conflists = (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(struct cni_network_list_conf *), files_num);
     if (tmp_conflists == NULL) {
         ERROR("Out of memory, cannot allocate mem to store conflists");
@@ -383,7 +383,7 @@ int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res
 
     *store = tmp_conflists;
     tmp_conflists = NULL;
-    *res_len = nets_num;  
+    *res_len = nets_num;
 
 out:
     util_free_array_by_len(files, files_num);
