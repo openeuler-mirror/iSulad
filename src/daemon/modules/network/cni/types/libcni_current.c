@@ -456,48 +456,64 @@ out:
 
 static int dns_to_json_copy_servers(const struct dns *src, cni_network_dns *result)
 {
+    size_t i;
     bool need_copy = (src->name_servers != NULL && src->name_servers_len > 0);
 
-    if (need_copy) {
-        result->nameservers = (char **)util_smart_calloc_s(src->name_servers_len, sizeof(char *));
-        if (result->nameservers == NULL) {
-            ERROR("Out of memory");
-            return -1;
-        }
-        result->nameservers_len = src->name_servers_len;
-        (void)memcpy(result->nameservers, src->name_servers, src->name_servers_len);
+    if (!need_copy) {
+        return 0;
+    }
+
+    result->nameservers = (char **)util_smart_calloc_s(src->name_servers_len, sizeof(char *));
+    if (result->nameservers == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    result->nameservers_len = src->name_servers_len;
+    for (i = 0; i < src->name_servers_len; i++) {
+        result->nameservers[i] = util_strdup_s(src->name_servers[i]);
     }
     return 0;
 }
 
 static int dns_to_json_copy_options(const struct dns *src, cni_network_dns *result)
 {
+    size_t i;
     bool need_copy = (src->options != NULL && src->options_len > 0);
 
-    if (need_copy) {
-        result->options = (char **)util_smart_calloc_s(src->options_len, sizeof(char *));
-        if (result->options == NULL) {
-            ERROR("Out of memory");
-            return -1;
-        }
-        result->options_len = src->options_len;
-        (void)memcpy(result->options, src->options, src->options_len);
+    if (!need_copy) {
+        return 0;
     }
+
+    result->options = (char **)util_smart_calloc_s(src->options_len, sizeof(char *));
+    if (result->options == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    result->options_len = src->options_len;
+    for (i = 0; i < src->options_len; i++) {
+        result->options[i] = util_strdup_s(src->options[i]);
+    }
+
     return 0;
 }
 
 static int dns_to_json_copy_searchs(const struct dns *src, cni_network_dns *result)
 {
+    size_t i;
     bool need_copy = (src->search != NULL && src->search_len > 0);
 
-    if (need_copy) {
-        result->search = (char **)util_smart_calloc_s(src->search_len, sizeof(char *));
-        if (result->search == NULL) {
-            ERROR("Out of memory");
-            return -1;
-        }
-        result->search_len = src->search_len;
-        (void)memcpy(result->search, src->search, src->search_len);
+    if (!need_copy) {
+        return 0;
+    }
+
+    result->search = (char **)util_smart_calloc_s(src->search_len, sizeof(char *));
+    if (result->search == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    result->search_len = src->search_len;
+    for (i = 0; i < src->search_len; i++) {
+        result->search[i] = util_strdup_s(src->search[i]);
     }
     return 0;
 }
