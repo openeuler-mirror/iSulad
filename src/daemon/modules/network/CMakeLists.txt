@@ -1,14 +1,20 @@
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} topsrcs)
 
-add_subdirectory(cni)
+add_subdirectory(cni_operator)
+add_subdirectory(cri_net)
+add_subdirectory(native_net)
 
 set(NETWORK_SRCS
     ${topsrcs}
-    ${NETWORK_SRCS}
+    ${CNI_OPERATOR_SRCS}
+    ${CRI_NET_SRCS}
+    ${NATIVE_NET_SRCS}
     PARENT_SCOPE
     )
 set(NETWORK_INCS
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${NETWORK_INCS}
+    ${CNI_OPERATOR_INCS}
+    ${CRI_NET_INCS}
+    ${NATIVE_NET_INCS}
     PARENT_SCOPE
     )
