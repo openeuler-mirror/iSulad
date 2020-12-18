@@ -43,7 +43,7 @@ struct cni_manager {
 int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
                            size_t bin_paths_len);
 
-int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, cni_conf_filter_t *filter_ops);
+int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, cni_conf_filter_t filter_ops);
 
 int attach_loopback(const char *id, const char *netns);
 
