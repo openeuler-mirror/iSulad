@@ -162,7 +162,7 @@ static bool is_same_process(const container_t *cont, const pid_ppid_info_t *pid_
 static void try_to_set_paused_container_pid(Container_Status status, const container_t *cont,
                                             const pid_ppid_info_t *pid_info)
 {
-    if (status != CONTAINER_STATUS_RUNNING || !is_same_process(cont, pid_info)) {
+    if (status != CONTAINER_STATUS_PAUSED || !is_same_process(cont, pid_info)) {
         container_state_set_running(cont->state, pid_info, false);
     }
 }
@@ -174,7 +174,7 @@ static void try_to_set_container_running(Container_Status status, container_t *c
     }
 }
 
-static void restore_stopped_container(Container_Status status, const container_t *cont, bool *need_save)
+static void restore_stopped_container(Container_Status status, const container_t *cont)
 {
     const char *id = cont->common_config->id;
     pid_t pid = 0;
@@ -191,7 +191,6 @@ static void restore_stopped_container(Container_Status status, const container_t
                   id);
         }
         container_state_set_stopped(cont->state, 255);
-        *need_save = true;
     }
 }
 
@@ -249,7 +248,6 @@ static void restore_paused_container(Container_Status status, container_t *cont,
 static void restore_state(container_t *cont)
 {
     int nret = 0;
-    bool need_save = false;
     const char *id = cont->common_config->id;
     const char *runtime = cont->runtime;
     rt_status_params_t params = { 0 };
@@ -268,7 +266,7 @@ static void restore_state(container_t *cont)
     }
 
     if (real_status.status == RUNTIME_CONTAINER_STATUS_STOPPED) {
-        restore_stopped_container(status, cont, &need_save);
+        restore_stopped_container(status, cont);
     } else if (real_status.status == RUNTIME_CONTAINER_STATUS_RUNNING) {
         restore_running_container(status, cont, &real_status);
     } else if (real_status.status == RUNTIME_CONTAINER_STATUS_PAUSED) {
@@ -279,9 +277,8 @@ static void restore_state(container_t *cont)
 
     if (container_is_removal_in_progress(cont->state)) {
         container_state_reset_removal_in_progress(cont->state);
-        need_save = true;
     }
-    if (need_save && container_state_to_disk(cont) != 0) {
+    if (container_state_to_disk(cont) != 0) {
         ERROR("Failed to re-save container \"%s\" to disk", id);
     }
 }
