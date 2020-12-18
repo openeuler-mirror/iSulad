@@ -20,6 +20,13 @@
 extern "C" {
 #endif
 
+/* signature algorithm name max length */
+#define  ALGO_NAME_LEN       256
+
+/* public key bits suggest min length */
+#define  RSA_PKEY_MIN_LEN       2048
+#define  ECC_PKEY_MIN_LEN       256
+
 int get_common_name_from_tls_cert(const char *cert_path, char *value, size_t len);
 
 #ifdef __cplusplus
