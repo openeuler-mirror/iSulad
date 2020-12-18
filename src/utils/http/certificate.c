@@ -24,6 +24,10 @@
 #include "isula_libutils/log.h"
 #include "utils_file.h"
 
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#define HAVE_OPAQUE_STRUCTS 1
+#endif
+
 static const char * const g_weak_algos[] = {
     "sha1WithRSAEncryption",
     "md5WithRSAEncryption",
@@ -36,21 +40,19 @@ static void check_algo(X509 *cert)
 {
     size_t i = 0;
     size_t len = sizeof(g_weak_algos) / sizeof(char *);
-    char sigalgo_name[ALGO_NAME_LEN] = { 0 };
-    X509_ALGOR *sig_type = cert->sig_alg;
-
-    if (sig_type == NULL) {
-        ERROR("Failed to get cert signature type");
+#if HAVE_OPAQUE_STRUCTS
+    const char *sig_algo = OBJ_nid2ln(X509_get_signature_nid(cert));
+#else
+    if (cert->sig_alg == NULL) {
+        ERROR("signature algorithm is null");
         return;
     }
-    if (i2t_ASN1_OBJECT(sigalgo_name, ALGO_NAME_LEN - 1, sig_type->algorithm) <= 0) {
-        ERROR("Failed to extract signature algorithm name");
-        return;
-    }
+    const char *sig_algo = OBJ_nid2ln(OBJ_obj2nid(cert->sig_alg->algorithm));
+#endif
 
     for (i = 0; i < len; i++) {
-        if (strcmp(g_weak_algos[i], sigalgo_name) == 0) {
-            WARN("Weak signature algorithm is used: %s", sigalgo_name);
+        if (strcmp(g_weak_algos[i], sig_algo) == 0) {
+            WARN("Weak signature algorithm is used: %s", sig_algo);
             return;
         }
     }
@@ -65,7 +67,13 @@ static void check_pub_key(X509 *cert)
         return;
     }
 
-    switch (pkey->type) {
+#if HAVE_OPAQUE_STRUCTS
+    int pkey_type = EVP_PKEY_base_id(pkey);
+#else
+    int pkey_type = EVP_PKEY_type(pkey->type);
+#endif
+
+    switch (pkey_type) {
         case EVP_PKEY_RSA:
             if (EVP_PKEY_bits(pkey) < RSA_PKEY_MIN_LEN) {
                 WARN("PublicKey's length is less then RSA suggested minimum length");
