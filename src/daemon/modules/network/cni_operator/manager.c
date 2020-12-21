@@ -23,7 +23,6 @@
 #include "isula_libutils/cni_net_conf_list.h"
 #include "isula_libutils/cni_anno_port_mappings.h"
 #include "utils.h"
-#include "libcni_utils.h"
 #include "libcni_types.h"
 
 #define LO_IFNAME "lo"
@@ -62,7 +61,6 @@ static cni_manager_store_t g_cni_manager = {
 };
 
 static cni_manager_network_conf_list_t g_conflists;
-
 
 static int bandwidth_inject(const char *value, struct runtime_conf *rt)
 {
@@ -137,7 +135,7 @@ static int port_mappings_inject(const char *value, struct runtime_conf *rt)
         goto out;
     }
 
-    new_p = (struct cni_port_mapping **)util_smart_calloc_s(sizeof(struct cni_port_mapping*), anno_p->len);
+    new_p = (struct cni_port_mapping **)util_smart_calloc_s(sizeof(struct cni_port_mapping *), anno_p->len);
     if (new_p == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -188,10 +186,12 @@ static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
     return 0;
 }
 
-static struct anno_registry_conf_rt g_registrant_rt[] = {
-    {.name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject},
-    {.name = CNI_ARGS_PORTMAPPING_KEY, .ops = port_mappings_inject},
-    {.name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject}
+static struct anno_registry_conf_rt g_registrant_rt[] = { { .name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject },
+    {
+        .name = CNI_ARGS_PORTMAPPING_KEY,
+        .ops = port_mappings_inject
+    },
+    { .name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject }
 };
 
 static struct anno_registry_conf_json g_registrant_json[] = {
@@ -282,8 +282,7 @@ out:
 }
 
 // Try my best to load file, when error occured, just skip and continue
-static int update_cri_conflist_from_files(cni_manager_network_conf_list_t *store, const char **files,
-                                          size_t length)
+static int update_cri_conflist_from_files(cni_manager_network_conf_list_t *store, const char **files, size_t length)
 {
     size_t i = 0;
     int ret = 0;
@@ -352,8 +351,8 @@ static int update_cri_conflist_with_lock(size_t new_length, const char **files)
     size_t i = 0;
     cni_manager_network_conf_list_t tmp_conflists = { 0 };
 
-    tmp_conflists.conflist = (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(
-                                                                                      struct cni_network_list_conf *), new_length);
+    tmp_conflists.conflist =
+        (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(struct cni_network_list_conf *), new_length);
     if (tmp_conflists.conflist == NULL) {
         ERROR("Out of memory, cannot allocate mem to store conflists");
         return -1;
@@ -900,7 +899,6 @@ out:
     free(net_list_conf_str);
     free_runtime_conf(rc);
     return ret;
-
 }
 
 int cri_detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
@@ -987,7 +985,6 @@ out:
     free(net_list_conf_str);
     free_runtime_conf(rc);
     return ret;
-
 }
 
 int detach_loopback(const char *id, const char *netns)
@@ -1033,7 +1030,7 @@ void free_cni_manager(struct cni_manager *manager)
     free(manager);
 }
 
-int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
+int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char * const *bin_paths,
                            size_t bin_paths_len)
 {
     int ret = 0;

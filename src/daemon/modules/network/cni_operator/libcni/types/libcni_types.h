@@ -23,23 +23,11 @@
 extern "C" {
 #endif
 
-#define IPV4LEN 4
-
-#define IPV6LEN 16
-
 /* define types for version */
 struct interface {
     char *name;
     char *mac;
     char *sandbox;
-};
-
-struct ipnet {
-    uint8_t *ip;
-    size_t ip_len;
-
-    uint8_t *ip_mask;
-    size_t ip_mask_len;
 };
 
 struct ipconfig {
@@ -85,8 +73,6 @@ struct result {
     struct dns *my_dns;
 };
 
-void free_ipnet_type(struct ipnet *val);
-
 void free_ipconfig_type(struct ipconfig *ipc);
 
 void free_route_type(struct route *val);
@@ -96,18 +82,6 @@ void free_interface_type(struct interface *val);
 void free_dns_type(struct dns *val);
 
 void free_result(struct result *val);
-
-int parse_ip_from_str(const char *addr, uint8_t **ips, size_t *len);
-
-int parse_cidr(const char *cidr_str, struct ipnet **ipnet_val);
-
-/* common tool functions */
-
-char *ipnet_to_string(const struct ipnet *value);
-
-char *ip_to_string(const uint8_t *ip, size_t len);
-
-bool net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const size_t ip_len, bool critical);
 
 #ifdef __cplusplus
 }

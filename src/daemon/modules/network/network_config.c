@@ -27,9 +27,7 @@
 #include "isula_libutils/log.h"
 #include "libcni_api.h"
 #include "libcni_conf.h"
-#include "libcni_types.h"
-#include "libcni_utils.h"
-
+#include "utils_network.h"
 
 const char *g_network_config_exts[] = { ".conf", ".conflist", ".json" };
 const char *g_bridge_name_prefix = "isula-br";
@@ -43,11 +41,11 @@ struct subnet_scope {
 /* Reserved IPv4 address ranges for private networks */
 const struct subnet_scope g_private_networks[] = {
     /* Class C network 192.168.0.0/16 */
-    {"192.168.0.0/24", "192.168.255.0/24"},
+    { "192.168.0.0/24", "192.168.255.0/24" },
     /* Class B network 172.16.0.0/12 */
-    {"172.16.0.0/24", "172.31.255.0/24"},
+    { "172.16.0.0/24", "172.31.255.0/24" },
     /* Class A network 10.0.0.0/8 */
-    {"10.0.0.0/24", "10.255.255.0/24"},
+    { "10.0.0.0/24", "10.255.255.0/24" },
 };
 
 struct cni_conflist {
@@ -307,10 +305,10 @@ static int get_config_subnet(const cni_net_conf_list *list, char ***arr)
 
     for (i = 0; i < list->plugins_len; i++) {
         plugin = list->plugins[i];
-        condition = plugin == NULL || plugin->ipam == NULL || plugin->ipam->ranges == NULL || plugin->ipam->ranges_len == 0 ||
-                    plugin->ipam->ranges[0] == NULL || plugin->ipam->ranges_item_lens == NULL ||
-                    plugin->ipam->ranges_item_lens[0] == 0 || plugin->ipam->ranges[0][0] == NULL ||
-                    plugin->ipam->ranges[0][0]->subnet == NULL;
+        condition = plugin == NULL || plugin->ipam == NULL || plugin->ipam->ranges == NULL ||
+                    plugin->ipam->ranges_len == 0 || plugin->ipam->ranges[0] == NULL ||
+                    plugin->ipam->ranges_item_lens == NULL || plugin->ipam->ranges_item_lens[0] == 0 ||
+                    plugin->ipam->ranges[0][0] == NULL || plugin->ipam->ranges[0][0]->subnet == NULL;
         if (condition) {
             continue;
         }
@@ -323,8 +321,8 @@ static int get_config_subnet(const cni_net_conf_list *list, char ***arr)
     return 0;
 }
 
-static int get_cni_config(const struct cni_conflist **conflist_arr, const size_t arr_len,
-                          get_config_callback cb, char ***arr)
+static int get_cni_config(const struct cni_conflist **conflist_arr, const size_t arr_len, get_config_callback cb,
+                          char ***arr)
 {
     int nret = 0;
     size_t i;
@@ -396,8 +394,8 @@ static int get_host_net_ip(char ***host_net_ip)
         }
 
         if (ifa->ifa_addr->sa_family == AF_INET) {
-            if (inet_ntop(AF_INET, &(((struct sockaddr_in *)ifa->ifa_addr)->sin_addr),
-                          ipaddr, INET_ADDRSTRLEN) == NULL) {
+            if (inet_ntop(AF_INET, &(((struct sockaddr_in *)ifa->ifa_addr)->sin_addr), ipaddr, INET_ADDRSTRLEN) ==
+                NULL) {
                 ERROR("Failed to get ipv4 addr");
                 ret = ECOMM;
                 goto out;
@@ -407,8 +405,8 @@ static int get_host_net_ip(char ***host_net_ip)
                 goto out;
             }
         } else if (ifa->ifa_addr->sa_family == AF_INET6) {
-            if (inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr),
-                          ipaddr, INET6_ADDRSTRLEN) == NULL) {
+            if (inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN) ==
+                NULL) {
                 ERROR("Failed to ipv6 addr");
                 ret = ECOMM;
                 goto out;
@@ -463,7 +461,8 @@ static int net_conflict(const struct ipnet *net, const struct ipnet *ipnet)
         first_ipnet[i] = ipnet->ip[i] & ipnet->ip_mask[i];
     }
 
-    if (net_contain_ip(net, first_ipnet, ipnet->ip_len, true) || net_contain_ip(ipnet, first_net, net->ip_len, true)) {
+    if (util_net_contain_ip(net, first_ipnet, ipnet->ip_len, true) ||
+        util_net_contain_ip(ipnet, first_net, net->ip_len, true)) {
         ret = 1;
     }
 
@@ -488,7 +487,7 @@ static int check_subnet_available(const char *subnet, const char **subnets, cons
     struct ipnet *net = NULL;
     struct ipnet *tmp = NULL;
 
-    ret = parse_cidr(subnet, &net);
+    ret = util_parse_cidr(subnet, &net);
     if (ret != 0 || net == NULL) {
         ERROR("Parse CIDR %s failed", subnet);
         return -1;
@@ -496,7 +495,7 @@ static int check_subnet_available(const char *subnet, const char **subnets, cons
 
     len = util_array_len(subnets);
     for (i = 0; i < len; i++) {
-        ret = parse_cidr(subnets[i], &tmp);
+        ret = util_parse_cidr(subnets[i], &tmp);
         if (ret != 0 || tmp == NULL) {
             ERROR("Parse CIDR %s failed", subnets[i]);
             ret = -1;
@@ -506,19 +505,19 @@ static int check_subnet_available(const char *subnet, const char **subnets, cons
         if (ret != 0) {
             goto out;
         }
-        free_ipnet_type(tmp);
+        util_free_ipnet(tmp);
         tmp = NULL;
     }
 
     len = util_array_len(hostIP);
     for (i = 0; i < len; i++) {
-        ret = parse_ip_from_str(hostIP[i], &ip, &ip_len);
+        ret = util_parse_ip_from_str(hostIP[i], &ip, &ip_len);
         if (ret != 0 || ip == NULL || ip_len == 0) {
             ERROR("Parse IP %s failed", hostIP[i]);
             ret = -1;
             goto out;
         }
-        if (net_contain_ip(net, ip, ip_len, true)) {
+        if (util_net_contain_ip(net, ip, ip_len, true)) {
             ret = 1;
             goto out;
         }
@@ -529,8 +528,8 @@ static int check_subnet_available(const char *subnet, const char **subnets, cons
 
 out:
     free(ip);
-    free_ipnet_type(net);
-    free_ipnet_type(tmp);
+    util_free_ipnet(net);
+    util_free_ipnet(tmp);
     return ret;
 }
 
@@ -663,7 +662,7 @@ static char *find_private_network(char *subnet)
         }
     }
 
-    nret = parse_cidr(subnet, &ipnet);
+    nret = util_parse_cidr(subnet, &ipnet);
     if (nret != 0 || ipnet == NULL) {
         ERROR("Parse IP %s failed", subnet);
         return NULL;
@@ -677,13 +676,13 @@ static char *find_private_network(char *subnet)
     mask = ~mask + 1;
     ip += mask;
     mask = 0xff;
-    for (i = ipnet->ip_len - 1; i >= 0 ; i--) {
+    for (i = ipnet->ip_len - 1; i >= 0; i--) {
         ipnet->ip[i] = (uint8_t)(ip & mask);
         ip >>= 8;
     }
 
-    nx = ipnet_to_string(ipnet);
-    free_ipnet_type(ipnet);
+    nx = util_ipnet_to_string(ipnet);
+    util_free_ipnet(ipnet);
 
     return nx;
 }
@@ -750,7 +749,7 @@ static char *find_gateway(const char *subnet)
     char *gateway = NULL;
     struct ipnet *ipnet = NULL;
 
-    nret = parse_cidr(subnet, &ipnet);
+    nret = util_parse_cidr(subnet, &ipnet);
     if (nret != 0 || ipnet == NULL) {
         ERROR("Parse IP %s failed", subnet);
         return NULL;
@@ -771,17 +770,16 @@ static char *find_gateway(const char *subnet)
         first_ip[i] = ipnet->ip[i] & ipnet->ip_mask[i];
     }
     first_ip[ipnet->ip_len - 1] = first_ip[ipnet->ip_len - 1] | 0x01;
-    gateway = ip_to_string(first_ip, ipnet->ip_len);
+    gateway = util_ip_to_string(first_ip, ipnet->ip_len);
 
 out:
-    free_ipnet_type(ipnet);
+    util_free_ipnet(ipnet);
     free(first_ip);
     return gateway;
 }
 
 static cni_net_conf_ipam *conf_bridge_ipam(const network_create_request *request,
-                                           const struct cni_conflist **conflist_arr,
-                                           const size_t arr_len)
+                                           const struct cni_conflist **conflist_arr, const size_t arr_len)
 {
     cni_net_conf_ipam *ipam = NULL;
 
@@ -805,7 +803,8 @@ static cni_net_conf_ipam *conf_bridge_ipam(const network_create_request *request
     ipam->routes_len++;
     ipam->routes[0]->dst = util_strdup_s("0.0.0.0/0");
 
-    ipam->ranges = (cni_net_conf_ipam_ranges_element ***)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element **));
+    ipam->ranges =
+        (cni_net_conf_ipam_ranges_element ***)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element **));
     if (ipam->ranges == NULL) {
         ERROR("Out of memory");
         goto err_out;
@@ -816,13 +815,15 @@ static cni_net_conf_ipam *conf_bridge_ipam(const network_create_request *request
         goto err_out;
     }
 
-    ipam->ranges[0] = (cni_net_conf_ipam_ranges_element **)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element *));
+    ipam->ranges[0] =
+        (cni_net_conf_ipam_ranges_element **)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element *));
     if (ipam->ranges[0] == NULL) {
         ERROR("Out of memory");
         goto err_out;
     }
     ipam->ranges_len++;
-    ipam->ranges[0][0] = (cni_net_conf_ipam_ranges_element *)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element));
+    ipam->ranges[0][0] =
+        (cni_net_conf_ipam_ranges_element *)util_common_calloc_s(sizeof(cni_net_conf_ipam_ranges_element));
     if (ipam->ranges[0][0] == NULL) {
         ERROR("Out of memory");
         goto err_out;
@@ -954,8 +955,7 @@ static cni_net_conf *conf_firewall_plugin(const network_create_request *request)
 }
 
 static cni_net_conf_list *conf_bridge_conflist(const network_create_request *request,
-                                               const struct cni_conflist **conflist_arr,
-                                               const size_t arr_len)
+                                               const struct cni_conflist **conflist_arr, const size_t arr_len)
 {
     size_t len;
     cni_net_conf *plugin = NULL;
@@ -1495,7 +1495,8 @@ static void run_delete_device(void *args)
 static int remove_interface(const char *ifa)
 {
     int ret = 0;
-    size_t i = 0;;
+    size_t i = 0;
+    ;
     const size_t args_len = 4;
     char **args = NULL;
     char **interfaces = NULL;
