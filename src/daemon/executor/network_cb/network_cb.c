@@ -22,8 +22,7 @@
 #include "error.h"
 #include "err_msg.h"
 #include "isula_libutils/log.h"
-#include "libcni_types.h"
-#include "libcni_utils.h"
+#include "utils_network.h"
 
 const char *g_accept_network_filter[] = { "name", "plugin", NULL };
 
@@ -60,12 +59,11 @@ static inline void network_conflist_unlock()
 static bool network_is_valid_name(const char *name)
 {
     if (strnlen(name, MAX_NETWORK_NAME_LEN + 1) > MAX_NETWORK_NAME_LEN) {
-        isulad_set_error_message("Network name \"%s\" too long, max length:%d", name,
-                                 MAX_NETWORK_NAME_LEN);
+        isulad_set_error_message("Network name \"%s\" too long, max length:%d", name, MAX_NETWORK_NAME_LEN);
         return false;
     }
-    if (util_reg_match(CNI_VALID_NAME_CHARS, name) != 0) {
-        isulad_set_error_message("Invalid network name:%s, only %s are allowed", name, CNI_VALID_NAME_CHARS);
+    if (!util_validate_network_name(name)) {
+        isulad_set_error_message("Invalid network name:%s, only %s are allowed", name, NETWORK_VALID_NAME_CHARS);
         return false;
     }
 
@@ -96,7 +94,7 @@ static int check_parameter(const network_create_request *request)
         return ret;
     }
 
-    ret = parse_cidr(request->subnet, &net);
+    ret = util_parse_cidr(request->subnet, &net);
     if (ret != 0 || net == NULL) {
         ERROR("Parse CIDR %s failed", request->subnet);
         isulad_set_error_message("Invalid subnet %s", request->subnet);
@@ -108,7 +106,7 @@ static int check_parameter(const network_create_request *request)
         goto out;
     }
 
-    ret = parse_ip_from_str(request->gateway, &ip, &ip_len);
+    ret = util_parse_ip_from_str(request->gateway, &ip, &ip_len);
     if (ret != 0 || ip == NULL || ip_len == 0) {
         ERROR("Parse IP %s failed", request->gateway);
         isulad_set_error_message("Invalid gateway %s", request->gateway);
@@ -116,13 +114,13 @@ static int check_parameter(const network_create_request *request)
         goto out;
     }
 
-    if (!net_contain_ip(net, ip, ip_len, false)) {
+    if (!util_net_contain_ip(net, ip, ip_len, false)) {
         isulad_set_error_message("subnet \"%s\" and gateway \"%s\" not match", request->subnet, request->gateway);
         ret = EINVALIDARGS;
     }
 
 out:
-    free_ipnet_type(net);
+    util_free_ipnet(net);
     free(ip);
     return ret;
 }
