@@ -19,6 +19,7 @@
 #include "utils.h"
 #include "map.h"
 #include "utils_network.h"
+#include "err_msg.h"
 
 // do not need lock;
 // because cri can make sure do not concurrent to call these apis
@@ -44,6 +45,21 @@ static bool is_cri_config_file(const char *filename)
     }
 
     return strncmp(ISULAD_CNI_NETWORK_CONF_FILE_PRE, filename, strlen(ISULAD_CNI_NETWORK_CONF_FILE_PRE)) != 0;
+}
+
+static void do_update_cni_stores(map_t *work, struct cni_network_list_conf **new_list, size_t new_list_len)
+{
+    size_t i;
+
+    map_free(g_net_store.g_net_index_map);
+    g_net_store.g_net_index_map = work;
+
+    for (i = 0; i < g_net_store.conflist_len; i++) {
+        free_cni_network_list_conf(g_net_store.conflist[i]);
+    }
+    free(g_net_store.conflist);
+    g_net_store.conflist = new_list;
+    g_net_store.conflist_len = new_list_len;
 }
 
 int adaptor_cni_update_confs()
@@ -74,8 +90,13 @@ int adaptor_cni_update_confs()
     }
 
     for (i = 0; i < tmp_net_list_len; i++) {
+        if (map_search(work, (void *)tmp_net_list[i]->name) != NULL) {
+            INFO("Ignore CNI network: %s, because already exist", tmp_net_list[i]->name);
+            continue;
+        }
+
         if (!map_replace(work, (void *)tmp_net_list[i]->name, (void *)&i)) {
-            ERROR("add net failed");
+            ERROR("add net failed: %s", tmp_net_list[i]->name);
             ret = -1;
             goto out;
         }
@@ -84,17 +105,10 @@ int adaptor_cni_update_confs()
             pos += strlen(tmp_net_list[i]->name) + 1;
         }
     }
-    // update current conflist data
-    map_free(g_net_store.g_net_index_map);
-    g_net_store.g_net_index_map = work;
-    work = NULL;
 
-    for (i = 0; i < g_net_store.conflist_len; i++) {
-        free_cni_network_list_conf(g_net_store.conflist[i]);
-    }
-    free(g_net_store.conflist);
-    g_net_store.conflist = tmp_net_list;
-    g_net_store.conflist_len = tmp_net_list_len;
+    // update current conflist data
+    do_update_cni_stores(work, tmp_net_list, tmp_net_list_len);
+    work = NULL;
     tmp_net_list_len = 0;
     tmp_net_list = NULL;
 
@@ -174,7 +188,8 @@ out:
     return ret;
 }
 
-static int do_foreach_network_op(const network_api_conf *conf, net_op_t op, network_api_result_list *result)
+static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofound, net_op_t op,
+                                 network_api_result_list *result)
 {
     int ret = 0;
     size_t i;
@@ -200,7 +215,12 @@ static int do_foreach_network_op(const network_api_conf *conf, net_op_t op, netw
         }
         tmp_idx = map_search(g_net_store.g_net_index_map, (void *)conf->extral_nets[i]->name);
         if (tmp_idx == NULL) {
-            ERROR("Can not find network: %s", conf->extral_nets[i]->name);
+            ERROR("Cannot found user defined net: %s", conf->extral_nets[i]->name);
+            // do best to detach network plane of container
+            if (ignore_nofound) {
+                continue;
+            }
+            isulad_set_error_message("Cannot found user defined net: %s", conf->extral_nets[i]->name);
             ret = -1;
             goto out;
         }
@@ -222,13 +242,14 @@ static int do_foreach_network_op(const network_api_conf *conf, net_op_t op, netw
         }
         if (do_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, result) !=
             0) {
-            ERROR("parse cni result failed");
+            isulad_set_error_message("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
+            ERROR("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
             ret = -1;
             goto out;
         }
     }
 
-    if (g_net_store.conflist_len > 0) {
+    if (g_net_store.conflist_len > 0 && default_idx < g_net_store.conflist_len) {
         free_result(cni_result);
         cni_result = NULL;
 
@@ -271,7 +292,7 @@ int adaptor_cni_setup(const network_api_conf *conf, network_api_result_list *res
         return -1;
     }
 
-    ret = do_foreach_network_op(conf, attach_network_plane, result);
+    ret = do_foreach_network_op(conf, false, attach_network_plane, result);
     if (ret != 0) {
         return -1;
     }
@@ -299,7 +320,7 @@ int adaptor_cni_teardown(const network_api_conf *conf, network_api_result_list *
         return -1;
     }
 
-    ret = do_foreach_network_op(conf, detach_network_plane, result);
+    ret = do_foreach_network_op(conf, true, detach_network_plane, result);
     if (ret != 0) {
         return -1;
     }

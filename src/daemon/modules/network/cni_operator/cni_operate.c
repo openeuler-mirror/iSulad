@@ -224,6 +224,19 @@ static int load_cni_config_file_list(const char *fname, struct cni_network_list_
         }
     }
 
+    if ((*n_list)->name == NULL || strcmp((*n_list)->name, "") == 0) {
+        free((*n_list)->name);
+        (*n_list)->name = util_path_base(fname);
+    }
+
+    // to compatibility for old version of clibcni
+    if (!util_validate_network_name((*n_list)->name)) {
+        ERROR("Invalid network name: %s", (*n_list)->name);
+        ret = -1;
+        goto out;
+    }
+
+
 out:
     if (n_conf != NULL) {
         free_cni_network_conf(n_conf);
@@ -275,9 +288,10 @@ static int update_conflist_from_files(struct cni_network_list_conf **conflists, 
         if (n_list == NULL || n_list->plugin_len == 0) {
             WARN("CNI config list %s has no networks, skipping", files[i]);
             free_cni_network_list_conf(n_list);
-            n_list = NULL;
             continue;
         }
+
+        // TODO: check plugins of config
 
         DEBUG("parse cni network: %s", n_list->name);
 

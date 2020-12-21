@@ -402,15 +402,15 @@ static int add_network(cni_net_conf *net, const char *name, const char *version,
         return -1;
     }
     if (!util_valid_container_id(rc->container_id)) {
-        ERROR("invalid container id");
+        ERROR("Invalid container id: %s", rc->container_id);
         return -1;
     }
     if (!util_validate_network_name(name)) {
-        ERROR("invalid network name");
+        ERROR("Invalid network name: %s", name);
         return -1;
     }
     if (!util_validate_network_interface(rc->ifname)) {
-        ERROR("invalid interface name");
+        ERROR("Invalid interface name: %s", rc->ifname);
         return -1;
     }
 
