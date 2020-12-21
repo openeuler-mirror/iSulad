@@ -27,6 +27,8 @@ extern "C" {
 #define CNI_ARGS_PORTMAPPING_KEY "portMappings"
 #define CNI_ARGS_IPRANGES_KEY "ipRanges"
 
+typedef bool (*cni_conf_filter_t)(const char *filename);
+
 // cni_manager holds cniNetworkPlugin and podNetwork infos
 struct cni_manager {
     char *id;
@@ -41,28 +43,17 @@ struct cni_manager {
 int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
                            size_t bin_paths_len);
 
+int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, cni_conf_filter_t *filter_ops);
+
 int attach_loopback(const char *id, const char *netns);
 
 int detach_loopback(const char *id, const char *netns);
 
+int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
+
+int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
+
 void free_cni_manager(struct cni_manager *manager);
-
-int cri_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len);
-
-int cri_update_confist_from_dir();
-
-int cri_attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
-
-int cri_detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
-
-
-int isula_update_confist_from_dir();
-
-int isula_attach_network_plane(const struct cni_manager *manager, const char *net_name, struct result **result);
-
-int isula_detach_network_plane(const struct cni_manager *manager, const char *net_name, struct result **result);
-
-
 
 #ifdef __cplusplus
 }
