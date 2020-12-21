@@ -22,6 +22,7 @@
 #include <isula_libutils/log.h>
 
 #include "utils.h"
+#include "utils_network.h"
 #include "libcni_cached.h"
 #include "libcni_api.h"
 #include "libcni_errno.h"
@@ -31,7 +32,6 @@
 #include "libcni_tools.h"
 #include "libcni_exec.h"
 #include "libcni_types.h"
-#include "libcni_utils.h"
 
 typedef struct _cni_module_conf_t {
     char **bin_paths;
@@ -136,12 +136,12 @@ static int inject_cni_port_mapping(const struct runtime_conf *rt, cni_net_conf_r
         rt_config->port_mappings = NULL;
     }
 
-    if (rt->p_mapping_len > (SIZE_MAX / sizeof(cni_inner_port_mapping*))) {
+    if (rt->p_mapping_len > (SIZE_MAX / sizeof(cni_inner_port_mapping *))) {
         ERROR("Too many mapping");
         return -1;
     }
 
-    rt_config->port_mappings = util_common_calloc_s(sizeof(cni_inner_port_mapping*) * (rt->p_mapping_len));
+    rt_config->port_mappings = util_common_calloc_s(sizeof(cni_inner_port_mapping *) * (rt->p_mapping_len));
     if (rt_config->port_mappings == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -278,8 +278,8 @@ static int do_inject_prev_result(const struct result *prev_result, cni_net_conf 
     return 0;
 }
 
-static inline bool check_build_one_config(const struct network_config *orig,
-                                          const struct runtime_conf *rt, char * const *result)
+static inline bool check_build_one_config(const struct network_config *orig, const struct runtime_conf *rt,
+                                          char * const *result)
 {
     return (orig == NULL || rt == NULL || result == NULL);
 }
@@ -339,7 +339,7 @@ out:
 }
 
 static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *version, const char *operator,
-                          const struct runtime_conf *rc, struct result **pret, bool with_result)
+                          const struct runtime_conf * rc, struct result * * pret, bool with_result)
 {
     int ret = -1;
     struct network_config net = { 0 };
@@ -371,7 +371,7 @@ static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *ver
         goto free_out;
     }
 
-    ret = args(operator, rc, &cargs);
+    ret = args(operator, rc, & cargs);
     if (ret != 0) {
         ERROR("get plugin arguments failed");
         goto free_out;
@@ -401,15 +401,15 @@ static int add_network(cni_net_conf *net, const char *name, const char *version,
         ERROR("Empty arguments");
         return -1;
     }
-    if (!clibcni_util_validate_id(rc->container_id)) {
+    if (!util_valid_container_id(rc->container_id)) {
         ERROR("invalid container id");
         return -1;
     }
-    if (!clibcni_util_validate_name(name)) {
+    if (!util_validate_network_name(name)) {
         ERROR("invalid network name");
         return -1;
     }
-    if (!clibcni_util_validate_interface(rc->ifname)) {
+    if (!util_validate_network_interface(rc->ifname)) {
         ERROR("invalid interface name");
         return -1;
     }
@@ -487,7 +487,8 @@ static int del_network_list(const struct network_config_list *list, const struct
     }
 
     if (greated) {
-        ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &prev_result);
+        ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc,
+                                    &prev_result);
         if (ret != 0) {
             ERROR("failed to get network: %s cached result", list->list->name);
             goto free_out;
@@ -865,10 +866,10 @@ static void json_obj_to_cni_list_conf(struct network_config_list *src, struct cn
         list->name = src->list->name ? util_strdup_s(src->list->name) : NULL;
         list->plugin_len = src->list->plugins_len;
         if (src->list->plugins_len > 0 && src->list->plugins != NULL && src->list->plugins[0] != NULL) {
-            list->first_plugin_name = src->list->plugins[0]->name != NULL ?
-                                      util_strdup_s(src->list->plugins[0]->name) : NULL;
-            list->first_plugin_type = src->list->plugins[0]->type != NULL ?
-                                      util_strdup_s(src->list->plugins[0]->type) : NULL;
+            list->first_plugin_name = src->list->plugins[0]->name != NULL ? util_strdup_s(src->list->plugins[0]->name) :
+                                      NULL;
+            list->first_plugin_type = src->list->plugins[0]->type != NULL ? util_strdup_s(src->list->plugins[0]->type) :
+                                      NULL;
         }
     }
 }
@@ -967,4 +968,3 @@ free_out:
     free_network_config_list(net_list);
     return ret;
 }
-

@@ -14,11 +14,11 @@
  *********************************************************************************/
 #include "network_api.h"
 
-#include<isula_libutils/log.h>
+#include <isula_libutils/log.h>
 #include "manager.h"
 #include "utils.h"
 #include "map.h"
-#include "libcni_types.h"
+#include "utils_network.h"
 
 // do not need lock;
 // because cri can make sure do not concurrent to call these apis
@@ -147,7 +147,7 @@ static int do_append_cni_result(const char *name, const char *interface, const s
             goto out;
         }
         for (i = 0; i < cni_result->ips_len; i++) {
-            work->ips[work->ips_len] = ipnet_to_string(cni_result->ips[i]->address);
+            work->ips[work->ips_len] = util_ipnet_to_string(cni_result->ips[i]->address);
             if (work->ips[work->ips_len] == NULL) {
                 WARN("parse cni result ip: %zu failed", i);
                 continue;
@@ -189,7 +189,8 @@ static int do_foreach_network_op(const network_api_conf *conf, net_op_t op, netw
     // Step 2, foreach operator for all network plane
     for (i = 0; i < conf->extral_nets_len; i++) {
         int *tmp_idx = NULL;
-        if (conf->extral_nets[i] == NULL || conf->extral_nets[i]->name == NULL || conf->extral_nets[i]->interface == NULL) {
+        if (conf->extral_nets[i] == NULL || conf->extral_nets[i]->name == NULL ||
+            conf->extral_nets[i]->interface == NULL) {
             WARN("ignore net idx: %zu", i);
             continue;
         }
@@ -215,7 +216,8 @@ static int do_foreach_network_op(const network_api_conf *conf, net_op_t op, netw
             ret = -1;
             goto out;
         }
-        if (do_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, result) != 0) {
+        if (do_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, result) !=
+            0) {
             ERROR("parse cni result failed");
             ret = -1;
             goto out;
@@ -300,4 +302,3 @@ int adaptor_cni_teardown(const network_api_conf *conf, network_api_result_list *
 
     return 0;
 }
-

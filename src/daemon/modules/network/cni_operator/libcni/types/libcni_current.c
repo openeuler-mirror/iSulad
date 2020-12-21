@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "utils_network.h"
 #include "isula_libutils/log.h"
 
 static cni_result_curr *new_curr_result_helper(const char *json_data)
@@ -89,7 +90,7 @@ static int do_parse_ipnet(const char *cidr_str, const char *ip_str, uint8_t **ip
 {
     int ret = 0;
 
-    ret = parse_cidr(cidr_str, ipnet_val);
+    ret = util_parse_cidr(cidr_str, ipnet_val);
     if (ret != 0) {
         ERROR("Parse cidr: %s failed", cidr_str);
         return -1;
@@ -97,10 +98,10 @@ static int do_parse_ipnet(const char *cidr_str, const char *ip_str, uint8_t **ip
     if (ip_str == NULL) {
         return 0;
     }
-    ret = parse_ip_from_str(ip_str, ip, ip_len);
+    ret = util_parse_ip_from_str(ip_str, ip, ip_len);
     if (ret != 0) {
         ERROR("Parse ip: %s failed", ip_str);
-        free_ipnet_type(*ipnet_val);
+        util_free_ipnet(*ipnet_val);
         *ipnet_val = NULL;
         return -1;
     }
@@ -172,7 +173,7 @@ static struct route *convert_curr_route(const cni_network_route *curr_route)
     if (result == NULL) {
         ERROR("Out of memory");
         free(gw);
-        free_ipnet_type(dst);
+        util_free_ipnet(dst);
         return NULL;
     }
 
@@ -354,7 +355,7 @@ static cni_network_interface *interface_to_json_interface(const struct interface
 static int parse_ip_and_gateway(const struct ipconfig *src, cni_network_ipconfig *result)
 {
     if (src->address != NULL) {
-        result->address = ipnet_to_string(src->address);
+        result->address = util_ipnet_to_string(src->address);
         if (result->address == NULL) {
             ERROR("Covert ipnet failed");
             return -1;
@@ -362,7 +363,7 @@ static int parse_ip_and_gateway(const struct ipconfig *src, cni_network_ipconfig
     }
 
     if (src->gateway && src->gateway_len > 0) {
-        result->gateway = ip_to_string(src->gateway, src->gateway_len);
+        result->gateway = util_ip_to_string(src->gateway, src->gateway_len);
         if (result->gateway == NULL) {
             ERROR("IP to string failed");
             return -1;
@@ -431,14 +432,14 @@ static cni_network_route *route_to_json_route(const struct route *src)
     }
 
     if (src->dst != NULL) {
-        result->dst = ipnet_to_string(src->dst);
+        result->dst = util_ipnet_to_string(src->dst);
         if (result->dst == NULL) {
             goto out;
         }
     }
 
     if (src->gw != NULL && src->gw_len > 0) {
-        result->gw = ip_to_string(src->gw, src->gw_len);
+        result->gw = util_ip_to_string(src->gw, src->gw_len);
         if (result->gw == NULL) {
             ERROR("ip to string failed");
             goto out;
@@ -573,8 +574,8 @@ static bool copy_interfaces_from_result_to_json(const struct result *src, cni_re
 
     res->interfaces_len = 0;
 
-    res->interfaces = (cni_network_interface **)util_smart_calloc_s(src->interfaces_len,
-                                                                    sizeof(cni_network_interface *));
+    res->interfaces =
+        (cni_network_interface **)util_smart_calloc_s(src->interfaces_len, sizeof(cni_network_interface *));
     if (res->interfaces == NULL) {
         ERROR("Out of memory");
         return false;
@@ -698,4 +699,3 @@ out:
     }
     return res;
 }
-
