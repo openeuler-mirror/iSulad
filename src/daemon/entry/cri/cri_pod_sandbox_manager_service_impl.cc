@@ -985,10 +985,19 @@ void PodSandboxManagerServiceImpl::GetIPs(const std::string &podSandboxID, const
         return;
     }
 
-    if (inspect->network_settings != nullptr && inspect->network_settings->ip_address != nullptr) {
-        WARN("Use container inspect ip info: %s, warn: %s", inspect->network_settings->ip_address, error.GetCMessage());
-        error.Clear();
-        ips.push_back(inspect->network_settings->ip_address);
+    if (inspect->network_settings->networks == NULL) {
+        WARN("Plugin network is empty");
+        return;
+    }
+
+    for (size_t i = 0; i < inspect->network_settings->networks->len; i++) {
+        if (inspect->network_settings->networks->values[i] != nullptr &&
+            inspect->network_settings->networks->values[i]->ip_address != nullptr) {
+            WARN("Use container inspect ip info: %s, warn: %s", inspect->network_settings->networks->values[i]->ip_address,
+                 error.GetCMessage());
+            error.Clear();
+            ips.push_back(inspect->network_settings->networks->values[i]->ip_address);
+        }
     }
 
     WARN("Failed to read pod IP from plugin/docker: %s", error.GetCMessage());
