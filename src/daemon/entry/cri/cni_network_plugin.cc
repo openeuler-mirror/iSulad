@@ -32,6 +32,7 @@
 #include "network_namespace_api.h"
 
 #include "network_api.h"
+#include "err_msg.h"
 
 namespace Network {
 
@@ -427,6 +428,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
                                 const std::string &id, const std::map<std::string, std::string> &annotations,
                                 const std::map<std::string, std::string> &options, Errors &err)
 {
+    DAEMON_CLEAR_ERRMSG();
     CheckInitialized(err);
     if (err.NotEmpty()) {
         return;
@@ -459,7 +461,11 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
     // TODO: parse result of attach
     network_api_result_list *result = nullptr;
     if (network_module_attach(config, NETWOKR_API_TYPE_CRI, &result) != 0) {
-        err.Errorf("setup cni for container: %s failed", id.c_str());
+        if (g_isulad_errmsg != nullptr) {
+            err.SetError(g_isulad_errmsg);
+        } else {
+            err.Errorf("setup cni for container: %s failed", id.c_str());
+        }
     }
 
     UnlockNetworkMap(err);

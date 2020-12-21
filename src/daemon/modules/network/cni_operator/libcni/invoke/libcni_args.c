@@ -192,8 +192,9 @@ char **as_env(const struct cni_args *cniargs)
     /* inherit environs of parent */
     for (pos = envir; pos != NULL && *pos != NULL && i < len; pos++) {
         // ignore proxy environs
-        if (strcasecmp(*pos, NO_PROXY_KEY) == 0 || strcasecmp(*pos, HTTP_PROXY_KEY) == 0 ||
-            strcasecmp(*pos, HTTPS_PROXY_KEY) == 0) {
+        if (strncasecmp(*pos, NO_PROXY_KEY, strlen(NO_PROXY_KEY)) == 0 ||
+            strncasecmp(*pos, HTTP_PROXY_KEY, strlen(HTTP_PROXY_KEY)) == 0 ||
+            strncasecmp(*pos, HTTPS_PROXY_KEY, strlen(HTTPS_PROXY_KEY)) == 0) {
             continue;
         }
         result[i] = util_strdup_s(*pos);
