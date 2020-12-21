@@ -12,21 +12,20 @@
  * Create: 2020-11-09
  * Description: provide CNI network manager function definition
  ******************************************************************************/
-#include "manager.h"
+#include "cni_operate.h"
 
 #include <pthread.h>
 #include <sys/types.h>
-#include <sys/inotify.h>
 
 #include "isula_libutils/log.h"
 #include "isula_libutils/cni_net_conf.h"
 #include "isula_libutils/cni_net_conf_list.h"
 #include "isula_libutils/cni_anno_port_mappings.h"
 #include "utils.h"
+#include "libcni_utils.h"
 #include "libcni_types.h"
 
 #define LO_IFNAME "lo"
-#define MAC_ADDR_VALID_CHARS "^([a-f0-9A-F]{2}[:-]){5}(a-f0-9A-F]{2})$"
 
 typedef int (*annotation_add_cap_t)(const char *value, struct runtime_conf *);
 typedef int (*annotation_add_json_t)(const char *value, char **bytes);
@@ -46,21 +45,10 @@ typedef struct cni_manager_store_t {
     char *loopback_conf_str;
 } cni_manager_store_t;
 
-typedef struct cni_manager_network_conf_list_t {
-    struct cni_network_list_conf **conflist;
-    size_t conflist_len;
-    // MAP_STR_STR, key:file name, value:bytes
-    map_t *map_isula_net_conf;
-
-    pthread_rwlock_t rwlock;
-} cni_manager_network_conf_list_t;
-
 static cni_manager_store_t g_cni_manager = {
     .loopback_conf_str = "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\","
     "\"plugins\":[{\"type\": \"loopback\" }]}",
 };
-
-static cni_manager_network_conf_list_t g_conflists;
 
 static int bandwidth_inject(const char *value, struct runtime_conf *rt)
 {
@@ -135,7 +123,7 @@ static int port_mappings_inject(const char *value, struct runtime_conf *rt)
         goto out;
     }
 
-    new_p = (struct cni_port_mapping **)util_smart_calloc_s(sizeof(struct cni_port_mapping *), anno_p->len);
+    new_p = (struct cni_port_mapping **)util_smart_calloc_s(sizeof(struct cni_port_mapping*), anno_p->len);
     if (new_p == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -186,12 +174,10 @@ static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
     return 0;
 }
 
-static struct anno_registry_conf_rt g_registrant_rt[] = { { .name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject },
-    {
-        .name = CNI_ARGS_PORTMAPPING_KEY,
-        .ops = port_mappings_inject
-    },
-    { .name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject }
+static struct anno_registry_conf_rt g_registrant_rt[] = {
+    {.name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject},
+    {.name = CNI_ARGS_PORTMAPPING_KEY, .ops = port_mappings_inject},
+    {.name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject}
 };
 
 static struct anno_registry_conf_json g_registrant_json[] = {
@@ -200,42 +186,6 @@ static struct anno_registry_conf_json g_registrant_json[] = {
 
 static const size_t g_numregistrants_rt = sizeof(g_registrant_rt) / sizeof(struct anno_registry_conf_rt);
 static const size_t g_numregistrants_json = sizeof(g_registrant_json) / sizeof(struct anno_registry_conf_json);
-
-static inline bool conflists_wrlock()
-{
-    int nret = 0;
-
-    nret = pthread_rwlock_wrlock(&g_conflists.rwlock);
-    if (nret != 0) {
-        ERROR("Lock conflists memory store failed: %s", strerror(nret));
-        return false;
-    }
-
-    return true;
-}
-
-static inline bool conflists_rdlock()
-{
-    int nret = 0;
-
-    nret = pthread_rwlock_rdlock(&g_conflists.rwlock);
-    if (nret != 0) {
-        ERROR("Lock conflists memory store failed: %s", strerror(nret));
-        return false;
-    }
-
-    return true;
-}
-
-static inline void conflists_unlock()
-{
-    int nret = 0;
-
-    nret = pthread_rwlock_unlock(&g_conflists.rwlock);
-    if (nret != 0) {
-        FATAL("Unlock driver memory store failed: %s", strerror(nret));
-    }
-}
 
 static int load_cni_config_file_list(const char *fname, struct cni_network_list_conf **n_list)
 {
@@ -282,18 +232,25 @@ out:
 }
 
 // Try my best to load file, when error occured, just skip and continue
-static int update_cri_conflist_from_files(cni_manager_network_conf_list_t *store, const char **files, size_t length)
+static int update_conflist_from_files(struct cni_network_list_conf **conflists, const char **files,
+                                          size_t files_num, size_t *nets_num, cni_conf_filter_t *filter_ops)
 {
     size_t i = 0;
     int ret = 0;
     char *fname = NULL;
+
+    if (nets_num == NULL) {
+        ERROR("Invalid input parmas");
+        return -1;
+    }
 
     if (g_cni_manager.conf_path == NULL) {
         ERROR("CNI conf path is null");
         return -1;
     }
 
-    for (i = 0; i < length; i++) {
+    *nets_num = 0;
+    for (i = 0; i < files_num; i++) {
         struct cni_network_list_conf *n_list = NULL;
 
         UTIL_FREE_AND_SET_NULL(fname);
@@ -304,7 +261,8 @@ static int update_cri_conflist_from_files(cni_manager_network_conf_list_t *store
             goto out;
         }
 
-        if (util_has_prefix(fname, ISULAD_CNI_NETWORK_CONF_FILE_PRE)) {
+        if (filter_ops != NULL && !filter_ops(fname)) {
+            DEBUG("Net config file:%s donot match, skip", fname);
             continue;
         }
 
@@ -320,9 +278,10 @@ static int update_cri_conflist_from_files(cni_manager_network_conf_list_t *store
             continue;
         }
 
-        store->conflist[i] = n_list;
-        n_list = NULL;
-        store->conflist_len++;
+        DEBUG("parse cni network: %s", n_list->name);
+
+        conflists[i] = n_list;
+        (*nets_num)++;
     }
 
 out:
@@ -345,157 +304,6 @@ static void free_conflists_data(struct cni_network_list_conf **conflist, size_t 
     free(conflist);
 }
 
-static int update_cri_conflist_with_lock(size_t new_length, const char **files)
-{
-    int ret = 0;
-    size_t i = 0;
-    cni_manager_network_conf_list_t tmp_conflists = { 0 };
-
-    tmp_conflists.conflist =
-        (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(struct cni_network_list_conf *), new_length);
-    if (tmp_conflists.conflist == NULL) {
-        ERROR("Out of memory, cannot allocate mem to store conflists");
-        return -1;
-    }
-
-    tmp_conflists.conflist_len = 0;
-    if (update_cri_conflist_from_files(&tmp_conflists, files, new_length) != 0) {
-        ERROR("Update conflist from files failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (!conflists_wrlock()) {
-        ERROR("Lock conflists store failed");
-        ret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < g_conflists.conflist_len; i++) {
-        free_cni_network_list_conf(g_conflists.conflist[i]);
-    }
-    free(g_conflists.conflist);
-
-    g_conflists.conflist = tmp_conflists.conflist;
-    g_conflists.conflist_len = tmp_conflists.conflist_len;
-    conflists_unlock();
-
-    tmp_conflists.conflist = NULL;
-    tmp_conflists.conflist_len = 0;
-
-out:
-    free_conflists_data(tmp_conflists.conflist, tmp_conflists.conflist_len);
-    return ret;
-}
-
-static int judge_cri_conf(const char *fpath, bool *res)
-{
-    char *name = NULL;
-
-    name = util_path_base(fpath);
-    if (name == NULL) {
-        ERROR("Get file name from full path:%s failed", fpath);
-        return -1;
-    }
-
-    *res = util_has_prefix(name, ISULAD_CNI_NETWORK_CONF_FILE_PRE);
-
-    free(name);
-    return 0;
-}
-
-static int replace_map_value(map_t *map, const char *fpath)
-{
-    int ret = 0;
-    struct cni_network_list_conf *n_list = NULL;
-
-    if (load_cni_config_file_list(fpath, &n_list) != 0) {
-        WARN("Load cni network conflist from file:%s failed", fpath);
-    }
-
-    if (n_list == NULL || n_list->plugin_len == 0) {
-        WARN("CNI config list %s has no networks, skipping", fpath);
-    }
-
-    if (!map_replace(map, (void *)n_list->name, (void *)n_list->bytes)) {
-        ERROR("Failed to replace cni config file:%s json to map", fpath);
-        ret = -1;
-    }
-
-    free_cni_network_list_conf(n_list);
-    return ret;
-}
-
-static map_t *new_isula_conflist_map(size_t length, const char **files)
-{
-    int ret = 0;
-    size_t i = 0;
-    map_t *map_net = NULL;
-
-    map_net = map_new(MAP_STR_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
-    if (map_net == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    for (i = 0; i < length; i++) {
-        bool is_isula = false;
-
-        if (judge_cri_conf(files[i], &is_isula) != 0) {
-            ERROR("Judge cri conf err");
-            ret = -1;
-            goto out;
-        }
-
-        if (!is_isula) {
-            continue;
-        }
-
-        if (replace_map_value(map_net, files[i]) != 0) {
-            ERROR("Replace map value for cni conf failed");
-            ret = -1;
-            goto out;
-        }
-    }
-
-out:
-    if (ret != 0) {
-        map_free(map_net);
-        map_net = NULL;
-    }
-    return map_net;
-}
-
-static int update_isula_conflist_with_lock(size_t length, const char **files)
-{
-    int ret = 0;
-    map_t *map = NULL;
-
-    map = new_isula_conflist_map(length, files);
-    if (map == NULL) {
-        ERROR("New allocate isula conflist map failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (!conflists_wrlock()) {
-        ERROR("Lock conflists store failed");
-        ret = -1;
-        goto out;
-    }
-
-    map_free(g_conflists.map_isula_net_conf);
-    g_conflists.map_isula_net_conf = map;
-    conflists_unlock();
-
-out:
-    if (ret != 0) {
-        map_free(map);
-        map = NULL;
-    }
-    return ret;
-}
-
 // Lexicographical order in ascending order
 static int cmpstr(const void *a, const void *b)
 {
@@ -507,8 +315,13 @@ static int get_conf_files(char ***files, size_t *length)
     int ret = 0;
     const char *exts[] = { ".conf", ".conflist", ".json" };
 
-    if (g_cni_manager.conf_path == NULL || files == NULL || length == NULL) {
+    if (files == NULL || length == NULL) {
         ERROR("Input params");
+        return -1;
+    }
+
+    if (g_cni_manager.conf_path == NULL) {
+        ERROR("CNI conf path is null");
         return -1;
     }
 
@@ -530,118 +343,50 @@ out:
     return ret;
 }
 
-int cri_update_confist_from_dir()
+
+int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, cni_conf_filter_t *filter_ops)
 {
     int ret = 0;
-    size_t length = 0;
+    size_t files_num = 0;
+    size_t nets_num = 0;
     char **files = NULL;
-
-    if (get_conf_files(&files, &length) != 0) {
-        ERROR("Get cni conf files in ascending order failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (length == 0) {
-        goto out;
-    }
-
-    if (update_cri_conflist_with_lock(length, (const char **)files) != 0) {
-        ERROR("Reload conflists data from conf dir failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    util_free_array_by_len(files, length);
-    return ret;
-}
-
-int isula_update_confist_from_dir()
-{
-    int ret = 0;
-    size_t length = 0;
-    char **files = NULL;
-
-    if (get_conf_files(&files, &length) != 0) {
-        ERROR("Get cni conf files in ascending order failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (update_isula_conflist_with_lock(length, (const char **)files) != 0) {
-        ERROR("Reload conflists data from conf dir failed");
-        ret = -1;
-        goto out;
-    }
-
-out:
-    util_free_array_by_len(files, length);
-    return ret;
-}
-
-static int get_cri_net_conflist_nolock(struct cni_network_list_conf ***store, size_t *res_len)
-{
-    size_t i = 0;
-    int ret = 0;
-
-    *res_len = 0;
-    *store = (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(struct cni_network_list_conf *),
-                                                                  g_conflists.conflist_len);
-    if (*store == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    for (i = 0; i < g_conflists.conflist_len; i++) {
-        struct cni_network_list_conf *list = NULL;
-        list = util_smart_calloc_s(sizeof(struct cni_network_list_conf), 1);
-        if (list == NULL) {
-            ERROR("Out of momory, cannot allocate conflist store");
-            ret = -1;
-            goto out;
-        }
-
-        list->plugin_len = g_conflists.conflist[i]->plugin_len;
-        list->name = util_strdup_s(g_conflists.conflist[i]->name);
-        list->first_plugin_type = util_strdup_s(g_conflists.conflist[i]->first_plugin_type);
-        list->first_plugin_name = util_strdup_s(g_conflists.conflist[i]->first_plugin_name);
-        list->bytes = util_strdup_s(g_conflists.conflist[i]->bytes);
-        (*store)[i] = list;
-        (*res_len)++;
-    }
-
-out:
-    if (ret != 0) {
-        free_conflists_data(*store, *res_len);
-        *store = NULL;
-        *res_len = 0;
-    }
-    return ret;
-}
-
-int cri_get_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len)
-{
-    int ret = 0;
+    struct cni_network_list_conf **tmp_conflists = NULL;
 
     if (store == NULL || res_len == NULL) {
         ERROR("Invalid input params");
         return -1;
     }
 
-    if (!conflists_rdlock()) {
-        ERROR("Lock conflist data failed");
-        return -1;
-    }
-
-    if (get_cri_net_conflist_nolock(store, res_len) != 0) {
-        ERROR("Get cni network conflist failed");
+    if (get_conf_files(&files, &files_num) != 0) {
+        ERROR("Get cni conf files in ascending order failed");
         ret = -1;
         goto out;
     }
 
+    if (files_num == 0) {
+        goto out;
+    }
+ 
+    tmp_conflists = (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(struct cni_network_list_conf *), files_num);
+    if (tmp_conflists == NULL) {
+        ERROR("Out of memory, cannot allocate mem to store conflists");
+        ret = -1;
+        goto out;
+    }
+
+    if (update_conflist_from_files(tmp_conflists, (const char **)files, files_num, &nets_num, filter_ops) != 0) {
+        ERROR("Update conflist from files failed");
+        free_conflists_data(tmp_conflists, files_num);
+        ret = -1;
+        goto out;
+    }
+
+    *store = tmp_conflists;
+    tmp_conflists = NULL;
+    *res_len = nets_num;  
+
 out:
-    conflists_unlock();
+    util_free_array_by_len(files, files_num);
     return ret;
 }
 
@@ -815,13 +560,13 @@ out:
     return ret;
 }
 
-int cri_attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
+int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
     char *net_list_conf_str_var = NULL;
 
-    if (manager == NULL || result == NULL) {
+    if (manager == NULL || net_list_conf_str == NULL || result == NULL) {
         ERROR("Invalid input params");
         return -1;
     }
@@ -858,50 +603,8 @@ out:
     return ret;
 }
 
-int isula_attach_network_plane(const struct cni_manager *manager, const char *net_name, struct result **result)
-{
-    int ret = 0;
-    struct runtime_conf *rc = NULL;
-    char *net_list_conf_str = NULL;
 
-    if (manager == NULL || net_name == NULL || result == NULL) {
-        ERROR("Invalid input params");
-        return -1;
-    }
-
-    net_list_conf_str = map_search(g_conflists.map_isula_net_conf, (void *)net_name);
-    if (net_list_conf_str == NULL) {
-        ERROR("Invalid network name:%s, search cni network conflist NULL", net_name);
-        ret = -1;
-        goto out;
-    }
-
-    rc = build_cni_runtime_conf(manager);
-    if (rc == NULL) {
-        ERROR("Error building CNI runtime config");
-        ret = -1;
-        goto out;
-    }
-
-    if (inject_annotations_json(manager->annotations, &net_list_conf_str) != 0) {
-        ERROR("Inject annotations to net conf json failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (cni_add_network_list(net_list_conf_str, rc, result) != 0) {
-        ERROR("Add CNI network:%s failed", net_name);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(net_list_conf_str);
-    free_runtime_conf(rc);
-    return ret;
-}
-
-int cri_detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
+int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
@@ -940,49 +643,6 @@ int cri_detach_network_plane(const struct cni_manager *manager, const char *net_
 
 out:
     free(net_list_conf_str_var);
-    free_runtime_conf(rc);
-    return ret;
-}
-
-int isula_detach_network_plane(const struct cni_manager *manager, const char *net_name, struct result **result)
-{
-    int ret = 0;
-    struct runtime_conf *rc = NULL;
-    char *net_list_conf_str = NULL;
-
-    if (manager == NULL || net_name == NULL || result == NULL) {
-        ERROR("Invalid input params");
-        return -1;
-    }
-
-    net_list_conf_str = map_search(g_conflists.map_isula_net_conf, (void *)net_name);
-    if (net_list_conf_str == NULL) {
-        ERROR("Invalid network name:%s, search cni network conflist NULL", net_name);
-        ret = -1;
-        goto out;
-    }
-
-    rc = build_cni_runtime_conf(manager);
-    if (rc == NULL) {
-        ERROR("Error building CNI runtime config");
-        ret = -1;
-        goto out;
-    }
-
-    if (inject_annotations_json(manager->annotations, &net_list_conf_str) != 0) {
-        ERROR("Inject annotations to net conf json failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (cni_del_network_list(net_list_conf_str, rc) != 0) {
-        ERROR("Error deleting network: %s", net_name);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    free(net_list_conf_str);
     free_runtime_conf(rc);
     return ret;
 }
@@ -1030,7 +690,7 @@ void free_cni_manager(struct cni_manager *manager)
     free(manager);
 }
 
-int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char * const *bin_paths,
+int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
                            size_t bin_paths_len)
 {
     int ret = 0;
@@ -1042,19 +702,6 @@ int cni_manager_store_init(const char *cache_dir, const char *conf_path, const c
 
     if (!cni_module_init(cache_dir, bin_paths, bin_paths_len)) {
         ERROR("Init libcni module failed");
-        ret = -1;
-        goto out;
-    }
-
-    if (pthread_rwlock_init(&(g_conflists.rwlock), NULL) != 0) {
-        ERROR("Failed to init global conflists rwlock");
-        ret = -1;
-        goto out;
-    }
-
-    g_conflists.map_isula_net_conf = map_new(MAP_STR_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
-    if (g_conflists.map_isula_net_conf == NULL) {
-        ERROR("Out of memory");
         ret = -1;
         goto out;
     }
