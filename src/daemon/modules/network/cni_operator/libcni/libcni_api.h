@@ -66,8 +66,7 @@ int cni_get_network_list_cached_result(const char *net_list_conf_str, const stru
 
 int cni_get_network_list_cached_config(const char *net_list_conf_str, struct runtime_conf *rc, char **config);
 
-int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc,
-                         struct result **pret);
+int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, struct result **pret);
 
 int cni_del_network_list(const char *net_list_conf_str, const struct runtime_conf *rc);
 
@@ -77,7 +76,7 @@ int cni_get_version_info(const char *plugin_type, struct plugin_info **pinfo);
 
 int cni_conf_files(const char *dir, const char **extensions, size_t ext_len, char ***result);
 
-int cni_conf_from_file(const char *filename, struct cni_network_conf **config);
+struct cni_network_conf *cni_conf_from_file(const char *filename);
 
 int cni_conflist_from_bytes(const char *bytes, struct cni_network_list_conf **list);
 
@@ -99,4 +98,3 @@ void free_runtime_conf(struct runtime_conf *rc);
 #endif
 
 #endif
-

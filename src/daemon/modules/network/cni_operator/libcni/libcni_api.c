@@ -72,10 +72,10 @@ int cni_get_network_list_cached_result(const char *net_list_conf_str, const stru
         return -1;
     }
 
-    ret = conflist_from_bytes(net_list_conf_str, &list);
-    if (ret != 0) {
+    list = conflist_from_bytes(net_list_conf_str);
+    if (list == NULL) {
         ERROR("Parse conf list failed");
-        return ret;
+        return -1;
     }
 
     if (list->list == NULL) {
@@ -102,10 +102,10 @@ int cni_get_network_list_cached_config(const char *net_list_conf_str, struct run
         return -1;
     }
 
-    ret = conflist_from_bytes(net_list_conf_str, &list);
-    if (ret != 0) {
+    list = conflist_from_bytes(net_list_conf_str);
+    if (list == NULL) {
         ERROR("Parse conf list failed");
-        return ret;
+        return -1;
     }
 
     if (list->list == NULL) {
@@ -738,10 +738,10 @@ int cni_add_network_list(const char *net_list_conf_str, const struct runtime_con
         return -1;
     }
 
-    ret = conflist_from_bytes(net_list_conf_str, &list);
-    if (ret != 0) {
+    list = conflist_from_bytes(net_list_conf_str);
+    if (list == NULL) {
         ERROR("Parse conf list failed");
-        return ret;
+        return -1;
     }
 
     ret = add_network_list(list, rc, pret);
@@ -761,10 +761,10 @@ int cni_del_network_list(const char *net_list_conf_str, const struct runtime_con
         return -1;
     }
 
-    ret = conflist_from_bytes(net_list_conf_str, &list);
-    if (ret != 0) {
+    list = conflist_from_bytes(net_list_conf_str);
+    if (list == NULL) {
         ERROR("Parse conf list failed");
-        return ret;
+        return -1;
     }
 
     ret = del_network_list(list, rc);
@@ -784,10 +784,10 @@ int cni_check_network_list(const char *net_list_conf_str, const struct runtime_c
         return -1;
     }
 
-    ret = conflist_from_bytes(net_list_conf_str, &list);
-    if (ret != 0) {
+    list = conflist_from_bytes(net_list_conf_str);
+    if (list == NULL) {
         ERROR("Parse conf list failed");
-        return ret;
+        return -1;
     }
 
     ret = check_network_list(list, rc);
@@ -820,38 +820,35 @@ int cni_conf_files(const char *dir, const char **extensions, size_t ext_len, cha
     return conf_files(dir, extensions, ext_len, result);
 }
 
-int cni_conf_from_file(const char *filename, struct cni_network_conf **config)
+struct cni_network_conf *cni_conf_from_file(const char *filename)
 {
-    int ret = 0;
     struct network_config *netconf = NULL;
+    struct cni_network_conf *config = NULL;
 
-    ret = conf_from_file(filename, &netconf);
-    if (ret != 0) {
+    netconf = conf_from_file(filename);
+    if (netconf == NULL) {
         ERROR("Parse conf file: %s failed", filename);
-        return ret;
+        return NULL;
     }
 
-    *config = util_common_calloc_s(sizeof(struct cni_network_conf));
-    if (*config == NULL) {
-        ret = -1;
+    config = util_common_calloc_s(sizeof(struct cni_network_conf));
+    if (config == NULL) {
         ERROR("Out of memory");
         goto free_out;
     }
 
     if (netconf != NULL && netconf->network != NULL) {
-        (*config)->type = netconf->network->type ? util_strdup_s(netconf->network->type) : NULL;
-        (*config)->name = netconf->network->name ? util_strdup_s(netconf->network->name) : NULL;
-    }
-    if (netconf != NULL) {
-        (*config)->bytes = netconf->bytes;
-        netconf->bytes = NULL;
+        config->type = netconf->network->type ? util_strdup_s(netconf->network->type) : NULL;
+        config->name = netconf->network->name ? util_strdup_s(netconf->network->name) : NULL;
     }
 
-    ret = 0;
+    if (netconf != NULL) {
+        config->bytes = util_strdup_s(netconf->bytes);
+    }
 
 free_out:
     free_network_config(netconf);
-    return ret;
+    return config;
 }
 
 static void json_obj_to_cni_list_conf(struct network_config_list *src, struct cni_network_list_conf *list)
@@ -879,10 +876,12 @@ int cni_conflist_from_bytes(const char *bytes, struct cni_network_list_conf **li
     struct network_config_list *tmp_cni_net_conf_list = NULL;
     int ret = 0;
 
-    ret = conflist_from_bytes(bytes, &tmp_cni_net_conf_list);
-    if (ret != 0) {
-        return ret;
+    tmp_cni_net_conf_list = conflist_from_bytes(bytes);
+    if (tmp_cni_net_conf_list == NULL) {
+        ret = -1;
+        goto free_out;
     }
+
     *list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (*list == NULL) {
         ret = -1;
@@ -903,10 +902,11 @@ int cni_conflist_from_file(const char *filename, struct cni_network_list_conf **
     struct network_config_list *tmp_cni_net_conf_list = NULL;
     int ret = 0;
 
-    ret = conflist_from_file(filename, &tmp_cni_net_conf_list);
-    if (ret != 0) {
-        return ret;
+    tmp_cni_net_conf_list = conflist_from_file(filename);
+    if (tmp_cni_net_conf_list == NULL) {
+        return -1;
     }
+
     *list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (*list == NULL) {
         ret = -1;
@@ -941,13 +941,15 @@ int cni_conflist_from_conf(const struct cni_network_conf *cni_conf, struct cni_n
         return -1;
     }
 
-    ret = conf_from_bytes(cni_conf->bytes, &net);
-    if (ret != 0) {
+    net = conf_from_bytes(cni_conf->bytes);
+    if (net == NULL) {
+        ret = -1;
         goto free_out;
     }
 
-    ret = conflist_from_conf(net, &net_list);
-    if (ret != 0) {
+    net_list = conflist_from_conf(net);
+    if (net_list == NULL) {
+        ret = -1;
         goto free_out;
     }
 
