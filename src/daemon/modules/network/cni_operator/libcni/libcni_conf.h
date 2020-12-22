@@ -38,17 +38,15 @@ void free_network_config(struct network_config *config);
 
 void free_network_config_list(struct network_config_list *conf_list);
 
-int conf_from_bytes(const char *conf_str, struct network_config **config);
+struct network_config *conf_from_bytes(const char *conf_str);
 
-int conf_from_file(const char *filename, struct network_config **config);
+struct network_config *conf_from_file(const char *filename);
 
-int conflist_from_bytes(const char *json_str, struct network_config_list **list);
+struct network_config_list *conflist_from_bytes(const char *json_str);
 
-int conflist_from_file(const char *filename, struct network_config_list **list);
+struct network_config_list *conflist_from_file(const char *filename);
 
-int load_conf(const char *dir, const char *name, struct network_config **conf);
-
-int conflist_from_conf(const struct network_config *conf, struct network_config_list **conf_list);
+struct network_config_list *conflist_from_conf(const struct network_config *conf);
 
 int conf_files(const char *dir, const char * const *extensions, size_t ext_len, char ***result);
 
@@ -57,4 +55,3 @@ int conf_files(const char *dir, const char * const *extensions, size_t ext_len, 
 #endif
 
 #endif
-

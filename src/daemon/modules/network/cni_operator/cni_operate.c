@@ -123,7 +123,7 @@ static int port_mappings_inject(const char *value, struct runtime_conf *rt)
         goto out;
     }
 
-    new_p = (struct cni_port_mapping **)util_smart_calloc_s(sizeof(struct cni_port_mapping*), anno_p->len);
+    new_p = (struct cni_port_mapping **)util_smart_calloc_s(sizeof(struct cni_port_mapping *), anno_p->len);
     if (new_p == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -175,9 +175,9 @@ static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
 }
 
 static struct anno_registry_conf_rt g_registrant_rt[] = {
-    {.name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject},
-    {.name = CNI_ARGS_PORTMAPPING_KEY, .ops = port_mappings_inject},
-    {.name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject}
+    { .name = CNI_ARGS_BANDWIDTH_KEY, .ops = bandwidth_inject },
+    { .name = CNI_ARGS_PORTMAPPING_KEY, .ops = port_mappings_inject },
+    { .name = CNI_ARGS_IPRANGES_KEY, .ops = ip_ranges_inject },
 };
 
 static struct anno_registry_conf_json g_registrant_json[] = {
@@ -204,7 +204,8 @@ static int load_cni_config_file_list(const char *fname, struct cni_network_list_
             goto out;
         }
     } else {
-        if (cni_conf_from_file(fname, &n_conf) != 0) {
+        n_conf = cni_conf_from_file(fname);
+        if (n_conf == NULL) {
             ERROR("Error loading CNI config file %s", fname);
             ret = -1;
             goto out;
@@ -232,8 +233,8 @@ out:
 }
 
 // Try my best to load file, when error occured, just skip and continue
-static int update_conflist_from_files(struct cni_network_list_conf **conflists, const char **files,
-                                      size_t files_num, size_t *nets_num, cni_conf_filter_t filter_ops)
+static int update_conflist_from_files(struct cni_network_list_conf **conflists, const char **files, size_t files_num,
+                                      size_t *nets_num, cni_conf_filter_t filter_ops)
 {
     size_t i = 0;
     int ret = 0;
@@ -343,7 +344,6 @@ out:
     return ret;
 }
 
-
 int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res_len, cni_conf_filter_t filter_ops)
 {
     int ret = 0;
@@ -367,7 +367,8 @@ int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res
         goto out;
     }
 
-    tmp_conflists = (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(struct cni_network_list_conf *), files_num);
+    tmp_conflists =
+        (struct cni_network_list_conf **)util_smart_calloc_s(sizeof(struct cni_network_list_conf *), files_num);
     if (tmp_conflists == NULL) {
         ERROR("Out of memory, cannot allocate mem to store conflists");
         ret = -1;
@@ -603,7 +604,6 @@ out:
     return ret;
 }
 
-
 int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
 {
     int ret = 0;
@@ -690,7 +690,7 @@ void free_cni_manager(struct cni_manager *manager)
     free(manager);
 }
 
-int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char* const *bin_paths,
+int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char * const *bin_paths,
                            size_t bin_paths_len)
 {
     int ret = 0;
