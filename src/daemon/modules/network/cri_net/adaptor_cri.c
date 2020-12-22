@@ -90,6 +90,9 @@ int adaptor_cni_update_confs()
     }
 
     for (i = 0; i < tmp_net_list_len; i++) {
+        if (tmp_net_list[i] == NULL) {
+            continue;
+        }
         if (map_search(work, (void *)tmp_net_list[i]->name) != NULL) {
             INFO("Ignore CNI network: %s, because already exist", tmp_net_list[i]->name);
             continue;
@@ -214,7 +217,8 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
             continue;
         }
         tmp_idx = map_search(g_net_store.g_net_index_map, (void *)conf->extral_nets[i]->name);
-        if (tmp_idx == NULL) {
+        // if user defined network is default network, return error
+        if (tmp_idx == NULL || *tmp_idx == 0) {
             ERROR("Cannot found user defined net: %s", conf->extral_nets[i]->name);
             // do best to detach network plane of container
             if (ignore_nofound) {
