@@ -853,6 +853,585 @@ pack_response:
     return (cc == ISULAD_SUCCESS) ? 0 : -1;
 }
 
+static int dup_path_and_args(const container_t *cont, char **path, char ***args, size_t *args_len)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    if (cont->common_config->path != NULL) {
+        *path = util_strdup_s(cont->common_config->path);
+    }
+    if (cont->common_config->args_len > 0) {
+        if ((cont->common_config->args_len) > SIZE_MAX / sizeof(char *)) {
+            ERROR("Containers config args len is too many!");
+            ret = -1;
+            goto out;
+        }
+        *args = util_common_calloc_s(cont->common_config->args_len * sizeof(char *));
+        if ((*args) == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        for (i = 0; i < cont->common_config->args_len; i++) {
+            if (cont->common_config->args[i] == NULL) {
+                ERROR("Input value of args is null");
+                ret = -1;
+                goto out;
+            }
+            (*args)[*args_len] = util_strdup_s(cont->common_config->args[i]);
+            (*args_len)++;
+        }
+    }
+out:
+    return ret;
+}
+
+// Always modify this function if host_config.json is modified.
+static int dup_host_config(const host_config *src, host_config **dest)
+{
+    int ret = -1;
+    char *json = NULL;
+    parser_error err = NULL;
+
+    if (src == NULL) {
+        *dest = NULL;
+        return 0;
+    }
+
+    json = host_config_generate_json(src, NULL, &err);
+    if (json == NULL) {
+        ERROR("Failed to generate json: %s", err);
+        goto out;
+    }
+    *dest = host_config_parse_data(json, NULL, &err);
+    if (*dest == NULL) {
+        ERROR("Failed to parse json: %s", err);
+        goto out;
+    }
+    ret = 0;
+
+out:
+    free(err);
+    free(json);
+    return ret;
+}
+
+static int dup_health_check_config(const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    if (src == NULL || src->healthcheck == NULL || dest == NULL) {
+        return 0;
+    }
+    dest->health_check = util_common_calloc_s(sizeof(defs_health_check));
+    if (dest->health_check == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    if (src->healthcheck->test != NULL && src->healthcheck->test_len != 0) {
+        if (src->healthcheck->test_len > SIZE_MAX / sizeof(char *)) {
+            ERROR("health check test is too much!");
+            ret = -1;
+            goto out;
+        }
+        dest->health_check->test = util_common_calloc_s(src->healthcheck->test_len * sizeof(char *));
+        if (dest->health_check->test == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        for (i = 0; i < src->healthcheck->test_len; i++) {
+            if (src->healthcheck->test[i] == NULL) {
+                ERROR("Input value of src health check test is null");
+                ret = -1;
+                goto out;
+            }
+            dest->health_check->test[i] = util_strdup_s(src->healthcheck->test[i]);
+            dest->health_check->test_len++;
+        }
+        dest->health_check->interval = (src->healthcheck->interval == 0) ? DEFAULT_PROBE_INTERVAL :
+                                       src->healthcheck->interval;
+        dest->health_check->start_period = (src->healthcheck->start_period == 0) ? DEFAULT_START_PERIOD :
+                                           src->healthcheck->start_period;
+        dest->health_check->timeout = (src->healthcheck->timeout == 0) ? DEFAULT_PROBE_TIMEOUT :
+                                      src->healthcheck->timeout;
+        dest->health_check->retries = (src->healthcheck->retries != 0) ? src->healthcheck->retries :
+                                      DEFAULT_PROBE_RETRIES;
+
+        dest->health_check->exit_on_unhealthy = src->healthcheck->exit_on_unhealthy;
+    }
+out:
+    return ret;
+}
+
+static int dup_container_config_env(const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+    size_t i = 0;
+    char *tmpstr = NULL;
+
+    if (src->env != NULL && src->env_len > 0) {
+        if (src->env_len > SIZE_MAX / sizeof(char *)) {
+            ERROR("Container inspect config env elements is too much!");
+            ret = -1;
+            goto out;
+        }
+        dest->env = util_common_calloc_s(src->env_len * sizeof(char *));
+        if (dest->env == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        for (i = 0; i < src->env_len; i++) {
+            if (src->env[i] == NULL) {
+                ERROR("Input value of src env is null");
+                ret = -1;
+                goto out;
+            }
+            tmpstr = src->env[i];
+            dest->env[i] = tmpstr ? util_strdup_s(tmpstr) : NULL;
+            dest->env_len++;
+        }
+    }
+
+out:
+    return ret;
+}
+
+static int dup_container_config_cmd_and_entrypoint(const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+
+    if (src == NULL || dest == NULL) {
+        return 0;
+    }
+
+    ret = util_dup_array_of_strings((const char **)(src->cmd), src->cmd_len, &(dest->cmd), &(dest->cmd_len));
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = util_dup_array_of_strings((const char **)(src->entrypoint), src->entrypoint_len, &(dest->entrypoint),
+                                    &(dest->entrypoint_len));
+out:
+    return ret;
+}
+
+static int dup_container_config_labels(const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+
+    if (src->labels != NULL) {
+        dest->labels = util_common_calloc_s(sizeof(json_map_string_string));
+        if (dest->labels == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        ret = dup_json_map_string_string(src->labels, dest->labels);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+out:
+    return ret;
+}
+
+static int dup_container_config_volumes(const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+
+    if (src->volumes != NULL) {
+        dest->volumes = dup_map_string_empty_object(src->volumes);
+        if (dest->volumes == 0) {
+            ret = -1;
+            goto out;
+        }
+    }
+out:
+    return ret;
+}
+
+static int dup_container_config_annotations(const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+
+    if (src->annotations != NULL) {
+        dest->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+        if (dest->annotations == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        ret = dup_json_map_string_string(src->annotations, dest->annotations);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+out:
+    return ret;
+}
+
+static int dup_container_config(const char *image, const container_config *src, container_inspect_config *dest)
+{
+    int ret = 0;
+
+    if (src == NULL || dest == NULL) {
+        return 0;
+    }
+
+    dest->hostname = src->hostname ? util_strdup_s(src->hostname) : util_strdup_s("");
+    dest->user = src->user ? util_strdup_s(src->user) : util_strdup_s("");
+    dest->tty = src->tty;
+    dest->image = image ? util_strdup_s(image) : util_strdup_s("none");
+
+    if (dup_container_config_env(src, dest) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_container_config_cmd_and_entrypoint(src, dest) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_container_config_labels(src, dest) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_container_config_volumes(src, dest) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_container_config_annotations(src, dest) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_health_check_config(src, dest) != 0) {
+        ERROR("Failed to duplicate health check config");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int mount_point_to_inspect(const container_t *cont, container_inspect *inspect)
+{
+    size_t i, len;
+
+    if (cont->common_config->mount_points == NULL || cont->common_config->mount_points->len == 0) {
+        return 0;
+    }
+
+    len = cont->common_config->mount_points->len;
+    if (len > SIZE_MAX / sizeof(docker_types_mount_point *)) {
+        ERROR("Invalid mount point size");
+        return -1;
+    }
+    inspect->mounts = util_common_calloc_s(sizeof(docker_types_mount_point *) * len);
+    if (inspect->mounts == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    for (i = 0; i < len; i++) {
+        container_config_v2_common_config_mount_points_element *mp = cont->common_config->mount_points->values[i];
+        inspect->mounts[i] = util_common_calloc_s(sizeof(docker_types_mount_point));
+        if (inspect->mounts[i] == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        inspect->mounts[i]->type = util_strdup_s(mp->type);
+        inspect->mounts[i]->source = util_strdup_s(mp->source);
+        inspect->mounts[i]->destination = util_strdup_s(mp->destination);
+        inspect->mounts[i]->name = util_strdup_s(mp->name);
+        inspect->mounts[i]->driver = util_strdup_s(mp->driver);
+        inspect->mounts[i]->mode = util_strdup_s(mp->relabel);
+        inspect->mounts[i]->propagation = util_strdup_s(mp->propagation);
+        inspect->mounts[i]->rw = mp->rw;
+
+        inspect->mounts_len++;
+    }
+    return 0;
+}
+
+static int pack_inspect_container_state(const container_t *cont, container_inspect *inspect)
+{
+    int ret = 0;
+    container_config_v2_state *cont_state = NULL;
+
+    cont_state = container_state_to_v2_state(cont->state);
+    if (cont_state == NULL) {
+        ERROR("Failed to read %s state", cont->common_config->id);
+        ret = -1;
+        goto out;
+    }
+
+    inspect->state = util_common_calloc_s(sizeof(container_inspect_state));
+    if (inspect->state == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    inspect->state->status = util_strdup_s(container_state_to_string(container_state_judge_status(cont_state)));
+    inspect->state->running = cont_state->running;
+    inspect->state->paused = cont_state->paused;
+    inspect->state->restarting = cont_state->restarting;
+    inspect->state->pid = cont_state->pid;
+
+    inspect->state->exit_code = cont_state->exit_code;
+    inspect->state->started_at = cont_state->started_at ? util_strdup_s(cont_state->started_at) :
+                                 util_strdup_s(defaultContainerTime);
+    inspect->state->finished_at = cont_state->finished_at ? util_strdup_s(cont_state->finished_at) :
+                                  util_strdup_s(defaultContainerTime);
+    inspect->state->error = cont->state->state->error ? util_strdup_s(cont->state->state->error) : NULL;
+    inspect->restart_count = cont->common_config->restart_count;
+
+    if (container_dup_health_check_status(&inspect->state->health, cont_state->health) != 0) {
+        ERROR("Failed to dup health check info");
+        ret = -1;
+        goto out;
+    }
+out:
+    free_container_config_v2_state(cont_state);
+    return ret;
+}
+
+static int pack_inspect_host_config(const container_t *cont, container_inspect *inspect)
+{
+    int ret = 0;
+    host_config *hostconfig = NULL;
+
+    hostconfig = cont->hostconfig;
+    if (hostconfig == NULL) {
+        ERROR("Failed to read host config");
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_host_config(hostconfig, &inspect->host_config) != 0) {
+        ERROR("Failed to dup host config");
+        ret = -1;
+        goto out;
+    }
+
+    if (cont->runtime != NULL) {
+        free(inspect->host_config->runtime);
+        inspect->host_config->runtime = util_strdup_s(cont->runtime);
+    }
+out:
+    return ret;
+}
+
+static int pack_inspect_general_data(const container_t *cont, container_inspect *inspect)
+{
+    int ret = 0;
+
+    inspect->id = util_strdup_s(cont->common_config->id);
+    inspect->name = util_strdup_s(cont->common_config->name);
+    if (cont->common_config->created != NULL) {
+        inspect->created = util_strdup_s(cont->common_config->created);
+    }
+
+    if (dup_path_and_args(cont, &(inspect->path), &(inspect->args), &(inspect->args_len)) != 0) {
+        ERROR("Failed to dup path and args");
+        ret = -1;
+        goto out;
+    }
+
+    inspect->image = cont->image_id != NULL ? util_strdup_s(cont->image_id) : util_strdup_s("");
+
+    if (cont->common_config->log_path != NULL) {
+        inspect->log_path = util_strdup_s(cont->common_config->log_path);
+    }
+
+    if (cont->common_config->hosts_path != NULL) {
+        inspect->hosts_path = util_strdup_s(cont->common_config->hosts_path);
+    }
+    if (cont->common_config->resolv_conf_path != NULL) {
+        inspect->resolv_conf_path = util_strdup_s(cont->common_config->resolv_conf_path);
+    }
+    if (cont->common_config->mount_label != NULL) {
+        inspect->mount_label = util_strdup_s(cont->common_config->mount_label);
+    }
+    if (cont->common_config->process_label != NULL) {
+        inspect->process_label = util_strdup_s(cont->common_config->process_label);
+    }
+
+    if (cont->common_config->seccomp_profile != NULL) {
+        inspect->seccomp_profile = util_strdup_s(cont->common_config->seccomp_profile);
+    }
+
+    inspect->no_new_privileges = cont->common_config->no_new_privileges;
+
+    if (mount_point_to_inspect(cont, inspect) != 0) {
+        ERROR("Failed to transform to mount point");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
+static int pack_inspect_config(const container_t *cont, container_inspect *inspect)
+{
+    int ret = 0;
+
+    inspect->config = util_common_calloc_s(sizeof(container_inspect_config));
+    if (inspect->config == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_container_config(cont->common_config->image, cont->common_config->config, inspect->config) != 0) {
+        ERROR("Failed to dup container config");
+        ret = -1;
+        goto out;
+    }
+out:
+    return ret;
+}
+
+static int merge_default_ulimit_with_ulimit(container_inspect *out_inspect)
+{
+    int ret = 0;
+    host_config_ulimits_element **rlimits = NULL;
+    size_t i, j, ulimits_len;
+
+    if (conf_get_isulad_default_ulimit(&rlimits) != 0) {
+        ERROR("Failed to get isulad default ulimit");
+        ret = -1;
+        goto out;
+    }
+
+    ulimits_len = ulimit_array_len(rlimits);
+    for (i = 0; i < ulimits_len; i++) {
+        for (j = 0; j < out_inspect->host_config->ulimits_len; j++) {
+            if (strcmp(rlimits[i]->name, out_inspect->host_config->ulimits[j]->name) == 0) {
+                break;
+            }
+        }
+        if (j < out_inspect->host_config->ulimits_len) {
+            continue;
+        }
+
+        if (ulimit_array_append(&out_inspect->host_config->ulimits, rlimits[i],
+                                out_inspect->host_config->ulimits_len) != 0) {
+            ERROR("ulimit append failed");
+            ret = -1;
+            goto out;
+        }
+        out_inspect->host_config->ulimits_len++;
+    }
+
+out:
+    free_default_ulimit(rlimits);
+    return ret;
+}
+
+static int pack_inspect_network_settings(const container_t *cont, container_inspect *inspect)
+{
+    int ret = 0;
+
+    if (cont->common_config->network_settings == NULL) {
+        WARN("Container with id:%s no network settings to inspect", cont->common_config->id);
+        return 0;
+    }
+
+    inspect->network_settings = util_common_calloc_s(sizeof(container_network_settings));
+    if (inspect->network_settings == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (cont->common_config->network_settings->ip_address != NULL) {
+        inspect->network_settings->ip_address = util_strdup_s(cont->common_config->network_settings->ip_address);
+    }
+
+    if (cont->common_config->network_settings->gateway != NULL) {
+        inspect->network_settings->gateway = util_strdup_s(cont->common_config->network_settings->gateway);
+    }
+
+    // TODO: copy network settings fields according to requirement
+
+out:
+    return ret;
+}
+
+static int pack_inspect_data(const container_t *cont, container_inspect **out_inspect)
+{
+    int ret = 0;
+    container_inspect *inspect = NULL;
+
+    inspect = util_common_calloc_s(sizeof(container_inspect));
+    if (inspect == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_inspect_general_data(cont, inspect) != 0) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_inspect_container_state(cont, inspect) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_inspect_host_config(cont, inspect) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (merge_default_ulimit_with_ulimit(inspect) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_inspect_config(cont, inspect) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (pack_inspect_network_settings(cont, inspect) != 0) {
+        ERROR("Pack inspect network settings error");
+        ret = -1;
+        goto out;
+    }
+
+    if (!strcmp(cont->common_config->image_type, IMAGE_TYPE_OCI)) {
+        inspect->graph_driver = im_graphdriver_get_metadata_by_container_id(cont->common_config->id);
+        if (inspect->graph_driver == NULL) {
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    *out_inspect = inspect;
+    return ret;
+}
+
+/*
+ * RETURN VALUE:
+ * 0: inspect success
+ * -1: no such container with "id"
+ * -2: have the container with "id", but failed to inspect due to other reasons
+*/
 static int inspect_container_helper(const char *id, int timeout, char **container_json)
 {
     int ret = 0;
