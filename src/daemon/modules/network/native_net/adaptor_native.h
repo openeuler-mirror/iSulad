@@ -13,22 +13,17 @@
  * Description: provide network callback function definition
  *******************************************************************************/
 
-#ifndef DAEMON_MODULES_API_NETWORK_CONFIG_H
-#define DAEMON_MODULES_API_NETWORK_CONFIG_H
+#ifndef DAEMON_MODULES_ADAPTOR_NATIVE_H
+#define DAEMON_MODULES_ADAPTOR_NATIVE_H
 
-#include "filters.h"
-#include "isula_libutils/network_create_request.h"
-#include "isula_libutils/network_create_response.h"
-#include "isula_libutils/network_network_info.h"
+#include "network_api.h"
 
-extern const char *g_default_driver;
+int native_config_create(const network_create_request *request, network_create_response **response);
 
-int network_config_bridge_create(const network_create_request *request, network_create_response **response);
+int native_config_inspect(const char *name, char **network_json);
 
-int network_config_inspect(const char *name, char **network_json);
+int native_config_list(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len);
 
-int network_config_list(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len);
-
-int network_config_remove(const char *name, char **res_name);
+int native_config_remove(const char *name, char **res_name);
 
 #endif // DAEMON_MODULES_API_NETWORK_CONFIG_H
