@@ -61,64 +61,60 @@ bool cni_module_init(const char *cache_dir, const char * const *paths, size_t pa
     return true;
 }
 
-int cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc,
-                                       struct result **cached_res)
+struct result *cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc)
 {
+    struct result *cached_res = NULL;
     struct network_config_list *list = NULL;
-    int ret = 0;
 
     if (net_list_conf_str == NULL) {
         ERROR("Empty net list conf argument");
-        return -1;
+        return NULL;
     }
 
     list = conflist_from_bytes(net_list_conf_str);
     if (list == NULL) {
         ERROR("Parse conf list failed");
-        return -1;
+        return NULL;
     }
 
     if (list->list == NULL) {
         ERROR("empty network configs");
-        ret = -1;
         goto out;
     }
 
-    ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, cached_res);
+    cached_res = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
 
 out:
     free_network_config_list(list);
-    return ret;
+    return cached_res;
 }
 
-// note: this function will update runtime config from cached data
-int cni_get_network_list_cached_config(const char *net_list_conf_str, struct runtime_conf *rc, char **config)
+cni_cached_info *cni_get_network_list_cached_info(const char *net_list_conf_str, struct runtime_conf *rc)
 {
     struct network_config_list *list = NULL;
-    int ret = 0;
+    cni_cached_info *info = NULL;
 
     if (net_list_conf_str == NULL) {
         ERROR("Empty net list conf argument");
-        return -1;
+        return NULL;
     }
 
     list = conflist_from_bytes(net_list_conf_str);
     if (list == NULL) {
         ERROR("Parse conf list failed");
-        return -1;
+        return NULL;
     }
 
     if (list->list == NULL) {
         ERROR("empty network configs");
-        ret = -1;
         goto out;
     }
 
-    ret = cni_get_cached_config(g_module_conf.cache_dir, list->list->name, rc, config);
+    info = cni_cache_read(g_module_conf.cache_dir, list->list->name, rc);
 
 out:
     free_network_config_list(list);
-    return ret;
+    return info;
 }
 
 static int args(const char *action, const struct runtime_conf *rc, struct cni_args **cargs);
@@ -487,9 +483,9 @@ static int del_network_list(const struct network_config_list *list, const struct
     }
 
     if (greated) {
-        ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc,
-                                    &prev_result);
-        if (ret != 0) {
+        prev_result = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
+        if (prev_result == NULL) {
+            ret = -1;
             ERROR("failed to get network: %s cached result", list->list->name);
             goto free_out;
         }
@@ -560,15 +556,16 @@ static int check_network_list(const struct network_config_list *list, const stru
         return 0;
     }
 
-    ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &prev_result);
-    if (ret != 0) {
+    prev_result = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
+    if (prev_result == NULL) {
+        ret = -1;
         ERROR("failed to get network: %s cached result", list->list->name);
         goto free_out;
     }
 
     for (i = list->list->plugins_len - 1; i >= 0; i--) {
-        ret = check_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, &prev_result);
-        if (ret != 0) {
+        if (check_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, &prev_result) != 0) {
+            ret = -1;
             ERROR("Run check plugin: %d failed", i);
             goto free_out;
         }
@@ -797,24 +794,6 @@ int cni_check_network_list(const char *net_list_conf_str, const struct runtime_c
     return ret;
 }
 
-int cni_get_version_info(const char *plugin_type, struct plugin_info **pinfo)
-{
-    int ret = 0;
-    char *plugin_path = NULL;
-    int save_errno = 0;
-
-    ret = find_in_path(plugin_type, (const char * const *)g_module_conf.bin_paths, g_module_conf.bin_paths_len,
-                       &plugin_path, &save_errno);
-    if (ret != 0) {
-        ERROR("find plugin: \"%s\" failed: %s", plugin_type, get_invoke_err_msg(save_errno));
-        return ret;
-    }
-
-    ret = raw_get_version_info(plugin_path, pinfo);
-    free(plugin_path);
-    return ret;
-}
-
 int cni_conf_files(const char *dir, const char **extensions, size_t ext_len, char ***result)
 {
     return conf_files(dir, extensions, ext_len, result);
@@ -871,102 +850,60 @@ static void json_obj_to_cni_list_conf(struct network_config_list *src, struct cn
     }
 }
 
-int cni_conflist_from_bytes(const char *bytes, struct cni_network_list_conf **list)
+struct cni_network_list_conf *cni_conflist_from_file(const char *filename)
 {
     struct network_config_list *tmp_cni_net_conf_list = NULL;
-    int ret = 0;
-
-    tmp_cni_net_conf_list = conflist_from_bytes(bytes);
-    if (tmp_cni_net_conf_list == NULL) {
-        ret = -1;
-        goto free_out;
-    }
-
-    *list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
-    if (*list == NULL) {
-        ret = -1;
-        ERROR("Out of memory");
-        goto free_out;
-    }
-
-    json_obj_to_cni_list_conf(tmp_cni_net_conf_list, *list);
-
-    ret = 0;
-free_out:
-    free_network_config_list(tmp_cni_net_conf_list);
-    return ret;
-}
-
-int cni_conflist_from_file(const char *filename, struct cni_network_list_conf **list)
-{
-    struct network_config_list *tmp_cni_net_conf_list = NULL;
-    int ret = 0;
+    struct cni_network_list_conf *list = NULL;
 
     tmp_cni_net_conf_list = conflist_from_file(filename);
     if (tmp_cni_net_conf_list == NULL) {
-        return -1;
+        return NULL;
     }
 
-    *list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
-    if (*list == NULL) {
-        ret = -1;
+    list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
+    if (list == NULL) {
         ERROR("Out of memory");
         goto free_out;
     }
 
-    json_obj_to_cni_list_conf(tmp_cni_net_conf_list, *list);
+    json_obj_to_cni_list_conf(tmp_cni_net_conf_list, list);
 
-    ret = 0;
 free_out:
     free_network_config_list(tmp_cni_net_conf_list);
-    return ret;
+    return list;
 }
 
-static inline bool check_cni_conflist_from_conf_args(const struct cni_network_conf *cni_conf,
-                                                     struct cni_network_list_conf * const *cni_conf_list)
-{
-    return (cni_conf == NULL || cni_conf_list == NULL);
-}
-
-int cni_conflist_from_conf(const struct cni_network_conf *cni_conf, struct cni_network_list_conf **cni_conf_list)
+struct cni_network_list_conf *cni_conflist_from_conf(const struct cni_network_conf *cni_conf)
 {
     struct network_config *net = NULL;
     struct network_config_list *net_list = NULL;
-    int ret = 0;
-    bool invalid_arg = false;
+    struct cni_network_list_conf *cni_conf_list = NULL;
 
-    invalid_arg = check_cni_conflist_from_conf_args(cni_conf, cni_conf_list);
-    if (invalid_arg) {
+    if (cni_conf == NULL) {
         ERROR("Empty cni conf or conflist argument");
-        return -1;
+        return NULL;
     }
 
     net = conf_from_bytes(cni_conf->bytes);
     if (net == NULL) {
-        ret = -1;
         goto free_out;
     }
 
     net_list = conflist_from_conf(net);
     if (net_list == NULL) {
-        ret = -1;
         goto free_out;
     }
 
-    *cni_conf_list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
-    if (*cni_conf_list == NULL) {
+    cni_conf_list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
+    if (cni_conf_list == NULL) {
         ERROR("Out of memory");
-        ret = -1;
         goto free_out;
     }
 
-    json_obj_to_cni_list_conf(net_list, *cni_conf_list);
-    ret = 0;
+    json_obj_to_cni_list_conf(net_list, cni_conf_list);
 
 free_out:
-    if (net != NULL) {
-        free_network_config(net);
-    }
+    free_network_config(net);
     free_network_config_list(net_list);
-    return ret;
+    return cni_conf_list;
 }
