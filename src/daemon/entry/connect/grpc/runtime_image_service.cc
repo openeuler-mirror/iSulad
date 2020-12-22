@@ -17,9 +17,16 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "cri_helpers.h"
-
 #include "isula_libutils/log.h"
+#include "cri_helpers.h"
+#include "cri_image_manager_service_impl.h"
+
+
+RuntimeImageServiceImpl::RuntimeImageServiceImpl()
+{
+    std::unique_ptr<ImageManagerService> service(new ImageManagerServiceImpl);
+    rService = std::move(service);
+}
 
 grpc::Status RuntimeImageServiceImpl::PullImage(grpc::ServerContext *context,
                                                 const runtime::v1alpha2::PullImageRequest *request,
@@ -29,7 +36,7 @@ grpc::Status RuntimeImageServiceImpl::PullImage(grpc::ServerContext *context,
 
     EVENT("Event: {Object: CRI, Type: Pulling image %s}", request->image().image().c_str());
 
-    std::string imageRef = rService.PullImage(request->image(), request->auth(), error);
+    std::string imageRef = rService->PullImage(request->image(), request->auth(), error);
     if (!error.Empty() || imageRef.empty()) {
         ERROR("{Object: CRI, Type: Failed to pull image %s}", request->image().image().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -50,7 +57,7 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
 
     EVENT("Event: {Object: CRI, Type: Listing all images}");
 
-    rService.ListImages(request->filter(), &images, error);
+    rService->ListImages(request->filter(), &images, error);
     if (!error.Empty()) {
         ERROR("{Object: CRI, Type: Failed to list all images: %s}", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -78,7 +85,7 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
 
     EVENT("Event: {Object: CRI, Type: Statusing image %s}", request->image().image().c_str());
 
-    image_info = rService.ImageStatus(request->image(), error);
+    image_info = rService->ImageStatus(request->image(), error);
     if (!error.Empty() && !CRIHelpers::IsImageNotFoundError(error.GetMessage())) {
         ERROR("{Object: CRI, Type: Failed to status image: %s due to %s}", request->image().image().c_str(),
               error.GetMessage().c_str());
@@ -104,7 +111,7 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
 
     EVENT("Event: {Object: CRI, Type: Statusing image fs info}");
 
-    rService.ImageFsInfo(&usages, error);
+    rService->ImageFsInfo(&usages, error);
     if (!error.Empty()) {
         ERROR("{Object: CRI, Type: Failed to status image fs info: %s}", error.GetMessage().c_str());
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
@@ -131,7 +138,7 @@ grpc::Status RuntimeImageServiceImpl::RemoveImage(grpc::ServerContext *context,
 
     EVENT("Event: {Object: CRI, Type: Removing image %s}", request->image().image().c_str());
 
-    rService.RemoveImage(request->image(), error);
+    rService->RemoveImage(request->image(), error);
     if (!error.Empty()) {
         ERROR("{Object: CRI, Type: Failed to remove image %s due to: %s}", request->image().image().c_str(),
               error.GetMessage().c_str());

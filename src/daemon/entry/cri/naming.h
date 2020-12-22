@@ -16,8 +16,9 @@
 #ifndef DAEMON_ENTRY_CRI_NAMING_H
 #define DAEMON_ENTRY_CRI_NAMING_H
 
-#include "cri_runtime_service.h"
+#include "api.pb.h"
 #include <string>
+#include "errors.h"
 
 namespace CRINaming {
 std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadata);

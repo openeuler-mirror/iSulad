@@ -16,6 +16,7 @@
 #include "cri_runtime_service.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "cri_constants.h"
 #include <memory>
 
 namespace CRISecurity {
@@ -137,7 +138,7 @@ static void ModifyCommonNamespaceOptions(const runtime::v1alpha2::NamespaceOptio
 {
     if (nsOpts.pid() == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->pid_mode);
-        hostConfig->pid_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
+        hostConfig->pid_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
 }
 
@@ -152,7 +153,7 @@ static void ModifyHostNetworkOptionForContainer(const runtime::v1alpha2::Namespa
     hostConfig->ipc_mode = util_strdup_s(sandboxNSMode.c_str());
     if (hostNetwork == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->uts_mode);
-        hostConfig->uts_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
+        hostConfig->uts_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
 }
 
@@ -160,12 +161,12 @@ static void ModifyHostNetworkOptionForSandbox(const runtime::v1alpha2::Namespace
 {
     if (nsOpts.ipc() == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->ipc_mode);
-        hostConfig->ipc_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
+        hostConfig->ipc_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
 
     if (nsOpts.network() == runtime::v1alpha2::NamespaceMode::NODE) {
         free(hostConfig->network_mode);
-        hostConfig->network_mode = util_strdup_s(CRIRuntimeService::Constants::namespaceModeHost.c_str());
+        hostConfig->network_mode = util_strdup_s(CRI::Constants::namespaceModeHost.c_str());
     }
     // Note: default networkMode is not supported
 }

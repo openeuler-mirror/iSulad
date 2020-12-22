@@ -17,13 +17,19 @@
 #define DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_IMAGE_SERVICE_H
 
 #include "api.grpc.pb.h"
+#include <memory>
 #include "callback.h"
-#include "cri_image_service.h"
+#include "cri_image_manager_service.h"
+
+using namespace CRI;
 
 // Implement of runtime RuntimeService
 class RuntimeImageServiceImpl : public
     runtime::v1alpha2::ImageService::Service {
 public:
+    RuntimeImageServiceImpl();
+    virtual ~RuntimeImageServiceImpl() = default;
+
     grpc::Status PullImage(grpc::ServerContext *context,
                            const runtime::v1alpha2::PullImageRequest *request,
                            runtime::v1alpha2::PullImageResponse *reply) override;
@@ -42,7 +48,7 @@ public:
                              runtime::v1alpha2::RemoveImageResponse *reply) override;
 
 private:
-    CRIImageServiceImpl rService;
+    std::unique_ptr<ImageManagerService> rService;
 };
 #endif // DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_IMAGE_SERVICE_H
 

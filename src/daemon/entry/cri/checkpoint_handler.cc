@@ -27,7 +27,7 @@
 #include "isula_libutils/log.h"
 #include "utils.h"
 
-namespace cri {
+namespace CRI {
 auto PortMapping::operator=(const PortMapping &obj) -> PortMapping &
 {
     if (&obj == this) {
@@ -362,4 +362,4 @@ void PodSandboxCheckpoint::CStructToCheckpoint(const cri_checkpoint *checkpoint,
     }
 }
 
-} // namespace cri
+} // namespace CRI

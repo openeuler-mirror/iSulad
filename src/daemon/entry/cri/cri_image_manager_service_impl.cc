@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -12,7 +12,7 @@
  * Create: 2017-11-22
  * Description: provide cri image functions
  *********************************************************************************/
-#include "cri_image_service.h"
+#include "cri_image_manager_service_impl.h"
 
 #include <iostream>
 #include <memory>
@@ -30,6 +30,7 @@
 #include "service_image_api.h"
 #include "utils.h"
 
+using namespace CRI;
 static void conv_image_to_grpc(const imagetool_image_summary *element, std::unique_ptr<runtime::v1alpha2::Image> &image)
 {
     if (element == nullptr) {
@@ -68,9 +69,9 @@ static void conv_image_to_grpc(const imagetool_image_summary *element, std::uniq
     }
 }
 
-auto CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
-                                                 const runtime::v1alpha2::AuthConfig *auth, im_pull_request **request,
-                                                 Errors &error) -> int
+auto ImageManagerServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                     const runtime::v1alpha2::AuthConfig *auth, im_pull_request **request,
+                                                     Errors &error) -> int
 {
     im_pull_request *tmpreq = (im_pull_request *)util_common_calloc_s(sizeof(im_pull_request));
     if (tmpreq == nullptr) {
@@ -112,8 +113,8 @@ auto CRIImageServiceImpl::pull_request_from_grpc(const runtime::v1alpha2::ImageS
     return 0;
 }
 
-auto CRIImageServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter,
-                                                 im_list_request **request, Errors &error) -> int
+auto ImageManagerServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageFilter *filter,
+                                                     im_list_request **request, Errors &error) -> int
 {
     im_list_request *tmpreq = (im_list_request *)util_common_calloc_s(sizeof(im_list_request));
     if (tmpreq == nullptr) {
@@ -131,9 +132,9 @@ auto CRIImageServiceImpl::list_request_from_grpc(const runtime::v1alpha2::ImageF
     return 0;
 }
 
-void CRIImageServiceImpl::list_images_to_grpc(im_list_response *response,
-                                              std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images,
-                                              Errors &error)
+void ImageManagerServiceImpl::list_images_to_grpc(im_list_response *response,
+                                                  std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images,
+                                                  Errors &error)
 {
     imagetool_images_list *list_images = response->images;
     if (list_images == nullptr) {
@@ -153,8 +154,8 @@ void CRIImageServiceImpl::list_images_to_grpc(im_list_response *response,
     }
 }
 
-void CRIImageServiceImpl::ListImages(const runtime::v1alpha2::ImageFilter &filter,
-                                     std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error)
+void ImageManagerServiceImpl::ListImages(const runtime::v1alpha2::ImageFilter &filter,
+                                         std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error)
 {
     im_list_request *request { nullptr };
     im_list_response *response { nullptr };
@@ -182,8 +183,8 @@ cleanup:
     free_im_list_response(response);
 }
 
-auto CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
-                                                   im_summary_request **request, Errors &error) -> int
+auto ImageManagerServiceImpl::status_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                       im_summary_request **request, Errors &error) -> int
 {
     im_summary_request *tmpreq = (im_summary_request *)util_common_calloc_s(sizeof(im_summary_request));
     if (tmpreq == nullptr) {
@@ -201,8 +202,8 @@ auto CRIImageServiceImpl::status_request_from_grpc(const runtime::v1alpha2::Imag
     return 0;
 }
 
-std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::status_image_to_grpc(im_summary_response *response,
-                                                                                    Errors & /*error*/)
+std::unique_ptr<runtime::v1alpha2::Image> ImageManagerServiceImpl::status_image_to_grpc(im_summary_response *response,
+                                                                                        Errors & /*error*/)
 {
     imagetool_image_summary *image_info = response->image_summary;
     if (image_info == nullptr) {
@@ -219,8 +220,9 @@ std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::status_image_to_g
     return image;
 }
 
-std::unique_ptr<runtime::v1alpha2::Image> CRIImageServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec &image,
-                                                                           Errors &error)
+std::unique_ptr<runtime::v1alpha2::Image> ImageManagerServiceImpl::ImageStatus(const runtime::v1alpha2::ImageSpec
+                                                                               &image,
+                                                                               Errors &error)
 {
     im_summary_request *request { nullptr };
     im_summary_response *response { nullptr };
@@ -250,8 +252,8 @@ cleanup:
     return out;
 }
 
-auto CRIImageServiceImpl::PullImage(const runtime::v1alpha2::ImageSpec &image,
-                                    const runtime::v1alpha2::AuthConfig &auth, Errors &error) -> std::string
+auto ImageManagerServiceImpl::PullImage(const runtime::v1alpha2::ImageSpec &image,
+                                        const runtime::v1alpha2::AuthConfig &auth, Errors &error) -> std::string
 {
     std::string out_str;
     im_pull_request *request { nullptr };
@@ -284,8 +286,9 @@ cleanup:
     return out_str;
 }
 
-auto CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_rmi_request **request,
-                                                   Errors &error) -> int
+auto ImageManagerServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image,
+                                                       im_rmi_request **request,
+                                                       Errors &error) -> int
 {
     im_rmi_request *tmpreq = (im_rmi_request *)util_common_calloc_s(sizeof(im_rmi_request));
     if (tmpreq == nullptr) {
@@ -303,7 +306,7 @@ auto CRIImageServiceImpl::remove_request_from_grpc(const runtime::v1alpha2::Imag
     return 0;
 }
 
-void CRIImageServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error)
+void ImageManagerServiceImpl::RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error)
 {
     std::string out_str;
     im_rmi_request *request { nullptr };
@@ -327,9 +330,9 @@ cleanup:
     free_im_remove_request(request);
 }
 
-void CRIImageServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
-                                          std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *fs_infos,
-                                          Errors & /*error*/)
+void ImageManagerServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
+                                              std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *fs_infos,
+                                              Errors & /*error*/)
 {
     imagetool_fs_info *got_fs_info = response->fs_info;
     if (got_fs_info == nullptr) {
@@ -382,8 +385,8 @@ void CRIImageServiceImpl::fs_info_to_grpc(im_fs_info_response *response,
     }
 }
 
-void CRIImageServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *usages,
-                                      Errors &error)
+void ImageManagerServiceImpl::ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *usages,
+                                          Errors &error)
 {
     im_fs_info_response *response { nullptr };
 

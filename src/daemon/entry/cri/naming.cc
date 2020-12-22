@@ -20,6 +20,7 @@
 #include <string>
 #include <errno.h>
 
+#include "cri_constants.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
 
@@ -29,7 +30,7 @@ static int parseName(const std::string &name, std::vector<std::string> &items, u
     std::istringstream f(name);
     std::string part;
 
-    while (getline(f, part, CRIRuntimeService::Constants::nameDelimiterChar)) {
+    while (getline(f, part, CRI::Constants::nameDelimiterChar)) {
         items.push_back(part);
     }
 
@@ -38,7 +39,7 @@ static int parseName(const std::string &name, std::vector<std::string> &items, u
         return -1;
     }
 
-    if (items[0] != CRIRuntimeService::Constants::kubePrefix) {
+    if (items[0] != CRI::Constants::kubePrefix) {
         err.Errorf("container is not managed by kubernetes: %s", name.c_str());
         return -1;
     }
@@ -55,16 +56,16 @@ std::string MakeSandboxName(const runtime::v1alpha2::PodSandboxMetadata &metadat
 {
     std::string sname;
 
-    sname.append(CRIRuntimeService::Constants::kubePrefix);
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
-    sname.append(CRIRuntimeService::Constants::sandboxContainerName);
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::kubePrefix);
+    sname.append(CRI::Constants::nameDelimiter);
+    sname.append(CRI::Constants::sandboxContainerName);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(metadata.name());
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(metadata.namespace_());
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(metadata.uid());
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(std::to_string(metadata.attempt()));
 
     return sname;
@@ -91,16 +92,16 @@ std::string MakeContainerName(const runtime::v1alpha2::PodSandboxConfig &s, cons
 {
     std::string sname;
 
-    sname.append(CRIRuntimeService::Constants::kubePrefix);
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::kubePrefix);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(c.metadata().name());
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(s.metadata().name());
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(s.metadata().namespace_());
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(s.metadata().uid());
-    sname.append(CRIRuntimeService::Constants::nameDelimiter);
+    sname.append(CRI::Constants::nameDelimiter);
     sname.append(std::to_string(c.metadata().attempt()));
 
     return sname;

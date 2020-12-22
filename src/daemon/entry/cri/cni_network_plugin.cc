@@ -26,6 +26,8 @@
 #include "cxxutils.h"
 #include "isula_libutils/log.h"
 #include "utils.h"
+#include "errors.h"
+#include "service_container_api.h"
 
 namespace Network {
 static auto GetLoNetwork(std::vector<std::string> binDirs) -> std::unique_ptr<CNINetwork>
@@ -351,22 +353,17 @@ void CniNetworkPlugin::SyncNetworkConfig()
     }
 }
 
-void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode,
+void CniNetworkPlugin::Init(const std::string &hairpinMode,
                             const std::string &nonMasqueradeCIDR, int mtu, Errors &error)
 {
     UNUSED(hairpinMode);
     UNUSED(nonMasqueradeCIDR);
     UNUSED(mtu);
 
-    if (criImpl == nullptr) {
-        error.Errorf("Empty runtime service");
-        return;
-    }
     PlatformInit(error);
     if (error.NotEmpty()) {
         return;
     }
-    m_criImpl = criImpl;
     SyncNetworkConfig();
 
     // start a thread to sync network config from confDir periodically to detect network config updates in every 5 seconds
@@ -450,6 +447,34 @@ cleanup:
     return ret;
 }
 
+auto CniNetworkPlugin::GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string
+{
+    int ret = 0;
+    char fullpath[PATH_MAX] { 0 };
+    std::string result;
+    const std::string NetNSFmt { "/proc/%d/ns/net" };
+
+    container_inspect *inspect_data = CRIHelpers::InspectContainer(podSandboxID, err, false);
+    if (inspect_data == nullptr) {
+        goto cleanup;
+    }
+    if (inspect_data->state->pid == 0) {
+        err.Errorf("cannot find network namespace for the terminated container %s", podSandboxID.c_str());
+        goto cleanup;
+    }
+    ret = snprintf(fullpath, sizeof(fullpath), NetNSFmt.c_str(), inspect_data->state->pid);
+    if ((size_t)ret >= sizeof(fullpath) || ret < 0) {
+        err.SetError("Sprint nspath failed");
+        goto cleanup;
+    }
+    result = fullpath;
+
+cleanup:
+    free_container_inspect(inspect_data);
+    return result;
+}
+
+
 void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                                 const std::string &id, const std::map<std::string, std::string> &annotations,
                                 const std::map<std::string, std::string> &options, Errors &err)
@@ -458,7 +483,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
     if (err.NotEmpty()) {
         return;
     }
-    std::string netnsPath = m_criImpl->GetNetNS(id, err);
+    std::string netnsPath = GetNetNS(id, err);
     if (err.NotEmpty()) {
         ERROR("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
         return;
@@ -568,7 +593,7 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
     }
     Errors tmpErr;
 
-    std::string netnsPath = m_criImpl->GetNetNS(id, err);
+    std::string netnsPath = GetNetNS(id, err);
     if (err.NotEmpty()) {
         WARN("CNI failed to retrieve network namespace path: %s", err.GetCMessage());
         err.Clear();
@@ -652,7 +677,7 @@ void CniNetworkPlugin::GetPodNetworkStatus(const std::string & /*ns*/, const std
         goto out;
     }
 
-    netnsPath = m_criImpl->GetNetNS(podSandboxID, tmpErr);
+    netnsPath = GetNetNS(podSandboxID, tmpErr);
     if (tmpErr.NotEmpty()) {
         err.Errorf("CNI failed to retrieve network namespace path: %s", tmpErr.GetCMessage());
         goto out;
@@ -881,12 +906,12 @@ void CniNetworkPlugin::BuildCNIRuntimeConf(const std::string &podName, const std
     }
     DEBUG("add checkpoint: %s", jsonCheckpoint.c_str());
 
-    std::vector<cri::PortMapping> portMappings;
+    std::vector<CRI::PortMapping> portMappings;
     INFO("Got netns path %s", podNetnsPath.c_str());
     INFO("Using podns path %s", podNs.c_str());
 
     if (!jsonCheckpoint.empty()) {
-        cri::PodSandboxCheckpoint checkpoint;
+        CRI::PodSandboxCheckpoint checkpoint;
         CRIHelpers::GetCheckpoint(jsonCheckpoint, checkpoint, err);
         if (err.NotEmpty() || checkpoint.GetData() == nullptr) {
             err.Errorf("could not retrieve port mappings: %s", err.GetCMessage());

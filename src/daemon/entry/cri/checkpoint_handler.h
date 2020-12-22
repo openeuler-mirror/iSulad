@@ -21,7 +21,7 @@
 #include "errors.h"
 #include "isula_libutils/cri_checkpoint.h"
 
-namespace cri {
+namespace CRI {
 const std::string SANDBOX_CHECKPOINT_DIR { "sandbox" };
 
 class PortMapping {
@@ -87,5 +87,5 @@ private:
     std::string m_checkSum;
 };
 
-} // namespace cri
+} // namespace CRI
 #endif
