@@ -30,13 +30,10 @@ int cni_cache_add(const char *cache_dir, const struct result *res, const char *c
 
 int cni_cache_delete(const char *cache_dir, const char *net_name, const struct runtime_conf *rc);
 
-int cni_cache_read(const char *cache_dir, const char *net_name, const struct runtime_conf *rc,
-                   cni_cached_info **p_info);
+cni_cached_info *cni_cache_read(const char *cache_dir, const char *net_name, const struct runtime_conf *rc);
 
-int cni_get_cached_config(const char *cache_dir, const char *net_name, struct runtime_conf *rc, char **config);
-
-int cni_get_cached_result(const char *cache_dir, const char *net_name, const char *hope_version,
-                          const struct runtime_conf *rc, struct result **cached_res);
+struct result *cni_get_cached_result(const char *cache_dir, const char *net_name, const char *hope_version,
+                                     const struct runtime_conf *rc);
 
 #ifdef __cplusplus
 }

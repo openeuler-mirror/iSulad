@@ -46,8 +46,8 @@ typedef struct cni_manager_store_t {
 } cni_manager_store_t;
 
 static cni_manager_store_t g_cni_manager = {
-    .loopback_conf_str = "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\","
-    "\"plugins\":[{\"type\": \"loopback\" }]}",
+    .loopback_conf_str =
+    "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\",\"plugins\":[{\"type\": \"loopback\" }]}",
 };
 
 static int bandwidth_inject(const char *value, struct runtime_conf *rt)
@@ -187,18 +187,20 @@ static struct anno_registry_conf_json g_registrant_json[] = {
 static const size_t g_numregistrants_rt = sizeof(g_registrant_rt) / sizeof(struct anno_registry_conf_rt);
 static const size_t g_numregistrants_json = sizeof(g_registrant_json) / sizeof(struct anno_registry_conf_json);
 
-static int load_cni_config_file_list(const char *fname, struct cni_network_list_conf **n_list)
+static struct cni_network_list_conf *load_cni_config_file_list(const char *fname)
 {
     int ret = 0;
     struct cni_network_conf *n_conf = NULL;
+    struct cni_network_list_conf *n_list = NULL;
 
-    if (fname == NULL || n_list == NULL) {
+    if (fname == NULL) {
         ERROR("Invalid NULL params");
-        return -1;
+        return NULL;
     }
 
     if (util_has_suffix(fname, ".conflist")) {
-        if (cni_conflist_from_file(fname, n_list) != 0) {
+        n_list = cni_conflist_from_file(fname);
+        if (n_list == NULL) {
             ERROR("Error loading CNI config list file %s", fname);
             ret = -1;
             goto out;
@@ -217,32 +219,35 @@ static int load_cni_config_file_list(const char *fname, struct cni_network_list_
             goto out;
         }
 
-        if (cni_conflist_from_conf(n_conf, n_list) != 0) {
+        n_list = cni_conflist_from_conf(n_conf);
+        if (n_list == NULL) {
             ERROR("Error converting CNI config file %s to list", fname);
             ret = -1;
             goto out;
         }
     }
 
-    if ((*n_list)->name == NULL || strcmp((*n_list)->name, "") == 0) {
-        free((*n_list)->name);
-        (*n_list)->name = util_path_base(fname);
+    if (n_list->name == NULL || strcmp(n_list->name, "") == 0) {
+        free(n_list->name);
+        n_list->name = util_path_base(fname);
     }
 
     // to compatibility for old version of clibcni
-    if (!util_validate_network_name((*n_list)->name)) {
-        ERROR("Invalid network name: %s", (*n_list)->name);
+    if (!util_validate_network_name(n_list->name)) {
+        ERROR("Invalid network name: %s", n_list->name);
         ret = -1;
         goto out;
     }
 
-
 out:
-    if (n_conf != NULL) {
-        free_cni_network_conf(n_conf);
+    free_cni_network_conf(n_conf);
+
+    if (ret != 0) {
+        free_cni_network_list_conf(n_list);
+        n_list = NULL;
     }
 
-    return ret;
+    return n_list;
 }
 
 // Try my best to load file, when error occured, just skip and continue
@@ -280,7 +285,8 @@ static int update_conflist_from_files(struct cni_network_list_conf **conflists, 
             continue;
         }
 
-        if (load_cni_config_file_list(files[i], &n_list) != 0) {
+        n_list = load_cni_config_file_list(files[i]);
+        if (n_list == NULL) {
             WARN("Load cni network conflist from file:%s failed", files[i]);
             continue;
         }
