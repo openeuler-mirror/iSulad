@@ -301,7 +301,7 @@ static int update_conflist_from_files(struct cni_network_list_conf **conflists, 
 
         DEBUG("parse cni network: %s", n_list->name);
 
-        conflists[i] = n_list;
+        conflists[*nets_num] = n_list;
         (*nets_num)++;
     }
 
