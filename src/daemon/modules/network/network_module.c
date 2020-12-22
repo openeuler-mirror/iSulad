@@ -17,6 +17,7 @@
 #include<isula_libutils/log.h>
 
 #include "adaptor_cri.h"
+#include "adaptor_native.h"
 #include "cni_operate.h"
 #include "utils_string.h"
 #include "utils_array.h"
@@ -25,12 +26,23 @@
 #define DEFAULT_CNI_CONFIG_FILES_DIR "/etc/cni/net.d"
 #define DEFAULT_CNI_BIN_FILES_DIR "/opt/cni/bin"
 
+
 struct net_ops {
     int (*init)(void);
+
+    // operators for network plane
     int (*attach)(const network_api_conf *conf, network_api_result_list *result);
     int (*detach)(const network_api_conf *conf, network_api_result_list *result);
+
+    // operators for network configs
+    int (*conf_create)(const network_create_request *request, network_create_response **response);
+    int (*conf_inspect)(const char *name, char **network_json);
+    int (*conf_list)(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len);
+    int (*conf_rm)(const char *name, char **res_name);
+
     bool (*check)(void);
     int (*update)(void);
+
     int (*destroy)(void);
 };
 
@@ -43,6 +55,10 @@ static const struct net_ops g_cri_ops = {
     .init = adaptor_cni_update_confs,
     .attach = adaptor_cni_setup,
     .detach = adaptor_cni_teardown,
+    .conf_create = NULL,
+    .conf_inspect = NULL,
+    .conf_list = NULL,
+    .conf_rm = NULL,
     .check = adaptor_cni_check_inited,
     .update = adaptor_cni_update_confs,
     .destroy = NULL,
@@ -52,6 +68,10 @@ static const struct net_ops g_native_ops = {
     .init = NULL,
     .attach = NULL,
     .detach = NULL,
+    .conf_create = native_config_create,
+    .conf_inspect = native_config_inspect,
+    .conf_list = native_config_list,
+    .conf_rm = native_config_remove,
     .check = NULL,
     .update = NULL,
     .destroy = NULL,
@@ -163,9 +183,11 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
         return -1;
     }
 
+    EVENT("Event: {Object: network, Type: attaching, Target: %s}", conf->pod_id);
+
     pnet = get_net_by_type(type);
-    if (pnet == NULL) {
-        ERROR("Unsupport net type: %s", type);
+    if (pnet == NULL || pnet->ops->attach == NULL) {
+        ERROR("net type: %s unsupport attach", type);
         return -1;
     }
 
@@ -193,6 +215,7 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
         *result = NULL;
         ERROR("do attach to network panes failed");
     }
+    EVENT("Event: {Object: network, Type: attached, Target: %s}", conf->pod_id);
 
     return ret;
 }
@@ -200,19 +223,117 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
 int network_module_detach(const network_api_conf *conf, const char *type)
 {
     const struct net_type *pnet = NULL;
+    int ret = 0;
 
     if (conf == NULL) {
         ERROR("Empty network config to attach");
         return -1;
     }
 
+    EVENT("Event: {Object: network, Type: detaching, Target: %s}", conf->pod_id);
+
     pnet = get_net_by_type(type);
-    if (pnet == NULL) {
-        ERROR("Unsupport net type: %s", type);
+    if (pnet == NULL || pnet->ops->detach == NULL) {
+        ERROR("net type: %s, unsupport detach", type);
         return -1;
     }
 
-    return pnet->ops->detach(conf, NULL);
+    ret = pnet->ops->detach(conf, NULL);
+
+    EVENT("Event: {Object: network, Type: detached, Target: %s}", conf->pod_id);
+    return ret;
+}
+
+int network_module_conf_create(const char *type, const network_create_request *request,
+                               network_create_response **response)
+{
+    const struct net_type *pnet = NULL;
+    int ret = 0;
+
+    if (request == NULL || response == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+    EVENT("Event: {Object: network, Type: creating, Target: %s}", request->name);
+
+    pnet = get_net_by_type(type);
+    if (pnet == NULL || pnet->ops->conf_create == NULL) {
+        ERROR("Type: %s net, unsupport config create", type);
+        return -1;
+    }
+
+    ret = pnet->ops->conf_create(request, response);
+    EVENT("Event: {Object: network, Type: created, Target: %s}", request->name);
+    return ret;
+}
+
+int network_module_conf_inspect(const char *type, const char *name, char **network_json)
+{
+    const struct net_type *pnet = NULL;
+    int ret = 0;
+
+    if (name == NULL || network_json == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+    EVENT("Event: {Object: network, Type: inspecting, Target: %s}", name);
+
+    pnet = get_net_by_type(type);
+    if (pnet == NULL || pnet->ops->conf_inspect == NULL) {
+        ERROR("Type: %s net, unsupport config inspect", type);
+        return -1;
+    }
+
+    ret = pnet->ops->conf_inspect(name, network_json);
+    EVENT("Event: {Object: network, Type: inspected, Target: %s}", name);
+    return ret;
+}
+
+int network_module_conf_list(const char *type, const struct filters_args *filters, network_network_info ***networks,
+                             size_t *networks_len)
+{
+    const struct net_type *pnet = NULL;
+    int ret = 0;
+
+    if (networks == NULL || networks_len == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+    EVENT("Event: {Object: network, Type: listing}");
+
+    pnet = get_net_by_type(type);
+    if (pnet == NULL || pnet->ops->conf_list == NULL) {
+        ERROR("Type: %s net, unsupport config list", type);
+        return -1;
+    }
+
+    ret = pnet->ops->conf_list(filters, networks, networks_len);
+    EVENT("Event: {Object: network, Type: listed}");
+    return ret;
+}
+
+int network_module_conf_rm(const char *type, const char *name, char **res_name)
+{
+    const struct net_type *pnet = NULL;
+    int ret = 0;
+
+    if (name == NULL || res_name == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    EVENT("Event: {Object: network, Type: removing, Target: %s}", name);
+
+    pnet = get_net_by_type(type);
+    if (pnet == NULL || pnet->ops->conf_rm == NULL) {
+        ERROR("Type: %s net, unsupport config remove", type);
+        return -1;
+    }
+
+    ret = pnet->ops->conf_rm(name, res_name);
+    EVENT("Event: {Object: network, Type: removed, Target: %s}", name);
+
+    return ret;
 }
 
 int network_module_check(const char *type)

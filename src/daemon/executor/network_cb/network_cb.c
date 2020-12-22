@@ -17,7 +17,7 @@
 
 #include <pthread.h>
 
-#include "network_config.h"
+#include "network_api.h"
 #include "utils.h"
 #include "error.h"
 #include "err_msg.h"
@@ -78,11 +78,6 @@ static int check_parameter(const network_create_request *request)
     struct ipnet *net = NULL;
 
     if (request->name != NULL && !network_is_valid_name(request->name)) {
-        return EINVALIDARGS;
-    }
-
-    if (request->driver != NULL && strcmp(request->driver, g_default_driver) != 0) {
-        isulad_set_error_message("Cannot support driver:%s", request->driver);
         return EINVALIDARGS;
     }
 
@@ -153,9 +148,7 @@ static int network_create_cb(const network_create_request *request, network_crea
 
     network_conflist_lock(EXCLUSIVE);
 
-    if (request->driver == NULL || strcmp(request->driver, g_default_driver) == 0) {
-        ret = network_config_bridge_create(request, response);
-    }
+    ret = network_module_conf_create(NETWOKR_API_TYPE_NATIVE, request, response);
     // TODO: support macvlan and other network drivers
 
     network_conflist_unlock();
@@ -197,7 +190,7 @@ static int network_inspect_cb(const network_inspect_request *request, network_in
 
     network_conflist_lock(SHARED);
 
-    ret = network_config_inspect(request->name, &network_json);
+    ret = network_module_conf_inspect(NETWOKR_API_TYPE_NATIVE, request->name, &network_json);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
     }
@@ -298,7 +291,7 @@ static int network_list_cb(const network_list_request *request, network_list_res
 
     network_conflist_lock(SHARED);
 
-    ret = network_config_list(filters, &(*response)->networks, &(*response)->networks_len);
+    ret = network_module_conf_list(NETWOKR_API_TYPE_NATIVE, filters, &(*response)->networks, &(*response)->networks_len);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         ERROR("Failed to list network");
@@ -342,7 +335,7 @@ static int network_remove_cb(const network_remove_request *request, network_remo
 
     network_conflist_lock(EXCLUSIVE);
 
-    ret = network_config_remove(request->name, &(*response)->name);
+    ret = network_module_conf_rm(NETWOKR_API_TYPE_NATIVE, request->name, &(*response)->name);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
     }
