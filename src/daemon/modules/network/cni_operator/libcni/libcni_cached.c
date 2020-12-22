@@ -30,7 +30,7 @@
 #include <isula_libutils/cni_cached_info.h>
 
 #include "utils.h"
-#include "libcni_current.h"
+#include "libcni_result_parse.h"
 
 #define DEFAULT_CACHE_DIR "/var/lib/cni"
 
@@ -150,7 +150,7 @@ out:
     return ret;
 }
 
-int cni_cache_add(const char *cache_dir, const struct result *res, const char *config, const char *net_name,
+int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const char *config, const char *net_name,
                   const struct runtime_conf *rc)
 {
     int ret = 0;
@@ -295,11 +295,11 @@ static bool do_check_version_of_result(const cni_cached_info *c_info, const char
     return true;
 }
 
-struct result *cni_get_cached_result(const char *cache_dir, const char *net_name, const char *hope_version,
-                                     const struct runtime_conf *rc)
+struct cni_opt_result *cni_get_cached_result(const char *cache_dir, const char *net_name, const char *hope_version,
+                                             const struct runtime_conf *rc)
 {
     cni_cached_info *c_info = NULL;
-    struct result *cached_res = NULL;
+    struct cni_opt_result *cached_res = NULL;
 
     if (rc == NULL) {
         ERROR("Empty return arguments");

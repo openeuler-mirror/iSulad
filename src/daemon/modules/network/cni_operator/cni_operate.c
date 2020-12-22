@@ -23,7 +23,6 @@
 #include "isula_libutils/cni_anno_port_mappings.h"
 #include "utils.h"
 #include "utils_network.h"
-#include "libcni_types.h"
 
 #define LO_IFNAME "lo"
 
@@ -552,7 +551,7 @@ int attach_loopback(const char *id, const char *netns)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
-    struct result *lo_result = NULL;
+    struct cni_opt_result *lo_result = NULL;
     char *net_conf_str = NULL;
 
     if (id == NULL || netns == NULL) {
@@ -576,12 +575,13 @@ int attach_loopback(const char *id, const char *netns)
 
 out:
     free(net_conf_str);
-    free_result(lo_result);
+    free_cni_opt_result(lo_result);
     free_runtime_conf(rc);
     return ret;
 }
 
-int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
+int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str,
+                         struct cni_opt_result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
@@ -624,7 +624,8 @@ out:
     return ret;
 }
 
-int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result)
+int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str,
+                         struct cni_opt_result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;

@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <isula_libutils/log.h>
 
@@ -25,13 +28,10 @@
 #include "utils_network.h"
 #include "libcni_cached.h"
 #include "libcni_api.h"
-#include "libcni_errno.h"
-#include "libcni_current.h"
+#include "libcni_result_parse.h"
 #include "libcni_conf.h"
-#include "libcni_args.h"
-#include "libcni_tools.h"
 #include "libcni_exec.h"
-#include "libcni_types.h"
+#include "libcni_result_type.h"
 
 typedef struct _cni_module_conf_t {
     char **bin_paths;
@@ -41,7 +41,7 @@ typedef struct _cni_module_conf_t {
 
 static cni_module_conf_t g_module_conf;
 
-bool cni_module_init(const char *cache_dir, const char * const *paths, size_t paths_len)
+bool cni_module_init(const char *cache_dir, const char *const *paths, size_t paths_len)
 {
     size_t i;
 
@@ -61,9 +61,9 @@ bool cni_module_init(const char *cache_dir, const char * const *paths, size_t pa
     return true;
 }
 
-struct result *cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc)
+struct cni_opt_result *cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc)
 {
-    struct result *cached_res = NULL;
+    struct cni_opt_result *cached_res = NULL;
     struct network_config_list *list = NULL;
 
     if (net_list_conf_str == NULL) {
@@ -209,7 +209,7 @@ out:
 }
 
 static inline bool check_inject_runtime_config_args(const struct network_config *orig, const struct runtime_conf *rt,
-                                                    char * const *result)
+                                                    char *const *result)
 {
     return (orig == NULL || rt == NULL || result == NULL);
 }
@@ -260,7 +260,7 @@ free_out:
     return ret;
 }
 
-static int do_inject_prev_result(const struct result *prev_result, cni_net_conf *work)
+static int do_inject_prev_result(const struct cni_opt_result *prev_result, cni_net_conf *work)
 {
     if (prev_result == NULL) {
         return 0;
@@ -275,13 +275,13 @@ static int do_inject_prev_result(const struct result *prev_result, cni_net_conf 
 }
 
 static inline bool check_build_one_config(const struct network_config *orig, const struct runtime_conf *rt,
-                                          char * const *result)
+                                          char *const *result)
 {
     return (orig == NULL || rt == NULL || result == NULL);
 }
 
 static int build_one_config(const char *name, const char *version, struct network_config *orig,
-                            const struct result *prev_result, const struct runtime_conf *rt, char **result)
+                            const struct cni_opt_result *prev_result, const struct runtime_conf *rt, char **result)
 {
     int ret = -1;
     cni_net_conf *work = NULL;
@@ -334,23 +334,71 @@ out:
     return ret;
 }
 
+static int do_check_file(const char *plugin, const char *path, char **find_path)
+{
+    int nret = 0;
+    char tmp_path[PATH_MAX] = { 0 };
+    struct stat rt_stat = { 0 };
+
+    nret = snprintf(tmp_path, PATH_MAX, "%s/%s", path, plugin);
+    if (nret < 0 || nret >= PATH_MAX) {
+        ERROR("Sprint failed with %s/%s", path, plugin);
+        return -1;
+    }
+    nret = stat(tmp_path, &rt_stat);
+    if (nret == 0 && S_ISREG(rt_stat.st_mode)) {
+        *find_path = util_strdup_s(tmp_path);
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+static inline bool check_find_in_path_args(const char *plugin, const char *const *paths, size_t len,
+                                           char *const *find_path)
+{
+    return (plugin == NULL || strlen(plugin) == 0 || paths == NULL || len == 0 || find_path == NULL);
+}
+
+static int find_plugin_in_path(const char *plugin, const char *const *paths, size_t len, char **find_path)
+{
+    int ret = -1;
+    size_t i = 0;
+
+    if (check_find_in_path_args(plugin, paths, len, find_path)) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+    for (i = 0; i < len; i++) {
+        if (do_check_file(plugin, paths[i], find_path) == 0) {
+            ret = 0;
+            break;
+        }
+    }
+
+    if (ret != 0) {
+        ERROR("Can not find plugin: %s", plugin);
+    }
+
+    return ret;
+}
+
 static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *version, const char *operator,
-                          const struct runtime_conf * rc, struct result * * pret, bool with_result)
+                          const struct runtime_conf * rc, struct cni_opt_result * * pret, bool with_result)
 {
     int ret = -1;
     struct network_config net = { 0 };
     char *plugin_path = NULL;
     struct cni_args *cargs = NULL;
     char *full_conf_bytes = NULL;
-    struct result *tmp_result = NULL;
-    int save_errno = 0;
+    struct cni_opt_result *tmp_result = NULL;
 
     net.network = p_net;
 
-    ret = find_in_path(net.network->type, (const char * const *)g_module_conf.bin_paths, g_module_conf.bin_paths_len,
-                       &plugin_path, &save_errno);
+    ret = find_plugin_in_path(net.network->type, (const char *const *)g_module_conf.bin_paths,
+                              g_module_conf.bin_paths_len, &plugin_path);
     if (ret != 0) {
-        ERROR("find plugin: \"%s\" failed: %s", net.network->type, get_invoke_err_msg(save_errno));
+        ERROR("Failed to find plugin: \"%s\"", net.network->type);
         goto free_out;
     }
 
@@ -391,7 +439,7 @@ static inline bool check_add_network_args(const cni_net_conf *net, const struct 
 }
 
 static int add_network(cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
-                       struct result **add_result)
+                       struct cni_opt_result **add_result)
 {
     if (check_add_network_args(net, rc)) {
         ERROR("Empty arguments");
@@ -414,12 +462,13 @@ static int add_network(cni_net_conf *net, const char *name, const char *version,
 }
 
 static inline bool check_add_network_list_args(const struct network_config_list *list, const struct runtime_conf *rc,
-                                               struct result * const *pret)
+                                               struct cni_opt_result *const *pret)
 {
     return (list == NULL || list->list == NULL || rc == NULL || pret == NULL);
 }
 
-static int add_network_list(const struct network_config_list *list, const struct runtime_conf *rc, struct result **pret)
+static int add_network_list(const struct network_config_list *list, const struct runtime_conf *rc,
+                            struct cni_opt_result **pret)
 {
     int ret = 0;
     size_t i = 0;
@@ -451,7 +500,7 @@ static inline bool check_del_network_args(const cni_net_conf *net, const struct 
 }
 
 static int del_network(cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
-                       struct result **prev_result)
+                       struct cni_opt_result **prev_result)
 {
     if (check_del_network_args(net, rc)) {
         ERROR("Empty arguments");
@@ -466,12 +515,103 @@ static inline bool check_del_network_list_args(const struct network_config_list 
     return (list == NULL || list->list == NULL || rc == NULL);
 }
 
+struct parse_version {
+    int major;
+    int minor;
+    int micro;
+};
+
+static bool do_parse_version(const char **splits, size_t splits_len, struct parse_version *ret)
+{
+    if (util_safe_int(splits[0], &ret->major) != 0) {
+        ERROR("failed to convert major version part: %s", splits[0]);
+        return false;
+    }
+
+    if (splits_len >= 2 && util_safe_int(splits[1], &ret->minor) != 0) {
+        ERROR("failed to convert minor version part: %s", splits[1]);
+        return false;
+    }
+
+    if (splits_len >= 3 && util_safe_int(splits[2], &ret->micro) != 0) {
+        ERROR("failed to convert micro version part: %s", splits[2]);
+        return false;
+    }
+
+    return true;
+}
+
+static bool parse_version_from_str(const char *src_version, struct parse_version *result)
+{
+    char **splits = NULL;
+    const size_t max_len = 4;
+    size_t tlen = 0;
+    bool ret = false;
+
+    splits = util_string_split(src_version, '.');
+    if (splits == NULL) {
+        ERROR("Split version: \"%s\" failed", src_version);
+        return false;
+    }
+    tlen = util_array_len((const char **)splits);
+    if (tlen < 1 || tlen >= max_len) {
+        ERROR("Invalid version: \"%s\"", src_version);
+        goto out;
+    }
+
+    ret = do_parse_version((const char **)splits, tlen, result);
+
+out:
+    util_free_array(splits);
+    return ret;
+}
+
+static bool do_compare_version(const struct parse_version *p_first, const struct parse_version *p_second)
+{
+    bool ret = false;
+
+    if (p_first->major > p_second->major) {
+        ret = true;
+    } else if (p_first->major == p_second->major) {
+        if (p_first->minor > p_second->minor) {
+            ret = true;
+        } else if (p_first->minor == p_second->minor && p_first->micro >= p_second->micro) {
+            ret = true;
+        }
+    }
+
+    return ret;
+}
+
+static int version_greater_than_or_equal_to(const char *first, const char *second, bool *result)
+{
+    struct parse_version first_parsed = { 0 };
+    struct parse_version second_parsed = { 0 };
+
+    if (result == NULL) {
+        ERROR("Invalid argument");
+        return -1;
+    }
+
+    if (!parse_version_from_str(first, &first_parsed)) {
+        return -1;
+    }
+
+    if (!parse_version_from_str(second, &second_parsed)) {
+        return -1;
+    }
+
+    *result = do_compare_version(&first_parsed, &second_parsed);
+
+    return 0;
+}
+
 static int del_network_list(const struct network_config_list *list, const struct runtime_conf *rc)
 {
     int i = 0;
     int ret = 0;
     bool greated = false;
-    struct result *prev_result = NULL;
+    struct cni_opt_result *prev_result = NULL;
 
     if (check_del_network_list_args(list, rc)) {
         ERROR("Empty arguments");
@@ -504,7 +644,7 @@ static int del_network_list(const struct network_config_list *list, const struct
     }
 
 free_out:
-    free_result(prev_result);
+    free_cni_opt_result(prev_result);
     return ret;
 }
 
@@ -514,7 +654,7 @@ static inline bool do_check_network_args(const cni_net_conf *net, const struct r
 }
 
 static int check_network(cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
-                         struct result **prev_result)
+                         struct cni_opt_result **prev_result)
 {
     if (do_check_network_args(net, rc)) {
         ERROR("Empty arguments");
@@ -534,7 +674,7 @@ static int check_network_list(const struct network_config_list *list, const stru
     int i = 0;
     int ret = 0;
     bool greated = false;
-    struct result *prev_result = NULL;
+    struct cni_opt_result *prev_result = NULL;
 
     if (do_check_network_list_args(list, rc)) {
         ERROR("Empty arguments");
@@ -572,7 +712,7 @@ static int check_network_list(const struct network_config_list *list, const stru
     }
 
 free_out:
-    free_result(prev_result);
+    free_cni_opt_result(prev_result);
     return ret;
 }
 
@@ -631,7 +771,7 @@ static int do_copy_args_paths(struct cni_args **cargs)
     return 0;
 }
 
-static inline bool check_args_args(const struct runtime_conf *rc, struct cni_args * const *cargs)
+static inline bool check_args_args(const struct runtime_conf *rc, struct cni_args *const *cargs)
 {
     return (rc == NULL || cargs == NULL);
 }
@@ -725,7 +865,7 @@ void free_runtime_conf(struct runtime_conf *rc)
     free(rc);
 }
 
-int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, struct result **pret)
+int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, struct cni_opt_result **pret)
 {
     struct network_config_list *list = NULL;
     int ret = 0;
@@ -843,9 +983,9 @@ static void json_obj_to_cni_list_conf(struct network_config_list *src, struct cn
         list->plugin_len = src->list->plugins_len;
         if (src->list->plugins_len > 0 && src->list->plugins != NULL && src->list->plugins[0] != NULL) {
             list->first_plugin_name = src->list->plugins[0]->name != NULL ? util_strdup_s(src->list->plugins[0]->name) :
-                                      NULL;
+                                                                            NULL;
             list->first_plugin_type = src->list->plugins[0]->type != NULL ? util_strdup_s(src->list->plugins[0]->type) :
-                                      NULL;
+                                                                            NULL;
         }
     }
 }

@@ -16,21 +16,29 @@
 #ifndef CLIBCNI_INVOKE_EXEC_H
 #define CLIBCNI_INVOKE_EXEC_H
 
-#include "libcni_args.h"
-#include "libcni_types.h"
-#include "libcni_version.h"
-#include "isula_libutils/cni_exec_error.h"
+#include "libcni_result_type.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct cni_args {
+    char *command;
+    char *container_id;
+    char *netns;
+    char *(*plugin_args)[2];
+    size_t plugin_args_len;
+    char *plugin_args_str;
+    char *ifname;
+    char *path;
+};
+
+void free_cni_args(struct cni_args *cargs);
+
 int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs,
-                            struct result **ret);
+                            struct cni_opt_result **ret);
 
 int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs);
-
-int raw_get_version_info(const char *plugin_path, struct plugin_info **result);
 
 #ifdef __cplusplus
 }
