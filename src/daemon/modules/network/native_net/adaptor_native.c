@@ -13,7 +13,7 @@
  * Description: provide network config functions
  ********************************************************************************/
 
-#include "network_config.h"
+#include "adaptor_native.h"
 
 #include <ifaddrs.h>
 #include <arpa/inet.h>
@@ -52,6 +52,13 @@ struct cni_conflist {
     cni_net_conf_list *conflist;
     char *path;
 };
+
+typedef struct native_store_t {
+    // string -> ptr
+    map_t *name_to_conf;
+    // string -> string
+    map_t *name_to_fname;
+} native_store;
 
 static void free_cni_conflist(struct cni_conflist *conflist)
 {
@@ -1138,7 +1145,7 @@ out:
     return ret;
 }
 
-int network_config_bridge_create(const network_create_request *request, network_create_response **response)
+int native_config_create(const network_create_request *request, network_create_response **response)
 {
     int ret = 0;
     int bin_dir_len = 0;
@@ -1149,6 +1156,11 @@ int network_config_bridge_create(const network_create_request *request, network_
     cni_net_conf_list *bridge_list = NULL;
     struct cni_conflist **conflist_arr = NULL;
 
+    if (request == NULL || request->driver == NULL || strcmp(request->driver, g_default_driver) != 0) {
+        ERROR("Cannot support driver");
+        isulad_set_error_message("Cannot support driver: %s", request == NULL ? "" : request->driver);
+        return -1;
+    }
     cni_conf_dir = get_cni_conf_dir();
     if (cni_conf_dir == NULL) {
         ERROR("Failed to get cni conf dir");
@@ -1226,7 +1238,7 @@ static char *get_conflist_json(const cni_net_conf_list *list)
     return json;
 }
 
-int network_config_inspect(const char *name, char **network_json)
+int native_config_inspect(const char *name, char **network_json)
 {
     int ret = 0;
     size_t i;
@@ -1339,7 +1351,7 @@ static void free_network_info_arr(network_network_info **networks, size_t len)
     free(networks);
 }
 
-int network_config_list(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len)
+int native_config_list(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len)
 {
     int ret = 0;
     size_t i, old_size, new_size;
@@ -1543,7 +1555,7 @@ out:
     return ret;
 }
 
-int network_config_remove(const char *name, char **res_name)
+int native_config_remove(const char *name, char **res_name)
 {
     int ret = 0;
     int get_err = 0;
@@ -1555,8 +1567,6 @@ int network_config_remove(const char *name, char **res_name)
         ERROR("Failed to get network");
         return -1;
     }
-
-    EVENT("Event: {Object: network %s, Type: remove}", name);
 
     // TODO: find the linked containers
     // TODO: remove containers if request->force is true,else return error
