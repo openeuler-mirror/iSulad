@@ -24,13 +24,13 @@ extern "C" {
 #endif
 
 /* define types for version */
-struct interface {
+struct cni_opt_result_interface {
     char *name;
     char *mac;
     char *sandbox;
 };
 
-struct ipconfig {
+struct cni_opt_result_ipconfig {
     char *version;
     int32_t *interface;
     struct ipnet *address;
@@ -39,14 +39,14 @@ struct ipconfig {
     size_t gateway_len;
 };
 
-struct route {
+struct cni_opt_result_route {
     struct ipnet *dst;
 
     uint8_t *gw;
     size_t gw_len;
 };
 
-struct dns {
+struct cni_opt_result_dns {
     char **name_servers;
     size_t name_servers_len;
 
@@ -59,29 +59,29 @@ struct dns {
     size_t options_len;
 };
 
-struct result {
+struct cni_opt_result {
     char *cniversion;
-    struct interface **interfaces;
+    struct cni_opt_result_interface **interfaces;
     size_t interfaces_len;
 
-    struct ipconfig **ips;
+    struct cni_opt_result_ipconfig **ips;
     size_t ips_len;
 
-    struct route **routes;
+    struct cni_opt_result_route **routes;
     size_t routes_len;
 
-    struct dns *my_dns;
+    struct cni_opt_result_dns *my_dns;
 };
 
-void free_ipconfig_type(struct ipconfig *ipc);
+void free_cni_opt_result_ipconfig(struct cni_opt_result_ipconfig *ipc);
 
-void free_route_type(struct route *val);
+void free_cni_opt_result_route(struct cni_opt_result_route *val);
 
-void free_interface_type(struct interface *val);
+void free_cni_opt_result_interface(struct cni_opt_result_interface *val);
 
-void free_dns_type(struct dns *val);
+void free_cni_opt_result_dns(struct cni_opt_result_dns *val);
 
-void free_result(struct result *val);
+void free_cni_opt_result(struct cni_opt_result *val);
 
 #ifdef __cplusplus
 }

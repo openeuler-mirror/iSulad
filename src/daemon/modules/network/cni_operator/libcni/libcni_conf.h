@@ -22,33 +22,9 @@
 extern "C" {
 #endif
 
-struct network_config {
-    cni_net_conf *network;
-
-    char *bytes;
-};
-
-struct network_config_list {
-    cni_net_conf_list *list;
-
-    char *bytes;
-};
-
-void free_network_config(struct network_config *config);
-
-void free_network_config_list(struct network_config_list *conf_list);
-
-struct network_config *conf_from_bytes(const char *conf_str);
-
-struct network_config *conf_from_file(const char *filename);
-
 struct network_config_list *conflist_from_bytes(const char *json_str);
 
-struct network_config_list *conflist_from_file(const char *filename);
-
-struct network_config_list *conflist_from_conf(const struct network_config *conf);
-
-int conf_files(const char *dir, const char * const *extensions, size_t ext_len, char ***result);
+struct network_config *conf_from_bytes(const char *conf_str);
 
 #ifdef __cplusplus
 }

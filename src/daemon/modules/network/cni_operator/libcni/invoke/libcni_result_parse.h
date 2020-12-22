@@ -15,15 +15,22 @@
 #ifndef CLIBCNI_TYPES_CURRENT_H
 #define CLIBCNI_TYPES_CURRENT_H
 
-#include "libcni_types.h"
+#include "libcni_result_type.h"
 #include "isula_libutils/cni_result_curr.h"
 
-#define curr_implemented_spec_version "0.4.0"
+typedef struct cni_opt_result *(*new_result_t)(const char *json_data);
 
-struct result *new_curr_result(const char *json_data);
+struct cni_opt_result_factories {
+    const char **supported_versions;
+    new_result_t new_result_op;
+};
 
-cni_result_curr *cni_result_curr_to_json_result(const struct result *src);
+struct cni_opt_result *new_result(const char *version, const char *jsonstr);
 
-struct result *copy_result_from_current(const cni_result_curr *curr_result);
+struct cni_opt_result *new_curr_result(const char *json_data);
+
+cni_result_curr *cni_result_curr_to_json_result(const struct cni_opt_result *src);
+
+struct cni_opt_result *copy_result_from_current(const cni_result_curr *curr_result);
 
 #endif

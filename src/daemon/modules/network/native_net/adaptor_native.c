@@ -26,7 +26,6 @@
 #include "isulad_config.h"
 #include "isula_libutils/log.h"
 #include "libcni_api.h"
-#include "libcni_conf.h"
 #include "utils_network.h"
 
 const char *g_network_config_exts[] = { ".conf", ".conflist", ".json" };

@@ -19,12 +19,15 @@
 
 #include <isula_libutils/cni_bandwidth_entry.h>
 #include <isula_libutils/cni_cached_info.h>
+#include "isula_libutils/cni_net_conf_list.h"
 
-#include "libcni_version.h"
+#include "libcni_result_type.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define CURRENT_VERSION "0.4.0"
 
 struct cni_port_mapping {
     int32_t host_port;
@@ -60,13 +63,25 @@ struct cni_network_list_conf {
     char *bytes;
 };
 
+struct network_config {
+    cni_net_conf *network;
+
+    char *bytes;
+};
+
+struct network_config_list {
+    cni_net_conf_list *list;
+
+    char *bytes;
+};
+
 bool cni_module_init(const char *cache_dir, const char * const *paths, size_t paths_len);
 
-struct result *cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc);
+struct cni_opt_result *cni_get_network_list_cached_result(const char *net_list_conf_str, const struct runtime_conf *rc);
 
 cni_cached_info *cni_get_network_list_cached_info(const char *net_list_conf_str, struct runtime_conf *rc);
 
-int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, struct result **pret);
+int cni_add_network_list(const char *net_list_conf_str, const struct runtime_conf *rc, struct cni_opt_result **pret);
 
 int cni_del_network_list(const char *net_list_conf_str, const struct runtime_conf *rc);
 
@@ -87,6 +102,19 @@ void free_cni_network_list_conf(struct cni_network_list_conf *val);
 void free_cni_port_mapping(struct cni_port_mapping *val);
 
 void free_runtime_conf(struct runtime_conf *rc);
+
+// network conf
+void free_network_config(struct network_config *config);
+
+void free_network_config_list(struct network_config_list *conf_list);
+
+struct network_config *conf_from_file(const char *filename);
+
+struct network_config_list *conflist_from_file(const char *filename);
+
+struct network_config_list *conflist_from_conf(const struct network_config *conf);
+
+int conf_files(const char *dir, const char * const *extensions, size_t ext_len, char ***result);
 
 #ifdef __cplusplus
 }

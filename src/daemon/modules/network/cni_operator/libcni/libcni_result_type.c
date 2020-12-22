@@ -22,11 +22,11 @@
 #include <arpa/inet.h>
 
 #include "isula_libutils/log.h"
-#include "libcni_types.h"
+#include "libcni_result_type.h"
 #include "utils.h"
 #include "utils_network.h"
 
-void free_ipconfig_type(struct ipconfig *ipc)
+void free_cni_opt_result_ipconfig(struct cni_opt_result_ipconfig *ipc)
 {
     if (ipc == NULL) {
         return;
@@ -42,7 +42,7 @@ void free_ipconfig_type(struct ipconfig *ipc)
     free(ipc);
 }
 
-void free_route_type(struct route *val)
+void free_cni_opt_result_route(struct cni_opt_result_route *val)
 {
     if (val == NULL) {
         return;
@@ -54,7 +54,7 @@ void free_route_type(struct route *val)
     free(val);
 }
 
-void free_interface_type(struct interface *val)
+void free_cni_opt_result_interface(struct cni_opt_result_interface *val)
 {
     if (val == NULL) {
         return;
@@ -68,7 +68,7 @@ void free_interface_type(struct interface *val)
     free(val);
 }
 
-void free_dns_type(struct dns *val)
+void free_cni_opt_result_dns(struct cni_opt_result_dns *val)
 {
     size_t i = 0;
     if (val == NULL) {
@@ -97,7 +97,7 @@ void free_dns_type(struct dns *val)
     free(val);
 }
 
-void free_result(struct result *val)
+void free_cni_opt_result(struct cni_opt_result *val)
 {
     size_t i = 0;
 
@@ -108,24 +108,24 @@ void free_result(struct result *val)
     free(val->cniversion);
     val->cniversion = NULL;
     for (i = 0; i < val->interfaces_len; i++) {
-        free_interface_type(val->interfaces[i]);
+        free_cni_opt_result_interface(val->interfaces[i]);
         val->interfaces[i] = NULL;
     }
     free(val->interfaces);
     val->interfaces = NULL;
     for (i = 0; i < val->ips_len; i++) {
-        free_ipconfig_type(val->ips[i]);
+        free_cni_opt_result_ipconfig(val->ips[i]);
         val->ips[i] = NULL;
     }
     free(val->ips);
     val->ips = NULL;
     for (i = 0; i < val->routes_len; i++) {
-        free_route_type(val->routes[i]);
+        free_cni_opt_result_route(val->routes[i]);
         val->routes[i] = NULL;
     }
     free(val->routes);
     val->routes = NULL;
-    free_dns_type(val->my_dns);
+    free_cni_opt_result_dns(val->my_dns);
     val->my_dns = NULL;
     free(val);
 }
