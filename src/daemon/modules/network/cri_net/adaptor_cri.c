@@ -129,7 +129,8 @@ out:
 }
 
 //int attach_network_plane(struct cni_manager *manager, const char *net_list_conf_str);
-typedef int (*net_op_t)(const struct cni_manager *manager, const char *net_list_conf_str, struct result **result);
+typedef int (*net_op_t)(const struct cni_manager *manager, const char *net_list_conf_str,
+                        struct cni_opt_result **result);
 
 static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager *manager)
 {
@@ -139,7 +140,7 @@ static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager
     manager->cni_args = conf->args;
 }
 
-static int do_append_cni_result(const char *name, const char *interface, const struct result *cni_result,
+static int do_append_cni_result(const char *name, const char *interface, const struct cni_opt_result *cni_result,
                                 network_api_result_list *result)
 {
     struct network_api_result *work = NULL;
@@ -199,7 +200,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
     int default_idx = 0;
     struct cni_manager manager = { 0 };
     const char *default_interface = DEFAULT_NETWORK_INTERFACE;
-    struct result *cni_result = NULL;
+    struct cni_opt_result *cni_result = NULL;
 
     if (conf->default_interface != NULL) {
         default_interface = conf->default_interface;
@@ -236,7 +237,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
         }
 
         // clear cni result
-        free_result(cni_result);
+        free_cni_opt_result(cni_result);
         cni_result = NULL;
 
         if (op(&manager, g_net_store.conflist[*tmp_idx]->bytes, &cni_result) != 0) {
@@ -254,7 +255,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
     }
 
     if (g_net_store.conflist_len > 0 && default_idx < g_net_store.conflist_len) {
-        free_result(cni_result);
+        free_cni_opt_result(cni_result);
         cni_result = NULL;
 
         manager.ifname = (char *)default_interface;
@@ -272,7 +273,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
     }
 
 out:
-    free_result(cni_result);
+    free_cni_opt_result(cni_result);
     return ret;
 }
 
