@@ -55,9 +55,56 @@ struct cni_conflist {
 typedef struct native_store_t {
     // string -> ptr
     map_t *name_to_conf;
-    // string -> string
-    map_t *name_to_fname;
+
+    size_t conflist_len;
+
+    pthread_rwlock_t rwlock;
 } native_store;
+
+static native_store g_store = { 0 };
+
+static void native_conflist_kvfree(void *key, void *value)
+{
+    cni_net_conf_list *conf = (cni_net_conf_list *)value;
+    free_cni_net_conf_list(conf);
+    free(key);
+}
+
+void native_destory()
+{
+    if (g_store.name_to_conf != NULL) {
+        map_free(g_store.name_to_conf);
+    }
+
+    pthread_rwlock_destroy(&(g_store.rwlock));
+}
+
+int native_init()
+{
+    if (pthread_rwlock_init(&(g_store.rwlock), NULL) != 0) {
+        ERROR("init lock for native store failed");
+        return -1;
+    }
+
+    g_store.name_to_conf = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, native_conflist_kvfree);
+    if (g_store.name_to_conf == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+
+    // TODO: load current network conflist
+
+    DEBUG("Native adaptor init success");
+    return 0;
+err_out:
+    native_destory();
+    return -1;
+}
+
+bool native_check()
+{
+    return g_store.conflist_len > 0;
+}
 
 static void free_cni_conflist(struct cni_conflist *conflist)
 {
