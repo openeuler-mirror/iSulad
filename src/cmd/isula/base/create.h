@@ -260,6 +260,27 @@ extern "C" {
       &(cmdargs).custom_conf.share_ns[NAMESPACE_NET],                                                                                                     \
       "Connect a container to a network",                                                                                                                 \
       NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "network",                                                                                                                                          \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.share_ns[NAMESPACE_NET],                                                                                                     \
+      "Connect a container to a network",                                                                                                                 \
+      NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "ip",                                                                                                                                               \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.ip,                                                                                                                          \
+      "Specify a static IP address for container (e.g. 192.168.21.9)",                                                                                    \
+      NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "mac-address",                                                                                                                                      \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.mac_address,                                                                                                                 \
+      "Specify a MAC address for container (e.g. 9e:c7:76:04:9a:42)",                                                                                     \
+      NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_STRING_DUP, false, "pid", 0, &(cmdargs).custom_conf.share_ns[NAMESPACE_PID],                                                           \
       "PID namespace to use",  NULL },                                                                                                                    \
     { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \

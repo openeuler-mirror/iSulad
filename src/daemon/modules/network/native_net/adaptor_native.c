@@ -1127,7 +1127,7 @@ static int cni_bin_detect(const char **cni_bin_dir, int bin_dir_len)
         goto out;
     }
 
-    dir_str = util_string_join(",", (const char **)cni_bin_dir, bin_dir_len);
+    dir_str = util_string_join(";", (const char **)cni_bin_dir, bin_dir_len);
     if (dir_str == NULL) {
         ERROR("Out of memory");
         free(file_str);
