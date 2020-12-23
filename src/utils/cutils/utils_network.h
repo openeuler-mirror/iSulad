@@ -36,6 +36,7 @@ int util_umount_namespace(const char *netns_path);
 #define IPV6LEN 16
 
 #define NETWORK_VALID_NAME_CHARS "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
+#define NETWORK_VALID_MAC_CHARS "^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$"
 
 struct ipnet {
     uint8_t *ip;
@@ -60,6 +61,14 @@ bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const siz
 bool util_validate_network_name(const char *name);
 
 bool util_validate_network_interface(const char *if_name);
+
+bool util_validate_ipv4_address(const char *ipv4);
+
+bool util_validate_ipv6_address(const char *ipv6);
+
+bool util_validate_ip_address(const char *ip);
+
+bool util_validate_mac_address(const char *mac);
 
 #ifdef __cplusplus
 }

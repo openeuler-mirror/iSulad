@@ -1011,3 +1011,63 @@ bool util_validate_network_interface(const char *if_name)
 
     return true;
 }
+
+bool util_validate_ipv4_address(const char *ipv4)
+{
+    struct sockaddr_in sa;
+
+    if (ipv4 == NULL) {
+        ERROR("missing ipv4 address");
+        return false;
+    }
+
+    if (inet_pton(AF_INET, ipv4, &sa.sin_addr) != 1) {
+        return false;
+    }
+
+    return true;
+}
+
+bool util_validate_ipv6_address(const char *ipv6)
+{
+    struct sockaddr_in sa;
+
+    if (ipv6 == NULL) {
+        ERROR("missing ipv6 address");
+        return false;
+    }
+
+    if (inet_pton(AF_INET6, ipv6, &sa.sin_addr) != 1) {
+        return false;
+    }
+
+    return true;
+}
+
+bool util_validate_ip_address(const char *ip)
+{
+    if (ip == NULL) {
+        ERROR("missing ip address");
+        return false;
+    }
+
+    if (!util_validate_ipv4_address(ip) && !util_validate_ipv6_address(ip)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool util_validate_mac_address(const char *mac)
+{
+    if (mac == NULL) {
+        ERROR("missing mac address");
+        return false;
+    }
+
+    if (util_reg_match(NETWORK_VALID_MAC_CHARS, mac) != 0) {
+        return false;
+    }
+
+    return true;
+}

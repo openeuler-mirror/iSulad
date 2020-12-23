@@ -271,14 +271,23 @@ void client_arguments_free(struct client_arguments *args)
     free(custom_conf->driver);
     custom_conf->driver = NULL;
 
-    free(custom_conf->gateway);
-    custom_conf->gateway = NULL;
-
-    free(custom_conf->subnet);
-    custom_conf->subnet = NULL;
-
     free(args->network_name);
     args->network_name = NULL;
+
+    free(args->driver);
+    args->driver = NULL;
+
+    free(args->gateway);
+    args->gateway = NULL;
+
+    free(args->subnet);
+    args->subnet = NULL;
+
+    free(custom_conf->ip);
+    custom_conf->ip = NULL;
+
+    free(custom_conf->mac_address);
+    custom_conf->mac_address = NULL;
 }
 
 /* print common help */
