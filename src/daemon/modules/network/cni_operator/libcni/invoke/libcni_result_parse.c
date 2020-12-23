@@ -576,7 +576,7 @@ static bool copy_interfaces_from_result_to_json(const struct cni_opt_result *src
     res->interfaces_len = 0;
 
     res->interfaces =
-            (cni_network_interface **)util_smart_calloc_s(src->interfaces_len, sizeof(cni_network_interface *));
+        (cni_network_interface **)util_smart_calloc_s(src->interfaces_len, sizeof(cni_network_interface *));
     if (res->interfaces == NULL) {
         ERROR("Out of memory");
         return false;
@@ -725,8 +725,11 @@ static bool check_raw(const char *version, const char **supports)
 #define CURR_SUPPORT_VERSION_LEN 4
 const char *g_curr_support_versions[CURR_SUPPORT_VERSION_LEN] = { "0.3.0", "0.3.1", CURRENT_VERSION, NULL };
 
-struct cni_opt_result_factories g_factories[1] = { { .supported_versions = g_curr_support_versions,
-                                                     .new_result_op = &new_curr_result } };
+struct cni_opt_result_factories g_factories[1] = { {
+        .supported_versions = g_curr_support_versions,
+        .new_result_op = &new_curr_result
+    }
+};
 
 struct cni_opt_result *new_result(const char *version, const char *jsonstr)
 {

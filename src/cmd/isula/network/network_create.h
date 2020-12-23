@@ -23,40 +23,40 @@ extern "C" {
 
 #define NETWORK_CREATE_OPTIONS(cmdargs)                         \
     {                                                           \
-        CMD_OPT_TYPE_STRING_DUP,                                \
+        CMD_OPT_TYPE_STRING,                                    \
         false,                                                  \
         "driver",                                               \
         'd',                                                    \
-        &(cmdargs).custom_conf.driver,                          \
+        &(cmdargs).driver,                                      \
         "Driver to manager the network (default \"bridge\")",   \
         NULL                                                    \
     },                                                          \
-    {                                                           \
-                                                                CMD_OPT_TYPE_STRING_DUP,                                \
-                                                                false,                                                  \
-                                                                "gateway",                                              \
-                                                                0,                                                      \
-                                                                &(cmdargs).custom_conf.gateway,                         \
-                                                                "IPv4 or IPv6 gateway for the subnet",                  \
-                                                                NULL                                                    \
-    },                                                          \
-    {                                                           \
-                                                                CMD_OPT_TYPE_BOOL,                                      \
-                                                                false,                                                  \
-                                                                "internal",                                             \
-                                                                0,                                                      \
-                                                                &(cmdargs).custom_conf.internal,                        \
-                                                                "Restrict external access from this network",           \
-                                                                NULL                                                    \
-    },                                                          \
-    {                                                           \
-                                                                CMD_OPT_TYPE_STRING_DUP,                                \
-                                                                false,                                                  \
-                                                                "subnet",                                               \
-                                                                0,                                                      \
-                                                                &(cmdargs).custom_conf.subnet,                          \
-                                                                "Subnet in CIDR format",                                \
-                                                                NULL                                                    \
+    {                                                   \
+                                                        CMD_OPT_TYPE_STRING_DUP,                        \
+                                                        false,                                          \
+                                                        "gateway",                                      \
+                                                        0,                                              \
+                                                        &(cmdargs).gateway,                             \
+                                                        "IPv4 or IPv6 gateway for the subnet",          \
+                                                        NULL                                            \
+    },                                                  \
+    {                                                   \
+                                                        CMD_OPT_TYPE_BOOL,                              \
+                                                        false,                                          \
+                                                        "internal",                                     \
+                                                        0,                                              \
+                                                        &(cmdargs).internal,                            \
+                                                        "Restrict external access from this network",   \
+                                                        NULL                                            \
+    },                                                  \
+    {                                                   \
+                                                        CMD_OPT_TYPE_STRING_DUP,                        \
+                                                        false,                                          \
+                                                        "subnet",                                       \
+                                                        0,                                              \
+                                                        &(cmdargs).subnet,                              \
+                                                        "Subnet in CIDR format",                        \
+                                                        NULL                                            \
     },
 
 extern const char g_cmd_network_create_desc[];

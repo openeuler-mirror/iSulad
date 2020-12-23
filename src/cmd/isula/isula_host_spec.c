@@ -201,6 +201,18 @@ static int pack_host_network_dns(host_config *dstconfig, const isula_host_config
     return 0;
 }
 
+static int pack_host_network_bridge(host_config *dstconfig, const isula_host_config_t *srcconfig)
+{
+    /* bridge */
+    if (util_dup_array_of_strings((const char **)srcconfig->bridge_network, srcconfig->bridge_network_len,
+                                  &dstconfig->bridge_network, &dstconfig->bridge_network_len) != 0) {
+        COMMAND_ERROR("Failed to dup host network bridge");
+        return -1;
+    }
+
+    return 0;
+}
+
 static int pack_host_config_network(host_config *dstconfig, const isula_host_config_t *srcconfig)
 {
     int ret = 0;
@@ -214,6 +226,8 @@ static int pack_host_config_network(host_config *dstconfig, const isula_host_con
     if (ret != 0) {
         goto out;
     }
+
+    ret = pack_host_network_bridge(dstconfig, srcconfig);
 
 out:
     return ret;
@@ -1689,6 +1703,9 @@ int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigs
     /* cgroup parent */
     check_and_strdup_s(&dstconfig->cgroup_parent, srcconfig->cgroup_parent);
 
+    check_and_strdup_s(&dstconfig->ip, srcconfig->ip);
+    check_and_strdup_s(&dstconfig->mac_address, srcconfig->mac_address);
+
     if (!parse_restart_policy(srcconfig->restart_policy, &dstconfig->restart_policy)) {
         ERROR("Invalid restart policy");
         ret = -1;
@@ -1799,6 +1816,16 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
 
     free(hostconfig->network_mode);
     hostconfig->network_mode = NULL;
+
+    util_free_array_by_len(hostconfig->bridge_network, hostconfig->bridge_network_len);
+    hostconfig->bridge_network = NULL;
+    hostconfig->bridge_network_len = 0;
+
+    free(hostconfig->ip);
+    hostconfig->ip = NULL;
+
+    free(hostconfig->mac_address);
+    hostconfig->mac_address = NULL;
 
     free(hostconfig->ipc_mode);
     hostconfig->ipc_mode = NULL;

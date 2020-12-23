@@ -57,6 +57,13 @@ typedef struct isula_host_config {
 
     char *network_mode;
 
+    char **bridge_network;
+    size_t bridge_network_len;
+
+    char *ip;
+
+    char *mac_address;
+
     char *ipc_mode;
 
     char *pid_mode;

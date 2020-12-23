@@ -41,7 +41,7 @@ typedef struct _cni_module_conf_t {
 
 static cni_module_conf_t g_module_conf;
 
-bool cni_module_init(const char *cache_dir, const char *const *paths, size_t paths_len)
+bool cni_module_init(const char *cache_dir, const char * const *paths, size_t paths_len)
 {
     size_t i;
 
@@ -209,7 +209,7 @@ out:
 }
 
 static inline bool check_inject_runtime_config_args(const struct network_config *orig, const struct runtime_conf *rt,
-                                                    char *const *result)
+                                                    char * const *result)
 {
     return (orig == NULL || rt == NULL || result == NULL);
 }
@@ -275,7 +275,7 @@ static int do_inject_prev_result(const struct cni_opt_result *prev_result, cni_n
 }
 
 static inline bool check_build_one_config(const struct network_config *orig, const struct runtime_conf *rt,
-                                          char *const *result)
+                                          char * const *result)
 {
     return (orig == NULL || rt == NULL || result == NULL);
 }
@@ -354,13 +354,13 @@ static int do_check_file(const char *plugin, const char *path, char **find_path)
     }
 }
 
-static inline bool check_find_in_path_args(const char *plugin, const char *const *paths, size_t len,
-                                           char *const *find_path)
+static inline bool check_find_in_path_args(const char *plugin, const char * const *paths, size_t len,
+                                           char * const *find_path)
 {
     return (plugin == NULL || strlen(plugin) == 0 || paths == NULL || len == 0 || find_path == NULL);
 }
 
-static int find_plugin_in_path(const char *plugin, const char *const *paths, size_t len, char **find_path)
+static int find_plugin_in_path(const char *plugin, const char * const *paths, size_t len, char **find_path)
 {
     int ret = -1;
     size_t i = 0;
@@ -395,7 +395,7 @@ static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *ver
 
     net.network = p_net;
 
-    ret = find_plugin_in_path(net.network->type, (const char *const *)g_module_conf.bin_paths,
+    ret = find_plugin_in_path(net.network->type, (const char * const *)g_module_conf.bin_paths,
                               g_module_conf.bin_paths_len, &plugin_path);
     if (ret != 0) {
         ERROR("Failed to find plugin: \"%s\"", net.network->type);
@@ -462,7 +462,7 @@ static int add_network(cni_net_conf *net, const char *name, const char *version,
 }
 
 static inline bool check_add_network_list_args(const struct network_config_list *list, const struct runtime_conf *rc,
-                                               struct cni_opt_result *const *pret)
+                                               struct cni_opt_result * const *pret)
 {
     return (list == NULL || list->list == NULL || rc == NULL || pret == NULL);
 }
@@ -771,7 +771,7 @@ static int do_copy_args_paths(struct cni_args **cargs)
     return 0;
 }
 
-static inline bool check_args_args(const struct runtime_conf *rc, struct cni_args *const *cargs)
+static inline bool check_args_args(const struct runtime_conf *rc, struct cni_args * const *cargs)
 {
     return (rc == NULL || cargs == NULL);
 }
@@ -983,9 +983,9 @@ static void json_obj_to_cni_list_conf(struct network_config_list *src, struct cn
         list->plugin_len = src->list->plugins_len;
         if (src->list->plugins_len > 0 && src->list->plugins != NULL && src->list->plugins[0] != NULL) {
             list->first_plugin_name = src->list->plugins[0]->name != NULL ? util_strdup_s(src->list->plugins[0]->name) :
-                                                                            NULL;
+                                      NULL;
             list->first_plugin_type = src->list->plugins[0]->type != NULL ? util_strdup_s(src->list->plugins[0]->type) :
-                                                                            NULL;
+                                      NULL;
         }
     }
 }

@@ -21,7 +21,7 @@ const char g_cmd_network_create_desc[] = "Create a network";
 const char g_cmd_network_create_usage[] = "create [OPTIONS] [NETWORK]";
 
 struct client_arguments g_cmd_network_create_args = {
-    .custom_conf.driver = "bridge",
+    .driver = "bridge",
 };
 
 int network_create(const struct client_arguments *args)
@@ -47,13 +47,13 @@ int network_create(const struct client_arguments *args)
         request.name = args->argv[0];
     }
 
-    if (args->custom_conf.driver != NULL) {
-        request.driver = args->custom_conf.driver;
+    if (args->driver != NULL) {
+        request.driver = args->driver;
     }
 
-    request.gateway = args->custom_conf.gateway;
-    request.internal = args->custom_conf.internal;
-    request.subnet = args->custom_conf.subnet;
+    request.gateway = args->gateway;
+    request.internal = args->internal;
+    request.subnet = args->subnet;
 
     ops = get_connect_client_ops();
     if (ops == NULL || ops->network.create == NULL) {

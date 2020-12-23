@@ -1195,7 +1195,7 @@ int conf_get_cni_bin_dir(char ***dst)
     if (conf == NULL || conf->json_confs == NULL || conf->json_confs->cni_bin_dir == NULL) {
         (void)util_array_append(&dir, default_bin_dir);
     } else {
-        dir = util_string_split(conf->json_confs->cni_bin_dir, ',');
+        dir = util_string_split(conf->json_confs->cni_bin_dir, ';');
         if (dir == NULL) {
             ERROR("String split failed");
             return -1;
