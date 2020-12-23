@@ -1079,16 +1079,15 @@ void PodSandboxManagerServiceImpl::GetIPs(const std::string &podSandboxID, const
     }
 
     if (inspect->network_settings->networks == NULL) {
-        WARN("Plugin network is empty");
+        error.Clear();
+        WARN("inspect network is empty");
         return;
     }
 
     for (size_t i = 0; i < inspect->network_settings->networks->len; i++) {
         if (inspect->network_settings->networks->values[i] != nullptr &&
             inspect->network_settings->networks->values[i]->ip_address != nullptr) {
-            WARN("Use container inspect ip info: %s, warn: %s", inspect->network_settings->networks->values[i]->ip_address,
-                 error.GetCMessage());
-            error.Clear();
+            WARN("Use container inspect ip: %s", inspect->network_settings->networks->values[i]->ip_address);
             ips.push_back(inspect->network_settings->networks->values[i]->ip_address);
         }
     }
