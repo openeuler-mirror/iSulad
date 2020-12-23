@@ -1156,11 +1156,16 @@ int native_config_create(const network_create_request *request, network_create_r
     cni_net_conf_list *bridge_list = NULL;
     struct cni_conflist **conflist_arr = NULL;
 
-    if (request == NULL || request->driver == NULL || strcmp(request->driver, g_default_driver) != 0) {
-        ERROR("Cannot support driver");
-        isulad_set_error_message("Cannot support driver: %s", request == NULL ? "" : request->driver);
+    if (request == NULL) {
+        ERROR("Invalid arguments");
         return -1;
     }
+    if (request->driver != NULL && strcmp(request->driver, g_default_driver) != 0) {
+        ERROR("Cannot support driver");
+        isulad_set_error_message("Cannot support driver: %s", request->driver);
+        return -1;
+    }
+
     cni_conf_dir = get_cni_conf_dir();
     if (cni_conf_dir == NULL) {
         ERROR("Failed to get cni conf dir");
