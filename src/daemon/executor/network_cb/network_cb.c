@@ -138,12 +138,7 @@ static int network_create_cb(const network_create_request *request, network_crea
 
     ret = check_parameter(request);
     if (ret != 0) {
-        (*response)->cc = ISULAD_ERR_INPUT;
-        if (g_isulad_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
-            DAEMON_CLEAR_ERRMSG();
-        }
-        return ret;
+        goto out;
     }
 
     network_conflist_lock(EXCLUSIVE);
@@ -153,6 +148,14 @@ static int network_create_cb(const network_create_request *request, network_crea
 
     network_conflist_unlock();
 
+out:
+    if (ret != 0) {
+        (*response)->cc = ISULAD_ERR_INPUT;
+        if (g_isulad_errmsg != NULL) {
+            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+            DAEMON_CLEAR_ERRMSG();
+        }
+    }
     return ret;
 }
 
