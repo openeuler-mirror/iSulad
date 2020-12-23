@@ -154,7 +154,7 @@ int CalculatePercentNum(std::string &s, const EncodeMode &mode, bool &hasPlus)
                 break;
             default:
                 if ((mode == EncodeMode::ENCODE_HOST || mode == EncodeMode::ENCODE_ZONE) &&
-                    s[i] < 0x80 && ShouldEscape(s[i], mode)) {
+                    int(s[i]) < 0x80 && ShouldEscape(s[i], mode)) {
                     ERROR("invalid URL escape %s", std::string(s.begin() + (long)i, s.begin() + (long)i + 1).c_str());
                     return -1;
                 }
