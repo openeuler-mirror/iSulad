@@ -599,6 +599,15 @@ static int request_pack_custom_annotations(const struct client_arguments *args, 
     return 0;
 }
 
+static void request_pack_custom_stop_signal(const struct client_arguments *args, isula_container_config_t *conf)
+{
+    if (args->custom_conf.stop_signal != NULL) {
+        conf->stop_signal = util_strdup_s(args->custom_conf.stop_signal);
+    }
+
+    return;
+}
+
 static isula_container_config_t *request_pack_custom_conf(const struct client_arguments *args)
 {
     isula_container_config_t *conf = NULL;
@@ -664,6 +673,8 @@ static isula_container_config_t *request_pack_custom_conf(const struct client_ar
     request_pack_custom_tty(args, conf);
 
     request_pack_custom_health_check(args, conf);
+
+    request_pack_custom_stop_signal(args, conf);
 
     return conf;
 

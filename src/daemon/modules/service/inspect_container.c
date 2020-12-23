@@ -266,6 +266,7 @@ static int dup_container_config(const char *image, const container_config *src, 
     dest->tty = src->tty;
     dest->image = image ? util_strdup_s(image) : util_strdup_s("none");
     dest->image_ref = util_strdup_s(src->image_ref);
+    dest->stop_signal = util_strdup_s(src->stop_signal);
 
     if (dup_container_config_env(src, dest) != 0) {
         ret = -1;

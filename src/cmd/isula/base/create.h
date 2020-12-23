@@ -309,8 +309,12 @@ extern "C" {
       "UTS namespace to use",  NULL },                                                                                                                    \
     { CMD_OPT_TYPE_CALLBACK, false, "volume", 'v', &(cmdargs).custom_conf.volumes, "Bind mount a volume",                                                 \
       command_append_array },                                                                                                                             \
-    { CMD_OPT_TYPE_CALLBACK, false, "volumes-from", 0, &(cmdargs).custom_conf.volumes_from,                                                               \
-      "Mount volumes from the specified container(s)",                                                                                                     \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "volumes-from",                                                                                                                                     \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.volumes_from,                                                                                                                \
+      "Mount volumes from the specified container(s)",                                                                                                    \
       command_append_array },                                                                                                                             \
     { CMD_OPT_TYPE_CALLBACK, false, "annotation", 0, &(cmdargs), "Set annotations on a container",                                                        \
       callback_annotation },                                                                                                                              \
@@ -464,7 +468,14 @@ extern "C" {
       0,                                                                                                                                                  \
       &(cmdargs).custom_conf.device_cgroup_rules,                                                                                                         \
       "Add a rule to the cgroup allowed devices list.",                                                                                                   \
-      command_convert_device_cgroup_rules },
+      command_convert_device_cgroup_rules },                                                                                                              \
+    { CMD_OPT_TYPE_STRING_DUP,                                                                                                                            \
+      false,                                                                                                                                              \
+      "stop-signal",                                                                                                                                      \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.stop_signal,                                                                                                                 \
+      "Signal to stop a container (default \"SIGTERM\")",                                                                                                 \
+      NULL },
 
 #define CREATE_EXTEND_OPTIONS(cmdargs)        \
     { CMD_OPT_TYPE_BOOL,                      \

@@ -255,6 +255,9 @@ void client_arguments_free(struct client_arguments *args)
 
     util_free_array(custom_conf->device_cgroup_rules);
     custom_conf->device_cgroup_rules = NULL;
+
+    free(custom_conf->stop_signal);
+    custom_conf->stop_signal = NULL;
 }
 
 /* print common help */

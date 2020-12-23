@@ -42,6 +42,15 @@ static void oci_image_merge_working_dir(const char *working_dir, container_confi
     container_spec->working_dir = util_strdup_s(working_dir);
 }
 
+static void oci_image_merge_stop_signal(const char *stop_signal, container_config *container_spec)
+{
+    if (container_spec->stop_signal != NULL || stop_signal == NULL) {
+        return;
+    }
+
+    container_spec->stop_signal = util_strdup_s(stop_signal);
+}
+
 static int oci_image_merge_env(const oci_image_spec_config *config, container_config *container_spec)
 {
     int ret = 0;
@@ -344,6 +353,8 @@ int oci_image_merge_config(imagetool_image *image_conf, container_config *contai
 
     if (image_conf->spec != NULL && image_conf->spec->config != NULL) {
         oci_image_merge_working_dir(image_conf->spec->config->working_dir, container_spec);
+
+        oci_image_merge_stop_signal(image_conf->spec->config->stop_signal, container_spec);
 
         if (oci_image_merge_env(image_conf->spec->config, container_spec) != 0) {
             ret = -1;
