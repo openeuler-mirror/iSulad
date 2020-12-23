@@ -1608,7 +1608,7 @@ static int cancel_deferred_removal(struct device_set *devset, const char *hash)
             if (nret == ERR_BUSY) {
                 // If we see EBUSY it may be a transient error, sleep a bit and retry
                 DEBUG("devmapper: cannot run canceling deferred remove task, device is busy, retry after 0.1 second");
-                sleep(0.1);
+                usleep(100000);
                 continue;
             }
             ERROR("devmapper: cancel deferred remove for dm:%s failed, err:%s", dm_name, dev_strerror(nret));

@@ -402,7 +402,7 @@ int oci_rmi(const im_rmi_request *request)
     char *image_ID = NULL;
     char *real_image_name = NULL;
     char **image_names = NULL;
-    size_t image_names_len;
+    size_t image_names_len = 0;
     char **reduced_image_names = NULL;
     size_t reduced_image_names_len = 0;
     size_t i;
