@@ -18,6 +18,12 @@
 
 #include "network_api.h"
 
+int native_init();
+
+bool native_check();
+
+void native_destory();
+
 int native_config_create(const network_create_request *request, network_create_response **response);
 
 int native_config_inspect(const char *name, char **network_json);

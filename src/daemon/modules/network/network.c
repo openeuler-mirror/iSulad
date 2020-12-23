@@ -43,7 +43,7 @@ struct net_ops {
     bool (*check)(void);
     int (*update)(void);
 
-    int (*destroy)(void);
+    void (*destroy)(void);
 };
 
 struct net_type {
@@ -65,16 +65,16 @@ static const struct net_ops g_cri_ops = {
 };
 
 static const struct net_ops g_native_ops = {
-    .init = NULL,
+    .init = native_init,
     .attach = NULL,
     .detach = NULL,
     .conf_create = native_config_create,
     .conf_inspect = native_config_inspect,
     .conf_list = native_config_list,
     .conf_rm = native_config_remove,
-    .check = NULL,
+    .check = native_check,
     .update = NULL,
-    .destroy = NULL,
+    .destroy = native_destory,
 };
 
 static const struct net_type g_nets[] = {
