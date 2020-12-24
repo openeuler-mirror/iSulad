@@ -49,10 +49,10 @@ int attach_loopback(const char *id, const char *netns);
 
 int detach_loopback(const char *id, const char *netns);
 
-int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str,
+int attach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                          struct cni_opt_result **result);
 
-int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str,
+int detach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                          struct cni_opt_result **result);
 
 void free_cni_manager(struct cni_manager *manager);
