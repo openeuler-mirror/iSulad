@@ -89,23 +89,18 @@ void CniNetworkPlugin::SyncNetworkConfig()
     }
 }
 
-void CniNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode,
-                            const std::string &nonMasqueradeCIDR, int mtu, Errors &error)
+void CniNetworkPlugin::Init(const std::string &hairpinMode, const std::string &nonMasqueradeCIDR, int mtu,
+                            Errors &error)
 {
     UNUSED(hairpinMode);
     UNUSED(nonMasqueradeCIDR);
     UNUSED(mtu);
 
-    if (criImpl == nullptr) {
-        error.Errorf("Empty runtime service");
-        return;
-    }
     PlatformInit(error);
     if (error.NotEmpty()) {
         return;
     }
 
-    m_criImpl = criImpl;
     SyncNetworkConfig();
 
     // start a thread to sync network config from confDir periodically to detect network config updates in every 5 seconds
@@ -294,7 +289,7 @@ static void PrepareAdaptorAnnotations(const std::map<std::string, std::string> &
     }
     DEBUG("add checkpoint: %s", jsonCheckpoint.c_str());
 
-    cri::PodSandboxCheckpoint checkpoint;
+    CRI::PodSandboxCheckpoint checkpoint;
     CRIHelpers::GetCheckpoint(jsonCheckpoint, checkpoint, err);
     if (err.NotEmpty() || checkpoint.GetData() == nullptr) {
         err.Errorf("could not retrieve port mappings: %s", err.GetCMessage());
