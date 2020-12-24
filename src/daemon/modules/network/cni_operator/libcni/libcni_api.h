@@ -75,10 +75,6 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
 
 int cni_check_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc);
 
-void free_cni_network_conf(struct cni_network_conf *val);
-
-void free_cni_network_list_conf(struct cni_network_list_conf *val);
-
 void free_cni_port_mapping(struct cni_port_mapping *val);
 
 void free_runtime_conf(struct runtime_conf *rc);
