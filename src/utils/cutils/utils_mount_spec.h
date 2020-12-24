@@ -27,7 +27,11 @@
 extern "C" {
 #endif
 
-#define DEFAULT_MOUNT_TYPE "volume"
+#define MOUNT_TYPE_BIND     "bind"
+#define MOUNT_TYPE_VOLUME   "volume"
+#define MOUNT_TYPE_SQUASHFS "squashfs"
+#define MOUNT_TYPE_TMPFS    "tmpfs"
+#define DEFAULT_MOUNT_TYPE  MOUNT_TYPE_VOLUME
 
 bool util_valid_mount_spec(const char *mount_str, char **errmsg);
 

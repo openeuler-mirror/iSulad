@@ -1428,6 +1428,15 @@ static mount_spec *dup_mount_spec(mount_spec *spec)
         }
         m->volume_options->no_copy = spec->volume_options->no_copy;
     }
+    if (spec->tmpfs_options != NULL) {
+        m->tmpfs_options = util_common_calloc_s(sizeof(tmpfs_options));
+        if (m->tmpfs_options == NULL) {
+            ret = -1;
+            goto out;
+        }
+        m->tmpfs_options->size_bytes = spec->tmpfs_options->size_bytes;
+        m->tmpfs_options->mode = spec->tmpfs_options->mode;
+    }
 
 out:
     if (ret != 0) {
@@ -1469,6 +1478,30 @@ static int generate_mounts(host_config *dstconfig, const isula_host_config_t *sr
 
 out:
 
+    return ret;
+}
+
+static int generate_tmpfs(host_config *dstconfig, const isula_host_config_t *srcconfig)
+{
+    int ret = 0;
+
+    if (srcconfig->tmpfs == NULL) {
+        goto out;
+    }
+
+    dstconfig->tmpfs = util_common_calloc_s(sizeof(json_map_string_string));
+    if (dstconfig->tmpfs == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    if (dup_json_map_string_string(srcconfig->tmpfs, dstconfig->tmpfs) != 0) {
+        COMMAND_ERROR("Failed to dup tmpfs");
+        ret = -1;
+        goto out;
+    }
+
+out:
     return ret;
 }
 
@@ -1585,6 +1618,12 @@ static int pack_host_config_common(host_config *dstconfig, const isula_host_conf
 
     /* --mount parameters */
     ret = generate_mounts(dstconfig, srcconfig);
+    if (ret != 0) {
+        goto out;
+    }
+
+    /* --tmpfs parameters */
+    ret = generate_tmpfs(dstconfig, srcconfig);
     if (ret != 0) {
         goto out;
     }
@@ -1806,6 +1845,9 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
     free(hostconfig->mounts);
     hostconfig->mounts = NULL;
     hostconfig->mounts_len = 0;
+
+    free_json_map_string_string(hostconfig->tmpfs);
+    hostconfig->tmpfs = NULL;
 
     util_free_array_by_len(hostconfig->blkio_weight_device, hostconfig->blkio_weight_device_len);
     hostconfig->blkio_weight_device = NULL;

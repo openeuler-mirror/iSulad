@@ -107,6 +107,8 @@ typedef struct isula_host_config {
     mount_spec **mounts;
     size_t mounts_len;
 
+    json_map_string_string *tmpfs;
+
     char **blkio_weight_device;
     size_t blkio_weight_device_len;
 

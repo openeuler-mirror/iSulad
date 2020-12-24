@@ -48,8 +48,6 @@
 #include "isula_host_spec.h"
 #include "utils_mount_spec.h"
 
-#define DEFAULT_MOUNT_TYPE "volume"
-
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
 
@@ -1033,6 +1031,31 @@ static int request_pack_host_mounts(const struct client_arguments *args, isula_h
     return 0;
 }
 
+static int request_pack_host_tmpfs(const struct client_arguments *args, isula_host_config_t *hostconfig)
+{
+    size_t i = 0;
+    size_t len = 0;
+
+    if (args->custom_conf.tmpfs == NULL) {
+        return 0;
+    }
+
+    hostconfig->tmpfs = util_common_calloc_s(sizeof(json_map_string_string));
+    if (hostconfig->tmpfs == NULL) {
+        COMMAND_ERROR("Out of memory");
+        return -1;
+    }
+
+    len = util_array_len((const char **)(args->custom_conf.tmpfs));
+    for (i = 0; i < len; i++) {
+        if (append_json_map_string_string(hostconfig->tmpfs, args->custom_conf.tmpfs[i], "")) {
+            COMMAND_ERROR("Failed to append map");
+            return -1;
+        }
+    }
+    return 0;
+}
+
 inline static void request_pack_host_hook_spec(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
     /* hook-spec file */
@@ -1132,6 +1155,10 @@ static isula_host_config_t *request_pack_host_config(const struct client_argumen
     }
 
     if (request_pack_host_mounts(args, hostconfig) != 0) {
+        goto error_out;
+    }
+
+    if (request_pack_host_tmpfs(args, hostconfig) != 0) {
         goto error_out;
     }
 

@@ -49,10 +49,12 @@ static int parse_mount_item_type(const char *value, char *mount_str, mount_spec 
     }
 
 #ifdef ENABLE_OCI_IMAGE
-    if (strcmp(value, "squashfs") && strcmp(value, "bind") && strcmp(value, "volume")) {
-        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Type must be one of squashfs/bind/volume", mount_str);
+    if (strcmp(value, MOUNT_TYPE_SQUASHFS) && strcmp(value, MOUNT_TYPE_BIND) &&
+        strcmp(value, MOUNT_TYPE_VOLUME) && strcmp(value, MOUNT_TYPE_TMPFS)) {
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Type must be one of squashfs/bind/volume/tmpfs",
+                     mount_str);
 #else
-    if (strcmp(value, "squashfs") && strcmp(value, "bind")) {
+    if (strcmp(value, MOUNT_TYPE_SQUASHFS) && strcmp(value, MOUNT_TYPE_BIND)) {
         CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Type must be squashfs or bind", mount_str);
 #endif
         return EINVALIDARGS;
@@ -203,6 +205,70 @@ static int parse_mount_item_selinux(const char *value, char *mount_str, mount_sp
 }
 
 #ifdef ENABLE_OCI_IMAGE
+static int parse_mount_item_tmpfs_size(const char *value, char *mount_str, mount_spec *m, char *errmsg)
+{
+    int64_t size = 0;
+
+    /* If value of destination is NULL, ignore it */
+    if (value == NULL) {
+        return 0;
+    }
+
+    if (m->tmpfs_options != NULL && m->tmpfs_options->size_bytes != 0) {
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.More than one tmpfs-size found", mount_str);
+        return EINVALIDARGS;
+    }
+
+    if (util_parse_byte_size_string(value, &size) != 0 || size < 0) {
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Invalid tmpfs-size:%s", mount_str, value);
+        return EINVALIDARGS;
+    }
+
+    if (m->tmpfs_options == NULL) {
+        m->tmpfs_options = util_common_calloc_s(sizeof(tmpfs_options));
+        if (m->tmpfs_options == NULL) {
+            CACHE_ERRMSG(errmsg, "Out of memory");
+            return EINVALIDARGS;
+        }
+    }
+
+    m->tmpfs_options->size_bytes = size;
+
+    return 0;
+}
+
+static int parse_mount_item_tmpfs_mode(const char *value, char *mount_str, mount_spec *m, char *errmsg)
+{
+    uint32_t mode = 0;
+
+    /* If value of destination is NULL, ignore it */
+    if (value == NULL) {
+        return 0;
+    }
+
+    if (m->tmpfs_options != NULL && m->tmpfs_options->mode != 0) {
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.More than one tmpfs-size found", mount_str);
+        return EINVALIDARGS;
+    }
+
+    if (util_parse_octal_uint32(value, &mode) != 0) {
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Invalid tmpfs-mode:%s", mount_str, value);
+        return EINVALIDARGS;
+    }
+
+    if (m->tmpfs_options == NULL) {
+        m->tmpfs_options = util_common_calloc_s(sizeof(tmpfs_options));
+        if (m->tmpfs_options == NULL) {
+            CACHE_ERRMSG(errmsg, "Out of memory");
+            return EINVALIDARGS;
+        }
+    }
+
+    m->tmpfs_options->mode = mode;
+
+    return 0;
+}
+
 static int parse_mount_item_nocopy(const char *value, char *mount_str, mount_spec *m, char *errmsg)
 {
     /* If value of destination is NULL, ignore it */
@@ -259,7 +325,7 @@ static bool exist_readonly_mode(char *mount_str)
 
 static bool valid_mount_spec_mode(char *mount_str, mount_spec *m, char *errmsg)
 {
-    if (strcmp(m->type, "volume") == 0) {
+    if (strcmp(m->type, MOUNT_TYPE_VOLUME) == 0) {
         if (m->bind_options != NULL && m->bind_options->propagation != NULL) {
             CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Propagation must not be specified for type %s",
                          mount_str, m->type);
@@ -271,10 +337,22 @@ static bool valid_mount_spec_mode(char *mount_str, mount_spec *m, char *errmsg)
             return false;
         }
     }
-    if (strcmp(m->type, "bind") == 0 && m->volume_options != NULL) {
+    if (strcmp(m->type, MOUNT_TYPE_BIND) == 0 && m->volume_options != NULL) {
         CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.nocopy must not be specified for type %s",
                      mount_str, m->type);
         return false;
+    }
+    if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0) {
+        if (m->volume_options != NULL) {
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Cannot mix volume options with type %s",
+                         mount_str, m->type);
+            return false;
+        }
+        if (m->bind_options != NULL) {
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Cannot mix bind options with type %s",
+                         mount_str, m->type);
+            return false;
+        }
     }
 
     return true;
@@ -284,19 +362,22 @@ static bool valid_mount_spec_mode(char *mount_str, mount_spec *m, char *errmsg)
 static int check_mount_spec(char *mount_str, mount_spec *m, char *errmsg)
 {
     // check source
-    if (strcmp(m->type, "volume") != 0 && m->source == NULL) {
-        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Missing source", mount_str);
-        return EINVALIDARGS;
-    }
-
-    if (strcmp(m->type, "volume") != 0) {
-        if (m->source == NULL || m->source[0] != '/') {
+    if (strcmp(m->type, MOUNT_TYPE_SQUASHFS) == 0 || strcmp(m->type, MOUNT_TYPE_BIND) == 0) {
+        if (m->source == NULL) {
+            CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Missing source", mount_str);
+            return EINVALIDARGS;
+        }
+        if (m->source[0] != '/') {
             CACHE_ERRMSG(errmsg, "source %s should be absolute path for type %s", m->source, m->type);
             return -1;
         }
     }
+    if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0 && m->source != NULL) {
+        CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Source must not be specified", mount_str);
+        return -1;
+    }
 
-    if (strcmp(m->type, "volume") == 0 && m->source != NULL && !util_valid_volume_name(m->source)) {
+    if (strcmp(m->type, MOUNT_TYPE_VOLUME) == 0 && m->source != NULL && !util_valid_volume_name(m->source)) {
         CACHE_ERRMSG(errmsg, "Invalid volume name %s, only \"%s\" are allowed", m->source, VALID_VOLUME_NAME);
         return -1;
     }
@@ -312,7 +393,7 @@ static int check_mount_spec(char *mount_str, mount_spec *m, char *errmsg)
         return -1;
     }
 
-    if (strcmp(m->type, "squashfs") == 0) {
+    if (strcmp(m->type, MOUNT_TYPE_SQUASHFS) == 0) {
         char real_path[PATH_MAX] = { 0 };
         if (strlen(m->source) > PATH_MAX || realpath(m->source, real_path) == NULL) {
             CACHE_ERRMSG(errmsg, "Invalid mount specification '%s'.Source %s not exist", mount_str, m->source);
@@ -350,6 +431,10 @@ static int parse_mounts_item(const char *mntkey, const char *value, char *mount_
     } else if (util_valid_key_selinux(mntkey)) {
         return parse_mount_item_selinux(value, mount_str, m, errmsg);
 #ifdef ENABLE_OCI_IMAGE
+    } else if (util_valid_key_tmpfs_size(mntkey)) {
+        return parse_mount_item_tmpfs_size(value, mount_str, m, errmsg);
+    } else if (util_valid_key_tmpfs_mode(mntkey)) {
+        return parse_mount_item_tmpfs_mode(value, mount_str, m, errmsg);
     } else if (util_valid_key_nocopy(mntkey)) {
         return parse_mount_item_nocopy(value, mount_str, m, errmsg);
 #endif

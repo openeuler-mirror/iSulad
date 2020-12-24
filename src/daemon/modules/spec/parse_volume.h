@@ -25,6 +25,7 @@ extern "C" {
 
 defs_mount *parse_volume(const char *volume);
 int append_default_mount_options(defs_mount *m, bool has_ro, bool has_pro, bool has_sel);
+int append_default_tmpfs_options(defs_mount *m);
 
 #ifdef __cplusplus
 }

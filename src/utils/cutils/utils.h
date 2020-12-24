@@ -41,6 +41,7 @@
 #include "utils_regex.h"
 #include "utils_verify.h"
 #include "isula_libutils/defs.h"
+#include "utils_mount_spec.h"
 
 #ifdef __cplusplus
 extern "C" {

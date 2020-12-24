@@ -134,6 +134,29 @@ int util_safe_uint64(const char *numstr, uint64_t *converted)
     return 0;
 }
 
+int util_parse_octal_uint32(const char *numstr, uint32_t *converted)
+{
+    char *err_str = NULL;
+    long long ll;
+
+    if (numstr == NULL || converted == NULL) {
+        return -EINVAL;
+    }
+
+    errno = 0;
+    ll = strtoll(numstr, &err_str, 8);
+    if (errno > 0) {
+        return -errno;
+    }
+
+    if (is_invalid_error_str(err_str, numstr) || ll < 0 || ll > UINT32_MAX) {
+        return -EINVAL;
+    }
+
+    *converted = (uint32_t)ll;
+    return 0;
+}
+
 int util_safe_llong(const char *numstr, long long *converted)
 {
     char *err_str = NULL;

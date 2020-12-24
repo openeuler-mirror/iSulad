@@ -63,10 +63,10 @@ static int check_volume_opts(const char *volume_str, const defs_mount *m)
     char *valid_volume_modes[] = {"ro", "rw", "z", "Z", "nocopy"};
     int ret = 0;
 
-    if (strcmp(m->type, "bind") == 0) {
+    if (strcmp(m->type, MOUNT_TYPE_BIND) == 0) {
         ret = check_modes(m, volume_str, valid_bind_modes, sizeof(valid_bind_modes) / sizeof(char*));
     }
-    if (strcmp(m->type, "volume") == 0) {
+    if (strcmp(m->type, MOUNT_TYPE_VOLUME) == 0) {
         ret = check_modes(m, volume_str, valid_volume_modes, sizeof(valid_volume_modes) / sizeof(char*));
     }
 
@@ -92,7 +92,7 @@ static int check_mount_dst(const defs_mount *m)
 
 static int check_mount_source(const defs_mount *m)
 {
-    if (strcmp(m->type, "volume") &&
+    if (strcmp(m->type, MOUNT_TYPE_VOLUME) &&
         (m->source == NULL || m->source[0] != '/')) {
         ERROR("Invalid source %s, type %s", m->source, m->type);
         isulad_set_error_message("Invalid source %s, type %s", m->source, m->type);
@@ -110,6 +110,35 @@ static int check_mount_source(const defs_mount *m)
     return 0;
 }
 
+int append_default_tmpfs_options(defs_mount *m)
+{
+    if (util_array_append(&m->options, "noexec") != 0) {
+        ERROR("append default tmpfs options noexec failed");
+        return -1;
+    }
+    m->options_len++;
+
+    if (util_array_append(&m->options, "nosuid") != 0) {
+        ERROR("append default tmpfs options nosuid failed");
+        return -1;
+    }
+    m->options_len++;
+
+    if (util_array_append(&m->options, "nodev") != 0) {
+        ERROR("append default tmpfs options nodev failed");
+        return -1;
+    }
+    m->options_len++;
+
+    if (util_array_append(&m->options, DefaultPropagationMode) != 0) {
+        ERROR("append default tmpfs options %s failed", DefaultPropagationMode);
+        return -1;
+    }
+    m->options_len++;
+
+    return 0;
+}
+
 int append_default_mount_options(defs_mount *m, bool has_ro, bool has_pro, bool has_sel)
 {
     int ret = 0;
@@ -119,7 +148,7 @@ int append_default_mount_options(defs_mount *m, bool has_ro, bool has_pro, bool 
         goto out;
     }
 
-    if (strcmp(m->type, "bind") == 0) {
+    if (strcmp(m->type, MOUNT_TYPE_BIND) == 0) {
         if (!has_ro) {
             ret = util_array_append(&m->options, DefaultROMode);
             if (ret != 0) {
@@ -141,7 +170,7 @@ int append_default_mount_options(defs_mount *m, bool has_ro, bool has_pro, bool 
         }
     }
 
-    if (!has_sel && strcmp(m->type, "volume") == 0) {
+    if (!has_sel && strcmp(m->type, MOUNT_TYPE_VOLUME) == 0) {
         ret = util_array_append(&m->options, DefaultSelinuxOpt);
         if (ret != 0) {
             ERROR("append default rbind to array failed");
@@ -151,7 +180,7 @@ int append_default_mount_options(defs_mount *m, bool has_ro, bool has_pro, bool 
         m->options_len++;
     }
 
-    if (strcmp(m->type, "bind") == 0 || strcmp(m->type, "volume") == 0) {
+    if (strcmp(m->type, MOUNT_TYPE_BIND) == 0 || strcmp(m->type, MOUNT_TYPE_VOLUME) == 0) {
         ret = util_array_append(&m->options, DefaultRBind);
         if (ret != 0) {
             ERROR("append default rbind to array failed");
@@ -159,6 +188,14 @@ int append_default_mount_options(defs_mount *m, bool has_ro, bool has_pro, bool 
             goto out;
         }
         m->options_len++;
+    }
+
+    if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0) {
+        if (append_default_tmpfs_options(m) != 0) {
+            ERROR("append default tmpfs options failed");
+            ret = -1;
+            goto out;
+        }
     }
 
 out:
@@ -180,7 +217,7 @@ static int check_mount_element(const char *volume_str, const defs_mount *m)
         goto out;
     }
 
-    if (strcmp(m->type, "bind") && strcmp(m->type, "volume")) {
+    if (strcmp(m->type, MOUNT_TYPE_BIND) && strcmp(m->type, MOUNT_TYPE_VOLUME)) {
         ERROR("invalid type %s, only support bind/volume", m->type);
         isulad_set_error_message("invalid type %s, only support bind/volume", m->type);
         ret = EINVALIDARGS;
@@ -385,9 +422,9 @@ defs_mount *parse_volume(const char *volume)
         mount_element->options[mount_element->options_len++] = util_strdup_s(nocopy);
     }
     if (mount_element->source != NULL && mount_element->source[0] == '/') {
-        mount_element->type = util_strdup_s("bind");
+        mount_element->type = util_strdup_s(MOUNT_TYPE_BIND);
     } else {
-        mount_element->type = util_strdup_s("volume");
+        mount_element->type = util_strdup_s(MOUNT_TYPE_VOLUME);
         if (mount_element->source != NULL) {
             mount_element->named = true;
         }

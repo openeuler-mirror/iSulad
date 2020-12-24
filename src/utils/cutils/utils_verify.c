@@ -514,6 +514,24 @@ bool util_valid_key_selinux(const char *key)
     return !strcmp(key, "bind-selinux-opts") || !strcmp(key, "selinux-opts");
 }
 
+bool util_valid_key_tmpfs_size(const char *key)
+{
+    if (key == NULL) {
+        return false;
+    }
+
+    return !strcmp(key, "tmpfs-size");
+}
+
+bool util_valid_key_tmpfs_mode(const char *key)
+{
+    if (key == NULL) {
+        return false;
+    }
+
+    return !strcmp(key, "tmpfs-mode");
+}
+
 bool util_valid_key_nocopy(const char *key)
 {
     if (key == NULL) {

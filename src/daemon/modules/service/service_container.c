@@ -621,7 +621,7 @@ static int valid_mount_point(container_config_v2_common_config_mount_points_elem
     }
 
     // check volumes only currently
-    if (strcmp(mp->type, "volume") != 0) {
+    if (strcmp(mp->type, MOUNT_TYPE_VOLUME) != 0) {
         return 0;
     }
 
