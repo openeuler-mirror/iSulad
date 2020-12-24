@@ -1415,8 +1415,8 @@ void isula_network_create_response_free(struct isula_network_create_response *re
         return;
     }
 
-    free(response->path);
-    response->path = NULL;
+    free(response->name);
+    response->name = NULL;
     free(response->errmsg);
     response->errmsg = NULL;
 

@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+int adaptor_cni_init_confs(const char *conf_dir, const char **bin_paths, const size_t bin_paths_len);
+
 int adaptor_cni_update_confs();
 
 bool adaptor_cni_check_inited();

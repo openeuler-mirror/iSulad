@@ -28,7 +28,7 @@
 
 
 struct net_ops {
-    int (*init)(void);
+    int (*init)(const char *conf_dir, const char **bin_paths, const size_t bin_paths_len);
 
     // operators for network plane
     int (*attach)(const network_api_conf *conf, network_api_result_list *result);
@@ -52,7 +52,7 @@ struct net_type {
 };
 
 static const struct net_ops g_cri_ops = {
-    .init = adaptor_cni_update_confs,
+    .init = adaptor_cni_init_confs,
     .attach = adaptor_cni_setup,
     .detach = adaptor_cni_teardown,
     .conf_create = NULL,
@@ -132,7 +132,7 @@ bool network_module_init(const char *network_plugin, const char *cache_dir, cons
         if (strcmp(g_nets[i].type, NETWOKR_API_TYPE_CRI) == 0 && network_plugin == NULL) {
             continue;
         }
-        if (g_nets[i].ops->init() != 0) {
+        if (g_nets[i].ops->init(use_conf_dir, (const char **)bin_paths, bin_paths_len) != 0) {
             ERROR("init network: %s failed", g_nets[i].type);
             ret = false;
             goto out;
