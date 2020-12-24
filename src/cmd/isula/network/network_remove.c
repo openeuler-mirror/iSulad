@@ -54,6 +54,9 @@ int network_remove(const struct client_arguments *args)
         goto out;
     }
 
+    if (response->errmsg != NULL) {
+        COMMAND_ERROR("%s", response->errmsg);
+    }
     printf("%s\n", g_cmd_network_remove_args.network_name);
     if (response->container_num == 0) {
         goto out;

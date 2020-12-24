@@ -77,7 +77,7 @@ static int unpack_create_response(const struct parsed_http_message *message, voi
     }
     response->server_errono = nresponse->cc;
     response->errmsg = util_strdup_s(nresponse->errmsg);
-    response->path = util_strdup_s(nresponse->path);
+    response->name = util_strdup_s(nresponse->name);
 
     ret = (nresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
     if (message->status_code == RESTFUL_RES_SERVERR) {
