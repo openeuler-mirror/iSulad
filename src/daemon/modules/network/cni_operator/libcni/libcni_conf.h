@@ -22,9 +22,7 @@
 extern "C" {
 #endif
 
-struct network_config_list *conflist_from_bytes(const char *json_str);
-
-struct network_config *conf_from_bytes(const char *conf_str);
+struct cni_network_conf *conf_from_bytes(const char *conf_str);
 
 #ifdef __cplusplus
 }

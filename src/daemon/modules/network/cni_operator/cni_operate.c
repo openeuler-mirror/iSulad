@@ -27,7 +27,8 @@
 #define LO_IFNAME "lo"
 
 typedef int (*annotation_add_cap_t)(const char *value, struct runtime_conf *);
-typedef int (*annotation_add_json_t)(const char *value, char **bytes);
+typedef int (*annotation_add_json_t)(const char *value, const struct cni_network_list_conf *old,
+                                     struct cni_network_list_conf **p_new);
 
 struct anno_registry_conf_rt {
     char *name;
@@ -41,13 +42,12 @@ struct anno_registry_conf_json {
 
 typedef struct cni_manager_store_t {
     char *conf_path;
-    char *loopback_conf_str;
+    struct cni_network_list_conf *loopback_conf;
 } cni_manager_store_t;
 
-static cni_manager_store_t g_cni_manager = {
-    .loopback_conf_str =
-    "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\",\"plugins\":[{\"type\": \"loopback\" }]}",
-};
+#define LOOPBACK_CONFLIST_STR "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\",\"plugins\":[{\"type\": \"loopback\" }]}"
+
+static cni_manager_store_t g_cni_manager;
 
 static int bandwidth_inject(const char *value, struct runtime_conf *rt)
 {
@@ -206,13 +206,13 @@ static struct cni_network_list_conf *load_cni_config_file_list(const char *fname
         }
     } else {
         n_conf = cni_conf_from_file(fname);
-        if (n_conf == NULL) {
+        if (n_conf == NULL || n_conf->network == NULL) {
             ERROR("Error loading CNI config file %s", fname);
             ret = -1;
             goto out;
         }
 
-        if (!util_valid_str(n_conf->type)) {
+        if (!util_valid_str(n_conf->network->type)) {
             ERROR("Error loading CNI config file %s: no 'type'; perhaps this is a .conflist?", fname);
             ret = -1;
             goto out;
@@ -226,14 +226,14 @@ static struct cni_network_list_conf *load_cni_config_file_list(const char *fname
         }
     }
 
-    if (n_list->name == NULL || strcmp(n_list->name, "") == 0) {
-        free(n_list->name);
-        n_list->name = util_path_base(fname);
+    if (n_list->list->name == NULL || strcmp(n_list->list->name, "") == 0) {
+        free(n_list->list->name);
+        n_list->list->name = util_path_base(fname);
     }
 
     // to compatibility for old version of clibcni
-    if (!util_validate_network_name(n_list->name)) {
-        ERROR("Invalid network name: %s", n_list->name);
+    if (!util_validate_network_name(n_list->list->name)) {
+        ERROR("Invalid network name: %s", n_list->list->name);
         ret = -1;
         goto out;
     }
@@ -290,7 +290,7 @@ static int update_conflist_from_files(struct cni_network_list_conf **conflists, 
             continue;
         }
 
-        if (n_list == NULL || n_list->plugin_len == 0) {
+        if (n_list->list == NULL || n_list->list->plugins_len == 0) {
             WARN("CNI config list %s has no networks, skipping", files[i]);
             free_cni_network_list_conf(n_list);
             continue;
@@ -298,7 +298,7 @@ static int update_conflist_from_files(struct cni_network_list_conf **conflists, 
 
         // TODO: check plugins of config
 
-        DEBUG("parse cni network: %s", n_list->name);
+        DEBUG("parse cni network: %s", n_list->list->name);
 
         conflists[*nets_num] = n_list;
         (*nets_num)++;
@@ -468,13 +468,14 @@ out:
 }
 
 // inject cni net conflist json from annotation
-static int inject_annotations_json(map_t *annotations, char **net_list_conf_str)
+static int inject_annotations_json(map_t *annotations, const struct cni_network_list_conf *old,
+                                   struct cni_network_list_conf **p_new)
 {
     int ret = 0;
     size_t i = 0;
     char *value = NULL;
 
-    if (annotations == NULL || net_list_conf_str == NULL) {
+    if (annotations == NULL || old == NULL || p_new == NULL) {
         ERROR("Invalid input param");
         return -1;
     }
@@ -486,7 +487,7 @@ static int inject_annotations_json(map_t *annotations, char **net_list_conf_str)
             continue;
         }
 
-        if (g_registrant_json[i].ops(value, net_list_conf_str) != 0) {
+        if (g_registrant_json[i].ops(value, old, p_new) != 0) {
             ERROR("The format of annotation is not right with key:%s, value:%s", g_registrant_json[i].name, value);
             ret = -1;
             goto out;
@@ -552,14 +553,12 @@ int attach_loopback(const char *id, const char *netns)
     int ret = 0;
     struct runtime_conf *rc = NULL;
     struct cni_opt_result *lo_result = NULL;
-    char *net_conf_str = NULL;
 
     if (id == NULL || netns == NULL) {
         ERROR("Invalid input params");
         return -1;
     }
 
-    net_conf_str = util_strdup_s(g_cni_manager.loopback_conf_str);
     rc = build_loopback_runtime_conf(id, netns);
     if (rc == NULL) {
         ERROR("Error building loopback runtime config");
@@ -567,36 +566,28 @@ int attach_loopback(const char *id, const char *netns)
         goto out;
     }
 
-    if (cni_add_network_list(net_conf_str, rc, &lo_result) != 0) {
+    if (cni_add_network_list(g_cni_manager.loopback_conf, rc, &lo_result) != 0) {
         ERROR("Add loopback network failed");
         ret = -1;
         goto out;
     }
 
 out:
-    free(net_conf_str);
     free_cni_opt_result(lo_result);
     free_runtime_conf(rc);
     return ret;
 }
 
-int attach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str,
+int attach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                          struct cni_opt_result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
-    char *net_list_conf_str_var = NULL;
+    struct cni_network_list_conf *use_list = NULL;
 
-    if (manager == NULL || net_list_conf_str == NULL || result == NULL) {
+    if (manager == NULL || list == NULL || result == NULL) {
         ERROR("Invalid input params");
         return -1;
-    }
-
-    net_list_conf_str_var = util_strdup_s(net_list_conf_str);
-    if (net_list_conf_str_var == NULL) {
-        ERROR("Dup net list conf str failed");
-        ret = -1;
-        goto out;
     }
 
     rc = build_cni_runtime_conf(manager);
@@ -606,41 +597,34 @@ int attach_network_plane(const struct cni_manager *manager, const char *net_list
         goto out;
     }
 
-    if (inject_annotations_json(manager->annotations, &net_list_conf_str_var) != 0) {
+    if (inject_annotations_json(manager->annotations, list, &use_list) != 0) {
         ERROR("Inject annotations to net conf json failed");
         ret = -1;
         goto out;
     }
 
-    if (cni_add_network_list(net_list_conf_str_var, rc, result) != 0) {
+    if (cni_add_network_list(list, rc, result) != 0) {
         ERROR("Add CNI network failed");
         ret = -1;
         goto out;
     }
 
 out:
-    free(net_list_conf_str_var);
     free_runtime_conf(rc);
+    free_cni_network_list_conf(use_list);
     return ret;
 }
 
-int detach_network_plane(const struct cni_manager *manager, const char *net_list_conf_str,
+int detach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                          struct cni_opt_result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
-    char *net_list_conf_str_var = NULL;
+    struct cni_network_list_conf *use_list = NULL;
 
     if (manager == NULL) {
         ERROR("Invalid input params");
         return -1;
-    }
-
-    net_list_conf_str_var = util_strdup_s(net_list_conf_str);
-    if (net_list_conf_str_var == NULL) {
-        ERROR("Dup net list conf str failed");
-        ret = -1;
-        goto out;
     }
 
     rc = build_cni_runtime_conf(manager);
@@ -650,21 +634,21 @@ int detach_network_plane(const struct cni_manager *manager, const char *net_list
         goto out;
     }
 
-    if (inject_annotations_json(manager->annotations, &net_list_conf_str_var) != 0) {
+    if (inject_annotations_json(manager->annotations, list, &use_list) != 0) {
         ERROR("Inject annotations to net conf json failed");
         ret = -1;
         goto out;
     }
 
-    if (cni_del_network_list(net_list_conf_str, rc) != 0) {
+    if (cni_del_network_list(list, rc) != 0) {
         ERROR("Error deleting network");
         ret = -1;
         goto out;
     }
 
 out:
-    free(net_list_conf_str_var);
     free_runtime_conf(rc);
+    free_cni_network_list_conf(use_list);
     return ret;
 }
 
@@ -672,9 +656,7 @@ int detach_loopback(const char *id, const char *netns)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
-    char *net_list_conf_str = NULL;
 
-    net_list_conf_str = util_strdup_s(g_cni_manager.loopback_conf_str);
     rc = build_loopback_runtime_conf(id, netns);
     if (rc == NULL) {
         ERROR("Error building loopback runtime config");
@@ -682,14 +664,13 @@ int detach_loopback(const char *id, const char *netns)
         goto out;
     }
 
-    if (cni_del_network_list(net_list_conf_str, rc) != 0) {
+    if (cni_del_network_list(g_cni_manager.loopback_conf, rc) != 0) {
         ERROR("Error delete loopback network");
         ret = -1;
         goto out;
     }
 
 out:
-    free(net_list_conf_str);
     free_runtime_conf(rc);
     return ret;
 }
@@ -723,6 +704,13 @@ int cni_manager_store_init(const char *cache_dir, const char *conf_path, const c
 
     if (!cni_module_init(cache_dir, bin_paths, bin_paths_len)) {
         ERROR("Init libcni module failed");
+        ret = -1;
+        goto out;
+    }
+
+    g_cni_manager.loopback_conf = cni_conflist_from_bytes(LOOPBACK_CONFLIST_STR);
+    if (g_cni_manager.loopback_conf == NULL) {
+        ERROR("Init loopback config failed");
         ret = -1;
         goto out;
     }
