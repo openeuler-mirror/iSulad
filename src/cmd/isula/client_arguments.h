@@ -266,6 +266,9 @@ struct client_arguments {
     // isula run;
     bool detach;
 
+    // attach stdout/stderr
+    bool attach;
+
     bool interactive;
     // stop/kill/delete
     bool force;

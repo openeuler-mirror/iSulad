@@ -22,7 +22,6 @@
 #include <unistd.h>
 
 #include "error.h"
-#include "client_arguments.h"
 #include "isula_libutils/log.h"
 #include "isula_connect.h"
 #include "console.h"
@@ -30,6 +29,18 @@
 #include "isula_commands.h"
 #include "command_parser.h"
 #include "connect.h"
+#include "wait.h"
+
+#define START_OPTIONS(cmdargs)\
+    {                                             \
+        CMD_OPT_TYPE_BOOL,                            \
+        false,                                        \
+        "attach",                                     \
+        'a',                                          \
+        &(cmdargs).attach,  \
+        "Attach STDOUT/STDERR",   \
+        NULL                                          \
+    },
 
 const char g_cmd_start_desc[] = "Start one or more stopped containers";
 const char g_cmd_start_usage[] = "start [OPTIONS] CONTAINER [CONTAINER...]";
@@ -60,6 +71,7 @@ static int start_prepare_console(const struct client_arguments *args, struct ter
 {
     int ret = 0;
     int istty = 0;
+
 
     istty = isatty(0);
     if (istty && args->custom_conf.tty && args->custom_conf.attach_stdin) {
@@ -193,13 +205,107 @@ void client_restore_console(bool reset_tty, const struct termios *oldtios, struc
     sem_destroy(&g_console_waitexit_sem);
 }
 
+static int client_remote_start_set_tty(const struct client_arguments *args, bool *reset_tty, struct termios *oldtios)
+{
+    int istty = 0;
+
+    istty = isatty(0);
+    if (istty && args->custom_conf.tty && args->custom_conf.attach_stdin) {
+        if (setup_tios(0, oldtios)) {
+            ERROR("Failed to setup terminal properties");
+            return -1;
+        }
+        *reset_tty = true;
+    }
+    return 0;
+}
+
+int client_remote_start(const struct client_arguments *args)
+{
+    int ret = 0;
+    bool reset_tty = false;
+    isula_connect_ops *ops = NULL;
+    struct isula_start_request request = { 0 };
+    struct isula_start_response *response = NULL;
+    client_connect_config_t config = { 0 };
+    struct termios oldtios;
+
+    ops = get_connect_client_ops();
+    if (ops == NULL || ops->container.remote_start == NULL) {
+        ERROR("Unimplemented ops");
+        ret = ECOMMON;
+        goto out;
+    }
+
+    if (client_remote_start_set_tty(args, &reset_tty, &oldtios) != 0) {
+        ret = ECOMMON;
+        goto out;
+    }
+
+    request.name = args->name;
+    request.attach_stdin = args->custom_conf.attach_stdin;
+    request.attach_stdout = args->custom_conf.attach_stdout;
+    request.attach_stderr = args->custom_conf.attach_stderr;
+    response = util_common_calloc_s(sizeof(struct isula_start_response));
+    if (response == NULL) {
+        ERROR("Out of memory");
+        ret = ECOMMON;
+        goto out;
+    }
+
+    config = get_connect_config(args);
+    ret = ops->container.remote_start(&request, response, &config);
+    if (ret) {
+        client_print_error(response->cc, response->server_errono, response->errmsg);
+        ret = ECOMMON;
+        if (response->server_errono ||
+            (response->errmsg && !strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT)))) {
+            ret = ESERVERERROR;
+        }
+        goto out;
+    }
+
+out:
+    isula_start_response_free(response);
+    if (reset_tty && tcsetattr(0, TCSAFLUSH, &oldtios) < 0) {
+        ERROR("Failed to reset terminal properties");
+        return -1;
+    }
+    return ret;
+}
+
+static int local_attach_start()
+{
+    int ret = 0;
+    unsigned int exit_code = 0;
+    bool reset_tty = false;
+    struct termios oldtios;
+    struct command_fifo_config *console_fifos = NULL;
+
+    ret = client_start(&g_cmd_start_args, &reset_tty, &oldtios, &console_fifos);
+    if (ret != 0) {
+        goto free_out;
+    }
+
+    ret = client_wait(&g_cmd_start_args, &exit_code);
+    if (ret != 0) {
+        goto free_out;
+    }
+    ret = (int)exit_code;
+
+    client_wait_fifo_exit(&g_cmd_start_args);
+free_out:
+    client_restore_console(reset_tty, &oldtios, console_fifos);
+    return ret;
+}
+
 int cmd_start_main(int argc, const char **argv)
 {
     int ret = 0;
     int i = 0;
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_start_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_start_args) START_OPTIONS(g_cmd_start_args)};
 
     isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_start_args)) {
@@ -228,17 +334,44 @@ int cmd_start_main(int argc, const char **argv)
         exit(EINVALIDARGS);
     }
 
-    for (i = 0; i < g_cmd_start_args.argc; i++) {
-        g_cmd_start_args.name = g_cmd_start_args.argv[i];
-        if (client_start(&g_cmd_start_args, NULL, NULL, NULL)) {
-            ERROR("Container \"%s\" start failed", g_cmd_start_args.name);
-            ret = ECOMMON;
-            continue;
+    if (g_cmd_start_args.attach) {
+        if (g_cmd_start_args.argc > 1) {
+            COMMAND_ERROR("You cannot start and attach multiple containers at once");
+            exit(EINVALIDARGS);
         }
-        if (g_cmd_start_args.detach) {
-            printf("Container \"%s\" started\n", g_cmd_start_args.name);
+
+        g_cmd_start_args.name = g_cmd_start_args.argv[0];
+        g_cmd_start_args.custom_conf.attach_stderr = true;
+        g_cmd_start_args.custom_conf.attach_stdout = true;
+
+        if (strncmp(g_cmd_start_args.socket, "tcp://", strlen("tcp://")) == 0) {
+            ret = client_remote_start(&g_cmd_start_args);
+            if (ret != 0) {
+                ERROR("Failed to execute command with remote start");
+                goto out;
+            }
+        } else {
+            ret = local_attach_start();
+            if (ret != 0) {
+                ERROR("Failed to execute command with local attach start");
+                goto out;
+            }
+        }
+    } else {
+        for (i = 0; i < g_cmd_start_args.argc; i++) {
+            g_cmd_start_args.name = g_cmd_start_args.argv[i];
+
+            if (client_start(&g_cmd_start_args, NULL, NULL, NULL)) {
+                ERROR("Container \"%s\" start failed", g_cmd_start_args.name);
+                ret = ECOMMON;
+                continue;
+            }
+            if (g_cmd_start_args.detach) {
+                printf("Container \"%s\" started\n", g_cmd_start_args.name);
+            }
         }
     }
 
+out:
     return ret;
 }
