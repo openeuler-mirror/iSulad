@@ -34,7 +34,7 @@
 #include "isula_libutils/cni_net_conf_list.h"
 #include "libcni_api.h"
 
-static int do_conf_from_bytes(const char *conf_str, struct network_config *config)
+static int do_conf_from_bytes(const char *conf_str, struct cni_network_conf *config)
 {
     int ret = 0;
     parser_error jerr = NULL;
@@ -58,16 +58,16 @@ out:
     return ret;
 }
 
-struct network_config *conf_from_bytes(const char *conf_str)
+struct cni_network_conf *conf_from_bytes(const char *conf_str)
 {
-    struct network_config *config = NULL;
+    struct cni_network_conf *config = NULL;
 
     if (conf_str == NULL) {
         ERROR("Empty json");
         return NULL;
     }
 
-    config = util_common_calloc_s(sizeof(struct network_config));
+    config = util_common_calloc_s(sizeof(struct cni_network_conf));
     if (config == NULL) {
         ERROR("Out of memory");
         goto error_out;
@@ -80,7 +80,7 @@ struct network_config *conf_from_bytes(const char *conf_str)
     return config;
 
 error_out:
-    free_network_config(config);
+    free_cni_network_conf(config);
     return NULL;
 }
 
@@ -96,10 +96,10 @@ static char *do_get_cni_net_confs_json(const char *filename)
     return content;
 }
 
-struct network_config *conf_from_file(const char *filename)
+struct cni_network_conf *cni_conf_from_file(const char *filename)
 {
     char *content = NULL;
-    struct network_config *config = NULL;
+    struct cni_network_conf *config = NULL;
 
     if (filename == NULL) {
         ERROR("Invalid arguments");
@@ -149,12 +149,12 @@ static int check_cni_net_conf_list(const cni_net_conf_list *tmp_list)
     return do_check_cni_net_conf_list_plugins(tmp_list);
 }
 
-struct network_config_list *conflist_from_bytes(const char *json_str)
+struct cni_network_list_conf *cni_conflist_from_bytes(const char *json_str)
 {
     int ret = -1;
     parser_error jerr = NULL;
     cni_net_conf_list *tmp_list = NULL;
-    struct network_config_list *result = NULL;
+    struct cni_network_list_conf *result = NULL;
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
 
     if (json_str == NULL) {
@@ -162,7 +162,7 @@ struct network_config_list *conflist_from_bytes(const char *json_str)
         goto free_out;
     }
 
-    result = util_common_calloc_s(sizeof(struct network_config_list));
+    result = util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (result == NULL) {
         ERROR("Out of memory");
         goto free_out;
@@ -190,16 +190,16 @@ free_out:
     free(jerr);
     if (ret != 0) {
         free_cni_net_conf_list(tmp_list);
-        free_network_config_list(result);
+        free_cni_network_list_conf(result);
         result = NULL;
     }
     return result;
 }
 
-struct network_config_list *conflist_from_file(const char *filename)
+struct cni_network_list_conf *cni_conflist_from_file(const char *filename)
 {
     char *content = NULL;
-    struct network_config_list *list = NULL;
+    struct cni_network_list_conf *list = NULL;
 
     if (filename == NULL) {
         ERROR("Invalid arguments");
@@ -212,7 +212,7 @@ struct network_config_list *conflist_from_file(const char *filename)
         goto free_out;
     }
 
-    list = conflist_from_bytes(content);
+    list = cni_conflist_from_bytes(content);
 
 free_out:
     free(content);
@@ -349,7 +349,7 @@ static inline bool check_conf_files_args(const char *dir, const char * const *ex
     return (dir == NULL || extensions == NULL || result == NULL);
 }
 
-int conf_files(const char *dir, const char * const *extensions, size_t ext_len, char ***result)
+int cni_conf_files(const char *dir, const char * const *extensions, size_t ext_len, char ***result)
 {
     int ret = -1;
     int nret = -1;
@@ -383,7 +383,7 @@ free_out:
     return ret;
 }
 
-static int generate_new_conflist(const cni_net_conf_list *list, struct network_config_list *conf_list)
+static int generate_new_conflist(const cni_net_conf_list *list, struct cni_network_list_conf *conf_list)
 {
     struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
     parser_error jerr = NULL;
@@ -410,23 +410,23 @@ free_out:
     return ret;
 }
 
-static inline bool check_conflist_from_conf_args(const struct network_config *conf)
+static inline bool check_conflist_from_conf_args(const struct cni_network_conf *conf)
 {
     return (conf == NULL || conf->network == NULL);
 }
 
-struct network_config_list *conflist_from_conf(const struct network_config *conf)
+struct cni_network_list_conf *cni_conflist_from_conf(const struct cni_network_conf *conf)
 {
     int ret = -1;
     cni_net_conf_list *list = NULL;
-    struct network_config_list *conf_list = NULL;
+    struct cni_network_list_conf *conf_list = NULL;
 
     if (check_conflist_from_conf_args(conf)) {
         ERROR("Invalid arguments");
         goto free_out;
     }
 
-    conf_list = util_common_calloc_s(sizeof(struct network_config_list));
+    conf_list = util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (conf_list == NULL) {
         ERROR("Out of memory");
         goto free_out;
@@ -459,13 +459,13 @@ struct network_config_list *conflist_from_conf(const struct network_config *conf
 free_out:
     free_cni_net_conf_list(list);
     if (ret != 0) {
-        free_network_config_list(conf_list);
+        free_cni_network_list_conf(conf_list);
         conf_list = NULL;
     }
     return conf_list;
 }
 
-void free_network_config(struct network_config *config)
+void free_cni_network_conf(struct cni_network_conf *config)
 {
     if (config != NULL) {
         free_cni_net_conf(config->network);
@@ -476,7 +476,7 @@ void free_network_config(struct network_config *config)
     }
 }
 
-void free_network_config_list(struct network_config_list *conf_list)
+void free_cni_network_list_conf(struct cni_network_list_conf *conf_list)
 {
     if (conf_list != NULL) {
         free_cni_net_conf_list(conf_list->list);

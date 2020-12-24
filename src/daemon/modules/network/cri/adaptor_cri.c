@@ -90,22 +90,23 @@ int adaptor_cni_update_confs()
     }
 
     for (i = 0; i < tmp_net_list_len; i++) {
-        if (tmp_net_list[i] == NULL) {
+        struct cni_network_list_conf *iter = tmp_net_list[i];
+        if (iter == NULL) {
             continue;
         }
-        if (map_search(work, (void *)tmp_net_list[i]->name) != NULL) {
-            INFO("Ignore CNI network: %s, because already exist", tmp_net_list[i]->name);
+        if (map_search(work, (void *)iter->list->name) != NULL) {
+            INFO("Ignore CNI network: %s, because already exist", iter->list->name);
             continue;
         }
 
-        if (!map_replace(work, (void *)tmp_net_list[i]->name, (void *)&i)) {
-            ERROR("add net failed: %s", tmp_net_list[i]->name);
+        if (!map_replace(work, (void *)iter->list->name, (void *)&i)) {
+            ERROR("add net failed: %s", iter->list->name);
             ret = -1;
             goto out;
         }
-        if (strlen(tmp_net_list[i]->name) + 1 < MAX_BUFFER_SIZE - pos) {
-            sprintf(message + pos, "%s,", tmp_net_list[i]->name);
-            pos += strlen(tmp_net_list[i]->name) + 1;
+        if (strlen(iter->list->name) + 1 < MAX_BUFFER_SIZE - pos) {
+            sprintf(message + pos, "%s,", iter->list->name);
+            pos += strlen(iter->list->name) + 1;
         }
     }
 
@@ -129,7 +130,7 @@ out:
 }
 
 //int attach_network_plane(struct cni_manager *manager, const char *net_list_conf_str);
-typedef int (*net_op_t)(const struct cni_manager *manager, const char *net_list_conf_str,
+typedef int (*net_op_t)(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                         struct cni_opt_result **result);
 
 static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager *manager)
@@ -240,7 +241,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
         free_cni_opt_result(cni_result);
         cni_result = NULL;
 
-        if (op(&manager, g_net_store.conflist[*tmp_idx]->bytes, &cni_result) != 0) {
+        if (op(&manager, g_net_store.conflist[*tmp_idx], &cni_result) != 0) {
             ERROR("Do op on net: %s failed", conf->extral_nets[i]->name);
             ret = -1;
             goto out;
@@ -259,13 +260,13 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
         cni_result = NULL;
 
         manager.ifname = (char *)default_interface;
-        ret = op(&manager, g_net_store.conflist[default_idx]->bytes, &cni_result);
+        ret = op(&manager, g_net_store.conflist[default_idx], &cni_result);
         if (ret != 0) {
-            ERROR("Do op on default net: %s failed", g_net_store.conflist[default_idx]->name);
+            ERROR("Do op on default net: %s failed", g_net_store.conflist[default_idx]->list->name);
             goto out;
         }
 
-        if (do_append_cni_result(g_net_store.conflist[default_idx]->name, manager.ifname, cni_result, result) != 0) {
+        if (do_append_cni_result(g_net_store.conflist[default_idx]->list->name, manager.ifname, cni_result, result) != 0) {
             ERROR("parse cni result failed");
             ret = -1;
             goto out;

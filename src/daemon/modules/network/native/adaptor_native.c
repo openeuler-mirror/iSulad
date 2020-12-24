@@ -191,11 +191,11 @@ free_out:
 static int load_cni_list_from_file(const char *file, cni_net_conf_list **list)
 {
     int ret = 0;
-    struct network_config_list *li = NULL;
-    struct network_config *conf = NULL;
+    struct cni_network_list_conf *li = NULL;
+    struct cni_network_conf *conf = NULL;
 
     if (util_has_suffix(file, ".conflist")) {
-        li = conflist_from_file(file);
+        li = cni_conflist_from_file(file);
         if (li == NULL) {
             WARN("Failed to load config list from file %s", file);
             ret = -1;
@@ -205,7 +205,7 @@ static int load_cni_list_from_file(const char *file, cni_net_conf_list **list)
             goto out;
         }
     } else {
-        conf = conf_from_file(file);
+        conf = cni_conf_from_file(file);
         if (conf == NULL) {
             ret = -1;
             WARN("Failed to load config from file %s", file);
@@ -215,7 +215,7 @@ static int load_cni_list_from_file(const char *file, cni_net_conf_list **list)
             goto out;
         }
 
-        li = conflist_from_conf(conf);
+        li = cni_conflist_from_conf(conf);
         if (li == NULL) {
             ERROR("Failed to get conflist from conf");
             ret = -1;
@@ -229,8 +229,8 @@ static int load_cni_list_from_file(const char *file, cni_net_conf_list **list)
     li->list = NULL;
 
 out:
-    free_network_config_list(li);
-    free_network_config(conf);
+    free_cni_network_list_conf(li);
+    free_cni_network_conf(conf);
     return ret;
 }
 
@@ -244,7 +244,7 @@ static int load_cni_conflist(const char *cni_conf_dir, struct cni_conflist ***co
     struct cni_conflist **tmp_arr = NULL;
     cni_net_conf_list *li = NULL;
 
-    ret = conf_files(cni_conf_dir, g_network_config_exts, sizeof(g_network_config_exts) / sizeof(char *), &files);
+    ret = cni_conf_files(cni_conf_dir, g_network_config_exts, sizeof(g_network_config_exts) / sizeof(char *), &files);
     if (ret != 0) {
         ERROR("Failed to get conf files");
         ret = -1;
