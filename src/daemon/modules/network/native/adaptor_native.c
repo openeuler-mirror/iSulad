@@ -65,8 +65,8 @@ static native_store g_store = { 0 };
 
 static void native_conflist_kvfree(void *key, void *value)
 {
-    cni_net_conf_list *conf = (cni_net_conf_list *)value;
-    free_cni_net_conf_list(conf);
+    struct cni_network_list_conf *conf = (struct cni_network_list_conf *)value;
+    free_cni_network_list_conf(conf);
     free(key);
 }
 
