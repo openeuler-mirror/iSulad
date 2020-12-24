@@ -396,7 +396,7 @@ int get_net_conflist_from_dir(struct cni_network_list_conf ***store, size_t *res
 
     if (update_conflist_from_files(tmp_conflists, (const char **)files, files_num, &nets_num, filter_ops) != 0) {
         ERROR("Update conflist from files failed");
-        free_conflists_data(tmp_conflists, files_num);
+        free_conflists_data(tmp_conflists, nets_num);
         ret = -1;
         goto out;
     }

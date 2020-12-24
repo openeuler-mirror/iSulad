@@ -144,7 +144,6 @@ static int network_create_cb(const network_create_request *request, network_crea
     network_conflist_lock(EXCLUSIVE);
 
     ret = network_module_conf_create(NETWOKR_API_TYPE_NATIVE, request, response);
-    // TODO: support macvlan and other network drivers
 
     network_conflist_unlock();
 
@@ -191,14 +190,10 @@ static int network_inspect_cb(const network_inspect_request *request, network_in
         goto out;
     }
 
-    network_conflist_lock(SHARED);
-
     ret = network_module_conf_inspect(NETWOKR_API_TYPE_NATIVE, request->name, &network_json);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
     }
-
-    network_conflist_unlock();
 
 out:
     (*response)->cc = cc;
@@ -292,15 +287,11 @@ static int network_list_cb(const network_list_request *request, network_list_res
         goto out;
     }
 
-    network_conflist_lock(SHARED);
-
     ret = network_module_conf_list(NETWOKR_API_TYPE_NATIVE, filters, &(*response)->networks, &(*response)->networks_len);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         ERROR("Failed to list network");
     }
-
-    network_conflist_unlock();
 
 out:
     (*response)->cc = cc;
@@ -336,14 +327,10 @@ static int network_remove_cb(const network_remove_request *request, network_remo
         goto out;
     }
 
-    network_conflist_lock(EXCLUSIVE);
-
     ret = network_module_conf_rm(NETWOKR_API_TYPE_NATIVE, request->name, &(*response)->name);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
     }
-
-    network_conflist_unlock();
 
 out:
     (*response)->cc = cc;

@@ -62,8 +62,8 @@ void NetworkServiceImpl::create_response_to_grpc(const network_create_response *
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
     }
-    if (response->path != nullptr) {
-        gresponse->set_path(response->path);
+    if (response->name != nullptr) {
+        gresponse->set_name(response->name);
     }
     return;
 }

@@ -67,8 +67,8 @@ public:
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
         }
-        if (!gresponse->path().empty()) {
-            response->path = util_strdup_s(gresponse->path().c_str());
+        if (!gresponse->name().empty()) {
+            response->name = util_strdup_s(gresponse->name().c_str());
         }
         return 0;
     }
