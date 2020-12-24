@@ -1107,7 +1107,7 @@ static int do_create_conflist_file(const char *cni_conf_dir, cni_net_conf_list *
         goto out;
     }
 
-    if (util_atomic_write_file(conflist_file, conflist_json, strlen(conflist_json), CONFIG_FILE_MODE) != 0) {
+    if (util_atomic_write_file(conflist_file, conflist_json, strlen(conflist_json), CONFIG_FILE_MODE, true) != 0) {
         ERROR("Failed write %s", conflist_file);
         ret = -1;
         goto out;

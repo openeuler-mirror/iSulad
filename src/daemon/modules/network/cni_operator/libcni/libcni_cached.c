@@ -142,7 +142,7 @@ static int do_save_cache(const char *fname, const cni_cached_info *p_info)
         goto out;
     }
 
-    ret = util_atomic_write_file(fname, data, strlen(data), SECURE_CONFIG_FILE_MODE);
+    ret = util_atomic_write_file(fname, data, strlen(data), SECURE_CONFIG_FILE_MODE, true);
 
 out:
     free(data);
