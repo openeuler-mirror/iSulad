@@ -41,27 +41,28 @@ struct client_arguments g_cmd_run_args = {
     .restart = "no",
 };
 
-static int local_cmd_start(struct client_arguments *args, uint32_t *exit_code)
+static int local_cmd_start(const struct client_arguments *args)
 {
     int ret = 0;
     bool reset_tty = false;
     struct termios oldtios;
     struct command_fifo_config *console_fifos = NULL;
+    unsigned int exit_code = 0;
 
-    ret = client_start(&g_cmd_run_args, &reset_tty, &oldtios, &console_fifos);
+    ret = client_start(args, &reset_tty, &oldtios, &console_fifos);
     if (ret != 0) {
         goto free_out;
     }
 
-    if (!g_cmd_run_args.detach) {
-        ret = client_wait(&g_cmd_run_args, exit_code);
+    if (!args->detach) {
+        ret = client_wait(args, &exit_code);
         if (ret != 0) {
             goto free_out;
         }
-        ret = (int)(*exit_code);
+        ret = (int)exit_code;
     }
 
-    client_wait_fifo_exit(&g_cmd_run_args);
+    client_wait_fifo_exit(args);
 free_out:
     client_restore_console(reset_tty, &oldtios, console_fifos);
     return ret;
@@ -82,7 +83,7 @@ static int remote_cmd_start_set_tty(const struct client_arguments *args, bool *r
     return 0;
 }
 
-static int remote_cmd_start(const struct client_arguments *args, uint32_t *exit_code)
+static int remote_cmd_start(const struct client_arguments *args)
 {
     int ret = 0;
     bool reset_tty = false;
@@ -177,7 +178,6 @@ out:
 int cmd_run_main(int argc, const char **argv)
 {
     int ret = 0;
-    unsigned int exit_code = 0;
     command_t cmd = { 0 };
     struct isula_libutils_log_config lconf = { 0 };
 
@@ -221,13 +221,13 @@ int cmd_run_main(int argc, const char **argv)
     }
 
     if (strncmp(g_cmd_run_args.socket, "tcp://", strlen("tcp://")) == 0) {
-        ret = remote_cmd_start(&g_cmd_run_args, &exit_code);
+        ret = remote_cmd_start(&g_cmd_run_args);
         if (ret != 0) {
             ERROR("Failed to execute command with remote run");
             goto free_out;
         }
     } else {
-        ret = local_cmd_start(&g_cmd_run_args, &exit_code);
+        ret = local_cmd_start(&g_cmd_run_args);
         if (ret != 0) {
             ERROR("Failed to execute command with local run");
             goto free_out;
