@@ -22,8 +22,6 @@
 
 #include "errors.h"
 
-class CRIRuntimeServiceImpl;
-
 namespace Network {
 const std::string DEFAULT_NETWORK_PLANE_NAME = "default";
 const std::string DEFAULT_NETWORK_INTERFACE_NAME = "eth0";
@@ -93,7 +91,7 @@ private:
 
 class NetworkPlugin {
 public:
-    virtual void Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode,
+    virtual void Init(const std::string &hairpinMode,
                       const std::string &nonMasqueradeCIDR, int mtu, Errors &error) = 0;
 
     virtual void Event(const std::string &name, std::map<std::string, std::string> &details) = 0;
@@ -123,7 +121,7 @@ public:
 
     virtual ~NoopNetworkPlugin() = default;
 
-    void Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode, const std::string &nonMasqueradeCIDR,
+    void Init(const std::string &hairpinMode, const std::string &nonMasqueradeCIDR,
               int mtu, Errors &error) override;
 
     void Event(const std::string &name, std::map<std::string, std::string> &details) override;
@@ -221,7 +219,7 @@ private:
 };
 
 void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std::string networkPluginName,
-                       CRIRuntimeServiceImpl *criImpl, std::string hairpinMode, std::string nonMasqueradeCIDR, int mtu,
+                       std::string hairpinMode, std::string nonMasqueradeCIDR, int mtu,
                        std::shared_ptr<NetworkPlugin> *result, Errors &error);
 
 void ProbeNetworkPlugins(const std::string &pluginDir, const std::string &binDir,

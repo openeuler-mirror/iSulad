@@ -23,12 +23,14 @@
 
 #include "api.pb.h"
 #include "cri_runtime_service.h"
+#include "cri_constants.h"
 #include "cri_security_context.h"
 #include "cxxutils.h"
 #include "isula_libutils/log.h"
 #include "isula_libutils/parse_common.h"
 #include "path.h"
 #include "utils.h"
+#include "service_container_api.h"
 
 namespace CRIHelpers {
 const std::string Constants::DEFAULT_RUNTIME_NAME { "lcr" };
@@ -414,7 +416,7 @@ auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annota
     return result;
 }
 
-auto CheckpointToSandbox(const std::string &id, const cri::PodSandboxCheckpoint &checkpoint)
+auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
 -> std::unique_ptr<runtime::v1alpha2::PodSandbox>
 {
     std::unique_ptr<runtime::v1alpha2::PodSandbox> result(new (std::nothrow) runtime::v1alpha2::PodSandbox);
@@ -452,7 +454,7 @@ void UpdateCreateConfig(container_config *createConfig, host_config *hc,
     if (config.linux().has_resources()) {
         runtime::v1alpha2::LinuxContainerResources rOpts = config.linux().resources();
         hc->memory = rOpts.memory_limit_in_bytes();
-        hc->memory_swap = CRIRuntimeService::Constants::DefaultMemorySwap;
+        hc->memory_swap = CRI::Constants::DefaultMemorySwap;
         hc->cpu_shares = rOpts.cpu_shares();
         hc->cpu_quota = rOpts.cpu_quota();
         hc->cpu_period = rOpts.cpu_period();
@@ -641,7 +643,7 @@ auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, E
     return seccompSecurityOpts;
 }
 
-auto CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string
+auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string
 {
     cri_checkpoint *criCheckpoint { nullptr };
     struct parser_context ctx {
@@ -684,7 +686,7 @@ out:
     return result;
 }
 
-void GetCheckpoint(const std::string &jsonCheckPoint, cri::PodSandboxCheckpoint &checkpoint, Errors &error)
+void GetCheckpoint(const std::string &jsonCheckPoint, CRI::PodSandboxCheckpoint &checkpoint, Errors &error)
 {
     cri_checkpoint *criCheckpoint { nullptr };
     struct parser_context ctx {
@@ -725,4 +727,243 @@ out:
     free_cri_checkpoint(criCheckpoint);
 }
 
+
+auto InspectContainer(const std::string &Id, Errors &err, bool with_host_config) -> container_inspect *
+{
+    container_inspect *inspect_data { nullptr };
+
+    inspect_data = inspect_container((const char *)Id.c_str(), 0, with_host_config);
+    if (inspect_data == nullptr) {
+        err.Errorf("Failed to call inspect service %s", Id.c_str());
+    }
+
+    return inspect_data;
+}
+
+int32_t ToInt32Timeout(int64_t timeout)
+{
+    if (timeout > INT32_MAX) {
+        return INT32_MAX;
+    } else if (timeout < INT32_MIN) {
+        return INT32_MIN;
+    }
+
+    return (int32_t)timeout;
+}
+
+void GetContainerLogPath(const std::string &containerID, char **path, char **realPath,
+                         Errors &error)
+{
+    container_inspect *info = InspectContainer(containerID, error, false);
+    if (info == nullptr || error.NotEmpty()) {
+        error.Errorf("failed to inspect container %s: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+
+    if (info->config != nullptr && (info->config->labels != nullptr)) {
+        for (size_t i = 0; i < info->config->labels->len; i++) {
+            if (strcmp(info->config->labels->keys[i], CRIHelpers::Constants::CONTAINER_LOGPATH_LABEL_KEY.c_str()) ==
+                0 &&
+                strcmp(info->config->labels->values[i], "") != 0) {
+                *path = util_strdup_s(info->config->labels->values[i]);
+                break;
+            }
+        }
+    }
+
+    if (info->log_path != nullptr && strcmp(info->log_path, "") != 0) {
+        *realPath = util_strdup_s(info->log_path);
+    }
+    free_container_inspect(info);
+}
+
+// CreateContainerLogSymlink creates the symlink for container log.
+void RemoveContainerLogSymlink(const std::string &containerID, Errors &error)
+{
+    char *path { nullptr };
+    char *realPath { nullptr };
+
+    GetContainerLogPath(containerID, &path, &realPath, error);
+    if (error.NotEmpty()) {
+        error.Errorf("Failed to get container %s log path: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+
+    if (path != nullptr) {
+        // Only remove the symlink when container log path is specified.
+        if (util_path_remove(path) != 0 && errno != ENOENT) {
+            error.Errorf("Failed to remove container %s log symlink %s: %s", containerID.c_str(), path,
+                         strerror(errno));
+            goto cleanup;
+        }
+    }
+cleanup:
+    free(path);
+    free(realPath);
+}
+
+void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
+                            int64_t *startedAt, int64_t *finishedAt, Errors &err)
+{
+    if (inspect == nullptr) {
+        err.SetError("Invalid arguments");
+        return;
+    }
+    if (createdAt != nullptr) {
+        if (util_to_unix_nanos_from_str(inspect->created, createdAt) != 0) {
+            err.Errorf("Parse createdAt failed: %s", inspect->created);
+            return;
+        }
+    }
+    if (inspect->state != nullptr) {
+        if (startedAt != nullptr) {
+            if (util_to_unix_nanos_from_str(inspect->state->started_at, startedAt) != 0) {
+                err.Errorf("Parse startedAt failed: %s", inspect->state->started_at);
+                return;
+            }
+        }
+        if (finishedAt != nullptr) {
+            if (util_to_unix_nanos_from_str(inspect->state->finished_at, finishedAt) != 0) {
+                err.Errorf("Parse finishedAt failed: %s", inspect->state->finished_at);
+                return;
+            }
+        }
+    }
+}
+
+std::string GetRealContainerOrSandboxID(service_executor_t *cb, const std::string &id, bool isSandbox, Errors &error)
+{
+    std::string realID;
+
+    if (cb == nullptr || cb->container.get_id == nullptr) {
+        error.SetError("Unimplemented callback");
+        return realID;
+    }
+    container_get_id_request *request { nullptr };
+    container_get_id_response *response { nullptr };
+    request = (container_get_id_request *)util_common_calloc_s(sizeof(container_get_id_request));
+    if (request == nullptr) {
+        error.SetError("Out of memory");
+        goto cleanup;
+    }
+    request->id_or_name = util_strdup_s(id.c_str());
+    if (isSandbox) {
+        std::string label = CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY + "=" +
+                            CRIHelpers::Constants::CONTAINER_TYPE_LABEL_SANDBOX;
+        request->label = util_strdup_s(label.c_str());
+    } else {
+        std::string label = CRIHelpers::Constants::CONTAINER_TYPE_LABEL_KEY + "=" +
+                            CRIHelpers::Constants::CONTAINER_TYPE_LABEL_CONTAINER;
+        request->label = util_strdup_s(label.c_str());
+    }
+
+    if (cb->container.get_id(request, &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+            goto cleanup;
+        } else {
+            error.SetError("Failed to call get id callback");
+            goto cleanup;
+        }
+    }
+    if (strncmp(response->id, id.c_str(), id.length()) != 0) {
+        error.Errorf("No such container with id: %s", id.c_str());
+        goto cleanup;
+    }
+
+    realID = response->id;
+
+cleanup:
+    free_container_get_id_request(request);
+    free_container_get_id_response(response);
+    return realID;
+}
+
+void RemoveContainer(service_executor_t *cb, const std::string &containerID, Errors &error)
+{
+    if (containerID.empty()) {
+        error.SetError("Invalid empty container id.");
+        return;
+    }
+    std::string realContainerID = GetRealContainerOrSandboxID(cb, containerID, false, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        error.Errorf("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+
+    if (cb == nullptr || cb->container.remove == nullptr) {
+        error.SetError("Unimplemented callback");
+        return;
+    }
+
+    container_delete_response *response { nullptr };
+    container_delete_request *request =
+        (container_delete_request *)util_common_calloc_s(sizeof(container_delete_request));
+    if (request == nullptr) {
+        error.SetError("Out of memory");
+        goto cleanup;
+    }
+    request->id = util_strdup_s(realContainerID.c_str());
+    request->force = true;
+
+    RemoveContainerLogSymlink(realContainerID, error);
+    if (error.NotEmpty()) {
+        goto cleanup;
+    }
+
+    if (cb->container.remove(request, &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to call remove container callback");
+        }
+        goto cleanup;
+    }
+
+cleanup:
+    free_container_delete_request(request);
+    free_container_delete_response(response);
+}
+
+void StopContainer(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error)
+{
+    if (containerID.empty()) {
+        error.SetError("Invalid empty container id.");
+        return;
+    }
+    std::string realContainerID = CRIHelpers::GetRealContainerOrSandboxID(cb, containerID, false, error);
+    if (error.NotEmpty()) {
+        ERROR("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        error.Errorf("Failed to find container id %s: %s", containerID.c_str(), error.GetCMessage());
+        return;
+    }
+
+    if (cb == nullptr || cb->container.stop == nullptr) {
+        error.SetError("Unimplemented callback");
+        return;
+    }
+    container_stop_response *response { nullptr };
+    container_stop_request *request = (container_stop_request *)util_common_calloc_s(sizeof(container_stop_request));
+    if (request == nullptr) {
+        error.SetError("Out of memory");
+        goto cleanup;
+    }
+    request->id = util_strdup_s(realContainerID.c_str());
+    // int32 is enough for timeout
+    request->timeout = CRIHelpers::ToInt32Timeout(timeout);
+
+    if (cb->container.stop(request, &response) != 0) {
+        if (response != nullptr && response->errmsg != nullptr) {
+            error.SetError(response->errmsg);
+        } else {
+            error.SetError("Failed to call stop container callback");
+        }
+        goto cleanup;
+    }
+
+cleanup:
+    free_container_stop_request(request);
+    free_container_stop_response(response);
+}
 } // namespace CRIHelpers

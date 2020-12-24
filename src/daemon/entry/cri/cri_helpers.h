@@ -28,7 +28,7 @@
 #include "isula_libutils/cri_pod_network.h"
 #include "isula_libutils/docker_seccomp.h"
 #include "isula_libutils/host_config.h"
-
+#include "isula_libutils/container_inspect.h"
 namespace CRIHelpers {
 class Constants {
 public:
@@ -97,7 +97,7 @@ auto sha256(const char *val) -> std::string;
 auto GetNetworkPlaneFromPodAnno(const std::map<std::string, std::string> &annotations, size_t *len, Errors &error)
 -> cri_pod_network_element **;
 
-auto CheckpointToSandbox(const std::string &id, const cri::PodSandboxCheckpoint &checkpoint)
+auto CheckpointToSandbox(const std::string &id, const CRI::PodSandboxCheckpoint &checkpoint)
 -> std::unique_ptr<runtime::v1alpha2::PodSandbox>;
 
 auto StringsJoin(const std::vector<std::string> &vec, const std::string &sep) -> std::string;
@@ -119,10 +119,27 @@ auto ToIsuladContainerStatus(const runtime::v1alpha2::ContainerStateValue &state
 auto GetSecurityOpts(const std::string &seccompProfile, const char &separator, Errors &error)
 -> std::vector<std::string>;
 
-auto CreateCheckpoint(cri::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
+auto CreateCheckpoint(CRI::PodSandboxCheckpoint &checkpoint, Errors &error) -> std::string;
 
-void GetCheckpoint(const std::string &jsonCheckPoint, cri::PodSandboxCheckpoint &checkpoint, Errors &error);
+void GetCheckpoint(const std::string &jsonCheckPoint, CRI::PodSandboxCheckpoint &checkpoint, Errors &error);
 
+auto InspectContainer(const std::string &Id, Errors &err, bool with_host_config) -> container_inspect *;
+
+auto ToInt32Timeout(int64_t timeout) -> int32_t;
+
+void GetContainerLogPath(const std::string &containerID, char **path, char **realPath, Errors &error);
+
+void RemoveContainerLogSymlink(const std::string &containerID, Errors &error);
+
+void GetContainerTimeStamps(const container_inspect *inspect, int64_t *createdAt,
+                            int64_t *startedAt, int64_t *finishedAt, Errors &err);
+
+auto GetRealContainerOrSandboxID(service_executor_t *cb, const std::string &id,
+                                 bool isSandbox, Errors &error) -> std::string;
+
+void RemoveContainer(service_executor_t *cb, const std::string &containerID, Errors &error);
+
+void StopContainer(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error);
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_CRI_HELPERS_H

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -19,15 +19,15 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "cri_services.h"
+// #include "cri_services.h"
 #include "image_api.h"
+#include "cri_image_manager_service.h"
 
-class CRIImageServiceImpl : public cri::ImageManagerService {
+namespace CRI {
+class ImageManagerServiceImpl : public ImageManagerService {
 public:
-    CRIImageServiceImpl() = default;
-    CRIImageServiceImpl(const CRIImageServiceImpl &) = delete;
-    CRIImageServiceImpl &operator=(const CRIImageServiceImpl &) = delete;
-    virtual ~CRIImageServiceImpl() = default;
+    ImageManagerServiceImpl() = default;
+    virtual ~ImageManagerServiceImpl() = default;
 
     void ListImages(const runtime::v1alpha2::ImageFilter &filter,
                     std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error) override;
@@ -62,4 +62,5 @@ private:
     int remove_request_from_grpc(const runtime::v1alpha2::ImageSpec *image, im_rmi_request **request, Errors &error);
 };
 
+} // namespace CRI
 #endif // DAEMON_ENTRY_CRI_CRI_IMAGE_SERVICE_H

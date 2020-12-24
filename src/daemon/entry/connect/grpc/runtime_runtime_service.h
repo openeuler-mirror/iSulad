@@ -17,6 +17,7 @@
 #define DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_RUNTIME_SERVICE_H
 
 #include "api.grpc.pb.h"
+#include <memory>
 #include "callback.h"
 #include "cri_runtime_service.h"
 #include "network_plugin.h"
@@ -103,7 +104,7 @@ public:
                         runtime::v1alpha2::StatusResponse *reply) override;
 
 private:
-    CRIRuntimeServiceImpl rService;
+    std::unique_ptr<CRI::CRIRuntimeService> rService;
 };
 
 #endif // DAEMON_ENTRY_CONNECT_GRPC_RUNTIME_RUNTIME_SERVICE_H

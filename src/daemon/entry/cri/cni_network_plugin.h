@@ -28,6 +28,7 @@
 #include "errors.h"
 #include "network_plugin.h"
 #include "utils.h"
+#include "isula_libutils/container_inspect.h"
 
 namespace Network {
 #define UNUSED(x) ((void)(x))
@@ -89,7 +90,7 @@ public:
 
     virtual ~CniNetworkPlugin();
 
-    void Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode, const std::string &nonMasqueradeCIDR,
+    void Init(const std::string &hairpinMode, const std::string &nonMasqueradeCIDR,
               int mtu, Errors &error) override;
 
     void Event(const std::string &name, std::map<std::string, std::string> &details) override;
@@ -113,6 +114,10 @@ public:
     void Status(Errors &error) override;
 
     virtual void SetLoNetwork(std::unique_ptr<CNINetwork> lo);
+
+private:
+    auto GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string;
+
 
 private:
     virtual void PlatformInit(Errors &error);
@@ -171,7 +176,6 @@ private:
     std::unique_ptr<CNINetwork> m_defaultNetwork { nullptr };
     std::map<std::string, std::unique_ptr<CNINetwork>> m_mutlNetworks;
 
-    CRIRuntimeServiceImpl *m_criImpl { nullptr };
     std::string m_nsenterPath;
     std::string m_confDir;
     std::vector<std::string> m_binDirs;

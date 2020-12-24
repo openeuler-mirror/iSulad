@@ -21,8 +21,8 @@
 #include <unistd.h>
 #include <clibcni/types.h>
 
-#include "isula_libutils/log.h"
 #include "utils.h"
+#include "isula_libutils/log.h"
 #include "sysctl_tools.h"
 #include "cri_runtime_service.h"
 
@@ -187,7 +187,7 @@ void GetPodIP(const std::string &nsenterPath, const std::string &netnsPath, cons
 }
 
 void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std::string networkPluginName,
-                       CRIRuntimeServiceImpl *criImpl, std::string hairpinMode, std::string nonMasqueradeCIDR, int mtu,
+                       std::string hairpinMode, std::string nonMasqueradeCIDR, int mtu,
                        std::shared_ptr<NetworkPlugin> *result, Errors &err)
 {
     std::string allErr { "" };
@@ -199,7 +199,7 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
             ERROR("Out of memory");
             return;
         }
-        (*result)->Init(criImpl, hairpinMode, nonMasqueradeCIDR, mtu, err);
+        (*result)->Init(hairpinMode, nonMasqueradeCIDR, mtu, err);
         return;
     }
 
@@ -224,7 +224,7 @@ void InitNetworkPlugin(std::vector<std::shared_ptr<NetworkPlugin>> *plugins, std
     }
     *result = pluginMap.find(networkPluginName)->second;
 
-    (*result)->Init(criImpl, hairpinMode, nonMasqueradeCIDR, mtu, err);
+    (*result)->Init(hairpinMode, nonMasqueradeCIDR, mtu, err);
     if (err.NotEmpty()) {
         allErr += ("Network plugin " + networkPluginName + " failed init: " + err.GetMessage());
         err.SetError(allErr);
@@ -485,7 +485,7 @@ unlock:
     Unlock(fullName, error);
 }
 
-void NoopNetworkPlugin::Init(CRIRuntimeServiceImpl *criImpl, const std::string &hairpinMode,
+void NoopNetworkPlugin::Init(const std::string &hairpinMode,
                              const std::string &nonMasqueradeCIDR, int mtu, Errors &error)
 {
     char *stderr_str { nullptr };

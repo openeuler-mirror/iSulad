@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
  * iSulad licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
@@ -8,14 +8,12 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: tanyifeng
- * Create: 2017-11-22
- * Description: provide cri service function definition
+ * Author: wujing
+ * Create: 2020-12-15
+ * Description: provide cri container manager service function definition
  *********************************************************************************/
-#ifndef DAEMON_ENTRY_CRI_CRI_SERVICES_H
-#define DAEMON_ENTRY_CRI_CRI_SERVICES_H
-
-#include <cstdint>
+#ifndef DAEMON_ENTRY_CRI_CONTAINER_MANAGER_H
+#define DAEMON_ENTRY_CRI_CONTAINER_MANAGER_H
 #include <memory>
 #include <string>
 #include <vector>
@@ -23,15 +21,12 @@
 #include "api.pb.h"
 #include "errors.h"
 
-namespace cri {
-class RuntimeVersioner {
+namespace CRI {
+class ContainerManagerService {
 public:
-    virtual void Version(const std::string &apiVersion, runtime::v1alpha2::VersionResponse *versionResponse,
-                         Errors &error) = 0;
-};
+    ContainerManagerService() = default;
+    virtual ~ContainerManagerService() = default;
 
-class ContainerManager {
-public:
     virtual auto CreateContainer(const std::string &podSandboxID,
                                  const runtime::v1alpha2::ContainerConfig &containerConfig,
                                  const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
@@ -67,49 +62,6 @@ public:
     virtual void Attach(const runtime::v1alpha2::AttachRequest &req, runtime::v1alpha2::AttachResponse *resp,
                         Errors &error) = 0;
 };
+} // namespace CRI
 
-class PodSandboxManager {
-public:
-    virtual auto RunPodSandbox(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &runtimeHandler,
-                               Errors &error) -> std::string = 0;
-
-    virtual void StopPodSandbox(const std::string &podSandboxID, Errors &error) = 0;
-
-    virtual void RemovePodSandbox(const std::string &podSandboxID, Errors &error) = 0;
-
-    virtual auto PodSandboxStatus(const std::string &podSandboxID,
-                                  Errors &error) -> std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> = 0;
-
-    virtual void ListPodSandbox(const runtime::v1alpha2::PodSandboxFilter *filter,
-                                std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods, Errors &error) = 0;
-
-    virtual void PortForward(const runtime::v1alpha2::PortForwardRequest &req,
-                             runtime::v1alpha2::PortForwardResponse *resp, Errors &error) = 0;
-};
-
-class RuntimeManager {
-public:
-    virtual void UpdateRuntimeConfig(const runtime::v1alpha2::RuntimeConfig &config, Errors &error) = 0;
-
-    virtual auto Status(Errors &error) -> std::unique_ptr<runtime::v1alpha2::RuntimeStatus> = 0;
-};
-
-class ImageManagerService {
-public:
-    virtual void ListImages(const runtime::v1alpha2::ImageFilter &filter,
-                            std::vector<std::unique_ptr<runtime::v1alpha2::Image>> *images, Errors &error) = 0;
-
-    virtual auto ImageStatus(const runtime::v1alpha2::ImageSpec &image,
-                             Errors &error) -> std::unique_ptr<runtime::v1alpha2::Image> = 0;
-
-    virtual auto PullImage(const runtime::v1alpha2::ImageSpec &image, const runtime::v1alpha2::AuthConfig &auth,
-                           Errors &error) -> std::string = 0;
-
-    virtual void RemoveImage(const runtime::v1alpha2::ImageSpec &image, Errors &error) = 0;
-
-    virtual void ImageFsInfo(std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> *usages,
-                             Errors &error) = 0;
-};
-
-} // namespace cri
-#endif // DAEMON_ENTRY_CRI_CRI_SERVICES_H
+#endif // DAEMON_ENTRY_CRI_CONTAINER_MANAGER_H
