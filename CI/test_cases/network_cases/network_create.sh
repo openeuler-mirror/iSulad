@@ -59,9 +59,10 @@ function test_network_create()
     isula network create --subnet 192.172.58.0/24 --gateway 192.0.0.1 2>&1 | grep "not match"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network success by specifing unmatch subnet gateway, but should failed" && return ${FAILURE}
 
-    file=$(isula network create --subnet 192.172.58.0/24 ${name1} | awk 'END {print}')
+    isula network create --subnet 192.172.58.0/24 ${name1} | awk 'END {print}'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name1} failed" && return ${FAILURE}
-    [ ! -f ${file} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file} not exist" && return ${FAILURE}
+    file1="/etc/cni/net.d/isulacni-${name1}.conflist"
+    [ ! -f ${file1} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file1} not exist" && return ${FAILURE}
 
     isula network create ${name1} 2>&1 | grep "has been used"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name1} success, but should failed" && return ${FAILURE}
@@ -69,27 +70,28 @@ function test_network_create()
     isula network create --subnet 192.172.58.0/24 2>&1 | grep "conflict with CNI config or host network"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network success by specifing conflict subnet, but should failed" && return ${FAILURE}
 
-    cat ${file} | grep '"subnet": "192.172.58.0/24"'
+    cat ${file1} | grep '"subnet": "192.172.58.0/24"'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no specified subnet in file" && return ${FAILURE}
 
-    cat ${file} | grep '"gateway": "192.172.58.1"'
+    cat ${file1} | grep '"gateway": "192.172.58.1"'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no gateway in file" && return ${FAILURE}
 
-    cat ${file} | grep '"name": "'${name1}'"'
+    cat ${file1} | grep '"name": "'${name1}'"'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no specified name in file" && return ${FAILURE}
 
-    cat ${file} | grep '"isGateway": true'
+    cat ${file1} | grep '"isGateway": true'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no isGateway in file" && return ${FAILURE}
 
-    cat ${file} | grep '"ipMasq": true'
+    cat ${file1} | grep '"ipMasq": true'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no ipMasq in file" && return ${FAILURE}
 
-    rm -f ${file}
+    rm -f ${file1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${file} failed" && return ${FAILURE}
 
-    file=$(isula network create -d bridge --internal | awk 'END {print}')
+    name=$(isula network create -d bridge --internal | awk 'END {print}')
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing bridge failed" && return ${FAILURE}
 
+    file="/etc/cni/net.d/isulacni-${name}.conflist"
     cat ${file} | grep '"isGateway": true'
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - find isGateway in file, but should not" && return ${FAILURE}
 
@@ -99,9 +101,10 @@ function test_network_create()
     rm -f ${file}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${file} failed" && return ${FAILURE}
 
-    file=$(isula network create --subnet fff0:3::3/64 | awk 'END {print}')
+    name=$(isula network create --subnet fff0:3::3/64 | awk 'END {print}')
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing IPv6 subnet" && return ${FAILURE}
 
+    file="/etc/cni/net.d/isulacni-${name}.conflist"
     cat ${file} | grep '"subnet": "fff0:3::3/64",'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no specified subnet in file" && return ${FAILURE}
 

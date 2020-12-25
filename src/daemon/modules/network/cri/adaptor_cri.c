@@ -129,6 +129,11 @@ out:
     return ret;
 }
 
+int adaptor_cni_init_confs(const char *conf_dir, const char **bin_paths, const size_t bin_paths_len)
+{
+    return adaptor_cni_update_confs();
+}
+
 //int attach_network_plane(struct cni_manager *manager, const char *net_list_conf_str);
 typedef int (*net_op_t)(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                         struct cni_opt_result **result);

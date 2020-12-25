@@ -64,14 +64,14 @@ int network_create(const struct client_arguments *args)
 
     config = get_connect_config(args);
     ret = ops->network.create(&request, response, &config);
-    if (ret != 0 || response->path == NULL) {
+    if (ret != 0 || response->name == NULL) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
         goto out;
     }
     if (response->errmsg != NULL) {
         COMMAND_ERROR("%s", response->errmsg);
     }
-    printf("%s\n", response->path);
+    printf("%s\n", response->name);
 
 out:
     isula_network_create_response_free(response);

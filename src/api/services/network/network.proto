@@ -39,7 +39,7 @@ message NetworkCreateRequest {
 }
 
 message NetworkCreateResponse {
-	string path = 1;
+	string name = 1;
 	uint32 cc = 2;
 	string errmsg = 3;
 }

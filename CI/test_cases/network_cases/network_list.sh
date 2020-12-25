@@ -38,12 +38,14 @@ function test_network_list()
     start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-    file1=$(isula network create ${name1} | awk 'END {print}')
+    isula network create ${name1} | awk 'END {print}'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name1} failed" && return ${FAILURE}
+    file1="/etc/cni/net.d/isulacni-${name1}.conflist"
     [ ! -f ${file1} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file1} not exist" && return ${FAILURE}
 
-    file2=$(isula network create ${name2} | awk 'END {print}')
+    isula network create ${name2} | awk 'END {print}'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name2} failed" && return ${FAILURE}
+    file2="/etc/cni/net.d/isulacni-${name2}.conflist"
     [ ! -f ${file2} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file2} not exist" && return ${FAILURE}
 
     isula network ls -q | grep ${name1} 

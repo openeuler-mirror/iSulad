@@ -626,7 +626,7 @@ struct isula_network_create_request {
 };
 
 struct isula_network_create_response {
-    char *path;
+    char *name;
     uint32_t cc;
     uint32_t server_errono;
     char *errmsg;
