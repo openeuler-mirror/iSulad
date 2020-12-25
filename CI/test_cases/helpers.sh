@@ -152,6 +152,22 @@ function check_valgrind_log() {
     return 0
 }
 
+function start_isulad_without_valgrind() {
+    isulad $@ -l DEBUG > /dev/null 2>&1 & 
+    wait_isulad_running
+}
+
+function stop_isulad_without_valgrind() {
+    pid=$(cat /var/run/isulad.pid)
+    kill -15 $pid
+    check_isulad_stopped $pid
+    if [[ $? -ne 0 ]]; then
+        echo "isulad process is still alive"
+        return 1
+    fi
+    return 0
+}
+
 function init_cni_conf()
 {
     dtpath="$1"
