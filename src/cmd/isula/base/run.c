@@ -68,75 +68,6 @@ free_out:
     return ret;
 }
 
-static int remote_cmd_start_set_tty(const struct client_arguments *args, bool *reset_tty, struct termios *oldtios)
-{
-    int istty = 0;
-
-    istty = isatty(0);
-    if (istty && args->custom_conf.tty && args->custom_conf.attach_stdin) {
-        if (setup_tios(0, oldtios)) {
-            ERROR("Failed to setup terminal properties");
-            return -1;
-        }
-        *reset_tty = true;
-    }
-    return 0;
-}
-
-static int remote_cmd_start(const struct client_arguments *args)
-{
-    int ret = 0;
-    bool reset_tty = false;
-    isula_connect_ops *ops = NULL;
-    struct isula_start_request request = { 0 };
-    struct isula_start_response *response = NULL;
-    client_connect_config_t config = { 0 };
-    struct termios oldtios;
-
-    ops = get_connect_client_ops();
-    if (ops == NULL || ops->container.remote_start == NULL) {
-        ERROR("Unimplemented ops");
-        ret = ECOMMON;
-        goto out;
-    }
-
-    if (remote_cmd_start_set_tty(args, &reset_tty, &oldtios) != 0) {
-        ret = ECOMMON;
-        goto out;
-    }
-
-    request.name = args->name;
-    request.attach_stdin = args->custom_conf.attach_stdin;
-    request.attach_stdout = args->custom_conf.attach_stdout;
-    request.attach_stderr = args->custom_conf.attach_stderr;
-    response = util_common_calloc_s(sizeof(struct isula_start_response));
-    if (response == NULL) {
-        ERROR("Out of memory");
-        ret = ECOMMON;
-        goto out;
-    }
-
-    config = get_connect_config(args);
-    ret = ops->container.remote_start(&request, response, &config);
-    if (ret) {
-        client_print_error(response->cc, response->server_errono, response->errmsg);
-        ret = ECOMMON;
-        if (response->server_errono ||
-            (response->errmsg && !strcmp(response->errmsg, errno_to_error_message(ISULAD_ERR_CONNECT)))) {
-            ret = ESERVERERROR;
-        }
-        goto out;
-    }
-
-out:
-    isula_start_response_free(response);
-    if (reset_tty && tcsetattr(0, TCSAFLUSH, &oldtios) < 0) {
-        ERROR("Failed to reset terminal properties");
-        return -1;
-    }
-    return ret;
-}
-
 static int do_resize_run_console(const struct client_arguments *args, unsigned int height, unsigned int width)
 {
     int ret = 0;
@@ -221,7 +152,7 @@ int cmd_run_main(int argc, const char **argv)
     }
 
     if (strncmp(g_cmd_run_args.socket, "tcp://", strlen("tcp://")) == 0) {
-        ret = remote_cmd_start(&g_cmd_run_args);
+        ret = client_remote_start(&g_cmd_run_args);
         if (ret != 0) {
             ERROR("Failed to execute command with remote run");
             goto free_out;
