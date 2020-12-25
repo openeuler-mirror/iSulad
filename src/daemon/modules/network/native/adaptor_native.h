@@ -24,6 +24,10 @@ bool native_check();
 
 void native_destory();
 
+int native_attach_networks(const network_api_conf *conf, network_api_result_list *result);
+
+int native_detach_networks(const network_api_conf *conf, network_api_result_list *result);
+
 int native_config_create(const network_create_request *request, network_create_response **response);
 
 int native_config_inspect(const char *name, char **network_json);
