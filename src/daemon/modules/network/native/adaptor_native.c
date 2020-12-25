@@ -26,6 +26,7 @@
 #include "isulad_config.h"
 #include "isula_libutils/log.h"
 #include "utils_network.h"
+#include "network_tools.h"
 #include "cni_operate.h"
 
 #define NETWOKR_DRIVER_BRIDGE "bridge"
@@ -1687,4 +1688,148 @@ int native_config_remove(const char *name, char **res_name)
     native_store_unlock();
     free(path);
     return 0;
+}
+
+static int do_native_append_cni_result(const char *name, const char *interface, const struct cni_opt_result *cni_result,
+                                       network_api_result_list *list)
+{
+    struct network_api_result *work = NULL;
+
+    work = network_parse_to_api_result(name, interface, cni_result);
+    if (work == NULL) {
+        return -1;
+    }
+
+    if (network_api_result_list_append(work, list)) {
+        return 0;
+    }
+
+    free_network_api_result(work);
+    return -1;
+}
+
+static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofound, cni_op_t op,
+                                 network_api_result_list *list)
+{
+    int ret = 0;
+    size_t i;
+    struct cni_manager manager = { 0 };
+    struct cni_opt_result *cni_result = NULL;
+
+    // Step1, build cni manager config
+    manager.annotations = conf->annotations;
+    manager.id = conf->pod_id;
+    manager.netns_path = conf->netns_path;
+    manager.cni_args = conf->args;
+
+    // Step 2, foreach operator for all network plane
+    for (i = 0; i < conf->extral_nets_len; i++) {
+        struct cni_network_list_conf *use_conf = NULL;
+
+        if (conf->extral_nets[i] == NULL || conf->extral_nets[i]->name == NULL ||
+            conf->extral_nets[i]->interface == NULL) {
+            WARN("empty config, just ignore net idx: %zu", i);
+            continue;
+        }
+        use_conf = map_search(g_store.name_to_conf, (void *)conf->extral_nets[i]->name);
+        if (use_conf == NULL) {
+            ERROR("Cannot found net: %s", conf->extral_nets[i]->name);
+            // do best to detach network plane of container
+            if (ignore_nofound) {
+                continue;
+            }
+            isulad_set_error_message("Cannot found net: %s", conf->extral_nets[i]->name);
+            ret = -1;
+            goto out;
+        }
+        // use conf interface
+        manager.ifname = conf->extral_nets[i]->interface;
+
+        // clear cni result
+        free_cni_opt_result(cni_result);
+        cni_result = NULL;
+
+        if (op(&manager, use_conf, &cni_result) != 0) {
+            ERROR("Do op on net: %s failed", conf->extral_nets[i]->name);
+            ret = -1;
+            goto out;
+        }
+        if (do_native_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, list) != 0) {
+            isulad_set_error_message("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
+            ERROR("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
+            ret = -1;
+            goto out;
+        }
+    }
+
+out:
+    free_cni_opt_result(cni_result);
+    return ret;
+}
+
+int native_attach_networks(const network_api_conf *conf, network_api_result_list *result)
+{
+    int ret = 0;
+
+    if (conf == NULL) {
+        ERROR("Invalid argument");
+        return -1;
+    }
+    if (!native_store_lock(SHARED)) {
+        return -1;
+    }
+
+    if (g_store.conflist_len == 0) {
+        ERROR("Not found cni networks");
+        goto unlock;
+    }
+
+    // first, attach to loopback network
+    ret = attach_loopback(conf->pod_id, conf->netns_path);
+    if (ret != 0) {
+        ERROR("Attach to loop net failed");
+        goto unlock;
+    }
+
+    ret = do_foreach_network_op(conf, false, attach_network_plane, result);
+
+unlock:
+    native_store_unlock();
+    return ret;
+}
+
+int native_detach_networks(const network_api_conf *conf, network_api_result_list *result)
+{
+    int ret = 0;
+
+    if (conf == NULL) {
+        ERROR("Invalid argument");
+        return -1;
+    }
+
+    if (!native_store_lock(SHARED)) {
+        return -1;
+    }
+
+    if (g_store.conflist_len == 0) {
+        ERROR("Not found cni networks");
+        ret = -1;
+        goto unlock;
+    }
+
+    // first, detach to loopback network
+    ret = detach_loopback(conf->pod_id, conf->netns_path);
+    if (ret != 0) {
+        ERROR("Deatch to loop net failed");
+        goto unlock;
+    }
+
+    ret = do_foreach_network_op(conf, true, detach_network_plane, result);
+    if (ret != 0) {
+        goto unlock;
+    }
+
+unlock:
+    native_store_unlock();
+    return ret;
 }

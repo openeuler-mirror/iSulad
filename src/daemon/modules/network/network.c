@@ -16,11 +16,13 @@
 
 #include<isula_libutils/log.h>
 
+#include "network_tools.h"
 #include "adaptor_cri.h"
 #include "adaptor_native.h"
 #include "cni_operate.h"
 #include "utils_string.h"
 #include "utils_array.h"
+#include "utils_network.h"
 #include "utils.h"
 
 #define DEFAULT_CNI_CONFIG_FILES_DIR "/etc/cni/net.d"
@@ -66,8 +68,8 @@ static const struct net_ops g_cri_ops = {
 
 static const struct net_ops g_native_ops = {
     .init = native_init,
-    .attach = NULL,
-    .detach = NULL,
+    .attach = native_attach_networks,
+    .detach = native_detach_networks,
     .conf_create = native_config_create,
     .conf_inspect = native_config_inspect,
     .conf_list = native_config_list,
@@ -191,23 +193,15 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
         return -1;
     }
 
-    if (conf->extral_nets_len >= SIZE_MAX - 1) {
+    if (conf->extral_nets_len > MAX_CONFIG_FILE_COUNT) {
         ERROR("Too large extral networks to attach");
         return -1;
     }
-
     *result = util_common_calloc_s(sizeof(network_api_result_list));
     if (*result == NULL) {
         ERROR("Out of memory");
         return -1;
     }
-
-    (*result)->items = util_smart_calloc_s(sizeof(struct network_api_result *), conf->extral_nets_len + 1);
-    if ((*result)->items == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-    (*result)->cap = conf->extral_nets_len + 1;
 
     ret = pnet->ops->attach(conf, *result);
     if (ret != 0) {
@@ -454,3 +448,104 @@ void free_network_api_result_list(network_api_result_list *ptr)
     ptr->cap = 0;
     free(ptr);
 }
+
+static inline size_t get_list_scale_size(size_t old_size)
+{
+    if (old_size == 0) {
+        return 1;
+    }
+
+    if (old_size << 1 > MAX_CONFIG_FILE_COUNT) {
+        return MAX_CONFIG_FILE_COUNT;
+    }
+
+    return old_size << 1;
+}
+
+bool network_api_result_list_append(struct network_api_result *result, network_api_result_list *list)
+{
+    if (list == NULL) {
+        ERROR("Invalid arguments");
+        return false;
+    }
+    if (result == NULL) {
+        WARN("Just ignore empty result");
+        return true;
+    }
+
+    if (list->len < list->cap) {
+        list->items[list->len] = result;
+        list->len += 1;
+        return true;
+    }
+
+    {
+        DEBUG("result list is full, scale it");
+        struct network_api_result **new_items = NULL;
+        size_t new_size = get_list_scale_size(list->cap);
+        if (list->len > new_size - 1) {
+            ERROR("Overflow result list capability");
+            return false;
+        }
+
+        // list capability less than MAX_CONFIG_FILE_COUNT(1024)
+        // so we do not need to check Overflow:
+        // new_size * sizeof(*new_items) and list->len * sizeof(*list->items)
+        if (util_mem_realloc((void **)&new_items, new_size * sizeof(*new_items), (void *)list->items,
+                             list->len * sizeof(*list->items)) != 0) {
+            ERROR("Out of memory");
+            return false;
+        }
+        list->items = new_items;
+        list->cap = new_size;
+        list->items[list->len] = result;
+        list->len += 1;
+    }
+
+    return true;
+}
+
+struct network_api_result *network_parse_to_api_result(const char *name, const char *interface,
+                                                       const struct cni_opt_result *cni_result)
+{
+    struct network_api_result *ret = NULL;
+
+    if (cni_result == NULL) {
+        return ret;
+    }
+
+    ret = util_common_calloc_s(sizeof(struct network_api_result));
+    if (ret == NULL) {
+        ERROR("Out of memory");
+        return ret;
+    }
+
+    if (cni_result->ips_len > 0) {
+        size_t i;
+        ret->ips = util_smart_calloc_s(sizeof(char *), cni_result->ips_len);
+        if (ret->ips == NULL) {
+            ERROR("Out of memory");
+            free_network_api_result(ret);
+            ret = NULL;
+            goto out;
+        }
+        for (i = 0; i < cni_result->ips_len; i++) {
+            ret->ips[ret->ips_len] = util_ipnet_to_string(cni_result->ips[i]->address);
+            if (ret->ips[ret->ips_len] == NULL) {
+                WARN("ignore: parse cni result ip failed");
+                continue;
+            }
+            ret->ips_len += 1;
+        }
+    }
+
+    ret->name = util_strdup_s(name);
+    ret->interface = util_strdup_s(interface);
+    if (cni_result->interfaces_len > 0) {
+        ret->mac = util_strdup_s(cni_result->interfaces[0]->mac);
+    }
+
+out:
+    return ret;
+}
+

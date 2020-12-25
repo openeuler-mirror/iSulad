@@ -20,6 +20,7 @@
 #include "map.h"
 #include "utils_network.h"
 #include "err_msg.h"
+#include "network_tools.h"
 
 // do not need lock;
 // because cri can make sure do not concurrent to call these apis
@@ -134,10 +135,6 @@ int adaptor_cni_init_confs(const char *conf_dir, const char **bin_paths, const s
     return adaptor_cni_update_confs();
 }
 
-//int attach_network_plane(struct cni_manager *manager, const char *net_list_conf_str);
-typedef int (*net_op_t)(const struct cni_manager *manager, const struct cni_network_list_conf *list,
-                        struct cni_opt_result **result);
-
 static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager *manager)
 {
     manager->annotations = conf->annotations;
@@ -146,60 +143,31 @@ static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager
     manager->cni_args = conf->args;
 }
 
-static int do_append_cni_result(const char *name, const char *interface, const struct cni_opt_result *cni_result,
-                                network_api_result_list *result)
+static int do_cri_append_cni_result(const char *name, const char *interface, const struct cni_opt_result *cni_result,
+                                    network_api_result_list *list)
 {
     struct network_api_result *work = NULL;
-    int ret = 0;
 
-    if (cni_result == NULL || result == NULL) {
+    if (cni_result == NULL) {
+        INFO("Get empty result for network: %s", name);
         return 0;
     }
 
-    if (result->len == result->cap) {
-        ERROR("Out of capability of result");
-        return -1;
-    }
-
-    work = util_common_calloc_s(sizeof(struct network_api_result));
+    work = network_parse_to_api_result(name, interface, cni_result);
     if (work == NULL) {
-        ERROR("Out of memory");
         return -1;
     }
-    if (cni_result->ips_len > 0) {
-        size_t i;
-        work->ips = util_smart_calloc_s(sizeof(char *), cni_result->ips_len);
-        if (work->ips == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-        for (i = 0; i < cni_result->ips_len; i++) {
-            work->ips[work->ips_len] = util_ipnet_to_string(cni_result->ips[i]->address);
-            if (work->ips[work->ips_len] == NULL) {
-                WARN("parse cni result ip: %zu failed", i);
-                continue;
-            }
-            work->ips_len += 1;
-        }
+
+    if (network_api_result_list_append(work, list)) {
+        return 0;
     }
 
-    work->name = util_strdup_s(name);
-    work->interface = util_strdup_s(interface);
-    if (cni_result->interfaces_len > 0) {
-        work->mac = util_strdup_s(cni_result->interfaces[0]->mac);
-    }
-
-    result->items[result->len] = work;
-    result->len += 1;
-    work = NULL;
-out:
     free_network_api_result(work);
-    return ret;
+    return -1;
 }
 
-static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofound, net_op_t op,
-                                 network_api_result_list *result)
+static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofound, cni_op_t op,
+                                 network_api_result_list *list)
 {
     int ret = 0;
     size_t i;
@@ -251,8 +219,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
             ret = -1;
             goto out;
         }
-        if (do_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, result) !=
-            0) {
+        if (do_cri_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, list) != 0) {
             isulad_set_error_message("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
             ERROR("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
             ret = -1;
@@ -271,7 +238,7 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
             goto out;
         }
 
-        if (do_append_cni_result(g_net_store.conflist[default_idx]->list->name, manager.ifname, cni_result, result) != 0) {
+        if (do_cri_append_cni_result(g_net_store.conflist[default_idx]->list->name, manager.ifname, cni_result, list) != 0) {
             ERROR("parse cni result failed");
             ret = -1;
             goto out;
