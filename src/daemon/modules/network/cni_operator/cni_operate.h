@@ -49,6 +49,8 @@ int attach_loopback(const char *id, const char *netns);
 
 int detach_loopback(const char *id, const char *netns);
 
+typedef int (*cni_op_t)(const struct cni_manager *, const struct cni_network_list_conf *, struct cni_opt_result **);
+
 int attach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                          struct cni_opt_result **result);
 
