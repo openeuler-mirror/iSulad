@@ -407,6 +407,53 @@ function test_volume_container_rmv()
   return ${ret}
 }
 
+function test_volume_tmpfs_basic()
+{
+  local ret=0
+
+  cleanup_containers_and_volumes
+
+  # test tmpfs basic
+  isula run -tid -n tmpfs --mount type=tmpfs,dst=/tmpfs,tmpfs-size=1m,tmpfs-mode=1700 --tmpfs /tmpfs2 busybox sh
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run tmpfs container fail" && ((ret++))
+
+  isula exec -ti tmpfs stat /tmpfs | grep "1700/drwx"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - /tmpfs mode not right" && ((ret++))
+
+  isula exec -ti tmpfs stat /tmpfs2 | grep "1777/drwx"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - /tmpfs2 mode not right" && ((ret++))
+
+  isula exec -ti tmpfs dd if=/dev/zero of=/tmpfs/data bs=1k count=2000
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - dd should fail" && ((ret++))
+
+  isula exec -ti tmpfs stat /tmpfs/data | grep "Size: 1048576"
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - /tmpfs/data size not right" && ((ret++))
+
+  return ${ret}
+}
+
+function test_volume_tmpfs_invalid()
+{
+  local ret=0
+
+  cleanup_containers_and_volumes
+
+  # test tmpfs basic
+  isula run -tid -n tmpfs --mount type=tmpfs,dst=/tmpfs --mount type=bind,src=/home,dst=/tmpfs busybox sh
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - conflict mount point should fail" && ((ret++))
+
+  isula run -tid -n tmpfs --mount type=tmpfs,dst=/tmpfs,tmpfs-size=-1 busybox sh
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid tmpfs size should fail" && ((ret++))
+
+  isula run -tid -n tmpfs --mount type=tmpfs,dst=/tmpfs,tmpfs-mode=-1 busybox sh
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid tmpfs mode should fail" && ((ret++))
+
+  isula run -tid -n tmpfs --mount type=tmpfs,dst=/tmpfs,volume-nocopy=true busybox sh
+  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - should fail if use volume nocopy" && ((ret++))
+
+  return ${ret}
+}
+
 function prepare_test_volume()
 {
   local ret=0
@@ -447,6 +494,8 @@ test_volume_copy || ((ans++))
 test_volume_conflict || ((ans++))
 test_volume_invalid_modes || ((ans++))
 test_volume_container_rmv || ((ans++))
+test_volume_tmpfs_basic || ((ans++))
+test_volume_tmpfs_invalid || ((ans++))
 
 post_test_volume
 
