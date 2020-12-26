@@ -1115,22 +1115,34 @@ inline static int request_pack_host_security(const struct client_arguments *args
 
 static int request_pack_host_network(const struct client_arguments *args, isula_host_config_t *hostconfig)
 {
+    int ret = 0;
+    size_t bridge_network_len = 0;
+    char **bridge_network = NULL;
     const char *net_mode = args->custom_conf.share_ns[NAMESPACE_NET];
 
     hostconfig->ip = util_strdup_s(args->custom_conf.ip);
 
     hostconfig->mac_address = util_strdup_s(args->custom_conf.mac_address);
 
-    if (net_mode != NULL && bridge_network_mode(net_mode)) {
-        hostconfig->bridge_network = util_string_split(net_mode, ',');
-        if (hostconfig->bridge_network == NULL) {
-            COMMAND_ERROR("Failed to pack hostconfig bridge");
-            return -1;
-        }
-        hostconfig->bridge_network_len = util_array_len((const char **)hostconfig->bridge_network);
+    if (net_mode == NULL || !bridge_network_mode(net_mode)) {
+        return 0;
     }
 
-    return 0;
+    bridge_network = util_string_split(net_mode, ',');
+    if (bridge_network == NULL) {
+        COMMAND_ERROR("Failed to pack hostconfig bridge");
+        return -1;
+    }
+    bridge_network_len = util_array_len((const char **)bridge_network);
+
+    if (util_string_array_unique((const char **)bridge_network, bridge_network_len,
+                                 &hostconfig->bridge_network, &hostconfig->bridge_network_len) != 0) {
+        ERROR("Failed to unique bridge networks");
+        ret = -1;
+    }
+
+    util_free_array_by_len(bridge_network, bridge_network_len);
+    return ret;
 }
 
 static isula_host_config_t *request_pack_host_config(const struct client_arguments *args)
