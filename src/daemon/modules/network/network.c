@@ -45,6 +45,8 @@ struct net_ops {
     bool (*check)(void);
     int (*update)(void);
 
+    bool (*exist)(const char *name);
+
     void (*destroy)(void);
 };
 
@@ -63,6 +65,7 @@ static const struct net_ops g_cri_ops = {
     .conf_rm = NULL,
     .check = adaptor_cni_check_inited,
     .update = adaptor_cni_update_confs,
+    .exist = NULL,
     .destroy = NULL,
 };
 
@@ -76,6 +79,7 @@ static const struct net_ops g_native_ops = {
     .conf_rm = native_config_remove,
     .check = native_check,
     .update = NULL,
+    .exist = native_network_exist,
     .destroy = native_destory,
 };
 
@@ -330,7 +334,7 @@ int network_module_conf_rm(const char *type, const char *name, char **res_name)
     return ret;
 }
 
-int network_module_check(const char *type)
+bool network_module_check(const char *type)
 {
     const struct net_type *pnet = NULL;
 
@@ -549,3 +553,15 @@ out:
     return ret;
 }
 
+int network_module_exist(const char *type, const char *name)
+{
+    const struct net_type *pnet = NULL;
+
+    pnet = get_net_by_type(type);
+    if (pnet == NULL || pnet->ops->exist == NULL) {
+        ERROR("net type: %s, unsupport exist", type);
+        return -1;
+    }
+
+    return pnet->ops->exist(name);
+}

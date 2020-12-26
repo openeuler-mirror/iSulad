@@ -95,7 +95,7 @@ int network_module_conf_list(const char *type, const struct filters_args *filter
 
 int network_module_conf_rm(const char *type, const char *name, char **res_name);
 
-int network_module_check(const char *type);
+bool network_module_check(const char *type);
 
 int network_module_update(const char *type);
 
@@ -106,6 +106,8 @@ int network_module_insert_portmapping(const char *val, network_api_conf *conf);
 int network_module_insert_bandwith(const char *val, network_api_conf *conf);
 
 int network_module_insert_iprange(const char *val, network_api_conf *conf);
+
+int network_module_exist(const char *type, const char *name);
 
 #ifdef __cplusplus
 }

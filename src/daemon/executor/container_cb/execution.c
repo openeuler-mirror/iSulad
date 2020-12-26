@@ -55,6 +55,7 @@
 #include "event_type.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#include "execution_network.h"
 
 static int filter_by_label(const container_t *cont, const container_get_id_request *request)
 {
@@ -348,6 +349,7 @@ static void handle_start_io_thread_by_cc(uint32_t cc, int sync_fd, pthread_t thr
 static int container_start_cb(const container_start_request *request, container_start_response **response, int stdinfd,
                               struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler)
 {
+#define STOP_TIMEOUT 10
     uint32_t cc = ISULAD_SUCCESS;
     char *id = NULL;
     char *fifos[3] = { NULL, NULL, NULL };
@@ -383,6 +385,13 @@ static int container_start_cb(const container_start_request *request, container_
         goto pack_response;
     }
 
+    if (!validate_container_network(cont->hostconfig->network_mode, (const char **)cont->hostconfig->bridge_network,
+                                    cont->hostconfig->bridge_network_len)) {
+        cc = ISULAD_ERR_EXEC;
+        ERROR("Failed to validate container network");
+        goto pack_response;
+    }
+
     id = cont->common_config->id;
     isula_libutils_set_log_prefix(id);
 
@@ -403,6 +412,23 @@ static int container_start_cb(const container_start_request *request, container_
 
     if (start_container(cont, (const char **)fifos, true) != 0) {
         cc = ISULAD_ERR_EXEC;
+        goto pack_response;
+    }
+
+    if (setup_network(cont) != 0) {
+        cc = ISULAD_ERR_EXEC;
+        ERROR("Setup network failed for container %s", id);
+        isulad_set_error_message("Setup network failed for container %s", id);
+
+        if (container_is_in_gc_progress(id)) {
+            isulad_append_error_message("You cannot stop container %s in garbage collector progress.", id);
+            ERROR("You cannot stop container %s in garbage collector progress.", id);
+            goto pack_response;
+        }
+
+        if (stop_container(cont, STOP_TIMEOUT, true, false)) {
+            container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
+        }
         goto pack_response;
     }
 
