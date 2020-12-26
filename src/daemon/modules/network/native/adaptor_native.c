@@ -314,7 +314,17 @@ out:
 
 bool native_check()
 {
-    return g_store.conflist_len > 0;
+    bool ret = false;
+
+    if (!native_store_lock(SHARED)) {
+        return false;
+    }
+
+    ret = g_store.conflist_len > 0;
+
+    native_store_unlock();
+
+    return ret;
 }
 
 typedef int (*get_config_callback)(const cni_net_conf_list *list, string_array *array);
@@ -1875,6 +1885,27 @@ int native_detach_networks(const network_api_conf *conf, network_api_result_list
     }
 
 unlock:
+    native_store_unlock();
+    return ret;
+}
+
+bool native_network_exist(const char *name)
+{
+    bool ret = false;
+
+    if (name == NULL) {
+        ERROR("Invalid argument");
+        return false;
+    }
+
+    if (!native_store_lock(SHARED)) {
+        return false;
+    }
+
+    if (map_search(g_store.name_to_conf, (void *)name) != NULL) {
+        ret = true;
+    }
+
     native_store_unlock();
     return ret;
 }
