@@ -46,6 +46,7 @@
 #include "isula_host_spec.h"
 #include "utils_mount_spec.h"
 #include "utils_network.h"
+#include "utils_port.h"
 
 const char g_cmd_create_desc[] = "Create a new container";
 const char g_cmd_create_usage[] = "create [OPTIONS] --external-rootfs=PATH|IMAGE [COMMAND] [ARG...]";
@@ -1271,6 +1272,8 @@ static isula_host_config_t *request_pack_host_config(const struct client_argumen
         goto error_out;
     }
 
+    hostconfig->publish_all = args->custom_conf.publish_all;
+
     return hostconfig;
 
 error_out:
@@ -1368,6 +1371,75 @@ static bool valid_pull_option(const char *pull)
     return false;
 }
 
+static int pack_custom_network_expose(isula_container_config_t *container_spec, const map_t *expose_m)
+{
+    int ret = 0;
+    size_t len = 0;
+    size_t i = 0;
+    map_itor *itor = NULL;
+    defs_map_string_object *expose = NULL;
+
+    len = map_size(expose_m);
+    if (len == 0) {
+        DEBUG("Expose port list empty, no need to pack");
+        return 0;
+    }
+
+    itor = map_itor_new(expose_m);
+    if (itor == NULL) {
+        ERROR("Out of memory, create new map itor failed");
+        ret = -1;
+        goto out;
+    }
+
+    expose = util_common_calloc_s(sizeof(defs_map_string_object));
+    if (expose == NULL) {
+        ERROR("Out of memory, allocate expose failed");
+        ret = -1;
+        goto out;
+    }
+
+    expose->keys = util_common_calloc_s(sizeof(char *) * len);
+    if (expose->keys == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    expose->values = util_common_calloc_s(len * sizeof(defs_map_string_object_element*));
+    if (expose->values == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (; map_itor_valid(itor) && i < len; map_itor_next(itor), i++) {
+        void *key = map_itor_key(itor);
+        if (key == NULL) {
+            continue;
+        }
+        expose->keys[i] = util_strdup_s(key);
+        expose->values[i] = NULL;
+        expose->len++;
+    }
+    container_spec->expose = expose;
+    expose = NULL;
+
+out:
+    free_defs_map_string_object(expose);
+    map_itor_free(itor);
+    return ret;
+}
+
+static int pack_custom_network_publish(isula_host_config_t *host_spec, const map_t *port_binding_m)
+{
+    if (port_binding_m == NULL || map_size(port_binding_m) == 0) {
+        return 0;
+    }
+
+    return util_copy_port_binding_from_custom_map(&(host_spec->port_bindings), port_binding_m);
+}
+
 /*
  * Create a create request message and call RPC
  */
@@ -1378,6 +1450,8 @@ int client_create(struct client_arguments *args)
     struct isula_create_response *response = NULL;
     isula_container_config_t *container_spec = NULL;
     isula_host_config_t *host_spec = NULL;
+    map_t *expose_m = NULL;
+    map_t *port_binding_m = NULL;
 
     request = util_common_calloc_s(sizeof(struct isula_create_request));
     if (request == NULL) {
@@ -1391,8 +1465,31 @@ int client_create(struct client_arguments *args)
     request->runtime = util_strdup_s(args->runtime);
     request->image = util_strdup_s(args->image_name);
 
+    // parse --publish param to custom map
+    if (args->custom_conf.publish != NULL) {
+        ret = util_parse_port_specs((const char **)args->custom_conf.publish, &expose_m, &port_binding_m);
+        if (ret != 0) {
+            COMMAND_ERROR("Invalid --publish params value");
+            ret = EINVALIDARGS;
+            goto out;
+        }
+    }
+    // parse --expose param to custom map
+    if (args->custom_conf.expose != NULL && args->custom_conf.publish_all) {
+        if (util_parse_expose_ports((const char **)args->custom_conf.expose, &expose_m) != 0) {
+            COMMAND_ERROR("Invalid --expose params value");
+            ret = EINVALIDARGS;
+            goto out;
+        }
+    }
+
     container_spec = request_pack_custom_conf(args);
     if (container_spec == NULL) {
+        ret = EINVALIDARGS;
+        goto out;
+    }
+
+    if (pack_custom_network_expose(container_spec, expose_m) != 0) {
         ret = EINVALIDARGS;
         goto out;
     }
@@ -1407,6 +1504,13 @@ int client_create(struct client_arguments *args)
         ret = EINVALIDARGS;
         goto out;
     }
+
+    if (pack_custom_network_publish(host_spec, port_binding_m) != 0) {
+        ret = EINVALIDARGS;
+        goto out;
+    }
+
+    host_spec->publish_all = args->custom_conf.publish_all;
 
     if (generate_hostconfig(host_spec, &request->host_spec_json) != 0) {
         ret = EINVALIDARGS;
@@ -1426,11 +1530,14 @@ int client_create(struct client_arguments *args)
         ret = ESERVERERROR;
         goto out;
     }
+
 out:
     isula_host_config_free(host_spec);
     isula_container_config_free(container_spec);
     isula_create_response_free(response);
     isula_create_request_free(request);
+    map_free(expose_m);
+    map_free(port_binding_m);
     return ret;
 }
 

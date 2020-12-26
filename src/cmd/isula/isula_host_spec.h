@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include "isula_libutils/json_common.h"
 #include "isula_libutils/mount_spec.h"
+#include "isula_libutils/defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -154,6 +155,9 @@ typedef struct isula_host_config {
 
     char **security;
     size_t security_len;
+
+    bool publish_all;
+    defs_map_string_object_port_bindings *port_bindings;
 } isula_host_config_t;
 
 int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigstr);

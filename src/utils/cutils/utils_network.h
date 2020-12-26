@@ -88,6 +88,9 @@ bool util_new_network_port(const char *proto, const char *port, struct network_p
 
 void util_free_network_port(struct network_port *ptr);
 
+bool util_valid_proto(const char *proto);
+
+
 #ifdef __cplusplus
 }
 #endif

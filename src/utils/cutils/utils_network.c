@@ -172,6 +172,8 @@ int util_umount_namespace(const char *netns_path)
 // IPV6 max address "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
 #define IPV6_MAX_ADDR_LEN 40
 const char g_HEX_DICT[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+#define PROTO_NUM 3
+const char *g_proto_whitelist[PROTO_NUM] = {"tcp", "udp", "sctp"};
 
 void util_free_ipnet(struct ipnet *val)
 {
@@ -1104,7 +1106,7 @@ bool util_parse_port_range(const char *ports, struct network_port *np)
         goto out;
     }
 
-    if (util_safe_uint64(parts[0], &np->end) != 0) {
+    if (util_safe_uint64(parts[1], &np->end) != 0) {
         ERROR("Invalid port end: %s", parts[1]);
         ret = false;
         goto out;
@@ -1180,4 +1182,20 @@ void util_free_network_port(struct network_port *ptr)
     ptr->start = 0;
     ptr->end = 0;
     free(ptr);
+}
+
+bool util_valid_proto(const char *proto)
+{
+    size_t i = 0;
+
+    if (proto == NULL) {
+        return false;
+    }
+
+    for (i = 0; i < PROTO_NUM; i++) {
+        if (strcmp(g_proto_whitelist[i], proto) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
