@@ -1071,3 +1071,112 @@ bool util_validate_mac_address(const char *mac)
 
     return true;
 }
+
+bool util_parse_port_range(const char *ports, struct network_port *np)
+{
+    char **parts = NULL;
+    bool ret = true;
+
+    if (ports == NULL || strlen(ports) == 0) {
+        ERROR("Empty string specified for ports");
+        return false;
+    }
+
+    if (strchr(ports, '-') == NULL) {
+        if (util_safe_uint64(ports, &np->start) != 0) {
+            ERROR("invalid port: %s", ports);
+            return false;
+        }
+        np->end = np->start;
+        return true;
+    }
+
+    parts = util_string_split(ports, '-');
+    if (parts == NULL || util_array_len((const char **)parts) != 2) {
+        ERROR("Invalid port: %s", ports);
+        ret = false;
+        goto out;
+    }
+
+    if (util_safe_uint64(parts[0], &np->start) != 0) {
+        ERROR("Invalid port start: %s", parts[0]);
+        ret = false;
+        goto out;
+    }
+
+    if (util_safe_uint64(parts[0], &np->end) != 0) {
+        ERROR("Invalid port end: %s", parts[1]);
+        ret = false;
+        goto out;
+    }
+
+    if (np->start > np->end) {
+        ERROR("Invalid port : %s", ports);
+        ret = false;
+        goto out;
+    }
+
+out:
+    if (!ret) {
+        np->start = 0;
+        np->end = 0;
+    }
+    util_free_array(parts);
+    return ret;
+}
+
+bool util_new_network_port(const char *proto, const char *port, struct network_port **res)
+{
+#define MAX_PORT_LEN 128
+    struct network_port *work = NULL;
+    bool ret = true;
+    char buff[MAX_PORT_LEN] = { 0 };
+
+    if (res == NULL || port == NULL) {
+        ERROR("Invalid arguments");
+        return false;
+    }
+
+    work = util_common_calloc_s(sizeof(struct network_port));
+    if (work == NULL) {
+        ERROR("Out of memory");
+        return false;
+    }
+
+    if (!util_parse_port_range(port, work)) {
+        ret = false;
+        goto out;
+    }
+
+    if (work->start == work->end) {
+        ret = sprintf(buff, "%zu/%s", work->start, proto) > 0;
+    } else {
+        ret = sprintf(buff, "%zu-%zu/%s", work->start, work->end, proto) > 0;
+    }
+    if (!ret) {
+        ERROR("format port failed");
+        goto out;
+    }
+
+    work->proto = util_strdup_s(proto);
+
+    *res = work;
+    work = NULL;
+out:
+    util_free_network_port(work);
+    return ret;
+}
+
+void util_free_network_port(struct network_port *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->format_str);
+    ptr->format_str = NULL;
+    free(ptr->proto);
+    ptr->proto = NULL;
+    ptr->start = 0;
+    ptr->end = 0;
+    free(ptr);
+}
