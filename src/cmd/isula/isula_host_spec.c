@@ -1720,7 +1720,10 @@ int generate_hostconfig(const isula_host_config_t *srcconfig, char **hostconfigs
             goto out;
         }
     }
+
+    dstconfig->port_bindings = srcconfig->port_bindings;
     *hostconfigstr = host_config_generate_json(dstconfig, &ctx, &err);
+    dstconfig->port_bindings = NULL;
     if (*hostconfigstr == NULL) {
         COMMAND_ERROR("Failed to generate hostconfig json:%s", err);
         ret = -1;
@@ -1905,6 +1908,9 @@ void isula_host_config_free(isula_host_config_t *hostconfig)
 
     container_cgroup_resources_free(hostconfig->cr);
     hostconfig->cr = NULL;
+
+    free_defs_map_string_object_port_bindings(hostconfig->port_bindings);
+    hostconfig->port_bindings = NULL;
 
     free(hostconfig);
 }

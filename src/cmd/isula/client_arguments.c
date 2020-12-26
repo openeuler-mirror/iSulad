@@ -288,6 +288,12 @@ void client_arguments_free(struct client_arguments *args)
 
     free(custom_conf->mac_address);
     custom_conf->mac_address = NULL;
+
+    util_free_array(custom_conf->expose);
+    custom_conf->expose = NULL;
+
+    util_free_array(custom_conf->publish);
+    custom_conf->publish = NULL;
 }
 
 /* print common help */

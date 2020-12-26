@@ -228,6 +228,15 @@ struct custom_configs {
 
     /* container MAC */
     char *mac_address;
+
+    /* container ports exposed to host*/
+    char **expose;
+
+    /* publish all exposed container ports to random ports on host */
+    bool publish_all;
+
+    /* publish a container's port to the host */
+    char **publish;
 };
 
 struct args_cgroup_resources {

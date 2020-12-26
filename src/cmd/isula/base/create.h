@@ -498,10 +498,31 @@ extern "C" {
       0,                                                                                                                                                  \
       &(cmdargs).custom_conf.stop_signal,                                                                                                                 \
       "Signal to stop a container (default \"SIGTERM\")",                                                                                                 \
+      NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "expose",                                                                                                                                           \
+      0,                                                                                                                                                  \
+      &(cmdargs).custom_conf.expose,                                                                                                                      \
+      "Expose a port or a range of ports",                                                                                                                \
+      command_append_array },                                                                                                                             \
+    { CMD_OPT_TYPE_CALLBACK,                                                                                                                              \
+      false,                                                                                                                                              \
+      "publish",                                                                                                                                          \
+      'p',                                                                                                                                                \
+      &(cmdargs).custom_conf.publish,                                                                                                                     \
+      "Publish a container's port(s) to host",                                                                                                            \
+      command_append_array },                                                                                                                             \
+    { CMD_OPT_TYPE_BOOL,                                                                                                                            \
+      false,                                                                                                                                              \
+      "publish-all",                                                                                                                                      \
+      'P',                                                                                                                                                \
+      &(cmdargs).custom_conf.publish_all,                                                                                                                 \
+      "Publish all exposed ports to random ports",                                                                                                        \
       NULL },
 
-#define CREATE_EXTEND_OPTIONS(cmdargs)        \
-    { CMD_OPT_TYPE_BOOL,                      \
+#define CREATE_EXTEND_OPTIONS(cmdargs)          \
+    { CMD_OPT_TYPE_BOOL,                        \
         false,                                  \
         "interactive",                          \
         'i',                                    \

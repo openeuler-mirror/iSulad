@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "isula_libutils/json_common.h"
+#include "isula_libutils/defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,6 +80,7 @@ typedef struct isula_container_config {
 
     char *stop_signal;
 
+    defs_map_string_object *expose;
 } isula_container_config_t;
 
 int generate_container_config(const isula_container_config_t *custom_conf, char **container_config_str);
