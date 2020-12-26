@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <malloc.h>
+#include <sys/eventfd.h>
 #include <isula_libutils/container_config.h>
 #include <isula_libutils/container_config_v2.h>
 #include <isula_libutils/container_delete_request.h>
@@ -248,11 +249,10 @@ out:
 
 static int prepare_start_io(container_t *cont, const container_start_request *request, char **fifopath, char *fifos[],
                             int stdinfd, struct io_write_wrapper *stdout_handler,
-                            struct io_write_wrapper *stderr_handler)
+                            struct io_write_wrapper *stderr_handler, int *sync_fd, pthread_t *thread_id)
 {
     int ret = 0;
     char *id = NULL;
-    pthread_t tid = 0;
 
     id = cont->common_config->id;
 
@@ -263,8 +263,15 @@ static int prepare_start_io(container_t *cont, const container_start_request *re
             goto out;
         }
 
-        if (ready_copy_io_data(-1, true, request->stdin, request->stdout, request->stderr, stdinfd, stdout_handler,
-                               stderr_handler, (const char **)fifos, &tid)) {
+        *sync_fd = eventfd(0, EFD_CLOEXEC);
+        if (*sync_fd < 0) {
+            ERROR("Failed to create eventfd: %s", strerror(errno));
+            ret = -1;
+            goto out;
+        }
+
+        if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr, stdinfd,
+                               stdout_handler, stderr_handler, (const char **)fifos, thread_id)) {
             ret = -1;
             goto out;
         }
@@ -292,7 +299,7 @@ static void pack_start_response(container_start_response *response, uint32_t cc,
 
 static int container_start_prepare(container_t *cont, const container_start_request *request, int stdinfd,
                                    struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
-                                   char **fifopath, char *fifos[])
+                                   char **fifopath, char *fifos[], int *sync_fd, pthread_t *thread_id)
 {
     const char *id = cont->common_config->id;
 
@@ -302,11 +309,40 @@ static int container_start_prepare(container_t *cont, const container_start_requ
         return -1;
     }
 
-    if (prepare_start_io(cont, request, fifopath, fifos, stdinfd, stdout_handler, stderr_handler) != 0) {
+    if (prepare_start_io(cont, request, fifopath, fifos, stdinfd, stdout_handler, stderr_handler, sync_fd, thread_id) !=
+        0) {
         return -1;
     }
 
     return 0;
+}
+
+static void handle_start_io_thread_by_cc(uint32_t cc, int sync_fd, pthread_t thread_id)
+{
+    if (cc == ISULAD_SUCCESS) {
+        if (thread_id > 0) {
+            if (pthread_detach(thread_id) != 0) {
+                SYSERROR("Failed to detach 0x%lx", thread_id);
+            }
+        }
+        if (sync_fd >= 0) {
+            close(sync_fd);
+        }
+    } else {
+        if (sync_fd >= 0) {
+            if (eventfd_write(sync_fd, 1) < 0) {
+                ERROR("Failed to write eventfd: %s", strerror(errno));
+            }
+        }
+        if (thread_id > 0) {
+            if (pthread_join(thread_id, NULL) != 0) {
+                ERROR("Failed to join thread: 0x%lx", thread_id);
+            }
+        }
+        if (sync_fd >= 0) {
+            close(sync_fd);
+        }
+    }
 }
 
 static int container_start_cb(const container_start_request *request, container_start_response **response, int stdinfd,
@@ -317,6 +353,8 @@ static int container_start_cb(const container_start_request *request, container_
     char *fifos[3] = { NULL, NULL, NULL };
     char *fifopath = NULL;
     container_t *cont = NULL;
+    int sync_fd = -1;
+    pthread_t thread_id = 0;
 
     DAEMON_CLEAR_ERRMSG();
 
@@ -357,7 +395,8 @@ static int container_start_cb(const container_start_request *request, container_
         goto pack_response;
     }
 
-    if (container_start_prepare(cont, request, stdinfd, stdout_handler, stderr_handler, &fifopath, fifos) != 0) {
+    if (container_start_prepare(cont, request, stdinfd, stdout_handler, stderr_handler, &fifopath, fifos, &sync_fd,
+                                &thread_id) != 0) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
@@ -371,6 +410,7 @@ static int container_start_cb(const container_start_request *request, container_
     (void)isulad_monitor_send_container_event(id, START, -1, 0, NULL, NULL);
 
 pack_response:
+    handle_start_io_thread_by_cc(cc, sync_fd, thread_id);
     delete_daemon_fifos(fifopath, (const char **)fifos);
     free(fifos[0]);
     free(fifos[1]);

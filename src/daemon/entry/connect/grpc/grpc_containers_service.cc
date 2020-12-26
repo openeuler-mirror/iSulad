@@ -622,7 +622,8 @@ class RemoteExecReceiveFromClientTask : public StoppableThread {
 public:
     RemoteExecReceiveFromClientTask() = default;
     RemoteExecReceiveFromClientTask(ServerReaderWriter<RemoteExecResponse, RemoteExecRequest> *stream, int read_pipe_fd)
-        : m_stream(stream), m_read_pipe_fd(read_pipe_fd)
+        : m_stream(stream)
+        , m_read_pipe_fd(read_pipe_fd)
     {
     }
     ~RemoteExecReceiveFromClientTask() = default;
@@ -925,7 +926,7 @@ Status ContainerServiceImpl::Attach(ServerContext *context, ServerReaderWriter<A
     // Close pipe 1 first, make sure io copy thread exit
     close(pipefd[1]);
     // Waiting sem, make sure the sem is posted always in attach callback.
-    if (container_req->attach_stderr) {
+    if (container_req->attach_stderr && ret == 0) {
         (void)sem_wait(&sem_stderr);
     }
     (void)sem_destroy(&sem_stderr);
@@ -1271,8 +1272,9 @@ Status ContainerServiceImpl::CopyFromContainer(ServerContext *context, const Cop
     return Status::OK;
 }
 
-Status ContainerServiceImpl::CopyToContainer(ServerContext *context,
-                                             ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream)
+Status
+ContainerServiceImpl::CopyToContainer(ServerContext *context,
+                                      ServerReaderWriter<CopyToContainerResponse, CopyToContainerRequest> *stream)
 
 {
     int ret;

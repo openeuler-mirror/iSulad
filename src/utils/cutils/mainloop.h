@@ -23,15 +23,14 @@ struct epoll_descr {
     struct linked_list handler_list;
 };
 
-typedef int (*epoll_loop_callback_t)(int fd, uint32_t event,
-                                     void *data,
-                                     struct epoll_descr *descr);
+#define EPOLL_LOOP_HANDLE_CONTINUE 0
+#define EPOLL_LOOP_HANDLE_CLOSE 1
+
+typedef int (*epoll_loop_callback_t)(int fd, uint32_t event, void *data, struct epoll_descr *descr);
 
 extern int epoll_loop(struct epoll_descr *descr, int t);
 
-extern int epoll_loop_add_handler(struct epoll_descr *descr, int fd,
-                                  epoll_loop_callback_t callback,
-                                  void *data);
+extern int epoll_loop_add_handler(struct epoll_descr *descr, int fd, epoll_loop_callback_t callback, void *data);
 
 extern int epoll_loop_del_handler(struct epoll_descr *descr, int fd);
 
@@ -40,4 +39,3 @@ extern int epoll_loop_open(struct epoll_descr *descr);
 extern int epoll_loop_close(struct epoll_descr *descr);
 
 #endif
-
