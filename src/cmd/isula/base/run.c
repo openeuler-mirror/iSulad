@@ -63,8 +63,31 @@ static int local_cmd_start(const struct client_arguments *args)
     }
 
     client_wait_fifo_exit(args);
+
 free_out:
     client_restore_console(reset_tty, &oldtios, console_fifos);
+    return ret;
+}
+
+static int remote_cmd_start(const struct client_arguments *args)
+{
+    int ret = 0;
+    unsigned int exit_code = 0;
+
+    ret = client_remote_start(&g_cmd_run_args);
+    if (ret != 0) {
+        goto out;
+    }
+
+    if (!args->detach) {
+        ret = client_wait(args, &exit_code);
+        if (ret != 0) {
+            goto out;
+        }
+        ret = (int)exit_code;
+    }
+
+out:
     return ret;
 }
 
@@ -152,7 +175,7 @@ int cmd_run_main(int argc, const char **argv)
     }
 
     if (strncmp(g_cmd_run_args.socket, "tcp://", strlen("tcp://")) == 0) {
-        ret = client_remote_start(&g_cmd_run_args);
+        ret = remote_cmd_start(&g_cmd_run_args);
         if (ret != 0) {
             ERROR("Failed to execute command with remote run");
             goto free_out;
