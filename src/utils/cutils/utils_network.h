@@ -73,6 +73,11 @@ bool util_validate_mac_address(const char *mac);
 
 bool util_parse_port_range(const char *ports, struct network_port *np);
 
+/*
+* support format of port:
+* 1. 1-10;
+* 2. 8;
+*/
 bool util_new_network_port(const char *proto, const char *port, struct network_port **res);
 
 void util_free_network_port(struct network_port *ptr);

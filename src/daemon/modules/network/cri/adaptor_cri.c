@@ -137,7 +137,6 @@ int adaptor_cni_init_confs(const char *conf_dir, const char **bin_paths, const s
 
 static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager *manager)
 {
-    manager->annotations = conf->annotations;
     manager->id = conf->pod_id;
     manager->netns_path = conf->netns_path;
     manager->cni_args = conf->args;
@@ -230,6 +229,11 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
     if (g_net_store.conflist_len > 0 && default_idx < g_net_store.conflist_len) {
         free_cni_opt_result(cni_result);
         cni_result = NULL;
+
+        // external configurations(portmappings, iprange, bandwith and so on) for mult-networks
+        // should work for only one:
+        // for network with (eth0/default interface) is a good choice.
+        manager.annotations = conf->annotations;
 
         manager.ifname = (char *)default_interface;
         ret = op(&manager, g_net_store.conflist[default_idx], &cni_result);

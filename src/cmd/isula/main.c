@@ -55,6 +55,7 @@
 #include "prune.h"
 #include "list.h"
 #include "network.h"
+#include "port.h"
 
 // The list of our supported commands
 struct command g_commands[] = {
@@ -203,6 +204,10 @@ struct command g_commands[] = {
     {
         // `network` sub-command
         "network", true, cmd_network_main, g_cmd_network_desc, NULL, NULL
+    },
+    {
+        // `port` sub-command
+        "port", false, cmd_port_main, g_cmd_port_desc, NULL, NULL
     },
     { NULL, NULL, NULL, NULL, NULL } // End of the list
 };

@@ -1022,6 +1022,7 @@ bool util_new_network_port(const char *proto, const char *port, struct network_p
         goto out;
     }
 
+    work->format_str = util_strdup_s(buff);
     work->proto = util_strdup_s(proto);
 
     *res = work;
