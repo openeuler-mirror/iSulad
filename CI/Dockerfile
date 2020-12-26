@@ -83,6 +83,8 @@ RUN yum clean all && yum makecache && yum install -y epel-release && yum swap -y
 			go \
 			CUnit \
 			CUnit-devel \
+			bc \
+			pidof \
 			valgrind \
 			e2fsprogs \
 			lcov \

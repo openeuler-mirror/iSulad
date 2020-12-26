@@ -175,13 +175,14 @@ void delete_daemon_fifos(const char *fifopath, const char *fifos[])
     }
 }
 
-typedef enum { IO_FD, IO_FIFO, IO_FUNC, IO_MAX } io_type;
+typedef enum { IO_FD = 0, IO_FIFO, IO_FUNC, IO_MAX } io_type;
 
 struct io_copy_arg {
     io_type srctype;
     void *src;
     io_type dsttype;
     void *dst;
+    int dstfifoflag;
 };
 
 struct io_copy_thread_arg {
@@ -254,24 +255,60 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
     return 0;
 }
 
+typedef int (*src_io_type_handle)(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds);
+
+struct src_io_copy_handler {
+    io_type type;
+    src_io_type_handle handle;
+};
+
+static int handle_src_io_fd(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds)
+{
+    srcfds[index] = *(int *)(copy_arg[index].src);
+
+    return 0;
+}
+
+static int handle_src_io_fifo(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds)
+{
+    if (console_fifo_open((const char *)copy_arg[index].src, &(infds[index]), O_RDONLY | O_NONBLOCK)) {
+        ERROR("failed to open console fifo.");
+        return -1;
+    }
+    srcfds[index] = infds[index];
+
+    return 0;
+}
+
+static int handle_src_io_fun(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds)
+{
+    ERROR("Got invalid src fd type");
+    return -1;
+}
+
+static int handle_src_io_max(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds)
+{
+    ERROR("Got invalid src fd type");
+    return -1;
+}
+
 static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds, int *srcfds)
 {
     size_t i;
 
+    struct src_io_copy_handler src_handler_jump_table[] = {
+        { IO_FD,      handle_src_io_fd},
+        { IO_FIFO,    handle_src_io_fifo},
+        { IO_FUNC,    handle_src_io_fun},
+        { IO_MAX,     handle_src_io_max},
+    };
+
     for (i = 0; i < len; i++) {
-        if (copy_arg[i].srctype == IO_FIFO) {
-            if (console_fifo_open((const char *)copy_arg[i].src, &(infds[i]), O_RDONLY | O_NONBLOCK)) {
-                ERROR("failed to open console fifo.");
-                return -1;
-            }
-            srcfds[i] = infds[i];
-        } else if (copy_arg[i].srctype == IO_FD) {
-            srcfds[i] = *(int *)(copy_arg[i].src);
-        } else {
-            ERROR("Got invalid src fd type");
+        if (src_handler_jump_table[(int)(copy_arg[i].srctype)].handle(i, copy_arg, infds, srcfds) != 0) {
             return -1;
         }
     }
+
     return 0;
 }
 
@@ -281,12 +318,7 @@ static ssize_t write_to_fifo(void *context, const void *data, size_t len)
     int fd;
 
     fd = *(int *)context;
-    ret = util_write_nointr(fd, data, len);
-    // Ignore EAGAIN to prevent hang, do not report error
-    if (errno == EAGAIN) {
-        return (ssize_t)len;
-    }
-
+    ret = util_write_nointr_in_total(fd, data, len);
     if ((ret <= 0) || (ret != (ssize_t)len)) {
         ERROR("Failed to write %d: %s", fd, strerror(errno));
         return -1;
@@ -305,31 +337,68 @@ static ssize_t write_to_fd(void *context, const void *data, size_t len)
     return ret;
 }
 
+typedef int (*dst_io_type_handle)(int index, struct io_copy_arg *copy_arg, int *outfds,
+                                  struct io_write_wrapper *writers);
+
+struct dst_io_copy_handler {
+    io_type type;
+    dst_io_type_handle handle;
+};
+
+static int handle_dst_io_fd(int index, struct io_copy_arg *copy_arg, int *outfds, struct io_write_wrapper *writers)
+{
+    writers[index].context = copy_arg[index].dst;
+    writers[index].write_func = write_to_fd;
+
+    return 0;
+}
+
+static int handle_dst_io_fifo(int index, struct io_copy_arg *copy_arg, int *outfds, struct io_write_wrapper *writers)
+{
+    if (console_fifo_open_withlock((const char *)copy_arg[index].dst, &outfds[index],
+                                   copy_arg[index].dstfifoflag | O_NONBLOCK)) {
+        ERROR("Failed to open console fifo.");
+        return -1;
+    }
+    writers[index].context = &outfds[index];
+    writers[index].write_func = write_to_fifo;
+
+    return 0;
+}
+
+static int handle_dst_io_fun(int index, struct io_copy_arg *copy_arg, int *outfds, struct io_write_wrapper *writers)
+{
+    struct io_write_wrapper *io_write = copy_arg[index].dst;
+    writers[index].context = io_write->context;
+    writers[index].write_func = io_write->write_func;
+    writers[index].close_func = io_write->close_func;
+
+    return 0;
+}
+
+static int handle_dst_io_max(int index, struct io_copy_arg *copy_arg, int *outfds, struct io_write_wrapper *writers)
+{
+    ERROR("Got invalid dst fd type");
+    return -1;
+}
+
 static int io_copy_make_dstfds(size_t len, struct io_copy_arg *copy_arg, int *outfds, struct io_write_wrapper *writers)
 {
     size_t i;
 
+    struct dst_io_copy_handler dst_handler_jump_table[] = {
+        { IO_FD,      handle_dst_io_fd},
+        { IO_FIFO,    handle_dst_io_fifo},
+        { IO_FUNC,    handle_dst_io_fun},
+        { IO_MAX,     handle_dst_io_max},
+    };
+
     for (i = 0; i < len; i++) {
-        if (copy_arg[i].dsttype == IO_FIFO) {
-            if (console_fifo_open_withlock((const char *)copy_arg[i].dst, &outfds[i], O_RDWR | O_NONBLOCK)) {
-                ERROR("Failed to open console fifo.");
-                return -1;
-            }
-            writers[i].context = &outfds[i];
-            writers[i].write_func = write_to_fifo;
-        } else if (copy_arg[i].dsttype == IO_FD) {
-            writers[i].context = copy_arg[i].dst;
-            writers[i].write_func = write_to_fd;
-        } else if (copy_arg[i].dsttype == IO_FUNC) {
-            struct io_write_wrapper *io_write = copy_arg[i].dst;
-            writers[i].context = io_write->context;
-            writers[i].write_func = io_write->write_func;
-            writers[i].close_func = io_write->close_func;
-        } else {
-            ERROR("Got invalid dst fd type");
+        if (dst_handler_jump_table[(int)(copy_arg[i].dsttype)].handle(i, copy_arg, outfds, writers) != 0) {
             return -1;
         }
     }
+
     return 0;
 }
 
@@ -409,64 +478,70 @@ static int start_io_copy_thread(int sync_fd, bool detach, struct io_copy_arg *co
     return 0;
 }
 
+static void add_io_copy_element(struct io_copy_arg *element,
+                                io_type srctype, void *src,
+                                io_type dsttype, void *dst,
+                                int dstfifoflag)
+{
+    element->srctype = srctype;
+    element->src = src;
+    element->dsttype = dsttype;
+    element->dst = dst;
+    element->dstfifoflag = dstfifoflag;
+}
+
+/*
+    -----------------------------------------------------------------------------------
+    |  CHANNEL |      iSula                          iSulad                    lxc    |
+    -----------------------------------------------------------------------------------
+    |          |                    fifoin                         fifos[0]           |
+    |    IN    |       RDWR       -------->       RD      RDWR     -------->      RD  |
+    -----------------------------------------------------------------------------------
+    |          |                   fifoout                         fifos[1]           |
+    |    OUT   |       RD         <--------       WR       RD      <--------      WR  |
+    -----------------------------------------------------------------------------------
+    |          |                   fifoerr                         fifos[2]           |
+    |    ERR   |       RD         <--------       WR       RD      <--------     WR   |
+    -----------------------------------------------------------------------------------
+*/
 int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char *fifoout, const char *fifoerr,
                        int stdin_fd, struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
                        const char *fifos[], pthread_t *tid)
 {
-    int ret = 0;
     size_t len = 0;
     struct io_copy_arg io_copy[6];
 
     if (fifoin != NULL) {
-        io_copy[len].srctype = IO_FIFO;
-        io_copy[len].src = (void *)fifoin;
-        io_copy[len].dsttype = IO_FIFO;
-        io_copy[len].dst = (void *)fifos[0];
-        len++;
+        // fifoin   : iSula -> iSulad read
+        // fifos[0] : iSulad -> lxc write
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifoin, IO_FIFO, (void *)fifos[0], O_RDWR);
     }
+
     if (fifoout != NULL) {
-        io_copy[len].srctype = IO_FIFO;
-        io_copy[len].src = (void *)fifos[1];
-        io_copy[len].dsttype = IO_FIFO;
-        io_copy[len].dst = (void *)fifoout;
-        len++;
+        // fifos[1]  : lxc -> iSulad read
+        // fifoout   : iSulad -> iSula write
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY);
     }
+
     if (fifoerr != NULL) {
-        io_copy[len].srctype = IO_FIFO;
-        io_copy[len].src = (void *)fifos[2];
-        io_copy[len].dsttype = IO_FIFO;
-        io_copy[len].dst = (void *)fifoerr;
-        len++;
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY);
     }
 
     if (stdin_fd > 0) {
-        io_copy[len].srctype = IO_FD;
-        io_copy[len].src = &stdin_fd;
-        io_copy[len].dsttype = IO_FIFO;
-        io_copy[len].dst = (void *)fifos[0];
-        len++;
+        add_io_copy_element(&io_copy[len++], IO_FD,  &stdin_fd, IO_FIFO, (void *)fifos[0], O_RDWR);
     }
 
     if (stdout_handler != NULL) {
-        io_copy[len].srctype = IO_FIFO;
-        io_copy[len].src = (void *)fifos[1];
-        io_copy[len].dsttype = IO_FUNC;
-        io_copy[len].dst = stdout_handler;
-        len++;
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FUNC, stdout_handler, O_WRONLY);
     }
 
     if (stderr_handler != NULL) {
-        io_copy[len].srctype = IO_FIFO;
-        io_copy[len].src = (void *)fifos[2];
-        io_copy[len].dsttype = IO_FUNC;
-        io_copy[len].dst = stderr_handler;
-        len++;
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FUNC, stderr_handler, O_WRONLY);
     }
 
-    if (start_io_copy_thread(sync_fd, detach, io_copy, len, tid)) {
-        ret = -1;
-        goto out;
+    if (start_io_copy_thread(sync_fd, detach, io_copy, len, tid) != 0) {
+        return -1;
     }
-out:
-    return ret;
+
+    return 0;
 }

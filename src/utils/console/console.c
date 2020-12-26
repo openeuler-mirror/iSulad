@@ -33,7 +33,8 @@
 static ssize_t fd_write_function(void *context, const void *data, size_t len)
 {
     ssize_t ret;
-    ret = util_write_nointr(*(int *)context, data, len);
+
+    ret = util_write_nointr_in_total(*(int *)context, data, len);
     if ((ret <= 0) || (ret != (ssize_t)len)) {
         ERROR("Failed to write: %s", strerror(errno));
         return -1;
@@ -101,12 +102,11 @@ static int console_writer_write_data(const struct io_write_wrapper *writer, cons
     return 0;
 }
 
-/* console cb tty fifoin */
 static int console_cb_stdio_copy(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
     struct tty_state *ts = cbdata;
     char *buf = NULL;
-    size_t buf_len = MAX_MSG_BUFFER_SIZE;
+    size_t buf_len = MAX_BUFFER_SIZE;
     int ret = 0;
     ssize_t r_ret;
 
@@ -154,9 +154,15 @@ static int console_cb_stdio_copy(int fd, uint32_t events, void *cbdata, struct e
     }
 
 out:
+    // Delete the handle from epoll, because if the write end of the handle is disconnected,
+    // it will enter again when epoll is repeated
+    if (ret > 0) {
+        epoll_loop_del_handler(descr, fd);
+    }
     free(buf);
     return ret;
 }
+
 
 /* console fifo name */
 int console_fifo_name(const char *rundir, const char *subpath, const char *stdflag, char *fifo_name,
@@ -241,7 +247,7 @@ int console_fifo_open(const char *fifo_path, int *fdout, int flags)
 {
     int fd = 0;
 
-    fd = util_open(fifo_path, O_RDONLY | O_NONBLOCK, (mode_t)0);
+    fd = util_open(fifo_path, flags, (mode_t)0);
     if (fd < 0) {
         ERROR("Failed to open fifo %s to send message: %s.", fifo_path, strerror(errno));
         return -1;
@@ -329,6 +335,27 @@ static void client_console_tty_state_close(struct epoll_descr *descr, const stru
     }
 }
 
+static int safe_epoll_loop(struct epoll_descr *descr)
+{
+    int ret;
+
+    ret = epoll_loop(descr, -1);
+    if (ret != 0) {
+        ERROR("Epoll_loop error");
+        return ret;
+    }
+
+    // There are stdout and stderr channels, and two epolls should be performed to prevent
+    // one of the channels from exiting first, causing the other channel to not receive data,
+    // resulting in data loss
+    ret = epoll_loop(descr, 100);
+    if (ret != 0) {
+        ERROR("Repeat the epoll loop to ensure that all data is transferred");
+    }
+
+    return ret;
+}
+
 /* console loop */
 /* data direction: */
 /* read stdinfd, write fifoinfd */
@@ -393,13 +420,7 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
         }
     }
 
-    ret = epoll_loop(&descr, -1);
-    if (ret) {
-        ERROR("Epoll_loop error");
-        goto err_out;
-    }
-
-    ret = 0;
+    ret = safe_epoll_loop(&descr);
 
 err_out:
     client_console_tty_state_close(&descr, &ts);
@@ -452,11 +473,7 @@ int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper
         }
     }
 
-    ret = epoll_loop(&descr, -1);
-    if (ret != 0) {
-        ERROR("Epoll_loop error");
-        goto err_out;
-    }
+    ret = safe_epoll_loop(&descr);
 
 err_out:
 
