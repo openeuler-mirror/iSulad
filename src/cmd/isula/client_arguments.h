@@ -380,6 +380,9 @@ struct client_arguments {
     char *gateway;
     bool internal;
     char *subnet;
+
+    // port command
+    char *port;
 };
 
 #define LOG_OPTIONS(log) { CMD_OPT_TYPE_BOOL_FALSE, false, "debug", 'D', &(log).quiet, "Enable debug mode", NULL },

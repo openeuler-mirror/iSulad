@@ -1720,9 +1720,9 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
     size_t i;
     struct cni_manager manager = { 0 };
     struct cni_opt_result *cni_result = NULL;
+    bool use_annotations = false;
 
     // Step1, build cni manager config
-    manager.annotations = conf->annotations;
     manager.id = conf->pod_id;
     manager.netns_path = conf->netns_path;
     manager.cni_args = conf->args;
@@ -1749,6 +1749,16 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
         }
         // use conf interface
         manager.ifname = conf->extral_nets[i]->interface;
+
+        // external configurations(portmappings, iprange, bandwith and so on) for mult-networks
+        // should work for only one:
+        // for first network is a good choice.
+        if (!use_annotations) {
+            manager.annotations = conf->annotations;
+            use_annotations = true;
+        } else {
+            manager.annotations = NULL;
+        }
 
         // clear cni result
         free_cni_opt_result(cni_result);

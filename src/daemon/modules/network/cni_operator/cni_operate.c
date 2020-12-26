@@ -475,7 +475,12 @@ static int inject_annotations_json(map_t *annotations, const struct cni_network_
     size_t i = 0;
     char *value = NULL;
 
-    if (annotations == NULL || old == NULL || p_new == NULL) {
+    if (annotations == NULL) {
+        DEBUG("Empty extension configs");
+        return 0;
+    }
+
+    if (old == NULL || p_new == NULL) {
         ERROR("Invalid input param");
         return -1;
     }
