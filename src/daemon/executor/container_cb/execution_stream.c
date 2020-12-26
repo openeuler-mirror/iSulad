@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/inotify.h>
+#include <sys/eventfd.h>
 #include <isula_libutils/container_attach_request.h>
 #include <isula_libutils/container_attach_response.h>
 #include <isula_libutils/container_config_v2.h>
@@ -214,7 +215,7 @@ out:
 
 static int attach_prepare_console(const container_t *cont, const container_attach_request *request, int stdinfd,
                                   struct io_write_wrapper *stdout_handler, struct io_write_wrapper *stderr_handler,
-                                  char **fifos, char **fifopath, pthread_t *tid)
+                                  char **fifos, char **fifopath, int *sync_fd, pthread_t *tid)
 {
     int ret = 0;
     const char *id = cont->common_config->id;
@@ -226,8 +227,15 @@ static int attach_prepare_console(const container_t *cont, const container_attac
             goto out;
         }
 
-        if (ready_copy_io_data(-1, true, request->stdin, request->stdout, request->stderr, stdinfd, stdout_handler,
-                               stderr_handler, (const char **)fifos, tid)) {
+        *sync_fd = eventfd(0, EFD_CLOEXEC);
+        if (*sync_fd < 0) {
+            ERROR("Failed to create eventfd: %s", strerror(errno));
+            ret = -1;
+            goto out;
+        }
+
+        if (ready_copy_io_data(*sync_fd, false, request->stdin, request->stdout, request->stderr, stdinfd,
+                               stdout_handler, stderr_handler, (const char **)fifos, tid)) {
             ret = -1;
             goto out;
         }
@@ -237,14 +245,31 @@ out:
     return ret;
 }
 
-static void close_io_writer(const struct io_write_wrapper *stdout_handler,
-                            const struct io_write_wrapper *stderr_handler)
+static void handle_attach_io_thread_by_cc(uint32_t cc, int sync_fd, pthread_t thread_id)
 {
-    if (stdout_handler != NULL && stdout_handler->close_func != NULL) {
-        (void)stdout_handler->close_func(stdout_handler->context, NULL);
-    }
-    if (stderr_handler != NULL && stderr_handler->close_func != NULL) {
-        (void)stderr_handler->close_func(stderr_handler->context, NULL);
+    if (cc == ISULAD_SUCCESS) {
+        if (thread_id > 0) {
+            if (pthread_detach(thread_id) != 0) {
+                SYSERROR("Failed to detach 0x%lx", thread_id);
+            }
+        }
+        if (sync_fd >= 0) {
+            close(sync_fd);
+        }
+    } else {
+        if (sync_fd >= 0) {
+            if (eventfd_write(sync_fd, 1) < 0) {
+                ERROR("Failed to write eventfd: %s", strerror(errno));
+            }
+        }
+        if (thread_id > 0) {
+            if (pthread_join(thread_id, NULL) != 0) {
+                ERROR("Failed to join thread: 0x%lx", thread_id);
+            }
+        }
+        if (sync_fd >= 0) {
+            close(sync_fd);
+        }
     }
 }
 
@@ -256,6 +281,7 @@ static int container_attach_cb(const container_attach_request *request, containe
     uint32_t cc = ISULAD_SUCCESS;
     char *fifos[3] = { NULL, NULL, NULL };
     char *fifopath = NULL;
+    int syncfd = -1;
     pthread_t tid = 0;
     container_t *cont = NULL;
     rt_attach_params_t params = { 0 };
@@ -267,21 +293,19 @@ static int container_attach_cb(const container_attach_request *request, containe
     }
 
     if (container_attach_cb_check(request, response, &cc, &cont) < 0) {
-        close_io_writer(stdout_handler, stderr_handler);
         goto pack_response;
     }
     id = cont->common_config->id;
     isula_libutils_set_log_prefix(id);
 
     if (attach_check_container_state(cont)) {
-        close_io_writer(stdout_handler, stderr_handler);
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
-    if (attach_prepare_console(cont, request, stdinfd, stdout_handler, stderr_handler, fifos, &fifopath, &tid) != 0) {
+    if (attach_prepare_console(cont, request, stdinfd, stdout_handler, stderr_handler, fifos, &fifopath, &syncfd,
+                               &tid) != 0) {
         cc = ISULAD_ERR_EXEC;
-        close_io_writer(stdout_handler, stderr_handler);
         goto pack_response;
     }
 
@@ -299,6 +323,7 @@ static int container_attach_cb(const container_attach_request *request, containe
     }
 
 pack_response:
+    handle_attach_io_thread_by_cc(cc, syncfd, tid);
     if (*response != NULL) {
         (*response)->cc = cc;
         if (g_isulad_errmsg != NULL) {

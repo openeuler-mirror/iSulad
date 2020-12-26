@@ -47,17 +47,17 @@ static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdat
 {
     struct tty_state *ts = cbdata;
     char c;
-    int ret = 0;
+    int ret = EPOLL_LOOP_HANDLE_CONTINUE;
     ssize_t r_ret, w_ret;
 
     if (fd != ts->stdin_reader) {
-        ret = 1;
+        ret = EPOLL_LOOP_HANDLE_CLOSE;
         goto out;
     }
 
     r_ret = util_read_nointr(ts->stdin_reader, &c, 1);
     if (r_ret <= 0) {
-        ret = 1;
+        ret = EPOLL_LOOP_HANDLE_CLOSE;
         goto out;
     }
 
@@ -78,7 +78,7 @@ static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdat
     if (ts->stdin_writer.context && ts->stdin_writer.write_func) {
         w_ret = ts->stdin_writer.write_func(ts->stdin_writer.context, &c, 1);
         if ((w_ret <= 0) || (w_ret != r_ret)) {
-            ret = 1;
+            ret = EPOLL_LOOP_HANDLE_CLOSE;
             goto out;
         }
     }
@@ -105,50 +105,50 @@ static int console_writer_write_data(const struct io_write_wrapper *writer, cons
 static int console_cb_stdio_copy(int fd, uint32_t events, void *cbdata, struct epoll_descr *descr)
 {
     struct tty_state *ts = cbdata;
-    char *buf = NULL;
-    size_t buf_len = MAX_BUFFER_SIZE;
-    int ret = 0;
+    char buf[MAX_BUFFER_SIZE] = { 0 };
+    int ret = EPOLL_LOOP_HANDLE_CONTINUE;
     ssize_t r_ret;
 
-    buf = util_common_calloc_s(buf_len);
-    if (buf == NULL) {
-        ERROR("Out of memory");
-        return -1;
+    if (fd != ts->sync_fd && fd != ts->stdin_reader && fd != ts->stdout_reader && fd != ts->stderr_reader) {
+        ret = EPOLL_LOOP_HANDLE_CLOSE;
+        goto out;
+    }
+
+    r_ret = util_read_nointr(fd, buf, sizeof(buf) - 1);
+    if (r_ret <= 0) {
+        // if we close the sync fd, it means the IO COPY thread had beed made to detached, continue to watch other fds
+        if (fd == ts->sync_fd) {
+            epoll_loop_del_handler(descr, fd);
+            ret = EPOLL_LOOP_HANDLE_CONTINUE;
+            goto out;
+        } else {
+            ret = EPOLL_LOOP_HANDLE_CLOSE;
+            goto out;
+        }
     }
 
     if (fd == ts->sync_fd) {
-        ret = 1;
-        goto out;
-    }
-
-    if (fd != ts->stdin_reader && fd != ts->stdout_reader && fd != ts->stderr_reader) {
-        ret = 1;
-        goto out;
-    }
-
-    r_ret = util_read_nointr(fd, buf, buf_len - 1);
-    if (r_ret <= 0) {
-        ret = 1;
+        ret = EPOLL_LOOP_HANDLE_CLOSE;
         goto out;
     }
 
     if (fd == ts->stdin_reader) {
         if (console_writer_write_data(&ts->stdin_writer, buf, r_ret) != 0) {
-            ret = 1;
+            ret = EPOLL_LOOP_HANDLE_CLOSE;
             goto out;
         }
     }
 
     if (fd == ts->stdout_reader) {
         if (console_writer_write_data(&ts->stdout_writer, buf, r_ret) != 0) {
-            ret = 1;
+            ret = EPOLL_LOOP_HANDLE_CLOSE;
             goto out;
         }
     }
 
     if (fd == ts->stderr_reader) {
         if (console_writer_write_data(&ts->stderr_writer, buf, r_ret) != 0) {
-            ret = 1;
+            ret = EPOLL_LOOP_HANDLE_CLOSE;
             goto out;
         }
     }
@@ -156,13 +156,11 @@ static int console_cb_stdio_copy(int fd, uint32_t events, void *cbdata, struct e
 out:
     // Delete the handle from epoll, because if the write end of the handle is disconnected,
     // it will enter again when epoll is repeated
-    if (ret > 0) {
+    if (ret != EPOLL_LOOP_HANDLE_CONTINUE) {
         epoll_loop_del_handler(descr, fd);
     }
-    free(buf);
     return ret;
 }
-
 
 /* console fifo name */
 int console_fifo_name(const char *rundir, const char *subpath, const char *stdflag, char *fifo_name,

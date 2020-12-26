@@ -57,7 +57,7 @@ static int monitor_event_cb(int fd, uint32_t events, void *cbdata, struct epoll_
         DEBUG("Malloc trim failed");
     }
 out:
-    return 0;
+    return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
 /* free monitored */

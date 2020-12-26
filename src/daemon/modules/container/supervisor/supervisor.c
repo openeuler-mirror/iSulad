@@ -245,7 +245,7 @@ static int supervisor_exit_cb(int fd, uint32_t events, void *cbdata, struct epol
 
     (void)new_clean_resources_thread(data);
 
-    return 0;
+    return EPOLL_LOOP_HANDLE_CONTINUE;
 }
 
 /* supervisor add exit monitor */

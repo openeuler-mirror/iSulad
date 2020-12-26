@@ -49,7 +49,8 @@ int epoll_loop(struct epoll_descr *descr, int t)
 
         for (i = 0; i < ep_fds; i++) {
             epoll_handler = (struct epoll_loop_handler *)(evs[i].data.ptr);
-            if (epoll_handler->cb(epoll_handler->cbfd, evs[i].events, epoll_handler->cbdata, descr) > 0) {
+            if (epoll_handler->cb(epoll_handler->cbfd, evs[i].events, epoll_handler->cbdata, descr) !=
+                EPOLL_LOOP_HANDLE_CONTINUE) {
                 goto out;
             }
         }

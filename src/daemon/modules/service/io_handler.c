@@ -297,10 +297,10 @@ static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *in
     size_t i;
 
     struct src_io_copy_handler src_handler_jump_table[] = {
-        { IO_FD,      handle_src_io_fd},
-        { IO_FIFO,    handle_src_io_fifo},
-        { IO_FUNC,    handle_src_io_fun},
-        { IO_MAX,     handle_src_io_max},
+        { IO_FD, handle_src_io_fd },
+        { IO_FIFO, handle_src_io_fifo },
+        { IO_FUNC, handle_src_io_fun },
+        { IO_MAX, handle_src_io_max },
     };
 
     for (i = 0; i < len; i++) {
@@ -387,10 +387,10 @@ static int io_copy_make_dstfds(size_t len, struct io_copy_arg *copy_arg, int *ou
     size_t i;
 
     struct dst_io_copy_handler dst_handler_jump_table[] = {
-        { IO_FD,      handle_dst_io_fd},
-        { IO_FIFO,    handle_dst_io_fifo},
-        { IO_FUNC,    handle_dst_io_fun},
-        { IO_MAX,     handle_dst_io_max},
+        { IO_FD, handle_dst_io_fd },
+        { IO_FIFO, handle_dst_io_fifo },
+        { IO_FUNC, handle_dst_io_fun },
+        { IO_MAX, handle_dst_io_max },
     };
 
     for (i = 0; i < len; i++) {
@@ -473,14 +473,13 @@ static int start_io_copy_thread(int sync_fd, bool detach, struct io_copy_arg *co
         CRIT("Thread creation failed");
         return -1;
     }
+
     sem_wait(&thread_arg.wait_sem);
     sem_destroy(&thread_arg.wait_sem);
     return 0;
 }
 
-static void add_io_copy_element(struct io_copy_arg *element,
-                                io_type srctype, void *src,
-                                io_type dsttype, void *dst,
+static void add_io_copy_element(struct io_copy_arg *element, io_type srctype, void *src, io_type dsttype, void *dst,
                                 int dstfifoflag)
 {
     element->srctype = srctype;
@@ -528,7 +527,7 @@ int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char 
     }
 
     if (stdin_fd > 0) {
-        add_io_copy_element(&io_copy[len++], IO_FD,  &stdin_fd, IO_FIFO, (void *)fifos[0], O_RDWR);
+        add_io_copy_element(&io_copy[len++], IO_FD, &stdin_fd, IO_FIFO, (void *)fifos[0], O_RDWR);
     }
 
     if (stdout_handler != NULL) {
