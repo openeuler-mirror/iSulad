@@ -1695,6 +1695,11 @@ static int do_native_append_cni_result(const char *name, const char *interface, 
 {
     struct network_api_result *work = NULL;
 
+    if (cni_result == NULL) {
+        INFO("get empty result from network: %s", name);
+        return 0;
+    }
+
     work = network_parse_to_api_result(name, interface, cni_result);
     if (work == NULL) {
         return -1;
