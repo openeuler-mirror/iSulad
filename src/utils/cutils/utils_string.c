@@ -914,3 +914,24 @@ char *util_str_token(char **input, const char *delimiter)
     *input = delimiter_found != NULL ? delimiter_found + strlen(delimiter) : NULL;
     return tok;
 }
+
+char *util_marshal_string(const char *src)
+{
+    char *marshaled = NULL;
+    char *jerr = NULL;
+
+    if (src == NULL) {
+        return NULL;
+    }
+
+    marshaled = json_marshal_string(src, strlen(src), NULL, &jerr);
+    if (marshaled == NULL) {
+        goto out;
+    }
+
+    util_trim_newline(marshaled);
+
+out:
+    free(jerr);
+    return marshaled;
+}

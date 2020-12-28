@@ -507,7 +507,7 @@ static void set_stderr_buf(char **stderr_buf, const char *format, ...)
         return;
     }
 
-    *stderr_buf = json_marshal_string(errbuf, strlen(errbuf), NULL, &jerr);
+    *stderr_buf = util_marshal_string(errbuf);
     if (*stderr_buf == NULL) {
         *stderr_buf = util_strdup_s(errbuf);
     }
@@ -596,19 +596,17 @@ static bool deal_with_result_of_waitpid(int status, char **stderr_msg, size_t er
 
 static void marshal_stderr_msg(char **buffer, size_t *real_size)
 {
-    char *jerr = NULL;
     char *tmp_err = NULL;
     char *stderr_buffer = *buffer;
     size_t stderr_real_size = *real_size;
 
     if (stderr_buffer != NULL && strlen(stderr_buffer) > 0 && stderr_real_size > 0) {
-        tmp_err = json_marshal_string(stderr_buffer, strlen(stderr_buffer), NULL, &jerr);
+        tmp_err = util_marshal_string(stderr_buffer);
         if (tmp_err != NULL) {
             free(stderr_buffer);
             *buffer = tmp_err;
             *real_size = strlen(tmp_err);
         }
-        free(jerr);
     }
 }
 
