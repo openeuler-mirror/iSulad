@@ -43,6 +43,7 @@ public:
     MOCK_METHOD1(StorageRootfsMount, char *(const char *container_id));
     MOCK_METHOD2(StorageRootfsUmount, int(const char *container_id, bool force));
     MOCK_METHOD1(StorageGetMetadataByContainerId, container_inspect_graph_driver * (const char *id));
+    MOCK_METHOD1(StorageLayerChainDelete, int (const char *layer_id));
 };
 
 void MockStorage_SetMock(MockStorage *mock);

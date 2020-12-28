@@ -184,3 +184,11 @@ container_inspect_graph_driver *storage_get_metadata_by_container_id(const char 
     }
     return nullptr;
 }
+
+int storage_layer_chain_delete(const char *layer_id)
+{
+    if (g_storage_mock != nullptr) {
+        return g_storage_mock->StorageLayerChainDelete(layer_id);
+    }
+    return -1;
+}

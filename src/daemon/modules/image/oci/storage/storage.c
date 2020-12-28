@@ -633,6 +633,25 @@ out:
     return ret;
 }
 
+int storage_layer_chain_delete(const char *layer_id)
+{
+    int ret = 0;
+
+    if (!storage_lock(&g_storage_rwlock, true)) {
+        ERROR("Failed to lock image store, not allowed to create new layer");
+        return -1;
+    }
+
+    ret = delete_img_related_layers("", layer_id);
+    if (ret != 0) {
+        ERROR("Failed to call layer store delete");
+    }
+
+    storage_unlock(&g_storage_rwlock);
+
+    return ret;
+}
+
 static void free_rootfs_list(struct rootfs_list *list)
 {
     size_t i;

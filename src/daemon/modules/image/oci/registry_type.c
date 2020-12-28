@@ -15,6 +15,7 @@
 #include "registry_type.h"
 
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "utils.h"
 #include "utils_array.h"
@@ -142,6 +143,13 @@ void free_pull_desc(pull_descriptor *desc)
 
     free(desc->layer_of_hold_refs);
     desc->layer_of_hold_refs = NULL;
+
+    if (desc->cond_inited) {
+        pthread_cond_destroy(&desc->cond);
+    }
+    if (desc->mutex_inited) {
+        pthread_mutex_destroy(&desc->mutex);
+    }
 
     free(desc);
 

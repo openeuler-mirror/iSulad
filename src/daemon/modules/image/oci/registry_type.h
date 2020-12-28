@@ -71,6 +71,8 @@ typedef struct {
     char *file;
     // already exist on local store
     bool already_exist;
+    // layer have registered to loacal store, this flag used to rollback
+    bool registered;
 } layer_blob;
 
 typedef struct {
@@ -111,6 +113,17 @@ typedef struct {
     config_blob config;
     layer_blob *layers;
     size_t layers_len;
+
+    bool rollback_layers_on_failure;
+    bool register_layers_complete;
+    // used to calc chain id
+    char *parent_chain_id;
+    // used to register layer
+    char *parent_layer_id;
+    pthread_mutex_t mutex;
+    bool mutex_inited;
+    pthread_cond_t cond;
+    bool cond_inited;
 } pull_descriptor;
 
 void free_challenge(challenge *c);
