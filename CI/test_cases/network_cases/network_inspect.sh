@@ -37,12 +37,12 @@ function test_network_inspect()
     start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-    isula network create --subnet 192.172.59.0/24 --gateway 192.172.59.3 ${name1} | awk 'END {print}'
+    isula network create --subnet 192.172.59.0/24 --gateway 192.172.59.3 ${name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name1} failed" && return ${FAILURE}
     file1="/etc/cni/net.d/isulacni-${name1}.conflist"
     [ ! -f ${file1} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file1} not exist" && return ${FAILURE}
 
-    isula network create --driver bridge --internal ${name2} | awk 'END {print}'
+    isula network create --driver bridge --internal ${name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name2} failed" && return ${FAILURE}
     file2="/etc/cni/net.d/isulacni-${name2}.conflist"
     [ ! -f ${file2} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file2} not exist" && return ${FAILURE}
@@ -62,11 +62,11 @@ function test_network_inspect()
     isula network inspect -f='{{.plugins.ipam.ranges}}' ${name1} | grep "192.172.59.0/24"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect ${name1}" && return ${FAILURE}
 
-    rm -f ${file1}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${file1} failed" && return ${FAILURE}
+    isula network rm ${name1}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name1} failed" && return ${FAILURE}
 
-    rm -f ${file2}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${file2} failed" && return ${FAILURE}
+    isula network rm ${name2}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name2} failed" && return ${FAILURE}
 
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))

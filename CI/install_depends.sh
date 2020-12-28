@@ -54,8 +54,7 @@ function make_cni_plugins()
     cd ~
     git clone https://gitee.com/duguhaotian/plugins.git
     cd plugins
-    git checkout -q "$CNI_PLUGINS_COMMIT"
-    ./build.sh
+    ./build_linux.sh
     mkdir -p ${builddir}/cni/bin/
     cp bin/* ${builddir}/cni/bin/
 }
