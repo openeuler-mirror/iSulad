@@ -12,9 +12,9 @@
  * Create: 2018-11-1
  * Description: provide tar functions
  ********************************************************************************/
-#define _GNU_SOURCE             /* See feature_test_macros(7) */
+#define _GNU_SOURCE /* See feature_test_macros(7) */
 #include "isulad_tar.h"
-#include <fcntl.h>              /* Obtain O_* constant definitions */
+#include <fcntl.h> /* Obtain O_* constant definitions */
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -210,14 +210,12 @@ static int archive_context_close(void *context, char **err)
         size_read = util_read_nointr(ctx->stderr_fd, buffer, BUFSIZ);
         if (size_read > 0) {
             reason = buffer;
-            char *err_info = NULL;
-            marshaled = json_marshal_string(buffer, (size_t)size_read, NULL, &err_info);
+            marshaled = util_marshal_string(buffer);
             if (marshaled == NULL) {
-                ERROR("Can not marshal json buffer: %s", err_info);
+                ERROR("Can not marshal json buffer: %s", buffer);
             } else {
                 reason = marshaled;
             }
-            free(err_info);
         }
         close(ctx->stderr_fd);
     }
@@ -232,8 +230,7 @@ static int archive_context_close(void *context, char **err)
     return ret;
 }
 
-static int get_rebase_name(const char *path, const char *real_path,
-                           char **resolved_path, char **rebase_name)
+static int get_rebase_name(const char *path, const char *real_path, char **resolved_path, char **rebase_name)
 {
     int nret;
     int ret = -1;
@@ -282,8 +279,7 @@ cleanup:
     return ret;
 }
 
-int resolve_host_source_path(const char *path, bool follow_link,
-                             char **resolved_path, char **rebase_name, char **err)
+int resolve_host_source_path(const char *path, bool follow_link, char **resolved_path, char **rebase_name, char **err)
 {
     int ret = -1;
     int nret = 0;
@@ -393,8 +389,8 @@ cleanup:
     return NULL;
 }
 
-static int copy_info_destination_path_ret(struct archive_copy_info *info,
-                                          struct stat st, char **err, int ret, const char *path)
+static int copy_info_destination_path_ret(struct archive_copy_info *info, struct stat st, char **err, int ret,
+                                          const char *path)
 {
     int i;
     int max_symlink_iter = 10;
@@ -619,8 +615,8 @@ static void close_pipe_fd(int pipe_fd[])
     }
 }
 
-int archive_untar(const struct io_read_wrapper *content, bool compression, const char *dstdir,
-                  const char *transform, char **err)
+int archive_untar(const struct io_read_wrapper *content, bool compression, const char *dstdir, const char *transform,
+                  char **err)
 {
     int stdin_pipe[2] = { -1, -1 };
     int stderr_pipe[2] = { -1, -1 };
@@ -649,7 +645,7 @@ int archive_untar(const struct io_read_wrapper *content, bool compression, const
     }
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork: %s", strerror(errno));
         goto cleanup;
     }
@@ -767,8 +763,8 @@ static void close_archive_pipes_fd(int *pipes, size_t pipe_size)
  * param exclude_base	:	exclude source basename in the archived file or not
  * return		:	zero if archive success, non-zero if not.
  */
-int archive_path(const char *srcdir, const char *srcbase, const char *rebase_name,
-                 bool compression, struct io_read_wrapper *archive_reader)
+int archive_path(const char *srcdir, const char *srcbase, const char *rebase_name, bool compression,
+                 struct io_read_wrapper *archive_reader)
 {
     int stderr_pipe[2] = { -1, -1 };
     int stdout_pipe[2] = { -1, -1 };
@@ -790,7 +786,7 @@ int archive_path(const char *srcdir, const char *srcbase, const char *rebase_nam
     }
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork: %s", strerror(errno));
         goto free_out;
     }

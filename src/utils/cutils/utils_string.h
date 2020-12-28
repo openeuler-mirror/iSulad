@@ -82,6 +82,9 @@ int util_string_array_unique(const char **elements, size_t length, char ***uniqu
 int util_parse_size_int_and_float(const char *numstr, int64_t mlt, int64_t *converted);
 
 char *util_str_token(char **input, const char *delimiter);
+
+char *util_marshal_string(const char *src);
+
 #ifdef __cplusplus
 }
 #endif
