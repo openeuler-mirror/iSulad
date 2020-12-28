@@ -299,6 +299,26 @@ free_out:
     return ret;
 }
 
+static int remote_attach_start()
+{
+    int ret = 0;
+    unsigned int exit_code = 0;
+
+    ret = client_remote_start(&g_cmd_start_args);
+    if (ret != 0) {
+        goto out;
+    }
+
+    ret = client_wait(&g_cmd_start_args, &exit_code);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = (int)exit_code;
+
+out:
+    return ret;
+}
+
 int cmd_start_main(int argc, const char **argv)
 {
     int ret = 0;
@@ -345,7 +365,7 @@ int cmd_start_main(int argc, const char **argv)
         g_cmd_start_args.custom_conf.attach_stdout = true;
 
         if (strncmp(g_cmd_start_args.socket, "tcp://", strlen("tcp://")) == 0) {
-            ret = client_remote_start(&g_cmd_start_args);
+            ret = remote_attach_start();
             if (ret != 0) {
                 ERROR("Failed to execute command with remote start");
                 goto out;

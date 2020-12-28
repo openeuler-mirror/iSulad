@@ -99,6 +99,16 @@ function do_attach_remote_test_t()
     isula rm -f -H "$config" $containername
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container remote" && ((ret++))
 
+    containername=start_exit
+    isula run -it -H "$config" --name $containername busybox /bin/sh -c 'exit 5'
+    [[ $? -ne 5 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid exit code with remote start" && ((ret++))
+
+    isula start -a -H "$config" $containername
+    [[ $? -ne 5 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid exit code with start and attach container remote" && ((ret++))
+
+    isula rm -f -H "$config" $containername
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove container" && ((ret++))
+
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
