@@ -666,6 +666,10 @@ bool util_exec_top_cmd(exec_top_func_t cb_func, char **args, const char *pid_arg
         close(err_fd[0]);
         dup2(err_fd[1], STDERR_FILENO);
 
+        if (util_check_inherited(true, -1) != 0) {
+            COMMAND_ERROR("Close inherited fds failed");
+        }
+
         /* become session leader */
         nret = setsid();
         if (nret < 0) {
@@ -785,6 +789,10 @@ bool util_exec_cmd(exec_func_t cb_func, void *args, const char *stdin_msg, char 
         // child process, dup2 err_fd[1] to stderr
         close(err_fd[0]);
         dup2(err_fd[1], STDERR_FILENO);
+
+        if (util_check_inherited(true, -1) != 0) {
+            COMMAND_ERROR("Close inherited fds failed");
+        }
 
         /* become session leader */
         nret = setsid();
