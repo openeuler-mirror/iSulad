@@ -98,7 +98,6 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
 
     // If target is registry server, we can save ssl related config to avoid load it again next time.
     if (!strcmp(host, desc->host)) {
-        options->ssl_verify_host = !desc->skip_tls_verify;
         if (!desc->cert_loaded) {
             ret = certs_load(host, desc->use_decrypted_key, &desc->ca_file, &desc->cert_file, &desc->key_file);
             if (ret != 0) {
@@ -118,9 +117,8 @@ static int setup_ssl_config(pull_descriptor *desc, struct http_get_options *opti
         }
     }
 
-    if (options->ca_file != NULL) {
-        options->ssl_verify_peer = true;
-    }
+    options->ssl_verify_peer = !desc->skip_tls_verify;
+    options->ssl_verify_host = !desc->skip_tls_verify;
 
 out:
 
