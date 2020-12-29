@@ -38,6 +38,18 @@ int util_array_append(char ***array, const char *element);
 
 bool util_array_contain(const char **array, const char *element);
 
+typedef struct string_array_t {
+    char **items;
+    size_t len;
+    size_t cap;
+} string_array;
+
+void util_free_string_array(string_array *ptr);
+
+int util_append_string_array(const char *val, string_array *array);
+
+bool util_string_array_contain(const string_array *ptr, const char *elem);
+
 #ifdef __cplusplus
 }
 #endif
