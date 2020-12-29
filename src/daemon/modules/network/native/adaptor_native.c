@@ -317,18 +317,18 @@ bool native_check()
     return g_store.conflist_len > 0;
 }
 
-typedef int (*get_config_callback)(const cni_net_conf_list *list, char ***array);
+typedef int (*get_config_callback)(const cni_net_conf_list *list, string_array *array);
 
-static int get_config_net_name(const cni_net_conf_list *list, char ***array)
+static int get_config_net_name(const cni_net_conf_list *list, string_array *array)
 {
     if (list->name == NULL) {
         return 0;
     }
 
-    return util_array_append(array, list->name);
+    return util_append_string_array(list->name, array);
 }
 
-static int get_config_bridge_name(const cni_net_conf_list *list, char ***array)
+static int get_config_bridge_name(const cni_net_conf_list *list, string_array *array)
 {
     size_t i;
     int nret = 0;
@@ -342,7 +342,7 @@ static int get_config_bridge_name(const cni_net_conf_list *list, char ***array)
         if (plugin == NULL || strcmp(plugin->type, NETWOKR_DRIVER_BRIDGE) != 0 || plugin->bridge == NULL) {
             continue;
         }
-        nret = util_array_append(array, plugin->bridge);
+        nret = util_append_string_array(plugin->bridge, array);
         if (nret != 0) {
             return -1;
         }
@@ -351,7 +351,7 @@ static int get_config_bridge_name(const cni_net_conf_list *list, char ***array)
     return 0;
 }
 
-static int get_config_subnet(const cni_net_conf_list *list, char ***array)
+static int get_config_subnet(const cni_net_conf_list *list, string_array *array)
 {
     size_t i;
     int nret = 0;
@@ -371,7 +371,7 @@ static int get_config_subnet(const cni_net_conf_list *list, char ***array)
         if (condition) {
             continue;
         }
-        nret = util_array_append(array, plugin->ipam->ranges[0][0]->subnet);
+        nret = util_append_string_array(plugin->ipam->ranges[0][0]->subnet, array);
         if (nret != 0) {
             return -1;
         }
@@ -380,16 +380,25 @@ static int get_config_subnet(const cni_net_conf_list *list, char ***array)
     return 0;
 }
 
-static int get_cni_config(get_config_callback cb, char ***array)
+static int get_cni_config(get_config_callback cb, string_array **array)
 {
     int ret = 0;
     map_itor *itor = NULL;
+    string_array *tmp = NULL;
 
     if (!native_store_lock(SHARED)) {
         return -1;
     }
 
+    tmp = util_common_calloc_s(sizeof(string_array));
+    if (tmp == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
     if (g_store.conflist_len == 0) {
+        *array = tmp;
+        tmp = NULL;
         goto out;
     }
 
@@ -403,30 +412,39 @@ static int get_cni_config(get_config_callback cb, char ***array)
     for (; map_itor_valid(itor); map_itor_next(itor)) {
         struct cni_network_list_conf *conflist = map_itor_value(itor);
 
-        ret = cb(conflist->list, array);
+        ret = cb(conflist->list, tmp);
         if (ret != 0) {
-            util_free_array(*array);
-            *array = NULL;
             goto out;
         }
     }
+    *array = tmp;
+    tmp = NULL;
 
 out:
     map_itor_free(itor);
     native_store_unlock();
+    util_free_string_array(tmp);
     return ret;
 }
 
-static int get_interface_name(char ***interface_names)
+static int get_interface_name(string_array **interface_names)
 {
     int ret = 0;
     struct ifaddrs *ifaddr = NULL;
     struct ifaddrs *ifa = NULL;
+    string_array *tmp = NULL;
 
     ret = getifaddrs(&ifaddr);
     if (ret != 0) {
         ERROR("Failed to get if addr");
         return ret;
+    }
+
+    tmp = util_common_calloc_s(sizeof(string_array));
+    if (tmp == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
     }
 
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
@@ -434,28 +452,39 @@ static int get_interface_name(char ***interface_names)
         if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_PACKET) {
             continue;
         }
-        ret = util_array_append(interface_names, ifa->ifa_name);
+        ret = util_append_string_array(ifa->ifa_name, tmp);
         if (ret != 0) {
             goto out;
         }
     }
+    *interface_names = tmp;
+    tmp = NULL;
 
 out:
+    util_free_string_array(tmp);
     freeifaddrs(ifaddr);
     return ret;
 }
 
-static int get_host_net_ip(char ***host_net_ip)
+static int get_host_net_ip(string_array **host_net_ip)
 {
     int ret = 0;
     char ipaddr[INET6_ADDRSTRLEN] = { 0 };
     struct ifaddrs *ifaddr = NULL;
     struct ifaddrs *ifa = NULL;
+    string_array *tmp = NULL;
 
     ret = getifaddrs(&ifaddr);
     if (ret != 0) {
         ERROR("Failed to get if addr");
         return ret;
+    }
+
+    tmp = util_common_calloc_s(sizeof(string_array));
+    if (tmp == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
     }
 
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
@@ -470,7 +499,7 @@ static int get_host_net_ip(char ***host_net_ip)
                 ret = ECOMM;
                 goto out;
             }
-            ret = util_array_append(host_net_ip, ipaddr);
+            ret = util_append_string_array(ipaddr, tmp);
             if (ret != 0) {
                 goto out;
             }
@@ -481,14 +510,18 @@ static int get_host_net_ip(char ***host_net_ip)
                 ret = ECOMM;
                 goto out;
             }
-            ret = util_array_append(host_net_ip, ipaddr);
+            ret = util_append_string_array(ipaddr, tmp);
             if (ret != 0) {
                 goto out;
             }
         }
     }
 
+    *host_net_ip = tmp;
+    tmp = NULL;
+
 out:
+    util_free_string_array(tmp);
     freeifaddrs(ifaddr);
     return ret;
 }
@@ -547,10 +580,9 @@ static int net_conflict(const struct ipnet *net, const struct ipnet *ipnet)
  * 1        : subnet not avaliable
  * others   : error
  */
-static int check_subnet_available(const char *subnet, const char **subnets, const char **hostIP)
+static int check_subnet_available(const char *subnet, const string_array *subnets, string_array *hostIP)
 {
     int ret = 0;
-    size_t len = 0;
     size_t i = 0;
     uint8_t *ip = NULL;
     size_t ip_len = 0;
@@ -563,11 +595,10 @@ static int check_subnet_available(const char *subnet, const char **subnets, cons
         return -1;
     }
 
-    len = util_array_len(subnets);
-    for (i = 0; i < len; i++) {
-        ret = util_parse_cidr(subnets[i], &tmp);
+    for (i = 0; i < subnets->len; i++) {
+        ret = util_parse_cidr(subnets->items[i], &tmp);
         if (ret != 0 || tmp == NULL) {
-            ERROR("Parse CIDR %s failed", subnets[i]);
+            ERROR("Parse CIDR %s failed", subnets->items[i]);
             ret = -1;
             goto out;
         }
@@ -579,11 +610,10 @@ static int check_subnet_available(const char *subnet, const char **subnets, cons
         tmp = NULL;
     }
 
-    len = util_array_len(hostIP);
-    for (i = 0; i < len; i++) {
-        ret = util_parse_ip_from_str(hostIP[i], &ip, &ip_len);
+    for (i = 0; i < hostIP->len; i++) {
+        ret = util_parse_ip_from_str(hostIP->items[i], &ip, &ip_len);
         if (ret != 0 || ip == NULL || ip_len == 0) {
-            ERROR("Parse IP %s failed", hostIP[i]);
+            ERROR("Parse IP %s failed", hostIP->items[i]);
             ret = -1;
             goto out;
         }
@@ -606,16 +636,16 @@ out:
 static int check_bridge(const network_create_request *request)
 {
     int ret = 0;
-    char **net_names = NULL;
-    char **subnets = NULL;
-    char **hostIP = NULL;
+    string_array *net_names = NULL;
+    string_array *subnets = NULL;
+    string_array *hostIP = NULL;
 
     if (request->name != NULL) {
         ret = get_cni_config(get_config_net_name, &net_names);
         if (ret != 0) {
             goto out;
         }
-        if (util_array_contain((const char **)net_names, request->name)) {
+        if (util_string_array_contain(net_names, request->name)) {
             isulad_set_error_message("Network name \"%s\" has been used", request->name);
             ret = EINVALIDARGS;
             goto out;
@@ -636,16 +666,16 @@ static int check_bridge(const network_create_request *request)
         goto out;
     }
 
-    ret = check_subnet_available(request->subnet, (const char **)subnets, (const char **)hostIP);
+    ret = check_subnet_available(request->subnet, subnets, hostIP);
     if (ret == 1) {
         isulad_set_error_message("Subnet \"%s\" conflict with CNI config or host network", request->subnet);
         ret = EINVALIDARGS;
     }
 
 out:
-    util_free_array(net_names);
-    util_free_array(subnets);
-    util_free_array(hostIP);
+    util_free_string_array(net_names);
+    util_free_string_array(subnets);
+    util_free_string_array(hostIP);
     return ret;
 }
 
@@ -655,9 +685,9 @@ static char *find_bridge_name()
     int i = 0;
     char *num = NULL;
     char *name = NULL;
-    char **net_names = NULL;
-    char **bridge_names = NULL;
-    char **host_net_names = NULL;
+    string_array *net_names = NULL;
+    string_array *bridge_names = NULL;
+    string_array *host_net_names = NULL;
     const char *bridge_name_prefix = "isula-br";
 
     nret = get_cni_config(get_config_net_name, &net_names);
@@ -689,13 +719,13 @@ static char *find_bridge_name()
         if (name == NULL) {
             goto out;
         }
-        if (net_names != NULL && util_array_contain((const char **)net_names, name)) {
+        if (net_names != NULL && util_string_array_contain(net_names, name)) {
             continue;
         }
-        if (bridge_names != NULL && util_array_contain((const char **)bridge_names, name)) {
+        if (bridge_names != NULL && util_string_array_contain(bridge_names, name)) {
             continue;
         }
-        if (host_net_names != NULL && util_array_contain((const char **)host_net_names, name)) {
+        if (host_net_names != NULL && util_string_array_contain(host_net_names, name)) {
             continue;
         }
         goto out;
@@ -706,9 +736,9 @@ static char *find_bridge_name()
 
 out:
     free(num);
-    util_free_array(net_names);
-    util_free_array(bridge_names);
-    util_free_array(host_net_names);
+    util_free_string_array(net_names);
+    util_free_string_array(bridge_names);
+    util_free_string_array(host_net_names);
     return name;
 }
 
@@ -761,8 +791,8 @@ static char *find_subnet()
 {
     int nret = 0;
     char *subnet = NULL;
-    char **config_subnet = NULL;
-    char **hostIP = NULL;
+    string_array *config_subnet = NULL;
+    string_array *hostIP = NULL;
 
     size_t len = sizeof(g_private_networks) / sizeof(g_private_networks[0]);
     const char *end = g_private_networks[len - 1].end;
@@ -788,7 +818,7 @@ static char *find_subnet()
             subnet = nx_subnet;
         }
 
-        nret = check_subnet_available(subnet, (const char **)config_subnet, (const char **)hostIP);
+        nret = check_subnet_available(subnet, config_subnet, hostIP);
         if (nret == 0) {
             goto out;
         }
@@ -806,8 +836,8 @@ static char *find_subnet()
     isulad_set_error_message("Cannot find avaliable subnet by default");
 
 out:
-    util_free_array(config_subnet);
-    util_free_array(hostIP);
+    util_free_string_array(config_subnet);
+    util_free_string_array(hostIP);
     return subnet;
 }
 
@@ -1550,7 +1580,7 @@ static int remove_interface(const char *ifa)
     ;
     const size_t args_len = 4;
     char **args = NULL;
-    char **interfaces = NULL;
+    string_array *interfaces = NULL;
     char *stdout_msg = NULL;
     char *stderr_msg = NULL;
 
@@ -1560,11 +1590,11 @@ static int remove_interface(const char *ifa)
         return -1;
     }
 
-    if (util_array_len((const char **)interfaces) == 0) {
+    if (interfaces->len == 0) {
         return 0;
     }
 
-    if (!util_array_contain((const char **)interfaces, ifa)) {
+    if (!util_string_array_contain(interfaces, ifa)) {
         goto out;
     }
 
@@ -1586,7 +1616,7 @@ static int remove_interface(const char *ifa)
     }
 
 out:
-    util_free_array(interfaces);
+    util_free_string_array(interfaces);
     util_free_array(args);
     free(stdout_msg);
     free(stderr_msg);
