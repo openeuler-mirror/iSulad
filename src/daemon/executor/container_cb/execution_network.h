@@ -33,6 +33,10 @@ int merge_network(const host_config *host_spec, const char *rootfs, const char *
 int init_container_network_confs(const char *id, const char *rootpath, const host_config *hc,
                                  container_config_v2_common_config *common_config);
 
+bool validate_container_network(const char *network, const char **bridge, const size_t len);
+
+int setup_network(container_t *cont);
+
 #ifdef __cplusplus
 }
 #endif
