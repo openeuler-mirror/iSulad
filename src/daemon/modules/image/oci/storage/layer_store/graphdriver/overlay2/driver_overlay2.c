@@ -1657,6 +1657,7 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
     char *layer_dir = NULL;
     char *layer_diff = NULL;
     struct archive_options options = { 0 };
+    char *err = NULL;
 
     if (id == NULL || driver == NULL || content == NULL) {
         ERROR("invalid argument");
@@ -1680,14 +1681,15 @@ int overlay2_apply_diff(const char *id, const struct graphdriver *driver, const 
 
     options.whiteout_format = OVERLAY_WHITEOUT_FORMATE;
 
-    ret = archive_unpack(content, layer_diff, &options);
+    ret = archive_unpack(content, layer_diff, &options, &err);
     if (ret != 0) {
-        ERROR("Failed to unpack to :%s", layer_diff);
+        ERROR("Failed to unpack to %s: %s", layer_diff, err);
         ret = -1;
         goto out;
     }
 
 out:
+    free(err);
     free(layer_dir);
     free(layer_diff);
     return ret;

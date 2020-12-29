@@ -1061,6 +1061,7 @@ int oci_do_load(const im_load_request *request)
     load_image_t *im = NULL;
     char *digest = NULL;
     char *dstdir = NULL;
+    char *err = NULL;
 
     if (request == NULL || request->file == NULL) {
         ERROR("Invalid input arguments, cannot load image");
@@ -1082,9 +1083,9 @@ int oci_do_load(const im_load_request *request)
     }
 
     options.whiteout_format = NONE_WHITEOUT_FORMATE;
-    if (archive_unpack(&reader, dstdir, &options) != 0) {
-        ERROR("Failed to unpack to :%s", dstdir);
-        isulad_try_set_error_message("Failed to unpack to :%s", dstdir);
+    if (archive_unpack(&reader, dstdir, &options, &err) != 0) {
+        ERROR("Failed to unpack to %s: %s", dstdir, err);
+        isulad_try_set_error_message("Failed to unpack to %s: %s", dstdir, err);
         ret = -1;
         goto out;
     }
@@ -1167,5 +1168,6 @@ out:
         WARN("failed to remove directory %s", dstdir);
     }
     free(dstdir);
+    free(err);
     return ret;
 }

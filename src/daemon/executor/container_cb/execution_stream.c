@@ -46,6 +46,7 @@
 #include "image_api.h"
 #include "path.h"
 #include "isulad_tar.h"
+#include "util_archive.h"
 #include "container_api.h"
 #include "error.h"
 #include "isula_libutils/logger_json_file.h"
@@ -384,9 +385,18 @@ out:
     return ret;
 }
 
+static char *get_tar_path(const char *srcdir, const char *srcbase, const char *container_fs)
+{
+    if (!util_has_prefix(srcdir, container_fs)) {
+        ERROR("srcdir %s does not contain %s", srcdir, container_fs);
+        return NULL;
+    }
+    return util_path_join(srcdir + strlen(container_fs), srcbase);
+}
+
 static int archive_and_send_copy_data(const stream_func_wrapper *stream,
                                       struct isulad_copy_from_container_response *response, const char *resolvedpath,
-                                      const char *abspath)
+                                      const char *abspath, const char *container_fs)
 {
     int ret = -1;
     int nret;
@@ -399,6 +409,7 @@ static int archive_and_send_copy_data(const stream_func_wrapper *stream,
     char *buf = NULL;
     char cleaned[PATH_MAX + 2] = { 0 };
     struct io_read_wrapper reader = { 0 };
+    char *tar_path = NULL;
 
     buf = util_common_calloc_s(buf_len);
     if (buf == NULL) {
@@ -422,7 +433,15 @@ static int archive_and_send_copy_data(const stream_func_wrapper *stream,
         ERROR("split %s failed", abspath);
         goto cleanup;
     }
-    nret = archive_path(srcdir, srcbase, absbase, false, &reader);
+
+    tar_path = get_tar_path(srcdir, srcbase, container_fs);
+    if (tar_path == NULL) {
+        goto cleanup;
+    }
+
+    DEBUG("archive chroot tar stream container_fs(%s) srcdir(%s) relative(%s) srcbase(%s) absbase(%s)",
+          container_fs, srcdir, tar_path, srcbase, absbase);
+    nret = archive_chroot_tar_stream(container_fs, tar_path, srcbase, absbase, &reader);
     if (nret != 0) {
         ERROR("Archive %s failed", resolvedpath);
         goto cleanup;
@@ -445,6 +464,7 @@ static int archive_and_send_copy_data(const stream_func_wrapper *stream,
 
     ret = 0;
 cleanup:
+    free(tar_path);
     free(buf);
     free(srcdir);
     free(srcbase);
@@ -583,58 +603,6 @@ static container_path_stat *resolve_and_stat_path(const char *rootpath, const ch
     return stat;
 }
 
-static int pause_container(const container_t *cont)
-{
-    int ret = 0;
-    rt_pause_params_t params = { 0 };
-    const char *id = cont->common_config->id;
-
-    params.rootpath = cont->root_path;
-    params.state = cont->state_path;
-    if (runtime_pause(id, cont->runtime, &params)) {
-        ERROR("Failed to pause container:%s", id);
-        ret = -1;
-        goto out;
-    }
-
-    container_state_set_paused(cont->state);
-
-    if (container_state_to_disk(cont)) {
-        ERROR("Failed to save container \"%s\" to disk", id);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
-static int resume_container(const container_t *cont)
-{
-    int ret = 0;
-    rt_resume_params_t params = { 0 };
-    const char *id = cont->common_config->id;
-
-    params.rootpath = cont->root_path;
-    params.state = cont->state_path;
-    if (runtime_resume(id, cont->runtime, &params)) {
-        ERROR("Failed to resume container:%s", id);
-        ret = -1;
-        goto out;
-    }
-
-    container_state_reset_paused(cont->state);
-
-    if (container_state_to_disk(cont)) {
-        ERROR("Failed to save container \"%s\" to disk", id);
-        ret = -1;
-        goto out;
-    }
-
-out:
-    return ret;
-}
-
 static int copy_from_container_cb(const struct isulad_copy_from_container_request *request,
                                   const stream_func_wrapper *stream, char **err)
 {
@@ -645,7 +613,6 @@ static int copy_from_container_cb(const struct isulad_copy_from_container_reques
     container_path_stat *stat = NULL;
     container_t *cont = NULL;
     struct isulad_copy_from_container_response *response = NULL;
-    bool need_pause = false;
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || stream == NULL || err == NULL) {
@@ -665,19 +632,10 @@ static int copy_from_container_cb(const struct isulad_copy_from_container_reques
         goto unlock_container;
     }
 
-    need_pause = container_is_running(cont->state) && !container_is_paused(cont->state);
-    if (need_pause) {
-        if (pause_container(cont) != 0) {
-            ERROR("can't copy to a container which is cannot be paused");
-            isulad_set_error_message("can't copy to a container which is cannot be paused");
-            goto unlock_container;
-        }
-    }
-
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
                                      cont->common_config->id);
     if (nret != 0) {
-        goto unpause_container;
+        goto unlock_container;
     }
 
     stat = resolve_and_stat_path(cont->common_config->base_fs, request->srcpath, &resolvedpath, &abspath);
@@ -692,7 +650,7 @@ static int copy_from_container_cb(const struct isulad_copy_from_container_reques
         goto cleanup_rootfs;
     }
 
-    nret = archive_and_send_copy_data(stream, response, resolvedpath, abspath);
+    nret = archive_and_send_copy_data(stream, response, resolvedpath, abspath, cont->common_config->base_fs);
     if (nret < 0) {
         ERROR("Failed to send archive data");
         goto cleanup_rootfs;
@@ -704,10 +662,6 @@ cleanup_rootfs:
     if (im_umount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
                                    cont->common_config->id) != 0) {
         WARN("Can not umount rootfs of container: %s", cont->common_config->id);
-    }
-unpause_container:
-    if (need_pause && resume_container(cont) != 0) {
-        ERROR("can't resume container which has been paused before copy");
     }
 unlock_container:
     container_unlock(cont);
@@ -777,15 +731,16 @@ static ssize_t extract_stream_to_io_read(void *content, void *buf, size_t buf_le
     return (ssize_t)(copy.data_len);
 }
 
-int read_and_extract_archive(stream_func_wrapper *stream, const char *resolved_path, const char *transform)
+static int read_and_extract_archive(stream_func_wrapper *stream, const char *container_fs,
+                                    const char *dstdir_in_container, const char *src_rebase,
+                                    const char *dst_rebase)
 {
     int ret = -1;
     char *err = NULL;
     struct io_read_wrapper content = { 0 };
-
     content.context = stream;
     content.read = extract_stream_to_io_read;
-    ret = archive_untar(&content, false, resolved_path, transform, &err);
+    ret = archive_chroot_untar_stream(&content, container_fs, dstdir_in_container, src_rebase, dst_rebase, &err);
     if (ret != 0) {
         ERROR("Can not untar to container: %s", (err != NULL) ? err : "unknown");
         isulad_set_error_message("Can not untar to container: %s", (err != NULL) ? err : "unknown");
@@ -795,7 +750,7 @@ int read_and_extract_archive(stream_func_wrapper *stream, const char *resolved_p
 }
 
 static char *copy_to_container_get_dstdir(const container_t *cont, const container_copy_to_request *request,
-                                          char **transform)
+                                          char **src_base, char **dst_base)
 {
     char *dstdir = NULL;
     char *error = NULL;
@@ -836,7 +791,7 @@ static char *copy_to_container_get_dstdir(const container_t *cont, const contain
     srcinfo.path = request->src_path;
     srcinfo.rebase_name = request->src_rebase_name;
 
-    dstdir = prepare_archive_copy(&srcinfo, dstinfo, transform, &error);
+    dstdir = prepare_archive_copy(&srcinfo, dstinfo, src_base, dst_base, &error);
     if (dstdir == NULL) {
         if (error == NULL) {
             ERROR("Can not prepare archive copy");
@@ -930,9 +885,9 @@ static int copy_to_container_cb(const container_copy_to_request *request, stream
     char *resolvedpath = NULL;
     char *abspath = NULL;
     char *dstdir = NULL;
-    char *transform = NULL;
+    char *src_base = NULL;
+    char *dst_base = NULL;
     container_t *cont = NULL;
-    bool need_pause = false;
 
     DAEMON_CLEAR_ERRMSG();
     if (request == NULL || stream == NULL || err == NULL) {
@@ -952,22 +907,13 @@ static int copy_to_container_cb(const container_copy_to_request *request, stream
         goto unlock_container;
     }
 
-    need_pause = container_is_running(cont->state) && !container_is_paused(cont->state);
-    if (need_pause) {
-        if (pause_container(cont) != 0) {
-            ERROR("can't copy to a container which is cannot be paused");
-            isulad_set_error_message("can't copy to a container which is cannot be paused");
-            goto unlock_container;
-        }
-    }
-
     nret = im_mount_container_rootfs(cont->common_config->image_type, cont->common_config->image,
                                      cont->common_config->id);
     if (nret != 0) {
-        goto unpause_container;
+        goto unlock_container;
     }
 
-    dstdir = copy_to_container_get_dstdir(cont, request, &transform);
+    dstdir = copy_to_container_get_dstdir(cont, request, &src_base, &dst_base);
     if (dstdir == NULL) {
         goto cleanup_rootfs;
     }
@@ -982,7 +928,8 @@ static int copy_to_container_cb(const container_copy_to_request *request, stream
         goto cleanup_rootfs;
     }
 
-    nret = read_and_extract_archive(stream, resolvedpath, transform);
+    nret = read_and_extract_archive(stream, cont->common_config->base_fs,
+                                    dstdir, src_base, dst_base);
     if (nret < 0) {
         ERROR("Failed to send archive data");
         goto cleanup_rootfs;
@@ -997,11 +944,6 @@ cleanup_rootfs:
         WARN("Can not umount rootfs of container: %s", cont->common_config->id);
     }
 
-unpause_container:
-    if (need_pause && resume_container(cont) != 0) {
-        ERROR("can't resume container which has been paused before copy");
-    }
-
 unlock_container:
     container_unlock(cont);
     container_unref(cont);
@@ -1013,7 +955,8 @@ pack_response:
     free(resolvedpath);
     free(abspath);
     free(dstdir);
-    free(transform);
+    free(src_base);
+    free(dst_base);
     return ret;
 }
 

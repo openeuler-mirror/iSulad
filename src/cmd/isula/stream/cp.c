@@ -27,6 +27,7 @@
 #include "path.h"
 #include "isula_connect.h"
 #include "isulad_tar.h"
+#include "util_archive.h"
 #include "command_parser.h"
 #include "connect.h"
 #include "io_wrapper.h"
@@ -124,7 +125,7 @@ static int client_copy_from_container(const struct client_arguments *args, const
     srcinfo->path = util_strdup_s(srcpath);
     srcinfo->isdir = S_ISDIR(response->stat->mode);
 
-    nret = archive_copy_to(&response->reader, false, srcinfo, resolved, &archive_err);
+    nret = archive_copy_to(&response->reader, srcinfo, resolved, &archive_err);
     if (nret != 0) {
         ret = nret;
     }
