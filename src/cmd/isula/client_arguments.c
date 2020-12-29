@@ -200,6 +200,15 @@ void client_arguments_free(struct client_arguments *args)
     util_free_array(custom_conf->volumes);
     custom_conf->volumes = NULL;
 
+    util_free_array(custom_conf->volumes_from);
+    custom_conf->volumes_from = NULL;
+
+    util_free_array(custom_conf->mounts);
+    custom_conf->mounts = NULL;
+
+    util_free_array(custom_conf->tmpfs);
+    custom_conf->tmpfs = NULL;
+
     free(custom_conf->entrypoint);
     custom_conf->entrypoint = NULL;
 

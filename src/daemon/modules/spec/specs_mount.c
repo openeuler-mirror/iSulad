@@ -383,7 +383,7 @@ static defs_mount *mount_point_to_defs_mnt(container_config_v2_common_config_mou
     }
 
     mnt->type = util_strdup_s(mp->type);
-    if (strcmp(mnt->type, "volume") == 0) {
+    if (strcmp(mnt->type, MOUNT_TYPE_VOLUME) == 0) {
         mnt->source = util_strdup_s(mp->name);
         mnt->named = mp->named;
     } else {
@@ -455,8 +455,8 @@ static int mount_points_to_defs_mnts(container_config_v2_common_config_mount_poi
     }
 
     for (i = 0; i < mount_points->len; i++) {
-        if (strcmp(mount_points->values[i]->type, "volume") != 0 &&
-            strcmp(mount_points->values[i]->type, "bind") != 0) {
+        if (strcmp(mount_points->values[i]->type, MOUNT_TYPE_VOLUME) != 0 &&
+            strcmp(mount_points->values[i]->type, MOUNT_TYPE_BIND) != 0) {
             continue;
         }
 
@@ -577,6 +577,54 @@ out:
     return ret;
 }
 
+static int append_tmpfs_option_size(defs_mount *m, size_t size)
+{
+    int nret = 0;
+    char kvbuf[MOUNT_PROPERTIES_SIZE] = {0};
+
+    if (size == 0) {
+        return 0;
+    }
+
+    nret = snprintf(kvbuf, sizeof(kvbuf), "size=%zu", size);
+    if (nret < 0 || (size_t)nret >= sizeof(kvbuf)) {
+        ERROR("Failed to snprintf tmpfs size");
+        return -1;
+    }
+
+    if (util_array_append(&m->options, kvbuf) != 0) {
+        ERROR("append tmpfs option size failed");
+        return -1;
+    }
+    m->options_len++;
+
+    return 0;
+}
+
+static int append_tmpfs_option_mode(defs_mount *m, uint32_t mode)
+{
+    int nret = 0;
+    char kvbuf[MOUNT_PROPERTIES_SIZE] = {0};
+
+    if (mode == 0) {
+        return 0;
+    }
+
+    nret = snprintf(kvbuf, sizeof(kvbuf), "mode=%o", mode);
+    if (nret < 0 || (size_t)nret >= sizeof(kvbuf)) {
+        ERROR("Failed to snprintf tmpfs mode");
+        return -1;
+    }
+
+    if (util_array_append(&m->options, kvbuf) != 0) {
+        ERROR("append tmpfs option mode failed");
+        return -1;
+    }
+    m->options_len++;
+
+    return 0;
+}
+
 static defs_mount *parse_mount(mount_spec *spec)
 {
     int ret = 0;
@@ -591,9 +639,13 @@ static defs_mount *parse_mount(mount_spec *spec)
     }
 
     m->type = util_strdup_s(spec->type);
-    m->source = util_strdup_s(spec->source);
+    if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0) {
+        m->source = util_strdup_s("tmpfs");
+    } else {
+        m->source = util_strdup_s(spec->source);
+    }
     m->destination = util_strdup_s(spec->target);
-    if (strcmp(m->type, "volume") == 0 && m->source != NULL) {
+    if (strcmp(m->type, MOUNT_TYPE_VOLUME) == 0 && m->source != NULL) {
         m->named = true;
     }
 
@@ -636,6 +688,20 @@ static defs_mount *parse_mount(mount_spec *spec)
         m->options_len++;
     }
 
+    if (strcmp(m->type, MOUNT_TYPE_TMPFS) == 0 && spec->tmpfs_options != NULL) {
+        if (append_tmpfs_option_size(m, (size_t) spec->tmpfs_options->size_bytes) != 0) {
+            ERROR("append tmpfs option size failed");
+            ret = -1;
+            goto out;
+        }
+
+        if (append_tmpfs_option_mode(m, spec->tmpfs_options->mode) != 0) {
+            ERROR("append tmpfs option mode failed");
+            ret = -1;
+            goto out;
+        }
+    }
+
     ret = append_default_mount_options(m, true, has_pro, has_sel);
     if (ret != 0) {
         goto out;
@@ -673,7 +739,7 @@ static defs_mount *parse_anonymous_volume(char *volume)
         return NULL;
     }
 
-    mount_element->type = util_strdup_s("volume");
+    mount_element->type = util_strdup_s(MOUNT_TYPE_VOLUME);
     mount_element->source = NULL;
     mount_element->destination = util_strdup_s(path);
     mount_element->named = false;
@@ -1242,7 +1308,7 @@ static container_config_v2_common_config_mount_points_element *defs_mnt_to_mount
             mp->propagation = util_strdup_s(mnt->options[i]);
             continue;
         }
-        if (strstr(mnt->options[i], "bind") != NULL) {
+        if (strstr(mnt->options[i], MOUNT_TYPE_BIND) != NULL) {
             continue;
         }
         if (mode == NULL) {
@@ -1472,7 +1538,7 @@ static int merge_fs_mounts_to_v2_spec(defs_mount **mounts, size_t mounts_len,
 
     for (i = 0; i < mounts_len; i++) {
         defs_mount *mnt = mounts[i];
-        if (strcmp(mnt->type, "volume") == 0) {
+        if (strcmp(mnt->type, MOUNT_TYPE_VOLUME) == 0) {
             struct volume_options opts = { .ref = v2_spec->id };
             // support local volume only currently.
             vol = volume_create(VOLUME_DEFAULT_DRIVER_NAME, mnt->source, &opts);
@@ -1523,9 +1589,9 @@ static int merge_fs_mounts_to_v2_spec(defs_mount **mounts, size_t mounts_len,
         }
 
         // mount -t have no type volume, trans volume to bind
-        if (strcmp(mnt->type, "volume") == 0) {
+        if (strcmp(mnt->type, MOUNT_TYPE_VOLUME) == 0) {
             free(mnt->type);
-            mnt->type = util_strdup_s("bind");
+            mnt->type = util_strdup_s(MOUNT_TYPE_BIND);
         }
         free_volume(vol);
         vol = NULL;
@@ -2204,7 +2270,7 @@ static bool mount_file(defs_mount ***all_mounts, size_t *all_mounts_len, const c
 
     tmp_mounts->destination = util_strdup_s(dst_path);
     tmp_mounts->source = util_strdup_s(src_path);
-    tmp_mounts->type = util_strdup_s("bind");
+    tmp_mounts->type = util_strdup_s(MOUNT_TYPE_BIND);
     tmp_mounts->options = options;
     tmp_mounts->options_len = options_len;
     options = NULL;
@@ -2252,7 +2318,7 @@ static bool add_host_channel_mount(defs_mount ***all_mounts, size_t *all_mounts_
 
     tmp_mounts->destination = util_strdup_s(host_channel->path_in_container);
     tmp_mounts->source = util_strdup_s(host_channel->path_on_host);
-    tmp_mounts->type = util_strdup_s("bind");
+    tmp_mounts->type = util_strdup_s(MOUNT_TYPE_BIND);
     tmp_mounts->options = options;
     tmp_mounts->options_len = options_len;
     options = NULL;
@@ -2592,7 +2658,7 @@ static bool add_shm_mount(defs_mount ***all_mounts, size_t *all_mounts_len, cons
 
     tmp_mounts->destination = util_strdup_s("/dev/shm");
     tmp_mounts->source = util_strdup_s(shm_path);
-    tmp_mounts->type = util_strdup_s("bind");
+    tmp_mounts->type = util_strdup_s(MOUNT_TYPE_BIND);
     tmp_mounts->options = options;
     tmp_mounts->options_len = options_len;
     options = NULL;
@@ -2726,6 +2792,10 @@ static int calc_mounts_len(host_config *host_spec, container_config *container_s
     }
 
     *len = host_spec->mounts_len + host_spec->binds_len + volumes_from_len;
+    if (host_spec->tmpfs != NULL) {
+        (*len) += host_spec->tmpfs->len;
+    }
+
     if (container_spec->volumes != NULL && container_spec->volumes->len != 0) {
         (*len) += container_spec->volumes->len;
     }
@@ -2744,6 +2814,7 @@ static int add_mounts(host_config *host_spec, defs_mount **merged_mounts, size_t
     int ret = 0;
     size_t i = 0;
     defs_mount *mnt = NULL;
+    defs_mount *conflict = NULL;
 
     for (i = 0; i < host_spec->mounts_len; i++) {
         mnt = parse_mount(host_spec->mounts[i]);
@@ -2753,10 +2824,21 @@ static int add_mounts(host_config *host_spec, defs_mount **merged_mounts, size_t
             goto out;
         }
 
+        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
+        if (conflict != NULL) {
+            ERROR("Duplicate mount point: %s", conflict->destination);
+            isulad_set_error_message("Duplicate mount point: %s", conflict->destination);
+            ret = -1;
+            goto out;
+        }
+
         add_mount(merged_mounts, merged_mounts_len, mnt);
     }
 
 out:
+    if (ret != 0) {
+        free_defs_mount(mnt);
+    }
 
     return ret;
 }
@@ -2772,6 +2854,113 @@ static int add_volumes(host_config *host_spec, defs_mount **merged_mounts, size_
         mnt = parse_volume(host_spec->binds[i]);
         if (mnt == NULL) {
             ERROR("parse binds %s failed", host_spec->binds[i]);
+            ret = -1;
+            goto out;
+        }
+
+        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
+        if (conflict != NULL) {
+            ERROR("Duplicate mount point: %s", conflict->destination);
+            isulad_set_error_message("Duplicate mount point: %s", conflict->destination);
+            ret = -1;
+            goto out;
+        }
+
+        add_mount(merged_mounts, merged_mounts_len, mnt);
+        mnt = NULL;
+    }
+
+out:
+    if (ret != 0) {
+        free_defs_mount(mnt);
+    }
+
+    return ret;
+}
+
+static char *get_valid_tmpfs_dst_path(char *tmpfs)
+{
+    char dstpath[PATH_MAX] = {0};
+
+    if (tmpfs == NULL) {
+        return NULL;
+    }
+
+    if (tmpfs[0] != '/') {
+        ERROR("Invalid mount specification '%s'.Destination must be absolute path", tmpfs);
+        isulad_set_error_message("Invalid mount specification '%s'.Destination must be absolute path", tmpfs);
+        return NULL;
+    }
+
+    if (!util_clean_path(tmpfs, dstpath, sizeof(dstpath))) {
+        ERROR("Invalid mount specification '%s'.Can't translate destination path to clean path", tmpfs);
+        isulad_set_error_message("Invalid mount specification '%s'.Can't translate destination path to clean path",
+                                 tmpfs);
+        return NULL;
+    }
+
+    if (strcmp(dstpath, "/") == 0) {
+        ERROR("Invalid mount specification '%s'.Destination can't be '/'", tmpfs);
+        isulad_set_error_message("Invalid mount specification '%s'.Destination can't be '/'", tmpfs);
+        return NULL;
+    }
+
+    return util_strdup_s(dstpath);
+}
+
+static defs_mount *parse_tmpfs(char *tmpfs)
+{
+    int ret = 0;
+    defs_mount *m = NULL;
+    char *dstpath = NULL;
+
+    dstpath = get_valid_tmpfs_dst_path(tmpfs);
+    if (dstpath == NULL) {
+        return NULL;
+    }
+
+    m = util_common_calloc_s(sizeof(defs_mount));
+    if (m == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    m->type = util_strdup_s(MOUNT_TYPE_TMPFS);
+    m->source = util_strdup_s("tmpfs");
+    m->destination = util_strdup_s(dstpath);
+
+    if (append_default_tmpfs_options(m) != 0) {
+        ERROR("append default tmpfs options failed");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(dstpath);
+    if (ret != 0) {
+        free_defs_mount(m);
+        m = NULL;
+    }
+
+    return m;
+}
+
+static int add_tmpfs(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
+    defs_mount *conflict = NULL;
+    json_map_string_string *tmpfs = host_spec->tmpfs;
+
+    if (tmpfs == NULL) {
+        return 0;
+    }
+    for (i = 0; i < tmpfs->len; i++) {
+        mnt = parse_tmpfs(tmpfs->keys[i]);
+        if (mnt == NULL) {
+            ERROR("parse binds %s failed", tmpfs->keys[i]);
             ret = -1;
             goto out;
         }
@@ -2905,6 +3094,12 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
 
     // add --volume
     ret = add_volumes(host_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // add --tmpfs
+    ret = add_tmpfs(host_spec, merged_mounts, &merged_mounts_len);
     if (ret != 0) {
         goto out;
     }

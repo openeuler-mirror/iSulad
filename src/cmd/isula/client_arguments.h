@@ -72,6 +72,9 @@ struct custom_configs {
     /* mounts to attach a filesystem */
     char **mounts;
 
+    /* mount tmpfs to container */
+    char **tmpfs;
+
     /* pids limit */
     int64_t pids_limit;
 

@@ -81,6 +81,10 @@ bool util_valid_key_propagation(const char *key);
 
 bool util_valid_key_selinux(const char *key);
 
+bool util_valid_key_tmpfs_size(const char *key);
+
+bool util_valid_key_tmpfs_mode(const char *key);
+
 bool util_valid_key_nocopy(const char *key);
 
 bool util_valid_value_true(const char *value);
