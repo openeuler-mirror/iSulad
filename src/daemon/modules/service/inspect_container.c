@@ -495,6 +495,40 @@ out:
     return ret;
 }
 
+static int pack_inspect_network_settings(const container_config_v2_common_config *common_config,
+                                         container_inspect *inspect)
+{
+    parser_error jerr = NULL;
+    char *jstr = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY | OPT_GEN_KEY_VALUE, 0 };
+    int ret = 0;
+
+    if (common_config == NULL || common_config->network_settings == NULL) {
+        return 0;
+    }
+
+    jstr = container_network_settings_generate_json(common_config->network_settings, &ctx, &jerr);
+    if (jstr == NULL) {
+        ERROR("Generate network settings failed: %s", jerr);
+        ret = -1;
+        goto out;
+    }
+
+    free(jerr);
+    jerr = NULL;
+    inspect->network_settings = container_network_settings_parse_data(jstr, NULL, &jerr);
+    if (inspect->network_settings == NULL) {
+        ERROR("Parse network settings failed: %s", jerr);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(jerr);
+    free(jstr);
+    return ret;
+}
+
 static container_inspect *pack_inspect_data(const container_t *cont, bool with_host_config)
 {
     container_inspect *inspect = NULL;
@@ -507,6 +541,10 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
 
     if (pack_inspect_general_data(cont, inspect) != 0) {
         ERROR("Failed to pack inspect general data, continue to pack other information");
+    }
+
+    if (pack_inspect_network_settings(cont->common_config, inspect) != 0) {
+        ERROR("Failed to pack inspect network data, continue to pack other information");
     }
 
     if (pack_inspect_container_state(cont, inspect) != 0) {
