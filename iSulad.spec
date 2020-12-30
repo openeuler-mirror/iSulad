@@ -1,5 +1,5 @@
-%global _version 2.0.7
-%global _release 20201207.153005.git41c86050
+%global _version 2.0.8
+%global _release 20201230.155843.git6557a6eb
 %global is_systemd 1
 
 Name:      iSulad
@@ -11,31 +11,6 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
-
-Patch0001: 0001-Add-a-solution-to-the-gpgkey-problem.patch
-Patch0002: 0002-change-default-tmp-directory-from-var-tmp-to-var-lib.patch
-Patch0003: 0003-update-api.proto-to-v1.19.3-according-to-kubelet.patch
-Patch0004: 0004-adapt-CI-ISULAD_TMPDIR-testcases.patch
-Patch0005: 0005-listening-127.0.0.1-port-in-cri-stream-websocket-ser.patch
-Patch0006: 0006-using-64-bit-unique-token-in-CRI-websockets-server-R.patch
-Patch0007: 0007-add-mock-conf_get_use_decrypted_key_flag-and-setup-a.patch
-Patch0008: 0008-show-all-mutl-network-ips.patch
-Patch0009: 0009-iSulad-only-qsort-the-configed-mounts.patch
-Patch0010: 0010-CI-add-testcases-for-bind-proc-and-sys-fs.patch
-Patch0011: 0011-verify-peer-if-it-s-secure-registry.patch
-Patch0012: 0012-make-sure-all-certs-load-success-if-any-provided.patch
-Patch0013: 0013-add-ch-docs-for-install-iSulad.patch
-Patch0014: 0014-error-out-if-unpack-layer-failed.patch
-Patch0015: 0015-ignore-get-ip-error-for-mutlnetwork.patch
-Patch0016: 0016-support-default-container-log-options.patch
-Patch0017: 0017-add-testcase-for-default-container-log-configs.patch
-Patch0018: 0018-clean-code-ignore-list-containers-error.patch
-Patch0019: 0019-add-g_oci_image_module_data-in-oci-image-module.patch
-Patch0020: 0020-translate-absolute-path-to-relative-path-when-unpack.patch
-Patch0021: 0021-clean-code-fix-check-error-in-terminal.c-and-volume_.patch
-Patch0022: 0022-iSulad-bugfix-args-use_decrypted_key-is-a-pointer.patch
-Patch0023: 0023-verify-peer-only-if-CA-configed.patch
-
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -238,6 +213,12 @@ fi
 %endif
 
 %changelog
+* Wed Dec 30 2020 lifeng <lifeng68@huawei.com> - 2.0.8-20201230.155843.git6557a6eb
+- Type: update to v2.0.8
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Mon Dec 7 2020 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.7-20201207.153005.git41c86050
 - Type: update
 - ID: NA
