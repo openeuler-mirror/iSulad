@@ -853,8 +853,8 @@ static int generate_filter_string(char ***filter_string, bool **json_format, siz
         }
     }
 
-    for (i = 1;i < g_cmd_inspect_args.argc; i++) {
-        for (j = 0;j < format_size; j++) {
+    for (i = 1; i < g_cmd_inspect_args.argc; i++) {
+        for (j = 0; j < format_size; j++) {
             (*json_format)[i * format_size + j] = (*json_format)[j];
         }
     }
@@ -890,7 +890,7 @@ static int do_inspect()
         if (ret != 0) {
             goto out;
         }
- 
+
         array_size = sizeof(container_tree_t) * (size_t)(g_cmd_inspect_args.argc * filter_string_len + 1);
     } else {
         array_size = sizeof(container_tree_t) * (size_t)(g_cmd_inspect_args.argc + 1);
