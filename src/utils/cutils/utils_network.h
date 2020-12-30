@@ -46,13 +46,6 @@ struct ipnet {
     size_t ip_mask_len;
 };
 
-struct network_port {
-    char *format_str;
-    char *proto;
-    uint64_t start;
-    uint64_t end;
-};
-
 void util_free_ipnet(struct ipnet *val);
 
 int util_parse_ip_from_str(const char *addr, uint8_t **ips, size_t *len);
@@ -76,20 +69,6 @@ bool util_validate_ipv6_address(const char *ipv6);
 bool util_validate_ip_address(const char *ip);
 
 bool util_validate_mac_address(const char *mac);
-
-bool util_parse_port_range(const char *ports, struct network_port *np);
-
-/*
-* support format of port:
-* 1. 1-10;
-* 2. 8;
-*/
-bool util_new_network_port(const char *proto, const char *port, struct network_port **res);
-
-void util_free_network_port(struct network_port *ptr);
-
-bool util_valid_proto(const char *proto);
-
 
 #ifdef __cplusplus
 }

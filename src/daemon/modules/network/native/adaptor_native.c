@@ -403,6 +403,7 @@ static int get_cni_config(get_config_callback cb, string_array **array)
     tmp = util_common_calloc_s(sizeof(string_array));
     if (tmp == NULL) {
         ERROR("Out of memory");
+        ret = -1;
         goto out;
     }
 

@@ -19,7 +19,7 @@
 #include "client_arguments.h"
 #include "isula_connect.h"
 #include "utils.h"
-#include "utils_network.h"
+#include "utils_port.h"
 #include "connect.h"
 
 const char g_cmd_port_desc[] = "List port mappings of the container";
