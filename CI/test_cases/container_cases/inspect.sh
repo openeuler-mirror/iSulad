@@ -136,6 +136,12 @@ function test_inspect_spec()
     isula inspect --format='{{json .Config.Cmd}}' $containername 2>&1 | grep "exit 0"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
 
+    isula inspect -f "{{json .State.Status}} {{.Name}}" $containername 2>&1 | sed -n '1p' | grep "inited"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
+
+    isula inspect -f "{{json .State.Status}} {{.Name}}" $containername 2>&1 | sed -n '2p' | grep ${containername}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check container with image: ${image}" && ((ret++))
+
     isula rm -f $containername
 
     msg_info "${test} finished with return ${ret}..."
