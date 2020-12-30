@@ -1,3 +1,55 @@
+2020-12-30 lifeng release 2.0.8
+    - !920 implent inspect of  multy formats From: @jackey_1024 Reviewed-by: Signed-off-by:
+    - !925 utils: add close fds for utils exec cmd From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !923 always do ssl verify if insecure-skip-verify-enforce is false From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !913 support mount tmpfs to container From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !918 fix invalid exit code of remote start container From: @jingwoo Reviewed-by: @jackey_1024,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !894 register layers when pulling to reduce the time From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !921 error msg: add marshal error msg to trim newline From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !916 remote: fix core dump when remote run uncorrect cmd From: @lifeng2221dd1 Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !814 Streaming IO solution optimization and enhancement From: @jingwoo Reviewed-by: Signed-off-by:
+    - !907 add isula start -a --attach without forward signals From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !908 optimize isula run func From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !895  refactoring cri From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !903 stop signal: add support stop signal From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !900 cleancode From: @jackey_1024 Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !883 iSulad: fix build error for openssl >= 1.1.1 From: @zhangsong234 Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !853 print warning logs for weak signature algorithm and public key From: @zhangsong234 Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !881 restore: re-save the state config when restore From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !875 Container manager: split state.json From: @lifeng2221dd1 Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
+    - !865 CPU: reduce CPU usage From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !877 reformat devmapper error msg From: @gaohuatao Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !876 Refactor data forwarding function of websocket server From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !871 atomic: add options to choose whether use fdatasync From: @lifeng2221dd1 Reviewed-by: @duguhaotian,@duguhaotian Signed-off-by: @duguhaotian
+    - !864 support remove anonymous volumes when remove container From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !862 fix code review From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !861 build doc: add install grpc/protobuf package From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !860 fix codedex warnings From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !859 fix code check warnings From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !858 verify peer only if CA configed From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !857 iSulad: bugfix, args->use_decrypted_key is a pointer From: @zh_xiaoyu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !856 translate absolute path to relative path when unpack From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !855 clean code: fix check error in terminal.c and volume_cb.c From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !849 add default isulad root dir for isula-transform From: @zh_xiaoyu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !854 clean code: ignore list containers error From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !829 support default container log options From: @duguhaotian Reviewed-by: Signed-off-by:
+    - !852 ignore error of get ip for mutlnetwork From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !851 error out if unpack layer failed From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !843 add ch build docs From: @duguhaotian Reviewed-by: @leizhongkai,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !847 restrict certs check From: @wangfengtu Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !846 Mounts: only qsort the configed mounts From: @lifeng2221dd1 Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !842 show all mutl network ips From: @duguhaotian Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !841 add mock conf_get_use_decrypted_key_flag and setup all common mocks From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !840 using 64 bit unique token in CRI websockets server Request Cache From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !836 change default tmp directory from /var/tmp to /var/lib/isulad/tmp From: @wangfengtu Reviewed-by: @duguhaotian Signed-off-by: @duguhaotian
+    - !839 listening 127.0.0.1:port in cri stream websocket server From: @jingwoo Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !820 isulad 支持kubernetes v1.19.3版本CRI 接口 From: @gaohuatao Reviewed-by: @duguhaotian,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+    - !837 【轻量级 PR】：Add a solution to the gpgkey problem From: @weibaohui Reviewed-by: @lifeng2221dd1 Signed-off-by: @lifeng2221dd1
+
+    dev stats:
+      - 236 files changed, 11468 insertions(+), 6503 deletions(-)
+      - contributors: lifeng68, WangFengTu, wujing, haozi007, gaohuatao, jikui, zhangsong234, zhangxiaoyu, 大罗马的太阳
+
 2020-11-23 lifeng release 2.0.7
     - !834 refactor subcommand help implementation From: @wangfengtu Reviewed-by: @zh_xiaoyu,@lifeng2221dd1 Signed-off-by: @lifeng2221dd1
     - !833 network: add filter with invalid resolv.conf content From: @lifeng2221dd1 Reviewed-by: @jingwoo,@duguhaotian Signed-off-by: @duguhaotian
