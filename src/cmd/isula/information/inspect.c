@@ -233,19 +233,18 @@ static int client_inspect_image(const struct isula_inspect_request *request, str
 /*
  * Create a inspect request message and call RPC
  */
-static int client_inspect(const struct client_arguments *args, const char *filter, container_tree_t *tree_array)
+static char *client_inspect(const struct client_arguments *args)
 {
     isula_connect_ops *ops = NULL;
     struct isula_inspect_request request = { 0 };
     struct isula_inspect_response *response = NULL;
     client_connect_config_t config = { 0 };
-    int ret = 0;
-    yajl_val tree = NULL;
+    char *res_json = NULL;
+    int result = 0;
 
     response = util_common_calloc_s(sizeof(struct isula_inspect_response));
     if (response == NULL) {
         ERROR("Out of memory");
-        ret = -1;
         goto out;
     }
 
@@ -256,53 +255,38 @@ static int client_inspect(const struct client_arguments *args, const char *filte
     ops = get_connect_client_ops();
     if (ops == NULL || ops->container.inspect == NULL || ops->image.inspect == NULL) {
         ERROR("Unimplemented ops");
-        ret = -1;
         goto out;
     }
 
     config = get_connect_config(args);
-    ret = client_inspect_container(&request, response, &config, ops);
-    if (ret == CONTAINER_NOT_FOUND) {
+    result = client_inspect_container(&request, response, &config, ops);
+    if (result == CONTAINER_NOT_FOUND) {
         isula_inspect_response_free(response);
         response = NULL;
 
         response = util_common_calloc_s(sizeof(struct isula_inspect_response));
         if (response == NULL) {
             ERROR("Out of memory");
-            ret = -1;
             goto out;
         }
 
-        ret = client_inspect_image(&request, response, &config, ops);
+        result = client_inspect_image(&request, response, &config, ops);
     }
 
-    if (ret != 0) {
+    if (result != 0) {
         goto out;
     }
 
     if (response == NULL || response->json == NULL) {
         ERROR("Container or image json is empty");
-        ret = -1;
         goto out;
     }
 
-    tree = inspect_load_json(response->json);
-    if (tree == NULL) {
-        ret = -1;
-        goto out;
-    }
-
-    if (!inspect_filter_done(tree, filter, tree_array)) {
-        ret = -1;
-        yajl_tree_free(tree);
-        goto out;
-    }
-
-    tree_array->tree_root = tree;
+    res_json = util_strdup_s(response->json);
 
 out:
     isula_inspect_response_free(response);
-    return ret;
+    return res_json;
 }
 
 static void print_json_string(yajl_val element, int flags, bool json_format)
@@ -558,7 +542,8 @@ static void print_json(yajl_val tree, int indent, bool json_format)
     print_json_aux(tree, indent, LAST_ELEMENT | TOP_LEVEL_OBJ, json_format);
 }
 
-static void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format, bool json_format)
+static void inspect_show_result(int show_nums, const container_tree_t *tree_array,
+                                const char *format, bool *json_format)
 {
     int i = 0;
     yajl_val tree = NULL;
@@ -578,7 +563,11 @@ static void inspect_show_result(int show_nums, const container_tree_t *tree_arra
 
     for (i = 0; i < show_nums; i++) {
         tree = tree_array[i].tree_print;
-        print_json(tree, indent, json_format);
+        if (json_format == NULL) {
+            print_json(tree, indent, true);
+        } else {
+            print_json(tree, indent, json_format[i]);
+        }
 
         if ((i + 1) != show_nums) {
             if (format == NULL) {
@@ -600,6 +589,10 @@ static void inspect_free_trees(int tree_nums, container_tree_t *tree_array)
 {
     int i = 0;
 
+    if (tree_array == NULL) {
+        return;
+    }
+
     for (i = 0; i < tree_nums; i++) {
         if (tree_array[i].tree_root) {
             yajl_tree_free(tree_array[i].tree_root);
@@ -612,7 +605,7 @@ static void inspect_free_trees(int tree_nums, container_tree_t *tree_array)
 /* arg string format: "{{json .State.Running}}"
  * ret_string should be free outside by free().
  */
-static char *inspect_pause_filter(const char *arg)
+static char *inspect_parse_filter(const char *arg)
 {
     char *input_str = NULL;
     char *p = NULL;
@@ -686,8 +679,8 @@ static int inspect_check_format_f(const char *json_str, bool *json_format)
     /* check "{{json .xxx.xxx}}" */
     ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json\\s+)?(\\.\\w+)+\\s*\\}\\s*\\}\\s*$");
     if (ret == 0) {
-        if (inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$") != 0) {
-            *json_format = false;
+        if (inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$") == 0) {
+            *json_format = true;
         }
         return 0;
     }
@@ -728,17 +721,242 @@ out:
     return CHECK_FAILED;
 }
 
-int cmd_inspect_main(int argc, const char **argv)
+static char **inspect_split_filter(const char *format, size_t *filter_len)
 {
     int i = 0;
+    size_t count = 0;
+    size_t res_count = 0;
+    int last_num = 0;
+    char **res_array = NULL;
+    const char *p = NULL;
+
+    if (format == NULL || filter_len == NULL) {
+        return NULL;
+    }
+
+    count = util_strings_count(format, '}');
+    *filter_len = (count + 1) / 2;
+    if (*filter_len <= 1) {
+        res_array = (char **)util_common_calloc_s(sizeof(char *));
+        if (res_array == NULL) {
+            ERROR("out of memory");
+            return NULL;
+        }
+
+        *filter_len = 1;
+        res_array[0] = util_strdup_s(format);
+        if (res_array[0] == NULL) {
+            ERROR("out of memory");
+            util_free_array_by_len(res_array, 1);
+            return NULL;
+        }
+        return res_array;
+    }
+
+    res_array = (char **)util_common_calloc_s(sizeof(char *) * (*filter_len));
+    if (res_array == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    for (i = 0, count = 0; format[i] != '\0'; i++) {
+        if (format[i] == '}') {
+            count++;
+            if (count == 0 || count % 2 == 1) {
+                continue;
+            } else if (res_count != *filter_len - 1) {
+                res_array[res_count] = (char *)util_common_calloc_s(i - last_num + 2);
+                if (res_array[res_count] == NULL) {
+                    ERROR("out of memory");
+                    util_free_array_by_len(res_array, *filter_len);
+                    return NULL;
+                }
+                p = &format[last_num];
+                (void)strncpy(res_array[res_count], p, i - last_num + 1);
+                res_count++;
+                last_num = i + 1;
+            } else {
+                res_array[res_count] = (char *)util_common_calloc_s(strlen(format) - last_num + 1);
+                if (res_array[res_count] == NULL) {
+                    ERROR("out of memory");
+                    util_free_array_by_len(res_array, *filter_len);
+                    return NULL;
+                }
+                p = &format[last_num];
+                (void)strncpy(res_array[res_count], p, strlen(format) - last_num);
+            }
+        }
+    }
+    return res_array;
+}
+
+static int inspect_parse_json(const char *json, const char *filter, container_tree_t *tree_array)
+{
+    yajl_val tree = NULL;
+    tree = inspect_load_json(json);
+    if (tree == NULL) {
+        return -1;
+    }
+
+    if (!inspect_filter_done(tree, filter, tree_array)) {
+        yajl_tree_free(tree);
+        return -1;
+    }
+    tree_array->tree_root = tree;
+
+    return 0;
+}
+
+static int generate_filter_string(char ***filter_string, bool **json_format, size_t *filter_string_len)
+{
+    int i = 0;
+    int j = 0;
+    int ret = 0;
+    size_t format_size = 0;
+    char **format_string = NULL;
+
+    if (filter_string == NULL || json_format == NULL || filter_string_len == NULL) {
+        return -1;
+    }
+
+    format_string = inspect_split_filter(g_cmd_inspect_args.format, &format_size);
+    if (format_string == NULL) {
+        return ECOMMON;
+    }
+
+    *filter_string_len = format_size;
+    *filter_string = (char **)util_common_calloc_s(sizeof(char *) * format_size);
+    if (*filter_string == NULL) {
+        ERROR("out of memory");
+        ret = ECOMMON;
+        goto error_out;
+    }
+
+    *json_format = (bool *)util_common_calloc_s(sizeof(bool) * format_size * g_cmd_inspect_args.argc);
+    if (*json_format == NULL) {
+        ERROR("out of memory");
+        ret = ECOMMON;
+        goto error_out;
+    }
+
+    for (i = 0; i < format_size; i++) {
+        if (inspect_check_format_f(format_string[i], &(*json_format)[i]) != 0) {
+            ret = ECOMMON;
+            goto error_out;
+        }
+
+        (*filter_string)[i] = inspect_parse_filter(format_string[i]);
+        if ((*filter_string)[i] == NULL) {
+            COMMAND_ERROR("Inspect format parameter invalid: %s", g_cmd_inspect_args.format);
+            ret = EINVALIDARGS;
+            goto error_out;
+        }
+    }
+
+    for (i = 1;i < g_cmd_inspect_args.argc; i++) {
+        for (j = 0;j < format_size; j++) {
+            (*json_format)[i * format_size + j] = (*json_format)[j];
+        }
+    }
+
+    util_free_array_by_len(format_string, format_size);
+    return ret;
+
+error_out:
+    free(*json_format);
+    util_free_array_by_len(*filter_string, format_size);
+    util_free_array_by_len(format_string, format_size);
+    *json_format = NULL;
+    *filter_string = NULL;
+    return ret;
+}
+
+static int do_inspect()
+{
+    int i = 0;
+    int j = 0;
     int status = 0;
-    struct isula_libutils_log_config lconf = { 0 };
+    int ret = 0;
     int success_counts = 0;
-    char *filter_string = NULL;
+    char *json = NULL;
+    char **filter_string = NULL;
+    size_t filter_string_len = 0;
     container_tree_t *tree_array = NULL;
     size_t array_size = 0;
+    bool *json_format = NULL;
+
+    if (g_cmd_inspect_args.format != NULL) {
+        ret = generate_filter_string(&filter_string, &json_format, &filter_string_len);
+        if (ret != 0) {
+            goto out;
+        }
+ 
+        array_size = sizeof(container_tree_t) * (size_t)(g_cmd_inspect_args.argc * filter_string_len + 1);
+    } else {
+        array_size = sizeof(container_tree_t) * (size_t)(g_cmd_inspect_args.argc + 1);
+    }
+
+    tree_array = (container_tree_t *)util_common_calloc_s(array_size);
+    if (tree_array == NULL) {
+        ERROR("out of memory");
+        ret = ECOMMON;
+        goto out;
+    }
+
+    for (i = 0; i < g_cmd_inspect_args.argc; i++) {
+        g_cmd_inspect_args.name = g_cmd_inspect_args.argv[i];
+        json = client_inspect(&g_cmd_inspect_args);
+        if (json == NULL) {
+            status = -1;
+            break;
+        }
+
+        if (g_cmd_inspect_args.format != NULL) {
+            for (j = 0; j < filter_string_len; j++) {
+                if (inspect_parse_json(json, filter_string[j], &tree_array[i * filter_string_len + j])) {
+                    status = -1;
+                    free(json);
+                    json = NULL;
+                    break;
+                }
+                success_counts++;
+            }
+        } else {
+            if (inspect_parse_json(json, NULL, &tree_array[i])) {
+                status = -1;
+                free(json);
+                json = NULL;
+                break;
+            }
+            success_counts++;
+        }
+        free(json);
+        json = NULL;
+    }
+
+    if (status == 0 && tree_array != NULL) {
+        inspect_show_result(success_counts, tree_array, g_cmd_inspect_args.format, json_format);
+    }
+
+    if (status) {
+        COMMAND_ERROR("Inspect error: No such object:%s", g_cmd_inspect_args.name);
+        ret = ECOMMON;
+        goto out;
+    }
+
+out:
+    inspect_free_trees(success_counts, tree_array);
+    free(tree_array);
+    free(json_format);
+    util_free_array_by_len(filter_string, filter_string_len);
+    return ret;
+}
+
+int cmd_inspect_main(int argc, const char **argv)
+{
+    int ret = 0;
+    struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    bool json_format = true;
 
     if (client_arguments_init(&g_cmd_inspect_args)) {
         COMMAND_ERROR("client arguments init failed");
@@ -774,51 +992,7 @@ int cmd_inspect_main(int argc, const char **argv)
         COMMAND_ERROR("The number of parameters of inspect is too large");
         exit(ECOMMON);
     }
-    array_size = sizeof(container_tree_t) * (size_t)(g_cmd_inspect_args.argc + 1);
-    tree_array = (container_tree_t *)util_common_calloc_s(array_size);
-    if (tree_array == NULL) {
-        ERROR("Malloc failed\n");
-        exit(ECOMMON);
-    }
+    ret = do_inspect();
 
-    if (g_cmd_inspect_args.format != NULL) {
-        int ret;
-        ret = inspect_check_format_f(g_cmd_inspect_args.format, &json_format);
-        if (ret != 0) {
-            free(tree_array);
-            tree_array = NULL;
-            exit(ECOMMON);
-        }
-
-        filter_string = inspect_pause_filter(g_cmd_inspect_args.format);
-        if (filter_string == NULL) {
-            COMMAND_ERROR("Inspect format parameter invalid: %s", g_cmd_inspect_args.format);
-            free(tree_array);
-            tree_array = NULL;
-            exit(EINVALIDARGS);
-        }
-    }
-
-    for (i = 0; i < g_cmd_inspect_args.argc; i++) {
-        g_cmd_inspect_args.name = g_cmd_inspect_args.argv[i];
-
-        if (client_inspect(&g_cmd_inspect_args, filter_string, &tree_array[i])) {
-            status = -1;
-            break;
-        }
-        success_counts++;
-    }
-
-    if (tree_array != NULL) {
-        inspect_show_result(success_counts, tree_array, g_cmd_inspect_args.format, json_format);
-        inspect_free_trees(success_counts, tree_array);
-    }
-    free(tree_array);
-    free(filter_string);
-
-    if (status) {
-        COMMAND_ERROR("Inspect error: No such object:%s", g_cmd_inspect_args.name);
-        exit(ECOMMON);
-    }
-    exit(EXIT_SUCCESS);
+    exit(ret);
 }
