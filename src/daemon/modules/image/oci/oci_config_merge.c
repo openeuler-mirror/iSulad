@@ -32,6 +32,7 @@
 #include "utils_array.h"
 #include "utils_string.h"
 #include "image_spec_merge.h"
+#include "map.h"
 
 static void oci_image_merge_working_dir(const char *working_dir, container_config *container_spec)
 {
@@ -342,6 +343,103 @@ static void oci_image_merge_image_ref(imagetool_image *image_conf, container_con
     }
 }
 
+static int oci_image_merge_port_mappings(oci_image_spec_config *img_spec, container_config *container_spec)
+{
+    defs_map_string_object *work = NULL;
+    size_t new_len, i;
+    int ret = 0;
+    // string -> bool
+    map_t *port_table = NULL;
+    bool flag = true;
+
+    if (img_spec == NULL || img_spec->exposed_ports == NULL || img_spec->exposed_ports->len == 0) {
+        return 0;
+    }
+
+    if (container_spec->exposed_ports == NULL) {
+        container_spec->exposed_ports = img_spec->exposed_ports;
+        img_spec->exposed_ports = NULL;
+        return 0;
+    }
+
+    port_table = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (port_table == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    new_len = img_spec->exposed_ports->len;
+    if (container_spec->exposed_ports->len > SIZE_MAX - new_len) {
+        ERROR("Too large portmappings list to set");
+        ret = -1;
+        goto out;
+    }
+    new_len += container_spec->exposed_ports->len;
+
+    work = util_common_calloc_s(sizeof(defs_map_string_object));
+    if (work == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    work->keys = util_smart_calloc_s(sizeof(char *), new_len);
+    if (work->keys == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    work->values = util_smart_calloc_s(sizeof(defs_map_string_object_element *), new_len);
+    if (work->values == NULL) {
+        free(work->keys);
+        work->keys = NULL;
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    // Step 1: merge container spec portmapping into work
+    for (i = 0; i < container_spec->exposed_ports->len; i++) {
+        if (!map_replace(port_table, (void *)container_spec->exposed_ports->keys[i], (void *)&flag)) {
+            ERROR("insert port mapping: %s into table failed", container_spec->exposed_ports->keys[i]);
+            ret = -1;
+            goto out;
+        }
+        work->keys[i] = container_spec->exposed_ports->keys[i];
+        container_spec->exposed_ports->keys[i] = NULL;
+        work->values[i] = container_spec->exposed_ports->values[i];
+        container_spec->exposed_ports->values[i] = NULL;
+        work->len += 1;
+    }
+
+    // Step 2: merge image spec portmapping into work, ignore port which same with container spec
+    for (i = 0; i < img_spec->exposed_ports->len; i++) {
+        if (map_search(port_table, img_spec->exposed_ports->keys[i]) != NULL) {
+            WARN("found same port: %s, just skip.", img_spec->exposed_ports->keys[i]);
+            continue;
+        }
+        if (!map_replace(port_table, (void *)img_spec->exposed_ports->keys[i], (void *)&flag)) {
+            ERROR("insert port mapping: %s into table failed", img_spec->exposed_ports->keys[i]);
+            ret = -1;
+            goto out;
+        }
+        work->keys[work->len] = img_spec->exposed_ports->keys[i];
+        img_spec->exposed_ports->keys[i] = NULL;
+        work->values[work->len] = img_spec->exposed_ports->values[i];
+        img_spec->exposed_ports->values[i] = NULL;
+        work->len += 1;
+    }
+
+    free_defs_map_string_object(container_spec->exposed_ports);
+    container_spec->exposed_ports = work;
+    work = NULL;
+
+out:
+    free_defs_map_string_object(work);
+    map_free(port_table);
+    return ret;
+}
+
 int oci_image_merge_config(imagetool_image *image_conf, container_config *container_spec)
 {
     int ret = 0;
@@ -355,6 +453,11 @@ int oci_image_merge_config(imagetool_image *image_conf, container_config *contai
         oci_image_merge_working_dir(image_conf->spec->config->working_dir, container_spec);
 
         oci_image_merge_stop_signal(image_conf->spec->config->stop_signal, container_spec);
+
+        if (oci_image_merge_port_mappings(image_conf->spec->config, container_spec) != 0) {
+            ret = -1;
+            goto out;
+        }
 
         if (oci_image_merge_env(image_conf->spec->config, container_spec) != 0) {
             ret = -1;

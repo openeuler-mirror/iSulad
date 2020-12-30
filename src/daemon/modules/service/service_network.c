@@ -16,7 +16,10 @@
 
 #include "service_network_api.h"
 
+#include <isula_libutils/cni_anno_port_mappings.h>
+
 #include "utils_network.h"
+#include "utils_port.h"
 #include "network_api.h"
 #include "err_msg.h"
 #include "namespace.h"
@@ -317,6 +320,314 @@ err_out:
     free_json_map_string_string(args);
     return NULL;
 }
+struct host_ports_validator {
+    map_t *udp_ports;
+    map_t *tcp_ports;
+    map_t *stcp_ports;
+};
+
+/* memory store map kvfree */
+static void valid_port_map_kvfree(void *key, void *value)
+{
+    free(key);
+
+    map_free((map_t *)value);
+}
+
+static int do_parse_host_port_key(const char *key, char **proto, int *container_port)
+{
+    char **parts = NULL;
+    int ret = 0;
+
+    if (key == NULL) {
+        ERROR("empty container port key");
+        return -1;
+    }
+    parts = util_string_split(key, '/');
+    if (parts == NULL || util_array_len((const char **)parts) != 2) {
+        ERROR("invalid container port key: %s", key);
+        ret = -1;
+        goto out;
+    }
+    if (util_safe_int(parts[0], container_port) != 0) {
+        ERROR("invalid container port key: %s", key);
+        ret = -1;
+        goto out;
+    }
+    *proto = parts[1];
+    parts[1] = NULL;
+
+out:
+    util_free_array(parts);
+    return ret;
+}
+
+static int get_random_port_with_retry()
+{
+#define  MAX_RETRY 15
+    size_t j;
+    int ret = -1;
+
+    for (j = 0; j < MAX_RETRY; j++) {
+        ret = util_get_random_port();
+        if (ret > 0) {
+            return ret;
+        }
+    }
+
+    return -1;
+}
+
+static int do_append_host_port(const char *key, const char *host_ip, int host_port, struct host_ports_validator *valid,
+                               cni_anno_port_mappings_container *result)
+{
+    const char *default_host_ip = "0.0.0.0";
+    // string -> map_t<int, int>
+    map_t *work = NULL;
+    // int -> int
+    map_t *tmp = NULL;
+    char *proto = NULL;
+    int container_port;
+    int *found_port;
+    cni_anno_port_mappings_element *elem = NULL;
+    int ret = 0;
+
+    // unset host port, get a useful port
+    if (host_port == 0) {
+        host_port = get_random_port_with_retry();
+        DEBUG("get random port: %d", host_port);
+    }
+
+    if (!is_valid_port(host_port)) {
+        ERROR("Invalid container port: %d", container_port);
+        ret = -1;
+        goto out;
+    }
+
+    if (do_parse_host_port_key(key, &proto, &container_port) != 0) {
+        return -1;
+    }
+
+    if (!is_valid_port(container_port)) {
+        ERROR("Invalid container port: %d", container_port);
+        ret = -1;
+        goto out;
+    }
+
+    if (proto == NULL || strcasecmp(proto, "udp") == 0) {
+        work = valid->udp_ports;
+    } else if (strcasecmp(proto, "tcp") == 0) {
+        work = valid->tcp_ports;
+    } else {
+        work = valid->stcp_ports;
+    }
+
+    host_ip = host_ip != NULL ? host_ip : default_host_ip;
+
+    tmp = map_search(work, (void *)host_ip);
+    if (tmp == NULL) {
+        tmp = map_new(MAP_INT_INT, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+        if (tmp == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        if (!map_replace(work, (void *)host_ip, (void *)tmp)) {
+            ERROR("update host key: %s failed", host_ip);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    found_port = map_search(tmp, (void *)&host_port);
+    if (found_port != NULL && *found_port == container_port) {
+        ERROR("Conflicting port mapping container --> host: (%d --> %d)", container_port, host_port);
+        ret = -1;
+        goto out;
+    }
+
+    if (!map_replace(tmp, (void *)&host_port, (void *)&container_port)) {
+        ERROR("update host port: %d --> %d failed", host_port, container_port);
+        ret = -1;
+        goto out;
+    }
+
+    elem = util_common_calloc_s(sizeof(cni_anno_port_mappings_element));
+    if (elem == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    elem->host_ip = util_strdup_s(host_ip);
+    elem->container_port = container_port;
+    elem->host_port = host_port;
+    elem->protocol = proto;
+    proto = NULL;
+    result->items[result->len] = elem;
+    result->len += 1;
+
+out:
+    free(proto);
+    return ret;
+}
+
+static int do_merge_portbindings(defs_map_string_object_port_bindings *port_bindings, map_t *port_set,
+                                 struct host_ports_validator *valid, cni_anno_port_mappings_container *result)
+{
+    size_t i, j;
+    bool flag = true;
+    int host_port;
+
+    for (i = 0; i < port_bindings->len; i++) {
+        if (!map_replace(port_set, (void *)port_bindings->keys[i], (void *)&flag)) {
+            ERROR("insert %s into port set failed", port_bindings->keys[i]);
+            return -1;
+        }
+        for (j = 0; j < port_bindings->values[i]->element->host_len; j++) {
+            network_port_binding_host_element *elem = port_bindings->values[i]->element->host[j];
+            if (util_safe_int(elem->host_port, &host_port) != 0) {
+                ERROR("invalid key: %s with host port: %s", port_bindings->keys[i], elem->host_port);
+                return -1;
+            }
+            if (do_append_host_port(port_bindings->keys[i], elem->host_ip, host_port, valid, result) != 0) {
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+static int do_merge_expose_ports(defs_map_string_object *exposed, map_t *port_set, struct host_ports_validator *valid,
+                                 cni_anno_port_mappings_container *result)
+{
+    size_t i;
+    bool flag = true;
+
+    for (i = 0; i < exposed->len; i++) {
+        if (map_search(port_set, (void *)exposed->keys[i])) {
+            WARN("port %s has set by port binding, just ignore.", exposed->keys[i]);
+            continue;
+        }
+        if (!map_replace(port_set, (void *)exposed->keys[i], (void *)&flag)) {
+            ERROR("Insert port: %s into set failed", exposed->keys[i]);
+            return -1;
+        }
+
+        if (do_append_host_port(exposed->keys[i], NULL, 0, valid, result) != 0) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// parse exposed_ports and portbindings to cni portmapping json
+static int do_set_portmapping_native_config(const host_config *hostconfig, const container_config *cont_spec,
+                                            network_api_conf *config)
+{
+    struct host_ports_validator validate = { 0 };
+    size_t i;
+    bool flag = true;
+    cni_anno_port_mappings_container *cni_ports = NULL;
+    size_t cni_ports_max_len = 0;
+    // string --> bool
+    map_t *port_set = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error jerr = NULL;
+    char *cni_portmap_str = NULL;
+    int ret = 0;
+
+    // port bindings keys had merged into exposed ports, so just check it.
+    if (cont_spec->exposed_ports == NULL || cont_spec->exposed_ports->len == 0) {
+        return 0;
+    }
+
+    cni_ports = util_common_calloc_s(sizeof(cni_anno_port_mappings_container));
+    if (cni_ports == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    cni_ports_max_len = cont_spec->exposed_ports->len;
+
+    port_set = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (port_set == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    validate.udp_ports = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, valid_port_map_kvfree);
+    if (validate.udp_ports == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    validate.tcp_ports = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, valid_port_map_kvfree);
+    if (validate.tcp_ports == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+    validate.stcp_ports = map_new(MAP_STR_PTR, MAP_DEFAULT_CMP_FUNC, valid_port_map_kvfree);
+    if (validate.stcp_ports == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->port_bindings != NULL) {
+        for (i = 0; i < hostconfig->port_bindings->len; i++) {
+            if (!map_replace(port_set, (void *)hostconfig->port_bindings->keys[i], (void *)&flag)) {
+                ERROR("insert %s into port set failed", hostconfig->port_bindings->keys[i]);
+                ret = -1;
+                goto out;
+            }
+            // port_bindings every key add to exposed ports, so we need decrease 1
+            cni_ports_max_len += hostconfig->port_bindings->values[i]->element->host_len - 1;
+        }
+    }
+
+    cni_ports->items = util_smart_calloc_s(sizeof(cni_anno_port_mappings_element *), cni_ports_max_len);
+    if (cni_ports->items == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (hostconfig->port_bindings != NULL &&
+        do_merge_portbindings(hostconfig->port_bindings, port_set, &validate, cni_ports) != 0) {
+        ret = -1;
+        goto out;
+    }
+
+    ret = do_merge_expose_ports(cont_spec->exposed_ports, port_set, &validate, cni_ports);
+    if (ret != 0) {
+        goto out;
+    }
+    cni_portmap_str = cni_anno_port_mappings_container_generate_json(cni_ports, &ctx, &jerr);
+    if (cni_portmap_str == NULL) {
+        ret = -1;
+        ERROR("parse cni port mapping failed: %s", jerr);
+        goto out;
+    }
+    DEBUG("get set portmapping: %s", cni_portmap_str);
+    if (network_module_insert_portmapping(cni_portmap_str, config) != 0) {
+        ret = -1;
+        ERROR("set cni port mapping to network module failed");
+        goto out;
+    }
+
+out:
+    map_free(port_set);
+    map_free(validate.udp_ports);
+    map_free(validate.tcp_ports);
+    map_free(validate.stcp_ports);
+    free(jerr);
+    free(cni_portmap_str);
+    free_cni_anno_port_mappings_container(cni_ports);
+    return ret;
+}
 
 static network_api_conf *build_adaptor_native_config(const container_t *cont, prepare_networks_t op)
 {
@@ -354,8 +665,10 @@ static network_api_conf *build_adaptor_native_config(const container_t *cont, pr
         goto err_out;
     }
 
-    // TODO: support set portmapping
-    config->annotations = NULL;
+    if (do_set_portmapping_native_config(cont->hostconfig, cont->common_config != NULL ? cont->common_config->config : NULL,
+                                         config) != 0) {
+        goto err_out;
+    }
 
     return config;
 
