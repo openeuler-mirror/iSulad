@@ -1389,6 +1389,14 @@ static void *register_layers_in_thread(void *arg)
     size_t i = 0;
     struct timespec ts = {0};
 
+    ret = pthread_detach(pthread_self());
+    if (ret != 0) {
+        ERROR("Set thread detach fail");
+        goto out;
+    }
+
+    prctl(PR_SET_NAME, "register_layer");
+
     for (i = 0; i < desc->layers_len; i++) {
         mutex_lock(&desc->mutex);
         while (wait_fetch_complete(&infos[i])) {
