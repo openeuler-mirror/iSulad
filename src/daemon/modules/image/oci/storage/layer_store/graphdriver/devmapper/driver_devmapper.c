@@ -216,7 +216,7 @@ char *devmapper_mount_layer(const char *id, const struct graphdriver *driver,
     }
 
     if (mount_device(id, mnt_point_dir, mount_opts, driver->devset) != 0) {
-        ERROR("Mount device:%s to path:%s failed", id, mnt_parent_dir);
+        ERROR("Mount device:%s to path:%s failed", id, mnt_point_dir);
         ret = -1;
         goto out;
     }
