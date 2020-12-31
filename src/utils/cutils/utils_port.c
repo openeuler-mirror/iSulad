@@ -14,13 +14,24 @@
  *******************************************************************************/
 
 #include "utils_port.h"
-#include "isula_libutils/log.h"
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include <isula_libutils/log.h>
+
 #include "utils.h"
 #include "utils_array.h"
 #include "utils_convert.h"
 #include "utils_network.h"
 #include "utils_convert.h"
 #include "isula_libutils/json_common.h"
+
+#define PROTO_NUM 3
+const char *g_proto_whitelist[PROTO_NUM] = {"tcp", "udp", "sctp"};
 
 // split --publish value to <host ip> <host port with proto> and <container port with proto>, without verify
 static int split_parts(const char *value, char **host_ip, char **host_port, char **container_port)
@@ -717,5 +728,189 @@ int util_copy_port_binding_from_custom_map(defs_map_string_object_port_bindings 
 out:
     map_itor_free(itor);
     free_defs_map_string_object_port_bindings(port_bindings);
+    return ret;
+}
+
+bool util_parse_port_range(const char *ports, struct network_port *np)
+{
+    char **parts = NULL;
+    bool ret = true;
+
+    if (ports == NULL || strlen(ports) == 0) {
+        ERROR("Empty string specified for ports");
+        return false;
+    }
+
+    if (strchr(ports, '-') == NULL) {
+        if (util_safe_uint64(ports, &np->start) != 0) {
+            ERROR("invalid port: %s", ports);
+            return false;
+        }
+        np->end = np->start;
+        return true;
+    }
+
+    parts = util_string_split(ports, '-');
+    if (parts == NULL || util_array_len((const char **)parts) != 2) {
+        ERROR("Invalid port: %s", ports);
+        ret = false;
+        goto out;
+    }
+
+    if (util_safe_uint64(parts[0], &np->start) != 0) {
+        ERROR("Invalid port start: %s", parts[0]);
+        ret = false;
+        goto out;
+    }
+
+    if (util_safe_uint64(parts[1], &np->end) != 0) {
+        ERROR("Invalid port end: %s", parts[1]);
+        ret = false;
+        goto out;
+    }
+
+    if (np->start > np->end) {
+        ERROR("Invalid port : %s", ports);
+        ret = false;
+        goto out;
+    }
+
+out:
+    if (!ret) {
+        np->start = 0;
+        np->end = 0;
+    }
+    util_free_array(parts);
+    return ret;
+}
+
+bool util_new_network_port(const char *proto, const char *port, struct network_port **res)
+{
+#define MAX_PORT_LEN 128
+    struct network_port *work = NULL;
+    bool ret = true;
+    char buff[MAX_PORT_LEN] = { 0 };
+
+    if (res == NULL || port == NULL) {
+        ERROR("Invalid arguments");
+        return false;
+    }
+
+    work = util_common_calloc_s(sizeof(struct network_port));
+    if (work == NULL) {
+        ERROR("Out of memory");
+        return false;
+    }
+
+    if (!util_parse_port_range(port, work)) {
+        ret = false;
+        goto out;
+    }
+
+    if (work->start == work->end) {
+        ret = sprintf(buff, "%zu/%s", work->start, proto) > 0;
+    } else {
+        ret = sprintf(buff, "%zu-%zu/%s", work->start, work->end, proto) > 0;
+    }
+    if (!ret) {
+        ERROR("format port failed");
+        goto out;
+    }
+
+    work->format_str = util_strdup_s(buff);
+    work->proto = util_strdup_s(proto);
+
+    *res = work;
+    work = NULL;
+out:
+    util_free_network_port(work);
+    return ret;
+}
+
+void util_free_network_port(struct network_port *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    free(ptr->format_str);
+    ptr->format_str = NULL;
+    free(ptr->proto);
+    ptr->proto = NULL;
+    ptr->start = 0;
+    ptr->end = 0;
+    free(ptr);
+}
+
+bool util_valid_proto(const char *proto)
+{
+    size_t i = 0;
+
+    if (proto == NULL) {
+        return false;
+    }
+
+    for (i = 0; i < PROTO_NUM; i++) {
+        if (strcmp(g_proto_whitelist[i], proto) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int do_close(int sock)
+{
+    size_t i;
+    const size_t retry = 10;
+
+    for (i = 0; i < retry; i++) {
+        if (close(sock) == 0) {
+            return 0;
+        }
+        WARN("close socket failed: %s, wait to retry: %zu\n", strerror(errno), i);
+        // wait 100us to retry
+        usleep(10000);
+    }
+
+    ERROR("close socket failed: %s", strerror(errno));
+    return -1;
+}
+
+int util_get_random_port()
+{
+    int ret = -1;
+    int sock = -1;
+    struct sockaddr_in s_addr;
+    socklen_t s_len;
+
+    bzero(&s_addr, sizeof(s_addr));
+    s_addr.sin_addr.s_addr = INADDR_ANY;
+    s_addr.sin_port = 0;
+    s_addr.sin_family = AF_INET;
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        ERROR("get socket failed: %s", strerror(errno));
+        return -1;
+    }
+
+    if (bind(sock, (struct sockaddr *)&s_addr, sizeof(struct sockaddr_in)) < 0) {
+        ERROR("bind port failed: %s\n", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    s_len = sizeof(struct sockaddr_in);
+    if (getsockname(sock, (struct sockaddr *)&s_addr, &s_len) == -1) {
+        ERROR("getsockname failed: %s\n", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+    ret = ntohs(s_addr.sin_port);
+
+out:
+    if (do_close(sock) != 0) {
+        return -1;
+    }
     return ret;
 }

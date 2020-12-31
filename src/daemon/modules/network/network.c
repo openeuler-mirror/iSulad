@@ -156,6 +156,20 @@ static inline int do_annotation_insert(const char *key, const char *val, network
         return 0;
     }
 
+    if (conf == NULL) {
+        ERROR("invalid argument");
+        return -1;
+    }
+
+    if (conf->annotations == NULL) {
+        conf->annotations = map_new(MAP_STR_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);;
+    }
+
+    if (conf->annotations == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
     if (!map_replace(conf->annotations, (void *)key, (void *)val)) {
         ERROR("add %s into annotation failed", key);
         return -1;
