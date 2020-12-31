@@ -1587,8 +1587,7 @@ static int remove_interface(const char *ifa)
 {
     int ret = 0;
     size_t i = 0;
-    ;
-    const size_t args_len = 4;
+    const size_t args_len = 5;
     char **args = NULL;
     string_array *interfaces = NULL;
     char *stdout_msg = NULL;
@@ -1651,7 +1650,7 @@ static int remove_bridge(cni_net_conf_list *list)
     }
 
     if (remove_interface(plugin->bridge) != 0) {
-        ERROR("Failed to remove bridge interface %s", plugin->bridge);
+        ERROR("Failed to remove interface %s", plugin->bridge);
         return -1;
     }
 

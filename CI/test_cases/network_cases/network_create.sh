@@ -59,7 +59,7 @@ function test_network_create()
     isula network create --subnet 192.172.58.0/24 --gateway 192.0.0.1 2>&1 | grep "not match"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network success by specifing unmatch subnet gateway, but should failed" && return ${FAILURE}
 
-    isula network create --subnet 192.172.58.0/24 ${name1} | awk 'END {print}'
+    isula network create --subnet 192.172.58.0/24 ${name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name1} failed" && return ${FAILURE}
     file1="/etc/cni/net.d/isulacni-${name1}.conflist"
     [ ! -f ${file1} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file1} not exist" && return ${FAILURE}
@@ -85,8 +85,8 @@ function test_network_create()
     cat ${file1} | grep '"ipMasq": true'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no ipMasq in file" && return ${FAILURE}
 
-    rm -f ${file1}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${file} failed" && return ${FAILURE}
+    isula network rm ${name1}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name1} failed" && return ${FAILURE}
 
     name=$(isula network create -d bridge --internal | awk 'END {print}')
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing bridge failed" && return ${FAILURE}
@@ -98,8 +98,8 @@ function test_network_create()
     cat ${file} | grep '"ipMasq": true'
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - find ipMasq in file, but should not" && return ${FAILURE}
 
-    rm -f ${file}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${file} failed" && return ${FAILURE}
+    isula network rm ${name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name} failed" && return ${FAILURE}
 
     name=$(isula network create --subnet fff0:3::3/64 | awk 'END {print}')
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing IPv6 subnet" && return ${FAILURE}
@@ -111,8 +111,8 @@ function test_network_create()
     cat ${file} | grep '"gateway": "fff0:0003::0001"'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no gateway in file" && return ${FAILURE}
 
-    rm -f ${file}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${file} failed" && return ${FAILURE}
+    isula network rm ${name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name} failed" && return ${FAILURE}
 
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))

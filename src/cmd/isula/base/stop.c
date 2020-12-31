@@ -63,6 +63,10 @@ static int client_stop(const struct client_arguments *args)
     if (ret != 0) {
         client_print_error(response->cc, response->server_errono, response->errmsg);
     }
+    if (response->errmsg != NULL) {
+        COMMAND_ERROR("%s", response->errmsg);
+    }
+
 out:
     isula_stop_response_free(response);
     return ret;

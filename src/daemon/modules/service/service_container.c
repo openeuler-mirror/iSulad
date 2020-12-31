@@ -59,6 +59,7 @@
 #include "utils_string.h"
 #include "utils_verify.h"
 #include "volume_api.h"
+#include "service_network_api.h"
 
 int set_container_to_removal(const container_t *cont)
 {
@@ -1158,6 +1159,12 @@ int delete_container(container_t *cont, bool force)
             ret = -1;
             goto reset_removal_progress;
         }
+
+        if (teardown_network(cont) != 0) {
+            isulad_set_error_message("Teardown network failed for container %s", id);
+            ERROR("Teardown network failed for container %s", id);
+        }
+
         ret = stop_container(cont, 3, force, false);
         if (ret != 0) {
             isulad_append_error_message("Could not stop running container %s, cannot remove. ", id);
