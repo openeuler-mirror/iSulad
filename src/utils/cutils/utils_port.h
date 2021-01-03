@@ -24,6 +24,7 @@ extern "C" {
 #endif
 
 struct port_mapping {
+    // with proto, such as 8080/tcp
     char *port;
     char *host_ip;
     char *host_port;

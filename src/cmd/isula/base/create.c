@@ -1452,7 +1452,7 @@ int client_create(struct client_arguments *args)
     if (args->custom_conf.publish != NULL) {
         ret = util_parse_port_specs((const char **)args->custom_conf.publish, &expose_m, &port_binding_m);
         if (ret != 0) {
-            COMMAND_ERROR("Invalid --publish params value");
+            COMMAND_ERROR("Invalid --publish or -p params value");
             ret = EINVALIDARGS;
             goto out;
         }
