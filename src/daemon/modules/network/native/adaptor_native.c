@@ -891,6 +891,7 @@ out:
 
 static cni_net_conf_ipam *conf_bridge_plugin_ipam(const network_create_request *request)
 {
+    struct ipnet *ipnet = NULL;
     cni_net_conf_ipam *ipam = NULL;
 
     ipam = util_common_calloc_s(sizeof(cni_net_conf_ipam));
@@ -941,7 +942,26 @@ static cni_net_conf_ipam *conf_bridge_plugin_ipam(const network_create_request *
     (ipam->ranges_item_lens)[0]++;
 
     if (request->subnet != NULL) {
-        ipam->ranges[0][0]->subnet = util_strdup_s(request->subnet);
+        // reduce subnet, e.g. 192.168.2.5/16 -> 192.168.0.0/16
+        if (util_parse_cidr(request->subnet, &ipnet) != 0) {
+            ERROR("Failed to parse cide subnet %s", request->subnet);
+            goto err_out;
+        }
+
+        if (util_reduce_ip_by_mask(ipnet) != 0) {
+            ERROR("Failed to reduce ip by mask");
+            goto err_out;
+        }
+
+        ipam->ranges[0][0]->subnet = util_ipnet_to_string(ipnet);
+        if (ipam->ranges[0][0]->subnet == NULL) {
+            ERROR("Failed to convert ipnet to string");
+            goto err_out;
+        }
+
+        if (strcmp(request->subnet, ipam->ranges[0][0]->subnet) != 0) {
+            DEBUG("reduce subnet \"%s\" to \"%s\"", request->subnet, ipam->ranges[0][0]->subnet);
+        }
     } else {
         ipam->ranges[0][0]->subnet = find_subnet();
         if (ipam->ranges[0][0]->subnet == NULL) {
@@ -960,10 +980,12 @@ static cni_net_conf_ipam *conf_bridge_plugin_ipam(const network_create_request *
         }
     }
 
+    util_free_ipnet(ipnet);
     return ipam;
 
 err_out:
     free_cni_net_conf_ipam(ipam);
+    util_free_ipnet(ipnet);
     return NULL;
 }
 

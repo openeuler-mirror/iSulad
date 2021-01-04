@@ -105,7 +105,7 @@ function test_network_create()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing IPv6 subnet" && return ${FAILURE}
 
     file="/etc/cni/net.d/isulacni-${name}.conflist"
-    cat ${file} | grep '"subnet": "fff0:3::3/64",'
+    cat ${file} | grep '"subnet": "fff0:0003::/64",'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no specified subnet in file" && return ${FAILURE}
 
     cat ${file} | grep '"gateway": "fff0:0003::0001"'
