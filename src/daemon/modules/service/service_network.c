@@ -479,13 +479,18 @@ static int do_merge_portbindings(defs_map_string_object_port_bindings *port_bind
     int host_port;
 
     for (i = 0; i < port_bindings->len; i++) {
+        if (map_search(port_set, (void *)port_bindings->keys[i]) != NULL) {
+            DEBUG("conflict container port mapping: %s, just ignore.", port_bindings->keys[i]);
+            continue;
+        }
         if (!map_replace(port_set, (void *)port_bindings->keys[i], (void *)&flag)) {
             ERROR("insert %s into port set failed", port_bindings->keys[i]);
             return -1;
         }
         for (j = 0; j < port_bindings->values[i]->element->host_len; j++) {
             network_port_binding_host_element *elem = port_bindings->values[i]->element->host[j];
-            if (util_safe_int(elem->host_port, &host_port) != 0) {
+            host_port = 0;
+            if (util_valid_str(elem->host_port) && util_safe_int(elem->host_port, &host_port) != 0) {
                 ERROR("invalid key: %s with host port: %s", port_bindings->keys[i], elem->host_port);
                 return -1;
             }
@@ -505,7 +510,7 @@ static int do_merge_expose_ports(defs_map_string_object *exposed, map_t *port_se
     bool flag = true;
 
     for (i = 0; i < exposed->len; i++) {
-        if (map_search(port_set, (void *)exposed->keys[i])) {
+        if (map_search(port_set, (void *)exposed->keys[i]) != NULL) {
             WARN("port %s has set by port binding, just ignore.", exposed->keys[i]);
             continue;
         }
@@ -523,12 +528,11 @@ static int do_merge_expose_ports(defs_map_string_object *exposed, map_t *port_se
 }
 
 // parse exposed_ports and portbindings to cni portmapping json
-static int do_set_portmapping_native_config(const host_config *hostconfig, const container_config *cont_spec,
-                                            network_api_conf *config)
+static int do_set_portmapping_for_setup(const host_config *hostconfig, const container_config *cont_spec,
+                                        network_api_conf *config, cni_anno_port_mappings_container **merged_ports)
 {
     struct host_ports_validator validate = { 0 };
     size_t i;
-    bool flag = true;
     cni_anno_port_mappings_container *cni_ports = NULL;
     size_t cni_ports_max_len = 0;
     // string --> bool
@@ -578,11 +582,6 @@ static int do_set_portmapping_native_config(const host_config *hostconfig, const
 
     if (hostconfig->port_bindings != NULL) {
         for (i = 0; i < hostconfig->port_bindings->len; i++) {
-            if (!map_replace(port_set, (void *)hostconfig->port_bindings->keys[i], (void *)&flag)) {
-                ERROR("insert %s into port set failed", hostconfig->port_bindings->keys[i]);
-                ret = -1;
-                goto out;
-            }
             // port_bindings every key add to exposed ports, so we need decrease 1
             cni_ports_max_len += hostconfig->port_bindings->values[i]->element->host_len - 1;
         }
@@ -605,6 +604,7 @@ static int do_set_portmapping_native_config(const host_config *hostconfig, const
     if (ret != 0) {
         goto out;
     }
+
     cni_portmap_str = cni_anno_port_mappings_container_generate_json(cni_ports, &ctx, &jerr);
     if (cni_portmap_str == NULL) {
         ret = -1;
@@ -618,6 +618,8 @@ static int do_set_portmapping_native_config(const host_config *hostconfig, const
         goto out;
     }
 
+    *merged_ports = cni_ports;
+    cni_ports = NULL;
 out:
     map_free(port_set);
     map_free(validate.udp_ports);
@@ -662,11 +664,6 @@ static network_api_conf *build_adaptor_native_config(const container_t *cont, pr
     config->args = prepare_native_args(cont);
     if (config->args == NULL) {
         ERROR("Failed to prepare native args");
-        goto err_out;
-    }
-
-    if (do_set_portmapping_native_config(cont->hostconfig, cont->common_config != NULL ? cont->common_config->config : NULL,
-                                         config) != 0) {
         goto err_out;
     }
 
@@ -795,11 +792,71 @@ out:
     return ret;
 }
 
+static inline void do_free_network_setting_cni_portmapping(container_network_settings *settings)
+{
+    size_t i;
+
+    for (i = 0; i < settings->cni_ports_len; i++) {
+        free_cni_inner_port_mapping(settings->cni_ports[i]);
+        settings->cni_ports[i] = NULL;
+    }
+    free(settings->cni_ports);
+    settings->cni_ports = NULL;
+}
+
+static int update_container_networks_portmappings(const cni_anno_port_mappings_container *merged_ports,
+                                                  container_network_settings *settings)
+{
+    size_t i;
+    cni_inner_port_mapping **tmp_ports = NULL;
+    size_t tmp_ports_len = 0;
+    int ret = 0;
+
+    if (merged_ports == NULL || merged_ports->len == 0) {
+        return 0;
+    }
+
+    tmp_ports = util_smart_calloc_s(sizeof(cni_inner_port_mapping *), merged_ports->len);
+    if (tmp_ports == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    for (i = 0; i < merged_ports->len; i++) {
+        tmp_ports[i] = util_common_calloc_s(sizeof(cni_inner_port_mapping));
+        if (tmp_ports == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        tmp_ports[i]->host_port = merged_ports->items[i]->host_port;
+        tmp_ports[i]->container_port = merged_ports->items[i]->container_port;
+        tmp_ports[i]->protocol = util_strdup_s(merged_ports->items[i]->protocol);
+        tmp_ports[i]->host_ip = util_strdup_s(merged_ports->items[i]->host_ip);
+        tmp_ports_len++;
+    }
+
+    do_free_network_setting_cni_portmapping(settings);
+
+    settings->cni_ports = tmp_ports;
+    tmp_ports = NULL;
+    settings->cni_ports_len = tmp_ports_len;
+    tmp_ports_len = 0;
+
+out:
+    for (i = 0; i < tmp_ports_len; i++) {
+        free_cni_inner_port_mapping(tmp_ports[i]);
+        tmp_ports[i] = NULL;
+    }
+    free(tmp_ports);
+    return ret;
+}
+
 int setup_network(container_t *cont)
 {
     int ret = 0;
     network_api_conf *config = NULL;
     network_api_result_list *result = NULL;
+    cni_anno_port_mappings_container *merged_ports = NULL;
 
     // set up network when network_mode is bridge
     if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
@@ -833,6 +890,12 @@ int setup_network(container_t *cont)
         goto out;
     }
 
+    if (do_set_portmapping_for_setup(cont->hostconfig, cont->common_config != NULL ? cont->common_config->config : NULL,
+                                     config, &merged_ports) != 0) {
+        ret = -1;
+        goto out;
+    }
+
     ret = network_module_attach(config, NETWOKR_API_TYPE_NATIVE, &result);
     if (ret != 0) {
         ERROR("Failed to attach network");
@@ -847,6 +910,12 @@ int setup_network(container_t *cont)
         goto unlock_out;
     }
 
+    ret = update_container_networks_portmappings(merged_ports, cont->common_config->network_settings);
+    if (ret != 0) {
+        ERROR("Failed to update network portmappings");
+        goto unlock_out;
+    }
+
     ret = container_to_disk(cont);
     if (ret != 0) {
         ERROR("Failed to save container '%s'", cont->common_config->id);
@@ -857,8 +926,66 @@ unlock_out:
     container_unlock(cont);
 
 out:
+    free_cni_anno_port_mappings_container(merged_ports);
     free_network_api_conf(config);
     free_network_api_result_list(result);
+    return ret;
+}
+
+static int do_set_portmapping_for_teardown(const container_t *cont, network_api_conf *config)
+{
+    cni_anno_port_mappings_container *cni_ports = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error jerr = NULL;
+    char *cni_portmap_str = NULL;
+    size_t i;
+    int ret = 0;
+
+    if (cont->common_config == NULL || cont->common_config->network_settings == NULL ||
+        cont->common_config->network_settings->cni_ports_len == 0) {
+        return 0;
+    }
+
+    cni_ports = util_common_calloc_s(sizeof(cni_anno_port_mappings_container));
+    cni_ports->items = util_smart_calloc_s(sizeof(cni_anno_port_mappings_container *),
+                                           cont->common_config->network_settings->cni_ports_len);
+    if (cni_ports->items == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < cont->common_config->network_settings->cni_ports_len; i++) {
+        cni_ports->items[i] = util_common_calloc_s(sizeof(cni_anno_port_mappings_container));
+        if (cni_ports->items[i] == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        cni_ports->items[i]->host_port = cont->common_config->network_settings->cni_ports[i]->host_port;
+        cni_ports->items[i]->container_port = cont->common_config->network_settings->cni_ports[i]->container_port;
+        cni_ports->items[i]->protocol = util_strdup_s(cont->common_config->network_settings->cni_ports[i]->protocol);
+        cni_ports->items[i]->host_ip = util_strdup_s(cont->common_config->network_settings->cni_ports[i]->host_ip);
+        cni_ports->len += 1;
+    }
+
+    cni_portmap_str = cni_anno_port_mappings_container_generate_json(cni_ports, &ctx, &jerr);
+    if (cni_portmap_str == NULL) {
+        ret = -1;
+        ERROR("parse cni port mapping failed: %s", jerr);
+        goto out;
+    }
+    DEBUG("get set portmapping: %s", cni_portmap_str);
+    if (network_module_insert_portmapping(cni_portmap_str, config) != 0) {
+        ret = -1;
+        ERROR("set cni port mapping to network module failed");
+        goto out;
+    }
+
+out:
+    free(jerr);
+    free(cni_portmap_str);
+    free_cni_anno_port_mappings_container(cni_ports);
     return ret;
 }
 
@@ -885,6 +1012,13 @@ int teardown_network(container_t *cont)
         goto out;
     }
 
+    ret = do_set_portmapping_for_teardown(cont, config);
+    if (ret != 0) {
+        ERROR("Failed to set network port mappings");
+        ret = -1;
+        goto out;
+    }
+
     ret = network_module_detach(config, NETWOKR_API_TYPE_NATIVE);
     if (ret != 0) {
         ERROR("Failed to detach network");
@@ -896,6 +1030,9 @@ out:
 
     free_defs_map_string_object_networks(cont->common_config->network_settings->networks);
     cont->common_config->network_settings->networks = NULL;
+
+    // clear portmappings
+    do_free_network_setting_cni_portmapping(cont->common_config->network_settings);
 
     if (container_to_disk(cont) != 0) {
         ERROR("Failed to save container '%s'", cont->common_config->id);

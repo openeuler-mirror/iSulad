@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#define MAX_PORT_LEN 128
+
 struct port_mapping {
     // with proto, such as 8080/tcp
     char *port;

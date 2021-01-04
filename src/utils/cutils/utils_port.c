@@ -901,7 +901,6 @@ out:
 
 bool util_new_network_port(const char *proto, const char *port, struct network_port **res)
 {
-#define MAX_PORT_LEN 128
     struct network_port *work = NULL;
     bool ret = true;
     char buff[MAX_PORT_LEN] = { 0 };
