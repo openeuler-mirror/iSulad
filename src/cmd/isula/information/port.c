@@ -123,7 +123,7 @@ static int do_port(const struct client_arguments *args, struct network_port *n_p
 
         for (j = 0; j < c_info->network_settings->ports->values[i]->element->host_len; j++) {
             network_port_binding_host_element *tmp = c_info->network_settings->ports->values[i]->element->host[j];
-            const char *use_ip = tmp->host_ip != NULL ? tmp->host_ip : "0.0.0.0";
+            const char *use_ip = util_valid_str(tmp->host_ip) ? tmp->host_ip : "0.0.0.0";
             printf("%s -> %s:%s\n", c_info->network_settings->ports->keys[i], use_ip, tmp->host_port);
         }
     }
