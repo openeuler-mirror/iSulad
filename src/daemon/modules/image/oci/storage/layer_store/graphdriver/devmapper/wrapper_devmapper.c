@@ -358,28 +358,32 @@ out:
 
 static void *udev_wait_process(void *data)
 {
+    int ret = 0;
     udev_wait_pth_t *uwait = (udev_wait_pth_t *)data;
 
-    if (dm_udev_wait(uwait->cookie) != 1) {
-        pthread_mutex_lock(&uwait->udev_mutex);
-        uwait->state = ERR_UDEV_WAIT;
-        pthread_mutex_unlock(&uwait->udev_mutex);
-        DAEMON_CLEAR_ERRMSG();
-        pthread_exit((void *)ERR_UDEV_WAIT);
+    if (pthread_detach(pthread_self()) != 0) {
+        CRIT("Start: set thread detach fail");
+        goto out;
     }
 
+    ret = dm_udev_wait(uwait->cookie);
     pthread_mutex_lock(&uwait->udev_mutex);
-    uwait->state = DEV_OK;
+    if (ret != 1) {
+        uwait->state = ERR_UDEV_WAIT;
+    } else {
+        uwait->state = DEV_OK;
+    }
     pthread_mutex_unlock(&uwait->udev_mutex);
+
+out:
     DAEMON_CLEAR_ERRMSG();
-    pthread_exit((void *)0);
+    return NULL;
 }
 
 // UdevWait waits for any processes that are waiting for udev to complete the specified cookie.
 void dev_udev_wait(uint32_t cookie)
 {
     pthread_t tid;
-    int thread_result = 0;
     udev_wait_pth_t *uwait = NULL;
     float timeout = 0;
     struct timeval start, end;
@@ -403,7 +407,7 @@ void dev_udev_wait(uint32_t cookie)
     }
 
     if (pthread_create(&tid, NULL, udev_wait_process, uwait) != 0) {
-        ERROR("devmapper: create udev wait process thread failed");
+        ERROR("devmapper: create udev wait process thread error:%s", strerror(errno));
         goto free_out;
     }
 
@@ -419,15 +423,14 @@ void dev_udev_wait(uint32_t cookie)
             ERROR("devmapper: get time failed");
             goto free_out;
         }
+
         timeout = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000; // seconds
         if (timeout >= (float)dm_udev_wait_timeout) {
             if (dm_udev_complete(cookie) != 1) {
                 ERROR("Failed to complete udev cookie %u on udev wait timeout", cookie);
                 goto free_out;
             }
-            INFO("devmapper: udev wait join thread start...");
-            pthread_join(tid, (void *)&thread_result);
-            INFO("devmapper: udev wait join thread end exit %d", thread_result);
+            ERROR("Wait on udev cookie time out");
             break;
         }
     }
@@ -482,6 +485,7 @@ int dev_delete_device_force(const char *name)
     }
 
 udev:
+    DEBUG("Start udev wait on delete device force");
     dev_udev_wait(cookie);
 
 out:
@@ -536,6 +540,7 @@ int dev_remove_device_deferred(const char *name)
     }
 
 udev:
+    DEBUG("Start udev wait on remove device deferred");
     dev_udev_wait(cookie);
 out:
     if (dmt != NULL) {
@@ -825,6 +830,7 @@ int dev_resume_device(const char *dm_name)
         ret = -1;
     }
 
+    DEBUG("Start udev wait on resume device");
     dev_udev_wait(cookie);
 
 out:
@@ -886,7 +892,8 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
         ERROR("devicemapper: error running deviceCreate (ActivateDevice) %d", ret);
         ret = -1;
     }
-
+    
+    DEBUG("Start udev wait on create device");
     dev_udev_wait(cookie);
 out:
     if (dmt != NULL) {
