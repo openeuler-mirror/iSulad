@@ -936,3 +936,19 @@ bool util_validate_mac_address(const char *mac)
 
     return true;
 }
+
+int util_reduce_ip_by_mask(const struct ipnet *val)
+{
+    size_t i;
+
+    if (val == NULL || val->ip_len != val->ip_mask_len) {
+        ERROR("Invalid ipnet");
+        return -1;
+    }
+
+    for (i = 0; i < val->ip_len; i++) {
+        val->ip[i] = val->ip[i] & val->ip_mask[i];
+    }
+
+    return 0;
+}

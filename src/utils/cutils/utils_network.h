@@ -50,6 +50,8 @@ char *util_ipnet_to_string(const struct ipnet *value);
 
 char *util_ip_to_string(const uint8_t *ip, size_t len);
 
+int util_reduce_ip_by_mask(const struct ipnet *val);
+
 bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const size_t ip_len, bool critical);
 
 bool util_validate_network_name(const char *name);
