@@ -391,6 +391,8 @@ static int pack_container_custom_config(container_config *container_spec, const 
         container_spec->exposed_ports->values = util_common_calloc_s(custom_conf->expose->len * sizeof(
                                                                          defs_map_string_object_element*));
         if (container_spec->exposed_ports->values == NULL) {
+            free(container_spec->exposed_ports->keys);
+            container_spec->exposed_ports->keys = NULL;
             ret = -1;
             goto out;
         }
