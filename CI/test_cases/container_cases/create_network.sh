@@ -56,18 +56,15 @@ function test_network_param()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check -p 127.0.0.1:80-82:90-92" && ((ret++))
 
     # Host ports range to container single port
-    id=`isula create -ti -p 127.0.0.1:80-82:90 ${image} /bin/sh`
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container with -p" && ((ret++))
-
-    grep "90/tcp"  ${root}/${id}/config.v2.json && grep "80-82" ${root}/${id}/hostconfig.json 
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check -p 127.0.0.1:80-82:90-92" && ((ret++))
+    isula create -ti -p 127.0.0.1:80-82:90 ${image} /bin/sh
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p 127.0.0.1:80-82:90, expect fail" && ((ret++))
 
     # Host ports range not equal to container ports range
-    id=`isula create -ti -p 127.0.0.1:80-82:90-93 ${image} /bin/sh`
+    isula create -ti -p 127.0.0.1:80-82:90-93 ${image} /bin/sh
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p 127.0.0.1:80-82:90-93 , expect fail" && ((ret++))
 
     # Invalid format
-    id=`isula create -ti -p 127.0.0.1:80-82:%90-93 ${image} /bin/sh`
+    isula create -ti -p 127.0.0.1:80-82:%90-93 ${image} /bin/sh
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p 127.0.0.1:80-82:%90-93 , expect fail" && ((ret++))
 
     isula rm -f `isula ps -qa`
