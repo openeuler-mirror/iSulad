@@ -322,61 +322,6 @@ out:
     return ret;
 }
 
-static int process_single_to_range(ports_t port_data, const char *raw_ip, struct port_mapping ***ports,
-                                   size_t *len_ports)
-{
-    int ret = 0;
-    size_t length = 0;
-    size_t cnt = 0;
-    char format_host_port[MAX_BUFFER_SIZE] = { 0 };
-    int nret = 0;
-    struct port_mapping **port_map_tmp = NULL;
-
-    port_map_tmp = (struct port_mapping **)util_smart_calloc_s(sizeof(struct port_mapping *), 1);
-    if (port_map_tmp == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    port_map_tmp[0] = util_smart_calloc_s(sizeof(struct port_mapping), 1);
-    if (port_map_tmp[0] == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-    length = 1;
-
-    nret = snprintf(format_host_port, MAX_BUFFER_SIZE, "%lu-%lu", port_data.start_hport, port_data.end_hport);
-    if (nret < 0 || (size_t)nret >= MAX_BUFFER_SIZE) {
-        ERROR("Format print host port err");
-        ret = -1;
-        goto out;
-    }
-
-    port_map_tmp[0]->port = util_pack_port_proto(port_data.start_cport, port_data.proto);
-    if (port_map_tmp[0]->port == NULL) {
-        ERROR("Pack container port with proto failed");
-        ret = -1;
-        goto out;
-    }
-
-    port_map_tmp[0]->host_ip = util_strdup_s(raw_ip);
-    port_map_tmp[0]->host_port = util_strdup_s(format_host_port);
-
-    *ports = port_map_tmp;
-    port_map_tmp = NULL;
-    *len_ports = length;
-    length = 0;
-
-out:
-    for (cnt = 0; cnt < length; cnt++) {
-        util_free_port_mapping(port_map_tmp[cnt]);
-        port_map_tmp[cnt] = NULL;
-    }
-    free(port_map_tmp);
-    return ret;
-}
-
 static int parse_port_spec(const char *value, struct port_mapping ***ports, size_t *len_ports)
 {
     int ret = 0;
@@ -422,31 +367,19 @@ static int parse_port_spec(const char *value, struct port_mapping ***ports, size
     }
 
     // 2. container range != host range, illegals
-    if (port_data.end_cport - port_data.start_cport != port_data.end_hport - port_data.start_hport &&
-        port_data.end_cport != port_data.start_cport) {
+    if (port_data.end_cport - port_data.start_cport != port_data.end_hport - port_data.start_hport) {
         ERROR("Invalid ranges specified for container and host Ports: %s and %s", raw_container_port, raw_host_port);
         ret = -1;
         goto out;
     }
 
     // 3. container range == host range
-    if (port_data.end_cport - port_data.start_cport == port_data.end_hport - port_data.start_hport) {
-        if (process_range_to_range(port_data, raw_ip, ports, len_ports) != 0) {
-            ERROR("Process port mapping scene of host ports range equal to container ports range err");
-            ret = -1;
-        }
+    if (process_range_to_range(port_data, raw_ip, ports, len_ports) != 0) {
+        ERROR("Process port mapping scene of host ports range equal to container ports range err");
+        ret = -1;
         goto out;
     }
-
-    // 4. single container port -> host range
-    if (port_data.start_cport == port_data.end_cport) {
-        if (process_single_to_range(port_data, raw_ip, ports, len_ports) != 0) {
-            ERROR("Process port mapping scene of single container port map host port range err");
-            ret = -1;
-        }
-        goto out;
-    }
-
+    
 out:
     free(raw_ip);
     free(raw_host_port);
