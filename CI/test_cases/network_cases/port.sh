@@ -34,16 +34,24 @@ function test_port()
     start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-    isula run -itd -p 80:8080 --name $containername busybox
-    fn_check_eq "$?" "0" "create failed"
+    isula network create cni0
+    fn_check_eq "$?" "0" "create network failed"
+
+    isula run -itd --net cni0 -p 8080:80 --name $containername busybox
+    fn_check_eq "$?" "0" "create container failed"
     testcontainer $containername running
 
-    # TODO: check port return stdout str
-    isula port $containername
+    isula port $containername | grep "80/tcp -> 0.0.0.0:8080"
     fn_check_eq "$?" "0" "port failed"
 
+    isula inspect -f '{{.NetworkSettings}}' $containername | grep HostPort | grep 8080
+    fn_check_eq "$?" "0" "inspect container failed"
+
     isula rm -f $containername
-    fn_check_eq "$?" "0" "rm failed"
+    fn_check_eq "$?" "0" "rm container failed"
+
+    isula network rm cni0
+    fn_check_eq "$?" "0" "rm network failed"
 
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
