@@ -493,7 +493,6 @@ out:
 static void set_stderr_buf(char **stderr_buf, const char *format, ...)
 {
     char errbuf[BUFSIZ + 1] = { 0 };
-    char *jerr = NULL;
 
     UTIL_FREE_AND_SET_NULL(*stderr_buf);
 
@@ -511,7 +510,6 @@ static void set_stderr_buf(char **stderr_buf, const char *format, ...)
     if (*stderr_buf == NULL) {
         *stderr_buf = util_strdup_s(errbuf);
     }
-    free(jerr);
 }
 
 static int open_devnull(void)
