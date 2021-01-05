@@ -892,7 +892,7 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
         ERROR("devicemapper: error running deviceCreate (ActivateDevice) %d", ret);
         ret = -1;
     }
-    
+
     DEBUG("Start udev wait on create device");
     dev_udev_wait(cookie);
 out:

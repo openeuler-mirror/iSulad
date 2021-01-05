@@ -68,7 +68,7 @@ static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdat
         }
 
         if (c == 'q' && ts->saw_tty_exit) {
-            ret = 1;
+            ret = EPOLL_LOOP_HANDLE_CLOSE;
             goto out;
         }
 
