@@ -1408,6 +1408,8 @@ static int pack_custom_network_expose(isula_container_config_t *container_spec, 
 
     expose->values = util_common_calloc_s(len * sizeof(defs_map_string_object_element*));
     if (expose->values == NULL) {
+        free(expose->keys);
+        expose->keys = NULL;
         ERROR("Out of memory");
         ret = -1;
         goto out;
@@ -1419,7 +1421,6 @@ static int pack_custom_network_expose(isula_container_config_t *container_spec, 
             continue;
         }
         expose->keys[i] = util_strdup_s(key);
-        expose->values[i] = NULL;
         expose->len++;
     }
     container_spec->expose = expose;
@@ -1433,7 +1434,7 @@ out:
 
 static int pack_custom_network_publish(isula_host_config_t *host_spec, const map_t *port_binding_m)
 {
-    if (port_binding_m == NULL || map_size(port_binding_m) == 0) {
+    if (map_size(port_binding_m) == 0) {
         return 0;
     }
 

@@ -780,13 +780,13 @@ int util_copy_port_binding_from_custom_map(defs_map_string_object_port_bindings 
     map_itor *itor = NULL;
     defs_map_string_object_port_bindings *port_bindings = NULL;
 
-    if (data == NULL || port_binding_m == NULL) {
+    if (data == NULL) {
         return -1;
     }
 
     len = map_size(port_binding_m);
     if (len == 0) {
-        DEBUG("Network publish ports list empty, no need to pack");
+        DEBUG("Network publish ports list empty, no need to copy");
         return 0;
     }
 
@@ -813,6 +813,8 @@ int util_copy_port_binding_from_custom_map(defs_map_string_object_port_bindings 
 
     port_bindings->values = util_common_calloc_s(len * sizeof(defs_map_string_object_port_bindings_element *));
     if (port_bindings->values == NULL) {
+        free(port_bindings->keys);
+        port_bindings->keys = NULL;
         ERROR("Out of memory");
         ret = -1;
         goto out;
@@ -822,7 +824,7 @@ int util_copy_port_binding_from_custom_map(defs_map_string_object_port_bindings 
         char *key = (char *)map_itor_key(itor);
         network_port_binding *value = (network_port_binding *)map_itor_value(itor);
 
-        if (value == NULL || map_search(port_binding_m, key) == NULL) {
+        if (value == NULL || key == NULL) {
             continue;
         }
 
