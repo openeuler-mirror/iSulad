@@ -38,6 +38,7 @@ typedef struct {
     char *proto;
 } ports_t;
 
+#define IP_ADDR_MIN_LENGTH  7
 #define PROTO_NUM 3
 const char *g_proto_whitelist[PROTO_NUM] = {"tcp", "udp", "sctp"};
 
@@ -322,12 +323,50 @@ out:
     return ret;
 }
 
+static int parse_raw_ip(const char *raw_ip, char **ip)
+{
+    int ret = 0;
+    char *ipv6 = NULL;
+    size_t len = 0;
+
+    len = strlen(raw_ip);
+    if (len < IP_ADDR_MIN_LENGTH) {
+        ERROR("Ip addr str too short");
+        return -1;
+    }
+
+    // ipv6
+    if (raw_ip[0] == '[') {
+        if (raw_ip[len - 1] != ']') {
+            ERROR("Invalid ipv6 addr format");
+            ret = -1;
+            goto out;
+        }
+        ipv6 = util_strdup_s(raw_ip);
+        ipv6[len - 1] = '\0';
+
+        *ip = util_strdup_s(ipv6 + 1);
+    } else {
+        if (strchr(raw_ip, ':') != NULL || strchr(raw_ip, '-') != NULL) {
+            ERROR("Invalid ipv4 format");
+            ret = -1;
+            goto out;
+        }
+        *ip = util_strdup_s(raw_ip);
+    }
+
+out:
+    free(ipv6);
+    return ret;
+}
+
 static int parse_port_spec(const char *value, struct port_mapping ***ports, size_t *len_ports)
 {
     int ret = 0;
     char *raw_ip = NULL;
+    char *ip = NULL;
     char *raw_host_port = NULL;
-    char *raw_container_port = NULL; // with proto
+    char *raw_container_port = NULL;
     ports_t port_data = { 0 };
 
     if (split_parts(value, &raw_ip, &raw_host_port, &raw_container_port) != 0) {
@@ -335,7 +374,20 @@ static int parse_port_spec(const char *value, struct port_mapping ***ports, size
         ret = -1;
         goto out;
     }
-    // TODO: Parse host ip
+
+    if (util_valid_str(raw_ip)) {
+        if (parse_raw_ip(raw_ip, &ip) != 0) {
+            ERROR("Parse raw ip failed");
+            ret = -1;
+            goto out;
+        }
+
+        if (!util_validate_ip_address(ip)) {
+            ERROR("Invalid input ip addr");
+            ret = -1;
+            goto out;
+        }
+    }
 
     // Parse container port
     if (parse_format_container_port(raw_container_port, &port_data.start_cport, &port_data.end_cport,
@@ -374,14 +426,15 @@ static int parse_port_spec(const char *value, struct port_mapping ***ports, size
     }
 
     // 3. container range == host range
-    if (process_range_to_range(port_data, raw_ip, ports, len_ports) != 0) {
+    if (process_range_to_range(port_data, ip, ports, len_ports) != 0) {
         ERROR("Process port mapping scene of host ports range equal to container ports range err");
         ret = -1;
         goto out;
     }
-    
+
 out:
     free(raw_ip);
+    free(ip);
     free(raw_host_port);
     free(raw_container_port);
     free(port_data.proto);
