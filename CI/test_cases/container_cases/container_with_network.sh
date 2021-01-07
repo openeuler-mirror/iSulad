@@ -22,6 +22,23 @@
 curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
 
+function ping_ipv6_address()
+{
+    local ipv6=$1
+
+    for i in `seq 1 3`
+    do
+        ping6 -c 3 -w 10 ${ipv6}
+        if [ $? -eq 0 ]; then
+            return 0;
+        fi
+        sleep 5
+    done
+
+    ping6 -c 3 -w 10 ${ipv6}
+    return $?
+}
+
 function test_container_with_networks()
 {
     local ret=0
@@ -42,7 +59,7 @@ function test_container_with_networks()
     isula network create --subnet 172.20.5.0/24 ${network_name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name1} failed" && return ${FAILURE}
 
-    isula network create ${network_name2}
+    isula network create --subnet 2001:db8:12::/64 ${network_name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name2} failed" && return ${FAILURE}
 
     cont_id=$(isula run -tid --net ${network_name1},${network_name2} -n ${cont_name} busybox sh)
@@ -57,7 +74,7 @@ function test_container_with_networks()
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
 
-    ping -c 3 -w 10 ${IP2}
+    ping_ipv6_address ${IP2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} failed " && return ${FAILURE}
 
     isula start ${cont_name}
@@ -66,7 +83,7 @@ function test_container_with_networks()
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
 
-    ping -c 3 -w 10 ${IP2}
+    ping_ipv6_address ${IP2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} failed " && return ${FAILURE}
 
     isula stop ${cont_name}
@@ -78,7 +95,7 @@ function test_container_with_networks()
     ping -c 3 -w 10 ${IP1}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} success, but should failed " && return ${FAILURE}
 
-    ping -c 3 -w 10 ${IP2}
+    ping6 -c 3 -w 10 ${IP2}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} success, but should failed " && return ${FAILURE}
 
     isula stop ${cont_name}
@@ -96,7 +113,7 @@ function test_container_with_networks()
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
 
-    ping -c 3 -w 10 ${IP2}
+    ping_ipv6_address ${IP2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} failed " && return ${FAILURE}
 
     isula restart ${cont_name}
@@ -111,7 +128,7 @@ function test_container_with_networks()
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
 
-    ping -c 3 -w 10 ${IP2}
+    ping_ipv6_address ${IP2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} failed " && return ${FAILURE}
 
     isula rm ${cont_name}
@@ -120,7 +137,7 @@ function test_container_with_networks()
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
 
-    ping -c 3 -w 10 ${IP2}
+    ping_ipv6_address ${IP2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} failed " && return ${FAILURE}
 
     isula rm -f ${cont_name}
@@ -129,7 +146,33 @@ function test_container_with_networks()
     ping -c 3 -w 10 ${IP1}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} success, but should failed " && return ${FAILURE}
 
-    ping -c 3 -w 10 ${IP2}
+    ping6 -c 3 -w 10 ${IP2}
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} success, but should failed " && return ${FAILURE}
+
+    # run container with specify IPv4
+    isula run -tid --net ${network_name1} --ip ${IP1} -n ${cont_name} busybox sh
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name} with network ${network_name1} and IP ${IP1} failed" && return ${FAILURE}
+
+    ping -c 3 -w 10 ${IP1}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
+
+    isula rm -f ${cont_name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm -f ${cont_name} failed" && return ${FAILURE}
+
+    ping -c 3 -w 10 ${IP1}
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} success, but should failed " && return ${FAILURE}
+
+    # run container with specify IPv6
+    isula run -tid --net ${network_name2} --ip ${IP2} -n ${cont_name} busybox sh
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name} with network ${network_name2} and IP ${IP2} failed" && return ${FAILURE}
+
+    ping_ipv6_address ${IP2}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} failed " && return ${FAILURE}
+
+    isula rm -f ${cont_name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm -f ${cont_name} failed" && return ${FAILURE}
+
+    ping6 -c 3 -w 10 ${IP2}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} success, but should failed " && return ${FAILURE}
 
     bridge1=$(isula network inspect -f {{.plugins.bridge}} ${network_name1})
@@ -143,6 +186,9 @@ function test_container_with_networks()
 
     iptables -t nat --list | grep ${cont_id}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect iptables rules success after rm container" && return ${FAILURE}
+
+    ip6tables -t nat --list | grep ${cont_id}
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after rm container" && return ${FAILURE}
 
     ip link show | grep ${bridge1}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${bridge1} success after rm container" && return ${FAILURE}

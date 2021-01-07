@@ -336,7 +336,7 @@ containers+=(${copycontainer})
 mkdir -p ${tmpdir}
 touch $CIDIR/${CONTAINER_NAME}.runflag
 
-docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${copycontainer} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  --privileged -e login_username=$login_username -e login_passwd=$login_passwd $BASE_IMAGE
+docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${copycontainer} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  --privileged -e login_username=$login_username -e login_passwd=$login_passwd --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE 
 docker cp ${CIDIR}/testcase_assign_R1 ${copycontainer}:/root
 echo_success "Run container ${copycontainer} success"
 
@@ -355,7 +355,7 @@ do
     tmpdir="${tmpdir_prefix}/${CONTAINER_NAME}_${suffix}"
     mkdir -p ${tmpdir}
     containers+=(${CONTAINER_NAME}_${suffix})
-    docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${CONTAINER_NAME}_${suffix} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  -v=/dev:/dev --privileged -e login_username=$login_username -e login_passwd=$login_passwd $BASE_IMAGE
+    docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${CONTAINER_NAME}_${suffix} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  -v=/dev:/dev --privileged -e login_username=$login_username -e login_passwd=$login_passwd --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE
     docker cp ${CIDIR}/testcase_assign_${suffix} ${CONTAINER_NAME}_${suffix}:/root
     echo_success "Run container ${CONTAINER_NAME}_${suffix} success"
 done
@@ -370,7 +370,8 @@ if [[ "x$disk" != "xNULL" ]] && [[ "x${enable_gcov}" != "xON" ]] ; then
     mkdir -p ${tmpdir}
     docker run -tid -v /sys/fs/cgroup:/sys/fs/cgroup --tmpfs /tmp:exec,mode=777 --tmpfs /run:exec,mode=777 --name ${devmappercontainer} -v ${cptemp}:${cptemp} $env_gcov $env_ignore_ci \
     -v ${CIDIR}:/tmp/runflag -v /lib/modules:/lib/modules -v $testcases_data_dir:$testcase_data -v $LXC_LOCK_DIR_HOST:$LXC_LOCK_DIR_CONTAINER \
-    -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  -v=/dev:/dev --privileged -e login_username=$login_username -e login_passwd=$login_passwd $BASE_IMAGE
+    -v $TOPDIR:$src_code_dir -v ${tmpdir}:/var/lib/isulad  -v=/dev:/dev --privileged -e login_username=$login_username -e login_passwd=$login_passwd \
+    --sysctl net.ipv6.conf.all.disable_ipv6=0 $BASE_IMAGE
 
     for index in $(seq 1 ${CONTAINER_INDEX})
     do
