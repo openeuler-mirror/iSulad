@@ -78,6 +78,10 @@ function test_port()
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "83/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
+    count=`isula port $id "80"`
+    fn_check_eq "$count" "1" "port required 1, get: $count"
+    isula port $id "80" | grep "80/tcp -> 0.0.0.0"
+    fn_check_eq "$?" "0" "port failed"
     do_check_network_setting_ports "$id" "80/tcp" "0.0.0.0"
     do_check_network_setting_ports "$id" "81/tcp" "0.0.0.0"
     do_check_network_setting_ports "$id" "82/tcp" "0.0.0.0"
@@ -100,6 +104,10 @@ function test_port()
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "83/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
+    count=`isula port $id "83"`
+    fn_check_eq "$count" "1" "port required 1, get: $count"
+    isula port $id "83" | grep "83/tcp -> 0.0.0.0"
+    fn_check_eq "$?" "0" "port failed"
     do_check_network_setting_ports "$id" "80/tcp" "0.0.0.0"
     do_check_network_setting_ports "$id" "81/tcp" "0.0.0.0"
     do_check_network_setting_ports "$id" "82/tcp" "0.0.0.0"
@@ -118,6 +126,10 @@ function test_port()
     isula port $id | grep "91/tcp -> 127.0.0.1:81"
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "92/tcp -> 127.0.0.1:82"
+    fn_check_eq "$?" "0" "port failed"
+    count=`isula port $id "90"`
+    fn_check_eq "$count" "1" "port required 1, get: $count"
+    isula port $id "90" | grep "90/tcp -> 127.0.0.1"
     fn_check_eq "$?" "0" "port failed"
     do_check_network_setting_ports "$id" "90/tcp" "127.0.0.1" "80"
     do_check_network_setting_ports "$id" "91/tcp" "127.0.0.1" "81"
@@ -140,6 +152,10 @@ function test_port()
     isula port $id | grep "80/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "81/tcp -> 0.0.0.0"
+    fn_check_eq "$?" "0" "port failed"
+    count=`isula port $id "90"`
+    fn_check_eq "$count" "1" "port required 1, get: $count"
+    isula port $id "90" | grep "90/tcp -> 0.0.0.0:8080"
     fn_check_eq "$?" "0" "port failed"
     do_check_network_setting_ports "$id" "80/tcp" "0.0.0.0"
     do_check_network_setting_ports "$id" "81/tcp" "0.0.0.0"
