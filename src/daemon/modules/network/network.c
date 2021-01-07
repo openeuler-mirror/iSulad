@@ -560,7 +560,17 @@ struct network_api_result *network_parse_to_api_result(const char *name, const c
     ret->name = util_strdup_s(name);
     ret->interface = util_strdup_s(interface);
     if (cni_result->interfaces_len > 0) {
-        ret->mac = util_strdup_s(cni_result->interfaces[0]->mac);
+        size_t i;
+        for (i = 0; i < cni_result->interfaces_len; i++) {
+            if (strcmp(cni_result->interfaces[i]->name, interface) != 0) {
+                continue;
+            }
+            ret->mac = util_strdup_s(cni_result->interfaces[i]->mac);
+            break;
+        }
+        if (i == cni_result->interfaces_len) {
+            WARN("Cannot find %s mac address", interface);
+        }
     }
 
 out:
