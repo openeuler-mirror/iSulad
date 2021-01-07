@@ -165,11 +165,6 @@ out:
 
 static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
 {
-    if (value == NULL || rt == NULL) {
-        ERROR("Invalid input params");
-        return -1;
-    }
-
     return 0;
 }
 
@@ -678,23 +673,6 @@ int detach_loopback(const char *id, const char *netns)
 out:
     free_runtime_conf(rc);
     return ret;
-}
-
-void free_cni_manager(struct cni_manager *manager)
-{
-    if (manager == NULL) {
-        return;
-    }
-
-    UTIL_FREE_AND_SET_NULL(manager->id);
-    UTIL_FREE_AND_SET_NULL(manager->ifname);
-    UTIL_FREE_AND_SET_NULL(manager->netns_path);
-    map_free(manager->annotations);
-    manager->annotations = NULL;
-    free_json_map_string_string(manager->cni_args);
-    manager->cni_args = NULL;
-
-    free(manager);
 }
 
 int cni_manager_store_init(const char *cache_dir, const char *conf_path, const char * const *bin_paths,

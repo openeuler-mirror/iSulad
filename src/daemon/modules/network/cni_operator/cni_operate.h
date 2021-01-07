@@ -57,8 +57,6 @@ int attach_network_plane(const struct cni_manager *manager, const struct cni_net
 int detach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                          struct cni_opt_result **result);
 
-void free_cni_manager(struct cni_manager *manager);
-
 #ifdef __cplusplus
 }
 #endif
