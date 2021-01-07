@@ -240,6 +240,8 @@ static void daemon_shutdown()
 
     umount_daemon_mntpoint();
 
+    network_module_exit();
+
     clean_residual_files();
 
     sem_post(&g_daemon_wait_shutdown_sem);
