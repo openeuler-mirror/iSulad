@@ -24,41 +24,55 @@
 #include "err_msg.h"
 #include "namespace.h"
 
-bool validate_container_network(const char *network_mode, const char **attach_networks, const size_t len)
+bool validate_container_network(container_t *cont)
 {
+    bool ret = false;
     size_t i;
 
-    if (!namespace_is_bridge(network_mode)) {
-        return true;
+    if (cont == NULL) {
+        ERROR("Invalid host config");
+        return false;
     }
 
-    if (attach_networks == NULL || len == 0) {
-        return false;
+    container_lock(cont);
+
+    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
+        ret = true;
+        goto out;
+    }
+
+    if (cont->hostconfig->bridge_network == NULL || cont->hostconfig->bridge_network_len == 0) {
+        goto out;
     }
 
     if (!network_module_check(NETWOKR_API_TYPE_NATIVE)) {
         isulad_set_error_message("No available native network");
-        return false;
+        goto out;
     }
 
-    for (i = 0; i < len; i++) {
-        if (!util_validate_network_name(attach_networks[i])) {
-            isulad_set_error_message("Invalid network name:%s", attach_networks[i]);
-            return false;
+    for (i = 0; i < cont->hostconfig->bridge_network_len; i++) {
+        if (!util_validate_network_name(cont->hostconfig->bridge_network[i])) {
+            isulad_set_error_message("Invalid network name:%s", cont->hostconfig->bridge_network[i]);
+            goto out;
         }
 
-        if (strnlen(attach_networks[i], MAX_NETWORK_NAME_LEN + 1) > MAX_NETWORK_NAME_LEN) {
-            isulad_set_error_message("Network name %s too long, max length:%d", attach_networks[i], MAX_NETWORK_NAME_LEN);
-            return false;
+        if (strnlen(cont->hostconfig->bridge_network[i], MAX_NETWORK_NAME_LEN + 1) > MAX_NETWORK_NAME_LEN) {
+            isulad_set_error_message("Network name %s too long, max length:%d", cont->hostconfig->bridge_network[i],
+                                     MAX_NETWORK_NAME_LEN);
+            goto out;
         }
 
-        if (!network_module_exist(NETWOKR_API_TYPE_NATIVE, attach_networks[i])) {
-            isulad_set_error_message("Network %s not found", attach_networks[i]);
-            return false;
+        if (!network_module_exist(NETWOKR_API_TYPE_NATIVE, cont->hostconfig->bridge_network[i])) {
+            isulad_set_error_message("Network %s not found", cont->hostconfig->bridge_network[i]);
+            goto out;
         }
     }
 
-    return true;
+    ret = true;
+
+out:
+    container_unlock(cont);
+    return ret;
 }
 
 static char *get_netns_path(const char *id, const int pid)
@@ -188,7 +202,7 @@ static struct attach_net_conf_list *prepare_attach_networks(const container_t *c
         goto out;
     }
 
-    ifname_table = get_ifname_table(cont->common_config->network_settings->networks);
+    ifname_table = get_ifname_table(cont->network_settings->networks);
     if (ifname_table == NULL) {
         ERROR("Get ifname table failed");
         nret = -1;
@@ -232,7 +246,7 @@ static struct attach_net_conf_list *prepare_detach_networks(const container_t *c
     int nret = 0;
     size_t i;
     struct attach_net_conf_list *list = NULL;
-    const defs_map_string_object_networks *networks = cont->common_config->network_settings->networks;
+    const defs_map_string_object_networks *networks = cont->network_settings->networks;
 
     list = (struct attach_net_conf_list *)util_common_calloc_s(sizeof(struct attach_net_conf));
     if (list == NULL) {
@@ -823,7 +837,7 @@ static int update_container_networks_portmappings(const cni_anno_port_mappings_c
     }
     for (i = 0; i < merged_ports->len; i++) {
         tmp_ports[i] = util_common_calloc_s(sizeof(cni_inner_port_mapping));
-        if (tmp_ports == NULL) {
+        if (tmp_ports[i] == NULL) {
             ERROR("Out of memory");
             ret = -1;
             goto out;
@@ -858,25 +872,36 @@ int setup_network(container_t *cont)
     network_api_result_list *result = NULL;
     cni_anno_port_mappings_container *merged_ports = NULL;
 
-    // set up network when network_mode is bridge
-    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
-        return 0;
+    if (cont == NULL) {
+        ERROR("Invalid cont");
+        return -1;
     }
 
-    if (cont->common_config->network_settings == NULL) {
-        cont->common_config->network_settings = (container_network_settings *)util_common_calloc_s(sizeof(
-                                                                                                       container_network_settings));
-        if (cont->common_config->network_settings == NULL) {
+    container_lock(cont);
+
+    // set up network when network_mode is bridge
+    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
+        goto out;
+    }
+
+    if (cont->network_settings == NULL) {
+        cont->network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+        if (cont->network_settings == NULL) {
             ERROR("Out of memory");
             ret = -1;
             goto out;
         }
     }
 
-    if (cont->common_config->network_settings->networks == NULL) {
-        cont->common_config->network_settings->networks = (defs_map_string_object_networks *)util_common_calloc_s(sizeof(
-                                                                                                                      defs_map_string_object_networks));
-        if (cont->common_config->network_settings->networks == NULL) {
+    if (cont->network_settings->networks != NULL && cont->network_settings->networks->len != 0) {
+        WARN("Container %s already has networks", cont->common_config->id);
+        goto out;
+    }
+
+    if (cont->network_settings->networks == NULL) {
+        cont->network_settings->networks = (defs_map_string_object_networks *)util_common_calloc_s(sizeof(
+                                                                                                       defs_map_string_object_networks));
+        if (cont->network_settings->networks == NULL) {
             ERROR("Out of memory");
             ret = -1;
             goto out;
@@ -902,33 +927,29 @@ int setup_network(container_t *cont)
         goto out;
     }
 
-    container_lock(cont);
-
-    ret = update_container_networks_info(result, cont->common_config->id, cont->common_config->network_settings->networks);
+    ret = update_container_networks_info(result, cont->common_config->id, cont->network_settings->networks);
     if (ret != 0) {
         ERROR("Failed to update network setting");
-        goto unlock_out;
+        goto out;
     }
 
-    ret = update_container_networks_portmappings(merged_ports, cont->common_config->network_settings);
+    ret = update_container_networks_portmappings(merged_ports, cont->network_settings);
     if (ret != 0) {
         ERROR("Failed to update network portmappings");
-        goto unlock_out;
+        goto out;
     }
 
-    ret = container_to_disk(cont);
+    ret = container_network_settings_to_disk(cont);
     if (ret != 0) {
-        ERROR("Failed to save container '%s'", cont->common_config->id);
-        goto unlock_out;
+        ERROR("Failed to save container '%s' network settings", cont->common_config->id);
+        goto out;
     }
-
-unlock_out:
-    container_unlock(cont);
 
 out:
     free_cni_anno_port_mappings_container(merged_ports);
     free_network_api_conf(config);
     free_network_api_result_list(result);
+    container_unlock(cont);
     return ret;
 }
 
@@ -941,31 +962,30 @@ static int do_set_portmapping_for_teardown(const container_t *cont, network_api_
     size_t i;
     int ret = 0;
 
-    if (cont->common_config == NULL || cont->common_config->network_settings == NULL ||
-        cont->common_config->network_settings->cni_ports_len == 0) {
+    if (cont->network_settings == NULL || cont->network_settings->cni_ports_len == 0) {
         return 0;
     }
 
     cni_ports = util_common_calloc_s(sizeof(cni_anno_port_mappings_container));
     cni_ports->items = util_smart_calloc_s(sizeof(cni_anno_port_mappings_container *),
-                                           cont->common_config->network_settings->cni_ports_len);
+                                           cont->network_settings->cni_ports_len);
     if (cni_ports->items == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
 
-    for (i = 0; i < cont->common_config->network_settings->cni_ports_len; i++) {
+    for (i = 0; i < cont->network_settings->cni_ports_len; i++) {
         cni_ports->items[i] = util_common_calloc_s(sizeof(cni_anno_port_mappings_container));
         if (cni_ports->items[i] == NULL) {
             ERROR("Out of memory");
             ret = -1;
             goto out;
         }
-        cni_ports->items[i]->host_port = cont->common_config->network_settings->cni_ports[i]->host_port;
-        cni_ports->items[i]->container_port = cont->common_config->network_settings->cni_ports[i]->container_port;
-        cni_ports->items[i]->protocol = util_strdup_s(cont->common_config->network_settings->cni_ports[i]->protocol);
-        cni_ports->items[i]->host_ip = util_strdup_s(cont->common_config->network_settings->cni_ports[i]->host_ip);
+        cni_ports->items[i]->host_port = cont->network_settings->cni_ports[i]->host_port;
+        cni_ports->items[i]->container_port = cont->network_settings->cni_ports[i]->container_port;
+        cni_ports->items[i]->protocol = util_strdup_s(cont->network_settings->cni_ports[i]->protocol);
+        cni_ports->items[i]->host_ip = util_strdup_s(cont->network_settings->cni_ports[i]->host_ip);
         cni_ports->len += 1;
     }
 
@@ -994,15 +1014,21 @@ int teardown_network(container_t *cont)
     int ret = 0;
     network_api_conf *config = NULL;
 
-    // tear down network when network_mode is bridge
-    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
-        return 0;
+    if (cont == NULL) {
+        ERROR("Invalid cont");
+        return -1;
     }
 
-    if (cont->common_config->network_settings == NULL || cont->common_config->network_settings->networks == NULL ||
-        cont->common_config->network_settings->networks->len == 0) {
+    container_lock(cont);
+
+    // tear down network when network_mode is bridge
+    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
+        goto out;
+    }
+
+    if (cont->network_settings->networks == NULL || cont->network_settings->networks->len == 0) {
         WARN("Container %s doesn't have any network", cont->common_config->id);
-        return 0;
+        goto out;
     }
 
     config = build_adaptor_native_config(cont, prepare_detach_networks);
@@ -1026,21 +1052,20 @@ int teardown_network(container_t *cont)
     }
 
 out:
-    container_lock(cont);
-
-    free_defs_map_string_object_networks(cont->common_config->network_settings->networks);
-    cont->common_config->network_settings->networks = NULL;
+    free_defs_map_string_object_networks(cont->network_settings->networks);
+    cont->network_settings->networks = NULL;
 
     // clear portmappings
-    do_free_network_setting_cni_portmapping(cont->common_config->network_settings);
+    do_free_network_setting_cni_portmapping(cont->network_settings);
 
-    if (container_to_disk(cont) != 0) {
-        ERROR("Failed to save container '%s'", cont->common_config->id);
+    if (container_network_settings_to_disk(cont) != 0) {
+        ERROR("Failed to save container '%s' network settings", cont->common_config->id);
         ret = -1;
     }
 
+    free_network_api_conf(config);
+
     container_unlock(cont);
 
-    free_network_api_conf(config);
     return ret;
 }
