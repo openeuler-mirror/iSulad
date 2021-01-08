@@ -309,3 +309,57 @@ int adaptor_cni_teardown(const network_api_conf *conf, network_api_result_list *
 
     return 0;
 }
+
+int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *result)
+{
+    int ret = 0;
+    struct cni_manager manager = { 0 };
+    const char *use_interface = DEFAULT_NETWORK_INTERFACE;
+    struct cni_opt_result *cni_result = NULL;
+    int *tmp_idx = NULL;
+
+    if (conf == NULL) {
+        ERROR("Invalid argument");
+        return -1;
+    }
+
+    if (g_net_store.conflist_len == 0) {
+        ERROR("Not found cni networks");
+        return -1;
+    }
+
+    if (conf->default_interface != NULL) {
+        use_interface = conf->default_interface;
+    }
+    if (conf->name != NULL) {
+        tmp_idx = map_search(g_net_store.g_net_index_map, (void *)conf->name);
+    } else {
+        tmp_idx = util_common_calloc_s(sizeof(int));
+    }
+
+    if (tmp_idx == NULL) {
+        ERROR("%s", conf->name != NULL ? "Cannot found network" : "Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    // Step1, build cni manager config
+    prepare_cni_manager(conf, &manager);
+    manager.ifname = (char *)use_interface;
+
+    ret = check_network_plane(&manager, g_net_store.conflist[*tmp_idx], &cni_result);
+    if (ret != 0) {
+        goto out;
+    }
+    if (do_cri_append_cni_result(g_net_store.conflist[*tmp_idx]->list->name, use_interface, cni_result, result) != 0) {
+        isulad_set_error_message("parse cni result for net: '%s' failed", g_net_store.conflist[*tmp_idx]->list->name);
+        ERROR("parse cni result for net: '%s' failed", g_net_store.conflist[*tmp_idx]->list->name);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(tmp_idx);
+    free_cni_opt_result(cni_result);
+    return ret;
+}

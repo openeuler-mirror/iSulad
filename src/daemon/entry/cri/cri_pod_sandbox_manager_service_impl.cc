@@ -996,7 +996,8 @@ void PodSandboxManagerServiceImpl::GetFormatIPsForMultNet(const container_inspec
         }
         Network::PodNetworkStatus status;
 
-        m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(), networks->items[i]->interface, inspect->id,
+        m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), networks->items[i]->name, networks->items[i]->interface,
+                                             inspect->id,
                                              status,
                                              error);
         if (error.NotEmpty()) {
@@ -1036,10 +1037,12 @@ auto PodSandboxManagerServiceImpl::GetIPsFromPlugin(const container_inspect *ins
 
     // step 1: get ips of default network
     Network::PodNetworkStatus status;
-    m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), metadata.name(), defaultInterface, inspect->id, status,
+    std::string emptyNet;
+    m_pluginManager->GetPodNetworkStatus(metadata.namespace_(), emptyNet, defaultInterface, inspect->id, status,
                                          error);
     if (error.NotEmpty()) {
-        return ret;
+        WARN("get default network status failed: %s, ignore it", error.GetCMessage());
+        error.Clear();
     }
     for (auto &iter : status.GetIPs()) {
         ret.push_back(iter);

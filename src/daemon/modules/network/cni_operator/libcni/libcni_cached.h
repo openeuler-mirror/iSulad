@@ -25,6 +25,8 @@ extern "C" {
 
 int copy_cni_port_mapping(const struct cni_port_mapping *src, cni_inner_port_mapping *dst);
 
+int copy_port_mapping_from_inner(const cni_inner_port_mapping *src, struct cni_port_mapping *dst);
+
 int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const char *config, const char *net_name,
                   const struct runtime_conf *rc);
 

@@ -34,6 +34,7 @@ struct net_ops {
 
     // operators for network plane
     int (*attach)(const network_api_conf *conf, network_api_result_list *result);
+    int (*check)(const network_api_conf *conf, network_api_result_list *result);
     int (*detach)(const network_api_conf *conf, network_api_result_list *result);
 
     // operators for network configs
@@ -42,7 +43,7 @@ struct net_ops {
     int (*conf_list)(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len);
     int (*conf_rm)(const char *name, char **res_name);
 
-    bool (*check)(void);
+    bool (*ready)(void);
     int (*update)(void);
 
     bool (*exist)(const char *name);
@@ -58,12 +59,13 @@ struct net_type {
 static const struct net_ops g_cri_ops = {
     .init = adaptor_cni_init_confs,
     .attach = adaptor_cni_setup,
+    .check = adaptor_cni_check,
     .detach = adaptor_cni_teardown,
     .conf_create = NULL,
     .conf_inspect = NULL,
     .conf_list = NULL,
     .conf_rm = NULL,
-    .check = adaptor_cni_check_inited,
+    .ready = adaptor_cni_check_inited,
     .update = adaptor_cni_update_confs,
     .exist = NULL,
     .destroy = NULL,
@@ -72,12 +74,13 @@ static const struct net_ops g_cri_ops = {
 static const struct net_ops g_native_ops = {
     .init = native_init,
     .attach = native_attach_networks,
+    .check = native_check_networks,
     .detach = native_detach_networks,
     .conf_create = native_config_create,
     .conf_inspect = native_config_inspect,
     .conf_list = native_config_list,
     .conf_rm = native_config_remove,
-    .check = native_check,
+    .ready = native_ready,
     .update = NULL,
     .exist = native_network_exist,
     .destroy = native_destory,
@@ -207,7 +210,7 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->attach == NULL) {
-        ERROR("net type: %s unsupport attach", type);
+        ERROR("net type: %s unsupported attach", type);
         return -1;
     }
 
@@ -232,6 +235,45 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
     return ret;
 }
 
+int network_module_check(const network_api_conf *conf, const char *type, network_api_result_list **result)
+{
+    const struct net_type *pnet = NULL;
+    int ret = 0;
+
+    if (conf == NULL || result == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    EVENT("Event: {Object: network, Type: checking, Target: %s}", conf->pod_id);
+
+    pnet = get_net_by_type(type);
+    if (pnet == NULL || pnet->ops->check == NULL) {
+        ERROR("net type: %s unsupported check", type);
+        return -1;
+    }
+
+    if (conf->extral_nets_len > MAX_CONFIG_FILE_COUNT) {
+        ERROR("Too large extral networks to attach");
+        return -1;
+    }
+    *result = util_common_calloc_s(sizeof(network_api_result_list));
+    if (*result == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    ret = pnet->ops->check(conf, *result);
+    if (ret != 0) {
+        free_network_api_result_list(*result);
+        *result = NULL;
+        ERROR("do check to network panes failed");
+    }
+    EVENT("Event: {Object: network, Type: checked, Target: %s}", conf->pod_id);
+
+    return ret;
+}
+
 int network_module_detach(const network_api_conf *conf, const char *type)
 {
     const struct net_type *pnet = NULL;
@@ -246,7 +288,7 @@ int network_module_detach(const network_api_conf *conf, const char *type)
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->detach == NULL) {
-        ERROR("net type: %s, unsupport detach", type);
+        ERROR("net type: %s, unsupported detach", type);
         return -1;
     }
 
@@ -270,7 +312,7 @@ int network_module_conf_create(const char *type, const network_create_request *r
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_create == NULL) {
-        ERROR("Type: %s net, unsupport config create", type);
+        ERROR("Type: %s net, unsupported config create", type);
         return -1;
     }
 
@@ -292,7 +334,7 @@ int network_module_conf_inspect(const char *type, const char *name, char **netwo
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_inspect == NULL) {
-        ERROR("Type: %s net, unsupport config inspect", type);
+        ERROR("Type: %s net, unsupported config inspect", type);
         return -1;
     }
 
@@ -315,7 +357,7 @@ int network_module_conf_list(const char *type, const struct filters_args *filter
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_list == NULL) {
-        ERROR("Type: %s net, unsupport config list", type);
+        ERROR("Type: %s net, unsupported config list", type);
         return -1;
     }
 
@@ -338,7 +380,7 @@ int network_module_conf_rm(const char *type, const char *name, char **res_name)
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_rm == NULL) {
-        ERROR("Type: %s net, unsupport config remove", type);
+        ERROR("Type: %s net, unsupported config remove", type);
         return -1;
     }
 
@@ -348,17 +390,17 @@ int network_module_conf_rm(const char *type, const char *name, char **res_name)
     return ret;
 }
 
-bool network_module_check(const char *type)
+bool network_module_ready(const char *type)
 {
     const struct net_type *pnet = NULL;
 
     pnet = get_net_by_type(type);
     if (pnet == NULL) {
-        ERROR("Unsupport net type: %s", type);
+        ERROR("Unsupported net type: %s", type);
         return -1;
     }
 
-    return pnet->ops->check();
+    return pnet->ops->ready();
 }
 
 int network_module_update(const char *type)
@@ -367,7 +409,7 @@ int network_module_update(const char *type)
 
     pnet = get_net_by_type(type);
     if (pnet == NULL) {
-        ERROR("Unsupport net type: %s", type);
+        ERROR("Unsupported net type: %s", type);
         return -1;
     }
 
@@ -583,7 +625,7 @@ int network_module_exist(const char *type, const char *name)
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->exist == NULL) {
-        ERROR("net type: %s, unsupport exist", type);
+        ERROR("net type: %s, unsupported exist", type);
         return -1;
     }
 

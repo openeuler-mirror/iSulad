@@ -312,7 +312,7 @@ out:
     return ret;
 }
 
-bool native_check()
+bool native_ready()
 {
     bool ret = false;
 
@@ -1857,7 +1857,7 @@ int native_attach_networks(const network_api_conf *conf, network_api_result_list
     }
 
     if (g_store.conflist_len == 0) {
-        ERROR("Not found cni networks");
+        ERROR("Not found native networks");
         goto unlock;
     }
 
@@ -1889,7 +1889,7 @@ int native_detach_networks(const network_api_conf *conf, network_api_result_list
     }
 
     if (g_store.conflist_len == 0) {
-        ERROR("Not found cni networks");
+        ERROR("Not found native networks");
         ret = -1;
         goto unlock;
     }
@@ -1905,6 +1905,30 @@ int native_detach_networks(const network_api_conf *conf, network_api_result_list
     if (ret != 0) {
         goto unlock;
     }
+
+unlock:
+    native_store_unlock();
+    return ret;
+}
+
+int native_check_networks(const network_api_conf *conf, network_api_result_list *result)
+{
+    int ret = 0;
+
+    if (conf == NULL) {
+        ERROR("Invalid argument");
+        return -1;
+    }
+    if (!native_store_lock(SHARED)) {
+        return -1;
+    }
+
+    if (g_store.conflist_len == 0) {
+        ERROR("Not found native networks");
+        goto unlock;
+    }
+
+    ret = do_foreach_network_op(conf, false, check_network_plane, result);
 
 unlock:
     native_store_unlock();

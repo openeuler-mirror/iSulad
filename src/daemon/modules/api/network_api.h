@@ -83,6 +83,8 @@ bool network_module_init(const char *network_plugin, const char *cache_dir, cons
 
 int network_module_attach(const network_api_conf *conf, const char *type, network_api_result_list **result);
 
+int network_module_check(const network_api_conf *conf, const char *type, network_api_result_list **result);
+
 int network_module_detach(const network_api_conf *conf, const char *type);
 
 int network_module_conf_create(const char *type, const network_create_request *request,
@@ -95,7 +97,7 @@ int network_module_conf_list(const char *type, const struct filters_args *filter
 
 int network_module_conf_rm(const char *type, const char *name, char **res_name);
 
-bool network_module_check(const char *type);
+bool network_module_ready(const char *type);
 
 int network_module_update(const char *type);
 
