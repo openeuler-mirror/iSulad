@@ -121,7 +121,7 @@ void CniNetworkPlugin::CheckInitialized(Errors &err)
         return;
     }
 
-    if (!network_module_check(NETWOKR_API_TYPE_CRI)) {
+    if (!network_module_ready(NETWOKR_API_TYPE_CRI)) {
         err.SetError("cni config uninitialized");
     }
 
@@ -374,7 +374,9 @@ void BuildAdaptorCNIConfig(const std::string &ns, const std::string &defaultInte
     // 2. iprange;
     PrepareAdaptorAnnotations(annotations, config, err);
 
-    config->name = util_strdup_s(name.c_str());
+    if (!name.empty()) {
+        config->name = util_strdup_s(name.c_str());
+    }
     config->ns = util_strdup_s(ns.c_str());
     config->pod_id = util_strdup_s(podSandboxID.c_str());
     config->netns_path = util_strdup_s(netnsPath.c_str());
@@ -540,38 +542,96 @@ void CniNetworkPlugin::Event(const std::string &name, std::map<std::string, std:
     SetPodCidr(iter->second);
 }
 
-void CniNetworkPlugin::GetPodNetworkStatus(const std::string & /*ns*/, const std::string & /*name*/,
+void CheckNetworkStatus(const std::string &ns, const std::string &name,
+                        const std::string &interfaceName, const std::string &netnsPath, const std::string &podSandboxID,
+                        std::vector<std::string> &ips, Errors &err)
+{
+    // int network_module_check(const network_api_conf *conf, const char *type, network_api_result_list **result);
+    network_api_conf *config = nullptr;
+    std::map<std::string, std::string> fakeMap;
+    BuildAdaptorCNIConfig(ns, interfaceName, name, netnsPath, podSandboxID, fakeMap, fakeMap, &config, err);
+    if (err.NotEmpty()) {
+        ERROR("build network api config failed");
+        return;
+    }
+
+    network_api_result_list *result = nullptr;
+    if (err.NotEmpty()) {
+        ERROR("%s", err.GetCMessage());
+        goto out;
+    }
+
+    if (network_module_check(config, NETWOKR_API_TYPE_CRI, &result) != 0) {
+        if (g_isulad_errmsg != nullptr) {
+            err.SetError(g_isulad_errmsg);
+        } else {
+            err.Errorf("setup cni for container: %s failed", podSandboxID.c_str());
+        }
+        goto out;
+    }
+    for (size_t i = 0; i < result->len; i++) {
+        if (result->items[i]->interface == NULL) {
+            continue;
+        }
+        if (interfaceName != result->items[i]->interface) {
+            continue;
+        }
+        for (size_t j = 0; j < result->items[i]->ips_len; j++) {
+            ips.push_back(result->items[i]->ips[j]);
+        }
+        break;
+    }
+
+out:
+    free_network_api_result_list(result);
+    free_network_api_conf(config);
+}
+
+void CniNetworkPlugin::GetPodNetworkStatus(const std::string &ns, const std::string &name,
                                            const std::string &interfaceName, const std::string &podSandboxID,
                                            PodNetworkStatus &status, Errors &err)
 {
+    DAEMON_CLEAR_ERRMSG();
     std::string netnsPath;
-    std::vector<std::string> ips;
     Errors tmpErr;
 
     if (podSandboxID.empty()) {
         err.SetError("Empty podsandbox ID");
-        goto out;
+        return;
     }
 
+    // TODO: save netns path in container_t
     netnsPath = GetNetNS(podSandboxID, tmpErr);
     if (tmpErr.NotEmpty()) {
         err.Errorf("CNI failed to retrieve network namespace path: %s", tmpErr.GetCMessage());
-        goto out;
+        return;
     }
     if (netnsPath.empty()) {
         err.Errorf("Cannot find the network namespace, skipping pod network status for container %s",
                    podSandboxID.c_str());
-        goto out;
+        return;
     }
-    GetPodIP(m_nsenterPath, netnsPath, interfaceName, ips, err);
-    if (err.NotEmpty()) {
-        ERROR("GetPodIP failed: %s", err.GetCMessage());
-        goto out;
-    }
-    status.SetIPs(ips);
+    std::vector<std::string> ips;
 
+
+    RLockNetworkMap(err);
+    CheckNetworkStatus(ns, name, interfaceName, netnsPath, podSandboxID, ips, err);
+    UnlockNetworkMap(err);
+
+    if (err.Empty()) {
+        goto out;
+    }
+    WARN("Get network status by check failed: %s", err.GetCMessage());
+    err.Clear();
+
+    GetPodIP(m_nsenterPath, netnsPath, interfaceName, ips, err);
+    if (!err.Empty()) {
+        ERROR("Get ip from plugin failed: %s", err.GetCMessage());
+        return;
+    }
 out:
     INFO("Get pod: %s network status success", podSandboxID.c_str());
+    status.SetIPs(ips);
 }
 
 void CniNetworkPlugin::RLockNetworkMap(Errors &error)

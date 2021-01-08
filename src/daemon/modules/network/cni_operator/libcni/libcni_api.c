@@ -73,24 +73,14 @@ struct cni_opt_result *cni_get_network_list_cached_result(const struct cni_netwo
     return cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
 }
 
-cni_cached_info *cni_get_network_list_cached_info(const struct cni_network_list_conf *list, struct runtime_conf *rc)
+cni_cached_info *cni_get_network_list_cached_info(const char *network, const struct runtime_conf *rc)
 {
-    cni_cached_info *info = NULL;
-
-    if (list == NULL) {
-        ERROR("Empty net list conf argument");
+    if (network == NULL) {
+        ERROR("Empty network");
         return NULL;
     }
 
-    if (list->list == NULL) {
-        ERROR("empty network configs");
-        goto out;
-    }
-
-    info = cni_cache_read(g_module_conf.cache_dir, list->list->name, rc);
-
-out:
-    return info;
+    return cni_cache_read(g_module_conf.cache_dir, network, rc);
 }
 
 static int args(const char *action, const struct runtime_conf *rc, struct cni_args **cargs);
@@ -628,19 +618,21 @@ static int check_network(cni_net_conf *net, const char *name, const char *versio
     return run_cni_plugin(net, name, version, "CHECK", rc, prev_result, false);
 }
 
-static inline bool do_check_network_list_args(const struct cni_network_list_conf *list, const struct runtime_conf *rc)
+static inline bool do_check_network_list_args(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
+                                              struct cni_opt_result **p_result)
 {
-    return (list == NULL || list->list == NULL || rc == NULL);
+    return (list == NULL || list->list == NULL || rc == NULL || p_result == NULL);
 }
 
-int cni_check_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc)
+int cni_check_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
+                           struct cni_opt_result **p_result)
 {
     int i = 0;
     int ret = 0;
     bool greated = false;
-    struct cni_opt_result *prev_result = NULL;
+    struct cni_opt_result *tmp_result = NULL;
 
-    if (do_check_network_list_args(list, rc)) {
+    if (do_check_network_list_args(list, rc, p_result)) {
         ERROR("Empty arguments");
         return -1;
     }
@@ -660,23 +652,25 @@ int cni_check_network_list(const struct cni_network_list_conf *list, const struc
         return 0;
     }
 
-    prev_result = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
-    if (prev_result == NULL) {
+    tmp_result = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
+    if (tmp_result == NULL) {
         ret = -1;
         ERROR("failed to get network: %s cached result", list->list->name);
         goto free_out;
     }
 
     for (i = list->list->plugins_len - 1; i >= 0; i--) {
-        if (check_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, &prev_result) != 0) {
+        if (check_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, &tmp_result) != 0) {
             ret = -1;
             ERROR("Run check plugin: %d failed", i);
             goto free_out;
         }
     }
+    *p_result = tmp_result;
+    tmp_result = NULL;
 
 free_out:
-    free_cni_opt_result(prev_result);
+    free_cni_opt_result(tmp_result);
     return ret;
 }
 
@@ -801,6 +795,8 @@ void free_runtime_conf(struct runtime_conf *rc)
     }
     free(rc->p_mapping);
     rc->p_mapping = NULL;
+    free_cni_bandwidth_entry(rc->bandwidth);
+    rc->bandwidth = NULL;
     free(rc);
 }
 

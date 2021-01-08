@@ -49,6 +49,18 @@ typedef struct cni_manager_store_t {
 
 static cni_manager_store_t g_cni_manager;
 
+static void parse_inner_portmapping(const cni_inner_port_mapping *src, struct cni_port_mapping *dst)
+{
+    if (src->protocol != NULL) {
+        dst->protocol = util_strdup_s(src->protocol);
+    }
+    if (src->host_ip != NULL) {
+        dst->host_ip = util_strdup_s(src->host_ip);
+    }
+    dst->container_port = src->container_port;
+    dst->host_port = src->host_port;
+}
+
 static int bandwidth_inject(const char *value, struct runtime_conf *rt)
 {
     int ret = -1;
@@ -498,16 +510,34 @@ out:
     return ret;
 }
 
+static int inject_cni_args_into_runtime_conf(const struct cni_manager *manager, struct runtime_conf *rt)
+{
+    size_t i = 0;
+
+    if (manager->cni_args == NULL || manager->cni_args->len == 0) {
+        WARN("No cni args found");
+        return 0;
+    }
+
+    rt->args = (char *(*)[2])util_smart_calloc_s(sizeof(char *) * 2, manager->cni_args->len);
+    if (rt->args == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    rt->args_len = manager->cni_args->len;
+    for (i = 0; i < manager->cni_args->len; i++) {
+        rt->args[i][0] = util_strdup_s(manager->cni_args->keys[i]);
+        rt->args[i][1] = util_strdup_s(manager->cni_args->values[i]);
+    }
+
+    return 0;
+}
+
 static struct runtime_conf *build_cni_runtime_conf(const struct cni_manager *manager)
 {
     int ret = 0;
     struct runtime_conf *rt = NULL;
-    size_t i = 0;
-
-    if (manager->cni_args == NULL || manager->cni_args->len == 0) {
-        ERROR("No cni args found");
-        return NULL;
-    }
 
     rt = (struct runtime_conf *)util_smart_calloc_s(sizeof(struct runtime_conf), 1);
     if (rt == NULL) {
@@ -520,17 +550,10 @@ static struct runtime_conf *build_cni_runtime_conf(const struct cni_manager *man
     rt->netns = util_strdup_s(manager->netns_path);
     rt->ifname = util_strdup_s(manager->ifname);
 
-    rt->args = (char *(*)[2])util_smart_calloc_s(sizeof(char *) * 2, manager->cni_args->len);
-    if (rt->args == NULL) {
-        ERROR("Out of memory");
+    if (inject_cni_args_into_runtime_conf(manager, rt) != 0) {
+        ERROR("Inject cni args to runtime conf failed");
         ret = -1;
         goto out;
-    }
-
-    rt->args_len = manager->cni_args->len;
-    for (i = 0; i < manager->cni_args->len; i++) {
-        rt->args[i][0] = util_strdup_s(manager->cni_args->keys[i]);
-        rt->args[i][1] = util_strdup_s(manager->cni_args->values[i]);
     }
 
     if (inject_annotations_runtime_conf(manager->annotations, rt) != 0) {
@@ -578,6 +601,116 @@ out:
     return ret;
 }
 
+static int update_runtime_conf_portmappings_by_cached(cni_cached_info *info, struct runtime_conf *rc)
+{
+    size_t i = 0;
+    struct cni_port_mapping **tmp_ports = NULL;
+    size_t tmp_ports_len = 0;
+
+    if (info->port_mappings_len == 0) {
+        return 0;
+    }
+    tmp_ports = util_smart_calloc_s(sizeof(struct cni_port_mapping), info->port_mappings_len);
+    if (tmp_ports == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < info->port_mappings_len; i++) {
+        tmp_ports[i] = util_common_calloc_s(sizeof(struct cni_port_mapping));
+        if (tmp_ports[i] == NULL) {
+            ERROR("Out of memory");
+            goto err_out;
+        }
+        tmp_ports_len++;
+        parse_inner_portmapping(info->port_mappings[i], tmp_ports[i]);
+    }
+    for (i = 0; i < rc->p_mapping_len; i++) {
+        free_cni_port_mapping(rc->p_mapping[i]);
+    }
+    free(rc->p_mapping);
+    rc->p_mapping = tmp_ports;
+    rc->p_mapping_len = tmp_ports_len;
+    return 0;
+err_out:
+    for (i = 0; i < tmp_ports_len; i++) {
+        free_cni_port_mapping(tmp_ports[i]);
+    }
+    free(tmp_ports);
+    return -1;
+}
+
+static int update_runtime_conf_cni_args_by_cached(cni_cached_info *info, struct runtime_conf *rc)
+{
+    size_t i = 0;
+    char *(*tmp_args)[2] = NULL;
+
+    if (info->cni_args == NULL || info->cni_args->len == 0) {
+        return 0;
+    }
+    tmp_args = util_smart_calloc_s(sizeof(char *) * 2, info->cni_args->len);
+    if (tmp_args == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < info->cni_args->len; i++) {
+        tmp_args[i][0] = util_strdup_s(info->cni_args->keys[i]);
+        tmp_args[i][1] = util_strdup_s(info->cni_args->values[i]);
+    }
+
+    for (i = 0; i < rc->args_len; i++) {
+        free(rc->args[i][0]);
+        free(rc->args[i][1]);
+    }
+    free(rc->args);
+    rc->args = tmp_args;
+    rc->args_len = info->cni_args->len;
+    return 0;
+}
+
+static int get_configs_from_cached(const char *network, struct runtime_conf *rc, char **conf_list)
+{
+    int ret = 0;
+    cni_cached_info *info = NULL;
+
+    info = cni_get_network_list_cached_info(network, rc);
+    if (info == NULL) {
+        return 0;
+    }
+
+    // check cache data is valid
+    if (info->network_name == NULL || strcmp(network, info->network_name) != 0) {
+        WARN("Invalid cached config: %s, ignore it", info->network_name != NULL ? info->network_name : "");
+        goto out;
+    }
+
+    // step 1: update cni_args;
+    if (update_runtime_conf_cni_args_by_cached(info, rc) != 0) {
+        ret = -1;
+        goto out;
+    }
+    // step 2: update capabilities
+    // step 2.1: update portmappings
+    if (update_runtime_conf_portmappings_by_cached(info, rc) != 0) {
+        ret = -1;
+        goto out;
+    }
+    // step 2.2: update bandwidth
+    rc->bandwidth = info->bandwidth;
+    info->bandwidth = NULL;
+
+    // step 3: return config list string
+    if (conf_list != NULL) {
+        *conf_list = info->config;
+        info->config = NULL;
+    }
+
+out:
+    free_cni_cached_info(info);
+    return ret;
+}
+
 int attach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
                          struct cni_opt_result **result)
 {
@@ -615,14 +748,14 @@ out:
     return ret;
 }
 
-int detach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
-                         struct cni_opt_result **result)
+int check_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
+                        struct cni_opt_result **result)
 {
     int ret = 0;
     struct runtime_conf *rc = NULL;
     struct cni_network_list_conf *use_list = NULL;
 
-    if (manager == NULL) {
+    if (manager == NULL || list == NULL || list->list == NULL) {
         ERROR("Invalid input params");
         return -1;
     }
@@ -630,6 +763,57 @@ int detach_network_plane(const struct cni_manager *manager, const struct cni_net
     rc = build_cni_runtime_conf(manager);
     if (rc == NULL) {
         ERROR("Error building CNI runtime config");
+        ret = -1;
+        goto out;
+    }
+
+    ret = get_configs_from_cached(list->list->name, rc, NULL);
+    if (ret != 0) {
+        ERROR("Get cached info failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (inject_annotations_json(manager->annotations, list, &use_list) != 0) {
+        ERROR("Inject annotations to net conf json failed");
+        ret = -1;
+        goto out;
+    }
+
+    if (cni_check_network_list(list, rc, result) != 0) {
+        ERROR("Error deleting network");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free_runtime_conf(rc);
+    free_cni_network_list_conf(use_list);
+    return ret;
+}
+
+int detach_network_plane(const struct cni_manager *manager, const struct cni_network_list_conf *list,
+                         struct cni_opt_result **result)
+{
+    int ret = 0;
+    struct runtime_conf *rc = NULL;
+    struct cni_network_list_conf *use_list = NULL;
+
+    if (manager == NULL || list == NULL || list->list == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    rc = build_cni_runtime_conf(manager);
+    if (rc == NULL) {
+        ERROR("Error building CNI runtime config");
+        ret = -1;
+        goto out;
+    }
+
+    ret = get_configs_from_cached(list->list->name, rc, NULL);
+    if (ret != 0) {
+        ERROR("Get cached info failed");
         ret = -1;
         goto out;
     }

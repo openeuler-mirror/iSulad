@@ -150,6 +150,49 @@ out:
     return ret;
 }
 
+static int do_cache_insert_cni_args(const struct runtime_conf *rc, cni_cached_info *p_info)
+{
+    size_t i;
+    int ret = 0;
+    json_map_string_string *tmp_args = NULL;
+
+    if (rc->args_len == 0) {
+        return 0;
+    }
+
+    tmp_args = util_common_calloc_s(sizeof(json_map_string_string));
+    if (tmp_args == NULL) {
+        ret = -1;
+        ERROR("Out of memory");
+        goto free_out;
+    }
+    tmp_args->keys = util_smart_calloc_s(sizeof(char *), rc->args_len);
+    if (tmp_args->keys == NULL) {
+        ret = -1;
+        ERROR("Out of memory");
+        goto free_out;
+    }
+    tmp_args->values = util_smart_calloc_s(sizeof(char *), rc->args_len);
+    if (tmp_args->values == NULL) {
+        ret = -1;
+        ERROR("Out of memory");
+        goto free_out;
+    }
+
+    for (i = 0; i < rc->args_len; i++) {
+        tmp_args->keys[i] = util_strdup_s(rc->args[i][0]);
+        tmp_args->values[i] = util_strdup_s(rc->args[i][1]);
+        tmp_args->len += 1;
+    }
+
+    p_info->cni_args = tmp_args;
+    tmp_args = NULL;
+
+free_out:
+    free_json_map_string_string(tmp_args);
+    return ret;
+}
+
 int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const char *config, const char *net_name,
                   const struct runtime_conf *rc)
 {
@@ -193,12 +236,17 @@ int cni_cache_add(const char *cache_dir, const struct cni_opt_result *res, const
     }
     // 2. add bandwidth
 
+    // 3. add cni args
+    if (do_cache_insert_cni_args(rc, p_info) != 0) {
+        ret = -1;
+        goto free_out;
+    }
+
     p_info->kind = util_strdup_s(CNI_CACHE_V1);
     p_info->container_id = util_strdup_s(rc->container_id);
     p_info->config = util_strdup_s(config);
     p_info->if_name = util_strdup_s(rc->ifname);
     p_info->network_name = util_strdup_s(net_name);
-    // TODO: support double array of string for cni args
 
     ret = do_save_cache(file_path, p_info);
 

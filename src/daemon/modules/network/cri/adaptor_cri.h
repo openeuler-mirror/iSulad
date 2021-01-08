@@ -31,6 +31,8 @@ int adaptor_cni_setup(const network_api_conf *conf, network_api_result_list *res
 
 int adaptor_cni_teardown(const network_api_conf *conf, network_api_result_list *result);
 
+int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *result);
+
 #ifdef __cplusplus
 }
 #endif

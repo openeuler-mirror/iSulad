@@ -45,7 +45,7 @@ bool validate_container_network(container_t *cont)
         goto out;
     }
 
-    if (!network_module_check(NETWOKR_API_TYPE_NATIVE)) {
+    if (!network_module_ready(NETWOKR_API_TYPE_NATIVE)) {
         isulad_set_error_message("No available native network");
         goto out;
     }
