@@ -386,8 +386,7 @@ static int container_start_cb(const container_start_request *request, container_
         goto pack_response;
     }
 
-    if (!validate_container_network(cont->hostconfig->network_mode, (const char **)cont->hostconfig->bridge_network,
-                                    cont->hostconfig->bridge_network_len)) {
+    if (!validate_container_network(cont)) {
         cc = ISULAD_ERR_EXEC;
         ERROR("Failed to validate container network");
         goto pack_response;

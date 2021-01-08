@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-bool validate_container_network(const char *network, const char **bridge, const size_t len);
+bool validate_container_network(container_t *cont);
 
 int setup_network(container_t *cont);
 

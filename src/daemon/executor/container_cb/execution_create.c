@@ -724,7 +724,7 @@ static int register_new_container(const char *id, const char *image_id, const ch
         goto out;
     }
 
-    cont = container_new(runtime, runtime_root, runtime_stat, image_id, host_spec, v2_spec, NULL);
+    cont = container_new(runtime, runtime_root, runtime_stat, image_id, host_spec, v2_spec, NULL, NULL);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
         goto out;

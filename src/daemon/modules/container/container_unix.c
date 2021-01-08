@@ -84,7 +84,7 @@ out:
 /* notes: hostconfig and common_config will be free in this function on error */
 container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
                            host_config *hostconfig, container_config_v2_common_config *common_config,
-                           container_state *state)
+                           container_state *state, container_network_settings *network_settings)
 {
     int ret = 0;
     container_t *cont = NULL;
@@ -130,6 +130,16 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
         cont->state->state = state;
     }
 
+    if (network_settings != NULL) {
+        cont->network_settings = network_settings;
+    } else {
+        cont->network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+        if (cont->network_settings == NULL) {
+            ERROR("Out of memory");
+            goto error_out;
+        }
+    }
+
     cont->rm = restart_manager_new(cont->hostconfig->restart_policy, cont->state->state->restart_count);
     if (cont->rm == NULL) {
         ERROR("Out of memory");
@@ -152,6 +162,9 @@ error_out:
         if (cont->state != NULL && cont->state->state == state) {
             cont->state->state = NULL;
         }
+        if (cont->network_settings != NULL && cont->network_settings == network_settings) {
+            cont->network_settings = NULL;
+        }
     }
     container_unref(cont);
     return NULL;
@@ -169,6 +182,9 @@ void container_free(container_t *container)
 
     container_state_free(container->state);
     container->state = NULL;
+
+    free_container_network_settings(container->network_settings);
+    container->network_settings = NULL;
 
     free(container->runtime);
     container->runtime = NULL;
@@ -707,6 +723,76 @@ out:
     return ret;
 }
 
+#define NETWORKSETTINGSJSON "network_settings.json"
+/* save network settings config */
+static int save_network_settings_config(const char *id, const char *rootpath, const char *network_settings)
+{
+    if (rootpath == NULL || id == NULL || network_settings == NULL) {
+        return -1;
+    }
+    return save_json_config_file(id, rootpath, network_settings, NETWORKSETTINGSJSON);
+}
+
+/* container save container network settings config */
+static int container_save_network_settings_config(const container_t *cont)
+{
+    int ret = 0;
+    parser_error err = NULL;
+    char *json_network_settings = NULL;
+
+    if (cont == NULL) {
+        return -1;
+    }
+
+    json_network_settings = container_network_settings_generate_json(cont->network_settings, NULL, &err);
+    if (json_network_settings == NULL) {
+        ERROR("Failed to generate container network settings json string:%s", err ? err : " ");
+        ret = -1;
+        goto out;
+    }
+
+    ret = save_network_settings_config(cont->common_config->id, cont->root_path, json_network_settings);
+    if (ret != 0) {
+        ERROR("Failed to save container network settings json to file");
+        goto out;
+    }
+
+out:
+    free(json_network_settings);
+    free(err);
+
+    return ret;
+}
+
+static int read_network_settings_config(const char *rootpath, const char *id,
+                                        container_network_settings **network_settings)
+{
+    int ret = 0;
+    int nret;
+    char filename[PATH_MAX] = { 0x00 };
+    parser_error err = NULL;
+
+    nret = snprintf(filename, sizeof(filename), "%s/%s/%s", rootpath, id, NETWORKSETTINGSJSON);
+    if (nret < 0 || (size_t)nret >= sizeof(filename)) {
+        ERROR("Failed to print string");
+        return -1;
+    }
+
+    if (!util_file_exists(filename)) {
+        WARN("No network settings config file of container '%s'", id);
+        return 0;
+    }
+
+    *network_settings = container_network_settings_parse_file(filename, NULL, &err);
+    if (*network_settings == NULL) {
+        ERROR("Failed to parse network settings config file:%s", err);
+        ret = -1;
+    }
+
+    free(err);
+    return ret;
+}
+
 /* container to disk */
 int container_to_disk(const container_t *cont)
 {
@@ -727,6 +813,11 @@ int container_to_disk(const container_t *cont)
     }
 
     ret = container_save_container_state_config(cont);
+    if (ret != 0) {
+        return ret;
+    }
+
+    ret = container_save_network_settings_config(cont);
     if (ret != 0) {
         return ret;
     }
@@ -780,6 +871,40 @@ int container_state_to_disk_locking(container_t *cont)
     container_lock(cont);
 
     ret = container_state_to_disk(cont);
+
+    container_unlock(cont);
+    return ret;
+}
+
+/* container network_settings to disk */
+int container_network_settings_to_disk(const container_t *cont)
+{
+    int ret = 0;
+
+    if (cont == NULL) {
+        return -1;
+    }
+
+    ret = container_save_network_settings_config(cont);
+    if (ret != 0) {
+        return ret;
+    }
+
+    return ret;
+}
+
+/* container network_settings to disk locking */
+int container_network_settings_to_disk_locking(container_t *cont)
+{
+    int ret = 0;
+
+    if (cont == NULL) {
+        return -1;
+    }
+
+    container_lock(cont);
+
+    ret = container_save_network_settings_config(cont);
 
     container_unlock(cont);
     return ret;
@@ -900,6 +1025,7 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     container_t *cont = NULL;
     container_config_v2_common_config_mount_points *mount_points = NULL;
     container_state *state = NULL;
+    container_network_settings *network_settings = NULL;
 
     if (rootpath == NULL || statepath == NULL || id == NULL || runtime == NULL) {
         return NULL;
@@ -930,6 +1056,11 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
         goto error_out;
     }
 
+    if (read_network_settings_config(rootpath, id, &network_settings) != 0) {
+        ERROR("Failed to read container network settings");
+        goto error_out;
+    }
+
     if (update_OCI_config_v1_to_v2(rootpath, id) != 0) {
         ERROR("Failed to update config to v2 for container: %s", id);
         goto error_out;
@@ -942,7 +1073,7 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     v2config->common_config = NULL;
     image_id = v2config->image;
 
-    cont = container_new(runtime, rootpath, statepath, image_id, hostconfig, common_config, state);
+    cont = container_new(runtime, rootpath, statepath, image_id, hostconfig, common_config, state, network_settings);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
         goto error_out;
@@ -951,6 +1082,7 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     hostconfig = NULL;
     common_config = NULL;
     state = NULL;
+    network_settings = NULL;
 
     if (restore_volumes(mount_points, (char *)id) != 0) {
         goto error_out;
@@ -965,6 +1097,7 @@ error_out:
     free_host_config(hostconfig);
     free_container_config_v2(v2config);
     free_container_state(state);
+    free_container_network_settings(network_settings);
     container_unref(cont);
     return NULL;
 }
