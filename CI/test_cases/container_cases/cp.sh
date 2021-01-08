@@ -163,6 +163,7 @@ test_cp_file_to_container()
     return ${ret}
 }
 
+
 test_cp_dir_to_container()
 {
     local ret=0
@@ -193,6 +194,66 @@ test_cp_dir_to_container()
 
     isula exec $containername /bin/sh -c "ls $dstfile/passwd"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
+
+    # test copy dir with hardlink
+    rm -rf $cpfiles/a
+    mkdir -p $cpfiles/a/a $cpfiles/a/b
+    echo "test_hardlink_a" > $cpfiles/a/a/a
+    ln $cpfiles/a/a/a $cpfiles/a/b/b
+    isula cp $cpfiles/a $containername:/c
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
+
+    isula exec -ti $containername cat /c/a/a | grep "test_hardlink_a"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy hardlink a not right" && ((ret++))
+
+    isula exec -ti $containername cat /c/b/b | grep "test_hardlink_a"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy hardlink b not right" && ((ret++))
+    rm -rf $cpfiles/a
+
+    # test copy dir to file
+    mkdir -p $cpfiles/dst
+    isula exec -ti $containername sh -c 'touch /dst'
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to touch file in container" && ((ret++))
+
+    isula cp $cpfiles/dst $containername:/
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy dir to container failed" && ((ret++))
+
+    isula exec -ti $containername stat / | grep directory
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - file should be replaced to be dir" && ((ret++))
+    rm -rf $cpfiles/dir
+
+    # test copy current dir file
+    touch $cpfiles/current
+    cd $cpfiles
+    isula cp . $containername:/current1
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cp current1 file" && ((ret++))
+
+    isula exec -ti $containername stat /current1
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - file current1 not exist" && ((ret++))
+
+    isula cp ./ $containername:/current2
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cp current2 file" && ((ret++))
+
+    isula exec -ti $containername stat /current2
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - file current2 not exist" && ((ret++))
+    cd -
+    rm -f $cpfiles/current
+
+    # test copy perm
+    mkdir -p $cpfiles/perm && chmod 700 $cpfiles/perm
+    isula cp $cpfiles/perm $containername:/
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to cp dir to container" && ((ret++))
+
+    isula exec -ti $containername stat /perm | grep "Access: (0700/drwx"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy perm not right" && ((ret++))
+    rm -f $cpfiles/perm
+
+    # test copy hardlink
+    rm -rf $cpfiles/cp_dir
+    mkdir $cpfiles/cp_dir && cd $cpfiles/cp_dir && echo hello > norm_file && ln norm_file norm_file_link && cd -
+    isula cp $cpfiles/cp_dir $containername:/home/
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - copy hardlink failed" && ((ret++))
+    rm -rf $cpfiles/cp_dir
 
     return ${ret}
 }
@@ -227,6 +288,17 @@ test_cp_symlink_to_container()
     isula exec $containername /bin/sh -c "cat $cpfiles/target | grep root"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to do copy" && ((ret++))
 
+    # test cp symlink with dir which have the same name prefix
+    rm -rf $cpfiles/abc $cpfiles/a
+    ln -s $cpfiles/abc $cpfiles/a
+
+    isula cp $cpfiles/a $containername:/b
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to copy symlink" && ((ret++))
+
+    isula exec -ti $containername readlink /b | grep "$cpfiles/abc"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid symlink" && ((ret++))
+    rm -f $cpfiles/abc $cpfiles/a
+
     return ${ret}
 }
 
@@ -256,14 +328,21 @@ function cp_test_t()
 
     msg_info "${test} starting..."
 
-    isula pull ${image}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    local isulad_pid=$(cat /var/run/isulad.pid)
+    local fd_num1=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    [[ $fd_num1 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
+
+    isula inspect ${image}
+    if [ x"$?" != x"0" ];then
+        isula pull ${image}
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    fi
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     containername=test_cmd_cp
-	isula run -n $containername -itd $image
+    isula run -n $containername -itd $image
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container: ${image}" && ((ret++))
 
     rm -rf $cpfiles
@@ -274,6 +353,7 @@ function cp_test_t()
     test_cp_file_from_container $containername || ((ret++))
     test_cp_dir_from_container $containername || ((ret++))
     test_cp_file_to_container $containername || ((ret++))
+    test_cp_dir_to_container $containername || ((ret++))
     test_cp_symlink_to_container $containername || ((ret++))
     test_cp_symlink_from_container $containername || ((ret++))
 
@@ -281,6 +361,13 @@ function cp_test_t()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to rm container: ${containername}" && ((ret++))
 
     rm -rf $cpfiles
+
+    local fd_num2=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    [[ $fd_num2 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
+
+    # make sure fd not increase after test
+    [[ $fd_num1 -ne $fd_num2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fd number not right" && ((ret++))
+
     echo "test end"
     return ${ret}
 }
