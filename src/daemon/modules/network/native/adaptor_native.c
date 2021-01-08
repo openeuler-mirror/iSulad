@@ -1479,7 +1479,7 @@ int native_config_list(const struct filters_args *filters, network_network_info 
         goto out;
     }
 
-    nets = (network_network_info **)util_common_calloc_s(sizeof(network_network_info *) * g_store.conflist_len);
+    nets = (network_network_info **)util_smart_calloc_s(sizeof(network_network_info *), g_store.conflist_len);
     if (nets == NULL) {
         ERROR("Out of memory");
         ret = -1;
