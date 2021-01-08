@@ -21,6 +21,8 @@
 
 declare -r curr_path=$(dirname $(readlink -f "$0"))
 source ../helpers.sh
+ipv6="2000::1:2345:3456:ab34"
+ipv4="127.0.0.1"
 
 function test_network_param()
 {
@@ -49,23 +51,30 @@ function test_network_param()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check -p 80-89" && ((ret++))
     
     # Host ports range equal to container ports range
-    id=`isula create -ti -p 127.0.0.1:80-82:90-92 ${image} /bin/sh`
+    id=`isula create -ti -p ${ipv4}:80-82:90-92 ${image} /bin/sh`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container with -p" && ((ret++))
 
-    grep "91/tcp"  ${root}/${id}/config.v2.json && grep "127.0.0.1" ${root}/${id}/hostconfig.json 
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check -p 127.0.0.1:80-82:90-92" && ((ret++))
+    grep "91/tcp"  ${root}/${id}/config.v2.json && grep "${ipv4}" ${root}/${id}/hostconfig.json 
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check -p ${ipv4}:80-82:90-92" && ((ret++))
+
+    # ip parse
+    id=`isula create -ti -p [${ipv6}]:80-82:90-92 ${image} /bin/sh`
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create container with -p" && ((ret++))
+
+    grep "${ipv6}" ${root}/${id}/hostconfig.json 
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to check --publish with ipv6" && ((ret++))
 
     # Host ports range to container single port
-    isula create -ti -p 127.0.0.1:80-82:90 ${image} /bin/sh
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p 127.0.0.1:80-82:90, expect fail" && ((ret++))
+    isula create -ti -p ${ipv4}:80-82:90 ${image} /bin/sh
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p ${ipv4}:80-82:90, expect fail" && ((ret++))
 
     # Host ports range not equal to container ports range
-    isula create -ti -p 127.0.0.1:80-82:90-93 ${image} /bin/sh
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p 127.0.0.1:80-82:90-93 , expect fail" && ((ret++))
+    isula create -ti -p ${ipv4}:80-82:90-93 ${image} /bin/sh
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p ${ipv4}:80-82:90-93 , expect fail" && ((ret++))
 
     # Invalid format
-    isula create -ti -p 127.0.0.1:80-82:%90-93 ${image} /bin/sh
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p 127.0.0.1:80-82:%90-93 , expect fail" && ((ret++))
+    isula create -ti -p ${ipv4}:80-82:%90-93 ${image} /bin/sh
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container with -p ${ipv4}:80-82:%90-93 , expect fail" && ((ret++))
 
     isula rm -f `isula ps -qa`
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm all container failed" && ((ret++))
