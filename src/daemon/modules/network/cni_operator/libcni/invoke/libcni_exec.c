@@ -256,11 +256,12 @@ static char *env_stringify(char *(*pargs)[2], size_t len)
         return NULL;
     }
 
-    if (len > (INT_MAX / sizeof(char *)) - 1) {
+    if (len > SIZE_MAX - 1) {
         ERROR("Too large arguments");
         return NULL;
     }
-    entries = util_common_calloc_s(sizeof(char *) * (len + 1));
+
+    entries = util_smart_calloc_s(sizeof(char *), (len + 1));
     if (entries == NULL) {
         ERROR("Out of memory");
         return NULL;
@@ -370,13 +371,13 @@ static char **as_env(const struct cni_args *cniargs)
 
     len = util_array_len((const char **)envir);
 
-    if (len > ((SIZE_MAX / sizeof(char *)) - (CNI_ENVS_LEN + 1))) {
+    if (len > (SIZE_MAX - (CNI_ENVS_LEN + 1))) {
         ERROR("Too large arguments");
         return NULL;
     }
 
     len += (CNI_ENVS_LEN + 1);
-    result = util_common_calloc_s(len * sizeof(char *));
+    result = util_smart_calloc_s(sizeof(char *), len);
     if (result == NULL) {
         ERROR("Out of memory");
         return NULL;
