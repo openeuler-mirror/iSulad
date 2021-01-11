@@ -565,9 +565,34 @@ static int register_new_container(const char *id, const char *runtime, host_conf
             goto out;
         }
     }
-    cont = container_new(runtime, runtime_root, runtime_stat, image_id, host_spec, v2_spec, NULL, NULL);
+    cont = container_new(runtime, runtime_root, runtime_stat, image_id);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
+        goto out;
+    }
+
+    if (container_fill_v2_config(cont, v2_spec) != 0) {
+        ERROR("Failed to fill v2 config");
+        goto out;
+    }
+
+    if (container_fill_host_config(cont, host_spec) != 0) {
+        ERROR("Failed to fill host config");
+        goto out;
+    }
+
+    if (container_fill_state(cont, NULL) != 0) {
+        ERROR("Failed to fill container state");
+        goto out;
+    }
+
+    if (container_fill_restart_manager(cont) != 0) {
+        ERROR("Failed to fill restart manager");
+        goto out;
+    }
+
+    if (container_fill_network_settings(cont, NULL) != 0) {
+        ERROR("Failed to fill network settings");
         goto out;
     }
 

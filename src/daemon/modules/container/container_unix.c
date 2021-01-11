@@ -80,15 +80,12 @@ out:
     return ret;
 }
 
-/* notes: hostconfig and common_config will be free in this function on error */
-container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
-                           host_config *hostconfig, container_config_v2_common_config *common_config,
-                           container_state *state, container_network_settings *network_settings)
+container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id)
 {
     int ret = 0;
     container_t *cont = NULL;
 
-    if (common_config == NULL || rootpath == NULL || statepath == NULL || hostconfig == NULL || runtime == NULL) {
+    if (rootpath == NULL || statepath == NULL || runtime == NULL) {
         return NULL;
     }
 
@@ -99,9 +96,6 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     }
 
     atomic_int_set(&cont->refcnt, 1);
-
-    cont->common_config = common_config;
-    cont->hostconfig = hostconfig;
 
     ret = init_container_mutex(cont);
     if (ret != 0) {
@@ -118,33 +112,6 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     cont->state_path = util_strdup_s(statepath);
     cont->image_id = image_id != NULL ? util_strdup_s(image_id) : NULL;
 
-    cont->state = container_state_new();
-    if (cont->state == NULL) {
-        ERROR("Out of memory");
-        goto error_out;
-    }
-
-    if (state != NULL) {
-        free_container_state(cont->state->state);
-        cont->state->state = state;
-    }
-
-    if (network_settings != NULL) {
-        cont->network_settings = network_settings;
-    } else {
-        cont->network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
-        if (cont->network_settings == NULL) {
-            ERROR("Out of memory");
-            goto error_out;
-        }
-    }
-
-    cont->rm = restart_manager_new(cont->hostconfig->restart_policy, cont->state->state->restart_count);
-    if (cont->rm == NULL) {
-        ERROR("Out of memory");
-        goto error_out;
-    }
-
     cont->handler = container_events_handler_new();
     if (cont->handler == NULL) {
         ERROR("Out of memory");
@@ -154,19 +121,86 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     return cont;
 
 error_out:
-    if (cont != NULL) {
-        // release these memory by the caller
-        cont->common_config = NULL;
-        cont->hostconfig = NULL;
-        if (cont->state != NULL && cont->state->state == state) {
-            cont->state->state = NULL;
-        }
-        if (cont->network_settings != NULL && cont->network_settings == network_settings) {
-            cont->network_settings = NULL;
-        }
-    }
     container_unref(cont);
     return NULL;
+}
+
+int container_fill_v2_config(container_t *cont, container_config_v2_common_config *common_config)
+{
+    if (cont == NULL || common_config == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    cont->common_config = common_config;
+    return 0;
+}
+
+int container_fill_host_config(container_t *cont, host_config *hostconfig)
+{
+    if (cont == NULL || hostconfig == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    cont->hostconfig = hostconfig;
+    return 0;
+}
+
+int container_fill_state(container_t *cont, container_state *state)
+{
+    if (cont == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    cont->state = container_state_new();
+    if (cont->state == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (state != NULL) {
+        free_container_state(cont->state->state);
+        cont->state->state = state;
+    }
+
+    return 0;
+}
+
+int container_fill_restart_manager(container_t *cont)
+{
+    if (cont == NULL || cont->hostconfig == NULL || cont->state == NULL || cont->state->state == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    cont->rm = restart_manager_new(cont->hostconfig->restart_policy, cont->state->state->restart_count);
+    if (cont->rm == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    return 0;
+}
+
+int container_fill_network_settings(container_t *cont, container_network_settings *network_settings)
+{
+    if (cont == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    cont->network_settings = network_settings;
+    if (cont->network_settings == NULL) {
+        cont->network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+        if (cont->network_settings == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 /* container free */
@@ -1072,15 +1106,39 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
     v2config->common_config = NULL;
     image_id = v2config->image;
 
-    cont = container_new(runtime, rootpath, statepath, image_id, hostconfig, common_config, state, network_settings);
+    cont = container_new(runtime, rootpath, statepath, image_id);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
         goto error_out;
     }
 
-    hostconfig = NULL;
+    if (container_fill_v2_config(cont, common_config) != 0) {
+        ERROR("Failed to fill v2 config");
+        goto error_out;
+    }
     common_config = NULL;
+
+    if (container_fill_host_config(cont, hostconfig) != 0) {
+        ERROR("Failed to fill host config");
+        goto error_out;
+    }
+    hostconfig = NULL;
+
+    if (container_fill_state(cont, state) != 0) {
+        ERROR("Failed to fill container state");
+        goto error_out;
+    }
     state = NULL;
+
+    if (container_fill_restart_manager(cont) != 0) {
+        ERROR("Failed to fill restart manager");
+        goto error_out;
+    }
+
+    if (container_fill_network_settings(cont, network_settings) != 0) {
+        ERROR("Failed to fill network settings");
+        goto error_out;
+    }
     network_settings = NULL;
 
     if (restore_volumes(mount_points, (char *)id) != 0) {
