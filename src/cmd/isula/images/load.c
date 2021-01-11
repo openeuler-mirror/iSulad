@@ -162,6 +162,11 @@ int cmd_load_main(int argc, const char **argv)
         g_cmd_load_args.file = file;
     }
 
+    if (!util_file_exists(g_cmd_load_args.file)) {
+        COMMAND_ERROR("File %s is not exist", g_cmd_load_args.file);
+        exit(exit_code);
+    }
+
     ret = client_load_image(&g_cmd_load_args);
     if (ret) {
         exit(exit_code);
