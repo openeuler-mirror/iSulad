@@ -137,9 +137,17 @@ void container_refinc(container_t *cont);
 
 void container_unref(container_t *cont);
 
-container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id,
-                           host_config *hostconfig, container_config_v2_common_config *common_config,
-                           container_state *state, container_network_settings *network_settings);
+container_t *container_new(const char *runtime, const char *rootpath, const char *statepath, const char *image_id);
+
+int container_fill_v2_config(container_t *cont, container_config_v2_common_config *common_config);
+
+int container_fill_host_config(container_t *cont, host_config *hostconfig);
+
+int container_fill_state(container_t *cont, container_state *state);
+
+int container_fill_restart_manager(container_t *cont);
+
+int container_fill_network_settings(container_t *cont, container_network_settings *network_settings);
 
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id);
 
