@@ -319,6 +319,7 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
     char *layer_fs = NULL;
     int ret = 0;
     struct archive_options options = { 0 };
+    char *err = NULL;
 
     if (!util_valid_str(id) || driver == NULL || content == NULL) {
         ERROR("invalid argument to apply diff with id(%s)", id);
@@ -340,8 +341,8 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
     }
 
     options.whiteout_format = REMOVE_WHITEOUT_FORMATE;
-    if (archive_unpack(content, layer_fs, &options) != 0) {
-        ERROR("devmapper: failed to unpack to :%s", layer_fs);
+    if (archive_unpack(content, layer_fs, &options, &err) != 0) {
+        ERROR("devmapper: failed to unpack to %s: %s", layer_fs, err);
         ret = -1;
         goto out;
     }
@@ -355,6 +356,7 @@ int devmapper_apply_diff(const char *id, const struct graphdriver *driver, const
 out:
     free_driver_mount_opts(mount_opts);
     free(layer_fs);
+    free(err);
     return ret;
 }
 

@@ -31,17 +31,7 @@
 #include "isula_libutils/log.h"
 #include "error.h"
 #include "isula_libutils/json_common.h"
-#include "io_wrapper.h"
-#include "utils_file.h"
-#include "utils_verify.h"
-
-#define TAR_MAX_OPTS 50
-#define TAR_CMD "tar"
-#define TAR_TRANSFORM_OPT "--transform"
-#define TAR_CREATE_OPT "-c"
-#define TAR_EXACT_OPT "-x"
-#define TAR_CHDIR_OPT "-C"
-#define TAR_GZIP_OPT "-z"
+#include "util_archive.h"
 
 static void set_char_to_separator(char *p)
 {
@@ -124,110 +114,6 @@ int gzip(const char *filename, size_t len)
         ERROR("Received error:\n%s", buffer);
     }
     return status;
-}
-
-struct archive_context {
-    int stdin_fd;
-    int stdout_fd;
-    int stderr_fd;
-    pid_t pid;
-};
-
-static ssize_t archive_context_read(void *context, void *buf, size_t len)
-{
-    struct archive_context *ctx = (struct archive_context *)context;
-    if (ctx == NULL) {
-        return -1;
-    }
-    if (ctx->stdout_fd >= 0) {
-        return util_read_nointr(ctx->stdout_fd, buf, len);
-    }
-    return 0;
-}
-
-static ssize_t archive_context_write(const void *context, const void *buf, size_t len)
-{
-    struct archive_context *ctx = (struct archive_context *)context;
-    if (ctx == NULL) {
-        return -1;
-    }
-    if (ctx->stdin_fd >= 0) {
-        return util_write_nointr(ctx->stdin_fd, buf, len);
-    }
-    return 0;
-}
-
-static int close_wait_pid(struct archive_context *ctx, int *status)
-{
-    int ret = 0;
-
-    // close stdin and stdout first, this will make sure the process of tar exit.
-    if (ctx->stdin_fd >= 0) {
-        close(ctx->stdin_fd);
-    }
-
-    if (ctx->stdout_fd >= 0) {
-        close(ctx->stdout_fd);
-    }
-
-    if (ctx->pid > 0) {
-        if (waitpid(ctx->pid, status, 0) != ctx->pid) {
-            ERROR("Failed to wait pid %u", ctx->pid);
-            ret = -1;
-        }
-    }
-
-    return ret;
-}
-
-static int archive_context_close(void *context, char **err)
-{
-    int ret = 0;
-    int status = 0;
-    char *reason = NULL;
-    ssize_t size_read = 0;
-    char buffer[BUFSIZ + 1] = { 0 };
-    struct archive_context *ctx = (struct archive_context *)context;
-    char *marshaled = NULL;
-
-    if (ctx == NULL) {
-        return 0;
-    }
-
-    ret = close_wait_pid(ctx, &status);
-
-    if (WIFSIGNALED((unsigned int)status)) {
-        status = WTERMSIG(status);
-        reason = "signaled";
-    } else if (WIFEXITED(status)) {
-        status = WEXITSTATUS(status);
-        reason = "exited";
-    } else {
-        reason = "unknown";
-    }
-
-    if (ctx->stderr_fd >= 0) {
-        size_read = util_read_nointr(ctx->stderr_fd, buffer, BUFSIZ);
-        if (size_read > 0) {
-            reason = buffer;
-            marshaled = util_marshal_string(buffer);
-            if (marshaled == NULL) {
-                ERROR("Can not marshal json buffer: %s", buffer);
-            } else {
-                reason = marshaled;
-            }
-        }
-        close(ctx->stderr_fd);
-    }
-
-    if (size_read > 0 || status != 0) {
-        format_errorf(err, "tar exited with status %d: %s", status, reason);
-        ret = -1;
-    }
-
-    free(marshaled);
-    free(ctx);
-    return ret;
 }
 
 static int get_rebase_name(const char *path, const char *real_path, char **resolved_path, char **rebase_name)
@@ -502,50 +388,8 @@ static bool asserts_directory(const char *path)
     return util_has_trailing_path_separator(path) || util_specify_current_dir(path);
 }
 
-static char *format_transform_of_tar(const char *srcbase, const char *dstbase)
-{
-    char *transform = NULL;
-    const char *src_escaped = srcbase;
-    const char *dst_escaped = dstbase;
-    int nret;
-    size_t len;
-
-    if (srcbase == NULL || dstbase == NULL) {
-        return NULL;
-    }
-
-    // escape "/" by "." to avoid generating leading / in tar archive which is dangerous to host when untar.
-    // this means tar or untar with leading / is forbidden and may got error, take care of this when coding.
-    if (strcmp(srcbase, "/") == 0) {
-        src_escaped = ".";
-    }
-
-    if (strcmp(dstbase, "/") == 0) {
-        dst_escaped = ".";
-    }
-
-    len = strlen(src_escaped) + strlen(dst_escaped) + 5;
-    if (len > PATH_MAX) {
-        ERROR("Invalid path length");
-        return NULL;
-    }
-
-    transform = util_common_calloc_s(len);
-    if (transform == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-    nret = snprintf(transform, len, "s/%s/%s/", src_escaped, dst_escaped);
-    if (nret < 0 || (size_t)nret >= len) {
-        ERROR("Failed to print string");
-        free(transform);
-        return NULL;
-    }
-    return transform;
-}
-
 char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct archive_copy_info *dstinfo,
-                           char **transform, char **err)
+                           char **src_base, char **dst_base, char **err)
 {
     char *dstdir = NULL;
     char *srcbase = NULL;
@@ -573,7 +417,8 @@ char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct
             free(srcbase);
             srcbase = util_strdup_s(srcinfo->rebase_name);
         }
-        *transform = format_transform_of_tar(srcbase, dstbase);
+        *src_base = util_strdup_s(srcbase);
+        *dst_base = util_strdup_s(dstbase);
     } else if (srcinfo->isdir) {
         // dst does not exist and src is a directory, untar the content to parent of dest,
         // and rename basename of src name to dest's basename.
@@ -581,7 +426,8 @@ char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct
             free(srcbase);
             srcbase = util_strdup_s(srcinfo->rebase_name);
         }
-        *transform = format_transform_of_tar(srcbase, dstbase);
+        *src_base = util_strdup_s(srcbase);
+        *dst_base = util_strdup_s(dstbase);
     } else if (asserts_directory(dstinfo->path)) {
         // dst does not exist and is want to be created as a directory, but src is not a directory, report error.
         format_errorf(err, "no such directory, can not copy file");
@@ -594,7 +440,8 @@ char *prepare_archive_copy(const struct archive_copy_info *srcinfo, const struct
             free(srcbase);
             srcbase = util_strdup_s(srcinfo->rebase_name);
         }
-        *transform = format_transform_of_tar(srcbase, dstbase);
+        *src_base = util_strdup_s(srcbase);
+        *dst_base = util_strdup_s(dstbase);
     }
 
 cleanup:
@@ -603,125 +450,14 @@ cleanup:
     return dstdir;
 }
 
-static void close_pipe_fd(int pipe_fd[])
-{
-    if (pipe_fd[0] != -1) {
-        close(pipe_fd[0]);
-        pipe_fd[0] = -1;
-    }
-    if (pipe_fd[1] != -1) {
-        close(pipe_fd[1]);
-        pipe_fd[1] = -1;
-    }
-}
-
-int archive_untar(const struct io_read_wrapper *content, bool compression, const char *dstdir, const char *transform,
-                  char **err)
-{
-    int stdin_pipe[2] = { -1, -1 };
-    int stderr_pipe[2] = { -1, -1 };
-    int ret = -1;
-    int cret = 0;
-    pid_t pid;
-    struct archive_context *ctx = NULL;
-    char *buf = NULL;
-    size_t buf_len = ARCHIVE_BLOCK_SIZE;
-    ssize_t read_len;
-    const char *params[TAR_MAX_OPTS] = { NULL };
-
-    buf = util_common_calloc_s(buf_len);
-    if (buf == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    if (pipe(stderr_pipe) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
-        goto cleanup;
-    }
-    if (pipe(stdin_pipe) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
-        goto cleanup;
-    }
-
-    pid = fork();
-    if (pid == (pid_t) -1) {
-        ERROR("Failed to fork: %s", strerror(errno));
-        goto cleanup;
-    }
-
-    if (pid == (pid_t)0) {
-        int i = 0;
-        // child process, dup2 stderr[1] to stderr, stdout[0] to stdin.
-        close(stderr_pipe[0]);
-        dup2(stderr_pipe[1], 2);
-        close(stdin_pipe[1]);
-        dup2(stdin_pipe[0], 0);
-
-        params[i++] = TAR_CMD;
-        params[i++] = TAR_EXACT_OPT;
-        if (compression) {
-            params[i++] = TAR_GZIP_OPT;
-        }
-        params[i++] = TAR_CHDIR_OPT;
-        params[i++] = dstdir;
-        if (transform != NULL) {
-            params[i++] = TAR_TRANSFORM_OPT;
-            params[i++] = transform;
-        }
-
-        execvp(TAR_CMD, (char * const *)params);
-
-        fprintf(stderr, "Failed to exec tar: %s", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    close(stderr_pipe[1]);
-    stderr_pipe[1] = -1;
-    close(stdin_pipe[0]);
-    stdin_pipe[0] = -1;
-
-    ctx = util_common_calloc_s(sizeof(struct archive_context));
-    if (ctx == NULL) {
-        goto cleanup;
-    }
-
-    ctx->pid = pid;
-    ctx->stdin_fd = stdin_pipe[1];
-    stdin_pipe[1] = -1;
-    ctx->stdout_fd = -1;
-    ctx->stderr_fd = stderr_pipe[0];
-    stderr_pipe[0] = -1;
-
-    read_len = content->read(content->context, buf, buf_len);
-    while (read_len > 0) {
-        ssize_t writed_len = archive_context_write(ctx, buf, (size_t)read_len);
-        if (writed_len < 0) {
-            DEBUG("Tar may exited: %s", strerror(errno));
-            break;
-        }
-        read_len = content->read(content->context, buf, buf_len);
-    }
-
-    ret = 0;
-
-cleanup:
-    free(buf);
-    cret = archive_context_close(ctx, err);
-    ret = (cret != 0) ? cret : ret;
-    close_pipe_fd(stderr_pipe);
-    close_pipe_fd(stdin_pipe);
-
-    return ret;
-}
-
-int archive_copy_to(const struct io_read_wrapper *content, bool compression, const struct archive_copy_info *srcinfo,
+int archive_copy_to(const struct io_read_wrapper *content, const struct archive_copy_info *srcinfo,
                     const char *dstpath, char **err)
 {
     int ret = -1;
     struct archive_copy_info *dstinfo = NULL;
     char *dstdir = NULL;
-    char *transform = NULL;
+    char *src_base = NULL;
+    char *dst_base = NULL;
 
     dstinfo = copy_info_destination_path(dstpath, err);
     if (dstinfo == NULL) {
@@ -729,128 +465,23 @@ int archive_copy_to(const struct io_read_wrapper *content, bool compression, con
         return -1;
     }
 
-    dstdir = prepare_archive_copy(srcinfo, dstinfo, &transform, err);
+    dstdir = prepare_archive_copy(srcinfo, dstinfo, &src_base, &dst_base, err);
     if (dstdir == NULL) {
         ERROR("Can not prepare archive copy");
         goto cleanup;
     }
 
-    ret = archive_untar(content, compression, dstdir, transform, err);
+    ret = archive_chroot_untar_stream(content, dstdir, ".", src_base, dst_base, err);
 
 cleanup:
     free_archive_copy_info(dstinfo);
     free(dstdir);
-    free(transform);
+    free(src_base);
+    free(dst_base);
     return ret;
 }
 
-static void close_archive_pipes_fd(int *pipes, size_t pipe_size)
-{
-    size_t i = 0;
-
-    for (i = 0; i < pipe_size; i++) {
-        if (pipes[i] >= 0) {
-            close(pipes[i]);
-            pipes[i] = -1;
-        }
-    }
-}
-
-/*
- * Archive file or directory.
- * param src		:	file or directory to compression.
- * param compression	:	using gzip compression or not
- * param exclude_base	:	exclude source basename in the archived file or not
- * return		:	zero if archive success, non-zero if not.
- */
-int archive_path(const char *srcdir, const char *srcbase, const char *rebase_name, bool compression,
-                 struct io_read_wrapper *archive_reader)
-{
-    int stderr_pipe[2] = { -1, -1 };
-    int stdout_pipe[2] = { -1, -1 };
-    int ret = -1;
-    pid_t pid;
-    struct archive_context *ctx = NULL;
-    char *transform = NULL;
-    const char *params[TAR_MAX_OPTS] = { NULL };
-
-    transform = format_transform_of_tar(srcbase, rebase_name);
-
-    if (pipe(stderr_pipe) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
-        goto free_out;
-    }
-    if (pipe(stdout_pipe) != 0) {
-        ERROR("Failed to create pipe: %s", strerror(errno));
-        goto free_out;
-    }
-
-    pid = fork();
-    if (pid == (pid_t) -1) {
-        ERROR("Failed to fork: %s", strerror(errno));
-        goto free_out;
-    }
-
-    if (pid == (pid_t)0) {
-        int i = 0;
-        // child process, dup2 stderr[1] to stderr, stdout[1] to stdout.
-        close(stderr_pipe[0]);
-        close(stdout_pipe[0]);
-        dup2(stderr_pipe[1], 2);
-        dup2(stdout_pipe[1], 1);
-
-        params[i++] = TAR_CMD;
-        params[i++] = TAR_CREATE_OPT;
-        if (compression) {
-            params[i++] = TAR_GZIP_OPT;
-        }
-        params[i++] = TAR_CHDIR_OPT;
-        params[i++] = srcdir;
-        if (transform != NULL) {
-            params[i++] = TAR_TRANSFORM_OPT;
-            params[i++] = transform;
-        }
-        params[i++] = srcbase;
-
-        execvp(TAR_CMD, (char * const *)params);
-
-        fprintf(stderr, "Failed to exec tar: %s", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    close(stderr_pipe[1]);
-    stderr_pipe[1] = -1;
-    close(stdout_pipe[1]);
-    stdout_pipe[1] = -1;
-
-    ctx = util_common_calloc_s(sizeof(struct archive_context));
-    if (ctx == NULL) {
-        goto free_out;
-    }
-
-    ctx->stdin_fd = -1;
-    ctx->stdout_fd = stdout_pipe[0];
-    stdout_pipe[0] = -1;
-    ctx->stderr_fd = stderr_pipe[0];
-    stderr_pipe[0] = -1;
-    ctx->pid = pid;
-
-    archive_reader->close = archive_context_close;
-    archive_reader->context = ctx;
-    ctx = NULL;
-    archive_reader->read = archive_context_read;
-
-    ret = 0;
-free_out:
-    free(transform);
-    close_archive_pipes_fd(stderr_pipe, 2);
-    close_archive_pipes_fd(stdout_pipe, 2);
-    free(ctx);
-
-    return ret;
-}
-
-int tar_resource_rebase(const char *path, const char *rebase, struct io_read_wrapper *archive_reader, char **err)
+static int tar_resource_rebase(const char *path, const char *rebase, struct io_read_wrapper *archive_reader, char **err)
 {
     int ret = -1;
     int nret;
@@ -868,8 +499,8 @@ int tar_resource_rebase(const char *path, const char *rebase, struct io_read_wra
         goto cleanup;
     }
 
-    DEBUG("Copying %s from %s", srcbase, srcdir);
-    nret = archive_path(srcdir, srcbase, rebase, false, archive_reader);
+    DEBUG("chroot tar stream srcdir(%s) srcbase(%s) rebase(%s)", srcdir, srcbase, rebase);
+    nret = archive_chroot_tar_stream(srcdir, srcbase, srcbase, rebase, archive_reader);
     if (nret < 0) {
         ERROR("Can not archive path: %s", path);
         goto cleanup;

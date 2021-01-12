@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #include <stdio.h>
+#include <locale.h>
 
 #include "isula_commands.h"
 #include "create.h"
@@ -202,8 +203,27 @@ struct command g_commands[] = {
     { NULL, false, NULL, NULL, NULL, NULL } // End of the list
 };
 
+static int set_locale()
+{
+    int ret = 0;
+
+    /* Change from the standard (C) to en_US.UTF-8 locale, so libarchive can handle filename conversions.*/
+    if (setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) {
+        fprintf(stderr, "Could not set locale to en_US.UTF-8:%s", strerror(errno));
+        ret = -1;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 int main(int argc, char **argv)
 {
+    if (set_locale() != 0) {
+        exit(ECOMMON);
+    }
+
     if (connect_client_ops_init()) {
         return ECOMMON;
     }
