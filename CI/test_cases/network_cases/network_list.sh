@@ -66,6 +66,15 @@ function test_network_list()
     isula network ls --filter plugin=bridge | grep ${name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to ls network by filter bridge plugin" && return ${FAILURE}
 
+    check_valgrind_log
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
+
+    start_isulad_with_valgrind
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
+
+    isula network ls --filter plugin=bridge | grep ${name1}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to ls network by filter bridge plugin after restart isulad" && return ${FAILURE}
+
     isula network rm ${name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name1} failed" && return ${FAILURE}
 

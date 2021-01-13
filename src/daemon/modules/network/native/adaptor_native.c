@@ -1911,30 +1911,6 @@ unlock:
     return ret;
 }
 
-int native_check_networks(const network_api_conf *conf, network_api_result_list *result)
-{
-    int ret = 0;
-
-    if (conf == NULL) {
-        ERROR("Invalid argument");
-        return -1;
-    }
-    if (!native_store_lock(SHARED)) {
-        return -1;
-    }
-
-    if (g_store.conflist_len == 0) {
-        ERROR("Not found native networks");
-        goto unlock;
-    }
-
-    ret = do_foreach_network_op(conf, false, check_network_plane, result);
-
-unlock:
-    native_store_unlock();
-    return ret;
-}
-
 bool native_network_exist(const char *name)
 {
     bool ret = false;

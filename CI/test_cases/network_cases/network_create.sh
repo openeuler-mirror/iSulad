@@ -114,6 +114,18 @@ function test_network_create()
     isula network rm ${name}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name} failed" && return ${FAILURE}
 
+    mv /opt/cni/bin/ /opt/cni/bin.bak
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - mv cni plugin failed" && return ${FAILURE}
+
+    isula network create 2>&1 | grep "WARN:cannot find cni plugin"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network create detect cni plugin failed" && return ${FAILURE}
+
+    mv /opt/cni/bin.bak /opt/cni/bin
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - mv cni plugin failed" && return ${FAILURE}
+
+    isula network rm $(isula network ls -q)
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - clean network failed" && return ${FAILURE}
+
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
