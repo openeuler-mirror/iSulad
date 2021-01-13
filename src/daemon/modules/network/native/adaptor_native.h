@@ -28,8 +28,6 @@ int native_attach_networks(const network_api_conf *conf, network_api_result_list
 
 int native_detach_networks(const network_api_conf *conf, network_api_result_list *result);
 
-int native_check_networks(const network_api_conf *conf, network_api_result_list *result);
-
 bool native_network_exist(const char *name);
 
 int native_config_create(const network_create_request *request, network_create_response **response);
