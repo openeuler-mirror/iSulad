@@ -418,10 +418,10 @@ static int container_start_cb(const container_start_request *request, container_
     if (setup_network(cont) != 0) {
         cc = ISULAD_ERR_EXEC;
         ERROR("Setup network failed for container %s", id);
-        isulad_set_error_message("Setup network failed for container %s", id);
+        isulad_append_error_message("Setup network failed for container %s. ", id);
 
         if (container_is_in_gc_progress(id)) {
-            isulad_append_error_message("You cannot stop container %s in garbage collector progress.", id);
+            isulad_append_error_message("You cannot stop container %s in garbage collector progress. ", id);
             ERROR("You cannot stop container %s in garbage collector progress.", id);
             goto pack_response;
         }
@@ -626,10 +626,10 @@ static int container_restart_cb(const container_restart_request *request, contai
     if (setup_network(cont) != 0) {
         cc = ISULAD_ERR_EXEC;
         ERROR("Setup network failed for container %s", id);
-        isulad_append_error_message("Setup network failed for container %s", id);
+        isulad_append_error_message("Setup network failed for container %s. ", id);
 
         if (container_is_in_gc_progress(id)) {
-            isulad_append_error_message("You cannot stop container %s in garbage collector progress.", id);
+            isulad_append_error_message("You cannot stop container %s in garbage collector progress. ", id);
             ERROR("You cannot stop container %s in garbage collector progress.", id);
             goto pack_response;
         }

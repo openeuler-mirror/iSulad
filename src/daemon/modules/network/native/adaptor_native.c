@@ -1722,25 +1722,25 @@ int native_config_remove(const char *name, char **res_name)
     if (pnet != NULL) {
         if (pnet->ops->remove == NULL) {
             WARN("net type: %s unsupport remove", pnet->driver);
-            isulad_append_error_message("net type: %s unsupport remove", pnet->driver);
+            isulad_append_error_message("net type: %s unsupport remove. ", pnet->driver);
         } else if (pnet->ops->remove(conflist->list) != 0) {
             WARN("Failed to remove %s interface", pnet->driver);
-            isulad_append_error_message("Failed to remove %s interface", pnet->driver);
+            isulad_append_error_message("Failed to remove %s interface. ", pnet->driver);
         }
     }
 
     path = get_file_path_by_name(conflist->list->name);
     if (path == NULL) {
         WARN("Failed to get %s file path", conflist->list->name);
-        isulad_append_error_message("Failed to get %s file path", conflist->list->name);
+        isulad_append_error_message("Failed to get %s file path. ", conflist->list->name);
     } else if (!util_remove_file(path, &get_err)) {
         WARN("Failed to delete %s, error: %s", path, strerror(get_err));
-        isulad_append_error_message("Failed to delete %s, error: %s", path, strerror(get_err));
+        isulad_append_error_message("Failed to delete %s, error: %s. ", path, strerror(get_err));
     }
 
     if (!map_remove(g_store.name_to_conf, (void *)conflist->list->name)) {
         WARN("remove network failed: %s", conflist->list->name);
-        isulad_append_error_message("remove network failed: %s", conflist->list->name);
+        isulad_append_error_message("remove network failed: %s. ", conflist->list->name);
     } else {
         g_store.conflist_len--;
     }
