@@ -35,6 +35,7 @@
 #include "utils.h"
 #include "libcni_errno.h"
 #include "libcni_result_parse.h"
+#include "err_msg.h"
 
 typedef struct _plugin_exec_args_t {
     const char *path;
@@ -210,9 +211,13 @@ static int do_parse_exec_stdout_str(int exec_ret, const char *cni_net_conf_json,
 {
     int ret = 0;
     char *version = NULL;
+    char *err_msg = NULL;
 
     if (exec_ret != 0) {
-        ERROR("raw exec failed: %s", str_cni_exec_error(e_err));
+        err_msg = str_cni_exec_error(e_err);
+        ERROR("raw exec failed: %s", err_msg);
+        isulad_append_error_message("raw exec failed: %s. ", err_msg);
+        ret = -1;
         goto out;
     }
 
@@ -234,6 +239,7 @@ static int do_parse_exec_stdout_str(int exec_ret, const char *cni_net_conf_json,
 
 out:
     free(version);
+    free(err_msg);
     return ret;
 }
 
@@ -441,6 +447,7 @@ out:
 
 int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf_json, const struct cni_args *cniargs)
 {
+    char *err_msg = NULL;
     char **envs = NULL;
     cni_exec_error *e_err = NULL;
     int ret = 0;
@@ -458,12 +465,15 @@ int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf
 
     ret = raw_exec(plugin_path, cni_net_conf_json, envs, NULL, &e_err);
     if (ret != 0) {
-        ERROR("raw exec failed: %s", str_cni_exec_error(e_err));
+        err_msg = str_cni_exec_error(e_err);
+        ERROR("raw exec failed: %s", err_msg);
+        isulad_append_error_message("raw exec failed: %s. ", err_msg);
     }
     DEBUG("Raw exec \"%s\" result: %d", plugin_path, ret);
 out:
     util_free_array(envs);
     free_cni_exec_error(e_err);
+    free(err_msg);
     return ret;
 }
 

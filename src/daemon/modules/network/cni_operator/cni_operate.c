@@ -841,6 +841,11 @@ int detach_loopback(const char *id, const char *netns)
     int ret = 0;
     struct runtime_conf *rc = NULL;
 
+    if (id == NULL || netns == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
     rc = build_loopback_runtime_conf(id, netns);
     if (rc == NULL) {
         ERROR("Error building loopback runtime config");
