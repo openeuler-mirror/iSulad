@@ -140,6 +140,10 @@ static void prepare_cni_manager(const network_api_conf *conf, struct cni_manager
     manager->id = conf->pod_id;
     manager->netns_path = conf->netns_path;
     manager->cni_args = conf->args;
+
+    // all network planes enable capabilities, but maybe should not to do this;
+    // like, portmappings should work on one network plane
+    manager->annotations = conf->annotations;
 }
 
 static int do_cri_append_cni_result(const char *name, const char *interface, const struct cni_opt_result *cni_result,
@@ -230,11 +234,6 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
         free_cni_opt_result(cni_result);
         cni_result = NULL;
 
-        // external configurations(portmappings, iprange, bandwith and so on) for mult-networks
-        // should work for only one:
-        // for network with (eth0/default interface) is a good choice.
-        manager.annotations = conf->annotations;
-
         manager.ifname = (char *)default_interface;
         ret = op(&manager, g_net_store.conflist[default_idx], &cni_result);
         if (ret != 0) {
@@ -316,7 +315,8 @@ int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *res
     struct cni_manager manager = { 0 };
     const char *use_interface = DEFAULT_NETWORK_INTERFACE;
     struct cni_opt_result *cni_result = NULL;
-    int *tmp_idx = NULL;
+    int default_idx = 0;
+    int *tmp_idx = &default_idx;
 
     if (conf == NULL) {
         ERROR("Invalid argument");
@@ -333,8 +333,6 @@ int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *res
     }
     if (conf->name != NULL) {
         tmp_idx = map_search(g_net_store.g_net_index_map, (void *)conf->name);
-    } else {
-        tmp_idx = util_common_calloc_s(sizeof(int));
     }
 
     if (tmp_idx == NULL) {
@@ -359,7 +357,6 @@ int adaptor_cni_check(const network_api_conf *conf, network_api_result_list *res
     }
 
 out:
-    free(tmp_idx);
     free_cni_opt_result(cni_result);
     return ret;
 }
