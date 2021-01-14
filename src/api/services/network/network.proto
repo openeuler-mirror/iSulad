@@ -66,12 +66,10 @@ message NetworkListResponse {
 
 message NetworkRemoveRequest {
 	string name = 1;
-	bool force = 2;
 }
 
 message NetworkRemoveResponse {
 	string name = 1;
-	repeated string containers = 2;
-	uint32 cc = 3;
-	string errmsg = 4;
+	uint32 cc = 2;
+	string errmsg = 3;
 }

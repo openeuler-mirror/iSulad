@@ -1069,3 +1069,25 @@ out:
 
     return ret;
 }
+
+bool network_store_container_list_add(container_t *cont)
+{
+    size_t i = 0;
+    bool ret = true;
+    const defs_map_string_object_networks *obj = NULL;
+
+    if (cont->network_settings == NULL || cont->network_settings->networks == NULL ||
+        cont->network_settings->networks->len == 0) {
+        return true;
+    }
+
+    obj = cont->network_settings->networks;
+    for (i = 0; i < obj->len; i++) {
+        if (network_module_container_list_add(NETWOKR_API_TYPE_NATIVE, obj->keys[i], cont->common_config->id) != 0) {
+            ERROR("Failed to add container %s to native network %s store", cont->common_config->id, obj->keys[i]);
+            ret = false;
+        }
+    }
+
+    return ret;
+}

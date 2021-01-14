@@ -258,16 +258,12 @@ public:
         if (request->name != nullptr) {
             grequest->set_name(request->name);
         }
-        grequest->set_force(request->force);
 
         return 0;
     }
 
     auto response_from_grpc(NetworkRemoveResponse *gresponse, isula_network_remove_response *response) -> int override
     {
-        int i;
-        int num = gresponse->containers_size();
-
         response->server_errono = gresponse->cc();
         if (!gresponse->name().empty()) {
             response->name = util_strdup_s(gresponse->name().c_str());
@@ -275,18 +271,6 @@ public:
         if (!gresponse->errmsg().empty()) {
             response->errmsg = util_strdup_s(gresponse->errmsg().c_str());
         }
-
-        if (num <= 0) {
-            response->containers = nullptr;
-            response->container_num = 0;
-            return 0;
-        }
-        response->containers = static_cast<char **>(util_smart_calloc_s(static_cast<size_t>(num), sizeof(char *)));
-        for (i = 0; i < num; i++) {
-            response->containers[i] = !gresponse->containers(i).empty() ? util_strdup_s(gresponse->containers(i).c_str())
-                                      : nullptr;
-        }
-        response->container_num = num;
 
         return 0;
     }

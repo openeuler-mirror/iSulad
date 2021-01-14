@@ -29,6 +29,8 @@ int setup_network(container_t *cont);
 
 int teardown_network(container_t *cont);
 
+bool network_store_container_list_add(container_t *cont);
+
 #ifdef __cplusplus
 }
 #endif

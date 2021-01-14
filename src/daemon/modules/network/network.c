@@ -48,6 +48,8 @@ struct net_ops {
 
     bool (*exist)(const char *name);
 
+    int (*add_cont)(const char *network_name, const char *cont_id);
+
     void (*destroy)(void);
 };
 
@@ -68,6 +70,7 @@ static const struct net_ops g_cri_ops = {
     .ready = adaptor_cni_check_inited,
     .update = adaptor_cni_update_confs,
     .exist = NULL,
+    .add_cont = NULL,
     .destroy = NULL,
 };
 
@@ -83,6 +86,7 @@ static const struct net_ops g_native_ops = {
     .ready = native_ready,
     .update = NULL,
     .exist = native_network_exist,
+    .add_cont = native_network_add_container_list,
     .destroy = native_destory,
 };
 
@@ -630,4 +634,17 @@ int network_module_exist(const char *type, const char *name)
     }
 
     return pnet->ops->exist(name);
+}
+
+int network_module_container_list_add(const char *type, const char *network_name, const char *cont_id)
+{
+    const struct net_type *pnet = NULL;
+
+    pnet = get_net_by_type(type);
+    if (pnet == NULL || pnet->ops->add_cont == NULL) {
+        ERROR("net type: %s, unsupported container list add", type);
+        return -1;
+    }
+
+    return pnet->ops->add_cont(network_name, cont_id);
 }

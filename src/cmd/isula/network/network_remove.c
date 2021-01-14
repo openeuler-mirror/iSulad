@@ -25,7 +25,6 @@ struct client_arguments g_cmd_network_remove_args = {};
 int network_remove(const struct client_arguments *args)
 {
     int ret = 0;
-    size_t i;
     isula_connect_ops *ops = NULL;
     struct isula_network_remove_request request = { 0 };
     struct isula_network_remove_response *response = NULL;
@@ -58,13 +57,6 @@ int network_remove(const struct client_arguments *args)
         COMMAND_ERROR("%s", response->errmsg);
     }
     printf("%s\n", g_cmd_network_remove_args.network_name);
-    if (response->container_num == 0) {
-        goto out;
-    }
-    COMMAND_ERROR("Rm linked container\n");
-    for (i = 0; i < response->container_num; i++) {
-        COMMAND_ERROR("%s\n", response->containers[i]);
-    }
 
 out:
     isula_network_remove_response_free(response);
@@ -80,8 +72,7 @@ int cmd_network_remove_main(int argc, const char **argv)
     bool success = true;
     struct isula_libutils_log_config lconf = { 0 };
     command_t cmd;
-    struct command_option options[] = { LOG_OPTIONS(lconf) NETWORK_REMOVE_OPTIONS(g_cmd_network_remove_args)
-        COMMON_OPTIONS(g_cmd_network_remove_args)
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_network_remove_args)
     };
 
     isula_libutils_default_log_config(argv[0], &lconf);

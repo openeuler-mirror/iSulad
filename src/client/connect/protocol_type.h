@@ -666,13 +666,10 @@ struct isula_network_list_response {
 
 struct isula_network_remove_request {
     char *name;
-    bool force;
 };
 
 struct isula_network_remove_response {
     char *name;
-    int container_num;
-    char **containers;
     uint32_t cc;
     uint32_t server_errono;
     char *errmsg;

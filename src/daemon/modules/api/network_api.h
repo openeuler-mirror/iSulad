@@ -111,6 +111,8 @@ int network_module_insert_iprange(const char *val, network_api_conf *conf);
 
 int network_module_exist(const char *type, const char *name);
 
+int network_module_container_list_add(const char *type, const char *network_name, const char *cont_id);
+
 #ifdef __cplusplus
 }
 #endif
