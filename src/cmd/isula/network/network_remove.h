@@ -21,17 +21,6 @@
 extern "C" {
 #endif
 
-#define NETWORK_REMOVE_OPTIONS(cmdargs)                         \
-    {                                                           \
-        CMD_OPT_TYPE_BOOL,                                      \
-        false,                                                  \
-        "force",                                                \
-        'f',                                                    \
-        &(cmdargs).force,                                       \
-        "Force to remove the containers using this network",    \
-        NULL                                                    \
-    },
-
 extern const char g_cmd_network_remove_desc[];
 extern const char g_cmd_networ_remove_usage[];
 extern struct client_arguments g_cmd_network_remove_args;

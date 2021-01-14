@@ -23,10 +23,11 @@
 #include "err_msg.h"
 #include "isula_libutils/log.h"
 #include "utils_network.h"
+#include "service_container_api.h"
 
 const char *g_accept_network_filter[] = { "name", "plugin", NULL };
 
-pthread_rwlock_t network_rwlock = PTHREAD_RWLOCK_INITIALIZER;
+static pthread_rwlock_t g_network_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 enum lock_type { SHARED = 0, EXCLUSIVE };
 
 static inline bool network_conflist_lock(enum lock_type type)
@@ -34,9 +35,9 @@ static inline bool network_conflist_lock(enum lock_type type)
     int nret = 0;
 
     if (type == SHARED) {
-        nret = pthread_rwlock_rdlock(&network_rwlock);
+        nret = pthread_rwlock_rdlock(&g_network_rwlock);
     } else {
-        nret = pthread_rwlock_wrlock(&network_rwlock);
+        nret = pthread_rwlock_wrlock(&g_network_rwlock);
     }
     if (nret != 0) {
         ERROR("Lock network list failed: %s", strerror(nret));
@@ -50,7 +51,7 @@ static inline void network_conflist_unlock()
 {
     int nret = 0;
 
-    nret = pthread_rwlock_unlock(&network_rwlock);
+    nret = pthread_rwlock_unlock(&g_network_rwlock);
     if (nret != 0) {
         FATAL("Unlock network list failed: %s", strerror(nret));
     }
@@ -330,6 +331,8 @@ static int network_remove_cb(const network_remove_request *request, network_remo
     ret = network_module_conf_rm(NETWOKR_API_TYPE_NATIVE, request->name, &(*response)->name);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
+        ret = ECOMMON;
+        goto out;
     }
 
 out:

@@ -33,6 +33,7 @@
 #include "libcni_result_parse.h"
 #include "libcni_exec.h"
 #include "libcni_result_type.h"
+#include "err_msg.h"
 
 typedef struct _cni_module_conf_t {
     char **bin_paths;
@@ -353,6 +354,7 @@ static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *ver
                               g_module_conf.bin_paths_len, &plugin_path);
     if (ret != 0) {
         ERROR("Failed to find plugin: \"%s\"", net.network->type);
+        isulad_append_error_message("Failed to find plugin: \"%s\". ", net.network->type);
         goto free_out;
     }
 

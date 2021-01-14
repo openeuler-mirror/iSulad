@@ -1525,8 +1525,6 @@ void isula_network_remove_response_free(struct isula_network_remove_response *re
 
     free(response->name);
     response->name = NULL;
-    util_free_array_by_len(response->containers, response->container_num);
-    response->containers = NULL;
     free(response->errmsg);
     response->errmsg = NULL;
 

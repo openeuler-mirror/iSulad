@@ -307,7 +307,6 @@ int NetworkServiceImpl::remove_request_from_grpc(const NetworkRemoveRequest *gre
     if (!grequest->name().empty()) {
         tmpreq->name = util_strdup_s(grequest->name().c_str());
     }
-    tmpreq->force = grequest->force();
 
     *request = tmpreq;
     return 0;
@@ -326,11 +325,6 @@ void NetworkServiceImpl::remove_response_to_grpc(const network_remove_response *
     }
     if (response->errmsg != nullptr) {
         gresponse->set_errmsg(response->errmsg);
-    }
-    if (response->containers != nullptr) {
-        for (size_t i = 0; i < response->containers_len; i++) {
-            gresponse->add_containers(response->containers[i]);
-        }
     }
     return;
 }
