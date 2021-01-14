@@ -22,7 +22,6 @@ StoppableThread &StoppableThread::operator=(StoppableThread &&obj)
     return *this;
 }
 
-
 bool StoppableThread::stopRequested()
 {
     if (m_future_obj.wait_for(std::chrono::milliseconds(0)) == std::future_status::timeout) {
@@ -35,6 +34,3 @@ void StoppableThread::stop()
 {
     m_exit_signal.set_value();
 }
-
-
-

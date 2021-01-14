@@ -28,22 +28,19 @@
 
 struct lws_context *WebsocketServer::m_context = nullptr;
 std::atomic<WebsocketServer *> WebsocketServer::m_instance;
-std::mutex WebsocketServer::m_mutex;
-std::unordered_map<struct lws *, session_data> WebsocketServer::m_wsis;
+RWMutex WebsocketServer::m_mutex;
+std::unordered_map<int, session_data> WebsocketServer::m_wsis;
+std::unordered_set<struct lws *> WebsocketServer::m_activeSession;
+
 WebsocketServer *WebsocketServer::GetInstance() noexcept
 {
-    WebsocketServer *server = m_instance.load(std::memory_order_relaxed);
-    std::atomic_thread_fence(std::memory_order_acquire);
-    if (server == nullptr) {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        server = m_instance.load(std::memory_order_relaxed);
-        if (server == nullptr) {
-            server = new WebsocketServer;
-            std::atomic_thread_fence(std::memory_order_release);
-            m_instance.store(server, std::memory_order_relaxed);
-        }
-    }
-    return server;
+    static std::once_flag flag;
+
+    std::call_once(flag, [] {
+        m_instance = new WebsocketServer;
+    });
+
+    return m_instance;
 }
 
 WebsocketServer::WebsocketServer()
@@ -62,14 +59,14 @@ url::URLDatum WebsocketServer::GetWebsocketUrl()
     return m_url;
 }
 
-std::unordered_map<struct lws *, session_data> &WebsocketServer::GetWsisData()
+std::unordered_map<int, session_data> &WebsocketServer::GetWsisData()
 {
     return m_wsis;
 }
 
-void WebsocketServer::LockAllWsSession()
+void WebsocketServer::ReadLockAllWsSession()
 {
-    m_mutex.lock();
+    m_mutex.rdlock();
 }
 
 void WebsocketServer::UnlockAllWsSession()
@@ -160,7 +157,7 @@ void WebsocketServer::RegisterCallback(const std::string &path,
 
 void WebsocketServer::CloseAllWsSession()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    WriteGuard<RWMutex> lock(m_mutex);
     for (auto it = m_wsis.begin(); it != m_wsis.end(); ++it) {
         free(it->second.buf);
         close(it->second.pipes.at(0));
@@ -172,15 +169,10 @@ void WebsocketServer::CloseAllWsSession()
     m_wsis.clear();
 }
 
-void WebsocketServer::CloseWsSession(struct lws *wsi)
+void WebsocketServer::CloseWsSession(int socketID)
 {
-    const int WAIT_PERIOD_MS = 50;
-
-    auto it = m_wsis.find(wsi);
+    auto it = m_wsis.find(socketID);
     if (it != m_wsis.end()) {
-        while (it->second.GetProcessingStatus()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(WAIT_PERIOD_MS));
-        }
         free(it->second.buf);
         close(it->second.pipes.at(0));
         close(it->second.pipes.at(1));
@@ -189,6 +181,21 @@ void WebsocketServer::CloseWsSession(struct lws *wsi)
         delete it->second.sended_mutex;
         m_wsis.erase(it);
     }
+}
+
+void WebsocketServer::RecordSession(struct lws *wsi)
+{
+    m_activeSession.insert(wsi);
+}
+
+void WebsocketServer::RemoveSession(struct lws *wsi)
+{
+    m_activeSession.erase(wsi);
+}
+
+bool WebsocketServer::IsValidSession(struct lws *wsi)
+{
+    return m_activeSession.count(wsi) != 0;
 }
 
 int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
@@ -200,15 +207,17 @@ int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
 
     session_data session;
     session.pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
-    m_wsis.insert(std::make_pair(wsi, session));
-    m_wsis[wsi].buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
-    if (m_wsis[wsi].buf == nullptr) {
+
+    int socketID = lws_get_socket_fd(wsi);
+    m_wsis.insert(std::make_pair(socketID, std::move(session)));
+    m_wsis[socketID].buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
+    if (m_wsis[socketID].buf == nullptr) {
         ERROR("Out of memory");
         return -1;
     }
-    m_wsis[wsi].buf_mutex = new std::mutex;
-    m_wsis[wsi].sended_mutex = new std::mutex;
-    m_wsis[wsi].SetProcessingStatus(false);
+    m_wsis[socketID].buf_mutex = new std::mutex;
+    m_wsis[socketID].sended_mutex = new std::mutex;
+    m_wsis[socketID].SetProcessingStatus(false);
 
     int len;
     char buf[MAX_BUF_LEN] { 0 };
@@ -216,7 +225,7 @@ int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
     lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI);
     if (strlen(buf) == 0) {
         ERROR("invalid url");
-        CloseWsSession(wsi);
+        CloseWsSession(socketID);
         return -1;
     }
 
@@ -228,14 +237,15 @@ int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
         !m_handler.IsValidMethod(vec.at(1)) ||
         !cache->IsValidToken(vec.at(2))) {
         ERROR("invalid url(%s): incorrect format!", buf);
-        CloseWsSession(wsi);
+        CloseWsSession(socketID);
         return -1;
     }
 
     std::thread streamTh([ = ]() {
-        StreamTask(&m_handler, wsi, vec.at(1), vec.at(2), m_wsis[wsi].pipes.at(0)).Run();
+        StreamTask(&m_handler, wsi, vec.at(1), vec.at(2), m_wsis[socketID].pipes.at(0)).Run();
     });
     streamTh.detach();
+    RecordSession(wsi);
     int n = 0;
     const unsigned char *c = nullptr;
     do {
@@ -260,7 +270,7 @@ int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
 
 int WebsocketServer::Wswrite(struct lws *wsi, void *in, size_t len)
 {
-    auto it = m_wsis.find(wsi);
+    auto it = m_wsis.find(lws_get_socket_fd(wsi));
     if (it != m_wsis.end()) {
         if (it->second.close) {
             DEBUG("websocket session disconnected");
@@ -286,9 +296,9 @@ int WebsocketServer::Wswrite(struct lws *wsi, void *in, size_t len)
     return 0;
 }
 
-void WebsocketServer::Receive(struct lws *wsi, void *in, size_t len)
+void WebsocketServer::Receive(int socketID, void *in, size_t len)
 {
-    if (m_wsis.find(wsi) == m_wsis.end()) {
+    if (m_wsis.find(socketID) == m_wsis.end()) {
         ERROR("invailed websocket session!");
         return;
     }
@@ -298,20 +308,20 @@ void WebsocketServer::Receive(struct lws *wsi, void *in, size_t len)
         return;
     }
 
-    if (write(m_wsis[wsi].pipes.at(1), (void *)((char *)in + 1), len - 1) < 0) {
+    if (write(m_wsis[socketID].pipes.at(1), (void *)((char *)in + 1), len - 1) < 0) {
         ERROR("sub write over!");
         return;
     }
 }
 
-void WebsocketServer::SetLwsSendedFlag(struct lws *wsi, bool sended)
+void WebsocketServer::SetLwsSendedFlag(int socketID, bool sended)
 {
-    auto it = m_wsis.find(wsi);
-    if (it != m_wsis.end()) {
-        it->second.sended_mutex->lock();
-        it->second.sended = sended;
-        it->second.sended_mutex->unlock();
+    if (m_wsis.count(socketID) == 0) {
+        return;
     }
+    m_wsis[socketID].sended_mutex->lock();
+    m_wsis[socketID].sended = sended;
+    m_wsis[socketID].sended_mutex->unlock();
 }
 
 int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
@@ -323,7 +333,7 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
             // asking to upgrade the connection to a websocket one.
             return -1;
         case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
-                std::lock_guard<std::mutex> lock(m_mutex);
+                WriteGuard<RWMutex> lock(m_mutex);
                 if (WebsocketServer::GetInstance()->DumpHandshakeInfo(wsi)) {
                     // return non-zero here and kill the connection
                     return -1;
@@ -335,22 +345,27 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
             }
             break;
         case LWS_CALLBACK_SERVER_WRITEABLE: {
-                std::lock_guard<std::mutex> lock(m_mutex);
+                ReadGuard<RWMutex> lock(m_mutex);
+                int socketID = lws_get_socket_fd(wsi);
                 if (WebsocketServer::GetInstance()->Wswrite(wsi, in, len)) {
-                    WebsocketServer::GetInstance()->SetLwsSendedFlag(wsi, true);
+                    WebsocketServer::GetInstance()->SetLwsSendedFlag(socketID, true);
+                    // return nonzero from the user callback to close the connection
+                    // and callback with the reason of LWS_CALLBACK_CLOSED
                     return -1;
                 }
-                WebsocketServer::GetInstance()->SetLwsSendedFlag(wsi, true);
+                WebsocketServer::GetInstance()->SetLwsSendedFlag(socketID, true);
             }
             break;
         case LWS_CALLBACK_RECEIVE: {
-                std::lock_guard<std::mutex> lock(m_mutex);
-                WebsocketServer::GetInstance()->Receive(wsi, (char *)in, len);
+                ReadGuard<RWMutex> lock(m_mutex);
+                WebsocketServer::GetInstance()->Receive(lws_get_socket_fd(wsi), (char *)in, len);
             }
             break;
         case LWS_CALLBACK_CLOSED: {
-                std::lock_guard<std::mutex> lock(m_mutex);
-                WebsocketServer::GetInstance()->CloseWsSession(wsi);
+                WriteGuard<RWMutex> lock(m_mutex);
+                DEBUG("connection has been closed");
+                WebsocketServer::GetInstance()->RemoveSession(wsi);
+                WebsocketServer::GetInstance()->CloseWsSession(lws_get_socket_fd(wsi));
             }
             break;
         default:
@@ -363,8 +378,7 @@ void WebsocketServer::ServiceWorkThread(int threadid)
 {
     int n = 0;
     while (n >= 0 && !m_force_exit) {
-        n = lws_service(m_context, 50);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        n = lws_service(m_context, 0);
     }
 }
 
@@ -396,20 +410,19 @@ void WebsocketServer::Wait()
 }
 
 namespace {
-auto PrepareWsiSession(struct lws *wsi) -> session_data *
+auto PrepareWsiSession(int socketID) -> session_data *
 {
     WebsocketServer *server = WebsocketServer::GetInstance();
-    server->LockAllWsSession();
+    server->ReadLockAllWsSession();
 
-    auto itor = server->GetWsisData().find(wsi);
+    auto itor = server->GetWsisData().find(socketID);
     if (itor == server->GetWsisData().end()) {
         ERROR("invalid session!");
         server->UnlockAllWsSession();
         return nullptr;
     }
-    itor->second.SetProcessingStatus(true);
+    server->SetLwsSendedFlag(socketID, false);
     server->UnlockAllWsSession();
-    server->SetLwsSendedFlag(wsi, false);
 
     return &itor->second;
 }
@@ -450,15 +463,13 @@ void EnsureWrited(struct lws *wsi, session_data *session)
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
     }
-
-    session->SetProcessingStatus(false);
 }
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
 {
     struct lws *wsi = static_cast<struct lws *>(context);
 
-    session_data *session = PrepareWsiSession(wsi);
+    session_data *session = PrepareWsiSession(lws_get_socket_fd(wsi));
     if (session == nullptr) {
         return 0;
     }
@@ -487,15 +498,20 @@ int closeWsConnect(void *context, char **err)
     struct lws *wsi = static_cast<struct lws *>(context);
 
     WebsocketServer *server = WebsocketServer::GetInstance();
-    auto it = server->GetWsisData().find(wsi);
+    server->ReadLockAllWsSession();
+    auto it = server->GetWsisData().find(lws_get_socket_fd(wsi));
     if (it == server->GetWsisData().end()) {
+        server->UnlockAllWsSession();
         ERROR("websocket session not exist");
         return -1;
     }
+
     it->second.close = true;
     // close websocket session
-    lws_callback_on_writable(wsi);
+    if (server->IsValidSession(wsi)) {
+        lws_callback_on_writable(wsi);
+    }
+    server->UnlockAllWsSession();
+
     return 0;
 }
-
-

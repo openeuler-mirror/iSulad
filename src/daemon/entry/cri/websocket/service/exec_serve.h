@@ -40,6 +40,7 @@ public:
     int Execute(struct lws *wsi, const std::string &token, int read_pipe_fd) override;
 
 private:
-    int RequestFromCri(const runtime::v1alpha2::ExecRequest *grequest, container_exec_request **request);
+    int RequestFromCri(const runtime::v1alpha2::ExecRequest &grequest, container_exec_request **request);
+    int GetContainerRequest(const std::string &token, container_exec_request **request);
 };
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_EXEC_SERVE_H

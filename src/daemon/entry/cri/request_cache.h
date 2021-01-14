@@ -21,19 +21,38 @@
 #include <mutex>
 #include <unordered_map>
 #include <chrono>
+#include <typeinfo>
 #include <google/protobuf/message.h>
+#include "api.pb.h"
 
-typedef struct sCacheEntry {
+struct CacheEntry {
     std::string token;
-    ::google::protobuf::Message *req;
+    std::vector<runtime::v1alpha2::ExecRequest>  execRequest;
+    std::vector<runtime::v1alpha2::AttachRequest>  attachRequest;
     std::chrono::system_clock::time_point expireTime;
-} CacheEntry, *pCacheEntry;
+
+    void SetValue(const std::string &t,
+                  const runtime::v1alpha2::ExecRequest *execReq,
+                  const runtime::v1alpha2::AttachRequest *attachReq,
+                  std::chrono::system_clock::time_point et)
+    {
+        token = t;
+        if (execReq != nullptr) {
+            execRequest.push_back(*execReq);
+        } else if (attachReq != nullptr) {
+            attachRequest.push_back(*attachReq);
+        }
+        expireTime = et;
+    }
+};
 
 class RequestCache {
 public:
     static RequestCache *GetInstance() noexcept;
-    std::string Insert(::google::protobuf::Message *req);
-    ::google::protobuf::Message *Consume(const std::string &token, bool &found);
+    std::string InsertExecRequest(const runtime::v1alpha2::ExecRequest &req);
+    std::string InsertAttachRequest(const runtime::v1alpha2::AttachRequest &req);
+    runtime::v1alpha2::ExecRequest ConsumeExecRequest(const std::string &token);
+    runtime::v1alpha2::AttachRequest ConsumeAttachRequest(const std::string &token);
     bool IsValidToken(const std::string &token);
 
 private:
