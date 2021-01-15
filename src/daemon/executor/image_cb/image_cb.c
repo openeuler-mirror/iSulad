@@ -54,7 +54,7 @@
 #include "utils_timestamp.h"
 #include "utils_verify.h"
 
-static int isula_import_image(const char *file, const char *tag, char **id)
+static int do_import_image(const char *file, const char *tag, char **id)
 {
     int ret = 0;
     im_import_request *request = NULL;
@@ -114,7 +114,7 @@ static int import_cb(const image_import_request *request, image_import_response 
 
     EVENT("Image Event: {Object: %s, Type: Importing}", request->file);
 
-    ret = isula_import_image(request->file, request->tag, &id);
+    ret = do_import_image(request->file, request->tag, &id);
     if (ret != 0) {
         ERROR("Failed to import docker image %s with tag %s", request->file, request->tag);
         cc = EINVALIDARGS;
@@ -140,7 +140,7 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
-static int docker_load_image(const char *file, const char *tag, const char *type)
+static int do_load_image(const char *file, const char *tag, const char *type)
 {
     int ret = 0;
     im_load_request *request = NULL;
@@ -210,7 +210,7 @@ static int image_load_cb(const image_load_image_request *request, image_load_ima
 
     EVENT("Image Event: {Object: %s, Type: Loading}", request->file);
 
-    ret = docker_load_image(request->file, request->tag, request->type);
+    ret = do_load_image(request->file, request->tag, request->type);
     if (ret != 0) {
         ERROR("Failed to load docker image %s with tag %s and type %s", request->file, request->tag, request->type);
         cc = EINVALIDARGS;
@@ -233,7 +233,7 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
-static int docker_login(const char *username, const char *password, const char *server, const char *type)
+static int do_login(const char *username, const char *password, const char *server, const char *type)
 {
     int ret = 0;
     im_login_request *request = NULL;
@@ -290,7 +290,7 @@ static int login_cb(const image_login_request *request, image_login_response **r
 
     EVENT("Image Event: {Object: %s, Type: Logining}", request->server);
 
-    ret = docker_login(request->username, request->password, request->server, request->type);
+    ret = do_login(request->username, request->password, request->server, request->type);
     if (ret != 0) {
         ERROR("Failed to login %s", request->server);
         cc = EINVALIDARGS;
@@ -312,7 +312,7 @@ out:
     return (ret < 0) ? ECOMMON : ret;
 }
 
-static int docker_logout(const char *server, const char *type)
+static int do_logout(const char *server, const char *type)
 {
     int ret = 0;
     im_logout_request *request = NULL;
@@ -367,7 +367,7 @@ static int logout_cb(const image_logout_request *request, image_logout_response 
 
     EVENT("Image Event: {Object: %s, Type: Logouting}", request->server);
 
-    ret = docker_logout(request->server, request->type);
+    ret = do_logout(request->server, request->type);
     if (ret != 0) {
         ERROR("Failed to logout %s", request->server);
         cc = EINVALIDARGS;
@@ -442,7 +442,7 @@ out:
 }
 
 /* tag image */
-static int tag_image(const char *src_name, const char *dest_name)
+static int do_tag_image(const char *src_name, const char *dest_name)
 {
     int ret = 0;
     im_tag_request *im_request = NULL;
@@ -524,7 +524,7 @@ static int image_tag_cb(const image_tag_image_request *request, image_tag_image_
 
     EVENT("Image Event: {Object: %s, Type: Tagging}", src_name);
 
-    ret = tag_image(src_name, dest_name);
+    ret = do_tag_image(src_name, dest_name);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         goto out;
