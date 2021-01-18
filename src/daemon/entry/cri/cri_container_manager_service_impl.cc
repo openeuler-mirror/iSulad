@@ -1251,15 +1251,9 @@ void ContainerManagerServiceImpl::Exec(const runtime::v1alpha2::ExecRequest &req
         return;
     }
     RequestCache *cache = RequestCache::GetInstance();
-    runtime::v1alpha2::ExecRequest *execReq = new (std::nothrow) runtime::v1alpha2::ExecRequest(req);
-    if (execReq == nullptr) {
-        error.SetError("Out of memory");
-        return;
-    }
-    std::string token = cache->Insert(const_cast<runtime::v1alpha2::ExecRequest *>(execReq));
+    std::string token = cache->InsertExecRequest(req);
     if (token.empty()) {
         error.SetError("failed to get a unique token!");
-        delete execReq;
         return;
     }
     std::string url = BuildURL("exec", token);
@@ -1303,15 +1297,9 @@ void ContainerManagerServiceImpl::Attach(const runtime::v1alpha2::AttachRequest 
         return;
     }
     RequestCache *cache = RequestCache::GetInstance();
-    runtime::v1alpha2::AttachRequest *attachReq = new (std::nothrow) runtime::v1alpha2::AttachRequest(req);
-    if (attachReq == nullptr) {
-        error.SetError("Out of memory");
-        return;
-    }
-    std::string token = cache->Insert(const_cast<runtime::v1alpha2::AttachRequest *>(attachReq));
+    std::string token = cache->InsertAttachRequest(req);
     if (token.empty()) {
         error.SetError("failed to get a unique token!");
-        delete attachReq;
         return;
     }
     std::string url = BuildURL("attach", token);

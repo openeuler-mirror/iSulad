@@ -41,12 +41,8 @@ RequestCache *RequestCache::GetInstance() noexcept
     return cache;
 }
 
-std::string RequestCache::Insert(::google::protobuf::Message *req)
+std::string RequestCache::InsertExecRequest(const runtime::v1alpha2::ExecRequest &req)
 {
-    if (req == nullptr) {
-        ERROR("invalid request");
-        return "";
-    }
     std::lock_guard<std::mutex> lock(m_mutex);
     // Remove expired entries.
     GarbageCollection();
@@ -56,7 +52,26 @@ std::string RequestCache::Insert(::google::protobuf::Message *req)
         return "";
     }
     auto token = UniqueToken();
-    CacheEntry tmp { token, req, std::chrono::system_clock::now() + std::chrono::minutes(1) };
+    CacheEntry tmp;
+    tmp.SetValue(token, &req, nullptr, std::chrono::system_clock::now() + std::chrono::minutes(1));
+    m_ll.push_front(tmp);
+    m_tokens.insert(std::make_pair(token, tmp));
+    return token;
+}
+
+std::string RequestCache::InsertAttachRequest(const runtime::v1alpha2::AttachRequest &req)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    // Remove expired entries.
+    GarbageCollection();
+    // If the cache is full, reject the request.
+    if (m_ll.size() == MaxInFlight) {
+        ERROR("too many cache in flight!");
+        return "";
+    }
+    auto token = UniqueToken();
+    CacheEntry tmp;
+    tmp.SetValue(token, nullptr, &req, std::chrono::system_clock::now() + std::chrono::minutes(1));
     m_ll.push_front(tmp);
     m_tokens.insert(std::make_pair(token, tmp));
     return token;
@@ -64,15 +79,11 @@ std::string RequestCache::Insert(::google::protobuf::Message *req)
 
 void RequestCache::GarbageCollection()
 {
-    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    auto now = std::chrono::system_clock::now();
     while (!m_ll.empty()) {
         CacheEntry oldest = m_ll.back();
         if (now < oldest.expireTime) {
             return;
-        }
-        if (oldest.req != nullptr) {
-            delete oldest.req;
-            oldest.req = nullptr;
         }
         m_ll.pop_back();
         m_tokens.erase(oldest.token);
@@ -124,34 +135,59 @@ std::string RequestCache::UniqueToken()
     ERROR("create unique token failed!");
     return "";
 }
+
 bool RequestCache::IsValidToken(const std::string &token)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     return static_cast<bool>(m_tokens.count(token));
 }
 
 // Consume the token (remove it from the cache) and return the cached request, if found.
-::google::protobuf::Message *RequestCache::Consume(const std::string &token, bool &found)
+runtime::v1alpha2::ExecRequest RequestCache::ConsumeExecRequest(const std::string &token)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    found = false;
-    if (!IsValidToken(token)) {
+    if (m_tokens.count(token) == 0 || m_tokens[token].execRequest.size() == 0) {
         ERROR("Invalid token");
-        return nullptr;
+        return runtime::v1alpha2::ExecRequest();
     }
 
     CacheEntry ele = m_tokens[token];
     for (auto it = m_ll.begin(); it != m_ll.end(); it++) {
-        if (it->token == ele.token) {
+        if (it->token == token) {
             m_ll.erase(it);
             break;
         }
     }
     m_tokens.erase(token);
-    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-    if (now > ele.expireTime) {
-        return nullptr;
+    if (std::chrono::system_clock::now() > ele.expireTime) {
+        return runtime::v1alpha2::ExecRequest();
     }
-    found = true;
-    return ele.req;
+
+    return ele.execRequest.at(0);
+}
+
+runtime::v1alpha2::AttachRequest RequestCache::ConsumeAttachRequest(const std::string &token)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    if (m_tokens.count(token) == 0 || m_tokens[token].attachRequest.size() == 0) {
+        ERROR("Invalid token");
+        return runtime::v1alpha2::AttachRequest();
+    }
+
+    CacheEntry ele = m_tokens[token];
+    for (auto it = m_ll.begin(); it != m_ll.end(); it++) {
+        if (it->token == token) {
+            m_ll.erase(it);
+            break;
+        }
+    }
+    m_tokens.erase(token);
+    if (std::chrono::system_clock::now() > ele.expireTime) {
+        return runtime::v1alpha2::AttachRequest();
+    }
+
+    return ele.attachRequest.at(0);
 }

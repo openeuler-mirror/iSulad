@@ -17,6 +17,7 @@
 #define DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <mutex>
 #include <atomic>
@@ -26,6 +27,7 @@
 #include "route_callback_register.h"
 #include "url.h"
 #include "errors.h"
+#include "read_write_lock.h"
 
 #define MAX_ECHO_PAYLOAD 4096
 #define MAX_ARRAY_LEN 2
@@ -71,10 +73,11 @@ public:
     void Shutdown();
     void RegisterCallback(const std::string &path, std::shared_ptr<StreamingServeInterface> callback);
     url::URLDatum GetWebsocketUrl();
-    std::unordered_map<struct lws *, session_data> &GetWsisData();
-    void SetLwsSendedFlag(struct lws *wsi, bool sended);
-    void LockAllWsSession();
+    std::unordered_map<int, session_data> &GetWsisData();
+    void SetLwsSendedFlag(int socketID, bool sended);
+    void ReadLockAllWsSession();
     void UnlockAllWsSession();
+    bool IsValidSession(struct lws *wsi);
 
 private:
     WebsocketServer();
@@ -85,17 +88,19 @@ private:
     std::vector<std::string> split(std::string str, char r);
     static void EmitLog(int level, const char *line);
     int CreateContext();
-    inline void Receive(struct lws *client, void *in, size_t len);
+    inline void Receive(int socketID, void *in, size_t len);
     int  Wswrite(struct lws *wsi, void *in, size_t len);
     inline int DumpHandshakeInfo(struct lws *wsi) noexcept;
     static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
                         void *user, void *in, size_t len);
     void ServiceWorkThread(int threadid);
-    void CloseWsSession(struct lws *wsi);
+    void CloseWsSession(int socketID);
     void CloseAllWsSession();
+    void RecordSession(struct lws *wsi);
+    void RemoveSession(struct lws *wsi);
 
 private:
-    static std::mutex m_mutex;
+    static RWMutex m_mutex;
     static struct lws_context *m_context;
     volatile int m_force_exit = 0;
     std::thread m_pthread_service;
@@ -104,7 +109,8 @@ private:
         { NULL, NULL, 0, 0 }
     };
     RouteCallbackRegister m_handler;
-    static std::unordered_map<struct lws *, session_data> m_wsis;
+    static std::unordered_map<int, session_data> m_wsis;
+    static std::unordered_set<struct lws *> m_activeSession;
     url::URLDatum m_url;
     int m_listenPort;
 };
