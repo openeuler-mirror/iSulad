@@ -25,13 +25,13 @@ typedef struct {
 
 int inspect_check_format_f(const char *json_str, bool *json_format);
 
-char *inspect_pause_filter(const char *arg);
+char *inspect_parse_filter(const char *arg);
 
 yajl_val inspect_load_json(const char *json_data);
 
 bool inspect_filter_done(yajl_val root, const char *filter, container_tree_t *tree_array);
 
-void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format, bool json_format);
+void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format, bool *json_format);
 
 void inspect_free_trees(int tree_nums, container_tree_t *tree_array);
 

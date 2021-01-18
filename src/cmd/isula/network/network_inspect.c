@@ -81,6 +81,7 @@ int cmd_network_inspect_main(int argc, const char **argv)
     int i = 0;
     int success_counts = 0;
     bool json_format = true;
+    bool *json_format_arr = NULL;
     bool failed = false;
     char *filter_string = NULL;
 
@@ -133,7 +134,7 @@ int cmd_network_inspect_main(int argc, const char **argv)
             exit(ECOMMON);
         }
 
-        filter_string = inspect_pause_filter(g_cmd_network_inspect_args.format);
+        filter_string = inspect_parse_filter(g_cmd_network_inspect_args.format);
         if (filter_string == NULL) {
             COMMAND_ERROR("Inspect format parameter invalid: %s", g_cmd_network_inspect_args.format);
             free(tree_array);
@@ -153,7 +154,15 @@ int cmd_network_inspect_main(int argc, const char **argv)
     }
 
     if (tree_array != NULL) {
-        inspect_show_result(success_counts, tree_array, g_cmd_network_inspect_args.format, json_format);
+        json_format_arr = util_smart_calloc_s(sizeof(bool), success_counts);
+        if (json_format_arr == NULL) {
+            ERROR("Out of memory");
+            exit(ECOMMON);
+        }
+        for (i = 0; i < success_counts; i++) {
+            json_format_arr[i] = json_format;
+        }
+        inspect_show_result(success_counts, tree_array, g_cmd_network_inspect_args.format, json_format_arr);
         inspect_free_trees(success_counts, tree_array);
     }
     free(tree_array);

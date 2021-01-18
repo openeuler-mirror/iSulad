@@ -424,7 +424,7 @@ static void print_json(yajl_val tree, int indent, bool json_format)
     print_json_aux(tree, indent, LAST_ELEMENT | TOP_LEVEL_OBJ, json_format);
 }
 
-void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format, bool json_format)
+void inspect_show_result(int show_nums, const container_tree_t *tree_array, const char *format, bool *json_format)
 {
     int i = 0;
     yajl_val tree = NULL;
@@ -444,7 +444,11 @@ void inspect_show_result(int show_nums, const container_tree_t *tree_array, cons
 
     for (i = 0; i < show_nums; i++) {
         tree = tree_array[i].tree_print;
-        print_json(tree, indent, json_format);
+        if (json_format == NULL) {
+            print_json(tree, indent, true);
+        } else {
+            print_json(tree, indent, json_format[i]);
+        }
 
         if ((i + 1) != show_nums) {
             if (format == NULL) {
@@ -466,6 +470,10 @@ void inspect_free_trees(int tree_nums, container_tree_t *tree_array)
 {
     int i = 0;
 
+    if (tree_array == NULL) {
+        return;
+    }
+
     for (i = 0; i < tree_nums; i++) {
         if (tree_array[i].tree_root) {
             yajl_tree_free(tree_array[i].tree_root);
@@ -478,7 +486,7 @@ void inspect_free_trees(int tree_nums, container_tree_t *tree_array)
 /* arg string format: "{{json .State.Running}}"
  * ret_string should be free outside by free().
  */
-char *inspect_pause_filter(const char *arg)
+char *inspect_parse_filter(const char *arg)
 {
     char *input_str = NULL;
     char *p = NULL;
@@ -552,8 +560,8 @@ int inspect_check_format_f(const char *json_str, bool *json_format)
     /* check "{{json .xxx.xxx}}" */
     ret = inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*(json\\s+)?(\\.\\w+)+\\s*\\}\\s*\\}\\s*$");
     if (ret == 0) {
-        if (inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$") != 0) {
-            *json_format = false;
+        if (inspect_check(json_str, "^\\s*\\{\\s*\\{\\s*json\\s+(\\.\\w+)+\\s*\\}\\s*\\}\\s*$") == 0) {
+            *json_format = true;
         }
         return 0;
     }
