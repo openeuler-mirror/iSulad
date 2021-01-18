@@ -1,0 +1,29 @@
+From e151821a1e092995836631b273bddc339cadffbe Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Mon, 11 Jan 2021 18:33:39 +0800
+Subject: [PATCH 5/9] modify image_load.sh CI to test file not exist
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ CI/test_cases/image_cases/image_load.sh | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/CI/test_cases/image_cases/image_load.sh b/CI/test_cases/image_cases/image_load.sh
+index 8415e036..bf41f2af 100755
+--- a/CI/test_cases/image_cases/image_load.sh
++++ b/CI/test_cases/image_cases/image_load.sh
+@@ -30,6 +30,11 @@ function test_image_load()
+   local test="isula load image test => (${FUNCNAME[@]})"
+ 
+   msg_info "${test} starting..."
++  
++  # file is not exist, expect fail
++  isula load -i xxx.tar
++  [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - image tar file not exist test failed" && ((ret++))
++
+ 
+   # single image without --tag
+   isula load -i $single_image
+-- 
+2.25.1
+
