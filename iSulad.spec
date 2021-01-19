@@ -1,5 +1,5 @@
 %global _version 2.0.8
-%global _release 20201230.155843.git6557a6eb
+%global _release 20210118.195254.git077e10f2
 %global is_systemd 1
 
 Name:      iSulad
@@ -11,6 +11,16 @@ URL:       https://gitee.com/openeuler/iSulad
 Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar.gz
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
+
+Patch1:	0001-make-thread-detach-to-avoid-resource-leak.patch
+Patch2:	0002-devmapper-fix-udev-wait-thread-resource-leak.patch
+Patch3:	0003-clean-code-fix-clean-code.patch
+Patch4:	0004-judge-isula-load-file-exists.patch
+Patch5:	0005-modify-image_load.sh-CI-to-test-file-not-exist.patch
+Patch6:	0006-do-not-pause-container-when-copy.patch
+Patch7:	0007-add-testcases-for-isula-cp.patch
+Patch8:	0008-image_cb-rename-the-function-isula_-docker_-to-do_.patch
+Patch9:	0009-fix-small-probability-of-coredump-in-CRI-streaming-s.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -213,6 +223,12 @@ fi
 %endif
 
 %changelog
+* Mon Jan 18 2020 lifeng <lifeng68@huawei.com> - 2.0.8-20210118.195254.git077e10f2
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Wed Dec 30 2020 lifeng <lifeng68@huawei.com> - 2.0.8-20201230.155843.git6557a6eb
 - Type: update to v2.0.8
 - ID: NA
