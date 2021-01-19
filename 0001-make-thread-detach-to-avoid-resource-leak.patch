@@ -1,0 +1,32 @@
+From 1ef7a43907ac6fc521cedd2b4744be4d102efd32 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Thu, 31 Dec 2020 14:05:25 +0800
+Subject: [PATCH 1/9] make thread detach to avoid resource leak
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/daemon/modules/image/oci/registry/registry.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/daemon/modules/image/oci/registry/registry.c b/src/daemon/modules/image/oci/registry/registry.c
+index 391af4fb..3fba2039 100644
+--- a/src/daemon/modules/image/oci/registry/registry.c
++++ b/src/daemon/modules/image/oci/registry/registry.c
+@@ -1389,6 +1389,14 @@ static void *register_layers_in_thread(void *arg)
+     size_t i = 0;
+     struct timespec ts = {0};
+ 
++    ret = pthread_detach(pthread_self());
++    if (ret != 0) {
++        ERROR("Set thread detach fail");
++        goto out;
++    }
++
++    prctl(PR_SET_NAME, "register_layer");
++
+     for (i = 0; i < desc->layers_len; i++) {
+         mutex_lock(&desc->mutex);
+         while (wait_fetch_complete(&infos[i])) {
+-- 
+2.25.1
+
