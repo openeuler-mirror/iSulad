@@ -298,16 +298,15 @@ struct search_cb_args {
 
 static bool search_conf_files_cb(const char *dir, const struct dirent *pdirent, void *context)
 {
-#define MAX_FILES 200
     struct search_cb_args *args = (struct search_cb_args *)context;
     char fname[PATH_MAX] = { 0 };
     size_t i = 0;
     const char *ext_name = NULL;
     int nret = -1;
 
-    if (args->result_len > MAX_FILES) {
+    if (args->result_len > MAX_NETWORK_CONFIG_FILE_COUNT) {
         ERROR("Too more config files, current support max count of config file is %d, so just ignore others.",
-              MAX_FILES);
+              MAX_NETWORK_CONFIG_FILE_COUNT);
         return false;
     }
 

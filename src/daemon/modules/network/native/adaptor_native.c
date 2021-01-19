@@ -30,6 +30,8 @@
 #include "network_tools.h"
 #include "cni_operate.h"
 
+#define MAX_BRIDGE_ID 1024
+
 #define NETWOKR_DRIVER_BRIDGE "bridge"
 #define NETWOKR_DRIVER_MACVLAN "macvlan"
 
@@ -331,7 +333,7 @@ static int load_store_map()
 
     ret = get_net_conflist_from_dir(&tmp, &tmp_len, is_native_config_file);
     if (ret != 0) {
-        ERROR("Failed to load net conflist from dir, maybe the net files count is above 200");
+        ERROR("Failed to load net conflist from dir, maybe the net files count is above %d", MAX_NETWORK_CONFIG_FILE_COUNT);
         return -1;
     }
 
