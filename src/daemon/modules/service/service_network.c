@@ -743,7 +743,6 @@ out:
 static int update_container_networks_info(const network_api_result_list *result, const char *id,
                                           defs_map_string_object_networks *networks)
 {
-#define MAX_NETWORKS 200
     int ret = 0;
     size_t i, old_size, new_size;
     const size_t len = networks->len;
@@ -753,7 +752,7 @@ static int update_container_networks_info(const network_api_result_list *result,
         return -1;
     }
 
-    if (result->len > MAX_NETWORKS - len) {
+    if (result->len > MAX_NETWORK_CONFIG_FILE_COUNT - len) {
         ERROR("Too many networks for container %s", id);
         return -1;
     }

@@ -26,7 +26,6 @@
 extern "C" {
 #endif
 
-#define MAX_CONFIG_FILE_COUNT 1024
 // support network type
 #define NETWOKR_API_TYPE_NATIVE "native"
 #define NETWOKR_API_TYPE_CRI "cri"

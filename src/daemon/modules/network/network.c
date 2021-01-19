@@ -218,7 +218,7 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
         return -1;
     }
 
-    if (conf->extral_nets_len > MAX_CONFIG_FILE_COUNT) {
+    if (conf->extral_nets_len > MAX_NETWORK_CONFIG_FILE_COUNT) {
         ERROR("Too large extral networks to attach");
         return -1;
     }
@@ -257,7 +257,7 @@ int network_module_check(const network_api_conf *conf, const char *type, network
         return -1;
     }
 
-    if (conf->extral_nets_len > MAX_CONFIG_FILE_COUNT) {
+    if (conf->extral_nets_len > MAX_NETWORK_CONFIG_FILE_COUNT) {
         ERROR("Too large extral networks to attach");
         return -1;
     }
@@ -519,8 +519,8 @@ static inline size_t get_list_scale_size(size_t old_size)
         return 1;
     }
 
-    if (old_size << 1 > MAX_CONFIG_FILE_COUNT) {
-        return MAX_CONFIG_FILE_COUNT;
+    if (old_size << 1 > MAX_NETWORK_CONFIG_FILE_COUNT) {
+        return MAX_NETWORK_CONFIG_FILE_COUNT;
     }
 
     return old_size << 1;
@@ -552,7 +552,7 @@ bool network_api_result_list_append(struct network_api_result *result, network_a
             return false;
         }
 
-        // list capability less than MAX_CONFIG_FILE_COUNT(1024)
+        // list capability less than MAX_NETWORK_CONFIG_FILE_COUNT(1024)
         // so we do not need to check Overflow:
         // new_size * sizeof(*new_items) and list->len * sizeof(*list->items)
         if (util_mem_realloc((void **)&new_items, new_size * sizeof(*new_items), (void *)list->items,

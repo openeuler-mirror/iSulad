@@ -2136,7 +2136,6 @@ out:
 
 static int create_namespaces_checker(const struct client_arguments *args)
 {
-#define MAX_FILES 200
     int max_bridge_len = 0;
     const char *net_mode = args->custom_conf.share_ns[NAMESPACE_NET];
 
@@ -2144,7 +2143,7 @@ static int create_namespaces_checker(const struct client_arguments *args)
         return 0;
     }
 
-    max_bridge_len = (MAX_NETWORK_NAME_LEN + 1) * MAX_FILES - 1;
+    max_bridge_len = (MAX_NETWORK_NAME_LEN + 1) * MAX_NETWORK_CONFIG_FILE_COUNT - 1;
     if (strnlen(net_mode, max_bridge_len + 1) > max_bridge_len) {
         COMMAND_ERROR("Network mode \"%s\" is too long", net_mode);
         return -1;
