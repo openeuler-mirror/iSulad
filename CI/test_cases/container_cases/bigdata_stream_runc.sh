@@ -119,6 +119,33 @@ function test_cat_bigdata()
 	declare -a pids
 
 	for index in $(seq 1 5); do
+		nohup isula exec -it $CID cat test_500M > /tmp/iocopy_stream_data_500M_$index &
+		pids[${#pids[@]}]=$!
+	done
+	wait ${pids[*]// /|}
+
+	for index in $(seq 1 5); do
+		ls -l /tmp/iocopy_stream_data_500M_$index
+		total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M_$index)
+		[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
+		rm -f /tmp/iocopy_stream_data_500M_$index
+	done
+
+	check_last_status
+	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - abnormal status" && ((ret++))
+
+	msg_info "${test} finished with return ${ret}..."
+	return ${ret}
+}
+
+function test_cat_bigdata_without_pty()
+{
+	local ret=0
+	local test="test_concurrent_bigdata_stream => (${FUNCNAME[@]})"
+	msg_info "${test} starting..."
+	declare -a pids
+
+	for index in $(seq 1 5); do
 		nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M_$index &
 		pids[${#pids[@]}]=$!
 	done
@@ -377,6 +404,7 @@ set_up || ((ans++))
 
 record_origin_status
 test_cat_bigdata || ((ans++))
+test_cat_bigdata_without_pty || ((ans++))
 test_stream_with_stop_client || ((ans++))
 test_stream_with_kill_client || ((ans++))
 test_stream_with_stop_attach || ((ans++))
