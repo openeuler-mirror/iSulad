@@ -1298,8 +1298,10 @@ static void free_thread_fetch_info(thread_fetch_info *info)
     return;
 }
 
-static bool all_fetch_complete(pull_descriptor *desc, int *result)
+static bool all_fetch_complete(pull_descriptor *desc, thread_fetch_info *infos, int *result)
 {
+    int i = 0;
+
     if (!desc->config.complete) {
         return false;
     }
@@ -1312,6 +1314,13 @@ static bool all_fetch_complete(pull_descriptor *desc, int *result)
 
     if (!desc->register_layers_complete) {
         return false;
+    }
+
+    // wait all fetch threads completed
+    for (i = 0; i < desc->layers_len; i++) {
+        if (infos[i].use && !infos[i].notified) {
+            return false;
+        }
     }
 
     if (desc->cancel) {
@@ -1584,7 +1593,7 @@ static int fetch_all(pull_descriptor *desc)
 
     // wait until all pulled or cancelled
     mutex_lock(&g_shared->mutex);
-    while (!all_fetch_complete(desc, &result)) {
+    while (!all_fetch_complete(desc, infos, &result)) {
         ts.tv_sec = time(NULL) + DEFAULT_WAIT_TIMEOUT; // avoid wait forever
         cond_ret = pthread_cond_timedwait(&g_shared->cond, &g_shared->mutex, &ts);
         if (cond_ret != 0 && cond_ret != ETIMEDOUT) {
