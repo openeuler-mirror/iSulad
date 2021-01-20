@@ -38,7 +38,7 @@ static ssize_t shim_write_nointr_lock(log_terminal *terminal, const void *buf, s
     ssize_t ret;
 
     (void)pthread_rwlock_wrlock(&terminal->log_terminal_rwlock);
-    ret = write_nointr(terminal->fd, buf, count);
+    ret = write_nointr_in_total(terminal->fd, buf, count);
     (void)pthread_rwlock_unlock(&terminal->log_terminal_rwlock);
 
     return ret;

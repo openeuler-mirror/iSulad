@@ -79,7 +79,7 @@ TEST_F(IsuladShimUnitTest, test_read_write_nointr)
 
     fd_wr = open_no_inherit(test_file.c_str(), O_CREAT | O_RDWR | O_APPEND | O_SYNC, 0640);
     EXPECT_GT(fd_wr, 0);
-    nwrite = write_nointr(fd_wr, test_string.c_str(), 5);
+    nwrite = write_nointr_in_total(fd_wr, test_string.c_str(), 5);
     EXPECT_EQ(nwrite, 5);
     fd_rd = open(test_file.c_str(), O_RDONLY);
     nread = read_nointr(fd_rd, buf, 32);
