@@ -52,6 +52,8 @@ extern "C" {
 ssize_t read_nointr(int fd, void *buf, size_t count);
 ssize_t write_nointr(int fd, const void *buf, size_t count);
 
+ssize_t write_nointr_in_total(int fd, const char *buf, size_t count);
+
 char *read_text_file(const char *path);
 
 bool file_exists(const char *f);

@@ -84,6 +84,31 @@ ssize_t write_nointr(int fd, const void *buf, size_t count)
     return nret;
 }
 
+ssize_t write_nointr_in_total(int fd, const char *buf, size_t count)
+{
+    ssize_t nret = 0;
+    ssize_t nwritten;
+
+    if (buf == NULL) {
+        return -1;
+    }
+
+    for (nwritten = 0; nwritten < count;) {
+        nret = write(fd, buf + nwritten, count - nwritten);
+        if (nret < 0) {
+            if (errno == EINTR || errno == EAGAIN) {
+                continue;
+            } else {
+                return nret;
+            }
+        } else {
+            nwritten += nret;
+        }
+    }
+
+    return nwritten;
+}
+
 bool file_exists(const char *f)
 {
     struct stat buf;

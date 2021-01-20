@@ -66,13 +66,13 @@ typedef struct process {
     char *id;
     char *bundle;
     char *runtime;
-    char *console_sock_path;
+    char *console_sock_path;// pty socket path
     int io_loop_fd;
     int exit_fd;
     int ctr_pid;
     log_terminal *terminal;
-    stdio_t *stdio;
-    stdio_t *shim_io;
+    stdio_t *stdio;// shim to on runtime side, in:r out/err: w
+    stdio_t *shim_io; // shim io on isulad side, in: w  out/err: r
     io_thread_t *io_threads[3];// stdin,stdout,stderr
     shim_client_process_state *state;
     sem_t sem_mainloop;

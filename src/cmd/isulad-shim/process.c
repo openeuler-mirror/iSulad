@@ -44,15 +44,6 @@
 
 extern int g_log_fd;
 
-typedef int (*epoll_loop_callback_t)(int fd, uint32_t event, void *data);
-
-struct epoll_loop_handler {
-    epoll_loop_callback_t cb;
-    int epfd;
-    int cbfd;
-    void *cbdata;
-};
-
 static shim_client_process_state *load_process()
 {
     parser_error err = NULL;
@@ -243,7 +234,7 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
     pthread_mutex_unlock(&(ioc->mutex));
 }
 
-static void *task_io_copy(void *data)
+static void *do_io_copy(void *data)
 {
     io_thread_t *io_thd = (io_thread_t *)data;
     if (io_thd == NULL || io_thd->ioc == NULL) {
@@ -278,7 +269,7 @@ static void *task_io_copy(void *data)
                     shim_write_container_log_file(io_thd->terminal, ioc->id == stdid_out ? "stdout" : "stderr", buf,
                                                   r_count);
                 } else {
-                    int w_count = write_nointr(fn->fd, buf, r_count);
+                    int w_count = write_nointr_in_total(fn->fd, buf, r_count);
                     if (w_count < 0) {
                         /* When any error occurs, remove the write fd */
                         remove_io_dispatch(io_thd, -1, fn->fd);
@@ -287,7 +278,11 @@ static void *task_io_copy(void *data)
             }
         }
 
-        if (io_thd->shutdown) {
+        /*
+         In the case of stdout and stderr, maybe numbers of read bytes are not the last msg in pipe.
+         So, when the value of r_count is larger than zero, we need to try reading again to avoid loss msgs.
+        */
+        if (io_thd->shutdown && r_count <= 0) {
             break;
         }
     }
@@ -301,7 +296,7 @@ static void *task_io_copy(void *data)
     return NULL;
 }
 
-static void do_io_copy(int fd, uint32_t event, void *data)
+static void sem_post_inotify_io_copy(int fd, uint32_t event, void *data)
 {
     io_thread_t *thd = (io_thread_t *)data;
     if (thd->ioc == NULL || fd != thd->ioc->fd_from) {
@@ -318,7 +313,7 @@ static void do_io_copy(int fd, uint32_t event, void *data)
     return;
 }
 
-static int process_io_start(process_t *p, int std_id)
+static int create_io_copy_thread(process_t *p, int std_id)
 {
     int ret = SHIM_ERR;
     io_thread_t *io_thd = NULL;
@@ -351,7 +346,7 @@ static int process_io_start(process_t *p, int std_id)
 
     p->io_threads[std_id] = io_thd;
 
-    ret = pthread_create(&(io_thd->tid), NULL, task_io_copy, io_thd);
+    ret = pthread_create(&(io_thd->tid), NULL, do_io_copy, io_thd);
     if (ret != SHIM_OK) {
         write_message(g_log_fd, ERR_MSG, "thread io copy create failed:%d", SHIM_SYS_ERR(errno));
         goto failure;
@@ -380,7 +375,7 @@ static int start_io_copy_threads(process_t *p)
 
     /* 3 threads for stdin, stdout and stderr */
     for (i = 0; i < 3; i++) {
-        ret = process_io_start(p, i);
+        ret = create_io_copy_thread(p, i);
         if (ret != SHIM_OK) {
             return SHIM_ERR;
         }
@@ -405,6 +400,20 @@ static void destroy_io_thread(process_t *p, int std_id)
     p->io_threads[std_id] = NULL;
 }
 
+/*
+    std_id: channel type
+    isulad_stdio: one side of the isulad fifo file
+    fd: one side of the shim io pipe
+    ---------------------------------------------------------------
+    | CHANNEL |    iSulad Fifo Side     | Flow Direction |   fd   |
+    ---------------------------------------------------------------
+    |  STDIN  |        READ             |      -->       |  WRITE |
+    ---------------------------------------------------------------
+    |  STDOUT |        WRITE            |      <--       |  READ  |
+    ---------------------------------------------------------------
+    |  STDERR |        WRITE            |      <--       |  READ  |
+    ---------------------------------------------------------------
+*/
 static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio, int fd)
 {
     mode_t mode;
@@ -501,7 +510,7 @@ out:
     return NULL;
 }
 
-static void *task_io_loop(void *data)
+static void *io_epoll_loop(void *data)
 {
     process_t *p = (process_t *)data;
     int wait_fds = 0;
@@ -526,7 +535,7 @@ static void *task_io_loop(void *data)
 
         for (i = 0; i < wait_fds; i++) {
             io_thread_t *thd_io = (io_thread_t *)evs[i].data.ptr;
-            do_io_copy(thd_io->ioc->fd_from, evs[i].events, thd_io);
+            sem_post_inotify_io_copy(thd_io->ioc->fd_from, evs[i].events, thd_io);
         }
     }
 }
@@ -702,6 +711,7 @@ static int open_generic_io(process_t *p)
 {
     int ret = SHIM_ERR;
 
+    // io: in: w  out/err: r
     stdio_t *io = initialize_io(p);
     if (io == NULL) {
         return SHIM_ERR;
@@ -858,7 +868,7 @@ int process_io_init(process_t *p)
     int ret = SHIM_ERR;
 
     pthread_t tid_loop;
-    ret = pthread_create(&tid_loop, NULL, task_io_loop, p);
+    ret = pthread_create(&tid_loop, NULL, io_epoll_loop, p);
     if (ret != SHIM_OK) {
         return SHIM_SYS_ERR(errno);
     }
