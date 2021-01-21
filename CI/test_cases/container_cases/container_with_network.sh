@@ -56,12 +56,34 @@ function test_container_with_networks()
     start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
+    # run container but no available network
+    isula run -tid --net ${network_name1} -n ${cont_name} busybox sh 2>&1 | grep "No available native network"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container and catch err msg failed" && ((ret++))
+
+    isula rm -f ${cont_name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm -f ${cont_name} failed" && return ${FAILURE}
+
+    # create network
     isula network create --subnet 172.20.5.0/24 ${network_name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name1} failed" && return ${FAILURE}
 
     isula network create --subnet 2001:db8:12::/64 ${network_name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name2} failed" && return ${FAILURE}
 
+    # run container with invalid network test
+    isula run -tid --net .xx -n ${cont_name} busybox sh 2>&1 | grep "Invalid network name"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container and catch err msg failed" && ((ret++))
+
+    isula rm -f ${cont_name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm -f ${cont_name} failed" && return ${FAILURE}
+
+    isula run -tid --net cni3 -n ${cont_name} busybox sh 2>&1 | grep "Network cni3 not found"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container and catch err msg failed" && ((ret++))
+
+    isula rm -f ${cont_name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm -f ${cont_name} failed" && return ${FAILURE}
+
+    # run container with ipv4 and ipv6 network
     cont_id=$(isula run -tid --net ${network_name1},${network_name2} -n ${cont_name} busybox sh)
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name} with network ${network_name1} ${network_name2} failed" && return ${FAILURE}
 

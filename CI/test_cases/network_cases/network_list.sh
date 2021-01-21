@@ -48,6 +48,15 @@ function test_network_list()
     file2="/etc/cni/net.d/isulacni-${name2}.conflist"
     [ ! -f ${file2} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file2} not exist" && return ${FAILURE}
 
+    isula network ls ${name1} 2>&1 | grep "\"isula network ls\" requires 0 arguments"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network and catch error msg failed" && return ${FAILURE}
+
+    isula network ls -f name=.xx 2>&1 | grep "Unrecognised filter value for name"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network and catch error msg failed" && return ${FAILURE}
+
+    isula network ls -f aa=bb 2>&1 | grep "Invalid filter"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network and catch error msg failed" && return ${FAILURE}
+
     isula network ls -q | grep ${name1} 
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - list network --quiet failed" && return ${FAILURE}
 

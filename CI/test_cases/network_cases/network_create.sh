@@ -27,6 +27,11 @@ function test_network_create()
     local ret=0
     local name1="cni1"
     local name2="cni2"
+    local name3="a"
+    for i in $(seq 1 7);do
+        name3=${name3}${name3}
+    done
+    local name4=${name3}b
     local invalid_name=".xx"
     local test="network create test => (${FUNCNAME[@]})"
 
@@ -40,6 +45,15 @@ function test_network_create()
 
     isula network create ${name1} ${name2} 2>&1 | grep "at most 1 network name"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create networks success, but should failed" && return ${FAILURE}
+
+    isula network create ${name3}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name3} failed" && return ${FAILURE}
+
+    isula network rm ${name3}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name} failed" && return ${FAILURE}
+
+    isula network create ${name4} 2>&1 | grep "too long"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name4} and catch error msg failed" && return ${FAILURE}
 
     isula network create ${invalid_name} 2>&1 | grep "Invalid network name"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${invalid_name} success, but should failed" && return ${FAILURE}

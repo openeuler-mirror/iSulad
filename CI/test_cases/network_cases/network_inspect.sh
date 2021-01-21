@@ -62,6 +62,9 @@ function test_network_inspect()
     isula network inspect -f='{{.plugins.ipam.ranges}}' ${name1} | grep "192.172.59.0/24"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to inspect ${name1}" && return ${FAILURE}
 
+    isula network inspect -f='{{...}}' ${name1}
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${name1} success" && return ${FAILURE}
+
     isula network rm ${name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name1} failed" && return ${FAILURE}
 

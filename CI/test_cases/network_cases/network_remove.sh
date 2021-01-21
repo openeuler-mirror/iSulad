@@ -51,6 +51,9 @@ function test_network_remove()
     isula network rm ${invalid} 2>&1 | grep "Cannot find network ${invalid}"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - cannot catch msg when remove invalid network ${invalid}" && return ${FAILURE}
 
+    isula network rm 2>&1 | grep "requires at least 1 network name"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm network and catch error msg failed" && return ${FAILURE}
+
     isula network rm ${name1} ${name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove network ${name1} ${name2} failed" && return ${FAILURE}
     test -f ${file1} && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file1} exist" && return ${FAILURE}
