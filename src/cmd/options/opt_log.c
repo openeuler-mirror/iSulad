@@ -25,6 +25,7 @@
 #include "utils_array.h"
 #include "utils_convert.h"
 #include "utils_string.h"
+#include "buffer.h"
 
 #define DRIVER_MAX 2
 
@@ -160,6 +161,7 @@ bool parse_container_log_opt(const char *key, const char *val, json_map_string_s
                 }
             }
             nret = append_json_map_string_string(opts, support_parsers[i].real_key, parsed_val);
+            free(parsed_val);
             return true;
         }
     }
@@ -274,3 +276,69 @@ bool check_opt_container_log_driver(const char *driver)
     return false;
 }
 
+int parse_container_log_opt_syslog_tag(const char *tag, tag_parser op, map_t *tag_maps, char **parsed_tag)
+{
+    Buffer *bf = NULL;
+    char *work_tag = NULL;
+    char *prefix = NULL;
+    char *curr = NULL;
+    int ret = 0;
+
+    if (tag == NULL || op == NULL || parsed_tag == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+    bf = buffer_alloc(strlen(tag));
+    if (bf == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    work_tag = util_strdup_s(tag);
+    prefix = work_tag;
+    while (prefix != NULL && strlen(prefix) != 0) {
+        char *parsed_item = NULL;
+        curr = strstr(prefix, "{{");
+        if (curr == NULL) {
+            ret = buffer_append(bf, prefix, strlen(prefix));
+            break;
+        }
+        *curr = '\0';
+        ret = buffer_append(bf, prefix, strlen(prefix));
+        if (ret != 0) {
+            ERROR("OUt of memory");
+            goto out;
+        }
+        *curr = '{';
+
+        curr = curr + 2;
+        prefix = strstr(curr, "}}");
+        if (prefix == NULL) {
+            ERROR("invalid tag item: %s", tag);
+            ret = -1;
+            goto out;
+        }
+        // get item in '{{' and '}}', to parse to expected string
+        *prefix = '\0';
+        if (op(curr, tag_maps, &parsed_item) != 0) {
+            ERROR("invalid tag item: %s", tag);
+            ret = -1;
+            goto out;
+        }
+        DEBUG("parse syslog tag item: %s --> %s", curr, parsed_item);
+        *prefix = '}';
+        ret = buffer_append(bf, parsed_item, strlen(parsed_item));
+        free(parsed_item);
+        if (ret != 0) {
+            ERROR("OUt of memory");
+            goto out;
+        }
+        prefix = prefix + 2;
+    }
+
+    *parsed_tag = util_strdup_s(bf->contents);
+out:
+    buffer_free(bf);
+    free(work_tag);
+    return ret;
+}
