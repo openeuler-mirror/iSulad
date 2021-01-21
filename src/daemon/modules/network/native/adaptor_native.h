@@ -18,7 +18,7 @@
 
 #include "network_api.h"
 
-int native_init();
+int native_init(const char *conf_dir, const char **bin_paths, const size_t bin_paths_len);
 
 bool native_ready();
 

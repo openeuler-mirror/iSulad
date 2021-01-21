@@ -437,6 +437,107 @@ out:
     return ret;
 }
 
+/* remove request to rest */
+static int remove_request_to_rest(const struct isula_network_remove_request *request, char **body, size_t *body_len)
+{
+    network_remove_request *nrequest = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    parser_error err = NULL;
+    int ret = 0;
+
+    nrequest = (network_remove_request *)util_common_calloc_s(sizeof(network_remove_request));
+    if (nrequest == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    if (request->name != NULL) {
+        nrequest->name = util_strdup_s(request->name);
+    }
+
+    *body = network_remove_request_generate_json(nrequest, &ctx, &err);
+    if (*body == NULL) {
+        ERROR("Failed to generate network remove request json:%s", err);
+        ret = -1;
+        goto out;
+    }
+    *body_len = strlen(*body) + 1;
+
+out:
+    free(err);
+    free_network_remove_request(nrequest);
+    return ret;
+}
+
+/* unpack remove response */
+static int unpack_remove_response(const struct parsed_http_message *message, void *arg)
+{
+    struct isula_network_remove_response *response = (struct isula_network_remove_response *)arg;
+    network_remove_response *nresponse = NULL;
+    parser_error err = NULL;
+    int ret = 0;
+
+    ret = check_status_code(message->status_code);
+    if (ret != 0) {
+        goto out;
+    }
+
+    nresponse = network_remove_response_parse_data(message->body, NULL, &err);
+    if (nresponse == NULL) {
+        ERROR("Invalid network remove response:%s", err);
+        ret = -1;
+        goto out;
+    }
+    response->server_errono = nresponse->cc;
+    if (nresponse->errmsg != NULL) {
+        response->errmsg = util_strdup_s(nresponse->errmsg);
+    }
+    if (nresponse->name != NULL) {
+        response->name = util_strdup_s(nresponse->name);
+    }
+    ret = (nresponse->cc == ISULAD_SUCCESS) ? 0 : -1;
+    if (message->status_code == RESTFUL_RES_SERVERR) {
+        ret = -1;
+    }
+
+out:
+    free(err);
+    free_network_remove_response(nresponse);
+    return ret;
+}
+
+/* rest network remove */
+static int rest_network_remove(const struct isula_network_remove_request *request,
+                               struct isula_network_remove_response *response, void *arg)
+{
+    char *body = NULL;
+    int ret = 0;
+    size_t len;
+    client_connect_config_t *connect_config = (client_connect_config_t *)arg;
+    const char *socketname = (const char *)(connect_config->socket);
+    Buffer *output = NULL;
+
+    ret = remove_request_to_rest(request, &body, &len);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = rest_send_requst(socketname, RestHttpHead NetworkServiceRemove, body, len, &output);
+    if (ret != 0) {
+        response->errmsg = util_strdup_s(errno_to_error_message(ISULAD_ERR_CONNECT));
+        response->cc = ISULAD_ERR_EXEC;
+        goto out;
+    }
+    ret = get_response(output, unpack_remove_response, (void *)response);
+    if (ret != 0) {
+        goto out;
+    }
+
+out:
+    buffer_free(output);
+    put_body(body);
+    return ret;
+}
+
 /* rest network client ops init */
 int rest_network_client_ops_init(isula_connect_ops *ops)
 {
@@ -447,6 +548,7 @@ int rest_network_client_ops_init(isula_connect_ops *ops)
     ops->network.create = &rest_network_create;
     ops->network.inspect = &rest_network_inspect;
     ops->network.list = &rest_network_list;
+    ops->network.remove = &rest_network_remove;
 
     return 0;
 }
