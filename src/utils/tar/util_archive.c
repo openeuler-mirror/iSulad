@@ -699,27 +699,39 @@ out:
 static int copy_data_between_archives(struct archive *ar, struct archive *aw)
 {
     int ret = ARCHIVE_FAILED;
-    const void *buff = NULL;
-    size_t size;
-    int64_t offset;
+    char *buff = NULL;
+    ssize_t size = 0;
+
+    buff = util_common_calloc_s(ARCHIVE_BLOCK_SIZE);
+    if (buff == NULL) {
+        ERROR("out of memory");
+        fprintf(stderr, "out of memory");
+        return ARCHIVE_FAILED;
+    }
 
     for (;;) {
-        ret = archive_read_data_block(ar, &buff, &size, &offset);
-        if (ret == ARCHIVE_EOF) {
-            return ARCHIVE_OK;
+        size = archive_read_data(ar, buff, ARCHIVE_BLOCK_SIZE);
+        if (size == 0) {
+            ret = ARCHIVE_OK;
+            goto out;
         }
-        if (ret < ARCHIVE_OK) {
+        if (size < 0) {
             ERROR("tar archive read result %d, error: %s", ret, archive_error_string(ar));
             fprintf(stderr, "tar archive read result %d, error: %s", ret, archive_error_string(ar));
-            return ret;
+            ret = ARCHIVE_FAILED;
+            goto out;
         }
         ret = archive_write_data(aw, buff, size);
         if (ret < ARCHIVE_OK) {
             ERROR("tar archive write result %d, error: %s", ret, archive_error_string(aw));
             fprintf(stderr, "tar archive write result %d, error: %s", ret, archive_error_string(aw));
-            return ret;
+            goto out;
         }
     }
+
+out:
+    free(buff);
+    return ret;
 }
 
 int update_entry_for_hardlink(map_t *map_link, struct archive_entry *entry, const char *src_base, const char *dst_base)
