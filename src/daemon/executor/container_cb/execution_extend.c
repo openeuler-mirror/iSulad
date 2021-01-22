@@ -532,6 +532,7 @@ static int do_resume_container(container_t *cont)
 
     params.rootpath = cont->root_path;
     params.state = cont->state_path;
+
     if (runtime_resume(id, cont->runtime, &params)) {
         ERROR("Failed to resume container:%s", id);
         ret = -1;
@@ -716,15 +717,17 @@ static int do_pause_container(container_t *cont)
 
     params.rootpath = cont->root_path;
     params.state = cont->state_path;
+
+    container_stop_health_checks(cont->common_config->id);
+
     if (runtime_pause(id, cont->runtime, &params)) {
+        container_update_health_monitor(cont->common_config->id);
         ERROR("Failed to pause container:%s", id);
         ret = -1;
         goto out;
     }
 
     container_state_set_paused(cont->state);
-
-    container_update_health_monitor(cont->common_config->id);
 
     if (container_state_to_disk(cont)) {
         ERROR("Failed to save container \"%s\" to disk", id);
