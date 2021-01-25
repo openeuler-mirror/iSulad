@@ -512,13 +512,7 @@ int graphdriver_cleanup(void)
         driver_unlock();
         goto out;
     }
-
-    free((char *)g_graphdriver->home);
-    g_graphdriver->home = NULL;
-    free(g_graphdriver->backing_fs);
-    g_graphdriver->backing_fs = NULL;
-    g_graphdriver = NULL;
-    // notes, do not driver_unlock and destroy the lock, becase the other threads may wait for it
+    // notes, do not call driver_unlock and destroy the lock, becase the other threads may wait for it
     // if we unlock and destroy the lock, may cause the lock failure, and result to coredump
 
 out:
