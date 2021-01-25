@@ -517,9 +517,9 @@ int graphdriver_cleanup(void)
     g_graphdriver->home = NULL;
     free(g_graphdriver->backing_fs);
     g_graphdriver->backing_fs = NULL;
-    driver_unlock();
-    pthread_rwlock_destroy(&(g_graphdriver->rwlock));
     g_graphdriver = NULL;
+    // notes, do not driver_unlock and destroy the lock, becase the other threads may wait for it
+    // if we unlock and destroy the lock, may cause the lock failure, and result to coredump
 
 out:
     return ret;
