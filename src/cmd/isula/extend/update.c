@@ -75,6 +75,10 @@ static isula_host_config_t *pack_update_request(const struct client_arguments *a
 
     host_config->cr->kernel_memory = args->cr.kernel_memory_limit;
 
+    // make sure swappiness have default value -1 if not configed, so it
+    // will not fail even if kernel does not support swappiness.
+    host_config->cr->swappiness = args->cr.swappiness;
+
     return host_config;
 
 error_out:

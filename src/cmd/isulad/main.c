@@ -1483,6 +1483,8 @@ int main(int argc, char **argv)
 
     update_isulad_rlimits();
 
+    (void)get_sys_info(true);
+
     clock_gettime(CLOCK_MONOTONIC, &t_start);
 
     if (pre_init_daemon(argc, argv, &msg) != 0) {
