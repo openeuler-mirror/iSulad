@@ -883,8 +883,8 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
     char hostname_content[MAX_HOST_NAME_LEN + 2] = { 0 };
 
     if (v2_spec->config->hostname == NULL) {
+        char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
         if (share_host) {
-            char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
             ret = gethostname(hostname, sizeof(hostname));
             if (ret != 0) {
                 ERROR("Get hostname error");
@@ -892,7 +892,13 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
             }
             v2_spec->config->hostname = util_strdup_s(hostname);
         } else {
-            v2_spec->config->hostname = util_strdup_s("localhost");
+            // hostname max length is 12
+            if (snprintf(hostname, 12, "%s", id) < 0) {
+                ERROR("sprintf hostname failed");
+                ret = -1;
+                goto out;
+            }
+            v2_spec->config->hostname = util_strdup_s(hostname);
         }
     }
 
