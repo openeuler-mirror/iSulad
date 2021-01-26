@@ -70,7 +70,6 @@ typedef struct native_store_t {
     char **bin_paths;
     size_t bin_paths_len;
 
-    // do not need write lock in native_init and native_destory
     pthread_rwlock_t rwlock;
 } native_store;
 
@@ -136,6 +135,7 @@ struct plugin_op {
 static cni_net_conf *conf_bridge_plugin(const network_create_request *request);
 static cni_net_conf *conf_portmap_plugin(const network_create_request *request);
 static cni_net_conf *conf_firewall_plugin(const network_create_request *request);
+static cni_net_conf *conf_dnsname_plugin(const network_create_request *request);
 
 static const struct plugin_op g_bridge_plugin = {
     .plugin = "bridge",
@@ -152,25 +152,30 @@ static const struct plugin_op g_firewall_plugin = {
     .op = conf_firewall_plugin,
 };
 
-#define BRIDGE_DRIVER_PLUGINS_LEN 3
-static const struct plugin_op *g_bridge_driver_plugins[] = { &g_bridge_plugin, &g_portmap_plugin, &g_firewall_plugin};
+static const struct plugin_op g_dnsname_plugin = {
+    .plugin = "dnsname",
+    .op = conf_dnsname_plugin,
+};
+
+#define BRIDGE_DRIVER_PLUGINS_LEN 4
+static const struct plugin_op *g_bridge_driver_plugins[] = { &g_bridge_plugin, &g_portmap_plugin, &g_firewall_plugin, &g_dnsname_plugin};
 
 struct net_driver_ops {
-    cni_net_conf_list * (*conf)(const network_create_request *request);
+    cni_net_conf_list * (*conf)(const network_create_request *request, char **missing);
     int (*check)(const network_create_request *request);
-    int (*detect)(const char **cni_bin_dir, int bin_dir_len);
+    string_array *(*detect)(void);
     int (*remove)(cni_net_conf_list *list);
 };
 
-static cni_net_conf_list *conf_bridge(const network_create_request *request);
+static cni_net_conf_list *conf_bridge(const network_create_request *request, char **missing);
 static int check_bridge(const network_create_request *request);
-static int detect_bridge_bin();
+static string_array *detect_bridge(void);
 static int remove_bridge(cni_net_conf_list *list);
 
 static const struct net_driver_ops g_bridge_ops = {
     .conf = conf_bridge,
     .check = check_bridge,
-    .detect = detect_bridge_bin,
+    .detect = detect_bridge,
     .remove = remove_bridge,
 };
 
@@ -252,6 +257,8 @@ static void native_network_kvfree(void *key, void *value)
 
 void native_destory()
 {
+    (void)native_store_lock(EXCLUSIVE);
+
     if (g_store.name_to_network != NULL) {
         map_free(g_store.name_to_network);
     }
@@ -264,8 +271,6 @@ void native_destory()
     util_free_array_by_len(g_store.bin_paths, g_store.bin_paths_len);
     g_store.bin_paths = NULL;
     g_store.bin_paths_len = 0;
-
-    pthread_rwlock_destroy(&(g_store.rwlock));
 }
 
 static bool is_native_config_file(const char *filename)
@@ -1191,7 +1196,46 @@ static cni_net_conf *conf_firewall_plugin(const network_create_request *request)
     return plugin;
 }
 
-static cni_net_conf_list *conf_bridge(const network_create_request *request)
+static cni_net_conf *conf_dnsname_plugin(const network_create_request *request)
+{
+    cni_net_conf *plugin = NULL;
+
+    plugin = (cni_net_conf *)util_common_calloc_s(sizeof(cni_net_conf));
+    if (plugin == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+    plugin->type = util_strdup_s("dnsname");
+    plugin->domain_name = util_strdup_s("dns.isulad");
+
+    plugin->capabilities = util_common_calloc_s(sizeof(json_map_string_bool));
+    if (plugin->capabilities == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+    plugin->capabilities->keys = util_common_calloc_s(sizeof(char *));
+    if (plugin->capabilities->keys == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+    plugin->capabilities->keys[0] = util_strdup_s("aliases");
+    plugin->capabilities->values = util_common_calloc_s(sizeof(bool));
+    if (plugin->capabilities->values == NULL) {
+        free(plugin->capabilities->keys[0]);
+        ERROR("Out of memory");
+        goto err_out;
+    }
+    plugin->capabilities->values[0] = true;
+    plugin->capabilities->len++;
+
+    return plugin;
+
+err_out:
+    free_cni_net_conf(plugin);
+    return NULL;
+}
+
+static cni_net_conf_list *conf_bridge(const network_create_request *request, char **missing)
 {
     size_t i;
     cni_net_conf_list *list = NULL;
@@ -1209,6 +1253,18 @@ static cni_net_conf_list *conf_bridge(const network_create_request *request)
     }
 
     for (i = 0; i < BRIDGE_DRIVER_PLUGINS_LEN; i++) {
+        if (strcmp(g_bridge_driver_plugins[i]->plugin, g_dnsname_plugin.plugin) == 0) {
+            // TODO: add dnsname in network conflist
+            // skip conf dnsname now, because of dnsname plugin bug
+            continue;
+        }
+
+        // skip conf dnsname if dnsname plugin not exist
+        if (strcmp(g_bridge_driver_plugins[i]->plugin, g_dnsname_plugin.plugin) == 0 &&
+            util_array_contain((const char **)missing, g_dnsname_plugin.plugin)) {
+            continue;
+        }
+
         cni_net_conf *plugin = g_bridge_driver_plugins[i]->op(request);
         if (plugin == NULL) {
             ERROR("Failed to config %s plugin", g_bridge_driver_plugins[i]->plugin);
@@ -1288,7 +1344,7 @@ out:
     return ret;
 }
 
-static int do_cni_bin_detect(const char *file, char ***absence)
+static int do_cni_bin_detect(const char *file, string_array *missing)
 {
     size_t i;
     char *path = NULL;
@@ -1308,51 +1364,66 @@ static int do_cni_bin_detect(const char *file, char ***absence)
         path = NULL;
     }
 
-    return util_array_append(absence, file);
+    return util_append_string_array(file, missing);
 }
 
-static int detect_bridge_bin()
+static string_array *detect_bridge()
 {
-    int ret = 0;
-    size_t i, len;
-    char **absence = NULL;
-    char *file_str = NULL;
-    char *dir_str = NULL;
+    int nret = 0;
+    size_t i = 0;
+    string_array *res = NULL;
+
+    res = (string_array *)util_common_calloc_s(sizeof(string_array));
+    if (res == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
 
     for (i = 0; i < BRIDGE_DRIVER_PLUGINS_LEN; i++) {
-        ret = do_cni_bin_detect(g_bridge_driver_plugins[i]->plugin, &absence);
-        if (ret != 0) {
+        nret = do_cni_bin_detect(g_bridge_driver_plugins[i]->plugin, res);
+        if (nret != 0) {
             ERROR("Failed to do cni bin detect for plugin %s", g_bridge_driver_plugins[i]->plugin);
-            goto out;
+            goto err_out;
         }
     }
 
-    if (absence == NULL) {
+    return res;
+
+err_out:
+    util_free_string_array(res);
+    return NULL;
+}
+
+static int set_missing_plugin_err_msg(string_array *missing)
+{
+    int ret = 0;
+    char *cni_str = NULL;
+    char *path_str = NULL;
+
+    if (missing->items == NULL) {
         return ret;
     }
 
-    len = util_array_len((const char **)absence);
-    file_str = util_string_join(",", (const char **)absence, len);
-    if (file_str == NULL) {
+    cni_str = util_string_join(",", (const char **)missing->items, missing->len);
+    if (cni_str == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
 
-    dir_str = util_string_join(";", (const char **)g_store.bin_paths, g_store.bin_paths_len);
-    if (dir_str == NULL) {
+    path_str = util_string_join(",", (const char **)g_store.bin_paths, g_store.bin_paths_len);
+    if (path_str == NULL) {
         ERROR("Out of memory");
-        free(file_str);
+        free(cni_str);
         ret = -1;
         goto out;
     }
 
-    isulad_set_error_message("WARN:cannot find cni plugin \"%s\" in dir \"%s\"", file_str, dir_str);
-    free(file_str);
-    free(dir_str);
+    isulad_set_error_message("WARN:cannot find cni plugin \"%s\" in dir \"%s\"", cni_str, path_str);
+    free(cni_str);
+    free(path_str);
 
 out:
-    util_free_array(absence);
     return ret;
 }
 
@@ -1360,6 +1431,7 @@ int native_config_create(const network_create_request *request, network_create_r
 {
     int ret = 0;
     uint32_t cc = ISULAD_SUCCESS;
+    string_array *missing = NULL;
     struct cni_network_list_conf *conflist = NULL;
     const struct net_driver *pnet = NULL;
 
@@ -1376,17 +1448,20 @@ int native_config_create(const network_create_request *request, network_create_r
         goto out;
     }
 
-    if (pnet->ops->check == NULL) {
-        ERROR("net type: %s unsupport check", pnet->driver);
+    if (pnet->ops->check == NULL || pnet->ops->conf == NULL || pnet->ops->detect == NULL) {
+        ERROR("net type: %s unsupport ops", pnet->driver);
         ret = -1;
         goto out;
     }
+
     ret = pnet->ops->check(request);
     if (ret != 0) {
         ERROR("Failed to check %s", pnet->driver);
         cc = ISULAD_ERR_INPUT;
         goto out;
     }
+
+    missing = pnet->ops->detect();
 
     conflist = (struct cni_network_list_conf *)util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (conflist == NULL) {
@@ -1396,12 +1471,7 @@ int native_config_create(const network_create_request *request, network_create_r
         goto out;
     }
 
-    if (pnet->ops->conf == NULL) {
-        ERROR("net type: %s unsupport conf", pnet->driver);
-        ret = -1;
-        goto out;
-    }
-    conflist->list = pnet->ops->conf(request);
+    conflist->list = pnet->ops->conf(request, missing->items);
     if (conflist->list == NULL) {
         ERROR("Failed to conf %s", pnet->driver);
         cc = ISULAD_ERR_EXEC;
@@ -1433,19 +1503,16 @@ int native_config_create(const network_create_request *request, network_create_r
     (*response)->name = util_strdup_s(conflist->list->name);
     conflist = NULL;
 
-    if (pnet->ops->detect == NULL) {
-        ERROR("net type: %s unsupport detect", pnet->driver);
-        ret = -1;
-        goto out;
-    }
-    ret = pnet->ops->detect((const char **)g_store.bin_paths, g_store.bin_paths_len);
+    ret = set_missing_plugin_err_msg(missing);
     if (ret != 0) {
-        ERROR("Failed to detect %s", pnet->driver);
+        ERROR("Failed to set missing plugin err msg");
         cc = ISULAD_ERR_EXEC;
+        goto out;
     }
 
 out:
     free_cni_network_list_conf(conflist);
+    util_free_string_array(missing);
 
     (*response)->cc = cc;
     if (g_isulad_errmsg != NULL) {

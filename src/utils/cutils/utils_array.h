@@ -43,6 +43,8 @@ typedef struct string_array_t {
     size_t cap;
 } string_array;
 
+string_array *util_string_array_new(size_t len);
+
 void util_free_string_array(string_array *ptr);
 
 int util_append_string_array(string_array *sarr, const char *val);

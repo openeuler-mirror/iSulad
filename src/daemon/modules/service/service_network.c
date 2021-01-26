@@ -23,6 +23,15 @@
 #include "utils_port.h"
 #include "err_msg.h"
 #include "namespace.h"
+#include "path.h"
+
+#define SHORT_ID_SPACE 12 + 1
+
+// ignore native network when network_mode != bridge or container is syscontainer
+static inline bool native_network_checker(host_config *hostconfig)
+{
+    return namespace_is_bridge(hostconfig->network_mode) && !hostconfig->system_container;
+}
 
 bool validate_container_network(container_t *cont)
 {
@@ -36,7 +45,7 @@ bool validate_container_network(container_t *cont)
 
     container_lock(cont);
 
-    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
+    if (!native_network_checker(cont->hostconfig)) {
         ret = true;
         goto out;
     }
@@ -88,7 +97,7 @@ static char *get_netns_path(const char *id, const int pid, const bool clean)
 
     nret = snprintf(fullpath, sizeof(fullpath), netns_fmt, pid);
     if ((size_t)nret >= sizeof(fullpath) || nret < 0) {
-        ERROR("Sprint nspath failed");
+        ERROR("snprintf fullpath failed");
         return NULL;
     }
 
@@ -148,7 +157,7 @@ static char *find_ifname(map_t *ifname_table)
     for (i = 0; i < IFNAME_MAX; i++) {
         nret = snprintf(fullname, sizeof(fullname), ifname_fmt, i);
         if ((size_t)nret >= sizeof(fullname) || nret < 0) {
-            ERROR("Sprint nspath failed");
+            ERROR("snprintf fullname failed");
             return NULL;
         }
 
@@ -289,6 +298,9 @@ out:
 
 static json_map_string_string * prepare_native_args(const container_t *cont)
 {
+#define DNS_NAME_MAX_LENGTH 63
+    int nret = 0;
+    char name[DNS_NAME_MAX_LENGTH + 1] = { 0x00 };
     json_map_string_string *args = NULL;
 
     args = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
@@ -302,12 +314,27 @@ static json_map_string_string * prepare_native_args(const container_t *cont)
         goto err_out;
     }
 
-    if (append_json_map_string_string(args, "K8S_POD_NAMESPACE", cont->common_config->name) != 0) {
+    if (strlen(cont->common_config->name) > DNS_NAME_MAX_LENGTH) {
+        // set short id as dns name
+        nret = snprintf(name, SHORT_ID_SPACE, "%s", cont->common_config->id);
+        if (nret < 0) {
+            ERROR("snprintf name failed, %d", nret);
+            goto err_out;
+        }
+    } else {
+        nret = snprintf(name, sizeof(name), "%s", cont->common_config->name);
+        if (nret < 0 || (size_t)nret >= sizeof(name)) {
+            ERROR("snprintf name failed");
+            goto err_out;
+        }
+    }
+
+    if (append_json_map_string_string(args, "K8S_POD_NAMESPACE", name) != 0) {
         ERROR("Append args tmp failed");
         goto err_out;
     }
 
-    if (append_json_map_string_string(args, "K8S_POD_NAME", cont->common_config->name) != 0) {
+    if (append_json_map_string_string(args, "K8S_POD_NAME", name) != 0) {
         ERROR("Append args tmp failed");
         goto err_out;
     }
@@ -725,6 +752,8 @@ static int parse_result(const struct network_api_result *item, char **key,
             ERROR("Failed to convert ip_prefix_len from string to int");
             goto out;
         }
+
+        tmp_value->gateway = util_strdup_s(item->gateway[0]);
     }
     tmp_value->mac_address = util_strdup_s(item->mac);
 
@@ -867,6 +896,441 @@ out:
     return ret;
 }
 
+typedef int (*append_content_callback_t)(const char *hostname, defs_map_string_object_networks_element *values,
+                                         string_array *array);
+
+static int append_hosts_content(const char *hostname, defs_map_string_object_networks_element *value,
+                                string_array *hosts)
+{
+    int ret = 0;
+    int nret = 0;
+    size_t size = 0;
+    char *tmp_str = NULL;
+    const char *ip_address = value->ip_address;
+
+    if (ip_address == NULL) {
+        return 0;
+    }
+
+    size = strlen(ip_address) + 1 + strlen(hostname) + 1;
+    tmp_str = util_common_calloc_s(size);
+    if (tmp_str == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    nret = snprintf(tmp_str, size, "%s %s", ip_address, hostname);
+    if (nret < 0 || (size_t)nret >= size) {
+        ERROR("snprintf hosts failed");
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_append_string_array(tmp_str, hosts);
+    if (ret != 0) {
+        ERROR("Failed to append hosts string array");;
+        goto out;
+    }
+
+out:
+    free(tmp_str);
+    return ret;
+}
+
+static int append_dns_content(const char *hostname, defs_map_string_object_networks_element *value, string_array *dns)
+{
+    int ret = 0;
+    int nret = 0;
+    size_t size = 0;
+    char *tmp_str = NULL;
+    const char *gateway = value->gateway;
+
+    if (gateway == NULL) {
+        return 0;
+    }
+
+    size = strlen("nameserver") + 1 + strlen(gateway) + 1;
+    tmp_str = util_common_calloc_s(size);
+    if (tmp_str == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    nret = snprintf(tmp_str, size, "nameserver %s", gateway);
+    if (nret < 0 || (size_t)nret >= size) {
+        ERROR("snprintf dns failed");
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_append_string_array(tmp_str, dns);
+    if (ret != 0) {
+        ERROR("Failed to append dns string array");
+        goto out;
+    }
+
+out:
+    free(tmp_str);
+    return ret;
+}
+
+static int do_update_internal_file(const char *id, const char *file_path,
+                                   const defs_map_string_object_networks *networks,
+                                   const append_content_callback_t op)
+{
+    int ret = 0;
+    int nret = 0;
+    size_t i = 0;
+    char *str = NULL;
+    char *content = NULL;
+    char *tmp_content = NULL;
+    string_array *array = NULL;
+    char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
+
+    array = (string_array *)util_common_calloc_s(sizeof(string_array));
+    if (array == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    nret = snprintf(hostname, SHORT_ID_SPACE, "%s", id);
+    if (nret < 0) {
+        ERROR("snprintf hostname failed, %d", nret);
+        ret = -1;
+        goto out;
+    }
+
+    if (!util_file_exists(file_path)) {
+        ERROR("container %s file %s not exist", id, file_path);
+    } else {
+        content = util_read_text_file(file_path);
+        if (content == NULL) {
+            ERROR("read content from file %s failed", file_path);
+            isulad_set_error_message("read content from file %s failed", file_path);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    for (i = 0; i < networks->len; i++) {
+        ret = op(hostname, networks->values[i], array);
+        if (ret != 0) {
+            ERROR("Failed to op networks");
+            goto out;
+        }
+    }
+
+    str = util_string_join("\n", (const char **)array->items, array->len);
+    if (str == NULL) {
+        ERROR("Failed to join array string");
+        ret = -1;
+        goto out;
+    }
+
+    tmp_content = util_string_append(str, content);
+    free(content);
+    content = tmp_content;
+
+    tmp_content = util_string_append("\n", content);
+    free(content);
+    content = tmp_content;
+
+    ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
+    if (ret != 0) {
+        if (errno == EROFS) {
+            // open in read only file system
+            WARN("failed to write file %s in readonly file system", file_path);
+            ret = 0;
+        } else {
+            ERROR("Failed to write file %s: %s", file_path, strerror(errno));
+            isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
+            goto out;
+        }
+    }
+
+out:
+    free(str);
+    free(content);
+    util_free_string_array(array);
+    return ret;
+}
+
+static int update_internal_file(const container_t *cont)
+{
+    if (cont->network_settings == NULL || cont->network_settings->networks == NULL ||
+        cont->network_settings->networks->len == 0) {
+        return 0;
+    }
+
+    if (do_update_internal_file(cont->common_config->id, cont->common_config->hosts_path, cont->network_settings->networks,
+                                append_hosts_content) != 0) {
+        ERROR("Failed to update hosts");
+        return -1;
+    }
+
+    if (do_update_internal_file(cont->common_config->id, cont->common_config->resolv_conf_path,
+                                cont->network_settings->networks, append_dns_content) != 0) {
+        ERROR("Failed to update resolv.conf");
+        return -1;
+    }
+
+    return 0;
+}
+
+static map_t *get_ip_map(const defs_map_string_object_networks *networks)
+{
+    size_t i = 0;
+    bool val = true;
+    // string -> bool
+    map_t *ip_map = NULL;
+
+    ip_map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (ip_map == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    for (i = 0; i < networks->len; i++) {
+        if (networks->keys[i] == NULL || networks->values[i] == NULL ||
+            networks->values[i]->ip_address == NULL) {
+            WARN("network %s doesn't have ip address", networks->keys[i] != NULL ? networks->keys[i] : " ");
+            continue;
+        }
+
+        if (map_search(ip_map, networks->values[i]->ip_address) != NULL) {
+            ERROR("ip address %s conflict", networks->values[i]->ip_address);
+            goto err_out;
+        }
+
+        if (!map_replace(ip_map, (void *)networks->values[i]->ip_address, (void *)&val)) {
+            ERROR("Failed to insert ip address %s in map", networks->values[i]->ip_address);
+            goto err_out;
+        }
+    }
+
+    return ip_map;
+
+err_out:
+    map_free(ip_map);
+    return NULL;
+}
+
+static map_t *get_gateway_map(const defs_map_string_object_networks *networks)
+{
+    size_t i = 0;
+    bool val = true;
+    // string -> bool
+    map_t *gateway_map = NULL;
+
+    gateway_map = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (gateway_map == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    for (i = 0; i < networks->len; i++) {
+        if (networks->keys[i] == NULL || networks->values[i] == NULL ||
+            networks->values[i]->gateway == NULL) {
+            WARN("network %s doesn't have gateway", networks->keys[i] != NULL ? networks->keys[i] : " ");
+            continue;
+        }
+
+        if (map_search(gateway_map, networks->values[i]->gateway) != NULL) {
+            ERROR("ip address %s conflict", networks->values[i]->gateway);
+            goto err_out;
+        }
+
+        if (!map_replace(gateway_map, (void *)networks->values[i]->gateway, (void *)&val)) {
+            ERROR("Failed to insert ip address %s in map", networks->values[i]->gateway);
+            goto err_out;
+        }
+    }
+
+    return gateway_map;
+
+err_out:
+    map_free(gateway_map);
+    return NULL;
+}
+
+typedef bool (*checker_callback_t)(const char *hostname, const map_t *ip_map, const char **hosts);
+
+bool hosts_checker(const char *hostname, const map_t *ip_map, const char **hosts)
+{
+    return strcmp(hostname, hosts[1]) == 0 && map_search(ip_map, (void *)hosts[0]) != NULL;
+}
+
+bool dns_checker(const char *hostname, const map_t *gateway_map, const char **dns)
+{
+    return strcmp("nameserver", dns[0]) == 0 && map_search(gateway_map, (void *)dns[1]) != NULL;
+}
+
+static int drop_file_content(const char *line, const char *hostname, const map_t *map, string_array *array,
+                             const checker_callback_t checker)
+{
+    int ret = 0;
+    char *tmp_line = NULL;
+    char **splits = NULL;
+
+    tmp_line = util_strdup_s(line);
+    util_trim_newline(tmp_line);
+    tmp_line = util_trim_space(tmp_line);
+
+    if (tmp_line[0] == '#') {
+        goto append_out;
+    }
+
+    splits = util_string_split(tmp_line, ' ');
+    if (splits == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    if (util_array_len((const char **)splits) < 2) {
+        goto append_out;
+    }
+
+    if (checker(hostname, map, (const char **)splits)) {
+        goto out;
+    }
+
+append_out:
+    ret = util_append_string_array(line, array);
+    if (ret != 0) {
+        ERROR("Failed to append string array");
+    }
+
+out:
+    free(tmp_line);
+    util_free_array(splits);
+    return ret;
+}
+
+static int do_drop_internal_file(const char *id, const char *file_path, const defs_map_string_object_networks *networks,
+                                 const map_t *map, const checker_callback_t checker)
+{
+    int ret = 0;
+    int nret = 0;
+    char *str = NULL;
+    FILE *fp = NULL;
+    size_t length = 0;
+    char *pline = NULL;
+    char hostname[MAX_HOST_NAME_LEN] = { 0x00 };
+    string_array *array = NULL;
+
+    if (!util_file_exists(file_path)) {
+        ERROR("container %s file %s not exist", id, file_path);
+        isulad_set_error_message("container %s file %s not exist", id, file_path);
+        return -1;
+    }
+
+    nret = snprintf(hostname, SHORT_ID_SPACE, "%s", id);
+    if (nret < 0) {
+        ERROR("snprintf hostname failed, %d", nret);
+        return -1;
+    }
+
+    array = (string_array *)util_common_calloc_s(sizeof(string_array));
+    if (array == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    fp = util_fopen(file_path, "a+");
+    if (fp == NULL) {
+        if (errno == EROFS) {
+            WARN("failed to open file %s in readonly file system", file_path);
+            goto out;
+        } else {
+            ERROR("Failed to open %s: %s", file_path, strerror(errno));
+            isulad_set_error_message("Failed to open %s: %s", file_path, strerror(errno));
+            ret = -1;
+            goto out;
+        }
+    }
+
+    while (getline(&pline, &length, fp) != -1) {
+        if (pline == NULL) {
+            ERROR("get %s content failed", file_path);
+            ret = -1;
+            goto out;
+        }
+        ret = drop_file_content(pline, hostname, map, array, checker);
+        if (ret != 0) {
+            ERROR("Failed to drop file content");
+            goto out;
+        }
+    }
+
+    str = util_string_join("", (const char **)array->items, array->len);
+    if (str == NULL) {
+        ERROR("Failed to join array string");
+        ret = -1;
+        goto out;
+    }
+
+    ret = util_write_file(file_path, str, strlen(str), NETWORK_MOUNT_FILE_MODE);
+    if (ret != 0) {
+        ERROR("Failed to write file %s: %s", file_path, strerror(errno));
+        isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
+        goto out;
+    }
+
+out:
+    free(str);
+    free(pline);
+    if (fp != NULL) {
+        fclose(fp);
+    }
+    util_free_string_array(array);
+    return ret;
+}
+
+static int drop_internal_file(const container_t *cont)
+{
+    int ret = 0;
+    map_t *ip_map = NULL;
+    map_t *gateway_map = NULL;
+
+    if (cont->network_settings == NULL || cont->network_settings->networks == NULL ||
+        cont->network_settings->networks->len == 0) {
+        return 0;
+    }
+
+    ip_map = get_ip_map(cont->network_settings->networks);
+    if (ip_map == NULL) {
+        ERROR("Failed to get ip map");
+        return -1;
+    }
+
+    gateway_map = get_gateway_map(cont->network_settings->networks);
+    if (gateway_map == NULL) {
+        ERROR("Failed to get gateway map");
+        ret = -1;
+        goto out;
+    }
+
+    if (do_drop_internal_file(cont->common_config->id, cont->common_config->hosts_path, cont->network_settings->networks,
+                              ip_map, hosts_checker) != 0) {
+        ERROR("Failed to drop hosts in hosts file");
+        ret = -1;
+        goto out;
+    }
+
+    if (do_drop_internal_file(cont->common_config->id, cont->common_config->resolv_conf_path,
+                              cont->network_settings->networks, gateway_map, dns_checker) != 0) {
+        ERROR("Failed to drop dns in resolv.conf");
+        ret = -1;
+        goto out;
+    }
+
+out:
+    map_free(ip_map);
+    map_free(gateway_map);
+    return ret;
+}
+
 int setup_network(container_t *cont)
 {
     int ret = 0;
@@ -881,8 +1345,7 @@ int setup_network(container_t *cont)
 
     container_lock(cont);
 
-    // set up network when network_mode is bridge
-    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
+    if (!native_network_checker(cont->hostconfig)) {
         goto out;
     }
 
@@ -944,6 +1407,12 @@ int setup_network(container_t *cont)
     ret = container_network_settings_to_disk(cont);
     if (ret != 0) {
         ERROR("Failed to save container '%s' network settings", cont->common_config->id);
+        goto out;
+    }
+
+    ret = update_internal_file(cont);
+    if (ret != 0) {
+        ERROR("Failed to update container internal network file");
         goto out;
     }
 
@@ -1147,7 +1616,7 @@ static char *iptables_get_rule(const char *command, const char *id, const char *
     args[i++] = util_strdup_s("POSTROUTING");
     args[i] = util_strdup_s("--wait");
 
-    DEBUG("iptables command: %s -t nat -S POSTROUTING", command);
+    DEBUG("iptables command: %s -t nat -S POSTROUTING --wait", command);
     if (!util_exec_cmd(run_iptables_list, args, NULL, &stdout_msg, &stderr_msg)) {
         ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
         goto out;
@@ -1230,7 +1699,7 @@ static int iptables_delete_rule(const char *command, const char *id, const char 
     args[i++] = util_strdup_s(comment);
     args[i] = util_strdup_s("--wait");
 
-    DEBUG("iptables command: %s -t nat -D POSTROUTING -s %s -j %s -m comment --comment %s", command, ip, chain, comment);
+    DEBUG("iptables command: %s -t nat -D POSTROUTING -s %s -j %s -m comment --comment %s --wait", command, ip, chain, comment);
     if (!util_exec_cmd(run_iptables_delete, args, NULL, &stdout_msg, &stderr_msg)) {
         if (!is_not_exist_err(command, stderr_msg)) {
             ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
@@ -1268,7 +1737,7 @@ static int iptables_clear_chain(const char *command, const char *chain)
     args[i++] = util_strdup_s(chain);
     args[i] = util_strdup_s("--wait");
 
-    DEBUG("iptables command: %s -t nat -F %s", command, chain);
+    DEBUG("iptables command: %s -t nat -F %s --wait", command, chain);
     if (!util_exec_cmd(run_iptables_clear_chain, args, NULL, &stdout_msg, &stderr_msg)) {
         if (!is_not_exist_err(command, stderr_msg)) {
             ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
@@ -1306,7 +1775,7 @@ static int iptables_delete_chain(const char *command, const char *chain)
     args[i++] = util_strdup_s(chain);
     args[i] = util_strdup_s("--wait");
 
-    DEBUG("iptables command: %s -t nat -X %s", command, chain);
+    DEBUG("iptables command: %s -t nat -X %s --wait", command, chain);
     if (!util_exec_cmd(run_iptables_delete_chain, args, NULL, &stdout_msg, &stderr_msg)) {
         if (!is_not_exist_err(command, stderr_msg)) {
             ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
@@ -1427,9 +1896,8 @@ int teardown_network(container_t *cont, const bool clean)
         return -1;
     }
 
-    // tear down network when network_mode is bridge
-    if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
-        return 0;
+    if (!native_network_checker(cont->hostconfig)) {
+        goto out;
     }
 
     if (cont->network_settings->networks == NULL || cont->network_settings->networks->len == 0) {
@@ -1458,6 +1926,11 @@ int teardown_network(container_t *cont, const bool clean)
     }
 
 out:
+    ret = drop_internal_file(cont);
+    if (ret != 0) {
+        ERROR("Failed to update container internal network file");
+    }
+
     free_defs_map_string_object_networks(cont->network_settings->networks);
     cont->network_settings->networks = NULL;
 

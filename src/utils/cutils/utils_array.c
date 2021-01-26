@@ -238,3 +238,33 @@ void util_free_string_array(string_array *ptr)
 
     free(ptr);
 }
+
+string_array *util_string_array_new(size_t len)
+{
+    string_array *ptr = NULL;
+
+    if (len == 0) {
+        return NULL;
+    }
+
+    ptr = (string_array *)util_common_calloc_s(sizeof(string_array));
+    if (ptr == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    ptr->items = (char **)util_smart_calloc_s(sizeof(char *), len);
+    if (ptr->items == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+
+    ptr->len = 0;
+    ptr->cap = len;
+
+    return ptr;
+
+err_out:
+    util_free_string_array(ptr);
+    return NULL;
+}
