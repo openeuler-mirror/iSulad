@@ -489,6 +489,8 @@ void free_network_api_result(struct network_api_result *ptr)
     ptr->mac = NULL;
     util_free_array_by_len(ptr->ips, ptr->ips_len);
     ptr->ips = NULL;
+    util_free_array_by_len(ptr->gateway, ptr->ips_len);
+    ptr->gateway = NULL;
     ptr->ips_len = 0;
     free(ptr);
 }
@@ -593,10 +595,24 @@ struct network_api_result *network_parse_to_api_result(const char *name, const c
             ret = NULL;
             goto out;
         }
+        ret->gateway = util_smart_calloc_s(sizeof(char *), cni_result->ips_len);
+        if (ret->gateway == NULL) {
+            ERROR("Out of memory");
+            free_network_api_result(ret);
+            ret = NULL;
+            goto out;
+        }
         for (i = 0; i < cni_result->ips_len; i++) {
             ret->ips[ret->ips_len] = util_ipnet_to_string(cni_result->ips[i]->address);
             if (ret->ips[ret->ips_len] == NULL) {
                 WARN("ignore: parse cni result ip failed");
+                continue;
+            }
+            ret->gateway[ret->ips_len] = util_ip_to_string(cni_result->ips[i]->gateway, cni_result->ips[i]->gateway_len);
+            if (ret->gateway[ret->ips_len] == NULL) {
+                WARN("ignore: parse cni result gateway failed");
+                free(ret->ips[ret->ips_len]);
+                ret->ips[ret->ips_len] = NULL;
                 continue;
             }
             ret->ips_len += 1;

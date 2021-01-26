@@ -60,6 +60,7 @@ struct network_api_result {
     char *interface;
 
     char **ips;
+    char **gateway;
     size_t ips_len;
     char *mac;
 };

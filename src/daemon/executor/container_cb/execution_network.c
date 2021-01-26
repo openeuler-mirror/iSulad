@@ -864,8 +864,8 @@ static int create_default_hostname(const char *id, const char *rootpath, bool sh
             }
             v2_spec->config->hostname = util_strdup_s(hostname);
         } else {
-            // hostname max length is 12
-            if (snprintf(hostname, 12, "%s", id) < 0) {
+            // hostname max length is 12 + '\0'
+            if (snprintf(hostname, 13, "%s", id) < 0) {
                 ERROR("sprintf hostname failed");
                 ret = -1;
                 goto out;
