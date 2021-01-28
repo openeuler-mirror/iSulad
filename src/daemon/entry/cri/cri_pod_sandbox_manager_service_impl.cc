@@ -989,12 +989,12 @@ void PodSandboxManagerServiceImpl::GetIPs(const std::string &podSandboxID, const
     }
 
     if (inspect->network_settings != nullptr && inspect->network_settings->ip_address != nullptr) {
-        WARN("Use container inspect ip info: %s", error.GetCMessage());
-        error.Clear();
+        WARN("Use container inspect ip info");
         ips.push_back(inspect->network_settings->ip_address);
     }
 
     WARN("Failed to read pod IP from plugin/docker: %s", error.GetCMessage());
+    error.Clear();
 }
 
 void PodSandboxManagerServiceImpl::SetSandboxStatusNetwork(const container_inspect *inspect,
