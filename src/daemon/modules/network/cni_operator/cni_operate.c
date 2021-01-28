@@ -63,7 +63,7 @@ static void parse_inner_portmapping(const cni_inner_port_mapping *src, struct cn
 
 static int bandwidth_inject(const char *value, struct runtime_conf *rt)
 {
-    int ret = -1;
+    int ret = 0;
     parser_error err = NULL;
     struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
     cni_bandwidth_entry *bwith = NULL;
@@ -177,7 +177,29 @@ out:
 
 static int ip_ranges_inject(const char *value, struct runtime_conf *rt)
 {
-    return 0;
+    int ret = -1;
+    parser_error err = NULL;
+    struct parser_context ctx = { OPT_GEN_SIMPLIFY, 0 };
+    cni_ip_ranges_array_container *ip_ranges = NULL;
+
+    if (value == NULL || rt == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    ip_ranges = cni_ip_ranges_array_container_parse_data(value, &ctx, &err);
+    if (ip_ranges == NULL) {
+        ERROR("Failed to parse ip ranges data from value:%s, err:%s", value, err);
+        ret = -1;
+        goto out;
+    }
+
+    rt->ip_ranges = ip_ranges;
+    ip_ranges = NULL;
+
+out:
+    free(err);
+    return ret;
 }
 
 static struct anno_registry_conf_rt g_registrant_rt[] = {
@@ -697,8 +719,25 @@ static int get_configs_from_cached(const char *network, struct runtime_conf *rc,
         goto out;
     }
     // step 2.2: update bandwidth
+    free_cni_bandwidth_entry(rc->bandwidth);
     rc->bandwidth = info->bandwidth;
     info->bandwidth = NULL;
+
+    // step 2.3: update ip ranges
+    if (info->ip_ranges != NULL && info->ip_ranges_len > 0) {
+        cni_ip_ranges_array_container *tmp_ip_ranges = util_common_calloc_s(sizeof(cni_ip_ranges_array_container));
+        if (tmp_ip_ranges == NULL) {
+            ERROR("Out of memory");
+            ret = -1;
+            goto out;
+        }
+        tmp_ip_ranges->items = info->ip_ranges;
+        info->ip_ranges = NULL;
+        tmp_ip_ranges->len = info->ip_ranges_len;
+        info->ip_ranges_len = 0;
+        tmp_ip_ranges->subitem_lens = info->ip_ranges_item_lens;
+        info->ip_ranges_item_lens = NULL;
+    }
 
     // step 3: return config list string
     if (conf_list != NULL) {

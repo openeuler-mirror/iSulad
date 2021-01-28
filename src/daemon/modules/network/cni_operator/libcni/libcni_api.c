@@ -66,12 +66,17 @@ bool cni_module_init(const char *cache_dir, const char * const *paths, size_t pa
 struct cni_opt_result *cni_get_network_list_cached_result(const struct cni_network_list_conf *list,
                                                           const struct runtime_conf *rc)
 {
+    struct cni_opt_result *result = NULL;
     if (list == NULL || list->list == NULL) {
         ERROR("Empty net list conf argument");
         return NULL;
     }
 
-    return cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
+    if (cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &result) != 0) {
+        ERROR("Get cached result failed");
+    }
+
+    return result;
 }
 
 cni_cached_info *cni_get_network_list_cached_info(const char *network, const struct runtime_conf *rc)
@@ -85,6 +90,12 @@ cni_cached_info *cni_get_network_list_cached_info(const char *network, const str
 }
 
 static int args(const char *action, const struct runtime_conf *rc, struct cni_args **cargs);
+
+typedef int (*cap_fn_t)(const struct runtime_conf *, cni_net_conf_runtime_config *);
+struct cap_inject_item {
+    const char *name;
+    cap_fn_t cb;
+};
 
 static int inject_cni_port_mapping(const struct runtime_conf *rt, cni_net_conf_runtime_config *rt_config)
 {
@@ -112,13 +123,99 @@ static int inject_cni_port_mapping(const struct runtime_conf *rt, cni_net_conf_r
     return 0;
 }
 
+static int inject_cni_bandwidth_entry(const struct runtime_conf *rt, cni_net_conf_runtime_config *rt_config)
+{
+    if (rt->bandwidth == NULL) {
+        return 0;
+    }
+    rt_config->bandwidth = util_common_calloc_s(sizeof(cni_bandwidth_entry));
+    if (rt_config->bandwidth == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    rt_config->bandwidth->ingress_burst = rt->bandwidth->ingress_burst;
+    rt_config->bandwidth->ingress_rate = rt->bandwidth->ingress_rate;
+    rt_config->bandwidth->egress_burst = rt->bandwidth->egress_burst;
+    rt_config->bandwidth->egress_rate = rt->bandwidth->egress_rate;
+    return 0;
+}
+
+static cni_ip_ranges *copy_cni_ip_ranges(cni_ip_ranges *src)
+{
+    cni_ip_ranges *ret = NULL;
+
+    if (src == NULL) {
+        return NULL;
+    }
+    ret = util_common_calloc_s(sizeof(cni_ip_ranges));
+    if (ret == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+    ret->subnet = util_strdup_s(src->subnet);
+    ret->range_start = util_strdup_s(src->range_start);
+    ret->range_end = util_strdup_s(src->range_end);
+    ret->gateway = util_strdup_s(src->gateway);
+    return ret;
+}
+
+static int inject_cni_ip_ranges(const struct runtime_conf *rt, cni_net_conf_runtime_config *rt_config)
+{
+    size_t i, j;
+
+    if (rt->ip_ranges == NULL || rt->ip_ranges->len == 0 || rt->ip_ranges->subitem_lens == NULL) {
+        return 0;
+    }
+
+    rt_config->ip_ranges = util_smart_calloc_s(sizeof(cni_ip_ranges **), rt->ip_ranges->len);
+    if (rt_config->ip_ranges == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    rt_config->ip_ranges_item_lens = util_smart_calloc_s(sizeof(size_t), rt->ip_ranges->len);
+    if (rt_config->ip_ranges_item_lens == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+    for (i = 0; i < rt->ip_ranges->len; i++) {
+        rt_config->ip_ranges[i] = util_smart_calloc_s(sizeof(cni_ip_ranges *), rt->ip_ranges->subitem_lens[i]);
+        if (rt_config->ip_ranges[i] == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+        for (j = 0; j < rt->ip_ranges->subitem_lens[i]; j++) {
+            rt_config->ip_ranges[i][j] = copy_cni_ip_ranges(rt->ip_ranges->items[i][j]);
+            if (rt_config->ip_ranges[i][j] == NULL) {
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+static struct cap_inject_item g_cap_inject_items[] = {
+    {
+        .name = SUPPORT_CAPABILITY_PORTMAPPINGS,
+        .cb = inject_cni_port_mapping
+    },
+    {
+        .name = SUPPORT_CAPABILITY_BANDWIDTH,
+        .cb = inject_cni_bandwidth_entry
+    },
+    {
+        .name = SUPPORT_CAPABILITY_IPRANGES,
+        .cb = inject_cni_ip_ranges
+    }
+};
+
 static int inject_runtime_config_items(const struct cni_network_conf *orig, const struct runtime_conf *rt,
                                        cni_net_conf_runtime_config **rt_config, bool *inserted)
 {
     char *work = NULL;
     bool value = false;
     int ret = -1;
-    size_t i = 0;
+    size_t i, j;
 
     *rt_config = util_common_calloc_s(sizeof(cni_net_conf_runtime_config));
     if (*rt_config == NULL) {
@@ -131,13 +228,17 @@ static int inject_runtime_config_items(const struct cni_network_conf *orig, cons
         if (!value || work == NULL) {
             continue;
         }
-        if (strcmp(work, "portMappings") == 0 && rt->p_mapping_len > 0) {
-            if (inject_cni_port_mapping(rt, *rt_config) != 0) {
+
+        /* new capabilities add to g_cap_inject_items */
+        for (j = 0; j < sizeof(g_cap_inject_items) / sizeof(struct cap_inject_item); j++) {
+            if (strcmp(work, g_cap_inject_items[j].name) != 0) {
+                continue;
+            }
+            if (g_cap_inject_items[j].cb(rt, *rt_config) != 0) {
                 goto free_out;
             }
             *inserted = true;
         }
-        /* new capabilities add here */
     }
     ret = 0;
 free_out:
@@ -160,6 +261,34 @@ static int do_generate_cni_net_conf_json(const struct cni_network_conf *orig, ch
 
 out:
     free(jerr);
+    return ret;
+}
+
+static int copy_cni_net_conf(const cni_net_conf *orig, cni_net_conf **copied)
+{
+    struct parser_context ctx = { OPT_PARSE_FULLKEY | OPT_GEN_SIMPLIFY, 0 };
+    parser_error jerr = NULL;
+    char *tmp_json = NULL;
+    int ret = 0;
+
+    /* generate new json str for injected config */
+    tmp_json = cni_net_conf_generate_json(orig, &ctx, &jerr);
+    if (tmp_json == NULL) {
+        ERROR("Generate cni net conf error: %s", jerr);
+        ret = -1;
+        goto out;
+    }
+
+    *copied = cni_net_conf_parse_data(tmp_json, &ctx, &jerr);
+    if (*copied == NULL) {
+        ERROR("parse cni net conf error: %s", jerr);
+        ret = -1;
+        goto out;
+    }
+
+out:
+    free(jerr);
+    free(tmp_json);
     return ret;
 }
 
@@ -338,7 +467,7 @@ static int find_plugin_in_path(const char *plugin, const char * const *paths, si
     return ret;
 }
 
-static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *version, const char *operator,
+static int run_cni_plugin(const cni_net_conf *p_net, const char *name, const char *version, const char *operator,
                           const struct runtime_conf * rc, struct cni_opt_result * * pret, bool with_result)
 {
     int ret = -1;
@@ -347,8 +476,12 @@ static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *ver
     struct cni_args *cargs = NULL;
     char *full_conf_bytes = NULL;
     struct cni_opt_result *tmp_result = NULL;
+    cni_net_conf *used_net = NULL;
 
-    net.network = p_net;
+    if (copy_cni_net_conf(p_net, &used_net) != 0) {
+        return -1;
+    }
+    net.network = used_net;
 
     ret = find_plugin_in_path(net.network->type, (const char * const *)g_module_conf.bin_paths,
                               g_module_conf.bin_paths_len, &plugin_path);
@@ -385,90 +518,9 @@ static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *ver
 free_out:
     free_cni_args(cargs);
     free(plugin_path);
+    free_cni_net_conf(used_net);
     free(net.bytes);
     return ret;
-}
-
-static inline bool check_add_network_args(const cni_net_conf *net, const struct runtime_conf *rc)
-{
-    return (net == NULL || rc == NULL);
-}
-
-static int add_network(cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
-                       struct cni_opt_result **add_result)
-{
-    if (check_add_network_args(net, rc)) {
-        ERROR("Empty arguments");
-        return -1;
-    }
-    if (!util_valid_container_id(rc->container_id)) {
-        ERROR("Invalid container id: %s", rc->container_id);
-        return -1;
-    }
-    if (!util_validate_network_name(name)) {
-        ERROR("Invalid network name: %s", name);
-        return -1;
-    }
-    if (!util_validate_network_interface(rc->ifname)) {
-        ERROR("Invalid interface name: %s", rc->ifname);
-        return -1;
-    }
-
-    return run_cni_plugin(net, name, version, "ADD", rc, add_result, true);
-}
-
-static inline bool check_add_network_list_args(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
-                                               struct cni_opt_result * const *pret)
-{
-    return (list == NULL || list->list == NULL || rc == NULL || pret == NULL);
-}
-
-int cni_add_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
-                         struct cni_opt_result **pret)
-{
-    int ret = 0;
-    size_t i = 0;
-
-    if (check_add_network_list_args(list, rc, pret)) {
-        ERROR("Empty arguments");
-        return -1;
-    }
-
-    for (i = 0; i < list->list->plugins_len; i++) {
-        ret = add_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, pret);
-        if (ret != 0) {
-            ERROR("Run ADD plugin: %zu failed", i);
-            break;
-        }
-    }
-
-    ret = cni_cache_add(g_module_conf.cache_dir, *pret, list->bytes, list->list->name, rc);
-    if (ret != 0) {
-        ERROR("failed to set network: %s cached result", list->list->name);
-    }
-
-    return ret;
-}
-
-static inline bool check_del_network_args(const cni_net_conf *net, const struct runtime_conf *rc)
-{
-    return (net == NULL || rc == NULL);
-}
-
-static int del_network(cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
-                       struct cni_opt_result **prev_result)
-{
-    if (check_del_network_args(net, rc)) {
-        ERROR("Empty arguments");
-        return -1;
-    }
-
-    return run_cni_plugin(net, name, version, "DEL", rc, prev_result, false);
-}
-
-static inline bool check_del_network_list_args(const struct cni_network_list_conf *list, const struct runtime_conf *rc)
-{
-    return (list == NULL || list->list == NULL || rc == NULL);
 }
 
 struct parse_version {
@@ -562,6 +614,98 @@ static int version_greater_than_or_equal_to(const char *first, const char *secon
     return 0;
 }
 
+static inline bool check_add_network_args(const cni_net_conf *net, const struct runtime_conf *rc)
+{
+    return (net == NULL || rc == NULL);
+}
+
+static int add_network(const cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
+                       struct cni_opt_result **add_result)
+{
+    if (check_add_network_args(net, rc)) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+    if (!util_valid_container_id(rc->container_id)) {
+        ERROR("Invalid container id: %s", rc->container_id);
+        return -1;
+    }
+    if (!util_validate_network_name(name)) {
+        ERROR("Invalid network name: %s", name);
+        return -1;
+    }
+    if (!util_validate_network_interface(rc->ifname)) {
+        ERROR("Invalid interface name: %s", rc->ifname);
+        return -1;
+    }
+
+    return run_cni_plugin(net, name, version, "ADD", rc, add_result, true);
+}
+
+static inline bool check_add_network_list_args(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
+                                               struct cni_opt_result * const *pret)
+{
+    return (list == NULL || list->list == NULL || rc == NULL || pret == NULL);
+}
+
+int cni_add_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc,
+                         struct cni_opt_result **pret)
+{
+    int ret = 0;
+    size_t i = 0;
+    bool greated = false;
+
+    if (check_add_network_list_args(list, rc, pret)) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
+    for (i = 0; i < list->list->plugins_len; i++) {
+        ret = add_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, pret);
+        if (ret != 0) {
+            ERROR("Run ADD plugin: %zu failed", i);
+            break;
+        }
+    }
+
+    if (*pret != NULL && version_greater_than_or_equal_to((*pret)->cniversion, CURRENT_VERSION, &greated) != 0) {
+        WARN("result version: %s is too old, do not save this cache", (*pret)->cniversion);
+        return 0;
+    }
+
+    if (!greated) {
+        return 0;
+    }
+
+    ret = cni_cache_add(g_module_conf.cache_dir, *pret, list->bytes, list->list->name, rc);
+    if (ret != 0) {
+        ERROR("failed to set network: %s cached result", list->list->name);
+    }
+
+    return ret;
+}
+
+static inline bool check_del_network_args(const cni_net_conf *net, const struct runtime_conf *rc)
+{
+    return (net == NULL || rc == NULL);
+}
+
+static int del_network(const cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
+                       struct cni_opt_result **prev_result)
+{
+    if (check_del_network_args(net, rc)) {
+        ERROR("Empty arguments");
+        return -1;
+    }
+
+    return run_cni_plugin(net, name, version, "DEL", rc, prev_result, false);
+}
+
+static inline bool check_del_network_list_args(const struct cni_network_list_conf *list, const struct runtime_conf *rc)
+{
+    return (list == NULL || list->list == NULL || rc == NULL);
+}
+
 int cni_del_network_list(const struct cni_network_list_conf *list, const struct runtime_conf *rc)
 {
     int i = 0;
@@ -579,8 +723,8 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
     }
 
     if (greated) {
-        prev_result = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
-        if (prev_result == NULL) {
+        ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &prev_result);
+        if (ret != 0) {
             ret = -1;
             ERROR("failed to get network: %s cached result", list->list->name);
             goto free_out;
@@ -609,7 +753,7 @@ static inline bool do_check_network_args(const cni_net_conf *net, const struct r
     return (net == NULL || rc == NULL);
 }
 
-static int check_network(cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
+static int check_network(const cni_net_conf *net, const char *name, const char *version, const struct runtime_conf *rc,
                          struct cni_opt_result **prev_result)
 {
     if (do_check_network_args(net, rc)) {
@@ -654,8 +798,8 @@ int cni_check_network_list(const struct cni_network_list_conf *list, const struc
         return 0;
     }
 
-    tmp_result = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc);
-    if (tmp_result == NULL) {
+    ret = cni_get_cached_result(g_module_conf.cache_dir, list->list->name, list->list->cni_version, rc, &tmp_result);
+    if (ret != 0) {
         ret = -1;
         ERROR("failed to get network: %s cached result", list->list->name);
         goto free_out;
@@ -799,6 +943,9 @@ void free_runtime_conf(struct runtime_conf *rc)
     rc->p_mapping = NULL;
     free_cni_bandwidth_entry(rc->bandwidth);
     rc->bandwidth = NULL;
+
+    free_cni_ip_ranges_array_container(rc->ip_ranges);
+    rc->ip_ranges = NULL;
+
     free(rc);
 }
-

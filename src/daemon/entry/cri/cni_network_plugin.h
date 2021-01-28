@@ -22,6 +22,8 @@
 #include <thread>
 #include <vector>
 
+#include <isula_libutils/container_inspect.h>
+
 #include "cri_runtime_service.h"
 #include "errors.h"
 #include "network_plugin.h"
@@ -69,7 +71,6 @@ private:
     auto GetNetNS(const std::string &podSandboxID, Errors &err) -> std::string;
     auto GetNetworkSettingsJson(const std::string &podSandboxID, const std::string netnsPath,
                                 network_api_result_list *result, Errors &err) -> std::string;
-
 
 private:
     virtual void PlatformInit(Errors &error);

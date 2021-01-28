@@ -192,7 +192,7 @@ int network_module_insert_portmapping(const char *val, network_api_conf *conf)
 
 int network_module_insert_bandwith(const char *val, network_api_conf *conf)
 {
-    return do_annotation_insert(CNI_ARGS_PORTMAPPING_KEY, val, conf);
+    return do_annotation_insert(CNI_ARGS_BANDWIDTH_KEY, val, conf);
 }
 
 int network_module_insert_iprange(const char *val, network_api_conf *conf)

@@ -59,6 +59,8 @@ public:
     static const std::string CNI_MUTL_NET_EXTENSION_KEY;
     static const std::string CNI_MUTL_NET_EXTENSION_ARGS_KEY;
     static const std::string CNI_ARGS_EXTENSION_PREFIX_KEY;
+    static const std::string CNI_CAPABILITIES_BANDWIDTH_INGRESS_KEY;
+    static const std::string CNI_CAPABILITIES_BANDWIDTH_ENGRESS_KEY;
 };
 
 auto GetDefaultSandboxImage(Errors &err) -> std::string;
@@ -140,6 +142,8 @@ auto GetRealContainerOrSandboxID(service_executor_t *cb, const std::string &id,
 void RemoveContainer(service_executor_t *cb, const std::string &containerID, Errors &error);
 
 void StopContainer(service_executor_t *cb, const std::string &containerID, int64_t timeout, Errors &error);
+
+int64_t ParseQuantity(const std::string &str, Errors &error);
 }; // namespace CRIHelpers
 
 #endif // DAEMON_ENTRY_CRI_CRI_HELPERS_H
