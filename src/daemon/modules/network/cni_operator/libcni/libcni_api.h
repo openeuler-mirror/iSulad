@@ -19,7 +19,8 @@
 
 #include <isula_libutils/cni_bandwidth_entry.h>
 #include <isula_libutils/cni_cached_info.h>
-#include "isula_libutils/cni_net_conf_list.h"
+#include <isula_libutils/cni_net_conf_list.h>
+#include <isula_libutils/cni_ip_ranges_array.h>
 
 #include "libcni_result_type.h"
 
@@ -28,6 +29,10 @@ extern "C" {
 #endif
 
 #define CURRENT_VERSION "0.4.0"
+
+#define SUPPORT_CAPABILITY_PORTMAPPINGS "portMappings"
+#define SUPPORT_CAPABILITY_BANDWIDTH "bandwidth"
+#define SUPPORT_CAPABILITY_IPRANGES "ipRanges"
 
 struct cni_port_mapping {
     int32_t host_port;
@@ -47,6 +52,8 @@ struct runtime_conf {
     size_t p_mapping_len;
 
     cni_bandwidth_entry *bandwidth;
+
+    cni_ip_ranges_array_container *ip_ranges;
 };
 
 struct cni_network_conf {
