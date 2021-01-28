@@ -85,13 +85,13 @@ function test_container_with_networks()
 
     # run container with ipv4 and ipv6 network
     cont_id=$(isula run -tid --net ${network_name1},${network_name2} -n ${cont_name} busybox sh)
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name} with network ${network_name1} ${network_name2} failed" && return ${FAILURE}
+    [[ "x${cont_id}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name} with network ${network_name1} ${network_name2} failed" && return ${FAILURE}
 
     IP1=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name1}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
+    [[ "x${IP1}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
 
     IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
+    [[ "x${IP2}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
 
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
@@ -127,10 +127,10 @@ function test_container_with_networks()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start exited ${cont_name} failed " && return ${FAILURE}
 
     IP1=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name1}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
+    [[ "x${IP1}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
 
     IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
+    [[ "x${IP2}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
 
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
@@ -142,10 +142,10 @@ function test_container_with_networks()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - restart running ${cont_name} failed " && return ${FAILURE}
 
     IP1=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name1}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
+    [[ "x${IP1}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
 
     IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
+    [[ "x${IP2}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
 
     ping -c 3 -w 10 ${IP1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP1} failed " && return ${FAILURE}
@@ -198,18 +198,18 @@ function test_container_with_networks()
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - ping ${IP2} success, but should failed " && return ${FAILURE}
 
     bridge1=$(isula network inspect -f {{.plugins.bridge}} ${network_name1})
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get ${network_name1} bridge interface failed" && return ${FAILURE}
+    [[ "x${bridge1}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get ${network_name1} bridge interface failed" && return ${FAILURE}
 
     bridge2=$(isula network inspect -f {{.plugins.bridge}} ${network_name2})
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get ${network_name2} bridge interface failed" && return ${FAILURE}
+    [[ "x${bridge2}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get ${network_name2} bridge interface failed" && return ${FAILURE}
 
     isula network rm ${network_name1} ${network_name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${network_name1} ${network_name2} failed" && return ${FAILURE}
 
-    iptables -t nat --list | grep ${cont_id}
+    iptables -t nat --list --wait | grep ${cont_id}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect iptables rules success after rm container" && return ${FAILURE}
 
-    ip6tables -t nat --list | grep ${cont_id}
+    ip6tables -t nat --list --wait | grep ${cont_id}
     [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after rm container" && return ${FAILURE}
 
     ip link show | grep ${bridge1}

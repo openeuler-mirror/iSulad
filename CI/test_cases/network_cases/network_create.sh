@@ -103,7 +103,7 @@ function test_network_create()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name1} failed" && return ${FAILURE}
 
     name=$(isula network create -d bridge --internal | awk 'END {print}')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing bridge failed" && return ${FAILURE}
+    [[ "x${name}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing bridge failed" && return ${FAILURE}
 
     file="/etc/cni/net.d/isulacni-${name}.conflist"
     cat ${file} | grep '"isGateway": true'
@@ -116,7 +116,7 @@ function test_network_create()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name} failed" && return ${FAILURE}
 
     name=$(isula network create --subnet fff0:3::3/64 | awk 'END {print}')
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing IPv6 subnet" && return ${FAILURE}
+    [[ "x${name}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing IPv6 subnet" && return ${FAILURE}
 
     file="/etc/cni/net.d/isulacni-${name}.conflist"
     cat ${file} | grep '"subnet": "fff0:0003::/64",'
