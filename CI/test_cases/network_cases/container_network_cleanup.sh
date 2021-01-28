@@ -36,7 +36,7 @@ function test_container_network_cleanup()
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
-    start_isulad_with_valgrind
+    start_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     # create network
@@ -47,74 +47,94 @@ function test_container_network_cleanup()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name2} failed" && return ${FAILURE}
 
     # run container with network
-    cont_id=$(isula run -tid --net ${network_name1},${network_name2} -n ${cont_name} busybox sh)
-    [[ "x${cont_id}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name} with network ${network_name1} ${network_name2} failed" && return ${FAILURE}
+    for i in $(seq 1 10); do
+        isula run -tid --net ${network_name1},${network_name2} -n ${cont_name}${i} busybox sh
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name}${i} with network ${network_name1} ${network_name2} failed" && return ${FAILURE}
+    done
 
     # kill lxc
     pkill lxc-start
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kill lxc-start failed" && return ${FAILURE}
 
     for i in $(seq 1 10); do
-        status=$(isula inspect -f {{.State.Status}} ${cont_name})
-        if [ "x${status}" == "xexited" ]; then
-            break;
-        fi
-        sleep 1
+        for j in $(seq 1 20); do
+            status=$(isula inspect -f {{.State.Status}} ${cont_name}${i})
+            if [ "x${status}" == "xexited" ]; then
+                break;
+            fi
+            sleep 1
+        done
+
+        status=$(isula inspect -f {{.State.Status}} ${cont_name}${i})
+        [[ "x${status}" != "xexited" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kill container ${cont_name}${i} failed" && return ${FAILURE}
     done
     
     # test iptables rule cleanup
-    isula start ${cont_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name} failed" && return ${FAILURE}
-
-    isula stop -t 0 ${cont_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop container ${cont_name} failed" && return ${FAILURE}
-
-    iptables -t nat --list | grep ${cont_id}
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect iptables rules success after stop container" && return ${FAILURE}
-
-    ip6tables -t nat --list | grep ${cont_id}
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after stop container" && return ${FAILURE}
+    for i in $(seq 1 10); do
+        cont_id=$(isula inspect -f {{.Id}} ${cont_name}${i})
+        [[ "x${cont_id}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get container ${cont_name}${i} Id failed" && return ${FAILURE}
     
-    isula start ${cont_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name} failed" && return ${FAILURE}
+        isula start ${cont_name}${i}
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name}${i} failed" && return ${FAILURE}
+
+        isula stop -t 0 ${cont_name}${i}
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop container ${cont_name}${i} failed" && return ${FAILURE}
+
+        iptables -t nat --list --wait | grep ${cont_id}
+        [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect iptables rules success after stop container" && return ${FAILURE}
+
+        ip6tables -t nat --list --wait | grep ${cont_id}
+        [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after stop container" && return ${FAILURE}
+    done
+    
+    for i in $(seq 1 10); do
+        isula start ${cont_name}${i}
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name}${i} failed" && return ${FAILURE}
+    done
 
     # stop isulad and kill lxc
-    check_valgrind_log
+    stop_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
     pkill lxc-start
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kill lxc-start failed" && return ${FAILURE}
 
-    start_isulad_with_valgrind
+    start_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     # test iptables rule cleanup
     for i in $(seq 1 10); do
-        isula start ${cont_name}
-        if [ $? -eq 0 ]; then
-            break;
-        fi
-        sleep 2
+        cont_id=$(isula inspect -f {{.Id}} ${cont_name}${i})
+        [[ "x${cont_id}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - get container ${cont_name}${i} Id failed" && return ${FAILURE}
+
+        for j in $(seq 1 20); do
+            isula start ${cont_name}${i}
+            if [ $? -eq 0 ]; then
+                break;
+            fi
+            sleep 2
+        done
+
+        status=$(isula inspect -f {{.State.Status}} ${cont_name}${i})
+        [[ "x${status}" != "xrunning" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name}${i} failed after retry" && return ${FAILURE}
+
+        isula stop -t 0 ${cont_name}${i}
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop container ${cont_name}${i} failed" && return ${FAILURE}
+
+        iptables -t nat --list --wait | grep ${cont_id}
+        [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect iptables rules success after stop container" && return ${FAILURE}
+
+        ip6tables -t nat --list --wait | grep ${cont_id}
+        [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after stop container" && return ${FAILURE}
     done
-    status=$(isula inspect -f {{.State.Status}} ${cont_name})
-    [[ "x${status}" != "xrunning" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name} failed" && return ${FAILURE}
 
-    isula stop -t 0 ${cont_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop container ${cont_name} failed" && return ${FAILURE}
-
-    iptables -t nat --list | grep ${cont_id}
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect iptables rules success after stop container" && return ${FAILURE}
-
-    ip6tables -t nat --list | grep ${cont_id}
-    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after stop container" && return ${FAILURE}
-
-    isula rm ${cont_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm ${cont_name} failed" && return ${FAILURE}
+    isula rm $(isula ps -aq)
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm containers failed" && return ${FAILURE}
 
     isula network rm ${network_name1} ${network_name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${network_name1} ${network_name2} failed" && return ${FAILURE}
 
-    check_valgrind_log
+    stop_isulad_without_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
     start_isulad_with_valgrind
