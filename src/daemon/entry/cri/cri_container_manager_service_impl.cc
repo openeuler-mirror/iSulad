@@ -126,9 +126,8 @@ auto ContainerManagerServiceImpl::PackCreateContainerHostConfigSecurityContext(
     return 0;
 }
 
-auto ContainerManagerServiceImpl::GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig
-                                                                    &containerConfig,
-                                                                    Errors &error) -> host_config *
+auto ContainerManagerServiceImpl::GenerateCreateContainerHostConfig(
+    const runtime::v1alpha2::ContainerConfig &containerConfig, Errors &error) -> host_config *
 {
     host_config *hostconfig = (host_config *)util_common_calloc_s(sizeof(host_config));
     if (hostconfig == nullptr) {
@@ -294,11 +293,11 @@ cleanup:
     return nullptr;
 }
 
-container_create_request *ContainerManagerServiceImpl::GenerateCreateContainerRequest(
-    const std::string &realPodSandboxID,
-    const runtime::v1alpha2::ContainerConfig &containerConfig,
-    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
-    const std::string &podSandboxRuntime, Errors &error)
+container_create_request *
+ContainerManagerServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
+                                                            const runtime::v1alpha2::ContainerConfig &containerConfig,
+                                                            const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+                                                            const std::string &podSandboxRuntime, Errors &error)
 {
     struct parser_context ctx {
         OPT_GEN_SIMPLIFY, 0
@@ -333,8 +332,7 @@ container_create_request *ContainerManagerServiceImpl::GenerateCreateContainerRe
         hostconfig->cgroup_parent = util_strdup_s(podSandboxConfig.linux().cgroup_parent().c_str());
     }
 
-    custom_config = GenerateCreateContainerCustomConfig(realPodSandboxID, containerConfig,
-                                                        podSandboxConfig, error);
+    custom_config = GenerateCreateContainerCustomConfig(realPodSandboxID, containerConfig, podSandboxConfig, error);
     if (error.NotEmpty()) {
         goto cleanup;
     }
@@ -611,7 +609,6 @@ void ContainerManagerServiceImpl::ListContainersToGRPC(container_list_response *
     }
 }
 
-
 void ContainerManagerServiceImpl::ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
                                                  std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
                                                  Errors &error)
@@ -681,9 +678,8 @@ auto ContainerManagerServiceImpl::PackContainerStatsFilter(const runtime::v1alph
     return 0;
 }
 
-void ContainerManagerServiceImpl::PackContainerStatsAttributes(const char *id,
-                                                               std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
-                                                               Errors &error)
+void ContainerManagerServiceImpl::PackContainerStatsAttributes(
+    const char *id, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container, Errors &error)
 {
     if (id == nullptr) {
         return;
@@ -779,7 +775,11 @@ void ContainerManagerServiceImpl::ContainerStatsToGRPC(
                                           container);
 
         if (response->container_stats[i]->mem_used != 0u) {
-            container->mutable_memory()->mutable_working_set_bytes()->set_value(response->container_stats[i]->mem_used);
+            uint64_t workingset = response->container_stats[i]->mem_used;
+            if (response->container_stats[i]->inactive_file_total < response->container_stats[i]->mem_used) {
+                workingset = response->container_stats[i]->mem_used - response->container_stats[i]->inactive_file_total;
+            }
+            container->mutable_memory()->mutable_working_set_bytes()->set_value(workingset);
         }
 
         if (response->container_stats[i]->cpu_use_nanos != 0u) {
@@ -838,9 +838,8 @@ cleanup:
     free_container_stats_response(response);
 }
 
-void ContainerManagerServiceImpl::PackContainerImageToStatus(container_inspect *inspect,
-                                                             std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus,
-                                                             Errors &error)
+void ContainerManagerServiceImpl::PackContainerImageToStatus(
+    container_inspect *inspect, std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error)
 {
     if (inspect->config == nullptr) {
         return;
@@ -854,9 +853,9 @@ void ContainerManagerServiceImpl::PackContainerImageToStatus(container_inspect *
     return;
 }
 
-void ContainerManagerServiceImpl::UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt,
-                                                              int64_t &startedAt, int64_t &finishedAt,
-                                                              std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
+void ContainerManagerServiceImpl::UpdateBaseStatusFromInspect(
+    container_inspect *inspect, int64_t &createdAt, int64_t &startedAt, int64_t &finishedAt,
+    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
 {
     runtime::v1alpha2::ContainerState state { runtime::v1alpha2::CONTAINER_UNKNOWN };
     std::string reason;
@@ -1198,7 +1197,6 @@ auto ContainerManagerServiceImpl::InspectContainerState(const std::string &Id, E
     return inspect_data;
 }
 
-
 auto ContainerManagerServiceImpl::ValidateExecRequest(const runtime::v1alpha2::ExecRequest &req, Errors &error) -> int
 {
     if (req.container_id().empty()) {
@@ -1260,8 +1258,8 @@ void ContainerManagerServiceImpl::Exec(const runtime::v1alpha2::ExecRequest &req
     resp->set_url(url);
 }
 
-auto ContainerManagerServiceImpl::ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req,
-                                                        Errors &error) -> int
+auto ContainerManagerServiceImpl::ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req, Errors &error)
+-> int
 {
     if (req.container_id().empty()) {
         error.SetError("missing required container id!");
@@ -1286,8 +1284,7 @@ auto ContainerManagerServiceImpl::ValidateAttachRequest(const runtime::v1alpha2:
 }
 
 void ContainerManagerServiceImpl::Attach(const runtime::v1alpha2::AttachRequest &req,
-                                         runtime::v1alpha2::AttachResponse *resp,
-                                         Errors &error)
+                                         runtime::v1alpha2::AttachResponse *resp, Errors &error)
 {
     if (ValidateAttachRequest(req, error) != 0) {
         return;

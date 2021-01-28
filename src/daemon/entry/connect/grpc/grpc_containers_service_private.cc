@@ -790,6 +790,7 @@ void ContainerServiceImpl::stats_response_to_grpc(const container_stats_response
             }
             stats->set_cache(response->container_stats[i]->cache);
             stats->set_cache_total(response->container_stats[i]->cache_total);
+            stats->set_inactive_file_total(response->container_stats[i]->inactive_file_total);
         }
     }
     gresponse->set_cc(response->cc);

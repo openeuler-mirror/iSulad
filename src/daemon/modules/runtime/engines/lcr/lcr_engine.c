@@ -164,6 +164,7 @@ static void copy_container_resources_stats(const struct lcr_container_state *lcs
     rs_stats->kmem_limit = lcs->kmem_limit;
     rs_stats->cache = lcs->cache;
     rs_stats->cache_total = lcs->cache_total;
+    rs_stats->inactive_file_total = lcs->inactive_file_total;
 }
 
 /* get container cgroup resources */
