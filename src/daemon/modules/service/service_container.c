@@ -1288,7 +1288,7 @@ static int force_kill(container_t *cont)
     }
     ret = container_wait_stop(cont, 90);
     if (ret != 0) {
-        WARN("Container(%s) stuck for 90 seconds, try to kill the monitor of container", id);
+        ERROR("Container(%s) stuck for 90 seconds, try to kill the monitor of container", id);
         ret = send_signal_to_process(cont->state->state->p_pid, cont->state->state->p_start_time, stop_signal, SIGKILL);
         if (ret != 0) {
             ERROR("Container stuck for 90 seconds and failed to kill the monitor of container, "

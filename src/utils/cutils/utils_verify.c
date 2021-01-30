@@ -184,14 +184,36 @@ bool util_validate_socket(const char *socket)
 bool util_valid_device_mode(const char *mode)
 {
     size_t i = 0;
+    int r_count = 0;
+    int w_count = 0;
+    int m_count = 0;
 
     if (mode == NULL || !strcmp(mode, "")) {
         return false;
     }
 
     for (i = 0; i < strlen(mode); i++) {
-        if (mode[i] != 'r' && mode[i] != 'w' && mode[i] != 'm') {
-            return false;
+        switch (mode[i]) {
+            case 'r':
+                if (r_count != 0) {
+                    return false;
+                }
+                r_count++;
+                break;
+            case 'w':
+                if (w_count != 0) {
+                    return false;
+                }
+                w_count++;
+                break;
+            case 'm':
+                if (m_count != 0) {
+                    return false;
+                }
+                m_count++;
+                break;
+            default:
+                return false;
         }
     }
 
