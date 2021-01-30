@@ -145,12 +145,12 @@ int cmd_volume_ls_main(int argc, const char **argv)
         COMMON_OPTIONS(g_cmd_volume_ls_args)
     };
 
+    isula_libutils_default_log_config(argv[0], &lconf);
     subcommand_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_volume_ls_desc,
                     g_cmd_volume_ls_usage);
     if (command_parse_args(&cmd, &g_cmd_volume_ls_args.argc, &g_cmd_volume_ls_args.argv)) {
         exit(exit_code);
     }
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("volume ls: log init failed");
         exit(exit_code);

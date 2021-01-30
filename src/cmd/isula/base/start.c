@@ -327,12 +327,12 @@ int cmd_start_main(int argc, const char **argv)
     command_t cmd;
     struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_start_args) START_OPTIONS(g_cmd_start_args)};
 
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_start_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
     g_cmd_start_args.progname = argv[0];
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_start_desc,
                  g_cmd_start_usage);
     if (command_parse_args(&cmd, &g_cmd_start_args.argc, &g_cmd_start_args.argv)) {

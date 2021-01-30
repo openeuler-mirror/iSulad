@@ -78,12 +78,12 @@ int cmd_stop_main(int argc, const char **argv)
         STOP_OPTIONS(g_cmd_stop_args)
     };
 
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_stop_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
     g_cmd_stop_args.progname = argv[0];
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_stop_desc,
                  g_cmd_stop_usage);
     if (command_parse_args(&cmd, &g_cmd_stop_args.argc, &g_cmd_stop_args.argv)) {

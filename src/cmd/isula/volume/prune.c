@@ -90,12 +90,12 @@ int cmd_volume_prune_main(int argc, const char **argv)
         PRUNE_OPTIONS(g_cmd_volume_prune_args)
     };
 
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_volume_prune_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
     g_cmd_volume_prune_args.progname = util_string_join(" ", argv, 2);
+    isula_libutils_default_log_config(argv[0], &lconf);
     subcommand_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_volume_prune_desc,
                     g_cmd_volume_prune_usage);
 

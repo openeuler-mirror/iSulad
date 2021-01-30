@@ -986,12 +986,12 @@ int cmd_list_main(int argc, const char **argv)
                COMMON_OPTIONS(g_cmd_list_args)
     };
 
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_list_desc,
                  g_cmd_list_usage);
     if (command_parse_args(&cmd, &g_cmd_list_args.argc, &g_cmd_list_args.argv)) {
         exit(EINVALIDARGS);
     }
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("PS: log init failed");
         exit(ECOMMON);
