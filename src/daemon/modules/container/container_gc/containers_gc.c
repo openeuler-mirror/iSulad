@@ -203,6 +203,8 @@ int gc_add_container(const char *id, const char *runtime, const pid_ppid_info_t 
         return -1;
     }
 
+    EVENT("Event: {Object: GC, Type: Add container %s with pid %u into garbage collector}", id, pid_info->pid);
+
     newnode = util_common_calloc_s(sizeof(struct linked_list));
     if (newnode == NULL) {
         CRIT("Memory allocation error.");
@@ -480,6 +482,8 @@ static void gc_container_process(struct linked_list *it)
         (void)gc_containers_to_disk();
 
         gc_containers_unlock();
+
+        EVENT("Event: {Object: GC, Type: Delete container %s with pid %u from garbage collector}", id, pid);
 
         /* apply restart policy for the container after gc */
         apply_restart_policy_after_gc(id);
