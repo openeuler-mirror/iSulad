@@ -1064,6 +1064,26 @@ static int adapt_resources_memory(const sysinfo_t *sysinfo, defs_resources_memor
     return adapt_memory_swap(sysinfo, &(memory->limit), &(memory->swap));
 }
 
+/* verify resources device */
+static int verify_resources_device(defs_resources *resources)
+{
+    int ret = 0;
+    size_t i = 0;
+
+    for (i = 0; i < resources->devices_len; i++) {
+        if (!util_valid_device_mode(resources->devices[i]->access)) {
+            ERROR("Invalid device mode \"%s\" for device \"%ld %ld\"", resources->devices[i]->access,
+                  resources->devices[i]->major, resources->devices[i]->minor);
+            isulad_set_error_message("Invalid device mode \"%s\" for device \"%ld %ld\"", resources->devices[i]->access,
+                                     resources->devices[i]->major, resources->devices[i]->minor);
+            ret = -1;
+            goto out;
+        }
+    }
+out:
+    return ret;
+}
+
 /* verify linux resources */
 static int verify_linux_resources(const sysinfo_t *sysinfo, defs_resources *resources)
 {
@@ -1100,6 +1120,13 @@ static int verify_linux_resources(const sysinfo_t *sysinfo, defs_resources *reso
     // blkio
     if (resources->block_io != NULL) {
         ret = verify_resources_blkio(sysinfo, resources->block_io);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+    // device
+    if (resources->devices != NULL) {
+        ret = verify_resources_device(resources);
         if (ret != 0) {
             goto out;
         }
