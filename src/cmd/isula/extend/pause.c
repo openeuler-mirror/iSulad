@@ -71,28 +71,26 @@ int cmd_pause_main(int argc, const char **argv)
     int i = 0;
     int status = 0;
     struct isula_libutils_log_config lconf = { 0 };
-
-    lconf.name = argv[0];
-    lconf.quiet = true;
-    lconf.file = NULL;
-    lconf.priority = "ERROR";
-    lconf.driver = "stdout";
-    if (isula_libutils_log_enable(&lconf)) {
-        COMMAND_ERROR("log init failed");
-        exit(ECOMMON);
-    }
     command_t cmd;
+
+    isula_libutils_default_log_config(argv[0], &lconf);
+
     if (client_arguments_init(&g_cmd_pause_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
     g_cmd_pause_args.progname = argv[0];
-    struct command_option options[] = { COMMON_OPTIONS(g_cmd_pause_args) };
+    struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_pause_args) };
 
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_pause_desc,
                  g_cmd_pause_usage);
     if (command_parse_args(&cmd, &g_cmd_pause_args.argc, &g_cmd_pause_args.argv)) {
         exit(EINVALIDARGS);
+    }
+
+    if (isula_libutils_log_enable(&lconf)) {
+        COMMAND_ERROR("log init failed");
+        exit(ECOMMON);
     }
 
     if (g_cmd_pause_args.argc == 0) {
