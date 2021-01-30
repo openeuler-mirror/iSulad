@@ -327,12 +327,12 @@ int cmd_cp_main(int argc, const char **argv)
     g_cmd_cp_args.progname = argv[0];
     struct command_option options[] = { LOG_OPTIONS(lconf) COMMON_OPTIONS(g_cmd_cp_args) };
 
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_cp_desc,
                  g_cmd_cp_usage);
     if (command_parse_args(&cmd, &g_cmd_cp_args.argc, &g_cmd_cp_args.argv)) {
         exit(EINVALIDARGS);
     }
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("cp: log init failed");
         exit(ECOMMON);

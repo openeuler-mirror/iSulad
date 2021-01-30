@@ -73,12 +73,12 @@ int cmd_restart_main(int argc, const char **argv)
         RESTART_OPTIONS(g_cmd_restart_args)
     };
 
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_restart_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
     g_cmd_restart_args.progname = argv[0];
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_restart_desc,
                  g_cmd_restart_usage);
 

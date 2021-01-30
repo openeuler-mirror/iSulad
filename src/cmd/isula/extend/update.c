@@ -149,12 +149,12 @@ int cmd_update_main(int argc, const char **argv)
         COMMON_OPTIONS(g_cmd_update_args)
     };
 
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_update_args)) {
         COMMAND_ERROR("client arguments init failed\n");
         exit(ECOMMON);
     }
     g_cmd_update_args.progname = argv[0];
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_update_desc,
                  g_cmd_update_usage);
     if (command_parse_args(&cmd, &g_cmd_update_args.argc, &g_cmd_update_args.argv) ||

@@ -118,12 +118,12 @@ int cmd_delete_main(int argc, const char **argv)
         DELETE_OPTIONS(g_cmd_delete_args)
     };
 
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_delete_args)) {
         COMMAND_ERROR("client arguments init failed");
         exit(ECOMMON);
     }
     g_cmd_delete_args.progname = argv[0];
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_delete_desc,
                  g_cmd_delete_usage);
     if (command_parse_args(&cmd, &g_cmd_delete_args.argc, &g_cmd_delete_args.argv)) {

@@ -109,12 +109,12 @@ static int cmd_logs_init(int argc, const char **argv)
         COMMON_OPTIONS(g_cmd_logs_args)
     };
 
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_logs_desc,
                  g_cmd_logs_usage);
     if (command_parse_args(&cmd, &g_cmd_logs_args.argc, &g_cmd_logs_args.argv)) {
         return EINVALIDARGS;
     }
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed\n");
         g_cmd_logs_args.name = g_cmd_logs_args.argv[0];

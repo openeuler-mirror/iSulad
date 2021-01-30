@@ -272,9 +272,9 @@ int cmd_stats_main(int argc, const char **argv)
         exit(ECOMMON);
     }
     g_cmd_stats_args.progname = argv[0];
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_stats_desc,
                  g_cmd_stats_usage);
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (command_parse_args(&cmd, &g_cmd_stats_args.argc, &g_cmd_stats_args.argv)) {
         exit(EINVALIDARGS);
     }

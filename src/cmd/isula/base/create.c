@@ -1538,6 +1538,7 @@ int cmd_create_main(int argc, const char **argv)
             g_cmd_create_args) COMMON_OPTIONS(g_cmd_create_args)
     };
 
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_create_desc,
                  g_cmd_create_usage);
     if (command_parse_args(&cmd, &g_cmd_create_args.argc, &g_cmd_create_args.argv) ||
@@ -1545,7 +1546,6 @@ int cmd_create_main(int argc, const char **argv)
         nret = EINVALIDARGS;
         goto out;
     }
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed");
         exit(ECOMMON);

@@ -198,12 +198,12 @@ static int exec_cmd_init(int argc, const char **argv)
         EXEC_OPTIONS(g_cmd_exec_args)
     };
 
-    isula_libutils_default_log_config(argv[0], &lconf);
     if (client_arguments_init(&g_cmd_exec_args)) {
         COMMAND_ERROR("client arguments init failed\n");
         exit(ECOMMON);
     }
     g_cmd_exec_args.progname = argv[0];
+    isula_libutils_default_log_config(argv[0], &lconf);
     command_init(&cmd, options, sizeof(options) / sizeof(options[0]), argc, (const char **)argv, g_cmd_exec_desc,
                  g_cmd_exec_usage);
 
