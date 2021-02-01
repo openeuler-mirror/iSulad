@@ -291,7 +291,9 @@ static int create_env_path_dir(const char *env_path)
         free(dir);
         return 0;
     }
-    ret = util_mkdir_p(dir, DEFAULT_SECURE_DIRECTORY_MODE);
+    if (!util_dir_exists(dir)) {
+        ret = util_mkdir_p(dir, DEFAULT_SECURE_DIRECTORY_MODE);
+    }
     free(dir);
     return ret;
 }
