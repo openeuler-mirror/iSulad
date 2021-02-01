@@ -160,6 +160,37 @@ function test_health_check_timeout()
     return ${ret}
 }
 
+function test_health_check_monitor()
+{
+    local ret=0
+    local image="busybox"
+    local test="health check monitor test => (${FUNCNAME[@]})"
+
+    msg_info "${test} starting..."
+
+    isula images | grep ${image}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
+
+    isula rm -f $(isula ps -qa)
+
+    container_name="health_check_monitor"
+    isula run -itd -n ${container_name} --health-cmd="sleep 3" --health-interval 3s  busybox
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
+
+    isula stop -t 0 ${container_name} && isula start ${container_name} && \
+        isula stop -t 0 ${container_name} && isula start ${container_name}
+
+    health_check_monitor_count=$(ps -T -p $(cat /var/run/isulad.pid) | grep HealthCheck | wc -l)
+    [[ ${health_check_monitor_count} -ne 1 ]] && \
+        msg_err "${FUNCNAME[0]}:${LINENO} - multiple health check monitor thread container: ${container_name}" && ((ret++))
+
+    isula rm -f ${container_name}
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to remove container: ${container_name}" && ((ret++))
+
+    msg_info "${test} finished with return ${ret}..."
+    return ${ret}
+}
+
 declare -i ans=0
 
 test_health_check_paraments || ((ans++))
@@ -167,6 +198,8 @@ test_health_check_paraments || ((ans++))
 test_health_check_normally || ((ans++))
 
 test_health_check_timeout || ((ans++))
+
+test_health_check_monitor || ((ans++))
 
 show_result ${ans} "${curr_path}/${0}"
 
