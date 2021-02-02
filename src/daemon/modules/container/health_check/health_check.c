@@ -73,22 +73,45 @@ static char *get_health_status(container_state_t *s)
     return status;
 }
 
-static void set_health_status(container_state_t *s, const char *new)
+static void set_health_status(container_t *cont, const char *new)
 {
-    if (s == NULL || new == NULL) {
+    if (cont->state == NULL || new == NULL) {
         return;
     }
-    container_state_lock(s);
-    free(s->state->health->status);
-    s->state->health->status = util_strdup_s(new);
-    container_state_unlock(s);
+
+    container_state_lock(cont->state);
+    free(cont->state->state->health->status);
+    cont->state->state->health->status = util_strdup_s(new);
+    container_state_unlock(cont->state);
+
+    if (container_state_to_disk(cont)) {
+        WARN("Failed to save container \"%s\" to disk", cont->common_config->id);
+    }
 }
 
-static void set_monitor_idle_status(health_check_manager_t *health)
+static void init_monitor_idle_status(health_check_manager_t *health)
 {
     container_health_check_lock(health);
     health->monitor_status = MONITOR_IDLE;
     container_health_check_unlock(health);
+}
+
+static int transfer_monitor_idle_status(health_check_manager_t *health)
+{
+    int ret = 0;
+
+    container_health_check_lock(health);
+    // When the minitor status is MONITOR_STOP, it cann't be set to minitor status
+    if (health->monitor_status == MONITOR_STOP) {
+        ret = -1;
+        goto out;
+    }
+
+    health->monitor_status = MONITOR_IDLE;
+
+out:
+    container_health_check_unlock(health);
+    return ret;
 }
 
 static void set_monitor_stop_status(health_check_manager_t *health)
@@ -98,11 +121,21 @@ static void set_monitor_stop_status(health_check_manager_t *health)
     container_health_check_unlock(health);
 }
 
-static void set_monitor_interval_timeout_status(health_check_manager_t *health)
+static int transfer_monitor_interval_timeout_status(health_check_manager_t *health)
 {
+    int ret = 0;
+
     container_health_check_lock(health);
+    // When the minitor status is MONITOR_STOP, it cann't be set to minitor status
+    if (health->monitor_status == MONITOR_STOP) {
+        ret = -1;
+        goto out;
+    }
     health->monitor_status = MONITOR_INTERVAL;
+
+out:
     container_health_check_unlock(health);
+    return ret;
 }
 
 static health_check_monitor_status_t get_health_check_monitor_state(health_check_manager_t *health)
@@ -116,18 +149,35 @@ static health_check_monitor_status_t get_health_check_monitor_state(health_check
     return ret;
 }
 
-static void close_health_check_monitor(const container_t *cont)
+static void set_monitor_exist_flag(health_check_manager_t *health, bool closed)
+{
+    container_health_check_lock(health);
+    health->monitor_exist = closed;
+    container_health_check_unlock(health);
+}
+
+static bool get_monitor_exist_flag(health_check_manager_t *health)
+{
+    bool ret;
+
+    container_health_check_lock(health);
+    ret = health->monitor_exist;
+    container_health_check_unlock(health);
+
+    return ret;
+}
+
+static void close_health_check_monitor(container_t *cont)
 {
     if (cont == NULL || cont->health_check == NULL) {
         return;
     }
-    set_monitor_stop_status(cont->health_check);
-    set_health_status(cont->state, UNHEALTHY);
-}
 
-static void open_health_check_monitor(health_check_manager_t *health)
-{
-    set_monitor_interval_timeout_status(health);
+    set_monitor_stop_status(cont->health_check);
+    // ensure that the monitor process exits
+    while (get_monitor_exist_flag(cont->health_check)) {
+        util_usleep_nointerupt(500);
+    }
 }
 
 // Called when the container is being stopped (whether because the health check is
@@ -160,6 +210,7 @@ void health_check_manager_free(health_check_manager_t *health_check)
     if (health_check->init_mutex) {
         pthread_mutex_destroy(&health_check->mutex);
     }
+
     free(health_check);
 }
 
@@ -182,6 +233,8 @@ static health_check_manager_t *health_check_manager_new()
     health_check->init_mutex = true;
 
     health_check->monitor_status = MONITOR_IDLE;
+
+    health_check->monitor_exist = false;
 
     return health_check;
 cleanup:
@@ -320,6 +373,43 @@ out:
     return ret;
 }
 
+static void *stop_container_on_unhealthy(void *arg)
+{
+    int ret = 0;
+    char *container_id = NULL;
+    container_t *cont = NULL;
+
+    if (arg == NULL) {
+        ERROR("Invalid input arguments");
+        return NULL;
+    }
+    container_id = (char *)arg;
+
+    ret = pthread_detach(pthread_self());
+    if (ret != 0) {
+        CRIT("Set thread detach fail");
+    }
+
+    prctl(PR_SET_NAME, "ExitOnUnhealthy");
+
+    cont = containers_store_get(container_id);
+    if (cont == NULL) {
+        ERROR("Failed to get container info");
+        goto out;
+    }
+
+    // kill container when exit on unhealthy flag is set
+    ret = stop_container(cont, 3, true, false);
+    if (ret != 0) {
+        ERROR("Could not stop running container %s, cannot remove", cont->common_config->id);
+    }
+
+out:
+    free(container_id);
+    container_unref(cont);
+    return NULL;
+}
+
 static int handle_increment_streak(container_t *cont, int retries)
 {
     int ret = 0;
@@ -328,18 +418,19 @@ static int handle_increment_streak(container_t *cont, int retries)
     health = cont->state->state->health;
     health->failing_streak++;
     if (health->failing_streak >= retries) {
-        set_health_status(cont->state, UNHEALTHY);
+        set_health_status(cont, UNHEALTHY);
         if (cont->common_config->config->healthcheck->exit_on_unhealthy) {
-            // kill container when exit on unhealthy flag is set
-            ret = stop_container(cont, 3, true, false);
-            if (ret != 0) {
-                isulad_try_set_error_message("Could not stop running container %s, cannot remove",
-                                             cont->common_config->id);
-                ERROR("Could not stop running container %s, cannot remove", cont->common_config->id);
+            pthread_t stop_container_tid = { 0 };
+            char *container_id = util_strdup_s(cont->common_config->id);
+            if (pthread_create(&stop_container_tid, NULL, stop_container_on_unhealthy,
+                               (void *)container_id)) {
+                free(container_id);
+                ERROR("Failed to create thread to exec health check");
                 ret = -1;
             }
         }
     }
+
     return ret;
 }
 
@@ -442,7 +533,7 @@ static int handle_probe_result(const char *container_id, const defs_health_log_e
 
     if (result->exit_code == EXIT_STATUS_HEALTHY) {
         health->failing_streak = 0;
-        set_health_status(cont->state, HEALTHY);
+        set_health_status(cont, HEALTHY);
     } else {
         if (handle_unhealthy_case(cont, result, retries)) {
             ERROR("failed to handle unhealthy case");
@@ -457,10 +548,7 @@ static int handle_probe_result(const char *container_id, const defs_health_log_e
         // note: event
         EVENT("EVENT: {Object: %s, health_status: %s}", cont->common_config->id, current);
     }
-    if (container_state_to_disk(cont)) {
-        ERROR("Failed to save container \"%s\" to disk", cont->common_config->id);
-        ret = -1;
-    }
+
 out:
     free(old_state);
     free(current);
@@ -499,10 +587,9 @@ static void health_check_exec_success_handle(const container_exec_response *cont
 
 // exec the healthcheck command in the container.
 // Returns the exit code and probe output (if any)
-void *health_check_run(void *arg)
+static void health_check_run(const char *container_id)
 {
     int ret = 0;
-    char *container_id = NULL;
     char **cmd_slice = NULL;
     char output[REV_BUF_SIZE] = { 0 };
     char timebuffer[TIME_STR_SIZE] = { 0 };
@@ -513,13 +600,6 @@ void *health_check_run(void *arg)
     container_exec_response *container_res = NULL;
     defs_health_log_element *result = NULL;
     container_config *config = NULL;
-
-    if (arg == NULL) {
-        ERROR("Invalid input arguments");
-        return NULL;
-    }
-
-    container_id = util_strdup_s((char *)arg);
 
     cont = containers_store_get(container_id);
     if (cont == NULL) {
@@ -590,14 +670,10 @@ void *health_check_run(void *arg)
 
 out:
     util_free_array(cmd_slice);
-    free(container_id);
-    container_id = NULL;
     free_defs_health_log_element(result);
     free_container_exec_request(container_req);
     free_container_exec_response(container_res);
     container_unref(cont);
-    DAEMON_CLEAR_ERRMSG();
-    return NULL;
 }
 
 // Get a suitable probe implementation for the container's healthcheck configuration.
@@ -623,40 +699,80 @@ static health_probe_t get_probe(const container_t *cont)
     }
 }
 
+static bool valid_container_status_for_health_check(const char *container_id)
+{
+    bool bret = true;
+    const char *id = NULL;
+    container_t *cont = NULL;
+
+    cont = containers_store_get(container_id);
+    if (cont == NULL) {
+        ERROR("No such container:%s", container_id);
+        bret = false;
+        goto out;
+    }
+
+    id = cont->common_config->id;
+
+    if (!container_is_running(cont->state)) {
+        ERROR("Container %s is not running.", id);
+        bret = false;
+        goto out;
+    }
+
+    if (container_is_paused(cont->state)) {
+        ERROR("Container %s is paused.", id);
+        bret = false;
+        goto out;
+    }
+
+    if (container_is_restarting(cont->state)) {
+        ERROR("Container %s is restarting.", id);
+        bret = false;
+        goto out;
+    }
+
+out:
+    container_unref(cont);
+    return bret;
+}
+
 static int do_monitor_interval(const char *container_id, health_check_manager_t *health_check,
                                types_timestamp_t *start_timestamp)
 {
     int ret = 0;
-    pthread_t exec_tid = { 0 };
 
-    if (pthread_create(&exec_tid, NULL, health_check_run, (void *)container_id)) {
-        ERROR("Failed to create thread to exec health check");
+    if (!valid_container_status_for_health_check(container_id)) {
+        ERROR("Invalid container status for health check");
         ret = -1;
         goto out;
     }
-    if (pthread_join(exec_tid, NULL) != 0) {
-        ERROR("Failed to run health check thread");
+
+    health_check_run(container_id);
+
+    if (transfer_monitor_idle_status(health_check) != 0) {
         ret = -1;
         goto out;
     }
-    if (get_health_check_monitor_state(health_check) == MONITOR_STOP) {
-        ret = 0;
-        goto out;
-    }
-    set_monitor_idle_status(health_check);
     if (util_get_now_time_stamp(start_timestamp) == false) {
         ERROR("Failed to get time stamp");
         ret = -1;
         goto out;
     }
+
 out:
     return ret;
 }
 
-static int do_monitor_default(int64_t probe_interval, health_check_manager_t *health_check,
+static int do_monitor_default(const char *container_id, int64_t probe_interval, health_check_manager_t *health_check,
                               const types_timestamp_t *start_timestamp, types_timestamp_t *last_timestamp)
 {
     int64_t time_interval = 0;
+
+    if (!valid_container_status_for_health_check(container_id)) {
+        ERROR("Invalid container status for health check");
+        return -1;
+    }
 
     if (util_get_now_time_stamp(last_timestamp) == false) {
         ERROR("Failed to get time stamp");
@@ -668,13 +784,14 @@ static int do_monitor_default(int64_t probe_interval, health_check_manager_t *he
         return -1;
     }
 
-    if (time_interval >= probe_interval) {
-        set_monitor_interval_timeout_status(health_check);
+    if (time_interval >= probe_interval && transfer_monitor_interval_timeout_status(health_check) != 0) {
+        return -1;
     }
     util_usleep_nointerupt(500);
 
     return 0;
 }
+
 // Run the container's monitoring thread until notified via "stop".
 // There is never more than one monitor thread running per container at a time.
 static void *health_check_monitor(void *arg)
@@ -689,14 +806,17 @@ static void *health_check_monitor(void *arg)
         ERROR("Container id is empty");
         return NULL;
     }
-    container_id = util_strdup_s((char *)arg);
+
+    container_id = (char *)arg;
+
+    prctl(PR_SET_NAME, "HealthCheck");
 
     cont = containers_store_get(container_id);
     if (cont == NULL) {
         ERROR("Failed to get container info");
         goto out;
     }
-
+    set_monitor_exist_flag(cont->health_check, true);
     if (util_get_now_time_stamp(&start_timestamp) == false) {
         ERROR("Failed to monitor start time stamp");
         goto out;
@@ -704,7 +824,7 @@ static void *health_check_monitor(void *arg)
     probe_interval = (cont->common_config->config->healthcheck->interval == 0) ?
                      DEFAULT_PROBE_INTERVAL :
                      cont->common_config->config->healthcheck->interval;
-    set_monitor_idle_status(cont->health_check);
+
     while (true) {
         switch (get_health_check_monitor_state(cont->health_check)) {
             case MONITOR_STOP:
@@ -712,30 +832,35 @@ static void *health_check_monitor(void *arg)
                 goto out;
             /* fall-through */
             case MONITOR_INTERVAL:
-                if (do_monitor_interval(container_id, cont->health_check, &start_timestamp)) {
+                if (do_monitor_interval(container_id, cont->health_check, &start_timestamp) != 0) {
                     goto out;
                 }
                 break;
             case MONITOR_IDLE:
             /* fall-through */
             default:
-                if (do_monitor_default(probe_interval, cont->health_check, &start_timestamp, &last_timestamp)) {
+                if (do_monitor_default(container_id, probe_interval, cont->health_check,
+                                       &start_timestamp, &last_timestamp) != 0) {
                     goto out;
                 }
                 break;
         }
     }
+
 out:
     free(container_id);
     container_id = NULL;
+    //  unhealthy when the monitor has stopped for compatibility reasons
+    set_health_status(cont, UNHEALTHY);
+    // post semaphore, indicating that the minitor process has exited
+    set_monitor_exist_flag(cont->health_check, false);
     container_unref(cont);
     DAEMON_CLEAR_ERRMSG();
     return NULL;
 }
 
 // Ensure the health-check monitor is running or not, depending on the current
-// state of the container.
-// Called from monitor.go, with c locked.
+// state of the container. Called from monitor, with c locked.
 void container_update_health_monitor(const char *container_id)
 {
     bool want_running = false;
@@ -746,6 +871,7 @@ void container_update_health_monitor(const char *container_id)
     if (container_id == NULL) {
         return;
     }
+
     cont = containers_store_get(container_id);
     if (cont == NULL) {
         ERROR("Failed to get container info");
@@ -756,13 +882,18 @@ void container_update_health_monitor(const char *container_id)
     if (health == NULL) {
         goto out;
     }
-    probe = get_probe(cont);
-    want_running = cont->state->state->running && !cont->state->state->paused && probe != HEALTH_NONE;
 
+    probe = get_probe(cont);
+
+    want_running = container_is_running(cont->state) && !container_is_paused(cont->state) && probe != HEALTH_NONE;
     if (want_running) {
-        open_health_check_monitor(cont->health_check);
         pthread_t monitor_tid = { 0 };
-        if (pthread_create(&monitor_tid, NULL, health_check_monitor, (void *)container_id)) {
+        char *cid = util_strdup_s(container_id);
+        // ensured that the health check monitor process is stopped
+        close_health_check_monitor(cont);
+        init_monitor_idle_status(cont->health_check);
+        if (pthread_create(&monitor_tid, NULL, health_check_monitor, (void *)cid)) {
+            free(cid);
             ERROR("Failed to create thread to monitor health check...");
             goto out;
         }
@@ -779,8 +910,7 @@ out:
 }
 
 // Reset the health state for a newly-started, restarted or restored container.
-// initHealthMonitor is called from monitor.go and we should never be running
-// two instances at once.
+// initHealthMonitor is called from monitor and we should never be running two instances at once.
 // Note: Called with container locked.
 void container_init_health_monitor(const char *id)
 {
@@ -809,14 +939,9 @@ void container_init_health_monitor(const char *id)
     if (get_probe(cont) == HEALTH_NONE) {
         goto out;
     }
-    // This is needed in case we're auto-restarting
-    container_stop_health_checks(cont->common_config->id);
-    if (cont->state == NULL || cont->state->state == NULL) {
-        goto out;
-    }
 
     if (cont->state->state->health != NULL) {
-        set_health_status(cont->state, HEALTH_STARTING);
+        set_health_status(cont, HEALTH_STARTING);
         cont->state->state->health->failing_streak = 0;
     } else {
         cont->state->state->health = util_common_calloc_s(sizeof(defs_health));
@@ -824,12 +949,7 @@ void container_init_health_monitor(const char *id)
             ERROR("out of memory");
             goto out;
         }
-        set_health_status(cont->state, HEALTH_STARTING);
-    }
-
-    if (container_state_to_disk(cont)) {
-        ERROR("Failed to save container \"%s\" to disk", id);
-        goto out;
+        set_health_status(cont, HEALTH_STARTING);
     }
 
     container_update_health_monitor(id);

@@ -204,6 +204,11 @@ void invokeStateSetPaused(container_state_t *s)
     return;
 }
 
+void invokeContainerStopHealthCheck(const char *container_id)
+{
+    return;
+}
+
 TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_pause)
 {
     service_container_callback_t cb;
@@ -220,6 +225,7 @@ TEST_F(ExecutionExtendUnitTest, test_container_extend_callback_init_pause)
     EXPECT_CALL(m_containerState, IsRestarting(_)).WillRepeatedly(Invoke(invokeIsRestarting));
     EXPECT_CALL(m_containerUnix, ContainerToDisk(_)).WillRepeatedly(Invoke(invokeContainerToDisk));
     EXPECT_CALL(m_containerUnix, ContainerStateToDisk(_)).WillRepeatedly(Invoke(invokeContainerStateToDisk));
+    EXPECT_CALL(m_healthCheck, ContainerStopHealthCheck(_)).WillRepeatedly(Invoke(invokeContainerStopHealthCheck));
     container_extend_callback_init(&cb);
     ASSERT_EQ(cb.pause(request, &response), 0);
     testing::Mock::VerifyAndClearExpectations(&m_runtime);

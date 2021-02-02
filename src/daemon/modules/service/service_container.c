@@ -1249,8 +1249,6 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
         goto out;
     }
 
-    container_stop_health_checks(id);
-
     ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, stop_signal, signal);
     if (ret != 0) {
         ERROR("Failed to send signal to container %s with signal %u", id, signal);
@@ -1355,6 +1353,7 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
             goto out;
         }
     }
+
 out:
     if (restart) {
         cont->hostconfig->auto_remove = cont->hostconfig->auto_remove_bak;
