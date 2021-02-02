@@ -76,6 +76,18 @@ static void stats_print_header(void)
     printf(TERMNORM);
 }
 
+// workingset = usage - total_inactive_file
+static uint64_t memory_get_working_set(const struct isula_container_info *stats)
+{
+    uint64_t workingset = stats->mem_used;
+
+    if (stats->inactive_file_total < stats->mem_used) {
+        workingset = stats->mem_used - stats->inactive_file_total;
+    }
+
+    return workingset;
+}
+
 static void stats_print(const struct isula_container_info *stats)
 {
 #define SHORTIDLEN 12
@@ -130,8 +142,10 @@ static void stats_print(const struct isula_container_info *stats)
     if (strlen(short_id) > SHORTIDLEN) {
         short_id[SHORTIDLEN] = '\0';
     }
+    // workingset = usage - total_inactive_file
+    uint64_t workingset = memory_get_working_set(stats);
     printf("%-16s %-10.2f %-26s %-10.2f %-26s %-10llu", short_id, cpu_percent, mem_str,
-           stats->mem_limit ? ((double)stats->mem_used / stats->mem_limit) * PERCENT : 0.00, iosb_str,
+           stats->mem_limit ? ((double)workingset / stats->mem_limit) * PERCENT : 0.00, iosb_str,
            (unsigned long long)stats->pids_current);
     free(short_id);
 }

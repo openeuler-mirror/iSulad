@@ -172,6 +172,7 @@ struct isula_container_info {
     // Cache usage
     uint64_t cache;
     uint64_t cache_total;
+    uint64_t inactive_file_total;
 };
 
 struct isula_inspect_request {

@@ -85,6 +85,7 @@ message Container_info {
 	string status = 15;
 	uint64 cache = 16;
 	uint64 cache_total = 17;
+	uint64 inactive_file_total = 18;
 }
 
 message Event {

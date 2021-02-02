@@ -268,6 +268,7 @@ static container_info *get_container_stats(const container_t *cont,
     info->status = util_strdup_s(container_state_to_string(container_state_get_status(cont->state)));
     info->cache = einfo->cache;
     info->cache_total = einfo->cache_total;
+    info->inactive_file_total = einfo->inactive_file_total;
 
     if (copy_map_labels(cont->common_config->config, &map_labels) != 0) {
         ret = -1;
