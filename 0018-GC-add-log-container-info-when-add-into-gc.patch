@@ -1,0 +1,35 @@
+From 72e8e3163524455768986a7496ccfc5ce384fade Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Fri, 29 Jan 2021 15:33:56 +0800
+Subject: [PATCH 18/26] GC: add log container info when add into gc
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ src/daemon/modules/container/container_gc/containers_gc.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/daemon/modules/container/container_gc/containers_gc.c b/src/daemon/modules/container/container_gc/containers_gc.c
+index 6b1c392c..5924aaa3 100644
+--- a/src/daemon/modules/container/container_gc/containers_gc.c
++++ b/src/daemon/modules/container/container_gc/containers_gc.c
+@@ -203,6 +203,8 @@ int gc_add_container(const char *id, const char *runtime, const pid_ppid_info_t
+         return -1;
+     }
+ 
++    EVENT("Event: {Object: GC, Type: Add container %s with pid %u into garbage collector}", id, pid_info->pid);
++
+     newnode = util_common_calloc_s(sizeof(struct linked_list));
+     if (newnode == NULL) {
+         CRIT("Memory allocation error.");
+@@ -481,6 +483,8 @@ static void gc_container_process(struct linked_list *it)
+ 
+         gc_containers_unlock();
+ 
++        EVENT("Event: {Object: GC, Type: Delete container %s with pid %u from garbage collector}", id, pid);
++
+         /* apply restart policy for the container after gc */
+         apply_restart_policy_after_gc(id);
+ 
+-- 
+2.25.1
+
