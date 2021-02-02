@@ -1,5 +1,5 @@
 %global _version 2.0.8
-%global _release 20210118.195254.git077e10f2
+%global _release 20210202.153251.gite082dcf3
 %global is_systemd 1
 
 Name:      iSulad
@@ -12,15 +12,32 @@ Source:    https://gitee.com/openeuler/iSulad/repository/archive/v%{version}.tar
 BuildRoot: {_tmppath}/iSulad-%{version}
 ExclusiveArch:  x86_64 aarch64
 
-Patch1:	0001-make-thread-detach-to-avoid-resource-leak.patch
-Patch2:	0002-devmapper-fix-udev-wait-thread-resource-leak.patch
-Patch3:	0003-clean-code-fix-clean-code.patch
-Patch4:	0004-judge-isula-load-file-exists.patch
-Patch5:	0005-modify-image_load.sh-CI-to-test-file-not-exist.patch
-Patch6:	0006-do-not-pause-container-when-copy.patch
-Patch7:	0007-add-testcases-for-isula-cp.patch
-Patch8:	0008-image_cb-rename-the-function-isula_-docker_-to-do_.patch
-Patch9:	0009-fix-small-probability-of-coredump-in-CRI-streaming-s.patch
+Patch1: 0001-make-thread-detach-to-avoid-resource-leak.patch
+Patch2: 0002-devmapper-fix-udev-wait-thread-resource-leak.patch
+Patch3: 0003-clean-code-fix-clean-code.patch
+Patch4: 0004-judge-isula-load-file-exists.patch
+Patch5: 0005-modify-image_load.sh-CI-to-test-file-not-exist.patch
+Patch6: 0006-do-not-pause-container-when-copy.patch
+Patch7: 0007-add-testcases-for-isula-cp.patch
+Patch8: 0008-image_cb-rename-the-function-isula_-docker_-to-do_.patch
+Patch9: 0009-fix-small-probability-of-coredump-in-CRI-streaming-s.patch
+Patch10: 0010-fix-ramdom-coredump-if-pull-failed.patch
+Patch11: 0011-shim-optimize-io-stream.patch
+Patch12: 0012-add-CI-to-test-shim-io.patch
+Patch13: 0013-CI-add-testcase-for-exec-without-pty.patch
+Patch14: 0014-adapt-for-sparse-file-when-tar-file.patch
+Patch15: 0015-driver-do-not-unlock-and-destroy-lock-when-clean-up.patch
+Patch16: 0016-driver-do-not-set-g_graphdriver-to-NULL.patch
+Patch17: 0017-ignore-error-if-get-ip-failed.patch
+Patch18: 0018-GC-add-log-container-info-when-add-into-gc.patch
+Patch19: 0019-log-use-the-same-function-to-init-log-in-export-paus.patch
+Patch20: 0020-init-log-config-should-before-command-parse.patch
+Patch21: 0021-spec-add-verify-for-device-cgroup-access-mode.patch
+Patch22: 0022-log-change-log-level-from-warn-to-error.patch
+Patch23: 0023-Fix-create-env-path-dir-if-dir-exist.patch
+Patch24: 0024-iSulad-calculate-memusage-with-used-total_inactive_f.patch
+Patch25: 0025-fix-container-exit-health-check-residue-and-multiple.patch
+Patch26: 0026-CI-supplementary-testcase-for-health-check-monitor.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -223,6 +240,12 @@ fi
 %endif
 
 %changelog
+* Tue Feb 2 2021 lifeng <lifeng68@huawei.com> - 2.0.8-20210202.153251.gite082dcf3
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Mon Jan 18 2020 lifeng <lifeng68@huawei.com> - 2.0.8-20210118.195254.git077e10f2
 - Type: sync from upstream
 - ID: NA
