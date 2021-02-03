@@ -82,7 +82,7 @@ private:
     void SetNetworkReady(const std::string &podSandboxID, bool ready, Errors &error);
     void StartSandboxContainer(const std::string &response_id, Errors &error);
     void SetupSandboxNetwork(const runtime::v1alpha2::PodSandboxConfig &config, const std::string &response_id,
-                             const std::string &jsonCheckpoint, Errors &error);
+                             const std::string &jsonCheckpoint, std::string &network_settings_json, Errors &error);
     void SetupSandboxFiles(const std::string &resolvPath, const runtime::v1alpha2::PodSandboxConfig &config,
                            Errors &error);
     void StopContainerHelper(const std::string &containerID, Errors &error);
@@ -106,16 +106,13 @@ private:
                                  std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> &podStatus, Errors &error);
     void GetIPs(const std::string &podSandboxID, const container_inspect *inspect,
                 const std::string &networkInterface, std::vector<std::string> &ips, Errors &error);
-    auto GetIPsFromPlugin(const container_inspect *inspect, const std::string &networkInterface,
-                          Errors &error) -> std::vector<std::string>;
-    void GetFormatIPsForMultNet(const container_inspect *inspect, const std::string &defaultInterface,
-                                const runtime::v1alpha2::PodSandboxMetadata &metadata,
-                                std::vector<std::string> &result, Errors &error);
     void ListPodSandboxFromGRPC(const runtime::v1alpha2::PodSandboxFilter *filter,
                                 container_list_request **request, bool *filterOutReadySandboxes, Errors &error);
     void ListPodSandboxToGRPC(container_list_response *response,
                               std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> *pods,
                               bool filterOutReadySandboxes, Errors &error);
+    auto GenerateUpdateNetworkSettingsReqest(const std::string &id, const std::string &json,
+                                             Errors &error) -> container_update_network_settings_request*;
 
 private:
     std::string m_podSandboxImage;

@@ -93,6 +93,8 @@
 #include "isula_libutils/network_list_response.h"
 #include "isula_libutils/network_remove_request.h"
 #include "isula_libutils/network_remove_response.h"
+#include "isula_libutils/container_update_network_settings_request.h"
+#include "isula_libutils/container_update_network_settings_response.h"
 
 #include "events_format.h"
 #include "stream_wrapper.h"
@@ -253,6 +255,9 @@ typedef struct {
 
     int (*resize)(const struct isulad_container_resize_request *request,
                   struct isulad_container_resize_response **response);
+
+    int (*update_network_settings)(const container_update_network_settings_request *request,
+                                   container_update_network_settings_response **response);
 } service_container_callback_t;
 
 typedef struct {

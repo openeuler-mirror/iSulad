@@ -29,8 +29,7 @@
 #include "utils.h"
 #include "errors.h"
 #include "service_container_api.h"
-
-#include "network_api.h"
+#include "service_network_api.h"
 #include "err_msg.h"
 
 namespace Network {
@@ -419,10 +418,54 @@ cleanup:
     return result;
 }
 
+auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, network_api_result_list *result,
+                                              Errors &err) -> std::string
+{
+    std::string json;
+    parser_error jerr { nullptr };
+    std::unique_ptr<char> setting_json;
+
+    if (result == nullptr) {
+        ERROR("Invalid input param, no network result to set");
+        return json;
+    }
+
+    container_network_settings *network_settings = static_cast<container_network_settings *>(util_common_calloc_s(sizeof(
+                                                                                                          container_network_settings)));
+    if (network_settings == nullptr) {
+        err.SetError("Out of memory");
+        goto out;
+    }
+
+    network_settings->networks = static_cast<defs_map_string_object_networks *>(util_common_calloc_s(sizeof(
+                                                                                             defs_map_string_object_networks)));
+    if (network_settings->networks == nullptr) {
+        err.SetError("Out of memory");
+        goto out;
+    }
+
+    if (update_container_networks_info(result, podSandboxID.c_str(), network_settings->networks) != 0) {
+        err.SetError("Failed to update network setting");
+        goto out;
+    }
+
+    setting_json = std::unique_ptr<char>(container_network_settings_generate_json(network_settings, nullptr, &jerr));
+    if (setting_json == nullptr) {
+        err.Errorf("Get network settings json err:%s", jerr);
+        goto out;
+    }
+
+    json = setting_json.get();
+
+out:
+    free(jerr);
+    free_container_network_settings(network_settings);
+    return json;
+}
 
 void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                                 const std::string &id, const std::map<std::string, std::string> &annotations,
-                                const std::map<std::string, std::string> &options, Errors &err)
+                                const std::map<std::string, std::string> &options, std::string &network_settings_json, Errors &err)
 {
     DAEMON_CLEAR_ERRMSG();
     CheckInitialized(err);
@@ -457,6 +500,8 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
             err.Errorf("setup cni for container: %s failed", id.c_str());
         }
     }
+
+    network_settings_json = GetNetworkSettingsJson(id, result, err);
 
     UnlockNetworkMap(err);
     free_network_api_result_list(result);
