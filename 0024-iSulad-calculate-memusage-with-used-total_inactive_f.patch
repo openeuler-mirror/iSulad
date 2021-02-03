@@ -1,0 +1,287 @@
+From c5aeb37655533ce84161f237ed6175153891d9e0 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Thu, 28 Jan 2021 19:30:44 +0800
+Subject: [PATCH 24/26] iSulad: calculate memusage with used -
+ total_inactive_file
+
+On cgroup v1 host, the result is `mem.used - mem.["total_inactive_file"]` .
+
+This definition is consistent with cadvisor and containerd/CRI.
+https://github.com/google/cadvisor/commit/307d1b1cb320fef66fab02db749f07a459245451
+https://github.com/containerd/cri/commit/6b8846cdf8b8c98c1d965313d66bc8489166059a
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ src/api/services/containers/container.proto   |  1 +
+ .../connect/grpc/grpc_containers_client.cc    |  4 +-
+ src/client/connect/protocol_type.h            |  1 +
+ src/cmd/isula/extend/stats.c                  | 16 +++++-
+ .../grpc/grpc_containers_service_private.cc   |  1 +
+ .../cri/cri_container_manager_service_impl.cc | 49 +++++++++----------
+ .../executor/container_cb/execution_extend.c  |  1 +
+ src/daemon/modules/api/runtime_api.h          |  1 +
+ .../modules/runtime/engines/lcr/lcr_engine.c  |  1 +
+ 9 files changed, 47 insertions(+), 28 deletions(-)
+
+diff --git a/src/api/services/containers/container.proto b/src/api/services/containers/container.proto
+index 36010860..efd085a1 100644
+--- a/src/api/services/containers/container.proto
++++ b/src/api/services/containers/container.proto
+@@ -85,6 +85,7 @@ message Container_info {
+ 	string status = 15;
+ 	uint64 cache = 16;
+ 	uint64 cache_total = 17;
++	uint64 inactive_file_total = 18;
+ }
+ 
+ message Event {
+diff --git a/src/client/connect/grpc/grpc_containers_client.cc b/src/client/connect/grpc/grpc_containers_client.cc
+index 9bb66b4b..ccde59a4 100644
+--- a/src/client/connect/grpc/grpc_containers_client.cc
++++ b/src/client/connect/grpc/grpc_containers_client.cc
+@@ -1688,6 +1688,7 @@ public:
+                 }
+                 response->container_stats[i].cache = gresponse->containers(i).cache();
+                 response->container_stats[i].cache_total = gresponse->containers(i).cache_total();
++                response->container_stats[i].inactive_file_total = gresponse->containers(i).inactive_file_total();
+             }
+             response->container_num = static_cast<size_t>(size);
+         }
+@@ -1981,7 +1982,8 @@ public:
+     explicit CopyToContainerWriteToServerTask(
+         const struct io_read_wrapper *reader,
+         std::shared_ptr<ClientReaderWriter<CopyToContainerRequest, CopyToContainerResponse>> stream)
+-        : m_reader(reader), m_stream(std::move(std::move(stream)))
++        : m_reader(reader)
++        , m_stream(std::move(std::move(stream)))
+     {
+     }
+     ~CopyToContainerWriteToServerTask() = default;
+diff --git a/src/client/connect/protocol_type.h b/src/client/connect/protocol_type.h
+index 6cbecf66..32f55b51 100644
+--- a/src/client/connect/protocol_type.h
++++ b/src/client/connect/protocol_type.h
+@@ -172,6 +172,7 @@ struct isula_container_info {
+     // Cache usage
+     uint64_t cache;
+     uint64_t cache_total;
++    uint64_t inactive_file_total;
+ };
+ 
+ struct isula_inspect_request {
+diff --git a/src/cmd/isula/extend/stats.c b/src/cmd/isula/extend/stats.c
+index 334f859e..03544325 100644
+--- a/src/cmd/isula/extend/stats.c
++++ b/src/cmd/isula/extend/stats.c
+@@ -76,6 +76,18 @@ static void stats_print_header(void)
+     printf(TERMNORM);
+ }
+ 
++// workingset = usage - total_inactive_file
++static uint64_t memory_get_working_set(const struct isula_container_info *stats)
++{
++    uint64_t workingset = stats->mem_used;
++
++    if (stats->inactive_file_total < stats->mem_used) {
++        workingset = stats->mem_used - stats->inactive_file_total;
++    }
++
++    return workingset;
++}
++
+ static void stats_print(const struct isula_container_info *stats)
+ {
+ #define SHORTIDLEN 12
+@@ -130,8 +142,10 @@ static void stats_print(const struct isula_container_info *stats)
+     if (strlen(short_id) > SHORTIDLEN) {
+         short_id[SHORTIDLEN] = '\0';
+     }
++    // workingset = usage - total_inactive_file
++    uint64_t workingset = memory_get_working_set(stats);
+     printf("%-16s %-10.2f %-26s %-10.2f %-26s %-10llu", short_id, cpu_percent, mem_str,
+-           stats->mem_limit ? ((double)stats->mem_used / stats->mem_limit) * PERCENT : 0.00, iosb_str,
++           stats->mem_limit ? ((double)workingset / stats->mem_limit) * PERCENT : 0.00, iosb_str,
+            (unsigned long long)stats->pids_current);
+     free(short_id);
+ }
+diff --git a/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc b/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
+index ac87a20b..8e19f978 100644
+--- a/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
++++ b/src/daemon/entry/connect/grpc/grpc_containers_service_private.cc
+@@ -790,6 +790,7 @@ void ContainerServiceImpl::stats_response_to_grpc(const container_stats_response
+             }
+             stats->set_cache(response->container_stats[i]->cache);
+             stats->set_cache_total(response->container_stats[i]->cache_total);
++            stats->set_inactive_file_total(response->container_stats[i]->inactive_file_total);
+         }
+     }
+     gresponse->set_cc(response->cc);
+diff --git a/src/daemon/entry/cri/cri_container_manager_service_impl.cc b/src/daemon/entry/cri/cri_container_manager_service_impl.cc
+index 812469ee..6c6569a6 100644
+--- a/src/daemon/entry/cri/cri_container_manager_service_impl.cc
++++ b/src/daemon/entry/cri/cri_container_manager_service_impl.cc
+@@ -126,9 +126,8 @@ auto ContainerManagerServiceImpl::PackCreateContainerHostConfigSecurityContext(
+     return 0;
+ }
+ 
+-auto ContainerManagerServiceImpl::GenerateCreateContainerHostConfig(const runtime::v1alpha2::ContainerConfig
+-                                                                    &containerConfig,
+-                                                                    Errors &error) -> host_config *
++auto ContainerManagerServiceImpl::GenerateCreateContainerHostConfig(
++    const runtime::v1alpha2::ContainerConfig &containerConfig, Errors &error) -> host_config *
+ {
+     host_config *hostconfig = (host_config *)util_common_calloc_s(sizeof(host_config));
+     if (hostconfig == nullptr) {
+@@ -294,11 +293,11 @@ cleanup:
+     return nullptr;
+ }
+ 
+-container_create_request *ContainerManagerServiceImpl::GenerateCreateContainerRequest(
+-    const std::string &realPodSandboxID,
+-    const runtime::v1alpha2::ContainerConfig &containerConfig,
+-    const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
+-    const std::string &podSandboxRuntime, Errors &error)
++container_create_request *
++ContainerManagerServiceImpl::GenerateCreateContainerRequest(const std::string &realPodSandboxID,
++                                                            const runtime::v1alpha2::ContainerConfig &containerConfig,
++                                                            const runtime::v1alpha2::PodSandboxConfig &podSandboxConfig,
++                                                            const std::string &podSandboxRuntime, Errors &error)
+ {
+     struct parser_context ctx {
+         OPT_GEN_SIMPLIFY, 0
+@@ -333,8 +332,7 @@ container_create_request *ContainerManagerServiceImpl::GenerateCreateContainerRe
+         hostconfig->cgroup_parent = util_strdup_s(podSandboxConfig.linux().cgroup_parent().c_str());
+     }
+ 
+-    custom_config = GenerateCreateContainerCustomConfig(realPodSandboxID, containerConfig,
+-                                                        podSandboxConfig, error);
++    custom_config = GenerateCreateContainerCustomConfig(realPodSandboxID, containerConfig, podSandboxConfig, error);
+     if (error.NotEmpty()) {
+         goto cleanup;
+     }
+@@ -611,7 +609,6 @@ void ContainerManagerServiceImpl::ListContainersToGRPC(container_list_response *
+     }
+ }
+ 
+-
+ void ContainerManagerServiceImpl::ListContainers(const runtime::v1alpha2::ContainerFilter *filter,
+                                                  std::vector<std::unique_ptr<runtime::v1alpha2::Container>> *containers,
+                                                  Errors &error)
+@@ -681,9 +678,8 @@ auto ContainerManagerServiceImpl::PackContainerStatsFilter(const runtime::v1alph
+     return 0;
+ }
+ 
+-void ContainerManagerServiceImpl::PackContainerStatsAttributes(const char *id,
+-                                                               std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
+-                                                               Errors &error)
++void ContainerManagerServiceImpl::PackContainerStatsAttributes(
++    const char *id, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container, Errors &error)
+ {
+     if (id == nullptr) {
+         return;
+@@ -779,7 +775,11 @@ void ContainerManagerServiceImpl::ContainerStatsToGRPC(
+                                           container);
+ 
+         if (response->container_stats[i]->mem_used != 0u) {
+-            container->mutable_memory()->mutable_working_set_bytes()->set_value(response->container_stats[i]->mem_used);
++            uint64_t workingset = response->container_stats[i]->mem_used;
++            if (response->container_stats[i]->inactive_file_total < response->container_stats[i]->mem_used) {
++                workingset = response->container_stats[i]->mem_used - response->container_stats[i]->inactive_file_total;
++            }
++            container->mutable_memory()->mutable_working_set_bytes()->set_value(workingset);
+         }
+ 
+         if (response->container_stats[i]->cpu_use_nanos != 0u) {
+@@ -838,9 +838,8 @@ cleanup:
+     free_container_stats_response(response);
+ }
+ 
+-void ContainerManagerServiceImpl::PackContainerImageToStatus(container_inspect *inspect,
+-                                                             std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus,
+-                                                             Errors &error)
++void ContainerManagerServiceImpl::PackContainerImageToStatus(
++    container_inspect *inspect, std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error)
+ {
+     if (inspect->config == nullptr) {
+         return;
+@@ -854,9 +853,9 @@ void ContainerManagerServiceImpl::PackContainerImageToStatus(container_inspect *
+     return;
+ }
+ 
+-void ContainerManagerServiceImpl::UpdateBaseStatusFromInspect(container_inspect *inspect, int64_t &createdAt,
+-                                                              int64_t &startedAt, int64_t &finishedAt,
+-                                                              std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
++void ContainerManagerServiceImpl::UpdateBaseStatusFromInspect(
++    container_inspect *inspect, int64_t &createdAt, int64_t &startedAt, int64_t &finishedAt,
++    std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus)
+ {
+     runtime::v1alpha2::ContainerState state { runtime::v1alpha2::CONTAINER_UNKNOWN };
+     std::string reason;
+@@ -1198,7 +1197,6 @@ auto ContainerManagerServiceImpl::InspectContainerState(const std::string &Id, E
+     return inspect_data;
+ }
+ 
+-
+ auto ContainerManagerServiceImpl::ValidateExecRequest(const runtime::v1alpha2::ExecRequest &req, Errors &error) -> int
+ {
+     if (req.container_id().empty()) {
+@@ -1260,8 +1258,8 @@ void ContainerManagerServiceImpl::Exec(const runtime::v1alpha2::ExecRequest &req
+     resp->set_url(url);
+ }
+ 
+-auto ContainerManagerServiceImpl::ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req,
+-                                                        Errors &error) -> int
++auto ContainerManagerServiceImpl::ValidateAttachRequest(const runtime::v1alpha2::AttachRequest &req, Errors &error)
++-> int
+ {
+     if (req.container_id().empty()) {
+         error.SetError("missing required container id!");
+@@ -1286,8 +1284,7 @@ auto ContainerManagerServiceImpl::ValidateAttachRequest(const runtime::v1alpha2:
+ }
+ 
+ void ContainerManagerServiceImpl::Attach(const runtime::v1alpha2::AttachRequest &req,
+-                                         runtime::v1alpha2::AttachResponse *resp,
+-                                         Errors &error)
++                                         runtime::v1alpha2::AttachResponse *resp, Errors &error)
+ {
+     if (ValidateAttachRequest(req, error) != 0) {
+         return;
+diff --git a/src/daemon/executor/container_cb/execution_extend.c b/src/daemon/executor/container_cb/execution_extend.c
+index 40f24d29..2d5c6bed 100644
+--- a/src/daemon/executor/container_cb/execution_extend.c
++++ b/src/daemon/executor/container_cb/execution_extend.c
+@@ -268,6 +268,7 @@ static container_info *get_container_stats(const container_t *cont,
+     info->status = util_strdup_s(container_state_to_string(container_state_get_status(cont->state)));
+     info->cache = einfo->cache;
+     info->cache_total = einfo->cache_total;
++    info->inactive_file_total = einfo->inactive_file_total;
+ 
+     if (copy_map_labels(cont->common_config->config, &map_labels) != 0) {
+         ret = -1;
+diff --git a/src/daemon/modules/api/runtime_api.h b/src/daemon/modules/api/runtime_api.h
+index f11228b6..dde21b91 100644
+--- a/src/daemon/modules/api/runtime_api.h
++++ b/src/daemon/modules/api/runtime_api.h
+@@ -61,6 +61,7 @@ struct runtime_container_resources_stats_info {
+     /* Cache usage */
+     uint64_t cache;
+     uint64_t cache_total;
++    uint64_t inactive_file_total;
+ };
+ 
+ typedef struct _rt_create_params_t {
+diff --git a/src/daemon/modules/runtime/engines/lcr/lcr_engine.c b/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
+index 691bfaa8..350f6497 100644
+--- a/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
++++ b/src/daemon/modules/runtime/engines/lcr/lcr_engine.c
+@@ -164,6 +164,7 @@ static void copy_container_resources_stats(const struct lcr_container_state *lcs
+     rs_stats->kmem_limit = lcs->kmem_limit;
+     rs_stats->cache = lcs->cache;
+     rs_stats->cache_total = lcs->cache_total;
++    rs_stats->inactive_file_total = lcs->inactive_file_total;
+ }
+ 
+ /* get container cgroup resources */
+-- 
+2.25.1
+
