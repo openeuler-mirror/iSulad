@@ -437,7 +437,7 @@ void PluginManager::GetPodNetworkStatus(const std::string &ns, const std::string
 
 void PluginManager::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                              const std::string &podSandboxID, std::map<std::string, std::string> &annotations,
-                             const std::map<std::string, std::string> &options, Errors &error)
+                             const std::map<std::string, std::string> &options, std::string &network_settings_json, Errors &error)
 {
     if (m_plugin == nullptr) {
         return;
@@ -451,7 +451,7 @@ void PluginManager::SetUpPod(const std::string &ns, const std::string &name, con
     INFO("Calling network plugin %s to set up pod %s", m_plugin->Name().c_str(), fullName.c_str());
 
     Errors tmpErr;
-    m_plugin->SetUpPod(ns, name, interfaceName, podSandboxID, annotations, options, tmpErr);
+    m_plugin->SetUpPod(ns, name, interfaceName, podSandboxID, annotations, options, network_settings_json, tmpErr);
     if (tmpErr.NotEmpty()) {
         error.Errorf("NetworkPlugin %s failed to set up pod %s network: %s", m_plugin->Name().c_str(), fullName.c_str(),
                      tmpErr.GetCMessage());
@@ -535,7 +535,7 @@ std::map<int, bool> *NoopNetworkPlugin::Capabilities()
 
 void NoopNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
                                  const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
-                                 const std::map<std::string, std::string> &options, Errors &error)
+                                 const std::map<std::string, std::string> &options, std::string &network_settings_json, Errors &error)
 {
     return;
 }

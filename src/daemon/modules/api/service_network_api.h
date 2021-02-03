@@ -18,6 +18,7 @@
 #include <stdbool.h>
 
 #include "container_unix.h"
+#include "network_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +31,9 @@ int setup_network(container_t *cont);
 int teardown_network(container_t *cont);
 
 bool network_store_container_list_add(container_t *cont);
+
+int update_container_networks_info(const network_api_result_list *result, const char *id,
+                                   defs_map_string_object_networks *networks);
 
 #ifdef __cplusplus
 }

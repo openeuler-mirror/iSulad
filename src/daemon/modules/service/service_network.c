@@ -20,7 +20,6 @@
 
 #include "utils_network.h"
 #include "utils_port.h"
-#include "network_api.h"
 #include "err_msg.h"
 #include "namespace.h"
 
@@ -740,8 +739,8 @@ out:
     return ret;
 }
 
-static int update_container_networks_info(const network_api_result_list *result, const char *id,
-                                          defs_map_string_object_networks *networks)
+int update_container_networks_info(const network_api_result_list *result, const char *id,
+                                   defs_map_string_object_networks *networks)
 {
     int ret = 0;
     size_t i, old_size, new_size;
@@ -818,7 +817,7 @@ static inline void do_free_network_setting_cni_portmapping(container_network_set
 }
 
 static int update_container_networks_portmappings(const cni_anno_port_mappings_container *merged_ports,
-                                                  container_network_settings *settings)
+                                           container_network_settings *settings)
 {
     size_t i;
     cni_inner_port_mapping **tmp_ports = NULL;
