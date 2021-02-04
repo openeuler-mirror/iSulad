@@ -329,6 +329,9 @@ function cp_test_t()
     msg_info "${test} starting..."
 
     local isulad_pid=$(cat /var/run/isulad.pid)
+
+    # wait some time to make sure fd closed
+    sleep 3
     local fd_num1=$(ls -l /proc/$isulad_pid/fd | wc -l)
     [[ $fd_num1 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
 
@@ -362,6 +365,8 @@ function cp_test_t()
 
     rm -rf $cpfiles
 
+    # wait some time to make sure fd closed
+    sleep 3
     local fd_num2=$(ls -l /proc/$isulad_pid/fd | wc -l)
     [[ $fd_num2 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
 
