@@ -1744,7 +1744,7 @@ static void run_delete_device(void *args)
     const size_t CMD_ARGS_NUM = 4;
 
     if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
-        COMMAND_ERROR(" delete device need four args");
+        ERROR("delete device need four args");
         exit(1);
     }
 
@@ -2136,11 +2136,11 @@ int native_detach_networks(const network_api_conf *conf, network_api_result_list
         goto unlock;
     }
 
+unlock:
     for (i = 0; i < conf->extral_nets_len; i++) {
         do_remove_container_list(conf->extral_nets[i]->name, conf->pod_id);
     }
 
-unlock:
     native_store_unlock();
     return ret;
 }

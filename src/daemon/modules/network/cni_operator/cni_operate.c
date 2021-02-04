@@ -45,7 +45,7 @@ typedef struct cni_manager_store_t {
     struct cni_network_list_conf *loopback_conf;
 } cni_manager_store_t;
 
-#define LOOPBACK_CONFLIST_STR "{\"cniVersion\": \"0.3.0\", \"name\": \"cni-loopback\",\"plugins\":[{\"type\": \"loopback\" }]}"
+#define LOOPBACK_CONFLIST_STR "{\"cniVersion\": \"0.3.1\", \"name\": \"cni-loopback\",\"plugins\":[{\"type\": \"loopback\" }]}"
 
 static cni_manager_store_t g_cni_manager;
 

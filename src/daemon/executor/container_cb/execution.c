@@ -473,6 +473,11 @@ static int restart_container(container_t *cont)
 
     params.rootpath = rootpath;
 
+    if (teardown_network(cont, false) != 0) {
+        ERROR("Teardown network failed for container %s", id);
+        isulad_set_error_message("Teardown network failed for container %s", id);
+    }
+
     ret = runtime_restart(id, runtime, &params);
     if (ret == -2) {
         goto out;
@@ -606,11 +611,6 @@ static int container_restart_cb(const container_restart_request *request, contai
 
     EVENT("Event: {Object: %s, Type: restarting}", id);
 
-    if (teardown_network(cont) != 0) {
-        ERROR("Teardown network failed for container %s", id);
-        isulad_set_error_message("Teardown network failed for container %s", id);
-    }
-
     if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot restart container %s in garbage collector progress.", id);
         ERROR("You cannot restart container %s in garbage collector progress.", id);
@@ -717,11 +717,6 @@ static int container_stop_cb(const container_stop_request *request, container_st
 
     EVENT("Event: {Object: %s, Type: Stopping}", id);
 
-    if (teardown_network(cont) != 0) {
-        isulad_set_error_message("Teardown network failed for container %s", id);
-        ERROR("Teardown network failed for container %s", id);
-    }
-
     if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot stop container %s in garbage collector progress.", id);
         ERROR("You cannot stop container %s in garbage collector progress.", id);
@@ -818,11 +813,6 @@ static int container_kill_cb(const container_kill_request *request, container_ki
     isula_libutils_set_log_prefix(id);
 
     EVENT("Event: {Object: %s, Type: Killing, Signal:%u}", id, signal);
-
-    if (teardown_network(cont) != 0) {
-        isulad_set_error_message("Teardown network failed for container %s", id);
-        ERROR("Teardown network failed for container %s", id);
-    }
 
     if (container_is_in_gc_progress(id)) {
         isulad_set_error_message("You cannot kill container %s in garbage collector progress.", id);

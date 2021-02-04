@@ -16,6 +16,7 @@
 
 #include "service_network_api.h"
 
+#include <unistd.h>
 #include <isula_libutils/cni_anno_port_mappings.h>
 
 #include "utils_network.h"
@@ -74,15 +75,15 @@ out:
     return ret;
 }
 
-static char *get_netns_path(const char *id, const int pid)
+static char *get_netns_path(const char *id, const int pid, const bool clean)
 {
     int nret = 0;
     char fullpath[PATH_MAX] = { 0 };
     const char *netns_fmt = "/proc/%d/ns/net";
 
-    if (pid == 0) {
-        ERROR("cannot find network namespace for the terminated container %s", id);
-        return NULL;
+    if (clean == true || pid == 0) {
+        WARN("Container %s pid is %d, and netns path is empty", id, pid);
+        return util_strdup_s("");
     }
 
     nret = snprintf(fullpath, sizeof(fullpath), netns_fmt, pid);
@@ -644,7 +645,7 @@ out:
     return ret;
 }
 
-static network_api_conf *build_adaptor_native_config(const container_t *cont, prepare_networks_t op)
+static network_api_conf *build_adaptor_native_config(const container_t *cont, prepare_networks_t op, const bool clean)
 {
     network_api_conf *config = NULL;
     struct attach_net_conf_list *list = NULL;
@@ -657,7 +658,7 @@ static network_api_conf *build_adaptor_native_config(const container_t *cont, pr
 
     config->name = util_strdup_s(cont->common_config->name);
     config->pod_id = util_strdup_s(cont->common_config->id);
-    config->netns_path = get_netns_path(cont->common_config->id, cont->state->state->pid);
+    config->netns_path = get_netns_path(cont->common_config->id, cont->state->state->pid, clean);
     if (config->netns_path == NULL) {
         ERROR("Failed to get netns path for container %s", cont->common_config->id);
         goto err_out;
@@ -739,12 +740,15 @@ out:
     return ret;
 }
 
-int update_container_networks_info(const network_api_result_list *result, const char *id,
-                                   defs_map_string_object_networks *networks)
+int update_container_networks_info(const network_api_result_list *result, const char *id, const char* netns_path,
+                                   container_network_settings *network_settings)
 {
     int ret = 0;
     size_t i, old_size, new_size;
+    defs_map_string_object_networks *networks = network_settings->networks;
     const size_t len = networks->len;
+
+    network_settings->sandbox_key = util_strdup_s(netns_path);
 
     if (result == NULL || result->items == NULL || result->len == 0) {
         ERROR("Invalid result");
@@ -817,7 +821,7 @@ static inline void do_free_network_setting_cni_portmapping(container_network_set
 }
 
 static int update_container_networks_portmappings(const cni_anno_port_mappings_container *merged_ports,
-                                           container_network_settings *settings)
+                                                  container_network_settings *settings)
 {
     size_t i;
     cni_inner_port_mapping **tmp_ports = NULL;
@@ -906,7 +910,7 @@ int setup_network(container_t *cont)
         }
     }
 
-    config = build_adaptor_native_config(cont, prepare_attach_networks);
+    config = build_adaptor_native_config(cont, prepare_attach_networks, false);
     if (config == NULL) {
         ERROR("Failed to build adaptor native config");
         ret = -1;
@@ -925,7 +929,7 @@ int setup_network(container_t *cont)
         goto out;
     }
 
-    ret = update_container_networks_info(result, cont->common_config->id, cont->network_settings->networks);
+    ret = update_container_networks_info(result, cont->common_config->id, config->netns_path, cont->network_settings);
     if (ret != 0) {
         ERROR("Failed to update network setting");
         goto out;
@@ -1007,7 +1011,413 @@ out:
     return ret;
 }
 
-int teardown_network(container_t *cont)
+static bool is_not_exist_err(const char *command, const char *err_msg)
+{
+    int nret = 0;
+    char rule_not_exist_msg[MAX_BUFFER_SIZE] = { 0x00 };
+    char chain_not_exist_msg[MAX_BUFFER_SIZE] = { 0x00 };
+
+    nret = snprintf(rule_not_exist_msg, sizeof(rule_not_exist_msg),
+                    "%s: Bad rule (does a matching rule exist in that chain?).", command);
+    if (nret < 0 || (size_t)nret >= sizeof(rule_not_exist_msg)) {
+        ERROR("snprintf failed");
+        return false;
+    }
+
+    nret = snprintf(chain_not_exist_msg, sizeof(chain_not_exist_msg), "%s: No chain/target/match by that name.", command);
+    if (nret < 0 || (size_t)nret >= sizeof(chain_not_exist_msg)) {
+        ERROR("snprintf failed");
+        return false;
+    }
+
+    return util_strings_contains_word(err_msg, rule_not_exist_msg) ||
+           util_strings_contains_word(err_msg, chain_not_exist_msg);
+}
+
+static char *get_chain(const char *rule)
+{
+    size_t i, len;
+    char *chain = NULL;
+    char **splits = NULL;
+
+    splits = util_string_split(rule, ' ');
+    if (splits == NULL) {
+        ERROR("Failed to split rule %s", rule);
+        return NULL;
+    }
+
+    len = util_array_len((const char **)splits);
+    if (len <= 1) {
+        goto out;
+    }
+    for (i = 0; i < len - 1; i++) {
+        if (strcmp(splits[i], "-j") == 0 || strcmp(splits[i], "--jump") == 0) {
+            chain = util_strdup_s(splits[i + 1]);
+            break;
+        }
+    }
+
+    if (chain != NULL && !util_has_prefix(chain, "CNI-")) {
+        ERROR("Chain %s format invalid", chain);
+        free(chain);
+        chain = NULL;
+        goto out;
+    }
+
+out:
+    util_free_array(splits);
+    return chain;
+}
+
+static void run_iptables_list(void *args)
+{
+    char **tmp_args = (char **)args;
+    const size_t CMD_ARGS_NUM = 6;
+
+    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
+        ERROR("iptables list need five args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static void run_iptables_delete(void *args)
+{
+    char **tmp_args = (char **)args;
+    const size_t CMD_ARGS_NUM = 14;
+
+    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
+        ERROR("iptables delete need thirteen args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static void run_iptables_clear_chain(void *args)
+{
+    char **tmp_args = (char **)args;
+    const size_t CMD_ARGS_NUM = 6;
+
+    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
+        ERROR("iptables clear chain need five args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static void run_iptables_delete_chain(void *args)
+{
+    char **tmp_args = (char **)args;
+    const size_t CMD_ARGS_NUM = 6;
+
+    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
+        ERROR("iptables delete chain need five args");
+        exit(1);
+    }
+
+    execvp(tmp_args[0], tmp_args);
+}
+
+static char *iptables_get_rule(const char *command, const char *id, const char *network_name)
+{
+#define IPTABLES_LIST_RULES_ARGS_LEN 6
+    size_t i = 0;
+    size_t len = 0;
+    char **args = NULL;
+    char **rules = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
+    char *tmp_res = NULL;
+    char *res = NULL;
+    const char *prefix = "-A ";
+
+    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_LIST_RULES_ARGS_LEN + 1);
+    if (args == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    args[i++] = util_strdup_s(command);
+    args[i++] = util_strdup_s("-t");
+    args[i++] = util_strdup_s("nat");
+    args[i++] = util_strdup_s("-S");
+    args[i++] = util_strdup_s("POSTROUTING");
+    args[i] = util_strdup_s("--wait");
+
+    DEBUG("iptables command: %s -t nat -S POSTROUTING", command);
+    if (!util_exec_cmd(run_iptables_list, args, NULL, &stdout_msg, &stderr_msg)) {
+        ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
+        goto out;
+    }
+
+    rules = util_string_split(stdout_msg, '\n');
+    if (rules == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    len = util_array_len((const char **)rules);
+    for (i = 0; i < len; i++) {
+        // rule: -A POSTROUTING -s <IP> -m comment --comment "name: \"<NETWORK_NAME>\" id: \"<ID>\"" -j <CHAIN>
+        if (util_strings_contains_word(rules[i], id) &&
+            util_strings_contains_word(rules[i], network_name) && util_has_prefix(rules[i], prefix)) {
+            // ipv6 address in iptables rule is not exactly same with container ip, so don't pick rule by ip
+            tmp_res = util_strdup_s(rules[i]);
+            break;
+        }
+    }
+
+    if (tmp_res == NULL) {
+        goto out;
+    }
+
+    res = util_sub_string(tmp_res, strlen(prefix), strlen(tmp_res) - strlen(prefix));
+    if (res == NULL) {
+        ERROR("Failed to sub string");
+        goto out;
+    }
+
+out:
+    util_free_array(args);
+    util_free_array(rules);
+    free(stdout_msg);
+    free(stderr_msg);
+    free(tmp_res);
+    return res;
+}
+
+static int iptables_delete_rule(const char *command, const char *id, const char *ip, const char *network_name,
+                                const char *chain)
+{
+#define IPTABLES_DELETE_RULE_ARGS_LEN 14
+    int ret = 0;
+    int nret = 0;
+    size_t i = 0;
+    char **args = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
+    char comment[MAX_BUFFER_SIZE] = { 0x00 };
+
+    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_DELETE_RULE_ARGS_LEN + 1);
+    if (args == NULL) {
+        ERROR("Out of memory");
+        ret = -1;
+        goto out;
+    }
+
+    nret = snprintf(comment, sizeof(comment), "name: \"%s\" id: \"%s\"", network_name, id);
+    if ((size_t)nret >= sizeof(comment) || nret < 0) {
+        ERROR("snprintf comment failed");
+        ret = -1;
+        goto out;
+    }
+
+    args[i++] = util_strdup_s(command);
+    args[i++] = util_strdup_s("-t");
+    args[i++] = util_strdup_s("nat");
+    args[i++] = util_strdup_s("-D");
+    args[i++] = util_strdup_s("POSTROUTING");
+    args[i++] = util_strdup_s("-s");
+    args[i++] = util_strdup_s(ip);
+    args[i++] = util_strdup_s("-j");
+    args[i++] = util_strdup_s(chain);
+    args[i++] = util_strdup_s("-m");
+    args[i++] = util_strdup_s("comment");
+    args[i++] = util_strdup_s("--comment");
+    args[i++] = util_strdup_s(comment);
+    args[i] = util_strdup_s("--wait");
+
+    DEBUG("iptables command: %s -t nat -D POSTROUTING -s %s -j %s -m comment --comment %s", command, ip, chain, comment);
+    if (!util_exec_cmd(run_iptables_delete, args, NULL, &stdout_msg, &stderr_msg)) {
+        if (!is_not_exist_err(command, stderr_msg)) {
+            ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
+            ret = -1;
+        }
+        goto out;
+    }
+
+out:
+    util_free_array(args);
+    free(stdout_msg);
+    free(stderr_msg);
+    return ret;
+}
+
+static int iptables_clear_chain(const char *command, const char *chain)
+{
+#define IPTABLES_CLEAR_CHAIN_ARGS_LEN 6
+    int ret = 0;
+    size_t i = 0;
+    char **args = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
+
+    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_CLEAR_CHAIN_ARGS_LEN + 1);
+    if (args == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    args[i++] = util_strdup_s(command);
+    args[i++] = util_strdup_s("-t");
+    args[i++] = util_strdup_s("nat");
+    args[i++] = util_strdup_s("-F");
+    args[i++] = util_strdup_s(chain);
+    args[i] = util_strdup_s("--wait");
+
+    DEBUG("iptables command: %s -t nat -F %s", command, chain);
+    if (!util_exec_cmd(run_iptables_clear_chain, args, NULL, &stdout_msg, &stderr_msg)) {
+        if (!is_not_exist_err(command, stderr_msg)) {
+            ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
+            ret = -1;
+        }
+        goto out;
+    }
+
+out:
+    util_free_array(args);
+    free(stdout_msg);
+    free(stderr_msg);
+    return ret;
+}
+
+static int iptables_delete_chain(const char *command, const char *chain)
+{
+#define IPTABLES_DELETE_CHAIN_ARGS_LEN 6
+    int ret = 0;
+    size_t i = 0;
+    char **args = NULL;
+    char *stdout_msg = NULL;
+    char *stderr_msg = NULL;
+
+    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_DELETE_CHAIN_ARGS_LEN + 1);
+    if (args == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    args[i++] = util_strdup_s(command);
+    args[i++] = util_strdup_s("-t");
+    args[i++] = util_strdup_s("nat");
+    args[i++] = util_strdup_s("-X");
+    args[i++] = util_strdup_s(chain);
+    args[i] = util_strdup_s("--wait");
+
+    DEBUG("iptables command: %s -t nat -X %s", command, chain);
+    if (!util_exec_cmd(run_iptables_delete_chain, args, NULL, &stdout_msg, &stderr_msg)) {
+        if (!is_not_exist_err(command, stderr_msg)) {
+            ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
+            ret = -1;
+        }
+        goto out;
+    }
+
+out:
+    util_free_array(args);
+    free(stdout_msg);
+    free(stderr_msg);
+    return ret;
+}
+
+static int do_clean_useless_iptables(const char *command, const char *id, const char *ip, const char *network_name)
+{
+    int ret = 0;
+    char *rule = NULL;
+    char *chain = NULL;
+
+    rule = iptables_get_rule(command, id, network_name);
+    if (rule == NULL) {
+        ERROR("Failed to get iptables rule, maybe it has been deleted");
+        return -1;
+    }
+
+    chain = get_chain(rule);
+    if (chain == NULL) {
+        ERROR("Failed to get chain from rule");
+        ret = -1;
+        goto out;
+    }
+
+    ret = iptables_delete_rule(command, id, ip, network_name, chain);
+    if (ret != 0) {
+        ERROR("Failed to delete iptables rule %s", rule);
+        goto out;
+    }
+
+    ret = iptables_clear_chain(command, chain);
+    if (ret != 0) {
+        ERROR("Failed to clear chain %s", chain);
+        goto out;
+    }
+
+    ret = iptables_delete_chain(command, chain);
+    if (ret != 0) {
+        ERROR("Failed to delete chain %s", chain);
+        goto out;
+    }
+
+out:
+    free(rule);
+    free(chain);
+    return ret;
+}
+
+int clean_useless_iptables(const char *id, const container_network_settings *network_settings)
+{
+    int nret = 0;
+    size_t i = 0;
+    char CIDR_IP[MAX_BUFFER_SIZE] = { 0x00 };
+
+    if (id == NULL) {
+        ERROR("Invalid input id");
+        return -1;
+    }
+
+    if (network_settings == NULL || network_settings->networks == NULL) {
+        return 0;
+    }
+
+    for (i = 0; i < network_settings->networks->len; i++) {
+        if (network_settings->networks->keys[i] == NULL || network_settings->networks->values[i] == NULL ||
+            network_settings->networks->values[i]->ip_address == NULL) {
+            continue;
+        }
+        const char *ip_address = network_settings->networks->values[i]->ip_address;
+
+        if (util_validate_ipv4_address(ip_address)) {
+            nret = snprintf(CIDR_IP, sizeof(CIDR_IP), "%s/32", ip_address);
+            if ((size_t)nret >= sizeof(CIDR_IP) || nret < 0) {
+                ERROR("snprintf CIDR IP failed");
+                return -1;
+            }
+            nret = do_clean_useless_iptables("iptables", id, CIDR_IP, network_settings->networks->keys[i]);
+        } else if (util_validate_ipv6_address(ip_address)) {
+            nret = snprintf(CIDR_IP, sizeof(CIDR_IP), "%s/128", ip_address);
+            if ((size_t)nret >= sizeof(CIDR_IP) || nret < 0) {
+                ERROR("snprintf CIDR IP failed");
+                return -1;
+            }
+            nret = do_clean_useless_iptables("ip6tables", id, CIDR_IP, network_settings->networks->keys[i]);
+        } else {
+            ERROR("Invalid ip address: %s", ip_address);
+            continue;
+        }
+
+        if (nret != 0) {
+            // continue clean iptables
+            ERROR("Failed to clean useless iptables, container id %s, network name %s, ip address %s", id,
+                  network_settings->networks->keys[i], ip_address);
+            continue;
+        }
+    }
+
+    return 0;
+}
+
+int teardown_network(container_t *cont, const bool clean)
 {
     int ret = 0;
     network_api_conf *config = NULL;
@@ -1017,19 +1427,17 @@ int teardown_network(container_t *cont)
         return -1;
     }
 
-    container_lock(cont);
-
     // tear down network when network_mode is bridge
     if (!namespace_is_bridge(cont->hostconfig->network_mode)) {
-        goto out;
+        return 0;
     }
 
     if (cont->network_settings->networks == NULL || cont->network_settings->networks->len == 0) {
-        WARN("Container %s doesn't have any network", cont->common_config->id);
-        goto out;
+        WARN("Container %s doesn't have any network, maybe it has been teardown", cont->common_config->id);
+        return 0;
     }
 
-    config = build_adaptor_native_config(cont, prepare_detach_networks);
+    config = build_adaptor_native_config(cont, prepare_detach_networks, clean);
     if (config == NULL) {
         ERROR("Failed to build adaptor native config");
         ret = -1;
@@ -1053,6 +1461,9 @@ out:
     free_defs_map_string_object_networks(cont->network_settings->networks);
     cont->network_settings->networks = NULL;
 
+    free(cont->network_settings->sandbox_key);
+    cont->network_settings->sandbox_key = NULL;
+
     // clear portmappings
     do_free_network_setting_cni_portmapping(cont->network_settings);
 
@@ -1062,8 +1473,6 @@ out:
     }
 
     free_network_api_conf(config);
-
-    container_unlock(cont);
 
     return ret;
 }
