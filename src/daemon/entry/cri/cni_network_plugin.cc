@@ -420,8 +420,8 @@ cleanup:
     return result;
 }
 
-auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, network_api_result_list *result,
-                                              Errors &err) -> std::string
+auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, const std::string netnsPath,
+                                              network_api_result_list *result, Errors &err) -> std::string
 {
     std::string json;
     parser_error jerr { nullptr };
@@ -433,20 +433,20 @@ auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, n
     }
 
     container_network_settings *network_settings = static_cast<container_network_settings *>(util_common_calloc_s(sizeof(
-                                                                                                          container_network_settings)));
+                                                                                                                      container_network_settings)));
     if (network_settings == nullptr) {
         err.SetError("Out of memory");
         goto out;
     }
 
     network_settings->networks = static_cast<defs_map_string_object_networks *>(util_common_calloc_s(sizeof(
-                                                                                             defs_map_string_object_networks)));
+                                                                                                         defs_map_string_object_networks)));
     if (network_settings->networks == nullptr) {
         err.SetError("Out of memory");
         goto out;
     }
 
-    if (update_container_networks_info(result, podSandboxID.c_str(), network_settings->networks) != 0) {
+    if (update_container_networks_info(result, podSandboxID.c_str(), netnsPath.c_str(), network_settings) != 0) {
         err.SetError("Failed to update network setting");
         goto out;
     }
@@ -509,7 +509,7 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         }
     }
 
-    network_settings_json = GetNetworkSettingsJson(id, result, err);
+    network_settings_json = GetNetworkSettingsJson(id, netnsPath, result, err);
 
     UnlockNetworkMap(err);
     free_network_api_result_list(result);

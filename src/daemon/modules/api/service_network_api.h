@@ -28,12 +28,14 @@ bool validate_container_network(container_t *cont);
 
 int setup_network(container_t *cont);
 
-int teardown_network(container_t *cont);
+int teardown_network(container_t *cont, const bool clean);
 
 bool network_store_container_list_add(container_t *cont);
 
-int update_container_networks_info(const network_api_result_list *result, const char *id,
-                                   defs_map_string_object_networks *networks);
+int update_container_networks_info(const network_api_result_list *result, const char *id, const char *netns_path,
+                                   container_network_settings *network_settings);
+
+int clean_useless_iptables(const char *id, const container_network_settings *network_settings);
 
 #ifdef __cplusplus
 }

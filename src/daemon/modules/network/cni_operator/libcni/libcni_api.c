@@ -371,7 +371,7 @@ static int run_cni_plugin(cni_net_conf *p_net, const char *name, const char *ver
         goto free_out;
     }
 
-    ret = args(operator, rc, & cargs);
+    ret = args(operator, rc, &cargs);
     if (ret != 0) {
         ERROR("get plugin arguments failed");
         goto free_out;

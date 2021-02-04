@@ -524,7 +524,7 @@ auto PodSandboxManagerServiceImpl::GenerateUpdateNetworkSettingsReqest(const std
     }
 
     container_update_network_settings_request *req = (container_update_network_settings_request *)util_common_calloc_s(
-              sizeof(container_update_network_settings_request));
+                                                         sizeof(container_update_network_settings_request));
     if (req == nullptr) {
         error.Errorf("container update network settings request: Out of memory");
         return nullptr;

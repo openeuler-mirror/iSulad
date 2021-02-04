@@ -680,14 +680,13 @@ static int pack_inspect_network_settings(const container_network_settings *netwo
 {
     parser_error jerr = NULL;
     char *jstr = NULL;
-    struct parser_context ctx = { OPT_GEN_SIMPLIFY | OPT_GEN_KEY_VALUE, 0 };
     int ret = 0;
 
     if (network_settings == NULL) {
         return 0;
     }
 
-    jstr = container_network_settings_generate_json(network_settings, &ctx, &jerr);
+    jstr = container_network_settings_generate_json(network_settings, NULL, &jerr);
     if (jstr == NULL) {
         ERROR("Generate network settings failed: %s", jerr);
         ret = -1;

@@ -330,7 +330,7 @@ static int add_cni_envs(const struct cni_args *cniargs, size_t *pos, char **resu
     }
     result[i++] = buffer;
     buffer = NULL;
-    nret = asprintf(&buffer, "%s=%s", ENV_CNI_ARGS, plugin_args_str);
+    nret = asprintf(&buffer, "%s=%s", ENV_CNI_ARGS, plugin_args_str == NULL ? "" : plugin_args_str);
     if (nret < 0) {
         ERROR("Sprintf failed");
         goto free_out;
@@ -437,6 +437,7 @@ int exec_plugin_with_result(const char *plugin_path, const char *cni_net_conf_js
 
     ret = raw_exec(plugin_path, cni_net_conf_json, envs, &stdout_str, &e_err);
     DEBUG("Raw exec \"%s\" result: %d", plugin_path, ret);
+    DEBUG("Raw exec stdout: %s", stdout_str);
     ret = do_parse_exec_stdout_str(ret, cni_net_conf_json, e_err, stdout_str, result);
 out:
     free(stdout_str);
@@ -449,6 +450,7 @@ int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf
 {
     char *err_msg = NULL;
     char **envs = NULL;
+    char *stdout_str = NULL;
     cni_exec_error *e_err = NULL;
     int ret = 0;
 
@@ -463,14 +465,16 @@ int exec_plugin_without_result(const char *plugin_path, const char *cni_net_conf
         }
     }
 
-    ret = raw_exec(plugin_path, cni_net_conf_json, envs, NULL, &e_err);
+    ret = raw_exec(plugin_path, cni_net_conf_json, envs, &stdout_str, &e_err);
     if (ret != 0) {
         err_msg = str_cni_exec_error(e_err);
         ERROR("raw exec failed: %s", err_msg);
         isulad_append_error_message("raw exec failed: %s. ", err_msg);
     }
     DEBUG("Raw exec \"%s\" result: %d", plugin_path, ret);
+    DEBUG("Raw exec stdout: %s", stdout_str);
 out:
+    free(stdout_str);
     util_free_array(envs);
     free_cni_exec_error(e_err);
     free(err_msg);
