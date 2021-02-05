@@ -1,9 +1,14 @@
 {
-	"cniVersion": "0.3.1",
+	"cniVersion": "0.4.0",
 	"name": "mock",
 	"type": "isulad-cni",
 	"ipam": {
 		"type": "isulad-cni",
 		"subnet": "10.3.0.0/16"
+	},
+	"capabilities": {
+		"ipRanges": true,
+		"bandwidth": true,
+		"portMappings": true
 	}
 }

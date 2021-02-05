@@ -176,6 +176,7 @@ function init_cni_conf()
     mkdir -p /opt/cni/bin
     cp $dtpath/bins/isulad-cni /opt/cni/bin
     cp $dtpath/good.conflist /etc/cni/net.d/
+    ls /etc/cni/net.d/
 
     check_valgrind_log
     if [ $? -ne 0 ]; then
@@ -191,3 +192,12 @@ function init_cni_conf()
 
     return $TC_RET_T
 }
+
+function do_pretest() {
+    msg_info "#### do pretest #####"
+    isula ps -a
+    isula network ls
+    msg_info "#####################"
+}
+
+do_pretest

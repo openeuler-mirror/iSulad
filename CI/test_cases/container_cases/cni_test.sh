@@ -59,16 +59,10 @@ function do_test_help()
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
-    ls /var/lib/cni/results/cni-loopback-*
-    if [ $? -ne 0 ];then
-        msg_err "can not found result cached"
-        TC_RET_T=$(($TC_RET_T+1))
-    fi
-
     cnt=`ls /var/lib/cni/results/* | wc -l`
-    target_cnt=2
+    target_cnt=1
     if [ "x$3" != "x" ];then
-        target_cnt=3
+        target_cnt=2
     fi
 
     if [ $cnt -ne $target_cnt ];then
@@ -198,23 +192,8 @@ function new_cni_config()
     do_test_help "mutlnet_pod.json" "10\.2\." "10\.1\."
 }
 
-function check_annotation()
+function check_annotation_extension()
 {
-    cp ${data_path}/mock.json /etc/cni/net.d/bridge.json
-    sync;sync;
-    tail $ISUALD_LOG
-    # wait cni updated
-    s=`date "+%s"`
-    for ((i=0;i<30;i++)); do
-        sleep 1
-        cur=`date "+%s"`
-        let "t=cur-s"
-        if [ $t -gt 6 ];then
-            break
-        fi
-    done
-    tail $ISUALD_LOG
-
     sid=`crictl runp ${data_path}/sandbox-config.json`
     if [ $? -ne 0 ]; then
         msg_err "Failed to run sandbox"
@@ -253,6 +232,103 @@ function check_annotation()
     return $TC_RET_T
 }
 
+# $1: input ingress rate;
+# $2: expect ingress rate;
+# $3: input egress rate;
+# $4: expect egress rate;
+function check_annotation_valid_bandwidth()
+{
+    rm bandwidth.json
+    cp ${data_path}/mock-sandbox.json bandwidth.json
+    sed -i "s#ingressholder#$1#g" bandwidth.json
+    sed -i "s#engressholder#$3#g" bandwidth.json
+    sid=`crictl runp bandwidth.json`
+    if [ $? -ne 0 ]; then
+        msg_err "Failed to run sandbox"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    basepath=/tmp/cnilogs/
+
+    cat ${basepath}/${sid}.netconf  | grep "ingressRate\":$3"
+    if [ $? -ne 0 ];then
+        msg_err "lost extension for mutl network args"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    cat ${basepath}/${sid}.netconf  | grep "egressRate\":$4"
+    if [ $? -ne 0 ];then
+        msg_err "lost extension for mutl network args"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl stopp $sid
+    if [ $? -ne 0 ];then
+        msg_err "stop sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl rmp $sid
+    if [ $? -ne 0 ];then
+        msg_err "rm sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    return $TC_RET_T
+}
+
+function check_annotation_invalid_bandwidth()
+{
+    rm bandwidth.json
+    cp ${data_path}/mock-sandbox.json bandwidth.json
+    sed -i "s#ingressholder#$1#g" bandwidth.json
+    sed -i "s#engressholder#$3#g" bandwidth.json
+
+    sid=`crictl runp bandwidth.json`
+    if [ $? -eq 0 ]; then
+        msg_err "run sandbox successfully with invalid bandwidth"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl stopp $sid
+
+    crictl rmp $sid
+    if [ $? -ne 0 ];then
+        msg_err "rm sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    return $TC_RET_T
+}
+
+function check_annotation()
+{
+    cp ${data_path}/mock.json /etc/cni/net.d/bridge.json
+    sync;sync;
+    tail $ISUALD_LOG
+    # wait cni updated
+    s=`date "+%s"`
+    for ((i=0;i<30;i++)); do
+        sleep 1
+        cur=`date "+%s"`
+        let "t=cur-s"
+        if [ $t -gt 6 ];then
+            break
+        fi
+    done
+    tail $ISUALD_LOG
+
+    check_annotation_extension
+
+    check_annotation_valid_bandwidth "10.24k" "10240" "-1.024k" "-1024"
+    check_annotation_valid_bandwidth "1024m" "2" "-1024m" "-1"
+    check_annotation_valid_bandwidth "1.000001Ki" "1025" "-1.00001Ki" "-1024"
+    check_annotation_valid_bandwidth "0.1Mi" "104858" "-0.01" "-10485"
+    check_annotation_valid_bandwidth "1.00001e2" "101" "-1.0001e2" "-100"
+
+    return $TC_RET_T
+}
+
 ret=0
 
 do_pre
@@ -269,6 +345,8 @@ new_cni_config
 if [ $? -ne 0 ];then
     let "ret=$ret + 1"
 fi
+
+check_annotation
 
 do_post
 
