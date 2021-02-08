@@ -394,6 +394,29 @@ static int rebase_hardlink(struct archive_entry *entry, const char *src_base, co
     return 0;
 }
 
+// if dst path exits, we just want to remove and replace it.
+// exception: when the exited dstpath is directory and the file from the layer is also a directory.
+static void try_to_replace_exited_dst(const char *dst_path, struct archive_entry *entry)
+{
+    struct stat s;
+    int nret;
+
+    nret = lstat(dst_path, &s);
+    if (nret < 0) {
+        return;
+    }
+
+    if (S_ISDIR(s.st_mode) && archive_entry_filetype(entry) == AE_IFDIR) {
+        return;
+    }
+
+    if (util_recursive_remove_path(dst_path) != 0) {
+        ERROR("Failed to remove path %s while unpack", dst_path);
+    }
+
+    return;
+}
+
 int archive_unpack_handler(const struct io_read_wrapper *content, const struct archive_options *options)
 {
     int ret = 0;
@@ -498,6 +521,8 @@ int archive_unpack_handler(const struct io_read_wrapper *content, const struct a
         if (wh_handle_cb != NULL && !wh_handle_cb(entry, dst_path, unpacked_path_map)) {
             continue;
         }
+
+        try_to_replace_exited_dst(dst_path, entry);
 
         ret = archive_write_header(ext, entry);
         if (ret != ARCHIVE_OK) {
@@ -874,8 +899,8 @@ static ssize_t stream_write_data(struct archive *a, void *client_data, const voi
     return size;
 }
 
-static int tar_all(const struct io_write_wrapper *writer, const char *tar_dir,
-                   const char *src_base, const char *dst_base)
+static int tar_all(const struct io_write_wrapper *writer, const char *tar_dir, const char *src_base,
+                   const char *dst_base)
 {
     struct archive *r = NULL;
     struct archive *w = NULL;
@@ -906,7 +931,7 @@ static int tar_all(const struct io_write_wrapper *writer, const char *tar_dir,
     }
     archive_write_set_format_pax(w);
     archive_write_set_options(w, "xattrheader=SCHILY");
-    ret = archive_write_open(w, (void*)writer, NULL, stream_write_data, NULL);
+    ret = archive_write_open(w, (void *)writer, NULL, stream_write_data, NULL);
     if (ret != ARCHIVE_OK) {
         ERROR("open archive write failed: %s", archive_error_string(w));
         fprintf(stderr, "open archive write failed: %s\n", archive_error_string(w));
@@ -924,7 +949,7 @@ out:
 
 static ssize_t fd_write(void *context, const void *data, size_t len)
 {
-    return util_write_nointr(*(int*)context, data, len);
+    return util_write_nointr(*(int *)context, data, len);
 }
 
 int archive_chroot_tar(char *path, char *file, char **errmsg)
@@ -989,7 +1014,7 @@ int archive_chroot_tar(char *path, char *file, char **errmsg)
             goto child_out;
         }
 
-        pipe_context.context = (void*)&fd;
+        pipe_context.context = (void *)&fd;
         pipe_context.write_func = fd_write;
         ret = tar_all(&pipe_context, ".", ".", NULL);
 
@@ -1024,7 +1049,7 @@ cleanup:
 
 static ssize_t pipe_read(void *context, void *buf, size_t len)
 {
-    return util_read_nointr(*(int*)context, buf, len);
+    return util_read_nointr(*(int *)context, buf, len);
 }
 
 static ssize_t archive_context_write(const void *context, const void *buf, size_t len)
@@ -1041,7 +1066,7 @@ static ssize_t archive_context_write(const void *context, const void *buf, size_
 
 static ssize_t pipe_write(void *context, const void *data, size_t len)
 {
-    return util_write_nointr(*(int*)context, data, len);
+    return util_write_nointr(*(int *)context, data, len);
 }
 
 static ssize_t archive_context_read(void *context, void *buf, size_t len)
@@ -1128,9 +1153,8 @@ static int archive_context_close(void *context, char **err)
     return ret;
 }
 
-int archive_chroot_untar_stream(const struct io_read_wrapper *context, const char *chroot_dir,
-                                const char *untar_dir, const char *src_base, const char *dst_base,
-                                char **errmsg)
+int archive_chroot_untar_stream(const struct io_read_wrapper *context, const char *chroot_dir, const char *untar_dir,
+                                const char *src_base, const char *dst_base, char **errmsg)
 {
     struct io_read_wrapper pipe_context = { 0 };
     int pipe_stream[2] = { -1, -1 };
@@ -1143,10 +1167,9 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
     char *buf = NULL;
     size_t buf_len = ARCHIVE_BLOCK_SIZE;
     ssize_t read_len;
-    struct archive_options options = {
-        .whiteout_format = NONE_WHITEOUT_FORMATE,
-        .src_base = src_base,
-        .dst_base = dst_base
+    struct archive_options options = { .whiteout_format = NONE_WHITEOUT_FORMATE,
+               .src_base = src_base,
+               .dst_base = dst_base
     };
 
     buf = util_common_calloc_s(buf_len);
@@ -1201,7 +1224,7 @@ int archive_chroot_untar_stream(const struct io_read_wrapper *context, const cha
             goto child_out;
         }
 
-        pipe_context.context = (void*)&pipe_stream[0];
+        pipe_context.context = (void *)&pipe_stream[0];
         pipe_context.read = pipe_read;
         ret = archive_unpack_handler(&pipe_context, &options);
 
@@ -1252,8 +1275,8 @@ cleanup:
     return ret;
 }
 
-int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, const char *src_base,
-                              const char *dst_base, struct io_read_wrapper *reader)
+int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, const char *src_base, const char *dst_base,
+                              struct io_read_wrapper *reader)
 {
     struct io_write_wrapper pipe_context = { 0 };
     int keepfds[] = { -1, -1, -1 };
@@ -1273,7 +1296,7 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
     }
 
     pid = fork();
-    if (pid == (pid_t) - 1) {
+    if (pid == (pid_t) -1) {
         ERROR("Failed to fork: %s", strerror(errno));
         goto free_out;
     }
@@ -1320,7 +1343,7 @@ int archive_chroot_tar_stream(const char *chroot_dir, const char *tar_path, cons
             goto child_out;
         }
 
-        pipe_context.context = (void*)&pipe_stream[1];
+        pipe_context.context = (void *)&pipe_stream[1];
         pipe_context.write_func = pipe_write;
         ret = tar_all(&pipe_context, tar_base_name, src_base, dst_base);
 
