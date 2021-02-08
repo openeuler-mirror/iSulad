@@ -101,10 +101,12 @@ static void stats_print(const struct isula_container_info *stats)
     int len;
     double cpu_percent = 0.0;
     char *short_id = NULL;
+    // workingset = usage - total_inactive_file
+    uint64_t workingset = memory_get_working_set(stats);
 
     isula_size_humanize(stats->blkio_read, iosb_read_str, sizeof(iosb_read_str));
     isula_size_humanize(stats->blkio_write, iosb_write_str, sizeof(iosb_write_str));
-    isula_size_humanize(stats->mem_used, mem_used_str, sizeof(mem_used_str));
+    isula_size_humanize(workingset, mem_used_str, sizeof(mem_used_str));
     isula_size_humanize(stats->mem_limit, mem_limit_str, sizeof(mem_limit_str));
 
     len = snprintf(iosb_str, sizeof(iosb_str), "%s / %s", iosb_read_str, iosb_write_str);
@@ -142,8 +144,7 @@ static void stats_print(const struct isula_container_info *stats)
     if (strlen(short_id) > SHORTIDLEN) {
         short_id[SHORTIDLEN] = '\0';
     }
-    // workingset = usage - total_inactive_file
-    uint64_t workingset = memory_get_working_set(stats);
+
     printf("%-16s %-10.2f %-26s %-10.2f %-26s %-10llu", short_id, cpu_percent, mem_str,
            stats->mem_limit ? ((double)workingset / stats->mem_limit) * PERCENT : 0.00, iosb_str,
            (unsigned long long)stats->pids_current);
