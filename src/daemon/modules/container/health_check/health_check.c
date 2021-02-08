@@ -429,6 +429,10 @@ static int handle_increment_streak(container_t *cont, int retries)
                 ret = -1;
             }
         }
+    } else {
+        if (container_state_to_disk(cont)) {
+            WARN("Failed to save container \"%s\" to disk", cont->common_config->id);
+        }
     }
 
     return ret;
@@ -542,6 +546,7 @@ static int handle_probe_result(const char *container_id, const defs_health_log_e
         }
         // else we're starting or healthy. Stay in that state.
     }
+
     // note: replicate Health status changes
     current = get_health_status(cont->state);
     if (strcmp(old_state, current) != 0) {
