@@ -36,7 +36,7 @@ function test_container_network_cleanup()
     check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
-    start_isulad_without_valgrind
+    start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     # create network
@@ -46,15 +46,19 @@ function test_container_network_cleanup()
     isula network create --subnet 2001:db8:12::/64 ${network_name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name2} failed" && return ${FAILURE}
 
+    pids=()
     # run container with network
     for i in $(seq 1 10); do
         isula run -tid --net ${network_name1},${network_name2} -n ${cont_name}${i} busybox sh
         [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container ${cont_name}${i} with network ${network_name1} ${network_name2} failed" && return ${FAILURE}
+
+        pids[${#pids[*]}]=$(isula inspect -f {{.State.Pid}} ${cont_name}${i})
     done
 
-    # kill lxc
-    pkill lxc-start
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kill lxc-start failed" && return ${FAILURE}
+    # kill container
+    for pid in ${pids[*]}; do
+        kill -9 ${pid}
+    done
 
     for i in $(seq 1 10); do
         for j in $(seq 1 20); do
@@ -87,19 +91,31 @@ function test_container_network_cleanup()
         [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ip6tables rules success after stop container" && return ${FAILURE}
     done
     
+    pids=()
     for i in $(seq 1 10); do
         isula start ${cont_name}${i}
         [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start container ${cont_name}${i} failed" && return ${FAILURE}
+
+        pids[${#pids[*]}]=$(isula inspect -f {{.State.Pid}} ${cont_name}${i})
     done
 
-    # stop isulad and kill lxc
-    stop_isulad_without_valgrind
+    # stop isulad and kill container
+    check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
-    pkill lxc-start
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - kill lxc-start failed" && return ${FAILURE}
+    for pid in ${pids[*]}; do
+        kill -9 ${pid}
 
-    start_isulad_without_valgrind
+        for k in $(seq 1 20); do
+            ps -aux | grep ${pid}
+            if [ $? -ne 0]; then
+                break
+            fi
+            sleep 2
+        done
+    done
+
+    start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
     # test iptables rule cleanup
@@ -134,7 +150,7 @@ function test_container_network_cleanup()
     isula network rm ${network_name1} ${network_name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${network_name1} ${network_name2} failed" && return ${FAILURE}
 
-    stop_isulad_without_valgrind
+    check_valgrind_log
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stop isulad failed" && ((ret++))
 
     start_isulad_with_valgrind
