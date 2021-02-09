@@ -34,7 +34,6 @@ void devmapper_device_info_ref_inc(devmapper_device_info_t *device_info)
 static void free_devmapper_device_info_t(devmapper_device_info_t *ptr)
 {
     if (ptr == NULL) {
-        ERROR("invalid argument");
         return;
     }
 
@@ -49,7 +48,6 @@ void devmapper_device_info_ref_dec(devmapper_device_info_t *device_info)
     bool is_zero = false;
 
     if (device_info == NULL) {
-        ERROR("invalid argument");
         return;
     }
 
