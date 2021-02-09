@@ -176,7 +176,7 @@ out:
     return 0;
 }
 
-static char *metadata_dir(struct device_set *devset)
+static char *metadata_dir(const struct device_set *devset)
 {
     return util_path_join(devset->root, "metadata");
 }
@@ -411,7 +411,7 @@ out:
     return exist;
 }
 
-static image_devmapper_device_info *load_metadata(struct device_set *devset, const char *hash)
+static image_devmapper_device_info *load_metadata(const struct device_set *devset, const char *hash)
 {
     image_devmapper_device_info *info = NULL;
     char metadata_file[PATH_MAX] = { 0 };
@@ -420,7 +420,6 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
     parser_error err = NULL;
 
     if (hash == NULL) {
-        ERROR("Invalid input param");
         return NULL;
     }
 
@@ -432,13 +431,13 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
 
     nret = snprintf(metadata_file, sizeof(metadata_file), "%s/%s", metadata_path, util_valid_str(hash) ? hash : "base");
     if (nret < 0 || (size_t)nret >= sizeof(metadata_file)) {
-        ERROR("Get metadata file with hash:%s path failed", hash);
+        ERROR("Failed to snprintf metadata file path with hash:%s, path is too long", hash);
         goto out;
     }
 
     info = image_devmapper_device_info_parse_file(metadata_file, NULL, &err);
     if (info == NULL) {
-        ERROR("load metadata file %s failed %s", metadata_file, err != NULL ? err : "");
+        SYSERROR("Load metadata file:%s failed:%s", metadata_file, err);
         goto out;
     }
 
@@ -448,7 +447,7 @@ static image_devmapper_device_info *load_metadata(struct device_set *devset, con
     }
 
     if (info->device_id > MAX_DEVICE_ID) {
-        ERROR("devmapper: Ignoring Invalid DeviceId=%d", info->device_id);
+        ERROR("devmapper: device id:%d out of limits, to be ignored", info->device_id);
         free_image_devmapper_device_info(info);
         info = NULL;
         goto out;
@@ -878,7 +877,7 @@ static int load_transaction_metadata(struct device_set *devset)
 
     trans = image_devmapper_transaction_parse_file(fname, NULL, &err);
     if (trans == NULL) {
-        ERROR("devmapper: load transaction metadata file error %s", err);
+        SYSERROR("Load transaction metadata file:%s failed:%s", fname, err);
         ret = -1;
         goto out;
     }
@@ -1061,7 +1060,7 @@ static int load_deviceset_metadata(struct device_set *devset)
 
     deviceset_meta = image_devmapper_deviceset_metadata_parse_file(meta_file, NULL, &err);
     if (deviceset_meta == NULL) {
-        ERROR("devmapper: load deviceset metadata file error %s", err);
+        SYSERROR("Load deviceset metadata file:%s failed:%s", meta_file, err);
         ret = -1;
         goto out;
     }
@@ -2781,7 +2780,7 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
 
     base_device_info = lookup_device(devset, util_valid_str(base_hash) ? base_hash : "base");
     if (base_device_info == NULL) {
-        ERROR("Lookup device %s failed", util_valid_str(base_hash) ? base_hash : "base");
+        ERROR("Lookup device %s failed, not found", util_valid_str(base_hash) ? base_hash : "base");
         ret = -1;
         goto free_out;
     }
