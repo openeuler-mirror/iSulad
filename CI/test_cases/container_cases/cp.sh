@@ -328,18 +328,19 @@ function cp_test_t()
 
     msg_info "${test} starting..."
 
+    isula inspect ${image}
+    if [ x"$?" != x"0" ];then
+        isula pull ${image}
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
+    fi
+
     local isulad_pid=$(cat /var/run/isulad.pid)
 
     # wait some time to make sure fd closed
     sleep 3
     local fd_num1=$(ls -l /proc/$isulad_pid/fd | wc -l)
     [[ $fd_num1 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
-
-    isula inspect ${image}
-    if [ x"$?" != x"0" ];then
-        isula pull ${image}
-        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to pull image: ${image}" && return ${FAILURE}
-    fi
+    ls -l /proc/$isulad_pid/fd
 
     isula images | grep busybox
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
@@ -369,6 +370,7 @@ function cp_test_t()
     sleep 3
     local fd_num2=$(ls -l /proc/$isulad_pid/fd | wc -l)
     [[ $fd_num2 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
+    ls -l /proc/$isulad_pid/fd
 
     # make sure fd not increase after test
     [[ $fd_num1 -ne $fd_num2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fd number not right" && ((ret++))

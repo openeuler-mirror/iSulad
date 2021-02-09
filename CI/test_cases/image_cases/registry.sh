@@ -26,6 +26,18 @@ source ../helpers.sh
 function isula_pull()
 {
     isula rm -f `isula ps -a -q`
+
+    isula pull busybox
+    fn_check_eq "$?" "0" "isula pull busybox"
+
+    local isulad_pid=$(cat /var/run/isulad.pid)
+
+    # wait some time to make sure fd closed
+    sleep 3
+    local fd_num1=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    [[ $fd_num1 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
+    ls -l /proc/$isulad_pid/fd
+
     isula rmi busybox
 
     for i in `seq 1 10`
@@ -35,6 +47,15 @@ function isula_pull()
     isula pull busybox
     fn_check_eq "$?" "0" "isula pull busybox"
     wait
+
+    # wait some time to make sure fd closed
+    sleep 3
+    local fd_num2=$(ls -l /proc/$isulad_pid/fd | wc -l)
+    [[ $fd_num2 -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - can not get fd number" && ((ret++))
+    ls -l /proc/$isulad_pid/fd
+
+    # make sure fd not increase after remove and pull busybox
+    [[ $fd_num1 -ne $fd_num2 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - fd number not right" && ((ret++))
 
     isula inspect busybox
     fn_check_eq "$?" "0" "isula inspect busybox"
