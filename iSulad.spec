@@ -246,7 +246,7 @@ fi
 - SUG: NA
 - DESC: update from master
 
-* Mon Jan 18 2020 lifeng <lifeng68@huawei.com> - 2.0.8-20210118.195254.git077e10f2
+* Mon Jan 18 2021 lifeng <lifeng68@huawei.com> - 2.0.8-20210118.195254.git077e10f2
 - Type: sync from upstream
 - ID: NA
 - SUG: NA
