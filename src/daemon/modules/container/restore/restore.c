@@ -455,11 +455,11 @@ error_load:
         if (remove_invalid_container(cont, runtime, rootpath, statepath, subdir[i])) {
             ERROR("Failed to delete subdir:%s", subdir[i]);
         }
-        container_unref(cont);
 
         if (index_flag) {
-            container_name_index_remove(subdir[i]);
+            container_name_index_remove(cont->common_config->name);
         }
+        container_unref(cont);
         continue;
     }
 }

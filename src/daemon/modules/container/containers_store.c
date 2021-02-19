@@ -128,6 +128,7 @@ static container_t *containers_store_get_by_id(const char *id)
 static container_t *containers_store_get_by_name(const char *name)
 {
     char *id = NULL;
+    container_t *cont = NULL;
 
     if (name == NULL) {
         ERROR("No container name supplied");
@@ -140,7 +141,10 @@ static container_t *containers_store_get_by_name(const char *name)
         return NULL;
     }
 
-    return containers_store_get_by_id(id);
+    cont = containers_store_get_by_id(id);
+
+    free(id);
+    return cont;
 }
 
 /* containers store get container by prefix */
@@ -443,6 +447,7 @@ unlock_out:
 char *container_name_index_get(const char *name)
 {
     char *id = NULL;
+    char *result = NULL;
 
     if (name == NULL) {
         return id;
@@ -451,11 +456,14 @@ char *container_name_index_get(const char *name)
         ERROR("lock name index failed");
         return id;
     }
+
     id = map_search(g_indexs->map, (void *)name);
+    result = util_strdup_s(id);
+
     if (pthread_rwlock_unlock(&g_indexs->rwlock) != 0) {
         ERROR("unlock name index failed");
     }
-    return id;
+    return result;
 }
 
 /* name index remove */
