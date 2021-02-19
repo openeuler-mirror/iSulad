@@ -440,6 +440,8 @@ static char *try_generate_id()
 
         value = container_name_index_get(id);
         if (value != NULL) {
+            free(value);
+            value = NULL;
             continue;
         } else {
             goto out;
@@ -631,10 +633,14 @@ static int maintain_container_id(const container_create_request *request, char *
     EVENT("Event: {Object: %s, Type: Creating %s}", id, name);
 
     if (!container_name_index_add(name, id)) {
-        ERROR("Name %s is in use", name);
+        char *used_id = NULL;
+        used_id = container_name_index_get(name);
+        ERROR("Name %s is in use by container %s", name, used_id);
         isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
                                  "You have to remove (or rename) that container to be able to reuse that name.",
-                                 name, name);
+                                 name, used_id);
+        free(used_id);
+        used_id = NULL;
         ret = -1;
         goto out;
     }
