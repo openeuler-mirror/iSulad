@@ -47,8 +47,6 @@
 #include "volume_api.h"
 #include "namespace.h"
 
-static int parse_container_log_configs(container_t *cont);
-
 static int init_container_mutex(container_t *cont)
 {
     int ret = 0;
@@ -99,11 +97,6 @@ container_t *container_new(const char *runtime, const char *rootpath, const char
     atomic_int_set(&cont->refcnt, 1);
 
     ret = init_container_mutex(cont);
-    if (ret != 0) {
-        goto error_out;
-    }
-
-    ret = parse_container_log_configs(cont);
     if (ret != 0) {
         goto error_out;
     }
@@ -951,7 +944,7 @@ static int do_parse_container_log_config(const char *key, const char *value, con
 }
 
 /* get log config of container */
-static int parse_container_log_configs(container_t *cont)
+int container_fill_log_configs(container_t *cont)
 {
     int ret = -1;
     size_t i = 0;
@@ -1133,6 +1126,11 @@ container_t *container_load(const char *runtime, const char *rootpath, const cha
         goto error_out;
     }
     network_settings = NULL;
+
+    if (container_fill_log_configs(cont) != 0) {
+        ERROR("Failed to fill container log configs");
+        goto error_out;
+    }
 
     if (restore_volumes(mount_points, (char *)id) != 0) {
         goto error_out;

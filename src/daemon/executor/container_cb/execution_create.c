@@ -755,6 +755,11 @@ static int register_new_container(const char *id, const char *image_id, const ch
         goto out;
     }
 
+    if (container_fill_log_configs(cont) != 0) {
+        ERROR("Failed to fill container log configs");
+        goto out;
+    }
+
     if (container_to_disk_locking(cont)) {
         ERROR("Failed to save container '%s'", id);
         goto out;
