@@ -125,7 +125,8 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
             devset->min_free_space_percent = (uint32_t)converted;
         } else if (strcasecmp(dup, "dm.basesize") == 0) {
             int64_t converted = 0;
-            if (util_parse_byte_size_string(val, &converted) != 0) {
+            ret = util_parse_byte_size_string(val, &converted);
+            if (ret != 0) {
                 ERROR("Invalid size: '%s': %s", val, strerror(-ret));
                 isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
                 ret = -1;
@@ -435,6 +436,11 @@ static image_devmapper_device_info *load_metadata(const struct device_set *devse
         goto out;
     }
 
+    if (!util_file_exists(metadata_file)) {
+        ERROR("No such file:%s, need not to load", metadata_file);
+        goto out;
+    }
+
     info = image_devmapper_device_info_parse_file(metadata_file, NULL, &err);
     if (info == NULL) {
         SYSERROR("Load metadata file:%s failed:%s", metadata_file, err);
@@ -594,6 +600,7 @@ static uint64_t get_base_device_size(struct device_set *devset)
 
     device_info = lookup_device(devset, "base");
     if (device_info == NULL) {
+        ERROR("No such device:\"base\"");
         return 0;
     }
 
@@ -1688,10 +1695,10 @@ out:
         (void)deactivate_device(devset, base_info);
     }
 
-    if (resume_dev && dev_resume_device(dm_name) != 0) {
-        ERROR("devmapper: resume dm with name:%s failed", dm_name);
-        ret = -1;
+    if (resume_dev) {
+        dev_resume_device(dm_name);
     }
+
     free(dm_name);
     return ret;
 }
@@ -2558,7 +2565,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
         goto out;
     }
 
-    if (util_parse_byte_size_string(tmp_str[0], &major) != 0) {
+    ret = util_parse_byte_size_string(tmp_str[0], &major);
+    if (ret != 0) {
         ERROR("devmapper: invalid size: '%s': %s", tmp_str[0], strerror(-ret));
         ret = -1;
         goto out;
@@ -2577,7 +2585,8 @@ static int determine_driver_capabilities(const char *version, struct device_set 
         goto out;
     }
 
-    if (util_parse_byte_size_string(tmp_str[1], &minor) != 0) {
+    ret = util_parse_byte_size_string(tmp_str[1], &minor);
+    if (ret != 0) {
         ERROR("devmapper: invalid size: '%s': %s", tmp_str[1], strerror(-ret));
         ret = -1;
         goto out;
@@ -2742,7 +2751,8 @@ static int parse_storage_opt(const json_map_string_string *opts, uint64_t *size)
         if (strcasecmp("size", opts->keys[i]) == 0) {
             int64_t converted = 0;
 
-            if (util_parse_byte_size_string(opts->values[i], &converted) != 0) {
+            ret = util_parse_byte_size_string(opts->values[i], &converted);
+            if (ret != 0) {
                 ERROR("Invalid size: '%s': %s", opts->values[i], strerror(-ret));
                 ret = -1;
                 goto out;
@@ -2756,6 +2766,31 @@ static int parse_storage_opt(const json_map_string_string *opts, uint64_t *size)
         }
     }
 
+out:
+    return ret;
+}
+
+static int grow_device_fs(struct device_set *devset, const char *hash, uint64_t size, uint64_t base_size)
+{
+    int ret = 0;
+    devmapper_device_info_t *device_info = NULL;
+
+    if (size <= base_size) {
+        return 0;
+    } else {
+        DEBUG("devmapper: new fs size is larger than old basesize, start to grow fs");
+        device_info = lookup_device(devset, hash);
+        if (device_info == NULL) {
+            ERROR("devmapper: lookup device %s failed", hash);
+            ret = -1;
+            goto out;
+        }
+
+        if (grow_fs(devset, device_info->info) != 0) {
+            ret = -1;
+            goto out;
+        }
+    }
 out:
     return ret;
 }
@@ -2820,18 +2855,14 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
         goto free_out;
     }
 
-    if (size > base_device_info->info->size) {
-        DEBUG("devmapper: new fs size is larger than old basesize, start to grow fs");
-        device_info = lookup_device(devset, hash);
-        if (device_info == NULL) {
-            ERROR("devmapper: lookup device %s failed", hash);
-            ret = -1;
-            goto free_out;
+    if (grow_device_fs(devset, hash, size, base_device_info->info->size) != 0) {
+        ERROR("Grow new deivce fs failed");
+        // Here, we need to delete device directly instead of deferred deleting, so that we can retry to add device with the same hash successfully.
+        if (do_delete_device(devset, hash, true) != 0) {
+            ERROR("devmapper: remove new snapshot device failed");
         }
-        if (grow_fs(devset, device_info->info) != 0) {
-            ret = -1;
-            goto free_out;
-        }
+        ret = -1;
+        goto free_out;
     }
 
 free_out:
@@ -2839,7 +2870,6 @@ free_out:
     devmapper_device_info_ref_dec(device_info);
     if (pthread_rwlock_unlock(&devset->devmapper_driver_rwlock)) {
         ERROR("unlock devmapper conf failed");
-        return -1;
     }
     return ret;
 }

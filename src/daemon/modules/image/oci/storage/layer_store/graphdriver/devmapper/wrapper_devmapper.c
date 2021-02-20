@@ -45,6 +45,9 @@ char *dev_strerror(int errnum)
         case ERR_TASK_SET_COOKIE:
             errmsg = "Task set cookie error";
             break;
+        case ERR_NIL_COOKIE:
+            errmsg = "cookie ptr can't be nil";
+            break;
         case ERR_TASK_SET_ADD_NODE:
             errmsg = "Task add dm node failed";
             break;
@@ -443,6 +446,7 @@ free_out:
 int dev_delete_device_force(const char *name)
 {
     int ret = 0;
+    int nret = 0;
     struct dm_task *dmt = NULL;
     uint32_t cookie = 0;
 
@@ -459,8 +463,9 @@ int dev_delete_device_force(const char *name)
         goto out;
     }
 
-    if (set_cookie(dmt, &cookie, 0) != 0) {
-        ERROR("devicemapper: set cookie failed");
+    nret = set_cookie(dmt, &cookie, 0);
+    if (nret != 0) {
+        ERROR("set cookie failed:%s", dev_strerror(nret));
         ret = -1;
         goto out;
     }
@@ -468,7 +473,7 @@ int dev_delete_device_force(const char *name)
     g_dm_saw_busy = false;
     g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
-        ERROR("devicemapper: run task to delete device faild");
+        ERROR("devicemapper: task run failed");
         if (g_dm_saw_busy) {
             ERROR("devicemapper: delete task run err type is \"device is busy\"");
             ret = ERR_BUSY;
@@ -498,6 +503,7 @@ out:
 int dev_remove_device_deferred(const char *name)
 {
     int ret = 0;
+    int nret = 0;
     struct dm_task *dmt = NULL;
     uint32_t cookie = 0;
     uint16_t flags = DM_UDEV_DISABLE_LIBRARY_FALLBACK;
@@ -521,15 +527,16 @@ int dev_remove_device_deferred(const char *name)
         goto out;
     }
 
-    if (set_cookie(dmt, &cookie, flags) != 0) {
-        ERROR("devicemapper: set cookie failed");
+    nret = set_cookie(dmt, &cookie, flags);
+    if (nret != 0) {
+        ERROR("set cookie failed:%s", dev_strerror(nret));
         ret = -1;
         goto out;
     }
 
     g_dm_saw_enxio = false;
     if (dm_task_run(dmt) != 1) {
-        ERROR("devicemapper: Error running RemoveDeviceDeferred %d", ret);
+        ERROR("devicemapper: task run failed");
         if (g_dm_saw_enxio) {
             ERROR("devicemapper: delete deferred task run err type is \"No such device or address\"");
             ret = ERR_ENXIO;
@@ -694,7 +701,7 @@ int dev_create_device(const char *pool_fname, int device_id)
         } else {
             ret = -1;
         }
-        ERROR("devicemapper: task run failed to create device");
+        ERROR("devicemapper: task run failed");
         goto cleanup;
     }
 
@@ -754,7 +761,7 @@ int dev_delete_device(const char *pool_fname, int device_id)
             DEBUG("devicemapper: device(id:%d) from pool(%s) does not exist", device_id, pool_fname);
             goto cleanup;
         }
-        ERROR("devicemapper: Error running dev_delete_device");
+        ERROR("devicemapper: task run failed");
         ret = -1;
         goto cleanup;
     }
@@ -786,7 +793,7 @@ int dev_suspend_device(const char *dm_name)
     }
 
     if (dm_task_run(dmt) != 1) {
-        ERROR("devicemapper: Error running deviceCreate (ActivateDevice)");
+        ERROR("devicemapper: task run failed");
         ret = -1;
         goto out;
     }
@@ -800,34 +807,32 @@ out:
 
 // ResumeDevice is the programmatic example of "dmsetup resume".
 // It un-suspends the specified device.
-int dev_resume_device(const char *dm_name)
+void dev_resume_device(const char *dm_name)
 {
-    int ret = 0;
+    int nret = 0;
     uint32_t cookie = 0;
     uint16_t flags = 0;
     struct dm_task *dmt = NULL;
 
     if (dm_name == NULL) {
         ERROR("devicemapper: invalid input params to resume device");
-        return -1;
+        return;
     }
 
-    dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
+    dmt = task_create_named(DM_DEVICE_RESUME, dm_name);
     if (dmt == NULL) {
-        ERROR("devicemapper:create named task(DM_DEVICE_SUSPEND) failed");
-        ret = -1;
+        ERROR("devicemapper: create named task(DM_DEVICE_RESUME) failed");
         goto out;
     }
 
-    if (set_cookie(dmt, &cookie, flags) != 0) {
-        ERROR("devicemapper: Can't set cookie %d", ret);
-        ret = -1;
+    nret = set_cookie(dmt, &cookie, flags);
+    if (nret != 0) {
+        ERROR("set cookie failed:%s", dev_strerror(nret));
         goto out;
     }
 
     if (dm_task_run(dmt) != 1) {
-        ERROR("devicemapper: Error running deviceResume %d", ret);
-        ret = -1;
+        ERROR("devicemapper: run task of DM_DEVICE_RESUME failed");
     }
 
     DEBUG("Start udev wait on resume device");
@@ -837,7 +842,6 @@ out:
     if (dmt != NULL) {
         dm_task_destroy(dmt);
     }
-    return ret;
 }
 
 int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size)
@@ -882,14 +886,15 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
         goto out;
     }
 
-    if (set_cookie(dmt, &cookie, flags) != 0) {
-        ERROR("devicemapper: Can't set cookie");
+    nret = set_cookie(dmt, &cookie, flags);
+    if (nret != 0) {
+        ERROR("set cookie failed:%s", dev_strerror(nret));
         ret = -1;
         goto out;
     }
 
     if (dm_task_run(dmt) != 1) {
-        ERROR("devicemapper: error running deviceCreate (ActivateDevice) %d", ret);
+        ERROR("devicemapper: task run failed");
         ret = -1;
     }
 
@@ -944,7 +949,7 @@ int dev_cancel_deferred_remove(const char *dm_name)
             ret = ERR_ENXIO;
             goto cleanup;
         }
-        ERROR("devicemapper: Error running CancelDeferredRemove");
+        ERROR("devicemapper: task run failed");
         ret = -1;
         goto cleanup;
     }
@@ -1070,7 +1075,7 @@ int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_de
             ret = ERR_DEVICE_ID_EXISTS;
             goto cleanup;
         }
-        ERROR("devicemapper: Error running deviceCreate (CreateSnapDeviceRaw)");
+        ERROR("devicemapper: task run failed");
         ret = -1;
         goto cleanup;
     }
