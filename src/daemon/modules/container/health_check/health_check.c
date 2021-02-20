@@ -407,6 +407,7 @@ static void *stop_container_on_unhealthy(void *arg)
 out:
     free(container_id);
     container_unref(cont);
+    DAEMON_CLEAR_ERRMSG();
     return NULL;
 }
 
