@@ -119,7 +119,7 @@ int dev_delete_device(const char *pool_fname, int device_id);
 
 int dev_suspend_device(const char *dm_name);
 
-int dev_resume_device(const char *dm_name);
+void dev_resume_device(const char *dm_name);
 
 int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size);
 
