@@ -151,6 +151,8 @@ int container_fill_restart_manager(container_t *cont);
 
 int container_fill_network_settings(container_t *cont, container_network_settings *network_settings);
 
+int container_fill_log_configs(container_t *cont);
+
 container_t *container_load(const char *runtime, const char *rootpath, const char *statepath, const char *id);
 
 int container_to_disk(const container_t *cont);
