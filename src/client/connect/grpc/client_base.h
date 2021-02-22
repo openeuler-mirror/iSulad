@@ -153,19 +153,19 @@ protected:
     virtual auto request_to_grpc(const RQ * /*rq*/, gRQ * /*grq*/) -> int
     {
         return 0;
-    };
+    }
     virtual auto response_from_grpc(gRP * /*reply*/, RP * /*response*/) -> int
     {
         return 0;
-    };
+    }
     virtual auto check_parameter(const gRQ & /*grq*/) -> int
     {
         return 0;
-    };
+    }
     virtual auto grpc_call(ClientContext * /*context*/, const gRQ & /*req*/, gRP * /*reply*/) -> Status
     {
         return Status::OK;
-    };
+    }
 
     auto ReadTextFile(const char *file) -> std::string
     {
