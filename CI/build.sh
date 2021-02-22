@@ -37,6 +37,9 @@ BASE_IMAGE=""
 devmapper_script="${TOPDIR}/CI/install_devmapper.sh"
 disk=NULL
 
+modprobe squashfs
+losetup -D
+losetup -l
 rm -rf ${TESTCASE_ASSIGN}_*
 
 # #Run this file will generate default BASE_IMAGE and auto run isulad unit tests
@@ -370,7 +373,8 @@ if [[ "x$disk" != "xNULL" ]] && [[ "x${enable_gcov}" != "xON" ]] ; then
     for index in $(seq 1 ${CONTAINER_INDEX})
     do
         suffix=$(ls ${CIDIR} | grep testcase_assign_ | grep -E "*[S|P]${index}$" | awk -F '_' '{print $NF}')
-        cat ${CIDIR}/testcase_assign_${suffix} >> ${CIDIR}/testcase_assign_devmapper
+        # only one embedded.sh shell is allowed at the same time and embedded image will not use in devicemapper enviorment
+        cat ${CIDIR}/testcase_assign_${suffix} | grep -v embedded.sh >> ${CIDIR}/testcase_assign_devmapper
     done
     docker cp ${CIDIR}/testcase_assign_devmapper ${devmappercontainer}:/root
     echo_success "Run container ${devmappercontainer} success"
