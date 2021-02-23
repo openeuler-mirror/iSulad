@@ -1864,6 +1864,11 @@ static inline bool is_restart_policy_always(const char *policy)
     return strcmp(policy, "always") == 0;
 }
 
+static inline bool is_restart_policy_unless_stopped(const char *policy)
+{
+    return strcmp(policy, "unless-stopped") == 0;
+}
+
 static inline bool is_restart_policy_on_reboot(const char *policy)
 {
     return strcmp(policy, "on-reboot") == 0;
@@ -1881,7 +1886,8 @@ static inline bool is_restart_policy_on_failure(const char *policy)
 
 static int verify_restart_policy_name(const host_config_restart_policy *rp, const host_config *hostconfig)
 {
-    if (is_restart_policy_always(rp->name) || is_restart_policy_no(rp->name) || is_restart_policy_on_reboot(rp->name)) {
+    if (is_restart_policy_always(rp->name) || is_restart_policy_no(rp->name) || is_restart_policy_on_reboot(rp->name) ||
+        is_restart_policy_unless_stopped(rp->name)) {
         if (rp->maximum_retry_count != 0) {
             ERROR("Maximum retry count cannot be used with restart policy '%s'", rp->name);
             isulad_set_error_message("Maximum retry count cannot be used with restart policy '%s'", rp->name);
