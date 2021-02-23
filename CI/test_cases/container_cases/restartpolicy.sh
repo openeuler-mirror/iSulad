@@ -41,6 +41,52 @@ function do_test_on_failure()
     fn_check_eq "$?" "0" "rm failed"
 }
 
+function do_test_unless_stopped()
+{
+    containername=test_rp_unless_stopped
+    isula run  --name $containername  -td --restart unless-stopped  busybox /bin/sh -c "exit 2"
+    fn_check_eq "$?" "0" "run failed"
+
+    sleep 8
+    count=`isula inspect --format='{{json .RestartCount}}' $containername`
+    if [[ $count == "0"  ]];then
+        echo "expect not 0 but get $count"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    isula stop $containername
+    testcontainer $containername exited
+
+    isula rm $containername
+    fn_check_eq "$?" "0" "rm failed"
+}
+
+function do_test_unless_stopped_kill()
+{
+    containername=test_rp_unless_stopped
+    isula run  --name $containername  -td --restart unless-stopped  busybox /bin/sh
+    fn_check_eq "$?" "0" "run failed"
+
+    cpid=`isula inspect -f '{{json .State.Pid}}' $containername`
+    kill -9 $cpid
+    sleep 8
+    testcontainer $containername running
+
+    isula stop $containername
+    fn_check_eq "$?" "0" "stop failed"
+    testcontainer $containername exited
+
+    isula restart $containername
+    testcontainer $containername running
+
+    isula kill $containername
+    fn_check_eq "$?" "0" "stop failed"
+    testcontainer $containername exited
+
+    isula rm $containername
+    fn_check_eq "$?" "0" "rm failed"
+}
+
 function do_test_always_cancel()
 {
     containername=test_rp_always_cancel
@@ -64,6 +110,8 @@ function do_test_t()
 {
     do_test_on_failure
     do_test_always_cancel
+    do_test_unless_stopped
+    do_test_unless_stopped_kill
 
     return $TC_RET_T
 }
