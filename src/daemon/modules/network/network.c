@@ -232,7 +232,7 @@ int network_module_attach(const network_api_conf *conf, const char *type, networ
     if (ret != 0) {
         free_network_api_result_list(*result);
         *result = NULL;
-        ERROR("do attach to network panes failed");
+        ERROR("do attach to network planes failed");
     }
     EVENT("Event: {Object: network, Type: attached, Target: %s}", conf->pod_id);
 
