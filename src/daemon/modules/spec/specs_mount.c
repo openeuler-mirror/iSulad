@@ -2799,6 +2799,9 @@ static int calc_mounts_len(host_config *host_spec, container_config *container_s
     if (container_spec->volumes != NULL && container_spec->volumes->len != 0) {
         (*len) += container_spec->volumes->len;
     }
+    if (container_spec->mounts != NULL && container_spec->mounts_len != 0) {
+        (*len) += container_spec->mounts_len;
+    }
 
     return 0;
 }
@@ -2807,6 +2810,54 @@ static void add_mount(defs_mount **merged_mounts, size_t *merged_mounts_len, def
 {
     merged_mounts[*merged_mounts_len] = mnt;
     *merged_mounts_len += 1;
+}
+
+static int add_embedded_layers(container_config *container_spec, defs_mount **merged_mounts,
+                               size_t *merged_mounts_len)
+{
+    int ret = 0;
+    size_t i = 0;
+    defs_mount *mnt = NULL;
+    defs_mount *conflict = NULL;
+    mount_spec *spec = NULL;
+    char *errmsg = NULL;
+
+    for (i = 0; container_spec->mounts != 0 && i < container_spec->mounts_len; i++) {
+        ret = util_parse_mount_spec(container_spec->mounts[i], &spec, &errmsg);
+        if (ret != 0) {
+            ERROR("parse mount spec failed: %s", errmsg);
+            ret = -1;
+            goto out;
+        }
+
+        mnt = parse_mount(spec);
+        if (mnt == NULL) {
+            ERROR("parse mount failed");
+            ret = -1;
+            goto out;
+        }
+
+        // do not use duplicate mount point
+        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
+        if (conflict != NULL) {
+            ERROR("Duplicate mount point: %s", conflict->destination);
+            isulad_set_error_message("Duplicate mount point: %s", conflict->destination);
+            ret = -1;
+            goto out;
+        }
+
+        add_mount(merged_mounts, merged_mounts_len, mnt);
+        mnt = NULL;
+        free_mount_spec(spec);
+        spec = NULL;
+    }
+
+out:
+    free_defs_mount(mnt);
+    free_mount_spec(spec);
+    free(errmsg);
+
+    return ret;
 }
 
 static int add_mounts(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
@@ -3083,6 +3134,12 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
     if (merged_mounts == NULL) {
         ERROR("out of memory");
         ret = -1;
+        goto out;
+    }
+
+    // add embedded layers
+    ret = add_embedded_layers(container_spec, merged_mounts, &merged_mounts_len);
+    if (ret != 0) {
         goto out;
     }
 

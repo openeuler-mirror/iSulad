@@ -731,11 +731,14 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
         goto close_exit_fd;
     }
 
-    nret = create_mtab_link(oci_spec);
-    if (nret != 0) {
-        ERROR("Failed to create link /etc/mtab for target /proc/mounts");
-        ret = -1;
-        goto close_exit_fd;
+    // embedded conainter is readonly, create mtab link will fail
+    if (strcmp(IMAGE_TYPE_EMBEDDED, cont->common_config->image_type) != 0) {
+        nret = create_mtab_link(oci_spec);
+        if (nret != 0) {
+            ERROR("Failed to create link /etc/mtab for target /proc/mounts");
+            ret = -1;
+            goto close_exit_fd;
+        }
     }
 
     if (verify_mounts(cont)) {
