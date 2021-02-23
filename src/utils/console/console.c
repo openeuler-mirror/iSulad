@@ -57,7 +57,11 @@ static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdat
 
     r_ret = util_read_nointr(ts->stdin_reader, &c, 1);
     if (r_ret <= 0) {
-        ret = EPOLL_LOOP_HANDLE_CLOSE;
+        if (r_ret == 0 && ts->ignore_stdin_close) {
+            ret = EPOLL_LOOP_HANDLE_CONTINUE;
+        } else {
+            ret = EPOLL_LOOP_HANDLE_CLOSE;
+        }
         goto out;
     }
 
@@ -122,7 +126,11 @@ static int console_cb_stdio_copy(int fd, uint32_t events, void *cbdata, struct e
             ret = EPOLL_LOOP_HANDLE_CONTINUE;
             goto out;
         } else {
-            ret = EPOLL_LOOP_HANDLE_CLOSE;
+            if (r_ret == 0 && ts->ignore_stdin_close && fd == ts->stdin_reader) {
+                ret = EPOLL_LOOP_HANDLE_CONTINUE;
+            } else {
+                ret = EPOLL_LOOP_HANDLE_CLOSE;
+            }
             goto out;
         }
     }
@@ -363,8 +371,8 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
                              int tty_exit, bool tty)
 {
     int ret;
-    struct epoll_descr descr;
-    struct tty_state ts;
+    struct epoll_descr descr = { 0 };
+    struct tty_state ts = { 0 };
 
     ret = epoll_loop_open(&descr);
     if (ret) {
@@ -378,6 +386,7 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
     ts.stdin_reader = -1;
     ts.stdout_reader = -1;
     ts.stderr_reader = -1;
+    ts.ignore_stdin_close = true;
 
     if (fifoinfd >= 0) {
         ts.stdin_reader = stdinfd;
