@@ -1,0 +1,9 @@
+{
+	"cniVersion": "0.3.1",
+	"name": "wrong",
+	"type": "wrong-cni",
+	"ipam": {
+		"type": "wrong-cni",
+		"subnet": "10.8.0.0/16"
+	}
+}

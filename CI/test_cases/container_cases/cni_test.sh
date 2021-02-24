@@ -177,6 +177,7 @@ function new_cni_config()
 
 function check_annotation()
 {
+    rm -f /etc/cni/net.d/*
     cp ${data_path}/mock.json /etc/cni/net.d/bridge.json
     sync;sync;
     tail $ISUALD_LOG
@@ -199,19 +200,19 @@ function check_annotation()
     fi
 
     basepath=/tmp/cnilogs/
-    cat ${basepath}/${sid}.env | grep CNI_MUTLINET_EXTENSION
+    cat ${basepath}/${sid}_eth0.env | grep CNI_MUTLINET_EXTENSION
     if [ $? -ne 0 ];then
         msg_err "lost extension for mutl network args"
         TC_RET_T=$(($TC_RET_T+1))
     fi
-    cat ${basepath}/${sid}.env | grep "extension=first"
+    cat ${basepath}/${sid}_eth0.env | grep "extension=first"
     if [ $? -ne 0 ];then
         msg_err "lost extension for first cni args"
         TC_RET_T=$(($TC_RET_T+1))
     fi
-    cat ${basepath}/${sid}.env | grep "extension=second"
-    if [ $? -ne 0 ];then
-        msg_err "lost extension for second cni args"
+    cat ${basepath}/${sid}_eth0.env | grep "extension=second"
+    if [ $? -eq 0 ];then
+        msg_err "same extension key write to cni args"
         TC_RET_T=$(($TC_RET_T+1))
     fi
 
@@ -230,6 +231,72 @@ function check_annotation()
     return $TC_RET_T
 }
 
+function check_rollback()
+{
+    rm -f /etc/cni/net.d/*
+    cp ${data_path}/mock.json /etc/cni/net.d/bridge.json
+    sed -i "s#mock#default#g" /etc/cni/net.d/bridge.json
+    cp ${data_path}/mock.json /etc/cni/net.d/
+    cp ${data_path}/mock_wrong.json /etc/cni/net.d/
+    sync;sync;
+    tail $ISUALD_LOG
+    # wait cni updated
+    s=`date "+%s"`
+    for ((i=0;i<30;i++)); do
+        sleep 1
+        cur=`date "+%s"`
+        let "t=cur-s"
+        if [ $t -gt 6 ];then
+            break
+        fi
+    done
+    tail $ISUALD_LOG
+
+    crictl runp ${data_path}/mutl_wrong_net_pod.json
+    if [ $? -eq 0 ]; then
+        msg_err "Run sandbox success with invalid cni configs"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+    sid=`crictl pods -q | head -1`
+
+    basepath=/tmp/cnilogs/
+
+    cat ${basepath}/${sid}_eth0.env | grep "CNI_COMMAND=DEL"
+    if [ $? -ne 0 ];then
+        msg_err "do not rollback for eth0"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    cat ${basepath}/${sid}_eth1.env | grep "CNI_COMMAND=DEL"
+    if [ $? -ne 0 ];then
+        msg_err "do not rollback for eth1"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    cat ${basepath}/${sid}_eth2.env | grep "CNI_COMMAND=DEL"
+    if [ $? -ne 0 ];then
+        msg_err "do not rollback for eth2"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl stopp $sid
+    if [ $? -ne 0 ];then
+        msg_err "stop sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    crictl rmp $sid
+    if [ $? -ne 0 ];then
+        msg_err "rm sandbox failed"
+        TC_RET_T=$(($TC_RET_T+1))
+    fi
+
+    rm -f /etc/cni/net.d/*
+    cp ${data_path}/bridge.json /etc/cni/net.d/
+
+    return $TC_RET_T
+}
+
 ret=0
 
 do_pre
@@ -243,6 +310,16 @@ if [ $? -ne 0 ];then
 fi
 
 new_cni_config
+if [ $? -ne 0 ];then
+    let "ret=$ret + 1"
+fi
+
+check_annotation
+if [ $? -ne 0 ];then
+    let "ret=$ret + 1"
+fi
+
+check_rollback
 if [ $? -ne 0 ];then
     let "ret=$ret + 1"
 fi
