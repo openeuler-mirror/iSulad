@@ -40,6 +40,7 @@ struct tty_state {
     int tty_exit;
     /* Flag to mark whether detected escape sequence. */
     int saw_tty_exit;
+    bool ignore_stdin_close;
 };
 
 int console_fifo_name(const char *rundir, const char *subpath, const char *stdflag, char *fifo_name,
