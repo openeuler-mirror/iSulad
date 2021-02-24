@@ -55,9 +55,9 @@ function record_origin_status()
 	origin_isulad_cpu_usage=$(ps -o %cpu -p $(cat /var/run/isulad.pid) | sed -n '2p')
 	msg_info "origin isulad cpu usage: $origin_isulad_cpu_usage"
 
-	lxc_monitor_pid=$(ps aux | grep "lxc monitor" | grep $CID | awk '{print $2}')
-	origin_lxc_monitor_cpu_usage=$(ps -o %cpu -p $lxc_monitor_pid | sed -n '2p')
-	msg_info "origin lxc monitor cpu usage: $origin_lxc_monitor_cpu_usage"
+	isulad_shim_pid=$(ps aux | grep "isulad-shim" | grep $CID | awk '{print $2}')
+	origin_isulad_shim_cpu_usage=$(ps -o %cpu -p $isulad_shim_pid | sed -n '2p')
+	msg_info "origin isulad shim cpu usage: $origin_isulad_shim_cpu_usage"
 
 	rm -rf /iocopy_stream_data_*
 }
@@ -80,22 +80,16 @@ function check_last_status()
 		ps -o %cpu -p $(cat /var/run/isulad.pid)
 	fi
 
-	lxc_monintor_pid=$(ps aux | grep "lxc monitor" | grep $CID | awk '{print $2}')
-	last_lxc_monitor_cpu_usage=$(ps -o %cpu -p $lxc_monintor_pid | sed -n '2p')
-	allowable_lxc_monitor_cpu_usage=$(echo "$origin_lxc_monitor_cpu_usage*2" | bc)
-	if [[ $(echo "$allowable_lxc_monitor_cpu_usage < 1.0" | bc) -eq 1 ]]; then
-		allowable_lxc_monitor_cpu_usage=1.0
+	isulad_shim_pid=$(ps aux | grep "isulad-shim" | grep $CID | awk '{print $2}')
+	last_isulad_shim_cpu_usage=$(ps -o %cpu -p $isulad_shim_pid | sed -n '2p')
+	allowable_isulad_shim_cpu_usage=$(echo "$origin_isulad_shim_cpu_usage*2" | bc)
+	if [[ $(echo "$allowable_isulad_shim_cpu_usage < 1.0" | bc) -eq 1 ]]; then
+		allowable_isulad_shim_cpu_usage=1.0
 	fi
-	msg_info "allowable lxc_monitor cpu usage: $allowable_lxc_monitor_cpu_usage"
-	if [[ $(echo "$last_lxc_monitor_cpu_usage > $allowable_lxc_monitor_cpu_usage" | bc) -eq 1 ]]; then
+	msg_info "allowable isulad_shim cpu usage: $allowable_isulad_shim_cpu_usage"
+	if [[ $(echo "$last_isulad_shim_cpu_usage > $allowable_isulad_shim_cpu_usage" | bc) -eq 1 ]]; then
 		msg_err "${FUNCNAME[0]}:${LINENO} - Process exception: endless loop or residual thread" && ((ret++))
-		ps -o %cpu -p $lxc_monintor_pid
-	fi
-
-	lxc_attach_process_number=$(ps aux | grep lxc-attach | grep $CID | wc -l)
-	if [[ $lxc_attach_process_number -ne 0 ]]; then
-		msg_err "${FUNCNAME[0]}:${LINENO} - lxc_attach process residual" && ((ret++))
-		ps aux | grep lxc-attach | grep $CID
+		ps -o %cpu -p $isulad_shim_pid
 	fi
 
 	client_pid=$(pidof isula)
@@ -209,100 +203,6 @@ function test_stream_with_kill_client()
 	return ${ret}
 }
 
-function test_stream_with_stop_attach()
-{
-	local ret=0
-	local test="test_stream_with_stop_attach => (${FUNCNAME[@]})"
-	msg_info "${test} starting..."
-
-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
-    exec_pid=$!
-	sleep 2
-	pid=$(ps aux | grep lxc-attach | grep $CID |grep "cat test_500M" | awk '{print $2}')
-	kill -19 $pid
-	sleep 3
-	kill -18 $pid
-
-	wait $exec_pid
-
-	ls -l /tmp/iocopy_stream_data_500M
-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
-	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
-
-	check_last_status
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - abnormal status" && ((ret++))
-
-	msg_info "${test} finished with return ${ret}..."
-	return ${ret}
-}
-
-function test_stream_with_kill_attach()
-{
-	local ret=0
-	local test="test_stream_with_kill_client => (${FUNCNAME[@]})"
-	msg_info "${test} starting..."
-
-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
-	sleep 3
-	pid=$(ps aux | grep lxc-attach | grep $CID |grep "cat test_500M" | awk '{print $2}')
-	kill -9 $pid
-
-	check_last_status
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - abnormal status" && ((ret++))
-
-	msg_info "${test} finished with return ${ret}..."
-	return ${ret}
-}
-
-function test_stream_with_stop_lxc_monitor()
-{
-	local ret=0
-	local test="test_stream_with_stop_lxc_monitor => (${FUNCNAME[@]})"
-	msg_info "${test} starting..."
-
-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
-    exec_pid=$!
-	sleep 2
-	pid=$(ps aux | grep "lxc monitor" | grep $CID  | awk '{print $2}')
-	kill -19 $pid
-	sleep 3
-	kill -18 $pid
-
-	wait $exec_pid
-
-	ls -l /tmp/iocopy_stream_data_500M
-	total_size=$(stat -c"%s" /tmp/iocopy_stream_data_500M)
-	[[ $total_size -ne 524288000 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - stream iocopy loss data" && ((ret++))
-
-	check_last_status
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - abnormal status" && ((ret++))
-
-	msg_info "${test} finished with return ${ret}..."
-	return ${ret}
-}
-
-function test_stream_with_kill_lxc_monitor()
-{
-	local ret=0
-	local test="test_stream_with_kill_lxc_monitor => (${FUNCNAME[@]})"
-	msg_info "${test} starting..."
-
-	nohup isula exec $CID cat test_500M > /tmp/iocopy_stream_data_500M &
-	sleep 3
-	pid=$(ps aux | grep "lxc monitor" | grep $CID  | awk '{print $2}')
-	kill -9 $pid
-	sleep 3
-
-	isula start $CID
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to start container: $CID" && ((ret++))
-
-	check_last_status
-	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - abnormal status" && ((ret++))
-
-	msg_info "${test} finished with return ${ret}..."
-	return ${ret}
-}
-
 function test_stream_with_stop_isulad()
 {
 	local ret=0
@@ -375,7 +275,7 @@ function test_memory_leak_with_bigdata_stream()
 
 	start_isulad_with_valgrind
 
-	CID=$(isula run -itd ${image} sh)
+	CID=$(isula run -itd --runtime runc ${image} sh)
 
 	isula exec -it $CID dd if=/dev/zero of=test_100M bs=1M count=100
 	[[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to create bigdata" && ((ret++))
@@ -407,10 +307,6 @@ test_cat_bigdata || ((ans++))
 test_cat_bigdata_without_pty || ((ans++))
 test_stream_with_stop_client || ((ans++))
 test_stream_with_kill_client || ((ans++))
-test_stream_with_stop_attach || ((ans++))
-test_stream_with_kill_attach || ((ans++))
-test_stream_with_stop_lxc_monitor || ((ans++))
-test_stream_with_kill_lxc_monitor || ((ans++))
 test_stream_with_stop_isulad || ((ans++))
 test_stream_with_kill_isulad || ((ans++))
 tear_down || ((ans++))
