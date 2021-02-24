@@ -103,9 +103,10 @@ private:
                               Errors &error);
     void PackContainerStatsAttributes(const char *id, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container,
                                       Errors &error);
-    void PackContainerStatsFilesystemUsage(const char *id, const char *image_type,
+    void PackContainerStatsFilesystemUsage(const char *id, const char *image_type, int64_t timestamp,
                                            std::unique_ptr<runtime::v1alpha2::ContainerStats> &container);
-    void SetFsUsage(const imagetool_fs_info *fs_usage, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container);
+    void SetFsUsage(const imagetool_fs_info *fs_usage, int64_t timestamp,
+                    std::unique_ptr<runtime::v1alpha2::ContainerStats> &container);
     void ContainerStatusToGRPC(container_inspect *inspect,
                                std::unique_ptr<runtime::v1alpha2::ContainerStatus> &contStatus, Errors &error);
     void PackContainerImageToStatus(container_inspect *inspect,
