@@ -711,7 +711,7 @@ void ContainerManagerServiceImpl::PackContainerStatsAttributes(
     }
 }
 
-void ContainerManagerServiceImpl::SetFsUsage(const imagetool_fs_info *fs_usage,
+void ContainerManagerServiceImpl::SetFsUsage(const imagetool_fs_info *fs_usage, int64_t timestamp,
                                              std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
 {
     if (fs_usage == nullptr || fs_usage->image_filesystems_len == 0 || fs_usage->image_filesystems[0] == nullptr) {
@@ -733,10 +733,18 @@ void ContainerManagerServiceImpl::SetFsUsage(const imagetool_fs_info *fs_usage,
         container->mutable_writable_layer()->mutable_inodes_used()->set_value(
             fs_usage->image_filesystems[0]->inodes_used->value);
     }
+    container->mutable_writable_layer()->set_timestamp(timestamp);
+
+    if (fs_usage->image_filesystems[0]->fs_id != nullptr &&
+        fs_usage->image_filesystems[0]->fs_id->mountpoint != nullptr) {
+        container->mutable_writable_layer()->mutable_fs_id()->set_mountpoint(
+            fs_usage->image_filesystems[0]->fs_id->mountpoint);
+    }
 }
 
 void ContainerManagerServiceImpl::PackContainerStatsFilesystemUsage(
-    const char *id, const char *image_type, std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
+    const char *id, const char *image_type, int64_t timestamp,
+    std::unique_ptr<runtime::v1alpha2::ContainerStats> &container)
 {
     if (id == nullptr || image_type == nullptr) {
         return;
@@ -747,7 +755,7 @@ void ContainerManagerServiceImpl::PackContainerStatsFilesystemUsage(
         ERROR("Failed to get container filesystem usage");
     }
 
-    SetFsUsage(fs_usage, container);
+    SetFsUsage(fs_usage, timestamp, container);
     free_imagetool_fs_info(fs_usage);
 }
 
@@ -771,21 +779,23 @@ void ContainerManagerServiceImpl::ContainerStatsToGRPC(
         if (error.NotEmpty()) {
             return;
         }
-        PackContainerStatsFilesystemUsage(response->container_stats[i]->id, response->container_stats[i]->image_type,
-                                          container);
 
+        int64_t timestamp = util_get_now_time_nanos();
+        PackContainerStatsFilesystemUsage(response->container_stats[i]->id, response->container_stats[i]->image_type,
+                                          timestamp, container);
         if (response->container_stats[i]->mem_used != 0u) {
             uint64_t workingset = response->container_stats[i]->mem_used;
             if (response->container_stats[i]->inactive_file_total < response->container_stats[i]->mem_used) {
                 workingset = response->container_stats[i]->mem_used - response->container_stats[i]->inactive_file_total;
             }
             container->mutable_memory()->mutable_working_set_bytes()->set_value(workingset);
+            container->mutable_memory()->set_timestamp(timestamp);
         }
 
         if (response->container_stats[i]->cpu_use_nanos != 0u) {
             container->mutable_cpu()->mutable_usage_core_nano_seconds()->set_value(
                 response->container_stats[i]->cpu_use_nanos);
-            container->mutable_cpu()->set_timestamp((int64_t)(response->container_stats[i]->cpu_system_use));
+            container->mutable_cpu()->set_timestamp(timestamp);
         }
 
         containerstats->push_back(move(container));
