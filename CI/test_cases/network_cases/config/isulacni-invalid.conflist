@@ -1,0 +1,38 @@
+{
+    "cniVersion": "0.4.0",
+    "name": "invalid",
+    "plugins": [
+        {
+            "type": "bridge",
+            "bridge": "isula-br2",
+            "isGateway": true,
+            "ipMasq": true,
+            "hairpinMode": true,
+            "ipam": {
+                "type": "host-local",
+                "routes": [
+                    {
+                        "dst": "0.0.0.0/0"
+                    }
+                ],
+                "ranges": [
+                    [
+                        {
+                            "subnet": "192.168.256.0/24",
+                            "gateway": "192.168.256.1"
+                        }
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "portmap",
+            "capabilities": {
+                "portMappings": true
+            }
+        },
+        {
+            "type": "firewall"
+        }
+    ]
+}

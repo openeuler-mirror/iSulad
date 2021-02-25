@@ -777,8 +777,6 @@ int update_container_networks_info(const network_api_result_list *result, const 
     defs_map_string_object_networks *networks = network_settings->networks;
     const size_t len = networks->len;
 
-    network_settings->sandbox_key = util_strdup_s(netns_path);
-
     if (result == NULL || result->items == NULL || result->len == 0) {
         ERROR("Invalid result");
         return -1;
@@ -823,6 +821,8 @@ int update_container_networks_info(const network_api_result_list *result, const 
         networks->values[networks->len] = value;
         (networks->len)++;
     }
+
+    network_settings->sandbox_key = util_strdup_s(netns_path);
 
 out:
     if (ret != 0) {
@@ -1036,16 +1036,18 @@ static int do_update_internal_file(const char *id, const char *file_path,
     content = tmp_content;
 
     ret = util_write_file(file_path, content, strlen(content), NETWORK_MOUNT_FILE_MODE);
-    if (ret != 0) {
-        if (errno == EROFS) {
-            // open in read only file system
-            WARN("failed to write file %s in readonly file system", file_path);
-            ret = 0;
-        } else {
-            ERROR("Failed to write file %s: %s", file_path, strerror(errno));
-            isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
-            goto out;
-        }
+    if (ret == 0) {
+        goto out;
+    }
+
+    if (errno == EROFS) {
+        // open in read only file system
+        WARN("failed to write file %s in readonly file system", file_path);
+        ret = 0;
+    } else {
+        ERROR("Failed to write file %s: %s", file_path, strerror(errno));
+        isulad_set_error_message("Failed to write file %s: %s", file_path, strerror(errno));
+        ret = -1;
     }
 
 out:
@@ -1054,6 +1056,8 @@ out:
     util_free_string_array(array);
     return ret;
 }
+
+static int drop_internal_file(const container_t *cont);
 
 static int update_internal_file(const container_t *cont)
 {
@@ -1071,6 +1075,7 @@ static int update_internal_file(const container_t *cont)
     if (do_update_internal_file(cont->common_config->id, cont->common_config->resolv_conf_path,
                                 cont->network_settings->networks, append_dns_content) != 0) {
         ERROR("Failed to update resolv.conf");
+        (void)drop_internal_file(cont);
         return -1;
     }
 
@@ -1331,6 +1336,62 @@ out:
     return ret;
 }
 
+static int update_container_network_settings(container_t *cont, const network_api_conf *config,
+                                             const cni_anno_port_mappings_container *merged_ports, const network_api_result_list *result)
+{
+    int nret = 0;
+    bool to_disk = false;
+
+    nret = update_container_networks_info(result, cont->common_config->id, config->netns_path, cont->network_settings);
+    if (nret != 0) {
+        ERROR("Failed to update network setting");
+        return -1;
+    }
+
+    nret = update_container_networks_portmappings(merged_ports, cont->network_settings);
+    if (nret != 0) {
+        ERROR("Failed to update network portmappings");
+        goto free_network_info;
+    }
+
+    nret = container_network_settings_to_disk(cont);
+    if (nret != 0) {
+        ERROR("Failed to save container '%s' network settings", cont->common_config->id);
+        goto free_portmappings;
+    }
+    to_disk = true;
+
+    nret = update_internal_file(cont);
+    if (nret == 0) {
+        return 0;
+    }
+    ERROR("Failed to update container internal network file");
+
+free_portmappings:
+    // clear portmappings
+    do_free_network_setting_cni_portmapping(cont->network_settings);
+    DEBUG("free portmapping when rollback");
+
+free_network_info:
+    free_defs_map_string_object_networks(cont->network_settings->networks);
+    cont->network_settings->networks = NULL;
+
+    free(cont->network_settings->sandbox_key);
+    cont->network_settings->sandbox_key = NULL;
+
+    DEBUG("free network info when rollback");
+
+    if (to_disk) {
+        nret = container_network_settings_to_disk(cont);
+        if (nret != 0) {
+            ERROR("Failed to rollback container '%s' network settings", cont->common_config->id);
+        }
+        DEBUG("network settings to disk when rollback");
+    }
+
+    return -1;
+}
+
 int setup_network(container_t *cont)
 {
     int ret = 0;
@@ -1389,32 +1450,20 @@ int setup_network(container_t *cont)
     ret = network_module_attach(config, NETWOKR_API_TYPE_NATIVE, &result);
     if (ret != 0) {
         ERROR("Failed to attach network");
-        goto out;
+        goto detach_out;
     }
 
-    ret = update_container_networks_info(result, cont->common_config->id, config->netns_path, cont->network_settings);
-    if (ret != 0) {
-        ERROR("Failed to update network setting");
+    ret = update_container_network_settings(cont, config, merged_ports, result);
+    if (ret == 0) {
         goto out;
     }
+    ERROR("Failed to update container network settings");
 
-    ret = update_container_networks_portmappings(merged_ports, cont->network_settings);
-    if (ret != 0) {
-        ERROR("Failed to update network portmappings");
-        goto out;
+detach_out:
+    if (network_module_detach(config, NETWOKR_API_TYPE_NATIVE) != 0) {
+        ERROR("Failed to detach network");
     }
-
-    ret = container_network_settings_to_disk(cont);
-    if (ret != 0) {
-        ERROR("Failed to save container '%s' network settings", cont->common_config->id);
-        goto out;
-    }
-
-    ret = update_internal_file(cont);
-    if (ret != 0) {
-        ERROR("Failed to update container internal network file");
-        goto out;
-    }
+    DEBUG("detach network plane when rollback");
 
 out:
     free_cni_anno_port_mappings_container(merged_ports);
@@ -1699,7 +1748,8 @@ static int iptables_delete_rule(const char *command, const char *id, const char 
     args[i++] = util_strdup_s(comment);
     args[i] = util_strdup_s("--wait");
 
-    DEBUG("iptables command: %s -t nat -D POSTROUTING -s %s -j %s -m comment --comment %s --wait", command, ip, chain, comment);
+    DEBUG("iptables command: %s -t nat -D POSTROUTING -s %s -j %s -m comment --comment %s --wait", command, ip, chain,
+          comment);
     if (!util_exec_cmd(run_iptables_delete, args, NULL, &stdout_msg, &stderr_msg)) {
         if (!is_not_exist_err(command, stderr_msg)) {
             ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
@@ -1897,7 +1947,7 @@ int teardown_network(container_t *cont, const bool clean)
     }
 
     if (!native_network_checker(cont->hostconfig)) {
-        goto out;
+        return 0;
     }
 
     if (cont->network_settings->networks == NULL || cont->network_settings->networks->len == 0) {

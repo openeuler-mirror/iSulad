@@ -664,7 +664,7 @@ int cni_add_network_list(const struct cni_network_list_conf *list, const struct 
         ret = add_network(list->list->plugins[i], list->list->name, list->list->cni_version, rc, pret);
         if (ret != 0) {
             ERROR("Run ADD plugin: %zu failed", i);
-            break;
+            return ret;
         }
     }
 
@@ -739,7 +739,7 @@ int cni_del_network_list(const struct cni_network_list_conf *list, const struct 
         }
     }
 
-    if (cni_cache_delete(g_module_conf.cache_dir, list->list->name, rc) != 0) {
+    if (greated && cni_cache_delete(g_module_conf.cache_dir, list->list->name, rc) != 0) {
         WARN("failed to delete network: %s cached result", list->list->name);
     }
 
