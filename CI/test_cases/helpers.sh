@@ -174,7 +174,7 @@ function init_cni_conf()
     mkdir -p /etc/cni/net.d/
     rm -rf /etc/cni/net.d/*
     mkdir -p /opt/cni/bin
-    cp $dtpath/bins/isulad-cni /opt/cni/bin
+    cp $dtpath/bins/* /opt/cni/bin/
     cp $dtpath/good.conflist /etc/cni/net.d/
 
     check_valgrind_log

@@ -167,7 +167,7 @@ private:
                            const std::string &netnsPath, const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
                            const std::map<std::string, std::string> &options, Errors &err);
 
-    bool TearDownMultNetworks(const std::string &ns, const std::string &defaultInterface, const std::string &name,
+    void TearDownMultNetworks(const std::string &ns, const std::string &defaultInterface, const std::string &name,
                               const std::string &netnsPath, const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
                               Errors &err);
 

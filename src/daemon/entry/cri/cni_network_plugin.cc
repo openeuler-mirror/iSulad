@@ -382,32 +382,33 @@ void CniNetworkPlugin::Status(Errors &err)
     CheckInitialized(err);
 }
 
-
+// return: represent need rollback
 bool CniNetworkPlugin::SetupMultNetworks(const std::string &ns, const std::string &defaultInterface,
                                          const std::string &name,
                                          const std::string &netnsPath, const std::string &podSandboxID,
                                          const std::map<std::string, std::string> &annotations,
                                          const std::map<std::string, std::string> &options, Errors &err)
 {
-    bool ret = false;
     int defaultIdx = -1;
     size_t len = 0;
+    struct result *preResult = nullptr;
+    CNINetwork *useDefaultNet = nullptr;
+    bool ret = true;
     cri_pod_network_element **networks = CRIHelpers::GetNetworkPlaneFromPodAnno(annotations, &len, err);
     if (err.NotEmpty()) {
         ERROR("Couldn't get network plane from pod annotations: %s", err.GetCMessage());
         err.Errorf("Couldn't get network plane from pod annotations: %s", err.GetCMessage());
-        goto cleanup;
+        return false;
     }
 
     for (size_t i = 0; i < len; i++) {
         if (networks[i] == nullptr || networks[i]->name == nullptr || networks[i]->interface == nullptr) {
             continue;
         }
-        struct result *preResult = nullptr;
         auto netIter = m_mutlNetworks.find(networks[i]->name);
         if (netIter == m_mutlNetworks.end()) {
             err.Errorf("Cannot found user defined net: %s", networks[i]->name);
-            break;
+            goto cleanup;
         }
         if (defaultInterface == networks[i]->interface) {
             defaultIdx = i;
@@ -416,32 +417,32 @@ bool CniNetworkPlugin::SetupMultNetworks(const std::string &ns, const std::strin
         AddToNetwork((netIter->second).get(), name, ns, networks[i]->interface, podSandboxID, netnsPath, annotations, options,
                      &preResult, err);
         free_result(preResult);
+        preResult = nullptr;
         if (err.NotEmpty()) {
             ERROR("Do setup user defined net: %s, failed: %s", networks[i]->name, err.GetCMessage());
-            break;
+            goto cleanup;
         }
-        INFO("Setup user defained net: %s success", networks[i]->name);
+        INFO("Setup user defined net: %s success", networks[i]->name);
     }
 
+    useDefaultNet = m_defaultNetwork.get();
     // mask default network pod, if user defined net use same interface
     if (defaultIdx >= 0) {
         auto netIter = m_mutlNetworks.find(networks[defaultIdx]->name);
         if (netIter == m_mutlNetworks.end()) {
-            err.Errorf("Cannot found user defined net: %s", networks[defaultIdx]->name);
+            err.Errorf("Cannot default net: %s", networks[defaultIdx]->name);
             goto cleanup;
         }
-
-        struct result *preResult = nullptr;
-        AddToNetwork((netIter->second).get(), name, ns, networks[defaultIdx]->interface, podSandboxID, netnsPath, annotations,
-                     options, &preResult, err);
-        free_result(preResult);
-        if (err.NotEmpty()) {
-            ERROR("Do setup user defined net: %s, failed: %s", networks[defaultIdx]->name, err.GetCMessage());
-            goto cleanup;
-        }
-        INFO("Setup default net: %s success", networks[defaultIdx]->name);
-        ret = true;
+        useDefaultNet = (netIter->second).get();
     }
+    AddToNetwork(useDefaultNet, name, ns, defaultInterface, podSandboxID, netnsPath, annotations, options, &preResult, err);
+    free_result(preResult);
+    if (err.NotEmpty()) {
+        ERROR("Setup default net failed: %s", err.GetCMessage());
+        goto cleanup;
+    }
+    INFO("Setup default net: %s success", useDefaultNet->GetName().c_str());
+    ret = false;
 cleanup:
     free_cri_pod_network(networks, len);
     return ret;
@@ -489,8 +490,8 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         return;
     }
 
-    struct result *preResult = nullptr;
     if (m_loNetwork != nullptr) {
+        struct result *preResult = nullptr;
         AddToNetwork(m_loNetwork.get(), name, ns, interfaceName, id, netnsPath, annotations, options, &preResult, err);
         free_result(preResult);
         preResult = nullptr;
@@ -506,38 +507,32 @@ void CniNetworkPlugin::SetUpPod(const std::string &ns, const std::string &name, 
         return;
     }
 
-    bool setedDefaultNet = SetupMultNetworks(ns, interfaceName, name, netnsPath, id, annotations, options, err);
-    if (err.NotEmpty()) {
-        goto unlock;
+    bool needRollback = SetupMultNetworks(ns, interfaceName, name, netnsPath, id, annotations, options, err);
+    if (needRollback && err.NotEmpty()) {
+        Errors tmpErr;
+        TearDownMultNetworks(ns, interfaceName, name, netnsPath, id, annotations, tmpErr);
+        if (tmpErr.NotEmpty()) {
+            err.AppendError(tmpErr.GetMessage());
+        }
     }
 
-    if (setedDefaultNet) {
-        goto unlock;
-    }
-
-    AddToNetwork(m_defaultNetwork.get(), name, ns, interfaceName, id, netnsPath, annotations, options, &preResult, err);
-    free_result(preResult);
-    if (err.NotEmpty()) {
-        ERROR("Error while adding to cni network: %s", err.GetCMessage());
-    }
-
-unlock:
     UnlockNetworkMap(err);
 }
 
-bool CniNetworkPlugin::TearDownMultNetworks(const std::string &ns, const std::string &defaultInterface,
+void CniNetworkPlugin::TearDownMultNetworks(const std::string &ns, const std::string &defaultInterface,
                                             const std::string &name,
                                             const std::string &netnsPath, const std::string &podSandboxID, const std::map<std::string, std::string> &annotations,
                                             Errors &err)
 {
-    bool ret = false;
     int defaultIdx = -1;
     size_t len = 0;
+    CNINetwork *useDefaultNet = nullptr;
+    Errors tmpErr;
     cri_pod_network_element **networks = CRIHelpers::GetNetworkPlaneFromPodAnno(annotations, &len, err);
     if (err.NotEmpty()) {
         ERROR("Couldn't get network plane from pod annotations: %s", err.GetCMessage());
         err.Errorf("Couldn't get network plane from pod annotations: %s", err.GetCMessage());
-        goto cleanup;
+        return;
     }
 
     for (size_t i = 0; i < len; i++) {
@@ -553,14 +548,18 @@ bool CniNetworkPlugin::TearDownMultNetworks(const std::string &ns, const std::st
             defaultIdx = i;
             continue;
         }
-        DeleteFromNetwork((netIter->second).get(), name, ns, networks[i]->interface, podSandboxID, netnsPath, annotations, err);
-        if (err.NotEmpty()) {
-            ERROR("Do teardown user defined net: %s, failed: %s", networks[i]->name, err.GetCMessage());
-            break;
+        DeleteFromNetwork((netIter->second).get(), name, ns, networks[i]->interface, podSandboxID, netnsPath, annotations,
+                          tmpErr);
+        if (tmpErr.NotEmpty()) {
+            ERROR("Do teardown user defined net: %s, failed: %s", networks[i]->name, tmpErr.GetCMessage());
+            err.AppendError(tmpErr.GetMessage());
+            tmpErr.Clear();
+            continue;
         }
         INFO("Teardown user defained net: %s success", networks[i]->name);
     }
 
+    useDefaultNet = m_defaultNetwork.get();
     // mask default network pod, if user defined net use same interface
     if (defaultIdx >= 0) {
         auto netIter = m_mutlNetworks.find(networks[defaultIdx]->name);
@@ -568,19 +567,18 @@ bool CniNetworkPlugin::TearDownMultNetworks(const std::string &ns, const std::st
             err.Errorf("Cannot found user defined net: %s", networks[defaultIdx]->name);
             goto cleanup;
         }
-
-        DeleteFromNetwork((netIter->second).get(), name, ns, networks[defaultIdx]->interface, podSandboxID, netnsPath,
-                          annotations, err);
-        if (err.NotEmpty()) {
-            ERROR("Do teardown user defined net: %s, failed: %s", networks[defaultIdx]->name, err.GetCMessage());
-            goto cleanup;
-        }
-        INFO("Teardown default net: %s success", networks[defaultIdx]->name);
-        ret = true;
+        useDefaultNet = (netIter->second).get();
     }
+    DeleteFromNetwork(useDefaultNet, name, ns, defaultInterface, podSandboxID, netnsPath, annotations, tmpErr);
+    if (tmpErr.NotEmpty()) {
+        ERROR("Teardown default net: %s, failed: %s", useDefaultNet->GetName().c_str(), tmpErr.GetCMessage());
+        err.AppendError(tmpErr.GetMessage());
+        goto cleanup;
+    }
+    INFO("Teardown default net: %s success", useDefaultNet->GetName().c_str());
+
 cleanup:
     free_cri_pod_network(networks, len);
-    return ret;
 }
 
 void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &name, const std::string &interfaceName,
@@ -605,21 +603,11 @@ void CniNetworkPlugin::TearDownPod(const std::string &ns, const std::string &nam
         return;
     }
 
-    bool defaultNetDone = TearDownMultNetworks(ns, interfaceName, name, netnsPath, id, annotations, err);
-    if (defaultNetDone) {
-        goto unlock;
-    }
+    TearDownMultNetworks(ns, interfaceName, name, netnsPath, id, annotations, err);
     if (err.NotEmpty()) {
         WARN("Teardown user defined networks failed: %s", err.GetCMessage());
     }
 
-    DeleteFromNetwork(m_defaultNetwork.get(), name, ns, interfaceName, id, netnsPath, annotations, tmpErr);
-    if (tmpErr.NotEmpty()) {
-        WARN("Teardown default network failed: %s", tmpErr.GetCMessage());
-        err.AppendError(tmpErr.GetMessage());
-    }
-
-unlock:
     UnlockNetworkMap(err);
 }
 
@@ -801,7 +789,8 @@ static void GetExtensionCNIArgs(const std::map<std::string, std::string> &annota
     // get cni multinetwork extension
     auto iter = annotations.find(CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_KEY);
     if (iter != annotations.end()) {
-        if (!CheckCNIArgValue(iter->second)) {
+        // args value must do not have ';'
+        if (iter->second.find(';') != std::string::npos) {
             WARN("Ignore: invalid multinetwork cni args: %s", iter->second.c_str());
         } else {
             args[CRIHelpers::Constants::CNI_MUTL_NET_EXTENSION_ARGS_KEY] = iter->second;
@@ -817,9 +806,9 @@ static void GetExtensionCNIArgs(const std::map<std::string, std::string> &annota
             continue;
         }
         auto strs = CXXUtils::Split(work.second, '=');
-        iter = annotations.find(work.first);
-        if (iter != annotations.end()) {
-            WARN("Ignore: Same key cni args: %s", work.first.c_str());
+        iter = args.find(strs[0]);
+        if (iter != args.end()) {
+            WARN("Ignore: Same key cni args: %s", work.second.c_str());
             continue;
         }
         args[strs[0]] = strs[1];
