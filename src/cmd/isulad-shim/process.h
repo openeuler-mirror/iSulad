@@ -59,7 +59,7 @@ typedef struct {
     io_copy_t *ioc;
     bool shutdown;
     bool is_stdin;
-    log_terminal *terminal;
+    log_terminal *terminal;// just used by stdout and stderr
 } io_thread_t;
 
 typedef struct process {

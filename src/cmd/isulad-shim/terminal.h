@@ -34,7 +34,7 @@ typedef struct {
     pthread_rwlock_t log_terminal_rwlock;
 } log_terminal;
 
-void shim_write_container_log_file(log_terminal *terminal, const char *type, char *buf,
+void shim_write_container_log_file(log_terminal *terminal, int type, char *buf,
                                    int bytes_read);
 
 int shim_create_container_log_file(log_terminal *terminal);

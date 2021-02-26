@@ -30,19 +30,11 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "process.h"
 
-#define BUF_CACHE_SIZE (16 * 1024)
-
-static ssize_t shim_write_nointr_lock(log_terminal *terminal, const void *buf, size_t count)
-{
-    ssize_t ret;
-
-    (void)pthread_rwlock_wrlock(&terminal->log_terminal_rwlock);
-    ret = write_nointr_in_total(terminal->fd, buf, count);
-    (void)pthread_rwlock_unlock(&terminal->log_terminal_rwlock);
-
-    return ret;
-}
+#define BUF_CACHE_SIZE (32 * 1024)
+#define STDOUT_STR "stdout"
+#define STDERR_STR "stderr"
 
 static int shim_rename_old_log_file(log_terminal *terminal)
 {
@@ -137,23 +129,29 @@ static int64_t get_log_file_size(int fd)
 
 static int shim_json_data_write(log_terminal *terminal, const char *buf, int read_count)
 {
-    int ret;
+    int ret = 0;
+    int nret = 0;
     int64_t available_space = -1;
     int64_t file_size;
 
+    (void)pthread_rwlock_wrlock(&terminal->log_terminal_rwlock);
+
+
     file_size = get_log_file_size(terminal->fd);
     if (file_size < 0) {
-        return SHIM_ERR;
+        ret = -1;
+        goto out;
     }
 
     available_space = terminal->log_maxsize - file_size;
     if (read_count <= available_space) {
-        return shim_write_nointr_lock(terminal, buf, read_count);
+        ret = write_nointr_in_total(terminal->fd, buf, read_count);
+        goto out;
     }
 
-    ret = shim_dump_log_file(terminal);
-    if (ret < 0) {
-        return SHIM_ERR;
+    if (shim_dump_log_file(terminal) < 0) {
+        ret = -1;
+        goto out;
     }
 
     /*
@@ -161,13 +159,18 @@ static int shim_json_data_write(log_terminal *terminal, const char *buf, int rea
      * We have set the log file min size 16k, so the scenario of log_maxsize < read_count
      * shouldn't happen, otherwise, discard some last bytes.
      */
-    ret = shim_write_nointr_lock(terminal, buf,
+    nret = write_nointr_in_total(terminal->fd, buf,
                                  terminal->log_maxsize < read_count ? terminal->log_maxsize : read_count);
-    if (ret < 0) {
-        return SHIM_ERR;
+    if (nret < 0) {
+        ret = -1;
+        goto out;
     }
 
-    return (read_count - ret);
+    ret = read_count - nret;
+
+out:
+    (void)pthread_rwlock_unlock(&terminal->log_terminal_rwlock);
+    return ret;
 }
 
 static bool util_get_time_buffer(struct timespec *timestamp, char *timebuffer, size_t maxsize)
@@ -256,10 +259,18 @@ cleanup:
     return ret;
 }
 
-void shim_write_container_log_file(log_terminal *terminal, const char *type, char *buf, int read_count)
+// BUF_CACHE_SIZE must be larger than read_count of buf readed
+static char cache_out[BUF_CACHE_SIZE] = { 0 };
+static char cache_err[BUF_CACHE_SIZE] = { 0 };
+static int size_out = 0;
+static int size_err = 0;
+
+// Just used by stdout stderr threads
+void shim_write_container_log_file(log_terminal *terminal, int type, char *buf, int read_count)
 {
-    static char cache[BUF_CACHE_SIZE];
-    static int size = 0;
+    char *cache = NULL;
+    int *size = NULL;
+    const char *type_str = NULL;
     int upto, index;
     int begin = 0;
     int buf_readed = 0;
@@ -268,38 +279,52 @@ void shim_write_container_log_file(log_terminal *terminal, const char *type, cha
     if (terminal == NULL) {
         return;
     }
+    switch (type) {
+        case stdid_out:
+            type_str = STDOUT_STR;
+            cache = cache_out;
+            size = &size_out;
+            break;
+        case stdid_err:
+            type_str = STDERR_STR;
+            cache = cache_err;
+            size = &size_err;
+            break;
+        default:
+            return;
+    }
 
     if (buf != NULL && read_count > 0) {
-        if (read_count > (BUF_CACHE_SIZE - size)) {
+        if (read_count > (BUF_CACHE_SIZE - *size)) {
             upto = BUF_CACHE_SIZE;
         } else {
-            upto = size + read_count;
+            upto = *size + read_count;
         }
 
-        if (upto > size) {
-            buf_readed = upto - size;
-            memcpy(cache + size, buf, buf_readed);
+        if (upto > *size) {
+            buf_readed = upto - *size;
+            memcpy(cache + *size, buf, buf_readed);
             buf_left = read_count - buf_readed;
-            size += buf_readed;
+            *size += buf_readed;
         }
     }
 
-    if (size == 0) {
+    if (*size == 0) {
         return;
     }
 
-    for (index = 0; index < size; index++) {
+    for (index = 0; index < *size; index++) {
         if (cache[index] == '\n') {
-            (void)shim_logger_write(terminal, type, cache + begin, index - begin + 1);
+            (void)shim_logger_write(terminal, type_str, cache + begin, index - begin + 1);
             begin = index + 1;
         }
     }
 
-    if (buf == NULL || (begin == 0 && size == BUF_CACHE_SIZE)) {
-        if (begin < size) {
-            (void)shim_logger_write(terminal, type, cache + begin, size - begin);
+    if (buf == NULL || (begin == 0 && *size == BUF_CACHE_SIZE)) {
+        if (begin < *size) {
+            (void)shim_logger_write(terminal, type_str, cache + begin, *size - begin);
             begin = 0;
-            size = 0;
+            *size = 0;
         }
         if (buf == NULL) {
             return;
@@ -307,13 +332,13 @@ void shim_write_container_log_file(log_terminal *terminal, const char *type, cha
     }
 
     if (begin > 0) {
-        memcpy(cache, cache + begin, size - begin);
-        size -= begin;
+        memcpy(cache, cache + begin, *size - begin);
+        *size -= begin;
     }
 
     if (buf_left > 0) {
-        memcpy(cache + size, buf + buf_readed, buf_left);
-        size += buf_left;
+        memcpy(cache + *size, buf + buf_readed, buf_left);
+        *size += buf_left;
     }
 }
 
