@@ -266,8 +266,7 @@ static void *do_io_copy(void *data)
             fd_node_t *fn = ioc->fd_to;
             for (; fn != NULL; fn = fn->next) {
                 if (fn->is_log) {
-                    shim_write_container_log_file(io_thd->terminal, ioc->id == stdid_out ? "stdout" : "stderr", buf,
-                                                  r_count);
+                    shim_write_container_log_file(io_thd->terminal, ioc->id, buf, r_count);
                 } else {
                     int w_count = write_nointr_in_total(fn->fd, buf, r_count);
                     if (w_count < 0) {
