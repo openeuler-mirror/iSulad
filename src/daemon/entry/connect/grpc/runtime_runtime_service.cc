@@ -50,8 +50,8 @@ void RuntimeRuntimeServiceImpl::Init(Network::NetworkPluginConf mConf, isulad_da
     Network::ProbeNetworkPlugins(mConf.GetPluginConfDir(), mConf.GetPluginBinDir(), &plugins);
 
     std::shared_ptr<Network::NetworkPlugin> chosen { nullptr };
-    Network::InitNetworkPlugin(&plugins, mConf.GetPluginName(), mConf.GetHairpinMode(),
-                               mConf.GetNonMasqueradeCIDR(), mConf.GetMTU(), &chosen, err);
+    Network::InitNetworkPlugin(&plugins, mConf.GetPluginName(), mConf.GetHairpinMode(), mConf.GetNonMasqueradeCIDR(),
+                               mConf.GetMTU(), &chosen, err);
     if (err.NotEmpty()) {
         ERROR("Init network plugin failed: %s", err.GetCMessage());
         return;
@@ -181,7 +181,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainers(grpc::ServerContext *cont
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Listing all Container}");
+    WARN("Event: {Object: CRI, Type: Listing all Container}");
 
     std::vector<std::unique_ptr<runtime::v1alpha2::Container>> containers;
     rService->ListContainers(request->has_filter() ? &request->filter() : nullptr, &containers, error);
@@ -199,7 +199,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainers(grpc::ServerContext *cont
         *container = *(iter->get());
     }
 
-    EVENT("Event: {Object: CRI, Type: Listed all Container}");
+    WARN("Event: {Object: CRI, Type: Listed all Container}");
 
     return grpc::Status::OK;
 }
@@ -210,7 +210,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainerStats(grpc::ServerContext *
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Listing all Container stats}");
+    WARN("Event: {Object: CRI, Type: Listing all Container stats}");
 
     std::vector<std::unique_ptr<runtime::v1alpha2::ContainerStats>> containers;
     rService->ListContainerStats(request->has_filter() ? &request->filter() : nullptr, &containers, error);
@@ -228,7 +228,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListContainerStats(grpc::ServerContext *
         *container = *(iter->get());
     }
 
-    EVENT("Event: {Object: CRI, Type: Listed all Container stats}");
+    WARN("Event: {Object: CRI, Type: Listed all Container stats}");
 
     return grpc::Status::OK;
 }
@@ -239,7 +239,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ContainerStatus(grpc::ServerContext *con
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Statusing Container: %s}", request->container_id().c_str());
+    WARN("Event: {Object: CRI, Type: Statusing Container: %s}", request->container_id().c_str());
 
     std::unique_ptr<runtime::v1alpha2::ContainerStatus> contStatus =
         rService->ContainerStatus(request->container_id(), error);
@@ -249,7 +249,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ContainerStatus(grpc::ServerContext *con
     }
     *(reply->mutable_status()) = *contStatus;
 
-    EVENT("Event: {Object: CRI, Type: Statused Container: %s}", request->container_id().c_str());
+    WARN("Event: {Object: CRI, Type: Statused Container: %s}", request->container_id().c_str());
 
     return grpc::Status::OK;
 }
@@ -339,7 +339,7 @@ grpc::Status RuntimeRuntimeServiceImpl::PodSandboxStatus(grpc::ServerContext *co
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Status Pod: %s}", request->pod_sandbox_id().c_str());
+    WARN("Event: {Object: CRI, Type: Status Pod: %s}", request->pod_sandbox_id().c_str());
 
     std::unique_ptr<runtime::v1alpha2::PodSandboxStatus> podStatus;
     podStatus = rService->PodSandboxStatus(request->pod_sandbox_id(), error);
@@ -350,7 +350,7 @@ grpc::Status RuntimeRuntimeServiceImpl::PodSandboxStatus(grpc::ServerContext *co
     }
     *(reply->mutable_status()) = *podStatus;
 
-    EVENT("Event: {Object: CRI, Type: Statused Pod: %s}", request->pod_sandbox_id().c_str());
+    WARN("Event: {Object: CRI, Type: Statused Pod: %s}", request->pod_sandbox_id().c_str());
 
     return grpc::Status::OK;
 }
@@ -361,7 +361,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *cont
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Listing all Pods}");
+    WARN("Event: {Object: CRI, Type: Listing all Pods}");
 
     std::vector<std::unique_ptr<runtime::v1alpha2::PodSandbox>> pods;
     rService->ListPodSandbox(request->has_filter() ? &request->filter() : nullptr, &pods, error);
@@ -378,7 +378,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ListPodSandbox(grpc::ServerContext *cont
         *pod = *(iter->get());
     }
 
-    EVENT("Event: {Object: CRI, Type: Listed all Pods}");
+    WARN("Event: {Object: CRI, Type: Listed all Pods}");
 
     return grpc::Status::OK;
 }
@@ -470,7 +470,7 @@ grpc::Status RuntimeRuntimeServiceImpl::Status(grpc::ServerContext *context,
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Statusing daemon}");
+    WARN("Event: {Object: CRI, Type: Statusing daemon}");
 
     std::unique_ptr<runtime::v1alpha2::RuntimeStatus> status = rService->Status(error);
     if (status == nullptr || error.NotEmpty()) {
@@ -479,7 +479,7 @@ grpc::Status RuntimeRuntimeServiceImpl::Status(grpc::ServerContext *context,
     }
     *(reply->mutable_status()) = *status;
 
-    EVENT("Event: {Object: CRI, Type: Statused daemon}");
+    WARN("Event: {Object: CRI, Type: Statused daemon}");
 
     return grpc::Status::OK;
 }

@@ -21,7 +21,6 @@
 #include "cri_helpers.h"
 #include "cri_image_manager_service_impl.h"
 
-
 RuntimeImageServiceImpl::RuntimeImageServiceImpl()
 {
     std::unique_ptr<ImageManagerService> service(new ImageManagerServiceImpl);
@@ -55,7 +54,7 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
     std::vector<std::unique_ptr<runtime::v1alpha2::Image>> images;
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Listing all images}");
+    WARN("Event: {Object: CRI, Type: Listing all images}");
 
     rService->ListImages(request->filter(), &images, error);
     if (!error.Empty()) {
@@ -71,7 +70,7 @@ grpc::Status RuntimeImageServiceImpl::ListImages(grpc::ServerContext *context,
         *image = *(iter->get());
     }
 
-    EVENT("Event: {Object: CRI, Type: Listed all images}");
+    WARN("Event: {Object: CRI, Type: Listed all images}");
 
     return grpc::Status::OK;
 }
@@ -83,7 +82,7 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
     std::unique_ptr<runtime::v1alpha2::Image> image_info = nullptr;
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Statusing image %s}", request->image().image().c_str());
+    WARN("Event: {Object: CRI, Type: Statusing image %s}", request->image().image().c_str());
 
     image_info = rService->ImageStatus(request->image(), error);
     if (!error.Empty() && !CRIHelpers::IsImageNotFoundError(error.GetMessage())) {
@@ -97,7 +96,7 @@ grpc::Status RuntimeImageServiceImpl::ImageStatus(grpc::ServerContext *context,
         *image = *image_info;
     }
 
-    EVENT("Event: {Object: CRI, Type: Statused image %s}", request->image().image().c_str());
+    WARN("Event: {Object: CRI, Type: Statused image %s}", request->image().image().c_str());
 
     return grpc::Status::OK;
 }
@@ -109,7 +108,7 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
     std::vector<std::unique_ptr<runtime::v1alpha2::FilesystemUsage>> usages;
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Statusing image fs info}");
+    WARN("Event: {Object: CRI, Type: Statusing image fs info}");
 
     rService->ImageFsInfo(&usages, error);
     if (!error.Empty()) {
@@ -126,7 +125,7 @@ grpc::Status RuntimeImageServiceImpl::ImageFsInfo(grpc::ServerContext *context,
         *fs_info = *(iter->get());
     }
 
-    EVENT("Event: {Object: CRI, Type: Statused image fs info}");
+    WARN("Event: {Object: CRI, Type: Statused image fs info}");
     return grpc::Status::OK;
 }
 

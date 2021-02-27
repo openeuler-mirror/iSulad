@@ -392,7 +392,7 @@ int im_get_filesystem_info(const char *image_type, im_fs_info_response **respons
         goto out;
     }
 
-    EVENT("Event: {Object: get image filesystem info, Type: inspecting}");
+    WARN("Event: {Object: get image filesystem info, Type: inspecting}");
     ret = q->ops->get_filesystem_info(response);
     if (ret != 0) {
         if (response != NULL && *response != NULL) {
@@ -402,7 +402,7 @@ int im_get_filesystem_info(const char *image_type, im_fs_info_response **respons
         }
         goto out;
     }
-    EVENT("Event: {Object: get image filesystem info, Type: inspected}");
+    WARN("Event: {Object: get image filesystem info, Type: inspected}");
 
 out:
     return ret;
@@ -442,7 +442,7 @@ int im_get_container_filesystem_usage(const char *image_type, const char *id, im
         request->name_id = util_strdup_s(id);
     }
 
-    EVENT("Event: {Object: container \'%s\' filesystem info, Type: inspecting}", id != NULL ? id : "");
+    WARN("Event: {Object: container \'%s\' filesystem info, Type: inspecting}", id != NULL ? id : "");
     ret = q->ops->container_fs_usage(request, &filesystemusage);
     if (ret != 0) {
         ERROR("Failed to get filesystem usage for container %s", id);
@@ -452,7 +452,7 @@ int im_get_container_filesystem_usage(const char *image_type, const char *id, im
 
     *fs_usage = filesystemusage;
     filesystemusage = NULL;
-    EVENT("Event: {Object: container \'%s\' filesystem info, Type: inspected}", id != NULL ? id : "");
+    WARN("Event: {Object: container \'%s\' filesystem info, Type: inspected}", id != NULL ? id : "");
 
 out:
     free_im_container_fs_usage_request(request);
@@ -1597,7 +1597,7 @@ int im_inspect_image(const im_inspect_request *request, im_inspect_response **re
 
     image_ref = util_strdup_s(request->image.image);
 
-    EVENT("Event: {Object: %s, Type: image inspecting}", image_ref);
+    WARN("Event: {Object: %s, Type: image inspecting}", image_ref);
 
     bim_type = bim_query(image_ref);
     if (bim_type == NULL) {
@@ -1619,7 +1619,7 @@ int im_inspect_image(const im_inspect_request *request, im_inspect_response **re
         goto pack_response;
     }
 
-    EVENT("Event: {Object: %s, Type: image inspected}", image_ref);
+    WARN("Event: {Object: %s, Type: image inspected}", image_ref);
 
 pack_response:
     if (g_isulad_errmsg != NULL) {
