@@ -276,6 +276,13 @@ extern "C" {
       &(cmdargs).custom_conf.privileged,                                                                                                                  \
       "Give extended privileges to this container",                                                                                                       \
       NULL },                                                                                                                                             \
+    { CMD_OPT_TYPE_STRING,                                                                                                                                \
+      false,                                                                                                                                              \
+      "pull",                                                                                                                                             \
+      0,                                                                                                                                                  \
+      &(cmdargs).pull,                                                                                                                                    \
+      "Pull image before running (\"always\"|\"missing\"|\"never\") (default \"missing\")",                                                               \
+      NULL },                                                                                                                                             \
     { CMD_OPT_TYPE_CALLBACK, false, "tmpfs", 0, &(cmdargs).custom_conf.tmpfs, "Mount a tmpfs directory",                                                 \
       command_append_array },                                                                                                                             \
     { CMD_OPT_TYPE_BOOL, false, "tty", 't', &(cmdargs).custom_conf.tty, "Allocate a pseudo-TTY", NULL },                                                  \
