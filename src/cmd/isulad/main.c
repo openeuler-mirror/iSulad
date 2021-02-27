@@ -1515,7 +1515,7 @@ int main(int argc, char **argv)
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     use_time = (double)(t_end.tv_sec - t_start.tv_sec) * (double)1000000000 + (double)(t_end.tv_nsec - t_start.tv_nsec);
     use_time /= 1000000000;
-    INFO("iSulad successfully booted in %.3f s", use_time);
+    EVENT("iSulad successfully booted in %.3f s", use_time);
 #ifdef GRPC_CONNECTOR
     INFO("Starting grpc server...");
 #else

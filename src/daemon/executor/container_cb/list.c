@@ -503,7 +503,7 @@ static container_container *get_container_info(const char *name, const struct li
 
     cont = containers_store_get(name);
     if (cont == NULL) {
-        ERROR("Container '%s' already removed", name);
+        ERROR("Container '%s' not exist", name);
         return NULL;
     }
     cont_state = container_dup_state(cont->state);

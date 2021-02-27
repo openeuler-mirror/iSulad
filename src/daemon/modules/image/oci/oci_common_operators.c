@@ -431,7 +431,7 @@ int oci_summary_image(im_summary_request *request, im_summary_response *response
         goto pack_response;
     }
 
-    EVENT("Event: {Object: %s, Type: statusing image summary}", resolved_name);
+    WARN("Event: {Object: %s, Type: statusing image summary}", resolved_name);
 
     image_summary = storage_img_get_summary(resolved_name);
     if (image_summary == NULL) {
@@ -444,7 +444,7 @@ int oci_summary_image(im_summary_request *request, im_summary_response *response
     response->image_summary = image_summary;
     image_summary = NULL;
 
-    EVENT("Event: {Object: %s, Type: statused image summary}", resolved_name);
+    WARN("Event: {Object: %s, Type: statused image summary}", resolved_name);
 
 pack_response:
     free(resolved_name);

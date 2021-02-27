@@ -515,7 +515,7 @@ int util_mount(const char *src, const char *dst, const char *mtype, const char *
 
     if ((mntflags & MS_REMOUNT) != MS_REMOUNT) {
         if (util_detect_mounted(dst)) {
-            ERROR("mount dst %s had been mounted, skip mount", dst);
+            WARN("mount dst %s had been mounted, skip mount", dst);
             ret = 0;
             goto out;
         }
