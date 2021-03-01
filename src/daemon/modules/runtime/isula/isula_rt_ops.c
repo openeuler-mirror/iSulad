@@ -612,7 +612,6 @@ static int status_to_exit_code(int status)
         exit_code = WEXITSTATUS(status);
     } else {
         exit_code = -1;
-        exit_code = -1;
     }
     if (WIFSIGNALED(status)) {
         int signal;
