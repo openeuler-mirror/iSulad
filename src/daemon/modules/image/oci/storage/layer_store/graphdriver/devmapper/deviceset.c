@@ -2158,14 +2158,15 @@ static int grow_fs(struct device_set *devset, image_devmapper_device_info *info)
         if (exec_grow_fs_command("resize2fs", dev_fname) != 0) {
             ERROR("Failed execute resize2fs to grow rootfs");
             ret = -1;
-            goto out;
+            goto clean_mount;
         }
     } else {
         ERROR("Unsupported filesystem type %s", devset->base_device_filesystem);
         ret = -1;
-        goto out;
+        goto clean_mount;
     }
 
+clean_mount:
     if (umount2(FS_MOUNT_POINT, MNT_DETACH) < 0 && errno != EINVAL) {
         WARN("Failed to umount directory %s:%s", FS_MOUNT_POINT, strerror(errno));
     }
