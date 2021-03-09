@@ -78,7 +78,7 @@ function test_port()
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "83/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
-    count=`isula port $id "80"`
+    count=`isula port $id "80" | wc -l`
     fn_check_eq "$count" "1" "port required 1, get: $count"
     isula port $id "80" | grep "80/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
@@ -104,7 +104,7 @@ function test_port()
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "83/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
-    count=`isula port $id "83"`
+    count=`isula port $id "83" | wc -l`
     fn_check_eq "$count" "1" "port required 1, get: $count"
     isula port $id "83" | grep "83/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
@@ -127,7 +127,7 @@ function test_port()
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "92/tcp -> 127.0.0.1:82"
     fn_check_eq "$?" "0" "port failed"
-    count=`isula port $id "90"`
+    count=`isula port $id "90" | wc -l`
     fn_check_eq "$count" "1" "port required 1, get: $count"
     isula port $id "90" | grep "90/tcp -> 127.0.0.1"
     fn_check_eq "$?" "0" "port failed"
@@ -153,7 +153,7 @@ function test_port()
     fn_check_eq "$?" "0" "port failed"
     isula port $id | grep "81/tcp -> 0.0.0.0"
     fn_check_eq "$?" "0" "port failed"
-    count=`isula port $id "90"`
+    count=`isula port $id "90" | wc -l`
     fn_check_eq "$count" "1" "port required 1, get: $count"
     isula port $id "90" | grep "90/tcp -> 0.0.0.0:8080"
     fn_check_eq "$?" "0" "port failed"
