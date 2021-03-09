@@ -193,6 +193,25 @@ function init_cni_conf()
     return $TC_RET_T
 }
 
+function wait_container_status()
+{
+    local cont="$1"
+    local status="$2"
+    local count=1
+    local flag=1
+    while [ $count -le 10 ]
+    do
+        local st=$(isula inspect -f {{.State.Status}} ${cont})
+        if [ "x$st" == "x$status" ]
+        then
+            return 0
+        fi
+        sleep 1
+        ((count++))
+    done
+    return 1
+}
+
 function do_pretest() {
     msg_info "#### do pretest #####"
     isula ps -a

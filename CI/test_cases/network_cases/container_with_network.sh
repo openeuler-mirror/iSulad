@@ -56,13 +56,6 @@ function test_container_with_networks()
     start_isulad_with_valgrind
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - start isulad failed" && ((ret++))
 
-    # run container but no available network
-    isula run -tid --net ${network_name1} -n ${cont_name} busybox sh 2>&1 | grep "No available native network"
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container and catch err msg failed" && ((ret++))
-
-    isula rm -f ${cont_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm -f ${cont_name} failed" && return ${FAILURE}
-
     # create network
     isula network create --subnet 172.20.5.0/24 ${network_name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name1} failed" && return ${FAILURE}
@@ -70,12 +63,9 @@ function test_container_with_networks()
     isula network create --subnet 2001:db8:12::/64 ${network_name2}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${network_name2} failed" && return ${FAILURE}
 
-    # run container with invalid network test
+    # run container with invalid network
     isula run -tid --net .xx -n ${cont_name} busybox sh 2>&1 | grep "Invalid network name"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container and catch err msg failed" && ((ret++))
-
-    isula rm -f ${cont_name}
-    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - rm -f ${cont_name} failed" && return ${FAILURE}
 
     isula run -tid --net cni3 -n ${cont_name} busybox sh 2>&1 | grep "Network cni3 not found"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container and catch err msg failed" && ((ret++))
@@ -90,7 +80,7 @@ function test_container_with_networks()
     IP1=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name1}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
     [[ "x${IP1}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
 
-    IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
+    IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.GlobalIPv6Address }}' ${cont_name} | sed 's/\"//g')
     [[ "x${IP2}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
 
     ping -c 3 -w 10 ${IP1}
@@ -129,7 +119,7 @@ function test_container_with_networks()
     IP1=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name1}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
     [[ "x${IP1}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
 
-    IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
+    IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.GlobalIPv6Address }}' ${cont_name} | sed 's/\"//g')
     [[ "x${IP2}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
 
     ping -c 3 -w 10 ${IP1}
@@ -144,7 +134,7 @@ function test_container_with_networks()
     IP1=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name1}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
     [[ "x${IP1}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name1} IP failed " && return ${FAILURE}
 
-    IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.IPAddress }}' ${cont_name} | sed 's/\"//g')
+    IP2=$(isula inspect -f '{{json .NetworkSettings.Networks.'${network_name2}'.GlobalIPv6Address }}' ${cont_name} | sed 's/\"//g')
     [[ "x${IP2}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - inspect ${cont_name} ${network_name2} IP failed " && return ${FAILURE}
 
     ping -c 3 -w 10 ${IP1}
