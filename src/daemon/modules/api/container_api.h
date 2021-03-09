@@ -92,6 +92,8 @@ typedef struct _container_t_ {
     char *image_id;
     container_config_v2_common_config *common_config;
     container_state_t *state;
+    // skip remove network when restarting
+    bool skip_remove_network;
     container_network_settings *network_settings;
     host_config *hostconfig;
     restart_manager_t *rm;

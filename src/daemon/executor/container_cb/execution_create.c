@@ -541,7 +541,7 @@ out:
 }
 
 static int register_new_container(const char *id, const char *runtime, host_config *host_spec,
-                                  container_config_v2_common_config *v2_spec)
+                                  container_config_v2_common_config *v2_spec, container_network_settings *network_settings)
 {
     int ret = -1;
     bool registered = false;
@@ -591,7 +591,7 @@ static int register_new_container(const char *id, const char *runtime, host_conf
         goto out;
     }
 
-    if (container_fill_network_settings(cont, NULL) != 0) {
+    if (container_fill_network_settings(cont, network_settings) != 0) {
         ERROR("Failed to fill network settings");
         goto out;
     }
@@ -614,10 +614,11 @@ out:
     free(runtime_stat);
     free(image_id);
     if (ret != 0) {
-        /* fail, do not use the input v2 spec and host spec, the memeory will be free by caller*/
+        /* fail, do not use the input v2 spec, host spec and network settings, the memeory will be free by caller*/
         if (cont != NULL) {
             cont->common_config = NULL;
             cont->hostconfig = NULL;
+            cont->network_settings = NULL;
             container_unref(cont);
         }
     }
@@ -1340,6 +1341,7 @@ int container_create_cb(const container_create_request *request, container_creat
     container_config *container_spec = NULL;
     container_config_v2_common_config *v2_spec = NULL;
     host_config_host_channel *host_channel = NULL;
+    container_network_settings *network_settings = NULL;
     int ret = 0;
 
     DAEMON_CLEAR_ERRMSG();
@@ -1422,6 +1424,13 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
+    network_settings = generate_network_settings(host_spec);
+    if (network_settings == NULL) {
+        ERROR("Failed to generate network settings");
+        cc = ISULAD_ERR_EXEC;
+        goto umount_shm;
+    }
+
     if (merge_config_for_syscontainer(request, host_spec, v2_spec->config, oci_spec) != 0) {
         ERROR("Failed to merge config for syscontainer");
         cc = ISULAD_ERR_EXEC;
@@ -1474,13 +1483,14 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_channel;
     }
 
-    if (register_new_container(id, runtime, host_spec, v2_spec)) {
+    if (register_new_container(id, runtime, host_spec, v2_spec, network_settings)) {
         ERROR("Failed to register new container");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
     }
     host_spec = NULL;
     v2_spec = NULL;
+    network_settings = NULL;
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
     (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
@@ -1516,6 +1526,7 @@ pack_response:
     free_host_config(host_spec);
     free_container_config_v2_common_config(v2_spec);
     free_host_config_host_channel(host_channel);
+    free_container_network_settings(network_settings);
     isula_libutils_free_log_prefix();
     malloc_trim(0);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;

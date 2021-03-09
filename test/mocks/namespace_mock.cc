@@ -40,6 +40,15 @@ int get_share_namespace_path(const char *type, const char *src_path, char **dest
     return 0;
 }
 
+int get_network_namespace_path(const host_config *host_spec, const container_network_settings *network_settings,
+                               const char *type, char **dest_path)
+{
+    if (g_namespace_mock != nullptr) {
+        return g_namespace_mock->GetNetworkNamespacePath(host_spec, network_settings, type, dest_path);
+    }
+    return 0;
+}
+
 char *get_container_process_label(const char *path)
 {
     if (g_namespace_mock != nullptr) {

@@ -57,20 +57,6 @@ static inline void network_conflist_unlock()
     }
 }
 
-static bool network_is_valid_name(const char *name)
-{
-    if (strnlen(name, MAX_NETWORK_NAME_LEN + 1) > MAX_NETWORK_NAME_LEN) {
-        isulad_set_error_message("Network name \"%s\" too long, max length:%d", name, MAX_NETWORK_NAME_LEN);
-        return false;
-    }
-    if (!util_validate_network_name(name)) {
-        isulad_set_error_message("Invalid network name:%s, only %s are allowed", name, NETWORK_VALID_NAME_CHARS);
-        return false;
-    }
-
-    return true;
-}
-
 static int check_parameter(const network_create_request *request)
 {
     int ret = 0;
@@ -78,7 +64,8 @@ static int check_parameter(const network_create_request *request)
     size_t ip_len = 0;
     struct ipnet *net = NULL;
 
-    if (request->name != NULL && !network_is_valid_name(request->name)) {
+    if (request->name != NULL && !util_validate_network_name(request->name)) {
+        isulad_set_error_message("Invalid network name %s", request->name);
         return EINVALIDARGS;
     }
 
@@ -185,7 +172,8 @@ static int network_inspect_cb(const network_inspect_request *request, network_in
         goto out;
     }
 
-    if (!network_is_valid_name(request->name)) {
+    if (!util_validate_network_name(request->name)) {
+        isulad_set_error_message("Invalid network name %s", request->name);
         cc = ISULAD_ERR_INPUT;
         ret = EINVALIDARGS;
         goto out;
@@ -215,7 +203,7 @@ static int do_add_filters(const char *filter_key, const json_map_string_bool *fi
 
     for (i = 0; i < filter_value->len; i++) {
         if (strcmp(filter_key, "name") == 0) {
-            if (!network_is_valid_name(filter_value->keys[i])) {
+            if (!util_validate_network_name(filter_value->keys[i])) {
                 ERROR("Unrecognised filter value for name: %s", filter_value->keys[i]);
                 isulad_set_error_message("Unrecognised filter value for name: %s", filter_value->keys[i]);
                 return -1;
@@ -322,7 +310,8 @@ static int network_remove_cb(const network_remove_request *request, network_remo
         return ECOMMON;
     }
 
-    if (!network_is_valid_name(request->name)) {
+    if (!util_validate_network_name(request->name)) {
+        isulad_set_error_message("Invalid network name %s", request->name);
         cc = ISULAD_ERR_INPUT;
         ret = EINVALIDARGS;
         goto out;

@@ -8,29 +8,27 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
  * PURPOSE.
  * See the Mulan PSL v2 for more details.
- * Author: lifeng
- * Create: 2020-06-11
- * Description: provide namespace spec definition
+ * Author: zhangxiaoyu
+ * Create: 2021-03-09
+ * Description: provide network namespace definition
  ******************************************************************************/
-#ifndef DAEMON_MODULES_SPEC_SPECS_NAMESPACE_H
-#define DAEMON_MODULES_SPEC_SPECS_NAMESPACE_H
+#ifndef DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H
+#define DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H
 
 #include <stdbool.h>
-#include <string.h>
-#include <isula_libutils/container_network_settings.h>
-#include <isula_libutils/host_config.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int get_share_namespace_path(const char *type, const char *src_path, char **dest_path);
-int get_network_namespace_path(const host_config *host_spec, const container_network_settings *network_settings,
-                               const char *type, char **dest_path);
-char *get_container_process_label(const char *path);
+int prepare_network_namespace(const bool post_prepare_network, const int pid, const char *netns_path);
+
+int remove_net_namspace(const char *netns);
+
+char *get_netns_path(const char *sandbox_key, const bool attach);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif // DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H

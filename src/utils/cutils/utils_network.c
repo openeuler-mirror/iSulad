@@ -30,6 +30,7 @@
 #include "utils_array.h"
 #include "utils_file.h"
 #include "utils_string.h"
+#include "namespace.h"
 
 #define IPV4_TO_V6_EMPTY_PREFIX_BYTES 12
 #define MAX_INTERFACE_NAME_LENGTH 15
@@ -813,6 +814,11 @@ bool util_validate_network_name(const char *name)
         return false;
     }
 
+    if (strnlen(name, MAX_NETWORK_NAME_LEN + 1) > MAX_NETWORK_NAME_LEN) {
+        ERROR("Network name \"%s\" too long, max length:%d", name, MAX_NETWORK_NAME_LEN);
+        return false;
+    }
+
     if (util_reg_match(NETWORK_VALID_NAME_CHARS, name) != 0) {
         ERROR("invalid characters found in network name: %s", name);
         return false;
@@ -820,6 +826,18 @@ bool util_validate_network_name(const char *name)
 
     return true;
 }
+
+// ignore native network when network_mode != bridge or container is syscontainer
+bool util_native_network_checker(const char *network_mode, const bool system_container)
+{
+    return namespace_is_bridge(network_mode) && !system_container;
+}
+
+bool util_post_setup_network(const char *user_remap)
+{
+    return user_remap != NULL ? true : false;
+}
+
 
 static bool is_invalid_char(char c)
 {

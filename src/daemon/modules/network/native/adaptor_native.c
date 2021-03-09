@@ -726,8 +726,8 @@ static int check_subnet_available(const char *subnet, const string_array *subnet
         ret = util_parse_cidr(subnets->items[i], &tmp);
         if (ret != 0 || tmp == NULL) {
             ERROR("Parse CIDR %s failed", subnets->items[i]);
-            ret = -1;
-            goto out;
+            ret = 0;
+            continue;
         }
         ret = net_conflict(tmp, net);
         if (ret != 0) {
@@ -2050,6 +2050,8 @@ static int do_foreach_network_op(const network_api_conf *conf, bool ignore_nofou
             ret = -1;
             goto out;
         }
+        EVENT("Event: {Object: network %s, Target: %s}", conf->extral_nets[i]->name, conf->pod_id);
+
         if (do_native_append_cni_result(conf->extral_nets[i]->name, conf->extral_nets[i]->interface, cni_result, list) != 0) {
             isulad_set_error_message("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
             ERROR("parse cni result for net: '%s' failed", conf->extral_nets[i]->name);
