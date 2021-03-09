@@ -62,6 +62,10 @@ bool util_net_contain_ip(const struct ipnet *ipnet, const uint8_t *ip, const siz
 
 bool util_validate_network_name(const char *name);
 
+bool util_native_network_checker(const char *network_mode, const bool system_container);
+
+bool util_post_setup_network(const char *user_remap);
+
 bool util_validate_network_interface(const char *if_name);
 
 bool util_validate_ipv4_address(const char *ipv4);

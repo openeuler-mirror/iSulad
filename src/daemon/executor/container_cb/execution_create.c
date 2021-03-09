@@ -706,7 +706,7 @@ out:
 }
 
 static int register_new_container(const char *id, const char *image_id, const char *runtime, host_config *host_spec,
-                                  container_config_v2_common_config *v2_spec)
+                                  container_config_v2_common_config *v2_spec, container_network_settings *network_settings)
 {
     int ret = -1;
     bool registered = false;
@@ -750,7 +750,7 @@ static int register_new_container(const char *id, const char *image_id, const ch
         goto out;
     }
 
-    if (container_fill_network_settings(cont, NULL) != 0) {
+    if (container_fill_network_settings(cont, network_settings) != 0) {
         ERROR("Failed to fill network settings");
         goto out;
     }
@@ -772,10 +772,11 @@ out:
     free(runtime_root);
     free(runtime_stat);
     if (ret != 0) {
-        /* fail, do not use the input v2 spec and host spec, the memeory will be free by caller*/
+        /* fail, do not use the input v2 spec, host spec and network settings, the memeory will be free by caller*/
         if (cont != NULL) {
             cont->common_config = NULL;
             cont->hostconfig = NULL;
+            cont->network_settings = NULL;
             container_unref(cont);
         }
     }
@@ -1452,46 +1453,6 @@ static char *new_pod_sandbox_key(void)
     return util_strdup_s(netns);
 }
 
-static int generate_network_settings(const host_config *host_config, container_config_v2_common_config *v2_spec)
-{
-    if (host_config == NULL || v2_spec == NULL) {
-        ERROR("Invalid input");
-        return -1;
-    }
-
-    container_config_v2_common_config_network_settings *settings = NULL;
-
-    if (!namespace_is_file(host_config->network_mode)) {
-        return 0;
-    }
-
-    settings = (container_config_v2_common_config_network_settings *)util_common_calloc_s(sizeof(
-                                                                                              container_config_v2_common_config_network_settings));
-    if (settings == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    settings->sandbox_key = new_pod_sandbox_key();
-    if (settings->sandbox_key == NULL) {
-        ERROR("Failed to generate sandbox key");
-        goto err_out;
-    }
-
-    if (prepare_network_namespace(settings->sandbox_key) != 0) {
-        ERROR("Failed to create network namespace");
-        goto err_out;
-    }
-
-    v2_spec->network_settings = settings;
-
-    return 0;
-
-err_out:
-    free_container_config_v2_common_config_network_settings(settings);
-    return -1;
-}
-
 static int cpurt_controller_init(const char *cgroups_path)
 {
     int ret = 0;
@@ -1571,6 +1532,7 @@ int container_create_cb(const container_create_request *request, container_creat
     container_config *container_spec = NULL;
     container_config_v2_common_config *v2_spec = NULL;
     host_config_host_channel *host_channel = NULL;
+    container_network_settings *network_settings = NULL;
     int ret = 0;
 
     DAEMON_CLEAR_ERRMSG();
@@ -1665,7 +1627,14 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_shm;
     }
 
-    if (generate_network_settings(host_spec, v2_spec) != 0) {
+    if (util_native_network_checker(host_spec->network_mode, host_spec->system_container)) {
+        network_settings = native_generate_network_settings(host_spec);
+    } else if (namespace_is_file(host_spec->network_mode)) {
+        network_settings = cri_generate_network_settings(host_spec);
+    } else {
+        network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+    }
+    if (network_settings == NULL) {
         ERROR("Failed to generate network settings");
         cc = ISULAD_ERR_EXEC;
         goto umount_shm;
@@ -1723,13 +1692,14 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_channel;
     }
 
-    if (register_new_container(id, image_id, runtime, host_spec, v2_spec)) {
+    if (register_new_container(id, image_id, runtime, host_spec, v2_spec, network_settings)) {
         ERROR("Failed to register new container");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
     }
     host_spec = NULL;
     v2_spec = NULL;
+    network_settings = NULL;
 
     EVENT("Event: {Object: %s, Type: Created %s}", id, name);
     (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
@@ -1766,6 +1736,7 @@ pack_response:
     free_host_config(host_spec);
     free_container_config_v2_common_config(v2_spec);
     free_host_config_host_channel(host_channel);
+    free_container_network_settings(network_settings);
     isula_libutils_free_log_prefix();
     malloc_trim(0);
     return (cc == ISULAD_SUCCESS) ? 0 : -1;

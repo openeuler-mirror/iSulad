@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <isula_libutils/cni_anno_port_mappings.h>
 
+#include "network_namespace_api.h"
 #include "utils_network.h"
 #include "utils_port.h"
 #include "err_msg.h"
@@ -27,155 +28,29 @@
 
 #define SHORT_ID_SPACE 12 + 1
 
-// ignore native network when network_mode != bridge or container is syscontainer
-static inline bool native_network_checker(host_config *hostconfig)
+static bool validate_network(const defs_map_string_object_networks *networks)
 {
-    return namespace_is_bridge(hostconfig->network_mode) && !hostconfig->system_container;
-}
+    size_t i = 0;
 
-bool validate_container_network(container_t *cont)
-{
-    bool ret = false;
-    size_t i;
-
-    if (cont == NULL) {
-        ERROR("Invalid host config");
+    if (networks == NULL || networks->len == 0 || networks->keys == NULL || networks->values == NULL) {
         return false;
     }
 
-    container_lock(cont);
-
-    if (!native_network_checker(cont->hostconfig)) {
-        ret = true;
-        goto out;
-    }
-
-    if (cont->hostconfig->bridge_network == NULL || cont->hostconfig->bridge_network_len == 0) {
-        goto out;
-    }
-
-    if (!network_module_ready(NETWOKR_API_TYPE_NATIVE)) {
-        isulad_set_error_message("No available native network");
-        goto out;
-    }
-
-    for (i = 0; i < cont->hostconfig->bridge_network_len; i++) {
-        if (!util_validate_network_name(cont->hostconfig->bridge_network[i])) {
-            isulad_set_error_message("Invalid network name:%s", cont->hostconfig->bridge_network[i]);
-            goto out;
-        }
-
-        if (strnlen(cont->hostconfig->bridge_network[i], MAX_NETWORK_NAME_LEN + 1) > MAX_NETWORK_NAME_LEN) {
-            isulad_set_error_message("Network name %s too long, max length:%d", cont->hostconfig->bridge_network[i],
-                                     MAX_NETWORK_NAME_LEN);
-            goto out;
-        }
-
-        if (!network_module_exist(NETWOKR_API_TYPE_NATIVE, cont->hostconfig->bridge_network[i])) {
-            isulad_set_error_message("Network %s not found", cont->hostconfig->bridge_network[i]);
-            goto out;
-        }
-    }
-
-    ret = true;
-
-out:
-    container_unlock(cont);
-    return ret;
-}
-
-static char *get_netns_path(const char *id, const int pid, const bool clean)
-{
-    int nret = 0;
-    char fullpath[PATH_MAX] = { 0 };
-    const char *netns_fmt = "/proc/%d/ns/net";
-
-    if (clean == true || pid == 0) {
-        WARN("Container %s pid is %d, and netns path is empty", id, pid);
-        return util_strdup_s("");
-    }
-
-    nret = snprintf(fullpath, sizeof(fullpath), netns_fmt, pid);
-    if ((size_t)nret >= sizeof(fullpath) || nret < 0) {
-        ERROR("snprintf fullpath failed");
-        return NULL;
-    }
-
-    return util_strdup_s(fullpath);
-}
-
-static map_t *get_ifname_table(const defs_map_string_object_networks *networks)
-{
-    // string -> bool
-    map_t *ifname_table = NULL;
-    size_t i;
-    bool val = true;
-
-    ifname_table = map_new(MAP_STR_BOOL, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
-    if (ifname_table == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    if (networks == NULL || networks->len == 0) {
-        return ifname_table;
-    }
-
     for (i = 0; i < networks->len; i++) {
-        if (networks->keys[i] == NULL || networks->values[i] == NULL || networks->values[i]->if_name == NULL) {
-            WARN("network %s doesn't have if_name", networks->keys[i] != NULL ? networks->keys[i] : " ");
-            continue;
+        if (!util_validate_network_name(networks->keys[i])) {
+            isulad_set_error_message("Invalid network name %s", networks->keys[i]);
+            ERROR("Invalid network name %s", networks->keys[i]);
+            return false;
         }
 
-        if (map_search(ifname_table, networks->values[i]->if_name) != NULL) {
-            ERROR("ifname %s conflict", networks->values[i]->if_name);
-            goto err_out;
-        }
-
-        if (!map_replace(ifname_table, (void *)networks->values[i]->if_name, (void *)&val)) {
-            ERROR("Failed to insert %s in ifname_table", networks->values[i]->if_name);
-            goto err_out;
+        if (!network_module_exist(NETWOKR_API_TYPE_NATIVE, networks->keys[i])) {
+            isulad_set_error_message("Network %s not found", networks->keys[i]);
+            ERROR("Network %s not found", networks->keys[i]);
+            return false;
         }
     }
 
-    return ifname_table;
-
-err_out:
-    map_free(ifname_table);
-    return NULL;
-}
-
-static char *find_ifname(map_t *ifname_table)
-{
-#define IFNAME_MAX 10000
-    int i;
-    int nret = 0;
-    char fullname[PATH_MAX] = { 0 };
-    const char *ifname_fmt = "eth%d";
-    bool val = true;
-
-    for (i = 0; i < IFNAME_MAX; i++) {
-        nret = snprintf(fullname, sizeof(fullname), ifname_fmt, i);
-        if ((size_t)nret >= sizeof(fullname) || nret < 0) {
-            ERROR("snprintf fullname failed");
-            return NULL;
-        }
-
-        if (map_search(ifname_table, fullname) != NULL) {
-            continue;
-        }
-
-        if (!map_replace(ifname_table, (void *)fullname, (void *)&val)) {
-            ERROR("Failed to insert %s in ifname_table", fullname);
-            return NULL;
-        }
-
-        return util_strdup_s(fullname);
-    }
-
-    isulad_set_error_message("Failed to find available ifname");
-    ERROR("Failed to find available ifname");
-    return NULL;
+    return true;
 }
 
 struct attach_net_conf_list {
@@ -183,79 +58,16 @@ struct attach_net_conf_list {
     size_t len;
 };
 
-typedef struct attach_net_conf_list *(*prepare_networks_t)(const container_t *cont);
-static struct attach_net_conf_list *prepare_attach_networks(const container_t *cont)
+static struct attach_net_conf_list *build_attach_networks(const defs_map_string_object_networks *networks)
 {
     int nret = 0;
-    size_t i;
+    size_t i = 0;
     struct attach_net_conf_list *list = NULL;
-    map_t *ifname_table = NULL;
-    const char **attach_networks = (const char **)cont->hostconfig->bridge_network;
-    const size_t networks_len = cont->hostconfig->bridge_network_len;
 
-    if (attach_networks == NULL || networks_len == 0) {
+    if (networks == NULL || networks->len == 0) {
         ERROR("attach network is none");
         return NULL;
     }
-
-    list = (struct attach_net_conf_list *)util_common_calloc_s(sizeof(struct attach_net_conf));
-    if (list == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    list->nets = (struct attach_net_conf **)util_smart_calloc_s(sizeof(struct attach_net_conf *), networks_len);
-    if (list->nets == NULL) {
-        ERROR("Out of memory");
-        nret = -1;
-        goto out;
-    }
-
-    ifname_table = get_ifname_table(cont->network_settings->networks);
-    if (ifname_table == NULL) {
-        ERROR("Get ifname table failed");
-        nret = -1;
-        goto out;
-    }
-
-    for (i = 0; i < networks_len; i++) {
-        list->nets[i] = (struct attach_net_conf *)util_common_calloc_s(sizeof(struct attach_net_conf));
-        if (list->nets[i] == NULL) {
-            ERROR("Out of memory");
-            nret = -1;
-            goto out;
-        }
-
-        list->len++;
-        list->nets[i]->name = util_strdup_s(attach_networks[i]);
-        list->nets[i]->interface = find_ifname(ifname_table);
-        if (list->nets[i]->interface == NULL) {
-            ERROR("Failed to find ifname");
-            nret = -1;
-            goto out;
-        }
-    }
-
-out:
-    if (nret != 0) {
-        for (i = 0; i < list->len; i++) {
-            free_attach_net_conf(list->nets[i]);
-        }
-        free(list->nets);
-        free(list);
-        list = NULL;
-    }
-    map_free(ifname_table);
-
-    return list;
-}
-
-static struct attach_net_conf_list *prepare_detach_networks(const container_t *cont)
-{
-    int nret = 0;
-    size_t i;
-    struct attach_net_conf_list *list = NULL;
-    const defs_map_string_object_networks *networks = cont->network_settings->networks;
 
     list = (struct attach_net_conf_list *)util_common_calloc_s(sizeof(struct attach_net_conf));
     if (list == NULL) {
@@ -271,6 +83,12 @@ static struct attach_net_conf_list *prepare_detach_networks(const container_t *c
     }
 
     for (i = 0; i < networks->len; i++) {
+        if (networks->keys[i] == NULL || networks->values[i] == NULL || networks->values[i]->if_name == NULL) {
+            ERROR("Invalid network");
+            nret = -1;
+            goto out;
+        }
+
         list->nets[i] = (struct attach_net_conf *)util_common_calloc_s(sizeof(struct attach_net_conf));
         if (list->nets[i] == NULL) {
             ERROR("Out of memory");
@@ -298,9 +116,9 @@ out:
 
 static json_map_string_string * prepare_native_args(const container_t *cont)
 {
-#define DNS_NAME_MAX_LENGTH 63
+#define HOST_NAME_MAX_LENGTH 63
     int nret = 0;
-    char name[DNS_NAME_MAX_LENGTH + 1] = { 0x00 };
+    char name[HOST_NAME_MAX_LENGTH + 1] = { 0x00 };
     json_map_string_string *args = NULL;
 
     args = (json_map_string_string *)util_common_calloc_s(sizeof(json_map_string_string));
@@ -314,8 +132,8 @@ static json_map_string_string * prepare_native_args(const container_t *cont)
         goto err_out;
     }
 
-    if (strlen(cont->common_config->name) > DNS_NAME_MAX_LENGTH) {
-        // set short id as dns name
+    if (strlen(cont->common_config->name) > HOST_NAME_MAX_LENGTH) {
+        // set short id as host name
         nret = snprintf(name, SHORT_ID_SPACE, "%s", cont->common_config->id);
         if (nret < 0) {
             ERROR("snprintf name failed, %d", nret);
@@ -672,7 +490,7 @@ out:
     return ret;
 }
 
-static network_api_conf *build_adaptor_native_config(const container_t *cont, prepare_networks_t op, const bool clean)
+static network_api_conf *build_adaptor_native_config(const container_t *cont, const bool attach)
 {
     network_api_conf *config = NULL;
     struct attach_net_conf_list *list = NULL;
@@ -685,13 +503,14 @@ static network_api_conf *build_adaptor_native_config(const container_t *cont, pr
 
     config->name = util_strdup_s(cont->common_config->name);
     config->pod_id = util_strdup_s(cont->common_config->id);
-    config->netns_path = get_netns_path(cont->common_config->id, cont->state->state->pid, clean);
+    config->netns_path = get_netns_path(cont->network_settings->sandbox_key, attach);
     if (config->netns_path == NULL) {
         ERROR("Failed to get netns path for container %s", cont->common_config->id);
         goto err_out;
     }
 
-    list = op(cont);
+
+    list = build_attach_networks(cont->network_settings->networks);
     if (list == NULL) {
         ERROR("Failed to prepare attach/detach networks");
         goto err_out;
@@ -715,125 +534,171 @@ err_out:
     return NULL;
 }
 
-static int parse_result(const struct network_api_result *item, char **key,
-                        defs_map_string_object_networks_element **value)
+static container_network_settings *dup_contaner_network_settings(const container_network_settings *settings)
+{
+    char *jstr = NULL;
+    container_network_settings *res = NULL;
+    parser_error jerr = NULL;
+
+    if (settings == NULL) {
+        return NULL;
+    }
+
+    jstr = container_network_settings_generate_json(settings, NULL, &jerr);
+    if (jstr == NULL) {
+        ERROR("Generate network settings failed: %s", jerr);
+        goto out;
+    }
+
+    free(jerr);
+    jerr = NULL;
+    res = container_network_settings_parse_data(jstr, NULL, &jerr);
+    if (res == NULL) {
+        ERROR("Parse network settings failed: %s", jerr);
+        goto out;
+    }
+
+out:
+    free(jerr);
+    free(jstr);
+    return res;
+}
+
+static map_t *get_networks_index_map(const defs_map_string_object_networks *networks)
+{
+    size_t i = 0;
+    map_t *index = NULL;
+
+    index = map_new(MAP_STR_INT, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (index == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    for (i = 0; i < networks->len; i++) {
+        if (networks->keys[i] == NULL) {
+            ERROR("Invalid network");
+            goto err_out;
+        }
+
+        if (map_search(index, networks->keys[i]) != NULL) {
+            ERROR("network name %s conflict", networks->keys[i]);
+            goto err_out;
+        }
+
+        if (!map_replace(index, (void *)networks->keys[i], (void *)&i)) {
+            ERROR("Failed to insert ip address %s in map", networks->keys[i]);
+            goto err_out;
+        }
+    }
+
+    return index;
+
+err_out:
+    map_free(index);
+    return NULL;
+}
+
+static int fill_container_network_element(const struct network_api_result *item,
+                                          defs_map_string_object_networks_element *value)
 {
     int ret = 0;
     char **split = NULL;
-    char *tmp_key = NULL;
-    defs_map_string_object_networks_element *tmp_value = NULL;
 
-    tmp_value = (defs_map_string_object_networks_element *)util_common_calloc_s(sizeof(
-                                                                                    defs_map_string_object_networks_element));
-    if (tmp_value == NULL) {
-        ERROR("Out of memory");
+    if (item->ips_len == 0) {
+        ERROR("No ips for attach network %s", item->name);
         return -1;
     }
 
-    tmp_key = util_strdup_s(item->name);
-    tmp_value->if_name = util_strdup_s(item->interface);
-    if (item->ips_len != 0) {
-        split = util_string_split_multi(item->ips[0], '/');
-        if (split == NULL) {
-            ERROR("Failed to split result ip");
-            ret = -1;
-            goto out;
-        }
+    // now only allocate one ip per network
+    split = util_string_split_multi(item->ips[0], '/');
+    if (split == NULL) {
+        ERROR("Failed to split result ip");
+        return -1;
+    }
 
-        if (util_array_len((const char **)split) != 2) {
-            ERROR("Invalid IP %s", item->ips[0]);
-            ret = -1;
-            goto out;
-        }
+    if (util_array_len((const char **)split) != 2) {
+        ERROR("Invalid IP %s", item->ips[0]);
+        ret = -1;
+        goto out;
+    }
 
-        tmp_value->ip_address = util_strdup_s(split[0]);
-        ret = util_safe_int(split[1], &tmp_value->ip_prefix_len);
+    if (util_validate_ipv4_address(split[0])) {
+        ret = util_safe_int(split[1], &value->ip_prefix_len);
         if (ret != 0) {
             ERROR("Failed to convert ip_prefix_len from string to int");
             goto out;
         }
 
-        tmp_value->gateway = util_strdup_s(item->gateway[0]);
-    }
-    tmp_value->mac_address = util_strdup_s(item->mac);
+        value->ip_address = util_strdup_s(split[0]);
+        value->gateway = util_strdup_s(item->gateway[0]);
+    } else if (util_validate_ipv6_address(split[0])) {
+        ret = util_safe_int(split[1], &value->global_i_pv6prefix_len);
+        if (ret != 0) {
+            ERROR("Failed to convert ip_prefix_len from string to int");
+            goto out;
+        }
 
-    *key = tmp_key;
-    tmp_key = NULL;
-    *value = tmp_value;
-    tmp_value = NULL;
+        value->global_i_pv6address = util_strdup_s(split[0]);
+        value->i_pv6gateway = util_strdup_s(item->gateway[0]);
+    }
+
+    value->mac_address = util_strdup_s(item->mac);
 
 out:
     util_free_array(split);
-    free(tmp_key);
-    free_defs_map_string_object_networks_element(tmp_value);
     return ret;
 }
 
-int update_container_networks_info(const network_api_result_list *result, const char *id, const char* netns_path,
-                                   container_network_settings *network_settings)
+static int update_container_networks_info(const network_api_result_list *result,
+                                          defs_map_string_object_networks *networks)
 {
     int ret = 0;
-    size_t i, old_size, new_size;
-    defs_map_string_object_networks *networks = network_settings->networks;
-    const size_t len = networks->len;
+    size_t i = 0;
+    map_t *index = NULL;
 
     if (result == NULL || result->items == NULL || result->len == 0) {
         ERROR("Invalid result");
         return -1;
     }
 
-    if (result->len > MAX_NETWORK_CONFIG_FILE_COUNT - len) {
-        ERROR("Too many networks for container %s", id);
+    if (result->len != networks->len) {
+        ERROR("result len %lu doesn't match networks len %lu", result->len, networks->len);
         return -1;
     }
 
-    old_size = len * sizeof(char *);
-    new_size = (len + result->len) * sizeof(char *);
-    ret = util_mem_realloc((void **)&networks->keys, new_size, networks->keys, old_size);
-    if (ret != 0) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    old_size = len * sizeof(defs_map_string_object_networks_element *);
-    new_size = (len + result->len) * sizeof(defs_map_string_object_networks_element *);
-    ret = util_mem_realloc((void **)&networks->values, new_size, networks->values, old_size);
-    if (ret != 0) {
-        ERROR("Out of memory");
+    index = get_networks_index_map(networks);
+    if (index == NULL) {
+        ERROR("Failed to get networks index map");
         return -1;
     }
 
     for (i = 0; i < result->len; i++) {
-        char *key = NULL;
-        defs_map_string_object_networks_element *value = NULL;
+        int *j = NULL;
 
         if (result->items[i] == NULL) {
-            continue;
-        }
-
-        ret = parse_result(result->items[i], &key, &value);
-        if (ret != 0) {
-            ERROR("Failed to parse network result");
+            ERROR("Invalid result item");
+            ret = -1;
             goto out;
         }
 
-        networks->keys[networks->len] = key;
-        networks->values[networks->len] = value;
-        (networks->len)++;
-    }
+        j = map_search(index, result->items[i]->name);
+        if (j == NULL) {
+            ERROR("Failed to find network %s", result->items[i]->name);
+            ret = -1;
+            goto out;
+        }
 
-    network_settings->sandbox_key = util_strdup_s(netns_path);
+        ret = fill_container_network_element(result->items[i], networks->values[*j]);
+        if (ret != 0) {
+            ERROR("Failed to fill container network element for %s", result->items[i]->name);
+            goto out;
+        }
+    }
 
 out:
-    if (ret != 0) {
-        for (i = len; i < networks->len; i++) {
-            free(networks->keys[i]);
-            networks->keys[i] = NULL;
-            free_defs_map_string_object_networks_element(networks->values[i]);
-            networks->values[i] = NULL;
-        }
-        networks->len = len;
-    }
+    // rollback cont->networksettings->networks by caller
+    map_free(index);
     return ret;
 }
 
@@ -845,8 +710,11 @@ static inline void do_free_network_setting_cni_portmapping(container_network_set
         free_cni_inner_port_mapping(settings->cni_ports[i]);
         settings->cni_ports[i] = NULL;
     }
+
     free(settings->cni_ports);
     settings->cni_ports = NULL;
+
+    settings->cni_ports_len = 0;
 }
 
 static int update_container_networks_portmappings(const cni_anno_port_mappings_container *merged_ports,
@@ -888,6 +756,7 @@ static int update_container_networks_portmappings(const cni_anno_port_mappings_c
     tmp_ports_len = 0;
 
 out:
+    // rollback cont->networksettings->networks by caller
     for (i = 0; i < tmp_ports_len; i++) {
         free_cni_inner_port_mapping(tmp_ports[i]);
         tmp_ports[i] = NULL;
@@ -906,10 +775,11 @@ static int append_hosts_content(const char *hostname, defs_map_string_object_net
     int nret = 0;
     size_t size = 0;
     char *tmp_str = NULL;
-    const char *ip_address = value->ip_address;
+    const char *ip_address = value->ip_address ? value->ip_address : value->global_i_pv6address;
 
     if (ip_address == NULL) {
-        return 0;
+        ERROR("Invalid ip address");
+        return -1;
     }
 
     size = strlen(ip_address) + 1 + strlen(hostname) + 1;
@@ -943,10 +813,11 @@ static int append_dns_content(const char *hostname, defs_map_string_object_netwo
     int nret = 0;
     size_t size = 0;
     char *tmp_str = NULL;
-    const char *gateway = value->gateway;
+    const char *gateway = value->gateway ? value->gateway : value->i_pv6gateway;
 
     if (gateway == NULL) {
-        return 0;
+        ERROR("Invalid gateway");
+        return -1;
     }
 
     size = strlen("nameserver") + 1 + strlen(gateway) + 1;
@@ -1096,19 +967,27 @@ static map_t *get_ip_map(const defs_map_string_object_networks *networks)
     }
 
     for (i = 0; i < networks->len; i++) {
-        if (networks->keys[i] == NULL || networks->values[i] == NULL ||
-            networks->values[i]->ip_address == NULL) {
-            WARN("network %s doesn't have ip address", networks->keys[i] != NULL ? networks->keys[i] : " ");
+        char *ip_address = NULL;
+
+        if (networks->keys[i] == NULL || networks->values[i] == NULL) {
+            WARN("Network key/value is null");
             continue;
         }
 
-        if (map_search(ip_map, networks->values[i]->ip_address) != NULL) {
-            ERROR("ip address %s conflict", networks->values[i]->ip_address);
+        ip_address = networks->values[i]->ip_address ? networks->values[i]->ip_address :
+                     networks->values[i]->global_i_pv6address;
+        if (ip_address == NULL) {
+            WARN("network %s doesn't have ip address", networks->keys[i]);
+            continue;
+        }
+
+        if (map_search(ip_map, ip_address) != NULL) {
+            ERROR("ip address %s conflict", ip_address);
             goto err_out;
         }
 
-        if (!map_replace(ip_map, (void *)networks->values[i]->ip_address, (void *)&val)) {
-            ERROR("Failed to insert ip address %s in map", networks->values[i]->ip_address);
+        if (!map_replace(ip_map, (void *)ip_address, (void *)&val)) {
+            ERROR("Failed to insert ip address %s in map", ip_address);
             goto err_out;
         }
     }
@@ -1134,19 +1013,26 @@ static map_t *get_gateway_map(const defs_map_string_object_networks *networks)
     }
 
     for (i = 0; i < networks->len; i++) {
-        if (networks->keys[i] == NULL || networks->values[i] == NULL ||
-            networks->values[i]->gateway == NULL) {
-            WARN("network %s doesn't have gateway", networks->keys[i] != NULL ? networks->keys[i] : " ");
+        char *gateway = NULL;
+
+        if (networks->keys[i] == NULL || networks->values[i] == NULL) {
+            WARN("Network key/value is null");
             continue;
         }
 
-        if (map_search(gateway_map, networks->values[i]->gateway) != NULL) {
-            ERROR("ip address %s conflict", networks->values[i]->gateway);
+        gateway = networks->values[i]->gateway ? networks->values[i]->gateway :  networks->values[i]->i_pv6gateway;
+        if (gateway == NULL) {
+            WARN("network %s doesn't have gateway", networks->keys[i]);
+            continue;
+        }
+
+        if (map_search(gateway_map, gateway) != NULL) {
+            ERROR("ip address %s conflict", gateway);
             goto err_out;
         }
 
-        if (!map_replace(gateway_map, (void *)networks->values[i]->gateway, (void *)&val)) {
-            ERROR("Failed to insert ip address %s in map", networks->values[i]->gateway);
+        if (!map_replace(gateway_map, (void *)gateway, (void *)&val)) {
+            ERROR("Failed to insert ip address %s in map", gateway);
             goto err_out;
         }
     }
@@ -1268,11 +1154,15 @@ static int do_drop_internal_file(const char *id, const char *file_path, const de
         }
     }
 
-    str = util_string_join("", (const char **)array->items, array->len);
-    if (str == NULL) {
-        ERROR("Failed to join array string");
-        ret = -1;
-        goto out;
+    if (array->items == NULL || array->len == 0) {
+        str = util_strdup_s("#\n");
+    } else {
+        str = util_string_join("", (const char **)array->items, array->len);
+        if (str == NULL) {
+            ERROR("Failed to join array string");
+            ret = -1;
+            goto out;
+        }
     }
 
     ret = util_write_file(file_path, str, strlen(str), NETWORK_MOUNT_FILE_MODE);
@@ -1336,105 +1226,73 @@ out:
     return ret;
 }
 
-static int update_container_network_settings(container_t *cont, const network_api_conf *config,
-                                             const cni_anno_port_mappings_container *merged_ports, const network_api_result_list *result)
+static int update_container_network_settings(container_t *cont, const cni_anno_port_mappings_container *merged_ports,
+                                             const network_api_result_list *result)
 {
-    int nret = 0;
+    int ret = 0;
     bool to_disk = false;
+    container_network_settings *backup = NULL;
 
-    nret = update_container_networks_info(result, cont->common_config->id, config->netns_path, cont->network_settings);
-    if (nret != 0) {
-        ERROR("Failed to update network setting");
+    backup = dup_contaner_network_settings(cont->network_settings);
+    if (backup == NULL) {
+        ERROR("Failed to dup container network settings");
         return -1;
     }
 
-    nret = update_container_networks_portmappings(merged_ports, cont->network_settings);
-    if (nret != 0) {
-        ERROR("Failed to update network portmappings");
-        goto free_network_info;
+    ret = update_container_networks_info(result, cont->network_settings->networks);
+    if (ret != 0) {
+        ERROR("Failed to update network setting");
+        goto out;
     }
 
-    nret = container_network_settings_to_disk(cont);
-    if (nret != 0) {
+    ret = update_container_networks_portmappings(merged_ports, cont->network_settings);
+    if (ret != 0) {
+        ERROR("Failed to update network portmappings");
+        goto out;
+    }
+
+    cont->network_settings->activation = true;
+    cont->skip_remove_network = false;
+    ret = container_network_settings_to_disk(cont);
+    if (ret != 0) {
         ERROR("Failed to save container '%s' network settings", cont->common_config->id);
-        goto free_portmappings;
+        goto out;
     }
     to_disk = true;
 
-    nret = update_internal_file(cont);
-    if (nret == 0) {
-        return 0;
+    ret = update_internal_file(cont);
+    if (ret != 0) {
+        ERROR("Failed to update container internal network file");
+        goto out;
     }
-    ERROR("Failed to update container internal network file");
 
-free_portmappings:
-    // clear portmappings
-    do_free_network_setting_cni_portmapping(cont->network_settings);
-    DEBUG("free portmapping when rollback");
+out:
+    if (ret != 0) {
+        free_container_network_settings(cont->network_settings);
+        cont->network_settings = backup;
+        backup = NULL;
+        DEBUG("rollback container network settings when failed");
 
-free_network_info:
-    free_defs_map_string_object_networks(cont->network_settings->networks);
-    cont->network_settings->networks = NULL;
-
-    free(cont->network_settings->sandbox_key);
-    cont->network_settings->sandbox_key = NULL;
-
-    DEBUG("free network info when rollback");
-
-    if (to_disk) {
-        nret = container_network_settings_to_disk(cont);
-        if (nret != 0) {
-            ERROR("Failed to rollback container '%s' network settings", cont->common_config->id);
+        if (to_disk) {
+            if (container_network_settings_to_disk(cont) != 0) {
+                ERROR("Failed to rollback container '%s' network settings", cont->common_config->id);
+            }
+            DEBUG("network settings to disk when rollback");
         }
-        DEBUG("network settings to disk when rollback");
     }
+    free_container_network_settings(backup);
 
-    return -1;
+    return ret;
 }
 
-int setup_network(container_t *cont)
+static int setup_network(container_t *cont)
 {
     int ret = 0;
     network_api_conf *config = NULL;
     network_api_result_list *result = NULL;
     cni_anno_port_mappings_container *merged_ports = NULL;
 
-    if (cont == NULL) {
-        ERROR("Invalid cont");
-        return -1;
-    }
-
-    container_lock(cont);
-
-    if (!native_network_checker(cont->hostconfig)) {
-        goto out;
-    }
-
-    if (cont->network_settings == NULL) {
-        cont->network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
-        if (cont->network_settings == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    if (cont->network_settings->networks != NULL && cont->network_settings->networks->len != 0) {
-        WARN("Container %s already has networks", cont->common_config->id);
-        goto out;
-    }
-
-    if (cont->network_settings->networks == NULL) {
-        cont->network_settings->networks = (defs_map_string_object_networks *)util_common_calloc_s(sizeof(
-                                                                                                       defs_map_string_object_networks));
-        if (cont->network_settings->networks == NULL) {
-            ERROR("Out of memory");
-            ret = -1;
-            goto out;
-        }
-    }
-
-    config = build_adaptor_native_config(cont, prepare_attach_networks, false);
+    config = build_adaptor_native_config(cont, true);
     if (config == NULL) {
         ERROR("Failed to build adaptor native config");
         ret = -1;
@@ -1453,7 +1311,7 @@ int setup_network(container_t *cont)
         goto detach_out;
     }
 
-    ret = update_container_network_settings(cont, config, merged_ports, result);
+    ret = update_container_network_settings(cont, merged_ports, result);
     if (ret == 0) {
         goto out;
     }
@@ -1469,7 +1327,58 @@ out:
     free_cni_anno_port_mappings_container(merged_ports);
     free_network_api_conf(config);
     free_network_api_result_list(result);
-    container_unlock(cont);
+
+    return ret;
+}
+
+int prepare_network(container_t *cont)
+{
+    int ret = 0;
+    bool new_ns = false;
+    bool post_setup_network = false;
+
+    if (cont == NULL) {
+        ERROR("Invalid cont");
+        return -1;
+    }
+
+    if (!util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
+        goto out;
+    }
+
+    if (cont->network_settings->activation) {
+        WARN("Container %s network is active", cont->common_config->id);
+        goto out;
+    }
+
+    if (!validate_network(cont->network_settings->networks)) {
+        ERROR("Failed to validate network");
+        ret = -1;
+        goto out;
+    }
+
+    post_setup_network = util_post_setup_network(cont->hostconfig->user_remap);
+    ret = prepare_network_namespace(post_setup_network, cont->state->state->pid, cont->network_settings->sandbox_key);
+    if (ret != 0) {
+        ERROR("Failed to new net namespace");
+        goto out;
+    }
+    new_ns = true;
+
+    ret = setup_network(cont);
+    if (ret != 0) {
+        ERROR("Failed to setup network");
+        goto out;
+    }
+
+out:
+    if (ret != 0 && new_ns) {
+        if (remove_network_namespace(cont->network_settings->sandbox_key) != 0) {
+            ERROR("Faield to remove net ns for container %s", cont->common_config->id);
+        }
+        DEBUG("remove net namespace when rollback");
+    }
+
     return ret;
 }
 
@@ -1529,437 +1438,91 @@ out:
     return ret;
 }
 
-static bool is_not_exist_err(const char *command, const char *err_msg)
+static int drop_container_networks_info(defs_map_string_object_networks *networks)
 {
-    int nret = 0;
-    char rule_not_exist_msg[MAX_BUFFER_SIZE] = { 0x00 };
-    char chain_not_exist_msg[MAX_BUFFER_SIZE] = { 0x00 };
-
-    nret = snprintf(rule_not_exist_msg, sizeof(rule_not_exist_msg),
-                    "%s: Bad rule (does a matching rule exist in that chain?).", command);
-    if (nret < 0 || (size_t)nret >= sizeof(rule_not_exist_msg)) {
-        ERROR("snprintf failed");
-        return false;
-    }
-
-    nret = snprintf(chain_not_exist_msg, sizeof(chain_not_exist_msg), "%s: No chain/target/match by that name.", command);
-    if (nret < 0 || (size_t)nret >= sizeof(chain_not_exist_msg)) {
-        ERROR("snprintf failed");
-        return false;
-    }
-
-    return util_strings_contains_word(err_msg, rule_not_exist_msg) ||
-           util_strings_contains_word(err_msg, chain_not_exist_msg);
-}
-
-static char *get_chain(const char *rule)
-{
-    size_t i, len;
-    char *chain = NULL;
-    char **splits = NULL;
-
-    splits = util_string_split(rule, ' ');
-    if (splits == NULL) {
-        ERROR("Failed to split rule %s", rule);
-        return NULL;
-    }
-
-    len = util_array_len((const char **)splits);
-    if (len <= 1) {
-        goto out;
-    }
-    for (i = 0; i < len - 1; i++) {
-        if (strcmp(splits[i], "-j") == 0 || strcmp(splits[i], "--jump") == 0) {
-            chain = util_strdup_s(splits[i + 1]);
-            break;
-        }
-    }
-
-    if (chain != NULL && !util_has_prefix(chain, "CNI-")) {
-        ERROR("Chain %s format invalid", chain);
-        free(chain);
-        chain = NULL;
-        goto out;
-    }
-
-out:
-    util_free_array(splits);
-    return chain;
-}
-
-static void run_iptables_list(void *args)
-{
-    char **tmp_args = (char **)args;
-    const size_t CMD_ARGS_NUM = 6;
-
-    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
-        ERROR("iptables list need five args");
-        exit(1);
-    }
-
-    execvp(tmp_args[0], tmp_args);
-}
-
-static void run_iptables_delete(void *args)
-{
-    char **tmp_args = (char **)args;
-    const size_t CMD_ARGS_NUM = 14;
-
-    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
-        ERROR("iptables delete need thirteen args");
-        exit(1);
-    }
-
-    execvp(tmp_args[0], tmp_args);
-}
-
-static void run_iptables_clear_chain(void *args)
-{
-    char **tmp_args = (char **)args;
-    const size_t CMD_ARGS_NUM = 6;
-
-    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
-        ERROR("iptables clear chain need five args");
-        exit(1);
-    }
-
-    execvp(tmp_args[0], tmp_args);
-}
-
-static void run_iptables_delete_chain(void *args)
-{
-    char **tmp_args = (char **)args;
-    const size_t CMD_ARGS_NUM = 6;
-
-    if (util_array_len((const char **)tmp_args) != (size_t)CMD_ARGS_NUM) {
-        ERROR("iptables delete chain need five args");
-        exit(1);
-    }
-
-    execvp(tmp_args[0], tmp_args);
-}
-
-static char *iptables_get_rule(const char *command, const char *id, const char *network_name)
-{
-#define IPTABLES_LIST_RULES_ARGS_LEN 6
     size_t i = 0;
-    size_t len = 0;
-    char **args = NULL;
-    char **rules = NULL;
-    char *stdout_msg = NULL;
-    char *stderr_msg = NULL;
-    char *tmp_res = NULL;
-    char *res = NULL;
-    const char *prefix = "-A ";
 
-    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_LIST_RULES_ARGS_LEN + 1);
-    if (args == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    args[i++] = util_strdup_s(command);
-    args[i++] = util_strdup_s("-t");
-    args[i++] = util_strdup_s("nat");
-    args[i++] = util_strdup_s("-S");
-    args[i++] = util_strdup_s("POSTROUTING");
-    args[i] = util_strdup_s("--wait");
-
-    DEBUG("iptables command: %s -t nat -S POSTROUTING --wait", command);
-    if (!util_exec_cmd(run_iptables_list, args, NULL, &stdout_msg, &stderr_msg)) {
-        ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
-        goto out;
-    }
-
-    rules = util_string_split(stdout_msg, '\n');
-    if (rules == NULL) {
-        ERROR("Out of memory");
-        goto out;
-    }
-
-    len = util_array_len((const char **)rules);
-    for (i = 0; i < len; i++) {
-        // rule: -A POSTROUTING -s <IP> -m comment --comment "name: \"<NETWORK_NAME>\" id: \"<ID>\"" -j <CHAIN>
-        if (util_strings_contains_word(rules[i], id) &&
-            util_strings_contains_word(rules[i], network_name) && util_has_prefix(rules[i], prefix)) {
-            // ipv6 address in iptables rule is not exactly same with container ip, so don't pick rule by ip
-            tmp_res = util_strdup_s(rules[i]);
-            break;
-        }
-    }
-
-    if (tmp_res == NULL) {
-        goto out;
-    }
-
-    res = util_sub_string(tmp_res, strlen(prefix), strlen(tmp_res) - strlen(prefix));
-    if (res == NULL) {
-        ERROR("Failed to sub string");
-        goto out;
-    }
-
-out:
-    util_free_array(args);
-    util_free_array(rules);
-    free(stdout_msg);
-    free(stderr_msg);
-    free(tmp_res);
-    return res;
-}
-
-static int iptables_delete_rule(const char *command, const char *id, const char *ip, const char *network_name,
-                                const char *chain)
-{
-#define IPTABLES_DELETE_RULE_ARGS_LEN 14
-    int ret = 0;
-    int nret = 0;
-    size_t i = 0;
-    char **args = NULL;
-    char *stdout_msg = NULL;
-    char *stderr_msg = NULL;
-    char comment[MAX_BUFFER_SIZE] = { 0x00 };
-
-    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_DELETE_RULE_ARGS_LEN + 1);
-    if (args == NULL) {
-        ERROR("Out of memory");
-        ret = -1;
-        goto out;
-    }
-
-    nret = snprintf(comment, sizeof(comment), "name: \"%s\" id: \"%s\"", network_name, id);
-    if ((size_t)nret >= sizeof(comment) || nret < 0) {
-        ERROR("snprintf comment failed");
-        ret = -1;
-        goto out;
-    }
-
-    args[i++] = util_strdup_s(command);
-    args[i++] = util_strdup_s("-t");
-    args[i++] = util_strdup_s("nat");
-    args[i++] = util_strdup_s("-D");
-    args[i++] = util_strdup_s("POSTROUTING");
-    args[i++] = util_strdup_s("-s");
-    args[i++] = util_strdup_s(ip);
-    args[i++] = util_strdup_s("-j");
-    args[i++] = util_strdup_s(chain);
-    args[i++] = util_strdup_s("-m");
-    args[i++] = util_strdup_s("comment");
-    args[i++] = util_strdup_s("--comment");
-    args[i++] = util_strdup_s(comment);
-    args[i] = util_strdup_s("--wait");
-
-    DEBUG("iptables command: %s -t nat -D POSTROUTING -s %s -j %s -m comment --comment %s --wait", command, ip, chain,
-          comment);
-    if (!util_exec_cmd(run_iptables_delete, args, NULL, &stdout_msg, &stderr_msg)) {
-        if (!is_not_exist_err(command, stderr_msg)) {
-            ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
-            ret = -1;
-        }
-        goto out;
-    }
-
-out:
-    util_free_array(args);
-    free(stdout_msg);
-    free(stderr_msg);
-    return ret;
-}
-
-static int iptables_clear_chain(const char *command, const char *chain)
-{
-#define IPTABLES_CLEAR_CHAIN_ARGS_LEN 6
-    int ret = 0;
-    size_t i = 0;
-    char **args = NULL;
-    char *stdout_msg = NULL;
-    char *stderr_msg = NULL;
-
-    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_CLEAR_CHAIN_ARGS_LEN + 1);
-    if (args == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    args[i++] = util_strdup_s(command);
-    args[i++] = util_strdup_s("-t");
-    args[i++] = util_strdup_s("nat");
-    args[i++] = util_strdup_s("-F");
-    args[i++] = util_strdup_s(chain);
-    args[i] = util_strdup_s("--wait");
-
-    DEBUG("iptables command: %s -t nat -F %s --wait", command, chain);
-    if (!util_exec_cmd(run_iptables_clear_chain, args, NULL, &stdout_msg, &stderr_msg)) {
-        if (!is_not_exist_err(command, stderr_msg)) {
-            ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
-            ret = -1;
-        }
-        goto out;
-    }
-
-out:
-    util_free_array(args);
-    free(stdout_msg);
-    free(stderr_msg);
-    return ret;
-}
-
-static int iptables_delete_chain(const char *command, const char *chain)
-{
-#define IPTABLES_DELETE_CHAIN_ARGS_LEN 6
-    int ret = 0;
-    size_t i = 0;
-    char **args = NULL;
-    char *stdout_msg = NULL;
-    char *stderr_msg = NULL;
-
-    args = (char **)util_smart_calloc_s(sizeof(char *), IPTABLES_DELETE_CHAIN_ARGS_LEN + 1);
-    if (args == NULL) {
-        ERROR("Out of memory");
-        return -1;
-    }
-
-    args[i++] = util_strdup_s(command);
-    args[i++] = util_strdup_s("-t");
-    args[i++] = util_strdup_s("nat");
-    args[i++] = util_strdup_s("-X");
-    args[i++] = util_strdup_s(chain);
-    args[i] = util_strdup_s("--wait");
-
-    DEBUG("iptables command: %s -t nat -X %s --wait", command, chain);
-    if (!util_exec_cmd(run_iptables_delete_chain, args, NULL, &stdout_msg, &stderr_msg)) {
-        if (!is_not_exist_err(command, stderr_msg)) {
-            ERROR("Unexpected command output %s with error: %s", stdout_msg, stderr_msg);
-            ret = -1;
-        }
-        goto out;
-    }
-
-out:
-    util_free_array(args);
-    free(stdout_msg);
-    free(stderr_msg);
-    return ret;
-}
-
-static int do_clean_useless_iptables(const char *command, const char *id, const char *ip, const char *network_name)
-{
-    int ret = 0;
-    char *rule = NULL;
-    char *chain = NULL;
-
-    rule = iptables_get_rule(command, id, network_name);
-    if (rule == NULL) {
-        ERROR("Failed to get iptables rule, maybe it has been deleted");
-        return -1;
-    }
-
-    chain = get_chain(rule);
-    if (chain == NULL) {
-        ERROR("Failed to get chain from rule");
-        ret = -1;
-        goto out;
-    }
-
-    ret = iptables_delete_rule(command, id, ip, network_name, chain);
-    if (ret != 0) {
-        ERROR("Failed to delete iptables rule %s", rule);
-        goto out;
-    }
-
-    ret = iptables_clear_chain(command, chain);
-    if (ret != 0) {
-        ERROR("Failed to clear chain %s", chain);
-        goto out;
-    }
-
-    ret = iptables_delete_chain(command, chain);
-    if (ret != 0) {
-        ERROR("Failed to delete chain %s", chain);
-        goto out;
-    }
-
-out:
-    free(rule);
-    free(chain);
-    return ret;
-}
-
-int clean_useless_iptables(const char *id, const container_network_settings *network_settings)
-{
-    int nret = 0;
-    size_t i = 0;
-    char CIDR_IP[MAX_BUFFER_SIZE] = { 0x00 };
-
-    if (id == NULL) {
-        ERROR("Invalid input id");
-        return -1;
-    }
-
-    if (network_settings == NULL || network_settings->networks == NULL) {
-        return 0;
-    }
-
-    for (i = 0; i < network_settings->networks->len; i++) {
-        if (network_settings->networks->keys[i] == NULL || network_settings->networks->values[i] == NULL ||
-            network_settings->networks->values[i]->ip_address == NULL) {
-            continue;
-        }
-        const char *ip_address = network_settings->networks->values[i]->ip_address;
-
-        if (util_validate_ipv4_address(ip_address)) {
-            nret = snprintf(CIDR_IP, sizeof(CIDR_IP), "%s/32", ip_address);
-            if ((size_t)nret >= sizeof(CIDR_IP) || nret < 0) {
-                ERROR("snprintf CIDR IP failed");
-                return -1;
-            }
-            nret = do_clean_useless_iptables("iptables", id, CIDR_IP, network_settings->networks->keys[i]);
-        } else if (util_validate_ipv6_address(ip_address)) {
-            nret = snprintf(CIDR_IP, sizeof(CIDR_IP), "%s/128", ip_address);
-            if ((size_t)nret >= sizeof(CIDR_IP) || nret < 0) {
-                ERROR("snprintf CIDR IP failed");
-                return -1;
-            }
-            nret = do_clean_useless_iptables("ip6tables", id, CIDR_IP, network_settings->networks->keys[i]);
-        } else {
-            ERROR("Invalid ip address: %s", ip_address);
-            continue;
+    for (i = 0; i < networks->len; i++) {
+        defs_map_string_object_networks_element *value = networks->values[i];
+        if (value == NULL) {
+            ERROR("Invalid value networks map value");
+            return -1;
         }
 
-        if (nret != 0) {
-            // continue clean iptables
-            ERROR("Failed to clean useless iptables, container id %s, network name %s, ip address %s", id,
-                  network_settings->networks->keys[i], ip_address);
-            continue;
-        }
+        free(value->ip_address);
+        value->ip_address = NULL;
+        value->ip_prefix_len = 0;
+
+        free(value->gateway);
+        value->gateway = NULL;
+
+        free(value->global_i_pv6address);
+        value->global_i_pv6address = NULL;
+        value->global_i_pv6prefix_len = 0;
+
+        free(value->i_pv6gateway);
+        value->i_pv6gateway = NULL;
+
+        free(value->mac_address);
+        value->mac_address = NULL;
     }
 
     return 0;
 }
 
-int teardown_network(container_t *cont, const bool clean)
+static int drop_container_network_settings(container_t *cont)
+{
+    int ret = 0;
+    container_network_settings *backup = NULL;
+
+    ret = drop_internal_file(cont);
+    if (ret != 0) {
+        ERROR("Failed to update container internal network file");
+        return -1;
+    }
+
+    backup = dup_contaner_network_settings(cont->network_settings);
+    if (backup == NULL) {
+        ERROR("Failed to dup container network settings");
+        return -1;
+    }
+
+    ret = drop_container_networks_info(cont->network_settings->networks);
+    if (ret != 0) {
+        ERROR("Failed to drop container networks info");
+        goto out;
+    }
+
+    // clear portmappings
+    do_free_network_setting_cni_portmapping(cont->network_settings);
+
+    cont->network_settings->activation = false;
+    if (container_network_settings_to_disk(cont) != 0) {
+        ERROR("Failed to save container '%s' network settings", cont->common_config->id);
+        ret = -1;
+    }
+
+out:
+    if (ret != 0) {
+        free_container_network_settings(cont->network_settings);
+        cont->network_settings = backup;
+        backup = NULL;
+        DEBUG("rollback container network settings when failed");
+    }
+    free_container_network_settings(backup);
+
+    return ret;
+}
+
+static int teardown_network(container_t *cont)
 {
     int ret = 0;
     network_api_conf *config = NULL;
 
-    if (cont == NULL) {
-        ERROR("Invalid cont");
-        return -1;
-    }
-
-    if (!native_network_checker(cont->hostconfig)) {
-        return 0;
-    }
-
-    if (cont->network_settings->networks == NULL || cont->network_settings->networks->len == 0) {
-        WARN("Container %s doesn't have any network, maybe it has been teardown", cont->common_config->id);
-        return 0;
-    }
-
-    config = build_adaptor_native_config(cont, prepare_detach_networks, clean);
+    config = build_adaptor_native_config(cont, false);
     if (config == NULL) {
         ERROR("Failed to build adaptor native config");
-        ret = -1;
-        goto out;
+        return -1;
     }
 
     ret = do_set_portmapping_for_teardown(cont, config);
@@ -1975,29 +1538,47 @@ int teardown_network(container_t *cont, const bool clean)
         goto out;
     }
 
-out:
-    ret = drop_internal_file(cont);
+    ret = drop_container_network_settings(cont);
     if (ret != 0) {
-        ERROR("Failed to update container internal network file");
+        ERROR("Failed to drop container network settings");
+        goto out;
     }
 
-    free_defs_map_string_object_networks(cont->network_settings->networks);
-    cont->network_settings->networks = NULL;
-
-    free(cont->network_settings->sandbox_key);
-    cont->network_settings->sandbox_key = NULL;
-
-    // clear portmappings
-    do_free_network_setting_cni_portmapping(cont->network_settings);
-
-    if (container_network_settings_to_disk(cont) != 0) {
-        ERROR("Failed to save container '%s' network settings", cont->common_config->id);
-        ret = -1;
-    }
-
+out:
     free_network_api_conf(config);
-
     return ret;
+}
+
+int remove_network(container_t *cont)
+{
+    bool failure = false;
+
+    if (cont == NULL) {
+        ERROR("Invalid cont");
+        return -1;
+    }
+
+    if (!util_native_network_checker(cont->hostconfig->network_mode, cont->hostconfig->system_container)) {
+        goto out;
+    }
+
+    if (cont->skip_remove_network) {
+        WARN("skip remove container %s network when restarting", cont->common_config->id);
+        goto out;
+    }
+
+    if (teardown_network(cont) != 0) {
+        ERROR("Failed to teardown network");
+        failure = true;
+    }
+
+    if (remove_network_namespace(cont->network_settings->sandbox_key) != 0) {
+        ERROR("Faield to remove net ns for container %s", cont->common_config->id);
+        failure = true;
+    }
+
+out:
+    return failure ? -1 : 0;
 }
 
 bool network_store_container_list_add(container_t *cont)
@@ -2005,6 +1586,10 @@ bool network_store_container_list_add(container_t *cont)
     size_t i = 0;
     bool ret = true;
     const defs_map_string_object_networks *obj = NULL;
+
+    if (!container_is_running(cont->state)) {
+        return true;
+    }
 
     if (cont->network_settings == NULL || cont->network_settings->networks == NULL ||
         cont->network_settings->networks->len == 0) {
@@ -2020,4 +1605,155 @@ bool network_store_container_list_add(container_t *cont)
     }
 
     return ret;
+}
+
+static int cni_parse_result(const struct network_api_result *item, char **key,
+                            defs_map_string_object_networks_element **value)
+{
+    int ret = 0;
+    char **split = NULL;
+    char *tmp_key = NULL;
+    defs_map_string_object_networks_element *tmp_value = NULL;
+
+    tmp_value = (defs_map_string_object_networks_element *)util_common_calloc_s(sizeof(
+                                                                                    defs_map_string_object_networks_element));
+    if (tmp_value == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    tmp_key = util_strdup_s(item->name);
+    tmp_value->if_name = util_strdup_s(item->interface);
+    if (item->ips_len != 0) {
+        split = util_string_split_multi(item->ips[0], '/');
+        if (split == NULL) {
+            ERROR("Failed to split result ip");
+            ret = -1;
+            goto out;
+        }
+
+        if (util_array_len((const char **)split) != 2) {
+            ERROR("Invalid IP %s", item->ips[0]);
+            ret = -1;
+            goto out;
+        }
+
+        if (util_validate_ipv4_address(split[0])) {
+            ret = util_safe_int(split[1], &tmp_value->ip_prefix_len);
+            if (ret != 0) {
+                ERROR("Failed to convert ip_prefix_len from string to int");
+                goto out;
+            }
+
+            tmp_value->ip_address = util_strdup_s(split[0]);
+            tmp_value->gateway = util_strdup_s(item->gateway[0]);
+        } else if (util_validate_ipv6_address(split[0])) {
+            ret = util_safe_int(split[1], &tmp_value->global_i_pv6prefix_len);
+            if (ret != 0) {
+                ERROR("Failed to convert ip_prefix_len from string to int");
+                goto out;
+            }
+
+            tmp_value->global_i_pv6address = util_strdup_s(split[0]);
+            tmp_value->i_pv6gateway = util_strdup_s(item->gateway[0]);
+        }
+    }
+    tmp_value->mac_address = util_strdup_s(item->mac);
+
+    *key = tmp_key;
+    tmp_key = NULL;
+    *value = tmp_value;
+    tmp_value = NULL;
+
+out:
+    util_free_array(split);
+    free(tmp_key);
+    free_defs_map_string_object_networks_element(tmp_value);
+    return ret;
+}
+
+int cni_update_container_networks_info(const network_api_result_list *result, const char *id, const char* netns_path,
+                                       container_network_settings *network_settings)
+{
+    int ret = 0;
+    size_t i, old_size, new_size;
+    defs_map_string_object_networks *networks = network_settings->networks;
+    const size_t len = networks->len;
+
+    if (result == NULL || result->items == NULL || result->len == 0) {
+        ERROR("Invalid result");
+        return -1;
+    }
+
+    if (result->len > MAX_NETWORK_CONFIG_FILE_COUNT - len) {
+        ERROR("Too many networks for container %s", id);
+        return -1;
+    }
+
+    old_size = len * sizeof(char *);
+    new_size = (len + result->len) * sizeof(char *);
+    ret = util_mem_realloc((void **)&networks->keys, new_size, networks->keys, old_size);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    old_size = len * sizeof(defs_map_string_object_networks_element *);
+    new_size = (len + result->len) * sizeof(defs_map_string_object_networks_element *);
+    ret = util_mem_realloc((void **)&networks->values, new_size, networks->values, old_size);
+    if (ret != 0) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < result->len; i++) {
+        char *key = NULL;
+        defs_map_string_object_networks_element *value = NULL;
+
+        if (result->items[i] == NULL) {
+            continue;
+        }
+
+        ret = cni_parse_result(result->items[i], &key, &value);
+        if (ret != 0) {
+            ERROR("Failed to parse network result");
+            goto out;
+        }
+
+        networks->keys[networks->len] = key;
+        networks->values[networks->len] = value;
+        (networks->len)++;
+    }
+
+    network_settings->sandbox_key = util_strdup_s(netns_path);
+
+out:
+    if (ret != 0) {
+        for (i = len; i < networks->len; i++) {
+            free(networks->keys[i]);
+            networks->keys[i] = NULL;
+            free_defs_map_string_object_networks_element(networks->values[i]);
+            networks->values[i] = NULL;
+        }
+        networks->len = len;
+    }
+    return ret;
+}
+
+void set_container_skip_remove_network(container_t *cont)
+{
+    container_lock(cont);
+
+    cont->skip_remove_network = true;
+
+    container_unlock(cont);
+}
+
+void reset_container_skip_remove_network(container_t *cont)
+{
+    container_lock(cont);
+
+    cont->skip_remove_network = false;
+
+    container_unlock(cont);
 }

@@ -563,7 +563,7 @@ auto CniNetworkPlugin::GetNetworkSettingsJson(const std::string &podSandboxID, c
         goto out;
     }
 
-    if (update_container_networks_info(result, podSandboxID.c_str(), netnsPath.c_str(), network_settings) != 0) {
+    if (cni_update_container_networks_info(result, podSandboxID.c_str(), netnsPath.c_str(), network_settings) != 0) {
         err.SetError("Failed to update network setting");
         goto out;
     }

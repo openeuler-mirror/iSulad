@@ -675,18 +675,17 @@ out:
     return ret;
 }
 
-static int pack_inspect_network_settings(const container_network_settings *network_settings,
-                                         container_inspect *inspect)
+static int pack_inspect_network_settings(const container_t *cont, container_inspect *inspect)
 {
     parser_error jerr = NULL;
     char *jstr = NULL;
     int ret = 0;
 
-    if (network_settings == NULL) {
+    if (cont->network_settings == NULL) {
         return 0;
     }
 
-    jstr = container_network_settings_generate_json(network_settings, NULL, &jerr);
+    jstr = container_network_settings_generate_json(cont->network_settings, NULL, &jerr);
     if (jstr == NULL) {
         ERROR("Generate network settings failed: %s", jerr);
         ret = -1;
@@ -709,6 +708,15 @@ static int pack_inspect_network_settings(const container_network_settings *netwo
         goto out;
     }
 
+    if (!container_is_running(cont->state)) {
+        // don't show network info when container is not running
+        free(inspect->network_settings->sandbox_key);
+        inspect->network_settings->sandbox_key = NULL;
+
+        free_defs_map_string_object_networks(inspect->network_settings->networks);
+        inspect->network_settings->networks = NULL;
+    }
+
 out:
     free(jerr);
     free(jstr);
@@ -729,7 +737,7 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
         ERROR("Failed to pack inspect general data, continue to pack other information");
     }
 
-    if (pack_inspect_network_settings(cont->network_settings, inspect) != 0) {
+    if (pack_inspect_network_settings(cont, inspect) != 0) {
         ERROR("Failed to pack inspect network data, continue to pack other information");
     }
 

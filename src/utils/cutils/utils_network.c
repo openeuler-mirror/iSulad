@@ -41,12 +41,25 @@
 #include "utils_fs.h"
 #include "utils_file.h"
 #include "constants.h"
+#include "namespace.h"
+
+#define IPV4_TO_V6_EMPTY_PREFIX_BYTES 12
+#define MAX_INTERFACE_NAME_LENGTH 15
+#define MAX_UINT_LEN 3
+// IPV6 max address "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
+#define IPV6_MAX_ADDR_LEN 40
+const char g_HEX_DICT[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 int util_create_netns_file(const char *netns_path)
 {
     int ret = 0;
     int fd = -1;
     char *netns_dir = NULL;
+
+    if (netns_path == NULL) {
+        ERROR("Invalid netns path");
+        return -1;
+    }
 
     if (util_file_exists(netns_path)) {
         ERROR("Namespace file %s exists", netns_path);
@@ -166,13 +179,6 @@ int util_umount_namespace(const char *netns_path)
     ERROR("Failed to umount target %s", netns_path);
     return -1;
 }
-
-#define IPV4_TO_V6_EMPTY_PREFIX_BYTES 12
-#define MAX_INTERFACE_NAME_LENGTH 15
-#define MAX_UINT_LEN 3
-// IPV6 max address "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
-#define IPV6_MAX_ADDR_LEN 40
-const char g_HEX_DICT[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 void util_free_ipnet(struct ipnet *val)
 {
@@ -949,6 +955,11 @@ bool util_validate_network_name(const char *name)
         return false;
     }
 
+    if (strnlen(name, MAX_NETWORK_NAME_LEN + 1) > MAX_NETWORK_NAME_LEN) {
+        ERROR("Network name \"%s\" too long, max length:%d", name, MAX_NETWORK_NAME_LEN);
+        return false;
+    }
+
     if (util_reg_match(NETWORK_VALID_NAME_CHARS, name) != 0) {
         ERROR("invalid characters found in network name: %s", name);
         return false;
@@ -956,6 +967,18 @@ bool util_validate_network_name(const char *name)
 
     return true;
 }
+
+// ignore native network when network_mode != bridge or container is syscontainer
+bool util_native_network_checker(const char *network_mode, const bool system_container)
+{
+    return namespace_is_bridge(network_mode) && !system_container;
+}
+
+bool util_post_setup_network(const char *user_remap)
+{
+    return user_remap != NULL ? true : false;
+}
+
 
 static bool is_invalid_char(char c)
 {

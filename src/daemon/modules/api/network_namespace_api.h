@@ -10,11 +10,11 @@
  * See the Mulan PSL v2 for more details.
  * Author: chengzeruizhi
  * Create: 2021-10-19
- * Description: set up CRI network namespace
+ * Description: provide network namespace definition
  *********************************************************************************/
 
-#ifndef DAEMON_MODULES_API_NETWORK_NAMESPACE_API
-#define DAEMON_MODULES_API_NETWORK_NAMESPACE_API
+#ifndef DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H
+#define DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H
 
 #include <stdbool.h>
 
@@ -24,12 +24,16 @@
 extern "C" {
 #endif
 
-int prepare_network_namespace(const char *netns_path);
 int remove_network_namespace(const char *netns);
+
+int prepare_network_namespace(const bool post_prepare_network, const int pid, const char *netns_path);
+
+// TODO: need to merge
 char *get_sandbox_key(const container_inspect *inspect_data);
+char *get_netns_path(const char *sandbox_key, const bool attach);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // DAEMON_MODULES_API_NETWORK_NAMESPACE_API
+#endif // DAEMON_MODULES_API_NETWORK_NAMESPACE_API_H

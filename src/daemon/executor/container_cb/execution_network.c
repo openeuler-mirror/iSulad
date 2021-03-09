@@ -1073,3 +1073,178 @@ int init_container_network_confs(const char *id, const char *rootpath, const hos
 out:
     return ret;
 }
+
+static bool verify_bridge_config(const char **bridges, const size_t len)
+{
+    size_t i = 0;
+
+    if (bridges == NULL || len == 0) {
+        ERROR("network is null for bridge network mode");
+        return false;
+    }
+
+    if (len > MAX_NETWORK_CONFIG_FILE_COUNT) {
+        ERROR("config too many bridge");
+        isulad_set_error_message("config too many bridge");
+        return false;
+    }
+
+    for (i = 0; i < len; i++) {
+        if (!util_validate_network_name(bridges[i])) {
+            ERROR("Invalid network name %s", bridges[i]);
+            isulad_set_error_message("Invalid network name %s", bridges[i]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static char *new_sandbox_key(void)
+{
+#define NETNS_LEN 12
+    int nret = 0;
+    char random[NETNS_LEN + 1] = { 0x00 };
+    char netns[PATH_MAX] = { 0x00 };
+    const char *netns_fmt = "/var/run/netns/isulacni-%s";
+
+    nret = util_generate_random_str(random, NETNS_LEN);
+    if (nret != 0) {
+        ERROR("Failed to generate random netns");
+        return NULL;
+    }
+
+    nret = snprintf(netns, sizeof(netns), netns_fmt, random);
+    if ((size_t)nret >= sizeof(netns) || nret < 0) {
+        ERROR("snprintf netns failed");
+        return NULL;
+    }
+
+    return util_strdup_s(netns);
+}
+
+static int generate_network_element(const char **bridges, const size_t len, defs_map_string_object_networks *networks)
+{
+#define INTERFACE_NAME_LEN 50
+    int i = 0;
+    int nret = 0;
+    char interface[INTERFACE_NAME_LEN] = { 0 };
+    const char *fmt = "eth%d";
+
+    networks->keys = (char **)util_smart_calloc_s(sizeof(char *), len);
+    if (networks->keys == NULL) {
+        ERROR("Out of memory ");
+        return -1;
+    }
+
+    networks->values = (defs_map_string_object_networks_element **)util_smart_calloc_s(sizeof(
+                                                                                           defs_map_string_object_networks_element *), len);
+    if (networks->values == NULL) {
+        ERROR("Out of memory ");
+        return -1;
+    }
+
+    for (i = 0; i < len; i++) {
+        nret = snprintf(interface, sizeof(interface), fmt, i);
+        if ((size_t)nret >= sizeof(interface) || nret < 0) {
+            ERROR("snprintf interface failed");
+            return -1;
+        }
+
+        networks->values[i] = (defs_map_string_object_networks_element *)util_common_calloc_s(sizeof(
+                                                                                                  defs_map_string_object_networks_element));
+        if (networks->values[i] == NULL) {
+            ERROR("Out of memory");
+            return -1;
+        }
+
+        networks->keys[i] = util_strdup_s(bridges[i]);
+        networks->values[i]->if_name = util_strdup_s(interface);
+        networks->len++;
+    }
+
+    return 0;
+}
+
+container_network_settings *native_generate_network_settings(const host_config *host_config)
+{
+    container_network_settings *settings = NULL;
+
+    settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+    if (settings == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    if (!util_native_network_checker(host_config->network_mode, host_config->system_container)) {
+        return settings;
+    }
+
+    if (!verify_bridge_config((const char **)host_config->bridge_network, host_config->bridge_network_len)) {
+        ERROR("Invalid bridge config");
+        goto err_out;
+    }
+
+    settings->sandbox_key = new_sandbox_key();
+    if (settings->sandbox_key == NULL) {
+        ERROR("Failed to new netns");
+        goto err_out;
+    }
+
+    settings->activation = false;
+    settings->networks = (defs_map_string_object_networks *)util_common_calloc_s(sizeof(defs_map_string_object_networks));
+    if (settings->networks == NULL) {
+        ERROR("Out of memory");
+        goto err_out;
+    }
+
+    if (generate_network_element((const char **)host_config->bridge_network, host_config->bridge_network_len,
+                                 settings->networks) != 0) {
+        ERROR("Failed to prepare network element");
+        goto err_out;
+    }
+
+    return settings;
+
+err_out:
+    free_container_network_settings(settings);
+    return NULL;
+}
+
+
+container_network_settings *cri_generate_network_settings(const host_config *host_config)
+{
+    if (host_config == NULL) {
+        ERROR("Invalid input");
+        return -1;
+    }
+
+    container_network_settings *settings = NULL;
+
+    settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
+    if (settings == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    if (!namespace_is_file(host_config->network_mode)) {
+        return settings;
+    }
+
+    settings->sandbox_key = new_pod_sandbox_key();
+    if (settings->sandbox_key == NULL) {
+        ERROR("Failed to generate sandbox key");
+        goto err_out;
+    }
+
+    if (util_create_netns_file(settings->sandbox_key) != 0) {
+        ERROR("Failed to create network namespace");
+        goto err_out;
+    }
+
+    return settings;
+
+err_out:
+    free_container_network_settings(settings);
+    return NULL;
+}

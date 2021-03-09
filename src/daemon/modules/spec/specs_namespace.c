@@ -23,6 +23,7 @@
 #include <isula_libutils/container_config_v2.h>
 
 #include "utils.h"
+#include "utils_network.h"
 #include "namespace.h"
 #include "container_api.h"
 #include "err_msg.h"
@@ -109,6 +110,45 @@ int get_share_namespace_path(const char *type, const char *src_path, char **dest
         if (*dest_path == NULL) {
             ret = -1;
         }
+    }
+
+    return ret;
+}
+
+int get_network_namespace_path(const host_config *host_spec, const container_network_settings *network_settings,
+                               const char *type, char **dest_path)
+{
+    int ret = 0;
+    const char *network_mode = host_spec->network_mode;
+
+    if (network_mode == NULL || dest_path == NULL) {
+        return -1;
+    }
+
+    if (namespace_is_none(network_mode)) {
+        *dest_path = NULL;
+    } else if (namespace_is_host(network_mode)) {
+        *dest_path = namespace_get_host_namespace_path(network_mode);
+        if (*dest_path == NULL) {
+            ret = -1;
+        }
+    } else if (namespace_is_container(network_mode)) {
+        *dest_path = parse_share_namespace_with_prefix(type, network_mode);
+        if (*dest_path == NULL) {
+            ret = -1;
+        }
+    } else if (namespace_is_bridge(network_mode)) {
+        if (host_spec->system_container || util_post_setup_network(host_spec->user_remap)) {
+            *dest_path = NULL;
+            return 0;
+        }
+
+        if (network_settings == NULL || network_settings->sandbox_key == NULL) {
+            ERROR("Invalid sandbox key for bridge network");
+            return -1;
+        }
+
+        *dest_path = util_strdup_s(network_settings->sandbox_key);
     }
 
     return ret;

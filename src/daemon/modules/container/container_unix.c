@@ -187,20 +187,12 @@ int container_fill_restart_manager(container_t *cont)
 
 int container_fill_network_settings(container_t *cont, container_network_settings *network_settings)
 {
-    if (cont == NULL) {
+    if (cont == NULL || network_settings == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }
 
     cont->network_settings = network_settings;
-    if (cont->network_settings == NULL) {
-        cont->network_settings = (container_network_settings *)util_common_calloc_s(sizeof(container_network_settings));
-        if (cont->network_settings == NULL) {
-            ERROR("Out of memory");
-            return -1;
-        }
-    }
-
     return 0;
 }
 
