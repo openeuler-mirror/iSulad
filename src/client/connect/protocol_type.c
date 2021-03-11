@@ -525,6 +525,9 @@ void isula_exec_request_free(struct isula_exec_request *request)
     free(request->user);
     request->user = NULL;
 
+    free(request->workdir);
+    request->workdir = NULL;
+
     util_free_array_by_len(request->argv, request->argc);
     request->argv = NULL;
     request->argc = 0;

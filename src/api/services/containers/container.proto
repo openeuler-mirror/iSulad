@@ -316,6 +316,7 @@ message ExecRequest {
 	repeated string env = 11;
 	string user = 12;
 	string suffix = 13;
+	string workdir = 14;
 }
 message ExecResponse {
 	int32 pid = 1;

@@ -1777,6 +1777,7 @@ static int do_exec_container(const container_t *cont, const char *runtime, char 
     params.state = cont->state_path;
     params.spec = process_spec;
     params.attach_stdin = request->attach_stdin;
+    params.workdir = request->workdir;
 
     if (runtime_exec(cont->common_config->id, runtime, &params, exit_code)) {
         ERROR("Runtime exec container failed");
