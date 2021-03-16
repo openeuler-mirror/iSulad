@@ -60,6 +60,8 @@
 #include "utils_verify.h"
 #include "volume_api.h"
 
+#define KATA_RUNTIME "kata-runtime"
+
 int set_container_to_removal(const container_t *cont)
 {
     int ret = 0;
@@ -732,7 +734,8 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
     }
 
     // embedded conainter is readonly, create mtab link will fail
-    if (strcmp(IMAGE_TYPE_EMBEDDED, cont->common_config->image_type) != 0) {
+    // kata-runtime container's qemu donot support to create mtab in host
+    if (strcmp(IMAGE_TYPE_EMBEDDED, cont->common_config->image_type) != 0 && strcmp(KATA_RUNTIME, cont->runtime) != 0) {
         nret = create_mtab_link(oci_spec);
         if (nret != 0) {
             ERROR("Failed to create link /etc/mtab for target /proc/mounts");
