@@ -1480,6 +1480,26 @@ out:
     return ret;
 }
 
+static bool is_rootfs_layer(const char *layer_id, const struct rootfs_list *all_rootfs)
+{
+    int j;
+
+    if (all_rootfs == NULL || layer_id == NULL) {
+        return false;
+    }
+
+    for (j = 0; j < all_rootfs->rootfs_len; j++) {
+        if (all_rootfs->rootfs[j]->layer == NULL) {
+            continue;
+        }
+        if (strcmp(layer_id, all_rootfs->rootfs[j]->layer) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool do_storage_integration_check(const char *path, map_t *checked_layers)
 {
     struct rootfs_list *all_rootfs = NULL;
@@ -1558,6 +1578,7 @@ static void delete_unchecked_layers(map_t *checked_layers)
 {
     struct layer_list *all_layers = NULL;
     size_t i;
+    struct rootfs_list *all_rootfs = NULL;
 
     all_layers = util_common_calloc_s(sizeof(struct layer_list));
     if (all_layers == NULL) {
@@ -1570,11 +1591,29 @@ static void delete_unchecked_layers(map_t *checked_layers)
         goto out;
     }
 
+    all_rootfs = util_common_calloc_s(sizeof(struct rootfs_list));
+    if (all_rootfs == NULL) {
+        ERROR("Out of memory");
+        goto out;
+    }
+
+    if (rootfs_store_get_all_rootfs(all_rootfs) != 0) {
+        ERROR("Failed to get all container rootfs information");
+        goto out;
+    }
+
     for (i = 0; i < all_layers->layers_len; i++) {
         if (map_search(checked_layers, (void *)all_layers->layers[i]->id) != NULL) {
+            DEBUG("ignore checked layer: %s", all_layers->layers[i]->id);
             continue;
         }
-        WARN("Delete unchecked layer: %s due to no related image", all_layers->layers[i]->id);
+
+        if (is_rootfs_layer(all_layers->layers[i]->id, all_rootfs)) {
+            DEBUG("ignore rootfs layer: %s", all_layers->layers[i]->id);
+            continue;
+        }
+
+        ERROR("Delete unchecked layer: %s due to no related image", all_layers->layers[i]->id);
         if (layer_store_delete(all_layers->layers[i]->id) != 0) {
             ERROR("Failed to delete unchecked layer %s", all_layers->layers[i]->id);
         }
@@ -1582,6 +1621,7 @@ static void delete_unchecked_layers(map_t *checked_layers)
 
 out:
     free_layer_list(all_layers);
+    free_rootfs_list(all_rootfs);
 }
 
 static bool storage_integration_check()
