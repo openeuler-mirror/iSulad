@@ -58,6 +58,9 @@ function test_image_info()
   ucid=$(isula create ${uimage})
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create container failed" && ((ret++))
 
+  isula run -tid --name checker alpine
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - run container failed" && ((ret++))
+
   tmp_fname=$(echo -n "/var/run/isulad/storage" | sha256sum | awk '{print $1}')
   rm -f "${ISULAD_RUN_ROOT_PATH}/storage/${tmp_fname}.json"
 
@@ -73,6 +76,9 @@ function test_image_info()
 
   isula ps -a | grep ${ucid}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - container: ${ucid} do not exist with valid image" && ((ret++))
+
+  isula exec -it checker date
+  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - container: checker exec failed with valid image" && ((ret++))
 
   isula images | grep busybox
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid image: ${image} exist" && ((ret++))
