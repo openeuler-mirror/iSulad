@@ -1,7 +1,7 @@
 From bba60af5e275a24ab6ae11943ce48ff71524c494 Mon Sep 17 00:00:00 2001
 From: Li Feng <lifeng2221dd1@zoho.com.cn>
 Date: Mon, 25 Jan 2021 11:31:54 +0800
-Subject: [PATCH 15/26] driver: do not unlock and destroy lock when clean up
+Subject: [PATCH 15/53] driver: do not unlock and destroy lock when clean up
 
 Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
 ---

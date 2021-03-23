@@ -1,7 +1,7 @@
 From b69da83db290057dde5dbe34e153fb0895e456e2 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Tue, 29 Dec 2020 10:16:13 +0800
-Subject: [PATCH 6/9] do not pause container when copy
+Subject: [PATCH 06/53] do not pause container when copy
 
 and use libarchive to do unpack/tar instead of
 execute tar command. Once not pause container,
