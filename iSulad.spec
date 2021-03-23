@@ -1,5 +1,5 @@
 %global _version 2.0.8
-%global _release 20210202.153251.gite082dcf3
+%global _release 20210323.094917.git7e6aa593
 %global is_systemd 1
 
 Name:      iSulad
@@ -38,6 +38,33 @@ Patch23: 0023-Fix-create-env-path-dir-if-dir-exist.patch
 Patch24: 0024-iSulad-calculate-memusage-with-used-total_inactive_f.patch
 Patch25: 0025-fix-container-exit-health-check-residue-and-multiple.patch
 Patch26: 0026-CI-supplementary-testcase-for-health-check-monitor.patch
+Patch27: 0027-add-container-lock-when-clean-container-resource.patch
+Patch28: 0028-sleep-some-time-before-calculate-to-make-sure-fd-clo.patch
+Patch29: 0029-stats-fix-wrong-memory-usage-info-in-stats.patch
+Patch30: 0030-save-health-check-log-to-disk-before-unhealthy.patch
+Patch31: 0031-unpack-try-to-remove-and-replace-dst_path-while-unpa.patch
+Patch32: 0032-fd-leak-check-in-cp.sh-should-not-include-pull-fd-ch.patch
+Patch33: 0033-devmapper-modify-log-msg.patch
+Patch34: 0034-name_id_index-fix-restore-fail-to-remove-name-index.patch
+Patch35: 0035-thread-function-calls-DAEMON_CLEAR_ERRORMSG-to-preve.patch
+Patch36: 0036-modify-resume-task-name.patch
+Patch37: 0037-cleadcode-Remove-extra-semicolons.patch
+Patch38: 0038-restart-policy-add-support-unless-stopped-policy.patch
+Patch39: 0039-CI-add-testcase-for-unless-stopped-restart-policy.patch
+Patch40: 0040-bugfix-for-embedded-image.patch
+Patch41: 0041-console-client-ignore-stdin-close-event.patch
+Patch42: 0042-delete-lxc-from-runc-CI-test.patch
+Patch43: 0043-add-embedded-testcases.patch
+Patch44: 0044-fix-the-error-of-ContainerStats-interface-field-valu.patch
+Patch45: 0045-rollback-setuped-network-if-mult-network-failed.patch
+Patch46: 0046-add-testcase-for-rollback-mutlnetworks.patch
+Patch47: 0047-log-adjust-log-level-from-EVENT-to-WARN-to-reduce-lo.patch
+Patch48: 0048-isulad-shim-fix-shim-exit-bug.patch
+Patch49: 0049-remove-redundant-code.patch
+Patch50: 0050-devicemapper-umount-when-resize2fs-command-failed.patch
+Patch51: 0051-ignore-to-create-mtab-when-runtime-is-kata-runtime.patch
+Patch52: 0052-remove-unchecked-layer-ignore-rootfs-layer.patch
+Patch53: 0053-add-test-to-check-running-container-with-image-integ.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -240,6 +267,12 @@ fi
 %endif
 
 %changelog
+* Tue Mar 23 2021 haozi007 <liuhao27@huawei.com> - 20210323.094917.git7e6aa593
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Tue Feb 2 2021 lifeng <lifeng68@huawei.com> - 2.0.8-20210202.153251.gite082dcf3
 - Type: sync from upstream
 - ID: NA

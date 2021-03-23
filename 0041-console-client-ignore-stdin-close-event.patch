@@ -1,0 +1,75 @@
+From f5cd35cbfb594aad4b4448dd6550eb2faf9368c9 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Tue, 23 Feb 2021 16:27:47 +0800
+Subject: [PATCH 41/53] console: client ignore stdin close event
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ src/utils/console/console.c | 17 +++++++++++++----
+ src/utils/console/console.h |  1 +
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/src/utils/console/console.c b/src/utils/console/console.c
+index 7fda519c..1aedd0c9 100644
+--- a/src/utils/console/console.c
++++ b/src/utils/console/console.c
+@@ -57,7 +57,11 @@ static int console_cb_tty_stdin_with_escape(int fd, uint32_t events, void *cbdat
+ 
+     r_ret = util_read_nointr(ts->stdin_reader, &c, 1);
+     if (r_ret <= 0) {
+-        ret = EPOLL_LOOP_HANDLE_CLOSE;
++        if (r_ret == 0 && ts->ignore_stdin_close) {
++            ret = EPOLL_LOOP_HANDLE_CONTINUE;
++        } else {
++            ret = EPOLL_LOOP_HANDLE_CLOSE;
++        }
+         goto out;
+     }
+ 
+@@ -122,7 +126,11 @@ static int console_cb_stdio_copy(int fd, uint32_t events, void *cbdata, struct e
+             ret = EPOLL_LOOP_HANDLE_CONTINUE;
+             goto out;
+         } else {
+-            ret = EPOLL_LOOP_HANDLE_CLOSE;
++            if (r_ret == 0 && ts->ignore_stdin_close && fd == ts->stdin_reader) {
++                ret = EPOLL_LOOP_HANDLE_CONTINUE;
++            } else {
++                ret = EPOLL_LOOP_HANDLE_CLOSE;
++            }
+             goto out;
+         }
+     }
+@@ -363,8 +371,8 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
+                              int tty_exit, bool tty)
+ {
+     int ret;
+-    struct epoll_descr descr;
+-    struct tty_state ts;
++    struct epoll_descr descr = { 0 };
++    struct tty_state ts = { 0 };
+ 
+     ret = epoll_loop_open(&descr);
+     if (ret) {
+@@ -378,6 +386,7 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
+     ts.stdin_reader = -1;
+     ts.stdout_reader = -1;
+     ts.stderr_reader = -1;
++    ts.ignore_stdin_close = true;
+ 
+     if (fifoinfd >= 0) {
+         ts.stdin_reader = stdinfd;
+diff --git a/src/utils/console/console.h b/src/utils/console/console.h
+index 406a2fe9..0dfe19d3 100644
+--- a/src/utils/console/console.h
++++ b/src/utils/console/console.h
+@@ -40,6 +40,7 @@ struct tty_state {
+     int tty_exit;
+     /* Flag to mark whether detected escape sequence. */
+     int saw_tty_exit;
++    bool ignore_stdin_close;
+ };
+ 
+ int console_fifo_name(const char *rundir, const char *subpath, const char *stdflag, char *fifo_name,
+-- 
+2.25.1
+
