@@ -1,7 +1,7 @@
 From 20a6562ea0a6c50bdc6a863067eeaf7fa04909d0 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Sat, 30 Jan 2021 14:46:13 +0800
-Subject: [PATCH 20/26] init log config should before command parse
+Subject: [PATCH 20/53] init log config should before command parse
 
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---
