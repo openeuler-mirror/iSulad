@@ -1,7 +1,7 @@
 From c8d14980e145a7d400aa6c5b449a59952a422801 Mon Sep 17 00:00:00 2001
 From: Li Feng <lifeng2221dd1@zoho.com.cn>
 Date: Fri, 15 Jan 2021 10:34:43 +0800
-Subject: [PATCH 8/9] image_cb: rename the function {isula_/docker_} to do_
+Subject: [PATCH 08/53] image_cb: rename the function {isula_/docker_} to do_
 
 Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
 ---
