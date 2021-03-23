@@ -1,0 +1,242 @@
+From 389be7c170c28b24bfe762027e235f6fa986ac07 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Wed, 24 Feb 2021 17:11:28 +0800
+Subject: [PATCH 46/53] add testcase for rollback mutlnetworks
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ CI/test_cases/container_cases/cni_test.sh     | 85 ++++++++++++++++++-
+ .../criconfigs/bins/isulad-cni                |  4 +-
+ .../container_cases/criconfigs/bins/wrong-cni | 25 ++++++
+ .../criconfigs/mock_wrong.json                |  9 ++
+ .../criconfigs/mutl_wrong_net_pod.json        | 14 +++
+ CI/test_cases/helpers.sh                      |  2 +-
+ 6 files changed, 132 insertions(+), 7 deletions(-)
+ create mode 100755 CI/test_cases/container_cases/criconfigs/bins/wrong-cni
+ create mode 100644 CI/test_cases/container_cases/criconfigs/mock_wrong.json
+ create mode 100644 CI/test_cases/container_cases/criconfigs/mutl_wrong_net_pod.json
+
+diff --git a/CI/test_cases/container_cases/cni_test.sh b/CI/test_cases/container_cases/cni_test.sh
+index c9e1e1ac..093178d6 100644
+--- a/CI/test_cases/container_cases/cni_test.sh
++++ b/CI/test_cases/container_cases/cni_test.sh
+@@ -177,6 +177,7 @@ function new_cni_config()
+ 
+ function check_annotation()
+ {
++    rm -f /etc/cni/net.d/*
+     cp ${data_path}/mock.json /etc/cni/net.d/bridge.json
+     sync;sync;
+     tail $ISUALD_LOG
+@@ -199,19 +200,82 @@ function check_annotation()
+     fi
+ 
+     basepath=/tmp/cnilogs/
+-    cat ${basepath}/${sid}.env | grep CNI_MUTLINET_EXTENSION
++    cat ${basepath}/${sid}_eth0.env | grep CNI_MUTLINET_EXTENSION
+     if [ $? -ne 0 ];then
+         msg_err "lost extension for mutl network args"
+         TC_RET_T=$(($TC_RET_T+1))
+     fi
+-    cat ${basepath}/${sid}.env | grep "extension=first"
++    cat ${basepath}/${sid}_eth0.env | grep "extension=first"
+     if [ $? -ne 0 ];then
+         msg_err "lost extension for first cni args"
+         TC_RET_T=$(($TC_RET_T+1))
+     fi
+-    cat ${basepath}/${sid}.env | grep "extension=second"
++    cat ${basepath}/${sid}_eth0.env | grep "extension=second"
++    if [ $? -eq 0 ];then
++        msg_err "same extension key write to cni args"
++        TC_RET_T=$(($TC_RET_T+1))
++    fi
++
++    crictl stopp $sid
+     if [ $? -ne 0 ];then
+-        msg_err "lost extension for second cni args"
++        msg_err "stop sandbox failed"
++        TC_RET_T=$(($TC_RET_T+1))
++    fi
++
++    crictl rmp $sid
++    if [ $? -ne 0 ];then
++        msg_err "rm sandbox failed"
++        TC_RET_T=$(($TC_RET_T+1))
++    fi
++
++    return $TC_RET_T
++}
++
++function check_rollback()
++{
++    rm -f /etc/cni/net.d/*
++    cp ${data_path}/mock.json /etc/cni/net.d/bridge.json
++    sed -i "s#mock#default#g" /etc/cni/net.d/bridge.json
++    cp ${data_path}/mock.json /etc/cni/net.d/
++    cp ${data_path}/mock_wrong.json /etc/cni/net.d/
++    sync;sync;
++    tail $ISUALD_LOG
++    # wait cni updated
++    s=`date "+%s"`
++    for ((i=0;i<30;i++)); do
++        sleep 1
++        cur=`date "+%s"`
++        let "t=cur-s"
++        if [ $t -gt 6 ];then
++            break
++        fi
++    done
++    tail $ISUALD_LOG
++
++    crictl runp ${data_path}/mutl_wrong_net_pod.json
++    if [ $? -eq 0 ]; then
++        msg_err "Run sandbox success with invalid cni configs"
++        TC_RET_T=$(($TC_RET_T+1))
++    fi
++    sid=`crictl pods -q | head -1`
++
++    basepath=/tmp/cnilogs/
++
++    cat ${basepath}/${sid}_eth0.env | grep "CNI_COMMAND=DEL"
++    if [ $? -ne 0 ];then
++        msg_err "do not rollback for eth0"
++        TC_RET_T=$(($TC_RET_T+1))
++    fi
++
++    cat ${basepath}/${sid}_eth1.env | grep "CNI_COMMAND=DEL"
++    if [ $? -ne 0 ];then
++        msg_err "do not rollback for eth1"
++        TC_RET_T=$(($TC_RET_T+1))
++    fi
++
++    cat ${basepath}/${sid}_eth2.env | grep "CNI_COMMAND=DEL"
++    if [ $? -ne 0 ];then
++        msg_err "do not rollback for eth2"
+         TC_RET_T=$(($TC_RET_T+1))
+     fi
+ 
+@@ -227,6 +291,9 @@ function check_annotation()
+         TC_RET_T=$(($TC_RET_T+1))
+     fi
+ 
++    rm -f /etc/cni/net.d/*
++    cp ${data_path}/bridge.json /etc/cni/net.d/
++
+     return $TC_RET_T
+ }
+ 
+@@ -247,6 +314,16 @@ if [ $? -ne 0 ];then
+     let "ret=$ret + 1"
+ fi
+ 
++check_annotation
++if [ $? -ne 0 ];then
++    let "ret=$ret + 1"
++fi
++
++check_rollback
++if [ $? -ne 0 ];then
++    let "ret=$ret + 1"
++fi
++
+ do_post
+ 
+ show_result $ret "cni base test"
+diff --git a/CI/test_cases/container_cases/criconfigs/bins/isulad-cni b/CI/test_cases/container_cases/criconfigs/bins/isulad-cni
+index e4b7e598..be48b77a 100755
+--- a/CI/test_cases/container_cases/criconfigs/bins/isulad-cni
++++ b/CI/test_cases/container_cases/criconfigs/bins/isulad-cni
+@@ -8,8 +8,8 @@ envpath=${basepath}/${secs}.env
+ 
+ env | grep CNI_CONTAINERID >/dev/null 2>&1
+ if [ $? -eq 0 ];then
+-	confpath=${basepath}/${CNI_CONTAINERID}.netconf
+-	envpath=${basepath}/${CNI_CONTAINERID}.env
++	confpath=${basepath}/${CNI_CONTAINERID}_${CNI_IFNAME}.netconf
++	envpath=${basepath}/${CNI_CONTAINERID}_${CNI_IFNAME}.env
+ fi
+ 
+ read -r line
+diff --git a/CI/test_cases/container_cases/criconfigs/bins/wrong-cni b/CI/test_cases/container_cases/criconfigs/bins/wrong-cni
+new file mode 100755
+index 00000000..558c3401
+--- /dev/null
++++ b/CI/test_cases/container_cases/criconfigs/bins/wrong-cni
+@@ -0,0 +1,25 @@
++#!/bin/bash
++
++basepath=/tmp/cnilogs/
++mkdir -p $basepath
++secs=`date "+%s"`
++confpath=${basepath}/${secs}.netconf
++envpath=${basepath}/${secs}.env
++
++env | grep CNI_CONTAINERID >/dev/null 2>&1
++if [ $? -eq 0 ];then
++	confpath=${basepath}/${CNI_CONTAINERID}_${CNI_IFNAME}.netconf
++	envpath=${basepath}/${CNI_CONTAINERID}_${CNI_IFNAME}.env
++fi
++
++read -r line
++echo $line > ${confpath}
++
++env > ${envpath}
++
++echo "{
++    \"cniVersion\": \"0.3.1\",
++    \"dns\": {}
++}"
++
++exit 1
+\ No newline at end of file
+diff --git a/CI/test_cases/container_cases/criconfigs/mock_wrong.json b/CI/test_cases/container_cases/criconfigs/mock_wrong.json
+new file mode 100644
+index 00000000..7b2a92e4
+--- /dev/null
++++ b/CI/test_cases/container_cases/criconfigs/mock_wrong.json
+@@ -0,0 +1,9 @@
++{
++	"cniVersion": "0.3.1",
++	"name": "wrong",
++	"type": "wrong-cni",
++	"ipam": {
++		"type": "wrong-cni",
++		"subnet": "10.8.0.0/16"
++	}
++}
+diff --git a/CI/test_cases/container_cases/criconfigs/mutl_wrong_net_pod.json b/CI/test_cases/container_cases/criconfigs/mutl_wrong_net_pod.json
+new file mode 100644
+index 00000000..01a6096c
+--- /dev/null
++++ b/CI/test_cases/container_cases/criconfigs/mutl_wrong_net_pod.json
+@@ -0,0 +1,14 @@
++{
++    "port_mappings":[{"protocol": 1, "container_port": 80, "host_port": 8080}],
++    "metadata": {
++        "name": "test",
++        "namespace": "default",
++        "attempt": 1,
++        "uid": "hdishd83djaidwnduwk28bcsb"
++    },
++    "linux": {
++    },
++    "annotations": {
++        "network.alpha.kubernetes.io/network": "[{\"name\":\"mock\",\"interface\":\"eth1\"},{\"name\":\"wrong\",\"interface\":\"eth2\"}]"
++    }
++}
+diff --git a/CI/test_cases/helpers.sh b/CI/test_cases/helpers.sh
+index 5a782281..fe256e8c 100755
+--- a/CI/test_cases/helpers.sh
++++ b/CI/test_cases/helpers.sh
+@@ -174,7 +174,7 @@ function init_cni_conf()
+     mkdir -p /etc/cni/net.d/
+     rm -rf /etc/cni/net.d/*
+     mkdir -p /opt/cni/bin
+-    cp $dtpath/bins/isulad-cni /opt/cni/bin
++    cp $dtpath/bins/* /opt/cni/bin/
+     cp $dtpath/good.conflist /etc/cni/net.d/
+ 
+     check_valgrind_log
+-- 
+2.25.1
+

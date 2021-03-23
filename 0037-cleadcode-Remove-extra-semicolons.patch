@@ -1,0 +1,41 @@
+From 3db92c961e93093d8520f4e46255c12e774b841b Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Mon, 22 Feb 2021 08:04:44 +0800
+Subject: [PATCH 37/53] cleadcode: Remove extra semicolons
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ src/client/connect/grpc/client_base.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/client/connect/grpc/client_base.h b/src/client/connect/grpc/client_base.h
+index 496370a8..5d1e7f0c 100644
+--- a/src/client/connect/grpc/client_base.h
++++ b/src/client/connect/grpc/client_base.h
+@@ -153,19 +153,19 @@ protected:
+     virtual auto request_to_grpc(const RQ * /*rq*/, gRQ * /*grq*/) -> int
+     {
+         return 0;
+-    };
++    }
+     virtual auto response_from_grpc(gRP * /*reply*/, RP * /*response*/) -> int
+     {
+         return 0;
+-    };
++    }
+     virtual auto check_parameter(const gRQ & /*grq*/) -> int
+     {
+         return 0;
+-    };
++    }
+     virtual auto grpc_call(ClientContext * /*context*/, const gRQ & /*req*/, gRP * /*reply*/) -> Status
+     {
+         return Status::OK;
+-    };
++    }
+ 
+     auto ReadTextFile(const char *file) -> std::string
+     {
+-- 
+2.25.1
+

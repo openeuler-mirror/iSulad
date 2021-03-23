@@ -1,7 +1,7 @@
 From e151821a1e092995836631b273bddc339cadffbe Mon Sep 17 00:00:00 2001
 From: gaohuatao <gaohuatao@huawei.com>
 Date: Mon, 11 Jan 2021 18:33:39 +0800
-Subject: [PATCH 5/9] modify image_load.sh CI to test file not exist
+Subject: [PATCH 05/53] modify image_load.sh CI to test file not exist
 
 Signed-off-by: gaohuatao <gaohuatao@huawei.com>
 ---

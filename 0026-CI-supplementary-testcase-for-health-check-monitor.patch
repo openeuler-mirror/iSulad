@@ -1,7 +1,7 @@
 From 39e9ae73804880f523d83db6c8ad5d25d8bd79ed Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Mon, 1 Feb 2021 16:58:35 +0800
-Subject: [PATCH 26/26] CI: supplementary testcase for health check monitor
+Subject: [PATCH 26/53] CI: supplementary testcase for health check monitor
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
