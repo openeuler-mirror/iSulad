@@ -1,7 +1,7 @@
 From 1ef7a43907ac6fc521cedd2b4744be4d102efd32 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Thu, 31 Dec 2020 14:05:25 +0800
-Subject: [PATCH 1/9] make thread detach to avoid resource leak
+Subject: [PATCH 01/53] make thread detach to avoid resource leak
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
