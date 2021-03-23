@@ -1,7 +1,7 @@
 From 171cb932bbbbfc5816ceb65223f1d5e733c79d8e Mon Sep 17 00:00:00 2001
 From: Li Feng <lifeng2221dd1@zoho.com.cn>
 Date: Sat, 30 Jan 2021 10:38:11 +0800
-Subject: [PATCH 19/26] log: use the same function to init log in
+Subject: [PATCH 19/53] log: use the same function to init log in
  export/pause/resume
 
 Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
