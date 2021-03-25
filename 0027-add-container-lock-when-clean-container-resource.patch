@@ -1,0 +1,36 @@
+From 002a546ec0ada609aebeccfc935d773968f89312 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Thu, 4 Feb 2021 10:43:59 +0800
+Subject: [PATCH 27/53] add container lock when clean container resource
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ src/daemon/modules/service/service_container.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index c4b9dbd6..6551bfbf 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -968,12 +968,17 @@ int clean_container_resource(const char *id, const char *runtime, pid_t pid)
+         goto out;
+     }
+ 
++    container_lock(cont);
+     ret = do_clean_container(cont, pid);
+     if (ret != 0) {
+         ERROR("Runtime clean container resource failed");
+         ret = -1;
+-        goto out;
++        goto unlock;
+     }
++
++unlock:
++    container_unlock(cont);
++
+ out:
+     container_unref(cont);
+     return ret;
+-- 
+2.25.1
+

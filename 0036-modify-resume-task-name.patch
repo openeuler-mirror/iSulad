@@ -1,0 +1,359 @@
+From 4726f2f980f42963a753350aa5306cbe6a4cc668 Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Sat, 20 Feb 2021 09:44:19 +0800
+Subject: [PATCH 36/53] modify resume task name
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ .../graphdriver/devmapper/deviceset.c         | 68 +++++++++++++------
+ .../graphdriver/devmapper/wrapper_devmapper.c | 57 +++++++++-------
+ .../graphdriver/devmapper/wrapper_devmapper.h |  2 +-
+ 3 files changed, 81 insertions(+), 46 deletions(-)
+
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+index 2bd3b9c8..0b0394c5 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/deviceset.c
+@@ -125,7 +125,8 @@ static int devmapper_parse_options(struct device_set *devset, const char **optio
+             devset->min_free_space_percent = (uint32_t)converted;
+         } else if (strcasecmp(dup, "dm.basesize") == 0) {
+             int64_t converted = 0;
+-            if (util_parse_byte_size_string(val, &converted) != 0) {
++            ret = util_parse_byte_size_string(val, &converted);
++            if (ret != 0) {
+                 ERROR("Invalid size: '%s': %s", val, strerror(-ret));
+                 isulad_set_error_message("Invalid size: '%s': %s", val, strerror(-ret));
+                 ret = -1;
+@@ -435,6 +436,11 @@ static image_devmapper_device_info *load_metadata(const struct device_set *devse
+         goto out;
+     }
+ 
++    if (!util_file_exists(metadata_file)) {
++        ERROR("No such file:%s, need not to load", metadata_file);
++        goto out;
++    }
++
+     info = image_devmapper_device_info_parse_file(metadata_file, NULL, &err);
+     if (info == NULL) {
+         SYSERROR("Load metadata file:%s failed:%s", metadata_file, err);
+@@ -594,6 +600,7 @@ static uint64_t get_base_device_size(struct device_set *devset)
+ 
+     device_info = lookup_device(devset, "base");
+     if (device_info == NULL) {
++        ERROR("No such device:\"base\"");
+         return 0;
+     }
+ 
+@@ -1688,10 +1695,10 @@ out:
+         (void)deactivate_device(devset, base_info);
+     }
+ 
+-    if (resume_dev && dev_resume_device(dm_name) != 0) {
+-        ERROR("devmapper: resume dm with name:%s failed", dm_name);
+-        ret = -1;
++    if (resume_dev) {
++        dev_resume_device(dm_name);
+     }
++
+     free(dm_name);
+     return ret;
+ }
+@@ -2558,7 +2565,8 @@ static int determine_driver_capabilities(const char *version, struct device_set
+         goto out;
+     }
+ 
+-    if (util_parse_byte_size_string(tmp_str[0], &major) != 0) {
++    ret = util_parse_byte_size_string(tmp_str[0], &major);
++    if (ret != 0) {
+         ERROR("devmapper: invalid size: '%s': %s", tmp_str[0], strerror(-ret));
+         ret = -1;
+         goto out;
+@@ -2577,7 +2585,8 @@ static int determine_driver_capabilities(const char *version, struct device_set
+         goto out;
+     }
+ 
+-    if (util_parse_byte_size_string(tmp_str[1], &minor) != 0) {
++    ret = util_parse_byte_size_string(tmp_str[1], &minor);
++    if (ret != 0) {
+         ERROR("devmapper: invalid size: '%s': %s", tmp_str[1], strerror(-ret));
+         ret = -1;
+         goto out;
+@@ -2742,7 +2751,8 @@ static int parse_storage_opt(const json_map_string_string *opts, uint64_t *size)
+         if (strcasecmp("size", opts->keys[i]) == 0) {
+             int64_t converted = 0;
+ 
+-            if (util_parse_byte_size_string(opts->values[i], &converted) != 0) {
++            ret = util_parse_byte_size_string(opts->values[i], &converted);
++            if (ret != 0) {
+                 ERROR("Invalid size: '%s': %s", opts->values[i], strerror(-ret));
+                 ret = -1;
+                 goto out;
+@@ -2760,6 +2770,31 @@ out:
+     return ret;
+ }
+ 
++static int grow_device_fs(struct device_set *devset, const char *hash, uint64_t size, uint64_t base_size)
++{
++    int ret = 0;
++    devmapper_device_info_t *device_info = NULL;
++
++    if (size <= base_size) {
++        return 0;
++    } else {
++        DEBUG("devmapper: new fs size is larger than old basesize, start to grow fs");
++        device_info = lookup_device(devset, hash);
++        if (device_info == NULL) {
++            ERROR("devmapper: lookup device %s failed", hash);
++            ret = -1;
++            goto out;
++        }
++
++        if (grow_fs(devset, device_info->info) != 0) {
++            ret = -1;
++            goto out;
++        }
++    }
++out:
++    return ret;
++}
++
+ int add_device(const char *hash, const char *base_hash, struct device_set *devset,
+                const json_map_string_string *storage_opts)
+ {
+@@ -2820,18 +2855,14 @@ int add_device(const char *hash, const char *base_hash, struct device_set *devse
+         goto free_out;
+     }
+ 
+-    if (size > base_device_info->info->size) {
+-        DEBUG("devmapper: new fs size is larger than old basesize, start to grow fs");
+-        device_info = lookup_device(devset, hash);
+-        if (device_info == NULL) {
+-            ERROR("devmapper: lookup device %s failed", hash);
+-            ret = -1;
+-            goto free_out;
+-        }
+-        if (grow_fs(devset, device_info->info) != 0) {
+-            ret = -1;
+-            goto free_out;
++    if (grow_device_fs(devset, hash, size, base_device_info->info->size) != 0) {
++        ERROR("Grow new deivce fs failed");
++        // Here, we need to delete device directly instead of deferred deleting, so that we can retry to add device with the same hash successfully.
++        if (do_delete_device(devset, hash, true) != 0) {
++            ERROR("devmapper: remove new snapshot device failed");
+         }
++        ret = -1;
++        goto free_out;
+     }
+ 
+ free_out:
+@@ -2839,7 +2870,6 @@ free_out:
+     devmapper_device_info_ref_dec(device_info);
+     if (pthread_rwlock_unlock(&devset->devmapper_driver_rwlock)) {
+         ERROR("unlock devmapper conf failed");
+-        return -1;
+     }
+     return ret;
+ }
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+index 5748ec54..38ed5615 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.c
+@@ -45,6 +45,9 @@ char *dev_strerror(int errnum)
+         case ERR_TASK_SET_COOKIE:
+             errmsg = "Task set cookie error";
+             break;
++        case ERR_NIL_COOKIE:
++            errmsg = "cookie ptr can't be nil";
++            break;
+         case ERR_TASK_SET_ADD_NODE:
+             errmsg = "Task add dm node failed";
+             break;
+@@ -443,6 +446,7 @@ free_out:
+ int dev_delete_device_force(const char *name)
+ {
+     int ret = 0;
++    int nret = 0;
+     struct dm_task *dmt = NULL;
+     uint32_t cookie = 0;
+ 
+@@ -459,8 +463,9 @@ int dev_delete_device_force(const char *name)
+         goto out;
+     }
+ 
+-    if (set_cookie(dmt, &cookie, 0) != 0) {
+-        ERROR("devicemapper: set cookie failed");
++    nret = set_cookie(dmt, &cookie, 0);
++    if (nret != 0) {
++        ERROR("set cookie failed:%s", dev_strerror(nret));
+         ret = -1;
+         goto out;
+     }
+@@ -468,7 +473,7 @@ int dev_delete_device_force(const char *name)
+     g_dm_saw_busy = false;
+     g_dm_saw_enxio = false;
+     if (dm_task_run(dmt) != 1) {
+-        ERROR("devicemapper: run task to delete device faild");
++        ERROR("devicemapper: task run failed");
+         if (g_dm_saw_busy) {
+             ERROR("devicemapper: delete task run err type is \"device is busy\"");
+             ret = ERR_BUSY;
+@@ -498,6 +503,7 @@ out:
+ int dev_remove_device_deferred(const char *name)
+ {
+     int ret = 0;
++    int nret = 0;
+     struct dm_task *dmt = NULL;
+     uint32_t cookie = 0;
+     uint16_t flags = DM_UDEV_DISABLE_LIBRARY_FALLBACK;
+@@ -521,15 +527,16 @@ int dev_remove_device_deferred(const char *name)
+         goto out;
+     }
+ 
+-    if (set_cookie(dmt, &cookie, flags) != 0) {
+-        ERROR("devicemapper: set cookie failed");
++    nret = set_cookie(dmt, &cookie, flags);
++    if (nret != 0) {
++        ERROR("set cookie failed:%s", dev_strerror(nret));
+         ret = -1;
+         goto out;
+     }
+ 
+     g_dm_saw_enxio = false;
+     if (dm_task_run(dmt) != 1) {
+-        ERROR("devicemapper: Error running RemoveDeviceDeferred %d", ret);
++        ERROR("devicemapper: task run failed");
+         if (g_dm_saw_enxio) {
+             ERROR("devicemapper: delete deferred task run err type is \"No such device or address\"");
+             ret = ERR_ENXIO;
+@@ -694,7 +701,7 @@ int dev_create_device(const char *pool_fname, int device_id)
+         } else {
+             ret = -1;
+         }
+-        ERROR("devicemapper: task run failed to create device");
++        ERROR("devicemapper: task run failed");
+         goto cleanup;
+     }
+ 
+@@ -754,7 +761,7 @@ int dev_delete_device(const char *pool_fname, int device_id)
+             DEBUG("devicemapper: device(id:%d) from pool(%s) does not exist", device_id, pool_fname);
+             goto cleanup;
+         }
+-        ERROR("devicemapper: Error running dev_delete_device");
++        ERROR("devicemapper: task run failed");
+         ret = -1;
+         goto cleanup;
+     }
+@@ -786,7 +793,7 @@ int dev_suspend_device(const char *dm_name)
+     }
+ 
+     if (dm_task_run(dmt) != 1) {
+-        ERROR("devicemapper: Error running deviceCreate (ActivateDevice)");
++        ERROR("devicemapper: task run failed");
+         ret = -1;
+         goto out;
+     }
+@@ -800,34 +807,32 @@ out:
+ 
+ // ResumeDevice is the programmatic example of "dmsetup resume".
+ // It un-suspends the specified device.
+-int dev_resume_device(const char *dm_name)
++void dev_resume_device(const char *dm_name)
+ {
+-    int ret = 0;
++    int nret = 0;
+     uint32_t cookie = 0;
+     uint16_t flags = 0;
+     struct dm_task *dmt = NULL;
+ 
+     if (dm_name == NULL) {
+         ERROR("devicemapper: invalid input params to resume device");
+-        return -1;
++        return;
+     }
+ 
+-    dmt = task_create_named(DM_DEVICE_SUSPEND, dm_name);
++    dmt = task_create_named(DM_DEVICE_RESUME, dm_name);
+     if (dmt == NULL) {
+-        ERROR("devicemapper:create named task(DM_DEVICE_SUSPEND) failed");
+-        ret = -1;
++        ERROR("devicemapper: create named task(DM_DEVICE_RESUME) failed");
+         goto out;
+     }
+ 
+-    if (set_cookie(dmt, &cookie, flags) != 0) {
+-        ERROR("devicemapper: Can't set cookie %d", ret);
+-        ret = -1;
++    nret = set_cookie(dmt, &cookie, flags);
++    if (nret != 0) {
++        ERROR("set cookie failed:%s", dev_strerror(nret));
+         goto out;
+     }
+ 
+     if (dm_task_run(dmt) != 1) {
+-        ERROR("devicemapper: Error running deviceResume %d", ret);
+-        ret = -1;
++        ERROR("devicemapper: run task of DM_DEVICE_RESUME failed");
+     }
+ 
+     DEBUG("Start udev wait on resume device");
+@@ -837,7 +842,6 @@ out:
+     if (dmt != NULL) {
+         dm_task_destroy(dmt);
+     }
+-    return ret;
+ }
+ 
+ int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size)
+@@ -882,14 +886,15 @@ int dev_active_device(const char *pool_name, const char *name, int device_id, ui
+         goto out;
+     }
+ 
+-    if (set_cookie(dmt, &cookie, flags) != 0) {
+-        ERROR("devicemapper: Can't set cookie");
++    nret = set_cookie(dmt, &cookie, flags);
++    if (nret != 0) {
++        ERROR("set cookie failed:%s", dev_strerror(nret));
+         ret = -1;
+         goto out;
+     }
+ 
+     if (dm_task_run(dmt) != 1) {
+-        ERROR("devicemapper: error running deviceCreate (ActivateDevice) %d", ret);
++        ERROR("devicemapper: task run failed");
+         ret = -1;
+     }
+ 
+@@ -944,7 +949,7 @@ int dev_cancel_deferred_remove(const char *dm_name)
+             ret = ERR_ENXIO;
+             goto cleanup;
+         }
+-        ERROR("devicemapper: Error running CancelDeferredRemove");
++        ERROR("devicemapper: task run failed");
+         ret = -1;
+         goto cleanup;
+     }
+@@ -1070,7 +1075,7 @@ int dev_create_snap_device_raw(const char *pool_name, int device_id, int base_de
+             ret = ERR_DEVICE_ID_EXISTS;
+             goto cleanup;
+         }
+-        ERROR("devicemapper: Error running deviceCreate (CreateSnapDeviceRaw)");
++        ERROR("devicemapper: task run failed");
+         ret = -1;
+         goto cleanup;
+     }
+diff --git a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.h b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.h
+index 0f45a87d..6a45db58 100644
+--- a/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.h
++++ b/src/daemon/modules/image/oci/storage/layer_store/graphdriver/devmapper/wrapper_devmapper.h
+@@ -119,7 +119,7 @@ int dev_delete_device(const char *pool_fname, int device_id);
+ 
+ int dev_suspend_device(const char *dm_name);
+ 
+-int dev_resume_device(const char *dm_name);
++void dev_resume_device(const char *dm_name);
+ 
+ int dev_active_device(const char *pool_name, const char *name, int device_id, uint64_t size);
+ 
+-- 
+2.25.1
+

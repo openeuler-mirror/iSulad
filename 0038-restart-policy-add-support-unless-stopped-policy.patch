@@ -1,0 +1,39 @@
+From 86f34975a4e382a2967a27c589a72c857b0c1781 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Tue, 23 Feb 2021 09:05:45 +0800
+Subject: [PATCH 38/53] restart policy: add support unless-stopped policy
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ src/daemon/modules/spec/verify.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/spec/verify.c b/src/daemon/modules/spec/verify.c
+index a3156579..cef95065 100644
+--- a/src/daemon/modules/spec/verify.c
++++ b/src/daemon/modules/spec/verify.c
+@@ -1864,6 +1864,11 @@ static inline bool is_restart_policy_always(const char *policy)
+     return strcmp(policy, "always") == 0;
+ }
+ 
++static inline bool is_restart_policy_unless_stopped(const char *policy)
++{
++    return strcmp(policy, "unless-stopped") == 0;
++}
++
+ static inline bool is_restart_policy_on_reboot(const char *policy)
+ {
+     return strcmp(policy, "on-reboot") == 0;
+@@ -1881,7 +1886,8 @@ static inline bool is_restart_policy_on_failure(const char *policy)
+ 
+ static int verify_restart_policy_name(const host_config_restart_policy *rp, const host_config *hostconfig)
+ {
+-    if (is_restart_policy_always(rp->name) || is_restart_policy_no(rp->name) || is_restart_policy_on_reboot(rp->name)) {
++    if (is_restart_policy_always(rp->name) || is_restart_policy_no(rp->name) || is_restart_policy_on_reboot(rp->name) ||
++        is_restart_policy_unless_stopped(rp->name)) {
+         if (rp->maximum_retry_count != 0) {
+             ERROR("Maximum retry count cannot be used with restart policy '%s'", rp->name);
+             isulad_set_error_message("Maximum retry count cannot be used with restart policy '%s'", rp->name);
+-- 
+2.25.1
+
