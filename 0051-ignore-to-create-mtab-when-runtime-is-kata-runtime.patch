@@ -1,0 +1,36 @@
+From a24118b4382492e27415f25411fcaadef990b659 Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Mon, 15 Mar 2021 09:49:10 -0400
+Subject: [PATCH 51/53] ignore to create mtab when runtime is kata-runtime
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ src/daemon/modules/service/service_container.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index e1d698cd..d6a82587 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -60,6 +60,8 @@
+ #include "utils_verify.h"
+ #include "volume_api.h"
+ 
++#define KATA_RUNTIME "kata-runtime"
++
+ int set_container_to_removal(const container_t *cont)
+ {
+     int ret = 0;
+@@ -732,7 +734,8 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
+     }
+ 
+     // embedded conainter is readonly, create mtab link will fail
+-    if (strcmp(IMAGE_TYPE_EMBEDDED, cont->common_config->image_type) != 0) {
++    // kata-runtime container's qemu donot support to create mtab in host
++    if (strcmp(IMAGE_TYPE_EMBEDDED, cont->common_config->image_type) != 0 && strcmp(KATA_RUNTIME, cont->runtime) != 0) {
+         nret = create_mtab_link(oci_spec);
+         if (nret != 0) {
+             ERROR("Failed to create link /etc/mtab for target /proc/mounts");
+-- 
+2.25.1
+

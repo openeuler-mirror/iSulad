@@ -1,7 +1,7 @@
 From 7e9b7b16c76785c15fd1465d7985a0919848f786 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Thu, 21 Jan 2021 18:44:52 +0800
-Subject: [PATCH 14/26] adapt for sparse file when tar file
+Subject: [PATCH 14/53] adapt for sparse file when tar file
 
 archive_read_data_block can not process sparse file
 correctly, use archive_read_data instead.

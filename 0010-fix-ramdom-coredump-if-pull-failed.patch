@@ -1,7 +1,7 @@
 From 7e04901403a0053f67eae6c9bb58764b529c0bd8 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Tue, 19 Jan 2021 16:57:17 +0800
-Subject: [PATCH 10/26] fix ramdom coredump if pull failed
+Subject: [PATCH 10/53] fix ramdom coredump if pull failed
 
 Signed-off-by: WangFengTu <wangfengtu@huawei.com>
 ---
