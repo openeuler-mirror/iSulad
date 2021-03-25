@@ -517,7 +517,7 @@ static container_inspect *pack_inspect_data(const container_t *cont, bool with_h
         ERROR("Failed to pack inspect host config data, continue to pack other information");
     }
 
-    if (merge_default_ulimit_with_ulimit(inspect) != 0) {
+    if (with_host_config && merge_default_ulimit_with_ulimit(inspect) != 0) {
         ERROR("Failed to pack default ulimit data, continue to pack other information");
     }
 
