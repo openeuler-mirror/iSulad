@@ -1,0 +1,111 @@
+From a7f40f1e13f08f03ca369dc908a399dfc3f7fe17 Mon Sep 17 00:00:00 2001
+From: Li Feng <lifeng2221dd1@zoho.com.cn>
+Date: Fri, 19 Feb 2021 19:06:43 +0800
+Subject: [PATCH 34/53] name_id_index: fix restore fail to remove name index
+
+Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
+---
+ src/daemon/executor/container_cb/execution_create.c | 10 ++++++++--
+ src/daemon/modules/container/containers_store.c     | 12 ++++++++++--
+ src/daemon/modules/container/restore/restore.c      |  4 ++--
+ 3 files changed, 20 insertions(+), 6 deletions(-)
+
+diff --git a/src/daemon/executor/container_cb/execution_create.c b/src/daemon/executor/container_cb/execution_create.c
+index 7ad55fa1..acad7fe3 100644
+--- a/src/daemon/executor/container_cb/execution_create.c
++++ b/src/daemon/executor/container_cb/execution_create.c
+@@ -440,6 +440,8 @@ static char *try_generate_id()
+ 
+         value = container_name_index_get(id);
+         if (value != NULL) {
++            free(value);
++            value = NULL;
+             continue;
+         } else {
+             goto out;
+@@ -631,10 +633,14 @@ static int maintain_container_id(const container_create_request *request, char *
+     EVENT("Event: {Object: %s, Type: Creating %s}", id, name);
+ 
+     if (!container_name_index_add(name, id)) {
+-        ERROR("Name %s is in use", name);
++        char *used_id = NULL;
++        used_id = container_name_index_get(name);
++        ERROR("Name %s is in use by container %s", name, used_id);
+         isulad_set_error_message("Conflict. The name \"%s\" is already in use by container %s. "
+                                  "You have to remove (or rename) that container to be able to reuse that name.",
+-                                 name, name);
++                                 name, used_id);
++        free(used_id);
++        used_id = NULL;
+         ret = -1;
+         goto out;
+     }
+diff --git a/src/daemon/modules/container/containers_store.c b/src/daemon/modules/container/containers_store.c
+index bbfbda3a..42972392 100644
+--- a/src/daemon/modules/container/containers_store.c
++++ b/src/daemon/modules/container/containers_store.c
+@@ -128,6 +128,7 @@ static container_t *containers_store_get_by_id(const char *id)
+ static container_t *containers_store_get_by_name(const char *name)
+ {
+     char *id = NULL;
++    container_t *cont = NULL;
+ 
+     if (name == NULL) {
+         ERROR("No container name supplied");
+@@ -140,7 +141,10 @@ static container_t *containers_store_get_by_name(const char *name)
+         return NULL;
+     }
+ 
+-    return containers_store_get_by_id(id);
++    cont = containers_store_get_by_id(id);
++
++    free(id);
++    return cont;
+ }
+ 
+ /* containers store get container by prefix */
+@@ -443,6 +447,7 @@ unlock_out:
+ char *container_name_index_get(const char *name)
+ {
+     char *id = NULL;
++    char *result = NULL;
+ 
+     if (name == NULL) {
+         return id;
+@@ -451,11 +456,14 @@ char *container_name_index_get(const char *name)
+         ERROR("lock name index failed");
+         return id;
+     }
++
+     id = map_search(g_indexs->map, (void *)name);
++    result = util_strdup_s(id);
++
+     if (pthread_rwlock_unlock(&g_indexs->rwlock) != 0) {
+         ERROR("unlock name index failed");
+     }
+-    return id;
++    return result;
+ }
+ 
+ /* name index remove */
+diff --git a/src/daemon/modules/container/restore/restore.c b/src/daemon/modules/container/restore/restore.c
+index 13cdcd24..a7ee11a2 100644
+--- a/src/daemon/modules/container/restore/restore.c
++++ b/src/daemon/modules/container/restore/restore.c
+@@ -455,11 +455,11 @@ error_load:
+         if (remove_invalid_container(cont, runtime, rootpath, statepath, subdir[i])) {
+             ERROR("Failed to delete subdir:%s", subdir[i]);
+         }
+-        container_unref(cont);
+ 
+         if (index_flag) {
+-            container_name_index_remove(subdir[i]);
++            container_name_index_remove(cont->common_config->name);
+         }
++        container_unref(cont);
+         continue;
+     }
+ }
+-- 
+2.25.1
+

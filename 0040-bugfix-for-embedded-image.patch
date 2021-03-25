@@ -1,0 +1,162 @@
+From 42a961197ce8d9c7e5bde3403b444d9e93c4c855 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Tue, 23 Feb 2021 09:43:05 +0800
+Subject: [PATCH 40/53] bugfix for embedded image
+
+1. do not create mtab when create container if it's embedded image
+2. use mounts in config, they are embedded image's layers
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ .../modules/service/service_container.c       | 13 +++--
+ src/daemon/modules/spec/specs_mount.c         | 57 +++++++++++++++++++
+ .../image/oci/oci_config_merge/CMakeLists.txt |  1 +
+ test/specs/specs/CMakeLists.txt               |  1 +
+ test/specs/specs_extend/CMakeLists.txt        |  1 +
+ 5 files changed, 68 insertions(+), 5 deletions(-)
+
+diff --git a/src/daemon/modules/service/service_container.c b/src/daemon/modules/service/service_container.c
+index 6551bfbf..e1d698cd 100644
+--- a/src/daemon/modules/service/service_container.c
++++ b/src/daemon/modules/service/service_container.c
+@@ -731,11 +731,14 @@ static int do_start_container(container_t *cont, const char *console_fifos[], bo
+         goto close_exit_fd;
+     }
+ 
+-    nret = create_mtab_link(oci_spec);
+-    if (nret != 0) {
+-        ERROR("Failed to create link /etc/mtab for target /proc/mounts");
+-        ret = -1;
+-        goto close_exit_fd;
++    // embedded conainter is readonly, create mtab link will fail
++    if (strcmp(IMAGE_TYPE_EMBEDDED, cont->common_config->image_type) != 0) {
++        nret = create_mtab_link(oci_spec);
++        if (nret != 0) {
++            ERROR("Failed to create link /etc/mtab for target /proc/mounts");
++            ret = -1;
++            goto close_exit_fd;
++        }
+     }
+ 
+     if (verify_mounts(cont)) {
+diff --git a/src/daemon/modules/spec/specs_mount.c b/src/daemon/modules/spec/specs_mount.c
+index 04ccd415..175a0fbe 100644
+--- a/src/daemon/modules/spec/specs_mount.c
++++ b/src/daemon/modules/spec/specs_mount.c
+@@ -2799,6 +2799,9 @@ static int calc_mounts_len(host_config *host_spec, container_config *container_s
+     if (container_spec->volumes != NULL && container_spec->volumes->len != 0) {
+         (*len) += container_spec->volumes->len;
+     }
++    if (container_spec->mounts != NULL && container_spec->mounts_len != 0) {
++        (*len) += container_spec->mounts_len;
++    }
+ 
+     return 0;
+ }
+@@ -2809,6 +2812,54 @@ static void add_mount(defs_mount **merged_mounts, size_t *merged_mounts_len, def
+     *merged_mounts_len += 1;
+ }
+ 
++static int add_embedded_layers(container_config *container_spec, defs_mount **merged_mounts,
++                               size_t *merged_mounts_len)
++{
++    int ret = 0;
++    size_t i = 0;
++    defs_mount *mnt = NULL;
++    defs_mount *conflict = NULL;
++    mount_spec *spec = NULL;
++    char *errmsg = NULL;
++
++    for (i = 0; container_spec->mounts != 0 && i < container_spec->mounts_len; i++) {
++        ret = util_parse_mount_spec(container_spec->mounts[i], &spec, &errmsg);
++        if (ret != 0) {
++            ERROR("parse mount spec failed: %s", errmsg);
++            ret = -1;
++            goto out;
++        }
++
++        mnt = parse_mount(spec);
++        if (mnt == NULL) {
++            ERROR("parse mount failed");
++            ret = -1;
++            goto out;
++        }
++
++        // do not use duplicate mount point
++        conflict = get_conflict_mount_point(merged_mounts, *merged_mounts_len, mnt);
++        if (conflict != NULL) {
++            ERROR("Duplicate mount point: %s", conflict->destination);
++            isulad_set_error_message("Duplicate mount point: %s", conflict->destination);
++            ret = -1;
++            goto out;
++        }
++
++        add_mount(merged_mounts, merged_mounts_len, mnt);
++        mnt = NULL;
++        free_mount_spec(spec);
++        spec = NULL;
++    }
++
++out:
++    free_defs_mount(mnt);
++    free_mount_spec(spec);
++    free(errmsg);
++
++    return ret;
++}
++
+ static int add_mounts(host_config *host_spec, defs_mount **merged_mounts, size_t *merged_mounts_len)
+ {
+     int ret = 0;
+@@ -3086,6 +3137,12 @@ static int merge_all_fs_mounts(host_config *host_spec, container_config *contain
+         goto out;
+     }
+ 
++    // add embedded layers
++    ret = add_embedded_layers(container_spec, merged_mounts, &merged_mounts_len);
++    if (ret != 0) {
++        goto out;
++    }
++
+     // add --mounts
+     ret = add_mounts(host_spec, merged_mounts, &merged_mounts_len);
+     if (ret != 0) {
+diff --git a/test/image/oci/oci_config_merge/CMakeLists.txt b/test/image/oci/oci_config_merge/CMakeLists.txt
+index 48960ff7..36dc3ead 100644
+--- a/test/image/oci/oci_config_merge/CMakeLists.txt
++++ b/test/image/oci/oci_config_merge/CMakeLists.txt
+@@ -18,6 +18,7 @@ add_executable(${EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/util_atomic.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/sha256/sha256.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/path.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/utils/cutils/utils_mount_spec.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/modules/spec//specs_extend.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/common/err_msg.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/daemon/config/isulad_config.c
+diff --git a/test/specs/specs/CMakeLists.txt b/test/specs/specs/CMakeLists.txt
+index e0f2b5b0..e0031e08 100644
+--- a/test/specs/specs/CMakeLists.txt
++++ b/test/specs/specs/CMakeLists.txt
+@@ -12,6 +12,7 @@ add_executable(${EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_timestamp.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/util_atomic.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_mount_spec.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
+diff --git a/test/specs/specs_extend/CMakeLists.txt b/test/specs/specs_extend/CMakeLists.txt
+index 7d5c7dfb..45b21ecd 100644
+--- a/test/specs/specs_extend/CMakeLists.txt
++++ b/test/specs/specs_extend/CMakeLists.txt
+@@ -12,6 +12,7 @@ add_executable(${EXE}
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_file.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_timestamp.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/util_atomic.c
++    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/utils_mount_spec.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/sha256/sha256.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/path.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/../../../src/utils/cutils/map/map.c
+-- 
+2.25.1
+
