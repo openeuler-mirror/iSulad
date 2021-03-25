@@ -1,7 +1,7 @@
 From 0eedc0354deb5616fe7e3308547d475af01d7cc3 Mon Sep 17 00:00:00 2001
 From: Li Feng <lifeng2221dd1@zoho.com.cn>
 Date: Wed, 20 Jan 2021 14:50:43 +0800
-Subject: [PATCH 13/26] CI: add testcase for exec without pty
+Subject: [PATCH 13/53] CI: add testcase for exec without pty
 
 Signed-off-by: Li Feng <lifeng2221dd1@zoho.com.cn>
 ---
