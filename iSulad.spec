@@ -1,5 +1,5 @@
 %global _version 2.0.8
-%global _release 20210323.094917.git7e6aa593
+%global _release 20210326.094027.gitac974aa6
 %global is_systemd 1
 
 Name:      iSulad
@@ -65,6 +65,7 @@ Patch50: 0050-devicemapper-umount-when-resize2fs-command-failed.patch
 Patch51: 0051-ignore-to-create-mtab-when-runtime-is-kata-runtime.patch
 Patch52: 0052-remove-unchecked-layer-ignore-rootfs-layer.patch
 Patch53: 0053-add-test-to-check-running-container-with-image-integ.patch
+Patch54: 0054-fix-coredump-when-inspect-container-when-daemon-sets.patch
 
 %ifarch x86_64 aarch64
 Provides:       libhttpclient.so()(64bit)
@@ -267,6 +268,12 @@ fi
 %endif
 
 %changelog
+* Fri Mar 26 2021 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 2.0.8-20210326.094027.gitac974aa6
+- Type: sync from upstream
+- ID: NA
+- SUG: NA
+- DESC: update from master
+
 * Tue Mar 23 2021 haozi007 <liuhao27@huawei.com> - 20210323.094917.git7e6aa593
 - Type: sync from upstream
 - ID: NA
