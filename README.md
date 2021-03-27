@@ -249,6 +249,12 @@ You can get more information about iSulad from our wikis, including roadmap, fea
 
 iSulad is licensed under the Mulan PSL v2.
 
+## Related Resouces
+
+- [bilibili videos](https://space.bilibili.com/527064077/video?keyword=iSulad)
+- [如何在openEuler树莓派镜像上部署k8s+iSula集群](https://my.oschina.net/openeuler/blog/4774838)
+- [基于openEuler搭建部署k8s](https://bbs.huaweicloud.com/forum/forum.php?mod=viewthread&tid=94271)
+
 ## Join us
 You can join us on any of the following channels:
 * Join our [mailing list](https://mailweb.openeuler.org/postorius/lists/isulad.openeuler.org/)
