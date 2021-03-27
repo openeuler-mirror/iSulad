@@ -21,14 +21,21 @@
 #include <utility>
 #include <map>
 #include <unistd.h>
+#include <semaphore.h>
 #include "isula_libutils/log.h"
+
+struct lwsContext {
+    int fd;
+    sem_t *sync_close_sem;
+};
+
 class StreamingServeInterface {
 public:
     StreamingServeInterface() = default;
     StreamingServeInterface(const StreamingServeInterface &) = delete;
     StreamingServeInterface &operator=(const StreamingServeInterface &) = delete;
     virtual ~StreamingServeInterface() = default;
-    virtual int Execute(struct lws *wsi, const std::string &token, int read_pipe_fd) = 0;
+    virtual int Execute(lwsContext lws_ctx, const std::string &token, int read_pipe_fd) = 0;
 };
 
 class RouteCallbackRegister {
@@ -42,15 +49,14 @@ public:
         return static_cast<bool>(m_registeredcallbacks.count(method));
     }
 
-    int HandleCallback(struct lws *wsi, const std::string &method,
-                       const std::string &token,
-                       int read_pipe_fd)
+    int HandleCallback(lwsContext lws_ctx, const std::string &method,
+                       const std::string &token, int read_pipe_fd)
     {
         auto it = m_registeredcallbacks.find(method);
         if (it != m_registeredcallbacks.end()) {
             std::shared_ptr<StreamingServeInterface> callback = it->second;
             if (callback) {
-                return callback->Execute(wsi, token, read_pipe_fd);
+                return callback->Execute(lws_ctx, token, read_pipe_fd);
             }
         }
         ERROR("invalid method!");
@@ -69,21 +75,21 @@ private:
 
 class StreamTask {
 public:
-    StreamTask(RouteCallbackRegister *invoker, struct lws *wsi,
+    StreamTask(RouteCallbackRegister *invoker, lwsContext lws_ctx,
                const std::string &method,
                const std::string &token, int read_pipe_fd)
-        : m_invoker(invoker), m_wsi(wsi), m_method(method), m_token(token),
+        : m_invoker(invoker), m_lws_ctx(lws_ctx), m_method(method), m_token(token),
           m_read_pipe_fd(read_pipe_fd) {}
     StreamTask(const StreamTask &) = delete;
     StreamTask &operator=(const StreamTask &) = delete;
     virtual ~StreamTask() = default;
     int Run()
     {
-        return m_invoker->HandleCallback(m_wsi, m_method, m_token, m_read_pipe_fd);
+        return m_invoker->HandleCallback(m_lws_ctx, m_method, m_token, m_read_pipe_fd);
     }
 private:
     RouteCallbackRegister *m_invoker{ nullptr };
-    struct lws *m_wsi;
+    lwsContext m_lws_ctx;
     std::string m_method;
     std::string m_token;
     int m_read_pipe_fd;

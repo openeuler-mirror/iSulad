@@ -328,7 +328,7 @@ out:
     return ret;
 }
 
-static void client_console_tty_state_close(struct epoll_descr *descr, const struct tty_state *ts)
+static void console_tty_state_close(struct epoll_descr *descr, const struct tty_state *ts)
 {
     if (ts->stdin_reader >= 0) {
         epoll_loop_del_handler(descr, ts->stdin_reader);
@@ -430,13 +430,14 @@ int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoin
     ret = safe_epoll_loop(&descr);
 
 err_out:
-    client_console_tty_state_close(&descr, &ts);
+    console_tty_state_close(&descr, &ts);
     epoll_loop_close(&descr);
     return ret;
 }
 
 /* console loop copy */
-int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper *writers, size_t len)
+int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper *writers,
+                         transfer_channel_type *channels, size_t len)
 {
     int ret = 0;
     size_t i = 0;
@@ -460,17 +461,35 @@ int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper
     }
 
     for (i = 0; i < len; i++) {
-        // Reusing ts.stdout_reader and ts.stdout_writer for coping io
-        ts[i].stdout_reader = srcfds[i];
-        ts[i].stdout_writer.context = writers[i].context;
-        ts[i].stdout_writer.write_func = writers[i].write_func;
+        // initial tty_state
+        ts[i].stdin_reader = -1;
+        ts[i].stdout_reader = -1;
+        ts[i].stderr_reader = -1;
         ts[i].sync_fd = -1;
-        ret = epoll_loop_add_handler(&descr, ts[i].stdout_reader, console_cb_stdio_copy, &ts[i]);
+        if (channels[i] == STDIN_CHANNEL) {
+            ts[i].stdin_reader = srcfds[i];
+            ts[i].stdin_writer.context = writers[i].context;
+            ts[i].stdin_writer.write_func = writers[i].write_func;
+            ret = epoll_loop_add_handler(&descr, ts[i].stdin_reader, console_cb_stdio_copy, &ts[i]);
+        } else if (channels[i] == STDOUT_CHANNEL) {
+            // Reusing ts.stdout_reader and ts.stdout_writer for coping io
+            ts[i].stdout_reader = srcfds[i];
+            ts[i].stdout_writer.context = writers[i].context;
+            ts[i].stdout_writer.write_func = writers[i].write_func;
+            ret = epoll_loop_add_handler(&descr, ts[i].stdout_reader, console_cb_stdio_copy, &ts[i]);
+        } else {
+            // Reusing ts.stderr_reader and ts.stderr_writer for coping io
+            ts[i].stderr_reader = srcfds[i];
+            ts[i].stderr_writer.context = writers[i].context;
+            ts[i].stderr_writer.write_func = writers[i].write_func;
+            ret = epoll_loop_add_handler(&descr, ts[i].stderr_reader, console_cb_stdio_copy, &ts[i]);
+        }
         if (ret != 0) {
             ERROR("Add handler for masterfd failed");
             goto err_out;
         }
     }
+
     if (sync_fd >= 0) {
         ts[i].sync_fd = sync_fd;
         epoll_loop_add_handler(&descr, ts[i].sync_fd, console_cb_stdio_copy, &ts[i]);
@@ -483,9 +502,8 @@ int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper
     ret = safe_epoll_loop(&descr);
 
 err_out:
-
     for (i = 0; i < (len + 1); i++) {
-        epoll_loop_del_handler(&descr, ts[i].stdout_reader);
+        console_tty_state_close(&descr, &ts[i]);
     }
     epoll_loop_close(&descr);
     free(ts);

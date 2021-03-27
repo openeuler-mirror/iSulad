@@ -22,6 +22,7 @@
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <list>
 #include <thread>
 #include <libwebsockets.h>
 #include "route_callback_register.h"
@@ -47,20 +48,45 @@ enum WebsocketChannel {
 
 struct session_data {
     std::array<int, MAX_ARRAY_LEN> pipes;
-    unsigned char *buf;
-    volatile bool sended { false };
     volatile bool close { false };
-    volatile bool in_processing { false };
     std::mutex *buf_mutex;
-    std::mutex *sended_mutex;
+    sem_t *sync_close_sem;
+    std::list<unsigned char *> buffer;
 
-    void SetProcessingStatus(bool status)
+    unsigned char *FrontMessage()
     {
-        in_processing = status;
+        unsigned char *message = nullptr;
+
+        buf_mutex->lock();
+        message = buffer.front();
+        buf_mutex->unlock();
+
+        return message;
     }
-    bool GetProcessingStatus() const
+
+    void PopMessage()
     {
-        return in_processing;
+        buf_mutex->lock();
+        buffer.pop_front();
+        buf_mutex->unlock();
+    }
+
+    void PushMessage(unsigned char *message)
+    {
+        buf_mutex->lock();
+        buffer.push_back(message);
+        buf_mutex->unlock();
+    }
+
+    void EraseAllMessage()
+    {
+        buf_mutex->lock();
+        for (auto iter = buffer.begin(); iter != buffer.end();) {
+            free(*iter);
+            *iter = NULL;
+            iter = buffer.erase(iter);
+        }
+        buf_mutex->unlock();
     }
 };
 
@@ -77,7 +103,6 @@ public:
     void SetLwsSendedFlag(int socketID, bool sended);
     void ReadLockAllWsSession();
     void UnlockAllWsSession();
-    bool IsValidSession(struct lws *wsi);
 
 private:
     WebsocketServer();
@@ -89,15 +114,15 @@ private:
     static void EmitLog(int level, const char *line);
     int CreateContext();
     inline void Receive(int socketID, void *in, size_t len);
-    int  Wswrite(struct lws *wsi, void *in, size_t len);
-    inline int DumpHandshakeInfo(struct lws *wsi) noexcept;
+    int  Wswrite(struct lws *wsi, const unsigned char *message);
+    inline void DumpHandshakeInfo(struct lws *wsi) noexcept;
+    int RegisterStreamTask(struct lws *wsi) noexcept;
+    int GenerateSessionData(session_data &session) noexcept;
     static int Callback(struct lws *wsi, enum lws_callback_reasons reason,
                         void *user, void *in, size_t len);
     void ServiceWorkThread(int threadid);
     void CloseWsSession(int socketID);
     void CloseAllWsSession();
-    void RecordSession(struct lws *wsi);
-    void RemoveSession(struct lws *wsi);
 
 private:
     static RWMutex m_mutex;
@@ -110,7 +135,6 @@ private:
     };
     RouteCallbackRegister m_handler;
     static std::unordered_map<int, session_data> m_wsis;
-    static std::unordered_set<struct lws *> m_activeSession;
     url::URLDatum m_url;
     int m_listenPort;
 };
@@ -118,6 +142,7 @@ private:
 ssize_t WsWriteStdoutToClient(void *context, const void *data, size_t len);
 ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len);
 int closeWsConnect(void *context, char **err);
+int closeWsStream(void *context, char **err);
 
 #endif // DAEMON_ENTRY_CRI_WEBSOCKET_SERVICE_WS_SERVER_H
 
