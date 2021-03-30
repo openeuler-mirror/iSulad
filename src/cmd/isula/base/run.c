@@ -39,6 +39,7 @@ static int run_checker(struct client_arguments *args);
 struct client_arguments g_cmd_run_args = {
     .runtime = "",
     .restart = "no",
+    .pull = "missing"
 };
 
 static int local_cmd_start(const struct client_arguments *args)

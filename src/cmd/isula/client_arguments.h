@@ -307,6 +307,7 @@ struct client_arguments {
     // pull/rmi
     char *ref;
     bool plain_http;
+    char *pull;
 
     // logs
     bool follow;

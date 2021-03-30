@@ -60,6 +60,20 @@ function isula_pull()
     isula inspect busybox
     fn_check_eq "$?" "0" "isula inspect busybox"
 
+    # test --pull always option
+    isula run --rm -ti --pull always busybox echo hello 2>&1 | grep pulling
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull always failed" && ((ret++))
+
+    # test --pull never option
+    isula rm -f `isula ps -a -q`
+    isula rmi busybox
+    isula run --rm -ti --pull never busybox echo hello
+    [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull never failed" && ((ret++))
+
+    # test default --pull option (missing)
+    isula run --rm -ti busybox echo hello 2>&1 | grep pulling
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - --pull missing failed" && ((ret++))
+
     isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox
     fn_check_eq "$?" "0" "isula pull 3laho3y3.mirror.aliyuncs.com/library/busybox"
 

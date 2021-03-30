@@ -59,6 +59,7 @@ struct client_arguments g_cmd_create_args = {
     .custom_conf.health_timeout = 0,
     .custom_conf.health_start_period = 0,
     .custom_conf.health_retries = 0,
+    .pull = "missing"
 };
 
 static void request_pack_host_config_limit(const struct client_arguments *args, isula_host_config_t *hostconfig)
@@ -1268,9 +1269,17 @@ static int client_try_to_create(const struct client_arguments *args, const struc
         goto out;
     }
 
+    if (strcmp(args->pull, "always") == 0) {
+        ret = client_pull(args);
+        if (ret != 0) {
+            goto out;
+        }
+    }
+
     ret = do_client_create(args, ops, request, response);
     if (ret != 0) {
-        if (response->errmsg == NULL || strstr(response->errmsg, IMAGE_NOT_FOUND_ERROR) == NULL) {
+        if (response->errmsg == NULL || strstr(response->errmsg, IMAGE_NOT_FOUND_ERROR) == NULL ||
+            strcmp(args->pull, "missing") != 0) {
             client_print_error(response->cc, response->server_errono, response->errmsg);
             goto out;
         }
@@ -1297,6 +1306,14 @@ static int client_try_to_create(const struct client_arguments *args, const struc
 out:
     *out_response = response;
     return ret;
+}
+
+static bool valid_pull_option(const char *pull)
+{
+    if (strcmp(pull, "always") == 0 || strcmp(pull, "missing") == 0 || strcmp(pull, "never") == 0) {
+        return true;
+    }
+    return false;
 }
 
 /*
@@ -1548,6 +1565,11 @@ int cmd_create_main(int argc, const char **argv)
     }
     if (isula_libutils_log_enable(&lconf)) {
         COMMAND_ERROR("log init failed");
+        exit(ECOMMON);
+    }
+
+    if (!valid_pull_option(g_cmd_create_args.pull)) {
+        COMMAND_ERROR("invalid --pull option, only \"always\"|\"missing\"|\"never\" is allowed");
         exit(ECOMMON);
     }
 
