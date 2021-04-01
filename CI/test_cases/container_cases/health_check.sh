@@ -38,20 +38,20 @@ function test_health_check_paraments()
 
     container_name="health_check_para"
     isula run -itd -n ${container_name} --health-cmd 'echo "iSulad" ; exit 1' \
-        --health-interval 2s --health-retries 2 --health-start-period 2s --health-exit-on-unhealthy ${image} /bin/sh 
+        --health-interval 5s --health-retries 2 --health-start-period 8s --health-exit-on-unhealthy ${image} /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     # start period : 2s => do health check => interval: 2s => do health check => exit on unhealthy
     [[ $(isula inspect -f '{{.State.Status}}' ${container_name}) == "running" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not running" && ((ret++))
 
-    sleep 3 # finish first health check
+    sleep 13 # finish first health check
     
     # keep starting status with health check return non-zero at always until status change to unhealthy
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
 
-    sleep 2 # finish second health check
+    sleep 6 # finish second health check
     
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
@@ -85,20 +85,20 @@ function test_health_check_normally()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     container_name="health_check_normally"
-    isula run -itd -n ${container_name} --health-cmd 'date' --health-interval 2s ${image} /bin/sh 
+    isula run -itd -n ${container_name} --health-cmd 'date' --health-interval 5s ${image} /bin/sh
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
     # start period : 0s => interval: 2s => do health check => interval: 2s => do health check => ... 
     [[ $(isula inspect -f '{{.State.Status}}' ${container_name}) == "running" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not running" && ((ret++))
 
-    sleep 1 # Health check has been performed yet
+    sleep 2 # Health check has been performed yet
 
     # Initial status when the container is still starting
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
 
-    sleep 2 # finish first health check
+    sleep 8 # finish first health check
     # When the health check returns successfully, status immediately becomes healthy 
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "healthy" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not healthy" && ((ret++))
@@ -131,11 +131,11 @@ function test_health_check_timeout()
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
     container_name="health_check_timeout"
-    isula run -itd -n ${container_name} --health-cmd 'sleep 5' --health-interval 2s --health-timeout 1s \
+    isula run -itd -n ${container_name} --health-cmd 'sleep 5' --health-interval 5s --health-timeout 1s \
         --health-retries 1 --health-exit-on-unhealthy ${image} /bin/sh 
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - failed to run container with image: ${image}" && ((ret++))
 
-    # start period : 0s => interval: 2s => do health check(1s timeout) => unhealthy(exited) 
+    # start period : 0s => interval: 5s => do health check(1s timeout) => unhealthy(exited)
     [[ $(isula inspect -f '{{.State.Status}}' ${container_name}) == "running" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container status: not running" && ((ret++))
 
@@ -145,7 +145,7 @@ function test_health_check_timeout()
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "starting" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not starting" && ((ret++))
 
-    sleep 3 # finish first health check
+    sleep 7 # finish first health check
     # The container process exits and the health check status becomes unhealthy
     [[ $(isula inspect -f '{{.State.Health.Status}}' ${container_name}) == "unhealthy" ]]
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} -  incorrent container health check status: not unhealthy" && ((ret++))
