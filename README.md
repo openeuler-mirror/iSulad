@@ -53,10 +53,25 @@ For more information contact your distribution or package provider.
 
 you should run `rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openEuler` first
 
+
+### Configure
+
+Configure the container image registry address, for example "docker.io" or other registry addrss.
+
+```sh
+# cat /etc/isulad/daemon.json
+.....
+    "registry-mirrors": [
+        "docker.io"
+    ],
+.....
+```
+
 ### Run
+
 We provide `systemd` service to start `iSulad`:
 ```sh
-systemctl start isulad # run the server with systemd command
+systemctl restart isulad # restart the server with systemd command
 ```
 
 You can use direct command to start `iSulad` server：
