@@ -816,7 +816,7 @@ bool util_raw_exec_cmd(exec_func_t cb_func, void *cb_args, exitcode_deal_func_t 
     in_fd[0] = -1;
     if (cmd_args->stdin_msg != NULL) {
         size_t len = strlen(cmd_args->stdin_msg);
-        if (util_write_nointr(in_fd[1], cmd_args->stdin_msg, len) != len) {
+        if (util_write_nointr_in_total(in_fd[1], cmd_args->stdin_msg, len) != len) {
             WARN("Write instr: %s failed", cmd_args->stdin_msg);
         }
     }
