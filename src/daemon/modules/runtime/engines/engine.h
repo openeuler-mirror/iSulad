@@ -82,6 +82,7 @@ typedef struct _engine_exec_request_t {
 
     bool tty;
     bool open_stdin;
+    const char *workdir;
 } engine_exec_request_t;
 
 typedef bool (*engine_create_t)(const char *, const char *, void *);

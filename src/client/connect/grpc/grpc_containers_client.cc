@@ -807,6 +807,9 @@ public:
         grequest->set_attach_stdin(request->attach_stdin);
         grequest->set_attach_stdout(request->attach_stdout);
         grequest->set_attach_stderr(request->attach_stderr);
+        if (request->workdir != nullptr) {
+            grequest->set_workdir(request->workdir);
+        }
         if (request->stdin != nullptr) {
             grequest->set_stdin(request->stdin);
         }

@@ -65,6 +65,7 @@ static int fill_exec_request(const struct client_arguments *args, const struct c
     }
 
     request->user = util_strdup_s(args->custom_conf.user);
+    request->workdir = util_strdup_s(args->custom_conf.workdir);
 
     if (util_dup_array_of_strings((const char **)args->argv, args->argc, &(request->argv),
                                   (size_t *)(&request->argc)) != 0) {
@@ -327,6 +328,7 @@ static int remote_cmd_exec(const struct client_arguments *args, uint32_t *exit_c
     request.attach_stdin = args->custom_conf.attach_stdin;
     request.attach_stdout = args->custom_conf.attach_stdout;
     request.attach_stderr = args->custom_conf.attach_stderr;
+    request.workdir = args->custom_conf.workdir;
 
     request.argc = args->argc;
     request.argv = (char **)args->argv;

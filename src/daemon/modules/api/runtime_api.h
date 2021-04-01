@@ -127,6 +127,7 @@ typedef struct _rt_exec_params_t {
     const char *logpath;
     const char *loglevel;
     const char **console_fifos;
+    const char *workdir;
     int64_t timeout;
     const char *suffix;
     defs_process *spec;

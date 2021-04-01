@@ -390,6 +390,9 @@ int rt_lcr_exec(const char *id, const char *runtime, const rt_exec_params_t *par
     if (params->spec != NULL) {
         request.tty = params->spec->terminal;
     }
+    if (params->workdir != NULL) {
+        request.workdir = params->workdir;
+    }
 
     if (!engine_ops->engine_exec_op(&request, exit_code)) {
         const char *tmpmsg = NULL;

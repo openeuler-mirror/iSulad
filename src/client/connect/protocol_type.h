@@ -332,6 +332,7 @@ struct isula_exec_request {
     char **env;
     int64_t timeout;
     char *user;
+    char *workdir;
 };
 
 struct isula_exec_response {

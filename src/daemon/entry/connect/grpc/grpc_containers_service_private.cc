@@ -359,6 +359,9 @@ int ContainerServiceImpl::exec_request_from_grpc(const ExecRequest *grequest, co
     tmpreq->attach_stdout = grequest->attach_stdout();
     tmpreq->attach_stderr = grequest->attach_stderr();
 
+    if (!grequest->workdir().empty()) {
+        tmpreq->workdir = util_strdup_s(grequest->workdir().c_str());
+    }
     if (!grequest->stdin().empty()) {
         tmpreq->stdin = util_strdup_s(grequest->stdin().c_str());
     }
