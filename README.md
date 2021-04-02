@@ -249,6 +249,14 @@ base operators of CRI
 | 100 * runp    | 27802  | 29197 | 2398   | -91.37%   | -91.79% |
 | 100 * stopp   | 14429  | 11173 | 1170   | -91.89%   | -89.53% |
 
+## Try to Use iSulad
+
+If you want to experience iSulad right now, you can try to use it at：
+
+- https://lab.huaweicloud.com/testdetail_498
+
+It is the experiment about iSulad. In this experiment you can install iSulad easily. And then you can pull image, run container, analyse iSulad's performance and compare it with performance of Docker.
+
 ## How to Contribute
 
 We always welcome new contributors. And we are happy to provide guidance for the new contributors.
