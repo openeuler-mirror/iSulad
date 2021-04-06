@@ -908,7 +908,6 @@ static int adapt_host_spec(host_config *host_spec)
     }
 
 out:
-    free_sysinfo(sysinfo);
     return ret;
 }
 
@@ -1292,7 +1291,6 @@ static int cpurt_controller_init(const char *cgroups_path)
     ret = do_init_cpurt_cgroups_path(dirpath, 0, mnt_root, cpu_rt_period, cpu_rt_runtime);
 
 out:
-    free_sysinfo(sysinfo);
     free(mnt_root);
     free(dup);
     return ret;

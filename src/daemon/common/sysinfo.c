@@ -20,6 +20,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/sysinfo.h>
+#include <sys/vfs.h>
+#include <linux/magic.h>
+#include <sys/stat.h>
 
 #include "err_msg.h"
 #include "isula_libutils/log.h"
@@ -28,7 +31,7 @@
 #include "utils_file.h"
 #include "utils_string.h"
 
-// Cgroup Item Definition
+// Cgroup V1 Item Definition
 #define CGROUP_BLKIO_WEIGHT "blkio.weight"
 #define CGROUP_BLKIO_WEIGHT_DEVICE "blkio.weight_device"
 #define CGROUP_BLKIO_READ_BPS_DEVICE "blkio.throttle.read_bps_device"
@@ -48,6 +51,45 @@
 #define CGROUP_MEMORY_RESERVATION "memory.soft_limit_in_bytes"
 #define CGROUP_KENEL_MEMORY_LIMIT "memory.kmem.limit_in_bytes"
 #define CGROUP_MEMORY_OOM_CONTROL "memory.oom_control"
+
+// Cgroup V2 Item Definition
+#define CGROUP2_CPU_WEIGHT "cpu.weight"
+#define CGROUP2_CPU_MAX "cpu.max"
+#define CGROUP2_CPUSET_CPUS_EFFECTIVE "cpuset.cpus.effective"
+#define CGROUP2_CPUSET_MEMS_EFFECTIVE "cpuset.mems.effective"
+#define CGROUP2_CPUSET_CPUS "cpuset.cpus"
+#define CGROUP2_CPUSET_MEMS "cpuset.mems"
+#define CGROUP2_IO_WEIGHT "io.weight"
+#define CGROUP2_IO_BFQ_WEIGHT "io.bfq.weight"
+#define CGROUP2_IO_MAX "io.max"
+#define CGROUP2_MEMORY_MAX "memory.max"
+#define CGROUP2_MEMORY_LOW "memory.low"
+#define CGROUP2_MEMORY_SWAP_MAX "memory.swap.max"
+#define CGROUP2_HUGETLB_MAX "hugetlb.%s.max"
+#define CGROUP2_PIDS_MAX "pids.max"
+#define CGROUP2_FILES_LIMIT "files.limit"
+
+#define CGROUP_MOUNTPOINT "/sys/fs/cgroup"
+#define CGROUP_ISULAD_PATH CGROUP_MOUNTPOINT"/isulad"
+#define DEFAULT_CGROUP_DIR_MODE 0755
+#define DEFAULT_CGROUP_FILE_MODE 0644
+#define CGROUP2_CONTROLLERS_PATH CGROUP_MOUNTPOINT"/cgroup.controllers"
+#define CGROUP2_SUBTREE_CONTROLLER_PATH CGROUP_MOUNTPOINT"/cgroup.subtree_control"
+#define CGROUP2_CPUSET_CPUS_EFFECTIVE_PATH CGROUP_MOUNTPOINT"/cpuset.cpus.effective"
+#define CGROUP2_CPUSET_MEMS_EFFECTIVE_PATH CGROUP_MOUNTPOINT"/cpuset.mems.effective"
+
+#ifndef CGROUP2_SUPER_MAGIC
+#define CGROUP2_SUPER_MAGIC 0x63677270
+#endif
+
+#ifndef CGROUP_SUPER_MAGIC
+#define CGROUP_SUPER_MAGIC 0x27e0eb
+#endif
+
+#define CGROUP_VERSION_1 1
+#define CGROUP_VERSION_2 2
+
+static sysinfo_t *g_sysinfo = NULL;
 
 struct layer {
     char **controllers;
@@ -966,6 +1008,27 @@ free_out:
     free(defaultpagesize);
 }
 
+static int get_cgroup_version()
+{
+    struct statfs fs = {0};
+
+    if (statfs(CGROUP_MOUNTPOINT, &fs) != 0) {
+        ERROR("failed to statfs %s: %s", CGROUP_MOUNTPOINT, strerror(errno));
+        return -1;
+    }
+
+    if (fs.f_type == CGROUP2_SUPER_MAGIC) {
+        return CGROUP_VERSION_2;
+    } else {
+        return CGROUP_VERSION_1;
+    }
+}
+
+static bool is_hugetlb_max(const char *name)
+{
+    return util_has_prefix(name, "hugetlb.") && util_has_suffix(name, ".max");
+}
+
 /* get huge page sizes */
 static char **get_huge_page_sizes()
 {
@@ -975,11 +1038,17 @@ static char **get_huge_page_sizes()
     char **hps = NULL;
     DIR *dir = NULL;
     struct dirent *info_archivo = NULL;
+    int cgroup_version = 0;
 
-    ret = find_cgroup_mountpoint_and_root("hugetlb", &hugetlbmp, NULL);
-    if (ret != 0 || hugetlbmp == NULL) {
-        ERROR("Hugetlb cgroup not supported");
-        return NULL;
+    cgroup_version = get_cgroup_version();
+    if (cgroup_version == CGROUP_VERSION_2) {
+        hugetlbmp = util_strdup_s(CGROUP_ISULAD_PATH);
+    } else {
+        ret = find_cgroup_mountpoint_and_root("hugetlb", &hugetlbmp, NULL);
+        if (ret != 0 || hugetlbmp == NULL) {
+            ERROR("Hugetlb cgroup not supported");
+            return NULL;
+        }
     }
 
     dir = opendir(hugetlbmp);
@@ -994,9 +1063,15 @@ static char **get_huge_page_sizes()
         char *pos = NULL;
         char *dot2 = NULL;
 
-        contain = strstr(info_archivo->d_name, "limit_in_bytes");
-        if (contain == NULL) {
-            continue;
+        if (cgroup_version == CGROUP_VERSION_2) {
+            if (!is_hugetlb_max(info_archivo->d_name)) {
+                continue;
+            }
+        } else {
+            contain = strstr(info_archivo->d_name, "limit_in_bytes");
+            if (contain == NULL) {
+                continue;
+            }
         }
 
         dup = util_strdup_s(info_archivo->d_name);
@@ -1151,27 +1226,15 @@ void free_sysinfo(sysinfo_t *sysinfo)
     free(sysinfo);
 }
 
-/* get sys info */
-sysinfo_t *get_sys_info(bool quiet)
+static int get_cgroup_info_v1(sysinfo_t *sysinfo, bool quiet)
 {
     struct layer **layers = NULL;
-    sysinfo_t *sysinfo = NULL;
-    bool ret = true;
-
-    sysinfo = util_common_calloc_s(sizeof(sysinfo_t));
-    if (sysinfo == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
 
     layers = cgroup_layers_find();
     if (layers == NULL) {
         ERROR("Failed to parse cgroup information");
-        ret = false;
-        goto out;
+        return -1;
     }
-
-    sysinfo->ncpus = get_nprocs();
 
     check_cgroup_mem(layers, quiet, &sysinfo->cgmeminfo);
     check_cgroup_cpu(layers, quiet, &sysinfo->cgcpuinfo);
@@ -1180,9 +1243,210 @@ sysinfo_t *get_sys_info(bool quiet)
     check_cgroup_cpuset_info(layers, quiet, &sysinfo->cpusetinfo);
     check_cgroup_pids(quiet, &sysinfo->pidsinfo);
     check_cgroup_files(quiet, &sysinfo->filesinfo);
-out:
+
     free_layer(layers);
-    if (!ret) {
+
+    return 0;
+}
+
+static int cgroup2_enable_all()
+{
+    int ret = 0;
+    int nret = 0;
+    int n = 0;
+    size_t i = 0;
+    const char *space = "";
+    char *controllers_str = NULL;
+    char *subtree_controller_str = NULL;
+    char **controllers = NULL;
+    char enable_controllers[PATH_MAX] = {0};
+
+    controllers_str = util_read_content_from_file(CGROUP2_CONTROLLERS_PATH);
+    if (controllers_str == NULL || strlen(controllers_str) == 0 ||
+        strcmp(controllers_str, "\n") == 0) {
+        ERROR("read cgroup controllers failed");
+        ret = -1;
+        goto out;
+    }
+
+    subtree_controller_str = util_read_content_from_file(CGROUP2_SUBTREE_CONTROLLER_PATH);
+    if (subtree_controller_str != NULL && strcmp(controllers_str, subtree_controller_str) == 0) {
+        goto out;
+    }
+
+    controllers = util_string_split(controllers_str, ' ');
+    if (controllers == NULL) {
+        ERROR("split %s failed", controllers_str);
+        ret = -1;
+        goto out;
+    }
+
+    for (i = 0; i < util_array_len((const char **)controllers); i++) {
+        nret = snprintf(enable_controllers + n, PATH_MAX - n, "%s+%s", space, controllers[i]);
+        if (nret < 0 || (size_t)nret >= PATH_MAX - n) {
+            ERROR("Path is too long");
+            goto out;
+        }
+        n += nret;
+        space = " ";
+    }
+    ret = util_write_file(CGROUP2_SUBTREE_CONTROLLER_PATH, enable_controllers, strlen(enable_controllers),
+                          DEFAULT_CGROUP_FILE_MODE);
+    if (ret != 0) {
+        ERROR("write %s to %s failed: %s", enable_controllers, CGROUP2_SUBTREE_CONTROLLER_PATH, strerror(errno));
+        goto out;
+    }
+
+out:
+    util_free_array(controllers);
+    free(controllers_str);
+    free(subtree_controller_str);
+
+    return ret;
+}
+
+static int make_sure_cgroup2_isulad_path_exist()
+{
+    int ret = 0;
+
+    if (util_dir_exists(CGROUP_ISULAD_PATH)) {
+        return 0;
+    }
+
+    if (cgroup2_enable_all() != 0) {
+        return -1;
+    }
+
+    ret = mkdir(CGROUP_ISULAD_PATH, DEFAULT_CGROUP_DIR_MODE);
+    if (ret != 0 && (errno != EEXIST || !util_dir_exists(CGROUP_ISULAD_PATH))) {
+        return -1;
+    }
+
+    return ret;
+}
+
+static int get_cgroup_info_v2(sysinfo_t *sysinfo, bool quiet)
+{
+    int ret = 0;
+    int nret = 0;
+    char *size = NULL;
+    char path[PATH_MAX] = {0};
+
+    if (make_sure_cgroup2_isulad_path_exist() != 0) {
+        return -1;
+    }
+
+    // cpu cgroup
+    sysinfo->cgcpuinfo.cpu_shares = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_WEIGHT);
+    cgroup_do_log(quiet, !(sysinfo->cgcpuinfo.cpu_shares), "Your kernel does not support cgroup2 cpu weight");
+
+    sysinfo->cgcpuinfo.cpu_cfs_period = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPU_MAX);
+    sysinfo->cgcpuinfo.cpu_cfs_quota = sysinfo->cgcpuinfo.cpu_cfs_period;
+    cgroup_do_log(quiet, !(sysinfo->cgcpuinfo.cpu_cfs_period), "Your kernel does not support cgroup2 cpu max");
+
+    sysinfo->cpusetinfo.cpuset = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS_EFFECTIVE) &&
+                                 cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_CPUS) &&
+                                 cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_MEMS_EFFECTIVE) &&
+                                 cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_CPUSET_MEMS);
+    cgroup_do_log(quiet, !(sysinfo->cpusetinfo.cpuset), "Your kernel does not support cpuset");
+    if (sysinfo->cpusetinfo.cpuset) {
+        sysinfo->cpusetinfo.cpus = util_read_content_from_file(CGROUP2_CPUSET_CPUS_EFFECTIVE_PATH);
+        sysinfo->cpusetinfo.mems = util_read_content_from_file(CGROUP2_CPUSET_MEMS_EFFECTIVE_PATH);
+        if (sysinfo->cpusetinfo.cpus == NULL || sysinfo->cpusetinfo.mems == NULL) {
+            ERROR("read cpus or mems failed");
+            return -1;
+        }
+        sysinfo->cpusetinfo.cpus = util_trim_space(sysinfo->cpusetinfo.cpus);
+        sysinfo->cpusetinfo.mems = util_trim_space(sysinfo->cpusetinfo.mems);
+    }
+
+    // io cgroup
+    sysinfo->blkioinfo.blkio_weight = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_BFQ_WEIGHT) ||
+                                      cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_WEIGHT);
+    sysinfo->blkioinfo.blkio_weight_device = sysinfo->blkioinfo.blkio_weight;
+    cgroup_do_log(quiet, !(sysinfo->blkioinfo.blkio_weight), "Your kernel does not support cgroup2 io weight");
+
+    sysinfo->blkioinfo.blkio_read_bps_device = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_IO_MAX);
+    sysinfo->blkioinfo.blkio_write_bps_device = sysinfo->blkioinfo.blkio_read_bps_device;
+    sysinfo->blkioinfo.blkio_read_iops_device = sysinfo->blkioinfo.blkio_read_bps_device;
+    sysinfo->blkioinfo.blkio_write_iops_device = sysinfo->blkioinfo.blkio_read_bps_device;
+    cgroup_do_log(quiet, !(sysinfo->blkioinfo.blkio_read_bps_device), "Your kernel does not support cgroup2 io max");
+
+    // memory cgroup
+    sysinfo->cgmeminfo.limit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_MAX);
+    cgroup_do_log(quiet, !(sysinfo->cgmeminfo.limit), "Your kernel does not support cgroup2 memory max");
+
+    sysinfo->cgmeminfo.reservation = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_LOW);
+    cgroup_do_log(quiet, !(sysinfo->cgmeminfo.reservation), "Your kernel does not support cgroup2 memory low");
+
+    sysinfo->cgmeminfo.swap = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_MEMORY_SWAP_MAX);
+    cgroup_do_log(quiet, !(sysinfo->cgmeminfo.swap), "Your kernel does not support cgroup2 memory swap max");
+
+    // pids cgroup
+    sysinfo->pidsinfo.pidslimit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_PIDS_MAX);
+    cgroup_do_log(quiet, !(sysinfo->pidsinfo.pidslimit), "Your kernel does not support cgroup2 pids max");
+
+    // hugetlb cgroup
+    size = get_default_huge_page_size();
+    if (size != NULL) {
+        nret = snprintf(path, sizeof(path), CGROUP2_HUGETLB_MAX, size);
+        if (nret < 0 || (size_t)nret >= sizeof(path)) {
+            WARN("Failed to print hugetlb path");
+            ret = -1;
+            goto out;
+        }
+        sysinfo->hugetlbinfo.hugetlblimit = cgroup_enabled(CGROUP_ISULAD_PATH, path);
+        cgroup_do_log(quiet, !sysinfo->hugetlbinfo.hugetlblimit, "Your kernel does not support cgroup2 hugetlb limit");
+    } else {
+        WARN("Your kernel does not support cgroup2 hugetlb limit");
+    }
+
+    // files cgroup
+    sysinfo->filesinfo.fileslimit = cgroup_enabled(CGROUP_ISULAD_PATH, CGROUP2_FILES_LIMIT);
+    cgroup_do_log(quiet, !(sysinfo->filesinfo.fileslimit), "Your kernel does not support cgroup2 files limit");
+
+out:
+    free(size);
+
+    return ret;
+}
+
+/* get sys info */
+sysinfo_t *get_sys_info(bool quiet)
+{
+    int cgroup_version = 0;
+    sysinfo_t *sysinfo = NULL;
+    int ret = 0;
+
+    if (g_sysinfo != NULL) {
+        return g_sysinfo;
+    }
+
+    sysinfo = util_common_calloc_s(sizeof(sysinfo_t));
+    if (sysinfo == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    sysinfo->ncpus = get_nprocs();
+
+    cgroup_version = get_cgroup_version();
+    if (cgroup_version < 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (cgroup_version == CGROUP_VERSION_1) {
+        ret = get_cgroup_info_v1(sysinfo, quiet);
+    } else {
+        ret = get_cgroup_info_v2(sysinfo, quiet);
+    }
+    if (ret != 0) {
+        goto out;
+    }
+    g_sysinfo = sysinfo;
+out:
+    if (ret != 0) {
         free_sysinfo(sysinfo);
         sysinfo = NULL;
     }

@@ -425,6 +425,20 @@ static int verify_cpu_cfs_period(const sysinfo_t *sysinfo, int64_t cpu_cfs_perio
         ret = -1;
         goto out;
     }
+
+    if (cpu_cfs_period > 0 && cpu_cfs_period < 1000) {
+        ERROR("CPU cfs period can not be less than 1ms (i.e. 1000)");
+        isulad_set_error_message("CPU cfs period can not be less than 1ms (i.e. 1000)");
+        ret = -1;
+        goto out;
+    }
+
+    if (cpu_cfs_period > 1000000) {
+        ERROR("CPU cfs period can not be more than 1s (i.e. 1000000)");
+        isulad_set_error_message("CPU cfs period can not be more than 1s (i.e. 1000000)");
+        ret = -1;
+        goto out;
+    }
 out:
     return ret;
 }
@@ -1600,7 +1614,6 @@ int verify_container_settings(const oci_runtime_spec *container)
     }
 
 out:
-    free_sysinfo(sysinfo);
     return ret;
 }
 
@@ -1980,7 +1993,6 @@ static int host_config_settings_with_sysinfo(host_config *hostconfig, bool updat
     }
 
 out:
-    free_sysinfo(sysinfo);
     return ret;
 }
 
