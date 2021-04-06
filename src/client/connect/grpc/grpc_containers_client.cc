@@ -1810,8 +1810,8 @@ private:
         for (const auto &iter : map) {
             std::string anno = iter.first + "=" + iter.second;
             (void)util_array_append(&event->annotations, anno.c_str());
-            event->annotations_len++;
         }
+        event->annotations_len = util_array_len((const char **)event->annotations);
     }
 
     auto events_request_to_grpc(const struct isula_events_request *request, EventsRequest *grequest) -> int

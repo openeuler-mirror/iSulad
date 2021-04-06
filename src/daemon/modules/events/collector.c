@@ -332,44 +332,36 @@ static int supplement_labels_for_container_msg(const container_t *cont, const st
     return 0;
 }
 
-static int supplement_annotations_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
-                                                    struct isulad_events_format *format_msg)
+static void supplement_annotations_for_container_msg(const container_t *cont, const struct monitord_msg *msg,
+                                                     struct isulad_events_format *format_msg)
 {
     if (supplement_pid_for_container_msg(cont, msg, format_msg) != 0) {
         ERROR("Failed to supplement pid info");
-        return -1;
     }
 
     if (supplement_exitcode_for_container_msg(cont, msg, format_msg) != 0) {
         ERROR("Failed to supplement exitCode info");
-        return -1;
     }
 
     if (supplement_image_for_container_msg(cont, msg, format_msg) != 0) {
         ERROR("Failed to supplement image info");
-        return -1;
     }
 
     if (supplement_name_for_container_msg(cont, msg, format_msg) != 0) {
         ERROR("Failed to supplement name info");
-        return -1;
     }
 
     if (supplement_labels_for_container_msg(cont, msg, format_msg) != 0) {
         ERROR("Failed to supplement label info");
-        return -1;
     }
 
     if (strlen(msg->extra_annations) != 0) {
         if (util_array_append(&format_msg->annotations, msg->extra_annations) != 0) {
             ERROR("Failed to supplement extra annations info");
-            return -1;
         }
     }
 
     format_msg->annotations_len = util_array_len((const char **)format_msg->annotations);
-
-    return 0;
 }
 
 static int supplement_msg_for_container(struct monitord_msg *msg, struct isulad_events_format *format_msg)
@@ -395,11 +387,7 @@ static int supplement_msg_for_container(struct monitord_msg *msg, struct isulad_
         goto out;
     }
 
-    if (supplement_annotations_for_container_msg(cont, msg, format_msg) != 0) {
-        ERROR("Failed to supplement annotations info");
-        ret = -1;
-        goto out;
-    }
+    supplement_annotations_for_container_msg(cont, msg, format_msg);
 
 out:
     container_unref(cont);
