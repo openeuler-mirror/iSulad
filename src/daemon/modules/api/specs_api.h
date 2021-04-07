@@ -20,6 +20,7 @@
 #include "isula_libutils/container_config_v2.h"
 #include "isula_libutils/oci_runtime_hooks.h"
 #include "isula_libutils/oci_runtime_spec.h"
+#include <isula_libutils/container_network_settings.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,7 +38,8 @@ int save_oci_config(const char *id, const char *rootpath, const oci_runtime_spec
 int parse_security_opt(const host_config *host_spec, bool *no_new_privileges, char ***label_opts,
                        size_t *label_opts_len, char **seccomp_profile);
 
-int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec);
+int merge_share_namespace(oci_runtime_spec *oci_spec, const host_config *host_spec,
+                          const container_network_settings *network_settings);
 #ifdef __cplusplus
 }
 #endif

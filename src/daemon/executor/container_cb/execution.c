@@ -55,6 +55,7 @@
 #include "event_type.h"
 #include "utils_timestamp.h"
 #include "utils_verify.h"
+#include "utils_network.h"
 #include "service_network_api.h"
 
 #define STOP_TIMEOUT 10
@@ -386,12 +387,6 @@ static int container_start_cb(const container_start_request *request, container_
         goto pack_response;
     }
 
-    if (!validate_container_network(cont)) {
-        cc = ISULAD_ERR_EXEC;
-        ERROR("Failed to validate container network");
-        goto pack_response;
-    }
-
     id = cont->common_config->id;
     isula_libutils_set_log_prefix(id);
 
@@ -412,23 +407,6 @@ static int container_start_cb(const container_start_request *request, container_
 
     if (start_container(cont, (const char **)fifos, true) != 0) {
         cc = ISULAD_ERR_EXEC;
-        goto pack_response;
-    }
-
-    if (setup_network(cont) != 0) {
-        cc = ISULAD_ERR_EXEC;
-        ERROR("Setup network failed for container %s", id);
-        isulad_append_error_message("Setup network failed for container %s. ", id);
-
-        if (container_is_in_gc_progress(id)) {
-            isulad_append_error_message("You cannot stop container %s in garbage collector progress. ", id);
-            ERROR("You cannot stop container %s in garbage collector progress.", id);
-            goto pack_response;
-        }
-
-        if (stop_container(cont, STOP_TIMEOUT, true, false)) {
-            container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
-        }
         goto pack_response;
     }
 
@@ -473,11 +451,6 @@ static int restart_container(container_t *cont)
 
     params.rootpath = rootpath;
 
-    if (teardown_network(cont, false) != 0) {
-        ERROR("Teardown network failed for container %s", id);
-        isulad_set_error_message("Teardown network failed for container %s", id);
-    }
-
     ret = runtime_restart(id, runtime, &params);
     if (ret == -2) {
         goto out;
@@ -504,6 +477,9 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     const char *console_fifos[3] = { NULL, NULL, NULL };
     const char *id = cont->common_config->id;
 
+    // skip remove network when restarting container
+    set_container_skip_remove_network(cont);
+
     ret = stop_container(cont, timeout, false, true);
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
@@ -529,7 +505,9 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
         cc = ISULAD_ERR_EXEC;
         goto out;
     }
+
 out:
+    reset_container_skip_remove_network(cont);
     container_state_reset_starting(cont->state);
     return cc;
 }
@@ -620,23 +598,6 @@ static int container_restart_cb(const container_restart_request *request, contai
 
     cc = do_restart_container(cont, timeout);
     if (cc != ISULAD_SUCCESS) {
-        goto pack_response;
-    }
-
-    if (setup_network(cont) != 0) {
-        cc = ISULAD_ERR_EXEC;
-        ERROR("Setup network failed for container %s", id);
-        isulad_append_error_message("Setup network failed for container %s. ", id);
-
-        if (container_is_in_gc_progress(id)) {
-            isulad_append_error_message("You cannot stop container %s in garbage collector progress. ", id);
-            ERROR("You cannot stop container %s in garbage collector progress.", id);
-            goto pack_response;
-        }
-
-        if (stop_container(cont, STOP_TIMEOUT, true, false)) {
-            container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
-        }
         goto pack_response;
     }
 

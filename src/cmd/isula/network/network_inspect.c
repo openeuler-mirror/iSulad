@@ -80,7 +80,7 @@ int cmd_network_inspect_main(int argc, const char **argv)
 {
     int i = 0;
     int success_counts = 0;
-    bool json_format = true;
+    bool json_format = false;
     bool *json_format_arr = NULL;
     bool failed = false;
     char *filter_string = NULL;

@@ -58,6 +58,7 @@
 #include "utils_fs.h"
 #include "utils_string.h"
 #include "utils_verify.h"
+#include "utils_network.h"
 #include "volume_api.h"
 #include "service_network_api.h"
 
@@ -226,7 +227,7 @@ static int renew_oci_config(const container_t *cont, oci_runtime_spec *oci_spec)
         goto out;
     }
 
-    ret = merge_share_namespace(oci_spec, cont->hostconfig);
+    ret = merge_share_namespace(oci_spec, cont->hostconfig, cont->network_settings);
     if (ret != 0) {
         ERROR("Failed to merge share ns");
         goto out;
@@ -832,6 +833,8 @@ out:
     return ret;
 }
 
+static int force_kill(container_t *cont);
+
 int start_container(container_t *cont, const char *console_fifos[], bool reset_rm)
 {
     int ret = 0;
@@ -873,19 +876,45 @@ int start_container(container_t *cont, const char *console_fifos[], bool reset_r
         goto out;
     }
 
+    if (!util_post_setup_network(cont->hostconfig->user_remap) && prepare_network(cont) != 0) {
+        isulad_append_error_message("Failed to prepare container network. ");
+        ERROR("Failed to prepare container network");
+        ret = -1;
+        goto out;
+    }
+
     ret = do_start_container(cont, console_fifos, reset_rm, &pid_info);
     if (ret != 0) {
         ERROR("Runtime start container failed");
         ret = -1;
         goto set_stopped;
-    } else {
-        container_state_set_running(cont->state, &pid_info, true);
-        container_state_reset_has_been_manual_stopped(cont->state);
-        container_init_health_monitor(cont->common_config->id);
-        goto save_container;
+    }
+    container_state_set_running(cont->state, &pid_info, true);
+
+    // if isolate container with a user namespace, setup network after container start
+    // otherwise the network namespace is owned by a wrong user namespace
+    if (util_post_setup_network(cont->hostconfig->user_remap) && prepare_network(cont) != 0) {
+        isulad_append_error_message("Failed to prepare container network. ");
+        ERROR("Failed to prepare container network");
+        ret = -1;
+        goto stop_container;
     }
 
+    container_state_reset_has_been_manual_stopped(cont->state);
+    container_init_health_monitor(cont->common_config->id);
+    goto save_container;
+
+stop_container:
+    // set AutoRemove flag to false before kill so the container won't be removed
+    cont->hostconfig->auto_remove = false;
+    if (force_kill(cont) != 0) {
+        ERROR("Failed to force kill container %s", cont->common_config->id);
+    }
+    cont->hostconfig->auto_remove = cont->hostconfig->auto_remove_bak;
 set_stopped:
+    if (!util_post_setup_network(cont->hostconfig->user_remap) && remove_network(cont) != 0) {
+        ERROR("Failed to remove cont network");
+    }
     container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
     util_contain_errmsg(g_isulad_errmsg, &exit_code);
     container_state_set_stopped(cont->state, exit_code);
@@ -903,36 +932,6 @@ save_container:
 out:
     container_unlock(cont);
     return ret;
-}
-
-static container_network_settings *dup_network_settings(const container_network_settings *network_settings)
-{
-    char *jstr = NULL;
-    container_network_settings *res = NULL;
-    parser_error jerr = NULL;
-
-    if (network_settings == NULL) {
-        return NULL;
-    }
-
-    jstr = container_network_settings_generate_json(network_settings, NULL, &jerr);
-    if (jstr == NULL) {
-        ERROR("Generate network settings failed: %s", jerr);
-        goto out;
-    }
-
-    free(jerr);
-    jerr = NULL;
-    res = container_network_settings_parse_data(jstr, NULL, &jerr);
-    if (res == NULL) {
-        ERROR("Parse network settings failed: %s", jerr);
-        goto out;
-    }
-
-out:
-    free(jerr);
-    free(jstr);
-    return res;
 }
 
 static int do_clean_container(const container_t *cont, pid_t pid)
@@ -982,28 +981,6 @@ out:
     return ret;
 }
 
-static int do_clean_container_network(container_t *cont)
-{
-    container_network_settings *network_settings = NULL;
-
-    network_settings = dup_network_settings(cont->network_settings);
-    if (network_settings == NULL) {
-        ERROR("Failed to dup container network settings");
-        return -1;
-    }
-
-    if (teardown_network(cont, true) != 0) {
-        ERROR("Failed to teardown network");
-    }
-
-    if (clean_useless_iptables(cont->common_config->id, network_settings) != 0) {
-        ERROR("Failed to clean useless iptables");
-    }
-
-    free_container_network_settings(network_settings);
-    return 0;
-}
-
 int clean_container_resource(const char *id, const char *runtime, pid_t pid)
 {
     int ret = 0;
@@ -1029,9 +1006,9 @@ int clean_container_resource(const char *id, const char *runtime, pid_t pid)
         goto unlock;
     }
 
-    ret = do_clean_container_network(cont);
-    if (ret != 0) {
-        ERROR("Failed to clean container network");
+    // ignore remove network error in gc
+    if (remove_network(cont) != 0) {
+        ERROR("Failed to remove container %s network", cont->common_config->id);
         goto unlock;
     }
 
@@ -1132,6 +1109,11 @@ static int do_delete_container(container_t *cont)
         ERROR("You cannot remove container %s in garbage collector progress.", id);
         ret = -1;
         goto out;
+    }
+
+    // try to clean up network resource
+    if (remove_network(cont) != 0) {
+        WARN("Failed to remove network when delete container %s, maybe it has been cleaned up", cont->common_config->id);
     }
 
     ret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
@@ -1395,11 +1377,6 @@ int stop_container(container_t *cont, int timeout, bool force, bool restart)
         cont->hostconfig->auto_remove = false;
     }
 
-    if (teardown_network(cont, false) != 0) {
-        ERROR("Teardown network failed for container %s", id);
-        isulad_set_error_message("Teardown network failed for container %s", id);
-    }
-
     stop_signal = container_stop_signal(cont);
 
     if (!force) {
@@ -1446,11 +1423,6 @@ int kill_container(container_t *cont, uint32_t signal)
         isulad_set_error_message("Cannot kill container: Container %s is not running", id);
         ret = -1;
         goto out;
-    }
-
-    if (teardown_network(cont, false) != 0) {
-        isulad_set_error_message("Teardown network failed for container %s", id);
-        ERROR("Teardown network failed for container %s", id);
     }
 
     if (signal == 0 || signal == SIGKILL) {

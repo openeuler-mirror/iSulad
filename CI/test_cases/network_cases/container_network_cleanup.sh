@@ -107,8 +107,8 @@ function test_container_network_cleanup()
         kill -9 ${pid}
 
         for k in $(seq 1 20); do
-            ps -aux | grep ${pid}
-            if [ $? -ne 0]; then
+            ls /proc | grep ${pid}
+            if [ $? -ne 0 ]; then
                 break
             fi
             sleep 2
