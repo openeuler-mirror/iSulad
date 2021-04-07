@@ -7,8 +7,13 @@ If you intend to contribute on iSulad. Thanks for your effort. Every contributio
 These dependencies are required for build:
 
 ### install basic dependencies based on Centos distribution
-```bash
-$ sudo yum --enablerepo='*' install -y automake autoconf libtool cmake make libcap libcap-devel libselinux libselinux-devel libseccomp libseccomp-devel yajl-devel git libcgroup tar python3 python3-pip device-mapper-devel libarchive libarchive-devel libcurl-devel zlib-devel glibc-headers openssl-devel gcc gcc-c++ systemd-devel systemd-libs golang libtar libtar-devel
+
+We provided a script to auto install iSulad on centos7, you can just execute the script to install iSulad.
+
+```sh
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad/docs
+$ sudo ./install_iSulad_on_Centos_7.sh
 ```
 
 ### install basic dependencies based on Ubuntu distribution
