@@ -143,6 +143,14 @@ make install
 cd -
 ldconfig
 
+# install cricli
+cd ~
+git clone https://gitee.com/jingwoo/cricli.git
+cd cricli
+make -j $(nproc)
+cp cricli /usr/local/bin
+cd -
+
 wait
 if [ -e ${buildstatus} ];then
     for i in ${buildlogs[@]}

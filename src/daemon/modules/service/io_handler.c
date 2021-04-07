@@ -183,6 +183,7 @@ struct io_copy_arg {
     io_type dsttype;
     void *dst;
     int dstfifoflag;
+    transfer_channel_type channel;
 };
 
 struct io_copy_thread_arg {
@@ -194,7 +195,7 @@ struct io_copy_thread_arg {
 };
 
 static void io_copy_thread_cleanup(struct io_write_wrapper *writers, struct io_copy_thread_arg *thread_arg, int *infds,
-                                   int *outfds, int *srcfds, size_t len)
+                                   int *outfds, int *srcfds, transfer_channel_type *channels, size_t len)
 {
     size_t i = 0;
     for (i = 0; i < len; i++) {
@@ -214,9 +215,11 @@ static void io_copy_thread_cleanup(struct io_write_wrapper *writers, struct io_c
     free(infds);
     free(outfds);
     free(writers);
+    free(channels);
 }
 
-static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds, struct io_write_wrapper **writers)
+static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
+                            struct io_write_wrapper **writers, transfer_channel_type **channels)
 {
     size_t i;
 
@@ -252,9 +255,19 @@ static int io_copy_init_fds(size_t len, int **infds, int **outfds, int **srcfds,
         ERROR("Out of memory");
         return -1;
     }
-    return 0;
-}
 
+    *channels = util_common_calloc_s(sizeof(transfer_channel_type) * len);
+    if (*channels == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
+
+    for (i = 0; i < len; i++) {
+        (*channels)[i] = MAX_CHANNEL;
+    }
+    return 0;
+
+}
 typedef int (*src_io_type_handle)(int index, struct io_copy_arg *copy_arg, int *infds, int *srcfds);
 
 struct src_io_copy_handler {
@@ -292,7 +305,8 @@ static int handle_src_io_max(int index, struct io_copy_arg *copy_arg, int *infds
     return -1;
 }
 
-static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds, int *srcfds)
+static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *infds,
+                               int *srcfds, transfer_channel_type *channels)
 {
     size_t i;
 
@@ -307,6 +321,7 @@ static int io_copy_make_srcfds(size_t len, struct io_copy_arg *copy_arg, int *in
         if (src_handler_jump_table[(int)(copy_arg[i].srctype)].handle(i, copy_arg, infds, srcfds) != 0) {
             return -1;
         }
+        channels[i] = copy_arg[i].channel;
     }
 
     return 0;
@@ -412,6 +427,7 @@ static void *io_copy_thread_main(void *arg)
     int *outfds = NULL; // recored fds to close
     int *srcfds = NULL;
     struct io_write_wrapper *writers = NULL;
+    transfer_channel_type *channels = NULL;
     int sync_fd = thread_arg->sync_fd;
     bool posted = false;
 
@@ -426,11 +442,11 @@ static void *io_copy_thread_main(void *arg)
     (void)prctl(PR_SET_NAME, "IoCopy");
 
     len = thread_arg->len;
-    if (io_copy_init_fds(len, &infds, &outfds, &srcfds, &writers) != 0) {
+    if (io_copy_init_fds(len, &infds, &outfds, &srcfds, &writers, &channels) != 0) {
         goto err;
     }
 
-    if (io_copy_make_srcfds(len, copy_arg, infds, srcfds) != 0) {
+    if (io_copy_make_srcfds(len, copy_arg, infds, srcfds, channels) != 0) {
         goto err;
     }
 
@@ -440,12 +456,12 @@ static void *io_copy_thread_main(void *arg)
 
     sem_post(&thread_arg->wait_sem);
     posted = true;
-    (void)console_loop_io_copy(sync_fd, srcfds, writers, len);
+    (void)console_loop_io_copy(sync_fd, srcfds, writers, channels, len);
 err:
     if (!posted) {
         sem_post(&thread_arg->wait_sem);
     }
-    io_copy_thread_cleanup(writers, thread_arg, infds, outfds, srcfds, len);
+    io_copy_thread_cleanup(writers, thread_arg, infds, outfds, srcfds, channels, len);
     DAEMON_CLEAR_ERRMSG();
     return NULL;
 }
@@ -480,26 +496,27 @@ static int start_io_copy_thread(int sync_fd, bool detach, struct io_copy_arg *co
 }
 
 static void add_io_copy_element(struct io_copy_arg *element, io_type srctype, void *src, io_type dsttype, void *dst,
-                                int dstfifoflag)
+                                int dstfifoflag, transfer_channel_type channel)
 {
     element->srctype = srctype;
     element->src = src;
     element->dsttype = dsttype;
     element->dst = dst;
     element->dstfifoflag = dstfifoflag;
+    element->channel = channel;
 }
 
 /*
     -----------------------------------------------------------------------------------
     |  CHANNEL |      iSula                          iSulad                    lxc    |
     -----------------------------------------------------------------------------------
-    |          |                    fifoin                         fifos[0]           |
+    |          |                fifoin | stdin_fd                  fifos[0]           |
     |    IN    |       RDWR       -------->       RD      RDWR     -------->      RD  |
     -----------------------------------------------------------------------------------
-    |          |                   fifoout                         fifos[1]           |
+    |          |             fifoout | stdout_handler              fifos[1]           |
     |    OUT   |       RD         <--------       WR       RD      <--------      WR  |
     -----------------------------------------------------------------------------------
-    |          |                   fifoerr                         fifos[2]           |
+    |          |             fifoerr stderr_handler                fifos[2]           |
     |    ERR   |       RD         <--------       WR       RD      <--------     WR   |
     -----------------------------------------------------------------------------------
 */
@@ -513,29 +530,29 @@ int ready_copy_io_data(int sync_fd, bool detach, const char *fifoin, const char 
     if (fifoin != NULL) {
         // fifoin   : iSula -> iSulad read
         // fifos[0] : iSulad -> lxc write
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifoin, IO_FIFO, (void *)fifos[0], O_RDWR);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifoin, IO_FIFO, (void *)fifos[0], O_RDWR, STDIN_CHANNEL);
     }
 
     if (fifoout != NULL) {
         // fifos[1]  : lxc -> iSulad read
         // fifoout   : iSulad -> iSula write
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FIFO, (void *)fifoout, O_WRONLY, STDOUT_CHANNEL);
     }
 
     if (fifoerr != NULL) {
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FIFO, (void *)fifoerr, O_WRONLY, STDERR_CHANNEL);
     }
 
     if (stdin_fd > 0) {
-        add_io_copy_element(&io_copy[len++], IO_FD, &stdin_fd, IO_FIFO, (void *)fifos[0], O_RDWR);
+        add_io_copy_element(&io_copy[len++], IO_FD, &stdin_fd, IO_FIFO, (void *)fifos[0], O_RDWR, STDIN_CHANNEL);
     }
 
     if (stdout_handler != NULL) {
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FUNC, stdout_handler, O_WRONLY);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[1], IO_FUNC, stdout_handler, O_WRONLY, STDOUT_CHANNEL);
     }
 
     if (stderr_handler != NULL) {
-        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FUNC, stderr_handler, O_WRONLY);
+        add_io_copy_element(&io_copy[len++], IO_FIFO, (void *)fifos[2], IO_FUNC, stderr_handler, O_WRONLY, STDERR_CHANNEL);
     }
 
     if (start_io_copy_thread(sync_fd, detach, io_copy, len, tid) != 0) {

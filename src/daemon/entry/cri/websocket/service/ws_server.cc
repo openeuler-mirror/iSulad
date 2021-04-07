@@ -30,7 +30,6 @@ struct lws_context *WebsocketServer::m_context = nullptr;
 std::atomic<WebsocketServer *> WebsocketServer::m_instance;
 RWMutex WebsocketServer::m_mutex;
 std::unordered_map<int, session_data> WebsocketServer::m_wsis;
-std::unordered_set<struct lws *> WebsocketServer::m_activeSession;
 
 WebsocketServer *WebsocketServer::GetInstance() noexcept
 {
@@ -159,12 +158,10 @@ void WebsocketServer::CloseAllWsSession()
 {
     WriteGuard<RWMutex> lock(m_mutex);
     for (auto it = m_wsis.begin(); it != m_wsis.end(); ++it) {
-        free(it->second.buf);
+        it->second.EraseAllMessage();
         close(it->second.pipes.at(0));
         close(it->second.pipes.at(1));
-        it->second.sended = true;
         delete it->second.buf_mutex;
-        delete it->second.sended_mutex;
     }
     m_wsis.clear();
 }
@@ -173,59 +170,54 @@ void WebsocketServer::CloseWsSession(int socketID)
 {
     auto it = m_wsis.find(socketID);
     if (it != m_wsis.end()) {
-        free(it->second.buf);
+        it->second.EraseAllMessage();
+        // close the pipe write endpoint first, make sure io copy thread exit,
+        // otherwise epoll will trigger EOF
+        if (it->second.pipes.at(1) >= 0) {
+            close(it->second.pipes.at(1));
+            it->second.pipes.at(1) = -1;
+        }
+        (void)sem_wait(it->second.sync_close_sem);
+        (void)sem_destroy(it->second.sync_close_sem);
         close(it->second.pipes.at(0));
-        close(it->second.pipes.at(1));
-        it->second.sended = true;
         delete it->second.buf_mutex;
-        delete it->second.sended_mutex;
         m_wsis.erase(it);
     }
 }
 
-void WebsocketServer::RecordSession(struct lws *wsi)
-{
-    m_activeSession.insert(wsi);
-}
-
-void WebsocketServer::RemoveSession(struct lws *wsi)
-{
-    m_activeSession.erase(wsi);
-}
-
-bool WebsocketServer::IsValidSession(struct lws *wsi)
-{
-    return m_activeSession.count(wsi) != 0;
-}
-
-int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
+int WebsocketServer::GenerateSessionData(session_data &session) noexcept
 {
     int read_pipe_fd[PIPE_FD_NUM];
     if (InitRWPipe(read_pipe_fd) < 0) {
         ERROR("failed to init read/write pipe!");
-    }
-
-    session_data session;
-    session.pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
-
-    int socketID = lws_get_socket_fd(wsi);
-    m_wsis.insert(std::make_pair(socketID, std::move(session)));
-    m_wsis[socketID].buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
-    if (m_wsis[socketID].buf == nullptr) {
-        ERROR("Out of memory");
         return -1;
     }
-    m_wsis[socketID].buf_mutex = new std::mutex;
-    m_wsis[socketID].sended_mutex = new std::mutex;
-    m_wsis[socketID].SetProcessingStatus(false);
 
-    int len;
+    std::mutex *buf_mutex = new std::mutex;
+    sem_t *sync_close_sem = new sem_t;
+
+    if (sem_init(sync_close_sem, 0, 0) != 0) {
+        ERROR("Semaphore initialization failed");
+        close(read_pipe_fd[1]);
+        close(read_pipe_fd[0]);
+        delete buf_mutex;
+        delete sync_close_sem;
+        return -1;
+    }
+
+    session.pipes = std::array<int, MAX_ARRAY_LEN> { read_pipe_fd[0], read_pipe_fd[1] };
+    session.buf_mutex = buf_mutex;
+    session.sync_close_sem = sync_close_sem;
+
+    return 0;
+}
+
+int WebsocketServer::RegisterStreamTask(struct lws *wsi) noexcept
+{
     char buf[MAX_BUF_LEN] { 0 };
-
     lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI);
     if (strlen(buf) == 0) {
         ERROR("invalid url");
-        CloseWsSession(socketID);
         return -1;
     }
 
@@ -237,60 +229,68 @@ int WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
         !m_handler.IsValidMethod(vec.at(1)) ||
         !cache->IsValidToken(vec.at(2))) {
         ERROR("invalid url(%s): incorrect format!", buf);
-        CloseWsSession(socketID);
         return -1;
     }
 
+    session_data session;
+    if (GenerateSessionData(session) != 0) {
+        ERROR("failed to fill generate session data");
+        return -1;
+    }
+
+    int socketID = lws_get_socket_fd(wsi);
+    m_wsis.insert(std::make_pair(socketID, std::move(session)));
+
+    lwsContext lwsCtx = {
+        .fd = socketID,
+        .sync_close_sem = m_wsis[socketID].sync_close_sem,
+    };
     std::thread streamTh([ = ]() {
-        StreamTask(&m_handler, wsi, vec.at(1), vec.at(2), m_wsis[socketID].pipes.at(0)).Run();
+        StreamTask(&m_handler, lwsCtx, vec.at(1), vec.at(2), m_wsis[socketID].pipes.at(0)).Run();
     });
     streamTh.detach();
-    RecordSession(wsi);
+
+    return 0;
+}
+
+void WebsocketServer::DumpHandshakeInfo(struct lws *wsi) noexcept
+{
     int n = 0;
     const unsigned char *c = nullptr;
+    char buf[MAX_BUF_LEN] { 0 };
+
     do {
         c = lws_token_to_string((lws_token_indexes)n);
         if (c == nullptr) {
             n++;
             continue;
         }
-        len = lws_hdr_total_length(wsi, (lws_token_indexes)n);
+        int len = lws_hdr_total_length(wsi, (lws_token_indexes)n);
         if (len == 0 || (static_cast<size_t>(len) > sizeof(buf) - 1)) {
             n++;
             continue;
         }
+
         lws_hdr_copy(wsi, buf, sizeof(buf), (lws_token_indexes)n);
         buf[sizeof(buf) - 1] = '\0';
         DEBUG("    %s = %s", (char *)c, buf);
         n++;
     } while (c != nullptr);
-
-    return 0;
 }
 
-int WebsocketServer::Wswrite(struct lws *wsi, void *in, size_t len)
+int WebsocketServer::Wswrite(struct lws *wsi, const unsigned char *message)
 {
     auto it = m_wsis.find(lws_get_socket_fd(wsi));
     if (it != m_wsis.end()) {
-        if (it->second.close) {
-            DEBUG("websocket session disconnected");
-            return -1;
-        }
-        it->second.buf_mutex->lock();
-        auto &buf = it->second.buf;
-        if (strlen((const char *)(&buf[LWS_PRE + 1])) == 0) {
-            it->second.buf_mutex->unlock();
+        if (strlen((const char *)(&message[LWS_PRE + 1])) == 0) {
             return 0;
         }
-        int n = lws_write(wsi, (unsigned char *)(&buf[LWS_PRE]),
-                          strlen((const char *)(&buf[LWS_PRE + 1])) + 1, LWS_WRITE_TEXT);
+        int n = lws_write(wsi, (unsigned char *)(&message[LWS_PRE]),
+                          strlen((const char *)(&message[LWS_PRE + 1])) + 1, LWS_WRITE_TEXT);
         if (n < 0) {
-            it->second.buf_mutex->unlock();
             ERROR("ERROR %d writing to socket, hanging up", n);
             return -1;
         }
-        (void)memset(buf, 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
-        it->second.buf_mutex->unlock();
     }
 
     return 0;
@@ -314,16 +314,6 @@ void WebsocketServer::Receive(int socketID, void *in, size_t len)
     }
 }
 
-void WebsocketServer::SetLwsSendedFlag(int socketID, bool sended)
-{
-    if (m_wsis.count(socketID) == 0) {
-        return;
-    }
-    m_wsis[socketID].sended_mutex->lock();
-    m_wsis[socketID].sended = sended;
-    m_wsis[socketID].sended_mutex->unlock();
-}
-
 int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
                               void *user, void *in, size_t len)
 {
@@ -334,10 +324,13 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
             return -1;
         case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
                 WriteGuard<RWMutex> lock(m_mutex);
-                if (WebsocketServer::GetInstance()->DumpHandshakeInfo(wsi)) {
+                WebsocketServer::GetInstance()->DumpHandshakeInfo(wsi);
+                if (WebsocketServer::GetInstance()->RegisterStreamTask(wsi) != 0) {
                     // return non-zero here and kill the connection
                     return -1;
                 }
+                // Trigger polling in LWS_CALLBACK_SERVER_WRITEABLE
+                lws_callback_on_writable(wsi);
             }
             break;
         case LWS_CALLBACK_ESTABLISHED: {
@@ -347,13 +340,32 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
         case LWS_CALLBACK_SERVER_WRITEABLE: {
                 ReadGuard<RWMutex> lock(m_mutex);
                 int socketID = lws_get_socket_fd(wsi);
-                if (WebsocketServer::GetInstance()->Wswrite(wsi, in, len)) {
-                    WebsocketServer::GetInstance()->SetLwsSendedFlag(socketID, true);
+                auto it = m_wsis.find(socketID);
+                if (it == m_wsis.end()) {
+                    DEBUG("invalid session!");
                     // return nonzero from the user callback to close the connection
                     // and callback with the reason of LWS_CALLBACK_CLOSED
                     return -1;
                 }
-                WebsocketServer::GetInstance()->SetLwsSendedFlag(socketID, true);
+
+                while (!it->second.buffer.empty()) {
+                    unsigned char *message = it->second.FrontMessage();
+                    // send success! free it and erase for list
+                    if (WebsocketServer::GetInstance()->Wswrite(wsi, (const unsigned char *)message) == 0) {
+                        free(message);
+                        it->second.PopMessage();
+                    } else {
+                        // Another case ret > 0, send fail! keep message and send it again!
+                        // Or maybe the client was shut down abnormally
+                        break;
+                    }
+                }
+
+                if (it->second.close) {
+                    DEBUG("websocket session disconnected");
+                    return -1;
+                }
+                lws_callback_on_writable(wsi);
             }
             break;
         case LWS_CALLBACK_RECEIVE: {
@@ -364,8 +376,8 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
         case LWS_CALLBACK_CLOSED: {
                 WriteGuard<RWMutex> lock(m_mutex);
                 DEBUG("connection has been closed");
-                WebsocketServer::GetInstance()->RemoveSession(wsi);
-                WebsocketServer::GetInstance()->CloseWsSession(lws_get_socket_fd(wsi));
+                int socketID = lws_get_socket_fd(wsi);
+                WebsocketServer::GetInstance()->CloseWsSession(socketID);
             }
             break;
         default:
@@ -377,6 +389,9 @@ int WebsocketServer::Callback(struct lws *wsi, enum lws_callback_reasons reason,
 void WebsocketServer::ServiceWorkThread(int threadid)
 {
     int n = 0;
+
+    prctl(PR_SET_NAME, "WebsocketServer");
+
     while (n >= 0 && !m_force_exit) {
         n = lws_service(m_context, 0);
     }
@@ -410,73 +425,37 @@ void WebsocketServer::Wait()
 }
 
 namespace {
-auto PrepareWsiSession(int socketID) -> session_data *
-{
-    WebsocketServer *server = WebsocketServer::GetInstance();
-    server->ReadLockAllWsSession();
 
-    auto itor = server->GetWsisData().find(socketID);
-    if (itor == server->GetWsisData().end()) {
-        ERROR("invalid session!");
-        server->UnlockAllWsSession();
-        return nullptr;
-    }
-    server->SetLwsSendedFlag(socketID, false);
-    server->UnlockAllWsSession();
-
-    return &itor->second;
-}
-
-void DoWriteToClient(struct lws *wsi, session_data *session,
+void DoWriteToClient(int fd, session_data *session,
                      const void *data, size_t len, WebsocketChannel channel)
 {
-    session->buf_mutex->lock();
-    // Determine if it is standard output channel or error channel
-    (void)memset(session->buf, 0, LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
-    session->buf[LWS_PRE] = channel;
-
-    (void)memcpy(&session->buf[LWS_PRE + 1], (void *)data, len);
-
-    lws_callback_on_writable(wsi);
-
-    session->buf_mutex->unlock();
-}
-
-void EnsureWrited(struct lws *wsi, session_data *session)
-{
-    const int RETRIES = 10;
-    const int CHECK_PERIOD_SECOND = 1;
-    const int TRIGGER_PERIOD_MS = 1;
-    auto start = std::chrono::system_clock::now();
-    int count = 0;
-
-    while (!session->sended && count < RETRIES) {
-        auto end = std::chrono::system_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        double spend_time = static_cast<double>(duration.count()) * std::chrono::microseconds::period::num /
-                            std::chrono::microseconds::period::den;
-        if (spend_time > CHECK_PERIOD_SECOND) {
-            lws_callback_on_writable(wsi);
-            std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
-            start = std::chrono::system_clock::now();
-            count++;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(TRIGGER_PERIOD_MS));
+    unsigned char *buf = (unsigned char *)util_common_calloc_s(LWS_PRE + MAX_MSG_BUFFER_SIZE + 1);
+    if (buf == nullptr) {
+        ERROR("Out of memory");
+        return;
     }
+    // Determine if it is standard output channel or error channel
+    buf[LWS_PRE] = channel;
+
+    (void)memcpy(&buf[LWS_PRE + 1], (void *)data, len);
+
+    // push back to message list
+    session->PushMessage(buf);
 }
 
 ssize_t WsWriteToClient(void *context, const void *data, size_t len, WebsocketChannel channel)
 {
-    struct lws *wsi = static_cast<struct lws *>(context);
+    auto *lwsCtx = static_cast<lwsContext *>(context);
+    int fd = lwsCtx->fd;
 
-    session_data *session = PrepareWsiSession(lws_get_socket_fd(wsi));
-    if (session == nullptr) {
+    WebsocketServer *server = WebsocketServer::GetInstance();
+    auto itor = server->GetWsisData().find(fd);
+    if (itor == server->GetWsisData().end()) {
+        ERROR("invalid session!");
         return 0;
     }
 
-    DoWriteToClient(wsi, session, data, len, channel);
-
-    EnsureWrited(wsi, session);
+    DoWriteToClient(fd, &itor->second, data, len, channel);
 
     return static_cast<ssize_t>(len);
 }
@@ -495,23 +474,37 @@ ssize_t WsWriteStderrToClient(void *context, const void *data, size_t len)
 int closeWsConnect(void *context, char **err)
 {
     (void)err;
-    struct lws *wsi = static_cast<struct lws *>(context);
+    auto *lwsCtx = static_cast<lwsContext *>(context);
+
+    if (lwsCtx->sync_close_sem != nullptr) {
+        (void)sem_post(lwsCtx->sync_close_sem);
+    }
 
     WebsocketServer *server = WebsocketServer::GetInstance();
     server->ReadLockAllWsSession();
-    auto it = server->GetWsisData().find(lws_get_socket_fd(wsi));
+    auto it = server->GetWsisData().find(lwsCtx->fd);
     if (it == server->GetWsisData().end()) {
         server->UnlockAllWsSession();
         ERROR("websocket session not exist");
+        delete lwsCtx;
         return -1;
     }
-
+    // will close websocket session on LWS_CALLBACK_SERVER_WRITEABLE polling
     it->second.close = true;
-    // close websocket session
-    if (server->IsValidSession(wsi)) {
-        lws_callback_on_writable(wsi);
-    }
     server->UnlockAllWsSession();
+
+    delete lwsCtx;
+    return 0;
+}
+
+int closeWsStream(void *context, char **err)
+{
+    (void)err;
+    auto *lwsCtx = static_cast<lwsContext *>(context);
+
+    if (lwsCtx->sync_close_sem != nullptr) {
+        (void)sem_post(lwsCtx->sync_close_sem);
+    }
 
     return 0;
 }

@@ -43,6 +43,8 @@ struct tty_state {
     bool ignore_stdin_close;
 };
 
+typedef enum { STDIN_CHANNEL, STDOUT_CHANNEL, STDERR_CHANNEL, MAX_CHANNEL} transfer_channel_type;
+
 int console_fifo_name(const char *rundir, const char *subpath, const char *stdflag, char *fifo_name,
                       size_t fifo_name_sz, char *fifo_path, size_t fifo_path_sz, bool do_mkdirp);
 
@@ -59,7 +61,8 @@ void console_fifo_close(int fd);
 int console_loop_with_std_fd(int stdinfd, int stdoutfd, int stderrfd, int fifoinfd, int fifooutfd, int fifoerrfd,
                              int tty_exit, bool tty);
 
-int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper *writers, size_t len);
+int console_loop_io_copy(int sync_fd, const int *srcfds, struct io_write_wrapper *writers,
+                         transfer_channel_type *channels, size_t len);
 
 int setup_tios(int fd, struct termios *curr_tios);
 
