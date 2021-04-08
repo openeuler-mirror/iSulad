@@ -192,13 +192,15 @@ static void stats_output(const struct client_arguments *args, struct isula_stats
 {
     size_t i;
 
-    printf(TERMCLEAR);
-    stats_print_header();
-    for (i = 0; i < (*response)->container_num; i++) {
-        stats_print(&((*response)->container_stats[i]));
-        printf("\n");
+    if (g_oldstats != NULL) {
+        printf(TERMCLEAR);
+        stats_print_header();
+        for (i = 0; i < (*response)->container_num; i++) {
+            stats_print(&((*response)->container_stats[i]));
+            printf("\n");
+        }
+        fflush(stdout);
     }
-    fflush(stdout);
 
     isula_stats_response_free(g_oldstats);
     g_oldstats = *response;
@@ -222,6 +224,7 @@ static int client_stats_mainloop(const struct client_arguments *args, const stru
     config = get_connect_config(args);
 
     while (1) {
+        bool first_frame = false;
         struct isula_stats_response *response = NULL;
         response = util_common_calloc_s(sizeof(struct isula_stats_response));
         if (response == NULL) {
@@ -239,6 +242,10 @@ static int client_stats_mainloop(const struct client_arguments *args, const stru
             goto out;
         }
 
+        if (g_oldstats == NULL) {
+            first_frame = true;
+        }
+
         if (args->original) {
             stats_output_original(args, &response);
             isula_stats_response_free(response);
@@ -247,7 +254,8 @@ static int client_stats_mainloop(const struct client_arguments *args, const stru
 
         stats_output(args, &response);
         isula_stats_response_free(response);
-        if (args->nostream) {
+
+        if (args->nostream && !first_frame) {
             goto out;
         }
 
