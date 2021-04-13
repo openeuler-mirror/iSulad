@@ -27,8 +27,10 @@ $ sudo ./install_iSulad_on_Centos_7.sh
 ```
 
 ### Ubuntu的安装命令
-```bash
-$ sudo apt install -y g++ libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc++-dev libgrpc-dev libtool automake autoconf cmake make pkg-config libyajl-dev zlib1g-dev libselinux-dev libseccomp-dev libcap-dev libsystemd-dev git libarchive libarchive-dev libcurl4-gnutls-dev openssl libdevmapper-dev python3 libtar libtar-dev
+```sh
+$ git clone https://gitee.com/openeuler/iSulad.git
+$ cd iSulad/docs
+$ sudo ./docs/install_iSulad_on_Ubuntu_20_04_LTS.sh
 ```
 
 ## 从源码构建和安装关键依赖
