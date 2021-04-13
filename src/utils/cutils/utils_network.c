@@ -702,14 +702,27 @@ static void generate_ip_string(const uint8_t *ip, int e0, int e1, char **result)
         } else if (i > 0) {
             (*result)[j++] = ':';
         }
+        bool skip = true;
         int nret = (ip[i] >> 4);
-        (*result)[j++] = g_HEX_DICT[nret];
+        if (nret != 0) {
+            (*result)[j++] = g_HEX_DICT[nret];
+            skip = false;
+        }
         nret = (ip[i] & 0x0f);
-        (*result)[j++] = g_HEX_DICT[nret];
+        if (nret != 0 || !skip) {
+            (*result)[j++] = g_HEX_DICT[nret];
+            skip = false;
+        }
         nret = (ip[i + 1] >> 4);
-        (*result)[j++] = g_HEX_DICT[nret];
+        if (nret != 0 || !skip) {
+            (*result)[j++] = g_HEX_DICT[nret];
+            skip = false;
+        }
         nret = (ip[i + 1] & 0x0f);
-        (*result)[j++] = g_HEX_DICT[nret];
+        if (nret != 0 || !skip) {
+            (*result)[j++] = g_HEX_DICT[nret];
+            skip = false;
+        }
     }
     return;
 }
@@ -1038,14 +1051,14 @@ bool util_validate_network_interface(const char *if_name)
 
 bool util_validate_ipv4_address(const char *ipv4)
 {
-    struct sockaddr_in sa;
+    struct in_addr sin_addr;
 
     if (ipv4 == NULL) {
         ERROR("missing ipv4 address");
         return false;
     }
 
-    if (inet_pton(AF_INET, ipv4, &sa.sin_addr) != 1) {
+    if (inet_pton(AF_INET, ipv4, &sin_addr) != 1) {
         return false;
     }
 
@@ -1054,14 +1067,14 @@ bool util_validate_ipv4_address(const char *ipv4)
 
 bool util_validate_ipv6_address(const char *ipv6)
 {
-    struct sockaddr_in sa;
+    struct in6_addr sin_addr;
 
     if (ipv6 == NULL) {
         ERROR("missing ipv6 address");
         return false;
     }
 
-    if (inet_pton(AF_INET6, ipv6, &sa.sin_addr) != 1) {
+    if (inet_pton(AF_INET6, ipv6, &sin_addr) != 1) {
         return false;
     }
 
