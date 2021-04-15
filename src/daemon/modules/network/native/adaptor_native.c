@@ -161,28 +161,24 @@ static const struct plugin_op g_dnsname_plugin = {
 static const struct plugin_op *g_bridge_driver_plugins[] = { &g_bridge_plugin, &g_portmap_plugin, &g_firewall_plugin, &g_dnsname_plugin};
 
 struct net_driver_ops {
-    cni_net_conf_list * (*conf)(const network_create_request *request, char **missing);
+    cni_net_conf_list * (*conf)(const network_create_request *request, string_array *missing);
     int (*check)(const network_create_request *request);
-    string_array *(*detect)(void);
     int (*remove)(cni_net_conf_list *list);
 };
 
-static cni_net_conf_list *conf_bridge(const network_create_request *request, char **missing);
+static cni_net_conf_list *conf_bridge(const network_create_request *request, string_array *missing);
 static int check_bridge(const network_create_request *request);
-static string_array *detect_bridge(void);
 static int remove_bridge(cni_net_conf_list *list);
 
 static const struct net_driver_ops g_bridge_ops = {
     .conf = conf_bridge,
     .check = check_bridge,
-    .detect = detect_bridge,
     .remove = remove_bridge,
 };
 
 static const struct net_driver_ops g_macvlan_ops = {
     .conf = NULL,
     .check = NULL,
-    .detect = NULL,
     .remove = NULL,
 };
 
@@ -1235,7 +1231,31 @@ err_out:
     return NULL;
 }
 
-static cni_net_conf_list *conf_bridge(const network_create_request *request, char **missing)
+static bool cni_bin_detect(const char *cni)
+{
+    size_t i;
+    char *path = NULL;
+
+    for (i = 0; i < g_store.bin_paths_len; i++) {
+        path = util_path_join(g_store.bin_paths[i], cni);
+        if (path == NULL) {
+            ERROR("Failed to join path %s and %s", g_store.bin_paths[i], cni);
+            return false;
+        }
+
+        if (util_file_exists(path)) {
+            free(path);
+            return true;
+        }
+
+        free(path);
+        path = NULL;
+    }
+
+    return false;
+}
+
+static cni_net_conf_list *conf_bridge(const network_create_request *request, string_array *missing)
 {
     size_t i;
     cni_net_conf_list *list = NULL;
@@ -1253,19 +1273,26 @@ static cni_net_conf_list *conf_bridge(const network_create_request *request, cha
     }
 
     for (i = 0; i < BRIDGE_DRIVER_PLUGINS_LEN; i++) {
+        cni_net_conf *plugin = NULL;
+
         if (strcmp(g_bridge_driver_plugins[i]->plugin, g_dnsname_plugin.plugin) == 0) {
             // TODO: add dnsname in network conflist
             // skip conf dnsname now, because of dnsname plugin bug
             continue;
         }
+        if (!cni_bin_detect(g_bridge_driver_plugins[i]->plugin)) {
+            // skip conf dnsname if dnsname plugin not exist
+            if (strcmp(g_bridge_driver_plugins[i]->plugin, g_dnsname_plugin.plugin) == 0) {
+                continue;
+            }
 
-        // skip conf dnsname if dnsname plugin not exist
-        if (strcmp(g_bridge_driver_plugins[i]->plugin, g_dnsname_plugin.plugin) == 0 &&
-            util_array_contain((const char **)missing, g_dnsname_plugin.plugin)) {
-            continue;
+            if (util_append_string_array(g_bridge_driver_plugins[i]->plugin, missing) != 0) {
+                ERROR("Failed to append string %s to array", g_bridge_driver_plugins[i]->plugin);
+                goto err_out;
+            }
         }
 
-        cni_net_conf *plugin = g_bridge_driver_plugins[i]->op(request);
+        plugin = g_bridge_driver_plugins[i]->op(request);
         if (plugin == NULL) {
             ERROR("Failed to config %s plugin", g_bridge_driver_plugins[i]->plugin);
             goto err_out;
@@ -1344,57 +1371,7 @@ out:
     return ret;
 }
 
-static int do_cni_bin_detect(const char *file, string_array *missing)
-{
-    size_t i;
-    char *path = NULL;
-
-    for (i = 0; i < g_store.bin_paths_len; i++) {
-        path = util_path_join(g_store.bin_paths[i], file);
-        if (path == NULL) {
-            return -1;
-        }
-
-        if (util_file_exists(path)) {
-            free(path);
-            return 0;
-        }
-
-        free(path);
-        path = NULL;
-    }
-
-    return util_append_string_array(file, missing);
-}
-
-static string_array *detect_bridge()
-{
-    int nret = 0;
-    size_t i = 0;
-    string_array *res = NULL;
-
-    res = (string_array *)util_common_calloc_s(sizeof(string_array));
-    if (res == NULL) {
-        ERROR("Out of memory");
-        return NULL;
-    }
-
-    for (i = 0; i < BRIDGE_DRIVER_PLUGINS_LEN; i++) {
-        nret = do_cni_bin_detect(g_bridge_driver_plugins[i]->plugin, res);
-        if (nret != 0) {
-            ERROR("Failed to do cni bin detect for plugin %s", g_bridge_driver_plugins[i]->plugin);
-            goto err_out;
-        }
-    }
-
-    return res;
-
-err_out:
-    util_free_string_array(res);
-    return NULL;
-}
-
-static int set_missing_plugin_err_msg(string_array *missing)
+static int set_missing_plugin_err_msg(const string_array *missing)
 {
     int ret = 0;
     char *cni_str = NULL;
@@ -1448,7 +1425,7 @@ int native_config_create(const network_create_request *request, network_create_r
         goto out;
     }
 
-    if (pnet->ops->check == NULL || pnet->ops->conf == NULL || pnet->ops->detect == NULL) {
+    if (pnet->ops->check == NULL || pnet->ops->conf == NULL) {
         ERROR("net type: %s unsupport ops", pnet->driver);
         ret = -1;
         goto out;
@@ -1461,7 +1438,13 @@ int native_config_create(const network_create_request *request, network_create_r
         goto out;
     }
 
-    missing = pnet->ops->detect();
+    missing = (string_array *)util_common_calloc_s(sizeof(string_array));
+    if (missing == NULL) {
+        ERROR("Out of memory");
+        cc = ISULAD_ERR_EXEC;
+        ret = -1;
+        goto out;
+    }
 
     conflist = (struct cni_network_list_conf *)util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (conflist == NULL) {
@@ -1471,7 +1454,7 @@ int native_config_create(const network_create_request *request, network_create_r
         goto out;
     }
 
-    conflist->list = pnet->ops->conf(request, missing->items);
+    conflist->list = pnet->ops->conf(request, missing);
     if (conflist->list == NULL) {
         ERROR("Failed to conf %s", pnet->driver);
         cc = ISULAD_ERR_EXEC;
