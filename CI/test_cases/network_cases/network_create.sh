@@ -73,7 +73,7 @@ function test_network_create()
     isula network create --subnet 192.172.58.0/24 --gateway 192.0.0.1 2>&1 | grep "not match"
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network success by specifing unmatch subnet gateway, but should failed" && return ${FAILURE}
 
-    isula network create --subnet 192.172.58.0/24 ${name1}
+    isula network create --subnet 192.172.58.156/24 ${name1}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network ${name1} failed" && return ${FAILURE}
     file1="/etc/cni/net.d/isulacni-${name1}.conflist"
     [ ! -f ${file1} ] && msg_err "${FUNCNAME[0]}:${LINENO} - file ${file1} not exist" && return ${FAILURE}
@@ -115,14 +115,14 @@ function test_network_create()
     isula network rm ${name}
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - network rm ${name} failed" && return ${FAILURE}
 
-    name=$(isula network create --subnet fff0:3::3/64 | awk 'END {print}')
+    name=$(isula network create --subnet fff0:0003::0003/64 | awk 'END {print}')
     [[ "x${name}" == "x" ]] && msg_err "${FUNCNAME[0]}:${LINENO} - create network with specifing IPv6 subnet" && return ${FAILURE}
 
     file="/etc/cni/net.d/isulacni-${name}.conflist"
-    cat ${file} | grep '"subnet": "fff0:0003::/64",'
+    cat ${file} | grep '"subnet": "fff0:3::/64",'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no specified subnet in file" && return ${FAILURE}
 
-    cat ${file} | grep '"gateway": "fff0:0003::0001"'
+    cat ${file} | grep '"gateway": "fff0:3::1"'
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - no gateway in file" && return ${FAILURE}
 
     isula network rm ${name}
