@@ -107,6 +107,8 @@ install -d $RPM_BUILD_ROOT/%{_initddir}
 install -p -m 0640 ../src/contrib/init/isulad.init $RPM_BUILD_ROOT/%{_initddir}/isulad.init
 %endif
 
+install -d $RPM_BUILD_ROOT/usr/share/bash-completion/completions
+install -p -m 0644 ../src/contrib/completion/isula $RPM_BUILD_ROOT/usr/share/bash-completion/completions/isula
 %clean
 rm -rf %{buildroot}
 
@@ -125,6 +127,8 @@ fi
 fi
 
 %post
+source /usr/share/bash-completion/completions/isula
+
 if ! getent group isula > /dev/null; then
     groupadd --system isula
 fi
@@ -211,6 +215,7 @@ fi
 %else
 %config(noreplace,missingok) %{_initddir}/isulad.init
 %endif
+/usr/share/bash-completion/completions/isula
 
 %changelog
 * Tue Sep 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 2.0.5-20200910.140350.git72990229

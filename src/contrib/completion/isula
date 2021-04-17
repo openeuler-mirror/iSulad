@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+_isula_isula() {
+    local isula_management_commands=(
+        volume
+    )
+
+    local isula_commands=(
+        attach
+        cp
+        create
+        events
+        exec
+        export
+        images
+        import
+        info
+        inspect
+        kill
+        load
+        login
+        logout
+        logs
+        pause
+        ps
+        pull
+        rename
+        restart
+        rm
+        rmi
+        run
+        start
+        stats
+        stop
+        tag
+        top
+        unpause
+        update
+        version
+        wait
+    )
+
+    local commands=(${isula_management_commands[*]} ${isula_commands[*]})
+    local common_options=(
+        --help
+        -H --host
+        --tls
+        --tlscacert
+        --tlscert
+        --tlskey
+        --tlsverify
+        --version
+    )
+
+    case "$prev" in
+        #todo.....
+    esac
+
+    case "$cur" in
+        -*)
+            COMPREPLY=( $( compgen -W "${common_options[*]}" -- "$cur" ) )
+            ;;
+        *)
+            COMPREPLY=( $( compgen -W "${commands[*]}" -- "$cur" ) )
+            ;;
+    esac
+}
+
+
+_isula() {
+    COMPREPLY=()
+
+    #An array variable consisting of the individual words in the current command line
+    local words=(${COMP_WORDS[*]})
+    #An index into ${word} of the word containing the current cursor position
+    local cword=$COMP_CWORD
+    local cur="${words[$cword]}"
+    local prev="${words[$cword-1]}"
+    local command='isula'
+
+    local completions_func=_isula_${command//-/_}
+
+    #The completion of the secondary command will be added later
+    if [ $cword -lt 2 ] ; then
+        declare -F $completions_func >/dev/null && $completions_func
+    fi
+
+    return 0
+}
+
+complete -F _isula isula
