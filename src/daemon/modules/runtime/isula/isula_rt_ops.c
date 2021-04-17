@@ -582,7 +582,8 @@ static int runtime_call_simple(const char *workdir, const char *runtime, const c
 
     runtime_exec_info_init(&rei, workdir, runtime, subcmd, opts, opts_len, id, params, PARAM_NUM);
     if (!util_exec_cmd(runtime_exec_func, &rei, NULL, &stdout, &stderr)) {
-        WARN("call runtime %s failed stderr %s", subcmd, stderr);
+        ERROR("call runtime %s failed stderr %s", subcmd, stderr);
+        ret = -1;
         goto out;
     }
 
