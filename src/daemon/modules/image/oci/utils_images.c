@@ -142,6 +142,11 @@ char *oci_add_host(const char *host, const char *name)
         return NULL;
     }
 
+    if (strlen(host) == 0) {
+        WARN("Invalid host");
+        return NULL;
+    }
+
     if (strchr(name, '/') == NULL) {
         need_repo_prefix = true;
     }
@@ -152,7 +157,9 @@ char *oci_add_host(const char *host, const char *name)
         return NULL;
     }
     (void)strcat(with_host, host);
-    (void)strcat(with_host, "/");
+    if (host[strlen(host) - 1] != '/') {
+        (void)strcat(with_host, "/");
+    }
     if (need_repo_prefix) {
         (void)strcat(with_host, REPO_PREFIX_TO_STRIP);
     }
@@ -491,7 +498,7 @@ bool oci_valid_time(char *time)
 
 static int makesure_path_is_dir(char *path)
 {
-    struct stat st = {0};
+    struct stat st = { 0 };
 
     if (lstat(path, &st) != 0) {
         if (errno == ENOENT) {
@@ -542,7 +549,7 @@ char *oci_get_isulad_tmpdir(const char *root_dir)
 
 int makesure_isulad_tmpdir_perm_right(const char *root_dir)
 {
-    struct stat st = {0};
+    struct stat st = { 0 };
     char *isulad_tmpdir = NULL;
     int ret = 0;
 
