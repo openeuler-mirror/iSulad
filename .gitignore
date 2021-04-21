@@ -12,3 +12,4 @@ compile_commands.json
 tags
 .clangd
 iSula-libutils
+isulad_ci_test_data
