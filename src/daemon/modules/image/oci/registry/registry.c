@@ -389,6 +389,7 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
     cached_layer *cache = NULL;
     struct linked_list *node = NULL;
     char *src_file = NULL;
+    thread_fetch_info *src_info = NULL;
     file_elem *elem = {NULL};
     pull_descriptor *desc = info->desc;
 
@@ -430,6 +431,12 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
                 goto out;
             }
             src_file = ((file_elem*)elem)->file;
+            src_info = ((file_elem*)elem)->info;
+            if (src_info == NULL) {
+                ERROR("source info is NULL, this should never happen");
+                ret = -1;
+                goto out;
+            }
 
             if (link(src_file, file) != 0) {
                 ERROR("link %s to %s failed: %s", src_file, file, strerror(errno));
@@ -438,6 +445,9 @@ static int add_cached_layer(char *blob_digest, char *file, thread_fetch_info *in
             }
             // As layer have already downloaded, set this flag to let register thread to do register
             info->notified = true;
+            if (info->diffid == NULL) {
+                info->diffid = util_strdup_s(src_info->diffid);
+            }
         } else {
             ERROR("cached layer have result %d", cache->result);
             ret = -1;

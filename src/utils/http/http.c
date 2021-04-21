@@ -337,6 +337,53 @@ static struct curl_slist *set_custom_header(CURL *curl_handle, const struct http
     return chunk;
 }
 
+static size_t calc_replaced_url_len(const char *url)
+{
+    size_t i = 0;
+    size_t size = 0;
+    size_t max = 0;
+    size = strlen(url);
+
+    for (i = 0; i < size; i++) {
+        if (url[i] != ' ') {
+            max++;
+            continue;
+        }
+        max += 3;	/* ' ' to %20 so size should add 3 */
+    }
+
+    return max + 1; /* +1 for terminator */
+}
+
+static char *replace_url(const char *url)
+{
+    size_t i = 0;
+    size_t pos = 0;
+    size_t size = 0;
+    size_t max = 0;
+    char *replaced_url = NULL;
+
+    size = strlen(url);
+    max = calc_replaced_url_len(url);
+    replaced_url = util_common_calloc_s(max);
+    if (replaced_url == NULL) {
+        ERROR("out of memory");
+        return NULL;
+    }
+
+    for (i = 0; i < size; i++) {
+        if (url[i] != ' ') {
+            *(replaced_url + pos) = url[i];
+            pos++;
+            continue;
+        }
+        (void)strcat(replaced_url + pos, "%20");
+        pos += 3; /* ' ' to %20 so multiply 3 */
+    }
+
+    return replaced_url;
+}
+
 int http_request(const char *url, struct http_get_options *options, long *response_code, int recursive_len)
 {
 #define MAX_REDIRCT_NUMS 32
@@ -352,6 +399,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     char *redir_url = NULL;
     char *tmp = NULL;
     size_t fsize = 0;
+    char *replaced_url = 0;
 
     if (recursive_len + 1 >= MAX_REDIRCT_NUMS) {
         ERROR("reach the max redirect num");
@@ -364,8 +412,14 @@ int http_request(const char *url, struct http_get_options *options, long *respon
         return -1;
     }
 
+    replaced_url = replace_url(url);
+    if (replaced_url == NULL) {
+        ret = -1;
+        goto out;
+    }
+
     /* set URL to get here */
-    curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+    curl_easy_setopt(curl_handle, CURLOPT_URL, replaced_url);
     curl_easy_setopt(curl_handle, CURLOPT_NOSIGNAL, 1L);
     /* complete connection within 30 seconds */
     curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, 30L);
@@ -417,6 +471,7 @@ int http_request(const char *url, struct http_get_options *options, long *respon
     }
 
 out:
+    free(replaced_url);
     close_file(pagefile);
     free_rpath(rpath);
 
