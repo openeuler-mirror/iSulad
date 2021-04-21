@@ -65,6 +65,10 @@ _isula_isula() {
     esac
 }
 
+_isula_default()
+{
+    COMPREPLY=( $( compgen -d -f -- $cur ) )
+}
 
 _isula() {
     COMPREPLY=()
@@ -81,9 +85,12 @@ _isula() {
 
     #The completion of the secondary command will be added later
     if [ $cword -lt 2 ] ; then
-        declare -F $completions_func >/dev/null && $completions_func
+        completions_func=_isula_${command//-/_}
+    else
+        completions_func=_isula_default
     fi
 
+    declare -F $completions_func >/dev/null && $completions_func
     return 0
 }
 
