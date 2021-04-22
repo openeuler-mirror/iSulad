@@ -143,6 +143,10 @@ int invokeHttpRequestV1(const char *url, struct http_get_options *options, long 
         if (token_count == 2) {
             file = data_path + "token_body2";
         } else {
+            if (strstr(url, "quay.io registry") == NULL) {
+                ERROR("invalid url %s", url);
+                return -1;
+            }
             file = data_path + "token_body";
         }
     } else if (util_has_prefix(url, "https://quay.io/v2/coreos/etcd/blobs/sha256")) {
