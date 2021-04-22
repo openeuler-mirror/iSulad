@@ -556,7 +556,7 @@ static bool check_cpu(const char *provided, const char *available)
 }
 
 /* parse unit list */
-int parse_unit_list(const char *val, bool *available_list)
+int parse_unit_list(const char *val, bool *available_list, int cpu_num)
 {
     int ret = -1;
     char *str = NULL;
@@ -576,7 +576,7 @@ int parse_unit_list(const char *val, bool *available_list)
         subchr = strchr(tmp, '-');
         if (subchr == NULL) {
             int value = 0;
-            if (util_safe_int(tmp, &value) || value < 0) {
+            if (util_safe_int(tmp, &value) || value < 0 || value >= cpu_num) {
                 goto out;
             }
             available_list[value] = true;
@@ -588,7 +588,7 @@ int parse_unit_list(const char *val, bool *available_list)
             if (util_safe_int(tmp, &min) || min < 0) {
                 goto out;
             }
-            if (util_safe_int(subchr, &max) || max < 0) {
+            if (util_safe_int(subchr, &max) || max < 0 || max >= cpu_num) {
                 goto out;
             }
             for (i = min; i <= max; i++) {
@@ -615,12 +615,15 @@ static bool is_cpuset_list_available(const char *provided, const char *available
     bool ret = false;
     bool *parsed_provided = NULL;
     bool *parsed_available = NULL;
+    sysinfo_t *sysinfo = NULL;
 
-    cpu_num = get_nprocs();
-    if (cpu_num <= 0) {
-        ERROR("failed to get the number of processors configured by the operating system!");
-        goto out;
+    sysinfo = get_sys_info(true);
+    if (sysinfo == NULL) {
+        ERROR("get sysinfo failed");
+        return false;
     }
+
+    cpu_num = sysinfo->ncpus;
     if ((size_t)cpu_num > SIZE_MAX / sizeof(bool)) {
         ERROR("invalid cpu num");
         goto out;
@@ -640,7 +643,8 @@ static bool is_cpuset_list_available(const char *provided, const char *available
         goto out;
     }
 
-    if (parse_unit_list(provided, parsed_provided) < 0 || parse_unit_list(available, parsed_available) < 0) {
+    if (parse_unit_list(provided, parsed_provided, cpu_num) < 0 ||
+        parse_unit_list(available, parsed_available, cpu_num) < 0) {
         goto out;
     }
     for (i = 0; i < cpu_num; i++) {
