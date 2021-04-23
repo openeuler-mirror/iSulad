@@ -49,6 +49,10 @@ static void check_algo(X509 *cert)
     }
     const char *sig_algo = OBJ_nid2ln(OBJ_obj2nid(cert->sig_alg->algorithm));
 #endif
+    if (sig_algo == NULL) {
+        ERROR("sig algo is NULL");
+        return;
+    }
 
     for (i = 0; i < len; i++) {
         if (strcmp(g_weak_algos[i], sig_algo) == 0) {
