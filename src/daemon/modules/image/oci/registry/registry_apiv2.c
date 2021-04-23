@@ -162,27 +162,32 @@ static int parse_auth(pull_descriptor *desc, char *auth)
     char *origin_tmp_auth = NULL;
     char *trimmed_auth = NULL;
     int ret = 0;
-    char **parts = NULL;
+    char *schema = NULL;
+    char *params = NULL;
 
     if (auth == NULL) {
         return -1;
     }
 
+    // auth: Bearer realm="https://auth.isula.org/token",service="isula registry"
     origin_tmp_auth = util_strdup_s(auth);
     util_trim_newline(origin_tmp_auth);
     trimmed_auth = util_trim_space(origin_tmp_auth);
-    parts = util_string_split_multi(trimmed_auth, ' ');
-    if (util_array_len((const char **)parts) < 2) {
-        ERROR("Split auth failed, auth: %s", trimmed_auth);
+    params = strchr(trimmed_auth, ' ');
+    if (params == NULL) {
+        ERROR("invalid auth when parse challenges, auth: %s", trimmed_auth);
         ret = -1;
         goto out;
     }
+    // params: realm="https://auth.isula.org/token",service="isula registry"
+    params[0] = 0;
+    params += 1;
+    // schema: Bearer
+    schema = trimmed_auth;
 
-    // parts[0]: Bearer
-    // parts[1]: realm="https://auth.isula.org/token",service="registry.isula.org"
-    ret = parse_challenges(desc, parts[0], parts[1]);
+    ret = parse_challenges(desc, schema, params);
     if (ret != 0) {
-        ERROR("Parse challenges failed, schema: %s, params: %s", parts[0], parts[1]);
+        ERROR("Parse challenges failed, schema: %s, params: %s", schema, params);
         ret = -1;
         goto out;
     }
@@ -190,7 +195,6 @@ static int parse_auth(pull_descriptor *desc, char *auth)
 out:
     free(origin_tmp_auth);
     origin_tmp_auth = NULL;
-    util_free_array(parts);
 
     return ret;
 }
@@ -268,7 +272,7 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
         HTTP/1.1 401 Unauthorized
         Content-Type: application/json
         Docker-Distribution-Api-Version: registry/2.0
-        Www-Authenticate: Bearer realm="https://auth.isula.org/token",service="registry.isula.org"
+        Www-Authenticate: Bearer realm="https://auth.isula.org/token",service="isula registry"
         Date: Mon, 16 Mar 2020 01:16:09 GMT
         Content-Length: 87
         Strict-Transport-Security: max-age=31536000
