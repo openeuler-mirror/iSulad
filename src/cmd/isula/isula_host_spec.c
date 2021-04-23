@@ -1021,6 +1021,11 @@ static int parse_security_opts(const isula_host_config_t *srcconfig, host_config
 
     for (i = 0; i < srcconfig->security_len; i++) {
         items = util_string_split_n(srcconfig->security[i], '=', 2);
+        if (items == NULL) {
+            COMMAND_ERROR("Invalid --security-opt: %s", srcconfig->security[i]);
+            ret = -1;
+            goto out;
+        }
         if (util_array_len((const char **)items) == 1) {
             if (strcmp(items[0], "no-new-privileges") != 0) {
                 ret = -1;

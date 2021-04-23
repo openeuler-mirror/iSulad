@@ -1929,7 +1929,7 @@ static int generate_security_opt(host_config *hc)
 
     for (i = 0; i < hc->security_opt_len; i++) {
         char **items = util_string_split(hc->security_opt[i], '=');
-        if (*items == NULL) {
+        if (items == NULL) {
             ERROR("Out of memory");
             return -1;
         }

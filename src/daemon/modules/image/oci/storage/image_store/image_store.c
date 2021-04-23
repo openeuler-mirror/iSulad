@@ -2089,6 +2089,12 @@ static int pack_repo_digest(char ***old_repo_digests, const char **image_tags, c
             continue;
         }
         tag_pos = util_tag_pos(ref);
+        if (tag_pos == NULL) {
+            ERROR("invalid ref %s", ref);
+            free(ref);
+            ref = NULL;
+            continue;
+        }
         *tag_pos = '\0';
 
         nret = asprintf(&tmp_repo_digests, "%s@%s", ref, digest);
