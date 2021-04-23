@@ -437,7 +437,7 @@ static image_devmapper_device_info *load_metadata(const struct device_set *devse
     }
 
     if (!util_file_exists(metadata_file)) {
-        ERROR("No such file:%s, need not to load", metadata_file);
+        WARN("No such file:%s, need not to load", metadata_file);
         goto out;
     }
 
@@ -2405,6 +2405,7 @@ static int do_check_all_devices(struct device_set *devset)
     struct stat st;
     int nret = 0;
 
+    // Equal to  "dmsetup ls" .  That is to say, devices_len is not zero, because isulad-thinpool exists. 
     if (dev_get_device_list(&devices_list, &devices_len) != 0) {
         ERROR("devicemapper: failed to get device list");
         ret = -1;
@@ -2511,10 +2512,9 @@ static int do_devmapper_init(struct device_set *devset)
         goto out;
     }
 
+    // If checking failed, we just print a log, there is no need to process the error that do not affect isulad starting
     if (do_check_all_devices(devset) != 0) {
         ERROR("Failed to check all devset devices");
-        ret = -1;
-        goto out;
     }
 
     if (do_init_metadate(devset) != 0) {

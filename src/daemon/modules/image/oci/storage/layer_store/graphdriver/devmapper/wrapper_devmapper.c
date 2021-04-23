@@ -556,8 +556,6 @@ out:
     return ret;
 }
 
-// from devmapper_wrapper.go
-// FIXME: how to use dm_task_get_names directly
 static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size)
 {
     struct dm_names *ns, *ns1;
@@ -566,6 +564,7 @@ static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size)
     int i = 0;
 
     if (!(ns = dm_task_get_names(dmt))) {
+        ERROR("Failed to get device names list  from dm task");
         return NULL;
     }
 
@@ -585,6 +584,7 @@ static char **local_dm_task_get_names(struct dm_task *dmt, size_t *size)
 
     result = malloc(sizeof(char *) * (*size));
     if (!result) {
+        ERROR("Out of memory");
         return NULL;
     }
 
@@ -624,7 +624,7 @@ int dev_get_device_list(char ***list, size_t *length)
     *list = local_dm_task_get_names(dmt, length);
     if (*list == NULL) {
         *length = 0;
-        ERROR("devicemapper: get device list failed");
+        ERROR("devicemapper: get device  list empty");
         ret = -1;
         goto cleanup;
     }
