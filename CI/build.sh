@@ -473,12 +473,12 @@ if [[ -e $CIDIR/${CONTAINER_NAME}.runflag ]]; then
     rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
     exit 0;
 else
-    for container in ${containers[@]}
-    do
-        docker rm -f $container
-        rm -rf /var/lib/isulad/$container
-    done
-    rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
+    #for container in ${containers[@]}
+    #do
+    #    docker rm -f $container
+    #    rm -rf /var/lib/isulad/$container
+    #done
+    #rm -rf /var/lib/isulad/${CONTAINER_NAME}_cptemp
     echo_error "Test failed!"
     exit -1;
 fi
