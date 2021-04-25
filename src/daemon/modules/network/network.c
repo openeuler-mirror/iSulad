@@ -38,7 +38,7 @@ struct net_ops {
     int (*detach)(const network_api_conf *conf, network_api_result_list *result);
 
     // operators for network configs
-    int (*conf_create)(const network_create_request *request, network_create_response **response);
+    int (*conf_create)(const network_create_request *request, char **name, uint32_t *cc);
     int (*conf_inspect)(const char *name, char **network_json);
     int (*conf_list)(const struct filters_args *filters, network_network_info ***networks, size_t *networks_len);
     int (*conf_rm)(const char *name, char **res_name);
@@ -302,17 +302,15 @@ int network_module_detach(const network_api_conf *conf, const char *type)
     return ret;
 }
 
-int network_module_conf_create(const char *type, const network_create_request *request,
-                               network_create_response **response)
+int network_module_conf_create(const char *type, const network_create_request *request, char **name, uint32_t *cc)
 {
     const struct net_type *pnet = NULL;
     int ret = 0;
 
-    if (request == NULL || response == NULL) {
+    if (request == NULL || name == NULL || cc == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }
-    EVENT("Event: {Object: network, Type: creating, Target: %s}", request->name);
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_create == NULL) {
@@ -320,8 +318,8 @@ int network_module_conf_create(const char *type, const network_create_request *r
         return -1;
     }
 
-    ret = pnet->ops->conf_create(request, response);
-    EVENT("Event: {Object: network, Type: created, Target: %s}", request->name);
+    ret = pnet->ops->conf_create(request, name, cc);
+
     return ret;
 }
 
@@ -334,7 +332,6 @@ int network_module_conf_inspect(const char *type, const char *name, char **netwo
         ERROR("Invalid arguments");
         return -1;
     }
-    EVENT("Event: {Object: network, Type: inspecting, Target: %s}", name);
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_inspect == NULL) {
@@ -343,7 +340,7 @@ int network_module_conf_inspect(const char *type, const char *name, char **netwo
     }
 
     ret = pnet->ops->conf_inspect(name, network_json);
-    EVENT("Event: {Object: network, Type: inspected, Target: %s}", name);
+
     return ret;
 }
 
@@ -357,7 +354,6 @@ int network_module_conf_list(const char *type, const struct filters_args *filter
         ERROR("Invalid arguments");
         return -1;
     }
-    EVENT("Event: {Object: network, Type: listing}");
 
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_list == NULL) {
@@ -366,7 +362,7 @@ int network_module_conf_list(const char *type, const struct filters_args *filter
     }
 
     ret = pnet->ops->conf_list(filters, networks, networks_len);
-    EVENT("Event: {Object: network, Type: listed}");
+
     return ret;
 }
 
@@ -380,8 +376,6 @@ int network_module_conf_rm(const char *type, const char *name, char **res_name)
         return -1;
     }
 
-    EVENT("Event: {Object: network, Type: removing, Target: %s}", name);
-
     pnet = get_net_by_type(type);
     if (pnet == NULL || pnet->ops->conf_rm == NULL) {
         ERROR("Type: %s net, unsupported config remove", type);
@@ -389,7 +383,6 @@ int network_module_conf_rm(const char *type, const char *name, char **res_name)
     }
 
     ret = pnet->ops->conf_rm(name, res_name);
-    EVENT("Event: {Object: network, Type: removed, Target: %s}", name);
 
     return ret;
 }

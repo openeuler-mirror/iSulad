@@ -278,7 +278,7 @@ static bool is_native_config_file(const char *filename)
     return strncmp(ISULAD_CNI_NETWORK_CONF_FILE_PRE, filename, strlen(ISULAD_CNI_NETWORK_CONF_FILE_PRE)) == 0;
 }
 
-static native_network *native_network_init(struct cni_network_list_conf *conflist)
+static native_network *native_network_init(struct cni_network_list_conf **conflist)
 {
     native_network *network = NULL;
 
@@ -294,7 +294,8 @@ static native_network *native_network_init(struct cni_network_list_conf *conflis
     }
 
     linked_list_init(&(network->containers_list));
-    network->conflist = conflist;
+    network->conflist = *conflist;
+    *conflist = NULL;
 
     return network;
 
@@ -303,7 +304,7 @@ err_out:
     return NULL;
 }
 
-static int native_store_add_network(struct cni_network_list_conf *conflist)
+static int native_store_add_network(struct cni_network_list_conf **conflist)
 {
     native_network *network = NULL;
 
@@ -313,8 +314,8 @@ static int native_store_add_network(struct cni_network_list_conf *conflist)
         return -1;
     }
 
-    if (!map_replace(g_store.name_to_network, (void *)conflist->list->name, network)) {
-        ERROR("add net failed: %s", conflist->list->name);
+    if (!map_replace(g_store.name_to_network, (void *)network->conflist->list->name, network)) {
+        ERROR("add net failed: %s", network->conflist->list->name);
         native_network_free(network);
         return -1;
     }
@@ -356,12 +357,11 @@ static int load_store_map()
             continue;
         }
 
-        ret = native_store_add_network(tmp[i]);
+        ret = native_store_add_network(&(tmp[i]));
         if (ret != 0) {
             ERROR("Failed to add network to native store");
             goto out;
         }
-        tmp[i] = NULL;
 
         if (strlen(name) + 1 < MAX_BUFFER_SIZE - pos) {
             sprintf(message + pos, "%s,", name);
@@ -1324,12 +1324,11 @@ static int create_conflist_file(struct cni_network_list_conf *conflist)
     char *conflist_json = NULL;
     parser_error err = NULL;
 
-    EVENT("Network Event: {Object: %s, Type: Creating}", conflist->list->name);
-
     if (!util_dir_exists(g_store.conf_dir)) {
         ret = util_mkdir_p(g_store.conf_dir, CONFIG_DIRECTORY_MODE);
         if (ret != 0) {
             ERROR("Failed to create network config directory %s", g_store.conf_dir);
+            isulad_set_error_message("Failed to create network config directory %s", g_store.conf_dir);
             goto out;
         }
     }
@@ -1358,12 +1357,12 @@ static int create_conflist_file(struct cni_network_list_conf *conflist)
 
     if (util_atomic_write_file(conflist_file, conflist_json, strlen(conflist_json), CONFIG_FILE_MODE, true) != 0) {
         ERROR("Failed write %s", conflist_file);
+        isulad_set_error_message("Failed write %s", conflist_file);
         ret = -1;
         goto out;
     }
 
     conflist->bytes = util_strdup_s(conflist_json);
-    EVENT("Network Event: {Object: %s, Type: Created}", conflist->list->name);
 
 out:
     free(conflist_json);
@@ -1404,24 +1403,26 @@ out:
     return ret;
 }
 
-int native_config_create(const network_create_request *request, network_create_response **response)
+int native_config_create(const network_create_request *request, char **name, uint32_t *cc)
 {
     int ret = 0;
-    uint32_t cc = ISULAD_SUCCESS;
     string_array *missing = NULL;
     struct cni_network_list_conf *conflist = NULL;
     const struct net_driver *pnet = NULL;
 
-    if (request == NULL) {
+    if (request == NULL || name == NULL || cc == NULL) {
         ERROR("Invalid arguments");
         return -1;
     }
+
+    EVENT("Event: {Object: network, Type: creating, Target: %s}", request->name);
 
     pnet = get_ops_by_driver(request->driver);
     if (pnet == NULL || strcmp(pnet->driver, NETWOKR_DRIVER_BRIDGE) != 0) {
         ERROR("Cannot support driver %s", request->driver);
         isulad_set_error_message("Cannot support driver: %s", request->driver);
-        cc = ISULAD_ERR_INPUT;
+        *cc = ISULAD_ERR_INPUT;
+        ret = -1;
         goto out;
     }
 
@@ -1434,14 +1435,14 @@ int native_config_create(const network_create_request *request, network_create_r
     ret = pnet->ops->check(request);
     if (ret != 0) {
         ERROR("Failed to check %s", pnet->driver);
-        cc = ISULAD_ERR_INPUT;
+        *cc = ISULAD_ERR_INPUT;
         goto out;
     }
 
     missing = (string_array *)util_common_calloc_s(sizeof(string_array));
     if (missing == NULL) {
         ERROR("Out of memory");
-        cc = ISULAD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         ret = -1;
         goto out;
     }
@@ -1449,7 +1450,7 @@ int native_config_create(const network_create_request *request, network_create_r
     conflist = (struct cni_network_list_conf *)util_common_calloc_s(sizeof(struct cni_network_list_conf));
     if (conflist == NULL) {
         ERROR("Out of memory");
-        cc = ISULAD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         ret = -1;
         goto out;
     }
@@ -1457,51 +1458,45 @@ int native_config_create(const network_create_request *request, network_create_r
     conflist->list = pnet->ops->conf(request, missing);
     if (conflist->list == NULL) {
         ERROR("Failed to conf %s", pnet->driver);
-        cc = ISULAD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         ret = -1;
         goto out;
     }
+    *name = util_strdup_s(conflist->list->name);
 
     ret = create_conflist_file(conflist);
     if (ret != 0) {
         ERROR("Failed to create conflist file");
-        cc = ISULAD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         goto out;
     }
 
     if (!native_store_lock(EXCLUSIVE)) {
-        cc = ISULAD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         ret = -1;
         goto out;
     }
 
-    ret = native_store_add_network(conflist);
+    ret = native_store_add_network(&conflist);
     native_store_unlock();
     if (ret != 0) {
         ERROR("Failed to add network to native store");
-        cc = ISULAD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         goto out;
     }
-
-    (*response)->name = util_strdup_s(conflist->list->name);
-    conflist = NULL;
 
     ret = set_missing_plugin_err_msg(missing);
     if (ret != 0) {
         ERROR("Failed to set missing plugin err msg");
-        cc = ISULAD_ERR_EXEC;
+        *cc = ISULAD_ERR_EXEC;
         goto out;
     }
+
+    EVENT("Event: {Object: network, Type: created, Target: %s}", *name);
 
 out:
     free_cni_network_list_conf(conflist);
     util_free_string_array(missing);
-
-    (*response)->cc = cc;
-    if (g_isulad_errmsg != NULL) {
-        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
-        DAEMON_CLEAR_ERRMSG();
-    }
 
     return ret;
 }
@@ -1511,7 +1506,12 @@ int native_config_inspect(const char *name, char **network_json)
     int ret = 0;
     map_itor *itor = NULL;
 
-    EVENT("Network Event: {Object: %s, Type: Inspecting}", name);
+    if (name == NULL || network_json == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    EVENT("Event: {Object: network, Type: inspecting, Target: %s}", name);
 
     if (!native_store_lock(SHARED)) {
         return -1;
@@ -1538,6 +1538,8 @@ int native_config_inspect(const char *name, char **network_json)
         *network_json = util_strdup_s(network->conflist->bytes);
 
         // TODO: inspect the linked containers ip info
+
+        EVENT("Event: {Object: network, Type: inspected, Target: %s}", name);
         goto out;
     }
 
@@ -1629,6 +1631,13 @@ int native_config_list(const struct filters_args *filters, network_network_info 
     network_network_info *net_info = NULL;
     map_itor *itor = NULL;
 
+    if (networks == NULL || networks_len == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    EVENT("Event: {Object: network, Type: listing}");
+
     if (!native_store_lock(SHARED)) {
         return -1;
     }
@@ -1643,8 +1652,6 @@ int native_config_list(const struct filters_args *filters, network_network_info 
         ret = -1;
         goto out;
     }
-
-    EVENT("Network Event: {Object: network, Type: List}");
 
     itor = map_itor_new(g_store.name_to_network);
     if (itor == NULL) {
@@ -1686,6 +1693,8 @@ int native_config_list(const struct filters_args *filters, network_network_info 
     nets = NULL;
     *networks_len = nets_len;
     nets_len = 0;
+
+    EVENT("Event: {Object: network, Type: listed}");
 
 out:
     map_itor_free(itor);
@@ -1901,6 +1910,13 @@ int native_config_remove(const char *name, char **res_name)
     const struct net_driver *pnet = NULL;
     native_network *network = NULL;
 
+    if (name == NULL || res_name == NULL) {
+        ERROR("Invalid arguments");
+        return -1;
+    }
+
+    EVENT("Event: {Object: network, Type: removing, Target: %s}", name);
+
     if (!native_store_lock(EXCLUSIVE)) {
         return -1;
     }
@@ -1947,6 +1963,8 @@ int native_config_remove(const char *name, char **res_name)
     }
 
     *res_name = util_strdup_s(name);
+
+    EVENT("Event: {Object: network, Type: removed, Target: %s}", name);
 
 out:
     native_store_unlock();

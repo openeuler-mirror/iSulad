@@ -87,8 +87,7 @@ int network_module_check(const network_api_conf *conf, const char *type, network
 
 int network_module_detach(const network_api_conf *conf, const char *type);
 
-int network_module_conf_create(const char *type, const network_create_request *request,
-                               network_create_response **response);
+int network_module_conf_create(const char *type, const network_create_request *request, char **name, uint32_t *cc);
 
 int network_module_conf_inspect(const char *type, const char *name, char **network_json);
 
