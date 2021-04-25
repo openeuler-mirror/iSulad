@@ -111,6 +111,7 @@ out:
 static int network_create_cb(const network_create_request *request, network_create_response **response)
 {
     int ret = 0;
+    uint32_t cc = ISULAD_SUCCESS;
 
     if (request == NULL || response == NULL) {
         ERROR("Invalid input arguments");
@@ -126,23 +127,24 @@ static int network_create_cb(const network_create_request *request, network_crea
 
     ret = check_parameter(request);
     if (ret != 0) {
+        cc = ISULAD_ERR_INPUT;
+        ERROR("check network parameter failed");
         goto out;
     }
 
     network_conflist_lock(EXCLUSIVE);
 
-    ret = network_module_conf_create(NETWOKR_API_TYPE_NATIVE, request, response);
+    ret = network_module_conf_create(NETWOKR_API_TYPE_NATIVE, request, &(*response)->name, &cc);
 
     network_conflist_unlock();
 
 out:
-    if (ret != 0) {
-        (*response)->cc = ISULAD_ERR_INPUT;
-        if (g_isulad_errmsg != NULL) {
-            (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
-            DAEMON_CLEAR_ERRMSG();
-        }
+    (*response)->cc = cc;
+    if (g_isulad_errmsg != NULL) {
+        (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
+        DAEMON_CLEAR_ERRMSG();
     }
+
     return ret;
 }
 
