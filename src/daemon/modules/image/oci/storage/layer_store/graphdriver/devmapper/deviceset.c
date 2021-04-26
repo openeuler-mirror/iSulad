@@ -2405,7 +2405,7 @@ static int do_check_all_devices(struct device_set *devset)
     struct stat st;
     int nret = 0;
 
-    // Equal to  "dmsetup ls" .  That is to say, devices_len is not zero, because isulad-thinpool exists. 
+    // Equal to  "dmsetup ls" .  That is to say, devices_len is not zero, because isulad-thinpool exists.
     if (dev_get_device_list(&devices_list, &devices_len) != 0) {
         ERROR("devicemapper: failed to get device list");
         ret = -1;
