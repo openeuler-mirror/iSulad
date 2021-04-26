@@ -191,3 +191,82 @@ function init_cni_conf()
 
     return $TC_RET_T
 }
+
+function do_install_thinpool()
+{
+    local ret=0
+
+    dev_disk=`pvs | grep isulad | awk '{print$1}'`
+    rm -rf /var/lib/isulad/*
+    dmsetup remove_all
+    lvremove -f isulad/thinpool
+    lvremove -f isulad/thinpoolmeta
+    vgremove -f isulad
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - vgremove failed" && ((ret++))
+
+    pvremove -f $dev_disk
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - pvremove failed" && ((ret++))
+    
+    mount | grep $dev_disk | grep /var/lib/isulad
+    if [ x"$?" == x"0" ]; then
+        umount /var/lib/isulad
+        [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - umount isulad failed" && ((ret++))
+    fi
+    touch /etc/lvm/profile/isulad-thinpool.profile
+    cat > /etc/lvm/profile/isulad-thinpool.profile <<EOF
+activation {
+thin_pool_autoextend_threshold=80
+thin_pool_autoextend_percent=20
+}
+EOF
+    echo y | mkfs.ext4 $dev_disk
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - mkfs.ext4 $dev_disk failed" && ((ret++))
+
+    pvcreate -y $dev_disk
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - vgremove isulad failed" && ((ret++))
+
+    vgcreate isulad $dev_disk
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - vgremove isulad failed" && ((ret++))
+
+    echo y | lvcreate --wipesignatures y -n thinpool isulad -l 80%VG
+    echo y | lvcreate --wipesignatures y -n thinpoolmeta isulad -l 1%VG
+
+    dmsetup status | grep -w "isulad-thinpoolmeta"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad-thinpoolmeta: no such device" && ((ret++))
+
+    dmsetup status | grep -w "isulad-thinpool"
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - isulad-thinpool: no such device" && ((ret++))
+
+    lvconvert -y --zero n -c 512K --thinpool isulad/thinpool --poolmetadata isulad/thinpoolmeta
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - lvconvert failed" && ((ret++))
+
+    lvchange --metadataprofile isulad-thinpool isulad/thinpool
+    [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - lvchange failed" && ((ret++))
+
+    lvs -o+seg_monitor
+
+    return $ret
+}
+
+# Delete all containers and stop isulad before executing this func 
+function reinstall_thinpool()
+{
+    retry_limit=3
+    retry_interval=2
+    state="fail"
+
+    for i in $(seq 1 "$retry_limit"); do
+        do_install_thinpool
+        if [ $? -eq 0 ]; then
+            state="success"
+            break;
+        fi
+        sleep $retry_interval
+    done
+
+    if [ "$state" != "success" ]; then
+        return 1
+    fi
+    return 0
+}
+
