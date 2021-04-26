@@ -196,6 +196,10 @@ function do_install_thinpool()
 {
     local ret=0
 
+    systemctl restart lvm2-lvmetad.service
+    systemctl restart systemd-udevd.service
+    udevadm control --reload-rules && udevadm trigger
+
     dev_disk=`pvs | grep isulad | awk '{print$1}'`
     rm -rf /var/lib/isulad/*
     dmsetup remove_all
@@ -240,6 +244,8 @@ EOF
     lvconvert -y --zero n -c 512K --thinpool isulad/thinpool --poolmetadata isulad/thinpoolmeta
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - lvconvert failed" && ((ret++))
 
+    lvchange --activate ay isulad
+
     lvchange --metadataprofile isulad-thinpool isulad/thinpool
     [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - lvchange failed" && ((ret++))
 
@@ -251,7 +257,7 @@ EOF
 # Delete all containers and stop isulad before executing this func 
 function reinstall_thinpool()
 {
-    retry_limit=3
+    retry_limit=10
     retry_interval=2
     state="fail"
 
