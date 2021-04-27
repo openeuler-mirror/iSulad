@@ -45,6 +45,7 @@ int rt_isula_resources_stats(const char *name, const char *runtime, const rt_sta
                              struct runtime_container_resources_stats_info *rs_stats);
 int rt_isula_resize(const char *id, const char *runtime, const rt_resize_params_t *params);
 int rt_isula_exec_resize(const char *id, const char *runtime, const rt_exec_resize_params_t *params);
+int rt_isula_kill(const char *id, const char *runtime, const rt_kill_params_t *params);
 
 #ifdef __cplusplus
 }

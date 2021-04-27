@@ -1236,7 +1236,6 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
     int ret = 0;
     int nret = 0;
     const char *id = cont->common_config->id;
-    int stop_signal = container_stop_signal(cont);
     bool need_unpause = container_is_paused(cont->state);
     rt_resume_params_t params = { 0 };
     char annotations[EVENT_EXTRA_ANNOTATION_MAX] = { 0 };
@@ -1260,7 +1259,12 @@ static int kill_with_signal(container_t *cont, uint32_t signal)
         goto out;
     }
 
-    ret = send_signal_to_process(cont->state->state->pid, cont->state->state->start_time, stop_signal, signal);
+    rt_kill_params_t kill_params = {
+        .pid = cont->state->state->pid,
+        .start_time = cont->state->state->start_time,
+        .signal = signal,
+    };
+    ret = runtime_kill(id, cont->runtime, &kill_params);
     if (ret != 0) {
         ERROR("Failed to send signal to container %s with signal %u", id, signal);
     }
