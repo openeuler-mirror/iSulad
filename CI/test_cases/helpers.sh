@@ -196,9 +196,10 @@ function do_install_thinpool()
 {
     local ret=0
 
-    systemctl restart lvm2-lvmetad.service
-    systemctl restart systemd-udevd.service
-    udevadm control --reload-rules && udevadm trigger
+    cat /etc/isulad/daemon.json | grep driver | grep devicemapper
+    if [[ $? -ne 0 ]]; then
+        return ${ret}
+    fi
 
     dev_disk=`pvs | grep isulad | awk '{print$1}'`
     rm -rf /var/lib/isulad/*
