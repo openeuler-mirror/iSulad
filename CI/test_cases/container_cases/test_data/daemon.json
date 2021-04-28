@@ -23,6 +23,7 @@
         "overlay2.override_kernel_check=true"
     ],
     "registry-mirrors": [
+        "docker.io"
     ],
     "insecure-registries": [
     ],

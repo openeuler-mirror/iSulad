@@ -17,10 +17,21 @@
 
 #include <stdbool.h>
 #include <isula_libutils/json_common.h>
+#include "map.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct logger_info {
+    char *id;
+    char *name;
+    char *img_id;
+    char *img_name;
+    char *daemon_name;
+};
+
+typedef int (*tag_parser)(const char *, map_t *, char **);
 
 bool check_raw_log_opt(const char *key);
 
@@ -31,6 +42,8 @@ bool check_opt_container_log_driver(const char *driver);
 bool parse_container_log_opt(const char *key, const char *val, json_map_string_string *opts);
 
 bool parse_container_log_opts(json_map_string_string **opts);
+
+int parse_container_log_opt_syslog_tag(const char *tag, tag_parser op, map_t *tag_maps, char **parsed_tag);
 
 #ifdef __cplusplus
 }

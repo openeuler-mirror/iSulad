@@ -257,8 +257,7 @@ static int merge_container_log_config_opts(const char *daemon_driver, const json
     return 0;
 }
 
-static int do_set_default_log_path_for_json_file(const char *id, const char *root, bool file_found,
-                                                 container_config *spec)
+static int do_set_default_log_path_for_json_file(const char *id, const char *root, container_config *spec)
 {
     int nret = 0;
     char default_path[PATH_MAX] = { 0 };
@@ -277,10 +276,150 @@ static int do_set_default_log_path_for_json_file(const char *id, const char *roo
     return 0;
 }
 
-static int do_check_container_log_config_opts(const char *id, const char *root, container_config *spec)
+int syslog_tag_parser(const char *tag, map_t *tag_maps, char **parsed)
+{
+    char *tmp_tag = NULL;
+    int ret = 0;
+    char *target = NULL;
+
+    if (tag == NULL) {
+        ERROR("empty tag is invalid.");
+        return -1;
+    }
+
+    tmp_tag = util_strdup_s(tag);
+    tmp_tag = util_trim_space(tmp_tag);
+    target = map_search(tag_maps, (void *)tmp_tag);
+    if (target == NULL) {
+        ERROR("Invalid tag: %s", tag);
+        ret = -1;
+        goto out;
+    }
+
+    *parsed = util_strdup_s(target);
+
+out:
+    free(tmp_tag);
+    return ret;
+}
+
+static int do_update_container_log_config_syslog_tag(map_t *tag_maps, const char *driver, size_t idx,
+                                                     json_map_string_string *annotations)
+{
+    char *parsed_tag = NULL;
+
+    if (driver == NULL || strcmp(driver, CONTAINER_LOG_CONFIG_SYSLOG_DRIVER) != 0) {
+        return 0;
+    }
+
+    if (annotations->keys[idx] == NULL || strcmp(annotations->keys[idx], CONTAINER_LOG_CONFIG_KEY_SYSLOG_TAG) != 0) {
+        return 0;
+    }
+
+    if (parse_container_log_opt_syslog_tag(annotations->values[idx], syslog_tag_parser, tag_maps, &parsed_tag) != 0) {
+        return -1;
+    }
+    DEBUG("new syslog tag: %s", parsed_tag);
+
+    free(annotations->values[idx]);
+    annotations->values[idx] = parsed_tag;
+    return 0;
+}
+
+static map_t *make_tag_mappings(const struct logger_info *p_info)
+{
+#define SHORT_ID_LEN 12
+    map_t *tag_maps = NULL;
+    char *short_id = NULL;
+    char *short_img_id = NULL;
+
+    tag_maps = map_new(MAP_STR_STR, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
+    if (tag_maps == NULL) {
+        ERROR("Out of memory");
+        return NULL;
+    }
+
+    short_id = util_sub_string(p_info->id, 0, SHORT_ID_LEN);
+    if (short_id == NULL) {
+        goto err_out;
+    }
+    if (!map_replace(tag_maps, (void *)".ID", (void *)short_id)) {
+        goto err_out;
+    }
+    if (!map_replace(tag_maps, (void *)".FullID", (void *)p_info->id)) {
+        goto err_out;
+    }
+    if (!map_replace(tag_maps, (void *)".Name", (void *)p_info->name)) {
+        goto err_out;
+    }
+
+    if (p_info->img_id != NULL) {
+        short_img_id = util_sub_string(p_info->img_id, 0, SHORT_ID_LEN);
+        if (short_img_id == NULL) {
+            goto err_out;
+        }
+        if (!map_replace(tag_maps, (void *)".ImageID", (void *)short_img_id)) {
+            goto err_out;
+        }
+        if (!map_replace(tag_maps, (void *)".ImageFullID", (void *)p_info->img_id)) {
+            goto err_out;
+        }
+    } else {
+        WARN("Empty image id");
+    }
+
+    if (p_info->img_name != NULL) {
+        if (!map_replace(tag_maps, (void *)".ImageName", (void *)p_info->img_name)) {
+            goto err_out;
+        }
+    } else {
+        WARN("Empty image name");
+    }
+
+    if (!map_replace(tag_maps, (void *)".DaemonName", (void *)p_info->daemon_name)) {
+        goto err_out;
+    }
+
+    free(short_img_id);
+    free(short_id);
+    return tag_maps;
+err_out:
+    free(short_img_id);
+    free(short_id);
+    map_free(tag_maps);
+    return NULL;
+}
+
+static int do_set_default_container_log_opts(bool set_file, bool set_rotate, bool set_size, const char *id,
+                                             const char *root, container_config *spec)
+{
+    if (!set_rotate && append_json_map_string_string(spec->annotations, CONTAINER_LOG_CONFIG_KEY_ROTATE, "7") != 0) {
+        return -1;
+    }
+    if (!set_size && append_json_map_string_string(spec->annotations, CONTAINER_LOG_CONFIG_KEY_SIZE, "1MB") != 0) {
+        return -1;
+    }
+    if (set_file) {
+        return 0;
+    }
+    return do_set_default_log_path_for_json_file(id, root, spec);
+}
+
+static int do_parse_container_log_config_opts(const struct logger_info *p_info, const char *root,
+                                              container_config *spec)
 {
     size_t i;
-    bool file_found = false;
+    bool set_file = false;
+    bool set_rotate = false;
+    bool set_size = false;
+    map_t *tag_maps = NULL;
+    int ret = 0;
+
+    tag_maps = make_tag_mappings(p_info);
+    if (tag_maps == NULL) {
+        ERROR("Out of memory");
+        return -1;
+    }
 
     // check log opts is support by driver
     for (i = 0; i < spec->annotations->len; i++) {
@@ -292,23 +431,40 @@ static int do_check_container_log_config_opts(const char *id, const char *root, 
         DEBUG("check log opt key: %s for driver: %s", tmp_key, spec->log_driver);
         if (!check_opt_container_log_opt(spec->log_driver, tmp_key)) {
             isulad_set_error_message("container log driver: %s, unsupport: %s", spec->log_driver, tmp_key);
-            return -1;
+            ERROR("container log driver: %s, unsupport: %s", spec->log_driver, tmp_key);
+            ret = -1;
+            goto out;
+        }
+
+        if (do_update_container_log_config_syslog_tag(tag_maps, spec->log_driver, i, spec->annotations) != 0) {
+            isulad_set_error_message("container syslog tag: unsupport: %s", spec->annotations->values[i]);
+            ERROR("container syslog tag: unsupport: %s", spec->annotations->values[i]);
+            ret = -1;
+            goto out;
         }
 
         if (strcmp(CONTAINER_LOG_CONFIG_KEY_FILE, tmp_key) == 0) {
-            file_found = true;
+            set_file = true;
+        }
+        if (strcmp(CONTAINER_LOG_CONFIG_KEY_ROTATE, tmp_key) == 0) {
+            set_rotate = true;
+        }
+        if (strcmp(CONTAINER_LOG_CONFIG_KEY_SIZE, tmp_key) == 0) {
+            set_size = true;
         }
     }
 
-    if (!file_found && strcmp(spec->log_driver, CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER) == 0) {
-        return do_set_default_log_path_for_json_file(id, root, file_found, spec);
+    if (strcmp(spec->log_driver, CONTAINER_LOG_CONFIG_JSON_FILE_DRIVER) == 0) {
+        ret = do_set_default_container_log_opts(set_file, set_rotate, set_size, p_info->id, root, spec);
     }
 
-    return 0;
+out:
+    map_free(tag_maps);
+    return ret;
 }
 
-static int set_container_log_config_to_container_spec(const char *id, const char *runtime_root,
-                                                      container_config *container_spec)
+static int update_container_log_config_to_container_spec(const struct logger_info *p_info, const char *runtime_root,
+                                                         container_config *spec)
 {
     int ret = 0;
     isulad_daemon_configs_container_log *daemon_container_opts = NULL;
@@ -317,30 +473,42 @@ static int set_container_log_config_to_container_spec(const char *id, const char
         return -1;
     }
 
-    set_container_log_config_driver(daemon_container_opts, container_spec);
+    set_container_log_config_driver(daemon_container_opts, spec);
 
-    if (container_spec->annotations == NULL) {
-        container_spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
+    if (spec->annotations == NULL) {
+        spec->annotations = util_common_calloc_s(sizeof(json_map_string_string));
     }
-    if (container_spec->annotations == NULL) {
+    if (spec->annotations == NULL) {
         ERROR("Out of memory");
         ret = -1;
         goto out;
     }
 
-    ret = merge_container_log_config_opts(daemon_container_opts->driver, daemon_container_opts->opts, container_spec);
+    ret = merge_container_log_config_opts(daemon_container_opts->driver, daemon_container_opts->opts, spec);
     if (ret != 0) {
         goto out;
     }
-    ret = do_check_container_log_config_opts(id, runtime_root, container_spec);
+    ret = do_parse_container_log_config_opts(p_info, runtime_root, spec);
 
 out:
     free_isulad_daemon_configs_container_log(daemon_container_opts);
     return ret;
 }
 
-static container_config *get_container_spec(const char *id, const char *runtime_root,
-                                            const container_create_request *request)
+static int do_update_container_log_configs(char *id, char *name, char *image_name, char *image_id,
+                                           const char *runtime_root, container_config *spec)
+{
+    struct logger_info l_info = { 0 };
+    l_info.id = id;
+    l_info.name = name;
+    l_info.img_name = image_name;
+    l_info.img_id = image_id != NULL ? image_id : image_name;
+    l_info.daemon_name = "iSulad";
+
+    return update_container_log_config_to_container_spec(&l_info, runtime_root, spec);
+}
+
+static container_config *get_container_spec(const container_create_request *request)
 {
     container_config *container_spec = NULL;
 
@@ -349,15 +517,7 @@ static container_config *get_container_spec(const char *id, const char *runtime_
         return NULL;
     }
 
-    if (set_container_log_config_to_container_spec(id, runtime_root, container_spec)) {
-        goto error_out;
-    }
-
     return container_spec;
-
-error_out:
-    free_container_config(container_spec);
-    return NULL;
 }
 
 static oci_runtime_spec *generate_oci_config(host_config *host_spec, const char *real_rootfs,
@@ -542,14 +702,13 @@ out:
     return ret;
 }
 
-static int register_new_container(const char *id, const char *runtime, host_config *host_spec,
+static int register_new_container(const char *id, const char *image_id, const char *runtime, host_config *host_spec,
                                   container_config_v2_common_config *v2_spec)
 {
     int ret = -1;
     bool registered = false;
     char *runtime_root = NULL;
     char *runtime_stat = NULL;
-    char *image_id = NULL;
     container_t *cont = NULL;
 
     runtime_root = conf_get_routine_rootdir(runtime);
@@ -562,11 +721,6 @@ static int register_new_container(const char *id, const char *runtime, host_conf
         goto out;
     }
 
-    if (strcmp(v2_spec->image_type, IMAGE_TYPE_OCI) == 0) {
-        if (conf_get_image_id(v2_spec->image, &image_id) != 0) {
-            goto out;
-        }
-    }
     cont = container_new(runtime, runtime_root, runtime_stat, image_id, host_spec, v2_spec, NULL);
     if (cont == NULL) {
         ERROR("Failed to create container '%s'", id);
@@ -589,7 +743,6 @@ static int register_new_container(const char *id, const char *runtime, host_conf
 out:
     free(runtime_root);
     free(runtime_stat);
-    free(image_id);
     if (ret != 0) {
         /* fail, do not use the input v2 spec and host spec, the memeory will be free by caller*/
         if (cont != NULL) {
@@ -911,8 +1064,8 @@ out:
     return ret;
 }
 
-static int get_basic_spec(const container_create_request *request, const char *id, const char *runtime_root,
-                          host_config **host_spec, container_config **container_spec)
+static int get_basic_spec(const container_create_request *request, host_config **host_spec,
+                          container_config **container_spec)
 {
     *host_spec = get_host_spec(request);
     if (*host_spec == NULL) {
@@ -923,7 +1076,7 @@ static int get_basic_spec(const container_create_request *request, const char *i
         return -1;
     }
 
-    *container_spec = get_container_spec(id, runtime_root, request);
+    *container_spec = get_container_spec(request);
     if (*container_spec == NULL) {
         return -1;
     }
@@ -1309,6 +1462,7 @@ int container_create_cb(const container_create_request *request, container_creat
     char *real_rootfs = NULL;
     char *image_type = NULL;
     char *runtime_root = NULL;
+    char *image_id = NULL;
     char *oci_config_data = NULL;
     char *runtime = NULL;
     char *name = NULL;
@@ -1340,7 +1494,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto clean_nameindex;
     }
 
-    if (get_basic_spec(request, id, runtime_root, &host_spec, &container_spec) != 0) {
+    if (get_basic_spec(request, &host_spec, &container_spec) != 0) {
         cc = ISULAD_ERR_INPUT;
         goto clean_container_root_dir;
     }
@@ -1386,6 +1540,18 @@ int container_create_cb(const container_create_request *request, container_creat
     ret = im_merge_image_config(image_type, image_name, v2_spec->config);
     if (ret != 0) {
         ERROR("Can not merge container_spec with image config");
+        cc = ISULAD_ERR_EXEC;
+        goto clean_rootfs;
+    }
+
+    if (strcmp(v2_spec->image_type, IMAGE_TYPE_OCI) == 0) {
+        if (conf_get_image_id(v2_spec->image, &image_id) != 0) {
+            cc = ISULAD_ERR_EXEC;
+            goto clean_rootfs;
+        }
+    }
+
+    if (do_update_container_log_configs(id, name, image_name, image_id, runtime_root, v2_spec->config)) {
         cc = ISULAD_ERR_EXEC;
         goto clean_rootfs;
     }
@@ -1453,7 +1619,7 @@ int container_create_cb(const container_create_request *request, container_creat
         goto umount_channel;
     }
 
-    if (register_new_container(id, runtime, host_spec, v2_spec)) {
+    if (register_new_container(id, image_id, runtime, host_spec, v2_spec)) {
         ERROR("Failed to register new container");
         cc = ISULAD_ERR_EXEC;
         goto umount_channel;
@@ -1490,6 +1656,7 @@ pack_response:
     free(image_type);
     free(image_name);
     free(name);
+    free(image_id);
     free(id);
     free_oci_runtime_spec(oci_spec);
     free_host_config(host_spec);
