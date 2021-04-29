@@ -445,11 +445,91 @@ out:
     return ret;
 }
 
+static int file_read_address(const char *fname, char *addr)
+{
+    int ret = 0;
+    char *buf = NULL;
+
+    if (!util_file_exists(fname)) {
+        ERROR("file:%s is not exist", fname);
+        ret = -1;
+        goto out;
+    }
+
+    buf = util_read_text_file(fname);
+    if (buf == NULL) {
+        ERROR("Read text from file:%s failed", fname);
+        ret = -1;
+        goto out;
+    }
+
+    (void) stpcpy(addr, buf);
+
+out:
+    free(buf);
+    return ret;
+}
+
+static int status_to_engine_container_status(enum Status s)
+{
+    if (s == RunningStatus) {
+        return RUNTIME_CONTAINER_STATUS_RUNNING;
+    } else if (s == CreatedStatus) {
+        return RUNTIME_CONTAINER_STATUS_CREATED;
+    } else if (s == StoppedStatus) {
+        return RUNTIME_CONTAINER_STATUS_STOPPED;
+    } else if (s == PauseStatus) {
+        return RUNTIME_CONTAINER_STATUS_PAUSED;
+    }
+
+    return RUNTIME_CONTAINER_STATUS_UNKNOWN;
+}
 
 int rt_shim_status(const char *id, const char *runtime, const rt_status_params_t *params,
                    struct runtime_container_status_info *status)
 {
-    return 0;
+    char address_file[PATH_MAX] = {0};
+    char address[PATH_MAX] = {0};
+    int ret = 0;
+    struct State ss = {};
+
+    if (id == NULL || params == NULL || status == NULL) {
+        ERROR("Invalid input params");
+        return -1;
+    }
+
+    if (snprintf(address_file, sizeof(address_file), "%s/%s/address", params->rootpath, id) < 0) {
+        ERROR("Failed to join full workdir %s/%s", params->rootpath, id);
+        ret = -1;
+        goto out;
+    }
+
+    if (file_read_address(address_file, address) != 0) {
+        ERROR("%s: could not read address on %s", id, address_file);
+        ret = -1;
+        goto out;
+    }
+
+    if (shim_v2_new(id, address) != 0) {
+        ERROR("%s: failed to init shim-v2 connection with address %s", id, address);
+        ret = -1;
+        goto out;
+    }
+
+    if (shim_v2_state(id, &ss) != 0) {
+        ERROR("%s: failed to get container state", id);
+        ret = -1;
+        goto out;
+    }
+
+    status->status = status_to_engine_container_status(ss.status);
+    status->pid = ss.pid;
+    if (ss.pid != 0) {
+        status->has_pid = true;
+    }
+
+out:
+    return ret;
 }
 
 
