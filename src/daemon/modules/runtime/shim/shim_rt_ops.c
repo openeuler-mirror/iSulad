@@ -400,8 +400,12 @@ int rt_shim_exec(const char *id, const char *runtime, const rt_exec_params_t *pa
 {
     int ret = 0;
     int pid = 0;
+    struct parser_context ctx = {OPT_GEN_SIMPLIFY, 0};
+    parser_error perr = NULL;
+    char *data = NULL;
+    shim_client_process_state p = {0};
 
-    if (id == NULL || runtime == NULL || params == NULL || exit_code == NULL) {
+    if (id == NULL || params == NULL || exit_code == NULL) {
         ERROR("Invalid input params");
         return -1;
     }
@@ -411,22 +415,33 @@ int rt_shim_exec(const char *id, const char *runtime, const rt_exec_params_t *pa
         return -1;
     }
 
-    // todo: change this process.json to real process.json
-    shim_client_process_state p = {0};
     copy_process(&p, params->spec);
-    struct parser_context ctx = {OPT_GEN_SIMPLIFY, 0};
-    parser_error perr = NULL;
-    char *data = NULL;
-    data = shim_client_process_state_generate_json(&p, &ctx, &perr);
 
-    ret = shim_v2_exec(id, params->suffix, params->spec->terminal, (char *)params->console_fifos[0],
-                       (char *)params->console_fifos[1], (char *)params->console_fifos[2], data);
-    if (ret != 0) {
+    data = shim_client_process_state_generate_json(&p, &ctx, &perr);
+    if (data == NULL) {
+        ERROR("failed generate json for process.json error=%s", perr);
+        ret = -1;
+        goto out;
+    }
+
+    if (shim_v2_exec(id, params->suffix, params->spec->terminal, (char *)params->console_fifos[0],
+                     (char *)params->console_fifos[1], (char *)params->console_fifos[2], data) != 0) {
+        ERROR("%s: failed to exec container", id);
+        ret = -1;
+        goto out;
+    }
+
+    if (shim_v2_start(id, params->suffix, &pid) != 0) {
         ERROR("%s: failed to start exec process", id);
-        return -1;
+        ret = -1;
+        goto out;
     }
 
     *exit_code = pid;
+
+out:
+    free(data);
+    free(perr);
     return ret;
 }
 
