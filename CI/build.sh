@@ -415,18 +415,17 @@ rm -rf ${cptemp}
 # wait for copy files become effective
 sleep 3
 
+docker exec ${copycontainer} tail -f --retry /tmp/runflag/${CONTAINER_NAME}.scripts.log 2>/dev/null &
+tailpid=$!
+
 for container in ${containers[@]}
 do
     {
         exec_script ${container} ${testcase_script}
-    }&
-    pids="$! $pids"
+    }
 done
 
-docker exec ${copycontainer} tail -f --retry /tmp/runflag/${CONTAINER_NAME}.scripts.log 2>/dev/null &
-tailpid=$!
 trap "kill -9 $tailpid; exit 0" 15 2
-wait $pids
 
 pid_dev="NULL"
 if [[ "x$disk" != "xNULL" ]] && [[ "x${enable_gcov}" == "xON" ]]; then
