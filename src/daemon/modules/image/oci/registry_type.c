@@ -150,6 +150,9 @@ void free_pull_desc(pull_descriptor *desc)
     if (desc->mutex_inited) {
         pthread_mutex_destroy(&desc->mutex);
     }
+    if (desc->challenges_mutex_inited) {
+        pthread_mutex_destroy(&desc->challenges_mutex);
+    }
 
     free(desc);
 

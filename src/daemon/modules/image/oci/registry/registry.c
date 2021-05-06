@@ -1910,6 +1910,13 @@ static int prepare_pull_desc(pull_descriptor *desc, registry_pull_options *optio
     }
     desc->mutex_inited = true;
 
+    ret = pthread_mutex_init(&desc->challenges_mutex, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init challenges mutex for pull");
+        goto out;
+    }
+    desc->challenges_mutex_inited = true;
+
     ret = pthread_cond_init(&desc->cond, NULL);
     if (ret != 0) {
         ERROR("Failed to init cond for pull");
@@ -2165,6 +2172,13 @@ int registry_login(registry_login_options *options)
     desc->insecure_registry = options->insecure_registry;
     desc->username = util_strdup_s(options->auth.username);
     desc->password = util_strdup_s(options->auth.password);
+
+    ret = pthread_mutex_init(&desc->challenges_mutex, NULL);
+    if (ret != 0) {
+        ERROR("Failed to init challenges mutex for login");
+        goto out;
+    }
+    desc->challenges_mutex_inited = true;
 
     ret = login_to_registry(desc);
     if (ret != 0) {
