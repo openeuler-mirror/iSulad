@@ -37,7 +37,7 @@ extern "C" {
                                                                 "filter",                                               \
                                                                 'f',                                                    \
                                                                 &(cmdargs).filters,                                     \
-                                                                "Filter output based on conditions provided",           \
+                                                                "Filter output based on conditions provided (specify string matching name or plugin)",           \
                                                                 command_append_array                                    \
     },
 
