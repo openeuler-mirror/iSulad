@@ -23,6 +23,7 @@
 #include <strings.h>
 #include <time.h>
 #include <curl/curl.h>
+#include <pthread.h>
 
 #include "isula_libutils/log.h"
 #include "buffer.h"
@@ -371,8 +372,10 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
                 goto out;
             }
         } else if (!strcasecmp(desc->challenges[i].schema, "Bearer")) {
+            (void)pthread_mutex_lock(&desc->challenges_mutex);
             ret = get_bearer_token(desc, &desc->challenges[i]);
             if (ret != 0) {
+                (void)pthread_mutex_unlock(&desc->challenges_mutex);
                 ERROR("get bearer token failed");
                 isulad_try_set_error_message("authentication failed");
                 goto out;
@@ -380,9 +383,11 @@ static int setup_auth_challenges(pull_descriptor *desc, char ***custom_headers)
 
             auth_header = auth_header_str("Bearer", desc->challenges[i].cached_token);
             if (auth_header == NULL) {
+                (void)pthread_mutex_unlock(&desc->challenges_mutex);
                 ret = -1;
                 goto out;
             }
+            (void)pthread_mutex_unlock(&desc->challenges_mutex);
         } else {
             WARN("Unsupported schema %s", desc->challenges[i].schema);
             continue;

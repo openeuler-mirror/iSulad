@@ -102,6 +102,8 @@ typedef struct {
     bool skip_tls_verify;
     bool insecure_registry;
     char *scope;
+    pthread_mutex_t challenges_mutex;
+    bool challenges_mutex_inited;
     challenge challenges[CHALLENGE_MAX];
     // This is temporary field. Once http request is performed, it is cleared
     char **headers;
