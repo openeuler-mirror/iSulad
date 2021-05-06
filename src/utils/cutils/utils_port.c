@@ -832,6 +832,16 @@ out:
     return ret;
 }
 
+static bool valid_port(uint64_t port)
+{
+    if (port < 1 || port > 65535) {
+        ERROR("Port numbers must be between 1 and 65535 (inclusive), got %lu", port);
+        return false;
+    }
+
+    return true;
+}
+
 bool util_parse_port_range(const char *ports, struct network_port *np)
 {
     char **parts = NULL;
@@ -845,6 +855,11 @@ bool util_parse_port_range(const char *ports, struct network_port *np)
     if (strchr(ports, '-') == NULL) {
         if (util_safe_uint64(ports, &np->start) != 0) {
             ERROR("invalid port: %s", ports);
+            return false;
+        }
+
+        if (!valid_port(np->start)) {
+            ERROR("invalid port value:%s", ports);
             return false;
         }
         np->end = np->start;
@@ -864,8 +879,20 @@ bool util_parse_port_range(const char *ports, struct network_port *np)
         goto out;
     }
 
+    if (!valid_port(np->start)) {
+        ERROR("invalid port start value:%s", parts[0]);
+        ret = false;
+        goto out;
+    }
+
     if (util_safe_uint64(parts[1], &np->end) != 0) {
         ERROR("Invalid port end: %s", parts[1]);
+        ret = false;
+        goto out;
+    }
+
+    if (!valid_port(np->end)) {
+        ERROR("invalid port start value:%s", parts[1]);
         ret = false;
         goto out;
     }
