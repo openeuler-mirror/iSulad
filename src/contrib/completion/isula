@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-_isula_isula() {
+
+_isula_isula() 
+{
     local isula_management_commands=(
         volume
     )
@@ -65,32 +67,60 @@ _isula_isula() {
     esac
 }
 
-_isula_default()
+_isula_default() 
 {
     COMPREPLY=( $( compgen -d -f -- $cur ) )
 }
 
-_isula() {
+_isula_isula_list_images_with_tag()
+{
+    local images_with_tag=()
+    case "$cur" in
+        *:*)
+            front=${cur%:*}
+            #先去掉第一行，然后过滤指定镜像名
+            images_with_tag=($(isula images |awk 'NR>1'|grep -w "$front"| awk '{print $2}'))
+            cur=${cur##*:}
+            ;;
+        *)
+            images_with_tag=($(isula images |awk 'NR>1{printf "%s:%s\n",$1,$2}'))
+            ;;
+    esac
+            
+    COMPREPLY=( $( compgen -W "${images_with_tag[*]}" -- "$cur" ) )
+}
+
+_isula_isula_rmi()
+{
+    _isula_isula_list_images_with_tag
+}
+
+_isula_isula_tag()
+{
+    _isula_isula_list_images_with_tag
+}
+
+_isula_isula_images()
+{
+    _isula_isula_list_images_with_tag
+}
+
+_isula()
+{
     COMPREPLY=()
 
-    #An array variable consisting of the individual words in the current command line
-    local words=(${COMP_WORDS[*]})
-    #An index into ${word} of the word containing the current cursor position
-    local cword=$COMP_CWORD
-    local cur="${words[$cword]}"
-    local prev="${words[$cword-1]}"
+    local cur prev words cword
+    _get_comp_words_by_ref -n : cur prev words cword
     local command='isula'
-
-    local completions_func=_isula_${command//-/_}
-
-    #The completion of the secondary command will be added later
-    if [ $cword -lt 2 ] ; then
-        completions_func=_isula_${command//-/_}
-    else
-        completions_func=_isula_default
+    if [ $cword -gt 1 ] ; then
+        command="isula_${words[1]}"
     fi
-
-    declare -F $completions_func >/dev/null && $completions_func
+    local completions_func=_isula_${command//-/_}
+    if declare -F $completions_func >/dev/null; then
+        $completions_func
+    else
+        _isula_default
+    fi
     return 0
 }
 
