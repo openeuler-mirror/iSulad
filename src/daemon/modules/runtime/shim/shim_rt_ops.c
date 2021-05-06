@@ -532,50 +532,81 @@ out:
     return ret;
 }
 
-
 int rt_shim_attach(const char *id, const char *runtime, const rt_attach_params_t *params)
 {
+    ERROR("rt_shim_attach not impl");
+    isulad_set_error_message("isula attach not support on shim-v2");
     return 0;
 }
 
 int rt_shim_update(const char *id, const char *runtime, const rt_update_params_t *params)
 {
+    ERROR("rt_shim_update not impl");
+    isulad_set_error_message("isula update not support on shim-v2");
     return 0;
 }
 
 int rt_shim_pause(const char *id, const char *runtime, const rt_pause_params_t *params)
 {
+    if (shim_v2_pause(id) != 0) {
+        ERROR("%s: pause container failed", id);
+        return -1;
+    }
+
     return 0;
 }
 
 int rt_shim_resume(const char *id, const char *runtime, const rt_resume_params_t *params)
 {
+    if (shim_v2_resume(id) != 0) {
+        ERROR("%s: resume container failed", id);
+        return -1;
+    }
+
     return 0;
 }
 
 int rt_shim_listpids(const char *id, const char *runtime, const rt_listpids_params_t *params,
                      rt_listpids_out_t *out)
 {
+    ERROR("isula top/listpids not support on isulad-shim");
+    isulad_set_error_message("isula top/listpids not support on shim-v2");
     return 0;
 }
 
 int rt_shim_resources_stats(const char *id, const char *runtime, const rt_stats_params_t *params,
                             struct runtime_container_resources_stats_info *rs_stats)
 {
+    ERROR("rt_shim_resources_stats not impl");
     return 0;
 }
 
 int rt_shim_resize(const char *id, const char *runtime, const rt_resize_params_t *params)
 {
+    if (shim_v2_resize_pty(id, NULL, params->height, params->width) != 0) {
+        ERROR("rt_shim_resize failed");
+        return -1;
+    }
+
     return 0;
 }
 
 int rt_shim_exec_resize(const char *id, const char *runtime, const rt_exec_resize_params_t *params)
 {
+    if (shim_v2_resize_pty(id, params->suffix, params->height, params->width) != 0) {
+        ERROR("rt_shim_exec_resize failed");
+        return -1;
+    }
+
     return 0;
 }
 
 int rt_shim_kill(const char *id, const char *runtime, const rt_kill_params_t *params)
 {
+    if (shim_v2_kill(id, NULL, params->signal, false) != 0) {
+        ERROR("%s: kill process failed", id);
+        return -1;
+    }
+
     return 0;
 }
