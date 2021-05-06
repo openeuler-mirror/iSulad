@@ -1112,8 +1112,9 @@ static int do_delete_container(container_t *cont)
     }
 
     // try to clean up network resource
-    if (remove_network(cont) != 0) {
-        WARN("Failed to remove network when delete container %s, maybe it has been cleaned up", cont->common_config->id);
+    if (cont->network_settings != NULL && util_file_exists(cont->network_settings->sandbox_key) &&
+        remove_network(cont) != 0) {
+        ERROR("Failed to remove network when delete container %s, maybe it has been cleaned up", cont->common_config->id);
     }
 
     ret = snprintf(container_state, sizeof(container_state), "%s/%s", statepath, id);
