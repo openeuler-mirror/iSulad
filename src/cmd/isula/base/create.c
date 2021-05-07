@@ -1568,11 +1568,6 @@ int cmd_create_main(int argc, const char **argv)
         exit(ECOMMON);
     }
 
-    if (!valid_pull_option(g_cmd_create_args.pull)) {
-        COMMAND_ERROR("invalid --pull option, only \"always\"|\"missing\"|\"never\" is allowed");
-        exit(ECOMMON);
-    }
-
     ret = client_create(&g_cmd_create_args);
     if (ret != 0) {
         ERROR("Container \"%s\" create failed", g_cmd_create_args.name);
@@ -2173,6 +2168,12 @@ int create_checker(struct client_arguments *args)
 
     if (args->argc < 1) {
         COMMAND_ERROR("\"%s\" requires a minimum of 1 argument.", args->subcommand);
+        ret = -1;
+        goto out;
+    }
+
+    if (!valid_pull_option(args->pull)) {
+        COMMAND_ERROR("invalid --pull option, only \"always\"|\"missing\"|\"never\" is allowed");
         ret = -1;
         goto out;
     }
