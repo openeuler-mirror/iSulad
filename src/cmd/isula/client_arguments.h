@@ -256,6 +256,8 @@ struct client_arguments {
 
     char *host_channel;
 
+    bool help;
+
     // lcr create
     char *external_rootfs;
     char *create_rootfs;
@@ -387,7 +389,7 @@ struct client_arguments {
       &(cmdargs).key_file,                                                                                      \
       "Path to TLS key file (default \"/root/.iSulad/key.pem\")",                                               \
       NULL },                                                                                                   \
-    { CMD_OPT_TYPE_STRING, false, "help", 0, NULL, "Print usage", NULL },
+    { CMD_OPT_TYPE_BOOL, false, "help", 0, &(cmdargs).help, "Print usage", NULL },
 
 #define VERSION_OPTIONS(cmdargs) \
     { CMD_OPT_TYPE_BOOL, false, "version", 0, NULL, "Print version information and quit", NULL },

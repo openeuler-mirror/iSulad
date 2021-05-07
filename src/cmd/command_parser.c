@@ -360,6 +360,10 @@ static int command_parse_long_arg(command_t *self, const char *arg)
         if (command_get_option_data(self, opt, &opt_arg)) {
             return -1;
         }
+        if (strcmp(opt->large, "help") == 0 && *(bool *)opt->data) {
+            command_help(self);
+            exit(0);
+        }
         return 0;
     }
     COMMAND_ERROR("Unknown flag found:'--%s'\n", arg);
