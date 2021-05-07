@@ -434,6 +434,12 @@ int cmd_exec_main(int argc, const char **argv)
         custom_cfg->open_stdin = false;
     }
 
+    if (custom_cfg->workdir != NULL && util_validate_absolute_path(custom_cfg->workdir) != 0) {
+        COMMAND_ERROR("exec failed: workdir is not validate absolute path");
+        ret = ECOMMON;
+        goto out;
+    }
+
     g_cmd_exec_args.exec_suffix = generate_exec_suffix();
     if (g_cmd_exec_args.exec_suffix == NULL) {
         ERROR("Failed to generate exec suffix");
