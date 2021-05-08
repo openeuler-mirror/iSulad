@@ -38,9 +38,9 @@ typedef struct {
     char *proto;
 } ports_t;
 
-#define IP_ADDR_MIN_LENGTH  7
+#define IP_ADDR_MIN_LENGTH 7
 #define PROTO_NUM 3
-const char *g_proto_whitelist[PROTO_NUM] = {"tcp", "udp", "sctp"};
+const char *g_proto_whitelist[PROTO_NUM] = { "tcp", "udp", "sctp" };
 
 // split --publish value to <host ip> <host port with proto> and <container port with proto>, without verify
 static int split_parts(const char *value, char **host_ip, char **host_port, char **container_port)
@@ -153,7 +153,7 @@ out:
 static int parse_format_container_port(const char *value, uint64_t *start_port, uint64_t *end_port, char **proto)
 {
     int ret = 0;
-    struct network_port  container_p = { 0 };
+    struct network_port container_p = { 0 };
     char *container_port_range = NULL;
     char *proto_tmp = NULL;
 
@@ -184,7 +184,6 @@ out:
     free(proto_tmp);
     return ret;
 }
-
 
 char *util_pack_port_proto(uint64_t port, const char *proto)
 {
@@ -217,8 +216,7 @@ void util_free_port_mapping(struct port_mapping *data)
     free(data);
 }
 
-static int process_without_host_port(ports_t port_data, struct port_mapping ***ports,
-                                     size_t *len_ports)
+static int process_without_host_port(ports_t port_data, struct port_mapping ***ports, size_t *len_ports)
 {
     int ret = 0;
     uint64_t i = 0;
@@ -226,8 +224,8 @@ static int process_without_host_port(ports_t port_data, struct port_mapping ***p
     size_t cnt = 0;
     struct port_mapping **port_map_tmp = NULL;
 
-    port_map_tmp = (struct port_mapping **)util_smart_calloc_s(sizeof(struct port_mapping *),
-                                                               (size_t)(port_data.end_cport - port_data.start_cport + 1));
+    port_map_tmp = (struct port_mapping **)util_smart_calloc_s(
+                       sizeof(struct port_mapping *), (size_t)(port_data.end_cport - port_data.start_cport + 1));
     if (port_map_tmp == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -273,8 +271,8 @@ static int process_range_to_range(ports_t port_data, const char *raw_ip, struct 
     size_t cnt = 0;
     struct port_mapping **port_map_tmp = NULL;
 
-    port_map_tmp = (struct port_mapping **)util_smart_calloc_s(sizeof(struct port_mapping *),
-                                                               (size_t)(port_data.end_cport - port_data.start_cport + 1));
+    port_map_tmp = (struct port_mapping **)util_smart_calloc_s(
+                       sizeof(struct port_mapping *), (size_t)(port_data.end_cport - port_data.start_cport + 1));
     if (port_map_tmp == NULL) {
         ERROR("Out of memory");
         return -1;
@@ -535,7 +533,6 @@ static int scale_port_binding_arr(map_t *port_binding_m, const struct port_mappi
         goto out;
     }
 
-
 out:
     return ret;
 }
@@ -582,7 +579,7 @@ int util_parse_port_specs(const char **port_arr, map_t **exposed_map, map_t **po
     int ret = 0;
     size_t length = 0;
     size_t i = 0;
-    map_t *exposed_m = NULL;// value is null, unused
+    map_t *exposed_m = NULL; // value is null, unused
     map_t *port_binding_m = NULL;
 
     if (port_arr == NULL || exposed_map == NULL || port_binding_map == NULL) {
@@ -638,7 +635,6 @@ static int pase_expose_single_value(map_t *exposed_m, const char *value)
         goto out;
     }
 
-
     if (!util_parse_port_range(container_port_range, &container_p)) {
         ERROR("Invalid container port :%s", container_port_range);
         ret = -1;
@@ -674,7 +670,7 @@ int util_parse_expose_ports(const char **expose, map_t **exposed_m)
     size_t length = 0;
 
     if (expose == NULL || exposed_m == NULL) {
-        ERROR("Invalid input param");;
+        ERROR("Invalid input param");
         return -1;
     }
 
@@ -686,7 +682,6 @@ int util_parse_expose_ports(const char **expose, map_t **exposed_m)
             goto out;
         }
     }
-
 
     length = util_array_len(expose);
     for (i = 0; i < length; i++) {
@@ -747,7 +742,6 @@ static int copy_network_port_binding(const network_port_binding *old,
     (*new)->element = element;
     element = NULL;
 
-
 out:
     free(err_json);
     free(err_obj);
@@ -783,7 +777,7 @@ int util_copy_port_binding_from_custom_map(defs_map_string_object_port_bindings 
         goto out;
     }
 
-    port_bindings  = util_common_calloc_s(sizeof(defs_map_string_object_port_bindings));
+    port_bindings = util_common_calloc_s(sizeof(defs_map_string_object_port_bindings));
     if (port_bindings == NULL) {
         ERROR("Out of memory");
         ret = -1;
@@ -1000,6 +994,35 @@ static int do_close(int sock)
 
     ERROR("close socket failed: %s", strerror(errno));
     return -1;
+}
+
+bool util_check_port_free(int port)
+{
+    bool ret = true;
+    int sock = -1;
+    struct sockaddr_in s_addr;
+
+    bzero(&s_addr, sizeof(s_addr));
+    s_addr.sin_addr.s_addr = INADDR_ANY;
+    s_addr.sin_port = htons(port);
+    s_addr.sin_family = AF_INET;
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        ERROR("get socket failed: %s", strerror(errno));
+        return false;
+    }
+
+    if (bind(sock, (struct sockaddr *)&s_addr, sizeof(struct sockaddr_in)) < 0) {
+        ERROR("bind port failed: %s\n", strerror(errno));
+        ret = false;
+    }
+
+    if (do_close(sock) != 0) {
+        ret = false;
+    }
+
+    return ret;
 }
 
 int util_get_random_port()

@@ -353,6 +353,10 @@ static int do_merge_portbindings(defs_map_string_object_port_bindings *port_bind
                 ERROR("invalid key: %s with host port: %s", port_bindings->keys[i], elem->host_port);
                 return -1;
             }
+            if (!util_check_port_free(host_port)) {
+                isulad_append_error_message("port '%d' already in use", host_port);
+                return -1;
+            }
             if (do_append_host_port(port_bindings->keys[i], elem->host_ip, host_port, valid, result) != 0) {
                 return -1;
             }

@@ -73,6 +73,8 @@ static inline bool is_valid_port(const int port)
     return (port > 0 && port <= 65535);
 }
 
+bool util_check_port_free(int port);
+
 #ifdef __cplusplus
 }
 #endif
