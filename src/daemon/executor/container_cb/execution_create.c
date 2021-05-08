@@ -109,6 +109,10 @@ out:
         *runtime_res = true;
     }
 
+    if (convert_v2_runtime(name, NULL) ==0) {
+        *runtime_res = true;
+    }
+
     return ret;
 }
 
