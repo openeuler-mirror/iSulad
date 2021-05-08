@@ -481,6 +481,8 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     set_container_skip_remove_network(cont);
 
     ret = stop_container(cont, timeout, false, true);
+    reset_container_skip_remove_network(cont);
+
     if (ret != 0) {
         cc = ISULAD_ERR_EXEC;
         container_state_set_error(cont->state, (const char *)g_isulad_errmsg);
@@ -507,7 +509,6 @@ static uint32_t stop_and_start(container_t *cont, int timeout)
     }
 
 out:
-    reset_container_skip_remove_network(cont);
     container_state_reset_starting(cont->state);
     return cc;
 }
