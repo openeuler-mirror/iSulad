@@ -241,6 +241,7 @@ static int do_append_host_port(const char *key, const char *host_ip, int host_po
                                cni_anno_port_mappings_container *result)
 {
     const char *default_host_ip = "0.0.0.0";
+    const char *use_host_ip = NULL;
     // string -> map_t<int, int>
     map_t *work = NULL;
     // int -> int
@@ -281,9 +282,9 @@ static int do_append_host_port(const char *key, const char *host_ip, int host_po
         work = valid->stcp_ports;
     }
 
-    host_ip = host_ip != NULL ? host_ip : default_host_ip;
+    use_host_ip = host_ip != NULL ? host_ip : default_host_ip;
 
-    tmp = map_search(work, (void *)host_ip);
+    tmp = map_search(work, (void *)use_host_ip);
     if (tmp == NULL) {
         tmp = map_new(MAP_INT_INT, MAP_DEFAULT_CMP_FUNC, MAP_DEFAULT_FREE_FUNC);
         if (tmp == NULL) {
@@ -291,8 +292,8 @@ static int do_append_host_port(const char *key, const char *host_ip, int host_po
             ret = -1;
             goto out;
         }
-        if (!map_replace(work, (void *)host_ip, (void *)tmp)) {
-            ERROR("update host key: %s failed", host_ip);
+        if (!map_replace(work, (void *)use_host_ip, (void *)tmp)) {
+            ERROR("update host key: %s failed", use_host_ip);
             ret = -1;
             goto out;
         }
