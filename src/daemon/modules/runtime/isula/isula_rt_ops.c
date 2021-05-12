@@ -562,6 +562,9 @@ static int runtime_call_stats(const char *workdir, const char *runtime, const ch
         info->mem_used = stats->data->memory->usage->usage;
         info->mem_limit = stats->data->memory->usage->limit;
     }
+    if (stats != NULL && stats->data != NULL && stats->data->memory != NULL && stats->data->memory->raw) {
+        info->inactive_file_total = stats->data->memory->raw->total_inactive_file;
+    }
 
 out:
     free_shim_client_runtime_stats(stats);
