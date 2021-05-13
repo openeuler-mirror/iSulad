@@ -275,7 +275,8 @@ static int append_additional_groups(const struct group *grp, struct group **grou
     struct group *new_groups = NULL;
     size_t new_len = *len + 1;
 
-    ret = util_mem_realloc((void **)&new_groups, new_len * sizeof(struct group), *groups, (*len) * sizeof(struct group));
+    ret = util_mem_realloc((void **)&new_groups, new_len * sizeof(struct group), *groups,
+                           (*len) * sizeof(struct group));
     if (ret != 0) {
         ERROR("Out of memory");
         return -1;
@@ -414,7 +415,7 @@ static int read_user_file(const char *basefs, const char *user_path, FILE **stre
 
     *stream = util_fopen(real_path, "r");
     if (*stream == NULL) {
-        ERROR("Failed to open %s: %s", real_path, strerror(errno));
+        WARN("Failed to open %s: %s", real_path, strerror(errno));
         ret = 0;
         goto out;
     }

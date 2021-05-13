@@ -260,7 +260,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: sync execing Container: %s}", request->container_id().c_str());
+    WARN("Event: {Object: CRI, Type: sync execing Container: %s}", request->container_id().c_str());
 
     rService->ExecSync(request->container_id(), request->cmd(), request->timeout(), reply, error);
     if (!error.Empty()) {
@@ -268,7 +268,7 @@ grpc::Status RuntimeRuntimeServiceImpl::ExecSync(grpc::ServerContext *context,
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
 
-    EVENT("Event: {Object: CRI, Type: sync execed Container: %s}", request->container_id().c_str());
+    WARN("Event: {Object: CRI, Type: sync execed Container: %s}", request->container_id().c_str());
 
     return grpc::Status::OK;
 }
@@ -390,7 +390,7 @@ RuntimeRuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context
 {
     Errors error;
 
-    EVENT("Event: {Object: CRI, Type: Updating container resources: %s}", request->container_id().c_str());
+    WARN("Event: {Object: CRI, Type: Updating container resources: %s}", request->container_id().c_str());
 
     rService->UpdateContainerResources(request->container_id(), request->linux(), error);
     if (error.NotEmpty()) {
@@ -399,7 +399,7 @@ RuntimeRuntimeServiceImpl::UpdateContainerResources(grpc::ServerContext *context
         return grpc::Status(grpc::StatusCode::UNKNOWN, error.GetMessage());
     }
 
-    EVENT("Event: {Object: CRI, Type: Updated container resources: %s}", request->container_id().c_str());
+    WARN("Event: {Object: CRI, Type: Updated container resources: %s}", request->container_id().c_str());
 
     return grpc::Status::OK;
 }

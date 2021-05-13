@@ -488,7 +488,7 @@ int oci_status_image(im_status_request *request, im_status_response *response)
         goto pack_response;
     }
 
-    EVENT("Event: {Object: %s, Type: statusing image}", resolved_name);
+    WARN("Event: {Object: %s, Type: statusing image}", resolved_name);
 
     image_info = storage_img_get(resolved_name);
     if (image_info == NULL) {
@@ -501,7 +501,7 @@ int oci_status_image(im_status_request *request, im_status_response *response)
     response->image_info->image = image_info;
     image_info = NULL;
 
-    EVENT("Event: {Object: %s, Type: statused image}", resolved_name);
+    WARN("Event: {Object: %s, Type: statused image}", resolved_name);
 
 pack_response:
     free(resolved_name);

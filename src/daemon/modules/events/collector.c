@@ -481,7 +481,7 @@ static int write_events_log(const struct isulad_events_format *events)
 
     len = calculate_annaotation_info_len(events);
     if (len == 1) {
-        EVENT("Event: {Object: %s, Type: %s}", events->id, events->opt);
+        WARN("Event: {Object: %s, Type: %s}", events->id, events->opt);
     } else {
         annotation = (char *)util_common_calloc_s(len);
         if (annotation == NULL) {
@@ -499,7 +499,7 @@ static int write_events_log(const struct isulad_events_format *events)
         }
         (void)strcat(annotation, ")");
 
-        EVENT("Event: {Object: %s, Type: %s %s}", events->id, events->opt, annotation);
+        WARN("Event: {Object: %s, Type: %s %s}", events->id, events->opt, annotation);
     }
 
 out:

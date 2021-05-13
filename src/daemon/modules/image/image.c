@@ -842,7 +842,7 @@ int im_list_images(const im_list_request *ctx, im_list_response **response)
         return -1;
     }
 
-    EVENT("Event: {Object: list images, Type: listing}");
+    WARN("Event: {Object: list images, Type: listing}");
 
     for (i = 0; i < g_numbims; i++) {
         if (g_bims[i].ops->list_ims == NULL) {
@@ -862,7 +862,7 @@ int im_list_images(const im_list_request *ctx, im_list_response **response)
         images_tmp = NULL;
     }
 
-    EVENT("Event: {Object: list images, Type: listed}");
+    WARN("Event: {Object: list images, Type: listed}");
 
     if (g_isulad_errmsg != NULL) {
         (*response)->errmsg = util_strdup_s(g_isulad_errmsg);
