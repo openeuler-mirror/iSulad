@@ -1223,15 +1223,15 @@ static int container_update_cb(const container_update_request *request, containe
 
     id = cont->common_config->id;
     isula_libutils_set_log_prefix(id);
-    EVENT("Event: {Object: %s, Type: updating}", id);
+    WARN("Event: {Object: %s, Type: updating}", id);
 
     if (do_update_resources(request, cont) != 0) {
         cc = ISULAD_ERR_EXEC;
         goto pack_response;
     }
 
-    EVENT("Event: {Object: %s, Type: updated}", id);
-    (void)isulad_monitor_send_container_event(id, CREATE, -1, 0, NULL, NULL);
+    WARN("Event: {Object: %s, Type: updated}", id);
+    (void)isulad_monitor_send_container_event(id, UPDATE, -1, 0, NULL, NULL);
 
 pack_response:
     pack_update_response(*response, cc, id);

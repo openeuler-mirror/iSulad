@@ -862,7 +862,7 @@ int64_t util_file_size(const char *filename)
     }
 
     if (stat(filename, &st)) {
-        ERROR("stat file %s failed: %s", filename, strerror(errno));
+        WARN("stat file %s failed: %s", filename, strerror(errno));
         return -1;
     }
 
