@@ -37,6 +37,8 @@
 
 #include "common.h"
 #include "terminal.h"
+#include "utils_array.h"
+#include "utils_string.h"
 
 #define MAX_EVENTS 100
 #define DEFAULT_IO_COPY_BUF (16 * 1024)
@@ -234,6 +236,38 @@ static void remove_io_dispatch(io_thread_t *io_thd, int from, int to)
     pthread_mutex_unlock(&(ioc->mutex));
 }
 
+static int get_exec_winsize(const char *buf, struct winsize *wsize)
+{
+    char **array = NULL;
+    int width = 0;
+    int height = 0;
+    int ret = 0;
+
+    array = util_string_split_multi(buf, ' ');
+    if (array == NULL) {
+        return -1;
+    }
+
+    if (util_array_len((const char **)array) != 2) {
+        ret = -1;
+        goto out;
+    }
+
+    width = atoi(array[0]);
+    height = atoi(array[1]);
+
+    if (width < 0 || width > USHRT_MAX || height < 0 || height > USHRT_MAX) {
+        ret = -1;
+        goto out;
+    }
+    wsize->ws_row = (unsigned short)height;
+    wsize->ws_col = (unsigned short)width;
+
+out:
+    util_free_array(array);
+    return ret;
+}
+
 static void *do_io_copy(void *data)
 {
     io_thread_t *io_thd = (io_thread_t *)data;
@@ -262,7 +296,7 @@ static void *do_io_copy(void *data)
         } else if (r_count == 0) {
             /* End of file. The remote has closed the connection */
             break;
-        } else {
+        } else if (ioc->id != EXEC_RESIZE) {
             fd_node_t *fn = ioc->fd_to;
             for (; fn != NULL; fn = fn->next) {
                 if (fn->is_log) {
@@ -274,6 +308,15 @@ static void *do_io_copy(void *data)
                         remove_io_dispatch(io_thd, -1, fn->fd);
                     }
                 }
+            }
+        } else {
+            int resize_fd = ioc->fd_to->fd;
+            struct winsize wsize = { 0x00 };
+            if (get_exec_winsize(buf, &wsize) < 0) {
+                break;
+            }
+            if (ioctl(resize_fd, TIOCSWINSZ, &wsize) < 0) {
+                break;
             }
         }
 
@@ -340,8 +383,8 @@ static int create_io_copy_thread(process_t *p, int std_id)
     io_thd->epfd = p->io_loop_fd;
     io_thd->ioc = ioc;
     io_thd->shutdown = false;
-    io_thd->is_stdin = std_id == stdid_in ? true : false;
-    io_thd->terminal = std_id != stdid_in ? p->terminal : NULL;
+    io_thd->is_stdin = std_id == STDID_IN ? true : false;
+    io_thd->terminal = std_id != STDID_IN ? p->terminal : NULL;
 
     p->io_threads[std_id] = io_thd;
 
@@ -372,8 +415,8 @@ static int start_io_copy_threads(process_t *p)
     int ret = SHIM_ERR;
     int i;
 
-    /* 3 threads for stdin, stdout and stderr */
-    for (i = 0; i < 3; i++) {
+    /* 4 threads for stdin, stdout, stderr and exec resize */
+    for (i = 0; i < 4; i++) {
         ret = create_io_copy_thread(p, i);
         if (ret != SHIM_OK) {
             return SHIM_ERR;
@@ -412,6 +455,8 @@ static void destroy_io_thread(process_t *p, int std_id)
     ---------------------------------------------------------------
     |  STDERR |        WRITE            |      <--       |  READ  |
     ---------------------------------------------------------------
+    |  RESIZE |        READ             |      -->       |  WRITE |
+    ---------------------------------------------------------------
 */
 static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio, int fd)
 {
@@ -420,7 +465,7 @@ static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio,
     int *fd_from = NULL;
     int *fd_to = NULL;
 
-    if (std_id == stdid_in) {
+    if (std_id == STDID_IN || std_id == EXEC_RESIZE) {
         mode = O_RDONLY;
         fd_from = &fd_isulad;
         fd_to = &fd;
@@ -435,10 +480,14 @@ static int connect_to_isulad(process_t *p, int std_id, const char *isulad_stdio,
         if (fd_isulad < 0) {
             return SHIM_ERR;
         }
+        /* open dummy fd to avoid resize epoll hub */
+        if (std_id == EXEC_RESIZE && open_fifo_noblock(isulad_stdio, O_WRONLY) < 0) {
+            return SHIM_ERR;
+        }
     }
 
     if (*fd_from != -1) {
-        if (std_id != stdid_in && p->io_threads[std_id]->terminal != NULL) {
+        if (std_id != STDID_IN && std_id != EXEC_RESIZE && p->io_threads[std_id]->terminal != NULL) {
             (void)add_io_dispatch(p->io_loop_fd, p->io_threads[std_id], *fd_from, p->terminal->fd);
         }
         return add_io_dispatch(p->io_loop_fd, p->io_threads[std_id], *fd_from, *fd_to);
@@ -472,13 +521,19 @@ static void *task_console_accept(void *data)
     /* do console io copy */
 
     /* p.state.stdin---->runtime.console */
-    ret = connect_to_isulad(ac->p, stdid_in, ac->p->state->isulad_stdin, recv_fd);
+    ret = connect_to_isulad(ac->p, STDID_IN, ac->p->state->isulad_stdin, recv_fd);
     if (ret != SHIM_OK) {
         goto out;
     }
 
     /* p.state.stdout<------runtime.console */
-    ret = connect_to_isulad(ac->p, stdid_out, ac->p->state->isulad_stdout, recv_fd);
+    ret = connect_to_isulad(ac->p, STDID_OUT, ac->p->state->isulad_stdout, recv_fd);
+    if (ret != SHIM_OK) {
+        goto out;
+    }
+
+    /* p.state.resize_fifo------>runtime.console */
+    ret = connect_to_isulad(ac->p, EXEC_RESIZE, ac->p->state->resize_fifo, recv_fd);
     if (ret != SHIM_OK) {
         goto out;
     }
@@ -487,7 +542,7 @@ static void *task_console_accept(void *data)
      * if the terminal is used, we do not need to active the io copy of stderr pipe,
      * for stderr and stdout are mixed together
      */
-    destroy_io_thread(ac->p, stdid_err);
+    destroy_io_thread(ac->p, STDID_ERR);
 
 out:
     /* release listen socket at the first time */
@@ -651,7 +706,7 @@ static void stdio_release(int (*stdio_fd)[2])
 
 static stdio_t *initialize_io(process_t *p)
 {
-    int stdio_fd[3][2] = { { -1, -1 }, { -1, -1 }, { -1, -1 } };
+    int stdio_fd[4][2] = { { -1, -1 }, { -1, -1 }, { -1, -1 }, { -1, -1 } };
 
     stdio_t *stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
     p->stdio = (stdio_t *)calloc(1, sizeof(stdio_t));
@@ -659,6 +714,7 @@ static stdio_t *initialize_io(process_t *p)
         goto failure;
     }
 
+    /* don't open resize pipe */
     if ((pipe2(stdio_fd[0], O_CLOEXEC | O_NONBLOCK) != 0) || (pipe2(stdio_fd[1], O_CLOEXEC | O_NONBLOCK) != 0) ||
         (pipe2(stdio_fd[2], O_CLOEXEC | O_NONBLOCK) != 0)) {
         write_message(g_log_fd, ERR_MSG, "open pipe failed when init io:%d", SHIM_SYS_ERR(errno));
@@ -671,6 +727,8 @@ static stdio_t *initialize_io(process_t *p)
     stdio->out = stdio_fd[1][0]; // r
     p->stdio->err = stdio_fd[2][1]; // w
     stdio->err = stdio_fd[2][0]; // r
+    p->stdio->resize = stdio_fd[3][0]; // r
+    stdio->resize = stdio_fd[3][1]; // w
 
     if (stdio_chown(stdio_fd, p->state->root_uid, p->state->root_gid) != SHIM_OK) {
         goto failure;
@@ -717,17 +775,17 @@ static int open_generic_io(process_t *p)
     }
     p->shim_io = io;
     /* stdin */
-    ret = connect_to_isulad(p, stdid_in, p->state->isulad_stdin, io->in);
+    ret = connect_to_isulad(p, STDID_IN, p->state->isulad_stdin, io->in);
     if (ret != SHIM_OK) {
         return SHIM_ERR;
     }
     /* stdout */
-    ret = connect_to_isulad(p, stdid_out, p->state->isulad_stdout, io->out);
+    ret = connect_to_isulad(p, STDID_OUT, p->state->isulad_stdout, io->out);
     if (ret != SHIM_OK) {
         return SHIM_ERR;
     }
     /* stderr */
-    ret = connect_to_isulad(p, stdid_err, p->state->isulad_stderr, io->err);
+    ret = connect_to_isulad(p, STDID_ERR, p->state->isulad_stderr, io->err);
     if (ret != SHIM_OK) {
         return SHIM_ERR;
     }
@@ -1021,6 +1079,10 @@ static void exec_runtime_process(process_t *p, int exec_fd)
             p->shim_io->err = -1;
             dup2(p->stdio->err, 2);
         }
+        if (p->shim_io->resize != -1) {
+            close(p->shim_io->resize);
+            p->shim_io->resize = -1;
+        }
     }
 
     char *cwd = getcwd(NULL, 0);
@@ -1091,6 +1153,7 @@ int create_process(process_t *p)
         close_fd(&p->stdio->in);
         close_fd(&p->stdio->out);
         close_fd(&p->stdio->err);
+        close_fd(&p->stdio->resize);
     }
     nread = read_nointr(exec_fd[0], exec_buff, sizeof(exec_buff));
     if (nread > 0) {

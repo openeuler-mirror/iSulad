@@ -13,9 +13,13 @@
  * Create: 2020-02-15
  */
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <gtest/gtest.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "mock.h"
 #include "isula_rt_ops.h"
 #include <gtest/gtest.h>
@@ -128,4 +132,34 @@ TEST_F(IsulaRtOpsUnitTest, test_rt_isula_status)
     ASSERT_EQ(rt_isula_status("123", "kata-runtime", &params, nullptr), -1);
     params.state = "/var/run/isulad/kata-runtime";
     ASSERT_EQ(rt_isula_status("123", "kata-runtime", &params, &status), -1);
+}
+
+TEST_F(IsulaRtOpsUnitTest, test_rt_isula_exec_resize)
+{
+    rt_exec_resize_params_t params = {};
+    ASSERT_EQ(rt_isula_exec_resize(nullptr, nullptr, nullptr), -1);
+    ASSERT_EQ(rt_isula_exec_resize("123", nullptr, nullptr), -1);
+
+    std::string id = "123";
+    std::string runtime = "kata-runtime";
+    params.state = "/tmp/isula_exec_resize_ut";
+    params.suffix = "abc";
+    std::string make_path = "mkdir -p /tmp/isula_exec_resize_ut/123/exec/abc";
+    ASSERT_EQ(system(make_path.c_str()), 0);
+    ASSERT_EQ(rt_isula_exec_resize(id.c_str(), runtime.c_str(), &params), -1);
+
+    std::string make_fifo = "mkfifo /tmp/isula_exec_resize_ut/123/exec/abc/resize_fifo";
+    ASSERT_EQ(system(make_fifo.c_str()), 0);
+    int fd = open("/tmp/isula_exec_resize_ut/123/exec/abc/resize_fifo", O_RDONLY | O_NONBLOCK);
+    ASSERT_GE(fd, 0);
+    ASSERT_EQ(rt_isula_exec_resize(id.c_str(), runtime.c_str(), &params), -1);
+
+    std::string make_pid = "touch /tmp/isula_exec_resize_ut/123/exec/abc/shim-pid";
+    std::string echo_pid = "echo 123 >> /tmp/isula_exec_resize_ut/123/exec/abc/shim-pid";
+    std::string rm_path = "rm -rf /tmp/isula_exec_resize_ut";
+    ASSERT_EQ(system(make_pid.c_str()), 0);
+    ASSERT_EQ(system(echo_pid.c_str()), 0);
+    ASSERT_EQ(rt_isula_exec_resize(id.c_str(), runtime.c_str(), &params), -1);
+    close(fd);
+    ASSERT_EQ(system(rm_path.c_str()), 0);
 }

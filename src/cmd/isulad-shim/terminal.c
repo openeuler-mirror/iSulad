@@ -280,12 +280,12 @@ void shim_write_container_log_file(log_terminal *terminal, int type, char *buf, 
         return;
     }
     switch (type) {
-        case stdid_out:
+        case STDID_OUT:
             type_str = STDOUT_STR;
             cache = cache_out;
             size = &size_out;
             break;
-        case stdid_err:
+        case STDID_ERR:
             type_str = STDERR_STR;
             cache = cache_err;
             size = &size_err;
