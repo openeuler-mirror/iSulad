@@ -46,9 +46,6 @@ function test_image_info()
   isula images | grep busybox
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${image}" && ((ret++))
 
-  isula images | grep ${uimage}
-  [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - missing list image: ${uimage}" && ((ret++))
-
   lid=$(isula inspect -f '{{.image.top_layer}}' ${image})
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid image top layer: ${image}" && ((ret++))
 
@@ -83,7 +80,7 @@ function test_image_info()
   isula images | grep busybox
   [[ $? -eq 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - invalid image: ${image} exist" && ((ret++))
 
-  isula images | grep ${uimage}
+  isula images | grep nats
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - valid image: ${uimage} do not exist" && ((ret++))
 
   isula rm ${ucid}
@@ -97,6 +94,8 @@ function test_image_info()
 
   isula rm ${ucid}
   [[ $? -ne 0 ]] && msg_err "${FUNCNAME[0]}:${LINENO} - remove container failed" && ((ret++))
+
+  isula rm -f `isula ps -aq`
 
   msg_info "${test} finished with return ${ret}..."
   return ${ret}
