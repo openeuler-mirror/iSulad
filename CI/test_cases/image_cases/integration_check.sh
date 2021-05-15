@@ -27,7 +27,7 @@ image="busybox"
 function test_image_info()
 {
   local ret=0
-  local uimage="nats"
+  local uimage="docker.io/library/nats"
   local test="list && inspect image info test => (${FUNCNAME[@]})"
   local lid
   local cid

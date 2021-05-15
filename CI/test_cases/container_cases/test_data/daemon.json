@@ -23,7 +23,7 @@
         "overlay2.override_kernel_check=true"
     ],
     "registry-mirrors": [
-        "https://3laho3y3.mirror.aliyuncs.com"
+        "docker.io"
     ],
     "insecure-registries": [
     ],
