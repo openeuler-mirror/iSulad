@@ -205,7 +205,7 @@ static int parse_auths(pull_descriptor *desc, struct parsed_http_message *m)
     int ret = 0;
 
     for (i = 0; i < m->num_headers; i++) {
-        if (!strcmp(m->headers[i][0], "Www-Authenticate") || !strcmp(m->headers[i][0], "WWW-Authenticate")) {
+        if (!strcasecmp(m->headers[i][0], "Www-Authenticate")) {
             ret = parse_auth(desc, (char *)m->headers[i][1]);
             if (ret != 0) {
                 WARN("parse auth %s failed", (char *)m->headers[i][1]);
@@ -294,12 +294,9 @@ static int parse_ping_header(pull_descriptor *desc, char *http_head)
 
     version = get_header_value(message, "Docker-Distribution-Api-Version");
     if (version == NULL) {
-        version = get_header_value(message, "Docker-Distribution-API-Version");
-        if (version == NULL) {
-            ERROR("Docker-Distribution-Api-Version not found in header, registry may can not support registry API V2");
-            ret = -1;
-            goto out;
-        }
+        ERROR("Docker-Distribution-Api-Version not found in header, registry may can not support registry API V2");
+        ret = -1;
+        goto out;
     }
 
     if (!util_strings_contains_word(version, "registry/2.0")) {
