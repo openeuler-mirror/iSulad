@@ -18,10 +18,10 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
-#include <random>
 #include <cmath>
-#include <libwebsockets.h>
 #include "isula_libutils/log.h"
+#include "utils.h"
+#include "utils_base64.h"
 
 std::atomic<RequestCache *> RequestCache::m_instance;
 std::mutex RequestCache::m_mutex;
@@ -93,40 +93,27 @@ void RequestCache::GarbageCollection()
 std::string RequestCache::UniqueToken()
 {
     const int maxTries { 50 };
-    std::random_device r;
-    std::default_random_engine e1(r());
-    std::uniform_int_distribution<int> uniform_dist(1, 254);
     // Number of bytes to be TokenLen when base64 encoded.
-    const int tokenSize = ceil(static_cast<double>(TokenLen) * 6 / 8);
-    char rawToken[tokenSize + 1];
-    (void)memset(rawToken, 0, sizeof(rawToken));
+    const int rawTokenSize = ceil(static_cast<double>(TokenLen) * 6 / 8);
     for (int i {}; i < maxTries; ++i) {
-        char buf[TokenLen + 1];
-        (void)memset(buf, 0, sizeof(buf));
-        for (int j {}; j < tokenSize; ++j) {
-            rawToken[j] = (char)uniform_dist(e1);
-        }
-        lws_b64_encode_string(rawToken, (int)strlen(rawToken), buf, (int)sizeof(buf));
-        buf[sizeof(buf) - 1] = '\0';
-        if (strlen(buf) < TokenLen) {
+        char rawToken[rawTokenSize + 1] = { 0x00 };
+        if (util_generate_random_str(rawToken, (size_t)rawTokenSize)) {
+            ERROR("Generate rawToken failed");
             continue;
         }
-        std::string token(buf, buf + TokenLen);
+
+        char *b64_encode_buf = nullptr;
+        if (util_base64_encode((unsigned char *)rawToken, strlen(rawToken), &b64_encode_buf) < 0) {
+            ERROR("Encode raw token to base64 failed");
+            continue;
+        }
+
+        std::string token(b64_encode_buf);
+        free(b64_encode_buf);
         if (token.length() != TokenLen) {
             continue;
         }
 
-        bool ok { true };
-        std::string subDelims { R"(-._:~!$&'()*+,;/=%@)" };
-        for (const auto &t : token) {
-            if ((subDelims.find(t) != std::string::npos)) {
-                ok = false;
-                break;
-            }
-        }
-        if (!ok) {
-            continue;
-        }
         auto it = m_tokens.find(token);
         if (it == m_tokens.end()) {
             return token;
