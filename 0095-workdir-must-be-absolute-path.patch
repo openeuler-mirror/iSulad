@@ -1,0 +1,30 @@
+From d2de6b5d8607f50c2b9b324197d670922bc94fbe Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Fri, 7 May 2021 16:13:11 +0800
+Subject: [PATCH 095/104] workdir must be absolute path
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/cmd/isula/stream/exec.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/cmd/isula/stream/exec.c b/src/cmd/isula/stream/exec.c
+index 3c8601f2..aa702b90 100644
+--- a/src/cmd/isula/stream/exec.c
++++ b/src/cmd/isula/stream/exec.c
+@@ -434,6 +434,12 @@ int cmd_exec_main(int argc, const char **argv)
+         custom_cfg->open_stdin = false;
+     }
+ 
++    if (custom_cfg->workdir != NULL && util_validate_absolute_path(custom_cfg->workdir) != 0) {
++        COMMAND_ERROR("exec failed: workdir is not validate absolute path");
++        ret = ECOMMON;
++        goto out;
++    }
++
+     g_cmd_exec_args.exec_suffix = generate_exec_suffix();
+     if (g_cmd_exec_args.exec_suffix == NULL) {
+         ERROR("Failed to generate exec suffix");
+-- 
+2.25.1
+
